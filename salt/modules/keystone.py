@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module for handling openstack keystone calls.
 
@@ -52,16 +51,10 @@ Module for handling openstack keystone calls.
         salt '*' keystone.tenant_list profile=openstack1
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import Salt Libs
 import salt.utils.http
-
-# Import 3rd-party libs
-from salt.ext import six
 
 HAS_KEYSTONE = False
 try:
@@ -163,8 +156,7 @@ def api_version(profile=None, **connection_args):
     auth_url = kwargs.get("auth_url", kwargs.get("endpoint", None))
     try:
         return salt.utils.http.query(
-            auth_url, decode=True, decode_type="json",
-            verify_ssl=kwargs["verify_ssl"]
+            auth_url, decode=True, decode_type="json", verify_ssl=kwargs["verify_ssl"]
         )["dict"]["version"]["id"]
     except KeyError:
         return None
@@ -275,7 +267,7 @@ def ec2_credentials_delete(
     if not user_id:
         return {"Error": "Could not resolve User ID"}
     kstone.ec2.delete(user_id, access_key)
-    return 'ec2 key "{0}" deleted under user id "{1}"'.format(access_key, user_id)
+    return 'ec2 key "{}" deleted under user id "{}"'.format(access_key, user_id)
 
 
 def ec2_credentials_get(
@@ -379,7 +371,7 @@ def endpoint_get(service, region=None, profile=None, interface=None, **connectio
     ]
     if len(e) > 1:
         return {
-            "Error": "Multiple endpoints found ({0}) for the {1} service. Please specify region.".format(
+            "Error": "Multiple endpoints found ({}) for the {} service. Please specify region.".format(
                 e, service
             )
         }
@@ -402,12 +394,12 @@ def endpoint_list(profile=None, **connection_args):
     ret = {}
 
     for endpoint in kstone.endpoints.list():
-        ret[endpoint.id] = dict(
-            (value, getattr(endpoint, value))
+        ret[endpoint.id] = {
+            value: getattr(endpoint, value)
             for value in dir(endpoint)
             if not value.startswith("_")
-            and isinstance(getattr(endpoint, value), (six.string_types, dict, bool))
-        )
+            and isinstance(getattr(endpoint, value), (str, dict, bool))
+        }
     return ret
 
 
@@ -493,7 +485,7 @@ def role_create(name, profile=None, **connection_args):
 
     kstone = auth(profile, **connection_args)
     if "Error" not in role_get(name=name, profile=profile, **connection_args):
-        return {"Error": 'Role "{0}" already exists'.format(name)}
+        return {"Error": 'Role "{}" already exists'.format(name)}
     kstone.roles.create(name)
     return role_get(name=name, profile=profile, **connection_args)
 
@@ -524,9 +516,9 @@ def role_delete(role_id=None, name=None, profile=None, **connection_args):
     role = kstone.roles.get(role_id)
     kstone.roles.delete(role)
 
-    ret = "Role ID {0} deleted".format(role_id)
+    ret = "Role ID {} deleted".format(role_id)
     if name:
-        ret += " ({0})".format(name)
+        ret += " ({})".format(name)
     return ret
 
 
@@ -570,12 +562,12 @@ def role_list(profile=None, **connection_args):
     kstone = auth(profile, **connection_args)
     ret = {}
     for role in kstone.roles.list():
-        ret[role.name] = dict(
-            (value, getattr(role, value))
+        ret[role.name] = {
+            value: getattr(role, value)
             for value in dir(role)
             if not value.startswith("_")
-            and isinstance(getattr(role, value), (six.string_types, dict, bool))
-        )
+            and isinstance(getattr(role, value), (str, dict, bool))
+        }
     return ret
 
 
@@ -614,7 +606,7 @@ def service_delete(service_id=None, name=None, profile=None, **connection_args):
             "id"
         ]
     kstone.services.delete(service_id)
-    return 'Keystone service ID "{0}" deleted'.format(service_id)
+    return 'Keystone service ID "{}" deleted'.format(service_id)
 
 
 def service_get(service_id=None, name=None, profile=None, **connection_args):
@@ -639,12 +631,12 @@ def service_get(service_id=None, name=None, profile=None, **connection_args):
     if not service_id:
         return {"Error": "Unable to resolve service id"}
     service = kstone.services.get(service_id)
-    ret[service.name] = dict(
-        (value, getattr(service, value))
+    ret[service.name] = {
+        value: getattr(service, value)
         for value in dir(service)
         if not value.startswith("_")
-        and isinstance(getattr(service, value), (six.string_types, dict, bool))
-    )
+        and isinstance(getattr(service, value), (str, dict, bool))
+    }
     return ret
 
 
@@ -661,12 +653,12 @@ def service_list(profile=None, **connection_args):
     kstone = auth(profile, **connection_args)
     ret = {}
     for service in kstone.services.list():
-        ret[service.name] = dict(
-            (value, getattr(service, value))
+        ret[service.name] = {
+            value: getattr(service, value)
             for value in dir(service)
             if not value.startswith("_")
-            and isinstance(getattr(service, value), (six.string_types, dict, bool))
-        )
+            and isinstance(getattr(service, value), (str, dict, bool))
+        }
     return ret
 
 
@@ -747,10 +739,10 @@ def tenant_delete(tenant_id=None, name=None, profile=None, **connection_args):
     if not tenant_id:
         return {"Error": "Unable to resolve tenant id"}
     getattr(kstone, _TENANTS, None).delete(tenant_id)
-    ret = "Tenant ID {0} deleted".format(tenant_id)
+    ret = "Tenant ID {} deleted".format(tenant_id)
     if name:
 
-        ret += " ({0})".format(name)
+        ret += " ({})".format(name)
     return ret
 
 
@@ -811,12 +803,12 @@ def tenant_get(tenant_id=None, name=None, profile=None, **connection_args):
     if not tenant_id:
         return {"Error": "Unable to resolve tenant id"}
     tenant = getattr(kstone, _TENANTS, None).get(tenant_id)
-    ret[tenant.name] = dict(
-        (value, getattr(tenant, value))
+    ret[tenant.name] = {
+        value: getattr(tenant, value)
         for value in dir(tenant)
         if not value.startswith("_")
-        and isinstance(getattr(tenant, value), (six.string_types, dict, bool))
-    )
+        and isinstance(getattr(tenant, value), (str, dict, bool))
+    }
     return ret
 
 
@@ -869,12 +861,12 @@ def tenant_list(profile=None, **connection_args):
     ret = {}
 
     for tenant in getattr(kstone, _TENANTS, None).list():
-        ret[tenant.name] = dict(
-            (value, getattr(tenant, value))
+        ret[tenant.name] = {
+            value: getattr(tenant, value)
             for value in dir(tenant)
             if not value.startswith("_")
-            and isinstance(getattr(tenant, value), (six.string_types, dict, bool))
-        )
+            and isinstance(getattr(tenant, value), (str, dict, bool))
+        }
     return ret
 
 
@@ -944,12 +936,12 @@ def tenant_update(
         tenant_id, name=name, description=description, enabled=enabled
     )
 
-    return dict(
-        (value, getattr(updated, value))
+    return {
+        value: getattr(updated, value)
         for value in dir(updated)
         if not value.startswith("_")
-        and isinstance(getattr(updated, value), (six.string_types, dict, bool))
-    )
+        and isinstance(getattr(updated, value), (str, dict, bool))
+    }
 
 
 def project_update(
@@ -1040,12 +1032,12 @@ def user_list(profile=None, **connection_args):
     kstone = auth(profile, **connection_args)
     ret = {}
     for user in kstone.users.list():
-        ret[user.name] = dict(
-            (value, getattr(user, value, None))
+        ret[user.name] = {
+            value: getattr(user, value, None)
             for value in dir(user)
             if not value.startswith("_")
-            and isinstance(getattr(user, value, None), (six.string_types, dict, bool))
-        )
+            and isinstance(getattr(user, value, None), (str, dict, bool))
+        }
         tenant_id = getattr(user, "tenantId", None)
         if tenant_id:
             ret[user.name]["tenant_id"] = tenant_id
@@ -1076,16 +1068,16 @@ def user_get(user_id=None, name=None, profile=None, **connection_args):
     try:
         user = kstone.users.get(user_id)
     except keystoneclient.exceptions.NotFound:
-        msg = "Could not find user '{0}'".format(user_id)
+        msg = "Could not find user '{}'".format(user_id)
         log.error(msg)
         return {"Error": msg}
 
-    ret[user.name] = dict(
-        (value, getattr(user, value, None))
+    ret[user.name] = {
+        value: getattr(user, value, None)
         for value in dir(user)
         if not value.startswith("_")
-        and isinstance(getattr(user, value, None), (six.string_types, dict, bool))
-    )
+        and isinstance(getattr(user, value, None), (str, dict, bool))
+    }
 
     tenant_id = getattr(user, "tenantId", None)
     if tenant_id:
@@ -1159,10 +1151,10 @@ def user_delete(user_id=None, name=None, profile=None, **connection_args):
     if not user_id:
         return {"Error": "Unable to resolve user id"}
     kstone.users.delete(user_id)
-    ret = "User ID {0} deleted".format(user_id)
+    ret = "User ID {} deleted".format(user_id)
     if name:
 
-        ret += " ({0})".format(name)
+        ret += " ({})".format(name)
     return ret
 
 
@@ -1210,7 +1202,7 @@ def user_update(
         if description is None:
             description = getattr(user, "description", None)
         else:
-            description = six.text_type(description)
+            description = str(description)
 
         project_id = None
         if project:
@@ -1241,7 +1233,7 @@ def user_update(
             if tenant_id:
                 kstone.users.update_tenant(user_id, tenant_id)
 
-    ret = "Info updated for user ID {0}".format(user_id)
+    ret = "Info updated for user ID {}".format(user_id)
     return ret
 
 
@@ -1319,9 +1311,9 @@ def user_password_update(
         kstone.users.update(user=user_id, password=password)
     else:
         kstone.users.update_password(user=user_id, password=password)
-    ret = "Password updated for user ID {0}".format(user_id)
+    ret = "Password updated for user ID {}".format(user_id)
     if name:
-        ret += " ({0})".format(name)
+        ret += " ({})".format(name)
     return ret
 
 
@@ -1362,9 +1354,9 @@ role_id=ce377245c4ec9b70e1c639c89e8cead4
             "id"
         )
     else:
-        user = next(
-            six.iterkeys(user_get(user_id, profile=profile, **connection_args))
-        )["name"]
+        user = next(iter(user_get(user_id, profile=profile, **connection_args).keys()))[
+            "name"
+        ]
     if not user_id:
         return {"Error": "Unable to resolve user id"}
 
@@ -1374,7 +1366,7 @@ role_id=ce377245c4ec9b70e1c639c89e8cead4
         ].get("id")
     else:
         tenant = next(
-            six.iterkeys(tenant_get(tenant_id, profile=profile, **connection_args))
+            iter(tenant_get(tenant_id, profile=profile, **connection_args).keys())
         )["name"]
     if not tenant_id:
         return {"Error": "Unable to resolve tenant/project id"}
@@ -1382,9 +1374,9 @@ role_id=ce377245c4ec9b70e1c639c89e8cead4
     if role:
         role_id = role_get(name=role, profile=profile, **connection_args)[role]["id"]
     else:
-        role = next(
-            six.iterkeys(role_get(role_id, profile=profile, **connection_args))
-        )["name"]
+        role = next(iter(role_get(role_id, profile=profile, **connection_args).keys()))[
+            "name"
+        ]
     if not role_id:
         return {"Error": "Unable to resolve role id"}
 
@@ -1433,9 +1425,9 @@ role_id=ce377245c4ec9b70e1c639c89e8cead4
             "id"
         )
     else:
-        user = next(
-            six.iterkeys(user_get(user_id, profile=profile, **connection_args))
-        )["name"]
+        user = next(iter(user_get(user_id, profile=profile, **connection_args).keys()))[
+            "name"
+        ]
     if not user_id:
         return {"Error": "Unable to resolve user id"}
 
@@ -1445,7 +1437,7 @@ role_id=ce377245c4ec9b70e1c639c89e8cead4
         ].get("id")
     else:
         tenant = next(
-            six.iterkeys(tenant_get(tenant_id, profile=profile, **connection_args))
+            iter(tenant_get(tenant_id, profile=profile, **connection_args).keys())
         )["name"]
     if not tenant_id:
         return {"Error": "Unable to resolve tenant/project id"}
@@ -1453,7 +1445,7 @@ role_id=ce377245c4ec9b70e1c639c89e8cead4
     if role:
         role_id = role_get(name=role, profile=profile, **connection_args)[role]["id"]
     else:
-        role = next(six.iterkeys(role_get(role_id)))["name"]
+        role = next(iter(role_get(role_id).keys()))["name"]
     if not role_id:
         return {"Error": "Unable to resolve role id"}
 
@@ -1510,12 +1502,12 @@ tenant_id=7167a092ece84bae8cead4bf9d15bb3b
 
     if _OS_IDENTITY_API_VERSION > 2:
         for role in kstone.roles.list(user=user_id, project=tenant_id):
-            ret[role.name] = dict(
-                (value, getattr(role, value))
+            ret[role.name] = {
+                value: getattr(role, value)
                 for value in dir(role)
                 if not value.startswith("_")
-                and isinstance(getattr(role, value), (six.string_types, dict, bool))
-            )
+                and isinstance(getattr(role, value), (str, dict, bool))
+            }
     else:
         for role in kstone.roles.roles_for_user(user=user_id, tenant=tenant_id):
             ret[role.name] = {
