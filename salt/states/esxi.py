@@ -683,7 +683,7 @@ def ssh_configured(
     ssh_key_file=None,
     service_policy=None,
     service_restart=False,
-    certificate_verify=False,
+    certificate_verify=None,
 ):
     """
     Manage the SSH configuration for a host including whether or not SSH is running or
@@ -724,7 +724,7 @@ def ssh_configured(
 
     certificate_verify
         If set to ``True``, the SSL connection must present a valid certificate.
-        Default is ``False``.
+        Default is ``True``.
 
     Example:
 
@@ -739,6 +739,8 @@ def ssh_configured(
             - certificate_verify: True
 
     """
+    if certificate_verify is None:
+        certificate_verify = True
     ret = {"name": name, "result": False, "changes": {}, "comment": ""}
     esxi_cmd = "esxi.cmd"
     host = __pillar__["proxy"]["host"]
