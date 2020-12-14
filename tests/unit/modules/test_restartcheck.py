@@ -6,12 +6,16 @@
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import os
+
 # Import Salt Libsrestartcheck
 import salt.modules.restartcheck as restartcheck
+import salt.utils.path
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
 
 # import salt.utils.files
@@ -24,7 +28,7 @@ class RestartcheckTestCase(TestCase, LoaderModuleMockMixin):
     """
 
     def setup_loader_modules(self):
-        return {restartcheck: {}}
+        return {restartcheck: {"__grains__": {"os_family": "RedHat"}, "__salt__": {}}}
 
     def test_kernel_versions_debian(self):
         """
@@ -329,3 +333,56 @@ class RestartcheckTestCase(TestCase, LoaderModuleMockMixin):
         self.assertFalse(restartcheck._valid_deleted_file("/SYSV/test"))
         self.assertFalse(restartcheck._valid_deleted_file("/SYSV/test (deleted)"))
         self.assertFalse(restartcheck._valid_deleted_file("/SYSV/test (path inode=1)"))
+
+    def test_valid_command(self):
+        """
+        test for CVE-2020-28243
+        """
+        create_file = os.path.join(RUNTIME_VARS.TMP, "created_file")
+
+        patch_kernel = patch(
+            "salt.modules.restartcheck._kernel_versions_redhat",
+            return_value=["3.10.0-1127.el7.x86_64"],
+        )
+        services = {
+            "NetworkManager": {"ExecMainPID": 123},
+            "auditd": {"ExecMainPID": 456},
+            "crond": {"ExecMainPID": 789},
+        }
+
+        patch_salt = patch.dict(
+            restartcheck.__salt__,
+            {
+                "cmd.run": MagicMock(
+                    return_value="Linux localhost.localdomain 3.10.0-1127.el7.x86_64"
+                ),
+                "service.get_running": MagicMock(return_value=list(services.keys())),
+                "service.show": MagicMock(side_effect=list(services.values())),
+                "pkg.owner": MagicMock(return_value=""),
+                "service.available": MagicMock(return_value=True),
+            },
+        )
+
+        patch_deleted = patch(
+            "salt.modules.restartcheck._deleted_files",
+            MagicMock(
+                return_value=[
+                    (";touch {};".format(create_file), 123, "/root/ (deleted)")
+                ]
+            ),
+        )
+
+        patch_readlink = patch(
+            "os.readlink", return_value="/root/;touch {};".format(create_file)
+        )
+
+        with patch_kernel, patch_salt, patch_deleted, patch_readlink:
+            if not salt.utils.path.which("repoquery"):
+                with self.assertRaises(FileNotFoundError):
+                    restartcheck.restartcheck()
+            else:
+                ret = restartcheck.restartcheck()
+                self.assertIn(
+                    "Found 1 processes using old versions of upgraded files", ret
+                )
+            self.assertFalse(os.path.exists(create_file))
