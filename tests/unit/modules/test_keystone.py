@@ -6,12 +6,14 @@
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import salt.modules.config as config
+
 # Import Salt Libs
 import salt.modules.keystone as keystone
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import MagicMock, call, patch
 from tests.support.unit import TestCase
 
 
@@ -444,7 +446,10 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
                 "auth": MockClient,
                 "client": MockClient(),
                 "keystoneclient": MockKeystoneClient(),
-            }
+                "__salt__": {"config.get": config.get},
+                "__opts__": {},
+            },
+            config: {"__opts__": {}},
         }
 
     # 'ec2_credentials_create' function tests: 1
@@ -1053,3 +1058,41 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
                 }
             },
         )
+
+    def test_api_version_verify_ssl(self):
+        """
+        test api_version when using verify_ssl
+        """
+        test_verify = [True, False, None]
+        conn_args = {
+            "keystone.user": "admin",
+            "connection_password": "password",
+            "connection_tenant": "admin",
+            "connection_tenant_id": "id",
+            "connection_auth_url": "https://127.0.0.1/v2.0/",
+            "connection_verify_ssl": True,
+        }
+
+        http_ret = {"dict": {"version": {"id": "id_test"}}}
+        for verify in test_verify:
+            mock_http = MagicMock(return_value=http_ret)
+            patch_http = patch("salt.utils.http.query", mock_http)
+            conn_args["connection_verify_ssl"] = verify
+            if verify is None:
+                conn_args.pop("connection_verify_ssl")
+                verify = True
+
+            with patch_http:
+                ret = keystone.api_version(**conn_args)
+
+            self.assertEqual(
+                mock_http.call_args_list,
+                [
+                    call(
+                        "https://127.0.0.1/v2.0/",
+                        decode=True,
+                        decode_type="json",
+                        verify_ssl=verify,
+                    )
+                ],
+            )
