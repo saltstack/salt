@@ -52,7 +52,7 @@ def _build_session(username, password, trans_label=None):
 
     bigip = requests.session()
     bigip.auth = (username, password)
-    bigip.verify = False
+    bigip.verify = True
     bigip.headers.update({"Content-Type": "application/json"})
 
     if trans_label:
