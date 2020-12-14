@@ -42,7 +42,7 @@ class Sqlite3TestCase(ShellCase):
 
         try:
             # This raises sqlite3.OperationalError for a missing table.
-            q = "SELECT {} FROM {} WHERE type=\"{}\" AND name=\"{}\";".format(
+            q = 'SELECT {} FROM {} WHERE type="{}" AND name="{}";'.format(
                 "name", "sqlite_master", "table", tablename
             )
             cur.execute(q)
@@ -61,8 +61,7 @@ class Sqlite3TestCase(ShellCase):
         is present and its value is True, any call to SDB will create
         the database.
         """
-        data = self.run_run_plus("sdb.get",
-                                 "sdb://sdbsqlite3createtrue/foo")
+        data = self.run_run_plus("sdb.get", "sdb://sdbsqlite3createtrue/foo")
 
         self.assertTrue(os.path.exists(self.sdb_file))
         self.assertTrue(data["return"] is None)
@@ -74,8 +73,7 @@ class Sqlite3TestCase(ShellCase):
         not present, the default value True is honoured and any call to
         SDB will create the database.
         """
-        data = self.run_run_plus("sdb.get",
-                                 "sdb://sdbsqlite3createdefault/foo")
+        data = self.run_run_plus("sdb.get", "sdb://sdbsqlite3createdefault/foo")
 
         self.assertTrue(os.path.exists(self.sdb_file))
         self.assertTrue(data["return"] is None)
@@ -90,8 +88,7 @@ class Sqlite3TestCase(ShellCase):
         Note: Because SQLite3 creates a database file with every
         "connection", the database table list has to be consulted.
         """
-        data = self.run_run_plus("sdb.get",
-                                 "sdb://sdbsqlite3createfalse/foo")
+        data = self.run_run_plus("sdb.get", "sdb://sdbsqlite3createfalse/foo")
 
         self.assertTrue(os.path.exists(self.sdb_file))
         self.assertTrue(data["return"] is None)
@@ -102,27 +99,24 @@ class Sqlite3TestCase(ShellCase):
         When the keyword argument "table" doesn't use the default value,
         the value specified is honoured.
         """
-        data = self.run_run_plus("sdb.get",
-                                 "sdb://sdbsqlite3funnytablename/foo")
+        data = self.run_run_plus("sdb.get", "sdb://sdbsqlite3funnytablename/foo")
 
         self.assertTrue(os.path.exists(self.sdb_file))
         self.assertFalse(data["return"])
-        self.assertTrue(self.table_exists(self.sdb_file,
-                                          "sdbsqlite3funnytablename"))
+        self.assertTrue(self.table_exists(self.sdb_file, "sdbsqlite3funnytablename"))
 
     def test_bbbb(self):
         """
         When a key-value pair is set in SDB, that same key-value pair
         is accessible later.
         """
-        data = self.run_run_plus("sdb.set",
-                                 "sdb://sdbsqlite3createtrue/foo",
-                                 value = "bar")
+        data = self.run_run_plus(
+            "sdb.set", "sdb://sdbsqlite3createtrue/foo", value="bar"
+        )
         self.assertTrue(os.path.exists(self.sdb_file))
         self.assertTrue(data["return"])
 
-        data = self.run_run_plus("sdb.get",
-                                 "sdb://sdbsqlite3createtrue/foo")
+        data = self.run_run_plus("sdb.get", "sdb://sdbsqlite3createtrue/foo")
         self.assertEqual(data["out"], ["bar"])
 
     def test_cccc(self):
@@ -130,22 +124,19 @@ class Sqlite3TestCase(ShellCase):
         When a key-value has been deleted from SDB, the key-value is
         is not accessible later.
         """
-        data = self.run_run_plus("sdb.set",
-                                 "sdb://sdbsqlite3createtrue/foo",
-                                 value = "bar")
+        data = self.run_run_plus(
+            "sdb.set", "sdb://sdbsqlite3createtrue/foo", value="bar"
+        )
         self.assertTrue(data["return"])
 
-        data = self.run_run_plus("sdb.get",
-                                 "sdb://sdbsqlite3createtrue/foo")
+        data = self.run_run_plus("sdb.get", "sdb://sdbsqlite3createtrue/foo")
         self.assertTrue(data["return"])
         self.assertEqual(data["out"], ["bar"])
 
-        data = self.run_run_plus("sdb.delete",
-                                 "sdb://sdbsqlite3createtrue/foo")
+        data = self.run_run_plus("sdb.delete", "sdb://sdbsqlite3createtrue/foo")
         self.assertTrue(data["return"])
 
-        data = self.run_run_plus("sdb.get",
-                                 "sdb://sdbsqlite3createtrue/foo")
+        data = self.run_run_plus("sdb.get", "sdb://sdbsqlite3createtrue/foo")
         self.assertTrue(data["return"] is None)
 
     def test_cccd(self):
@@ -153,36 +144,32 @@ class Sqlite3TestCase(ShellCase):
         When a key-value is deleted from SDB, they key-value and nothing
         else is deleted.
         """
-        data = self.run_run_plus("sdb.set",
-                                 "sdb://sdbsqlite3createtrue/foo",
-                                 value = "bar")
+        data = self.run_run_plus(
+            "sdb.set", "sdb://sdbsqlite3createtrue/foo", value="bar"
+        )
         self.assertTrue(data["return"])
-        data = self.run_run_plus("sdb.set",
-                                 "sdb://sdbsqlite3createtrue/bar",
-                                 value = "foo")
+        data = self.run_run_plus(
+            "sdb.set", "sdb://sdbsqlite3createtrue/bar", value="foo"
+        )
         self.assertTrue(data["return"])
 
-        data = self.run_run_plus("sdb.get",
-                                 "sdb://sdbsqlite3createtrue/foo")
+        data = self.run_run_plus("sdb.get", "sdb://sdbsqlite3createtrue/foo")
         self.assertTrue(data["return"])
         self.assertEqual(data["out"], ["bar"])
 
-        data = self.run_run_plus("sdb.get",
-                                 "sdb://sdbsqlite3createtrue/bar")
+        data = self.run_run_plus("sdb.get", "sdb://sdbsqlite3createtrue/bar")
         self.assertTrue(data["return"])
         self.assertEqual(data["out"], ["foo"])
 
-        data = self.run_run_plus("sdb.delete",
-                                 "sdb://sdbsqlite3createtrue/foo")
+        data = self.run_run_plus("sdb.delete", "sdb://sdbsqlite3createtrue/foo")
         self.assertTrue(data["return"])
 
-        data = self.run_run_plus("sdb.get",
-                                 "sdb://sdbsqlite3createtrue/foo")
+        data = self.run_run_plus("sdb.get", "sdb://sdbsqlite3createtrue/foo")
         self.assertTrue(data["return"] is None)
 
-        data = self.run_run_plus("sdb.get",
-                                 "sdb://sdbsqlite3createtrue/bar")
+        data = self.run_run_plus("sdb.get", "sdb://sdbsqlite3createtrue/bar")
         self.assertTrue(data["return"])
         self.assertEqual(data["out"], ["foo"])
+
 
 # end of file.
