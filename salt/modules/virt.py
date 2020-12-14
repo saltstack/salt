@@ -949,6 +949,7 @@ def _gen_xml(
     serials=None,
     consoles=None,
     stop_on_reboot=False,
+    host_devices=None,
     **kwargs
 ):
     """
@@ -1136,6 +1137,44 @@ def _gen_xml(
             disk_context["driver"] = False
         context["disks"].append(disk_context)
     context["nics"] = nicp
+
+    # Process host devices passthrough
+    hostdev_context = []
+    try:
+        for hostdev_name in host_devices or []:
+            hostdevice = conn.nodeDeviceLookupByName(hostdev_name)
+            doc = ElementTree.fromstring(hostdevice.XMLDesc())
+            if "pci" in hostdevice.listCaps():
+                hostdev_context.append(
+                    {
+                        "type": "pci",
+                        "domain": "0x{:04x}".format(
+                            int(doc.find("./capability[@type='pci']/domain").text)
+                        ),
+                        "bus": "0x{:02x}".format(
+                            int(doc.find("./capability[@type='pci']/bus").text)
+                        ),
+                        "slot": "0x{:02x}".format(
+                            int(doc.find("./capability[@type='pci']/slot").text)
+                        ),
+                        "function": "0x{}".format(
+                            doc.find("./capability[@type='pci']/function").text
+                        ),
+                    }
+                )
+            elif "usb_device" in hostdevice.listCaps():
+                vendor_id = doc.find(".//vendor").get("id")
+                product_id = doc.find(".//product").get("id")
+                hostdev_context.append(
+                    {"type": "usb", "vendor": vendor_id, "product": product_id}
+                )
+            # For the while we only handle pci and usb passthrough
+    except libvirt.libvirtError as err:
+        conn.close()
+        raise CommandExecutionError(
+            "Failed to get host devices: " + err.get_error_message()
+        )
+    context["hostdevs"] = hostdev_context
 
     context["os_type"] = os_type
     context["arch"] = arch
@@ -2003,6 +2042,7 @@ def init(
     serials=None,
     consoles=None,
     stop_on_reboot=False,
+    host_devices=None,
     **kwargs
 ):
     """
@@ -2330,6 +2370,13 @@ def init(
     :param consoles:
         Dictionary providing details on the consoles device to create. (Default: ``None``)
         See :ref:`init-chardevs-def` for more details on the possible values.
+
+        .. versionadded:: Aluminium
+
+    :param host_devices:
+        List of host devices to passthrough to the guest.
+        The value is a list of device names as provided by the :py:func:`~salt.modules.virt.node_devices` function.
+        (Default: ``None``)
 
         .. versionadded:: Aluminium
 
@@ -2904,6 +2951,7 @@ def init(
             serials,
             consoles,
             stop_on_reboot,
+            host_devices,
             **kwargs
         )
         log.debug("New virtual machine definition: %s", vm_xml)
@@ -3017,6 +3065,32 @@ def _graphics_equal(gfx1, gfx2):
     )
 
 
+def _hostdevs_equal(dev1, dev2):
+    """
+    Test if two hostdevs devices should be considered the same device
+    """
+
+    def _filter_hostdevs(dev):
+        """
+        When the domain is running, the hostdevs element may contain additional properties.
+        This function will only keep the ones we care about
+        """
+        type_ = dev.get("type")
+        definition = {
+            "type": type_,
+        }
+        if type_ == "pci":
+            address_node = dev.find("./source/address")
+            for attr in ["domain", "bus", "slot", "function"]:
+                definition[attr] = address_node.get(attr)
+        elif type_ == "usb":
+            for attr in ["vendor", "product"]:
+                definition[attr] = dev.find("./source/" + attr).get("id")
+        return definition
+
+    return _filter_hostdevs(dev1) == _filter_hostdevs(dev2)
+
+
 def _diff_lists(old, new, comparator):
     """
     Compare lists to extract the changes
@@ -3115,6 +3189,16 @@ def _diff_graphics_lists(old, new):
     :param new: list of ElementTree nodes representing the new graphic devices
     """
     return _diff_lists(old, new, _graphics_equal)
+
+
+def _diff_hostdev_lists(old, new):
+    """
+    Compare hostdev devices definitions to extract the changes
+
+    :param old: list of ElementTree nodes representing the old hostdev devices
+    :param new: list of ElementTree nodes representing the new hostdev devices
+    """
+    return _diff_lists(old, new, _hostdevs_equal)
 
 
 def _expand_cpuset(cpuset):
@@ -3231,6 +3315,7 @@ def update(
     serials=None,
     consoles=None,
     stop_on_reboot=False,
+    host_devices=None,
     **kwargs
 ):
     """
@@ -3418,6 +3503,13 @@ def update(
                 hpet:
                   present: False
 
+    :param host_devices:
+        List of host devices to passthrough to the guest.
+        The value is a list of device names as provided by the :py:func:`~salt.modules.virt.node_devices` function.
+        (Default: ``None``)
+
+        .. versionadded:: Aluminium
+
     :return:
 
         Returns a dictionary indicating the status of what has been done. It is structured in
@@ -3481,6 +3573,7 @@ def update(
             serial=serials,
             consoles=consoles,
             stop_on_reboot=stop_on_reboot,
+            host_devices=host_devices,
             **kwargs
         )
     )
@@ -3873,6 +3966,7 @@ def update(
         "graphics": ["graphics"],
         "serial": ["serial"],
         "console": ["console"],
+        "hostdev": ["host_devices"],
     }
     changes = {}
     for dev_type in parameters:
@@ -4000,7 +4094,7 @@ def update(
 
             changes["disk"]["new"] = new_disks
 
-            for dev_type in ["disk", "interface"]:
+            for dev_type in ["disk", "interface", "hostdev"]:
                 for added in changes[dev_type].get("new", []):
                     commands.append(
                         {
@@ -4052,6 +4146,10 @@ def update(
                         "detachDevice": "detached",
                         "updateDeviceFlags": "updated",
                     }
+                    if device_type not in status:
+                        status[device_type] = {}
+                    if actions[cmd["cmd"]] not in status[device_type]:
+                        status[device_type][actions[cmd["cmd"]]] = []
                     status[device_type][actions[cmd["cmd"]]].append(cmd["args"][0])
 
             except libvirt.libvirtError as err:
