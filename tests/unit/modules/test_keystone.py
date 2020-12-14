@@ -1,22 +1,16 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
-import salt.modules.keystone as keystone
 import salt.modules.config as config
-
-# Import Salt Testing Libs
+import salt.modules.keystone as keystone
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import MagicMock, patch, call
+from tests.support.mock import MagicMock, call, patch
 from tests.support.unit import TestCase
 
 
-class MockEC2(object):
+class MockEC2:
     """
     Mock of EC2 class
     """
@@ -69,7 +63,7 @@ class MockEC2(object):
         return [cr_ec2]
 
 
-class MockEndpoints(object):
+class MockEndpoints:
     """
     Mock of Endpoints class
     """
@@ -104,7 +98,7 @@ class MockEndpoints(object):
         return id
 
 
-class MockServices(object):
+class MockServices:
     """
     Mock of Services class
     """
@@ -160,7 +154,7 @@ class MockServices(object):
         return service_id
 
 
-class MockRoles(object):
+class MockRoles:
     """
     Mock of Roles class
     """
@@ -230,7 +224,7 @@ class MockRoles(object):
         return [role]
 
 
-class MockTenants(object):
+class MockTenants:
     """
     Mock of Tenants class
     """
@@ -280,7 +274,7 @@ class MockTenants(object):
         return tenant_id
 
 
-class MockServiceCatalog(object):
+class MockServiceCatalog:
     """
     Mock of ServiceCatalog class
     """
@@ -303,7 +297,7 @@ class MockServiceCatalog(object):
         }
 
 
-class MockUsers(object):
+class MockUsers:
     """
     Mock of Users class
     """
@@ -376,7 +370,7 @@ class Unauthorized(Exception):
     """
 
     def __init__(self, message="Test"):
-        super(Unauthorized, self).__init__(message)
+        super().__init__(message)
         self.msg = message
 
 
@@ -386,11 +380,11 @@ class AuthorizationFailure(Exception):
     """
 
     def __init__(self, message="Test"):
-        super(AuthorizationFailure, self).__init__(message)
+        super().__init__(message)
         self.msg = message
 
 
-class MockExceptions(object):
+class MockExceptions:
     """
     Mock of exceptions class
     """
@@ -400,7 +394,7 @@ class MockExceptions(object):
         self.AuthorizationFailure = AuthorizationFailure
 
 
-class MockKeystoneClient(object):
+class MockKeystoneClient:
     """
     Mock of keystoneclient module
     """
@@ -409,7 +403,7 @@ class MockKeystoneClient(object):
         self.exceptions = MockExceptions()
 
 
-class MockClient(object):
+class MockClient:
     """
     Mock of Client class
     """
@@ -1057,7 +1051,6 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
                 }
             },
         )
-
 
     def test_api_version_verify_ssl(self):
         """
