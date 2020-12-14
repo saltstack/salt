@@ -306,6 +306,22 @@
       <target type='virtio' name='org.qemu.guest_agent.0'/>
     </channel>
 {%- endif %}
+{%- for hostdev in hostdevs %}
+    <hostdev mode='subsystem' type='{{ hostdev["type"] }}'{% if hostdev["type"] == "pci" %} managed='yes'{% endif %}>
+      <source>
+  {%- if hostdev["type"] == "usb" %}
+        <vendor id='{{ hostdev["vendor"] }}'/>
+        <product id='{{ hostdev["product"] }}'/>
+  {%- elif hostdev["type"] == "pci" %}
+        <address
+          domain='{{ hostdev["domain"] }}'
+          bus='{{ hostdev["bus"] }}'
+          slot='{{ hostdev["slot"] }}'
+          function='{{ hostdev["function"] }}'/>
+  {%- endif %}
+      </source>
+    </hostdev>
+{%- endfor %}
   </devices>
   <features>
     <acpi />
