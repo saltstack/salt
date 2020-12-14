@@ -15,6 +15,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import python libs
 import os
 import re
+import shlex
 import subprocess
 import sys
 import time
@@ -602,7 +603,8 @@ def restartcheck(ignorelist=None, blacklist=None, excludepid=None, **kwargs):
     for package in packages:
         _check_timeout(start_time, timeout)
         cmd = cmd_pkg_query + package
-        paths = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
+        cmd = shlex.split(cmd)
+        paths = subprocess.Popen(cmd, stdout=subprocess.PIPE)
 
         while True:
             _check_timeout(start_time, timeout)
