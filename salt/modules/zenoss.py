@@ -16,6 +16,8 @@ Module for working with the Zenoss API
           hostname: https://zenoss.example.com
           username: admin
           password: admin123
+          verify_ssl: True
+          ca_bundle: /etc/ssl/certs/ca-certificates.crt
 """
 
 
@@ -25,9 +27,10 @@ import logging
 import re
 
 import salt.utils.json
+import salt.utils.http
 
 try:
-    import requests
+    import requests  # pylint: disable=unused-import
 
     HAS_LIBS = True
 except ImportError:
@@ -79,11 +82,13 @@ def _session():
     """
 
     config = __salt__["config.option"]("zenoss")
-    session = requests.session()
-    session.auth = (config.get("username"), config.get("password"))
-    session.verify = False
-    session.headers.update({"Content-type": "application/json; charset=utf-8"})
-    return session
+    return salt.utils.http.session(
+        user=config.get("username"),
+        password=config.get("password"),
+        verify_ssl=config.get("verify_ssl", True),
+        ca_bundle=config.get("ca_bundle"),
+        headers={"Content-type": "application/json; charset=utf-8"},
+    )
 
 
 def _router_request(router, method, data=None):
