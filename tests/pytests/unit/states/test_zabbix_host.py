@@ -2,6 +2,7 @@
     :codeauthor: Piter Punk <piterpunk@slackware.com>
 """
 
+import ast
 from collections import OrderedDict
 
 import pytest
@@ -184,7 +185,7 @@ def test_create_a_new_host_with_multiple_groups(basic_host_configuration):
     """
     This test creates a host with multiple groups, mixing names and IDs.
     """
-    host, groups, interfaces, kwargs, ret = basic_host_configuration
+    host, _, interfaces, kwargs, ret = basic_host_configuration
     groups = ["Testing Group", 15, "Tested Group"]
 
     hostgroup_get_output = [
@@ -236,7 +237,7 @@ def test_create_a_new_host_with_multiple_interfaces(basic_host_configuration):
     parameters filled. Also, tests the different dns, ip and useip
     combinations.
     """
-    host, groups, interfaces, kwargs, ret = basic_host_configuration
+    host, groups, _, kwargs, ret = basic_host_configuration
     interfaces = [
         OrderedDict(
             [
@@ -296,11 +297,13 @@ def test_create_a_new_host_with_multiple_interfaces(basic_host_configuration):
         },
     ):
         assert zabbix_host.present(host, groups, interfaces, **kwargs) == ret
-        mock_host_create.assert_called_with(
-            "new_host",
-            [16],
-            [
-                {
+        # Blame Python 3.5 for this:
+        host_create_call = mock_host_create.call_args[0]
+        assert host_create_call[0] == "new_host"
+        assert host_create_call[1] == [16]
+        for interface in host_create_call[2]:
+            if interface["type"] == "1":
+                assert interface == {
                     "type": "1",
                     "main": "1",
                     "useip": "1",
@@ -308,8 +311,9 @@ def test_create_a_new_host_with_multiple_interfaces(basic_host_configuration):
                     "dns": "new_host",
                     "port": "10050",
                     "details": [],
-                },
-                {
+                }
+            elif interface["type"] == "2":
+                assert interface == {
                     "type": "2",
                     "main": "1",
                     "useip": "0",
@@ -321,8 +325,9 @@ def test_create_a_new_host_with_multiple_interfaces(basic_host_configuration):
                         "bulk": "1",
                         "community": "{$SNMP_COMMUNITY}",
                     },
-                },
-                {
+                }
+            elif interface["type"] == "3":
+                assert interface == {
                     "type": "3",
                     "main": "1",
                     "useip": "1",
@@ -330,8 +335,9 @@ def test_create_a_new_host_with_multiple_interfaces(basic_host_configuration):
                     "dns": "new_host",
                     "port": "623",
                     "details": [],
-                },
-                {
+                }
+            elif interface["type"] == "4":
+                assert interface == {
                     "type": "4",
                     "main": "1",
                     "useip": "1",
@@ -339,15 +345,9 @@ def test_create_a_new_host_with_multiple_interfaces(basic_host_configuration):
                     "dns": "new_host",
                     "port": "12345",
                     "details": [],
-                },
-            ],
-            _connection_password="XXXXXXXXXX",
-            _connection_url="http://XXXXXXXXX/zabbix/api_jsonrpc.php",
-            _connection_user="XXXXXXXXXX",
-            inventory={},
-            proxy_hostid="0",
-            visible_name=None,
-        )
+                }
+            else:
+                assert interface["type"] == "Should be 1, 2, 3 or 4"
 
 
 def test_create_a_new_host_with_additional_parameters(basic_host_configuration):
@@ -526,7 +526,7 @@ def test_create_a_new_host_with_missing_groups(basic_host_configuration):
     """
     Tests when any of the provided groups doesn't exists
     """
-    host, groups, interfaces, kwargs, ret = basic_host_configuration
+    host, _, interfaces, kwargs, _ = basic_host_configuration
     groups = ["Testing Group", "Missing Group"]
 
     ret = {
@@ -562,7 +562,7 @@ def test_create_a_new_host_with_missing_proxy(basic_host_configuration):
     """
     Tests when the given proxy_host doesn't exists
     """
-    host, groups, interfaces, kwargs, ret = basic_host_configuration
+    host, groups, interfaces, kwargs, _ = basic_host_configuration
     kwargs["proxy_host"] = 10356
 
     ret = {
@@ -603,7 +603,7 @@ def test_ensure_nothing_happens_when_host_is_in_desired_state(
     Test to ensure that nothing happens when the state applied
     already corresponds to the host actual configuration.
     """
-    host, groups, interfaces, kwargs, ret = basic_host_configuration
+    host, groups, interfaces, kwargs, _ = basic_host_configuration
     (
         host_get_output,
         hostgroup_get_output_up,
@@ -650,7 +650,7 @@ def test_change_a_host_group(basic_host_configuration, existing_host_responses):
     """
     Tests if the group of a host is changed when solicited
     """
-    host, groups, interfaces, kwargs, ret = basic_host_configuration
+    host, groups, interfaces, kwargs, _ = basic_host_configuration
     (
         host_get_output,
         hostgroup_get_output_up,
@@ -703,7 +703,7 @@ def test_to_add_new_groups_to_a_host(basic_host_configuration, existing_host_res
     """
     Tests if new groups are added to a host
     """
-    host, groups, interfaces, kwargs, ret = basic_host_configuration
+    host, _, interfaces, kwargs, _ = basic_host_configuration
     (
         host_get_output,
         hostgroup_get_output_up,
@@ -763,7 +763,7 @@ def test_update_an_existent_host_proxy(
     This also tests if a proxy can be added, as a host without a proxy
     have the proxy_hostid property equals zero.
     """
-    host, groups, interfaces, kwargs, ret = basic_host_configuration
+    host, groups, interfaces, kwargs, _ = basic_host_configuration
     (
         host_get_output,
         hostgroup_get_output,
@@ -819,7 +819,7 @@ def test_update_a_host_with_additional_parameters(
     This test checks if additional parameters can be added to an
     existing host
     """
-    host, groups, interfaces, kwargs, ret = basic_host_configuration
+    host, groups, interfaces, kwargs, _ = basic_host_configuration
     (
         host_get_output,
         hostgroup_get_output,
@@ -858,7 +858,15 @@ def test_update_a_host_with_additional_parameters(
             "zabbix.host_update": mock_host_update,
         },
     ):
-        assert zabbix_host.present(host, groups, interfaces, **kwargs) == ret
+        # Blame Python 3.5 support for all this black magic
+        host_present_ret = zabbix_host.present(host, groups, interfaces, **kwargs)
+        host_present_changes = ast.literal_eval(host_present_ret["changes"]["host"])
+        assert host_present_changes == ast.literal_eval(ret["changes"]["host"])
+        assert host_present_ret["comment"] == "Host new_host updated."
+        assert host_present_ret["name"] == "new_host"
+        assert host_present_ret["result"] is True
+        # When Python 3.5 is gone, the following line does the job:
+        # assert zabbix_host.present(host, groups, interfaces, **kwargs) == ret
         mock_host_update.assert_called_with(
             "31337",
             _connection_password="XXXXXXXXXX",
@@ -873,7 +881,7 @@ def test_update_a_hostinterface(basic_host_configuration, existing_host_response
     """
     Tests the update of a current hostinterface of a host.
     """
-    host, groups, interfaces, kwargs, ret = basic_host_configuration
+    host, groups, _, kwargs, _ = basic_host_configuration
     (
         host_get_output,
         hostgroup_get_output,
@@ -924,7 +932,17 @@ def test_update_a_hostinterface(basic_host_configuration, existing_host_response
             "zabbix.hostinterface_update": mock_hostinterface_update,
         },
     ):
-        assert zabbix_host.present(host, groups, interfaces, **kwargs) == ret
+        # Blame Python 3.5 support for all this black magic
+        host_present_ret = zabbix_host.present(host, groups, interfaces, **kwargs)
+        host_present_changes = ast.literal_eval(
+            host_present_ret["changes"]["interfaces"]
+        )
+        assert host_present_changes == ast.literal_eval(ret["changes"]["interfaces"])
+        assert host_present_ret["comment"] == "Host new_host updated."
+        assert host_present_ret["name"] == "new_host"
+        assert host_present_ret["result"] is True
+        # When Python 3.5 is gone, the following line does the job:
+        # assert zabbix_host.present(host, groups, interfaces, **kwargs) == ret
         mock_hostinterface_update.assert_called_with(
             interfaceid="29",
             ip="",
@@ -945,7 +963,7 @@ def test_add_a_new_hostinterface(basic_host_configuration, existing_host_respons
     Tests the update of a current and creation of a new hostinterface
     of a host.
     """
-    host, groups, interfaces, kwargs, ret = basic_host_configuration
+    host, groups, _, kwargs, _ = basic_host_configuration
     (
         host_get_output,
         hostgroup_get_output,
@@ -965,12 +983,12 @@ def test_add_a_new_hostinterface(basic_host_configuration, existing_host_respons
                     ],
                 ),
                 (
-                    "snmp_interface",
+                    "ipmi_interface",
                     [
                         OrderedDict([("ip", "127.0.0.1")]),
                         OrderedDict([("dns", "new_host")]),
                         OrderedDict([("useip", False)]),
-                        OrderedDict([("type", "snmp")]),
+                        OrderedDict([("type", "ipmi")]),
                     ],
                 ),
             ]
@@ -982,7 +1000,7 @@ def test_add_a_new_hostinterface(basic_host_configuration, existing_host_respons
 
     ret = {
         "changes": {
-            "interfaces": "[{'type': '1', 'main': '1', 'useip': '0', 'ip': '', 'dns': 'new_host', 'port': '10050', 'details': []}, {'type': '2', 'main': '1', 'useip': '0', 'ip': '127.0.0.1', 'dns': 'new_host', 'port': '161', 'details': {'version': '2', 'bulk': '1', 'community': '{$SNMP_COMMUNITY}'}}]"
+            "interfaces": "[{'type': '1', 'main': '1', 'useip': '0', 'ip': '', 'dns': 'new_host', 'port': '10050', 'details': []}, {'type': '3', 'main': '1', 'useip': '0', 'ip': '127.0.0.1', 'dns': 'new_host', 'port': '623', 'details': []}]"
         },
         "comment": "Host new_host updated.",
         "name": "new_host",
@@ -1008,7 +1026,20 @@ def test_add_a_new_hostinterface(basic_host_configuration, existing_host_respons
             "zabbix.hostinterface_create": mock_hostinterface_create,
         },
     ):
-        assert zabbix_host.present(host, groups, interfaces, **kwargs) == ret
+        # Blame Python 3.5 support for all this black magic
+        host_present_ret = zabbix_host.present(host, groups, interfaces, **kwargs)
+        for interface in ast.literal_eval(host_present_ret["changes"]["interfaces"]):
+            if interface["type"] == "1":
+                assert interface == ast.literal_eval(ret["changes"]["interfaces"])[0]
+            elif interface["type"] == "3":
+                assert interface == ast.literal_eval(ret["changes"]["interfaces"])[1]
+            else:
+                assert interface["type"] == "Should be 1 or 3"
+        assert host_present_ret["comment"] == "Host new_host updated."
+        assert host_present_ret["name"] == "new_host"
+        assert host_present_ret["result"] is True
+        # When Python 3.5 is gone, the following line does the job:
+        # assert zabbix_host.present(host, groups, interfaces, **kwargs) == ret
         mock_hostinterface_update.assert_called_with(
             interfaceid="29",
             ip="",
@@ -1027,10 +1058,10 @@ def test_add_a_new_hostinterface(basic_host_configuration, existing_host_respons
             "127.0.0.1",
             dns="new_host",
             useip="0",
-            if_type="2",
+            if_type="3",
             main="1",
-            port="161",
-            details={"version": "2", "bulk": "1", "community": "{$SNMP_COMMUNITY}"},
+            port="623",
+            details=[],
             _connection_password="XXXXXXXXXX",
             _connection_url="http://XXXXXXXXX/zabbix/api_jsonrpc.php",
             _connection_user="XXXXXXXXXX",
