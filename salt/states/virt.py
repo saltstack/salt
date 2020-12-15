@@ -158,7 +158,8 @@ def _virt_call(
     :param state: the expected final state of the VM. If None the VM state won't be checked.
     :return: the salt state return
     """
-    ret = {"name": domain, "changes": {}, "result": True, "comment": ""}
+    result = True if not __opts__["test"] else None
+    ret = {"name": domain, "changes": {}, "result": result, "comment": ""}
     targeted_domains = fnmatch.filter(__salt__["virt.list_domains"](), domain)
     changed_domains = list()
     ignored_domains = list()
@@ -171,15 +172,17 @@ def _virt_call(
                 domain_state = __salt__["virt.vm_state"](targeted_domain)
                 action_needed = domain_state.get(targeted_domain) != state
             if action_needed:
-                response = __salt__["virt.{}".format(function)](
-                    targeted_domain,
-                    connection=connection,
-                    username=username,
-                    password=password,
-                    **kwargs
-                )
-                if isinstance(response, dict):
-                    response = response["name"]
+                response = True
+                if not __opts__["test"]:
+                    response = __salt__["virt.{}".format(function)](
+                        targeted_domain,
+                        connection=connection,
+                        username=username,
+                        password=password,
+                        **kwargs
+                    )
+                    if isinstance(response, dict):
+                        response = response["name"]
                 changed_domains.append({"domain": targeted_domain, function: response})
             else:
                 noaction_domains.append(targeted_domain)
