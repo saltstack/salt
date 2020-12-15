@@ -71,13 +71,15 @@ def test_correct_args_should_be_passed_to_CreateContainerView_from_by_moid(
 ):
     fake_inventory = patched_inventory[0]
     expected_obj_type = "some obj type"
+    expected_si = "this is not a real si"
     fake_inventory.return_value.rootFolder = "fnordy folder"
     expected_mock_call = call(
         fake_inventory.return_value.rootFolder, [expected_obj_type], True
     )
 
-    vmware.get_mor_by_moid(si="fake si", obj_type=expected_obj_type, obj_moid="fnord")
+    vmware.get_mor_by_moid(si=expected_si, obj_type=expected_obj_type, obj_moid="fnord")
 
+    fake_inventory.assert_has_calls([call(expected_si)])
     fake_inventory.return_value.viewManager.CreateContainerView.assert_has_calls(
         [expected_mock_call]
     )
@@ -123,13 +125,15 @@ def test_correct_args_should_be_passed_to_CreateContainerView_from_by_name(
 ):
     fake_inventory = patched_inventory[0]
     expected_obj_type = "some obj type"
+    expected_si = "this is some other fake si"
     fake_inventory.return_value.rootFolder = "fnordy folder"
     expected_mock_call = call(
         fake_inventory.return_value.rootFolder, [expected_obj_type], True
     )
 
-    vmware.get_mor_by_name(si="fake si", obj_type=expected_obj_type, obj_name="fnord")
+    vmware.get_mor_by_name(si=expected_si, obj_type=expected_obj_type, obj_name="fnord")
 
+    fake_inventory.assert_has_calls([call(expected_si)])
     fake_inventory.return_value.viewManager.CreateContainerView.assert_has_calls(
         [expected_mock_call]
     )
