@@ -68,7 +68,7 @@ class BSDShadowTest(TestCase, LoaderModuleMockMixin):
         self.assertEqual(69, info["expire"])
         self.assertTrue(
             info["passwd"] == "*"  # if the test is not running as root
-            or re.match(r"^\$[0-9\$", info["passwd"])  # modular format
+            or re.match(r"^\$[0-9]\$", info["passwd"])  # modular format
             or re.match(r"^_", info["passwd"])  # DES Extended format
             or info["passwd"] == ""  # No password
             or re.match(r"^\*LOCKED\*", info["passwd"])  # Locked account
