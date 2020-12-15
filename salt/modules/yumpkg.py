@@ -73,15 +73,7 @@ def __virtual__():
     except Exception:  # pylint: disable=broad-except
         return (False, "Module yumpkg: no yum based system detected")
 
-    enabled = (
-        "amazon",
-        "xcp",
-        "xenserver",
-        "virtuozzolinux",
-        "virtuozzo",
-        "vmware photon os",
-    )
-
+    enabled = ("amazon", "xcp", "xenserver", "virtuozzolinux", "virtuozzo")
     if os_family == "redhat" or os_grain in enabled:
         if _yum() is None:
             return (False, "DNF nor YUM found")
