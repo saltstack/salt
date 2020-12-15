@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage information about files on the minion, set/read user, group
 data, modify the ACL of files/directories
@@ -8,7 +7,6 @@ data, modify the ACL of files/directories
             - win32con
             - salt.utils.win_dacl
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 # pylint: disable=unused-import
 import contextlib  # do not remove, used in imported file.py functions
@@ -23,8 +21,6 @@ import itertools  # same as above, do not remove, it's used in __clean_tmp
 import logging
 import mmap  # do not remove, used in imported file.py functions
 import operator  # do not remove
-
-# Import python libs
 import os
 import os.path
 import re  # do not remove, used in imported file.py functions
@@ -33,12 +29,11 @@ import stat
 import string  # do not remove, used in imported file.py functions
 import sys  # do not remove, used in imported file.py functions
 import tempfile  # do not remove. Used in salt.modules.file.__clean_tmp
+import urllib.parse
 from collections.abc import Iterable, Mapping
 from functools import reduce  # do not remove
 
 import salt.utils.atomicfile  # do not remove, used in imported file.py functions
-
-# Import salt libs
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.user
@@ -46,7 +41,6 @@ from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 # do not remove, used in imported file.py functions
 from salt.ext import six
-from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
 from salt.modules.file import check_hash  # pylint: disable=W0611
 from salt.modules.file import (
     HASHES,
@@ -290,7 +284,7 @@ def _resolve_symlink(path, max_depth=64):
         )
 
     # make sure we don't get stuck in a symlink loop!
-    paths_seen = set((path,))
+    paths_seen = {path}
     cur_depth = 0
     while is_link(path):
         path = readlink(path)
@@ -328,7 +322,7 @@ def gid_to_group(gid):
 
         salt '*' file.gid_to_group S-1-5-21-626487655-2533044672-482107328-1010
     """
-    func_name = "{0}.gid_to_group".format(__virtualname__)
+    func_name = "{}.gid_to_group".format(__virtualname__)
     if __opts__.get("fun", "") == func_name:
         log.info(
             "The function %s should not be used on Windows systems; "
@@ -363,7 +357,7 @@ def group_to_gid(group):
 
         salt '*' file.group_to_gid administrators
     """
-    func_name = "{0}.group_to_gid".format(__virtualname__)
+    func_name = "{}.group_to_gid".format(__virtualname__)
     if __opts__.get("fun", "") == func_name:
         log.info(
             "The function %s should not be used on Windows systems; "
@@ -405,7 +399,7 @@ def get_pgid(path, follow_symlinks=True):
         salt '*' file.get_pgid c:\\temp\\test.txt
     """
     if not os.path.exists(path):
-        raise CommandExecutionError("Path not found: {0}".format(path))
+        raise CommandExecutionError("Path not found: {}".format(path))
 
     # Under Windows, if the path is a symlink, the user that owns the symlink is
     # returned, not the user that owns the file/directory the symlink is
@@ -489,7 +483,7 @@ def get_gid(path, follow_symlinks=True):
 
         salt '*' file.get_gid c:\\temp\\test.txt
     """
-    func_name = "{0}.get_gid".format(__virtualname__)
+    func_name = "{}.get_gid".format(__virtualname__)
     if __opts__.get("fun", "") == func_name:
         log.info(
             "The function %s should not be used on Windows systems; "
@@ -536,7 +530,7 @@ def get_group(path, follow_symlinks=True):
 
         salt '*' file.get_group c:\\temp\\test.txt
     """
-    func_name = "{0}.get_group".format(__virtualname__)
+    func_name = "{}.get_group".format(__virtualname__)
     if __opts__.get("fun", "") == func_name:
         log.info(
             "The function %s should not be used on Windows systems; "
@@ -618,7 +612,7 @@ def get_uid(path, follow_symlinks=True):
         salt '*' file.get_uid c:\\temp\\test.txt follow_symlinks=False
     """
     if not os.path.exists(path):
-        raise CommandExecutionError("Path not found: {0}".format(path))
+        raise CommandExecutionError("Path not found: {}".format(path))
 
     # Under Windows, if the path is a symlink, the user that owns the symlink is
     # returned, not the user that owns the file/directory the symlink is
@@ -658,7 +652,7 @@ def get_user(path, follow_symlinks=True):
         salt '*' file.get_user c:\\temp\\test.txt follow_symlinks=False
     """
     if not os.path.exists(path):
-        raise CommandExecutionError("Path not found: {0}".format(path))
+        raise CommandExecutionError("Path not found: {}".format(path))
 
     # Under Windows, if the path is a symlink, the user that owns the symlink is
     # returned, not the user that owns the file/directory the symlink is
@@ -691,9 +685,9 @@ def get_mode(path):
         salt '*' file.get_mode /etc/passwd
     """
     if not os.path.exists(path):
-        raise CommandExecutionError("Path not found: {0}".format(path))
+        raise CommandExecutionError("Path not found: {}".format(path))
 
-    func_name = "{0}.get_mode".format(__virtualname__)
+    func_name = "{}.get_mode".format(__virtualname__)
     if __opts__.get("fun", "") == func_name:
         log.info(
             "The function %s should not be used on Windows systems; "
@@ -742,7 +736,7 @@ def lchown(path, user, group=None, pgroup=None):
         salt '*' file.lchown c:\\temp\\test.txt myusername "pgroup='None'"
     """
     if group:
-        func_name = "{0}.lchown".format(__virtualname__)
+        func_name = "{}.lchown".format(__virtualname__)
         if __opts__.get("fun", "") == func_name:
             log.info(
                 "The group parameter has no effect when using %s on "
@@ -791,7 +785,7 @@ def chown(path, user, group=None, pgroup=None, follow_symlinks=True):
     """
     # the group parameter is not used; only provided for API compatibility
     if group is not None:
-        func_name = "{0}.chown".format(__virtualname__)
+        func_name = "{}.chown".format(__virtualname__)
         if __opts__.get("fun", "") == func_name:
             log.info(
                 "The group parameter has no effect when using %s on "
@@ -804,7 +798,7 @@ def chown(path, user, group=None, pgroup=None, follow_symlinks=True):
         path = _resolve_symlink(path)
 
     if not os.path.exists(path):
-        raise CommandExecutionError("Path not found: {0}".format(path))
+        raise CommandExecutionError("Path not found: {}".format(path))
 
     salt.utils.win_dacl.set_owner(path, user)
     if pgroup:
@@ -875,7 +869,7 @@ def chgrp(path, group):
 
         salt '*' file.chpgrp c:\\temp\\test.txt administrators
     """
-    func_name = "{0}.chgrp".format(__virtualname__)
+    func_name = "{}.chgrp".format(__virtualname__)
     if __opts__.get("fun", "") == func_name:
         log.info(
             "The function %s should not be used on Windows systems; see "
@@ -921,7 +915,7 @@ def stats(path, hash_type="sha256", follow_symlinks=True):
     # This is to mirror the behavior of file.py. `check_file_meta` expects an
     # empty dictionary when the file does not exist
     if not os.path.exists(path):
-        raise CommandExecutionError("Path not found: {0}".format(path))
+        raise CommandExecutionError("Path not found: {}".format(path))
 
     if follow_symlinks and sys.getwindowsversion().major >= 6:
         path = _resolve_symlink(path)
@@ -982,7 +976,7 @@ def get_attributes(path):
         salt '*' file.get_attributes c:\\temp\\a.txt
     """
     if not os.path.exists(path):
-        raise CommandExecutionError("Path not found: {0}".format(path))
+        raise CommandExecutionError("Path not found: {}".format(path))
 
     # set up dictionary for attribute values
     attributes = {}
@@ -1064,7 +1058,7 @@ def set_attributes(
         salt '*' file.set_attributes c:\\temp\\a.txt readonly=True hidden=True
     """
     if not os.path.exists(path):
-        raise CommandExecutionError("Path not found: {0}".format(path))
+        raise CommandExecutionError("Path not found: {}".format(path))
 
     if normal:
         if archive or hidden or notIndexed or readonly or system or temporary:
@@ -1133,7 +1127,7 @@ def set_mode(path, mode):
 
         salt '*' file.set_mode /etc/passwd 0644
     """
-    func_name = "{0}.set_mode".format(__virtualname__)
+    func_name = "{}.set_mode".format(__virtualname__)
     if __opts__.get("fun", "") == func_name:
         log.info(
             "The function %s should not be used on Windows systems; "
@@ -1169,11 +1163,11 @@ def remove(path, force=False):
     path = os.path.expanduser(path)
 
     if not os.path.isabs(path):
-        raise SaltInvocationError("File path must be absolute: {0}".format(path))
+        raise SaltInvocationError("File path must be absolute: {}".format(path))
 
     # Does the file/folder exists
     if not os.path.exists(path) and not is_link(path):
-        raise CommandExecutionError("Path not found: {0}".format(path))
+        raise CommandExecutionError("Path not found: {}".format(path))
 
     # Remove ReadOnly Attribute
     if force:
@@ -1190,17 +1184,17 @@ def remove(path, force=False):
             os.rmdir(path)
         else:
             for name in os.listdir(path):
-                item = "{0}\\{1}".format(path, name)
+                item = "{}\\{}".format(path, name)
                 # If its a normal directory, recurse to remove it's contents
                 remove(item, force)
 
             # rmdir will work now because the directory is empty
             os.rmdir(path)
-    except (OSError, IOError) as exc:
+    except OSError as exc:
         if force:
             # Reset attributes to the original if delete fails.
             win32api.SetFileAttributes(path, file_attributes)
-        raise CommandExecutionError("Could not remove '{0}': {1}".format(path, exc))
+        raise CommandExecutionError("Could not remove '{}': {}".format(path, exc))
 
     return True
 
@@ -1258,9 +1252,7 @@ def symlink(src, link):
         return True
     except win32file.error as exc:
         raise CommandExecutionError(
-            "Could not create '{0}' - [{1}] {2}".format(
-                link, exc.winerror, exc.strerror
-            )
+            "Could not create '{}' - [{}] {}".format(link, exc.winerror, exc.strerror)
         )
 
 
@@ -1328,7 +1320,7 @@ def readlink(path):
         return salt.utils.path.readlink(path)
     except OSError as exc:
         if exc.errno == errno.EINVAL:
-            raise CommandExecutionError("{0} is not a symbolic link".format(path))
+            raise CommandExecutionError("{} is not a symbolic link".format(path))
         raise CommandExecutionError(exc.__str__())
     except Exception as exc:  # pylint: disable=broad-except
         raise CommandExecutionError(exc)
@@ -1407,7 +1399,7 @@ def mkdir(
     # Make sure the drive is valid
     drive = os.path.splitdrive(path)[0]
     if not os.path.isdir(drive):
-        raise CommandExecutionError("Drive {0} is not mapped".format(drive))
+        raise CommandExecutionError("Drive {} is not mapped".format(drive))
 
     path = os.path.expanduser(path)
     path = os.path.expandvars(path)
@@ -1431,7 +1423,7 @@ def mkdir(
                 reset=reset,
             )
 
-        except WindowsError as exc:
+        except OSError as exc:
             raise CommandExecutionError(exc)
 
     return True
@@ -1523,12 +1515,12 @@ def makedirs_(
 
     if os.path.isdir(dirname):
         # There's nothing for us to do
-        msg = "Directory '{0}' already exists".format(dirname)
+        msg = "Directory '{}' already exists".format(dirname)
         log.debug(msg)
         return msg
 
     if os.path.exists(dirname):
-        msg = "The path '{0}' already exists and is not a directory".format(dirname)
+        msg = "The path '{}' already exists and is not a directory".format(dirname)
         log.debug(msg)
         return msg
 
@@ -1543,7 +1535,7 @@ def makedirs_(
 
         if current_dirname == dirname:
             raise SaltInvocationError(
-                "Recursive creation for path '{0}' would result in an "
+                "Recursive creation for path '{}' would result in an "
                 "infinite loop. Please use an absolute path.".format(dirname)
             )
 
@@ -1737,7 +1729,7 @@ def check_perms(
         salt '*' file.check_perms C:\\Temp\\ {} Administrators "{'jsnuffy': {'perms': ['read_attributes', 'read_ea'], 'applies_to': 'files_only'}}"
     """
     if not os.path.exists(path):
-        raise CommandExecutionError("Path not found: {0}".format(path))
+        raise CommandExecutionError("Path not found: {}".format(path))
 
     path = os.path.expanduser(path)
 
