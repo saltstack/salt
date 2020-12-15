@@ -374,7 +374,7 @@ def managed(name, ppa=None, copr=None, **kwargs):
             else salt.utils.data.is_true(disabled)
         )
 
-    elif __grains__["os_family"] in ("RedHat", "Suse", "VMware Photon OS",):
+    elif __grains__["os_family"] in ("RedHat", "Suse"):
         if __grains__["os_family"] in "RedHat":
             if copr is not None:
                 repo = ":".join(("copr", copr))
@@ -433,7 +433,7 @@ def managed(name, ppa=None, copr=None, **kwargs):
                     # not explicitly set, so we don't need to update the repo
                     # if it's desired to be enabled and the 'enabled' key is
                     # missing from the repo definition
-                    if __grains__["os_family"] in ("RedHat", "VMware Photon OS",):
+                    if __grains__["os_family"] == "RedHat":
                         if not salt.utils.data.is_true(sanitizedkwargs[kwarg]):
                             break
                     else:
@@ -460,10 +460,7 @@ def managed(name, ppa=None, copr=None, **kwargs):
                     )
                     if pre_comments != post_comments:
                         break
-            elif kwarg == "comments" and __grains__["os_family"] in (
-                "RedHat",
-                "VMware Photon OS",
-            ):
+            elif kwarg == "comments" and __grains__["os_family"] == "RedHat":
                 precomments = salt.utils.pkg.rpm.combine_comments(pre[kwarg])
                 kwargcomments = salt.utils.pkg.rpm.combine_comments(
                     sanitizedkwargs[kwarg]
@@ -474,11 +471,7 @@ def managed(name, ppa=None, copr=None, **kwargs):
                 if set(sanitizedkwargs[kwarg]) != set(pre[kwarg]):
                     break
             else:
-                if __grains__["os_family"] in (
-                    "RedHat",
-                    "Suse",
-                    "VMware Photon OS",
-                ) and any(
+                if __grains__["os_family"] in ("RedHat", "Suse") and any(
                     isinstance(x, bool) for x in (sanitizedkwargs[kwarg], pre[kwarg])
                 ):
                     # This check disambiguates 1/0 from True/False
