@@ -78,7 +78,9 @@ def present(
         If encrypted is ``scram-sha-256``, it will use the algorithm described
         in RFC 7677.
 
-        # TODO: versionadded for this?
+        .. versionchanged:: 3003
+
+            Prior versions only supported ``True`` and ``False``
 
     login
         Should the group have login perm

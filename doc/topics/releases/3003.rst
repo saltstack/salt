@@ -6,3 +6,14 @@ Salt 3003 Release Notes - Codename Aluminium
 
 Salt 3003 is an *unreleased* upcoming feature release.
 
+New Features
+============
+
+SCRAM-SHA-256 support for PostgreSQL passwords
+----------------------------------------------
+
+Support for SCRAM-SHA-256 password hashes has been added to the
+:py:func:`postgres_user.present <salt.states.postgres_user.present>`
+and :py:func:`postgres_group.present <salt.states.postgres_group.present>`
+states. This allows migration away from the insecure and deprecated
+previous storage methods.
