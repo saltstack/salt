@@ -40,6 +40,7 @@ the ID.
       host: <ip or dns name of cimc host>
       username: <cimc username>
       password: <cimc password>
+      verify_ssl: True
 
 proxytype
 ^^^^^^^^^
@@ -136,6 +137,10 @@ def init(opts):
     DETAILS["host"] = opts["proxy"]["host"]
     DETAILS["username"] = opts["proxy"].get("username")
     DETAILS["password"] = opts["proxy"].get("password")
+    verify_ssl = opts["proxy"].get("verify_ssl")
+    if verify_ssl is None:
+        verify_ssl = True
+    DETAILS["verify_ssl"] = verify_ssl
 
     # Ensure connectivity to the device
     log.debug("Attempting to connect to cimc proxy host.")
@@ -167,7 +172,7 @@ def set_config_modify(dn=None, inconfig=None, hierarchical=False):
         method="POST",
         decode_type="plain",
         decode=True,
-        verify_ssl=False,
+        verify_ssl=DETAILS["verify_ssl"],
         raise_error=True,
         status=True,
         headers=DETAILS["headers"],
@@ -204,7 +209,7 @@ def get_config_resolver_class(cid=None, hierarchical=False):
         method="POST",
         decode_type="plain",
         decode=True,
-        verify_ssl=False,
+        verify_ssl=DETAILS["verify_ssl"],
         raise_error=True,
         status=True,
         headers=DETAILS["headers"],
@@ -235,7 +240,7 @@ def logon():
         method="POST",
         decode_type="plain",
         decode=True,
-        verify_ssl=False,
+        verify_ssl=DETAILS["verify_ssl"],
         raise_error=False,
         status=True,
         headers=DETAILS["headers"],
@@ -265,7 +270,7 @@ def logout(cookie=None):
         method="POST",
         decode_type="plain",
         decode=True,
-        verify_ssl=False,
+        verify_ssl=DETAILS["verify_ssl"],
         raise_error=True,
         headers=DETAILS["headers"],
     )
