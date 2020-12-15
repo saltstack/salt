@@ -141,6 +141,14 @@ def query(params=None):
         "secret_access_key", get_configured_provider(), __opts__, search_global=False
     )
 
+    verify_ssl = config.get_cloud_config_value(
+        "verify_ssl",
+        get_configured_provider(),
+        __opts__,
+        default=True,
+        search_global=False,
+    )
+
     # public interface parameters
     real_parameters = {
         "access_key_id": access_key_id,
@@ -171,7 +179,7 @@ def query(params=None):
     # print('parameters:')
     # pprint.pprint(real_parameters)
 
-    request = requests.get(path, params=real_parameters, verify=False)
+    request = requests.get(path, params=real_parameters, verify=verify_ssl)
 
     # print('url:')
     # print(request.url)
