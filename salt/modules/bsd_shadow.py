@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage the password database on BSD systems
 
@@ -9,15 +8,10 @@ Manage the password database on BSD systems
     <module-provider-override>`.
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.utils.files
 import salt.utils.stringutils
-from salt.exceptions import SaltInvocationError
-
-# Import salt libs
-from salt.ext import six
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 try:
     import pwd
@@ -26,6 +20,7 @@ except ImportError:
 
 try:
     import salt.utils.pycrypto
+
     HAS_CRYPT = True
 except ImportError:
     HAS_CRYPT = False
@@ -113,10 +108,10 @@ def info(name):
     except KeyError:
         return {"name": "", "passwd": ""}
 
-    if not isinstance(name, six.string_types):
-        name = six.text_type(name)
+    if not isinstance(name, str):
+        name = str(name)
     if ":" in name:
-        raise SaltInvocationError("Invalid username '{0}'".format(name))
+        raise SaltInvocationError("Invalid username '{}'".format(name))
 
     if __salt__["cmd.has_exec"]("pw"):
         change, expire = __salt__["cmd.run_stdout"](
@@ -127,12 +122,12 @@ def info(name):
             with salt.utils.files.fopen("/etc/master.passwd", "r") as fp_:
                 for line in fp_:
                     line = salt.utils.stringutils.to_unicode(line)
-                    if line.startswith("{0}:".format(name)):
+                    if line.startswith("{}:".format(name)):
                         key = line.split(":")
                         change, expire = key[5:7]
-                        ret["passwd"] = six.text_type(key[1])
+                        ret["passwd"] = str(key[1])
                         break
-        except IOError:
+        except OSError:
             change = expire = None
     else:
         change = expire = None
@@ -216,7 +211,7 @@ def del_password(name):
 
         salt '*' shadow.del_password username
     """
-    cmd = "pw user mod {0} -w none".format(name)
+    cmd = "pw user mod {} -w none".format(name)
     __salt__["cmd.run"](cmd, python_shell=False, output_loglevel="quiet")
     uinfo = info(name)
     return not uinfo["passwd"]
