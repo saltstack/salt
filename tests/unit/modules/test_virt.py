@@ -2281,6 +2281,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
               <memory unit='KiB'>1048576</memory>
               <currentMemory unit='KiB'>1048576</currentMemory>
               <vcpu placement='auto'>1</vcpu>
+              <on_reboot>restart</on_reboot>
               <os>
                 <type arch='x86_64' machine='pc-i440fx-2.6'>hvm</type>
                 <boot dev="hd"/>
@@ -3389,6 +3390,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
               <memory unit='KiB'>1048576</memory>
               <currentMemory unit='KiB'>1048576</currentMemory>
               <vcpu placement='auto'>1</vcpu>
+              <on_reboot>restart</on_reboot>
               <os>
                 <type arch='x86_64' machine='pc-i440fx-2.6'>hvm</type>
               </os>
@@ -3803,6 +3805,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
               <os>
                 <type arch='x86_64' machine='pc-i440fx-2.6'>hvm</type>
               </os>
+              <on_reboot>restart</on_reboot>
             </domain>
         """
         domain_mock = self.set_mock_vm("vm_with_numatune_param", xml_numatune)
@@ -4824,6 +4827,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
               <os>
                 <type arch='x86_64' machine='pc-i440fx-2.6'>hvm</type>
               </os>
+              <on_reboot>restart</on_reboot>
             </domain>
         """
         domain_mock = self.set_mock_vm("vm_with_memback_param", xml_with_memback_params)
