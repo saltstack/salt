@@ -9,6 +9,7 @@ import threading
 import time
 from concurrent.futures.thread import ThreadPoolExecutor
 
+import pytest
 import salt.config
 import salt.exceptions
 import salt.ext.tornado.gen
@@ -510,6 +511,9 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
 
     @skipIf(salt.utils.platform.is_windows(), "Skip on Windows OS")
     @slowTest
+    @pytest.mark.skip_on_darwin(
+        reason="This test makes the test suite stop working on macOS"
+    )
     def test_publish_to_pubserv_ipc(self):
         """
         Test sending 10K messags to ZeroMQPubServerChannel using IPC transport
