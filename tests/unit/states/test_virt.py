@@ -693,7 +693,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
             ):
                 ret.update(
                     {
-                        "changes": {"myvm": {"started": True}},
+                        "changes": {"myvm": {"definition": False, "started": True}},
                         "comment": "Domain myvm started",
                     }
                 )
@@ -872,7 +872,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
             ):
                 ret.update(
                     {
-                        "changes": {"myvm": {}},
+                        "changes": {"myvm": {"definition": False}},
                         "result": False,
                         "comment": "libvirt error msg",
                     }
@@ -897,7 +897,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                         "comment": "Domain myvm updated",
                     }
                 )
-                self.assertDictEqual(virt.running("myvm", cpu=2, update=True), ret)
+                self.assertDictEqual(virt.running("myvm", cpu=2), ret)
 
             # Working update case when running with boot params
             boot = {
@@ -923,7 +923,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                         "comment": "Domain myvm updated",
                     }
                 )
-                self.assertDictEqual(virt.running("myvm", boot=boot, update=True), ret)
+                self.assertDictEqual(virt.running("myvm", boot=boot), ret)
 
             # Working update case when stopped
             with patch.dict(
@@ -942,7 +942,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                         "comment": "Domain myvm updated and started",
                     }
                 )
-                self.assertDictEqual(virt.running("myvm", cpu=2, update=True), ret)
+                self.assertDictEqual(virt.running("myvm", cpu=2), ret)
 
             # Failed live update case
             update_mock = MagicMock(
@@ -973,7 +973,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                         "comment": "Domain myvm updated with live update(s) failures",
                     }
                 )
-                self.assertDictEqual(virt.running("myvm", cpu=2, update=True), ret)
+                self.assertDictEqual(virt.running("myvm", cpu=2), ret)
                 update_mock.assert_called_with(
                     "myvm",
                     cpu=2,
@@ -1010,7 +1010,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                 },
             ):
                 ret.update({"changes": {}, "result": False, "comment": "error message"})
-                self.assertDictEqual(virt.running("myvm", cpu=2, update=True), ret)
+                self.assertDictEqual(virt.running("myvm", cpu=2), ret)
 
         # Test dry-run mode
         with patch.dict(virt.__opts__, {"test": True}):
@@ -1099,7 +1099,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                         "comment": "Domain myvm updated and started",
                     }
                 )
-                self.assertDictEqual(virt.running("myvm", cpu=2, update=True), ret)
+                self.assertDictEqual(virt.running("myvm", cpu=2), ret)
                 update_mock.assert_called_with(
                     "myvm",
                     cpu=2,
@@ -1142,7 +1142,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                         "comment": "Domain myvm exists and is running",
                     }
                 )
-                self.assertDictEqual(virt.running("myvm", update=True), ret)
+                self.assertDictEqual(virt.running("myvm"), ret)
                 update_mock.assert_called_with(
                     "myvm",
                     cpu=None,
