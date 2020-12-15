@@ -2,7 +2,7 @@
 
 runTestSuite(
     ami_image_id: 'ami-033ed8f0f55cad1e0',
-    concurrent_builds: 1,
+    concurrent_builds: 4,
     distro_name: 'debian',
     distro_version: '9',
     env: env,

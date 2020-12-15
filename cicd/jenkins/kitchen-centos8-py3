@@ -2,7 +2,7 @@
 
 runTestSuite(
     ami_image_id: 'ami-0d482e88fbf35072c',
-    concurrent_builds: 1,
+    concurrent_builds: 4,
     distro_name: 'centos',
     distro_version: '8',
     env: env,
