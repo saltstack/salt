@@ -13,13 +13,11 @@ import yaml as _yaml  # future lint: disable=blacklisted-import
 from salt.serializers import SerializationError
 from salt.serializers.yaml import EncryptedString
 from salt.utils.odict import OrderedDict
-from tests.support.helpers import flaky
 from tests.support.unit import TestCase, skipIf
 
 SKIP_MESSAGE = "%s is unavailable, have prerequisites been met?"
 
 
-@flaky(condition=True)
 class TestSerializers(TestCase):
     @skipIf(not json.available, SKIP_MESSAGE % "json")
     def test_serialize_json(self):
@@ -103,7 +101,6 @@ class TestSerializers(TestCase):
 
     @skipIf(not yaml.available, SKIP_MESSAGE % "yaml")
     @skipIf(not yamlex.available, SKIP_MESSAGE % "sls")
-    @skipIf(True, "Flaky on Python 3.")
     def test_compare_sls_vs_yaml_with_jinja(self):
         tpl = "{{ data }}"
         env = jinja2.Environment()

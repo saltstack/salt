@@ -14,7 +14,6 @@ import datetime
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
     destructiveTest,
-    flaky,
     runs_on,
     skip_if_binaries_missing,
     skip_if_not_root,
@@ -24,7 +23,6 @@ from tests.support.unit import skipIf
 
 
 @skip_if_not_root
-@flaky
 @runs_on(kernel="Darwin")
 @skip_if_binaries_missing("systemsetup")
 class MacTimezoneModuleTest(ModuleCase):

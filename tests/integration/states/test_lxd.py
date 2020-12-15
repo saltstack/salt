@@ -4,7 +4,7 @@ Integration tests for the lxd states
 
 import salt.utils.path
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, flaky
+from tests.support.helpers import destructiveTest
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.unit import skipIf
 
@@ -24,7 +24,6 @@ class LxdTestCase(ModuleCase, SaltReturnAssertsMixin):
 
     run_once = False
 
-    @flaky
     def test_01__init_lxd(self):
         if LxdTestCase.run_once:
             return

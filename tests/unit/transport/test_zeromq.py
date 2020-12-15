@@ -23,7 +23,7 @@ import zmq.eventloop.ioloop
 from salt.ext.tornado.testing import AsyncTestCase
 from salt.transport.zeromq import AsyncReqMessageClientPool
 from saltfactories.utils.ports import get_unused_localhost_port
-from tests.support.helpers import flaky, not_runs_on, slowTest
+from tests.support.helpers import not_runs_on, slowTest
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, call, patch
 from tests.support.runtests import RUNTIME_VARS
@@ -167,7 +167,6 @@ class ClearReqTestCases(BaseZMQReqCase, ReqChannelMixin):
         del channel
 
 
-@flaky
 @not_runs_on(
     kernel="linux",
     os_familiy="Suse",
@@ -202,9 +201,6 @@ class AESReqTestCases(BaseZMQReqCase, ReqChannelMixin):
         """
         Test a variety of bad requests, make sure that we get some sort of error
         """
-        # TODO: This test should be re-enabled when Jenkins moves to C7.
-        # Once the version of salt-testing is increased to something newer than the September
-        # release of salt-testing, the @flaky decorator should be applied to this test.
         msgs = ["", [], tuple()]
         for msg in msgs:
             with self.assertRaises(salt.exceptions.AuthenticationError):

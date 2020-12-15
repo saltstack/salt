@@ -12,13 +12,7 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 from tests.support.case import ModuleCase
-from tests.support.helpers import (
-    destructiveTest,
-    flaky,
-    runs_on,
-    skip_if_not_root,
-    slowTest,
-)
+from tests.support.helpers import destructiveTest, runs_on, skip_if_not_root, slowTest
 from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
@@ -275,7 +269,6 @@ class SystemModuleTest(ModuleCase):
         self.assertTrue(self._same_times(time_now, cmp_time), msg=msg)
         self._test_hwclock_sync()
 
-    @flaky
     @destructiveTest
     @skip_if_not_root
     @slowTest

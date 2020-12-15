@@ -3,10 +3,8 @@ Integration tests for the lxd states
 """
 
 import tests.integration.states.test_lxd
-from tests.support.helpers import flaky
 
 
-@flaky
 class LxdContainerTestCase(tests.integration.states.test_lxd.LxdTestCase):
     def setUp(self):
         self.run_state(

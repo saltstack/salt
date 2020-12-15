@@ -14,7 +14,6 @@ from tests.support.case import ModuleCase
 from tests.support.helpers import (
     SKIP_IF_NOT_RUNNING_PYTEST,
     destructiveTest,
-    flaky,
     requires_system_grains,
 )
 from tests.support.mixins import SaltReturnAssertsMixin
@@ -69,7 +68,6 @@ class AnsiblePlaybooksTestCase(ModuleCase, SaltReturnAssertsMixin):
         delattr(self, "tempdir")
         delattr(self, "inventory")
 
-    @flaky
     def test_ansible_playbook(self):
         ret = self.run_state(
             "ansible.playbooks",

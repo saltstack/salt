@@ -6,7 +6,7 @@ import threading
 import time
 
 from tests.support.case import SSHCase
-from tests.support.helpers import flaky, slowTest
+from tests.support.helpers import slowTest
 from tests.support.runtests import RUNTIME_VARS
 
 SSH_SLS = "ssh_state_tests"
@@ -223,7 +223,6 @@ class SSHStateTest(SSHCase):
         check_file = self.run_function("file.file_exists", [SSH_SLS_FILE], wipe=False)
         self.assertTrue(check_file)
 
-    @flaky
     @slowTest
     def test_state_running(self):
         """

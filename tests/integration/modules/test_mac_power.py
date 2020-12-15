@@ -5,7 +5,6 @@ integration tests for mac_power
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
     destructiveTest,
-    flaky,
     runs_on,
     skip_if_binaries_missing,
     skip_if_not_root,
@@ -14,7 +13,6 @@ from tests.support.helpers import (
 
 
 @skip_if_not_root
-@flaky(attempts=10)
 @runs_on(kernel="Darwin")
 @skip_if_binaries_missing("systemsetup")
 class MacPowerModuleTest(ModuleCase):
@@ -158,7 +156,6 @@ class MacPowerModuleTest(ModuleCase):
 
 
 @skip_if_not_root
-@flaky(attempts=10)
 @runs_on(kernel="Darwin")
 @skip_if_binaries_missing("systemsetup")
 class MacPowerModuleTestSleepOnPowerButton(ModuleCase):
@@ -209,7 +206,6 @@ class MacPowerModuleTestSleepOnPowerButton(ModuleCase):
 
 
 @skip_if_not_root
-@flaky(attempts=10)
 @runs_on(kernel="Darwin")
 @skip_if_binaries_missing("systemsetup")
 class MacPowerModuleTestRestartPowerFailure(ModuleCase):
@@ -259,7 +255,6 @@ class MacPowerModuleTestRestartPowerFailure(ModuleCase):
 
 
 @skip_if_not_root
-@flaky(attempts=10)
 @runs_on(kernel="Darwin")
 @skip_if_binaries_missing("systemsetup")
 class MacPowerModuleTestWakeOnNet(ModuleCase):
@@ -305,7 +300,6 @@ class MacPowerModuleTestWakeOnNet(ModuleCase):
 
 
 @skip_if_not_root
-@flaky(attempts=10)
 @runs_on(kernel="Darwin")
 @skip_if_binaries_missing("systemsetup")
 class MacPowerModuleTestWakeOnModem(ModuleCase):

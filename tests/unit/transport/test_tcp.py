@@ -22,7 +22,7 @@ from salt.transport.tcp import (
     TCPPubServerChannel,
 )
 from saltfactories.utils.ports import get_unused_localhost_port
-from tests.support.helpers import flaky, slowTest
+from tests.support.helpers import slowTest
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
@@ -150,7 +150,6 @@ class AESReqTestCases(BaseTCPReqCase, ReqChannelMixin):
 
     # TODO: make failed returns have a specific framing so we can raise the same exception
     # on encrypted channels
-    @flaky
     @slowTest
     def test_badload(self):
         """

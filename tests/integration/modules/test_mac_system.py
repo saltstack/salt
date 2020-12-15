@@ -9,7 +9,6 @@ import pytest
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
     destructiveTest,
-    flaky,
     random_string,
     runs_on,
     skip_if_binaries_missing,
@@ -26,7 +25,6 @@ SET_SUBNET_NAME = random_string("RS-", lowercase=False)
 
 
 @skip_if_not_root
-@flaky(attempts=10)
 @runs_on(kernel="Darwin")
 @skip_if_binaries_missing("systemsetup")
 @pytest.mark.usefixtures("salt_sub_minion")

@@ -3,7 +3,7 @@ import random
 import pytest
 import salt.utils.platform
 from tests.support.case import ModuleCase
-from tests.support.helpers import flaky, slowTest
+from tests.support.helpers import slowTest
 from tests.support.unit import skipIf
 
 
@@ -14,7 +14,6 @@ class StatusModuleTest(ModuleCase):
     """
 
     @skipIf(salt.utils.platform.is_windows(), "minion is windows")
-    @flaky
     def test_status_pid(self):
         """
         status.pid

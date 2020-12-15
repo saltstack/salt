@@ -21,7 +21,7 @@ import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.yaml
 from tests.support.case import ShellCase
-from tests.support.helpers import expensiveTest, flaky, slowTest
+from tests.support.helpers import expensiveTest, slowTest
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
@@ -29,7 +29,6 @@ from tests.support.unit import skipIf
 log = logging.getLogger(__name__)
 
 
-@flaky
 class StateRunnerTest(ShellCase):
     """
     Test the state runner.
@@ -343,7 +342,6 @@ class StateRunnerTest(ShellCase):
 
 
 @skipIf(salt.utils.platform.is_windows(), "*NIX-only test")
-@flaky
 class OrchEventTest(ShellCase):
     """
     Tests for orchestration events

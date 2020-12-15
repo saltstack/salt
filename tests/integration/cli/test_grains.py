@@ -18,7 +18,7 @@ import os
 import pytest
 import salt.utils.files
 from tests.support.case import ShellCase, SSHCase
-from tests.support.helpers import flaky, requires_system_grains, slowTest
+from tests.support.helpers import requires_system_grains, slowTest
 
 log = logging.getLogger(__name__)
 
@@ -51,7 +51,6 @@ class GrainsTargetingTest(ShellCase):
         sub_minion = self.run_salt('-G "id:sub_minion" test.ping')
         self.assertEqual(sorted(sub_minion), sorted(["sub_minion:", "    True"]))
 
-    @flaky
     @slowTest
     def test_grains_targeting_disconnected(self):
         """

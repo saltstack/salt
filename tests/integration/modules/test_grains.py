@@ -10,7 +10,7 @@ import time
 
 import pytest
 from tests.support.case import ModuleCase
-from tests.support.helpers import flaky, slowTest
+from tests.support.helpers import slowTest
 from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
@@ -204,13 +204,11 @@ class GrainsAppendTestCase(ModuleCase):
 
         assert msg == ret
 
-    @flaky
     @slowTest
     def test_grains_append_val_is_list(self):
         """
         Tests the return of a grains.append call when val is passed in as a list.
         """
-        # Start off with an empty list, don't know if the flaky decorator runs the setUp function or not...
         self.run_function("grains.setval", [self.GRAIN_KEY, []])
         second_grain = self.GRAIN_VAL + "-2"
         ret = self.run_function(

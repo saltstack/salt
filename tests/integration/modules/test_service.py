@@ -3,7 +3,7 @@ import salt.utils.path
 import salt.utils.platform
 import salt.utils.systemd
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, flaky, slowTest
+from tests.support.helpers import destructiveTest, slowTest
 from tests.support.unit import skipIf
 
 
@@ -72,7 +72,6 @@ class ServiceModuleTest(ModuleCase):
                 self.run_function("service.disable", [self.service_name])
         del self.service_name
 
-    @flaky
     @slowTest
     def test_service_status_running(self):
         """
