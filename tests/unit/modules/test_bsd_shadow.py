@@ -11,13 +11,10 @@ import textwrap
 
 # Import Salt Testing libs
 import salt.utils.platform
-import salt.utils.stringutils
 
 # Import 3rd-party libs
-from salt.ext import six
-from tests.support.helpers import skip_if_not_root
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import DEFAULT, MagicMock, mock_open, patch
+from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
 
 # Import salt libs
@@ -59,6 +56,17 @@ class BSDShadowTest(TestCase, LoaderModuleMockMixin):
                 "pw user mod root -w none",
                 output_loglevel="quiet",
                 python_shell=False)
+
+    def test_gen_password(self):
+        """
+        Test shadow.gen_password
+        """
+        self.assertEqual(
+            '$6$salt$wZU8LXJfJJqoagopbB7RuK6JEotEMZ0CQDy0phpPAuLMYQFcmf6L6BdAbs/Q7w7o1qsZ9pFqFVY4yuUSWgaYt1',
+            shadow.gen_password("x", crypt_salt="salt", algorithm="sha512"))
+        self.assertEqual(
+            '$5$salt$eC8iHMk0B/acxRGi4idWiCK/.xXHLUsxovn4V591t3.',
+            shadow.gen_password("x", crypt_salt="salt", algorithm="sha256"))
 
     def test_info(self):
         """
