@@ -25,9 +25,10 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         if salt.utils.platform.is_windows():
             cls.pkg = "putty"
         elif grains["os_family"] == "RedHat":
-            cls.pkg = "units"
-        elif grains["os_family"] == "VMware Photon OS":
-            cls.pkg = "snoopy"
+            if grains["os"] == "VMware Photon OS":
+                cls.pkg = "snoopy"
+            else:
+                cls.pkg = "units"
 
     @pytest.mark.skip_if_not_root
     @pytest.mark.requires_salt_modules("pkg.refresh_db")
@@ -102,7 +103,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
                         pprint.pformat(ret)
                     ),
                 )
-            elif grains["os_family"] in ("RedHat", "VMware Photon OS"):
+            elif grains["os_family"] == "RedHat":
                 repo = "saltstack"
                 name = "SaltStack repo for RHEL/CentOS {}".format(
                     grains["osmajorrelease"]
@@ -315,7 +316,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
                 "Upstream repo did not return coherent results: {}".format(ret)
             )
 
-        if grains["os_family"] in ("RedHat", "VMWare Photon OS"):
+        if grains["os_family"] == "RedHat":
             self.assertIn(ret, (True, None))
         elif grains["os_family"] == "Suse":
             if not isinstance(ret, dict):
