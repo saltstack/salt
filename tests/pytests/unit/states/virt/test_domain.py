@@ -102,6 +102,7 @@ def test_defined_new_with_connection(test):
                 password="supersecret",
                 serials=serials,
                 consoles=consoles,
+                host_devices=["pci_0000_00_17_0"],
             )
             if not test:
                 init_mock.assert_called_with(
@@ -132,6 +133,7 @@ def test_defined_new_with_connection(test):
                     password="supersecret",
                     serials=serials,
                     consoles=consoles,
+                    host_devices=["pci_0000_00_17_0"],
                 )
             else:
                 init_mock.assert_not_called()
@@ -222,6 +224,7 @@ def test_defined_update_error(test):
                 serials=None,
                 consoles=None,
                 stop_on_reboot=False,
+                host_devices=None,
             )
 
 
@@ -346,6 +349,7 @@ def test_running_define(test):
                 priv_key="/path/to/key",
                 boot_dev="network hd",
                 stop_on_reboot=True,
+                host_devices=["pci_0000_00_17_0"],
                 connection="someconnection",
                 username="libvirtuser",
                 password="supersecret",
@@ -379,6 +383,7 @@ def test_running_define(test):
                     password="supersecret",
                     serials=None,
                     consoles=None,
+                    host_devices=["pci_0000_00_17_0"],
                 )
                 start_mock.assert_called_with(
                     "myvm",
@@ -523,6 +528,7 @@ def test_running_update_error():
                 serials=None,
                 consoles=None,
                 stop_on_reboot=False,
+                host_devices=None,
             )
 
 
