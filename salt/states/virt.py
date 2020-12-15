@@ -285,7 +285,6 @@ def defined(
     arch=None,
     boot=None,
     numatune=None,
-    update=True,
     boot_dev=None,
     hypervisor_features=None,
     clock=None,
@@ -495,10 +494,6 @@ def defined(
 
         .. versionadded:: 3000
 
-    :param update: set to ``False`` to prevent updating a defined domain. (Default: ``True``)
-
-        .. deprecated:: 3001
-
     :param boot_dev:
         Space separated list of devices to boot from sorted by decreasing priority.
         Values can be ``hd``, ``fd``, ``cdrom`` or ``network``.
@@ -638,31 +633,29 @@ def defined(
         if name in __salt__["virt.list_domains"](
             connection=connection, username=username, password=password
         ):
-            status = {}
-            if update:
-                status = __salt__["virt.update"](
-                    name,
-                    cpu=cpu,
-                    mem=mem,
-                    disk_profile=disk_profile,
-                    disks=disks,
-                    nic_profile=nic_profile,
-                    interfaces=interfaces,
-                    graphics=graphics,
-                    live=live,
-                    connection=connection,
-                    username=username,
-                    password=password,
-                    boot=boot,
-                    numatune=numatune,
-                    serials=serials,
-                    consoles=consoles,
-                    test=__opts__["test"],
-                    boot_dev=boot_dev,
-                    hypervisor_features=hypervisor_features,
-                    clock=clock,
-                    stop_on_reboot=stop_on_reboot,
-                )
+            status = __salt__["virt.update"](
+                name,
+                cpu=cpu,
+                mem=mem,
+                disk_profile=disk_profile,
+                disks=disks,
+                nic_profile=nic_profile,
+                interfaces=interfaces,
+                graphics=graphics,
+                live=live,
+                connection=connection,
+                username=username,
+                password=password,
+                boot=boot,
+                numatune=numatune,
+                serials=serials,
+                consoles=consoles,
+                test=__opts__["test"],
+                boot_dev=boot_dev,
+                hypervisor_features=hypervisor_features,
+                clock=clock,
+                stop_on_reboot=stop_on_reboot,
+            )
             ret["changes"][name] = status
             if not status.get("definition"):
                 ret["comment"] = "Domain {} unchanged".format(name)
@@ -728,7 +721,6 @@ def running(
     install=True,
     pub_key=None,
     priv_key=None,
-    update=False,
     connection=None,
     username=None,
     password=None,
@@ -823,10 +815,6 @@ def running(
     :param seed_cmd: Salt command to execute to seed the image. (Default: ``'seed.apply'``)
 
         .. versionadded:: 2019.2.0
-    :param update: set to ``True`` to update a defined domain. (Default: ``False``)
-
-        .. versionadded:: 2019.2.0
-        .. deprecated:: 3001
     :param connection: libvirt connection URI, overriding defaults
 
         .. versionadded:: 2019.2.0
@@ -985,12 +973,6 @@ def running(
     """
     merged_disks = disks
 
-    if not update:
-        salt.utils.versions.warn_until(
-            "Aluminium",
-            "'update' parameter has been deprecated. Future behavior will be the one of update=True"
-            "It will be removed in {version}.",
-        )
     ret = defined(
         name,
         cpu=cpu,
@@ -1008,7 +990,6 @@ def running(
         os_type=os_type,
         arch=arch,
         boot=boot,
-        update=update,
         boot_dev=boot_dev,
         numatune=numatune,
         hypervisor_features=hypervisor_features,
