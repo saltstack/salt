@@ -148,7 +148,7 @@ sdbetcd:
   etcd.port: 2379
 # See the file "tests/integration/sdb/test_sqlite3.py" for an explanation.
 sdbsqlite3createtrue:
-  create: true
+  create_table: true
   database: sdb.sqlite3
   driver: sqlite3
   table: sdb
@@ -159,13 +159,13 @@ sdbsqlite3createdefault:
   table: sdb
 # See the file "tests/integration/sdb/test_sqlite3.py" for an explanation.
 sdbsqlite3createfalse:
-  create: false
+  create_table: false
   database: sdb.sqlite3
   driver: sqlite3
   table: sdb
 # See the file "tests/integration/sdb/test_sqlite3.py" for an explanation.
 sdbsqlite3funnytablename:
-  create: true
+  create_table: true
   database: sdb.sqlite3
   driver: sqlite3
   table: sdbsqlite3funnytablename
