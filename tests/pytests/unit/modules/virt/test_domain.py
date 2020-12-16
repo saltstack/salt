@@ -937,3 +937,51 @@ def test_diff_nics():
     assert ["52:54:00:39:02:b2", "52:54:00:39:02:b3"] == [
         nic.find("mac").get("address") for nic in ret["deleted"]
     ]
+
+
+def test_diff_nics_live_nochange():
+    """
+    Libvirt alters the NICs of network type when running the guest, test the virt._diff_nics()
+    function with no change in such a case.
+    """
+    old_nics = ET.fromstring(
+        """
+        <devices>
+          <interface type='direct'>
+            <mac address='52:54:00:03:02:15'/>
+            <source network='test-vepa' portid='8377df4f-7c72-45f3-9ba4-a76306333396' dev='eth1' mode='vepa'/>
+            <target dev='macvtap0'/>
+            <model type='virtio'/>
+            <alias name='net0'/>
+            <address type='pci' domain='0x0000' bus='0x00' slot='0x05' function='0x0'/>
+          </interface>
+          <interface type='bridge'>
+            <mac address='52:54:00:ea:2e:89'/>
+            <source network='default' portid='b97ec5b7-25fd-4697-ae45-06af8cc1a964' bridge='br0'/>
+            <target dev='vnet0'/>
+            <model type='virtio'/>
+            <alias name='net0'/>
+            <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x0'/>
+          </interface>
+        </devices>
+        """
+    ).findall("interface")
+
+    new_nics = ET.fromstring(
+        """
+        <devices>
+           <interface type='network'>
+             <source network='test-vepa'/>
+             <model type='virtio'/>
+           </interface>
+           <interface type='network'>
+             <source network='default'/>
+             <model type='virtio'/>
+           </interface>
+        </devices>
+        """
+    )
+    ret = virt._diff_interface_lists(old_nics, new_nics)
+    assert ["52:54:00:03:02:15", "52:54:00:ea:2e:89"] == [
+        nic.find("mac").get("address") for nic in ret["unchanged"]
+    ]
