@@ -875,3 +875,65 @@ def test_update_hostdev_changes(running, live, make_mock_device, make_mock_vm, t
     else:
         domain_mock.attachDevice.assert_not_called()
         domain_mock.detachDevice.assert_not_called()
+
+
+def test_diff_nics():
+    """
+    Test virt._diff_nics()
+    """
+    old_nics = ET.fromstring(
+        """
+        <devices>
+           <interface type='network'>
+             <mac address='52:54:00:39:02:b1'/>
+             <source network='default'/>
+             <model type='virtio'/>
+             <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x0'/>
+           </interface>
+           <interface type='network'>
+             <mac address='52:54:00:39:02:b2'/>
+             <source network='admin'/>
+             <model type='virtio'/>
+             <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x0'/>
+           </interface>
+           <interface type='network'>
+             <mac address='52:54:00:39:02:b3'/>
+             <source network='admin'/>
+             <model type='virtio'/>
+             <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x0'/>
+           </interface>
+        </devices>
+    """
+    ).findall("interface")
+
+    new_nics = ET.fromstring(
+        """
+        <devices>
+           <interface type='network'>
+             <mac address='52:54:00:39:02:b1'/>
+             <source network='default'/>
+             <model type='virtio'/>
+           </interface>
+           <interface type='network'>
+             <mac address='52:54:00:39:02:b2'/>
+             <source network='default'/>
+             <model type='virtio'/>
+           </interface>
+           <interface type='network'>
+             <mac address='52:54:00:39:02:b4'/>
+             <source network='admin'/>
+             <model type='virtio'/>
+           </interface>
+        </devices>
+    """
+    ).findall("interface")
+    ret = virt._diff_interface_lists(old_nics, new_nics)
+    assert ["52:54:00:39:02:b1"] == [
+        nic.find("mac").get("address") for nic in ret["unchanged"]
+    ]
+    assert ["52:54:00:39:02:b2", "52:54:00:39:02:b4"] == [
+        nic.find("mac").get("address") for nic in ret["new"]
+    ]
+    assert ["52:54:00:39:02:b2", "52:54:00:39:02:b3"] == [
+        nic.find("mac").get("address") for nic in ret["deleted"]
+    ]
