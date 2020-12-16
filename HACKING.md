@@ -16,15 +16,20 @@ repo. The best way to contribute is using [Git](https://git-scm.com/).
 
 ## Environment Setup
 
-To hack on Salt or the docs you're going to need to setup your development
+To hack on Salt or the docs you're going to need to set up your development
 environment. If you already have a workflow that you're comfortable with, you
 can use that, but otherwise this is an opinionated guide for setting up your
 dev environment. Follow these steps and you'll end out with a functioning dev
 environment and be able to submit your first PR.
 
 This guide assumes at least a passing familiarity with
-[Git](https://git-scm.com/), and that you already have it installed and
-configured.
+[Git](https://git-scm.com/), a common version control tool used across many
+open source projects, and is necessary for contributing to salt. For an
+introduction to Git,  watch [Salt Docs Clinic - Git For the True
+Beginner](https://www.youtube.com/watch?v=zJw6KNvmuq4&ab_channel=SaltStack).
+Because of its widespread use, there are many resources for learning more about
+Git. One popular resource is the free online book [Learn Git in a Month of
+Lunches](https://www.manning.com/books/learn-git-in-a-month-of-lunches).
 
 ## `pyenv`, Virtual Environments, and You
 
@@ -76,9 +81,16 @@ Then activate it:
 
     pyenv activate salt
 
-Sweet! Now you're ready to clone salt so you can start hacking away!
+Sweet! Now you're ready to clone salt so you can start hacking away! If you get
+stuck at any point, check out the resources at the beginning of this guide. IRC
+and Slack are particularly helpful places to go.
 
-### Cloning Salt
+### Get The Source!
+
+Salt uses the fork and clone workflow for Git contributions. See [Using the
+Fork-and-Branch Git Workflow](https://blog.scottlowe.org/2015/01/27/using-fork-branch-git-workflow/)
+for how to implement it. But if you just want to hurry and get started you can
+go ahead and follow these steps:
 
 Clones are so shallow. Well, this one is anyway:
 
@@ -89,10 +101,8 @@ that's all you'll need, and you can start building out other commits as you go.
 If you *really* want all 108,300+ commits you can just run `git fetch
 --unshallow`. Then go make a sandwich because it's gonna be a while.
 
-### Fork Salt
-
 You're also going to want to head over to GitHub and create your own [fork of
-salt](https://github.com/saltstack/salt/fork). Once you've got that setup you
+salt](https://github.com/saltstack/salt/fork). Once you've got that set up you
 can add it as a remote:
 
     git remote add yourname <YOUR SALT REMOTE>
@@ -104,12 +114,13 @@ Salt repo you'll never get `upstream` or `origin` confused.
 
 Here at Salt we use [pre-commit](https://pre-commit.com/) and
 [nox](https://nox.thea.codes/en/stable/) to make it easier for contributors to
-get quick feedback. Nox enables us to run multiple different test
-configurations, as well as other common tasks. You can think of it as Make with
-superpowers. Pre-commit does what it sounds like - it configures some Git
-pre-commit hooks to run `black` for formatting, `isort` for keeping our imports
-sorted, and `pylint` to catch issues like unused imports, among others. You can
-easily install them in your virtualenv with:
+get quick feedback, for quality control, and to increase the chance that your
+merge request will get reviewed and merged. Nox enables us to run multiple
+different test configurations, as well as other common tasks. You can think of
+it as Make with superpowers. Pre-commit does what it sounds like - it
+configures some Git pre-commit hooks to run `black` for formatting, `isort` for
+keeping our imports sorted, and `pylint` to catch issues like unused imports,
+among others. You can easily install them in your virtualenv with:
 
     python -m pip install pre-commit nox
     pre-commit install
@@ -119,7 +130,42 @@ before you open a pull request. And with that step, it's time to start hacking
 on Salt!
 
 
-## Selecting an Issue
+## Salt Issues
+
+### Create Your Own
+
+Perhaps you've come to this guide because you found a problem in Salt, and
+you've diagnosed the cause. Maybe you need some help figuring out the problem.
+In any case, creating quality bug reports is a great way to contribute to Salt
+even if you lack the skills, time, or inclination to fix it yourself. If that's
+the case, head on over to [Salt's issue tracker on
+GitHub](https://github.com/saltstack/salt/issues/new/choose).
+
+Creating a **good** report can take a little bit of time - but every minute you
+invest in making it easier for others to reproduce and understand your issue is
+time well spent. The faster someone can understand your issue, the faster it
+will be able to get fixed correctly.
+
+The thing that every issue needs goes by many names, but one at least as good
+as any other is MCVE - **M**inimum **C**omplete **V**erifiable **E**xample.
+
+In a nutshell:
+
+- **Minimum**: All of the **extra** information has been removed. Will 2 or 3
+  lines of master/minion config still exhibit the behavior?
+- **Complete**: Minimum also means complete. If your example is missing
+  information, then it's not complete. Salt, Python, and OS versions are all
+  bits of information that make your example complete. Have you provided the
+  commands that you ran?
+- **Verifiable**: Can someone take your report and reproduce it?
+
+Slow is smooth, and smooth is fast - it may feel like you're taking a long time
+to create your issue if you're creating a proper MCVE, but a MCVE eliminates
+back and forth required to reproduce/verify the issue so someone can actually
+create a fix.
+
+
+### Pick An Issue
 
 If you don't already have an issue in mind, you can search for [help
 wanted](https://github.com/saltstack/salt/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22)
@@ -134,11 +180,12 @@ you're working on it. Good communication is key to collaboration - so if you
 don't have time to complete work on the issue, just leaving some information
 about when you expect to pick things up again is a great idea!
 
+
 ## Hacking Away
 
 ### Salt, Tests, Documentation, and You
 
-To merge code contributions, Salt requires:
+Before approving code contributions, Salt requires:
 
 - documentation
 - meaningful passing tests
@@ -182,7 +229,9 @@ And then refresh your browser to get your updated docs. This one should be
 quite a bit faster since Sphinx won't need to rebuild everything.
 
 If your change is a doc-only change, you can go ahead and commit/push your code
-and open a PR. Otherwise you'll want to write some tests and code.
+and open a PR. You can indicate that it's a doc-only change by adding
+`[Documentation]` to the title of your PR. Otherwise you'll want to write some
+tests and code. 
 
 ### Running Development Salt
 
@@ -338,19 +387,42 @@ After you read that page, it's time to [open a new
 PR](https://github.com/saltstack/salt/compare). Fill out the PR template - you
 should have updated or created any necessary docs, and written tests if you're
 providing a code change. When you submit your PR, we have a suite of tests that
-will run across different platforms. You will also get a reviewer assigned. If
-your PR is submitted during the week you should be able to expect some kind of
+will run across different platforms to help ensure that no known bugs were
+introduced.
+
+
+### Now What?
+
+You've made your changes, added documentation, opened your PR, and have passing
+tests... now what? When can you expect your code to be merged?
+
+When you open your PR, a reviewer will get automatically assigned. If your PR
+is submitted during the week you should be able to expect some kind of
 communication within that business day. If your tests are passing and we're not
 in a code freeze, ideally your code will be merged that day. If you haven't
 heard from your assigned reviewer, ping them on GitHub, [irc][salt on
 freenode], or Community Slack.
 
-If, as mentioned earlier, you're not interested in writing tests or docs, just
-note that in your PR. Something like, "I'm not interested in writing
-docs/tests, I just wanted to provide this fix." Otherwise, we will request that
-you add appropriate docs/tests.
+It's likely that your reviewer will leave some comments that need addressing -
+it may be a style change, or you forgot a changelog entry, or need to update
+the docs. Maybe it's something more fundamental - perhaps you encountered the rare
+case where your PR has a much larger scope than initially assumed.
 
-Congrats! You're a Salt developer! You rock!
+Whatever the case, simply make the requested changes (or discuss why the
+requests are incorrect), and push up your new commits. If your PR is open for a
+significant period of time it may be worth rebasing your changes on the most
+recent changes to Salt. If you need help, the previously linked Git resources
+will be valuable.
+
+But if, for whatever reason, you're not interested in driving your PR to
+completion then just note that in your PR. Something like, "I'm not interested
+in writing docs/tests, I just wanted to provide this fix - someone else will
+need to complete this PR." If you do that then we'll add a "Help Wanted" label
+and someone will be able to pick up the PR, make the required changes, and it
+can eventually get merged in.
+
+In any case, now that you have a PR open, congrats! You're a Salt
+developer! You rock!
 
 ## Troubleshooting
 
