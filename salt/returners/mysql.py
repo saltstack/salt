@@ -508,7 +508,7 @@ def _purge_jobs(timestamp):
     """
     with _get_serv() as cur:
         try:
-            sql = "delete from `jids` where jid in (select distinct jid from salt_returns where alter_time < %s)"
+            sql = "delete m from `jids` as m inner join `salt_returns` as n on m.jid = n.jid where n.alter_time < %s"
             cur.execute(sql, (timestamp,))
             cur.execute("COMMIT")
         except MySQLdb.Error as e:
