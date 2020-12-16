@@ -431,7 +431,8 @@ def _get_nics(dom):
     Get domain network interfaces from a libvirt domain object.
     """
     nics = {}
-    doc = ElementTree.fromstring(dom.XMLDesc(0))
+    # Don't expose the active configuration since it may be changed by libvirt
+    doc = ElementTree.fromstring(dom.XMLDesc(libvirt.VIR_DOMAIN_XML_INACTIVE))
     for iface_node in doc.findall("devices/interface"):
         nic = {}
         nic["type"] = iface_node.get("type")
@@ -7488,7 +7489,9 @@ def network_update(
         elements_to_copy = ["uuid", "mac"]
         for to_copy in elements_to_copy:
             element = old_xml.find(to_copy)
-            new_xml.insert(1, element)
+            # mac may not be present (hostdev network for instance)
+            if element is not None:
+                new_xml.insert(1, element)
 
         # Remove libvirt auto-added bridge attributes to compare
         default_bridge_attribs = {"stp": "on", "delay": "0"}
@@ -7607,6 +7610,16 @@ def network_info(name=None, **kwargs):
                 lease["type"] = "unknown"
         return leases
 
+    def _net_get_bridge(net):
+        """
+        Get the bridge of the network or None
+        """
+        try:
+            return net.bridgeName()
+        except libvirt.libvirtError as err:
+            # Some network configurations have no bridge
+            return None
+
     try:
         nets = [
             net for net in conn.listAllNetworks() if name is None or net.name() == name
@@ -7614,7 +7627,7 @@ def network_info(name=None, **kwargs):
         result = {
             net.name(): {
                 "uuid": net.UUIDString(),
-                "bridge": net.bridgeName(),
+                "bridge": _net_get_bridge(net),
                 "autostart": net.autostart(),
                 "active": net.isActive(),
                 "persistent": net.isPersistent(),
