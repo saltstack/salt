@@ -3010,10 +3010,20 @@ def _nics_equal(nic1, nic2):
         """
         Filter out elements to ignore when comparing nics
         """
+        source_node = nic.find("source")
+        source_attrib = source_node.attrib if source_node is not None else {}
+        source_type = "network" if "network" in source_attrib else nic.attrib["type"]
+
+        source_getters = {
+            "network": lambda n: n.get("network"),
+            "bridge": lambda n: n.get("bridge"),
+            "direct": lambda n: n.get("dev"),
+            "hostdev": lambda n: _format_pci_address(n.find("address")),
+        }
         return {
-            "type": nic.attrib["type"],
-            "source": nic.find("source").attrib[nic.attrib["type"]]
-            if nic.find("source") is not None
+            "type": source_type,
+            "source": source_getters[source_type](source_node)
+            if source_node is not None
             else None,
             "model": nic.find("model").attrib["type"]
             if nic.find("model") is not None
@@ -3294,6 +3304,15 @@ def _diff_console_list(old, new):
     :param new: list of ElementTree nodes representing the new consoles
     """
     return _diff_lists(old, new, _serial_or_concole_equal)
+
+
+def _format_pci_address(node):
+    return "{}:{}:{}.{}".format(
+        node.get("domain").replace("0x", ""),
+        node.get("bus").replace("0x", ""),
+        node.get("slot").replace("0x", ""),
+        node.get("function").replace("0x", ""),
+    )
 
 
 def update(
