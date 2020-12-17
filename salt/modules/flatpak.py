@@ -109,13 +109,14 @@ def uninstall(pkg):
     return ret
 
 
-def add_remote(name, location):
+def add_remote(name, location, user=False):
     '''
     Adds a new location to install flatpak packages from.
 
     Args:
         name (str): The repository's name.
         location (str): The location of the repository.
+        user (bool): Configure per-user installation.
 
     Returns:
         dict: The ``result`` and ``output``.
@@ -126,8 +127,10 @@ def add_remote(name, location):
 
         salt '*' flatpak.add_remote flathub https://flathub.org/repo/flathub.flatpakrepo
     '''
+    user_flag = ' --user ' if bool(user) else ''
     ret = {'result': None, 'output': ''}
-    out = __salt__['cmd.run_all'](FLATPAK_BINARY_NAME + ' remote-add ' + name + ' ' + location)
+
+    out = __salt__['cmd.run_all'](FLATPAK_BINARY_NAME + ' remote-add  --if-not-exists ' + user_flag + name + ' ' + location)
 
     if out['retcode'] and out['stderr']:
         ret['stderr'] = out['stderr'].strip()
