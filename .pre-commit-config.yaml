@@ -10,7 +10,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-linux-py3.5-zmq-requirements
         name: Linux Py3.5 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/linux\.in)$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/(linux\.in|git-sources\.txt))$
         exclude: ^requirements/static/(centos-6|amzn-2018\.03|lint|cloud|docs|darwin|windows)\.in$
         args:
           - -v
@@ -19,11 +19,13 @@ repos:
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - --include=requirements/pytest.txt
+          - --include=requirements/static/ci/git-sources.txt
+          - --passthrough-line-from-input=^git\+https(.*)$
 
       - id: pip-tools-compile
         alias: compile-linux-py3.6-zmq-requirements
         name: Linux Py3.6 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/linux\.in)$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/(linux\.in|git-sources\.txt))$
         exclude: ^requirements/static/(centos-6|amzn-2018\.03|lint|cloud|docs|darwin|windows)\.in$
         args:
           - -v
@@ -32,11 +34,13 @@ repos:
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - --include=requirements/pytest.txt
+          - --include=requirements/static/ci/git-sources.txt
+          - --passthrough-line-from-input=^git\+https(.*)$
 
       - id: pip-tools-compile
         alias: compile-linux-py3.7-zmq-requirements
         name: Linux Py3.7 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/linux\.in)$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/(linux\.in|git-sources\.txt))$
         exclude: ^requirements/static/(centos-6|amzn-2018\.03|lint|cloud|docs|darwin|windows)\.in$
         args:
           - -v
@@ -45,11 +49,13 @@ repos:
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - --include=requirements/pytest.txt
+          - --include=requirements/static/ci/git-sources.txt
+          - --passthrough-line-from-input=^git\+https(.*)$
 
       - id: pip-tools-compile
         alias: compile-linux-py3.8-zmq-requirements
         name: Linux Py3.8 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/linux\.in)$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/(linux\.in|git-sources\.txt))$
         exclude: ^requirements/static/(centos-6|amzn-2018\.03|lint|cloud|docs|darwin|windows)\.in$
         args:
           - -v
@@ -58,11 +64,13 @@ repos:
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - --include=requirements/pytest.txt
+          - --include=requirements/static/ci/git-sources.txt
+          - --passthrough-line-from-input=^git\+https(.*)$
 
       - id: pip-tools-compile
         alias: compile-linux-py3.9-zmq-requirements
         name: Linux Py3.9 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/linux\.in)$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/(linux\.in|git-sources\.txt))$
         exclude: ^requirements/static/(centos-6|amzn-2018\.03|lint|cloud|docs|darwin|windows)\.in$
         args:
           - -v
@@ -71,6 +79,8 @@ repos:
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - --include=requirements/pytest.txt
+          - --include=requirements/static/ci/git-sources.txt
+          - --passthrough-line-from-input=^git\+https(.*)$
 
       - id: pip-tools-compile
         alias: compile-linux-crypto-py3.5-requirements
