@@ -335,6 +335,12 @@ def multi_call(*methods, **kwargs):
     kwargs
         Key-value dictionary with the connection details (when not running
         under a Proxy Minion).
+        
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' netmiko.multi_call "{'name': 'enable', 'args': ['sudo su']}" "{'name': 'send_command', 'kwargs': {'command_string': 'whoami'}}"
     """
     kwargs = clean_kwargs(**kwargs)
     if "netmiko.conn" in __proxy__:
@@ -346,8 +352,11 @@ def multi_call(*methods, **kwargs):
         # Explicit unpacking
         method_name = method["name"]
         method_args = method.get("args", [])
-        method_kwargs = method.get("kwargs", [])
-        ret.append(getattr(conn, method_name)(*method_args, **method_kwargs))
+        method_kwargs = method.get("kwargs", {})
+        if "netmiko.call" in __proxy__:
+          ret.append(__proxy__["netmiko.call"](method_name, *method_args, **method_kwargs))
+        else:
+          ret.append(getattr(conn, method_name)(*method_args, **method_kwargs))
     if "netmiko.conn" not in __proxy__:
         conn.disconnect()
     return ret
