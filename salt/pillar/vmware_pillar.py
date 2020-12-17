@@ -370,7 +370,8 @@ def ext_pillar(minion_id, pillar, **kwargs):  # pylint: disable=W0613
         vmware_pillar[pillar_key] = {}
         try:
             _conn = salt.utils.vmware.get_service_instance(
-                host, username, password, protocol, port
+                host, username, password, protocol, port,
+                verify_ssl=kwargs.get("verify_ssl", True)
             )
             if _conn:
                 data = None
