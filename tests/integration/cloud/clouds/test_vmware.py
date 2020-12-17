@@ -57,3 +57,19 @@ class VMWareTest(CloudTest):
         self.assertIn(s_ret_str, six.text_type(create_snapshot))
 
         self.assertDestroyInstance()
+
+    def test_verify_ssl_false(self):
+        """
+        Tests creating and deleting an instance on vmware when using
+        verify_ssl: False
+        """
+        profile_name = "vmware_verify_ssl"
+        self.add_profile_config("vmware-test", {"verify_ssl": False},
+                                          "vmware.conf", profile_name)
+        # create the instance
+        ret_val = self.run_cloud(
+            "-p {} {}".format(profile_name, self.instance_name), timeout=TIMEOUT
+        )
+        # check if instance returned with salt installed
+        self.assertInstanceExists(ret_val)
+        self.assertDestroyInstance()
