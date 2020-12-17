@@ -181,8 +181,9 @@ def esxcli(
     return ret
 
 
-def get_vsphere_client(server, username, password, session=None,
-                       verify_ssl=True, ca_bundle=None):
+def get_vsphere_client(
+    server, username, password, session=None, verify_ssl=True, ca_bundle=None
+):
     """
     Internal helper method to create an instance of the vSphere API client.
     Please provide username and password to authenticate.
@@ -208,8 +209,7 @@ def get_vsphere_client(server, username, password, session=None,
     """
     if not session:
         # Create an https session to be used for a vSphere client
-        session = salt.utils.http.session(verify_ssl=verify_ssl,
-                                          ca_bundle=ca_bundle)
+        session = salt.utils.http.session(verify_ssl=verify_ssl, ca_bundle=ca_bundle)
     client = None
     try:
         client = create_vsphere_client(
@@ -221,7 +221,14 @@ def get_vsphere_client(server, username, password, session=None,
 
 
 def _get_service_instance(
-    host, username, password, protocol, port, mechanism, principal, domain,
+    host,
+    username,
+    password,
+    protocol,
+    port,
+    mechanism,
+    principal,
+    domain,
     verify_ssl=True,
 ):
     """
@@ -259,9 +266,7 @@ def _get_service_instance(
         )
 
     log.trace(
-        "Connecting using the '%s' mechanism, with username '%s'",
-        mechanism,
-        username,
+        "Connecting using the '%s' mechanism, with username '%s'", mechanism, username,
     )
 
     try:
@@ -295,10 +300,12 @@ def _get_service_instance(
             isinstance(exc, vim.fault.HostConnectFault)
             and "[SSL: CERTIFICATE_VERIFY_FAILED]" in exc.msg
         ) or "[SSL: CERTIFICATE_VERIFY_FAILED]" in str(exc):
-            err_msg = "Could not verify the SSL certificate. You can use " \
-                      "verify_ssl: False if you do not want to verify the " \
-                      "SSL certificate. This is not recommended as it is " \
-                      "considered insecure."
+            err_msg = (
+                "Could not verify the SSL certificate. You can use "
+                "verify_ssl: False if you do not want to verify the "
+                "SSL certificate. This is not recommended as it is "
+                "considered insecure."
+            )
         else:
             log.exception(exc)
             err_msg = exc.msg if hasattr(exc, "msg") else default_msg
@@ -455,8 +462,15 @@ def get_service_instance(
 
     if not service_instance:
         service_instance = _get_service_instance(
-            host, username, password, protocol, port, mechanism, principal,
-            domain, verify_ssl=verify_ssl,
+            host,
+            username,
+            password,
+            protocol,
+            port,
+            mechanism,
+            principal,
+            domain,
+            verify_ssl=verify_ssl,
         )
 
     # Test if data can actually be retrieved or connection has gone stale
@@ -467,8 +481,15 @@ def get_service_instance(
         log.trace("Session no longer authenticating. Reconnecting")
         Disconnect(service_instance)
         service_instance = _get_service_instance(
-            host, username, password, protocol, port, mechanism, principal,
-            domain, verify_ssl=verify_ssl,
+            host,
+            username,
+            password,
+            protocol,
+            port,
+            mechanism,
+            principal,
+            domain,
+            verify_ssl=verify_ssl,
         )
     except vim.fault.NoPermission as exc:
         log.exception(exc)
