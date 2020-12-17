@@ -253,12 +253,16 @@ def _get_si():
     port = config.get_cloud_config_value(
         'port', get_configured_provider(), __opts__, search_global=False, default=443
     )
-
-    return salt.utils.vmware.get_service_instance(url,
-                                                  username,
-                                                  password,
-                                                  protocol=protocol,
-                                                  port=port)
+    verify_ssl = config.get_cloud_config_value(
+        "verify_ssl",
+        get_configured_provider(),
+        __opts__,
+        search_global=False,
+        default=True,
+    )
+    return salt.utils.vmware.get_service_instance(
+        url, username, password, protocol=protocol, port=port, verify_ssl=verify_ssl
+    )
 
 
 def _edit_existing_hard_disk_helper(disk, size_kb=None, size_gb=None, mode=None):
