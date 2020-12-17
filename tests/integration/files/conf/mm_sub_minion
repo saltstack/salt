@@ -1,4 +1,0 @@
-id: mm-sub-minion
-master:
-  - localhost:64506
-  - localhost:64508

@@ -41,6 +41,22 @@ def test_change_xml_text_nochange(xml_doc):
     assert not ret
 
 
+def test_change_xml_equals_nochange(xml_doc):
+    ret = xml.change_xml(
+        xml_doc,
+        {"mem": 1023},
+        [
+            {
+                "path": "mem",
+                "xpath": "memory",
+                "get": lambda n: int(n.text),
+                "equals": lambda o, n: abs(o - n) <= 1,
+            }
+        ],
+    )
+    assert not ret
+
+
 def test_change_xml_text_notdefined(xml_doc):
     ret = xml.change_xml(xml_doc, {}, [{"path": "name", "xpath": "name"}])
     assert not ret

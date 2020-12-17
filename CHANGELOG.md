@@ -273,6 +273,14 @@ Added
   This flag will be deprecated in the Phosphorus release when this functionality
   becomes the default. (#58652)
 
+Salt 3001.4
+===========
+
+Fixed
+-----
+
+- Fixes salt-ssh authentication when using tty (#58922)
+
 Salt 3001.3
 ===========
 
@@ -718,6 +726,14 @@ Added
 - Added `efi` parameter to virt module, so `uefi` firmware can be auto selected. (#57397)
 - [#56637](https://github.com/saltstack/salt/pull/56637) - Add ``win_wua.installed`` to the ``win_wua`` execution module
 - Clarify how to get the master fingerprint (#54699)
+
+Salt 3000.6
+===========
+
+Fixed
+-----
+
+- Fixes salt-ssh authentication when using tty (#58922)
 
 Salt 3000.5
 ===========

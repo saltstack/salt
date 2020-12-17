@@ -1,7 +1,8 @@
 {%- import 'libvirt_disks.jinja' as libvirt_disks -%}
 {%- macro opt_attribute(obj, name, conv=none) %}
-{%- if obj.get(name) is not none %}{{ name }}='{{ obj[name] if conv is none else conv(obj[name]) }}'{% endif -%}
+{%- if obj.get(name) is not none %} {{ name }}='{{ obj[name] if conv is none else conv(obj[name]) }}'{% endif -%}
 {%- endmacro %}
+{%- import 'libvirt_chardevs.jinja' as libvirt_chardevs -%}
 <domain type='{{ hypervisor }}'>
         <name>{{ name }}</name>
         {%- if cpu %}
@@ -237,6 +238,19 @@
                 <boot dev='{{ dev }}' />
                 {% endfor %}
         </os>
+{%- if clock %}
+        <clock offset="{{ clock.offset }}"{{ opt_attribute(clock, "adjustment") }}{{ opt_attribute(clock, "timezone") }}>
+    {%- for timer_name in clock.timers %}
+    {%- set timer = clock.timers[timer_name] %}
+            <timer name='{{ timer_name }}'{{ opt_attribute(timer, "track") }}{{ opt_attribute(timer, "tickpolicy") }}{{ opt_attribute(timer, "frequency") }}{{ opt_attribute(timer, "mode") }}{{ opt_attribute(timer, "present", yesno) }}>
+        {%- if "threshold" in timer or "slew" in timer or "limit" in timer %}
+                <catchup{{ opt_attribute(timer, "slew") }}{{ opt_attribute(timer, "threshold") }}{{ opt_attribute(timer, "limit") }}/>
+        {%- endif %}
+            </timer>
+    {%- endfor %}
+        </clock>
+{%- endif %}
+        <on_reboot>{{ on_reboot }}</on_reboot>
         <devices>
                 {% for disk in disks %}
                 <disk type='{{ disk.type }}' device='{{ disk.device }}'>
@@ -255,7 +269,7 @@
                         <address type='drive' controller='0' bus='0' target='0' unit='{{ disk.index }}' />
                         {% endif %}
                         {% if disk.driver -%}
-                        <driver name='qemu' type='{{ disk.format}}' cache='none' io='native'/>
+                        <driver name='qemu' type='{{ disk.format}}' cache='none' io='{{ disk.io }}'/>
                         {% endif %}
                 </disk>
                 {% endfor %}
@@ -290,35 +304,39 @@
                             address='{{ graphics.listen.address }}'
                             {% endif %}/>
                 </graphics>
-                {% endif %}
-                {% if serial_type == 'pty' %}
-                <serial type='pty'>
-                        <target port='0'/>
-                </serial>
-                {% if console %}
-                <console type='pty'>
-                        <target type='serial' port='0'/>
-                </console>
-                {% endif %}
+
+                  {% if graphics.type == "spice" -%}
+                  <channel type='spicevmc'>
+                    <target type='virtio' name='com.redhat.spice.0'/>
+                  </channel>
+                  {%- endif %}
                 {% endif %}
 
-                {% if serial_type == 'tcp' %}
-                <serial type='tcp'>
-                        <source mode='bind' host='' service='{{ telnet_port }}'/>
-                        <protocol type='telnet'/>
-                        <target port='0'/>
+                {%- for serial in serials %}
+                <serial type='{{ serial.type }}'>
+                  {{ libvirt_chardevs.chardev(serial) }}
                 </serial>
-                {% if console %}
-                <console type='tcp'>
-                        <source mode='bind' host='' service='{{ telnet_port }}'/>
-                        <protocol type='telnet'/>
-                        <target type='serial' port='0'/>
-                </console>
-                {% endif %}
-                {% endif %}
+                {%- endfor %}
 
+                {%- for console in consoles %}
+                <console type='{{ console.type }}'>
+                  {{ libvirt_chardevs.chardev(console) }}
+                </console>
+                {% endfor %}
+{%- if hypervisor in ["qemu", "kvm"] %}
+        <channel type='unix'>
+            <target type='virtio' name='org.qemu.guest_agent.0'/>
+        </channel>
+{%- endif %}
         </devices>
         <features>
                 <acpi />
+                <apic />
+                <pae />
+{%- if hypervisor_features.get("kvm-hint-dedicated") %}
+                <kvm>
+                  <hint-dedicated state="on"/>
+                </kvm>
+{%- endif %}
         </features>
 </domain>

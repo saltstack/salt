@@ -1,14 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 Integration tests for the lxd states
 """
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Lxd Test Case
 import tests.integration.states.test_lxd
-
-# Import Salt Testing libs
 from tests.support.helpers import flaky
 
 

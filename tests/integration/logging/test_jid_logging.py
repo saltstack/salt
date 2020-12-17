@@ -1,19 +1,11 @@
-# -*- coding: utf-8 -*-
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 
-import salt.ext.six as six
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.helpers import TstSuiteLoggingHandler, flaky
 from tests.support.unit import skipIf
 
 
-@skipIf(six.PY3, "Runtest Log Hander Disabled for PY3, #41836")
+@skipIf(True, "Runtest Log Hander Disabled for PY3, #41836")
 class LoggingJIDsTest(ModuleCase):
     """
     Validate that JIDs appear in LOGs

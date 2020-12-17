@@ -156,9 +156,11 @@ def clean_node(parent_map, node, ignored=None):
     :param parent_map: dictionary mapping each node to its parent
     :param node: the node to clean
     :param ignored: a list of ignored attributes.
+    :return: True if anything has been removed, False otherwise
     """
     has_text = node.text is not None and node.text.strip()
     parent = parent_map.get(node)
+    removed = False
     if (
         len(node.attrib.keys() - (ignored or [])) == 0
         and not list(node)
@@ -166,9 +168,12 @@ def clean_node(parent_map, node, ignored=None):
         and parent
     ):
         parent.remove(node)
+        removed = True
     # Clean parent nodes if needed
     if parent is not None:
-        clean_node(parent_map, parent, ignored)
+        parent_cleaned = clean_node(parent_map, parent, ignored)
+        removed = removed or parent_cleaned
+    return removed
 
 
 def del_text(parent_map, node):
@@ -180,6 +185,7 @@ def del_text(parent_map, node):
     parent = parent_map[node]
     parent.remove(node)
     clean_node(parent, node)
+    return True
 
 
 def del_attribute(attribute, ignored=None):
@@ -197,11 +203,52 @@ def del_attribute(attribute, ignored=None):
 
     def _do_delete(parent_map, node):
         if attribute not in node.keys():
-            return
+            return False
         node.attrib.pop(attribute)
         clean_node(parent_map, node, ignored)
+        return True
 
     return _do_delete
+
+
+def attribute(path, xpath, attr_name, ignored=None, convert=None):
+    """
+    Helper function creating a change_xml mapping entry for a text XML attribute.
+
+    :param path: the path to the value in the data
+    :param xpath: the xpath to the node holding the attribute
+    :param attr_name: the attribute name
+    :param ignored: the list of attributes to ignore when cleaning up the node
+    :param convert: a function used to convert the value
+    """
+    entry = {
+        "path": path,
+        "xpath": xpath,
+        "get": lambda n: n.get(attr_name),
+        "set": lambda n, v: n.set(attr_name, str(v)),
+        "del": salt.utils.xmlutil.del_attribute(attr_name, ignored),
+    }
+    if convert:
+        entry["convert"] = convert
+    return entry
+
+
+def int_attribute(path, xpath, attr_name, ignored=None):
+    """
+    Helper function creating a change_xml mapping entry for a text XML integer attribute.
+
+    :param path: the path to the value in the data
+    :param xpath: the xpath to the node holding the attribute
+    :param attr_name: the attribute name
+    :param ignored: the list of attributes to ignore when cleaning up the node
+    """
+    return {
+        "path": path,
+        "xpath": xpath,
+        "get": lambda n: int(n.get(attr_name)) if n.get(attr_name) else None,
+        "set": lambda n, v: n.set(attr_name, str(v)),
+        "del": salt.utils.xmlutil.del_attribute(attr_name, ignored),
+    }
 
 
 def change_xml(doc, data, mapping):
@@ -237,6 +284,7 @@ def change_xml(doc, data, mapping):
             del
                 function deleting the value in the XML.
                 Takes two parameters for the parent node and the node matched by the XPath.
+                Returns True if anything was removed, False otherwise.
                 Default is to remove the text value.
                 More cleanup may be performed, see the :py:func:`clean_node` function for details.
 
@@ -308,7 +356,9 @@ def change_xml(doc, data, mapping):
                 if convert_fn:
                     new_value = convert_fn(new_value)
 
-                if str(current_value) != str(new_value):
+                # Allow custom comparison. Can be useful for almost equal numeric values
+                compare_fn = param.get("equals", lambda o, n: str(o) == str(n))
+                if not compare_fn(current_value, new_value):
                     set_fn(node, new_value)
                     need_update = True
             else:
@@ -316,17 +366,16 @@ def change_xml(doc, data, mapping):
                 del_fn = param.get("del", del_text)
                 parent_map = {c: p for p in doc.iter() for c in p}
                 for node in nodes:
-                    del_fn(parent_map, node)
-                    need_update = True
+                    deleted = del_fn(parent_map, node)
+                    need_update = need_update or deleted
 
         # Clean the left over XML elements if there were placeholders
-        if placeholders and values[0].get("value") != []:
+        if placeholders and [v for v in values if v.get("value") != []]:
             all_nodes = set(doc.findall(all_nodes_xpath))
             to_remove = all_nodes - kept_nodes
             del_fn = param.get("del", del_text)
             parent_map = {c: p for p in doc.iter() for c in p}
             for node in to_remove:
-                del_fn(parent_map, node)
-                need_update = True
-
+                deleted = del_fn(parent_map, node)
+                need_update = need_update or deleted
     return need_update
