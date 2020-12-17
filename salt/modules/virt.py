@@ -3340,6 +3340,41 @@ def _compute_device_changes(old_xml, new_xml, to_skip):
     return changes
 
 
+def _get_pci_addresses(node):
+    """
+    Get all the pci addresses in the node in 0000:00:00.0 form
+    """
+    return {_format_pci_address(address) for address in node.findall(".//address")}
+
+
+def _correct_networks(conn, desc):
+    """
+    Adjust the interface devices matching existing networks.
+    Returns the network interfaces XML definition as string mapped to the new device node.
+    """
+    networks = [ElementTree.fromstring(net.XMLDesc()) for net in conn.listAllNetworks()]
+    nics = desc.findall("devices/interface")
+    device_map = {}
+    for nic in nics:
+        if nic.get("type") == "hostdev":
+            # Do we have a network matching this NIC PCI address?
+            addr = _get_pci_addresses(nic.find("source"))
+            matching_nets = [
+                net
+                for net in networks
+                if net.find("forward").get("mode") == "hostdev"
+                and addr & _get_pci_addresses(net)
+            ]
+            if matching_nets:
+                # We need to store the XML before modifying it
+                # since libvirt needs it to detach the device
+                old_xml = ElementTree.tostring(nic)
+                nic.set("type", "network")
+                nic.find("source").set("network", matching_nets[0].find("name").text)
+                device_map[nic] = old_xml
+    return device_map
+
+
 def _update_live(domain, new_desc, mem, cpu, old_mem, old_cpu, to_skip, test):
     """
     Perform the live update of a domain.
@@ -3385,9 +3420,9 @@ def _update_live(domain, new_desc, mem, cpu, old_mem, old_cpu, to_skip, test):
             )
 
     # Compute the changes with the live definition
-    changes = _compute_device_changes(
-        ElementTree.fromstring(domain.XMLDesc(0)), new_desc, to_skip
-    )
+    old_desc = ElementTree.fromstring(domain.XMLDesc(0))
+    changed_devices = {"interface": _correct_networks(domain.connect(), old_desc)}
+    changes = _compute_device_changes(old_desc, new_desc, to_skip)
 
     # Look for removable device source changes
     removable_changes = []
@@ -3444,13 +3479,14 @@ def _update_live(domain, new_desc, mem, cpu, old_mem, old_cpu, to_skip, test):
             )
 
         for removed in changes[dev_type].get("deleted", []):
+            removed_def = changed_devices.get(dev_type, {}).get(
+                removed, ElementTree.tostring(removed)
+            )
             commands.append(
                 {
                     "device": dev_type,
                     "cmd": "detachDevice",
-                    "args": [
-                        salt.utils.stringutils.to_str(ElementTree.tostring(removed))
-                    ],
+                    "args": [salt.utils.stringutils.to_str(removed_def)],
                 }
             )
 
@@ -3735,7 +3771,7 @@ def update(
     }
     conn = __get_conn(**kwargs)
     domain = _get_domain(conn, name)
-    desc = ElementTree.fromstring(domain.XMLDesc(0))
+    desc = ElementTree.fromstring(domain.XMLDesc(libvirt.VIR_DOMAIN_XML_INACTIVE))
     need_update = False
 
     # Compute the XML to get the disks, interfaces and graphics
@@ -4196,15 +4232,14 @@ def update(
             conn.close()
             raise err
 
-        if live:
-            live_status, errors = _update_live(
-                domain, new_desc, mem, cpu, old_mem, old_cpu, to_skip, test
-            )
-            status.update(live_status)
-            if errors:
-                if "errors" not in status:
-                    status["errors"] = []
-                status["errors"] += errors
+    if live:
+        live_status, errors = _update_live(
+            domain, new_desc, mem, cpu, old_mem, old_cpu, to_skip, test
+        )
+        status.update(live_status)
+        if errors:
+            status_errors = status.setdefault("errors", [])
+            status_errors += errors
 
     conn.close()
     return status
