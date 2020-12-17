@@ -985,3 +985,78 @@ def test_diff_nics_live_nochange():
     assert ["52:54:00:03:02:15", "52:54:00:ea:2e:89"] == [
         nic.find("mac").get("address") for nic in ret["unchanged"]
     ]
+
+
+def test_update_nic_hostdev_nochange(make_mock_network, make_mock_vm, test):
+    """
+    Test the virt.update function with a running host with hostdev nic
+    """
+    xml_def_template = """
+        <domain type='kvm'>
+          <name>my_vm</name>
+          <memory unit='KiB'>524288</memory>
+          <currentMemory unit='KiB'>524288</currentMemory>
+          <vcpu placement='static'>1</vcpu>
+          <os>
+            <type arch='x86_64'>hvm</type>
+          </os>
+          <on_reboot>restart</on_reboot>
+          <devices>
+            {}
+          </devices>
+        </domain>
+    """
+    inactive_nic = """
+        <interface type='hostdev' managed='yes'>
+          <mac address='52:54:00:67:b2:08'/>
+          <driver name='vfio'/>
+          <source network="test-hostdev"/>
+          <model type='virtio'/>
+          <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x0'/>
+        </interface>
+    """
+    running_nic = """
+        <interface type='hostdev' managed='yes'>
+          <mac address='52:54:00:67:b2:08'/>
+          <driver name='vfio'/>
+          <source>
+            <address type='pci' domain='0x0000' bus='0x3d' slot='0x02' function='0x0'/>
+          </source>
+          <model type='virtio'/>
+          <alias name='hostdev0'/>
+          <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x0'/>
+        </interface>
+    """
+    domain_mock = make_mock_vm(
+        xml_def_template.format(running_nic),
+        running="running",
+        inactive_def=xml_def_template.format(inactive_nic),
+    )
+
+    make_mock_network(
+        """
+        <network connections='1'>
+          <name>test-hostdev</name>
+          <uuid>51d0aaa5-7530-4c60-8498-5bc3ab8c655b</uuid>
+          <forward mode='hostdev' managed='yes'>
+            <pf dev='eth0'/>
+            <address type='pci' domain='0x0000' bus='0x3d' slot='0x02' function='0x0'/>
+            <address type='pci' domain='0x0000' bus='0x3d' slot='0x02' function='0x1'/>
+          </forward>
+        </network>
+        """
+    )
+
+    ret = virt.update(
+        "my_vm",
+        interfaces=[{"name": "eth0", "type": "network", "source": "test-hostdev"}],
+        test=test,
+        live=True,
+    )
+    assert not ret.get("definition")
+    assert not ret.get("interface").get("attached")
+    assert not ret.get("interface").get("detached")
+    define_mock = virt.libvirt.openAuth().defineXML
+    define_mock.assert_not_called()
+    domain_mock.attachDevice.assert_not_called()
+    domain_mock.detachDevice.assert_not_called()
