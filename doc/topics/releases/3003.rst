@@ -185,3 +185,42 @@ Fixed
 - Fixing the virtual function for the netimiko module to allow it to run outside of a proxy minion. Adding additional tests. (#59635)
 - Allow "extra_filerefs" as sanitized kwargs for SSH client.
   Fix regression on "cmd.run" when passing tuples as cmd. (#59664)
+
+
+New Features
+============
+
+Transactional System Support (MicroOS)
+--------------------------------------
+
+A transactional system, like ``MicroOS``, can present some challenges
+when the user decided to manage it via Salt.
+
+MicroOS provide a read-only rootfs and a tool,
+``transactional-update``, that takes care of the management of the
+system (updating, upgrading, installation or reboot, among others) in
+an atomic way.
+
+Atomicity is the main feature of MicroOS, and to guarantee this
+property, this model leverages ``snapper``, ``zypper``, ``btrfs`` and
+``overlayfs`` to create snapshots that will be updated independently
+of the currently running system, and that are activated after the
+reboot.  This implies, for example, that some changes made on the
+system are not visible until the next reboot, as those changes are
+living in a different snapshot of the file system.
+
+Salt 3003 (Aluminium) support this type of system via two new modules
+(``transactional_update`` and ``rebootmgr``) and a new executor
+(``transactional_update``).
+
+The new modules will provide all the low level API for interacting
+with transactional systems, like defining a mantenance window where
+the system is free to reboot and activate the new state, or install
+new software in a new transaction.  It will also provide hight level
+of abstractions that will allows us to execute Salt module functions
+or applying states inside new transactions.
+
+The execution module will help us to treat the transactional system
+transparently (like the traditional ones), using a mechanism that will
+delegate some Salt modules execution into the new
+``transactional_update`` module.
