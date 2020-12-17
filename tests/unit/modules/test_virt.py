@@ -3189,7 +3189,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         devattach_mock.reset_mock()
         devdetach_mock.reset_mock()
         ret = virt.update("my_vm", nic_profile=None, interfaces=[])
-        self.assertEqual([], ret["interface"]["attached"])
+        self.assertFalse(ret["interface"].get("attached"))
         self.assertEqual(2, len(ret["interface"]["detached"]))
         devattach_mock.assert_not_called()
         devdetach_mock.assert_called()
@@ -3198,7 +3198,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         devattach_mock.reset_mock()
         devdetach_mock.reset_mock()
         ret = virt.update("my_vm", disk_profile=None, disks=[])
-        self.assertEqual([], ret["disk"]["attached"])
+        self.assertFalse(ret["disk"].get("attached"))
         self.assertEqual(3, len(ret["disk"]["detached"]))
         devattach_mock.assert_not_called()
         devdetach_mock.assert_called()
@@ -3484,8 +3484,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         )
 
         self.assertTrue(ret["definition"])
-        self.assertFalse(ret["disk"]["attached"])
-        self.assertFalse(ret["disk"]["detached"])
+        self.assertFalse(ret["disk"].get("attached"))
+        self.assertFalse(ret["disk"].get("detached"))
         self.assertEqual(
             [
                 {
