@@ -1,4 +1,5 @@
 import pytest
+import salt.exceptions
 import salt.utils.vmware as vmware
 from tests.support.mock import MagicMock, call, patch
 
@@ -137,3 +138,149 @@ def test_correct_args_should_be_passed_to_CreateContainerView_from_by_name(
     fake_inventory.return_value.viewManager.CreateContainerView.assert_has_calls(
         [expected_mock_call]
     )
+
+
+def test_when_no_datastore_matches_by_name_VMwareObjectRetrievalError_should_be_raised():
+    datastore = "whatever"
+    expected_message = "Datastore '{}' does not exist.".format(datastore)
+    patch_get_mor = patch(
+        "salt.utils.vmware.get_mor_by_name", autospec=True, return_value=None
+    )
+    with patch_get_mor, pytest.raises(salt.exceptions.VMwareObjectRetrievalError) as e:
+        vmware.list_datastore_full(service_instance="blarp", datastore=datastore)
+
+    assert e.value.args[0] == expected_message
+
+
+def test_when_no_host_exists_items_should_be_correctly_returned_from_datastore_object():
+    expected_items = {
+        "name": "roscivs",
+        "type": "bottia",
+        "url": "of sandwich",
+        "capacity": 42,
+        "free": 13,
+        "used": 42 - 13,  # capacity-free
+        "usage": (29 / 42) * 100,  # (used / capacity) * 100
+        "hosts": [],
+    }
+    gigabytes = 1024 * 1024
+    fake_do = MagicMock()
+    fake_do.summary.name = expected_items["name"]
+    fake_do.summary.type = expected_items["type"]
+    fake_do.summary.url = expected_items["url"]
+    fake_do.summary.capacity = expected_items["capacity"] * gigabytes
+    fake_do.summary.freeSpace = expected_items["free"] * gigabytes
+    fake_do.summary.host = []
+
+    with patch(
+        "salt.utils.vmware.get_mor_by_name", autospec=True, return_value=fake_do
+    ):
+        actual_items = vmware.list_datastore_full(
+            service_instance="fnord", datastore="also fnord"
+        )
+
+    assert actual_items == expected_items
+
+
+def test_text_values_should_have_single_quotes_removed():
+    expected_name = "roscivs"
+    expected_type = "bottia"
+    expected_url = "of sandwich"
+    fake_do = MagicMock()
+    fake_do.summary.name = "'''''{}''".format(expected_name)
+    fake_do.summary.type = "'''{}''''''''''".format(expected_type)
+    fake_do.summary.url = "{}''''''''''".format(expected_url)
+    fake_do.summary.capacity = 42
+    fake_do.summary.freeSpace = 13
+    fake_do.summary.host = []
+
+    with patch(
+        "salt.utils.vmware.get_mor_by_name", autospec=True, return_value=fake_do
+    ):
+        actual_items = vmware.list_datastore_full(
+            service_instance="fnord", datastore="also fnord"
+        )
+
+    assert actual_items["name"] == expected_name
+    assert actual_items["type"] == expected_type
+    assert actual_items["url"] == expected_url
+
+
+def test_host_keys_are_correctly_processed_before_searching_by_moid():
+    expected_keys = [
+        "quoty mcquoteface",
+        "sir quotesalot",
+        "all the quotes",
+        "sans quotes:but:more:colons",
+    ]
+    fake_do = MagicMock()
+    fake_do.summary.name = "fnord"
+    fake_do.summary.type = "fnord"
+    fake_do.summary.url = "fnord"
+    fake_do.summary.capacity = 4  # IEEE random number
+    fake_do.summary.freeSpace = 4
+    fake_do.host = [
+        MagicMock(key="''''something fnordy:{}".format(expected_keys[0])),
+        MagicMock(key="'''':{}'''''".format(expected_keys[1])),
+        MagicMock(key="'''''''''''':{}'''''''''''".format(expected_keys[2])),
+        MagicMock(key="ignore me:{}".format(expected_keys[3])),
+    ]
+
+    patch_by_name = patch(
+        "salt.utils.vmware.get_mor_by_name", autospec=True, return_value=fake_do
+    )
+    patch_by_moid = patch("salt.utils.vmware.get_mor_by_moid", autospec=True)
+
+    with patch_by_name, patch_by_moid as fake_moid:
+        vmware.list_datastore_full(service_instance="fnord", datastore="also fnord")
+
+        fake_moid.assert_has_calls(
+            [
+                call("fnord", vmware.vim.HostSystem, expected_keys[0]),
+                call("fnord", vmware.vim.HostSystem, expected_keys[1]),
+                call("fnord", vmware.vim.HostSystem, expected_keys[2]),
+                call("fnord", vmware.vim.HostSystem, expected_keys[3]),
+            ]
+        )
+
+
+def test_host_names_should_be_correctly_returned():
+    expected_hosts = ["hosty mchostface", "roscivs bottia", "whatever", "cool times"]
+    fake_do = MagicMock()
+    fake_do.summary.name = "fnord"
+    fake_do.summary.type = "fnord"
+    fake_do.summary.url = "fnord"
+    fake_do.summary.capacity = 4  # IEEE random number
+    fake_do.summary.freeSpace = 4
+    fake_do.host = [
+        MagicMock(key="fnord:fnord"),
+        MagicMock(key="fnord:fnord:fnord"),
+        MagicMock(key="fnord:fnord:fnord:fnord"),
+        MagicMock(key="fnord:fnord:fnord:fnord"),
+    ]
+    fake_hosts = [
+        MagicMock(),
+        MagicMock(),
+        MagicMock(),
+        MagicMock(),
+    ]
+    fake_hosts[0].name = expected_hosts[0]
+    fake_hosts[1].name = expected_hosts[1]
+    fake_hosts[2].name = expected_hosts[2]
+    fake_hosts[3].name = expected_hosts[3]
+
+    patch_by_name = patch(
+        "salt.utils.vmware.get_mor_by_name", autospec=True, return_value=fake_do
+    )
+    m1 = MagicMock()
+    m1.name = expected_hosts[0]
+    patch_by_moid = patch(
+        "salt.utils.vmware.get_mor_by_moid", autospec=True, side_effect=fake_hosts
+    )
+
+    with patch_by_name, patch_by_moid as fake_moid:
+        actual_items = vmware.list_datastore_full(
+            service_instance="fnord", datastore="also fnord"
+        )
+
+        assert actual_items["hosts"] == expected_hosts
