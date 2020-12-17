@@ -335,7 +335,7 @@ def multi_call(*methods, **kwargs):
     kwargs
         Key-value dictionary with the connection details (when not running
         under a Proxy Minion).
-        
+
     CLI Example:
 
     .. code-block:: bash
