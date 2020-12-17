@@ -271,6 +271,8 @@ def init(opts):
     # Save optional
     DETAILS['protocol'] = proxy_conf.get('protocol')
     DETAILS['port'] = proxy_conf.get('port')
+    DETAILS['verify_ssl'] = proxy_conf.get('verify_ssl')
+    DETAILS['ca_bundle'] = proxy_conf.get('ca_bundle')
 
     # Test connection
     if DETAILS['mechanism'] == 'userpass':
