@@ -1,14 +1,6 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Megan Wilhite <mwilhite@saltstack.com>
 """
-
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Salt Libs
-from salt.ext import six
-
 # Create the cloud instance name to be used throughout the tests
 from tests.integration.cloud.helpers.cloud_test_base import TIMEOUT, CloudTest
 
@@ -31,9 +23,9 @@ class VMWareTest(CloudTest):
         ]
 
         ret_val = self.run_cloud(
-            "-p vmware-test {0}".format(self.instance_name), timeout=TIMEOUT
+            "-p vmware-test {}".format(self.instance_name), timeout=TIMEOUT
         )
-        disk_datastore_str = "                [{0}] {1}/Hard disk 2-flat.vmdk".format(
+        disk_datastore_str = "                [{}] {}/Hard disk 2-flat.vmdk".format(
             disk_datastore, self.instance_name
         )
 
@@ -42,7 +34,7 @@ class VMWareTest(CloudTest):
         self.assertIn(
             disk_datastore_str,
             ret_val,
-            msg="Hard Disk 2 did not use the Datastore {0} ".format(disk_datastore),
+            msg="Hard Disk 2 did not use the Datastore {} ".format(disk_datastore),
         )
 
         self.assertDestroyInstance()
@@ -53,14 +45,14 @@ class VMWareTest(CloudTest):
         """
         # create the instance
         ret_val = self.run_cloud(
-            "-p vmware-test {0} --no-deploy".format(self.instance_name), timeout=TIMEOUT
+            "-p vmware-test {} --no-deploy".format(self.instance_name), timeout=TIMEOUT
         )
 
         # check if instance returned with salt installed
         self.assertInstanceExists(ret_val)
 
         create_snapshot = self.run_cloud(
-            "-a create_snapshot {0} \
+            "-a create_snapshot {} \
                                          snapshot_name='Test Cloud' \
                                          memdump=True -y".format(
                 self.instance_name
@@ -69,7 +61,7 @@ class VMWareTest(CloudTest):
         )
         s_ret_str = "Snapshot created successfully"
 
-        self.assertIn(s_ret_str, six.text_type(create_snapshot))
+        self.assertIn(s_ret_str, str(create_snapshot))
 
         self.assertDestroyInstance()
 
@@ -79,8 +71,9 @@ class VMWareTest(CloudTest):
         verify_ssl: False
         """
         profile_name = "vmware_verify_ssl"
-        self.add_profile_config("vmware-test", {"verify_ssl": False,},
-                                          "vmware.conf", profile_name)
+        self.add_profile_config(
+            "vmware-test", {"verify_ssl": False}, "vmware.conf", profile_name
+        )
         # create the instance
         ret_val = self.run_cloud(
             "-p {} {}".format(profile_name, self.instance_name), timeout=TIMEOUT
