@@ -1458,8 +1458,11 @@ def get_ssh_key(host,
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs('credstore')
-def get_host_datetime(host, username, password, protocol=None, port=None, host_names=None):
+@ignores_kwargs("credstore")
+def get_host_datetime(
+    host, username, password, protocol=None, port=None, host_names=None,
+    verify_ssl=True
+):
     '''
     Get the date/time information for a given host or list of host_names.
 
@@ -1489,6 +1492,9 @@ def get_host_datetime(host, username, password, protocol=None, port=None, host_n
         ``host`` location instead. This is useful for when service instance connection
         information is used for a single ESXi host.
 
+    verify_ssl
+        Verify the SSL certificate. Default: True
+
     CLI Example:
 
     .. code-block:: bash
@@ -1500,11 +1506,10 @@ def get_host_datetime(host, username, password, protocol=None, port=None, host_n
         salt '*' vsphere.get_host_datetime my.vcenter.location root bad-password \
         host_names='[esxi-1.host.com, esxi-2.host.com]'
     '''
-    service_instance = salt.utils.vmware.get_service_instance(host=host,
-                                                              username=username,
-                                                              password=password,
-                                                              protocol=protocol,
-                                                              port=port)
+    service_instance = salt.utils.vmware.get_service_instance(
+        host=host, username=username, password=password, protocol=protocol,
+        port=port, verify_ssl=verify_ssl,
+    )
     host_names = _check_hosts(service_instance, host, host_names)
     ret = {}
     for host_name in host_names:
@@ -1517,8 +1522,9 @@ def get_host_datetime(host, username, password, protocol=None, port=None, host_n
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs('credstore')
-def get_ntp_config(host, username, password, protocol=None, port=None, host_names=None):
+@ignores_kwargs("credstore")
+def get_ntp_config(host, username, password, protocol=None, port=None,
+                   host_names=None, verify_ssl=True):
     '''
     Get the NTP configuration information for a given host or list of host_names.
 
@@ -1548,6 +1554,9 @@ def get_ntp_config(host, username, password, protocol=None, port=None, host_name
         ``host`` location instead. This is useful for when service instance connection
         information is used for a single ESXi host.
 
+    verify_ssl
+        Verify the SSL certificate. Default: True
+
     CLI Example:
 
     .. code-block:: bash
@@ -1559,11 +1568,10 @@ def get_ntp_config(host, username, password, protocol=None, port=None, host_name
         salt '*' vsphere.get_ntp_config my.vcenter.location root bad-password \
         host_names='[esxi-1.host.com, esxi-2.host.com]'
     '''
-    service_instance = salt.utils.vmware.get_service_instance(host=host,
-                                                              username=username,
-                                                              password=password,
-                                                              protocol=protocol,
-                                                              port=port)
+    service_instance = salt.utils.vmware.get_service_instance(
+        host=host, username=username, password=password, protocol=protocol,
+        port=port, verify_ssl=verify_ssl,
+    )
     host_names = _check_hosts(service_instance, host, host_names)
     ret = {}
     for host_name in host_names:
@@ -1575,8 +1583,11 @@ def get_ntp_config(host, username, password, protocol=None, port=None, host_name
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs('credstore')
-def get_service_policy(host, username, password, service_name, protocol=None, port=None, host_names=None):
+@ignores_kwargs("credstore")
+def get_service_policy(
+    host, username, password, service_name, protocol=None, port=None,
+    host_names=None, verify_ssl=True,
+):
     '''
     Get the service name's policy for a given host or list of hosts.
 
@@ -1622,6 +1633,9 @@ def get_service_policy(host, username, password, service_name, protocol=None, po
         for the ``host`` location instead. This is useful for when service instance
         connection information is used for a single ESXi host.
 
+    verify_ssl
+        Verify the SSL certificate. Default: True
+
     CLI Example:
 
     .. code-block:: bash
@@ -1633,13 +1647,26 @@ def get_service_policy(host, username, password, service_name, protocol=None, po
         salt '*' vsphere.get_service_policy my.vcenter.location root bad-password 'ntpd' \
         host_names='[esxi-1.host.com, esxi-2.host.com]'
     '''
-    service_instance = salt.utils.vmware.get_service_instance(host=host,
-                                                              username=username,
-                                                              password=password,
-                                                              protocol=protocol,
-                                                              port=port)
-    valid_services = ['DCUI', 'TSM', 'SSH', 'ssh', 'lbtd', 'lsassd', 'lwiod', 'netlogond',
-                      'ntpd', 'sfcbd-watchdog', 'snmpd', 'vprobed', 'vpxa', 'xorg']
+    service_instance = salt.utils.vmware.get_service_instance(
+        host=host, username=username, password=password, protocol=protocol,
+        port=port, verify_ssl=verify_ssl,
+    )
+    valid_services = [
+        "DCUI",
+        "TSM",
+        "SSH",
+        "ssh",
+        "lbtd",
+        "lsassd",
+        "lwiod",
+        "netlogond",
+        "ntpd",
+        "sfcbd-watchdog",
+        "snmpd",
+        "vprobed",
+        "vpxa",
+        "xorg",
+    ]
     host_names = _check_hosts(service_instance, host, host_names)
 
     ret = {}
@@ -1682,8 +1709,11 @@ def get_service_policy(host, username, password, service_name, protocol=None, po
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs('credstore')
-def get_service_running(host, username, password, service_name, protocol=None, port=None, host_names=None):
+@ignores_kwargs("credstore")
+def get_service_running(
+    host, username, password, service_name, protocol=None, port=None,
+    host_names=None, verify_ssl=True,
+):
     '''
     Get the service name's running state for a given host or list of hosts.
 
@@ -1729,6 +1759,9 @@ def get_service_running(host, username, password, service_name, protocol=None, p
         for the ``host`` location instead. This is useful for when service instance
         connection information is used for a single ESXi host.
 
+    verify_ssl
+        Verify the SSL certificate. Default: True
+
     CLI Example:
 
     .. code-block:: bash
@@ -1740,13 +1773,26 @@ def get_service_running(host, username, password, service_name, protocol=None, p
         salt '*' vsphere.get_service_running my.vcenter.location root bad-password 'ntpd' \
         host_names='[esxi-1.host.com, esxi-2.host.com]'
     '''
-    service_instance = salt.utils.vmware.get_service_instance(host=host,
-                                                              username=username,
-                                                              password=password,
-                                                              protocol=protocol,
-                                                              port=port)
-    valid_services = ['DCUI', 'TSM', 'SSH', 'ssh', 'lbtd', 'lsassd', 'lwiod', 'netlogond',
-                      'ntpd', 'sfcbd-watchdog', 'snmpd', 'vprobed', 'vpxa', 'xorg']
+    service_instance = salt.utils.vmware.get_service_instance(
+        host=host, username=username, password=password, protocol=protocol,
+        port=port, verify_ssl=verify_ssl,
+    )
+    valid_services = [
+        "DCUI",
+        "TSM",
+        "SSH",
+        "ssh",
+        "lbtd",
+        "lsassd",
+        "lwiod",
+        "netlogond",
+        "ntpd",
+        "sfcbd-watchdog",
+        "snmpd",
+        "vprobed",
+        "vpxa",
+        "xorg",
+    ]
     host_names = _check_hosts(service_instance, host, host_names)
 
     ret = {}
@@ -1789,8 +1835,11 @@ def get_service_running(host, username, password, service_name, protocol=None, p
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs('credstore')
-def get_vmotion_enabled(host, username, password, protocol=None, port=None, host_names=None):
+@ignores_kwargs("credstore")
+def get_vmotion_enabled(
+    host, username, password, protocol=None, port=None, host_names=None,
+    verify_ssl=True,
+):
     '''
     Get the VMotion enabled status for a given host or a list of host_names. Returns ``True``
     if VMotion is enabled, ``False`` if it is not enabled.
@@ -1821,6 +1870,9 @@ def get_vmotion_enabled(host, username, password, protocol=None, port=None, host
         ``host`` location instead. This is useful for when service instance
         connection information is used for a single ESXi host.
 
+    verify_ssl
+        Verify the SSL certificate. Default: True
+
     CLI Example:
 
     .. code-block:: bash
@@ -1832,11 +1884,10 @@ def get_vmotion_enabled(host, username, password, protocol=None, port=None, host
         salt '*' vsphere.get_vmotion_enabled my.vcenter.location root bad-password \
         host_names='[esxi-1.host.com, esxi-2.host.com]'
     '''
-    service_instance = salt.utils.vmware.get_service_instance(host=host,
-                                                              username=username,
-                                                              password=password,
-                                                              protocol=protocol,
-                                                              port=port)
+    service_instance = salt.utils.vmware.get_service_instance(
+        host=host, username=username, password=password, protocol=protocol,
+        port=port, verify_ssl=verify_ssl,
+    )
     host_names = _check_hosts(service_instance, host, host_names)
     ret = {}
     for host_name in host_names:
@@ -1851,8 +1902,11 @@ def get_vmotion_enabled(host, username, password, protocol=None, port=None, host
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs('credstore')
-def get_vsan_enabled(host, username, password, protocol=None, port=None, host_names=None):
+@ignores_kwargs("credstore")
+def get_vsan_enabled(
+    host, username, password, protocol=None, port=None, host_names=None,
+    verify_ssl=True,
+):
     '''
     Get the VSAN enabled status for a given host or a list of host_names. Returns ``True``
     if VSAN is enabled, ``False`` if it is not enabled, and ``None`` if a VSAN Host Config
@@ -1884,6 +1938,9 @@ def get_vsan_enabled(host, username, password, protocol=None, port=None, host_na
         ``host`` location instead. This is useful for when service instance
         connection information is used for a single ESXi host.
 
+    verify_ssl
+        Verify the SSL certificate. Default: True
+
     CLI Example:
 
     .. code-block:: bash
@@ -1895,11 +1952,10 @@ def get_vsan_enabled(host, username, password, protocol=None, port=None, host_na
         salt '*' vsphere.get_vsan_enabled my.vcenter.location root bad-password \
         host_names='[esxi-1.host.com, esxi-2.host.com]'
     '''
-    service_instance = salt.utils.vmware.get_service_instance(host=host,
-                                                              username=username,
-                                                              password=password,
-                                                              protocol=protocol,
-                                                              port=port)
+    service_instance = salt.utils.vmware.get_service_instance(
+        host=host, username=username, password=password, protocol=protocol,
+        port=port, verify_ssl=verify_ssl,
+    )
     host_names = _check_hosts(service_instance, host, host_names)
     ret = {}
     for host_name in host_names:
@@ -1918,8 +1974,11 @@ def get_vsan_enabled(host, username, password, protocol=None, port=None, host_na
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs('credstore')
-def get_vsan_eligible_disks(host, username, password, protocol=None, port=None, host_names=None):
+@ignores_kwargs("credstore")
+def get_vsan_eligible_disks(
+    host, username, password, protocol=None, port=None, host_names=None,
+    verify_ssl=True,
+):
     '''
     Returns a list of VSAN-eligible disks for a given host or list of host_names.
 
@@ -1949,6 +2008,9 @@ def get_vsan_eligible_disks(host, username, password, protocol=None, port=None, 
         for the ``host`` location instead. This is useful for when service instance
         connection information is used for a single ESXi host.
 
+    verify_ssl
+        Verify the SSL certificate. Default: True
+
     CLI Example:
 
     .. code-block:: bash
@@ -1960,11 +2022,10 @@ def get_vsan_eligible_disks(host, username, password, protocol=None, port=None, 
         salt '*' vsphere.get_vsan_eligible_disks my.vcenter.location root bad-password \
         host_names='[esxi-1.host.com, esxi-2.host.com]'
     '''
-    service_instance = salt.utils.vmware.get_service_instance(host=host,
-                                                              username=username,
-                                                              password=password,
-                                                              protocol=protocol,
-                                                              port=port)
+    service_instance = salt.utils.vmware.get_service_instance(
+        host=host, username=username, password=password, protocol=protocol,
+        port=port, verify_ssl=verify_ssl,
+    )
     host_names = _check_hosts(service_instance, host, host_names)
     response = _get_vsan_eligible_disks(service_instance, host, host_names)
 
@@ -2014,8 +2075,9 @@ def test_vcenter_connection(service_instance=None):
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs('credstore')
-def system_info(host, username, password, protocol=None, port=None):
+@ignores_kwargs("credstore")
+def system_info(host, username, password, protocol=None, port=None,
+                verify_ssl=True,):
     '''
     Return system information about a VMware environment.
 
@@ -2036,17 +2098,19 @@ def system_info(host, username, password, protocol=None, port=None):
         Optionally set to alternate port if the host is not using the default
         port. Default port is ``443``.
 
+    verify_ssl
+        Verify the SSL certificate. Default: True
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' vsphere.system_info 1.2.3.4 root bad-password
     '''
-    service_instance = salt.utils.vmware.get_service_instance(host=host,
-                                                              username=username,
-                                                              password=password,
-                                                              protocol=protocol,
-                                                              port=port)
+    service_instance = salt.utils.vmware.get_service_instance(
+        host=host, username=username, password=password, protocol=protocol,
+        port=port, verify_ssl=verify_ssl,
+    )
     ret = salt.utils.vmware.get_inventory(service_instance).about.__dict__
     if 'apiType' in ret:
         if ret['apiType'] == 'HostAgent':
@@ -2055,10 +2119,11 @@ def system_info(host, username, password, protocol=None, port=None):
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs('credstore')
-def list_datacenters(host, username, password, protocol=None, port=None):
+@ignores_kwargs("credstore")
+def list_datacenters(host, username, password, protocol=None, port=None,
+                     verify_ssl=True):
     '''
-    Returns a list of datacenters for the the specified host.
+    Returns a list of datacenters for the specified host.
 
     host
         The location of the host.
@@ -2076,6 +2141,9 @@ def list_datacenters(host, username, password, protocol=None, port=None):
     port
         Optionally set to alternate port if the host is not using the default
         port. Default port is ``443``.
+
+    verify_ssl
+        Verify the SSL certificate. Default: True
 
     CLI Example:
 
@@ -2084,19 +2152,19 @@ def list_datacenters(host, username, password, protocol=None, port=None):
         salt '*' vsphere.list_datacenters 1.2.3.4 root bad-password
 
     '''
-    service_instance = salt.utils.vmware.get_service_instance(host=host,
-                                                              username=username,
-                                                              password=password,
-                                                              protocol=protocol,
-                                                              port=port)
+    service_instance = salt.utils.vmware.get_service_instance(
+        host=host, username=username, password=password, protocol=protocol,
+        port=port, verify_ssl=verify_ssl,
+    )
     return salt.utils.vmware.list_datacenters(service_instance)
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs('credstore')
-def list_clusters(host, username, password, protocol=None, port=None):
+@ignores_kwargs("credstore")
+def list_clusters(host, username, password, protocol=None, port=None,
+                  verify_ssl=True):
     '''
-    Returns a list of clusters for the the specified host.
+    Returns a list of clusters for the specified host.
 
     host
         The location of the host.
@@ -2114,6 +2182,9 @@ def list_clusters(host, username, password, protocol=None, port=None):
     port
         Optionally set to alternate port if the host is not using the default
         port. Default port is ``443``.
+
+    verify_ssl
+        Verify the SSL certificate. Default: True
 
     CLI Example:
 
@@ -2122,19 +2193,19 @@ def list_clusters(host, username, password, protocol=None, port=None):
         salt '*' vsphere.list_clusters 1.2.3.4 root bad-password
 
     '''
-    service_instance = salt.utils.vmware.get_service_instance(host=host,
-                                                              username=username,
-                                                              password=password,
-                                                              protocol=protocol,
-                                                              port=port)
+    service_instance = salt.utils.vmware.get_service_instance(
+        host=host, username=username, password=password, protocol=protocol,
+        port=port, verify_ssl=verify_ssl,
+    )
     return salt.utils.vmware.list_clusters(service_instance)
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs('credstore')
-def list_datastore_clusters(host, username, password, protocol=None, port=None):
+@ignores_kwargs("credstore")
+def list_datastore_clusters(host, username, password, protocol=None, port=None,
+                           verify_ssl=True):
     '''
-    Returns a list of datastore clusters for the the specified host.
+    Returns a list of datastore clusters for the specified host.
 
     host
         The location of the host.
@@ -2152,6 +2223,9 @@ def list_datastore_clusters(host, username, password, protocol=None, port=None):
     port
         Optionally set to alternate port if the host is not using the default
         port. Default port is ``443``.
+
+    verify_ssl
+        Verify the SSL certificate. Default: True
 
     CLI Example:
 
@@ -2159,19 +2233,19 @@ def list_datastore_clusters(host, username, password, protocol=None, port=None):
 
         salt '*' vsphere.list_datastore_clusters 1.2.3.4 root bad-password
     '''
-    service_instance = salt.utils.vmware.get_service_instance(host=host,
-                                                              username=username,
-                                                              password=password,
-                                                              protocol=protocol,
-                                                              port=port)
+    service_instance = salt.utils.vmware.get_service_instance(
+        host=host, username=username, password=password, protocol=protocol,
+        port=port, verify_ssl=verify_ssl,
+    )
     return salt.utils.vmware.list_datastore_clusters(service_instance)
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs('credstore')
-def list_datastores(host, username, password, protocol=None, port=None):
+@ignores_kwargs("credstore")
+def list_datastores(host, username, password, protocol=None, port=None,
+                    verify_ssl=True):
     '''
-    Returns a list of datastores for the the specified host.
+    Returns a list of datastores for the specified host.
 
     host
         The location of the host.
@@ -2189,6 +2263,9 @@ def list_datastores(host, username, password, protocol=None, port=None):
     port
         Optionally set to alternate port if the host is not using the default
         port. Default port is ``443``.
+
+    verify_ssl
+        Verify the SSL certificate. Default: True
 
     CLI Example:
 
@@ -2196,19 +2273,19 @@ def list_datastores(host, username, password, protocol=None, port=None):
 
         salt '*' vsphere.list_datastores 1.2.3.4 root bad-password
     '''
-    service_instance = salt.utils.vmware.get_service_instance(host=host,
-                                                              username=username,
-                                                              password=password,
-                                                              protocol=protocol,
-                                                              port=port)
+    service_instance = salt.utils.vmware.get_service_instance(
+        host=host, username=username, password=password, protocol=protocol,
+        port=port, verify_ssl=verify_ssl,
+    )
     return salt.utils.vmware.list_datastores(service_instance)
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs('credstore')
-def list_hosts(host, username, password, protocol=None, port=None):
+@ignores_kwargs("credstore")
+def list_hosts(host, username, password, protocol=None, port=None,
+               verify_ssl=True):
     '''
-    Returns a list of hosts for the the specified VMware environment.
+    Returns a list of hosts for the specified VMware environment.
 
     host
         The location of the host.
@@ -2226,6 +2303,9 @@ def list_hosts(host, username, password, protocol=None, port=None):
     port
         Optionally set to alternate port if the host is not using the default
         port. Default port is ``443``.
+
+    verify_ssl
+        Verify the SSL certificate. Default: True
 
     CLI Example:
 
@@ -2233,19 +2313,19 @@ def list_hosts(host, username, password, protocol=None, port=None):
 
         salt '*' vsphere.list_hosts 1.2.3.4 root bad-password
     '''
-    service_instance = salt.utils.vmware.get_service_instance(host=host,
-                                                              username=username,
-                                                              password=password,
-                                                              protocol=protocol,
-                                                              port=port)
+    service_instance = salt.utils.vmware.get_service_instance(
+        host=host, username=username, password=password, protocol=protocol,
+        port=port, verify_ssl=verify_ssl,
+    )
     return salt.utils.vmware.list_hosts(service_instance)
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs('credstore')
-def list_resourcepools(host, username, password, protocol=None, port=None):
+@ignores_kwargs("credstore")
+def list_resourcepools(host, username, password, protocol=None, port=None,
+                       verify_ssl=True):
     '''
-    Returns a list of resource pools for the the specified host.
+    Returns a list of resource pools for the specified host.
 
     host
         The location of the host.
@@ -2263,6 +2343,9 @@ def list_resourcepools(host, username, password, protocol=None, port=None):
     port
         Optionally set to alternate port if the host is not using the default
         port. Default port is ``443``.
+
+    verify_ssl
+        Verify the SSL certificate. Default: True
 
     CLI Example:
 
@@ -2270,19 +2353,19 @@ def list_resourcepools(host, username, password, protocol=None, port=None):
 
         salt '*' vsphere.list_resourcepools 1.2.3.4 root bad-password
     '''
-    service_instance = salt.utils.vmware.get_service_instance(host=host,
-                                                              username=username,
-                                                              password=password,
-                                                              protocol=protocol,
-                                                              port=port)
+    service_instance = salt.utils.vmware.get_service_instance(
+        host=host, username=username, password=password, protocol=protocol,
+        port=port, verify_ssl=verify_ssl,
+    )
     return salt.utils.vmware.list_resourcepools(service_instance)
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs('credstore')
-def list_networks(host, username, password, protocol=None, port=None):
+@ignores_kwargs("credstore")
+def list_networks(host, username, password, protocol=None, port=None,
+                  verify_ssl=True):
     '''
-    Returns a list of networks for the the specified host.
+    Returns a list of networks for the specified host.
 
     host
         The location of the host.
@@ -2300,6 +2383,9 @@ def list_networks(host, username, password, protocol=None, port=None):
     port
         Optionally set to alternate port if the host is not using the default
         port. Default port is ``443``.
+
+    verify_ssl
+        Verify the SSL certificate. Default: True
 
     CLI Example:
 
@@ -2307,19 +2393,19 @@ def list_networks(host, username, password, protocol=None, port=None):
 
         salt '*' vsphere.list_networks 1.2.3.4 root bad-password
     '''
-    service_instance = salt.utils.vmware.get_service_instance(host=host,
-                                                              username=username,
-                                                              password=password,
-                                                              protocol=protocol,
-                                                              port=port)
+    service_instance = salt.utils.vmware.get_service_instance(
+        host=host, username=username, password=password, protocol=protocol,
+        port=port, verify_ssl=verify_ssl,
+    )
     return salt.utils.vmware.list_networks(service_instance)
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs('credstore')
-def list_vms(host, username, password, protocol=None, port=None):
+@ignores_kwargs("credstore")
+def list_vms(host, username, password, protocol=None, port=None,
+             verify_ssl=True):
     '''
-    Returns a list of VMs for the the specified host.
+    Returns a list of VMs for the specified host.
 
     host
         The location of the host.
@@ -2337,6 +2423,9 @@ def list_vms(host, username, password, protocol=None, port=None):
     port
         Optionally set to alternate port if the host is not using the default
         port. Default port is ``443``.
+
+    verify_ssl
+        Verify the SSL certificate. Default: True
 
     CLI Example:
 
@@ -2344,19 +2433,19 @@ def list_vms(host, username, password, protocol=None, port=None):
 
         salt '*' vsphere.list_vms 1.2.3.4 root bad-password
     '''
-    service_instance = salt.utils.vmware.get_service_instance(host=host,
-                                                              username=username,
-                                                              password=password,
-                                                              protocol=protocol,
-                                                              port=port)
+    service_instance = salt.utils.vmware.get_service_instance(
+        host=host, username=username, password=password, protocol=protocol,
+        port=port, verify_ssl=verify_ssl,
+    )
     return salt.utils.vmware.list_vms(service_instance)
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs('credstore')
-def list_folders(host, username, password, protocol=None, port=None):
+@ignores_kwargs("credstore")
+def list_folders(host, username, password, protocol=None, port=None,
+                 verify_ssl=True):
     '''
-    Returns a list of folders for the the specified host.
+    Returns a list of folders for the specified host.
 
     host
         The location of the host.
@@ -2374,6 +2463,9 @@ def list_folders(host, username, password, protocol=None, port=None):
     port
         Optionally set to alternate port if the host is not using the default
         port. Default port is ``443``.
+
+    verify_ssl
+        Verify the SSL certificate. Default: True
 
     CLI Example:
 
@@ -2381,19 +2473,19 @@ def list_folders(host, username, password, protocol=None, port=None):
 
         salt '*' vsphere.list_folders 1.2.3.4 root bad-password
     '''
-    service_instance = salt.utils.vmware.get_service_instance(host=host,
-                                                              username=username,
-                                                              password=password,
-                                                              protocol=protocol,
-                                                              port=port)
+    service_instance = salt.utils.vmware.get_service_instance(
+        host=host, username=username, password=password, protocol=protocol,
+        port=port, verify_ssl=verify_ssl,
+    )
     return salt.utils.vmware.list_folders(service_instance)
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs('credstore')
-def list_dvs(host, username, password, protocol=None, port=None):
+@ignores_kwargs("credstore")
+def list_dvs(host, username, password, protocol=None, port=None,
+             verify_ssl=True):
     '''
-    Returns a list of distributed virtual switches for the the specified host.
+    Returns a list of distributed virtual switches for the specified host.
 
     host
         The location of the host.
@@ -2411,6 +2503,9 @@ def list_dvs(host, username, password, protocol=None, port=None):
     port
         Optionally set to alternate port if the host is not using the default
         port. Default port is ``443``.
+
+    verify_ssl
+        Verify the SSL certificate. Default: True
 
     CLI Example:
 
@@ -2418,19 +2513,19 @@ def list_dvs(host, username, password, protocol=None, port=None):
 
         salt '*' vsphere.list_dvs 1.2.3.4 root bad-password
     '''
-    service_instance = salt.utils.vmware.get_service_instance(host=host,
-                                                              username=username,
-                                                              password=password,
-                                                              protocol=protocol,
-                                                              port=port)
+    service_instance = salt.utils.vmware.get_service_instance(
+        host=host, username=username, password=password, protocol=protocol,
+        port=port, verify_ssl=verify_ssl,
+    )
     return salt.utils.vmware.list_dvs(service_instance)
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs('credstore')
-def list_vapps(host, username, password, protocol=None, port=None):
+@ignores_kwargs("credstore")
+def list_vapps(host, username, password, protocol=None, port=None,
+               verify_ssl=True):
     '''
-    Returns a list of vApps for the the specified host.
+    Returns a list of vApps for the specified host.
 
     host
         The location of the host.
@@ -2448,6 +2543,9 @@ def list_vapps(host, username, password, protocol=None, port=None):
     port
         Optionally set to alternate port if the host is not using the default
         port. Default port is ``443``.
+
+    verify_ssl
+        Verify the SSL certificate. Default: True
 
     CLI Example:
 
@@ -2456,17 +2554,17 @@ def list_vapps(host, username, password, protocol=None, port=None):
         # List vapps from all minions
         salt '*' vsphere.list_vapps 1.2.3.4 root bad-password
     '''
-    service_instance = salt.utils.vmware.get_service_instance(host=host,
-                                                              username=username,
-                                                              password=password,
-                                                              protocol=protocol,
-                                                              port=port)
+    service_instance = salt.utils.vmware.get_service_instance(
+        host=host, username=username, password=password, protocol=protocol,
+        port=port, verify_ssl=verify_ssl,
+    )
     return salt.utils.vmware.list_vapps(service_instance)
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs('credstore')
-def list_ssds(host, username, password, protocol=None, port=None, host_names=None):
+@ignores_kwargs("credstore")
+def list_ssds(host, username, password, protocol=None, port=None,
+              host_names=None, verify_ssl=True):
     '''
     Returns a list of SSDs for the given host or list of host_names.
 
@@ -2496,6 +2594,9 @@ def list_ssds(host, username, password, protocol=None, port=None, host_names=Non
         ``host`` location instead. This is useful for when service instance
         connection information is used for a single ESXi host.
 
+    verify_ssl
+        Verify the SSL certificate. Default: True
+
     CLI Example:
 
     .. code-block:: bash
@@ -2507,11 +2608,10 @@ def list_ssds(host, username, password, protocol=None, port=None, host_names=Non
         salt '*' vsphere.list_ssds my.vcenter.location root bad-password \
         host_names='[esxi-1.host.com, esxi-2.host.com]'
     '''
-    service_instance = salt.utils.vmware.get_service_instance(host=host,
-                                                              username=username,
-                                                              password=password,
-                                                              protocol=protocol,
-                                                              port=port)
+    service_instance = salt.utils.vmware.get_service_instance(
+        host=host, username=username, password=password, protocol=protocol,
+        port=port, verify_ssl=verify_ssl,
+    )
     host_names = _check_hosts(service_instance, host, host_names)
     ret = {}
     names = []
@@ -2526,8 +2626,9 @@ def list_ssds(host, username, password, protocol=None, port=None, host_names=Non
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs('credstore')
-def list_non_ssds(host, username, password, protocol=None, port=None, host_names=None):
+@ignores_kwargs("credstore")
+def list_non_ssds(host, username, password, protocol=None, port=None,
+                  host_names=None, verify_ssl=True):
     '''
     Returns a list of Non-SSD disks for the given host or list of host_names.
 
@@ -2564,6 +2665,9 @@ def list_non_ssds(host, username, password, protocol=None, port=None, host_names
         ``host`` location instead. This is useful for when service instance
         connection information is used for a single ESXi host.
 
+    verify_ssl
+        Verify the SSL certificate. Default: True
+
     CLI Example:
 
     .. code-block:: bash
@@ -2575,11 +2679,10 @@ def list_non_ssds(host, username, password, protocol=None, port=None, host_names
         salt '*' vsphere.list_non_ssds my.vcenter.location root bad-password \
         host_names='[esxi-1.host.com, esxi-2.host.com]'
     '''
-    service_instance = salt.utils.vmware.get_service_instance(host=host,
-                                                              username=username,
-                                                              password=password,
-                                                              protocol=protocol,
-                                                              port=port)
+    service_instance = salt.utils.vmware.get_service_instance(
+        host=host, username=username, password=password, protocol=protocol,
+        port=port, verify_ssl=verify_ssl,
+    )
     host_names = _check_hosts(service_instance, host, host_names)
     ret = {}
     names = []
@@ -2594,8 +2697,11 @@ def list_non_ssds(host, username, password, protocol=None, port=None, host_names
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs('credstore')
-def set_ntp_config(host, username, password, ntp_servers, protocol=None, port=None, host_names=None):
+@ignores_kwargs("credstore")
+def set_ntp_config(
+    host, username, password, ntp_servers, protocol=None, port=None,
+    host_names=None, verify_ssl=True
+):
     '''
     Set NTP configuration for a given host of list of host_names.
 
@@ -2629,6 +2735,9 @@ def set_ntp_config(host, username, password, ntp_servers, protocol=None, port=No
         ``host`` location instead. This is useful for when service instance connection
         information is used for a single ESXi host.
 
+    verify_ssl
+        Verify the SSL certificate. Default: True
+
     CLI Example:
 
     .. code-block:: bash
@@ -2640,11 +2749,10 @@ def set_ntp_config(host, username, password, ntp_servers, protocol=None, port=No
         salt '*' vsphere.ntp_configure my.vcenter.location root bad-password '[192.174.1.100, 192.174.1.200]' \
         host_names='[esxi-1.host.com, esxi-2.host.com]'
     '''
-    service_instance = salt.utils.vmware.get_service_instance(host=host,
-                                                              username=username,
-                                                              password=password,
-                                                              protocol=protocol,
-                                                              port=port)
+    service_instance = salt.utils.vmware.get_service_instance(
+        host=host, username=username, password=password, protocol=protocol,
+        port=port, verify_ssl=verify_ssl,
+    )
     if not isinstance(ntp_servers, list):
         raise CommandExecutionError('\'ntp_servers\' must be a list.')
 
@@ -2674,14 +2782,11 @@ def set_ntp_config(host, username, password, ntp_servers, protocol=None, port=No
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs('credstore')
-def service_start(host,
-                  username,
-                  password,
-                  service_name,
-                  protocol=None,
-                  port=None,
-                  host_names=None):
+@ignores_kwargs("credstore")
+def service_start(
+    host, username, password, service_name, protocol=None, port=None,
+    host_names=None, verify_ssl=True
+):
     '''
     Start the named service for the given host or list of hosts.
 
@@ -2727,6 +2832,9 @@ def service_start(host,
         location instead. This is useful for when service instance connection information
         is used for a single ESXi host.
 
+    verify_ssl
+        Verify the SSL certificate. Default: True
+
     CLI Example:
 
     .. code-block:: bash
@@ -2738,11 +2846,10 @@ def service_start(host,
         salt '*' vsphere.service_start my.vcenter.location root bad-password 'ntpd' \
         host_names='[esxi-1.host.com, esxi-2.host.com]'
     '''
-    service_instance = salt.utils.vmware.get_service_instance(host=host,
-                                                              username=username,
-                                                              password=password,
-                                                              protocol=protocol,
-                                                              port=port)
+    service_instance = salt.utils.vmware.get_service_instance(
+        host=host, username=username, password=password, protocol=protocol,
+        port=port, verify_ssl=verify_ssl,
+    )
     host_names = _check_hosts(service_instance, host, host_names)
     valid_services = ['DCUI', 'TSM', 'SSH', 'ssh', 'lbtd', 'lsassd', 'lwiod', 'netlogond',
                       'ntpd', 'sfcbd-watchdog', 'snmpd', 'vprobed', 'vpxa', 'xorg']
@@ -2785,14 +2892,11 @@ def service_start(host,
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs('credstore')
-def service_stop(host,
-                 username,
-                 password,
-                 service_name,
-                 protocol=None,
-                 port=None,
-                 host_names=None):
+@ignores_kwargs("credstore")
+def service_stop(
+    host, username, password, service_name, protocol=None, port=None,
+    host_names=None, verify_ssl=True,
+):
     '''
     Stop the named service for the given host or list of hosts.
 
@@ -2838,6 +2942,9 @@ def service_stop(host,
         location instead. This is useful for when service instance connection information
         is used for a single ESXi host.
 
+    verify_ssl
+        Verify the SSL certificate. Default: True
+
     CLI Example:
 
     .. code-block:: bash
@@ -2849,11 +2956,10 @@ def service_stop(host,
         salt '*' vsphere.service_stop my.vcenter.location root bad-password 'ssh' \
         host_names='[esxi-1.host.com, esxi-2.host.com]'
     '''
-    service_instance = salt.utils.vmware.get_service_instance(host=host,
-                                                              username=username,
-                                                              password=password,
-                                                              protocol=protocol,
-                                                              port=port)
+    service_instance = salt.utils.vmware.get_service_instance(
+        host=host, username=username, password=password, protocol=protocol,
+        port=port, verify_ssl=verify_ssl,
+    )
     host_names = _check_hosts(service_instance, host, host_names)
     valid_services = ['DCUI', 'TSM', 'SSH', 'ssh', 'lbtd', 'lsassd', 'lwiod', 'netlogond',
                       'ntpd', 'sfcbd-watchdog', 'snmpd', 'vprobed', 'vpxa', 'xorg']
@@ -2896,14 +3002,11 @@ def service_stop(host,
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs('credstore')
-def service_restart(host,
-                    username,
-                    password,
-                    service_name,
-                    protocol=None,
-                    port=None,
-                    host_names=None):
+@ignores_kwargs("credstore")
+def service_restart(
+    host, username, password, service_name, protocol=None, port=None,
+    host_names=None, verify_ssl=True,
+):
     '''
     Restart the named service for the given host or list of hosts.
 
@@ -2949,6 +3052,9 @@ def service_restart(host,
         location instead. This is useful for when service instance connection information
         is used for a single ESXi host.
 
+    verify_ssl
+        Verify the SSL certificate. Default: True
+
     CLI Example:
 
     .. code-block:: bash
@@ -2960,11 +3066,10 @@ def service_restart(host,
         salt '*' vsphere.service_restart my.vcenter.location root bad-password 'ntpd' \
         host_names='[esxi-1.host.com, esxi-2.host.com]'
     '''
-    service_instance = salt.utils.vmware.get_service_instance(host=host,
-                                                              username=username,
-                                                              password=password,
-                                                              protocol=protocol,
-                                                              port=port)
+    service_instance = salt.utils.vmware.get_service_instance(
+        host=host, username=username, password=password, protocol=protocol,
+        port=port, verify_ssl=verify_ssl,
+    )
     host_names = _check_hosts(service_instance, host, host_names)
     valid_services = ['DCUI', 'TSM', 'SSH', 'ssh', 'lbtd', 'lsassd', 'lwiod', 'netlogond',
                       'ntpd', 'sfcbd-watchdog', 'snmpd', 'vprobed', 'vpxa', 'xorg']
@@ -3007,15 +3112,18 @@ def service_restart(host,
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs('credstore')
-def set_service_policy(host,
-                       username,
-                       password,
-                       service_name,
-                       service_policy,
-                       protocol=None,
-                       port=None,
-                       host_names=None):
+@ignores_kwargs("credstore")
+def set_service_policy(
+    host,
+    username,
+    password,
+    service_name,
+    service_policy,
+    protocol=None,
+    port=None,
+    host_names=None,
+    verify_ssl=True
+):
     '''
     Set the service name's policy for a given host or list of hosts.
 
@@ -3064,6 +3172,9 @@ def set_service_policy(host,
         for the ``host`` location instead. This is useful for when service instance
         connection information is used for a single ESXi host.
 
+    verify_ssl
+        Verify the SSL certificate. Default: True
+
     CLI Example:
 
     .. code-block:: bash
@@ -3075,11 +3186,10 @@ def set_service_policy(host,
         salt '*' vsphere.set_service_policy my.vcenter.location root bad-password 'ntpd' 'automatic' \
         host_names='[esxi-1.host.com, esxi-2.host.com]'
     '''
-    service_instance = salt.utils.vmware.get_service_instance(host=host,
-                                                              username=username,
-                                                              password=password,
-                                                              protocol=protocol,
-                                                              port=port)
+    service_instance = salt.utils.vmware.get_service_instance(
+        host=host, username=username, password=password, protocol=protocol,
+        port=port, verify_ssl=verify_ssl,
+    )
     host_names = _check_hosts(service_instance, host, host_names)
     valid_services = ['DCUI', 'TSM', 'SSH', 'ssh', 'lbtd', 'lsassd', 'lwiod', 'netlogond',
                       'ntpd', 'sfcbd-watchdog', 'snmpd', 'vprobed', 'vpxa', 'xorg']
@@ -3136,8 +3246,11 @@ def set_service_policy(host,
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs('credstore')
-def update_host_datetime(host, username, password, protocol=None, port=None, host_names=None):
+@ignores_kwargs("credstore")
+def update_host_datetime(
+    host, username, password, protocol=None, port=None, host_names=None,
+    verify_ssl=True
+):
     '''
     Update the date/time on the given host or list of host_names. This function should be
     used with caution since network delays and execution delays can result in time skews.
@@ -3168,6 +3281,9 @@ def update_host_datetime(host, username, password, protocol=None, port=None, hos
         location instead. This is useful for when service instance connection
         information is used for a single ESXi host.
 
+    verify_ssl
+        Verify the SSL certificate. Default: True
+
     CLI Example:
 
     .. code-block:: bash
@@ -3179,11 +3295,10 @@ def update_host_datetime(host, username, password, protocol=None, port=None, hos
         salt '*' vsphere.update_date_time my.vcenter.location root bad-password \
         host_names='[esxi-1.host.com, esxi-2.host.com]'
     '''
-    service_instance = salt.utils.vmware.get_service_instance(host=host,
-                                                              username=username,
-                                                              password=password,
-                                                              protocol=protocol,
-                                                              port=port)
+    service_instance = salt.utils.vmware.get_service_instance(
+        host=host, username=username, password=password, protocol=protocol,
+        port=port, verify_ssl=verify_ssl,
+    )
     host_names = _check_hosts(service_instance, host, host_names)
     ret = {}
     for host_name in host_names:
@@ -3203,8 +3318,11 @@ def update_host_datetime(host, username, password, protocol=None, port=None, hos
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs('credstore')
-def update_host_password(host, username, password, new_password, protocol=None, port=None):
+@ignores_kwargs("credstore")
+def update_host_password(
+    host, username, password, new_password, protocol=None, port=None,
+    verify_ssl=True
+):
     '''
     Update the password for a given host.
 
@@ -3230,6 +3348,9 @@ def update_host_password(host, username, password, new_password, protocol=None, 
         Optionally set to alternate port if the host is not using the default
         port. Default port is ``443``.
 
+    verify_ssl
+        Verify the SSL certificate. Default: True
+
     CLI Example:
 
     .. code-block:: bash
@@ -3237,11 +3358,10 @@ def update_host_password(host, username, password, new_password, protocol=None, 
         salt '*' vsphere.update_host_password my.esxi.host root original-bad-password new-bad-password
 
     '''
-    service_instance = salt.utils.vmware.get_service_instance(host=host,
-                                                              username=username,
-                                                              password=password,
-                                                              protocol=protocol,
-                                                              port=port)
+    service_instance = salt.utils.vmware.get_service_instance(
+        host=host, username=username, password=password, protocol=protocol,
+        port=port, verify_ssl=verify_ssl,
+    )
     # Get LocalAccountManager object
     account_manager = salt.utils.vmware.get_inventory(service_instance).accountManager
 
@@ -3266,8 +3386,11 @@ def update_host_password(host, username, password, new_password, protocol=None, 
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs('credstore')
-def vmotion_disable(host, username, password, protocol=None, port=None, host_names=None):
+@ignores_kwargs("credstore")
+def vmotion_disable(
+    host, username, password, protocol=None, port=None, host_names=None,
+    verify_ssl=True
+):
     '''
     Disable vMotion for a given host or list of host_names.
 
@@ -3297,6 +3420,9 @@ def vmotion_disable(host, username, password, protocol=None, port=None, host_nam
         location instead. This is useful for when service instance connection
         information is used for a single ESXi host.
 
+    verify_ssl
+        Verify the SSL certificate. Default: True
+
     CLI Example:
 
     .. code-block:: bash
@@ -3308,11 +3434,10 @@ def vmotion_disable(host, username, password, protocol=None, port=None, host_nam
         salt '*' vsphere.vmotion_disable my.vcenter.location root bad-password \
         host_names='[esxi-1.host.com, esxi-2.host.com]'
     '''
-    service_instance = salt.utils.vmware.get_service_instance(host=host,
-                                                              username=username,
-                                                              password=password,
-                                                              protocol=protocol,
-                                                              port=port)
+    service_instance = salt.utils.vmware.get_service_instance(
+        host=host, username=username, password=password, protocol=protocol,
+        port=port, verify_ssl=verify_ssl,
+    )
     host_names = _check_hosts(service_instance, host, host_names)
     ret = {}
     for host_name in host_names:
@@ -3335,8 +3460,11 @@ def vmotion_disable(host, username, password, protocol=None, port=None, host_nam
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs('credstore')
-def vmotion_enable(host, username, password, protocol=None, port=None, host_names=None, device='vmk0'):
+@ignores_kwargs("credstore")
+def vmotion_enable(
+    host, username, password, protocol=None, port=None, host_names=None,
+    device="vmk0", verify_ssl=True
+):
     '''
     Enable vMotion for a given host or list of host_names.
 
@@ -3370,6 +3498,9 @@ def vmotion_enable(host, username, password, protocol=None, port=None, host_name
         The device that uniquely identifies the VirtualNic that will be used for
         VMotion for each host. Defaults to ``vmk0``.
 
+    verify_ssl
+        Verify the SSL certificate. Default: True
+
     CLI Example:
 
     .. code-block:: bash
@@ -3381,11 +3512,10 @@ def vmotion_enable(host, username, password, protocol=None, port=None, host_name
         salt '*' vsphere.vmotion_enable my.vcenter.location root bad-password \
         host_names='[esxi-1.host.com, esxi-2.host.com]'
     '''
-    service_instance = salt.utils.vmware.get_service_instance(host=host,
-                                                              username=username,
-                                                              password=password,
-                                                              protocol=protocol,
-                                                              port=port)
+    service_instance = salt.utils.vmware.get_service_instance(
+        host=host, username=username, password=password, protocol=protocol,
+        port=port, verify_ssl=verify_ssl,
+    )
     host_names = _check_hosts(service_instance, host, host_names)
     ret = {}
     for host_name in host_names:
@@ -3408,8 +3538,9 @@ def vmotion_enable(host, username, password, protocol=None, port=None, host_name
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs('credstore')
-def vsan_add_disks(host, username, password, protocol=None, port=None, host_names=None):
+@ignores_kwargs("credstore")
+def vsan_add_disks(host, username, password, protocol=None, port=None,
+                   host_names=None, verify_ssl=True):
     '''
     Add any VSAN-eligible disks to the VSAN System for the given host or list of host_names.
 
@@ -3440,6 +3571,9 @@ def vsan_add_disks(host, username, password, protocol=None, port=None, host_name
         VSAN system for the ``host`` location instead. This is useful for when service
         instance connection information is used for a single ESXi host.
 
+    verify_ssl
+        Verify the SSL certificate. Default: True
+
     CLI Example:
 
     .. code-block:: bash
@@ -3451,11 +3585,10 @@ def vsan_add_disks(host, username, password, protocol=None, port=None, host_name
         salt '*' vsphere.vsan_add_disks my.vcenter.location root bad-password \
         host_names='[esxi-1.host.com, esxi-2.host.com]'
     '''
-    service_instance = salt.utils.vmware.get_service_instance(host=host,
-                                                              username=username,
-                                                              password=password,
-                                                              protocol=protocol,
-                                                              port=port)
+    service_instance = salt.utils.vmware.get_service_instance(
+        host=host, username=username, password=password, protocol=protocol,
+        port=port, verify_ssl=verify_ssl,
+    )
     host_names = _check_hosts(service_instance, host, host_names)
     response = _get_vsan_eligible_disks(service_instance, host, host_names)
 
@@ -3512,8 +3645,9 @@ def vsan_add_disks(host, username, password, protocol=None, port=None, host_name
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs('credstore')
-def vsan_disable(host, username, password, protocol=None, port=None, host_names=None):
+@ignores_kwargs("credstore")
+def vsan_disable(host, username, password, protocol=None, port=None,
+                 host_names=None, verify_ssl=True):
     '''
     Disable VSAN for a given host or list of host_names.
 
@@ -3543,6 +3677,9 @@ def vsan_disable(host, username, password, protocol=None, port=None, host_names=
         location instead. This is useful for when service instance connection
         information is used for a single ESXi host.
 
+    verify_ssl
+        Verify the SSL certificate. Default: True
+
     CLI Example:
 
     .. code-block:: bash
@@ -3554,11 +3691,10 @@ def vsan_disable(host, username, password, protocol=None, port=None, host_names=
         salt '*' vsphere.vsan_disable my.vcenter.location root bad-password \
         host_names='[esxi-1.host.com, esxi-2.host.com]'
     '''
-    service_instance = salt.utils.vmware.get_service_instance(host=host,
-                                                              username=username,
-                                                              password=password,
-                                                              protocol=protocol,
-                                                              port=port)
+    service_instance = salt.utils.vmware.get_service_instance(
+        host=host, username=username, password=password, protocol=protocol,
+        port=port, verify_ssl=verify_ssl,
+    )
     # Create a VSAN Configuration Object and set the enabled attribute to True
     vsan_config = vim.vsan.host.ConfigInfo()
     vsan_config.enabled = False
@@ -3597,8 +3733,9 @@ def vsan_disable(host, username, password, protocol=None, port=None, host_names=
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs('credstore')
-def vsan_enable(host, username, password, protocol=None, port=None, host_names=None):
+@ignores_kwargs("credstore")
+def vsan_enable(host, username, password, protocol=None, port=None,
+                host_names=None, verify_ssl=True):
     '''
     Enable VSAN for a given host or list of host_names.
 
@@ -3628,6 +3765,8 @@ def vsan_enable(host, username, password, protocol=None, port=None, host_names=N
         location instead. This is useful for when service instance connection
         information is used for a single ESXi host.
 
+    verify_ssl
+        Verify the SSL certificate. Default: True
     CLI Example:
 
     .. code-block:: bash
@@ -3639,11 +3778,10 @@ def vsan_enable(host, username, password, protocol=None, port=None, host_names=N
         salt '*' vsphere.vsan_enable my.vcenter.location root bad-password \
         host_names='[esxi-1.host.com, esxi-2.host.com]'
     '''
-    service_instance = salt.utils.vmware.get_service_instance(host=host,
-                                                              username=username,
-                                                              password=password,
-                                                              protocol=protocol,
-                                                              port=port)
+    service_instance = salt.utils.vmware.get_service_instance(
+        host=host, username=username, password=password, protocol=protocol,
+        port=port, verify_ssl=verify_ssl,
+    )
     # Create a VSAN Configuration Object and set the enabled attribute to True
     vsan_config = vim.vsan.host.ConfigInfo()
     vsan_config.enabled = True
@@ -6858,10 +6996,21 @@ def _set_syslog_config_helper(host, username, password, syslog_config, config_va
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs('credstore')
-def add_host_to_dvs(host, username, password, vmknic_name, vmnic_name,
-                    dvs_name, target_portgroup_name, uplink_portgroup_name,
-                    protocol=None, port=None, host_names=None):
+@ignores_kwargs("credstore")
+def add_host_to_dvs(
+    host,
+    username,
+    password,
+    vmknic_name,
+    vmnic_name,
+    dvs_name,
+    target_portgroup_name,
+    uplink_portgroup_name,
+    protocol=None,
+    port=None,
+    host_names=None,
+    verify_ssl=True,
+):
     '''
     Adds an ESXi host to a vSphere Distributed Virtual Switch and migrates
     the desired adapters to the DVS from the standard switch.
@@ -6902,6 +7051,9 @@ def add_host_to_dvs(host, username, password, vmknic_name, vmnic_name,
 
     host_names:
         An array of VMware host names to migrate
+
+    verify_ssl
+        Verify the SSL certificate. Default: True
 
     CLI Example:
 
@@ -7029,11 +7181,10 @@ def add_host_to_dvs(host, username, password, vmknic_name, vmnic_name,
     ret = {}
     ret['success'] = True
     ret['message'] = []
-    service_instance = salt.utils.vmware.get_service_instance(host=host,
-                                                              username=username,
-                                                              password=password,
-                                                              protocol=protocol,
-                                                              port=port)
+    service_instance = salt.utils.vmware.get_service_instance(
+        host=host, username=username, password=password, protocol=protocol,
+        port=port, verify_ssl=verify_ssl,
+    )
     dvs = salt.utils.vmware._get_dvs(service_instance, dvs_name)
     if not dvs:
         ret['message'].append('No Distributed Virtual Switch found with name {0}'.format(dvs_name))
@@ -9095,7 +9246,7 @@ def _delete_device(device):
     return device_spec
 
 
-def _get_client(server, username, password):
+def _get_client(server, username, password, verify_ssl=None, ca_bundle=None):
     '''
     Establish client through proxy or with user provided credentials.
 
@@ -9105,12 +9256,17 @@ def _get_client(server, username, password):
         Username associated with the vCenter center.
     :param basestring password:
         Password associated with the vCenter center.
+    :param boolean verify_ssl:
+        Verify the SSL certificate. Default: True
+    :param basestring ca_bundle:
+        Path to the ca bundle to use when verifying SSL certificates.
     :returns:
         vSphere Client instance.
     :rtype:
         vSphere.Client
     '''
     # Get salted vSphere Client
+    details = None
     if not (server and username and password):
         # User didn't provide CLI args so use proxy information
         details = __salt__['vcenter.get_details']()
@@ -9118,10 +9274,33 @@ def _get_client(server, username, password):
         username = details['username']
         password = details['password']
 
+    if verify_ssl is None:
+        if details is None:
+            details = __salt__["vcenter.get_details"]()
+        verify_ssl = details.get("verify_ssl", True)
+        if verify_ssl is None:
+            verify_ssl = True
+
+    if ca_bundle is None:
+        if details is None:
+            details = __salt__["vcenter.get_details"]()
+        ca_bundle = details.get("ca_bundle", None)
+
+    if ca_bundle:
+        ca_bundle = salt.utils.http.get_ca_bundle({"ca_bundle": ca_bundle})
+
+    if verify_ssl is False and ca_bundle is not None:
+        log.error("Cannot set verify_ssl to False and ca_bundle together")
+        return False
+
+    if verify_ssl and ca_bundle is None:
+        ca_bundle = salt.utils.http.get_ca_bundle()
+
     # Establish connection with client
-    client = salt.utils.vmware.get_vsphere_client(server=server,
-                                                  username=username,
-                                                  password=password)
+    client = salt.utils.vmware.get_vsphere_client(
+        server=server, username=username, password=password,
+        verify_ssl=verify_ssl, ca_bundle=ca_bundle,
+    )
     # Will return None if utility function causes Unauthenticated error
     return client
 
@@ -9129,8 +9308,10 @@ def _get_client(server, username, password):
 @depends(HAS_PYVMOMI, HAS_VSPHERE_SDK)
 @supports_proxies('vcenter')
 @gets_service_instance_via_proxy
-def list_tag_categories(server=None, username=None, password=None,
-                        service_instance=None):
+def list_tag_categories(
+    server=None, username=None, password=None, service_instance=None,
+    verify_ssl=True, ca_bundle=None
+):
     '''
     List existing categories a user has access to.
 
@@ -9146,13 +9327,18 @@ def list_tag_categories(server=None, username=None, password=None,
         Username associated with the vCenter center.
     :param basestring password:
         Password associated with the vCenter center.
+    :param boolean verify_ssl:
+        Verify the SSL certificate. Default: True
+    :param basestring ca_bundle:
+        Path to the ca bundle to use when verifying SSL certificates.
     :returns:
         Value(s) of category_id.
     :rtype:
         list of str
     '''
     categories = None
-    client = _get_client(server, username, password)
+    client = _get_client(server, username, password, verify_ssl=verify_ssl,
+                         ca_bundle=ca_bundle)
 
     if client:
         categories = client.tagging.Category.list()
@@ -9162,8 +9348,8 @@ def list_tag_categories(server=None, username=None, password=None,
 @depends(HAS_PYVMOMI, HAS_VSPHERE_SDK)
 @supports_proxies('vcenter')
 @gets_service_instance_via_proxy
-def list_tags(server=None, username=None, password=None,
-              service_instance=None):
+def list_tags(server=None, username=None, password=None, service_instance=None,
+             verify_ssl=True, ca_bundle=None):
     '''
     List existing tags a user has access to.
 
@@ -9179,13 +9365,18 @@ def list_tags(server=None, username=None, password=None,
         Username associated with the vCenter center.
     :param basestring password:
         Password associated with the vCenter center.
+    :param boolean verify_ssl:
+        Verify the SSL certificate. Default: True
+    :param basestring ca_bundle:
+        Path to the ca bundle to use when verifying SSL certificates.
     :return:
         Value(s) of tag_id.
     :rtype:
         list of str
     '''
     tags = None
-    client = _get_client(server, username, password)
+    client = _get_client(server, username, password, verify_ssl=verify_ssl,
+                         ca_bundle=ca_bundle)
 
     if client:
         tags = client.tagging.Tag.list()
@@ -9195,10 +9386,17 @@ def list_tags(server=None, username=None, password=None,
 @depends(HAS_PYVMOMI, HAS_VSPHERE_SDK)
 @supports_proxies('vcenter')
 @gets_service_instance_via_proxy
-def attach_tag(object_id, tag_id,
-               managed_obj='ClusterComputeResource',
-               server=None, username=None, password=None,
-               service_instance=None):
+def attach_tag(
+    object_id,
+    tag_id,
+    managed_obj="ClusterComputeResource",
+    server=None,
+    username=None,
+    password=None,
+    service_instance=None,
+    verify_ssl=True,
+    ca_bundle=None,
+):
     '''
     Attach an existing tag to an input object.
 
@@ -9230,6 +9428,10 @@ def attach_tag(object_id, tag_id,
         Username associated with the vCenter center.
     :param basestring password:
         Password associated with the vCenter center.
+    :param boolean verify_ssl:
+        Verify the SSL certificate. Default: True
+    :param basestring ca_bundle:
+        Path to the ca bundle to use when verifying SSL certificates.
     :return:
         The list of all tag identifiers that correspond to the
         tags attached to the given object.
@@ -9241,7 +9443,8 @@ def attach_tag(object_id, tag_id,
         if the user can not be authenticated.
     '''
     tag_attached = None
-    client = _get_client(server, username, password)
+    client = _get_client(server, username, password, verify_ssl=verify_ssl,
+                         ca_bundle=ca_bundle)
 
     if client:
         # Create dynamic id object associated with a type and an id.
@@ -9264,10 +9467,16 @@ def attach_tag(object_id, tag_id,
 @depends(HAS_PYVMOMI, HAS_VSPHERE_SDK)
 @supports_proxies('vcenter')
 @gets_service_instance_via_proxy
-def list_attached_tags(object_id,
-                       managed_obj='ClusterComputeResource',
-                       server=None, username=None, password=None,
-                       service_instance=None):
+def list_attached_tags(
+    object_id,
+    managed_obj="ClusterComputeResource",
+    server=None,
+    username=None,
+    password=None,
+    service_instance=None,
+    verify_ssl=True,
+    ca_bundle=None,
+):
     '''
     List existing tags a user has access to.
 
@@ -9289,6 +9498,10 @@ def list_attached_tags(object_id,
         Username associated with the vCenter center.
     :param basestring password:
         Password associated with the vCenter center.
+    :param boolean verify_ssl:
+        Verify the SSL certificate. Default: True
+    :param basestring ca_bundle:
+        Path to the ca bundle to use when verifying SSL certificates.
     :return:
         The list of all tag identifiers that correspond to the
         tags attached to the given object.
@@ -9300,7 +9513,8 @@ def list_attached_tags(object_id,
         if the user can not be authenticated.
     '''
     attached_tags = None
-    client = _get_client(server, username, password)
+    client = _get_client(server, username, password, verify_ssl=verify_ssl,
+                         ca_bundle=ca_bundle)
 
     if client:
         # Create dynamic id object associated with a type and an id.
@@ -9323,9 +9537,17 @@ def list_attached_tags(object_id,
 @depends(HAS_PYVMOMI, HAS_VSPHERE_SDK)
 @supports_proxies('vcenter')
 @gets_service_instance_via_proxy
-def create_tag_category(name, description, cardinality,
-                        server=None, username=None, password=None,
-                        service_instance=None):
+def create_tag_category(
+    name,
+    description,
+    cardinality,
+    server=None,
+    username=None,
+    password=None,
+    service_instance=None,
+    verify_ssl=True,
+    ca_bundle=None,
+):
     '''
     Create a category with given cardinality.
 
@@ -9347,6 +9569,10 @@ def create_tag_category(name, description, cardinality,
         Username associated with the vCenter center.
     :param basestring password:
         Password associated with the vCenter center.
+    :param boolean verify_ssl:
+        Verify the SSL certificate. Default: True
+    :param basestring ca_bundle:
+        Path to the ca bundle to use when verifying SSL certificates.
     :return:
         Identifier of the created category.
     :rtype:
@@ -9360,7 +9586,8 @@ def create_tag_category(name, description, cardinality,
         if you do not have the privilege to create a category.
     '''
     category_created = None
-    client = _get_client(server, username, password)
+    client = _get_client(server, username, password, verify_ssl=verify_ssl,
+                         ca_bundle=ca_bundle)
 
     if client:
         if cardinality == 'SINGLE':
@@ -9388,9 +9615,10 @@ def create_tag_category(name, description, cardinality,
 @depends(HAS_PYVMOMI, HAS_VSPHERE_SDK)
 @supports_proxies('vcenter')
 @gets_service_instance_via_proxy
-def delete_tag_category(category_id,
-                        server=None, username=None, password=None,
-                        service_instance=None):
+def delete_tag_category(
+    category_id, server=None, username=None, password=None,
+    service_instance=None, verify_ssl=True, ca_bundle=None
+):
     '''
     Delete a category.
 
@@ -9410,6 +9638,10 @@ def delete_tag_category(category_id,
         Username associated with the vCenter center.
     :param basestring password:
         Password associated with the vCenter center.
+    :param boolean verify_ssl:
+        Verify the SSL certificate. Default: True
+    :param basestring ca_bundle:
+        Path to the ca bundle to use when verifying SSL certificates.
     :raise: NotFound
         if the tag for the given tag_id does not exist in the system.
     :raise: Unauthorized
@@ -9418,7 +9650,8 @@ def delete_tag_category(category_id,
         if the user can not be authenticated.
     '''
     category_deleted = None
-    client = _get_client(server, username, password)
+    client = _get_client(server, username, password, verify_ssl=verify_ssl,
+                         ca_bundle=ca_bundle)
 
     if client:
         try:
@@ -9432,9 +9665,17 @@ def delete_tag_category(category_id,
 @depends(HAS_PYVMOMI, HAS_VSPHERE_SDK)
 @supports_proxies('vcenter')
 @gets_service_instance_via_proxy
-def create_tag(name, description, category_id,
-               server=None, username=None, password=None,
-               service_instance=None):
+def create_tag(
+    name,
+    description,
+    category_id,
+    server=None,
+    username=None,
+    password=None,
+    service_instance=None,
+    verify_ssl=True,
+    ca_bundle=None,
+):
     '''
     Create a tag under a category with given description.
 
@@ -9456,6 +9697,10 @@ def create_tag(name, description, category_id,
         Given description of tag category.
     :param str category_id:
         Value of category_id representative of the category created previously.
+    :param boolean verify_ssl:
+        Verify the SSL certificate. Default: True
+    :param basestring ca_bundle:
+        Path to the ca bundle to use when verifying SSL certificates.
     :return:
         The identifier of the created tag.
     :rtype:
@@ -9472,7 +9717,8 @@ def create_tag(name, description, category_id,
         if you do not have the privilege to create tag.
     '''
     tag_created = None
-    client = _get_client(server, username, password)
+    client = _get_client(server, username, password, verify_ssl=verify_ssl,
+                         ca_bundle=ca_bundle)
 
     if client:
         create_spec = client.tagging.Tag.CreateSpec()
@@ -9490,9 +9736,10 @@ def create_tag(name, description, category_id,
 @depends(HAS_PYVMOMI, HAS_VSPHERE_SDK)
 @supports_proxies('vcenter')
 @gets_service_instance_via_proxy
-def delete_tag(tag_id,
-               server=None, username=None, password=None,
-               service_instance=None):
+def delete_tag(
+    tag_id, server=None, username=None, password=None, service_instance=None,
+    verify_ssl=True, ca_bundle=None
+):
     '''
     Delete a tag.
 
@@ -9512,6 +9759,10 @@ def delete_tag(tag_id,
         Username associated with the vCenter center.
     :param basestring password:
         Password associated with the vCenter center.
+    :param boolean verify_ssl:
+        Verify the SSL certificate. Default: True
+    :param basestring ca_bundle:
+        Path to the ca bundle to use when verifying SSL certificates.
     :raise: AlreadyExists
         if the name provided in the create_spec is the name of an already
         existing category.
@@ -9521,7 +9772,8 @@ def delete_tag(tag_id,
         if you do not have the privilege to create a category.
     '''
     tag_deleted = None
-    client = _get_client(server, username, password)
+    client = _get_client(server, username, password, verify_ssl=verify_ssl,
+                         ca_bundle=ca_bundle)
 
     if client:
         try:
