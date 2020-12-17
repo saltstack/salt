@@ -1751,7 +1751,7 @@ class PrivateGetServiceInstanceTestCase(TestCase):
                             mechanism="sspi",
                             principal="fake_principal",
                             domain="fake_domain",
-                            verify_ssl=False
+                            verify_ssl=False,
                         )
 
                         mock_ssl_context.assert_called_once_with(ssl.PROTOCOL_TLSv1)
@@ -1799,8 +1799,7 @@ class PrivateGetServiceInstanceTestCase(TestCase):
 
         self.assertEqual(mock_sc.call_count, 1)
         self.assertIn(
-            "Could not connect to host 'fake_host.fqdn'",
-            excinfo.exception.message,
+            "Could not connect to host 'fake_host.fqdn'", excinfo.exception.message,
         )
 
     def test_attempt_unsuccessful_connection_vim_fault(self):
@@ -1849,8 +1848,7 @@ class PrivateGetServiceInstanceTestCase(TestCase):
 
             self.assertEqual(mock_sc.call_count, 2)
             self.assertIn(
-                "Could not connect to host 'fake_host.fqdn'",
-                excinfo.exception.message
+                "Could not connect to host 'fake_host.fqdn'", excinfo.exception.message
             )
 
     def test_first_attempt_unsuccsessful_cannot_vim_fault_verify_ssl(self):
@@ -1899,11 +1897,13 @@ class PrivateGetServiceInstanceTestCase(TestCase):
                         mechanism="sspi",
                         principal="fake_principal",
                         domain="fake_domain",
-                        verify_ssl=False
+                        verify_ssl=False,
                     )
 
             self.assertEqual(mock_sc.call_count, 2)
-            self.assertIn("Could not connect to host 'fake_host.fqdn", excinfo.exception.message)
+            self.assertIn(
+                "Could not connect to host 'fake_host.fqdn", excinfo.exception.message
+            )
 
     def test_second_attempt_unsuccessful_connection_vim_fault(self):
         with patch("ssl.SSLContext", MagicMock()), patch(
@@ -1924,7 +1924,7 @@ class PrivateGetServiceInstanceTestCase(TestCase):
                         mechanism="sspi",
                         principal="fake_principal",
                         domain="fake_domain",
-                        verify_ssl=False
+                        verify_ssl=False,
                     )
 
             self.assertEqual(mock_sc.call_count, 1)
@@ -1955,8 +1955,15 @@ class GetServiceInstanceTestCase(TestCase):
         with patch("salt.utils.vmware._get_service_instance", mock_get_si):
             salt.utils.vmware.get_service_instance(host="fake_host")
             mock_get_si.assert_called_once_with(
-                "fake_host", None, None, "https", 443, "userpass", None, None,
-                verify_ssl=True
+                "fake_host",
+                None,
+                None,
+                "https",
+                443,
+                "userpass",
+                None,
+                None,
+                verify_ssl=True,
             )
 
     def test_no_cached_service_instance_same_host_on_proxy(self):
@@ -2021,7 +2028,7 @@ class GetServiceInstanceTestCase(TestCase):
                 mechanism="fake_mechanism",
                 principal="fake_principal",
                 domain="fake_domain",
-                verify_ssl=True
+                verify_ssl=True,
             )
             mock_get_si.assert_called_once_with(
                 "fake_host",
