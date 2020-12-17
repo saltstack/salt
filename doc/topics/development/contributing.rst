@@ -81,7 +81,7 @@ Now add pyenv to your ``.bashrc``:
 
 ::
 
-   export PATH="$HOME/.pyenv/bin:$PATH" >> ~/.bashrc
+   echo 'export PATH="$HOME/.pyenv/bin:$PATH"' >> ~/.bashrc
    pyenv init 2>> ~/.bashrc
    pyenv virtualenv-init 2>> ~/.bashrc
 
