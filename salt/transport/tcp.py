@@ -378,7 +378,9 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
         if not self.auth.authenticated:
             yield self.auth.authenticate()
         ret = yield self.message_client.send(
-            self._package_load(self.auth.crypticle.dumps(load)), timeout=timeout
+            self._package_load(self.auth.crypticle.dumps(load)),
+            timeout=timeout,
+            tries=tries,
         )
         key = self.auth.get_keys()
         if HAS_M2:
@@ -403,7 +405,9 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
         @salt.ext.tornado.gen.coroutine
         def _do_transfer():
             data = yield self.message_client.send(
-                self._package_load(self.auth.crypticle.dumps(load)), timeout=timeout,
+                self._package_load(self.auth.crypticle.dumps(load)),
+                timeout=timeout,
+                tries=tries,
             )
             # we may not have always data
             # as for example for saltcall ret submission, this is a blind
@@ -426,7 +430,10 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
 
     @salt.ext.tornado.gen.coroutine
     def _uncrypted_transfer(self, load, tries=3, timeout=60):
-        ret = yield self.message_client.send(self._package_load(load), timeout=timeout)
+        ret = yield self.message_client.send(
+            self._package_load(load), timeout=timeout, tries=tries,
+        )
+
         raise salt.ext.tornado.gen.Return(ret)
 
     @salt.ext.tornado.gen.coroutine
@@ -1361,22 +1368,42 @@ class SaltMessageClient:
         timeout = self.send_timeout_map.pop(message_id)
         self.io_loop.remove_timeout(timeout)
 
-    def timeout_message(self, message_id):
+    def timeout_message(self, message_id, msg):
         if message_id in self.send_timeout_map:
             del self.send_timeout_map[message_id]
         if message_id in self.send_future_map:
-            self.send_future_map.pop(message_id).set_exception(
-                SaltReqTimeoutError("Message timed out")
-            )
+            future = self.send_future_map.pop(message_id)
+            # In a race condition the message might have been sent by the time
+            # we're timing it out. Make sure the future is not None
+            if future is not None:
+                if future.attempts < future.tries:
+                    future.attempts += 1
 
-    def send(self, msg, timeout=None, callback=None, raw=False):
+                    log.debug(
+                        "SaltReqTimeoutError, retrying. (%s/%s)",
+                        future.attempts,
+                        future.tries,
+                    )
+                    self.send(
+                        msg, timeout=future.timeout, tries=future.tries, future=future,
+                    )
+
+                else:
+                    future.set_exception(SaltReqTimeoutError("Message timed out"))
+
+    def send(self, msg, timeout=None, callback=None, raw=False, future=None, tries=3):
         """
         Send given message, and return a future
         """
         message_id = self._message_id()
         header = {"mid": message_id}
 
-        future = salt.ext.tornado.concurrent.Future()
+        if future is None:
+            future = salt.ext.tornado.concurrent.Future()
+            future.tries = tries
+            future.attempts = 0
+            future.timeout = timeout
+
         if callback is not None:
 
             def handle_future(future):
@@ -1392,7 +1419,7 @@ class SaltMessageClient:
 
         if timeout is not None:
             send_timeout = self.io_loop.call_later(
-                timeout, self.timeout_message, message_id
+                timeout, self.timeout_message, message_id, msg
             )
             self.send_timeout_map[message_id] = send_timeout
 
