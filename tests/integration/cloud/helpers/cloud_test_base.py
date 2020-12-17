@@ -8,10 +8,10 @@ import os
 import shutil
 from time import sleep
 
+import salt.utils.verify
 from salt.config import cloud_config, cloud_providers_config
 from salt.ext.six.moves import range
 from salt.utils.yaml import safe_load
-import salt.utils.verify
 from tests.support.case import ShellCase
 from tests.support.helpers import expensiveTest, random_string
 from tests.support.paths import FILES
@@ -200,9 +200,7 @@ class CloudTest(ShellCase):
         """
         copy the current profile and add a new profile in the same file
         """
-        conf_path = os.path.join(
-            RUNTIME_VARS.TMP_CONF_DIR, "cloud.profiles.d", conf
-        )
+        conf_path = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "cloud.profiles.d", conf)
         with salt.utils.files.fopen(conf_path, "r") as fp:
             conf = safe_load(fp)
         conf[new_profile] = conf[name].copy()
