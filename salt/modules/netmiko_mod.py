@@ -354,9 +354,9 @@ def multi_call(*methods, **kwargs):
         method_args = method.get("args", [])
         method_kwargs = method.get("kwargs", {})
         if "netmiko.call" in __proxy__:
-          ret.append(__proxy__["netmiko.call"](method_name, *method_args, **method_kwargs))
+            ret.append(__proxy__["netmiko.call"](method_name, *method_args, **method_kwargs))
         else:
-          ret.append(getattr(conn, method_name)(*method_args, **method_kwargs))
+            ret.append(getattr(conn, method_name)(*method_args, **method_kwargs))
     if "netmiko.conn" not in __proxy__:
         conn.disconnect()
     return ret
