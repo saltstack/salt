@@ -3160,6 +3160,116 @@ class TestVSphereTagging(TestCase, LoaderModuleMockMixin):
                                     {"Tag attached": self.list_attached_tags_return},
                                 )
 
+    def test_get_client(self):
+        """
+        test get_client when verify_ssl and ca_bundle are not passed
+        """
+        mock_client = MagicMock(return_value=None)
+        patch_client = patch("salt.utils.vmware.get_vsphere_client",
+                             mock_client)
+
+        cert_path="/test/ca-certificates.crt"
+        mock_ca = MagicMock(return_value=cert_path)
+        patch_ca = patch("salt.utils.http.get_ca_bundle", mock_ca)
+
+        mock_details = MagicMock(return_value=self.details)
+        patch_details = patch.dict(vsphere.__salt__, {"vcenter.get_details":
+                                                      mock_details})
+
+        with patch_client, patch_ca, patch_details:
+            vsphere._get_client(server='localhost', username='testuser',
+                                      password='testpassword')
+            self.assertEqual(mock_client.call_args_list,
+                             [call(ca_bundle=cert_path,
+                 password='testpassword', server='localhost',
+                 username='testuser', verify_ssl=True)])
+            self.assertEqual(mock_details.assert_called_once(), None)
+            self.assertEqual(mock_ca.assert_called_once(), None)
+
+    def test_get_client_verify_ssl_false(self):
+        """
+        test get_client when verify_ssl=False is set
+        """
+        details = self.details.copy()
+        details["verify_ssl"] = False
+        mock_client = MagicMock(return_value=None)
+        patch_client = patch("salt.utils.vmware.get_vsphere_client",
+                             mock_client)
+
+        cert_path="/test/ca-certificates.crt"
+        mock_ca = MagicMock(return_value=cert_path)
+        patch_ca = patch("salt.utils.http.get_ca_bundle", mock_ca)
+
+        mock_details = MagicMock(return_value=details)
+        patch_details = patch.dict(vsphere.__salt__, {"vcenter.get_details":
+                                                      mock_details})
+
+        with patch_client, patch_ca, patch_details:
+            vsphere._get_client(server='localhost', username='testuser',
+                                      password='testpassword')
+            self.assertEqual(mock_client.call_args_list,
+                             [call(ca_bundle=None,
+                 password='testpassword', server='localhost',
+                 username='testuser', verify_ssl=False)])
+            self.assertEqual(mock_details.assert_called_once(), None)
+            self.assertEqual(mock_ca.assert_not_called(), None)
+
+    def test_get_client_verify_ssl_false_ca_bundle(self):
+        """
+        test get_client when verify_ssl=False and ca_bundle set
+        """
+        details = self.details.copy()
+        details["verify_ssl"] = False
+        details["ca_bundle"] = '/tmp/test'
+        mock_client = MagicMock(return_value=None)
+        patch_client = patch("salt.utils.vmware.get_vsphere_client",
+                             mock_client)
+
+        cert_path="/test/ca-certificates.crt"
+        mock_ca = MagicMock(return_value=cert_path)
+        patch_ca = patch("salt.utils.http.get_ca_bundle", mock_ca)
+
+        mock_details = MagicMock(return_value=details)
+        patch_details = patch.dict(vsphere.__salt__, {"vcenter.get_details":
+                                                      mock_details})
+
+        with patch_client, patch_ca, patch_details:
+            self.assertFalse(vsphere._get_client(server='localhost', username='testuser',
+                                      password='testpassword'))
+            self.assertEqual(mock_details.assert_called_once(), None)
+            self.assertEqual(mock_ca.assert_not_called(), None)
+
+
+    def test_get_client_ca_bundle(self):
+        """
+        test get_client when verify_ssl=False and ca_bundle set
+        """
+        cert_path="/test/ca-certificates.crt"
+        details = self.details.copy()
+        details["ca_bundle"] = cert_path
+        mock_client = MagicMock(return_value=None)
+        patch_client = patch("salt.utils.vmware.get_vsphere_client",
+                             mock_client)
+
+        mock_ca = MagicMock(return_value=cert_path)
+        patch_ca = patch("salt.utils.http.get_ca_bundle", mock_ca)
+
+        mock_details = MagicMock(return_value=details)
+        patch_details = patch.dict(vsphere.__salt__, {"vcenter.get_details":
+                                                      mock_details})
+
+        with patch_client, patch_ca, patch_details:
+            vsphere._get_client(server='localhost', username='testuser',
+                                      password='testpassword')
+            self.assertEqual(mock_client.call_args_list,
+                             [call(ca_bundle=cert_path,
+                 password='testpassword', server='localhost',
+                 username='testuser', verify_ssl=True)])
+            self.assertEqual(mock_details.assert_called_once(), None)
+            self.assertEqual(mock_ca.assert_called_once(), None)
+            self.assertEqual(mock_ca.call_args_list, [call({'ca_bundle':
+                                                            cert_path})])
+
 
 class TestCertificateVerify(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
@@ -3219,3 +3329,4 @@ class TestCertificateVerify(TestCase, LoaderModuleMockMixin):
                 username="root",
                 verify_ssl=certificate_verify_value,
             )
+
