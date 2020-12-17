@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Proxy Minion interface module for managing VMWare vCenters.
 
@@ -182,13 +181,10 @@ and that host would reach out over the network and communicate with the ESXi
 host.
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
 
-# Import Salt Libs
 import salt.exceptions
 from salt.config.schemas.vcenter import VCenterProxySchema
 from salt.utils.dictupdate import merge

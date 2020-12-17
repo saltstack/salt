@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: :email:`Rod McKenzie (roderick.mckenzie@morganstanley.com)`
     :codeauthor: :email:`Alexandru Bleotu (alexandru.bleotu@morganstanley.com)`
@@ -9,11 +8,8 @@
     VCenter configuration schemas
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt libs
-from salt.utils.schema import ArrayItem, IntegerItem, Schema, StringItem, BooleanItem
+from salt.utils.schema import ArrayItem, BooleanItem, IntegerItem, Schema, StringItem
 
 
 class VCenterEntitySchema(Schema):
