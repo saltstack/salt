@@ -426,11 +426,10 @@ def ext_pillar(minion_id,
     if virtualgrain == 'vmware' or osgrain == 'vmware esxi' or osgrain == 'esxi':
         vmware_pillar[pillar_key] = {}
         try:
-            _conn = salt.utils.vmware.get_service_instance(host,
-                                                           username,
-                                                           password,
-                                                           protocol,
-                                                           port)
+            _conn = salt.utils.vmware.get_service_instance(
+                host, username, password, protocol, port,
+                verify_ssl=kwargs.get("verify_ssl", True)
+            )
             if _conn:
                 data = None
                 for prop_type in property_types:
