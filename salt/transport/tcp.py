@@ -644,6 +644,7 @@ class TCPReqServerChannel(
     def __init__(self, opts):
         salt.transport.server.ReqServerChannel.__init__(self, opts)
         self._socket = None
+        self.req_server = None
 
     @property
     def socket(self):
@@ -660,24 +661,24 @@ class TCPReqServerChannel(
                     pass
                 else:
                     raise
-            self._socket.close()
+            if self.req_server is None:
+                # We only close the socket if we don't have a req_server instance.
+                # If we did, because the req_server is also handling this socket, when we call
+                # req_server.stop(), tornado will give us an AssertionError because it's trying to
+                # match the socket.fileno() (after close it's -1) to the fd it holds on it's _sockets cache
+                # so it can remove the socket from the IOLoop handlers
+                self._socket.close()
             self._socket = None
-        if hasattr(self.req_server, "shutdown"):
+        if self.req_server is not None:
             try:
-                self.req_server.shutdown()
-            except Exception as exc:  # pylint: disable=broad-except
-                log.exception(
-                    "TCPReqServerChannel close generated an exception: %s", str(exc)
-                )
-        elif hasattr(self.req_server, "stop"):
-            try:
-                self.req_server.stop()
+                self.req_server.close()
             except OSError as exc:
                 if exc.errno != 9:
                     raise
                 log.exception(
                     "TCPReqServerChannel close generated an exception: %s", str(exc)
                 )
+            self.req_server = None
 
     # pylint: disable=W1701
     def __del__(self):
