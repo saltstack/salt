@@ -276,6 +276,16 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
             kwargs.get("crypt", "aes"),  # TODO: use the same channel for crypt
         )
 
+    @classmethod
+    def force_close_all_instances(cls):
+        """
+        Will force close all instances
+        :return: None
+        """
+        for weak_dict in list(cls.instance_map.values()):
+            for instance in list(weak_dict.values()):
+                instance.close()
+
     # has to remain empty for singletons, since __init__ will *always* be called
     def __init__(self, opts, **kwargs):
         pass
