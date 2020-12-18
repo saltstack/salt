@@ -39,6 +39,7 @@ import salt.utils.msgpack
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.verify
+import salt.utils.versions
 from salt.exceptions import SaltClientError, SaltReqTimeoutError
 from salt.transport import iter_transport_opts
 
@@ -841,11 +842,11 @@ class SaltMessageServer(salt.ext.tornado.tcpserver.TCPServer):
         io_loop = (
             kwargs.pop("io_loop", None) or salt.ext.tornado.ioloop.IOLoop.current()
         )
+        self._closing = False
         super().__init__(*args, **kwargs)
         self.io_loop = io_loop
         self.clients = []
         self.message_handler = message_handler
-        self._shutting_down = False
 
     @salt.ext.tornado.gen.coroutine
     def handle_stream(self, stream, address):
@@ -865,7 +866,6 @@ class SaltMessageServer(salt.ext.tornado.tcpserver.TCPServer):
                     self.io_loop.spawn_callback(
                         self.message_handler, stream, header, framed_msg["body"]
                     )
-
         except salt.ext.tornado.iostream.StreamClosedError:
             log.trace("req client disconnected %s", address)
             self.remove_client((stream, address))
@@ -884,9 +884,21 @@ class SaltMessageServer(salt.ext.tornado.tcpserver.TCPServer):
         """
         Shutdown the whole server
         """
-        if self._shutting_down:
+        salt.utils.versions.warn_until(
+            "Phosphorus",
+            "Please stop calling {0}.{1}.shutdown() and instead call {0}.{1}.close()".format(
+                __name__, self.__class__.__name__
+            ),
+        )
+        self.close()
+
+    def close(self):
+        """
+        Close the server
+        """
+        if self._closing:
             return
-        self._shutting_down = True
+        self._closing = True
         for item in self.clients:
             client, address = item
             client.close()
@@ -916,8 +928,18 @@ if USE_LOAD_BALANCER:
             self.thread.start()
 
         def stop(self):
+            salt.utils.versions.warn_until(
+                "Phosphorus",
+                "Please stop calling {0}.{1}.stop() and instead call {0}.{1}.close()".format(
+                    __name__, self.__class__.__name__
+                ),
+            )
+            self.close()
+
+        def close(self):
             self._stop.set()
             self.thread.join()
+            super().close()
 
         def socket_queue_thread(self):
             try:
