@@ -1678,6 +1678,8 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
             self.io_loop.start()
         except (KeyboardInterrupt, SystemExit):
             salt.log.setup.shutdown_multiprocessing_logging()
+        finally:
+            pull_sock.close()
 
     def pre_fork(self, process_manager, kwargs=None):
         """

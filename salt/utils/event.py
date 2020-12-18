@@ -987,6 +987,8 @@ class AsyncEventPublisher:
 
         self.io_loop = io_loop or salt.ext.tornado.ioloop.IOLoop.current()
         self._closing = False
+        self.publisher = None
+        self.puller = None
 
         hash_type = getattr(hashlib, self.opts["hash_type"])
         # Only use the first 10 chars to keep longer hashes from exceeding the
@@ -1066,9 +1068,9 @@ class AsyncEventPublisher:
         if self._closing:
             return
         self._closing = True
-        if hasattr(self, "publisher"):
+        if self.publisher is not None:
             self.publisher.close()
-        if hasattr(self, "puller"):
+        if self.puller is not None:
             self.puller.close()
 
     # pylint: disable=W1701
