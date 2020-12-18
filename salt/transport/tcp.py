@@ -595,7 +595,7 @@ class AsyncTCPPubChannel(
 
                 self.message_client = SaltMessageClientPool(
                     self.opts,
-                    args=(self.opts, self.opts["master_ip"], int(self.publish_port),),
+                    args=(self.opts, self.opts["master_ip"], int(self.publish_port)),
                     kwargs={
                         "io_loop": self.io_loop,
                         "connect_callback": self.connect_callback,
@@ -1014,6 +1014,12 @@ class SaltMessageClientPool(salt.transport.MessageClientPool):
 
     def __init__(self, opts, args=None, kwargs=None):
         super().__init__(SaltMessageClient, opts, args=args, kwargs=kwargs)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.close()
 
     # pylint: disable=W1701
     def __del__(self):
