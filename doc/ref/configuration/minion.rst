@@ -2239,6 +2239,20 @@ states is cluttering the logs. Set it to True to ignore them.
 
     state_output_diff: False
 
+.. conf_minion:: state_output_profile
+
+``state_output_profile``
+------------------------
+
+Default: ``True``
+
+The ``state_output_profile`` setting changes whether profile information
+will be shown for each state run.
+
+.. code-block:: yaml
+
+    state_output_profile: True
+
 .. conf_minion:: autoload_dynamic_modules
 
 ``autoload_dynamic_modules``

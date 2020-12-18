@@ -112,7 +112,6 @@ Example output with no special settings in configuration files:
     Total:     0
 """
 
-# Import python libs
 
 import logging
 import pprint
@@ -120,8 +119,6 @@ import re
 import textwrap
 
 import salt.output
-
-# Import salt libs
 import salt.utils.color
 import salt.utils.data
 import salt.utils.stringutils
@@ -356,7 +353,7 @@ def _format_host(host, data, indent_level=1):
                 "    {tcolor}  Result: {ret[result]!s}{colors[ENDC]}",
                 "    {tcolor} Comment: {comment}{colors[ENDC]}",
             ]
-            if __opts__.get("state_output_profile", True) and "start_time" in ret:
+            if __opts__.get("state_output_profile") and "start_time" in ret:
                 state_lines.extend(
                     [
                         "    {tcolor} Started: {ret[start_time]!s}{colors[ENDC]}",
@@ -498,7 +495,7 @@ def _format_host(host, data, indent_level=1):
         )
         hstrs.append(colorfmt.format(colors["CYAN"], totals, colors))
 
-        if __opts__.get("state_output_profile", True):
+        if __opts__.get("state_output_profile"):
             sum_duration = sum(rdurations)
             duration_unit = "ms"
             # convert to seconds if duration is 1000ms or more
@@ -570,7 +567,7 @@ def _format_terse(tcolor, comps, ret, colors, tabular):
                 c=colors, w="\n".join(ret["warnings"])
             )
         fmt_string += "{0}"
-        if __opts__.get("state_output_profile", True) and "start_time" in ret:
+        if __opts__.get("state_output_profile") and "start_time" in ret:
             fmt_string += "{6[start_time]!s} [{6[duration]!s:>7} ms] "
         fmt_string += "{2:>10}.{3:<10} {4:7}   Name: {1}{5}"
     elif isinstance(tabular, str):
@@ -582,7 +579,7 @@ def _format_terse(tcolor, comps, ret, colors, tabular):
                 c=colors, w="\n".join(ret["warnings"])
             )
         fmt_string += " {0} Name: {1} - Function: {2}.{3} - Result: {4}"
-        if __opts__.get("state_output_profile", True) and "start_time" in ret:
+        if __opts__.get("state_output_profile") and "start_time" in ret:
             fmt_string += " Started: - {6[start_time]!s} Duration: {6[duration]!s} ms"
         fmt_string += "{5}"
 
