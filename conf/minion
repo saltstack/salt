@@ -242,7 +242,7 @@
 # in seconds, for each individual attempt. After this timeout expires, the minion
 # will wait for acceptance_wait_time seconds before trying again. Unless your master
 # is under unusually heavy load, this should be left at the default.
-#auth_timeout: 60
+#auth_timeout: 5
 
 # Number of consecutive SaltReqTimeoutError that are acceptable when trying to
 # authenticate.

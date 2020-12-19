@@ -1252,7 +1252,7 @@ default.
 
 .. code-block:: yaml
 
-    auth_timeout: 60
+    auth_timeout: 5
 
 .. conf_minion:: auth_safemode
 
