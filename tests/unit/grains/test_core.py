@@ -701,7 +701,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             "oscodename": "CentOS Stream 8",
             "osfullname": "CentOS Stream",
             "osrelease": "8",
-            "osrelease_info": (8, ),
+            "osrelease_info": (8,),
             "osmajorrelease": 8,
             "osfinger": "CentOS Stream-8",
         }
