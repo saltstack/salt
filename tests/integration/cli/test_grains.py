@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Daniel Mizyrycki (mzdaniel@glidelink.net)
 
@@ -12,7 +11,6 @@
     localhost:
         localhost
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
@@ -39,7 +37,7 @@ class GrainsTargetingTest(ShellCase):
         Tests running "salt -G 'os:<system-os>' test.ping and minions both return True
         """
         test_ret = ["sub_minion:", "    True", "minion:", "    True"]
-        ret = self.run_salt('-G "os:{0}" test.ping'.format(grains["os"]))
+        ret = self.run_salt('-G "os:{}" test.ping'.format(grains["os"]))
         self.assertEqual(sorted(ret), sorted(test_ret))
 
     @slowTest

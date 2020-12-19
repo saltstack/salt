@@ -55,9 +55,8 @@ import time
 import salt.utils.compat
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.ext.six.moves import range
 
-log = logging.getLogger(__name__)  # pylint: disable=W1699
+log = logging.getLogger(__name__)
 
 try:
     # pylint: disable=unused-import

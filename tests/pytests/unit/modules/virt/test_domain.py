@@ -270,6 +270,7 @@ def test_update_approx_mem(make_mock_vm):
           <os>
             <type arch='x86_64'>hvm</type>
           </os>
+          <on_reboot>restart</on_reboot>
         </domain>
     """
     domain_mock = make_mock_vm(xml_def)
@@ -317,6 +318,7 @@ def test_update_hypervisor_features(make_mock_vm):
               <hint-dedicated state="on"/>
             </kvm>
           </features>
+          <on_reboot>restart</on_reboot>
         </domain>
     """
     domain_mock = make_mock_vm(xml_def)
@@ -458,6 +460,7 @@ def test_update_clock(make_mock_vm):
             <timer name="tsc" frequency="3504000000" mode="native" />
             <timer name="kvmclock" present="no" />
           </clock>
+          <on_reboot>restart</on_reboot>
         </domain>
     """
     domain_mock = make_mock_vm(xml_def)
@@ -511,3 +514,78 @@ def test_update_clock(make_mock_vm):
     setxml = ET.fromstring(virt.libvirt.openAuth().defineXML.call_args[0][0])
     assert {"offset": "utc"} == setxml.find("clock").attrib
     assert setxml.find("clock/timer") is None
+
+
+def test_update_stop_on_reboot_reset(make_mock_vm):
+    """
+    Test virt.update to remove the on_reboot=destroy flag
+    """
+    xml_def = """
+        <domain type='kvm'>
+          <name>my_vm</name>
+          <memory unit='KiB'>524288</memory>
+          <currentMemory unit='KiB'>524288</currentMemory>
+          <vcpu placement='static'>1</vcpu>
+          <on_reboot>destroy</on_reboot>
+          <os>
+            <type arch='x86_64'>hvm</type>
+          </os>
+        </domain>"""
+    domain_mock = make_mock_vm(xml_def)
+
+    ret = virt.update("my_vm")
+
+    assert ret["definition"]
+    define_mock = virt.libvirt.openAuth().defineXML
+    setxml = ET.fromstring(define_mock.call_args[0][0])
+    assert "restart" == setxml.find("./on_reboot").text
+
+
+def test_update_stop_on_reboot(make_mock_vm):
+    """
+    Test virt.update to add the on_reboot=destroy flag
+    """
+    xml_def = """
+        <domain type='kvm'>
+          <name>my_vm</name>
+          <memory unit='KiB'>524288</memory>
+          <currentMemory unit='KiB'>524288</currentMemory>
+          <vcpu placement='static'>1</vcpu>
+          <os>
+            <type arch='x86_64'>hvm</type>
+          </os>
+        </domain>"""
+    domain_mock = make_mock_vm(xml_def)
+
+    ret = virt.update("my_vm", stop_on_reboot=True)
+
+    assert ret["definition"]
+    define_mock = virt.libvirt.openAuth().defineXML
+    setxml = ET.fromstring(define_mock.call_args[0][0])
+    assert "destroy" == setxml.find("./on_reboot").text
+
+
+def test_init_no_stop_on_reboot(make_capabilities):
+    """
+    Test virt.init to add the on_reboot=restart flag
+    """
+    make_capabilities()
+    with patch.dict(virt.os.__dict__, {"chmod": MagicMock(), "makedirs": MagicMock()}):
+        with patch.dict(virt.__salt__, {"cmd.run": MagicMock()}):
+            virt.init("test_vm", 2, 2048, start=False)
+            define_mock = virt.libvirt.openAuth().defineXML
+            setxml = ET.fromstring(define_mock.call_args[0][0])
+            assert "restart" == setxml.find("./on_reboot").text
+
+
+def test_init_stop_on_reboot(make_capabilities):
+    """
+    Test virt.init to add the on_reboot=destroy flag
+    """
+    make_capabilities()
+    with patch.dict(virt.os.__dict__, {"chmod": MagicMock(), "makedirs": MagicMock()}):
+        with patch.dict(virt.__salt__, {"cmd.run": MagicMock()}):
+            virt.init("test_vm", 2, 2048, stop_on_reboot=True, start=False)
+            define_mock = virt.libvirt.openAuth().defineXML
+            setxml = ET.fromstring(define_mock.call_args[0][0])
+            assert "destroy" == setxml.find("./on_reboot").text
