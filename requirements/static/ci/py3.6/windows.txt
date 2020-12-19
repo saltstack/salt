@@ -117,7 +117,7 @@ sshpubkeys==3.1.0         # via moto
 strict-rfc3339==0.7
 tempora==1.14.1
 timelib==0.2.5
-toml==0.10.0
+toml==0.10.2
 urllib3==1.24.3
 virtualenv==20.0.20
 watchdog==0.10.3
