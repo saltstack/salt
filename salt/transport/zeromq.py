@@ -1040,6 +1040,7 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
                                         salt.utils.stringutils.to_bytes(topic)
                                     ).hexdigest()
                                 )
+
                                 pub_sock.send(htopic, flags=zmq.SNDMORE)
                                 pub_sock.send(payload)
                                 log.trace("Filtered data has been sent")
@@ -1373,11 +1374,16 @@ class AsyncReqMessageClient:
                 future.set_exception(SaltReqTimeoutError("Message timed out"))
 
     def send(
-        self, message, timeout=None, tries=3, future=None, callback=None, raw=False
+        self, message, timeout=None, tries=None, future=None, callback=None, raw=False
     ):
         """
         Return a future which will be completed when the message has a response
         """
+        # Retrieve auth_tries from configuration if None is passed
+        # Otherwise, use 3
+        if tries is None:
+            tries = self.opts.get("auth_tries") or 3
+
         if future is None:
             future = salt.ext.tornado.concurrent.Future()
             future.tries = tries
