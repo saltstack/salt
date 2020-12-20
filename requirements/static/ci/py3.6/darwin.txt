@@ -82,7 +82,7 @@ passlib==1.7.2            # via ciscoconfparse
 pathtools==0.1.2          # via watchdog
 pluggy==0.13.1            # via pytest
 portend==2.6
-psutil==5.7.3
+psutil==5.8.0
 py==1.9.0                 # via pytest
 pyaml==19.4.1             # via moto
 pyasn1-modules==0.2.4     # via google-auth
