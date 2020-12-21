@@ -78,14 +78,6 @@ except ImportError:
     # resource is not available on windows
     HAS_RESOURCE = False
 
-try:
-    import halite  # pylint: disable=import-error
-
-    HAS_HALITE = True
-except ImportError:
-    HAS_HALITE = False
-
-
 log = logging.getLogger(__name__)
 
 
@@ -760,10 +752,6 @@ class Master(SMaster):
                 except Exception:  # pylint: disable=broad-except
                     log.error("Error creating ext_processes process: %s", proc)
 
-            if HAS_HALITE and "halite" in self.opts:
-                log.info("Creating master halite process")
-                self.process_manager.add_process(Halite, args=(self.opts["halite"],))
-
             # TODO: remove, or at least push into the transport stuff (pre-fork probably makes sense there)
             if self.opts["con_cache"]:
                 log.info("Creating master concache process")
@@ -830,45 +818,6 @@ class Master(SMaster):
         self.process_manager.kill_children()
         time.sleep(1)
         sys.exit(0)
-
-
-class Halite(salt.utils.process.SignalHandlingProcess):
-    """
-    Manage the Halite server
-    """
-
-    def __init__(self, hopts, **kwargs):
-        """
-        Create a halite instance
-
-        :param dict hopts: The halite options
-        """
-        super().__init__(**kwargs)
-        self.hopts = hopts
-
-    # __setstate__ and __getstate__ are only used on Windows.
-    # We do this so that __init__ will be invoked on Windows in the child
-    # process so that a register_after_fork() equivalent will work on Windows.
-    def __setstate__(self, state):
-        self.__init__(
-            state["hopts"],
-            log_queue=state["log_queue"],
-            log_queue_level=state["log_queue_level"],
-        )
-
-    def __getstate__(self):
-        return {
-            "hopts": self.hopts,
-            "log_queue": self.log_queue,
-            "log_queue_level": self.log_queue_level,
-        }
-
-    def run(self):
-        """
-        Fire up halite!
-        """
-        salt.utils.process.appendproctitle(self.__class__.__name__)
-        halite.start(self.hopts)
 
 
 class ReqServer(salt.utils.process.SignalHandlingProcess):
