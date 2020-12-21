@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 This module provides the point of entry for client applications to interface to
 salt. The purpose is to have a simplified consistent interface for various
@@ -15,15 +14,11 @@ client applications.
 
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
 import salt.auth
 import salt.client
-
-# Import Salt libs
 import salt.config
 import salt.runner
 import salt.syspaths as syspaths
@@ -44,7 +39,7 @@ def tokenify(cmd, token=None):
     return cmd
 
 
-class APIClient(object):
+class APIClient:
     """
     Provide a uniform method of accessing the various client interfaces in Salt
     in the form of low-data data structures. For example:
@@ -137,7 +132,7 @@ class APIClient(object):
         ):
             raise EauthAuthenticationError("No authentication credentials given")
 
-        executor = getattr(self, "{0}_{1}".format(client, mode))
+        executor = getattr(self, "{}_{}".format(client, mode))
         result = executor(**cmd)
         return result
 
@@ -283,7 +278,7 @@ class APIClient(object):
             tokenage = self.resolver.mk_token(creds)
         except Exception as ex:  # pylint: disable=broad-except
             raise EauthAuthenticationError(
-                "Authentication failed with {0}.".format(repr(ex))
+                "Authentication failed with {}.".format(repr(ex))
             )
 
         if "token" not in tokenage:
@@ -312,7 +307,7 @@ class APIClient(object):
             result = self.resolver.get_token(token)
         except Exception as ex:  # pylint: disable=broad-except
             raise EauthAuthenticationError(
-                "Token validation failed with {0}.".format(repr(ex))
+                "Token validation failed with {}.".format(repr(ex))
             )
 
         return result
