@@ -463,6 +463,37 @@ class NetapiSSHClientAuthTest(SSHCase):
         del self.netapi
         self.mod_case.run_function("user.delete", [self.USERA], remove=True)
 
+    @staticmethod
+    def cleanup_file(path):
+        try:
+            os.remove(path)
+        except OSError:
+            pass
+
+    @slowTest
+    def test_extra_mods(self):
+        """
+        validate input from extra_mods
+        """
+        path = os.path.join(RUNTIME_VARS.TMP, "test_extra_mods")
+        self.addCleanup(self.cleanup_file, path)
+        low = {
+            "client": "ssh",
+            "tgt": "localhost",
+            "fun": "test.ping",
+            "roster_file": "roster",
+            "rosters": [self.rosters],
+            "ssh_priv": self.priv_file,
+            "eauth": "pam",
+            "username": self.USERA,
+            "password": self.USERA_PWD,
+            "regen_thin": True,
+            "thin_extra_mods": "';touch {};'".format(path),
+        }
+
+        ret = self.netapi.run(low)
+        self.assertFalse(os.path.exists(path))
+
     @classmethod
     def setUpClass(cls):
         cls.post_webserver = Webserver(handler=SaveRequestsPostHandler)
