@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 An engine that reads messages from the salt event bus and pushes
 them onto a fluent endpoint.
@@ -36,15 +35,10 @@ All arguments are optional
 :depends: fluent-logger
 """
 
-# Import python libraries
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 
-# Import salt libs
 import salt.utils.event
 
-# Import third-party libs
 try:
     from fluent import sender, event
 except ImportError:
