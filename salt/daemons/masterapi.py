@@ -1043,6 +1043,11 @@ class RemoteFuncs:
             )
         return True
 
+    def destroy(self):
+        if self.event is not None:
+            self.event.destroy()
+            self.event = None
+
 
 class LocalFuncs:
     """
@@ -1413,3 +1418,8 @@ class LocalFuncs:
             key = self.key
 
         return auth_type, err_name, key
+
+    def destroy(self):
+        if self.event is not None:
+            self.event.destroy()
+            self.event = None
