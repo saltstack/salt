@@ -778,11 +778,16 @@ def _check_directory(
     if clean:
         keep = _gen_keep_files(name, require, walk_d)
 
-        def _check_changes(fname):
+        def _check_changes(fname, isdir):
             path = os.path.join(root, fname)
             if path in keep:
                 return {}
             else:
+                # Skip removing directories that contain files that are to be kept
+                if isdir and any(
+                    (keepfile.startswith(os.path.join(path, "")) for keepfile in keep)
+                ):
+                    return {}
                 if not salt.utils.stringutils.check_include_exclude(
                     os.path.relpath(path, name), None, exclude_pat
                 ):
@@ -792,9 +797,9 @@ def _check_directory(
 
         for root, dirs, files in walk_l:
             for fname in files:
-                changes.update(_check_changes(fname))
+                changes.update(_check_changes(fname, False))
             for name_ in dirs:
-                changes.update(_check_changes(name_))
+                changes.update(_check_changes(name_, True))
 
     if not os.path.isdir(name):
         changes[name] = {"directory": "new"}
