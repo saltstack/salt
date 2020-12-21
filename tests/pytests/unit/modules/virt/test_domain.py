@@ -1313,6 +1313,37 @@ def test_update_boot_uefi_auto(make_mock_vm):
     assert "efi" == setxml.find("os").get("firmware")
 
 
+def test_update_boot_uefi_auto_nochange(make_mock_vm):
+    """
+    Test virt.update(), change boot with efi value and no change.
+    libvirt converts the efi=True value into a loader and nvram config with path.
+    """
+    domain_mock = make_mock_vm(
+        """
+        <domain type='kvm' id='1'>
+          <name>my_vm</name>
+          <uuid>27434df0-706d-4603-8ad7-5a88d19a3417</uuid>
+          <memory unit='KiB'>524288</memory>
+          <currentMemory unit='KiB'>524288</currentMemory>
+          <vcpu placement='static'>1</vcpu>
+          <resource>
+            <partition>/machine</partition>
+          </resource>
+          <os>
+            <type arch='x86_64' machine='pc-i440fx-4.2'>hvm</type>
+            <loader readonly='yes' type='pflash'>/usr/share/qemu/edk2-x86_64-code.fd</loader>
+            <nvram template='/usr/share/qemu/edk2-i386-vars.fd'>/var/lib/libvirt/qemu/nvram/vm01_VARS.fd</nvram>
+          </os>
+          <on_reboot>restart</on_reboot>
+        </domain>
+        """
+    )
+
+    ret = virt.update("my_vm", boot={"efi": True})
+    assert not ret["definition"]
+    virt.libvirt.openAuth().defineXML.assert_not_called()
+
+
 def test_update_boot_invalid(make_mock_vm):
     """
     Test virt.update(), change boot, invalid values
