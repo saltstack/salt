@@ -2007,10 +2007,11 @@ def _handle_efi_param(boot, desc):
     elif type(efi_value) == bool and os_attrib == {}:
         if efi_value is True and parent_tag.find("loader") is None:
             parent_tag.set("firmware", "efi")
+            return True
         if efi_value is False and parent_tag.find("loader") is not None:
             parent_tag.remove(parent_tag.find("loader"))
             parent_tag.remove(parent_tag.find("nvram"))
-        return True
+            return True
     elif type(efi_value) != bool:
         raise SaltInvocationError("Invalid efi value")
     return False
