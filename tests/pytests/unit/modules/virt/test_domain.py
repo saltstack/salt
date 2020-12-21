@@ -1,11 +1,15 @@
+import os.path
+
 import pytest
 import salt.modules.virt as virt
+import salt.syspaths
 import salt.utils.xmlutil as xmlutil
 from salt._compat import ElementTree as ET
+from salt.exceptions import SaltInvocationError
 from tests.support.mock import MagicMock, patch
 
 from .conftest import loader_modules_config
-from .test_helpers import append_to_XMLDesc, assert_called, strip_xml
+from .test_helpers import append_to_XMLDesc, assert_called, assert_equal_unit, strip_xml
 
 
 @pytest.fixture
@@ -54,8 +58,8 @@ def test_update_xen_disk_volumes(make_mock_vm, make_mock_storage_pool):
     )
 
     assert ret["definition"]
-    define_mock = virt.libvirt.openAuth().defineXML
-    setxml = ET.fromstring(define_mock.call_args[0][0])
+    virt.libvirt.openAuth().defineXML = virt.libvirt.openAuth().defineXML
+    setxml = ET.fromstring(virt.libvirt.openAuth().defineXML.call_args[0][0])
     assert "block" == setxml.find(".//disk[3]").get("type")
     assert "/path/to/vdb/vdb1" == setxml.find(".//disk[3]/source").get("dev")
 
@@ -544,8 +548,8 @@ def test_update_stop_on_reboot_reset(make_mock_vm):
     ret = virt.update("my_vm")
 
     assert ret["definition"]
-    define_mock = virt.libvirt.openAuth().defineXML
-    setxml = ET.fromstring(define_mock.call_args[0][0])
+    virt.libvirt.openAuth().defineXML = virt.libvirt.openAuth().defineXML
+    setxml = ET.fromstring(virt.libvirt.openAuth().defineXML.call_args[0][0])
     assert "restart" == setxml.find("./on_reboot").text
 
 
@@ -568,8 +572,8 @@ def test_update_stop_on_reboot(make_mock_vm):
     ret = virt.update("my_vm", stop_on_reboot=True)
 
     assert ret["definition"]
-    define_mock = virt.libvirt.openAuth().defineXML
-    setxml = ET.fromstring(define_mock.call_args[0][0])
+    virt.libvirt.openAuth().defineXML = virt.libvirt.openAuth().defineXML
+    setxml = ET.fromstring(virt.libvirt.openAuth().defineXML.call_args[0][0])
     assert "destroy" == setxml.find("./on_reboot").text
 
 
@@ -581,8 +585,8 @@ def test_init_no_stop_on_reboot(make_capabilities):
     with patch.dict(virt.os.__dict__, {"chmod": MagicMock(), "makedirs": MagicMock()}):
         with patch.dict(virt.__salt__, {"cmd.run": MagicMock()}):
             virt.init("test_vm", 2, 2048, start=False)
-            define_mock = virt.libvirt.openAuth().defineXML
-            setxml = ET.fromstring(define_mock.call_args[0][0])
+            virt.libvirt.openAuth().defineXML = virt.libvirt.openAuth().defineXML
+            setxml = ET.fromstring(virt.libvirt.openAuth().defineXML.call_args[0][0])
             assert "restart" == setxml.find("./on_reboot").text
 
 
@@ -594,8 +598,8 @@ def test_init_stop_on_reboot(make_capabilities):
     with patch.dict(virt.os.__dict__, {"chmod": MagicMock(), "makedirs": MagicMock()}):
         with patch.dict(virt.__salt__, {"cmd.run": MagicMock()}):
             virt.init("test_vm", 2, 2048, stop_on_reboot=True, start=False)
-            define_mock = virt.libvirt.openAuth().defineXML
-            setxml = ET.fromstring(define_mock.call_args[0][0])
+            virt.libvirt.openAuth().defineXML = virt.libvirt.openAuth().defineXML
+            setxml = ET.fromstring(virt.libvirt.openAuth().defineXML.call_args[0][0])
             assert "destroy" == setxml.find("./on_reboot").text
 
 
@@ -1060,3 +1064,913 @@ def test_update_nic_hostdev_nochange(make_mock_network, make_mock_vm, test):
     define_mock.assert_not_called()
     domain_mock.attachDevice.assert_not_called()
     domain_mock.detachDevice.assert_not_called()
+
+
+def test_update_no_param(make_mock_vm):
+    """
+    Test virt.update(), no parameter passed
+    """
+    domain_mock = make_mock_vm()
+    ret = virt.update("my_vm")
+    assert not ret["definition"]
+    assert not ret.get("mem")
+    assert not ret.get("cpu")
+
+
+def test_update_cpu_and_mem(make_mock_vm):
+    """
+    Test virt.update(), update both cpu and memory
+    """
+    domain_mock = make_mock_vm()
+    ret = virt.update("my_vm", mem=2048, cpu=2)
+    assert ret["definition"]
+    assert ret["mem"]
+    assert ret["cpu"]
+    setxml = ET.fromstring(virt.libvirt.openAuth().defineXML.call_args[0][0])
+    assert "2" == setxml.find("vcpu").text
+    assert "2147483648" == setxml.find("memory").text
+    assert 2048 * 1024 == domain_mock.setMemoryFlags.call_args[0][0]
+    assert 2 == domain_mock.setVcpusFlags.call_args[0][0]
+
+
+def test_update_cpu_simple(make_mock_vm):
+    """
+    Test virt.update(), simple cpu count update
+    """
+    domain_mock = make_mock_vm()
+    ret = virt.update("my_vm", cpu=2)
+    assert ret["definition"]
+    assert ret["cpu"]
+    setxml = ET.fromstring(virt.libvirt.openAuth().defineXML.call_args[0][0])
+    assert "2" == setxml.find("vcpu").text
+    assert 2 == domain_mock.setVcpusFlags.call_args[0][0]
+
+
+def test_update_add_cpu_topology(make_mock_vm):
+    """
+    Test virt.update(), add cpu topology settings
+    """
+    domain_mock = make_mock_vm()
+    ret = virt.update(
+        "my_vm",
+        cpu={
+            "placement": "static",
+            "cpuset": "0-11",
+            "current": 5,
+            "maximum": 12,
+            "vcpus": {
+                "0": {"enabled": True, "hotpluggable": False, "order": 1},
+                "1": {"enabled": False, "hotpluggable": True},
+            },
+            "mode": "custom",
+            "match": "exact",
+            "check": "full",
+            "model": {
+                "name": "coreduo",
+                "fallback": "allow",
+                "vendor_id": "Genuine20201",
+            },
+            "vendor": "Intel",
+            "topology": {"sockets": 1, "cores": 12, "threads": 1},
+            "cache": {"mode": "emulate", "level": 3},
+            "features": {"lahf": "optional", "pcid": "disable"},
+            "numa": {
+                "0": {
+                    "cpus": "0-3",
+                    "memory": "1g",
+                    "discard": True,
+                    "distances": {0: 10, 1: 21, 2: 31, 3: 41},
+                },
+                "1": {
+                    "cpus": "4-6",
+                    "memory": "0.5g",
+                    "discard": False,
+                    "memAccess": "shared",
+                    "distances": {0: 21, 1: 10, 2: 15, 3: 30},
+                },
+            },
+        },
+    )
+    assert ret["definition"]
+    setxml = ET.fromstring(virt.libvirt.openAuth().defineXML.call_args[0][0])
+
+    assert "12" == setxml.find("vcpu").text
+    assert "static" == setxml.find("vcpu").get("placement")
+    assert "0,1,2,3,4,5,6,7,8,9,10,11" == setxml.find("vcpu").get("cpuset")
+    assert "5" == setxml.find("vcpu").get("current")
+
+    assert "0" == setxml.find("./vcpus/vcpu/[@id='0']").get("id")
+    assert "yes" == setxml.find("./vcpus/vcpu/[@id='0']").get("enabled")
+    assert "no" == setxml.find("./vcpus/vcpu/[@id='0']").get("hotpluggable")
+    assert "1" == setxml.find("./vcpus/vcpu/[@id='0']").get("order")
+    assert "1" == setxml.find("./vcpus/vcpu/[@id='1']").get("id")
+    assert "no" == setxml.find("./vcpus/vcpu/[@id='1']").get("enabled")
+    assert "yes" == setxml.find("./vcpus/vcpu/[@id='1']").get("hotpluggable")
+    assert setxml.find("./vcpus/vcpu/[@id='1']").get("order") is None
+
+    assert "custom" == setxml.find("cpu").get("mode")
+    assert "exact" == setxml.find("cpu").get("match")
+    assert "full" == setxml.find("cpu").get("check")
+
+    assert "Genuine20201" == setxml.find("cpu/model").get("vendor_id")
+    assert "allow" == setxml.find("cpu/model").get("fallback")
+    assert "coreduo" == setxml.find("cpu/model").text
+
+    assert "Intel" == setxml.find("cpu/vendor").text
+
+    assert "1" == setxml.find("cpu/topology").get("sockets")
+    assert "12" == setxml.find("cpu/topology").get("cores")
+    assert "1" == setxml.find("cpu/topology").get("threads")
+
+    assert "3" == setxml.find("cpu/cache").get("level")
+    assert "emulate" == setxml.find("cpu/cache").get("mode")
+
+    assert "disable" == setxml.find("./cpu/feature[@name='pcid']").get("policy")
+    assert "optional" == setxml.find("./cpu/feature[@name='lahf']").get("policy")
+
+    assert "0,1,2,3" == setxml.find("./cpu/numa/cell/[@id='0']").get("cpus")
+    assert str(1024 ** 3) == setxml.find("./cpu/numa/cell/[@id='0']").get("memory")
+    assert "bytes" == setxml.find("./cpu/numa/cell/[@id='0']").get("unit")
+    assert "yes" == setxml.find("./cpu/numa/cell/[@id='0']").get("discard")
+    assert "10" == setxml.find(
+        "./cpu/numa/cell/[@id='0']/distances/sibling/[@id='0']"
+    ).get("value")
+    assert "21" == setxml.find(
+        "./cpu/numa/cell/[@id='0']/distances/sibling/[@id='1']"
+    ).get("value")
+    assert "31" == setxml.find(
+        "./cpu/numa/cell/[@id='0']/distances/sibling/[@id='2']"
+    ).get("value")
+    assert "41" == setxml.find(
+        "./cpu/numa/cell/[@id='0']/distances/sibling/[@id='3']"
+    ).get("value")
+    assert "4,5,6" == setxml.find("./cpu/numa/cell/[@id='1']").get("cpus")
+    assert str(int(1024 ** 3 / 2)) == setxml.find("./cpu/numa/cell/[@id='1']").get(
+        "memory"
+    )
+    assert "bytes" == setxml.find("./cpu/numa/cell/[@id='1']").get("unit")
+    assert "no" == setxml.find("./cpu/numa/cell/[@id='1']").get("discard")
+    assert "shared" == setxml.find("./cpu/numa/cell/[@id='1']").get("memAccess")
+    assert "21" == setxml.find(
+        "./cpu/numa/cell/[@id='1']/distances/sibling/[@id='0']"
+    ).get("value")
+    assert "10" == setxml.find(
+        "./cpu/numa/cell/[@id='1']/distances/sibling/[@id='1']"
+    ).get("value")
+    assert "15" == setxml.find(
+        "./cpu/numa/cell/[@id='1']/distances/sibling/[@id='2']"
+    ).get("value")
+    assert "30" == setxml.find(
+        "./cpu/numa/cell/[@id='1']/distances/sibling/[@id='3']"
+    ).get("value")
+
+
+@pytest.mark.parametrize("boot_dev", ["hd", "cdrom network hd"])
+def test_update_bootdev_unchanged(make_mock_vm, boot_dev):
+    """
+    Test virt.update(), unchanged boot devices case
+    """
+    domain_mock = make_mock_vm(
+        """
+            <domain type='kvm' id='7'>
+              <name>my_vm</name>
+              <memory unit='KiB'>1048576</memory>
+              <currentMemory unit='KiB'>1048576</currentMemory>
+              <vcpu placement='auto'>1</vcpu>
+              <on_reboot>restart</on_reboot>
+              <os>
+                <type arch='x86_64' machine='pc-i440fx-2.6'>hvm</type>
+                <boot dev="hd"/>
+              </os>
+            </domain>
+        """
+    )
+    ret = virt.update("my_vm", boot_dev=boot_dev)
+    assert (boot_dev != "hd") == ret["definition"]
+    if boot_dev == "hd":
+        virt.libvirt.openAuth().defineXML.assert_not_called()
+    else:
+        setxml = ET.fromstring(virt.libvirt.openAuth().defineXML.call_args[0][0])
+        assert ["cdrom", "network", "hd"] == [
+            node.get("dev") for node in setxml.findall("os/boot")
+        ]
+
+
+def test_update_boot_kernel_paths(make_mock_vm):
+    """
+    Test virt.update(), change boot with kernel/initrd path and kernel params
+    """
+    domain_mock = make_mock_vm()
+    ret = virt.update(
+        "my_vm",
+        boot={
+            "kernel": "/root/f8-i386-vmlinuz",
+            "initrd": "/root/f8-i386-initrd",
+            "cmdline": "console=ttyS0 ks=http://example.com/f8-i386/os/",
+        },
+    )
+    assert ret["definition"]
+    setxml = ET.fromstring(virt.libvirt.openAuth().defineXML.call_args[0][0])
+    assert "/root/f8-i386-vmlinuz" == setxml.find("os/kernel").text
+    assert "/root/f8-i386-initrd" == setxml.find("os/initrd").text
+    assert (
+        "console=ttyS0 ks=http://example.com/f8-i386/os/"
+        == setxml.find("os/cmdline").text
+    )
+
+
+def test_update_boot_uefi_paths(make_mock_vm):
+    """
+    Test virt.update(), add boot with uefi loader and nvram paths
+    """
+    domain_mock = make_mock_vm()
+
+    ret = virt.update(
+        "my_vm",
+        boot={
+            "loader": "/usr/share/OVMF/OVMF_CODE.fd",
+            "nvram": "/usr/share/OVMF/OVMF_VARS.ms.fd",
+        },
+    )
+
+    assert ret["definition"]
+    setxml = ET.fromstring(virt.libvirt.openAuth().defineXML.call_args[0][0])
+    assert "/usr/share/OVMF/OVMF_CODE.fd" == setxml.find("os/loader").text
+    assert "yes" == setxml.find("os/loader").get("readonly")
+    assert "pflash" == setxml.find("os/loader").get("type")
+    assert "/usr/share/OVMF/OVMF_VARS.ms.fd" == setxml.find("os/nvram").get("template")
+
+
+def test_update_boot_uefi_auto(make_mock_vm):
+    """
+    Test virt.update(), change boot with efi value (automatic discovery of loader)
+    """
+    domain_mock = make_mock_vm()
+
+    ret = virt.update("my_vm", boot={"efi": True})
+    assert ret["definition"]
+    setxml = ET.fromstring(virt.libvirt.openAuth().defineXML.call_args[0][0])
+    assert "efi" == setxml.find("os").get("firmware")
+
+
+def test_update_boot_invalid(make_mock_vm):
+    """
+    Test virt.update(), change boot, invalid values
+    """
+    domain_mock = make_mock_vm()
+
+    with pytest.raises(SaltInvocationError):
+        virt.update(
+            "my_vm",
+            boot={
+                "loader": "/usr/share/OVMF/OVMF_CODE.fd",
+                "initrd": "/root/f8-i386-initrd",
+            },
+        )
+
+    with pytest.raises(SaltInvocationError):
+        virt.update("my_vm", boot={"efi": "Not a boolean value"})
+
+
+def test_update_add_memtune(make_mock_vm):
+    """
+    Test virt.update(), add memory tune config case
+    """
+    domain_mock = make_mock_vm()
+    ret = virt.update(
+        "my_vm",
+        mem={
+            "soft_limit": "0.5g",
+            "hard_limit": "1024",
+            "swap_hard_limit": "2048m",
+            "min_guarantee": "1 g",
+        },
+    )
+
+    assert ret["definition"]
+    setxml = ET.fromstring(virt.libvirt.openAuth().defineXML.call_args[0][0])
+    assert_equal_unit(setxml.find("memtune/soft_limit"), int(0.5 * 1024 ** 3), "bytes")
+    assert_equal_unit(setxml.find("memtune/hard_limit"), 1024 * 1024 ** 2, "bytes")
+    assert_equal_unit(setxml.find("memtune/swap_hard_limit"), 2048 * 1024 ** 2, "bytes")
+    assert_equal_unit(setxml.find("memtune/min_guarantee"), 1 * 1024 ** 3, "bytes")
+
+
+def test_update_add_memtune_invalid_unit(make_mock_vm):
+    """
+    Test virt.update(), add invalid unit to memory tuning config
+    """
+    domain_mock = make_mock_vm()
+
+    with pytest.raises(SaltInvocationError):
+        virt.update("my_vm", mem={"soft_limit": "2HB"})
+
+    with pytest.raises(SaltInvocationError):
+        virt.update("my_vm", mem={"soft_limit": "3.4.MB"})
+
+
+def test_update_add_numatune(make_mock_vm):
+    """
+    Test virt.update(), add numatune config case
+    """
+    domain_mock = make_mock_vm()
+    ret = virt.update(
+        "my_vm",
+        numatune={
+            "memory": {"mode": "strict", "nodeset": 1},
+            "memnodes": {
+                0: {"mode": "strict", "nodeset": 1},
+                1: {"mode": "preferred", "nodeset": 2},
+            },
+        },
+    )
+
+    assert ret["definition"]
+    setxml = ET.fromstring(virt.libvirt.openAuth().defineXML.call_args[0][0])
+    assert "strict" == setxml.find("numatune/memory").get("mode")
+    assert "1" == setxml.find("numatune/memory").get("nodeset")
+    assert "strict" == setxml.find("./numatune/memnode/[@cellid='0']").get("mode")
+    assert "1" == setxml.find("./numatune/memnode/[@cellid='0']").get("nodeset")
+    assert "preferred" == setxml.find("./numatune/memnode/[@cellid='1']").get("mode")
+    assert "2" == setxml.find("./numatune/memnode/[@cellid='1']").get("nodeset")
+
+
+def test_update_mem_simple(make_mock_vm):
+    """
+    Test virt.update(), simple memory amount change
+    """
+    domain_mock = make_mock_vm()
+    ret = virt.update("my_vm", mem=2048)
+    assert ret["definition"]
+    assert ret["mem"]
+    setxml = ET.fromstring(virt.libvirt.openAuth().defineXML.call_args[0][0])
+    assert str(2048 * 1024 ** 2) == setxml.find("memory").text
+    assert "bytes" == setxml.find("memory").get("unit")
+    assert 2048 * 1024 == domain_mock.setMemoryFlags.call_args[0][0]
+
+
+def test_update_mem(make_mock_vm):
+    """
+    Test virt.update(), advanced memory amounts changes
+    """
+    domain_mock = make_mock_vm()
+
+    ret = virt.update(
+        "my_vm", mem={"boot": "0.5g", "current": "2g", "max": "1g", "slots": 12},
+    )
+    assert ret["definition"]
+    assert ret["mem"]
+    setxml = ET.fromstring(virt.libvirt.openAuth().defineXML.call_args[0][0])
+    assert "bytes" == setxml.find("memory").get("unit")
+    assert str(int(0.5 * 1024 ** 3)) == setxml.find("memory").text
+    assert str(1 * 1024 ** 3) == setxml.find("maxMemory").text
+    assert str(2 * 1024 ** 3) == setxml.find("currentMemory").text
+
+
+def test_update_add_mem_backing(make_mock_vm):
+    """
+    Test virt.update(), add memory backing case
+    """
+    domain_mock = make_mock_vm()
+    ret = virt.update(
+        "my_vm",
+        mem={
+            "hugepages": [
+                {"nodeset": "1-5,^4", "size": "1g"},
+                {"nodeset": "4", "size": "2g"},
+            ],
+            "nosharepages": True,
+            "locked": True,
+            "source": "file",
+            "access": "shared",
+            "allocation": "immediate",
+            "discard": True,
+        },
+    )
+
+    assert ret["definition"]
+    setxml = ET.fromstring(virt.libvirt.openAuth().defineXML.call_args[0][0])
+    assert {
+        p.get("nodeset"): {"size": p.get("size"), "unit": p.get("unit")}
+        for p in setxml.findall("memoryBacking/hugepages/page")
+    } == {
+        "1,2,3,5": {"size": str(1024 ** 3), "unit": "bytes"},
+        "4": {"size": str(2 * 1024 ** 3), "unit": "bytes"},
+    }
+    assert setxml.find("./memoryBacking/nosharepages") is not None
+    assert setxml.find("./memoryBacking/nosharepages").text is None
+    assert [] == setxml.find("./memoryBacking/nosharepages").keys()
+    assert setxml.find("./memoryBacking/locked") is not None
+    assert setxml.find("./memoryBacking/locked").text is None
+    assert [] == setxml.find("./memoryBacking/locked").keys()
+    assert "file" == setxml.find("./memoryBacking/source").attrib["type"]
+    assert "shared" == setxml.find("./memoryBacking/access").attrib["mode"]
+    assert setxml.find("./memoryBacking/discard") is not None
+
+
+def test_update_add_iothreads(make_mock_vm):
+    """
+    Test virt.update(), add iothreads
+    """
+    domain_mock = make_mock_vm()
+    ret = virt.update("my_vm", cpu={"iothreads": 5})
+    assert ret["definition"]
+    setxml = ET.fromstring(virt.libvirt.openAuth().defineXML.call_args[0][0])
+    assert "5" == setxml.find("iothreads").text
+
+
+def test_update_add_cputune(make_mock_vm):
+    """
+    Test virt.update(), adding CPU tuning parameters
+    """
+    domain_mock = make_mock_vm()
+    cputune = {
+        "shares": 2048,
+        "period": 122000,
+        "quota": -1,
+        "global_period": 1000000,
+        "global_quota": -3,
+        "emulator_period": 1200000,
+        "emulator_quota": -10,
+        "iothread_period": 133000,
+        "iothread_quota": -1,
+        "vcpupin": {0: "1-4,^2", 1: "0,1", 2: "2,3", 3: "0,4"},
+        "emulatorpin": "1-3",
+        "iothreadpin": {1: "5-6", 2: "7-8"},
+        "vcpusched": [
+            {"scheduler": "fifo", "priority": 1, "vcpus": "0"},
+            {"scheduler": "fifo", "priotity": 2, "vcpus": "1"},
+            {"scheduler": "idle", "priotity": 3, "vcpus": "2"},
+        ],
+        "iothreadsched": [{"scheduler": "batch", "iothreads": "7"}],
+        "cachetune": {
+            "0-3": {
+                0: {"level": 3, "type": "both", "size": 3},
+                1: {"level": 3, "type": "both", "size": 3},
+                "monitor": {1: 3, "0-3": 3},
+            },
+            "4-5": {"monitor": {4: 3, 5: 2}},
+        },
+        "memorytune": {"0-2": {0: 60}, "3-4": {0: 50, 1: 70}},
+    }
+    assert {
+        "definition": True,
+        "disk": {"attached": [], "detached": [], "updated": []},
+        "interface": {"attached": [], "detached": []},
+    } == virt.update("my_vm", cpu={"tuning": cputune})
+    setxml = ET.fromstring(virt.libvirt.openAuth().defineXML.call_args[0][0])
+    assert "2048" == setxml.find("cputune/shares").text
+    assert "122000" == setxml.find("cputune/period").text
+    assert "-1" == setxml.find("cputune/quota").text
+    assert "1000000" == setxml.find("cputune/global_period").text
+    assert "-3" == setxml.find("cputune/global_quota").text
+    assert "1200000" == setxml.find("cputune/emulator_period").text
+    assert "-10" == setxml.find("cputune/emulator_quota").text
+    assert "133000" == setxml.find("cputune/iothread_period").text
+    assert "-1" == setxml.find("cputune/iothread_quota").text
+    assert "1,3,4" == setxml.find("cputune/vcpupin[@vcpu='0']").get("cpuset")
+    assert "0,1" == setxml.find("cputune/vcpupin[@vcpu='1']").get("cpuset")
+    assert "2,3" == setxml.find("cputune/vcpupin[@vcpu='2']").get("cpuset")
+    assert "0,4" == setxml.find("cputune/vcpupin[@vcpu='3']").get("cpuset")
+    assert "1,2,3" == setxml.find("cputune/emulatorpin").get("cpuset")
+    assert "5,6" == setxml.find("cputune/iothreadpin[@iothread='1']").get("cpuset")
+    assert "7,8" == setxml.find("cputune/iothreadpin[@iothread='2']").get("cpuset")
+    assert "1" == setxml.find("cputune/vcpusched[@vcpus='0']").get("priority")
+    assert "fifo" == setxml.find("cputune/vcpusched[@vcpus='0']").get("scheduler")
+    assert "7" == setxml.find("cputune/iothreadsched").get("iothreads")
+    assert "batch" == setxml.find("cputune/iothreadsched").get("scheduler")
+    assert "3" == setxml.find(
+        "./cputune/cachetune[@vcpus='0,1,2,3']/cache[@id='0']"
+    ).get("level")
+    assert "both" == setxml.find(
+        "./cputune/cachetune[@vcpus='0,1,2,3']/cache[@id='0']"
+    ).get("type")
+    assert "3" == setxml.find(
+        "./cputune/cachetune[@vcpus='0,1,2,3']/monitor[@vcpus='1']"
+    ).get("level")
+    assert "3" == setxml.find(
+        "./cputune/cachetune[@vcpus='4,5']/monitor[@vcpus='4']"
+    ).get("level")
+    assert "2" == setxml.find(
+        "./cputune/cachetune[@vcpus='4,5']/monitor[@vcpus='5']"
+    ).get("level")
+    assert "60" == setxml.find(
+        "./cputune/memorytune[@vcpus='0,1,2']/node[@id='0']"
+    ).get("bandwidth")
+    assert "50" == setxml.find("./cputune/memorytune[@vcpus='3,4']/node[@id='0']").get(
+        "bandwidth"
+    )
+    assert "70" == setxml.find("./cputune/memorytune[@vcpus='3,4']/node[@id='1']").get(
+        "bandwidth"
+    )
+
+
+def test_update_graphics(make_mock_vm):
+    """
+    Test virt.update(), graphics update case
+    """
+    domain_mock = make_mock_vm(
+        """
+        <domain type='kvm' id='7'>
+          <name>my_vm</name>
+          <memory unit='KiB'>1048576</memory>
+          <currentMemory unit='KiB'>1048576</currentMemory>
+          <vcpu placement='auto'>1</vcpu>
+          <on_reboot>restart</on_reboot>
+          <os>
+            <type arch='x86_64' machine='pc-i440fx-2.6'>hvm</type>
+          </os>
+          <devices>
+            <graphics type='spice' listen='127.0.0.1' autoport='yes'>
+              <listen type='address' address='127.0.0.1'/>
+            </graphics>
+          </devices>
+        </domain>
+        """
+    )
+    assert {
+        "definition": True,
+        "disk": {"attached": [], "detached": [], "updated": []},
+        "interface": {"attached": [], "detached": []},
+    } == virt.update("my_vm", graphics={"type": "vnc"})
+    setxml = ET.fromstring(virt.libvirt.openAuth().defineXML.call_args[0][0])
+    assert "vnc" == setxml.find("devices/graphics").get("type")
+
+
+def test_update_console(make_mock_vm):
+    """
+    Test virt.update(), console and serial devices update case
+    """
+    domain_mock = make_mock_vm(
+        """
+        <domain type='kvm' id='7'>
+          <name>my_vm</name>
+          <memory unit='KiB'>1048576</memory>
+          <currentMemory unit='KiB'>1048576</currentMemory>
+          <vcpu placement='auto'>1</vcpu>
+          <on_reboot>restart</on_reboot>
+          <os>
+            <type arch='x86_64' machine='pc-i440fx-2.6'>hvm</type>
+          </os>
+          <devices>
+            <serial type='pty'/>
+            <console type='pty'/>
+          </devices>
+        </domain>
+        """
+    )
+
+    assert {
+        "definition": True,
+        "disk": {"attached": [], "detached": [], "updated": []},
+        "interface": {"attached": [], "detached": []},
+    } == virt.update("my_vm", serials=[{"type": "tcp"}], consoles=[{"type": "tcp"}])
+    setxml = ET.fromstring(virt.libvirt.openAuth().defineXML.call_args[0][0])
+    assert "tcp" == setxml.find("devices/serial").attrib["type"]
+    assert "tcp" == setxml.find("devices/console").attrib["type"]
+
+
+def test_update_disks(make_mock_vm):
+    """
+    Test virt.udpate() with disk device changes
+    """
+    root_dir = os.path.join(salt.syspaths.ROOT_DIR, "srv", "salt-images")
+    xml_def = """
+        <domain type='kvm' id='7'>
+          <name>my_vm</name>
+          <memory unit='KiB'>1048576</memory>
+          <currentMemory unit='KiB'>1048576</currentMemory>
+          <vcpu placement='auto'>1</vcpu>
+          <on_reboot>restart</on_reboot>
+          <os>
+            <type arch='x86_64' machine='pc-i440fx-2.6'>hvm</type>
+          </os>
+          <devices>
+            <disk type='file' device='disk'>
+              <driver name='qemu' type='qcow2'/>
+              <source file='{}{}my_vm_system.qcow2'/>
+              <backingStore/>
+              <target dev='vda' bus='virtio'/>
+              <alias name='virtio-disk0'/>
+              <address type='pci' domain='0x0000' bus='0x00' slot='0x07' function='0x0'/>
+            </disk>
+            <disk type="network" device="disk">
+              <driver name='raw' type='qcow2'/>
+              <source protocol='rbd' name='libvirt-pool/my_vm_data2'>
+                <host name='ses2.tf.local'/>
+              </source>
+              <target dev='vdc' bus='virtio'/>
+              <alias name='virtio-disk2'/>
+              <address type='pci' domain='0x0000' bus='0x00' slot='0x07' function='0x2'/>
+            </disk>
+          </devices>
+        </domain>
+    """.format(
+        root_dir, os.sep
+    )
+    domain_mock = make_mock_vm(xml_def)
+
+    mock_chmod = MagicMock()
+    mock_run = MagicMock()
+    with patch.dict(os.__dict__, {"chmod": mock_chmod, "makedirs": MagicMock()}):
+        with patch.dict(virt.__salt__, {"cmd.run": mock_run}):
+            ret = virt.update(
+                "my_vm",
+                disk_profile="default",
+                disks=[
+                    {
+                        "name": "cddrive",
+                        "device": "cdrom",
+                        "source_file": None,
+                        "model": "ide",
+                    },
+                    {"name": "added", "size": 2048, "io": "threads"},
+                ],
+            )
+            added_disk_path = os.path.join(
+                virt.__salt__["config.get"]("virt:images"), "my_vm_added.qcow2"
+            )
+            assert (
+                'qemu-img create -f qcow2 "{}" 2048M'.format(added_disk_path)
+                == mock_run.call_args[0][0]
+            )
+            assert added_disk_path == mock_chmod.call_args[0][0]
+            assert [None, os.path.join(root_dir, "my_vm_added.qcow2")] == [
+                ET.fromstring(disk).find("source").get("file")
+                if str(disk).find("<source") > -1
+                else None
+                for disk in ret["disk"]["attached"]
+            ]
+
+            assert ["libvirt-pool/my_vm_data2"] == [
+                ET.fromstring(disk).find("source").get("volume")
+                or ET.fromstring(disk).find("source").get("name")
+                for disk in ret["disk"]["detached"]
+            ]
+            assert 2 == domain_mock.attachDevice.call_count
+            assert 1 == domain_mock.detachDevice.call_count
+
+            setxml = ET.fromstring(virt.libvirt.openAuth().defineXML.call_args[0][0])
+            assert "threads" == setxml.find("devices/disk[3]/driver").get("io")
+
+
+def test_update_nics(make_mock_vm):
+    """
+    Test virt.update() with NIC device changes
+    """
+    domain_mock = make_mock_vm(
+        """
+        <domain type='kvm' id='7'>
+          <name>my_vm</name>
+          <memory unit='KiB'>1048576</memory>
+          <currentMemory unit='KiB'>1048576</currentMemory>
+          <vcpu placement='auto'>1</vcpu>
+          <on_reboot>restart</on_reboot>
+          <os>
+            <type arch='x86_64' machine='pc-i440fx-2.6'>hvm</type>
+          </os>
+          <devices>
+            <interface type='network'>
+              <mac address='52:54:00:39:02:b1'/>
+              <source network='default' bridge='virbr0'/>
+              <target dev='vnet0'/>
+              <model type='virtio'/>
+              <alias name='net0'/>
+              <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x0'/>
+            </interface>
+            <interface type='network'>
+              <mac address='52:54:00:39:02:b2'/>
+              <source network='oldnet' bridge='virbr1'/>
+              <target dev='vnet1'/>
+              <model type='virtio'/>
+              <alias name='net1'/>
+              <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x1'/>
+            </interface>
+          </devices>
+        </domain>
+        """
+    )
+    mock_config = salt.utils.yaml.safe_load(
+        """
+          virt:
+             nic:
+                myprofile:
+                   - network: default
+                     name: eth0
+        """
+    )
+    with patch.dict(salt.modules.config.__opts__, mock_config):
+        ret = virt.update(
+            "my_vm",
+            nic_profile="myprofile",
+            interfaces=[
+                {
+                    "name": "eth0",
+                    "type": "network",
+                    "source": "default",
+                    "mac": "52:54:00:39:02:b1",
+                },
+                {"name": "eth1", "type": "network", "source": "newnet"},
+            ],
+        )
+        assert ["newnet"] == [
+            ET.fromstring(nic).find("source").get("network")
+            for nic in ret["interface"]["attached"]
+        ]
+        assert ["oldnet"] == [
+            ET.fromstring(nic).find("source").get("network")
+            for nic in ret["interface"]["detached"]
+        ]
+        domain_mock.attachDevice.assert_called_once()
+        domain_mock.detachDevice.assert_called_once()
+
+
+def test_update_remove_disks_nics(make_mock_vm):
+    """
+    Test virt.update() when removing nics and disks even if that may sound silly
+    """
+    root_dir = os.path.join(salt.syspaths.ROOT_DIR, "srv", "salt-images")
+    xml_def = """
+        <domain type='kvm' id='7'>
+          <name>my_vm</name>
+          <memory unit='KiB'>1048576</memory>
+          <currentMemory unit='KiB'>1048576</currentMemory>
+          <vcpu placement='auto'>1</vcpu>
+          <on_reboot>restart</on_reboot>
+          <os>
+            <type arch='x86_64' machine='pc-i440fx-2.6'>hvm</type>
+          </os>
+          <devices>
+            <disk type='file' device='disk'>
+              <driver name='qemu' type='qcow2'/>
+              <source file='{}{}my_vm_system.qcow2'/>
+              <backingStore/>
+              <target dev='vda' bus='virtio'/>
+              <alias name='virtio-disk0'/>
+              <address type='pci' domain='0x0000' bus='0x00' slot='0x07' function='0x0'/>
+            </disk>
+            <interface type='network'>
+              <mac address='52:54:00:39:02:b1'/>
+              <source network='default' bridge='virbr0'/>
+              <target dev='vnet0'/>
+              <model type='virtio'/>
+              <alias name='net0'/>
+              <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x0'/>
+            </interface>
+          </devices>
+        </domain>
+    """.format(
+        root_dir, os.sep
+    )
+    domain_mock = make_mock_vm(xml_def)
+
+    ret = virt.update(
+        "my_vm", nic_profile=None, interfaces=[], disk_profile=None, disks=[]
+    )
+    assert [] == ret["interface"].get("attached", [])
+    assert 1 == len(ret["interface"]["detached"])
+    assert [] == ret["disk"].get("attached", [])
+    assert 1 == len(ret["disk"]["detached"])
+
+    domain_mock.attachDevice.assert_not_called()
+    assert 2 == domain_mock.detachDevice.call_count
+
+
+def test_update_no_change(make_mock_vm, make_mock_storage_pool):
+    """
+    Test virt.update() with no change
+    """
+    root_dir = os.path.join(salt.syspaths.ROOT_DIR, "srv", "salt-images")
+    xml_def = """
+        <domain type='kvm' id='7'>
+          <name>my_vm</name>
+          <memory unit='KiB'>1048576</memory>
+          <currentMemory unit='KiB'>1048576</currentMemory>
+          <vcpu placement='auto'>1</vcpu>
+          <on_reboot>restart</on_reboot>
+          <os>
+            <type arch='x86_64' machine='pc-i440fx-2.6'>hvm</type>
+            <boot dev="hd"/>
+          </os>
+          <devices>
+            <disk type='file' device='disk'>
+              <driver name='qemu' type='qcow2'/>
+              <source file='{}{}my_vm_system.qcow2'/>
+              <backingStore/>
+              <target dev='vda' bus='virtio'/>
+              <alias name='virtio-disk0'/>
+              <address type='pci' domain='0x0000' bus='0x00' slot='0x07' function='0x0'/>
+            </disk>
+            <disk type='volume' device='disk'>
+              <driver name='qemu' type='qcow2'/>
+              <source pool='default' volume='my_vm_data'/>
+              <backingStore/>
+              <target dev='vdb' bus='virtio'/>
+              <alias name='virtio-disk1'/>
+              <address type='pci' domain='0x0000' bus='0x00' slot='0x07' function='0x1'/>
+            </disk>
+            <disk type="network" device="disk">
+              <driver name='raw' type='qcow2'/>
+              <source protocol='rbd' name='libvirt-pool/my_vm_data2'>
+                <host name='ses2.tf.local'/>
+                <host name='ses3.tf.local' port='1234'/>
+                <auth username='libvirt'>
+                  <secret type='ceph' usage='pool_test-rbd'/>
+                </auth>
+              </source>
+              <target dev='vdc' bus='virtio'/>
+              <alias name='virtio-disk2'/>
+              <address type='pci' domain='0x0000' bus='0x00' slot='0x07' function='0x2'/>
+            </disk>
+            <interface type='network'>
+              <mac address='52:54:00:39:02:b1'/>
+              <source network='default' bridge='virbr0'/>
+              <target dev='vnet0'/>
+              <model type='virtio'/>
+              <alias name='net0'/>
+              <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x0'/>
+            </interface>
+            <graphics type='spice' listen='127.0.0.1' autoport='yes'>
+              <listen type='address' address='127.0.0.1'/>
+            </graphics>
+            <video>
+              <model type='qxl' ram='65536' vram='65536' vgamem='16384' heads='1' primary='yes'/>
+              <alias name='video0'/>
+              <address type='pci' domain='0x0000' bus='0x00' slot='0x02' function='0x0'/>
+            </video>
+            <serial type='pty'/>
+            <console type='pty'/>
+          </devices>
+        </domain>
+    """.format(
+        root_dir, os.sep
+    )
+    domain_mock = make_mock_vm(xml_def)
+
+    make_mock_storage_pool("default", "dir", ["my_vm_data"])
+    make_mock_storage_pool(
+        "test-rbd",
+        "rbd",
+        ["my_vm_data2"],
+        source="""
+            <host name='ses2.tf.local'/>
+            <host name='ses3.tf.local' port='1234'/>
+            <name>libvirt-pool</name>
+            <auth type='ceph' username='libvirt'>
+              <secret usage='pool_test-rbd'/>
+            </auth>
+        """,
+    )
+    assert {
+        "definition": False,
+        "disk": {"attached": [], "detached": [], "updated": []},
+        "interface": {"attached": [], "detached": []},
+    } == virt.update(
+        "my_vm",
+        cpu=1,
+        mem=1024,
+        disk_profile="default",
+        disks=[
+            {"name": "data", "size": 2048, "pool": "default"},
+            {"name": "data2", "size": 4096, "pool": "test-rbd", "format": "raw"},
+        ],
+        nic_profile="myprofile",
+        interfaces=[
+            {
+                "name": "eth0",
+                "type": "network",
+                "source": "default",
+                "mac": "52:54:00:39:02:b1",
+            },
+        ],
+        graphics={
+            "type": "spice",
+            "listen": {"type": "address", "address": "127.0.0.1"},
+        },
+    )
+
+
+def test_update_failure(make_mock_vm):
+    """
+    Test virt.update() with errors
+    """
+    domain_mock = make_mock_vm()
+    virt.libvirt.openAuth().defineXML.side_effect = virt.libvirt.libvirtError(
+        "Test error"
+    )
+    with pytest.raises(virt.libvirt.libvirtError):
+        virt.update("my_vm", mem=2048)
+
+    # Failed single update failure case
+    virt.libvirt.openAuth().defineXML = MagicMock(return_value=True)
+    domain_mock.setMemoryFlags.side_effect = virt.libvirt.libvirtError(
+        "Failed to live change memory"
+    )
+
+    domain_mock.setVcpusFlags.return_value = 0
+    assert {
+        "definition": True,
+        "errors": ["Failed to live change memory"],
+        "cpu": True,
+        "disk": {"attached": [], "detached": [], "updated": []},
+        "interface": {"attached": [], "detached": []},
+    } == virt.update("my_vm", cpu=4, mem=2048)
