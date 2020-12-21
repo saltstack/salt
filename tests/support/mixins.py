@@ -40,11 +40,6 @@ from tests.support.paths import CODE_DIR
 from tests.support.pytest.loader import LoaderModuleMock
 from tests.support.runtests import RUNTIME_VARS
 
-try:
-    from salt.utils.odict import OrderedDict
-except ImportError:
-    from collections import OrderedDict
-
 log = logging.getLogger(__name__)
 
 
@@ -255,27 +250,6 @@ class AdaptedConfigurationTestCaseMixin:
         """
         return self.get_config("sub_minion")
 
-    @property
-    def mm_master_opts(self):
-        """
-        Return the options used for the multimaster master
-        """
-        return self.get_config("mm_master")
-
-    @property
-    def mm_sub_master_opts(self):
-        """
-        Return the options used for the multimaster sub-master
-        """
-        return self.get_config("mm_sub_master")
-
-    @property
-    def mm_minion_opts(self):
-        """
-        Return the options used for the minion
-        """
-        return self.get_config("mm_minion")
-
 
 class SaltClientTestCaseMixin(AdaptedConfigurationTestCaseMixin):
     """
@@ -318,52 +292,6 @@ class SaltClientTestCaseMixin(AdaptedConfigurationTestCaseMixin):
                 "runtime_client"
             ] = salt.client.get_local_client(mopts=mopts)
         return RUNTIME_VARS.RUNTIME_CONFIGS["runtime_client"]
-
-
-class SaltMultimasterClientTestCaseMixin(AdaptedConfigurationTestCaseMixin):
-    """
-    Mix-in class that provides a ``clients`` attribute which returns a list of Salt
-    :class:`LocalClient<salt:salt.client.LocalClient>`.
-
-    .. code-block:: python
-
-        class LocalClientTestCase(TestCase, SaltMultimasterClientTestCaseMixin):
-
-            def test_check_pub_data(self):
-                just_minions = {'minions': ['m1', 'm2']}
-                jid_no_minions = {'jid': '1234', 'minions': []}
-                valid_pub_data = {'minions': ['m1', 'm2'], 'jid': '1234'}
-
-                for client in self.clients:
-                    self.assertRaises(EauthAuthenticationError,
-                                      client._check_pub_data, None)
-                    self.assertDictEqual({},
-                        client._check_pub_data(just_minions),
-                        'Did not handle lack of jid correctly')
-
-                    self.assertDictEqual(
-                        {},
-                        client._check_pub_data({'jid': '0'}),
-                        'Passing JID of zero is not handled gracefully')
-    """
-
-    _salt_client_config_file_name_ = "master"
-
-    @property
-    def clients(self):
-        # Late import
-        import salt.client
-
-        if "runtime_clients" not in RUNTIME_VARS.RUNTIME_CONFIGS:
-            RUNTIME_VARS.RUNTIME_CONFIGS["runtime_clients"] = OrderedDict()
-
-        runtime_clients = RUNTIME_VARS.RUNTIME_CONFIGS["runtime_clients"]
-        for master_id in ("mm-master", "mm-sub-master"):
-            if master_id in runtime_clients:
-                continue
-            mopts = self.get_config(master_id.replace("-", "_"), from_scratch=True)
-            runtime_clients[master_id] = salt.client.get_local_client(mopts=mopts)
-        return runtime_clients
 
 
 class ShellCaseCommonTestsMixin(CheckShellBinaryNameAndVersionMixin):

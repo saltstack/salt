@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Copyright 2013 Google Inc. All Rights Reserved.
 
@@ -46,8 +45,6 @@ Example Provider Configuration
 """
 # pylint: disable=invalid-name,function-redefined
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
@@ -63,13 +60,9 @@ import salt.utils.http
 import salt.utils.msgpack
 from salt.cloud.libcloudfuncs import *  # pylint: disable=redefined-builtin,wildcard-import,unused-wildcard-import
 from salt.exceptions import SaltCloudSystemExit
-from salt.ext import six
-
-# Import salt libs
 from salt.utils.functools import namespaced_function
 from salt.utils.versions import LooseVersion as _LooseVersion
 
-# Import 3rd-party libs
 # pylint: disable=import-error
 LIBCLOUD_IMPORT_ERROR = None
 try:
@@ -131,7 +124,7 @@ def __virtual__():
     if get_dependencies() is False:
         return False
 
-    for provider, details in six.iteritems(__opts__["providers"]):
+    for provider, details in __opts__["providers"].items():
         if "gce" not in details:
             continue
 
@@ -193,7 +186,7 @@ def get_conn():
         "service_account_private_key", provider, __opts__
     )
     gce = driver(email, private_key, project=project)
-    gce.connection.user_agent_append("{0}/{1}".format(_UA_PRODUCT, _UA_VERSION))
+    gce.connection.user_agent_append("{}/{}".format(_UA_PRODUCT, _UA_VERSION))
     return gce
 
 
@@ -437,7 +430,7 @@ def __get_metadata(vm_):
     else:
         metadata["salt-cloud-profile"] = vm_["profile"]
         items = []
-        for k, v in six.iteritems(metadata):
+        for k, v in metadata.items():
             items.append({"key": k, "value": v})
         metadata = {"items": items}
     return metadata
@@ -533,7 +526,7 @@ def _parse_allow(allow):
         pairs = p.split(":")
         if pairs[0].lower() not in ["tcp", "udp", "icmp"]:
             raise SaltCloudSystemExit(
-                "Unsupported protocol {0}. Must be tcp, udp, or icmp.".format(pairs[0])
+                "Unsupported protocol {}. Must be tcp, udp, or icmp.".format(pairs[0])
             )
         if len(pairs) == 1 or pairs[0].lower() == "icmp":
             seen_protos[pairs[0]] = []
@@ -1999,7 +1992,7 @@ def reboot(vm_name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "reboot instance",
-        "salt/cloud/{0}/rebooting".format(vm_name),
+        "salt/cloud/{}/rebooting".format(vm_name),
         args={"name": vm_name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -2010,7 +2003,7 @@ def reboot(vm_name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "reboot instance",
-        "salt/cloud/{0}/rebooted".format(vm_name),
+        "salt/cloud/{}/rebooted".format(vm_name),
         args={"name": vm_name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -2041,7 +2034,7 @@ def start(vm_name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "start instance",
-        "salt/cloud/{0}/starting".format(vm_name),
+        "salt/cloud/{}/starting".format(vm_name),
         args={"name": vm_name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -2052,7 +2045,7 @@ def start(vm_name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "start instance",
-        "salt/cloud/{0}/started".format(vm_name),
+        "salt/cloud/{}/started".format(vm_name),
         args={"name": vm_name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -2081,7 +2074,7 @@ def stop(vm_name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "stop instance",
-        "salt/cloud/{0}/stopping".format(vm_name),
+        "salt/cloud/{}/stopping".format(vm_name),
         args={"name": vm_name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -2092,7 +2085,7 @@ def stop(vm_name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "stop instance",
-        "salt/cloud/{0}/stopped".format(vm_name),
+        "salt/cloud/{}/stopped".format(vm_name),
         args={"name": vm_name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -2130,12 +2123,12 @@ def destroy(vm_name, call=None):
             exc,
             exc_info_on_loglevel=logging.DEBUG,
         )
-        raise SaltCloudSystemExit("Could not find instance {0}.".format(vm_name))
+        raise SaltCloudSystemExit("Could not find instance {}.".format(vm_name))
 
     __utils__["cloud.fire_event"](
         "event",
         "delete instance",
-        "salt/cloud/{0}/deleting".format(vm_name),
+        "salt/cloud/{}/deleting".format(vm_name),
         args={"name": vm_name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -2171,11 +2164,11 @@ def destroy(vm_name, call=None):
             exc,
             exc_info_on_loglevel=logging.DEBUG,
         )
-        raise SaltCloudSystemExit("Could not destroy instance {0}.".format(vm_name))
+        raise SaltCloudSystemExit("Could not destroy instance {}.".format(vm_name))
     __utils__["cloud.fire_event"](
         "event",
         "delete instance",
-        "salt/cloud/{0}/deleted".format(vm_name),
+        "salt/cloud/{}/deleted".format(vm_name),
         args={"name": vm_name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -2264,7 +2257,7 @@ def create_attach_volumes(name, kwargs, call=None):
     letter = ord("a") - 1
 
     for idx, volume in enumerate(volumes):
-        volume_name = "{0}-sd{1}".format(name, chr(letter + 2 + idx))
+        volume_name = "{}-sd{}".format(name, chr(letter + 2 + idx))
 
         volume_dict = {
             "disk_name": volume_name,
@@ -2308,7 +2301,7 @@ def request_instance(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "create instance",
-        "salt/cloud/{0}/creating".format(vm_["name"]),
+        "salt/cloud/{}/creating".format(vm_["name"]),
         args=__utils__["cloud.filter_event"](
             "creating", vm_, ["name", "profile", "provider", "driver"]
         ),
@@ -2398,7 +2391,7 @@ def request_instance(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "requesting instance",
-        "salt/cloud/{0}/requesting".format(vm_["name"]),
+        "salt/cloud/{}/requesting".format(vm_["name"]),
         args=__utils__["cloud.filter_event"](
             "requesting", vm_, ["name", "profile", "provider", "driver"]
         ),
@@ -2427,7 +2420,7 @@ def request_instance(vm_):
         __utils__["cloud.fire_event"](
             "event",
             "attaching volumes",
-            "salt/cloud/{0}/attaching_volumes".format(vm_["name"]),
+            "salt/cloud/{}/attaching_volumes".format(vm_["name"]),
             args={"volumes": volumes},
             sock_dir=__opts__["sock_dir"],
             transport=__opts__["transport"],
@@ -2474,7 +2467,7 @@ def create(vm_=None, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "created instance",
-        "salt/cloud/{0}/created".format(vm_["name"]),
+        "salt/cloud/{}/created".format(vm_["name"]),
         args=__utils__["cloud.filter_event"](
             "created", vm_, ["name", "profile", "provider", "driver"]
         ),
@@ -2533,7 +2526,7 @@ def show_pricing(kwargs=None, call=None):
     comps = profile.get("location", "us").split("-")
     region = comps[0]
 
-    size = "CP-COMPUTEENGINE-VMIMAGE-{0}".format(profile["size"].upper())
+    size = "CP-COMPUTEENGINE-VMIMAGE-{}".format(profile["size"].upper())
     pricefile = os.path.join(__opts__["cachedir"], "gce-pricing.p")
     if not os.path.exists(pricefile):
         update_pricing()

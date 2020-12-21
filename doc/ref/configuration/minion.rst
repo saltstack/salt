@@ -103,6 +103,16 @@ The option can also be set to a list of masters, enabling
           - address2
         master_type: failover
 
+.. conf_minion:: color
+
+``color``
+---------
+
+Default: ``True``
+
+By default output is colored. To disable colored output, set the color value to
+``False``.
+
 .. conf_minion:: ipv6
 
 ``ipv6``
@@ -2178,6 +2188,28 @@ or just post what changes are going to be made.
 .. code-block:: yaml
 
     test: False
+
+.. conf_minion:: state_aggregate
+
+``state_aggregate``
+-------------------
+
+Default: ``False``
+
+Automatically aggregate all states that have support for ``mod_aggregate`` by
+setting to ``True``.
+
+.. code-block:: yaml
+
+    state_aggregate: True
+
+Or pass a list of state module names to automatically
+aggregate just those types.
+
+.. code-block:: yaml
+
+    state_aggregate:
+      - pkg
 
 .. conf_minion:: state_verbose
 

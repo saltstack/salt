@@ -6,7 +6,7 @@ The Salt minion for Arista EOS is distributed as a SWIX extension and can be ins
 
 .. note::
 
-    This SWIX extension has been tested on Arista DCS-7280SE-68-R, running EOS 4.17.5M and vEOS 4.18.3F. 
+    This SWIX extension has been tested on Arista DCS-7280SE-68-R, running EOS 4.17.5M and vEOS 4.18.3F.
 
 Important Notes
 ===============
@@ -46,8 +46,8 @@ Verify the installation
 
 .. code-block:: bash
 
-    veos#show extensions | include salt-eos      
-         salt-eos-2017-07-19.swix      1.0.11/1.fc25        A, F                27   
+    veos#show extensions | include salt-eos
+         salt-eos-2017-07-19.swix      1.0.11/1.fc25        A, F                27
 
 Change the Salt master IP address or FQDN, by edit the variable (SALT_MASTER)
 
@@ -55,9 +55,9 @@ Change the Salt master IP address or FQDN, by edit the variable (SALT_MASTER)
 
     veos#bash vi /mnt/flash/startup.sh
 
-Make sure you enable the eAPI with unix-socket 
+Make sure you enable the eAPI with unix-socket
 
-.. code-block:: bash
+.. code-block:: console
 
     veos(config)#management api http-commands
              protocol unix-socket
@@ -70,7 +70,7 @@ Generate Keys and host record and start Salt minion
 
 .. code-block:: bash
 
-   veos#bash 
+   veos#bash
    #sudo /mnt/flash/startup.sh
 
 ``salt-minion`` should be running
@@ -79,14 +79,14 @@ Copy the installed extensions to boot-extensions
 
 .. code-block:: bash
 
-   veos#copy installed-extensions boot-extensions 
+   veos#copy installed-extensions boot-extensions
 
-Apply event-handler to let EOS start salt-minion during boot-up 
+Apply event-handler to let EOS start salt-minion during boot-up
 
-.. code-block:: bash
+.. code-block:: console
 
-   veos(config)#event-handler boot-up-script       
-      trigger on-boot                 
+   veos(config)#event-handler boot-up-script
+      trigger on-boot
       action bash sudo /mnt/flash/startup.sh
 
 For more specific installation details of the ``salt-minion``, please refer to :ref:`Configuring Salt<configuring-salt>`.
@@ -112,7 +112,7 @@ If you decide to uninstall this package, the following steps are recommended for
 
 2. Remove boot-up script
 
-.. code-block:: bash
+.. code-block:: console
 
    veos(config)#no event-handler boot-up-script
 
