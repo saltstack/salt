@@ -3287,7 +3287,7 @@ def _serial_or_concole_equal(old, new):
     return _filter_serial_or_concole(old) == _filter_serial_or_concole(new)
 
 
-def _diff_serial_list(old, new):
+def _diff_serial_lists(old, new):
     """
     Compare serial definitions to extract the changes
 
@@ -3297,7 +3297,7 @@ def _diff_serial_list(old, new):
     return _diff_lists(old, new, _serial_or_concole_equal)
 
 
-def _diff_console_list(old, new):
+def _diff_console_lists(old, new):
     """
     Compare console definitions to extract the changes
 
@@ -3793,7 +3793,7 @@ def update(
             boot,
             boot_dev,
             numatune,
-            serial=serials,
+            serials=serials,
             consoles=consoles,
             stop_on_reboot=stop_on_reboot,
             host_devices=host_devices,
@@ -4187,8 +4187,8 @@ def update(
         "disk": _skip_update(["disks", "disk_profile"]),
         "interface": _skip_update(["interfaces", "nic_profile"]),
         "graphics": _skip_update(["graphics"]),
-        "serial": _skip_update(["serial"]),
-        "console": _skip_update(["console"]),
+        "serial": _skip_update(["serials"]),
+        "console": _skip_update(["consoles"]),
         "hostdev": _skip_update(["host_devices"]),
     }
     changes = _compute_device_changes(desc, new_desc, to_skip)
