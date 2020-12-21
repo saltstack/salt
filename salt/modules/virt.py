@@ -7557,6 +7557,17 @@ def network_update(
             if element is not None:
                 new_xml.insert(1, element)
 
+        # Libvirt adds a connection attribute on running networks, remove before comparing
+        old_xml.attrib.pop("connections", None)
+
+        # Libvirt adds the addresses of the VF devices on running networks with the ph passed
+        # Those need to be removed before comparing
+        if old_xml.find("forward/pf") is not None:
+            forward_node = old_xml.find("forward")
+            address_nodes = forward_node.findall("address")
+            for node in address_nodes:
+                forward_node.remove(node)
+
         # Remove libvirt auto-added bridge attributes to compare
         default_bridge_attribs = {"stp": "on", "delay": "0"}
         old_bridge_node = old_xml.find("bridge")
