@@ -425,8 +425,8 @@ def purge(name, delete_key=True):
 
     if delete_key:
         log.debug("Deleting key %s", name)
-        skey = salt.key.Key(__opts__)
-        skey.delete_key(name)
+        with salt.key.Key(__opts__) as skey:
+            skey.delete_key(name)
     __jid_event__.fire_event({"message": "Purged VM {}".format(name)}, "progress")
     return "good"
 

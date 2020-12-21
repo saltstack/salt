@@ -266,15 +266,15 @@ def list_not_state(subset=None, show_ip=False):
     """
     connected = list_state(subset=None, show_ip=show_ip)
 
-    key = salt.key.get_key(__opts__)
-    keys = key.list_keys()
+    with salt.key.get_key(__opts__) as key:
+        keys = key.list_keys()
 
-    not_connected = []
-    for minion in keys[key.ACC]:
-        if minion not in connected and (subset is None or minion in subset):
-            not_connected.append(minion)
+        not_connected = []
+        for minion in keys[key.ACC]:
+            if minion not in connected and (subset is None or minion in subset):
+                not_connected.append(minion)
 
-    return not_connected
+        return not_connected
 
 
 def present(subset=None, show_ip=False):
@@ -522,9 +522,7 @@ def safe_accept(target, tgt_type="glob"):
         salt-run manage.safe_accept my_minion
         salt-run manage.safe_accept minion1,minion2 tgt_type=list
     """
-    salt_key = salt.key.Key(__opts__)
     ssh_client = salt.client.ssh.client.SSHClient()
-
     ret = ssh_client.cmd(target, "key.finger", tgt_type=tgt_type)
 
     failures = {}
@@ -532,7 +530,8 @@ def safe_accept(target, tgt_type="glob"):
         if not FINGERPRINT_REGEX.match(finger):
             failures[minion] = finger
         else:
-            fingerprints = salt_key.finger(minion)
+            with salt.key.Key(__opts__) as salt_key:
+                fingerprints = salt_key.finger(minion)
             accepted = fingerprints.get("minions", {})
             pending = fingerprints.get("minions_pre", {})
             if minion in accepted:
