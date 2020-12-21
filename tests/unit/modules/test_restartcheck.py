@@ -19,6 +19,7 @@ from tests.support.mock import (
 # Import Salt Libsrestartcheck
 import salt.modules.restartcheck as restartcheck
 import salt.utils.path
+import salt.ext.six as six
 # import salt.utils.files
 # from salt.exceptions import CommandExecutionError
 
@@ -298,8 +299,12 @@ class RestartcheckTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch_kernel, patch_salt, patch_deleted, patch_readlink:
             if not salt.utils.path.which("repoquery"):
-                with self.assertRaises(FileNotFoundError):
-                    restartcheck.restartcheck()
+                if six.PY2:
+                    with self.assertRaises(OSError):
+                        restartcheck.restartcheck()
+                else:
+                    with self.assertRaises(FileNotFoundError):
+                        restartcheck.restartcheck()
             else:
                 ret = restartcheck.restartcheck()
                 self.assertIn(
