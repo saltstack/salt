@@ -462,6 +462,36 @@ class NetapiSSHClientAuthTest(SSHCase, ModuleCase):
         cls.post_webserver.stop()
         del cls.post_webserver
 
+    @staticmethod
+    def cleanup_file(path):
+        try:
+            os.remove(path)
+        except OSError:
+            pass
+
+    def test_extra_mods(self):
+        """
+        validate input from extra_mods
+        """
+        path = os.path.join(RUNTIME_VARS.TMP, "test_extra_mods")
+        self.addCleanup(self.cleanup_file, path)
+        low = {
+            "client": "ssh",
+            "tgt": "localhost",
+            "fun": "test.ping",
+            "roster_file": "roster",
+            "rosters": [self.rosters],
+            "ssh_priv": self.priv_file,
+            "eauth": "pam",
+            "username": self.USERA,
+            "password": self.USERA_PWD,
+            "regen_thin": True,
+            "thin_extra_mods": "';touch {0};'".format(path)
+        }
+
+        ret = self.netapi.run(low)
+        self.assertFalse(os.path.exists(path))
+
     def test_ssh_auth_bypass(self):
         """
         CVE-2020-25592 - Bogus eauth raises exception.
