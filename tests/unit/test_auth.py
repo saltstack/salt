@@ -1,10 +1,7 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Mike Place <mp@saltstack.com>
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import time
 
@@ -15,8 +12,6 @@ from salt import auth
 from salt.exceptions import SaltDeserializationError
 from tests.support.case import ModuleCase
 from tests.support.mock import MagicMock, call, patch
-
-# Import Salt Testing libs
 from tests.support.unit import TestCase, skipIf
 
 
@@ -225,6 +220,7 @@ class MasterACLTestCase(ModuleCase):
             ],
         }
         self.clear = salt.master.ClearFuncs(opts, MagicMock())
+        self.addCleanup(self.clear.destroy)
         self.addCleanup(delattr, self, "clear")
 
         # overwrite the _send_pub method so we don't have to serialize MagicMock
@@ -362,14 +358,14 @@ class MasterACLTestCase(ModuleCase):
             self.clear.publish(self.valid_clear_load)
         self.assertTrue(
             self.fire_event_mock.called,
-            "Did not fire {0} for minion tgt {1}".format(
+            "Did not fire {} for minion tgt {}".format(
                 requested_function, requested_tgt
             ),
         )
         self.assertEqual(
             self.fire_event_mock.call_args[0][0]["fun"],
             requested_function,
-            "Did not fire {0} for minion glob".format(requested_function),
+            "Did not fire {} for minion glob".format(requested_function),
         )
 
     def test_master_function_glob(self):
@@ -755,6 +751,7 @@ class AuthACLTestCase(ModuleCase):
         opts["external_auth"]["pam"] = {"test_user": [{"alpha_minion": ["test.ping"]}]}
 
         self.clear = salt.master.ClearFuncs(opts, MagicMock())
+        self.addCleanup(self.clear.destroy)
         self.addCleanup(delattr, self, "clear")
 
         # overwrite the _send_pub method so we don't have to serialize MagicMock
