@@ -1003,8 +1003,7 @@ def _sanitize_url_components(comp_list, field):
         return ret + _sanitize_url_components(comp_list, field)
 
 
-def session(user=None, password=None, verify_ssl=True, ca_bundle=None,
-            headers=None):
+def session(user=None, password=None, verify_ssl=True, ca_bundle=None, headers=None):
     """
     create a requests session
     """
@@ -1015,9 +1014,10 @@ def session(user=None, password=None, verify_ssl=True, ca_bundle=None,
         log.error("You cannot use both ca_bundle and verify_ssl False together")
         return False
     if ca_bundle:
-        session.verify = get_ca_bundle({"ca_bundle": ca_bundle})
+        opts = {"ca_bundle": ca_bundle}
+        session.verify = get_ca_bundle(opts)
     if not verify_ssl:
         session.verify = False
     if headers:
-        session.headers.update = headers
+        session.headers.update(headers)
     return session
