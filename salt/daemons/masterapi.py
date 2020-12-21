@@ -1037,10 +1037,10 @@ class RemoteFuncs:
         """
         if "id" not in load:
             return False
-        keyapi = salt.key.Key(self.opts)
-        keyapi.delete_key(
-            load["id"], preserve_minions=load.get("preserve_minion_cache", False)
-        )
+        with salt.key.Key(self.opts) as keyapi:
+            keyapi.delete_key(
+                load["id"], preserve_minions=load.get("preserve_minion_cache", False)
+            )
         return True
 
 

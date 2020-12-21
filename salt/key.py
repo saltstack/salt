@@ -844,3 +844,9 @@ class Key:
                     path = os.path.join(self.opts["pki_dir"], status, key)
                 ret[status][key] = salt.utils.crypt.pem_finger(path, sum_type=hash_type)
         return ret
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.event.destroy()
