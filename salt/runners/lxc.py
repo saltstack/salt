@@ -280,24 +280,24 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
     seeds = {}
     seed_arg = kwargs.get("seed", True)
     if approve_key and not explicit_auth:
-        skey = salt.key.Key(__opts__)
-        all_minions = skey.all_keys().get("minions", [])
-        for name in names:
-            seed = seed_arg
-            if name in all_minions:
-                try:
-                    if client.cmd(name, "test.ping", timeout=20).get(name, None):
-                        seed = False
-                except (TypeError, KeyError):
-                    pass
-            seeds[name] = seed
-            kv = salt.utils.virt.VirtKey(host, name, __opts__)
-            if kv.authorize():
-                log.info("Container key will be preauthorized")
-            else:
-                ret["comment"] = "Container key preauthorization failed"
-                ret["result"] = False
-                return ret
+        with salt.key.Key(__opts__) as skey:
+            all_minions = skey.all_keys().get("minions", [])
+            for name in names:
+                seed = seed_arg
+                if name in all_minions:
+                    try:
+                        if client.cmd(name, "test.ping", timeout=20).get(name, None):
+                            seed = False
+                    except (TypeError, KeyError):
+                        pass
+                seeds[name] = seed
+                kv = salt.utils.virt.VirtKey(host, name, __opts__)
+                if kv.authorize():
+                    log.info("Container key will be preauthorized")
+                else:
+                    ret["comment"] = "Container key preauthorization failed"
+                    ret["result"] = False
+                    return ret
 
     log.info("Creating container(s) '%s' on host '%s'", names, host)
 
@@ -509,8 +509,8 @@ def purge(name, delete_key=True, quiet=False, path=None):
         return data
 
     if delete_key:
-        skey = salt.key.Key(__opts__)
-        skey.delete_key(name)
+        with salt.key.Key(__opts__) as skey:
+            skey.delete_key(name)
 
     if data is None:
         return
