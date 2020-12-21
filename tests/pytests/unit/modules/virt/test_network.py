@@ -417,3 +417,34 @@ def test_update_nat_change(make_mock_network, test):
             """
         )
         assert expected_xml == strip_xml(define_mock.call_args[0][0])
+
+
+@pytest.mark.parametrize("change", [True, False], ids=["changed", "unchanged"])
+def test_update_hostdev_pf(make_mock_network, change):
+    """
+    Test updating a hostdev network without changes
+    """
+    net_mock = make_mock_network(
+        """
+        <network connections='1'>
+          <name>test-hostdev</name>
+          <uuid>51d0aaa5-7530-4c60-8498-5bc3ab8c655b</uuid>
+          <forward mode='hostdev' managed='yes'>
+            <pf dev='eth0'/>
+            <address type='pci' domain='0x0000' bus='0x3d' slot='0x02' function='0x0'/>
+            <address type='pci' domain='0x0000' bus='0x3d' slot='0x02' function='0x1'/>
+          </forward>
+        </network>
+        """
+    )
+    assert change == virt.network_update(
+        "test-hostdev",
+        None,
+        "hostdev",
+        physical_function="eth0" if not change else "eth1",
+    )
+    define_mock = virt.libvirt.openAuth().networkDefineXML
+    if change:
+        define_mock.assert_called()
+    else:
+        define_mock.assert_not_called()
