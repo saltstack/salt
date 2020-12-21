@@ -217,8 +217,8 @@ def get_tops_python(py_ver, exclude=None, ext_py_ver=None):
                 "{} does not exist. Could not auto detect dependencies".format(py_ver)
             )
             return {}
-        py_shell_cmd = "{0} -c 'import {1}; print({1}.__file__)'".format(py_ver, mod)
-        cmd = subprocess.Popen(py_shell_cmd, stdout=subprocess.PIPE, shell=True)
+        py_shell_cmd = [py_ver, "-c", "import {0}; print({0}.__file__)".format(mod)]
+        cmd = subprocess.Popen(py_shell_cmd, stdout=subprocess.PIPE)
         stdout, _ = cmd.communicate()
         mod_file = os.path.abspath(salt.utils.data.decode(stdout).rstrip("\n"))
 
