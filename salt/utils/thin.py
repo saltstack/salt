@@ -212,8 +212,8 @@ def get_tops_python(py_ver, exclude=None):
                 "{} does not exist. Could not auto detect dependencies".format(py_ver)
             )
             return {}
-        py_shell_cmd = "{0} -c 'import {1}; print({1}.__file__)'".format(py_ver, mod)
-        cmd = subprocess.Popen(py_shell_cmd, stdout=subprocess.PIPE, shell=True)
+        py_shell_cmd = [py_ver, "-c", "import {0}; print({0}.__file__)".format(mod)]
+        cmd = subprocess.Popen(py_shell_cmd, stdout=subprocess.PIPE)
         stdout, _ = cmd.communicate()
         mod_file = os.path.abspath(salt.utils.data.decode(stdout).rstrip("\n"))
 
@@ -570,10 +570,12 @@ def gen_thin(
                 python2_bin,
             )
         else:
-            py_shell_cmd = "{} -c 'import sys;sys.stdout.write(\"%s.%s\\n\" % sys.version_info[:2]);'".format(
-                python2_bin
-            )
-            cmd = subprocess.Popen(py_shell_cmd, stdout=subprocess.PIPE, shell=True)
+            py_shell_cmd = [
+                python2_bin,
+                "-c",
+                'import sys;sys.stdout.write("%s.%s\\n" % sys.version_info[:2]);',
+            ]
+            cmd = subprocess.Popen(py_shell_cmd, stdout=subprocess.PIPE)
             stdout, _ = cmd.communicate()
             if cmd.returncode == 0:
                 py2_version = tuple(
@@ -605,12 +607,14 @@ def gen_thin(
         if not salt.utils.path.which(python3_bin):
             log.debug(python_check_msg, python3_bin, "3")
         else:
-            py_shell_cmd = "{0} -c 'import salt.utils.thin as t;print(t.gte())' '{1}'".format(
+            py_shell_cmd = [
                 python3_bin,
+                "-c",
+                "import salt.utils.thin as t;print(t.gte())",
                 salt.utils.json.dumps({"extra_mods": extra_mods, "so_mods": so_mods}),
-            )
+            ]
             cmd = subprocess.Popen(
-                py_shell_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True
+                py_shell_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE
             )
             stdout, stderr = cmd.communicate()
             if cmd.returncode == 0:
@@ -630,12 +634,14 @@ def gen_thin(
         if not salt.utils.path.which(python2_bin):
             log.debug(python_check_msg, python2_bin, "2")
         else:
-            py_shell_cmd = "{0} -c 'import salt.utils.thin as t;print(t.gte())' '{1}'".format(
+            py_shell_cmd = [
                 python2_bin,
+                "-c",
+                "import salt.utils.thin as t;print(t.gte())",
                 salt.utils.json.dumps({"extra_mods": extra_mods, "so_mods": so_mods}),
-            )
+            ]
             cmd = subprocess.Popen(
-                py_shell_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True
+                py_shell_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE
             )
             stdout, stderr = cmd.communicate()
             if cmd.returncode == 0:
@@ -820,11 +826,12 @@ def gen_min(
             return mintar
     if _six.PY3:
         # Let's check for the minimum python 2 version requirement, 2.6
-        py_shell_cmd = (
-            python2_bin + " -c 'from __future__ import print_function; import sys; "
-            'print("{0}.{1}".format(*(sys.version_info[:2])));\''
-        )
-        cmd = subprocess.Popen(py_shell_cmd, stdout=subprocess.PIPE, shell=True)
+        py_shell_cmd = [
+            python2_bin,
+            "-c",
+            'from __future__ import print_function; import sys;print("{0}.{1}".format(*(sys.version_info[:2])));',
+        ]
+        cmd = subprocess.Popen(py_shell_cmd, stdout=subprocess.PIPE)
         stdout, _ = cmd.communicate()
         if cmd.returncode == 0:
             py2_version = tuple(
@@ -856,15 +863,15 @@ def gen_min(
     #       This would reduce the min size.
     if _six.PY2 and sys.version_info[0] == 2:
         # Get python 3 tops
-        py_shell_cmd = (
-            python3_bin + " -c 'import sys; import json; import salt.utils.thin; "
-            "print(json.dumps(salt.utils.thin.get_tops(**(json.loads(sys.argv[1]))), ensure_ascii=False)); exit(0);' "
-            "'{0}'".format(
-                salt.utils.json.dumps({"extra_mods": extra_mods, "so_mods": so_mods})
-            )
-        )
+        py_shell_cmd = [
+            python3_bin,
+            "-c",
+            "import sys; import json; import salt.utils.thin;"
+            "print(json.dumps(salt.utils.thin.get_tops(**(json.loads(sys.argv[1]))), ensure_ascii=False)); exit(0);",
+            salt.utils.json.dumps({"extra_mods": extra_mods, "so_mods": so_mods}),
+        ]
         cmd = subprocess.Popen(
-            py_shell_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True
+            py_shell_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE
         )
         stdout, stderr = cmd.communicate()
         if cmd.returncode == 0:
@@ -875,16 +882,15 @@ def gen_min(
                 pass
     if _six.PY3 and sys.version_info[0] == 3:
         # Get python 2 tops
-        py_shell_cmd = (
-            python2_bin + " -c 'from __future__ import print_function; "
-            "import sys; import json; import salt.utils.thin; "
-            "print(json.dumps(salt.utils.thin.get_tops(**(json.loads(sys.argv[1]))), ensure_ascii=False)); exit(0);' "
-            "'{0}'".format(
-                salt.utils.json.dumps({"extra_mods": extra_mods, "so_mods": so_mods})
-            )
-        )
+        py_shell_cmd = [
+            python2_bin,
+            "-c",
+            "from __future__ import print_function; import sys; import json; import salt.utils.thin;"
+            "print(json.dumps(salt.utils.thin.get_tops(**(json.loads(sys.argv[1]))), ensure_ascii=False)); exit(0);",
+            salt.utils.json.dumps({"extra_mods": extra_mods, "so_mods": so_mods}),
+        ]
         cmd = subprocess.Popen(
-            py_shell_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True
+            py_shell_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE
         )
         stdout, stderr = cmd.communicate()
         if cmd.returncode == 0:
