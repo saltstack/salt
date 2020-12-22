@@ -1,1 +1,1 @@
-The yumpkg module has been updated to support VMWare's Photon OS, which uses tdnf (a C implementation of dnf).
+The yumpkg module has been updated to support VMWare's Photon OS, which uses tdnf (a C implementation of dnf).  "VMware Photon OS" has been added to the "RedHat" `os_family` map as part of this change.
