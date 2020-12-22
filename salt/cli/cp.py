@@ -1,13 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 The cp module is used to execute the logic used by the salt-cp command
 line application, salt-cp is NOT intended to broadcast large files, it is
 intended to handle text files.
 Salt-cp can be used to distribute configuration files
 """
-
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import base64
 import errno
@@ -16,7 +12,6 @@ import os
 import re
 import sys
 
-# Import salt libs
 import salt.client
 import salt.output
 import salt.utils.files
@@ -27,9 +22,6 @@ import salt.utils.parsers
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.verify
-
-# Import 3rd party libs
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -53,7 +45,7 @@ class SaltCPCli(salt.utils.parsers.SaltCPOptionParser):
         cp_.run()
 
 
-class SaltCP(object):
+class SaltCP:
     """
     Create a salt cp object, used to distribute simple files with salt
     """
@@ -81,7 +73,7 @@ class SaltCP(object):
         except OSError as exc:
             if exc.errno == errno.ENOENT:
                 # Path does not exist
-                sys.stderr.write("{0} does not exist\n".format(path))
+                sys.stderr.write("{} does not exist\n".format(path))
                 sys.exit(42)
             elif exc.errno in (errno.EINVAL, errno.ENOTDIR):
                 # Path is a file (EINVAL on Windows, ENOTDIR otherwise)
@@ -110,7 +102,7 @@ class SaltCP(object):
         Take a path and return the contents of the file as a string
         """
         if not os.path.isfile(fn_):
-            err = "The referenced file, {0} is not available.".format(fn_)
+            err = "The referenced file, {} is not available.".format(fn_)
             sys.stderr.write(err + "\n")
             sys.exit(42)
         with salt.utils.files.fopen(fn_, "r") as fp_:
@@ -213,7 +205,7 @@ class SaltCP(object):
 
         ret = {}
         parent = ".." + os.sep
-        for fn_, mode in six.iteritems(files):
+        for fn_, mode in files.items():
             remote_path = _get_remote_path(fn_)
 
             index = 1
@@ -224,12 +216,12 @@ class SaltCP(object):
                 log.debug(
                     "Copying %s to %starget '%s' as %s%s",
                     fn_,
-                    "{0} ".format(selected_target_option)
+                    "{} ".format(selected_target_option)
                     if selected_target_option
                     else "",
                     tgt,
                     remote_path,
-                    " (chunk #{0})".format(index) if append else "",
+                    " (chunk #{})".format(index) if append else "",
                 )
                 args = [
                     tgt,
@@ -245,9 +237,9 @@ class SaltCP(object):
                 if not result:
                     # Publish failed
                     msg = (
-                        "Publish failed.{0} It may be necessary to "
+                        "Publish failed.{} It may be necessary to "
                         "decrease salt_cp_chunk_size (current value: "
-                        "{1})".format(
+                        "{})".format(
                             " File partially transferred." if index > 1 else "",
                             self.opts["salt_cp_chunk_size"],
                         )
@@ -256,7 +248,7 @@ class SaltCP(object):
                         ret.setdefault(minion, {})[remote_path] = msg
                     break
 
-                for minion_id, minion_ret in six.iteritems(result):
+                for minion_id, minion_ret in result.items():
                     ret.setdefault(minion_id, {})[remote_path] = minion_ret
                     # Catch first error message for a given minion, we will
                     # rewrite the results after we're done iterating through
@@ -266,7 +258,7 @@ class SaltCP(object):
 
                 index += 1
 
-            for minion_id, msg in six.iteritems(failed):
+            for minion_id, msg in failed.items():
                 ret[minion_id][remote_path] = msg
 
         for dirname in empty_dirs:
@@ -274,7 +266,7 @@ class SaltCP(object):
             log.debug(
                 "Creating empty dir %s on %starget '%s'",
                 dirname,
-                "{0} ".format(
+                "{} ".format(
                     selected_target_option
                 )  # pylint: disable=str-format-in-logging
                 if selected_target_option
@@ -285,7 +277,7 @@ class SaltCP(object):
             if selected_target_option is not None:
                 args.append(selected_target_option)
 
-            for minion_id, minion_ret in six.iteritems(local.cmd(*args)):
+            for minion_id, minion_ret in local.cmd(*args).items():
                 ret.setdefault(minion_id, {})[remote_path] = minion_ret
 
         return ret

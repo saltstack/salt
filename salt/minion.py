@@ -73,8 +73,6 @@ from salt.exceptions import (
 )
 
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
-from salt.ext import six
-from salt.ext.six.moves import range
 from salt.template import SLS_ENCODING
 from salt.utils.ctx import RequestContext
 from salt.utils.debug import enable_sigusr1_handler
@@ -1339,8 +1337,9 @@ class Minion(MinionBase):
         if self._connect_master_future.done():
             future_exception = self._connect_master_future.exception()
             if future_exception:
+                exc_info = self._connect_master_future.exc_info()
                 # This needs to be re-raised to preserve restart_on_error behavior.
-                raise six.reraise(*future_exception)
+                raise exc_info[0].with_traceback(exc_info[1], exc_info[2])
         if timeout and self._sync_connect_master_success is False:
             raise SaltDaemonNotRunning("Failed to connect to the salt-master")
 
@@ -1665,8 +1664,6 @@ class Minion(MinionBase):
         differently.
         """
         # Ensure payload is unicode. Disregard failure to decode binary blobs.
-        if six.PY2:
-            data = salt.utils.data.decode(data, keep=True)
         if "user" in data:
             log.info(
                 "User %s Executing command %s with jid %s",

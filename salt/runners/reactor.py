@@ -12,11 +12,9 @@ engine configuration for the Salt master.
         - reactor
 
 """
-# Import python libs
 
 import logging
 
-# Import salt libs
 import salt.config
 import salt.syspaths
 import salt.utils.event
@@ -24,7 +22,6 @@ import salt.utils.master
 import salt.utils.process
 import salt.utils.reactor
 from salt.exceptions import CommandExecutionError
-from salt.ext.six import string_types
 
 log = logging.getLogger(__name__)
 
@@ -88,7 +85,7 @@ def add(event, reactors, saltenv="base", test=None):
     if not _reactor_system_available():
         raise CommandExecutionError("Reactor system is not running.")
 
-    if isinstance(reactors, string_types):
+    if isinstance(reactors, str):
         reactors = [reactors]
 
     sevent = salt.utils.event.get_event(
