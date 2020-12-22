@@ -1964,27 +1964,24 @@ def _handle_remote_boot_params(orig_boot):
         {"kernel", "initrd", "cmdline", "loader", "nvram"},
     ]
 
-    try:
-        if keys in cases:
-            for key in keys:
-                if key == "efi" and type(orig_boot.get(key)) == bool:
-                    new_boot[key] = orig_boot.get(key)
-                elif orig_boot.get(key) is not None and salt.utils.virt.check_remote(
-                    orig_boot.get(key)
-                ):
-                    if saltinst_dir is None:
-                        os.makedirs(CACHE_DIR)
-                        saltinst_dir = CACHE_DIR
-                    new_boot[key] = salt.utils.virt.download_remote(
-                        orig_boot.get(key), saltinst_dir
-                    )
-            return new_boot
-        else:
-            raise SaltInvocationError(
-                "Invalid boot parameters,It has to follow this combination: [(kernel, initrd) or/and cmdline] or/and [(loader, nvram) or efi]"
-            )
-    except Exception as err:  # pylint: disable=broad-except
-        raise err
+    if keys in cases:
+        for key in keys:
+            if key == "efi" and type(orig_boot.get(key)) == bool:
+                new_boot[key] = orig_boot.get(key)
+            elif orig_boot.get(key) is not None and salt.utils.virt.check_remote(
+                orig_boot.get(key)
+            ):
+                if saltinst_dir is None:
+                    os.makedirs(CACHE_DIR)
+                    saltinst_dir = CACHE_DIR
+                new_boot[key] = salt.utils.virt.download_remote(
+                    orig_boot.get(key), saltinst_dir
+                )
+        return new_boot
+    else:
+        raise SaltInvocationError(
+            "Invalid boot parameters,It has to follow this combination: [(kernel, initrd) or/and cmdline] or/and [(loader, nvram) or efi]"
+        )
 
 
 def _handle_efi_param(boot, desc):
