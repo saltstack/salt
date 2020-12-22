@@ -4174,6 +4174,7 @@ def vsan_enable(host, username, password, protocol=None, port=None,
 
     verify_ssl
         Verify the SSL certificate. Default: True
+
     CLI Example:
 
     .. code-block:: bash
@@ -10164,12 +10165,12 @@ def _get_client(server, username, password, verify_ssl=None, ca_bundle=None):
             details = __salt__["vcenter.get_details"]()
         ca_bundle = details.get("ca_bundle", None)
 
-    if ca_bundle:
-        ca_bundle = salt.utils.http.get_ca_bundle({"ca_bundle": ca_bundle})
-
     if verify_ssl is False and ca_bundle is not None:
         log.error("Cannot set verify_ssl to False and ca_bundle together")
         return False
+
+    if ca_bundle:
+        ca_bundle = salt.utils.http.get_ca_bundle({"ca_bundle": ca_bundle})
 
     if verify_ssl and ca_bundle is None:
         ca_bundle = salt.utils.http.get_ca_bundle()
