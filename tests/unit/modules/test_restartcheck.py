@@ -370,8 +370,12 @@ class RestartcheckTestCase(TestCase, LoaderModuleMockMixin):
             "os.readlink", return_value="/root/;touch {};".format(create_file)
         )
 
+        check_error = True
+        if salt.utils.path.which("repoquery"):
+            check_error = False
+
         with patch_kernel, patch_salt, patch_deleted, patch_readlink:
-            if not salt.utils.path.which("repoquery"):
+            if check_error:
                 with self.assertRaises(FileNotFoundError):
                     restartcheck.restartcheck()
             else:
