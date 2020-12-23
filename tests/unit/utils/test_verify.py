@@ -78,20 +78,27 @@ class TestVerify(TestCase):
         class FakeWriter:
             def __init__(self):
                 self.output = ""
+                self.errors = "strict"
 
             def write(self, data):
                 self.output += data
 
+            def flush(self):
+                pass
+
         stderr = sys.stderr
         writer = FakeWriter()
         sys.stderr = writer
-        # Now run the test
-        if sys.platform.startswith("win"):
-            self.assertTrue(check_user("nouser"))
-        else:
-            self.assertFalse(check_user("nouser"))
-        # Restore sys.stderr
-        sys.stderr = stderr
+        try:
+            # Now run the test
+            if sys.platform.startswith("win"):
+                self.assertTrue(check_user("nouser"))
+            else:
+                with self.assertRaises(SystemExit):
+                    self.assertFalse(check_user("nouser"))
+        finally:
+            # Restore sys.stderr
+            sys.stderr = stderr
         if writer.output != 'CRITICAL: User not found: "nouser"\n':
             # If there's a different error catch, write it to sys.stderr
             sys.stderr.write(writer.output)
@@ -117,7 +124,7 @@ class TestVerify(TestCase):
             # this will just fail.
             try:
                 self.assertTrue(verify_socket("::", 18000, 18001))
-            except OSError as serr:
+            except OSError:
                 # Python has IPv6 enabled, but the system cannot create
                 # IPv6 sockets (otherwise the test would return a bool)
                 # - skip the test

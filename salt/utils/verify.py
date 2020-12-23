@@ -166,24 +166,37 @@ def verify_log_files(files, user):
     return verify_files(verify_logs_filter(files), user)
 
 
-def verify_files(files, user):
+def _get_pwnam(user):
     """
-    Verify that the named files exist and are owned by the named user
+    Get the user from passwords database
     """
     if salt.utils.platform.is_windows():
         return True
     import pwd  # after confirming not running Windows
 
     try:
-        pwnam = pwd.getpwnam(user)
-        uid = pwnam[2]
+        return pwd.getpwnam(user)
     except KeyError:
-        err = (
-            "Failed to prepare the Salt environment for user "
-            "{}. The user is not available.\n"
-        ).format(user)
-        sys.stderr.write(err)
+        msg = "Failed to prepare the Salt environment for user {}. The user is not available.".format(
+            user
+        )
+        if is_console_configured():
+            log.critical(msg)
+        else:
+            print(msg, file=sys.stderr, flush=True)
         sys.exit(salt.defaults.exitcodes.EX_NOUSER)
+
+
+def verify_files(files, user):
+    """
+    Verify that the named files exist and are owned by the named user
+    """
+    if salt.utils.platform.is_windows():
+        return True
+
+    # after confirming not running Windows
+    pwnam = _get_pwnam(user)
+    uid = pwnam[2]
 
     for fn_ in files:
         dirname = os.path.dirname(fn_)
@@ -233,21 +246,13 @@ def verify_env(
         return win_verify_env(
             root_dir, dirs, permissive=permissive, skip_extra=skip_extra
         )
-    import pwd  # after confirming not running Windows
 
-    try:
-        pwnam = pwd.getpwnam(user)
-        uid = pwnam[2]
-        gid = pwnam[3]
-        groups = salt.utils.user.get_gid_list(user, include_default=False)
+    # after confirming not running Windows
+    pwnam = _get_pwnam(user)
+    uid = pwnam[2]
+    gid = pwnam[3]
+    groups = salt.utils.user.get_gid_list(user, include_default=False)
 
-    except KeyError:
-        err = (
-            "Failed to prepare the Salt environment for user "
-            "{}. The user is not available.\n"
-        ).format(user)
-        sys.stderr.write(err)
-        sys.exit(salt.defaults.exitcodes.EX_NOUSER)
     for dir_ in dirs:
         if not dir_:
             continue
@@ -338,42 +343,32 @@ def check_user(user):
         return True
     if user == salt.utils.user.get_user():
         return True
-    import pwd  # after confirming not running Windows
+
+    # after confirming not running Windows
+    pwuser = _get_pwnam(user)
 
     try:
-        pwuser = pwd.getpwnam(user)
-        try:
-            if hasattr(os, "initgroups"):
-                os.initgroups(
-                    user, pwuser.pw_gid
-                )  # pylint: disable=minimum-python-version
-            else:
-                os.setgroups(salt.utils.user.get_gid_list(user, include_default=False))
-            os.setgid(pwuser.pw_gid)
-            os.setuid(pwuser.pw_uid)
+        if hasattr(os, "initgroups"):
+            os.initgroups(user, pwuser.pw_gid)  # pylint: disable=minimum-python-version
+        else:
+            os.setgroups(salt.utils.user.get_gid_list(user, include_default=False))
+        os.setgid(pwuser.pw_gid)
+        os.setuid(pwuser.pw_uid)
 
-            # We could just reset the whole environment but let's just override
-            # the variables we can get from pwuser
-            if "HOME" in os.environ:
-                os.environ["HOME"] = pwuser.pw_dir
+        # We could just reset the whole environment but let's just override
+        # the variables we can get from pwuser
+        if "HOME" in os.environ:
+            os.environ["HOME"] = pwuser.pw_dir
 
-            if "SHELL" in os.environ:
-                os.environ["SHELL"] = pwuser.pw_shell
+        if "SHELL" in os.environ:
+            os.environ["SHELL"] = pwuser.pw_shell
 
-            for envvar in ("USER", "LOGNAME"):
-                if envvar in os.environ:
-                    os.environ[envvar] = pwuser.pw_name
+        for envvar in ("USER", "LOGNAME"):
+            if envvar in os.environ:
+                os.environ[envvar] = pwuser.pw_name
 
-        except OSError:
-            msg = 'Salt configured to run as user "{0}" but unable to switch.'
-            msg = msg.format(user)
-            if is_console_configured():
-                log.critical(msg)
-            else:
-                sys.stderr.write("CRITICAL: {}\n".format(msg))
-            return False
-    except KeyError:
-        msg = 'User not found: "{}"'.format(user)
+    except OSError:
+        msg = 'Salt configured to run as user "{}" but unable to switch.'.format(user)
         if is_console_configured():
             log.critical(msg)
         else:
