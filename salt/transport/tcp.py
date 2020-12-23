@@ -468,17 +468,19 @@ class AsyncTCPPubChannel(
         self.connected = False
         self._closing = False
         self._reconnected = False
+        self.message_client = None
         self.event = salt.utils.event.get_event("minion", opts=self.opts, listen=False)
 
     def close(self):
         if self._closing:
             return
         self._closing = True
+        if self.message_client is not None:
+            self.message_client.close()
+            self.message_client = None
         if self.event is not None:
             self.event.destroy()
             self.event = None
-        if hasattr(self, "message_client"):
-            self.message_client.close()
 
     # pylint: disable=W1701
     def __del__(self):
@@ -1450,6 +1452,7 @@ class PubServer(salt.ext.tornado.tcpserver.TCPServer):
         self.clients = set()
         self.aes_funcs = salt.master.AESFuncs(self.opts)
         self.present = {}
+        self.event = None
         self.presence_events = False
         if self.opts.get("presence_events", False):
             tcp_only = True
@@ -1476,6 +1479,9 @@ class PubServer(salt.ext.tornado.tcpserver.TCPServer):
         if self.event is not None:
             self.event.destroy()
             self.event = None
+        if self.aes_funcs is not None:
+            self.aes_funcs.destroy()
+            self.aes_funcs = None
 
     # pylint: disable=W1701
     def __del__(self):

@@ -1073,12 +1073,6 @@ class AsyncEventPublisher:
         if self.puller is not None:
             self.puller.close()
 
-    # pylint: disable=W1701
-    def __del__(self):
-        self.close()
-
-    # pylint: enable=W1701
-
 
 class EventPublisher(salt.utils.process.SignalHandlingProcess):
     """
@@ -1195,12 +1189,6 @@ class EventPublisher(salt.utils.process.SignalHandlingProcess):
     def _handle_signals(self, signum, sigframe):
         self.close()
         super()._handle_signals(signum, sigframe)
-
-    # pylint: disable=W1701
-    def __del__(self):
-        self.close()
-
-    # pylint: enable=W1701
 
 
 class EventReturn(salt.utils.process.SignalHandlingProcess):
