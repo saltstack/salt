@@ -32,38 +32,38 @@ log = logging.getLogger(__name__)
 
 
 def _ping(tgt, tgt_type, timeout, gather_job_timeout):
-    client = salt.client.get_local_client(__opts__["conf_file"])
-    pub_data = client.run_job(
-        tgt, "test.ping", (), tgt_type, "", timeout, "", listen=True
-    )
+    with salt.client.get_local_client(__opts__["conf_file"]) as client:
+        pub_data = client.run_job(
+            tgt, "test.ping", (), tgt_type, "", timeout, "", listen=True
+        )
 
-    if not pub_data:
-        return pub_data
+        if not pub_data:
+            return pub_data
 
-    log.debug(
-        "manage runner will ping the following minion(s): %s",
-        ", ".join(sorted(pub_data["minions"])),
-    )
+        log.debug(
+            "manage runner will ping the following minion(s): %s",
+            ", ".join(sorted(pub_data["minions"])),
+        )
 
-    returned = set()
-    for fn_ret in client.get_cli_event_returns(
-        pub_data["jid"],
-        pub_data["minions"],
-        client._get_timeout(timeout),
-        tgt,
-        tgt_type,
-        gather_job_timeout=gather_job_timeout,
-    ):
+        returned = set()
+        for fn_ret in client.get_cli_event_returns(
+            pub_data["jid"],
+            pub_data["minions"],
+            client._get_timeout(timeout),
+            tgt,
+            tgt_type,
+            gather_job_timeout=gather_job_timeout,
+        ):
 
-        if fn_ret:
-            for mid, _ in fn_ret.items():
-                log.debug("minion '%s' returned from ping", mid)
-                returned.add(mid)
+            if fn_ret:
+                for mid, _ in fn_ret.items():
+                    log.debug("minion '%s' returned from ping", mid)
+                    returned.add(mid)
 
-    not_returned = sorted(set(pub_data["minions"]) - returned)
-    returned = sorted(returned)
+        not_returned = sorted(set(pub_data["minions"]) - returned)
+        returned = sorted(returned)
 
-    return returned, not_returned
+        return returned, not_returned
 
 
 def status(
