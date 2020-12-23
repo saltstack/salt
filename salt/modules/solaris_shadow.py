@@ -122,7 +122,7 @@ def info(name):
     s_file = "/etc/shadow"
     if not os.path.isfile(s_file):
         return ret
-    with salt.utils.files.fopen(s_file, "rb") as ifile:
+    with salt.utils.files.fopen(s_file, "r") as ifile:
         for line in ifile:
             comps = line.strip().split(":")
             if comps[0] == name:
@@ -287,7 +287,7 @@ def set_password(name, password):
     if not os.path.isfile(s_file):
         return ret
     lines = []
-    with salt.utils.files.fopen(s_file, "rb") as ifile:
+    with salt.utils.files.fopen(s_file, "r") as ifile:
         for line in ifile:
             comps = line.strip().split(":")
             if comps[0] != name:
