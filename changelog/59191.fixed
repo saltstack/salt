@@ -1,0 +1,1 @@
+Fixed salt.modules.solaris_shadow failing on bytes-like object is require, not 'str'.
