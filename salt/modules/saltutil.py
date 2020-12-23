@@ -1644,8 +1644,8 @@ def cmd(
         salt '*' saltutil.cmd
     """
     cfgfile = __opts__["conf_file"]
-    client = _get_ssh_or_api_client(cfgfile, ssh)
-    fcn_ret = _exec(client, tgt, fun, arg, timeout, tgt_type, ret, kwarg, **kwargs)
+    with _get_ssh_or_api_client(cfgfile, ssh) as client:
+        fcn_ret = _exec(client, tgt, fun, arg, timeout, tgt_type, ret, kwarg, **kwargs)
     # if return is empty, we may have not used the right conf,
     # try with the 'minion relative master configuration counter part
     # if available
@@ -1655,8 +1655,10 @@ def cmd(
         and cfgfile.endswith("{}{}".format(os.path.sep, "minion"))
         and os.path.exists(master_cfgfile)
     ):
-        client = _get_ssh_or_api_client(master_cfgfile, ssh)
-        fcn_ret = _exec(client, tgt, fun, arg, timeout, tgt_type, ret, kwarg, **kwargs)
+        with _get_ssh_or_api_client(master_cfgfile, ssh) as client:
+            fcn_ret = _exec(
+                client, tgt, fun, arg, timeout, tgt_type, ret, kwarg, **kwargs
+            )
 
     return fcn_ret
 

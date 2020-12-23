@@ -1047,6 +1047,9 @@ class RemoteFuncs:
         if self.event is not None:
             self.event.destroy()
             self.event = None
+        if self.local is not None:
+            self.local.destroy()
+            self.local = None
 
 
 class LocalFuncs:
@@ -1423,3 +1426,6 @@ class LocalFuncs:
         if self.event is not None:
             self.event.destroy()
             self.event = None
+        if self.local is not None:
+            self.local.destroy()
+            self.local = None
