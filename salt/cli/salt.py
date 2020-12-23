@@ -104,7 +104,10 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
                     "\nNOTICE: Too many minions targeted, switching to batch execution."
                 )
                 self.options.batch = self.options.batch_safe_size
-                self._run_batch()
+                try:
+                    self._run_batch()
+                finally:
+                    self.local_client.destroy()
                 return
 
         if getattr(self.options, "return"):
@@ -229,6 +232,8 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
         ) as exc:
             ret = str(exc)
             self._output_ret(ret, "", retcode=1)
+        finally:
+            self.local_client.destroy()
 
     def _preview_target(self):
         """

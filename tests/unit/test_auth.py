@@ -168,7 +168,7 @@ class MasterACLTestCase(ModuleCase):
             ("salt.auth.LoadAuth.time_auth", MagicMock(return_value=True)),
             ("salt.minion.MasterMinion", MagicMock()),
             ("salt.utils.verify.check_path_traversal", MagicMock()),
-            ("salt.client.get_local_client", MagicMock(return_value=opts["conf_file"])),
+            ("salt.client.get_local_client", MagicMock()),
         )
         for mod, mock in patches:
             patcher = patch(mod, mock)
@@ -734,7 +734,7 @@ class AuthACLTestCase(ModuleCase):
             ("salt.utils.verify.check_path_traversal", MagicMock()),
             ("salt.utils.minions.CkMinions.auth_check", self.auth_check_mock),
             ("salt.auth.LoadAuth.time_auth", MagicMock(return_value=True)),
-            ("salt.client.get_local_client", MagicMock(return_value=opts["conf_file"])),
+            ("salt.client.get_local_client", MagicMock()),
         )
         for mod, mock in patches:
             patcher = patch(mod, mock)

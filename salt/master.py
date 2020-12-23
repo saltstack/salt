@@ -1964,6 +1964,9 @@ class AESFuncs(TransportMethods):
 
     def destroy(self):
         self.masterapi.destroy()
+        if self.local is not None:
+            self.local.destroy()
+            self.local = None
 
 
 class ClearFuncs(TransportMethods):
@@ -2510,3 +2513,6 @@ class ClearFuncs(TransportMethods):
         if self.masterapi is not None:
             self.masterapi.destroy()
             self.masterapi = None
+        if self.local is not None:
+            self.local.destroy()
+            self.local = None

@@ -688,31 +688,33 @@ class Key:
             matches = match_dict
         else:
             matches = {}
-        for status, keys in matches.items():
-            for key in keys:
-                try:
-                    if revoke_auth:
-                        if self.opts.get("rotate_aes_key") is False:
-                            print(
-                                "Immediate auth revocation specified but AES key rotation not allowed. "
-                                "Minion will not be disconnected until the master AES key is rotated."
-                            )
-                        else:
-                            try:
-                                client = salt.client.get_local_client(mopts=self.opts)
-                                client.cmd_async(key, "saltutil.revoke_auth")
-                            except salt.exceptions.SaltClientError:
+        with salt.client.get_local_client(mopts=self.opts) as client:
+            for status, keys in matches.items():
+                for key in keys:
+                    try:
+                        if revoke_auth:
+                            if self.opts.get("rotate_aes_key") is False:
                                 print(
-                                    "Cannot contact Salt master. "
-                                    "Connection for {} will remain up until "
-                                    "master AES key is rotated or auth is revoked "
-                                    "with 'saltutil.revoke_auth'.".format(key)
+                                    "Immediate auth revocation specified but AES key rotation not allowed. "
+                                    "Minion will not be disconnected until the master AES key is rotated."
                                 )
-                    os.remove(os.path.join(self.opts["pki_dir"], status, key))
-                    eload = {"result": True, "act": "delete", "id": key}
-                    self.event.fire_event(eload, salt.utils.event.tagify(prefix="key"))
-                except OSError:
-                    pass
+                            else:
+                                try:
+                                    client.cmd_async(key, "saltutil.revoke_auth")
+                                except salt.exceptions.SaltClientError:
+                                    print(
+                                        "Cannot contact Salt master. "
+                                        "Connection for {} will remain up until "
+                                        "master AES key is rotated or auth is revoked "
+                                        "with 'saltutil.revoke_auth'.".format(key)
+                                    )
+                        os.remove(os.path.join(self.opts["pki_dir"], status, key))
+                        eload = {"result": True, "act": "delete", "id": key}
+                        self.event.fire_event(
+                            eload, salt.utils.event.tagify(prefix="key")
+                        )
+                    except OSError:
+                        pass
         if self.opts.get("preserve_minions") is True:
             self.check_minion_cache(preserve_minions=matches.get("minions", []))
         else:
