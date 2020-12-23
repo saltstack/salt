@@ -1193,10 +1193,12 @@ class MinionManager(MinionBase):
             # kill any remaining processes
             minion.process_manager.kill_children()
             minion.destroy()
+        self.event.destroy()
 
     def destroy(self):
         for minion in self.minions:
             minion.destroy()
+        self.event.destroy()
 
 
 class Minion(MinionBase):
@@ -2879,11 +2881,10 @@ class Minion(MinionBase):
                 except Exception:  # pylint: disable=broad-except
                     log.critical("The beacon errored: ", exc_info=True)
                 if beacons:
-                    event = salt.utils.event.get_event(
+                    with salt.utils.event.get_event(
                         "minion", opts=self.opts, listen=False
-                    )
-                    event.fire_event({"beacons": beacons}, "__beacons_return")
-                    event.destroy()
+                    ) as event:
+                        event.fire_event({"beacons": beacons}, "__beacons_return")
 
             if before_connect:
                 # Make sure there is a chance for one iteration to occur before connect
