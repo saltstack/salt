@@ -1,24 +1,17 @@
-# -*- coding: utf-8 -*-
 """
 Control virtual machines via Salt
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os.path
 
-# Import Salt libs
 import salt.client
 import salt.key
 import salt.utils.cloud
 import salt.utils.files
 import salt.utils.stringutils
 from salt.exceptions import SaltClientError
-
-# Import 3rd-party libs
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -31,7 +24,7 @@ def _determine_host(data, omit=""):
     # to be much more complicated.
     host = ""
     bestmem = 0
-    for hv_, comps in six.iteritems(data):
+    for hv_, comps in data.items():
         if hv_ == omit:
             continue
         if not isinstance(comps, dict):
@@ -79,7 +72,7 @@ def query(host=None, quiet=False):
             if not isinstance(info, dict):
                 continue
             chunk = {}
-            id_ = next(six.iterkeys(info))
+            id_ = next(iter(info.keys()))
             if host:
                 if host != id_:
                     continue
@@ -117,7 +110,7 @@ def list(host=None, quiet=False, hyper=None):  # pylint: disable=redefined-built
         if not isinstance(info, dict):
             continue
         chunk = {}
-        id_ = next(six.iterkeys(info))
+        id_ = next(iter(info.keys()))
         if host:
             if host != id_:
                 continue
@@ -128,7 +121,7 @@ def list(host=None, quiet=False, hyper=None):  # pylint: disable=redefined-built
         if not isinstance(info[id_]["ret"], dict):
             continue
         data = {}
-        for key, val in six.iteritems(info[id_]["ret"]):
+        for key, val in info[id_]["ret"].items():
             if val["state"] in data:
                 data[val["state"]].append(key)
             else:
@@ -250,7 +243,7 @@ def init(
         if "vm_info" in data[node]:
             if name in data[node]["vm_info"]:
                 __jid_event__.fire_event(
-                    {"message": "Virtual machine {0} is already deployed".format(name)},
+                    {"message": "Virtual machine {} is already deployed".format(name)},
                     "progress",
                 )
                 return "fail"
@@ -260,7 +253,7 @@ def init(
 
     if host not in data or not host:
         __jid_event__.fire_event(
-            {"message": "Host {0} was not found".format(host)}, "progress"
+            {"message": "Host {} was not found".format(host)}, "progress"
         )
         return "fail"
 
@@ -276,7 +269,7 @@ def init(
     client = salt.client.get_local_client(__opts__["conf_file"])
 
     __jid_event__.fire_event(
-        {"message": "Creating VM {0} on host {1}".format(name, host)}, "progress"
+        {"message": "Creating VM {} on host {}".format(name, host)}, "progress"
     )
     try:
         cmd_ret = client.cmd_iter(
@@ -308,20 +301,20 @@ def init(
     ret = next(cmd_ret)
     if not ret:
         __jid_event__.fire_event(
-            {"message": "VM {0} was not initialized.".format(name)}, "progress"
+            {"message": "VM {} was not initialized.".format(name)}, "progress"
         )
         return "fail"
     for minion_id in ret:
         if ret[minion_id]["ret"] is False:
             print(
-                "VM {0} initialization failed. Returned error: {1}".format(
+                "VM {} initialization failed. Returned error: {}".format(
                     name, ret[minion_id]["ret"]
                 )
             )
             return "fail"
 
     __jid_event__.fire_event(
-        {"message": "VM {0} initialized on host {1}".format(name, host)}, "progress"
+        {"message": "VM {} initialized on host {}".format(name, host)}, "progress"
     )
     return "good"
 
@@ -343,15 +336,15 @@ def reset(name):
     data = vm_info(name, quiet=True)
     if not data:
         __jid_event__.fire_event(
-            {"message": "Failed to find VM {0} to reset".format(name)}, "progress"
+            {"message": "Failed to find VM {} to reset".format(name)}, "progress"
         )
         return "fail"
-    host = next(six.iterkeys(data))
+    host = next(iter(data.keys()))
     try:
         cmd_ret = client.cmd_iter(host, "virt.reset", [name], timeout=600)
         for comp in cmd_ret:
             ret.update(comp)
-        __jid_event__.fire_event({"message": "Reset VM {0}".format(name)}, "progress")
+        __jid_event__.fire_event({"message": "Reset VM {}".format(name)}, "progress")
     except SaltClientError as client_error:
         print(client_error)
     return ret
@@ -366,20 +359,20 @@ def start(name):
     data = vm_info(name, quiet=True)
     if not data:
         __jid_event__.fire_event(
-            {"message": "Failed to find VM {0} to start".format(name)}, "progress"
+            {"message": "Failed to find VM {} to start".format(name)}, "progress"
         )
         return "fail"
-    host = next(six.iterkeys(data))
+    host = next(iter(data.keys()))
     if data[host][name]["state"] == "running":
-        print("VM {0} is already running".format(name))
+        print("VM {} is already running".format(name))
         return "bad state"
     try:
         cmd_ret = client.cmd_iter(host, "virt.start", [name], timeout=600)
     except SaltClientError as client_error:
-        return "Virtual machine {0} not started: {1}".format(name, client_error)
+        return "Virtual machine {} not started: {}".format(name, client_error)
     for comp in cmd_ret:
         ret.update(comp)
-    __jid_event__.fire_event({"message": "Started VM {0}".format(name)}, "progress")
+    __jid_event__.fire_event({"message": "Started VM {}".format(name)}, "progress")
     return "good"
 
 
@@ -391,21 +384,21 @@ def force_off(name):
     client = salt.client.get_local_client(__opts__["conf_file"])
     data = vm_info(name, quiet=True)
     if not data:
-        print("Failed to find VM {0} to destroy".format(name))
+        print("Failed to find VM {} to destroy".format(name))
         return "fail"
-    host = next(six.iterkeys(data))
+    host = next(iter(data.keys()))
     if data[host][name]["state"] == "shutdown":
-        print("VM {0} is already shutdown".format(name))
+        print("VM {} is already shutdown".format(name))
         return "bad state"
     try:
         cmd_ret = client.cmd_iter(host, "virt.stop", [name], timeout=600)
     except SaltClientError as client_error:
-        return "Virtual machine {0} could not be forced off: {1}".format(
+        return "Virtual machine {} could not be forced off: {}".format(
             name, client_error
         )
     for comp in cmd_ret:
         ret.update(comp)
-    __jid_event__.fire_event({"message": "Powered off VM {0}".format(name)}, "progress")
+    __jid_event__.fire_event({"message": "Powered off VM {}".format(name)}, "progress")
     return "good"
 
 
@@ -418,14 +411,14 @@ def purge(name, delete_key=True):
     data = vm_info(name, quiet=True)
     if not data:
         __jid_event__.fire_event(
-            {"error": "Failed to find VM {0} to purge".format(name)}, "progress"
+            {"error": "Failed to find VM {} to purge".format(name)}, "progress"
         )
         return "fail"
-    host = next(six.iterkeys(data))
+    host = next(iter(data.keys()))
     try:
         cmd_ret = client.cmd_iter(host, "virt.purge", [name, True], timeout=600)
     except SaltClientError as client_error:
-        return "Virtual machine {0} could not be purged: {1}".format(name, client_error)
+        return "Virtual machine {} could not be purged: {}".format(name, client_error)
 
     for comp in cmd_ret:
         ret.update(comp)
@@ -434,7 +427,7 @@ def purge(name, delete_key=True):
         log.debug("Deleting key %s", name)
         skey = salt.key.Key(__opts__)
         skey.delete_key(name)
-    __jid_event__.fire_event({"message": "Purged VM {0}".format(name)}, "progress")
+    __jid_event__.fire_event({"message": "Purged VM {}".format(name)}, "progress")
     return "good"
 
 
@@ -448,22 +441,22 @@ def pause(name):
     data = vm_info(name, quiet=True)
     if not data:
         __jid_event__.fire_event(
-            {"error": "Failed to find VM {0} to pause".format(name)}, "progress"
+            {"error": "Failed to find VM {} to pause".format(name)}, "progress"
         )
         return "fail"
-    host = next(six.iterkeys(data))
+    host = next(iter(data.keys()))
     if data[host][name]["state"] == "paused":
         __jid_event__.fire_event(
-            {"error": "VM {0} is already paused".format(name)}, "progress"
+            {"error": "VM {} is already paused".format(name)}, "progress"
         )
         return "bad state"
     try:
         cmd_ret = client.cmd_iter(host, "virt.pause", [name], timeout=600)
     except SaltClientError as client_error:
-        return "Virtual machine {0} could not be pasued: {1}".format(name, client_error)
+        return "Virtual machine {} could not be pasued: {}".format(name, client_error)
     for comp in cmd_ret:
         ret.update(comp)
-    __jid_event__.fire_event({"message": "Paused VM {0}".format(name)}, "progress")
+    __jid_event__.fire_event({"message": "Paused VM {}".format(name)}, "progress")
     return "good"
 
 
@@ -476,24 +469,22 @@ def resume(name):
     data = vm_info(name, quiet=True)
     if not data:
         __jid_event__.fire_event(
-            {"error": "Failed to find VM {0} to pause".format(name)}, "progress"
+            {"error": "Failed to find VM {} to pause".format(name)}, "progress"
         )
         return "not found"
-    host = next(six.iterkeys(data))
+    host = next(iter(data.keys()))
     if data[host][name]["state"] != "paused":
         __jid_event__.fire_event(
-            {"error": "VM {0} is not paused".format(name)}, "progress"
+            {"error": "VM {} is not paused".format(name)}, "progress"
         )
         return "bad state"
     try:
         cmd_ret = client.cmd_iter(host, "virt.resume", [name], timeout=600)
     except SaltClientError as client_error:
-        return "Virtual machine {0} could not be resumed: {1}".format(
-            name, client_error
-        )
+        return "Virtual machine {} could not be resumed: {}".format(name, client_error)
     for comp in cmd_ret:
         ret.update(comp)
-    __jid_event__.fire_event({"message": "Resumed VM {0}".format(name)}, "progress")
+    __jid_event__.fire_event({"message": "Resumed VM {}".format(name)}, "progress")
     return "good"
 
 
@@ -509,33 +500,31 @@ def migrate(name, target=""):
         origin_host = next(iter(origin_data))
     except StopIteration:
         __jid_event__.fire_event(
-            {"error": "Named VM {0} was not found to migrate".format(name)}, "progress"
+            {"error": "Named VM {} was not found to migrate".format(name)}, "progress"
         )
         return ""
     disks = origin_data[origin_host][name]["disks"]
     if not origin_data:
         __jid_event__.fire_event(
-            {"error": "Named VM {0} was not found to migrate".format(name)}, "progress"
+            {"error": "Named VM {} was not found to migrate".format(name)}, "progress"
         )
         return ""
     if not target:
         target = _determine_host(data, origin_host)
     if target not in data:
         __jid_event__.fire_event(
-            {"error": "Target host {0} not found".format(origin_data)}, "progress"
+            {"error": "Target host {} not found".format(origin_data)}, "progress"
         )
         return ""
     try:
         client.cmd(target, "virt.seed_non_shared_migrate", [disks, True])
         jid = client.cmd_async(origin_host, "virt.migrate_non_shared", [name, target])
     except SaltClientError as client_error:
-        return "Virtual machine {0} could not be migrated: {1}".format(
-            name, client_error
-        )
+        return "Virtual machine {} could not be migrated: {}".format(name, client_error)
 
     msg = (
-        "The migration of virtual machine {0} to host {1} has begun, "
-        "and can be tracked via jid {2}. The ``salt-run virt.query`` "
+        "The migration of virtual machine {} to host {} has begun, "
+        "and can be tracked via jid {}. The ``salt-run virt.query`` "
         "runner can also be used, the target VM will be shown as paused "
         "until the migration is complete."
     ).format(name, target, jid)
