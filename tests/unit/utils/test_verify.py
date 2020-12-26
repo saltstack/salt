@@ -1,10 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Test the verification routines
 """
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import ctypes
 import getpass
@@ -15,13 +11,8 @@ import stat
 import sys
 import tempfile
 
-# Import salt libs
 import salt.utils.files
 import salt.utils.platform
-
-# Import 3rd-party libs
-from salt.ext import six
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 from salt.utils.verify import (
     check_max_open_files,
     check_user,
@@ -37,20 +28,9 @@ from salt.utils.verify import (
 )
 from tests.support.helpers import TstSuiteLoggingHandler, requires_network
 from tests.support.mock import MagicMock, patch
-
-# Import Salt Testing libs
-# Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
 
-# Import third party libs
-if sys.platform.startswith("win"):
-    import win32file
-else:
-    import resource
-
-
-# Import third party libs
 if sys.platform.startswith("win"):
     import win32file
 else:
@@ -95,7 +75,7 @@ class TestVerify(TestCase):
     def test_no_user(self):
         # Catch sys.stderr here since no logging is configured and
         # check_user WILL write to sys.stderr
-        class FakeWriter(object):
+        class FakeWriter:
             def __init__(self):
                 self.output = ""
 
@@ -137,7 +117,7 @@ class TestVerify(TestCase):
             # this will just fail.
             try:
                 self.assertTrue(verify_socket("::", 18000, 18001))
-            except socket.error as serr:
+            except OSError as serr:
                 # Python has IPv6 enabled, but the system cannot create
                 # IPv6 sockets (otherwise the test would return a bool)
                 # - skip the test
@@ -200,7 +180,7 @@ class TestVerify(TestCase):
                 ):
 
                     for n in range(prev, newmax):
-                        kpath = os.path.join(keys_dir, six.text_type(n))
+                        kpath = os.path.join(keys_dir, str(n))
                         with salt.utils.files.fopen(kpath, "w") as fp_:
                             fp_.write(
                                 str(n)
@@ -232,7 +212,7 @@ class TestVerify(TestCase):
 
                 newmax = mof_test
                 for n in range(prev, newmax):
-                    kpath = os.path.join(keys_dir, six.text_type(n))
+                    kpath = os.path.join(keys_dir, str(n))
                     with salt.utils.files.fopen(kpath, "w") as fp_:
                         fp_.write(str(n))  # future lint: disable=blacklisted-function
 
@@ -252,7 +232,7 @@ class TestVerify(TestCase):
                     handler.messages,
                 )
                 handler.clear()
-            except IOError as err:
+            except OSError as err:
                 if err.errno == 24:
                     # Too many open files
                     self.skipTest("We've hit the max open files setting")
@@ -372,7 +352,6 @@ def symlink(source, link_name):
         raise ctypes.WinError()
 
 
-@skipIf(six.PY2 and salt.utils.platform.is_windows(), "Skipped on windows py2")
 class TestCleanPathLink(TestCase):
     """
     Ensure salt.utils.clean_path works with symlinked directories and files
@@ -382,7 +361,7 @@ class TestCleanPathLink(TestCase):
         self.tmpdir = tempfile.mkdtemp()
         self.to_path = os.path.join(self.tmpdir, "linkto")
         self.from_path = os.path.join(self.tmpdir, "linkfrom")
-        if six.PY2 or salt.utils.platform.is_windows():
+        if salt.utils.platform.is_windows():
             kwargs = {}
         else:
             kwargs = {"target_is_directory": True}
