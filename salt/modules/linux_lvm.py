@@ -468,6 +468,7 @@ def lvcreate(
         "minor",
         "persistent",
         "mirrors",
+        "nosync",
         "noudevsync",
         "monitor",
         "ignoremonitoring",
@@ -480,6 +481,7 @@ def lvcreate(
         "zero",
     )
     no_parameter = (
+        "nosync",
         "noudevsync",
         "ignoremonitoring",
         "thin",
