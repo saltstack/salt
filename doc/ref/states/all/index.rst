@@ -257,6 +257,7 @@ state modules
     postgres_schema
     postgres_tablespace
     postgres_user
+    power_dns
     powerpath
     probes
     process
