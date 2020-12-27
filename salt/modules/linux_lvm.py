@@ -2,11 +2,9 @@
 Support for Linux LVM2
 """
 
-# Import python libs
 import logging
 import os.path
 
-# Import salt libs
 import salt.utils.path
 
 # Set up logger
