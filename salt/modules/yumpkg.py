@@ -139,6 +139,9 @@ def _yum():
     depending on the executable existence in $PATH.
     """
 
+    # Do import due to function clonning to kernelpkg_linux_yum mod
+    import os
+
     def _check(file):
         return (
             os.path.exists(file)
