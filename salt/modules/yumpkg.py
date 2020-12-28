@@ -73,6 +73,8 @@ def __virtual__():
     enabled = ("amazon", "xcp", "xenserver", "virtuozzolinux", "virtuozzo")
 
     if os_family == "redhat" or os_grain in enabled:
+        if _yum() is None:
+            return (False, "DNF nor YUM found")
         return __virtualname__
     return (False, "Module yumpkg: no yum based system detected")
 
@@ -134,20 +136,26 @@ def _get_hold(line, pattern=__HOLD_PATTERN, full=True):
 def _yum():
     """
     Determine package manager name (yum or dnf),
-    depending on the system version.
+    depending on the executable existence in $PATH.
     """
+
+    def _check(file):
+        return (
+            os.path.exists(file)
+            and os.access(file, os.F_OK | os.X_OK)
+            and not os.path.isdir(file)
+        )
+
     contextkey = "yum_bin"
     if contextkey not in __context__:
-        if (
-            "fedora" in __grains__["os"].lower() and int(__grains__["osrelease"]) >= 22
-        ) or (
-            __grains__["os"].lower() in ("redhat", "centos")
-            and int(__grains__["osmajorrelease"]) >= 8
-        ):
-            __context__[contextkey] = "dnf"
-        else:
-            __context__[contextkey] = "yum"
-    return __context__[contextkey]
+        for dir in os.environ.get("PATH", os.defpath).split(os.pathsep):
+            if _check(os.path.join(dir, "dnf")):
+                __context__[contextkey] = "dnf"
+                break
+            elif _check(os.path.join(dir, "yum")):
+                __context__[contextkey] = "yum"
+                break
+    return __context__.get(contextkey)
 
 
 def _call_yum(args, **kwargs):
