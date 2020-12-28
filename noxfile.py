@@ -925,7 +925,7 @@ def _pytest(session, coverage, cmd_args):
         "pip", "uninstall", "-y", "pytest-salt", silent=True,
     )
 
-    env = {"PYTEST_SESSION": "1"}
+    env = {"PYTEST_SESSION": "1", "CI_RUN": "1" if CI_RUN else "0"}
     if IS_DARWIN:
         # Don't nuke our multiprocessing efforts objc!
         # https://stackoverflow.com/questions/50168647/multiprocessing-causes-python-to-crash-and-gives-an-error-may-have-been-in-progr
