@@ -1,16 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 A convenience system to manage jobs, both active and already run
 """
-
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import fnmatch
 import logging
 import os
 
-# Import salt libs
 import salt.client
 import salt.minion
 import salt.payload
@@ -20,9 +15,6 @@ import salt.utils.files
 import salt.utils.jid
 import salt.utils.master
 from salt.exceptions import SaltClientError
-
-# Import 3rd-party libs
-from salt.ext import six
 
 try:
     import dateutil.parser as dateutil_parser
@@ -69,16 +61,16 @@ def active(display_progress=False):
     if display_progress:
         __jid_event__.fire_event(
             {
-                "message": "Attempting to contact minions: {0}".format(
+                "message": "Attempting to contact minions: {}".format(
                     list(active_.keys())
                 )
             },
             "progress",
         )
-    for minion, data in six.iteritems(active_):
+    for minion, data in active_.items():
         if display_progress:
             __jid_event__.fire_event(
-                {"message": "Received reply from minion {0}".format(minion)}, "progress"
+                {"message": "Received reply from minion {}".format(minion)}, "progress"
             )
         if not isinstance(data, list):
             continue
@@ -96,7 +88,7 @@ def active(display_progress=False):
         returner = _get_returner(
             (__opts__["ext_job_cache"], __opts__["master_job_cache"])
         )
-        data = mminion.returners["{0}.get_jid".format(returner)](jid)
+        data = mminion.returners["{}.get_jid".format(returner)](jid)
         if data:
             for minion in data:
                 if minion not in ret[jid]["Returned"]:
@@ -207,14 +199,14 @@ def list_job(jid, ext_source=None, display_progress=False):
     )
     if display_progress:
         __jid_event__.fire_event(
-            {"message": "Querying returner: {0}".format(returner)}, "progress"
+            {"message": "Querying returner: {}".format(returner)}, "progress"
         )
 
-    job = mminion.returners["{0}.get_load".format(returner)](jid)
+    job = mminion.returners["{}.get_load".format(returner)](jid)
     ret.update(_format_jid_instance(jid, job))
-    ret["Result"] = mminion.returners["{0}.get_jid".format(returner)](jid)
+    ret["Result"] = mminion.returners["{}.get_jid".format(returner)](jid)
 
-    fstr = "{0}.get_endtime".format(__opts__["master_job_cache"])
+    fstr = "{}.get_endtime".format(__opts__["master_job_cache"])
     if __opts__.get("job_cache_store_endtime") and fstr in mminion.returners:
         endtime = mminion.returners[fstr](jid)
         if endtime:
@@ -314,11 +306,11 @@ def list_jobs(
     )
     if display_progress:
         __jid_event__.fire_event(
-            {"message": "Querying returner {0} for jobs.".format(returner)}, "progress"
+            {"message": "Querying returner {} for jobs.".format(returner)}, "progress"
         )
     mminion = salt.minion.MasterMinion(__opts__)
 
-    ret = mminion.returners["{0}.get_jids".format(returner)]()
+    ret = mminion.returners["{}.get_jids".format(returner)]()
 
     mret = {}
     for item in ret:
@@ -340,7 +332,7 @@ def list_jobs(
             _match = False
             if "Target" in ret[item]:
                 targets = ret[item]["Target"]
-                if isinstance(targets, six.string_types):
+                if isinstance(targets, str):
                     targets = [targets]
                 for target in targets:
                     for key in salt.utils.args.split_input(search_target):
@@ -410,14 +402,14 @@ def list_jobs_filter(
     )
     if display_progress:
         __jid_event__.fire_event(
-            {"message": "Querying returner {0} for jobs.".format(returner)}, "progress"
+            {"message": "Querying returner {} for jobs.".format(returner)}, "progress"
         )
     mminion = salt.minion.MasterMinion(__opts__)
 
-    fun = "{0}.get_jids_filter".format(returner)
+    fun = "{}.get_jids_filter".format(returner)
     if fun not in mminion.returners:
         raise NotImplementedError(
-            "'{0}' returner function not implemented yet.".format(fun)
+            "'{}' returner function not implemented yet.".format(fun)
         )
     ret = mminion.returners[fun](count, filter_find_job)
 
@@ -445,17 +437,17 @@ def print_job(jid, ext_source=None):
     mminion = salt.minion.MasterMinion(__opts__)
 
     try:
-        job = mminion.returners["{0}.get_load".format(returner)](jid)
+        job = mminion.returners["{}.get_load".format(returner)](jid)
         ret[jid] = _format_jid_instance(jid, job)
     except TypeError:
         ret[jid]["Result"] = (
-            "Requested returner {0} is not available. Jobs cannot be "
+            "Requested returner {} is not available. Jobs cannot be "
             "retrieved. Check master log for details.".format(returner)
         )
         return ret
-    ret[jid]["Result"] = mminion.returners["{0}.get_jid".format(returner)](jid)
+    ret[jid]["Result"] = mminion.returners["{}.get_jid".format(returner)](jid)
 
-    fstr = "{0}.get_endtime".format(__opts__["master_job_cache"])
+    fstr = "{}.get_endtime".format(__opts__["master_job_cache"])
     if __opts__.get("job_cache_store_endtime") and fstr in mminion.returners:
         endtime = mminion.returners[fstr](jid)
         if endtime:
@@ -610,6 +602,6 @@ def _walk_through(job_dir, display_progress=False):
             jid = job["jid"]
             if display_progress:
                 __jid_event__.fire_event(
-                    {"message": "Found JID {0}".format(jid)}, "progress"
+                    {"message": "Found JID {}".format(jid)}, "progress"
                 )
             yield jid, job, t_path, final

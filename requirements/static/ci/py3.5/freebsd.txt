@@ -26,6 +26,7 @@ cheetah3==3.1.0
 cheroot==6.5.4
 cherrypy==17.3.0
 contextlib2==0.5.5
+contextvars==2.4 ; python_version < "3.7"
 croniter==0.3.29
 cryptography==3.2
 distlib==0.3.0            # via virtualenv
@@ -43,6 +44,7 @@ gitpython==2.1.11
 google-auth==1.6.3        # via kubernetes
 hgtools==8.1.1
 idna==2.8
+immutables==0.14
 importlib-metadata==0.23  # via importlib-resources, pluggy, pytest, virtualenv
 importlib-resources==1.5.0  # via virtualenv
 iniconfig==1.0.1          # via pytest
@@ -91,7 +93,7 @@ pyopenssl==19.1.0
 pyparsing==2.4.5          # via junos-eznc, packaging
 pyserial==3.4             # via junos-eznc
 pytest-helpers-namespace==2019.1.8
-pytest-salt-factories==0.98.2
+pytest-salt-factories==0.99.2
 pytest-salt==2020.1.27
 pytest-tempdir==2019.10.12
 pytest==6.1.2

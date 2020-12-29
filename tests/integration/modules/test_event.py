@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
@@ -7,14 +6,12 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
 
-from __future__ import absolute_import
-
+import queue
 import threading
 import time
 
 import pytest
 import salt.utils.event as event
-from salt.ext.six.moves.queue import Empty, Queue
 from tests.support.case import ModuleCase
 
 
@@ -22,11 +19,11 @@ from tests.support.case import ModuleCase
 @pytest.mark.usefixtures("salt_sub_minion")
 class EventModuleTest(ModuleCase):
     def __test_event_fire_master(self):
-        events = Queue()
+        events = queue.Queue()
 
         def get_event(events):
-            me = event.MasterEvent(self.master_opts["sock_dir"], listen=True)
-            events.put_nowait(me.get_event(wait=10, tag="salttest", full=False))
+            with event.MasterEvent(self.master_opts["sock_dir"], listen=True) as me:
+                events.put_nowait(me.get_event(wait=10, tag="salttest", full=False))
 
         threading.Thread(target=get_event, args=(events,)).start()
         time.sleep(1)  # Allow multiprocessing.Process to start
@@ -46,15 +43,15 @@ class EventModuleTest(ModuleCase):
         )
         self.assertTrue(ret)
 
-        with self.assertRaises(Empty):
+        with self.assertRaises(queue.Empty):
             eventfired = events.get(block=True, timeout=10)
 
     def __test_event_fire(self):
-        events = Queue()
+        events = queue.Queue()
 
         def get_event(events):
-            me = event.MinionEvent(self.minion_opts, listen=True)
-            events.put_nowait(me.get_event(wait=10, tag="salttest", full=False))
+            with event.MinionEvent(self.minion_opts, listen=True) as me:
+                events.put_nowait(me.get_event(wait=10, tag="salttest", full=False))
 
         threading.Thread(target=get_event, args=(events,)).start()
         time.sleep(1)  # Allow multiprocessing.Process to start
@@ -73,15 +70,15 @@ class EventModuleTest(ModuleCase):
         )
         self.assertTrue(ret)
 
-        with self.assertRaises(Empty):
+        with self.assertRaises(queue.Empty):
             eventfired = events.get(block=True, timeout=10)
 
     def __test_event_fire_ipc_mode_tcp(self):
-        events = Queue()
+        events = queue.Queue()
 
         def get_event(events):
-            me = event.MinionEvent(self.sub_minion_opts, listen=True)
-            events.put_nowait(me.get_event(wait=10, tag="salttest", full=False))
+            with event.MinionEvent(self.sub_minion_opts, listen=True) as me:
+                events.put_nowait(me.get_event(wait=10, tag="salttest", full=False))
 
         threading.Thread(target=get_event, args=(events,)).start()
         time.sleep(1)  # Allow multiprocessing.Process to start
@@ -104,5 +101,5 @@ class EventModuleTest(ModuleCase):
         )
         self.assertTrue(ret)
 
-        with self.assertRaises(Empty):
+        with self.assertRaises(queue.Empty):
             eventfired = events.get(block=True, timeout=10)

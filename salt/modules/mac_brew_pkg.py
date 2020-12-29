@@ -20,7 +20,6 @@ import salt.utils.path
 import salt.utils.pkg
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationError
-from salt.ext.six.moves import zip
 
 log = logging.getLogger(__name__)
 
@@ -175,7 +174,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
     # Grab packages from brew cask, if available.
     # Brew Cask doesn't provide a JSON interface, must be parsed the old way.
     try:
-        cask_cmd = "cask list --versions"
+        cask_cmd = "list --cask --versions"
         out = _call_brew(cask_cmd)["stdout"]
 
         for line in out.splitlines():

@@ -11,6 +11,7 @@ import re
 import subprocess
 import tempfile
 import time
+import urllib.request
 import uuid
 
 import salt.client
@@ -24,7 +25,6 @@ import salt.utils.versions
 import salt.version
 import salt.wheel
 from salt.exceptions import SaltClientError, SaltSystemExit
-from salt.ext.six.moves.urllib.request import urlopen as _urlopen
 
 FINGERPRINT_REGEX = re.compile(r"^([a-f0-9]{2}:){15}([a-f0-9]{2})$")
 
@@ -793,7 +793,7 @@ def bootstrap_psexec(
 
     if not installer_url:
         base_url = "https://repo.saltstack.com/windows/"
-        source = _urlopen(base_url).read()
+        source = urllib.request.urlopen(base_url).read()
         salty_rx = re.compile(
             '>(Salt-Minion-(.+?)-(.+)-Setup.exe)</a></td><td align="right">(.*?)\\s*<'
         )

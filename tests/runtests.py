@@ -58,7 +58,6 @@ except ImportError as exc:
     raise
 
 from tests.integration import TestDaemon, TestDaemonStartFailed  # isort:skip
-from tests.multimaster import MultimasterTestDaemon  # isort:skip
 import salt.utils.platform  # isort:skip
 
 if not salt.utils.platform.is_windows():
@@ -156,8 +155,8 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             suites -= {"proxy"}
         if not include_kitchen:
             suites -= {"kitchen"}
-        if not include_multimaster:
-            suites -= {"multimaster"}
+        # Multimaster tests now run under PyTest
+        suites -= {"multimaster"}
 
         return suites
 
@@ -570,7 +569,6 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
 
         # Transplant configuration
         TestDaemon.transplant_configs(transport=self.options.transport)
-        MultimasterTestDaemon.transplant_configs(transport=self.options.transport)
 
     def post_execution_cleanup(self):
         SaltCoverageTestingParser.post_execution_cleanup(self)
@@ -665,68 +663,6 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                         TestDaemon.config_location()
                     )
                 )
-
-                while True:
-                    time.sleep(1)
-        except TestDaemonStartFailed:
-            self.exit(status=2)
-
-    def start_multimaster_daemons_only(self):
-        if not salt.utils.platform.is_windows():
-            self.set_filehandle_limits("integration")
-        try:
-            print_header(
-                " * Setting up Salt daemons for interactive use",
-                top=False,
-                width=getattr(self.options, "output_columns", PNUM),
-            )
-        except TypeError:
-            print_header(" * Setting up Salt daemons for interactive use", top=False)
-
-        try:
-            with MultimasterTestDaemon(self):
-                print_header(" * Salt daemons started")
-                master_conf = MultimasterTestDaemon.config("mm_master")
-                sub_master_conf = MultimasterTestDaemon.config("mm_sub_master")
-                minion_conf = MultimasterTestDaemon.config("mm_minion")
-                sub_minion_conf = MultimasterTestDaemon.config("mm_sub_minion")
-
-                print_header(" * Master configuration values", top=True)
-                print("interface: {}".format(master_conf["interface"]))
-                print("publish port: {}".format(master_conf["publish_port"]))
-                print("return port: {}".format(master_conf["ret_port"]))
-                print("\n")
-
-                print_header(" * Second master configuration values", top=True)
-                print("interface: {}".format(sub_master_conf["interface"]))
-                print("publish port: {}".format(sub_master_conf["publish_port"]))
-                print("return port: {}".format(sub_master_conf["ret_port"]))
-                print("\n")
-
-                print_header(" * Minion configuration values", top=True)
-                print("interface: {}".format(minion_conf["interface"]))
-                print("masters: {}".format(", ".join(minion_conf["master"])))
-                if minion_conf["ipc_mode"] == "tcp":
-                    print("tcp pub port: {}".format(minion_conf["tcp_pub_port"]))
-                    print("tcp pull port: {}".format(minion_conf["tcp_pull_port"]))
-                print("\n")
-
-                print_header(" * Sub Minion configuration values", top=True)
-                print("interface: {}".format(sub_minion_conf["interface"]))
-                print("masters: {}".format(", ".join(sub_minion_conf["master"])))
-                if sub_minion_conf["ipc_mode"] == "tcp":
-                    print("tcp pub port: {}".format(sub_minion_conf["tcp_pub_port"]))
-                    print("tcp pull port: {}".format(sub_minion_conf["tcp_pull_port"]))
-                print("\n")
-
-                print_header(
-                    " Your client configurations are at {}".format(
-                        ", ".join(MultimasterTestDaemon.config_location())
-                    )
-                )
-                print("To access minions from different masters use:")
-                for location in MultimasterTestDaemon.config_location():
-                    print("    salt -c {} minion test.ping".format(location))
 
                 while True:
                     time.sleep(1)
@@ -911,73 +847,6 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         except TestDaemonStartFailed:
             self.exit(status=2)
 
-    def run_multimaster_tests(self):
-        """
-        Execute the multimaster tests suite
-        """
-        named_tests = []
-        named_unit_test = []
-
-        if self.options.name:
-            for test in self.options.name:
-                if test.startswith(("tests.multimaster.", "multimaster.")):
-                    named_tests.append(test)
-
-        # TODO: check 'from_filenames'
-        if not self.options.multimaster and not named_tests:
-            # We're not running any multimaster test suites.
-            return [True]
-
-        if not salt.utils.platform.is_windows():
-            self.set_filehandle_limits("integration")
-
-        try:
-            print_header(
-                " * Setting up multimaster Salt daemons to execute tests",
-                top=False,
-                width=getattr(self.options, "output_columns", PNUM),
-            )
-        except TypeError:
-            print_header(
-                " * Setting up multimaster Salt daemons to execute tests", top=False
-            )
-
-        status = []
-
-        try:
-            with MultimasterTestDaemon(self):
-                if self.options.name:
-                    for name in self.options.name:
-                        name = name.strip()
-                        if not name:
-                            continue
-                        if os.path.isfile(name):
-                            if not name.endswith(".py"):
-                                continue
-                            if not name.startswith(
-                                os.path.join("tests", "multimaster")
-                            ):
-                                continue
-                            results = self.run_suite(
-                                os.path.dirname(name),
-                                name,
-                                suffix=os.path.basename(name),
-                                load_from_name=False,
-                            )
-                            status.append(results)
-                            continue
-                        if not name.startswith(("tests.multimaster.", "multimaster.")):
-                            continue
-                        results = self.run_suite(
-                            "", name, suffix="test_*.py", load_from_name=True
-                        )
-                        status.append(results)
-                    return status
-                status.append(self.run_integration_suite(**TEST_SUITES["multimaster"]))
-            return status
-        except TestDaemonStartFailed:
-            self.exit(status=2)
-
     def run_unit_tests(self):
         """
         Execute the unit tests
@@ -1082,12 +951,14 @@ def main(**kwargs):
         overall_status = []
         if parser.options.interactive:
             if parser.options.multimaster:
-                parser.start_multimaster_daemons_only()
+                print(
+                    "Multimaster tests now run under PyTest",
+                    file=sys.stderr,
+                    flush=True,
+                )
             else:
                 parser.start_daemons_only()
         status = parser.run_integration_tests()
-        overall_status.extend(status)
-        status = parser.run_multimaster_tests()
         overall_status.extend(status)
         status = parser.run_unit_tests()
         overall_status.extend(status)

@@ -1,16 +1,9 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Alexander Schwartz <alexander.schwartz@gmx.net>
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Salt Libs
 import salt.client
 from salt.cloud.clouds import saltify
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import ANY, MagicMock, patch
 from tests.support.unit import TestCase
