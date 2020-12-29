@@ -55,21 +55,21 @@ def list_(saltenv="base", test=None):
     if not _reactor_system_available():
         raise CommandExecutionError("Reactor system is not running.")
 
-    sevent = salt.utils.event.get_event(
+    with salt.utils.event.get_event(
         "master",
         __opts__["sock_dir"],
         __opts__["transport"],
         opts=__opts__,
         listen=True,
-    )
+    ) as sevent:
 
-    master_key = salt.utils.master.get_master_key("root", __opts__)
+        master_key = salt.utils.master.get_master_key("root", __opts__)
 
-    __jid_event__.fire_event({"key": master_key}, "salt/reactors/manage/list")
+        __jid_event__.fire_event({"key": master_key}, "salt/reactors/manage/list")
 
-    results = sevent.get_event(wait=30, tag="salt/reactors/manage/list-results")
-    reactors = results["reactors"]
-    return reactors
+        results = sevent.get_event(wait=30, tag="salt/reactors/manage/list-results")
+        reactors = results["reactors"]
+        return reactors
 
 
 def add(event, reactors, saltenv="base", test=None):
@@ -88,23 +88,23 @@ def add(event, reactors, saltenv="base", test=None):
     if isinstance(reactors, str):
         reactors = [reactors]
 
-    sevent = salt.utils.event.get_event(
+    with salt.utils.event.get_event(
         "master",
         __opts__["sock_dir"],
         __opts__["transport"],
         opts=__opts__,
         listen=True,
-    )
+    ) as sevent:
 
-    master_key = salt.utils.master.get_master_key("root", __opts__)
+        master_key = salt.utils.master.get_master_key("root", __opts__)
 
-    __jid_event__.fire_event(
-        {"event": event, "reactors": reactors, "key": master_key},
-        "salt/reactors/manage/add",
-    )
+        __jid_event__.fire_event(
+            {"event": event, "reactors": reactors, "key": master_key},
+            "salt/reactors/manage/add",
+        )
 
-    res = sevent.get_event(wait=30, tag="salt/reactors/manage/add-complete")
-    return res["result"]
+        res = sevent.get_event(wait=30, tag="salt/reactors/manage/add-complete")
+        return res["result"]
 
 
 def delete(event, saltenv="base", test=None):
@@ -120,22 +120,22 @@ def delete(event, saltenv="base", test=None):
     if not _reactor_system_available():
         raise CommandExecutionError("Reactor system is not running.")
 
-    sevent = salt.utils.event.get_event(
+    with salt.utils.event.get_event(
         "master",
         __opts__["sock_dir"],
         __opts__["transport"],
         opts=__opts__,
         listen=True,
-    )
+    ) as sevent:
 
-    master_key = salt.utils.master.get_master_key("root", __opts__)
+        master_key = salt.utils.master.get_master_key("root", __opts__)
 
-    __jid_event__.fire_event(
-        {"event": event, "key": master_key}, "salt/reactors/manage/delete"
-    )
+        __jid_event__.fire_event(
+            {"event": event, "key": master_key}, "salt/reactors/manage/delete"
+        )
 
-    res = sevent.get_event(wait=30, tag="salt/reactors/manage/delete-complete")
-    return res["result"]
+        res = sevent.get_event(wait=30, tag="salt/reactors/manage/delete-complete")
+        return res["result"]
 
 
 def is_leader():
@@ -151,20 +151,20 @@ def is_leader():
     if not _reactor_system_available():
         raise CommandExecutionError("Reactor system is not running.")
 
-    sevent = salt.utils.event.get_event(
+    with salt.utils.event.get_event(
         "master",
         __opts__["sock_dir"],
         __opts__["transport"],
         opts=__opts__,
         listen=True,
-    )
+    ) as sevent:
 
-    master_key = salt.utils.master.get_master_key("root", __opts__)
+        master_key = salt.utils.master.get_master_key("root", __opts__)
 
-    __jid_event__.fire_event({"key": master_key}, "salt/reactors/manage/is_leader")
+        __jid_event__.fire_event({"key": master_key}, "salt/reactors/manage/is_leader")
 
-    res = sevent.get_event(wait=30, tag="salt/reactors/manage/leader/value")
-    return res["result"]
+        res = sevent.get_event(wait=30, tag="salt/reactors/manage/leader/value")
+        return res["result"]
 
 
 def set_leader(value=True):
@@ -180,20 +180,20 @@ def set_leader(value=True):
     if not _reactor_system_available():
         raise CommandExecutionError("Reactor system is not running.")
 
-    sevent = salt.utils.event.get_event(
+    with salt.utils.event.get_event(
         "master",
         __opts__["sock_dir"],
         __opts__["transport"],
         opts=__opts__,
         listen=True,
-    )
+    ) as sevent:
 
-    master_key = salt.utils.master.get_master_key("root", __opts__)
+        master_key = salt.utils.master.get_master_key("root", __opts__)
 
-    __jid_event__.fire_event(
-        {"id": __opts__["id"], "value": value, "key": master_key},
-        "salt/reactors/manage/set_leader",
-    )
+        __jid_event__.fire_event(
+            {"id": __opts__["id"], "value": value, "key": master_key},
+            "salt/reactors/manage/set_leader",
+        )
 
-    res = sevent.get_event(wait=30, tag="salt/reactors/manage/leader/value")
-    return res["result"]
+        res = sevent.get_event(wait=30, tag="salt/reactors/manage/leader/value")
+        return res["result"]
