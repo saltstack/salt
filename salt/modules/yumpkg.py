@@ -224,17 +224,20 @@ def _check_versionlock():
     """
     Ensure that the appropriate versionlock plugin is present
     """
+
+    def dnf_version_lock():
+        if __grains__["os"].lower() == "fedora":
+            return (
+                "python3-dnf-plugin-versionlock"
+                if int(__grains__.get("osrelease")) >= 26
+                else "python3-dnf-plugins-extras-versionlock"
+            )
+        if int(__grains__.get("osmajorrelease")) >= 8:
+            return "python3-dnf-plugin-versionlock"
+        return "python2-dnf-plugin-versionlock"
+
     if _yum() == "dnf":
-        if (
-            "fedora" in __grains__["os"].lower()
-            and int(__grains__.get("osrelease")) >= 26
-        ) or (
-            __grains__.get("os").lower() in ("redhat", "centos")
-            and int(__grains__.get("osmajorrelease")) >= 8
-        ):
-            vl_plugin = "python3-dnf-plugin-versionlock"
-        else:
-            vl_plugin = "python3-dnf-plugins-extras-versionlock"
+        vl_plugin = dnf_version_lock()
     else:
         vl_plugin = (
             "yum-versionlock"
