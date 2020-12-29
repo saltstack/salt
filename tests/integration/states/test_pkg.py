@@ -635,10 +635,12 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         """
         versionlock_pkg = None
         if grains["os_family"] == "RedHat":
+            from salt.modules.yumpkg import _versionlock_pkg
+
             pkgs = {
                 p
                 for p in self.run_function("pkg.list_repo_pkgs")
-                if "yum-plugin-versionlock" in p
+                if _versionlock_pkg(grains) in p
             }
             if not pkgs:
                 self.skipTest("No versionlock package found in repositories")

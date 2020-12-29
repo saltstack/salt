@@ -149,16 +149,22 @@ def _yum():
             and not os.path.isdir(file)
         )
 
+    # allow calling function outside execution module
+    try:
+        context = __context__
+    except NameError:
+        context = {}
+
     contextkey = "yum_bin"
-    if contextkey not in __context__:
+    if contextkey not in context:
         for dir in os.environ.get("PATH", os.defpath).split(os.pathsep):
             if _check(os.path.join(dir, "dnf")):
-                __context__[contextkey] = "dnf"
+                context[contextkey] = "dnf"
                 break
             elif _check(os.path.join(dir, "yum")):
-                __context__[contextkey] = "yum"
+                context[contextkey] = "yum"
                 break
-    return __context__.get(contextkey)
+    return context.get(contextkey)
 
 
 def _call_yum(args, **kwargs):
@@ -220,31 +226,35 @@ def _yum_pkginfo(output):
                     yield pkginfo
 
 
+def _versionlock_pkg(grains=None):
+    """
+    Determine versionlock plugin package name
+    """
+    if grains is None:
+        grains = __grains__
+    if _yum() == "dnf":
+        if grains["os"].lower() == "fedora":
+            return (
+                "python3-dnf-plugin-versionlock"
+                if int(grains.get("osrelease")) >= 26
+                else "python3-dnf-plugins-extras-versionlock"
+            )
+        if int(grains.get("osmajorrelease")) >= 8:
+            return "python3-dnf-plugin-versionlock"
+        return "python2-dnf-plugin-versionlock"
+    else:
+        return (
+            "yum-versionlock"
+            if int(grains.get("osmajorrelease")) == 5
+            else "yum-plugin-versionlock"
+        )
+
+
 def _check_versionlock():
     """
     Ensure that the appropriate versionlock plugin is present
     """
-
-    def dnf_version_lock():
-        if __grains__["os"].lower() == "fedora":
-            return (
-                "python3-dnf-plugin-versionlock"
-                if int(__grains__.get("osrelease")) >= 26
-                else "python3-dnf-plugins-extras-versionlock"
-            )
-        if int(__grains__.get("osmajorrelease")) >= 8:
-            return "python3-dnf-plugin-versionlock"
-        return "python2-dnf-plugin-versionlock"
-
-    if _yum() == "dnf":
-        vl_plugin = dnf_version_lock()
-    else:
-        vl_plugin = (
-            "yum-versionlock"
-            if __grains__.get("osmajorrelease") == "5"
-            else "yum-plugin-versionlock"
-        )
-
+    vl_plugin = _versionlock_pkg()
     if vl_plugin not in list_pkgs():
         raise SaltInvocationError(
             "Cannot proceed, {} is not installed.".format(vl_plugin)
