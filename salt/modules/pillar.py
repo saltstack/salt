@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Extract the pillar data for this minion
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 import logging
@@ -184,7 +182,7 @@ def get(
 
     ret = salt.utils.data.traverse_dict_and_list(pillar_dict, key, default, delimiter)
     if ret is KeyError:
-        raise KeyError("Pillar key not found: {0}".format(key))
+        raise KeyError("Pillar key not found: {}".format(key))
 
     return ret
 
@@ -265,17 +263,16 @@ def items(*args, **kwargs):
             )
         except Exception as exc:  # pylint: disable=broad-except
             raise CommandExecutionError(
-                "Failed to decrypt pillar override: {0}".format(exc)
+                "Failed to decrypt pillar override: {}".format(exc)
             )
 
     pillar = salt.pillar.get_pillar(
         __opts__,
-        __grains__,
+        dict(__grains__),
         __opts__["id"],
         pillar_override=pillar_override,
         pillarenv=pillarenv,
     )
-
     return pillar.compile_pillar()
 
 
@@ -296,7 +293,7 @@ def _obfuscate_inner(var):
     elif isinstance(var, (list, set, tuple)):
         return type(var)(_obfuscate_inner(v) for v in var)
     else:
-        return "<{0}>".format(var.__class__.__name__)
+        return "<{}>".format(var.__class__.__name__)
 
 
 def obfuscate(*args):
@@ -445,7 +442,7 @@ def raw(key=None):
     if key:
         ret = __pillar__.get(key, {})
     else:
-        ret = __pillar__
+        ret = dict(__pillar__)
 
     return ret
 
@@ -539,10 +536,10 @@ def keys(key, delimiter=DEFAULT_TARGET_DELIM):
     ret = salt.utils.data.traverse_dict_and_list(__pillar__, key, KeyError, delimiter)
 
     if ret is KeyError:
-        raise KeyError("Pillar key not found: {0}".format(key))
+        raise KeyError("Pillar key not found: {}".format(key))
 
     if not isinstance(ret, dict):
-        raise ValueError("Pillar value in key {0} is not a dict".format(key))
+        raise ValueError("Pillar value in key {} is not a dict".format(key))
 
     return list(ret)
 

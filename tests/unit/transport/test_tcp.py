@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Thomas Jackson <jacksontj.89@gmail.com>
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import socket
@@ -17,8 +15,6 @@ import salt.transport.client
 import salt.transport.server
 import salt.utils.platform
 import salt.utils.process
-from salt.ext import six
-from salt.ext.six.moves import range
 from salt.ext.tornado.testing import AsyncTestCase, gen_test
 from salt.transport.tcp import (
     SaltMessageClient,
@@ -74,7 +70,7 @@ class BaseTCPReqCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 "transport": "tcp",
                 "master_ip": "127.0.0.1",
                 "master_port": ret_port,
-                "master_uri": "tcp://127.0.0.1:{0}".format(ret_port),
+                "master_uri": "tcp://127.0.0.1:{}".format(ret_port),
             }
         )
 
@@ -200,7 +196,7 @@ class BaseTCPPubCase(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
                 "master_ip": "127.0.0.1",
                 "auth_timeout": 1,
                 "master_port": ret_port,
-                "master_uri": "tcp://127.0.0.1:{0}".format(ret_port),
+                "master_uri": "tcp://127.0.0.1:{}".format(ret_port),
             }
         )
 
@@ -243,17 +239,17 @@ class BaseTCPPubCase(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
         del cls.req_server_channel
 
     def setUp(self):
-        super(BaseTCPPubCase, self).setUp()
+        super().setUp()
         self._start_handlers = dict(self.io_loop._handlers)
 
     def tearDown(self):
-        super(BaseTCPPubCase, self).tearDown()
+        super().tearDown()
         failures = []
-        for k, v in six.iteritems(self.io_loop._handlers):
+        for k, v in self.io_loop._handlers.items():
             if self._start_handlers.get(k) != v:
                 failures.append((k, v))
         if failures:
-            raise Exception("FDs still attached to the IOLoop: {0}".format(failures))
+            raise Exception("FDs still attached to the IOLoop: {}".format(failures))
         del self.channel
         del self._start_handlers
 
@@ -287,7 +283,7 @@ class AsyncPubChannelTest(BaseTCPPubCase, PubChannelMixin):
 
 class SaltMessageClientPoolTest(AsyncTestCase):
     def setUp(self):
-        super(SaltMessageClientPoolTest, self).setUp()
+        super().setUp()
         sock_pool_size = 5
         with patch(
             "salt.transport.tcp.SaltMessageClient.__init__",
@@ -306,7 +302,7 @@ class SaltMessageClientPoolTest(AsyncTestCase):
             "salt.transport.tcp.SaltMessageClient.close", MagicMock(return_value=None)
         ):
             del self.original_message_clients
-        super(SaltMessageClientPoolTest, self).tearDown()
+        super().tearDown()
 
     def test_send(self):
         for message_client_mock in self.message_client_pool.message_clients:

@@ -2,6 +2,7 @@
 Generate the salt thin tarball from the installed python files
 """
 
+import contextvars
 import copy
 import logging
 import os
@@ -25,6 +26,16 @@ import salt.utils.path
 import salt.utils.stringutils
 import salt.version
 import yaml
+
+# This is needed until we drop support for python 3.6
+has_immutables = False
+try:
+    import immutables
+
+    has_immutables = True
+except ImportError:
+    pass
+
 
 try:
     import zlib
@@ -339,7 +350,7 @@ def get_tops(extra_mods="", so_mods=""):
     :return:
     """
     tops = []
-    for mod in [
+    mods = [
         salt,
         distro,
         jinja2,
@@ -353,7 +364,11 @@ def get_tops(extra_mods="", so_mods=""):
         ssl_match_hostname,
         markupsafe,
         backports_abc,
-    ]:
+        contextvars,
+    ]
+    if has_immutables:
+        mods.append(immutables)
+    for mod in mods:
         if mod:
             log.debug('Adding module to the tops: "%s"', mod.__name__)
             _add_dependency(tops, mod)

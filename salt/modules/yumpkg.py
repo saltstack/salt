@@ -38,9 +38,6 @@ import salt.utils.pkg.rpm
 import salt.utils.systemd
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationError
-
-# pylint: disable=import-error,redefined-builtin
-from salt.ext.six.moves import configparser, zip
 from salt.utils.versions import LooseVersion as _LooseVersion
 
 try:
@@ -49,9 +46,6 @@ try:
     HAS_YUM = True
 except ImportError:
     HAS_YUM = False
-
-
-# pylint: enable=import-error,redefined-builtin
 
 
 log = logging.getLogger(__name__)
@@ -2256,8 +2250,7 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
 
     targets = []
     if pkgs:
-        for pkg in salt.utils.data.repack_dictlist(pkgs):
-            targets.append(pkg)
+        targets.extend(pkgs)
     elif sources:
         for source in sources:
             targets.append(next(iter(source)))
