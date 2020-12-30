@@ -672,14 +672,13 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             self.skipTest("{}  `{}` is installed".format(target_ret, versionlock_pkg))
 
         try:
-            target_ret = self.run_state(
-                "pkg.installed", name=target, hold=True, refresh=False,
-            )
             tag = "pkg_|-{0}_|-{0}_|-installed".format(target)
             self.assertSaltTrueReturn(target_ret)
             self.assertIn(tag, target_ret)
             self.assertIn("changes", target_ret[tag])
-            self.assertIn(target, target_ret[tag]["changes"])
+            # On Centos 7 package is already installed, no change happened
+            if target_ret[tag].get("changes"):
+                self.assertIn(target, target_ret[tag]["changes"])
             self.assertIn("held", target_ret[tag]["comment"])
         finally:
             # Clean up, unhold package and remove
