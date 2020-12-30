@@ -37,15 +37,15 @@ class EventSender(multiprocessing.Process):
         self.sock_dir = sock_dir
 
     def run(self):
-        me = salt.utils.event.MasterEvent(self.sock_dir, listen=False)
-        time.sleep(self.wait)
-        me.fire_event(self.data, self.tag)
-        # Wait a few seconds before tearing down the zmq context
-        if os.environ.get("TRAVIS_PYTHON_VERSION", None) is not None:
-            # Travis is slow
-            time.sleep(10)
-        else:
-            time.sleep(2)
+        with salt.utils.event.MasterEvent(self.sock_dir, listen=False) as me:
+            time.sleep(self.wait)
+            me.fire_event(self.data, self.tag)
+            # Wait a few seconds before tearing down the zmq context
+            if os.environ.get("TRAVIS_PYTHON_VERSION", None) is not None:
+                # Travis is slow
+                time.sleep(10)
+            else:
+                time.sleep(2)
 
 
 @contextmanager
