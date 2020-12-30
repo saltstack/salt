@@ -672,6 +672,9 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             self.skipTest("{}  `{}` is installed".format(target_ret, versionlock_pkg))
 
         try:
+            target_ret = self.run_state(
+                "pkg.installed", name=target, hold=True, refresh=False,
+            )
             tag = "pkg_|-{0}_|-{0}_|-installed".format(target)
             self.assertSaltTrueReturn(target_ret)
             self.assertIn(tag, target_ret)
