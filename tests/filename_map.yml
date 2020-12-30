@@ -6,8 +6,8 @@
   - unit.utils.test_versions
 
 setup.py:
-  - unit.setup.test_man
-  - unit.setup.test_install
+  - pytests.scenarios.setup.test_man
+  - pytests.scenarios.setup.test_install
 
 salt/modules/(apkpkg|aptpkg|ebuildpkg|dpkg_lowpkg|freebsdpkg|mac_brew_pkg|mac_ports_pkg|openbsdpkg|opkg|pacmanpkg|pkgin|pkgng|pkg_resource|rpm_lowpkg|solarisipspkg|solarispkg|win_pkg|xbpspkg|yumpkg|zypperpkg)\.py:
   - unit.states.test_pkg

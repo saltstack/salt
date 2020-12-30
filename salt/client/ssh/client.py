@@ -1,23 +1,17 @@
-# -*- coding: utf-8 -*-
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import copy
 import logging
 import os
 import random
 
-# Import Salt libs
 import salt.config
-import salt.syspaths as syspaths
+import salt.syspaths
 import salt.utils.args
-from salt.exceptions import SaltClientError  # Temporary
+from salt.exceptions import SaltClientError
 
 log = logging.getLogger(__name__)
 
 
-class SSHClient(object):
+class SSHClient:
     """
     Create a client object for executing routines via the salt-ssh backend
 
@@ -26,7 +20,7 @@ class SSHClient(object):
 
     def __init__(
         self,
-        c_path=os.path.join(syspaths.CONFIG_DIR, "master"),
+        c_path=os.path.join(salt.syspaths.CONFIG_DIR, "master"),
         mopts=None,
         disable_custom_roster=False,
     ):
@@ -80,8 +74,7 @@ class SSHClient(object):
         .. versionadded:: 2015.5.0
         """
         ssh = self._prep_ssh(tgt, fun, arg, timeout, tgt_type, kwarg, **kwargs)
-        for ret in ssh.run_iter(jid=kwargs.get("jid", None)):
-            yield ret
+        yield from ssh.run_iter(jid=kwargs.get("jid", None))
 
     def cmd(
         self, tgt, fun, arg=(), timeout=None, tgt_type="glob", kwarg=None, **kwargs

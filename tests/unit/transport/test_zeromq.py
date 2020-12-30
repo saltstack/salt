@@ -9,6 +9,7 @@ import threading
 import time
 from concurrent.futures.thread import ThreadPoolExecutor
 
+import pytest
 import salt.config
 import salt.exceptions
 import salt.ext.tornado.gen
@@ -18,9 +19,8 @@ import salt.transport.client
 import salt.transport.server
 import salt.utils.platform
 import salt.utils.process
+import salt.utils.stringutils
 import zmq.eventloop.ioloop
-from salt.ext import six
-from salt.ext.six.moves import range
 from salt.ext.tornado.testing import AsyncTestCase
 from salt.transport.zeromq import AsyncReqMessageClientPool
 from saltfactories.utils.ports import get_unused_localhost_port
@@ -34,6 +34,11 @@ from tests.unit.transport.mixins import (
     ReqChannelMixin,
     run_loop_in_thread,
 )
+
+pytestmark = [
+    pytest.mark.skip_on_darwin,
+    pytest.mark.skip_on_freebsd,
+]
 
 x = "fix pre"
 
@@ -435,7 +440,10 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
         )
         salt.master.SMaster.secrets["aes"] = {
             "secret": multiprocessing.Array(
-                ctypes.c_char, six.b(salt.crypt.Crypticle.generate_key_string()),
+                ctypes.c_char,
+                salt.utils.stringutils.to_bytes(
+                    salt.crypt.Crypticle.generate_key_string()
+                ),
             ),
         }
         cls.minion_config = cls.get_temp_config(
