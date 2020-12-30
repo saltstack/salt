@@ -663,7 +663,9 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         target = self._PKG_TARGETS[0]
 
         # First we ensure that the package is installed
-        target_ret = self.run_state("pkg.installed", name=target, hold=False, refresh=False,)
+        target_ret = self.run_state(
+            "pkg.installed", name=target, hold=False, refresh=False,
+        )
         self.assertSaltTrueReturn(target_ret)
 
         if versionlock_pkg and "-versionlock is not installed" in str(target_ret):
