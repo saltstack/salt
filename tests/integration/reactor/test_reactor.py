@@ -43,8 +43,8 @@ class ReactorTest(SaltMinionEventAssertsMixin, ShellCase):
         )
 
     def fire_event(self, tag, data):
-        event = self.get_event()
-        event.fire_event(tag, data)
+        with self.get_event() as event:
+            event.fire_event(tag, data)
 
     def alarm_handler(self, signal, frame):
         raise TimeoutException("Timeout of {} seconds reached".format(self.timeout))
@@ -55,12 +55,10 @@ class ReactorTest(SaltMinionEventAssertsMixin, ShellCase):
         that it pings the minion
         """
         # Create event bus connection
-        e = salt.utils.event.get_event(
+        with salt.utils.event.get_event(
             "minion", sock_dir=self.minion_opts["sock_dir"], opts=self.minion_opts
-        )
-
-        e.fire_event({"a": "b"}, "/test_event")
-
+        ) as event:
+            event.fire_event({"a": "b"}, "/test_event")
         self.assertMinionEventReceived({"a": "b"}, timeout=30)
 
     @skipIf(salt.utils.platform.is_windows(), "no sigalarm on windows")
@@ -72,8 +70,8 @@ class ReactorTest(SaltMinionEventAssertsMixin, ShellCase):
         signal.signal(signal.SIGALRM, self.alarm_handler)
         signal.alarm(self.timeout)
 
-        master_event = self.get_event()
-        master_event.fire_event({"id": "minion"}, "salt/test/reactor")
+        with self.get_event() as master_event:
+            master_event.fire_event({"id": "minion"}, "salt/test/reactor")
 
         try:
             while True:
@@ -126,19 +124,18 @@ class ReactorTest(SaltMinionEventAssertsMixin, ShellCase):
         self.assertFalse(ret["return"])
 
         try:
-            master_event = self.get_event()
-            self.fire_event({"id": "minion"}, "salt/test/reactor")
+            with self.get_event() as master_event:
+                self.fire_event({"id": "minion"}, "salt/test/reactor")
 
-            while True:
-                event = master_event.get_event(full=True)
+                while True:
+                    event = master_event.get_event(full=True)
 
-                if event is None:
-                    continue
+                    if event is None:
+                        continue
 
-                if event.get("tag") == "test_reaction":
-                    # if we reach this point, the test is a failure
-                    self.assertTrue(True)  # pylint: disable=redundant-unittest-assert
-                    break
+                    if event.get("tag") == "test_reaction":
+                        # if we reach this point, the test is a failure
+                        break
         except TimeoutException as exc:
             self.assertTrue("Timeout" in str(exc))
         finally:
@@ -165,17 +162,17 @@ class ReactorTest(SaltMinionEventAssertsMixin, ShellCase):
         signal.alarm(self.timeout)
 
         try:
-            master_event = self.get_event()
-            self.fire_event({"id": "minion"}, "salt/test/reactor")
+            with self.get_event() as master_event:
+                self.fire_event({"id": "minion"}, "salt/test/reactor")
 
-            while True:
-                event = master_event.get_event(full=True)
+                while True:
+                    event = master_event.get_event(full=True)
 
-                if event is None:
-                    continue
+                    if event is None:
+                        continue
 
-                if event.get("tag") == "test_reaction":
-                    self.assertTrue(event["data"]["test_reaction"])
-                    break
+                    if event.get("tag") == "test_reaction":
+                        self.assertTrue(event["data"]["test_reaction"])
+                        break
         finally:
             signal.alarm(0)
