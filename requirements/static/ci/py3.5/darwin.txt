@@ -91,7 +91,7 @@ pyopenssl==19.0.0
 pyparsing==2.4.5          # via junos-eznc, packaging
 pyserial==3.4             # via junos-eznc
 pytest-helpers-namespace==2019.1.8
-pytest-salt-factories==0.99.0
+pytest-salt-factories==0.99.2
 pytest-salt==2020.1.27
 pytest-tempdir==2019.10.12
 pytest==6.1.2
