@@ -1,5 +1,3 @@
-import os
-import pathlib
 import shutil
 
 import pytest
@@ -12,15 +10,17 @@ def virtualenv(tmp_path):
 
 
 @pytest.fixture
-def cache_dir(tmp_path):
-    if "CI_RUN" in os.environ and os.environ["CI_RUN"] == "1":
+def cache_dir(tmp_path, grains):
+    if grains["os"] == "Arch" or (
+        grains["os"] == "Fedora" and grains["osmajorrelease"] == 33
+    ):
         # Some of our golden images, at least, Arch Linux and Fedora 33, mount /tmp as a tmpfs.
-        # These setup tests will currently consume all of the freespace on /tmp in these distributions.
-        # To bypass that issue, we'll use the users `.cache` directory to store the downloads we need
+        # These setup tests will currently consume all of the freespace on /tmp in these distributions,
+        # and fail. Just skip these tests on these platforms, at least, for now.
         # to run these tests.
-        _cache_dir = pathlib.Path.home() / ".cache" / "salt-setup-tests"
-    else:
-        _cache_dir = tmp_path / ".cache"
+        pytest.skip("Skipped as tests would consume all of /tmp and fail")
+
+    _cache_dir = tmp_path / ".cache"
     _cache_dir.mkdir(parents=True, exist_ok=True)
     try:
         yield _cache_dir
