@@ -8,7 +8,6 @@ import time
 
 import pytest
 import salt.defaults.events
-from tests.support.helpers import slowTest
 
 log = logging.getLogger(__name__)
 
@@ -33,7 +32,7 @@ def event_listener(salt_factories):
     return salt_factories.event_listener
 
 
-@slowTest
+@pytest.mark.slow_test
 @pytest.mark.parametrize("sync_refresh", [False, True])
 def test_pillar_refresh(
     salt_minion,
