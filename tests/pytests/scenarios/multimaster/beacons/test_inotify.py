@@ -5,7 +5,6 @@ import time
 import pytest
 import salt.config
 import salt.version
-from tests.support.helpers import slowTest
 
 try:
     import pyinotify  # pylint: disable=unused-import
@@ -86,7 +85,7 @@ def setup_beacons(mm_master_1_salt_cli, salt_mm_minion_1, inotify_test_path):
             )
 
 
-@slowTest
+@pytest.mark.slow_test
 def test_beacons_duplicate_53344(
     event_listener,
     inotify_test_path,

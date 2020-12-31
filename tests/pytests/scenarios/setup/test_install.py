@@ -12,18 +12,17 @@ import salt.utils.path
 import salt.utils.platform
 import salt.version
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
-from tests.support.helpers import slowTest
 from tests.support.runtests import RUNTIME_VARS
 
 log = logging.getLogger(__name__)
 
 pytestmark = [
+    pytest.mark.slow_test,
     pytest.mark.windows_whitelisted,
     pytest.mark.skip_if_binaries_missing(*KNOWN_BINARY_NAMES, check_all=False),
 ]
 
 
-@slowTest
 def test_wheel(virtualenv, cache_dir):
     """
     test building and installing a bdist_wheel package
@@ -92,7 +91,6 @@ def test_wheel(virtualenv, cache_dir):
         assert salt_generated_version_file_path.is_file()
 
 
-@slowTest
 def test_egg(virtualenv, cache_dir):
     """
     test building and installing a bdist_egg package
@@ -194,7 +192,6 @@ def test_egg(virtualenv, cache_dir):
     and sys.version_info < (3, 6),
     reason="Skip on python 3.5",
 )
-@slowTest
 def test_sdist(virtualenv, cache_dir):
     """
     test building and installing a sdist package
@@ -282,7 +279,6 @@ def test_sdist(virtualenv, cache_dir):
         )
 
 
-@slowTest
 def test_setup_install(virtualenv, cache_dir):
     """
     test installing directly from source
