@@ -242,10 +242,14 @@ def pytest_configure(config):
     config.addinivalue_line(
         "markers", "requires_sshd_server: Mark test that require an SSH server running"
     )
+    config.addinivalue_line(
+        "markers",
+        "slow_test: Mark test as being slow. These tests are skipped by default unless `--run-slow` is passed",
+    )
     # Make sure the test suite "knows" this is a pytest test run
     RUNTIME_VARS.PYTEST_SESSION = True
 
-    # "Flag" the slotTest decorator if we're skipping slow tests or not
+    # "Flag" the slowTest decorator if we're skipping slow tests or not
     os.environ["SLOW_TESTS"] = str(config.getoption("--run-slow"))
 
 
@@ -464,7 +468,9 @@ def pytest_runtest_setup(item):
         item._skipped_by_mark = True
         pytest.skip(PRE_PYTEST_SKIP_REASON)
 
-    if saltfactories.utils.compat.has_unittest_attr(item, "__slow_test__"):
+    if saltfactories.utils.compat.has_unittest_attr(
+        item, "__slow_test__"
+    ) or item.get_closest_marker("slow_test"):
         if item.config.getoption("--run-slow") is False:
             item._skipped_by_mark = True
             pytest.skip("Slow tests are disabled!")
