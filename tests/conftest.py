@@ -860,9 +860,6 @@ def salt_master_factory(
     config_defaults["known_hosts_file"] = tests_known_hosts_file
     config_defaults["syndic_master"] = "localhost"
     config_defaults["transport"] = salt_syndic_master_factory.config["transport"]
-    config_defaults["reactor"] = [
-        {"salt/test/reactor": [os.path.join(RUNTIME_VARS.FILES, "reactor-test.sls")]}
-    ]
 
     config_overrides = {"log_level_logfile": "quiet"}
     ext_pillar = []
