@@ -5,7 +5,10 @@ Tests for the salt-run command
 import logging
 
 import pytest
-from tests.support.helpers import slowTest
+
+pytestmark = [
+    pytest.mark.slow_test,
+]
 
 log = logging.getLogger(__name__)
 
@@ -49,7 +52,6 @@ def pillar_tree(base_env_pillar_tree_root_dir, salt_minion, salt_sub_minion, sal
         assert ret.json[salt_sub_minion.id] is True
 
 
-@slowTest
 def test_cache(salt_run_cli):
     """
     Store, list, fetch, then flush data
@@ -81,7 +83,6 @@ def test_cache(salt_run_cli):
     assert "test_cache" not in ret.json
 
 
-@slowTest
 def test_cache_invalid(salt_run_cli):
     """
     Store, list, fetch, then flush data
@@ -92,7 +93,6 @@ def test_cache_invalid(salt_run_cli):
     assert "Passed invalid arguments:" in ret.stdout
 
 
-@slowTest
 def test_grains(salt_run_cli, pillar_tree, salt_minion):
     """
     Test cache.grains
@@ -102,7 +102,6 @@ def test_grains(salt_run_cli, pillar_tree, salt_minion):
     assert salt_minion.id in ret.json
 
 
-@slowTest
 def test_pillar(salt_run_cli, pillar_tree, salt_minion, salt_sub_minion):
     """
     Test cache.pillar
@@ -113,7 +112,6 @@ def test_pillar(salt_run_cli, pillar_tree, salt_minion, salt_sub_minion):
     assert salt_sub_minion.id not in ret.json
 
 
-@slowTest
 def test_pillar_no_tgt(salt_run_cli, pillar_tree, salt_minion, salt_sub_minion):
     """
     Test cache.pillar when no tgt is
@@ -126,7 +124,6 @@ def test_pillar_no_tgt(salt_run_cli, pillar_tree, salt_minion, salt_sub_minion):
     assert salt_sub_minion.id in ret.json
 
 
-@slowTest
 def test_pillar_minion_noexist(salt_run_cli, pillar_tree, salt_minion, salt_sub_minion):
     """
     Test cache.pillar when the target does not exist
@@ -137,7 +134,6 @@ def test_pillar_minion_noexist(salt_run_cli, pillar_tree, salt_minion, salt_sub_
     assert salt_sub_minion.id not in ret.json
 
 
-@slowTest
 def test_pillar_minion_tgt_type_pillar(
     salt_run_cli, pillar_tree, salt_minion, salt_sub_minion
 ):
@@ -151,7 +147,6 @@ def test_pillar_minion_tgt_type_pillar(
     assert salt_sub_minion.id in ret.json
 
 
-@slowTest
 def test_mine(salt_run_cli, salt_minion):
     """
     Test cache.mine
