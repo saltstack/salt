@@ -1,21 +1,14 @@
-# -*- coding: utf-8 -*-
 """
 A runner module to collect and display the inline documentation from the
 various module types
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import itertools
 
-# Import salt libs
 import salt.client
 import salt.runner
 import salt.wheel
 from salt.exceptions import SaltClientError
-
-# Import 3rd-party libs
-from salt.ext import six
 
 
 def __virtual__():
@@ -70,13 +63,13 @@ def execution():
     docs = {}
     try:
         for ret in client.cmd_iter("*", "sys.doc", timeout=__opts__["timeout"]):
-            for v in six.itervalues(ret):
+            for v in ret.values():
                 docs.update(v)
     except SaltClientError as exc:
         print(exc)
         return []
 
-    i = itertools.chain.from_iterable([six.iteritems(docs["ret"])])
+    i = itertools.chain.from_iterable([docs["ret"].items()])
     ret = dict(list(i))
 
     return ret

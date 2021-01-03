@@ -4,7 +4,6 @@ Simple Smoke Tests for Connected Proxy Minion
 import os
 
 import pytest
-from tests.support.helpers import slowTest
 
 
 @pytest.fixture(scope="module")
@@ -95,7 +94,7 @@ def test_state_apply(salt_cli, salt_proxy):
         assert value["result"] is True
 
 
-@slowTest
+@pytest.mark.slow_test
 def test_state_highstate(salt_cli, salt_proxy):
     ret = salt_cli.run("state.highstate", minion_tgt=salt_proxy.id)
     for value in ret.json.values():
