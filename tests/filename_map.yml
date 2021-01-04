@@ -214,7 +214,7 @@ salt/runners/venafiapi.py:
   - integration.externalapi.test_venafiapi
 
 salt/serializers/*:
-  - unit.serializers.test_serializers
+  - pytests.unit.serializers.test_serializers
 
 salt/(cli/spm\.py|spm/.+):
   - unit.test_spm
