@@ -463,6 +463,9 @@ class AsyncTCPPubChannel(
         if self._closing:
             return
         self._closing = True
+        if self.event is not None:
+            self.event.destroy()
+            self.event = None
         if hasattr(self, "message_client"):
             self.message_client.close()
 
@@ -1418,11 +1421,16 @@ class PubServer(salt.ext.tornado.tcpserver.TCPServer):
             self.event = salt.utils.event.get_event(
                 "master", opts=self.opts, listen=False
             )
+        else:
+            self.event = None
 
     def close(self):
         if self._closing:
             return
         self._closing = True
+        if self.event is not None:
+            self.event.destroy()
+            self.event = None
 
     # pylint: disable=W1701
     def __del__(self):
