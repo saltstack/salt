@@ -3,7 +3,6 @@ Tests written specifically for the grains.append function.
 """
 
 import logging
-import pprint
 import time
 
 import attr
@@ -105,45 +104,6 @@ def test_grains_append_val_is_list(salt_call_cli, append_grain):
     assert ret.exitcode == 0
     assert ret.json
     assert ret.json == {append_grain.key: [append_grain.value, second_grain]}
-
-
-def test_grains_append_call_twice(salt_call_cli, append_grain):
-    """
-    Tests the return of a grains.append call when the value is already present
-    but also ensure the grain is not listed twice.
-    """
-    # First, add the test grain.
-    ret = salt_call_cli.run("grains.append", append_grain.key, append_grain.value)
-    assert ret.exitcode == 0
-    assert ret.json
-    assert ret.json == {append_grain.key: [append_grain.value]}
-    append_1 = ret.json
-
-    # Call the function again, which results in a string message, as tested in
-    # test_grains_append_val_already_present above.
-    ret = salt_call_cli.run("grains.append", append_grain.key, append_grain.value)
-    assert ret.exitcode == 0
-    assert ret.json
-    assert isinstance(ret.json, str)  # The error message
-    append_2 = ret.json
-
-    # Now make sure the grain doesn't show up twice.
-    ret = salt_call_cli.run("grains.items")
-    assert ret.exitcode == 0
-    assert ret.json
-    count = 0
-    for grain in ret.json:
-        if grain == append_grain.key:
-            count += 1
-
-    # We should only have hit the grain key once.
-    assert_error_msg = (
-        "Count did not match({}!=1) while looking for key '{}'.\n"
-        "First append return:\n{}\nSecond append return:\n{}"
-    ).format(
-        count, append_grain.key, pprint.pformat(append_1), pprint.pformat(append_2),
-    )
-    assert count == 1, assert_error_msg
 
 
 def test_grains_remove_add(
