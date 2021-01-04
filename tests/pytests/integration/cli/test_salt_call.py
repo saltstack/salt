@@ -19,21 +19,23 @@ import salt.utils.files
 import salt.utils.json
 import salt.utils.platform
 import salt.utils.yaml
-from tests.support.helpers import PRE_PYTEST_SKIP, PRE_PYTEST_SKIP_REASON, slowTest
+from tests.support.helpers import PRE_PYTEST_SKIP, PRE_PYTEST_SKIP_REASON
 from tests.support.runtests import RUNTIME_VARS
 
+pytestmark = [
+    pytest.mark.slow_test,
+    pytest.mark.windows_whitelisted,
+]
+
 log = logging.getLogger(__name__)
-pytestmark = pytest.mark.windows_whitelisted
 
 
-@slowTest
 def test_fib(salt_call_cli):
     ret = salt_call_cli.run("test.fib", "3")
     assert ret.exitcode == 0
     assert ret.json[0] == 2
 
 
-@slowTest
 def test_fib_txt_output(salt_call_cli):
     ret = salt_call_cli.run("--output=txt", "test.fib", "3")
     assert ret.exitcode == 0
@@ -44,7 +46,6 @@ def test_fib_txt_output(salt_call_cli):
     )
 
 
-@slowTest
 @pytest.mark.parametrize("indent", [-1, 0, 1])
 def test_json_out_indent(salt_call_cli, indent):
     ret = salt_call_cli.run("--out=json", "--out-indent={}".format(indent), "test.ping")
@@ -60,7 +61,6 @@ def test_json_out_indent(salt_call_cli, indent):
     assert ret.stdout == expected_output
 
 
-@slowTest
 def test_local_sls_call(salt_call_cli):
     fileroot = os.path.join(RUNTIME_VARS.FILES, "file", "base")
     ret = salt_call_cli.run(
@@ -73,7 +73,6 @@ def test_local_sls_call(salt_call_cli):
     assert state_run_dict["changes"]["ret"] == "hello"
 
 
-@slowTest
 def test_local_salt_call(salt_call_cli):
     """
     This tests to make sure that salt-call does not execute the
@@ -94,7 +93,6 @@ def test_local_salt_call(salt_call_cli):
         assert contents.count("foo") == 1, contents
 
 
-@slowTest
 @pytest.mark.skip_on_windows(reason=PRE_PYTEST_SKIP_REASON)
 def test_user_delete_kw_output(salt_call_cli):
     ret = salt_call_cli.run("-d", "user.delete", _timeout=120)
@@ -105,7 +103,6 @@ def test_user_delete_kw_output(salt_call_cli):
     assert expected_output in ret.stdout
 
 
-@slowTest
 def test_salt_documentation_too_many_arguments(salt_call_cli):
     """
     Test to see if passing additional arguments shows an error
@@ -115,7 +112,6 @@ def test_salt_documentation_too_many_arguments(salt_call_cli):
     assert "You can only get documentation for one method at one time" in ret.stderr
 
 
-@slowTest
 def test_issue_6973_state_highstate_exit_code(salt_call_cli):
     """
     If there is no tops/master_tops or state file matches
@@ -134,7 +130,6 @@ def test_issue_6973_state_highstate_exit_code(salt_call_cli):
     assert expected_comment in ret.stdout
 
 
-@slowTest
 @PRE_PYTEST_SKIP
 def test_issue_15074_output_file_append(salt_call_cli):
 
@@ -163,7 +158,6 @@ def test_issue_15074_output_file_append(salt_call_cli):
         assert second_run_output == first_run_output + first_run_output
 
 
-@slowTest
 @PRE_PYTEST_SKIP
 def test_issue_14979_output_file_permissions(salt_call_cli):
     with pytest.helpers.temp_file(name="issue-14979") as output_file:
@@ -202,7 +196,6 @@ def test_issue_14979_output_file_permissions(salt_call_cli):
             assert stat1.st_mode != stat3.st_mode
 
 
-@slowTest
 @pytest.mark.skip_on_windows(reason="This test does not apply on Win")
 def test_42116_cli_pillar_override(salt_call_cli):
     ret = salt_call_cli.run(
@@ -219,7 +212,6 @@ def test_42116_cli_pillar_override(salt_call_cli):
     )
 
 
-@slowTest
 def test_pillar_items_masterless(
     salt_minion, salt_call_cli, base_env_pillar_tree_root_dir
 ):
@@ -260,7 +252,6 @@ def test_pillar_items_masterless(
         assert ret.json["monty"] == "python"
 
 
-@slowTest
 def test_masterless_highstate(salt_call_cli):
     """
     test state.highstate in masterless mode
@@ -273,7 +264,6 @@ def test_masterless_highstate(salt_call_cli):
     assert state_run_dict["__id__"] == destpath
 
 
-@slowTest
 @pytest.mark.skip_on_windows
 def test_syslog_file_not_found(salt_minion, salt_call_cli):
     """
@@ -305,7 +295,6 @@ def test_syslog_file_not_found(salt_minion, salt_call_cli):
             os.chdir(old_cwd)
 
 
-@slowTest
 @PRE_PYTEST_SKIP
 @pytest.mark.skip_on_windows
 def test_return(salt_call_cli, salt_run_cli):
@@ -328,7 +317,6 @@ def test_return(salt_call_cli, salt_run_cli):
     assert ret.json[target] == "returnTOmaster"
 
 
-@slowTest
 def test_exit_status_unknown_argument(salt_call_cli):
     """
     Ensure correct exit status when an unknown argument is passed to salt CLI.
@@ -339,7 +327,6 @@ def test_exit_status_unknown_argument(salt_call_cli):
     assert "no such option: --unknown-argument" in ret.stderr
 
 
-@slowTest
 def test_exit_status_correct_usage(salt_call_cli):
     """
     Ensure correct exit status when salt CLI starts correctly.
@@ -349,7 +336,6 @@ def test_exit_status_correct_usage(salt_call_cli):
     assert ret.exitcode == salt.defaults.exitcodes.EX_OK, ret
 
 
-@slowTest
 def test_context_retcode_salt_call(salt_call_cli):
     """
     Test that a nonzero retcode set in the context dunder will cause the
@@ -381,7 +367,6 @@ def test_context_retcode_salt_call(salt_call_cli):
     assert ret.exitcode == salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR, ret
 
 
-@slowTest
 def test_salt_call_error(salt_call_cli):
     """
     Test that we return the expected retcode when a minion function raises
