@@ -1,19 +1,15 @@
-# -*- coding: utf-8 -*-
 """
 Control Linux Containers via Salt
 
 :depends: lxc execution module
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 import logging
 import os
 import time
 
-# Import Salt libs
 import salt.client
 import salt.key
 import salt.utils.args
@@ -21,9 +17,6 @@ import salt.utils.cloud
 import salt.utils.files
 import salt.utils.stringutils
 import salt.utils.virt
-
-# Import 3rd-party lib
-from salt.ext import six
 from salt.utils.odict import OrderedDict as _OrderedDict
 
 log = logging.getLogger(__name__)
@@ -48,7 +41,7 @@ def _do(name, fun, path=None):
 
     client = salt.client.get_local_client(__opts__["conf_file"])
     cmd_ret = client.cmd_iter(
-        host, "lxc.{0}".format(fun), [name], kwarg={"path": path}, timeout=60
+        host, "lxc.{}".format(fun), [name], kwarg={"path": path}, timeout=60
     )
     data = next(cmd_ret)
     data = data.get(host, {}).get("ret", None)
@@ -73,13 +66,13 @@ def _do_names(names, fun, path=None):
         return False
 
     client = salt.client.get_local_client(__opts__["conf_file"])
-    for host, sub_names in six.iteritems(hosts):
+    for host, sub_names in hosts.items():
         cmds = []
         for name in sub_names:
             cmds.append(
                 client.cmd_iter(
                     host,
-                    "lxc.{0}".format(fun),
+                    "lxc.{}".format(fun),
                     [name],
                     kwarg={"path": path},
                     timeout=60,
@@ -113,7 +106,7 @@ def find_guest(name, quiet=False, path=None):
             "'quiet' argument is being deprecated." " Please migrate to --quiet"
         )
     for data in _list_iter(path=path):
-        host, l = next(six.iteritems(data))
+        host, l = next(iter(data.items()))
         for x in "running", "frozen", "stopped":
             if name in l[x]:
                 if not quiet:
@@ -138,7 +131,7 @@ def find_guests(names, path=None):
     ret = {}
     names = names.split(",")
     for data in _list_iter(path=path):
-        host, stat = next(six.iteritems(data))
+        host, stat = next(iter(data.items()))
         for state in stat:
             for name in stat[state]:
                 if name in names:
@@ -244,7 +237,7 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
         ret["comment"] = "A host must be provided"
         ret["result"] = False
         return ret
-    if isinstance(names, six.string_types):
+    if isinstance(names, str):
         names = names.split(",")
     if not isinstance(names, list):
         ret["comment"] = "Container names are not formed as a list"
@@ -259,15 +252,15 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
     except (TypeError, KeyError):
         pass
     if not alive:
-        ret["comment"] = "Host {0} is not reachable".format(host)
+        ret["comment"] = "Host {} is not reachable".format(host)
         ret["result"] = False
         return ret
 
     log.info("Searching for LXC Hosts")
     data = __salt__["lxc.list"](host, quiet=True, path=path)
-    for host, containers in six.iteritems(data):
+    for host, containers in data.items():
         for name in names:
-            if name in sum(six.itervalues(containers), []):
+            if name in sum(containers.values(), []):
                 log.info(
                     "Container '%s' already exists on host '%s', init "
                     "can be a NO-OP",
@@ -275,7 +268,7 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
                     host,
                 )
     if host not in data:
-        ret["comment"] = "Host '{0}' was not found".format(host)
+        ret["comment"] = "Host '{}' was not found".format(host)
         ret["result"] = False
         return ret
 
@@ -349,7 +342,7 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
                 if not container.get("result", False):
                     error = container
             else:
-                error = "Invalid return for {0}: {1} {2}".format(
+                error = "Invalid return for {}: {} {}".format(
                     container_name, container, sub_ret
                 )
         else:
@@ -396,7 +389,7 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
             time.sleep(1)
             if ping:
                 return "OK"
-            raise Exception("Unresponsive {0}".format(mid_))
+            raise Exception("Unresponsive {}".format(mid_))
 
         ping = salt.utils.cloud.wait_for_fun(testping, timeout=21, mid=mid)
         if ping != "OK":
@@ -457,7 +450,7 @@ def _list_iter(host=None, path=None):
         if not isinstance(container_info, dict):
             continue
         chunk = {}
-        id_ = next(six.iterkeys(container_info))
+        id_ = next(iter(container_info.keys()))
         if host and host != id_:
             continue
         if not isinstance(container_info[id_], dict):

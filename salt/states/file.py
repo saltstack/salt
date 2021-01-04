@@ -289,9 +289,11 @@ import shutil
 import sys
 import time
 import traceback
+import urllib.parse
 from collections import defaultdict
 from collections.abc import Iterable, Mapping
 from datetime import date, datetime  # python3 problem in the making?
+from itertools import zip_longest
 
 import salt.loader
 import salt.payload
@@ -307,8 +309,6 @@ import salt.utils.templates
 import salt.utils.url
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError
-from salt.ext.six.moves import zip_longest
-from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
 from salt.serializers import DeserializationError
 from salt.state import get_accumulator_dir as _get_accumulator_dir
 
@@ -3266,7 +3266,11 @@ def managed(
             log.debug(traceback.format_exc())
             salt.utils.files.remove(tmp_filename)
             if not keep_source:
-                if not sfn and source and _urlparse(source).scheme == "salt":
+                if (
+                    not sfn
+                    and source
+                    and urllib.parse.urlparse(source).scheme == "salt"
+                ):
                     # The file would not have been cached until manage_file was
                     # run, so check again here for a cached copy.
                     sfn = __salt__["cp.is_cached"](source, __env__)
@@ -3343,7 +3347,11 @@ def managed(
             if tmp_filename:
                 salt.utils.files.remove(tmp_filename)
             if not keep_source:
-                if not sfn and source and _urlparse(source).scheme == "salt":
+                if (
+                    not sfn
+                    and source
+                    and urllib.parse.urlparse(source).scheme == "salt"
+                ):
                     # The file would not have been cached until manage_file was
                     # run, so check again here for a cached copy.
                     sfn = __salt__["cp.is_cached"](source, __env__)
@@ -5350,9 +5358,13 @@ def keyvalue(
                 ret, "file.keyvalue can not combine key_values with key and value"
             )
         key_values = {str(key): value}
-    elif type(key_values) is not dict:
+
+    elif not isinstance(key_values, dict) or not key_values:
+        msg = "is not a dictionary"
+        if not key_values:
+            msg = "is empty"
         return _error(
-            ret, "file.keyvalue key and value not supplied and key_values empty"
+            ret, "file.keyvalue key and value not supplied and key_values " + msg,
         )
 
     # try to open the file and only return a comment if ignore_if_missing is
@@ -6946,7 +6958,7 @@ def patch(
         try:
             orig_test = __opts__["test"]
             __opts__["test"] = False
-            sys.modules[__salt__["test.ping"].__module__].__opts__["test"] = False
+            sys.modules[__salt__["file.patch"].__module__].__opts__["test"] = False
             result = managed(
                 patch_file,
                 source=source_match,
@@ -6968,7 +6980,7 @@ def patch(
             log.debug("file.managed: %s", result)
         finally:
             __opts__["test"] = orig_test
-            sys.modules[__salt__["test.ping"].__module__].__opts__["test"] = orig_test
+            sys.modules[__salt__["file.patch"].__module__].__opts__["test"] = orig_test
 
         if not result["result"]:
             log.debug(
@@ -8598,7 +8610,7 @@ def cached(
     ret = {"changes": {}, "comment": "", "name": name, "result": False}
 
     try:
-        parsed = _urlparse(name)
+        parsed = urllib.parse.urlparse(name)
     except Exception:  # pylint: disable=broad-except
         ret["comment"] = "Only URLs or local file paths are valid input"
         return ret
@@ -8807,7 +8819,7 @@ def not_cached(name, saltenv="base"):
     ret = {"changes": {}, "comment": "", "name": name, "result": False}
 
     try:
-        parsed = _urlparse(name)
+        parsed = urllib.parse.urlparse(name)
     except Exception:  # pylint: disable=broad-except
         ret["comment"] = "Only URLs or local file paths are valid input"
         return ret

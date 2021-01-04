@@ -49,7 +49,8 @@ Namespaced tag
 
 """
 
-
+import atexit
+import contextlib
 import datetime
 import fnmatch
 import hashlib
@@ -57,7 +58,6 @@ import logging
 import os
 import time
 from collections.abc import MutableMapping
-from multiprocessing.util import Finalize
 
 import salt.config
 import salt.defaults.exitcodes
@@ -75,8 +75,6 @@ import salt.utils.platform
 import salt.utils.process
 import salt.utils.stringutils
 import salt.utils.zeromq
-from salt.ext import six
-from salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)
 
@@ -747,7 +745,7 @@ class SaltEvent:
             dump_data,
             self.opts["max_event_size"],
             is_msgpacked=True,
-            use_bin_type=six.PY3,
+            use_bin_type=True,
         )
         log.debug("Sending event: tag = %s; data = %s", tag, data)
         event = b"".join(
@@ -1091,6 +1089,9 @@ class EventPublisher(salt.utils.process.SignalHandlingProcess):
         self.opts = salt.config.DEFAULT_MASTER_OPTS.copy()
         self.opts.update(opts)
         self._closing = False
+        self.io_loop = None
+        self.puller = None
+        self.publisher = None
 
     # __setstate__ and __getstate__ are only used on Windows.
     # We do this so that __init__ will be invoked on Windows in the child
@@ -1154,11 +1155,13 @@ class EventPublisher(salt.utils.process.SignalHandlingProcess):
                         0o666,
                     )
 
-            # Make sure the IO loop and respective sockets are closed and
-            # destroyed
-            Finalize(self, self.close, exitpriority=15)
-
-            self.io_loop.start()
+            atexit.register(self.close)
+            with contextlib.suppress(KeyboardInterrupt):
+                try:
+                    self.io_loop.start()
+                finally:
+                    # Make sure the IO loop and respective sockets are closed and destroyed
+                    self.close()
 
     def handle_publish(self, package, _):
         """
@@ -1176,12 +1179,16 @@ class EventPublisher(salt.utils.process.SignalHandlingProcess):
         if self._closing:
             return
         self._closing = True
-        if hasattr(self, "publisher"):
+        atexit.unregister(self.close)
+        if self.publisher is not None:
             self.publisher.close()
-        if hasattr(self, "puller"):
+            self.publisher = None
+        if self.puller is not None:
             self.puller.close()
-        if hasattr(self, "io_loop"):
+            self.puller = None
+        if self.io_loop is not None:
             self.io_loop.close()
+            self.io_loop = None
 
     def _handle_signals(self, signum, sigframe):
         self.close()

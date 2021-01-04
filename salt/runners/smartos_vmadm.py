@@ -1,16 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 Runner for SmartOS minions control vmadm
 """
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import salt libs
 import salt.client
 from salt.exceptions import SaltClientError
-
-# Import 3rd party libs
-from salt.ext import six
 from salt.utils.odict import OrderedDict
 
 # Function aliases
@@ -53,7 +46,7 @@ def _action(action="get", search=None, one=True, force=False):
         ):
             if not cn:
                 continue
-            node = next(six.iterkeys(cn))
+            node = next(iter(cn.keys()))
             if (
                 not isinstance(cn[node], dict)
                 or "ret" not in cn[node]
@@ -107,7 +100,7 @@ def _action(action="get", search=None, one=True, force=False):
     ## multiple allowed?
     if one and len(matched_vms) > 1:
         return {
-            "Error": "Matched {0} vms, only one allowed!".format(len(matched_vms)),
+            "Error": "Matched {} vms, only one allowed!".format(len(matched_vms)),
             "Matches": matched_vms,
         }
 
@@ -118,7 +111,7 @@ def _action(action="get", search=None, one=True, force=False):
             vmadm_args = {"key": "uuid", "vm": vm}
             try:
                 for vmadm_res in client.cmd_iter(
-                    vms[vm]["node"], "vmadm.{0}".format(action), kwarg=vmadm_args
+                    vms[vm]["node"], "vmadm.{}".format(action), kwarg=vmadm_args
                 ):
                     if not vmadm_res:
                         continue
@@ -160,7 +153,7 @@ def nodes(verbose=False):
         ):
             if not cn:
                 continue
-            node = next(six.iterkeys(cn))
+            node = next(iter(cn.keys()))
             if (
                 not isinstance(cn[node], dict)
                 or "ret" not in cn[node]
@@ -193,7 +186,7 @@ def nodes(verbose=False):
             else:
                 ret.append(node)
     except SaltClientError as client_error:
-        return "{0}".format(client_error)
+        return "{}".format(client_error)
 
     if not verbose:
         ret.sort()
@@ -232,7 +225,7 @@ def list_vms(search=None, verbose=False):
         ):
             if not cn:
                 continue
-            node = next(six.iterkeys(cn))
+            node = next(iter(cn.keys()))
             if (
                 not isinstance(cn[node], dict)
                 or "ret" not in cn[node]
@@ -250,18 +243,18 @@ def list_vms(search=None, verbose=False):
                     ret[vm]["resources"] = OrderedDict()
                     ret[vm]["resources"]["memory"] = vmcfg["ram"]
                     if vmcfg["type"] == "KVM":
-                        ret[vm]["resources"]["cpu"] = "{0:.2f}".format(
+                        ret[vm]["resources"]["cpu"] = "{:.2f}".format(
                             int(vmcfg["vcpus"])
                         )
                     else:
                         if vmcfg["cpu_cap"] != "":
-                            ret[vm]["resources"]["cpu"] = "{0:.2f}".format(
+                            ret[vm]["resources"]["cpu"] = "{:.2f}".format(
                                 int(vmcfg["cpu_cap"]) / 100
                             )
                 else:
                     ret.append(vm)
     except SaltClientError as client_error:
-        return "{0}".format(client_error)
+        return "{}".format(client_error)
 
     if not verbose:
         ret = sorted(ret)

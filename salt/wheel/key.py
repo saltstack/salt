@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Wheel system wrapper for the Salt key system to be used in interactions with
 the Salt Master programmatically.
@@ -27,7 +26,6 @@ The wheel key functions can also be called via a ``salt`` command at the CLI
 using the :mod:`saltutil execution module <salt.modules.saltutil>`.
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import hashlib
 import logging
@@ -379,7 +377,7 @@ def gen(id_=None, keysize=2048):
         id_ = clean.filename(id_)
     ret = {"priv": "", "pub": ""}
     priv = salt.crypt.gen_keys(__opts__["pki_dir"], id_, keysize)
-    pub = "{0}.pub".format(priv[: priv.rindex(".")])
+    pub = "{}.pub".format(priv[: priv.rindex(".")])
     with salt.utils.files.fopen(priv) as fp_:
         ret["priv"] = salt.utils.stringutils.to_unicode(fp_.read())
     with salt.utils.files.fopen(pub) as fp_:

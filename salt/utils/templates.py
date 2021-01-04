@@ -207,7 +207,7 @@ def generate_sls_context(tmplpath, sls):
     """
     if not features.get("enable_slsvars_fixes", False):
         return _generate_sls_context_legacy(tmplpath, sls)
-    _generate_sls_context(tmplpath, sls)
+    return _generate_sls_context(tmplpath, sls)
 
 
 def wrap_tmpl_func(render_str):

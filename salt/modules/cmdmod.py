@@ -651,7 +651,11 @@ def _run(
         # stdin/stdout/stderr
         if new_kwargs["shell"] is True:
             new_kwargs["executable"] = shell
-        new_kwargs["close_fds"] = True
+        if salt.utils.platform.is_freebsd() and sys.version_info < (3, 9):
+            # https://bugs.python.org/issue38061
+            new_kwargs["close_fds"] = False
+        else:
+            new_kwargs["close_fds"] = True
 
     if not os.path.isabs(cwd) or not os.path.isdir(cwd):
         raise CommandExecutionError(
