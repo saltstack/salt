@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 .. _saltify-module:
 
@@ -17,22 +16,15 @@ files as described in the
 :ref:`Getting Started with Saltify <getting-started-with-saltify>` documentation.
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import time
 
 import salt.client
 import salt.config as config
-import salt.ext.six as six
-
-# Import salt libs
 import salt.utils.cloud
 from salt._compat import ipaddress
 from salt.exceptions import SaltCloudException, SaltCloudSystemExit
 
-# Get logging started
 log = logging.getLogger(__name__)
 
 try:
@@ -295,7 +287,7 @@ def create(vm_):
             else:
                 log.info("sending wake-on-lan to %s using node %s", wol_mac, wol_host)
 
-                if isinstance(wol_mac, six.string_types):
+                if isinstance(wol_mac, str):
                     wol_mac = [wol_mac]  # a smart user may have passed more params
                 ret = local.cmd(wol_host, "network.wol", wol_mac)
                 log.info("network.wol returned value %s", ret)
@@ -461,7 +453,7 @@ def destroy(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroying instance",
-        "salt/cloud/{0}/destroying".format(name),
+        "salt/cloud/{}/destroying".format(name),
         args={"name": name},
         sock_dir=opts["sock_dir"],
         transport=opts["transport"],
@@ -505,13 +497,13 @@ def destroy(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroyed instance",
-        "salt/cloud/{0}/destroyed".format(name),
+        "salt/cloud/{}/destroyed".format(name),
         args={"name": name},
         sock_dir=opts["sock_dir"],
         transport=opts["transport"],
     )
 
-    return {"Destroyed": "{0} was destroyed.".format(name)}
+    return {"Destroyed": "{} was destroyed.".format(name)}
 
 
 def reboot(name, call=None):

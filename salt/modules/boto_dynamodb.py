@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Connection module for Amazon DynamoDB
 
@@ -44,18 +43,12 @@ Connection module for Amazon DynamoDB
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import time
 
 import salt.utils.versions
 from salt.exceptions import SaltInvocationError
-
-# Import third party libs
-from salt.ext import six
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 logger = logging.getLogger(__name__)
 logging.getLogger("boto").setLevel(logging.INFO)
@@ -296,9 +289,9 @@ def extract_index(index_data, global_index=False):
     parsed_data = {}
     keys = []
 
-    for key, value in six.iteritems(index_data):
+    for key, value in index_data.items():
         for item in value:
-            for field, data in six.iteritems(item):
+            for field, data in item.items():
                 if field == "hash_key":
                     parsed_data["hash_key"] = data
                 elif field == "hash_key_data_type":

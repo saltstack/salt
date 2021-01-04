@@ -13,7 +13,6 @@ import pytest
 import salt.proxy.dummy
 import salt.utils.path
 import salt.utils.platform
-from tests.support.helpers import slowTest
 
 log = logging.getLogger(__name__)
 
@@ -31,7 +30,7 @@ def salt_call_cli(salt_proxy):
     return salt_proxy.get_salt_call_cli(default_timeout=120)
 
 
-@slowTest
+@pytest.mark.slow_test
 def test_can_it_ping(salt_call_cli):
     """
     Ensure the proxy can ping
@@ -41,7 +40,7 @@ def test_can_it_ping(salt_call_cli):
     assert ret.json is True
 
 
-@slowTest
+@pytest.mark.slow_test
 def test_list_pkgs(salt_call_cli):
     """
     Package test 1, really just tests that the virtual function capability
@@ -53,7 +52,7 @@ def test_list_pkgs(salt_call_cli):
         assert package_name in ret.json
 
 
-@slowTest
+@pytest.mark.slow_test
 def test_upgrade(salt_call_cli):
     ret = salt_call_cli.run("pkg.upgrade")
     assert ret.exitcode == 0, ret
@@ -68,14 +67,14 @@ def service_name():
     return random.choice(list(salt.proxy.dummy._initial_state()["services"]))
 
 
-@slowTest
+@pytest.mark.slow_test
 def test_service_list(salt_call_cli, service_name):
     ret = salt_call_cli.run("service.list")
     assert ret.exitcode == 0, ret
     assert service_name in ret.json
 
 
-@slowTest
+@pytest.mark.slow_test
 def test_service_start(salt_call_cli):
     ret = salt_call_cli.run("service.start", "samba")
     assert ret.exitcode == 0, ret
@@ -84,14 +83,14 @@ def test_service_start(salt_call_cli):
     assert ret.json is True
 
 
-@slowTest
+@pytest.mark.slow_test
 def test_service_get_all(salt_call_cli, service_name):
     ret = salt_call_cli.run("service.get_all")
     assert ret.exitcode == 0, ret
     assert service_name in ret.json
 
 
-@slowTest
+@pytest.mark.slow_test
 def test_grains_items(salt_call_cli):
     ret = salt_call_cli.run("grains.items")
     assert ret.exitcode == 0, ret

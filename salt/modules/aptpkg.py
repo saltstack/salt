@@ -10,7 +10,6 @@ Support for APT (Advanced Packaging Tool)
     For repository management, the ``python-apt`` package must be installed.
 """
 
-
 import copy
 import datetime
 import fnmatch

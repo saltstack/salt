@@ -16,6 +16,11 @@ def xml_doc():
             <vcpus>
               <vcpu enabled="yes" id="1"/>
             </vcpus>
+            <memtune>
+              <hugepages>
+                <page size="128"/>
+              </hugepages>
+            </memtune>
         </domain>
     """
     )
@@ -32,6 +37,22 @@ def test_change_xml_text(xml_doc):
 def test_change_xml_text_nochange(xml_doc):
     ret = xml.change_xml(
         xml_doc, {"name": "test01"}, [{"path": "name", "xpath": "name"}]
+    )
+    assert not ret
+
+
+def test_change_xml_equals_nochange(xml_doc):
+    ret = xml.change_xml(
+        xml_doc,
+        {"mem": 1023},
+        [
+            {
+                "path": "mem",
+                "xpath": "memory",
+                "get": lambda n: int(n.text),
+                "equals": lambda o, n: abs(o - n) <= 1,
+            }
+        ],
     )
     assert not ret
 
@@ -167,3 +188,23 @@ def test_change_xml_template_remove(xml_doc):
     )
     assert ret
     assert xml_doc.find("vcpus") is None
+
+
+def test_change_xml_template_list(xml_doc):
+    ret = xml.change_xml(
+        xml_doc,
+        {"memtune": {"hugepages": [{"size": "1024"}, {"size": "512"}]}},
+        [
+            {
+                "path": "memtune:hugepages:{id}:size",
+                "xpath": "memtune/hugepages/page[$id]",
+                "get": lambda n: n.get("size"),
+                "set": lambda n, v: n.set("size", v),
+                "del": xml.del_attribute("size"),
+            },
+        ],
+    )
+    assert ret
+    assert ["1024", "512"] == [
+        n.get("size") for n in xml_doc.findall("memtune/hugepages/page")
+    ]

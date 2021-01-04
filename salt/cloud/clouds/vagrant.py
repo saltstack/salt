@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Vagrant Cloud Driver
 ====================
@@ -15,22 +14,16 @@ files as described in the
 
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import os
 import tempfile
 
 import salt.client
 import salt.config as config
-
-# Import salt libs
 import salt.utils.cloud
 from salt._compat import ipaddress
 from salt.exceptions import SaltCloudException, SaltCloudSystemExit, SaltInvocationError
 
-# Get logging started
 log = logging.getLogger(__name__)
 
 
@@ -297,7 +290,7 @@ def destroy(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroying instance",
-        "salt/cloud/{0}/destroying".format(name),
+        "salt/cloud/{}/destroying".format(name),
         args={"name": name},
         sock_dir=opts["sock_dir"],
         transport=opts["transport"],
@@ -314,7 +307,7 @@ def destroy(name, call=None):
             __utils__["cloud.fire_event"](
                 "event",
                 "destroyed instance",
-                "salt/cloud/{0}/destroyed".format(name),
+                "salt/cloud/{}/destroyed".format(name),
                 args={"name": name},
                 sock_dir=opts["sock_dir"],
                 transport=opts["transport"],
@@ -325,7 +318,7 @@ def destroy(name, call=None):
                     name, __active_provider_name__.split(":")[0], opts
                 )
 
-            return {"Destroyed": "{0} was destroyed.".format(name)}
+            return {"Destroyed": "{} was destroyed.".format(name)}
         else:
             return {"Error": "Error destroying {}".format(name)}
     else:

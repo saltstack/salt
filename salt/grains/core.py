@@ -17,6 +17,7 @@ import os
 import platform
 import re
 import socket
+import subprocess
 import sys
 import time
 import uuid
@@ -68,10 +69,11 @@ if salt.utils.platform.is_windows():
     # attempt to import the python wmi module
     # the Windows minion uses WMI for some of its grains
     try:
-        import wmi  # pylint: disable=import-error
-        import salt.utils.winapi
         import win32api
+        import wmi  # pylint: disable=import-error
+
         import salt.utils.win_reg
+        import salt.utils.winapi
 
         HAS_WMI = True
     except ImportError:
@@ -98,6 +100,24 @@ HAS_UNAME = hasattr(os, "uname")
 # Possible value for h_errno defined in netdb.h
 HOST_NOT_FOUND = 1
 NO_DATA = 4
+
+
+def _parse_junos_showver(txt):
+    showver = {}
+    for l in txt.splitlines():
+        decoded_line = l.decode("utf-8")
+        if decoded_line.startswith("Model"):
+            showver["model"] = decoded_line.split(" ")[1]
+        if decoded_line.startswith("Junos"):
+            showver["osrelease"] = decoded_line.split(" ")[1]
+            showver["osmajorrelease"] = decoded_line.split(".")[0]
+            showver["osrelease_info"] = decoded_line.split(".")
+        if decoded_line.startswith("JUNOS OS Kernel"):
+            showver["kernelversion"] = decoded_line
+            relno = re.search(r"\[(.*)\]", decoded_line)
+            if relno:
+                showver["kernelrelease"] = relno.group(1)
+    return showver
 
 
 def _windows_cpudata():
@@ -1511,6 +1531,7 @@ _OS_NAME_MAP = {
     "archarm": "Arch ARM",
     "arch": "Arch",
     "debian": "Debian",
+    "Junos": "Junos",
     "raspbian": "Raspbian",
     "fedoraremi": "Fedora",
     "chapeau": "Chapeau",
@@ -1757,7 +1778,18 @@ def os_data():
     ) = platform.uname()
     # pylint: enable=unpacking-non-sequence
 
-    if salt.utils.platform.is_proxy():
+    if salt.utils.platform.is_junos():
+        grains["kernel"] = "Junos"
+        grains["osfullname"] = "Junos"
+        grains["os"] = "Junos"
+        grains["os_family"] = "FreeBSD"
+        showver = _parse_junos_showver(
+            subprocess.run(
+                ["/usr/sbin/cli", "show", "version"], stdout=subprocess.PIPE, check=True
+            ).stdout
+        )
+        grains.update(showver)
+    elif salt.utils.platform.is_proxy():
         grains["kernel"] = "proxy"
         grains["kernelrelease"] = "proxy"
         grains["kernelversion"] = "proxy"
