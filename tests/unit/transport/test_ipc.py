@@ -1,17 +1,14 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Mike Place <mp@saltstack.com>
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import errno
 import logging
 import os
-import socket
 import threading
 
+import pytest
 import salt.config
 import salt.exceptions
 import salt.ext.tornado.gen
@@ -21,13 +18,15 @@ import salt.transport.client
 import salt.transport.ipc
 import salt.transport.server
 import salt.utils.platform
-from salt.ext import six
-from salt.ext.six.moves import range
 from tests.support.mock import MagicMock
-
-# Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
+
+pytestmark = [
+    pytest.mark.skip_on_darwin,
+    pytest.mark.skip_on_freebsd,
+    pytest.mark.skip_on_windows,
+]
 
 log = logging.getLogger(__name__)
 
@@ -39,7 +38,7 @@ class BaseIPCReqCase(salt.ext.tornado.testing.AsyncTestCase):
     """
 
     def setUp(self):
-        super(BaseIPCReqCase, self).setUp()
+        super().setUp()
         # self._start_handlers = dict(self.io_loop._handlers)
         self.socket_path = os.path.join(RUNTIME_VARS.TMP, "ipc_test.ipc")
 
@@ -53,16 +52,16 @@ class BaseIPCReqCase(salt.ext.tornado.testing.AsyncTestCase):
         self.payloads = []
 
     def tearDown(self):
-        super(BaseIPCReqCase, self).tearDown()
+        super().tearDown()
         # failures = []
         try:
             self.server_channel.close()
-        except socket.error as exc:
+        except OSError as exc:
             if exc.errno != errno.EBADF:
                 # If its not a bad file descriptor error, raise
                 raise
         os.unlink(self.socket_path)
-        # for k, v in six.iteritems(self.io_loop._handlers):
+        # for k, v in self.io_loop._handlers.items():
         #    if self._start_handlers.get(k) != v:
         #        failures.append((k, v))
         # if len(failures) > 0:
@@ -95,15 +94,15 @@ class IPCMessageClient(BaseIPCReqCase):
         return self.channel
 
     def setUp(self):
-        super(IPCMessageClient, self).setUp()
+        super().setUp()
         self.channel = self._get_channel()
 
     def tearDown(self):
-        super(IPCMessageClient, self).tearDown()
+        super().tearDown()
         try:
             # Make sure we close no matter what we've done in the tests
             del self.channel
-        except socket.error as exc:
+        except OSError as exc:
             if exc.errno != errno.EBADF:
                 # If its not a bad file descriptor error, raise
                 raise
@@ -133,7 +132,7 @@ class IPCMessageClient(BaseIPCReqCase):
         self.server_channel.stream_handler = MagicMock()
 
         for i in range(0, 1000):
-            msgs.append("test_many_send_{0}".format(i))
+            msgs.append("test_many_send_{}".format(i))
 
         for i in msgs:
             self.channel.send(i)
@@ -142,7 +141,7 @@ class IPCMessageClient(BaseIPCReqCase):
         self.assertEqual(self.payloads[:-1], msgs)
 
     def test_very_big_message(self):
-        long_str = "".join([six.text_type(num) for num in range(10 ** 5)])
+        long_str = "".join([str(num) for num in range(10 ** 5)])
         msg = {"long_str": long_str, "stop": True}
         self.channel.send(msg)
         self.wait()
@@ -179,7 +178,7 @@ class IPCMessagePubSubCase(salt.ext.tornado.testing.AsyncTestCase):
     """
 
     def setUp(self):
-        super(IPCMessagePubSubCase, self).setUp()
+        super().setUp()
         self.opts = {"ipc_write_buffer": 0}
         self.socket_path = os.path.join(RUNTIME_VARS.TMP, "ipc_test.ipc")
         self.pub_channel = self._get_pub_channel()
@@ -201,16 +200,16 @@ class IPCMessagePubSubCase(salt.ext.tornado.testing.AsyncTestCase):
         return sub_channel
 
     def tearDown(self):
-        super(IPCMessagePubSubCase, self).tearDown()
+        super().tearDown()
         try:
             self.pub_channel.close()
-        except socket.error as exc:
+        except OSError as exc:
             if exc.errno != errno.EBADF:
                 # If its not a bad file descriptor error, raise
                 raise
         try:
             self.sub_channel.close()
-        except socket.error as exc:
+        except OSError as exc:
             if exc.errno != errno.EBADF:
                 # If its not a bad file descriptor error, raise
                 raise

@@ -1,8 +1,3 @@
-# coding: utf-8
-
-# Import Python libs
-from __future__ import absolute_import
-
 import os
 import shutil
 import tempfile
@@ -13,8 +8,6 @@ import salt.utils.files
 from tests.support.helpers import destructiveTest
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, patch
-
-# Import Salt Testing libs
 from tests.support.unit import TestCase
 
 _F1 = {

@@ -10,7 +10,6 @@ import salt.utils.platform
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
     destructiveTest,
-    requires_salt_modules,
     requires_salt_states,
     requires_system_grains,
     runs_on,
@@ -28,17 +27,12 @@ class PkgrepoTest(ModuleCase, SaltReturnAssertsMixin):
     pkgrepo state tests
     """
 
-    @requires_salt_modules("pkgrepo.managed")
+    @requires_salt_states("pkgrepo.managed")
     @requires_system_grains
     def test_pkgrepo_01_managed(self, grains):
         """
         Test adding a repo
         """
-        if grains["os"] == "Ubuntu" and grains["osrelease_info"] >= (15, 10):
-            self.skipTest(
-                "The PPA used for this test does not exist for Ubuntu Wily"
-                " (15.10) and later."
-            )
 
         if grains["os_family"] == "Debian":
             try:
@@ -53,17 +47,12 @@ class PkgrepoTest(ModuleCase, SaltReturnAssertsMixin):
         for state_id, state_result in ret.items():
             self.assertSaltTrueReturn(dict([(state_id, state_result)]))
 
-    @requires_salt_modules("pkgrepo.absent")
+    @requires_salt_states("pkgrepo.absent")
     @requires_system_grains
     def test_pkgrepo_02_absent(self, grains):
         """
         Test removing the repo from the above test
         """
-        if grains["os"] == "Ubuntu" and grains["osrelease_info"] >= (15, 10):
-            self.skipTest(
-                "The PPA used for this test does not exist for Ubuntu Wily"
-                " (15.10) and later."
-            )
 
         ret = self.run_function("state.sls", mods="pkgrepo.absent", timeout=120)
         # If the below assert fails then no states were run, and the SLS in

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module for managing the LXD daemon and its containers.
 
@@ -32,24 +31,16 @@ several functions to help manage it and its containers.
 :platform: Linux
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Set up logging
 import logging
 import os
 from datetime import datetime
 
-import salt.ext.six as six
-
-# Import salt libs
 import salt.utils.decorators.path
 import salt.utils.files
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.ext.six.moves import map, zip
 from salt.utils.versions import LooseVersion
 
-# Import 3rd-party libs
 try:
     import pylxd
 
@@ -96,8 +87,8 @@ def __virtual__():
                 False,
                 (
                     "The lxd execution module cannot be loaded:"
-                    ' pylxd "{0}" is not supported,'
-                    ' you need at least pylxd "{1}"'
+                    ' pylxd "{}" is not supported,'
+                    ' you need at least pylxd "{}"'
                 ).format(pylxd_version(), _pylxd_minimal_version),
             )
 
@@ -193,31 +184,31 @@ def init(
         salt '*' lxd.init
     """
 
-    cmd = ("lxd init --auto" ' --storage-backend="{0}"').format(storage_backend)
+    cmd = ("lxd init --auto" ' --storage-backend="{}"').format(storage_backend)
 
     if trust_password is not None:
-        cmd = cmd + ' --trust-password="{0}"'.format(trust_password)
+        cmd = cmd + ' --trust-password="{}"'.format(trust_password)
 
     if network_address is not None:
-        cmd = cmd + ' --network-address="{0}"'.format(network_address)
+        cmd = cmd + ' --network-address="{}"'.format(network_address)
 
     if network_port is not None:
-        cmd = cmd + ' --network-port="{0}"'.format(network_port)
+        cmd = cmd + ' --network-port="{}"'.format(network_port)
 
     if storage_create_device is not None:
-        cmd = cmd + ' --storage-create-device="{0}"'.format(storage_create_device)
+        cmd = cmd + ' --storage-create-device="{}"'.format(storage_create_device)
 
     if storage_create_loop is not None:
-        cmd = cmd + ' --storage-create-loop="{0}"'.format(storage_create_loop)
+        cmd = cmd + ' --storage-create-loop="{}"'.format(storage_create_loop)
 
     if storage_pool is not None:
-        cmd = cmd + ' --storage-pool="{0}"'.format(storage_pool)
+        cmd = cmd + ' --storage-pool="{}"'.format(storage_pool)
 
     try:
         output = __salt__["cmd.run"](cmd)
     except ValueError as e:
         raise CommandExecutionError(
-            "Failed to call: '{0}', error was: {1}".format(cmd, six.text_type(e)),
+            "Failed to call: '{}', error was: {}".format(cmd, str(e)),
         )
 
     if "error:" in output:
@@ -248,13 +239,13 @@ def config_set(key, value):
         salt '*' lxd.config_set core.trust_password blah
 
     """
-    cmd = 'lxc config set "{0}" "{1}"'.format(key, value,)
+    cmd = 'lxc config set "{}" "{}"'.format(key, value,)
 
     output = __salt__["cmd.run"](cmd)
     if "error:" in output:
         raise CommandExecutionError(output[output.index("error:") + 7 :],)
 
-    return ('Config value "{0}" successfully set.'.format(key),)
+    return ('Config value "{}" successfully set.'.format(key),)
 
 
 @salt.utils.decorators.path.which("lxd")
@@ -273,7 +264,7 @@ def config_get(key):
         salt '*' lxd.config_get core.https_address
     """
 
-    cmd = 'lxc config get "{0}"'.format(key)
+    cmd = 'lxc config get "{}"'.format(key)
 
     output = __salt__["cmd.run"](cmd)
     if "error:" in output:
@@ -320,14 +311,7 @@ def pylxd_client_get(remote_addr=None, cert=None, key=None, verify_cert=True):
 
     """
 
-    pool_key = "|".join(
-        (
-            six.text_type(remote_addr),
-            six.text_type(cert),
-            six.text_type(key),
-            six.text_type(verify_cert),
-        )
-    )
+    pool_key = "|".join((str(remote_addr), str(cert), str(key), str(verify_cert),))
 
     if pool_key in _connection_pool:
         log.debug('Returning the client "%s" from our connection pool', remote_addr)
@@ -343,10 +327,7 @@ def pylxd_client_get(remote_addr=None, cert=None, key=None, verify_cert=True):
             else:
                 if cert is None or key is None:
                     raise SaltInvocationError(
-                        (
-                            "You have to give a Cert and "
-                            "Key file for remote endpoints."
-                        )
+                        "You have to give a Cert and Key file for remote endpoints."
                     )
 
                 cert = os.path.expanduser(cert)
@@ -355,7 +336,7 @@ def pylxd_client_get(remote_addr=None, cert=None, key=None, verify_cert=True):
                 if not os.path.isfile(cert):
                     raise SaltInvocationError(
                         (
-                            'You have given an invalid cert path: "{0}", '
+                            'You have given an invalid cert path: "{}", '
                             "the file does not exists or is not a file."
                         ).format(cert)
                     )
@@ -363,7 +344,7 @@ def pylxd_client_get(remote_addr=None, cert=None, key=None, verify_cert=True):
                 if not os.path.isfile(key):
                     raise SaltInvocationError(
                         (
-                            'You have given an invalid key path: "{0}", '
+                            'You have given an invalid key path: "{}", '
                             "the file does not exists or is not a file."
                         ).format(key)
                     )
@@ -380,15 +361,15 @@ def pylxd_client_get(remote_addr=None, cert=None, key=None, verify_cert=True):
                     endpoint=remote_addr, cert=(cert, key,), verify=verify_cert
                 )
     except pylxd.exceptions.ClientConnectionFailed:
-        raise CommandExecutionError("Failed to connect to '{0}'".format(remote_addr))
+        raise CommandExecutionError("Failed to connect to '{}'".format(remote_addr))
 
     except TypeError as e:
         # Happens when the verification failed.
         raise CommandExecutionError(
             (
-                'Failed to connect to "{0}",'
-                " looks like the SSL verification failed, error was: {1}"
-            ).format(remote_addr, six.text_type(e))
+                'Failed to connect to "{}",'
+                " looks like the SSL verification failed, error was: {}"
+            ).format(remote_addr, str(e))
         )
 
     _connection_pool[pool_key] = client
@@ -408,7 +389,7 @@ def pylxd_save_object(obj):
     try:
         obj.save()
     except pylxd.exceptions.LXDAPIException as e:
-        raise CommandExecutionError(six.text_type(e))
+        raise CommandExecutionError(str(e))
 
     return True
 
@@ -464,7 +445,7 @@ def authenticate(remote_addr, password, cert, key, verify_cert=True):
         client.authenticate(password)
     except pylxd.exceptions.LXDAPIException as e:
         # Wrong password
-        raise CommandExecutionError(six.text_type(e))
+        raise CommandExecutionError(str(e))
 
     return client.trusted
 
@@ -659,17 +640,17 @@ def container_create(
 
     client = pylxd_client_get(remote_addr, cert, key, verify_cert)
 
-    if not isinstance(profiles, (list, tuple, set,)):
+    if not isinstance(profiles, (list, tuple, set)):
         raise SaltInvocationError("'profiles' must be formatted as list/tuple/set.")
 
     if architecture not in _architectures:
         raise SaltInvocationError(
-            ("Unknown architecture '{0}' " "given for the container '{1}'").format(
+            "Unknown architecture '{}' given for the container '{}'".format(
                 architecture, name
             )
         )
 
-    if isinstance(source, six.string_types):
+    if isinstance(source, str):
         source = {"type": "image", "alias": source}
 
     config, devices = normalize_input_values(config, devices)
@@ -687,14 +668,14 @@ def container_create(
             wait=wait,
         )
     except pylxd.exceptions.LXDAPIException as e:
-        raise CommandExecutionError(six.text_type(e))
+        raise CommandExecutionError(str(e))
 
     if not wait:
         return container.json()["operation"]
 
     # Add devices if not wait and devices have been given.
     if devices:
-        for dn, dargs in six.iteritems(devices):
+        for dn, dargs in devices.items():
             container_device_add(name, dn, **dargs)
 
     if _raw:
@@ -750,7 +731,7 @@ def container_get(
         try:
             containers = [client.containers.get(name)]
         except pylxd.exceptions.LXDAPIException:
-            raise SaltInvocationError("Container '{0}' not found".format(name))
+            raise SaltInvocationError("Container '{}' not found".format(name))
         if _raw:
             return containers[0]
 
@@ -838,7 +819,7 @@ def container_rename(
 
     if container.status_code == CONTAINER_STATUS_RUNNING:
         raise SaltInvocationError(
-            "Can't rename the running container '{0}'.".format(name)
+            "Can't rename the running container '{}'.".format(name)
         )
 
     container.rename(newname, wait=True)
@@ -882,7 +863,7 @@ def container_state(name=None, remote_addr=None, cert=None, key=None, verify_cer
         try:
             containers = [client.containers.get(name)]
         except pylxd.exceptions.LXDAPIException:
-            raise SaltInvocationError("Container '{0}' not found".format(name))
+            raise SaltInvocationError("Container '{}' not found".format(name))
 
     states = []
     for container in containers:
@@ -894,13 +875,11 @@ def container_state(name=None, remote_addr=None, cert=None, key=None, verify_cer
                 [
                     (
                         container.name,
-                        dict(
-                            [
-                                (k, getattr(state, k))
-                                for k in dir(state)
-                                if not k.startswith("_")
-                            ]
-                        ),
+                        {
+                            k: getattr(state, k)
+                            for k in dir(state)
+                            if not k.startswith("_")
+                        },
                     )
                 ]
             )
@@ -1197,7 +1176,7 @@ def container_migrate(
         dest_container.profiles = container.profiles
         dest_container.save()
     except pylxd.exceptions.LXDAPIException as e:
-        raise CommandExecutionError(six.text_type(e))
+        raise CommandExecutionError(str(e))
 
     # Remove the source container
     container.delete(wait=True)
@@ -1570,9 +1549,9 @@ def container_file_put(
     # Fix mode. Salt commandline doesn't use octals, so 0600 will be
     # the decimal integer 600 (and not the octal 0600). So, it it's
     # and integer, handle it as if it where a octal representation.
-    mode = six.text_type(mode)
+    mode = str(mode)
     if not mode.startswith("0"):
-        mode = "0{0}".format(mode)
+        mode = "0{}".format(mode)
 
     container = container_get(name, remote_addr, cert, key, verify_cert, _raw=True)
 
@@ -1582,7 +1561,7 @@ def container_file_put(
         if src.find("://") >= 0:
             cached_file = __salt__["cp.cache_file"](src, saltenv=saltenv)
             if not cached_file:
-                raise SaltInvocationError("File '{0}' not found".format(src))
+                raise SaltInvocationError("File '{}' not found".format(src))
             if not os.path.isabs(cached_file):
                 raise SaltInvocationError("File path must be absolute.")
             src = cached_file
@@ -1593,14 +1572,11 @@ def container_file_put(
         src = os.path.sep
 
     if not os.path.exists(src):
-        raise CommandExecutionError("No such file or directory '{0}'".format(src))
+        raise CommandExecutionError("No such file or directory '{}'".format(src))
 
     if os.path.isdir(src) and not recursive:
         raise SaltInvocationError(
-            (
-                "Cannot copy overwriting a directory "
-                "without recursive flag set to true!"
-            )
+            "Cannot copy overwriting a directory without recursive flag set to true!"
         )
 
     try:
@@ -1609,7 +1585,7 @@ def container_file_put(
     except pylxd.exceptions.NotFound:
         pass
     except pylxd.exceptions.LXDAPIException as why:
-        if six.text_type(why).find("Is a directory") >= 0:
+        if str(why).find("Is a directory") >= 0:
             dst_is_directory = True
 
     if os.path.isfile(src):
@@ -1623,7 +1599,7 @@ def container_file_put(
                 except pylxd.exceptions.NotFound:
                     found = False
                 except pylxd.exceptions.LXDAPIException as why:
-                    if six.text_type(why).find("not found") >= 0:
+                    if str(why).find("not found") >= 0:
                         # Old version of pylxd
                         found = False
                     else:
@@ -1663,7 +1639,7 @@ def container_file_put(
         except pylxd.exceptions.NotFound:
             pass
         except pylxd.exceptions.LXDAPIException as why:
-            if six.text_type(why).find("Is a directory") >= 0:
+            if str(why).find("Is a directory") >= 0:
                 dst_is_directory = True
                 # destination is non-existent
                 # cp -r /src/dir1 /scr/dir1
@@ -1777,9 +1753,9 @@ def container_file_get(
 
     # Do only if mode is not None, otherwise we get 0None
     if mode is not None:
-        mode = six.text_type(mode)
+        mode = str(mode)
         if not mode.startswith("0"):
-            mode = "0{0}".format(mode)
+            mode = "0{}".format(mode)
 
     container = container_get(name, remote_addr, cert, key, verify_cert, _raw=True)
 
@@ -1801,7 +1777,7 @@ def container_file_get(
         dst_path = os.path.dirname(dst)
         if not os.path.isdir(dst_path):
             raise CommandExecutionError(
-                "No such file or directory '{0}'".format(dst_path)
+                "No such file or directory '{}'".format(dst_path)
             )
         # Seems to be duplicate of line 1794, produces /path/file_name/file_name
         # dst = os.path.join(dst, os.path.basename(src))
@@ -1885,7 +1861,7 @@ def container_execute(
         # TODO: Using exit_code 0 here is not always right,
         # in the most cases the command worked ok though.
         # See: https://github.com/lxc/pylxd/issues/280
-        saltresult = dict(exit_code=0, stdout="", stderr=six.text_type(e))
+        saltresult = dict(exit_code=0, stdout="", stderr=str(e))
 
     if int(saltresult["exit_code"]) > 0:
         saltresult["result"] = False
@@ -2020,7 +1996,7 @@ def profile_create(
     try:
         profile = client.profiles.create(name, config, devices)
     except pylxd.exceptions.LXDAPIException as e:
-        raise CommandExecutionError(six.text_type(e))
+        raise CommandExecutionError(str(e))
 
     if description is not None:
         profile.description = description
@@ -2077,7 +2053,7 @@ def profile_get(
     try:
         profile = client.profiles.get(name)
     except pylxd.exceptions.LXDAPIException:
-        raise SaltInvocationError("Profile '{0}' not found".format(name))
+        raise SaltInvocationError("Profile '{}' not found".format(name))
 
     if _raw:
         return profile
@@ -2378,8 +2354,8 @@ def profile_device_set(
 
     kwargs["type"] = device_type
 
-    for k, v in six.iteritems(kwargs):
-        kwargs[k] = six.text_type(v)
+    for k, v in kwargs.items():
+        kwargs[k] = str(v)
 
     return _set_property_dict_item(profile, "devices", device_name, kwargs)
 
@@ -2535,7 +2511,7 @@ def image_get(
         image = client.images.get(fingerprint)
     except pylxd.exceptions.LXDAPIException:
         raise SaltInvocationError(
-            "Image with fingerprint '{0}' not found".format(fingerprint)
+            "Image with fingerprint '{}' not found".format(fingerprint)
         )
 
     if _raw:
@@ -2592,7 +2568,7 @@ def image_get_by_alias(
     try:
         image = client.images.get_by_alias(alias)
     except pylxd.exceptions.LXDAPIException:
-        raise SaltInvocationError("Image with alias '{0}' not found".format(alias))
+        raise SaltInvocationError("Image with alias '{}' not found".format(alias))
 
     if _raw:
         return image
@@ -2718,7 +2694,7 @@ def image_from_simplestreams(
             server, alias, public=public, auto_update=auto_update
         )
     except pylxd.exceptions.LXDAPIException as e:
-        raise CommandExecutionError(six.text_type(e))
+        raise CommandExecutionError(str(e))
 
     # Aliases support
     for alias in aliases:
@@ -2799,7 +2775,7 @@ def image_from_url(
             url, public=public, auto_update=auto_update
         )
     except pylxd.exceptions.LXDAPIException as e:
-        raise CommandExecutionError(six.text_type(e))
+        raise CommandExecutionError(str(e))
 
     # Aliases support
     for alias in aliases:
@@ -2883,7 +2859,7 @@ def image_from_file(
     try:
         image = client.images.create(data, public=public, wait=True)
     except pylxd.exceptions.LXDAPIException as e:
-        raise CommandExecutionError(six.text_type(e))
+        raise CommandExecutionError(str(e))
 
     # Aliases support
     for alias in aliases:
@@ -3361,21 +3337,21 @@ def normalize_input_values(config, devices):
         else:
             config = {}
 
-    if isinstance(config, six.string_types):
+    if isinstance(config, str):
         raise SaltInvocationError("config can't be a string, validate your YAML input.")
 
-    if isinstance(devices, six.string_types):
+    if isinstance(devices, str):
         raise SaltInvocationError(
             "devices can't be a string, validate your YAML input."
         )
 
     # Golangs wants strings
     if config is not None:
-        for k, v in six.iteritems(config):
-            config[k] = six.text_type(v)
+        for k, v in config.items():
+            config[k] = str(v)
     if devices is not None:
         for dn in devices:
-            for k, v in six.iteritems(devices[dn]):
+            for k, v in devices[dn].items():
                 devices[dn][k] = v
 
     return (
@@ -3410,22 +3386,12 @@ def sync_config_devices(obj, newconfig, newdevices, test=False):
         newconfig = {}
 
     newconfig = dict(
-        list(
-            zip(
-                map(six.text_type, newconfig.keys()),
-                map(six.text_type, newconfig.values()),
-            )
-        )
+        list(zip(map(str, newconfig.keys()), map(str, newconfig.values())))
     )
     cck = set(newconfig.keys())
 
     obj.config = dict(
-        list(
-            zip(
-                map(six.text_type, obj.config.keys()),
-                map(six.text_type, obj.config.values()),
-            )
-        )
+        list(zip(map(str, obj.config.keys()), map(str, obj.config.values())))
     )
     ock = set(obj.config.keys())
 
@@ -3437,14 +3403,14 @@ def sync_config_devices(obj, newconfig, newdevices, test=False):
             continue
 
         if not test:
-            config_changes[k] = (
-                'Removed config key "{0}", its value was "{1}"'
-            ).format(k, obj.config[k])
+            config_changes[k] = 'Removed config key "{}", its value was "{}"'.format(
+                k, obj.config[k]
+            )
             del obj.config[k]
         else:
-            config_changes[k] = (
-                'Would remove config key "{0} with value "{1}"'
-            ).format(k, obj.config[k])
+            config_changes[k] = 'Would remove config key "{} with value "{}"'.format(
+                k, obj.config[k]
+            )
 
     # same keys
     for k in cck.intersection(ock):
@@ -3455,14 +3421,16 @@ def sync_config_devices(obj, newconfig, newdevices, test=False):
         if newconfig[k] != obj.config[k]:
             if not test:
                 config_changes[k] = (
-                    'Changed config key "{0}" to "{1}", ' 'its value was "{2}"'
-                ).format(k, newconfig[k], obj.config[k])
+                    'Changed config key "{}" to "{}", '
+                    'its value was "{}"'.format(k, newconfig[k], obj.config[k])
+                )
                 obj.config[k] = newconfig[k]
             else:
-                config_changes[k] = (
-                    'Would change config key "{0}" to "{1}", '
-                    'its current value is "{2}"'
-                ).format(k, newconfig[k], obj.config[k])
+                config_changes[
+                    k
+                ] = 'Would change config key "{}" to "{}", its current value is "{}"'.format(
+                    k, newconfig[k], obj.config[k]
+                )
 
     # New keys
     for k in cck.difference(ock):
@@ -3471,12 +3439,10 @@ def sync_config_devices(obj, newconfig, newdevices, test=False):
             continue
 
         if not test:
-            config_changes[k] = ('Added config key "{0}" = "{1}"').format(
-                k, newconfig[k]
-            )
+            config_changes[k] = 'Added config key "{}" = "{}"'.format(k, newconfig[k])
             obj.config[k] = newconfig[k]
         else:
-            config_changes[k] = ('Would add config key "{0}" = "{1}"').format(
+            config_changes[k] = 'Would add config key "{}" = "{}"'.format(
                 k, newconfig[k]
             )
 
@@ -3500,13 +3466,13 @@ def sync_config_devices(obj, newconfig, newdevices, test=False):
             continue
 
         if not test:
-            devices_changes[k] = ('Removed device "{0}"').format(k)
+            devices_changes[k] = 'Removed device "{}"'.format(k)
             del obj.devices[k]
         else:
-            devices_changes[k] = ('Would remove device "{0}"').format(k)
+            devices_changes[k] = 'Would remove device "{}"'.format(k)
 
     # Changed devices
-    for k, v in six.iteritems(obj.devices):
+    for k, v in obj.devices.items():
         # Ignore LXD internals also for new devices.
         if k == "root":
             continue
@@ -3517,10 +3483,10 @@ def sync_config_devices(obj, newconfig, newdevices, test=False):
 
         if newdevices[k] != v:
             if not test:
-                devices_changes[k] = ('Changed device "{0}"').format(k)
+                devices_changes[k] = 'Changed device "{}"'.format(k)
                 obj.devices[k] = newdevices[k]
             else:
-                devices_changes[k] = ('Would change device "{0}"').format(k)
+                devices_changes[k] = 'Would change device "{}"'.format(k)
 
     # New devices
     for k in ndk.difference(dk):
@@ -3529,10 +3495,10 @@ def sync_config_devices(obj, newconfig, newdevices, test=False):
             continue
 
         if not test:
-            devices_changes[k] = ('Added device "{0}"').format(k)
+            devices_changes[k] = 'Added device "{}"'.format(k)
             obj.devices[k] = newdevices[k]
         else:
-            devices_changes[k] = ('Would add device "{0}"').format(k)
+            devices_changes[k] = 'Would add device "{}"'.format(k)
 
     if devices_changes:
         changes["devices"] = devices_changes
@@ -3568,7 +3534,7 @@ def _set_property_dict_item(obj, prop, key, value):
         attr[key] = value
 
     else:  # config
-        attr[key] = six.text_type(value)
+        attr[key] = str(value)
 
     pylxd_save_object(obj)
 
@@ -3578,7 +3544,7 @@ def _set_property_dict_item(obj, prop, key, value):
 def _get_property_dict_item(obj, prop, key):
     attr = getattr(obj, prop)
     if key not in attr:
-        raise SaltInvocationError("'{0}' doesn't exists".format(key))
+        raise SaltInvocationError("'{}' doesn't exists".format(key))
 
     return attr[key]
 
@@ -3586,7 +3552,7 @@ def _get_property_dict_item(obj, prop, key):
 def _delete_property_dict_item(obj, prop, key):
     attr = getattr(obj, prop)
     if key not in attr:
-        raise SaltInvocationError("'{0}' doesn't exists".format(key))
+        raise SaltInvocationError("'{}' doesn't exists".format(key))
 
     del attr[key]
     pylxd_save_object(obj)
@@ -3596,7 +3562,7 @@ def _delete_property_dict_item(obj, prop, key):
 
 def _verify_image(image, remote_addr=None, cert=None, key=None, verify_cert=True):
     # Get image by alias/fingerprint or check for fingerprint attribute
-    if isinstance(image, six.string_types):
+    if isinstance(image, str):
         name = image
 
         # This will fail with a SaltInvocationError if
@@ -3610,7 +3576,7 @@ def _verify_image(image, remote_addr=None, cert=None, key=None, verify_cert=True
         except SaltInvocationError:
             image = image_get(name, remote_addr, cert, key, verify_cert, _raw=True)
     elif not hasattr(image, "fingerprint"):
-        raise SaltInvocationError("Invalid image '{0}'".format(image))
+        raise SaltInvocationError("Invalid image '{}'".format(image))
     return image
 
 
@@ -3650,12 +3616,12 @@ if HAS_PYLXD:
                 if isinstance(mode, int):
                     mode = oct(mode)
                 elif not mode.startswith("0"):
-                    mode = "0{0}".format(mode)
+                    mode = "0{}".format(mode)
                 headers["X-LXD-mode"] = mode
             if uid is not None:
-                headers["X-LXD-uid"] = six.text_type(uid)
+                headers["X-LXD-uid"] = str(uid)
             if gid is not None:
-                headers["X-LXD-gid"] = six.text_type(gid)
+                headers["X-LXD-gid"] = str(gid)
             response = self._client.api.containers[self._container.name].files.post(
                 params={"path": filepath}, data=data, headers=headers
             )

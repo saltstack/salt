@@ -1,29 +1,19 @@
-# -*- coding: utf-8 -*-
 """
 Support for rpm
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
 import logging
 import os
 import re
 
-# Import Salt libs
 import salt.utils.decorators.path
 import salt.utils.itertools
 import salt.utils.path
 import salt.utils.pkg.rpm
 import salt.utils.versions
-
-# pylint: enable=import-error,redefined-builtin
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.ext import six
-
-# pylint: disable=import-error,redefined-builtin
-from salt.ext.six.moves import zip
 from salt.utils.versions import LooseVersion
 
 try:
@@ -105,14 +95,14 @@ def bin_pkg_info(path, saltenv="base"):
         newpath = __salt__["cp.cache_file"](path, saltenv)
         if not newpath:
             raise CommandExecutionError(
-                "Unable to retrieve {0} from saltenv '{1}'".format(path, saltenv)
+                "Unable to retrieve {} from saltenv '{}'".format(path, saltenv)
             )
         path = newpath
     else:
         if not os.path.exists(path):
-            raise CommandExecutionError("{0} does not exist on minion".format(path))
+            raise CommandExecutionError("{} does not exist on minion".format(path))
         elif not os.path.isabs(path):
-            raise SaltInvocationError("{0} does not exist on minion".format(path))
+            raise SaltInvocationError("{} does not exist on minion".format(path))
 
     # REPOID is not a valid tag for the rpm command. Remove it and replace it
     # with 'none'
@@ -187,28 +177,26 @@ def verify(*packages, **kwargs):
     ftypes = {"c": "config", "d": "doc", "g": "ghost", "l": "license", "r": "readme"}
     ret = {}
     ignore_types = kwargs.get("ignore_types", [])
-    if not isinstance(ignore_types, (list, six.string_types)):
+    if not isinstance(ignore_types, (list, str)):
         raise SaltInvocationError(
             "ignore_types must be a list or a comma-separated string"
         )
-    if isinstance(ignore_types, six.string_types):
+    if isinstance(ignore_types, str):
         try:
             ignore_types = [x.strip() for x in ignore_types.split(",")]
         except AttributeError:
-            ignore_types = [x.strip() for x in six.text_type(ignore_types).split(",")]
+            ignore_types = [x.strip() for x in str(ignore_types).split(",")]
 
     verify_options = kwargs.get("verify_options", [])
-    if not isinstance(verify_options, (list, six.string_types)):
+    if not isinstance(verify_options, (list, str)):
         raise SaltInvocationError(
             "verify_options must be a list or a comma-separated string"
         )
-    if isinstance(verify_options, six.string_types):
+    if isinstance(verify_options, str):
         try:
             verify_options = [x.strip() for x in verify_options.split(",")]
         except AttributeError:
-            verify_options = [
-                x.strip() for x in six.text_type(verify_options).split(",")
-            ]
+            verify_options = [x.strip() for x in str(verify_options).split(",")]
 
     cmd = ["rpm"]
     if kwargs.get("root"):
@@ -229,7 +217,7 @@ def verify(*packages, **kwargs):
         # succeeded, but if the retcode is nonzero, then the command failed.
         msg = "Failed to verify package(s)"
         if out["stderr"]:
-            msg += ": {0}".format(out["stderr"])
+            msg += ": {}".format(out["stderr"])
         raise CommandExecutionError(msg)
 
     for line in salt.utils.itertools.split(out["stdout"], "\n"):
@@ -492,7 +480,7 @@ def diff(package_path, path):
     )
     res = __salt__["cmd.shell"](cmd.format(package_path, path), output_loglevel="trace")
     if res and res.startswith("Binary file"):
-        return "File '{0}' is binary and its content has been " "modified.".format(path)
+        return "File '{}' is binary and its content has been modified.".format(path)
 
     return res
 
@@ -590,7 +578,7 @@ def info(*packages, **kwargs):
             attr.append("edition")
             query.append(attr_map["edition"])
     else:
-        for attr_k, attr_v in six.iteritems(attr_map):
+        for attr_k, attr_v in attr_map.items():
             if attr_k != "description":
                 query.append(attr_v)
     if attr and "description" in attr or not attr:
@@ -599,7 +587,7 @@ def info(*packages, **kwargs):
 
     cmd = " ".join(cmd)
     call = __salt__["cmd.run_all"](
-        cmd + (" --queryformat '{0}'".format("".join(query))),
+        cmd + (" --queryformat '{}'".format("".join(query))),
         output_loglevel="trace",
         env={"TZ": "UTC"},
         clean_env=True,
@@ -706,11 +694,7 @@ def version_cmp(ver1, ver2, ignore_epoch=False):
 
         salt '*' pkg.version_cmp '0.2-001' '0.2.0.1-002'
     """
-    normalize = (
-        lambda x: six.text_type(x).split(":", 1)[-1]
-        if ignore_epoch
-        else six.text_type(x)
-    )
+    normalize = lambda x: str(x).split(":", 1)[-1] if ignore_epoch else str(x)
     ver1 = normalize(ver1)
     ver2 = normalize(ver2)
 
@@ -747,7 +731,7 @@ def version_cmp(ver1, ver2, ignore_epoch=False):
                 # rpmdev-vercmp always uses epochs, even when zero
                 def _ensure_epoch(ver):
                     def _prepend(ver):
-                        return "0:{0}".format(ver)
+                        return "0:{}".format(ver)
 
                     try:
                         if ":" not in ver:
@@ -798,7 +782,7 @@ def version_cmp(ver1, ver2, ignore_epoch=False):
             cmp_result = cmp_func((ver1_e, ver1_v, ver1_r), (ver2_e, ver2_v, ver2_r))
             if cmp_result not in (-1, 0, 1):
                 raise CommandExecutionError(
-                    "Comparison result '{0}' is invalid".format(cmp_result)
+                    "Comparison result '{}' is invalid".format(cmp_result)
                 )
             return cmp_result
 
