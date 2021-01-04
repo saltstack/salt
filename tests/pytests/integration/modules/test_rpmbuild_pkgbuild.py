@@ -10,7 +10,6 @@ import subprocess
 import textwrap
 
 import pytest
-from tests.support.helpers import slowTest
 from tests.support.runtests import RUNTIME_VARS
 
 GPG_TEST_PRIV_KEY = """-----BEGIN PGP PRIVATE KEY BLOCK-----
@@ -334,7 +333,7 @@ def gpg_agent(request, gpghome):
                 )
 
 
-@slowTest
+@pytest.mark.slow_test
 def test_make_repo(grains, gpghome, repodir, gpg_agent, salt_call_cli, pillar_tree):
     """
     test make repo, signing rpm

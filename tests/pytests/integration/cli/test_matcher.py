@@ -1,8 +1,10 @@
+import pathlib
+
 import pytest
 import salt.defaults.exitcodes
-from tests.support.helpers import slowTest
 
 pytestmark = [
+    pytest.mark.slow_test,
     pytest.mark.windows_whitelisted,
 ]
 
@@ -76,7 +78,6 @@ def pillar_tree(base_env_pillar_tree_root_dir, salt_minion, salt_sub_minion, sal
         assert ret.json[salt_sub_minion.id] is True
 
 
-@slowTest
 def test_list(salt_cli, salt_minion, salt_sub_minion):
     """
     test salt -L matcher
@@ -94,7 +95,6 @@ def test_list(salt_cli, salt_minion, salt_sub_minion):
     assert salt_sub_minion.id in ret.json
 
 
-@slowTest
 def test_compound_min_with_grain(salt_cli, salt_minion, salt_sub_minion):
     """
     test salt compound matcher
@@ -105,7 +105,6 @@ def test_compound_min_with_grain(salt_cli, salt_minion, salt_sub_minion):
     assert salt_sub_minion.id not in ret.json
 
 
-@slowTest
 def test_compound_and_not_grain(salt_cli, salt_minion, salt_sub_minion):
     ret = salt_cli.run("-C", "test.ping", minion_tgt="min* and not G@test_grain:foo")
     assert ret.exitcode == 0
@@ -113,7 +112,6 @@ def test_compound_and_not_grain(salt_cli, salt_minion, salt_sub_minion):
     assert salt_sub_minion.id not in ret.json
 
 
-@slowTest
 def test_compound_not_grain(salt_cli, salt_minion, salt_sub_minion):
     ret = salt_cli.run("-C", "test.ping", minion_tgt="min* not G@test_grain:foo")
     assert ret.exitcode == 0
@@ -121,7 +119,6 @@ def test_compound_not_grain(salt_cli, salt_minion, salt_sub_minion):
     assert salt_sub_minion.id not in ret.json
 
 
-@slowTest
 def test_compound_pcre_grain_and_grain(salt_cli, salt_minion, salt_sub_minion):
     match = "P@test_grain:^cheese$ and * and G@test_grain:cheese"
     ret = salt_cli.run("-C", "test.ping", minion_tgt=match)
@@ -129,7 +126,6 @@ def test_compound_pcre_grain_and_grain(salt_cli, salt_minion, salt_sub_minion):
     assert salt_sub_minion.id not in ret.json
 
 
-@slowTest
 def test_compound_list_and_pcre_minion(salt_cli, salt_minion, salt_sub_minion):
     match = "L@{} and E@.*".format(salt_sub_minion.id)
     ret = salt_cli.run("-C", "test.ping", minion_tgt=match)
@@ -137,7 +133,6 @@ def test_compound_list_and_pcre_minion(salt_cli, salt_minion, salt_sub_minion):
     assert salt_minion.id not in ret.json
 
 
-@slowTest
 def test_compound_not_sub_minion(salt_cli, salt_minion, salt_sub_minion):
     ret = salt_cli.run(
         "-C", "test.ping", minion_tgt="not {}".format(salt_sub_minion.id)
@@ -147,7 +142,6 @@ def test_compound_not_sub_minion(salt_cli, salt_minion, salt_sub_minion):
     assert salt_sub_minion.id not in ret.json
 
 
-@slowTest
 def test_compound_all_and_not_grains(salt_cli, salt_minion, salt_sub_minion):
     ret = salt_cli.run(
         "-C", "test.ping", minion_tgt="* and ( not G@test_grain:cheese )"
@@ -157,7 +151,6 @@ def test_compound_all_and_not_grains(salt_cli, salt_minion, salt_sub_minion):
     assert salt_sub_minion.id in ret.json
 
 
-@slowTest
 def test_compound_grain_regex(salt_cli, salt_minion, salt_sub_minion):
     ret = salt_cli.run("-C", "test.ping", minion_tgt="G%@planets%merc*")
     assert ret.exitcode == 0
@@ -165,7 +158,6 @@ def test_compound_grain_regex(salt_cli, salt_minion, salt_sub_minion):
     assert salt_sub_minion.id not in ret.json
 
 
-@slowTest
 def test_coumpound_pcre_grain_regex(salt_cli, salt_minion, salt_sub_minion):
     ret = salt_cli.run("-C", "test.ping", minion_tgt="P%@planets%^(mercury|saturn)$")
     assert ret.exitcode == 0
@@ -173,7 +165,6 @@ def test_coumpound_pcre_grain_regex(salt_cli, salt_minion, salt_sub_minion):
     assert salt_sub_minion.id in ret.json
 
 
-@slowTest
 def test_compound_pillar(salt_cli, salt_minion, salt_sub_minion, pillar_tree):
     # FYI, This test was previously being skipped because it was unreliable
     ret = salt_cli.run("-C", "test.ping", minion_tgt="I%@companions%three%sarah*")
@@ -182,7 +173,6 @@ def test_compound_pillar(salt_cli, salt_minion, salt_sub_minion, pillar_tree):
     assert salt_sub_minion.id in ret.json
 
 
-@slowTest
 def test_compound_pillar_pcre(salt_cli, salt_minion, salt_sub_minion, pillar_tree):
     # FYI, This test was previously being skipped because it was unreliable
     ret = salt_cli.run("-C", "test.ping", minion_tgt="J%@knights%^(Lancelot|Galahad)$")
@@ -210,7 +200,6 @@ def test_compound_nodegroup(salt_cli, salt_minion, salt_sub_minion):
     assert salt_sub_minion.id not in ret.json
 
 
-@slowTest
 def test_nodegroup(salt_cli, salt_minion, salt_sub_minion):
     """
     test salt nodegroup matcher
@@ -242,7 +231,6 @@ def test_nodegroup(salt_cli, salt_minion, salt_sub_minion):
     assert salt_sub_minion.id in ret.json
 
 
-@slowTest
 def test_nodegroup_list(salt_cli, salt_minion, salt_sub_minion):
     ret = salt_cli.run("-N", "test.ping", minion_tgt="list_group")
     assert ret.exitcode == 0
@@ -265,7 +253,6 @@ def test_nodegroup_list(salt_cli, salt_minion, salt_sub_minion):
     assert salt_sub_minion.id not in ret.json
 
 
-@slowTest
 def test_glob(salt_cli, salt_minion, salt_sub_minion):
     """
     test salt glob matcher
@@ -281,7 +268,6 @@ def test_glob(salt_cli, salt_minion, salt_sub_minion):
     assert salt_sub_minion.id in ret.json
 
 
-@slowTest
 def test_regex(salt_cli, salt_minion, salt_sub_minion):
     """
     test salt regex matcher
@@ -296,7 +282,6 @@ def test_regex(salt_cli, salt_minion, salt_sub_minion):
     assert salt_sub_minion.id in ret.json
 
 
-@slowTest
 def test_grain(salt_cli, salt_master, salt_minion, salt_sub_minion):
     """
     test salt grain matcher
@@ -364,7 +349,59 @@ def test_grain(salt_cli, salt_master, salt_minion, salt_sub_minion):
     assert salt_sub_minion.id in ret.json
 
 
-@slowTest
+def test_grains_targeting_os_running(grains, salt_cli, salt_minion, salt_sub_minion):
+    """
+    Tests running "salt -G 'os:<system-os>' test.ping and minions both return True
+    """
+    ret = salt_cli.run("-G", "test.ping", minion_tgt="os:{}".format(grains["os"]))
+    assert ret.exitcode == 0
+    assert salt_minion.id in ret.json
+    assert ret.json[salt_minion.id] is True
+    assert salt_sub_minion.id in ret.json
+    assert ret.json[salt_sub_minion.id] is True
+
+
+def test_grains_targeting_minion_id_running(salt_cli, salt_minion, salt_sub_minion):
+    """
+    Tests return of each running test minion targeting with minion id grain
+    """
+    ret = salt_cli.run("-G", "test.ping", minion_tgt="id:{}".format(salt_minion.id))
+    assert ret.exitcode == 0
+    assert salt_minion.id in ret.json
+    assert ret.json[salt_minion.id] is True
+
+    ret = salt_cli.run("-G", "test.ping", minion_tgt="id:{}".format(salt_sub_minion.id))
+    assert ret.exitcode == 0
+    assert salt_sub_minion.id in ret.json
+    assert ret.json[salt_sub_minion.id] is True
+
+
+def test_grains_targeting_minion_id_disconnected(salt_master, salt_minion, salt_cli):
+    """
+    Tests return of minion using grains targeting on a disconnected minion.
+    """
+    expected_output = "Minion did not return. [No response]"
+
+    # Create a minion key, but do not start the "fake" minion. This mimics a
+    # disconnected minion.
+    disconnected_minion_id = "disconnected"
+    minions_pki_dir = pathlib.Path(salt_master.config["pki_dir"]) / "minions"
+    with pytest.helpers.temp_file(
+        disconnected_minion_id,
+        minions_pki_dir.joinpath(salt_minion.id).read_text(),
+        minions_pki_dir,
+    ):
+        ret = salt_cli.run(
+            "--timeout=1",
+            "-G",
+            "test.ping",
+            minion_tgt="id:{}".format(disconnected_minion_id),
+        )
+        assert ret.exitcode == 1
+        assert disconnected_minion_id in ret.json
+        assert expected_output in ret.json[disconnected_minion_id]
+
+
 def test_regrain(salt_cli, salt_minion, salt_sub_minion):
     """
     test salt grain matcher
@@ -379,7 +416,6 @@ def test_regrain(salt_cli, salt_minion, salt_sub_minion):
     assert salt_minion.id not in ret.json
 
 
-@slowTest
 def test_pillar(salt_cli, salt_minion, salt_sub_minion, pillar_tree):
     """
     test pillar matcher
@@ -413,7 +449,6 @@ def test_pillar(salt_cli, salt_minion, salt_sub_minion, pillar_tree):
     assert salt_sub_minion.id in ret.json
 
 
-@slowTest
 def test_repillar(salt_cli, salt_minion, salt_sub_minion, pillar_tree):
     """
     test salt pillar PCRE matcher
@@ -430,7 +465,6 @@ def test_repillar(salt_cli, salt_minion, salt_sub_minion, pillar_tree):
     assert salt_sub_minion.id in ret.json
 
 
-@slowTest
 def test_ipcidr(salt_cli, salt_minion, salt_sub_minion):
     ret = salt_cli.run("network.subnets", minion_tgt=salt_minion.id)
     assert ret.exitcode == 0
@@ -445,7 +479,6 @@ def test_ipcidr(salt_cli, salt_minion, salt_sub_minion):
     assert salt_sub_minion.id in ret.json
 
 
-@slowTest
 def test_static(salt_cli, salt_minion, salt_sub_minion):
     """
     test salt static call
@@ -456,7 +489,6 @@ def test_static(salt_cli, salt_minion, salt_sub_minion):
     assert salt_minion.id in ret.stdout
 
 
-@slowTest
 def test_salt_documentation(salt_cli, salt_minion):
     """
     Test to see if we're supporting --doc
@@ -466,7 +498,6 @@ def test_salt_documentation(salt_cli, salt_minion):
     assert "test.ping" in ret.json
 
 
-@slowTest
 def test_salt_documentation_too_many_arguments(salt_cli, salt_minion):
     """
     Test to see if passing additional arguments shows an error

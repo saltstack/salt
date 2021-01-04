@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import os
 import shutil
@@ -101,26 +98,26 @@ class ClearFuncsPubTestCase(ConfigMixin, TestCase):
             "tgt_type": "glob",
             "user": "root",
         }
-        eventbus = salt.utils.event.get_event(
+        with salt.utils.event.get_event(
             "master",
             sock_dir=self.master_config["sock_dir"],
             transport=self.master_config["transport"],
             opts=self.master_config,
-        )
-        ret = clear_channel.send(msg, timeout=15)
-        if salt.utils.platform.is_windows():
-            time.sleep(30)
-            timeout = 30
-        else:
-            timeout = 5
-        ret_evt = None
-        start = time.time()
-        while time.time() - start <= timeout:
-            raw = eventbus.get_event(timeout, auto_reconnect=True)
-            if raw and "jid" in raw and raw["jid"] == jid:
-                ret_evt = raw
-                break
-        assert not os.path.exists(self.tmpfile), "Evil file created"
+        ) as eventbus:
+            ret = clear_channel.send(msg, timeout=15)
+            if salt.utils.platform.is_windows():
+                time.sleep(30)
+                timeout = 30
+            else:
+                timeout = 5
+            ret_evt = None
+            start = time.time()
+            while time.time() - start <= timeout:
+                raw = eventbus.get_event(timeout, auto_reconnect=True)
+                if raw and "jid" in raw and raw["jid"] == jid:
+                    ret_evt = raw
+                    break
+            assert not os.path.exists(self.tmpfile), "Evil file created"
 
 
 class ClearFuncsConfigTest(ConfigMixin, TestCase):

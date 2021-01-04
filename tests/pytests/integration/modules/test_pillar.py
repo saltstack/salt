@@ -1,9 +1,11 @@
 import pathlib
+import textwrap
 
+import attr
 import pytest
-from tests.support.helpers import slowTest
 
 pytestmark = [
+    pytest.mark.slow_test,
     pytest.mark.windows_whitelisted,
 ]
 
@@ -51,7 +53,6 @@ def pillar_tree(base_env_pillar_tree_root_dir, salt_minion, salt_call_cli):
         assert ret.json is True
 
 
-@slowTest
 def test_data(salt_call_cli, pillar_tree):
     """
     pillar.data
@@ -72,7 +73,6 @@ def test_data(salt_call_cli, pillar_tree):
         assert pillar["class"] == "other"
 
 
-@slowTest
 def test_issue_5449_report_actual_file_roots_in_pillar(
     salt_call_cli, pillar_tree, base_env_state_tree_root_dir
 ):
@@ -91,7 +91,6 @@ def test_issue_5449_report_actual_file_roots_in_pillar(
     ]
 
 
-@slowTest
 def test_ext_cmd_yaml(salt_call_cli, pillar_tree):
     """
     pillar.data for ext_pillar cmd.yaml
@@ -103,7 +102,6 @@ def test_ext_cmd_yaml(salt_call_cli, pillar_tree):
     assert pillar["ext_spam"] == "eggs"
 
 
-@slowTest
 def test_issue_5951_actual_file_roots_in_opts(
     salt_call_cli, pillar_tree, base_env_state_tree_root_dir
 ):
@@ -117,7 +115,6 @@ def test_issue_5951_actual_file_roots_in_opts(
     ]
 
 
-@slowTest
 def test_pillar_items(salt_call_cli, pillar_tree):
     """
     Test to ensure we get expected output
@@ -133,7 +130,6 @@ def test_pillar_items(salt_call_cli, pillar_tree):
     assert pillar_items["knights"] == ["Lancelot", "Galahad", "Bedevere", "Robin"]
 
 
-@slowTest
 def test_pillar_command_line(salt_call_cli, pillar_tree):
     """
     Test to ensure when using pillar override
@@ -154,3 +150,208 @@ def test_pillar_command_line(salt_call_cli, pillar_tree):
     pillar_items = ret.json
     assert "new" in pillar_items
     assert pillar_items["new"] == "additional"
+
+
+@attr.s
+class PillarRefresh:
+    pillar_state_tree = attr.ib(repr=False)
+    salt_cli = attr.ib(repr=False)
+    top_file = attr.ib(init=False)
+    minion_1_id = attr.ib(repr=False)
+    minion_1_pillar = attr.ib(init=False)
+
+    def __attrs_post_init__(self):
+        self.top_file = self.pillar_state_tree / "top.sls"
+        top_file_contents = textwrap.dedent(
+            """\
+        base:
+          {}:
+            - minion-1-pillar
+        """.format(
+                self.minion_1_id
+            )
+        )
+        self.top_file.write_text(top_file_contents)
+        self.minion_1_pillar = self.pillar_state_tree / "minion-1-pillar.sls"
+
+    def refresh_pillar(self, timeout=60, sleep=0.5):
+        ret = self.salt_cli.run(
+            "saltutil.refresh_pillar", wait=True, minion_tgt=self.minion_1_id
+        )
+        assert ret.exitcode == 0
+        assert ret.json is True
+
+    def __call__(self, pillar_key):
+        pillar_contents = "{}: true".format(pillar_key)
+        self.minion_1_pillar.write_text(pillar_contents)
+        return self
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.minion_1_pillar.unlink()
+        self.refresh_pillar()
+
+
+@pytest.fixture
+def key_pillar(salt_minion, salt_cli, base_env_pillar_tree_root_dir):
+    return PillarRefresh(
+        pillar_state_tree=base_env_pillar_tree_root_dir,
+        salt_cli=salt_cli,
+        minion_1_id=salt_minion.id,
+    )
+
+
+def test_pillar_refresh_pillar_raw(salt_cli, salt_minion, key_pillar):
+    """
+    Validate the minion's pillar.raw call behavior for new pillars
+    """
+    key = "issue-54941-raw"
+
+    # We do not expect to see the pillar because it does not exist yet
+    ret = salt_cli.run("pillar.raw", key, minion_tgt=salt_minion.id)
+    assert ret.exitcode == 0
+    val = ret.json
+    assert val == {}
+
+    with key_pillar(key):
+        # The pillar exists now but raw reads it from in-memory pillars
+        ret = salt_cli.run("pillar.raw", key, minion_tgt=salt_minion.id)
+        assert ret.exitcode == 0
+        val = ret.json
+        assert val == {}
+
+        # Calling refresh_pillar to update in-memory pillars
+        key_pillar.refresh_pillar()
+
+        # The pillar can now be read from in-memory pillars
+        ret = salt_cli.run("pillar.raw", key, minion_tgt=salt_minion.id)
+        assert ret.exitcode == 0
+        val = ret.json
+        assert val is True, repr(val)
+
+
+def test_pillar_refresh_pillar_get(salt_cli, salt_minion, key_pillar):
+    """
+    Validate the minion's pillar.get call behavior for new pillars
+    """
+    key = "issue-54941-get"
+
+    # We do not expect to see the pillar because it does not exist yet
+    ret = salt_cli.run("pillar.get", key, minion_tgt=salt_minion.id)
+    assert ret.exitcode == 0
+    val = ret.json
+    assert val == ""
+
+    with key_pillar(key):
+        # The pillar exists now but get reads it from in-memory pillars, no
+        # refresh happens
+        ret = salt_cli.run("pillar.get", key, minion_tgt=salt_minion.id)
+        assert ret.exitcode == 0
+        val = ret.json
+        assert val == ""
+
+        # Calling refresh_pillar to update in-memory pillars
+        key_pillar.refresh_pillar()
+
+        # The pillar can now be read from in-memory pillars
+        ret = salt_cli.run("pillar.get", key, minion_tgt=salt_minion.id)
+        assert ret.exitcode == 0
+        val = ret.json
+        assert val is True, repr(val)
+
+
+def test_pillar_refresh_pillar_item(salt_cli, salt_minion, key_pillar):
+    """
+    Validate the minion's pillar.item call behavior for new pillars
+    """
+    key = "issue-54941-item"
+
+    # We do not expect to see the pillar because it does not exist yet
+    ret = salt_cli.run("pillar.item", key, minion_tgt=salt_minion.id)
+    assert ret.exitcode == 0
+    val = ret.json
+    assert key in val
+    assert val[key] == ""
+
+    with key_pillar(key):
+        # The pillar exists now but get reads it from in-memory pillars, no
+        # refresh happens
+        ret = salt_cli.run("pillar.item", key, minion_tgt=salt_minion.id)
+        assert ret.exitcode == 0
+        val = ret.json
+        assert key in val
+        assert val[key] == ""
+
+        # Calling refresh_pillar to update in-memory pillars
+        key_pillar.refresh_pillar()
+
+        # The pillar can now be read from in-memory pillars
+        ret = salt_cli.run("pillar.item", key, minion_tgt=salt_minion.id)
+        assert ret.exitcode == 0
+        val = ret.json
+        assert key in val
+        assert val[key] is True
+
+
+def test_pillar_refresh_pillar_items(salt_cli, salt_minion, key_pillar):
+    """
+    Validate the minion's pillar.item call behavior for new pillars
+    """
+    key = "issue-54941-items"
+
+    # We do not expect to see the pillar because it does not exist yet
+    ret = salt_cli.run("pillar.items", minion_tgt=salt_minion.id)
+    assert ret.exitcode == 0
+    val = ret.json
+    assert key not in val
+
+    with key_pillar(key):
+        # A pillar.items call sees the pillar right away because a
+        # refresh_pillar event is fired.
+        ret = salt_cli.run("pillar.items", minion_tgt=salt_minion.id)
+        assert ret.exitcode == 0
+        val = ret.json
+        assert key in val
+        assert val[key] is True
+
+
+def test_pillar_refresh_pillar_ping(salt_cli, salt_minion, key_pillar):
+    """
+    Validate the minion's test.ping does not update pillars
+
+    See: https://github.com/saltstack/salt/issues/54941
+    """
+    key = "issue-54941-ping"
+
+    # We do not expect to see the pillar because it does not exist yet
+    ret = salt_cli.run("pillar.item", key, minion_tgt=salt_minion.id)
+    assert ret.exitcode == 0
+    val = ret.json
+    assert key in val
+    assert val[key] == ""
+
+    with key_pillar(key):
+        ret = salt_cli.run("test.ping", minion_tgt=salt_minion.id)
+        assert ret.exitcode == 0
+        val = ret.json
+        assert val is True
+
+        # The pillar exists now but get reads it from in-memory pillars, no
+        # refresh happens
+        ret = salt_cli.run("pillar.item", key, minion_tgt=salt_minion.id)
+        assert ret.exitcode == 0
+        val = ret.json
+        assert key in val
+        assert val[key] == ""
+
+        # Calling refresh_pillar to update in-memory pillars
+        key_pillar.refresh_pillar()
+
+        # The pillar can now be read from in-memory pillars
+        ret = salt_cli.run("pillar.item", key, minion_tgt=salt_minion.id)
+        assert ret.exitcode == 0
+        val = ret.json
+        assert key in val
+        assert val[key] is True

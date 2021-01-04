@@ -14,7 +14,7 @@ import pytest
 import salt.defaults.exitcodes
 from saltfactories.exceptions import FactoryNotStarted
 from saltfactories.utils import random_string
-from tests.support.helpers import PRE_PYTEST_SKIP_REASON, slowTest
+from tests.support.helpers import PRE_PYTEST_SKIP_REASON
 
 log = logging.getLogger(__name__)
 
@@ -30,14 +30,11 @@ def proxy_minion_id(salt_factories, salt_master):
         pytest.helpers.remove_stale_minion_key(salt_master, _proxy_minion_id)
 
 
-@slowTest
-@pytest.mark.skipif(True, reason="This test will always fail after #58979 was merged")
+@pytest.mark.slow_test
 def test_exit_status_no_proxyid(salt_master, proxy_minion_id):
     """
     Ensure correct exit status when --proxyid argument is missing.
     """
-    # Why this test got disabled:
-    #  https://github.com/saltstack/salt/pull/58979/files#diff-50d51d9b6043081acacafa23eb7b742b791d3b04df64bf739f9a37490f45ef19R437
     with pytest.raises(FactoryNotStarted) as exc:
         factory = salt_master.get_salt_proxy_minion_daemon(
             proxy_minion_id, include_proxyid_cli_flag=False
@@ -65,7 +62,7 @@ def test_exit_status_unknown_user(salt_master, proxy_minion_id):
     assert "The user is not available." in exc.value.stderr, exc.value
 
 
-@slowTest
+@pytest.mark.slow_test
 def test_exit_status_unknown_argument(salt_master, proxy_minion_id):
     """
     Ensure correct exit status when an unknown argument is passed to

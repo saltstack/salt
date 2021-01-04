@@ -1,22 +1,13 @@
-# -*- coding: utf-8 -*-
 """
 Module to provide information about minions
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import os
 import sys
 import time
 
 import salt.key
-
-# Import Salt libs
 import salt.utils.data
-
-# Import third party libs
-from salt.ext import six
-from salt.ext.six.moves import range
 
 # Don't shadow built-ins.
 __func_alias__ = {"list_": "list"}
@@ -50,7 +41,7 @@ def list_():
                 if not fn_.startswith("."):
                     if os.path.isfile(os.path.join(dir_, fn_)):
                         ret[os.path.basename(dir_)].append(fn_)
-        except (OSError, IOError):
+        except OSError:
             # key dir kind is not created yet, just skip
             continue
 
@@ -215,12 +206,12 @@ def restart():
     restart_cmd = __salt__["config.get"]("minion_restart_command")
     if restart_cmd:
         comment.append("Using configuration minion_restart_command:")
-        comment.extend(["    {0}".format(arg) for arg in restart_cmd])
+        comment.extend(["    {}".format(arg) for arg in restart_cmd])
     else:
         if "-d" in sys.argv:
             restart_cmd = sys.argv
             comment.append("Restart using process argv:")
-            comment.extend(["    {0}".format(arg) for arg in restart_cmd])
+            comment.extend(["    {}".format(arg) for arg in restart_cmd])
         else:
             should_restart = False
             comment.append(
@@ -230,7 +221,7 @@ def restart():
     if should_kill:
         ret.update(kill())
         if "comment" in ret and ret["comment"]:
-            if isinstance(ret["comment"], six.string_types):
+            if isinstance(ret["comment"], str):
                 comment.append(ret["comment"])
             else:
                 comment.extend(ret["comment"])
