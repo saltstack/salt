@@ -11,11 +11,13 @@ chardet==3.0.4            # via requests
 cheroot==8.3.0            # via cherrypy
 cherrypy==17.4.1
 contextlib2==0.6.0.post1  # via cherrypy
+contextvars==2.4 ; python_version < "3.7"
 cryptography==3.2
 distro==1.5.0
 gitdb2==2.0.5             # via gitpython
 gitpython==2.1.10
 idna==2.8
+immutables==0.14          # via contextvars
 ioloop==0.1a0
 ipaddress==1.0.22
 jaraco.functools==2.0     # via cheroot, tempora

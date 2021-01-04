@@ -20,8 +20,9 @@ import copy
 import errno
 import logging
 import os
+import pathlib
 import re
-from pathlib import Path
+import shlex
 
 import salt.utils.args
 import salt.utils.data
@@ -32,8 +33,6 @@ import salt.utils.pkg
 import salt.utils.stringutils
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationError
-from salt.ext.six.moves import map  # pylint: disable=import-error,redefined-builtin
-from salt.ext.six.moves import shlex_quote as _cmd_quote  # pylint: disable=import-error
 
 REPO_REGEXP = r'^#?\s*(src|src/gz)\s+([^\s<>]+|"[^<>]+")\s+[^\s<>]+'
 OPKG_CONFDIR = "/etc/opkg"
@@ -113,8 +112,8 @@ def _update_nilrt_restart_state():
 
         for fexpert in os.listdir(nisysapi_conf_d_path):
             _fingerprint_file(
-                filename=Path(nisysapi_conf_d_path, fexpert),
-                fingerprint_dir=Path(NILRT_RESTARTCHECK_STATE_PATH),
+                filename=pathlib.Path(nisysapi_conf_d_path, fexpert),
+                fingerprint_dir=pathlib.Path(NILRT_RESTARTCHECK_STATE_PATH),
             )
 
 
@@ -1239,9 +1238,9 @@ def version_cmp(
 
     for oper, ret in (("<<", -1), ("=", 0), (">>", 1)):
         cmd = cmd_compare[:]
-        cmd.append(_cmd_quote(pkg1))
+        cmd.append(shlex.quote(pkg1))
         cmd.append(oper)
-        cmd.append(_cmd_quote(pkg2))
+        cmd.append(shlex.quote(pkg2))
         retcode = __salt__["cmd.retcode"](
             cmd, output_loglevel="trace", ignore_retcode=True, python_shell=False
         )

@@ -2525,18 +2525,20 @@ states is cluttering the logs. Set it to True to ignore them.
 
 Default: ``False``
 
-Automatically aggregate all states that have support for mod_aggregate by
-setting to ``True``. Or pass a list of state module names to automatically
+Automatically aggregate all states that have support for ``mod_aggregate`` by
+setting to ``True``.
+
+.. code-block:: yaml
+
+    state_aggregate: True
+
+Or pass a list of state module names to automatically
 aggregate just those types.
 
 .. code-block:: yaml
 
     state_aggregate:
       - pkg
-
-.. code-block:: yaml
-
-    state_aggregate: True
 
 .. conf_master:: state_events
 
