@@ -149,7 +149,7 @@ salt/utils/minions.py:
   - pytests.integration.cli.test_matcher
 
 salt/utils/reactor.py:
-  - integration.reactor.test_reactor
+  - pytests.integration.reactor.test_reactor
 
 salt/cli/daemons.py:
   - pytests.integration.cli.test_salt_master
@@ -214,7 +214,7 @@ salt/runners/venafiapi.py:
   - integration.externalapi.test_venafiapi
 
 salt/serializers/*:
-  - unit.serializers.test_serializers
+  - pytests.unit.serializers.test_serializers
 
 salt/(cli/spm\.py|spm/.+):
   - unit.test_spm

@@ -6,6 +6,7 @@ import logging
 import socket
 import threading
 
+import pytest
 import salt.config
 import salt.exceptions
 import salt.ext.tornado.concurrent
@@ -31,6 +32,11 @@ from tests.unit.transport.mixins import (
     ReqChannelMixin,
     run_loop_in_thread,
 )
+
+pytestmark = [
+    pytest.mark.skip_on_darwin,
+    pytest.mark.skip_on_freebsd,
+]
 
 log = logging.getLogger(__name__)
 
