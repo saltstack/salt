@@ -345,12 +345,16 @@ def _run(
             if windows_codepage != previous_windows_codepage:
                 change_windows_codepage = True
 
-    if shell.lower().strip() == "powershell":
+    # The powershell binary is "powershell"
+    # The powershell 7 binary is "pwsh"
+    # you can also pass a path here as long as the binary name is one of the two
+    if any(word in shell.lower().strip() for word in ["powershell", "pwsh"]):
         # Strip whitespace
         if isinstance(cmd, str):
             cmd = cmd.strip()
         elif isinstance(cmd, list):
             cmd = " ".join(cmd).strip()
+        cmd = cmd.replace('"', '\\"')
 
         # If we were called by script(), then fakeout the Windows
         # shell to run a Powershell script.
@@ -361,15 +365,11 @@ def _run(
         # The last item in the list [-1] is the current method.
         # The third item[2] in each tuple is the name of that method.
         if stack[-2][2] == "script":
-            cmd = "Powershell -NonInteractive -NoProfile -ExecutionPolicy Bypass {}".format(
-                cmd.replace('"', '\\"')
-            )
+            cmd = f'"{shell}" -NonInteractive -NoProfile -ExecutionPolicy Bypass -Command {cmd}'
         elif encoded_cmd:
-            cmd = "Powershell -NonInteractive -EncodedCommand {}".format(cmd)
+            cmd = f'"{shell}" -NonInteractive -EncodedCommand "{cmd}"'
         else:
-            cmd = 'Powershell -NonInteractive -NoProfile "{}"'.format(
-                cmd.replace('"', '\\"')
-            )
+            cmd = f'"{shell}" -NonInteractive -NoProfile -Command "{cmd}"'
 
     # munge the cmd and cwd through the template
     (cmd, cwd) = _render_cmd(cmd, cwd, template, saltenv, pillarenv, pillar_override)
@@ -3527,7 +3527,7 @@ def powershell(
     cwd=None,
     stdin=None,
     runas=None,
-    shell=DEFAULT_SHELL,
+    shell="powershell",
     env=None,
     clean_env=False,
     template=None,
@@ -3603,8 +3603,8 @@ def powershell(
 
       .. versionadded:: 2016.3.0
 
-    :param str shell: Specify an alternate shell. Defaults to the system's
-        default shell.
+    :param str shell: Specify an alternate shell. Defaults to "powershell". Can
+        also use "pwsh" for powershell 7 if present on the system
 
     :param bool python_shell: If False, let python handle the positional
       arguments. Set to True to use shell features, such as pipes or
@@ -3718,6 +3718,11 @@ def powershell(
 
         salt '*' cmd.powershell "$PSVersionTable.CLRVersion"
     """
+    if shell not in ["powershell", "pwsh"]:
+        msg = "Must specify a valid powershell binary. Must be 'powershell' " \
+              "or 'pwsh'"
+        raise CommandExecutionError(msg)
+
     if "python_shell" in kwargs:
         python_shell = kwargs.pop("python_shell")
     else:
@@ -3754,7 +3759,7 @@ def powershell(
         cwd=cwd,
         stdin=stdin,
         runas=runas,
-        shell="powershell",
+        shell=shell,
         env=env,
         clean_env=clean_env,
         template=template,
@@ -3790,7 +3795,7 @@ def powershell_all(
     cwd=None,
     stdin=None,
     runas=None,
-    shell=DEFAULT_SHELL,
+    shell="powershell",
     env=None,
     clean_env=False,
     template=None,
@@ -3917,8 +3922,8 @@ def powershell_all(
     :param str password: Windows only. Required when specifying ``runas``. This
         parameter will be ignored on non-Windows platforms.
 
-    :param str shell: Specify an alternate shell. Defaults to the system's
-        default shell.
+    :param str shell: Specify an alternate shell. Defaults to "powershell". Can
+        also use "pwsh" for powershell 7 if present on the system
 
     :param bool python_shell: If False, let python handle the positional
         arguments. Set to True to use shell features, such as pipes or
@@ -4055,6 +4060,11 @@ def powershell_all(
 
         salt '*' cmd.powershell_all "dir mydirectory" force_list=True
     """
+    if shell not in ["powershell", "pwsh"]:
+        msg = "Must specify a valid powershell binary. Must be 'powershell' " \
+              "or 'pwsh'"
+        raise CommandExecutionError(msg)
+
     if "python_shell" in kwargs:
         python_shell = kwargs.pop("python_shell")
     else:
@@ -4081,7 +4091,7 @@ def powershell_all(
         cwd=cwd,
         stdin=stdin,
         runas=runas,
-        shell="powershell",
+        shell=shell,
         env=env,
         clean_env=clean_env,
         template=template,
