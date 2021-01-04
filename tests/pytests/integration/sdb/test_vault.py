@@ -10,7 +10,6 @@ import time
 import pytest
 import salt.utils.path
 from saltfactories.utils.processes import ProcessResult
-from tests.support.helpers import slowTest
 from tests.support.runtests import RUNTIME_VARS
 
 log = logging.getLogger(__name__)
@@ -186,7 +185,7 @@ def vault_container_version(request, salt_call_cli, vault_port):
             assert state_run["result"] is True
 
 
-@slowTest
+@pytest.mark.slow_test
 def test_sdb(salt_call_cli):
     ret = salt_call_cli.run(
         "sdb.set", uri="sdb://sdbvault/secret/test/test_sdb/foo", value="bar"
@@ -199,7 +198,7 @@ def test_sdb(salt_call_cli):
     assert ret.json == "bar"
 
 
-@slowTest
+@pytest.mark.slow_test
 def test_sdb_runner(salt_run_cli):
     ret = salt_run_cli.run(
         "sdb.set", uri="sdb://sdbvault/secret/test/test_sdb_runner/foo", value="bar"
@@ -214,7 +213,7 @@ def test_sdb_runner(salt_run_cli):
     assert ret.stdout == "bar"
 
 
-@slowTest
+@pytest.mark.slow_test
 def test_config(salt_call_cli, pillar_tree):
     ret = salt_call_cli.run(
         "sdb.set", uri="sdb://sdbvault/secret/test/test_pillar_sdb/foo", value="bar"
@@ -227,7 +226,7 @@ def test_config(salt_call_cli, pillar_tree):
     assert ret.json == "bar"
 
 
-@slowTest
+@pytest.mark.slow_test
 def test_sdb_kv2_kvv2_path_local(salt_call_cli, vault_container_version):
     if vault_container_version != "1.3.1":
         pytest.skip("Test not applicable to vault {}".format(vault_container_version))

@@ -9,6 +9,7 @@ import threading
 import time
 from concurrent.futures.thread import ThreadPoolExecutor
 
+import pytest
 import salt.config
 import salt.exceptions
 import salt.ext.tornado.gen
@@ -33,6 +34,11 @@ from tests.unit.transport.mixins import (
     ReqChannelMixin,
     run_loop_in_thread,
 )
+
+pytestmark = [
+    pytest.mark.skip_on_darwin,
+    pytest.mark.skip_on_freebsd,
+]
 
 x = "fix pre"
 
