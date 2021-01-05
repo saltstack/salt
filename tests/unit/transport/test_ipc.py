@@ -8,6 +8,7 @@ import logging
 import os
 import threading
 
+import pytest
 import salt.config
 import salt.exceptions
 import salt.ext.tornado.gen
@@ -20,6 +21,12 @@ import salt.utils.platform
 from tests.support.mock import MagicMock
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
+
+pytestmark = [
+    pytest.mark.skip_on_darwin,
+    pytest.mark.skip_on_freebsd,
+    pytest.mark.skip_on_windows,
+]
 
 log = logging.getLogger(__name__)
 

@@ -1,9 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 integration tests for mac_ports
 """
-
-from __future__ import absolute_import, print_function, unicode_literals
 
 from tests.support.case import ModuleCase
 from tests.support.helpers import (

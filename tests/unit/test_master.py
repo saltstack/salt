@@ -29,6 +29,7 @@ class TransportMethodsTest(TestCase):
         """
         opts = salt.config.master_config(None)
         aes_funcs = salt.master.AESFuncs(opts)
+        self.addCleanup(aes_funcs.destroy)
         for name in aes_funcs.expose_methods:
             func = getattr(aes_funcs, name, None)
             assert callable(func)
@@ -39,6 +40,7 @@ class TransportMethodsTest(TestCase):
         """
         opts = salt.config.master_config(None)
         aes_funcs = salt.master.AESFuncs(opts)
+        self.addCleanup(aes_funcs.destroy)
         # Any callable that should not explicitly be allowed should be added
         # here.
         blacklist_methods = [
@@ -70,6 +72,7 @@ class TransportMethodsTest(TestCase):
             "__subclasshook__",
             "get_method",
             "run_func",
+            "destroy",
         ]
         for name in dir(aes_funcs):
             if name in aes_funcs.expose_methods:
@@ -84,6 +87,7 @@ class TransportMethodsTest(TestCase):
         """
         opts = salt.config.master_config(None)
         clear_funcs = salt.master.ClearFuncs(opts, {})
+        self.addCleanup(clear_funcs.destroy)
         for name in clear_funcs.expose_methods:
             func = getattr(clear_funcs, name, None)
             assert callable(func)
@@ -94,6 +98,7 @@ class TransportMethodsTest(TestCase):
         """
         opts = salt.config.master_config(None)
         clear_funcs = salt.master.ClearFuncs(opts, {})
+        self.addCleanup(clear_funcs.destroy)
         blacklist_methods = [
             "__class__",
             "__delattr__",
@@ -123,6 +128,7 @@ class TransportMethodsTest(TestCase):
             "_send_pub",
             "_send_ssh_pub",
             "get_method",
+            "destroy",
         ]
         for name in dir(clear_funcs):
             if name in clear_funcs.expose_methods:
@@ -144,6 +150,7 @@ class ClearFuncsTestCase(TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        cls.clear_funcs.destroy()
         del cls.clear_funcs
 
     def test_get_method(self):
