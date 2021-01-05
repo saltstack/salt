@@ -1,9 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 integration tests for mac_shadow
 """
-
-from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
 
@@ -69,7 +66,7 @@ class MacShadowModuleTest(ModuleCase):
         # User does not exist
         self.assertEqual(
             self.run_function("shadow.get_account_created", [NO_USER]),
-            "ERROR: User not found: {0}".format(NO_USER),
+            "ERROR: User not found: {}".format(NO_USER),
         )
 
     @destructiveTest
@@ -87,7 +84,7 @@ class MacShadowModuleTest(ModuleCase):
         # User does not exist
         self.assertEqual(
             self.run_function("shadow.get_last_change", [NO_USER]),
-            "ERROR: User not found: {0}".format(NO_USER),
+            "ERROR: User not found: {}".format(NO_USER),
         )
 
     @destructiveTest
@@ -105,7 +102,7 @@ class MacShadowModuleTest(ModuleCase):
         # User does not exist
         self.assertEqual(
             self.run_function("shadow.get_login_failed_last", [NO_USER]),
-            "ERROR: User not found: {0}".format(NO_USER),
+            "ERROR: User not found: {}".format(NO_USER),
         )
 
     @destructiveTest
@@ -122,7 +119,7 @@ class MacShadowModuleTest(ModuleCase):
         # User does not exist
         self.assertEqual(
             self.run_function("shadow.get_login_failed_count", [NO_USER]),
-            "ERROR: User not found: {0}".format(NO_USER),
+            "ERROR: User not found: {}".format(NO_USER),
         )
 
     @destructiveTest
@@ -139,11 +136,11 @@ class MacShadowModuleTest(ModuleCase):
         # User does not exist
         self.assertEqual(
             self.run_function("shadow.set_maxdays", [NO_USER, 7]),
-            "ERROR: User not found: {0}".format(NO_USER),
+            "ERROR: User not found: {}".format(NO_USER),
         )
         self.assertEqual(
             self.run_function("shadow.get_maxdays", [NO_USER]),
-            "ERROR: User not found: {0}".format(NO_USER),
+            "ERROR: User not found: {}".format(NO_USER),
         )
 
     @destructiveTest
@@ -164,11 +161,11 @@ class MacShadowModuleTest(ModuleCase):
         # User does not exist
         self.assertEqual(
             self.run_function("shadow.set_change", [NO_USER, "02/11/2012"]),
-            "ERROR: User not found: {0}".format(NO_USER),
+            "ERROR: User not found: {}".format(NO_USER),
         )
         self.assertEqual(
             self.run_function("shadow.get_change", [NO_USER]),
-            "ERROR: User not found: {0}".format(NO_USER),
+            "ERROR: User not found: {}".format(NO_USER),
         )
 
     @destructiveTest
@@ -189,11 +186,11 @@ class MacShadowModuleTest(ModuleCase):
         # User does not exist
         self.assertEqual(
             self.run_function("shadow.set_expire", [NO_USER, "02/11/2012"]),
-            "ERROR: User not found: {0}".format(NO_USER),
+            "ERROR: User not found: {}".format(NO_USER),
         )
         self.assertEqual(
             self.run_function("shadow.get_expire", [NO_USER]),
-            "ERROR: User not found: {0}".format(NO_USER),
+            "ERROR: User not found: {}".format(NO_USER),
         )
 
     @destructiveTest
@@ -209,7 +206,7 @@ class MacShadowModuleTest(ModuleCase):
         # User does not exist
         self.assertEqual(
             self.run_function("shadow.del_password", [NO_USER]),
-            "ERROR: User not found: {0}".format(NO_USER),
+            "ERROR: User not found: {}".format(NO_USER),
         )
 
     @destructiveTest
@@ -226,5 +223,5 @@ class MacShadowModuleTest(ModuleCase):
         # User does not exist
         self.assertEqual(
             self.run_function("shadow.set_password", [NO_USER, "P@SSw0rd"]),
-            "ERROR: User not found: {0}".format(NO_USER),
+            "ERROR: User not found: {}".format(NO_USER),
         )
