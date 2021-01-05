@@ -789,28 +789,28 @@ def traverse_dict_and_list(data, key, default=None, delimiter=DEFAULT_TARGET_DEL
     if isinstance(key, str):
         key = key.split(delimiter)
 
+    if isinstance(key, int):
+        key = [key]
+
     for each in key:
         if isinstance(ptr, list):
             try:
                 idx = int(each)
             except ValueError:
-                embed_match = False
-                # Index was not numeric, lets look at any embedded dicts
-                for embedded in (x for x in ptr if isinstance(x, dict)):
-                    try:
-                        ptr = embedded[each]
-                        embed_match = True
-                        break
-                    except KeyError:
-                        pass
-                if not embed_match:
-                    # No embedded dicts matched, return the default
-                    return default
-            else:
+                idx = each
+
+            embed_match = False
+            # Index was not numeric, lets look at any embedded dicts
+            for embedded in (x for x in ptr if isinstance(x, dict)):
                 try:
-                    ptr = ptr[idx]
-                except IndexError:
-                    return default
+                    ptr = embedded[idx]
+                    embed_match = True
+                    break
+                except KeyError:
+                    pass
+            if not embed_match:
+                # No embedded dicts matched, return the default
+                return default
         else:
             try:
                 ptr = ptr[each]

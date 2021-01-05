@@ -33,6 +33,10 @@ def pillar_tree(base_env_pillar_tree_root_dir, salt_minion, salt_call_cli):
       - Galahad
       - Bedevere
       - Robin
+
+    12345:
+      code:
+        - luggage
     """
     top_tempfile = pytest.helpers.temp_file(
         "top.sls", top_file, base_env_pillar_tree_root_dir
@@ -150,6 +154,26 @@ def test_pillar_command_line(salt_call_cli, pillar_tree):
     pillar_items = ret.json
     assert "new" in pillar_items
     assert pillar_items["new"] == "additional"
+
+
+def test_pillar_get_integer_key(salt_call_cli, pillar_tree):
+    """
+    Test to ensure we get expected output
+    from pillar.items
+    """
+    ret = salt_call_cli.run("pillar.items")
+    assert ret.exitcode == 0
+    assert ret.json
+    pillar_items = ret.json
+    assert "12345" in pillar_items
+    assert pillar_items["12345"] == {"code": ["luggage"]}
+
+    ret = salt_call_cli.run("pillar.get", key="12345")
+    assert ret.exitcode == 0
+    assert ret.json
+    pillar_get = ret.json
+    assert "code" in pillar_get
+    assert "luggage" in pillar_get["code"]
 
 
 @attr.s
