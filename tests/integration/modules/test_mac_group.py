@@ -1,12 +1,8 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Nicole Thomas <nicole@saltstack.com>
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
-
 from salt.exceptions import CommandExecutionError
-from salt.ext import six
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
     destructiveTest,
@@ -133,7 +129,7 @@ class MacGroupModuleTest(ModuleCase):
         ):
             self.run_function("group.delete", [ADD_GROUP])
             self.skipTest(
-                "Failed to create the {0} group or add user {1} to group "
+                "Failed to create the {} group or add user {} to group "
                 "to manipulate".format(ADD_GROUP, ADD_USER)
             )
 
@@ -142,8 +138,8 @@ class MacGroupModuleTest(ModuleCase):
 
         # ensure new user is added to group and previous user is removed
         group_info = self.run_function("group.info", [ADD_GROUP])
-        self.assertIn(REP_USER_GROUP, six.text_type(group_info["members"]))
-        self.assertNotIn(ADD_USER, six.text_type(group_info["members"]))
+        self.assertIn(REP_USER_GROUP, str(group_info["members"]))
+        self.assertNotIn(ADD_USER, str(group_info["members"]))
 
     @slowTest
     def test_mac_getent(self):
@@ -156,14 +152,14 @@ class MacGroupModuleTest(ModuleCase):
         ):
             self.run_function("group.delete", [ADD_GROUP])
             self.skipTest(
-                "Failed to create the {0} group or add user {1} to group "
+                "Failed to create the {} group or add user {} to group "
                 "to manipulate".format(ADD_GROUP, ADD_USER)
             )
 
         getinfo = self.run_function("group.getent")
         self.assertTrue(getinfo)
-        self.assertIn(ADD_GROUP, six.text_type(getinfo))
-        self.assertIn(ADD_USER, six.text_type(getinfo))
+        self.assertIn(ADD_GROUP, str(getinfo))
+        self.assertIn(ADD_USER, str(getinfo))
 
     def tearDown(self):
         """
