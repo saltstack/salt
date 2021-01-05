@@ -119,7 +119,6 @@ TEST_SUITES_UNORDERED = {
     "external_api": {"display_name": "ExternalAPIs", "path": "integration/externalapi"},
     "daemons": {"display_name": "Daemon", "path": "integration/daemons"},
     "sdb": {"display_name": "Sdb", "path": "integration/sdb"},
-    "logging": {"display_name": "Logging", "path": "integration/logging"},
 }
 
 TEST_SUITES = collections.OrderedDict(
