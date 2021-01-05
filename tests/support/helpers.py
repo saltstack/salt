@@ -62,6 +62,7 @@ PRE_PYTEST_SKIP = pytest.mark.skipif(
 SKIP_IF_NOT_RUNNING_PYTEST = skipIf(
     RUNTIME_VARS.PYTEST_SESSION is False, "These tests now require running under PyTest"
 )
+ON_PY35 = sys.version_info < (3, 6)
 
 
 def no_symlinks():
