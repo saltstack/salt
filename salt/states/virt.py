@@ -822,9 +822,6 @@ def running(
     :param seed_cmd: Salt command to execute to seed the image. (Default: ``'seed.apply'``)
 
         .. versionadded:: 2019.2.0
-    :param update: set to ``True`` to update a defined domain. (Default: ``False``)
-
-        .. versionadded:: 2019.2.0
         .. deprecated:: 3001
     :param connection: libvirt connection URI, overriding defaults
 
