@@ -39,17 +39,14 @@ Connection module for Amazon ALB
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
 
-# Import Python libs
 import logging
 
-# Import Salt libs
 import salt.utils.boto3mod
 import salt.utils.versions
 
 log = logging.getLogger(__name__)
 
 
-# Import third-party libs
 try:
     # pylint: disable=unused-import
     import boto3

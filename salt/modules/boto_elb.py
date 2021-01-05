@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Connection module for Amazon ELB
 
@@ -44,19 +43,13 @@ Connection module for Amazon ELB
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
 
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import logging
 import time
 
-# Import Salt libs
 import salt.utils.json
 import salt.utils.odict as odict
 import salt.utils.versions
-
-# Import third party libs
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -265,10 +258,10 @@ def create(
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     if exists(name, region, key, keyid, profile):
         return True
-    if isinstance(availability_zones, six.string_types):
+    if isinstance(availability_zones, str):
         availability_zones = salt.utils.json.loads(availability_zones)
 
-    if isinstance(listeners, six.string_types):
+    if isinstance(listeners, str):
         listeners = salt.utils.json.loads(listeners)
 
     _complex_listeners = []
@@ -336,7 +329,7 @@ def create_listeners(name, listeners, region=None, key=None, keyid=None, profile
     """
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    if isinstance(listeners, six.string_types):
+    if isinstance(listeners, str):
         listeners = salt.utils.json.loads(listeners)
 
     _complex_listeners = []
@@ -368,7 +361,7 @@ def delete_listeners(name, ports, region=None, key=None, keyid=None, profile=Non
     """
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    if isinstance(ports, six.string_types):
+    if isinstance(ports, str):
         ports = salt.utils.json.loads(ports)
     try:
         conn.delete_load_balancer_listeners(name, ports)
@@ -398,7 +391,7 @@ def apply_security_groups(
     """
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    if isinstance(security_groups, six.string_types):
+    if isinstance(security_groups, str):
         security_groups = salt.utils.json.loads(security_groups)
     try:
         conn.apply_security_groups_to_lb(name, security_groups)
@@ -424,7 +417,7 @@ def enable_availability_zones(
     """
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    if isinstance(availability_zones, six.string_types):
+    if isinstance(availability_zones, str):
         availability_zones = salt.utils.json.loads(availability_zones)
     try:
         conn.enable_availability_zones(name, availability_zones)
@@ -449,7 +442,7 @@ def disable_availability_zones(
     """
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    if isinstance(availability_zones, six.string_types):
+    if isinstance(availability_zones, str):
         availability_zones = salt.utils.json.loads(availability_zones)
     try:
         conn.disable_availability_zones(name, availability_zones)
@@ -477,7 +470,7 @@ def attach_subnets(name, subnets, region=None, key=None, keyid=None, profile=Non
     """
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    if isinstance(subnets, six.string_types):
+    if isinstance(subnets, str):
         subnets = salt.utils.json.loads(subnets)
     try:
         conn.attach_lb_to_subnets(name, subnets)
@@ -505,7 +498,7 @@ def detach_subnets(name, subnets, region=None, key=None, keyid=None, profile=Non
     """
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    if isinstance(subnets, six.string_types):
+    if isinstance(subnets, str):
         subnets = salt.utils.json.loads(subnets)
     try:
         conn.detach_lb_from_subnets(name, subnets)
@@ -752,7 +745,7 @@ def register_instances(
     """
     # convert instances to list type, enabling consistent use of instances
     # variable throughout the register_instances method
-    if isinstance(instances, six.string_types) or isinstance(instances, six.text_type):
+    if isinstance(instances, str) or isinstance(instances, str):
         instances = [instances]
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
@@ -797,7 +790,7 @@ def deregister_instances(
     """
     # convert instances to list type, enabling consistent use of instances
     # variable throughout the deregister_instances method
-    if isinstance(instances, six.string_types) or isinstance(instances, six.text_type):
+    if isinstance(instances, str) or isinstance(instances, str):
         instances = [instances]
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
@@ -848,12 +841,9 @@ def set_instances(
         salt myminion boto_elb.set_instances myelb region=us-east-1 instances="[instance_id,instance_id]"
     """
     ret = True
-    current = set(
-        [
-            i["instance_id"]
-            for i in get_instance_health(name, region, key, keyid, profile)
-        ]
-    )
+    current = {
+        i["instance_id"] for i in get_instance_health(name, region, key, keyid, profile)
+    }
     desired = set(instances)
     add = desired - current
     remove = current - desired
@@ -1106,9 +1096,9 @@ def _build_tag_param_list(params, tags):
     i = 1
     for key in keys:
         value = tags[key]
-        params["Tags.member.{0}.Key".format(i)] = key
+        params["Tags.member.{}.Key".format(i)] = key
         if value is not None:
-            params["Tags.member.{0}.Value".format(i)] = value
+            params["Tags.member.{}.Value".format(i)] = value
         i += 1
 
 

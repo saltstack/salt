@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 HTTP Logstash engine
 ==========================
@@ -29,14 +28,10 @@ them onto a logstash endpoint via HTTP requests.
                   - bgp.config
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python lib
 import fnmatch
 
 import salt.utils.event
-
-# Import salt libs
 import salt.utils.http
 import salt.utils.json
 
