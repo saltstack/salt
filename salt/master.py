@@ -1012,6 +1012,7 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
     def _handle_signals(self, signum, sigframe):
         for channel in getattr(self, "req_channels", ()):
             channel.close()
+        self.clear_funcs.destroy()
         super()._handle_signals(signum, sigframe)
 
     def __bind(self):
@@ -1961,6 +1962,12 @@ class AESFuncs(TransportMethods):
         # Encrypt the return
         return ret, {"fun": "send"}
 
+    def destroy(self):
+        self.masterapi.destroy()
+        if self.local is not None:
+            self.local.destroy()
+            self.local = None
+
 
 class ClearFuncs(TransportMethods):
     """
@@ -2501,3 +2508,11 @@ class ClearFuncs(TransportMethods):
         Send the load back to the sender.
         """
         return clear_load
+
+    def destroy(self):
+        if self.masterapi is not None:
+            self.masterapi.destroy()
+            self.masterapi = None
+        if self.local is not None:
+            self.local.destroy()
+            self.local = None
