@@ -1,16 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 mac_power tests
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Salt Libs
 import salt.modules.mac_power as mac_power
 from salt.exceptions import SaltInvocationError
-
-# Import Salt Testing Libs
 from tests.support.unit import TestCase
 
 

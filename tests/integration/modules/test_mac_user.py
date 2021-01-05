@@ -1,13 +1,9 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Nicole Thomas <nicole@saltstack.com>
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
-
 import os
 
-import salt.ext.six as six
 import salt.utils.files
 from salt.exceptions import CommandExecutionError
 from tests.support.case import ModuleCase
@@ -38,7 +34,7 @@ class MacUserModuleTest(ModuleCase):
         """
         Sets up test requirements
         """
-        super(MacUserModuleTest, self).setUp()
+        super().setUp()
         os_grain = self.run_function("grains.item", ["kernel"])
         if os_grain["kernel"] not in "Darwin":
             self.skipTest("Test not applicable to '{kernel}' kernel".format(**os_grain))
@@ -163,15 +159,8 @@ class MacUserModuleTest(ModuleCase):
             self.assertTrue(os.path.exists("/etc/kcpassword"))
 
             # Are the contents of the file correct
-            if six.PY2:
-                test_data = b".\xf8'B\xa0\xd9\xad\x8b\xcd\xcdl"
-            else:
-                test_data = (
-                    b".\xc3\xb8'B\xc2\xa0\xc3\x99\xc2\xad\xc2\x8b\xc3\x8d\xc3\x8dl"
-                )
-            with salt.utils.files.fopen(
-                "/etc/kcpassword", "r" if six.PY2 else "rb"
-            ) as f:
+            test_data = b".\xc3\xb8'B\xc2\xa0\xc3\x99\xc2\xad\xc2\x8b\xc3\x8d\xc3\x8dl"
+            with salt.utils.files.fopen("/etc/kcpassword", "rb") as f:
                 file_data = f.read()
             self.assertEqual(test_data, file_data)
 

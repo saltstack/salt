@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 integration tests for mac_softwareupdate
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
@@ -34,7 +32,7 @@ class MacSoftwareUpdateModuleTest(ModuleCase):
         self.SCHEDULE = self.run_function("softwareupdate.schedule")
         self.CATALOG = self.run_function("softwareupdate.get_catalog")
 
-        super(MacSoftwareUpdateModuleTest, self).setUp()
+        super().setUp()
 
     def tearDown(self):
         """
@@ -53,7 +51,7 @@ class MacSoftwareUpdateModuleTest(ModuleCase):
         else:
             self.run_function("softwareupdate.set_catalog", [self.CATALOG])
 
-        super(MacSoftwareUpdateModuleTest, self).tearDown()
+        super().tearDown()
 
     @slowTest
     def test_list_available(self):
