@@ -54,7 +54,7 @@ def test_ping_reaction(event_listener, salt_minion):
 
     event_pattern = (salt_minion.id, event_tag)
     matched_events = event_listener.wait_for_events(
-        [event_pattern], after_time=start_time, timeout=30
+        [event_pattern], after_time=start_time, timeout=90
     )
     assert matched_events.found_all_events
     for event in matched_events:
@@ -72,7 +72,7 @@ def test_reactor_reaction(
     master_event_bus.fire_event({"id": salt_minion.id}, reactor_event.tag)
     event_pattern = (salt_master.id, reactor_event.event_tag)
     matched_events = event_listener.wait_for_events(
-        [event_pattern], after_time=start_time, timeout=30
+        [event_pattern], after_time=start_time, timeout=90
     )
     assert matched_events.found_all_events
     for event in matched_events:
@@ -161,13 +161,13 @@ def test_reactor_is_leader(
         # Since leader is false, let's try and get the fire event to ensure it was triggered
         event_pattern = (salt_master.id, reactor_event.tag)
         matched_events = event_listener.wait_for_events(
-            [event_pattern], after_time=start_time, timeout=30
+            [event_pattern], after_time=start_time, timeout=90
         )
         assert matched_events.found_all_events
         # Now that we matched the trigger event, let's confirm we don't get the reaction event
         event_pattern = (salt_master.id, reactor_event.event_tag)
         matched_events = event_listener.wait_for_events(
-            [event_pattern], after_time=start_time, timeout=10
+            [event_pattern], after_time=start_time, timeout=30
         )
         assert matched_events.found_all_events is not True
 
@@ -183,7 +183,7 @@ def test_reactor_is_leader(
         master_event_bus.fire_event({"id": salt_minion.id}, reactor_event.tag)
         event_pattern = (salt_master.id, reactor_event.event_tag)
         matched_events = event_listener.wait_for_events(
-            [event_pattern], after_time=start_time, timeout=30
+            [event_pattern], after_time=start_time, timeout=90
         )
         assert matched_events.found_all_events
         for event in matched_events:
