@@ -728,7 +728,6 @@ def running(
     install=True,
     pub_key=None,
     priv_key=None,
-    update=False,
     connection=None,
     username=None,
     password=None,
@@ -985,12 +984,6 @@ def running(
     """
     merged_disks = disks
 
-    if not update:
-        salt.utils.versions.warn_until(
-            "Aluminium",
-            "'update' parameter has been deprecated. Future behavior will be the one of update=True"
-            "It will be removed in {version}.",
-        )
     ret = defined(
         name,
         cpu=cpu,
@@ -1008,7 +1001,6 @@ def running(
         os_type=os_type,
         arch=arch,
         boot=boot,
-        update=update,
         boot_dev=boot_dev,
         numatune=numatune,
         hypervisor_features=hypervisor_features,
