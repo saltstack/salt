@@ -5,3 +5,4 @@ pytest-salt
 pytest-salt-factories >= 0.100.0
 pytest-tempdir >= 2019.10.12
 pytest-helpers-namespace >= 2019.1.8
+flaky
