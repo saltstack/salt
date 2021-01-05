@@ -6,17 +6,13 @@ import pytest
 import salt.utils.json
 import salt.utils.stringutils
 from salt.netapi.rest_tornado import saltnado
-from salt.utils.versions import StrictVersion
 from salt.utils.zeromq import ZMQDefaultLoop as ZMQIOLoop
-from salt.utils.zeromq import zmq
 from tests.support.helpers import TstSuiteLoggingHandler, flaky, slowTest
 from tests.support.unit import skipIf
-from tests.unit.netapi.test_rest_tornado import SaltnadoTestCase
-
-HAS_ZMQ_IOLOOP = bool(zmq)
+from tests.unit.netapi.test_rest_tornado import SaltnadoTestsBase
 
 
-class _SaltnadoIntegrationTestCase(SaltnadoTestCase):  # pylint: disable=abstract-method
+class SaltnadoIntegrationTestsBase(SaltnadoTestsBase):
     @property
     def opts(self):
         return self.get_config("client_config", from_scratch=True)
@@ -25,14 +21,12 @@ class _SaltnadoIntegrationTestCase(SaltnadoTestCase):  # pylint: disable=abstrac
     def mod_opts(self):
         return self.get_config("minion", from_scratch=True)
 
+    def get_app(self):
+        raise NotImplementedError
 
-@skipIf(HAS_ZMQ_IOLOOP is False, "PyZMQ version must be >= 14.0.1 to run these tests.")
-@skipIf(
-    StrictVersion(zmq.__version__) < StrictVersion("14.0.1"),
-    "PyZMQ must be >= 14.0.1 to run these tests.",
-)
+
 @pytest.mark.usefixtures("salt_sub_minion")
-class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
+class TestSaltAPIHandler(SaltnadoIntegrationTestsBase):
     def setUp(self):
         super().setUp()
         os.environ["ASYNC_TEST_TIMEOUT"] = "300"
@@ -432,8 +426,7 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
 
 
 @flaky
-@skipIf(HAS_ZMQ_IOLOOP is False, "PyZMQ version must be >= 14.0.1 to run these tests.")
-class TestMinionSaltAPIHandler(_SaltnadoIntegrationTestCase):
+class TestMinionSaltAPIHandler(SaltnadoIntegrationTestsBase):
     def get_app(self):
         urls = [
             (r"/minions/(.*)", saltnado.MinionSaltAPIHandler),
@@ -536,8 +529,7 @@ class TestMinionSaltAPIHandler(_SaltnadoIntegrationTestCase):
         self.assertEqual(response.code, 400)
 
 
-@skipIf(HAS_ZMQ_IOLOOP is False, "PyZMQ version must be >= 14.0.1 to run these tests.")
-class TestJobsSaltAPIHandler(_SaltnadoIntegrationTestCase):
+class TestJobsSaltAPIHandler(SaltnadoIntegrationTestsBase):
     def get_app(self):
         urls = [
             (r"/jobs/(.*)", saltnado.JobsSaltAPIHandler),
@@ -593,8 +585,7 @@ class TestJobsSaltAPIHandler(_SaltnadoIntegrationTestCase):
 
 # TODO: run all the same tests from the root handler, but for now since they are
 # the same code, we'll just sanity check
-@skipIf(HAS_ZMQ_IOLOOP is False, "PyZMQ version must be >= 14.0.1 to run these tests.")
-class TestRunSaltAPIHandler(_SaltnadoIntegrationTestCase):
+class TestRunSaltAPIHandler(SaltnadoIntegrationTestsBase):
     def get_app(self):
         urls = [
             ("/run", saltnado.RunSaltAPIHandler),
@@ -619,8 +610,7 @@ class TestRunSaltAPIHandler(_SaltnadoIntegrationTestCase):
         self.assertEqual(response_obj["return"], [{"minion": True, "sub_minion": True}])
 
 
-@skipIf(HAS_ZMQ_IOLOOP is False, "PyZMQ version must be >= 14.0.1 to run these tests.")
-class TestEventsSaltAPIHandler(_SaltnadoIntegrationTestCase):
+class TestEventsSaltAPIHandler(SaltnadoIntegrationTestsBase):
     def get_app(self):
         urls = [
             (r"/events", saltnado.EventsSaltAPIHandler),
@@ -666,8 +656,7 @@ class TestEventsSaltAPIHandler(_SaltnadoIntegrationTestCase):
             self.assertTrue(data.startswith("data: "))
 
 
-@skipIf(HAS_ZMQ_IOLOOP is False, "PyZMQ version must be >= 14.0.1 to run these tests.")
-class TestWebhookSaltAPIHandler(_SaltnadoIntegrationTestCase):
+class TestWebhookSaltAPIHandler(SaltnadoIntegrationTestsBase):
     def get_app(self):
 
         urls = [
