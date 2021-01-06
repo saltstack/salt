@@ -367,7 +367,7 @@ def _run(
         if stack[-2][2] == "script":
             cmd = f'"{shell}" -NonInteractive -NoProfile -ExecutionPolicy Bypass -Command {cmd}'
         elif encoded_cmd:
-            cmd = f'"{shell}" -NonInteractive -EncodedCommand "{cmd}"'
+            cmd = f'"{shell}" -NonInteractive -NoProfile -EncodedCommand {cmd}'
         else:
             cmd = f'"{shell}" -NonInteractive -NoProfile -Command "{cmd}"'
 
@@ -3736,22 +3736,24 @@ def powershell(
         if depth is not None:
             cmd += " -Depth {}".format(depth)
 
-    if encode_cmd:
-        # Convert the cmd to UTF-16LE without a BOM and base64 encode.
-        # Just base64 encoding UTF-8 or including a BOM is not valid.
-        log.debug("Encoding PowerShell command '%s'", cmd)
-        cmd_utf16 = cmd.decode("utf-8").encode("utf-16le")
-        cmd = base64.standard_b64encode(cmd_utf16)
-        encoded_cmd = True
-    else:
-        encoded_cmd = False
-
     # Put the whole command inside a try / catch block
     # Some errors in PowerShell are not "Terminating Errors" and will not be
     # caught in a try/catch block. For example, the `Get-WmiObject` command will
     # often return a "Non Terminating Error". To fix this, make sure
     # `-ErrorAction Stop` is set in the powershell command
     cmd = "try {" + cmd + '} catch { "{}" }'
+
+    if encode_cmd:
+        # Convert the cmd to UTF-16LE without a BOM and base64 encode.
+        # Just base64 encoding UTF-8 or including a BOM is not valid.
+        log.debug("Encoding PowerShell command '%s'", cmd)
+        cmd = f"$ProgressPreference='SilentlyContinue'; {cmd}"
+        cmd_utf16 = cmd.encode("utf-16-le")
+        cmd = base64.standard_b64encode(cmd_utf16)
+        cmd = salt.utils.stringutils.to_str(cmd)
+        encoded_cmd = True
+    else:
+        encoded_cmd = False
 
     # Retrieve the response, while overriding shell with 'powershell'
     response = run(
@@ -3784,6 +3786,7 @@ def powershell(
     if response == "":
         response = "{}"
     try:
+        return response
         return salt.utils.json.loads(response)
     except Exception:  # pylint: disable=broad-except
         log.error("Error converting PowerShell JSON return", exc_info=True)
@@ -4079,8 +4082,10 @@ def powershell_all(
         # Convert the cmd to UTF-16LE without a BOM and base64 encode.
         # Just base64 encoding UTF-8 or including a BOM is not valid.
         log.debug("Encoding PowerShell command '%s'", cmd)
-        cmd_utf16 = cmd.decode("utf-8").encode("utf-16le")
+        cmd = f"$ProgressPreference='SilentlyContinue'; {cmd}"
+        cmd_utf16 = cmd.encode("utf-16-le")
         cmd = base64.standard_b64encode(cmd_utf16)
+        cmd = salt.utils.stringutils.to_str(cmd)
         encoded_cmd = True
     else:
         encoded_cmd = False
