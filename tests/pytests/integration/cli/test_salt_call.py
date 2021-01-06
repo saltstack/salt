@@ -126,6 +126,9 @@ def test_issue_6973_state_highstate_exit_code(salt_call_cli):
         """
 
     with temp_state_file("top.sls", top_sls) as src:
+        # Need to cast to str because of Python3.5 and PyTests issues.
+        src = str(src)
+
         dst = "{0}.bak"
         shutil.move(src, dst)
         expected_comment = "No states found for this minion"
