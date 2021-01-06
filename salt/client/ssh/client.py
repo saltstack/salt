@@ -188,3 +188,20 @@ class SSHClient:
         return self.cmd_iter(
             f_tgt, fun, arg, timeout, tgt_type="list", ret=ret, kwarg=kwarg, **kwargs
         )
+
+    def destroy(self):
+        """
+        API compatibility method with salt.client.LocalClient
+        """
+
+    def __enter__(self):
+        """
+        API compatibility method with salt.client.LocalClient
+        """
+        return self
+
+    def __exit__(self, *args):
+        """
+        API compatibility method with salt.client.LocalClient
+        """
+        self.destroy()

@@ -324,8 +324,8 @@ def destroy(name, conn=None, call=None):
         mopts_ = salt.config.DEFAULT_MINION_OPTS
         conf_path = "/".join(__opts__["conf_file"].split("/")[:-1])
         mopts_.update(salt.config.minion_config(os.path.join(conf_path, "minion")))
-        client = salt.client.get_local_client(mopts_)
-        minions = client.cmd(name, "mine.flush")
+        with salt.client.get_local_client(mopts=mopts_) as client:
+            minions = client.cmd(name, "mine.flush")
 
     log.info("Clearing Salt Mine: %s, %s", name, flush_mine_on_destroy)
     log.info("Destroying VM: %s", name)
