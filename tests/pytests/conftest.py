@@ -7,6 +7,7 @@ import os
 import shutil
 import stat
 
+import attr
 import pytest
 import salt.utils.files
 import salt.utils.platform
@@ -39,6 +40,38 @@ def vault_port():
     return get_unused_localhost_port()
 
 
+@attr.s(slots=True, frozen=True)
+class ReactorEvent:
+    sls_path = attr.ib()
+    tag = attr.ib()
+    event_tag = attr.ib()
+
+
+@pytest.fixture(scope="session")
+def reactor_event(tmp_path_factory):
+
+    reactor_tag = "salt/event/test"
+    event_tag = random_string("test/reaction/")
+    reactors_dir = tmp_path_factory.mktemp("reactors")
+    reactor_test_contents = """
+    reactor-test:
+      runner.event.send:
+        - args:
+          - tag: {}
+          - data:
+              test_reaction: True
+    """.format(
+        event_tag
+    )
+    try:
+        with pytest.helpers.temp_file(
+            "reactor-test.sls", reactor_test_contents, reactors_dir
+        ) as reactor_file_path:
+            yield ReactorEvent(reactor_file_path, reactor_tag, event_tag)
+    finally:
+        shutil.rmtree(str(reactors_dir), ignore_errors=True)
+
+
 @pytest.fixture(scope="session")
 def salt_master_factory(
     request,
@@ -52,6 +85,7 @@ def salt_master_factory(
     ext_pillar_file_tree_root_dir,
     sdb_etcd_port,
     vault_port,
+    reactor_event,
 ):
     master_id = random_string("master-")
     root_dir = salt_factories.get_root_dir_for_daemon(master_id)
@@ -70,7 +104,7 @@ def salt_master_factory(
     config_defaults["syndic_master"] = "localhost"
     config_defaults["transport"] = request.config.getoption("--transport")
     config_defaults["reactor"] = [
-        {"salt/test/reactor": [os.path.join(RUNTIME_VARS.FILES, "reactor-test.sls")]}
+        {reactor_event.tag: [str(reactor_event.sls_path)]},
     ]
 
     nodegroups = {

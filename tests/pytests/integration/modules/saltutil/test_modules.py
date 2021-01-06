@@ -4,7 +4,6 @@ Integration tests for the saltutil module.
 
 
 import pytest
-from tests.support.helpers import slowTest
 
 pytestmark = [pytest.mark.windows_whitelisted]
 
@@ -25,7 +24,7 @@ def refresh_pillar(salt_call_cli, salt_minion, salt_sub_minion):
         assert ret.json
 
 
-@slowTest
+@pytest.mark.slow_test
 def test_sync_all(salt_call_cli):
     """
     Test syncing all ModuleCase
@@ -63,7 +62,7 @@ def test_sync_all(salt_call_cli):
     assert ret.json == expected_return
 
 
-@slowTest
+@pytest.mark.slow_test
 def test_sync_all_whitelist(salt_call_cli):
     """
     Test syncing all ModuleCase with whitelist
@@ -95,7 +94,7 @@ def test_sync_all_whitelist(salt_call_cli):
     assert ret.json == expected_return
 
 
-@slowTest
+@pytest.mark.slow_test
 def test_sync_all_blacklist(salt_call_cli):
     """
     Test syncing all ModuleCase with blacklist
@@ -139,7 +138,7 @@ def test_sync_all_blacklist(salt_call_cli):
     assert ret.json == expected_return
 
 
-@slowTest
+@pytest.mark.slow_test
 def test_sync_all_blacklist_and_whitelist(salt_call_cli):
     """
     Test syncing all ModuleCase with whitelist and blacklist

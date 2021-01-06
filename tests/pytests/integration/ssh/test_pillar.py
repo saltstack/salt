@@ -1,5 +1,4 @@
 import pytest
-from tests.support.helpers import slowTest
 
 pytestmark = [
     pytest.mark.skip_on_windows(reason="salt-ssh not available on Windows"),
@@ -34,7 +33,7 @@ def pillar_tree(base_env_pillar_tree_root_dir):
         yield
 
 
-@slowTest
+@pytest.mark.slow_test
 def test_pillar_items(salt_ssh_cli, pillar_tree):
     """
     test pillar.items with salt-ssh
@@ -49,7 +48,7 @@ def test_pillar_items(salt_ssh_cli, pillar_tree):
     assert pillar_items["knights"] == ["Lancelot", "Galahad", "Bedevere", "Robin"]
 
 
-@slowTest
+@pytest.mark.slow_test
 def test_pillar_get(salt_ssh_cli, pillar_tree):
     """
     test pillar.get with salt-ssh
@@ -60,7 +59,7 @@ def test_pillar_get(salt_ssh_cli, pillar_tree):
     assert ret.json == "python"
 
 
-@slowTest
+@pytest.mark.slow_test
 def test_pillar_get_doesnotexist(salt_ssh_cli, pillar_tree):
     """
     test pillar.get when pillar does not exist with salt-ssh
