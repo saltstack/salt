@@ -32,38 +32,38 @@ log = logging.getLogger(__name__)
 
 
 def _ping(tgt, tgt_type, timeout, gather_job_timeout):
-    client = salt.client.get_local_client(__opts__["conf_file"])
-    pub_data = client.run_job(
-        tgt, "test.ping", (), tgt_type, "", timeout, "", listen=True
-    )
+    with salt.client.get_local_client(__opts__["conf_file"]) as client:
+        pub_data = client.run_job(
+            tgt, "test.ping", (), tgt_type, "", timeout, "", listen=True
+        )
 
-    if not pub_data:
-        return pub_data
+        if not pub_data:
+            return pub_data
 
-    log.debug(
-        "manage runner will ping the following minion(s): %s",
-        ", ".join(sorted(pub_data["minions"])),
-    )
+        log.debug(
+            "manage runner will ping the following minion(s): %s",
+            ", ".join(sorted(pub_data["minions"])),
+        )
 
-    returned = set()
-    for fn_ret in client.get_cli_event_returns(
-        pub_data["jid"],
-        pub_data["minions"],
-        client._get_timeout(timeout),
-        tgt,
-        tgt_type,
-        gather_job_timeout=gather_job_timeout,
-    ):
+        returned = set()
+        for fn_ret in client.get_cli_event_returns(
+            pub_data["jid"],
+            pub_data["minions"],
+            client._get_timeout(timeout),
+            tgt,
+            tgt_type,
+            gather_job_timeout=gather_job_timeout,
+        ):
 
-        if fn_ret:
-            for mid, _ in fn_ret.items():
-                log.debug("minion '%s' returned from ping", mid)
-                returned.add(mid)
+            if fn_ret:
+                for mid, _ in fn_ret.items():
+                    log.debug("minion '%s' returned from ping", mid)
+                    returned.add(mid)
 
-    not_returned = sorted(set(pub_data["minions"]) - returned)
-    returned = sorted(returned)
+        not_returned = sorted(set(pub_data["minions"]) - returned)
+        returned = sorted(returned)
 
-    return returned, not_returned
+        return returned, not_returned
 
 
 def status(
@@ -266,15 +266,15 @@ def list_not_state(subset=None, show_ip=False):
     """
     connected = list_state(subset=None, show_ip=show_ip)
 
-    key = salt.key.get_key(__opts__)
-    keys = key.list_keys()
+    with salt.key.get_key(__opts__) as key:
+        keys = key.list_keys()
 
-    not_connected = []
-    for minion in keys[key.ACC]:
-        if minion not in connected and (subset is None or minion in subset):
-            not_connected.append(minion)
+        not_connected = []
+        for minion in keys[key.ACC]:
+            if minion not in connected and (subset is None or minion in subset):
+                not_connected.append(minion)
 
-    return not_connected
+        return not_connected
 
 
 def present(subset=None, show_ip=False):
@@ -522,9 +522,7 @@ def safe_accept(target, tgt_type="glob"):
         salt-run manage.safe_accept my_minion
         salt-run manage.safe_accept minion1,minion2 tgt_type=list
     """
-    salt_key = salt.key.Key(__opts__)
     ssh_client = salt.client.ssh.client.SSHClient()
-
     ret = ssh_client.cmd(target, "key.finger", tgt_type=tgt_type)
 
     failures = {}
@@ -532,7 +530,8 @@ def safe_accept(target, tgt_type="glob"):
         if not FINGERPRINT_REGEX.match(finger):
             failures[minion] = finger
         else:
-            fingerprints = salt_key.finger(minion)
+            with salt.key.Key(__opts__) as salt_key:
+                fingerprints = salt_key.finger(minion)
             accepted = fingerprints.get("minions", {})
             pending = fingerprints.get("minions_pre", {})
             if minion in accepted:

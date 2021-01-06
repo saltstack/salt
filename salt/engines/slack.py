@@ -895,15 +895,15 @@ class SlackClient:
 
         # Default to trying to run as a client module.
         else:
-            local = salt.client.LocalClient()
             log.debug(
                 "Command %s will run via local.cmd_async, targeting %s", cmd, target
             )
             log.debug("Running %s, %s, %s, %s, %s", target, cmd, args, kwargs, tgt_type)
             # according to https://github.com/saltstack/salt-api/issues/164, tgt_type has changed to expr_form
-            job_id = local.cmd_async(
-                str(target), cmd, arg=args, kwarg=kwargs, tgt_type=str(tgt_type),
-            )
+            with salt.client.LocalClient() as local:
+                job_id = local.cmd_async(
+                    str(target), cmd, arg=args, kwarg=kwargs, tgt_type=str(tgt_type),
+                )
             log.info("ret from local.cmd_async is %s", job_id)
         return job_id
 
