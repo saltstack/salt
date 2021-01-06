@@ -3785,7 +3785,6 @@ def powershell(
     if response == "":
         response = "{}"
     try:
-        return response
         return salt.utils.json.loads(response)
     except Exception:  # pylint: disable=broad-except
         log.error("Error converting PowerShell JSON return", exc_info=True)
