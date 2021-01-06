@@ -1,38 +1,19 @@
-import os
 import time
 
 import pytest
-import salt.utils.files
-import salt.utils.platform
-from salt.serializers import yaml
-from tests.support.helpers import get_virtualenv_binary_path, slowTest
-from tests.support.runtests import RUNTIME_VARS
+from saltfactories.utils import random_string
+from tests.support.helpers import slowTest
 
 
 @pytest.fixture(scope="function")
 def salt_minion_retry(salt_master_factory, salt_minion_id):
-    with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, "minion")) as rfh:
-        config_defaults = yaml.deserialize(rfh.read())
-    config_defaults["hosts.file"] = os.path.join(RUNTIME_VARS.TMP, "hosts")
-    config_defaults["aliases.file"] = os.path.join(RUNTIME_VARS.TMP, "aliases")
-    config_defaults["transport"] = salt_master_factory.config["transport"]
-
-    config_overrides = {
-        "file_roots": salt_master_factory.config["file_roots"].copy(),
-        "pillar_roots": salt_master_factory.config["pillar_roots"].copy(),
-    }
-
-    virtualenv_binary = get_virtualenv_binary_path()
-    if virtualenv_binary:
-        config_overrides["venv_bin"] = virtualenv_binary
-
     # override the defaults for this test
-    config_overrides["return_retry_timer_max"] = 0
-    config_overrides["return_retry_timer"] = 60
-
+    config_overrides = {
+        "return_retry_timer_max": 0,
+        "return_retry_timer": 60,
+    }
     factory = salt_master_factory.get_salt_minion_daemon(
-        salt_minion_id,
-        config_defaults=config_defaults,
+        random_string("retry-minion-"),
         config_overrides=config_overrides,
         extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
     )
