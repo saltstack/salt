@@ -401,3 +401,10 @@ def strip_spaces(node):
         raise Exception("Failed to recurse on the node")
 
     return node
+
+
+def element_to_str(node):
+    """
+    Serialize an XML node into a string
+    """
+    return salt.utils.stringutils.to_str(ElementTree.tostring(node))
