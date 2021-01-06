@@ -13,7 +13,7 @@ def test_powershell():
     Test cmd.powershell
     """
     ret = cmdmod.powershell("Write-Output foo")
-    assert ret == '"foo"'
+    assert ret == 'foo'
 
 
 @pytest.mark.skip_unless_on_windows(reason="Only run on Windows")
@@ -22,7 +22,7 @@ def test_powershell_encode_cmd():
     Test cmd.powershell with encode_cmd
     """
     ret = cmdmod.powershell('Write-Output "encoded foo"', encode_cmd=True)
-    assert ret == '"encoded foo"'
+    assert ret == 'encoded foo'
 
 
 @pytest.mark.skip_unless_on_windows(reason="Only run on Windows")
@@ -32,7 +32,7 @@ def test_powershell_pwsh():
     Test cmd.powershell with Powershell 7 (shell="pwsh")
     """
     ret = cmdmod.powershell("Write-Output foo", shell="pwsh")
-    assert ret == '"foo"'
+    assert ret == 'foo'
 
 
 @pytest.mark.skip_unless_on_windows(reason="Only run on Windows")
@@ -42,7 +42,7 @@ def test_powershell_encode_cmd_pwsh():
     Test cmd.powershell with encode_cmd on Powershell 7 (shell="pwsh")
     """
     ret = cmdmod.powershell('Write-Output "encoded foo"', shell="pwsh", encode_cmd=True)
-    assert ret == '"encoded foo"'
+    assert ret == 'encoded foo'
 
 
 @pytest.mark.skip_unless_on_windows(reason="Only run on Windows")
