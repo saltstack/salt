@@ -3472,9 +3472,7 @@ def _update_live(domain, new_desc, mem, cpu, old_mem, old_cpu, to_skip, test):
                 {
                     "device": dev_type,
                     "cmd": "attachDevice",
-                    "args": [
-                        salt.utils.stringutils.to_str(ElementTree.tostring(added))
-                    ],
+                    "args": [xmlutil.element_to_str(added)],
                 }
             )
 
@@ -3495,9 +3493,7 @@ def _update_live(domain, new_desc, mem, cpu, old_mem, old_cpu, to_skip, test):
             {
                 "device": "disk",
                 "cmd": "updateDeviceFlags",
-                "args": [
-                    salt.utils.stringutils.to_str(ElementTree.tostring(updated_disk))
-                ],
+                "args": [xmlutil.element_to_str(updated_disk)],
             }
         )
 
@@ -4224,9 +4220,9 @@ def update(
                     elif item in changes["disk"]["new"] and not source_file:
                         _disk_volume_create(conn, all_disks[idx])
             if not test:
-                xml_desc = ElementTree.tostring(desc)
+                xml_desc = xmlutil.element_to_str(desc)
                 log.debug("Update virtual machine definition: %s", xml_desc)
-                conn.defineXML(salt.utils.stringutils.to_str(xml_desc))
+                conn.defineXML(xml_desc)
             status["definition"] = True
         except libvirt.libvirtError as err:
             conn.close()
@@ -6333,9 +6329,7 @@ def snapshot(domain, name=None, suffix=None, **kwargs):
     n_name.text = name
 
     conn = __get_conn(**kwargs)
-    _get_domain(conn, domain).snapshotCreateXML(
-        salt.utils.stringutils.to_str(ElementTree.tostring(doc))
-    )
+    _get_domain(conn, domain).snapshotCreateXML(xmlutil.element_to_str(doc))
     conn.close()
 
     return {"name": name}
@@ -7003,10 +6997,8 @@ def cpu_baseline(full=False, migratable=False, out="libvirt", **kwargs):
     conn = __get_conn(**kwargs)
     caps = ElementTree.fromstring(conn.getCapabilities())
     cpu = caps.find("host/cpu")
-    log.debug(
-        "Host CPU model definition: %s",
-        salt.utils.stringutils.to_str(ElementTree.tostring(cpu)),
-    )
+    host_cpu_def = xmlutil.element_to_str(cpu)
+    log.debug("Host CPU model definition: %s", host_cpu_def)
 
     flags = 0
     if migratable:
@@ -7021,11 +7013,7 @@ def cpu_baseline(full=False, migratable=False, out="libvirt", **kwargs):
         # This one is only in 1.1.3+
         flags += libvirt.VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES
 
-    cpu = ElementTree.fromstring(
-        conn.baselineCPU(
-            [salt.utils.stringutils.to_str(ElementTree.tostring(cpu))], flags
-        )
-    )
+    cpu = ElementTree.fromstring(conn.baselineCPU([host_cpu_def], flags))
     conn.close()
 
     if full and not getattr(libvirt, "VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES", False):
@@ -7618,9 +7606,7 @@ def network_update(
 
         needs_update = xmlutil.to_dict(old_xml, True) != xmlutil.to_dict(new_xml, True)
         if needs_update and not test:
-            conn.networkDefineXML(
-                salt.utils.stringutils.to_str(ElementTree.tostring(new_xml))
-            )
+            conn.networkDefineXML(xmlutil.element_to_str(new_xml))
     finally:
         conn.close()
     return needs_update
@@ -8466,9 +8452,7 @@ def pool_update(
 
         needs_update = xmlutil.to_dict(old_xml, True) != xmlutil.to_dict(new_xml, True)
         if needs_update and not test:
-            conn.storagePoolDefineXML(
-                salt.utils.stringutils.to_str(ElementTree.tostring(new_xml))
-            )
+            conn.storagePoolDefineXML(xmlutil.element_to_str(new_xml))
     finally:
         conn.close()
     return needs_update
