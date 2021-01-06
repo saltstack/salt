@@ -556,38 +556,29 @@ class CMDModuleTest(ModuleCase):
         self.assertIn("abc=123", out)
         self.assertIn("ABC=456", out)
 
-    @skipIf(not salt.utils.platform.is_windows(), "minion is not windows")
-    def test_windows_cmd_powershell_list(self):
-        """
-        Ensure that cmd.run_all supports running shell='cmd' with cmd passed
-        as a list
-        """
-        out = self.run_function(
-            "cmd.run_all", cmd=["echo", "salt"], python_shell=False, shell="powershell"
-        )
-        self.assertEqual(out["stdout"], "salt")
-
-    @skipIf(not salt.utils.platform.is_windows(), "minion is not windows")
-    def test_windows_cmd_powershell_string(self):
-        """
-        Ensure that cmd.run_all supports running shell='cmd' with cmd passed
-        as a string
-        """
-        out = self.run_function(
-            "cmd.run_all", cmd="echo salt", python_shell=False, shell="powershell"
-        )
-        self.assertEqual(out["stdout"], "salt")
-
-    @pytest.mark.slow_test
+    @slowTest
     @skipIf(not salt.utils.platform.is_windows(), "minion is not windows")
     def test_windows_powershell_script_args(self):
         """
         Ensure that powershell processes inline script in args
         """
         val = "i like cheese"
+        args = f'-SecureString (ConvertTo-SecureString -String "{val}" -AsPlainText -Force) -ErrorAction Stop'
+        script = "salt://issue-56195/test.ps1"
+        ret = self.run_function("cmd.script", [script], args=args, shell="powershell")
+        self.assertEqual(ret["stdout"], val)
+
+    @pytest.mark.slow_test
+    @skipIf(not salt.utils.platform.is_windows(), "minion is not windows")
+    @skipIf(not salt.utils.path.which("pwsh"), "Requires Powershell 7")
+    def test_windows_powershell_script_args_pwsh(self):
+        """
+        Ensure that powershell processes inline script in args with powershell 7
+        """
+        val = "i like cheese"
         args = '-SecureString (ConvertTo-SecureString -String "{}" -AsPlainText -Force) -ErrorAction Stop'.format(
             val
         )
         script = "salt://issue-56195/test.ps1"
-        ret = self.run_function("cmd.script", [script], args=args, shell="powershell")
+        ret = self.run_function("cmd.script", [script], args=args, shell="pwsh")
         self.assertEqual(ret["stdout"], val)
