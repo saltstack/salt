@@ -1,4 +1,5 @@
 import base64
+
 import pytest
 import salt.modules.cmdmod as cmdmod
 import salt.utils.stringutils
