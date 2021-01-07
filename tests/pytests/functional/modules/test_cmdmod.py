@@ -113,7 +113,7 @@ def test_cmd_run_all_powershell_string():
 
 def test_cmd_run_encoded_cmd():
     cmd = "Write-Output 'encoded command'"
-    cmd = "$ProgressPreference='SilentlyContinue'; {0}".format(cmd)
+    cmd = "$ProgressPreference='SilentlyContinue'; {}".format(cmd)
     cmd_utf16 = cmd.encode("utf-16-le")
     encoded_cmd = base64.standard_b64encode(cmd_utf16)
     encoded_cmd = salt.utils.stringutils.to_str(encoded_cmd)
@@ -124,7 +124,7 @@ def test_cmd_run_encoded_cmd():
 @pytest.mark.skip_if_binaries_missing("pwsh", message="Powershell 7 Not Present")
 def test_cmd_run_encoded_cmd_pwsh():
     cmd = "Write-Output 'encoded command'"
-    cmd = "$ProgressPreference='SilentlyContinue'; {0}".format(cmd)
+    cmd = "$ProgressPreference='SilentlyContinue'; {}".format(cmd)
     cmd_utf16 = cmd.encode("utf-16-le")
     encoded_cmd = base64.standard_b64encode(cmd_utf16)
     encoded_cmd = salt.utils.stringutils.to_str(encoded_cmd)
@@ -134,7 +134,7 @@ def test_cmd_run_encoded_cmd_pwsh():
 
 def test_cmd_run_all_encoded_cmd():
     cmd = "Write-Output 'encoded command'"
-    cmd = "$ProgressPreference='SilentlyContinue'; {0}".format(cmd)
+    cmd = "$ProgressPreference='SilentlyContinue'; {}".format(cmd)
     cmd_utf16 = cmd.encode("utf-16-le")
     encoded_cmd = base64.standard_b64encode(cmd_utf16)
     encoded_cmd = salt.utils.stringutils.to_str(encoded_cmd)
@@ -145,7 +145,7 @@ def test_cmd_run_all_encoded_cmd():
 @pytest.mark.skip_if_binaries_missing("pwsh", message="Powershell 7 Not Present")
 def test_cmd_run_all_encoded_cmd_pwsh():
     cmd = "Write-Output 'encoded command'"
-    cmd = "$ProgressPreference='SilentlyContinue'; {0}".format(cmd)
+    cmd = "$ProgressPreference='SilentlyContinue'; {}".format(cmd)
     cmd_utf16 = cmd.encode("utf-16-le")
     encoded_cmd = base64.standard_b64encode(cmd_utf16)
     encoded_cmd = salt.utils.stringutils.to_str(encoded_cmd)
