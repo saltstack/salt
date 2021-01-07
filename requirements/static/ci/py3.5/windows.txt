@@ -57,7 +57,7 @@ jsonschema==2.6.0
 keyring==5.7.1
 kubernetes==3.0.0
 libnacl==1.7.1
-lxml==4.3.0
+lxml==4.6.2
 mako==1.0.7
 markupsafe==1.1.1
 mock==3.0.5 ; python_version < "3.6"
