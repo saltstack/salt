@@ -121,6 +121,7 @@ docker==3.7.2
 docutils==0.15.2          # via botocore
 ecdsa==0.13.3             # via python-jose
 filelock==3.0.12          # via virtualenv
+flaky==3.7.0
 future==0.17.1            # via napalm, python-jose, textfsm
 genshi==0.7.3
 geomet==0.1.2             # via cassandra-driver
@@ -186,7 +187,7 @@ pyopenssl==19.1.0
 pyparsing==2.4.5          # via junos-eznc, packaging
 pyserial==3.4             # via junos-eznc, netmiko
 pytest-helpers-namespace==2019.1.8
-pytest-salt-factories==0.98.2
+pytest-salt-factories==0.120.0
 pytest-salt==2020.1.27
 pytest-tempdir==2019.10.12
 pytest==6.1.2

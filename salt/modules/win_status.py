@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module for returning various status data about a minion.
 These data can be useful for compiling into stats later,
@@ -9,22 +8,16 @@ or for problem solving if your minion is having problems.
 :depends:  - wmi
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import ctypes
 import datetime
 import logging
 import subprocess
 
-# Import Salt Libs
 import salt.utils.event
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.win_pdh
-
-# Import 3rd party Libs
-from salt.ext import six
 
 # These imports needed for namespaced functions
 # pylint: disable=W0611
@@ -37,7 +30,6 @@ log = logging.getLogger(__name__)
 
 # pylint: enable=W0611
 
-# Import 3rd Party Libs
 try:
     if salt.utils.platform.is_windows():
         import wmi
@@ -449,7 +441,7 @@ def uptime(human_readable=False):
     # Subtract startup time from current time to get the uptime of the system
     uptime = datetime.datetime.now() - startup_time
 
-    return six.text_type(uptime) if human_readable else uptime.total_seconds()
+    return str(uptime) if human_readable else uptime.total_seconds()
 
 
 def _get_process_info(proc):
@@ -489,15 +481,15 @@ def _get_process_owner(process):
 
 def _byte_calc(val):
     if val < 1024:
-        tstr = six.text_type(val) + "B"
+        tstr = str(val) + "B"
     elif val < 1038336:
-        tstr = six.text_type(val / 1024) + "KB"
+        tstr = str(val / 1024) + "KB"
     elif val < 1073741824:
-        tstr = six.text_type(val / 1038336) + "MB"
+        tstr = str(val / 1038336) + "MB"
     elif val < 1099511627776:
-        tstr = six.text_type(val / 1073741824) + "GB"
+        tstr = str(val / 1073741824) + "GB"
     else:
-        tstr = six.text_type(val / 1099511627776) + "TB"
+        tstr = str(val / 1099511627776) + "TB"
     return tstr
 
 

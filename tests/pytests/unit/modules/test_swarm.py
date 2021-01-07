@@ -16,15 +16,13 @@ pytestmark = pytest.mark.skipif(
 )
 
 
-@pytest.fixture(autouse=True)
-def setup_loader():
-    setup_loader_modules = {swarm: {"__context__": {}}}
-    with pytest.helpers.loader_mock(setup_loader_modules) as loader_mock:
-        yield loader_mock
+@pytest.fixture
+def configure_loader_modules():
+    return {swarm: {"__context__": {}}}
 
 
 @pytest.fixture
-def fake_context_client():
+def fake_context_client(setup_loader_mock):
     fake_swarm_client = MagicMock()
     patch_context = patch.dict(
         swarm.__context__, {"client": fake_swarm_client, "server_name": "test swarm"}
