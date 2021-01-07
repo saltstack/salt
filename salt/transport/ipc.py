@@ -235,6 +235,12 @@ class IPCServer:
 
     # pylint: enable=W1701
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.close()
+
 
 class IPCClient:
     """
@@ -344,17 +350,6 @@ class IPCClient:
 
                 yield salt.ext.tornado.gen.sleep(1)
 
-    # pylint: disable=W1701
-    def __del__(self):
-        try:
-            self.close()
-        except TypeError:
-            # This is raised when Python's GC has collected objects which
-            # would be needed when calling self.close()
-            pass
-
-    # pylint: enable=W1701
-
     def close(self):
         """
         Routines to handle any cleanup before the instance shuts down.
@@ -375,6 +370,23 @@ class IPCClient:
                 if exc.errno != errno.EBADF:
                     # If its not a bad file descriptor error, raise
                     raise
+
+    # pylint: disable=W1701
+    def __del__(self):
+        try:
+            self.close()
+        except TypeError:
+            # This is raised when Python's GC has collected objects which
+            # would be needed when calling self.close()
+            pass
+
+    # pylint: enable=W1701
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.close()
 
 
 class IPCMessageClient(IPCClient):
@@ -584,16 +596,11 @@ class IPCMessagePublisher:
         if hasattr(self.sock, "close"):
             self.sock.close()
 
-    # pylint: disable=W1701
-    def __del__(self):
-        try:
-            self.close()
-        except TypeError:
-            # This is raised when Python's GC has collected objects which
-            # would be needed when calling self.close()
-            pass
+    def __enter__(self):
+        return self
 
-    # pylint: enable=W1701
+    def __exit__(self, *args):
+        self.close()
 
 
 class IPCMessageSubscriber(IPCClient):
@@ -748,10 +755,3 @@ class IPCMessageSubscriber(IPCClient):
             exc = self._read_stream_future.exception()
             if exc and not isinstance(exc, StreamClosedError):
                 log.error("Read future returned exception %r", exc)
-
-    # pylint: disable=W1701
-    def __del__(self):
-        if IPCMessageSubscriber in globals():
-            self.close()
-
-    # pylint: enable=W1701
