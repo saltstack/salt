@@ -572,7 +572,7 @@ def _certificate_file_managed(ret, file_args):
 
 
 def certificate_managed(
-    name, days_remaining=90, append_certs=None, managed_private_key=None, **kwargs
+    name, days_remaining=90, append_certs=None, **kwargs
 ):
     """
     Manage a Certificate
@@ -590,10 +590,6 @@ def certificate_managed(
     append_certs:
         A list of certificates to be appended to the managed file.
         They must be valid PEM files, otherwise an error will be thrown.
-
-    managed_private_key:
-        Has no effect since v2016.11 and will be removed in Salt Aluminium.
-        Use a separate x509.private_key_managed call instead.
 
     kwargs:
         Any arguments supported by :py:func:`x509.create_certificate
@@ -659,13 +655,6 @@ def certificate_managed(
     ):
         raise salt.exceptions.SaltInvocationError(
             "public_key, signing_private_key, or csr must be specified."
-        )
-
-    if managed_private_key:
-        salt.utils.versions.warn_until(
-            "Aluminium",
-            "Passing 'managed_private_key' to x509.certificate_managed has no effect and "
-            "will be removed Salt Aluminium. Use a separate x509.private_key_managed call instead.",
         )
 
     ret = {"name": name, "result": False, "changes": {}, "comment": ""}
