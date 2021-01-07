@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Control the state system on the minion.
 
@@ -11,8 +10,6 @@ highdata and won't hit the fileserver except for ``salt://`` links in the
 states themselves.
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
@@ -22,7 +19,6 @@ import tarfile
 import tempfile
 import time
 
-# Import salt libs
 import salt.config
 import salt.defaults.exitcodes
 import salt.payload
@@ -42,9 +38,6 @@ import salt.utils.stringutils
 import salt.utils.url
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-
-# Import 3rd-party libs
-from salt.ext import six
 from salt.loader import _format_cached_grains
 from salt.runners.state import orchestrate as _orchestrate
 from salt.utils.odict import OrderedDict
@@ -89,11 +82,11 @@ def _filter_running(runnings):
     """
     Filter out the result: True + no changes data
     """
-    ret = dict(
-        (tag, value)
-        for tag, value in six.iteritems(runnings)
+    ret = {
+        tag: value
+        for tag, value in runnings.items()
         if not value["result"] or value["changes"]
-    )
+    }
     return ret
 
 
@@ -151,7 +144,7 @@ def _snapper_pre(opts, jid):
             snapper_pre = __salt__["snapper.create_snapshot"](
                 config=__opts__.get("snapper_states_config", "root"),
                 snapshot_type="pre",
-                description="Salt State run for jid {0}".format(jid),
+                description="Salt State run for jid {}".format(jid),
                 __pub_jid=jid,
             )
     except Exception:  # pylint: disable=broad-except
@@ -170,7 +163,7 @@ def _snapper_post(opts, jid, pre_num):
                 config=__opts__.get("snapper_states_config", "root"),
                 snapshot_type="post",
                 pre_number=pre_num,
-                description="Salt State run for jid {0}".format(jid),
+                description="Salt State run for jid {}".format(jid),
                 __pub_jid=jid,
             )
     except Exception:  # pylint: disable=broad-except
@@ -216,7 +209,7 @@ def get_pauses(jid=None):
     elif isinstance(jid, list):
         jids = salt.utils.data.stringify(jid)
     else:
-        jids = [six.text_type(jid)]
+        jids = [str(jid)]
     for scan_jid in jids:
         is_active = False
         for active_data in active:
@@ -260,7 +253,7 @@ def soft_kill(jid, state_id=None):
         salt '*' state.soft_kill 20171130110407769519
         salt '*' state.soft_kill 20171130110407769519 vim
     """
-    jid = six.text_type(jid)
+    jid = str(jid)
     if state_id is None:
         state_id = "__all__"
     data, pause_path = _get_pause(jid, state_id)
@@ -294,7 +287,7 @@ def pause(jid, state_id=None, duration=None):
         salt '*' state.pause 20171130110407769519 vim
         salt '*' state.pause 20171130110407769519 vim 20
     """
-    jid = six.text_type(jid)
+    jid = str(jid)
     if state_id is None:
         state_id = "__all__"
     data, pause_path = _get_pause(jid, state_id)
@@ -326,7 +319,7 @@ def resume(jid, state_id=None):
         salt '*' state.resume 20171130110407769519
         salt '*' state.resume 20171130110407769519 vim
     """
-    jid = six.text_type(jid)
+    jid = str(jid)
     if state_id is None:
         state_id = "__all__"
     data, pause_path = _get_pause(jid, state_id)
@@ -387,8 +380,8 @@ def running(concurrent=False):
     active = __salt__["saltutil.is_running"]("state.*")
     for data in active:
         err = (
-            'The function "{0}" is running as PID {1} and was started at '
-            "{2} with jid {3}"
+            'The function "{}" is running as PID {} and was started at '
+            "{} with jid {}"
         ).format(
             data["fun"],
             data["pid"],
@@ -525,8 +518,8 @@ def high(data, test=None, queue=False, **kwargs):
             opts,
             pillar_override,
             pillar_enc=pillar_enc,
-            proxy=__proxy__,
-            context=__context__,
+            proxy=dict(__proxy__),
+            context=dict(__context__),
             initial_pillar=_get_initial_pillar(opts),
         )
     except NameError:
@@ -567,13 +560,13 @@ def template(tem, queue=False, **kwargs):
     try:
         st_ = salt.state.HighState(
             opts,
-            context=__context__,
-            proxy=__proxy__,
+            context=dict(__context__),
+            proxy=dict(__proxy__),
             initial_pillar=_get_initial_pillar(opts),
         )
     except NameError:
         st_ = salt.state.HighState(
-            opts, context=__context__, initial_pillar=_get_initial_pillar(opts)
+            opts, context=dict(__context__), initial_pillar=_get_initial_pillar(opts)
         )
 
     errors = _get_pillar_errors(kwargs, pillar=st_.opts["pillar"])
@@ -850,10 +843,10 @@ def request(mods=None, **kwargs):
         try:
             if salt.utils.platform.is_windows():
                 # Make sure cache file isn't read-only
-                __salt__["cmd.run"]('attrib -R "{0}"'.format(notify_path))
+                __salt__["cmd.run"]('attrib -R "{}"'.format(notify_path))
             with salt.utils.files.fopen(notify_path, "w+b") as fp_:
                 serial.dump(req, fp_)
-        except (IOError, OSError):
+        except OSError:
             log.error(
                 "Unable to write state request file %s. Check permission.", notify_path
             )
@@ -902,7 +895,7 @@ def clear_request(name=None):
     if not name:
         try:
             os.remove(notify_path)
-        except (IOError, OSError):
+        except OSError:
             pass
     else:
         req = check_request()
@@ -914,10 +907,10 @@ def clear_request(name=None):
             try:
                 if salt.utils.platform.is_windows():
                     # Make sure cache file isn't read-only
-                    __salt__["cmd.run"]('attrib -R "{0}"'.format(notify_path))
+                    __salt__["cmd.run"]('attrib -R "{}"'.format(notify_path))
                 with salt.utils.files.fopen(notify_path, "w+b") as fp_:
                     serial.dump(req, fp_)
-            except (IOError, OSError):
+            except OSError:
                 log.error(
                     "Unable to write state request file %s. Check permission.",
                     notify_path,
@@ -950,7 +943,7 @@ def run_request(name="default", **kwargs):
         ret = apply_(n_req["mods"], **n_req["kwargs"])
         try:
             os.remove(os.path.join(__opts__["cachedir"], "req_state.p"))
-        except (IOError, OSError):
+        except OSError:
             pass
         return ret
     return {}
@@ -1096,8 +1089,8 @@ def highstate(test=None, queue=False, **kwargs):
             pillar_override,
             kwargs.get("__pub_jid"),
             pillar_enc=pillar_enc,
-            proxy=__proxy__,
-            context=__context__,
+            proxy=dict(__proxy__),
+            context=dict(__context__),
             mocked=kwargs.get("mock", False),
             initial_pillar=_get_initial_pillar(opts),
         )
@@ -1319,7 +1312,7 @@ def sls(mods, test=None, exclude=None, queue=False, sync_mods=None, **kwargs):
     serial = salt.payload.Serial(__opts__)
     cfn = os.path.join(
         __opts__["cachedir"],
-        "{0}.cache.p".format(kwargs.get("cache_name", "highstate")),
+        "{}.cache.p".format(kwargs.get("cache_name", "highstate")),
     )
 
     if sync_mods is True:
@@ -1335,7 +1328,7 @@ def sls(mods, test=None, exclude=None, queue=False, sync_mods=None, **kwargs):
 
     for module_type in sync_mods:
         try:
-            __salt__["saltutil.sync_{0}".format(module_type)](saltenv=opts["saltenv"])
+            __salt__["saltutil.sync_{}".format(module_type)](saltenv=opts["saltenv"])
         except KeyError:
             log.warning("Invalid custom module type '%s', ignoring", module_type)
 
@@ -1345,8 +1338,8 @@ def sls(mods, test=None, exclude=None, queue=False, sync_mods=None, **kwargs):
             pillar_override,
             kwargs.get("__pub_jid"),
             pillar_enc=pillar_enc,
-            proxy=__proxy__,
-            context=__context__,
+            proxy=dict(__proxy__),
+            context=dict(__context__),
             mocked=kwargs.get("mock", False),
             initial_pillar=_get_initial_pillar(opts),
         )
@@ -1374,7 +1367,7 @@ def sls(mods, test=None, exclude=None, queue=False, sync_mods=None, **kwargs):
                     return st_.state.call_high(high_, orchestration_jid)
 
     # If the state file is an integer, convert to a string then to unicode
-    if isinstance(mods, six.integer_types):
+    if isinstance(mods, int):
         mods = salt.utils.stringutils.to_unicode(
             str(mods)
         )  # future lint: disable=blacklisted-function
@@ -1409,7 +1402,7 @@ def sls(mods, test=None, exclude=None, queue=False, sync_mods=None, **kwargs):
                 __salt__["cmd.run"](["attrib", "-R", cache_file], python_shell=False)
             with salt.utils.files.fopen(cache_file, "w+b") as fp_:
                 serial.dump(ret, fp_)
-        except (IOError, OSError):
+        except OSError:
             log.error(
                 "Unable to write to SLS cache file %s. Check permission.", cache_file
             )
@@ -1425,7 +1418,7 @@ def sls(mods, test=None, exclude=None, queue=False, sync_mods=None, **kwargs):
                 except TypeError:
                     # Can't serialize pydsl
                     pass
-        except (IOError, OSError):
+        except OSError:
             log.error(
                 "Unable to write to highstate cache file %s. Do you have permissions?",
                 cfn,
@@ -1491,8 +1484,8 @@ def top(topfn, test=None, queue=False, **kwargs):
             opts,
             pillar_override,
             pillar_enc=pillar_enc,
-            context=__context__,
-            proxy=__proxy__,
+            context=dict(__context__),
+            proxy=dict(__proxy__),
             initial_pillar=_get_initial_pillar(opts),
         )
     except NameError:
@@ -1500,7 +1493,7 @@ def top(topfn, test=None, queue=False, **kwargs):
             opts,
             pillar_override,
             pillar_enc=pillar_enc,
-            context=__context__,
+            context=dict(__context__),
             initial_pillar=_get_initial_pillar(opts),
         )
     errors = _get_pillar_errors(kwargs, pillar=st_.opts["pillar"])
@@ -1830,8 +1823,8 @@ def sls_id(id_, mods, test=None, queue=False, **kwargs):
     __opts__["test"] = orig_test
     if not ret:
         raise SaltInvocationError(
-            "No matches for ID '{0}' found in SLS '{1}' within saltenv "
-            "'{2}'".format(id_, mods, opts["saltenv"])
+            "No matches for ID '{}' found in SLS '{}' within saltenv "
+            "'{}'".format(id_, mods, opts["saltenv"])
         )
     return ret
 
@@ -2067,9 +2060,9 @@ def id_exists(ids, mods, test=None, queue=False, **kwargs):
     """
     ids = salt.utils.args.split_input(ids)
     ids = set(ids)
-    sls_ids = set(
+    sls_ids = {
         x["__id__"] for x in show_low_sls(mods, test=test, queue=queue, **kwargs)
-    )
+    }
     return ids.issubset(sls_ids)
 
 
@@ -2239,10 +2232,10 @@ def pkg(pkg_path, pkg_sum, hash_type, test=None, **kwargs):
     members = s_pkg.getmembers()
     for member in members:
         if salt.utils.stringutils.to_unicode(member.path).startswith(
-            (os.sep, "..{0}".format(os.sep))
+            (os.sep, "..{}".format(os.sep))
         ):
             return {}
-        elif "..{0}".format(os.sep) in salt.utils.stringutils.to_unicode(member.path):
+        elif "..{}".format(os.sep) in salt.utils.stringutils.to_unicode(member.path):
             return {}
     s_pkg.extractall(root)
     s_pkg.close()
@@ -2282,7 +2275,7 @@ def pkg(pkg_path, pkg_sum, hash_type, test=None, **kwargs):
     ret = st_.call_listen(lowstate, ret)
     try:
         shutil.rmtree(root)
-    except (IOError, OSError):
+    except OSError:
         pass
     _set_retcode(ret)
     _snapper_post(popts, kwargs.get("__pub_jid", "called localy"), snapper_pre)
@@ -2320,9 +2313,9 @@ def disable(states):
     _changed = False
     for _state in states:
         if _state in _disabled:
-            msg.append("Info: {0} state already disabled.".format(_state))
+            msg.append("Info: {} state already disabled.".format(_state))
         else:
-            msg.append("Info: {0} state disabled.".format(_state))
+            msg.append("Info: {} state disabled.".format(_state))
             _disabled.append(_state)
             _changed = True
 
@@ -2370,9 +2363,9 @@ def enable(states):
     for _state in states:
         log.debug("_state %s", _state)
         if _state not in _disabled:
-            msg.append("Info: {0} state already enabled.".format(_state))
+            msg.append("Info: {} state already enabled.".format(_state))
         else:
-            msg.append("Info: {0} state enabled.".format(_state))
+            msg.append("Info: {} state enabled.".format(_state))
             _disabled.remove(_state)
             _changed = True
 
@@ -2481,7 +2474,7 @@ def event(
             if salt.utils.stringutils.expr_match(ret["tag"], tagmatch):
                 if not quiet:
                     salt.utils.stringutils.print_cli(
-                        str("{0}\t{1}").format(  # future lint: blacklisted-function
+                        "{}\t{}".format(  # future lint: blacklisted-function
                             salt.utils.stringutils.to_str(ret["tag"]),
                             salt.utils.json.dumps(
                                 ret["data"],

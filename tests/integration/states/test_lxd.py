@@ -1,17 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 Integration tests for the lxd states
 """
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import salt utils
 import salt.utils.path
 from tests.support.case import ModuleCase
 from tests.support.helpers import destructiveTest, flaky
 from tests.support.mixins import SaltReturnAssertsMixin
-
-# Import Salt Testing Libs
 from tests.support.unit import skipIf
 
 try:

@@ -1,8 +1,17 @@
 """
 Simple Smoke Tests for Connected Proxy Minion
 """
+import os
 
-from tests.support.helpers import slowTest
+import pytest
+
+
+@pytest.fixture(scope="module")
+def salt_proxy(salt_proxy):
+    cachefile = os.path.join(salt_proxy.config["cachedir"], "dummy-proxy.cache")
+    if os.path.exists(cachefile):
+        os.unlink(cachefile)
+    return salt_proxy
 
 
 def test_can_it_ping(salt_cli, salt_proxy):
@@ -85,7 +94,7 @@ def test_state_apply(salt_cli, salt_proxy):
         assert value["result"] is True
 
 
-@slowTest
+@pytest.mark.slow_test
 def test_state_highstate(salt_cli, salt_proxy):
     ret = salt_cli.run("state.highstate", minion_tgt=salt_proxy.id)
     for value in ret.json.values():

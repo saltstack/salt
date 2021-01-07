@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Mike Place <mp@saltstack.com>
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.utils.platform
 from salt import client
@@ -27,12 +25,12 @@ class LocalClientTestCase(TestCase, SaltClientTestCaseMixin):
         jid = "0815"
         raw_return = {"id": "fake-id", "jid": jid, "data": "", "return": "fake-return"}
         expected_return = {"fake-id": {"ret": "fake-return"}}
-        local_client = client.LocalClient(mopts=self.get_temp_config("master"))
-        local_client.event.get_event = MagicMock(return_value=raw_return)
-        local_client.returners = MagicMock()
-        ret = local_client.get_event_iter_returns(jid, minions)
-        val = next(ret)
-        self.assertEqual(val, expected_return)
+        with client.LocalClient(mopts=self.get_temp_config("master")) as local_client:
+            local_client.event.get_event = MagicMock(return_value=raw_return)
+            local_client.returners = MagicMock()
+            ret = local_client.get_event_iter_returns(jid, minions)
+            val = next(ret)
+            self.assertEqual(val, expected_return)
 
     def test_job_result_return_failure(self):
         """
@@ -47,21 +45,21 @@ class LocalClientTestCase(TestCase, SaltClientTestCaseMixin):
             "data": "",
             "return": "fake-return",
         }
-        local_client = client.LocalClient(mopts=self.get_temp_config("master"))
-        local_client.event.get_event = MagicMock()
-        local_client.event.get_event.side_effect = [raw_return, None]
-        local_client.returners = MagicMock()
-        ret = local_client.get_event_iter_returns(jid, minions)
-        with self.assertRaises(StopIteration):
-            next(ret)
+        with client.LocalClient(mopts=self.get_temp_config("master")) as local_client:
+            local_client.event.get_event = MagicMock()
+            local_client.event.get_event.side_effect = [raw_return, None]
+            local_client.returners = MagicMock()
+            ret = local_client.get_event_iter_returns(jid, minions)
+            with self.assertRaises(StopIteration):
+                next(ret)
 
     def test_create_local_client(self):
-        local_client = client.LocalClient(mopts=self.get_temp_config("master"))
-        self.assertIsInstance(
-            local_client,
-            client.LocalClient,
-            "LocalClient did not create a LocalClient instance",
-        )
+        with client.LocalClient(mopts=self.get_temp_config("master")) as local_client:
+            self.assertIsInstance(
+                local_client,
+                client.LocalClient,
+                "LocalClient did not create a LocalClient instance",
+            )
 
     def test_check_pub_data(self):
         just_minions = {"minions": ["m1", "m2"]}

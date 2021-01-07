@@ -2701,6 +2701,14 @@ class State:
             else:
                 run_dict = running
 
+            filtered_run_dict = {}
+            for chunk in chunks:
+                tag = _gen_tag(chunk)
+                run_dict_chunk = run_dict.get(tag)
+                if run_dict_chunk:
+                    filtered_run_dict[tag] = run_dict_chunk
+            run_dict = filtered_run_dict
+
             while True:
                 if self.reconcile_procs(run_dict):
                     break
@@ -3071,6 +3079,23 @@ class State:
                 running[tag] = self.call(low, chunks, running)
         if tag in running:
             self.event(running[tag], len(chunks), fire_event=low.get("fire_event"))
+
+            for sub_state_data in running[tag].pop("sub_state_run", ()):
+                start_time, duration = _calculate_fake_duration()
+                self.__run_num += 1
+                sub_tag = _gen_tag(sub_state_data["low"])
+                running[sub_tag] = {
+                    "name": sub_state_data["low"]["name"],
+                    "changes": sub_state_data["changes"],
+                    "result": sub_state_data["result"],
+                    "duration": sub_state_data.get("duration", duration),
+                    "start_time": sub_state_data.get("start_time", start_time),
+                    "comment": sub_state_data.get("comment", ""),
+                    "__state_ran__": True,
+                    "__run_num__": self.__run_num,
+                    "__sls__": low["__sls__"],
+                }
+
         return running
 
     def call_listen(self, chunks, running):
@@ -4016,8 +4041,8 @@ class BaseHighState:
                             levels, include = match.groups()
                         else:
                             msg = (
-                                "Badly formatted include {0} found in include "
-                                "in SLS '{2}:{3}'".format(inc_sls, saltenv, sls)
+                                "Badly formatted include {} found in include "
+                                "in SLS '{}:{}'".format(inc_sls, saltenv, sls)
                             )
                             log.error(msg)
                             errors.append(msg)

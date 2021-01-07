@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Execution module for Amazon Elasticache using boto3
 ===================================================
@@ -46,21 +45,16 @@ Execution module for Amazon Elasticache using boto3
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import time
 
 import salt.utils.compat
 import salt.utils.versions
-
-# Import Salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 log = logging.getLogger(__name__)
 
-# Import third party libs
 try:
     # pylint: disable=unused-import
     import botocore
@@ -82,7 +76,6 @@ def __virtual__():
 
 
 def __init__(opts):
-    salt.utils.compat.pack_dunder(__name__)
     if HAS_BOTO3:
         __utils__["boto3.assign_funcs"](
             __name__,
@@ -123,11 +116,11 @@ def _describe_resource(
         f = getattr(conn, func)
     except (AttributeError, KeyError) as e:
         raise SaltInvocationError(
-            "No function '{0}()' found: {1}".format(func, e.message)
+            "No function '{}()' found: {}".format(func, e.message)
         )
     # Undocumented, but you can't pass 'Marker' if searching for a specific resource...
     args.update({name_param: name} if name else {"Marker": ""})
-    args = dict([(k, v) for k, v in args.items() if not k.startswith("_")])
+    args = {k: v for k, v in args.items() if not k.startswith("_")}
     try:
         return _collect_results(f, info_node, args)
     except botocore.exceptions.ClientError as e:
@@ -156,7 +149,7 @@ def _delete_resource(
         wait = int(wait)
     except Exception:  # pylint: disable=broad-except
         raise SaltInvocationError(
-            "Bad value ('{0}') passed for 'wait' param - must be an "
+            "Bad value ('{}') passed for 'wait' param - must be an "
             "int or boolean.".format(wait)
         )
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
@@ -170,7 +163,7 @@ def _delete_resource(
         name = args[name_param]
     else:
         args[name_param] = name
-    args = dict([(k, v) for k, v in args.items() if not k.startswith("_")])
+    args = {k: v for k, v in args.items() if not k.startswith("_")}
     try:
         func = "delete_" + res_type
         f = getattr(conn, func)
@@ -179,7 +172,7 @@ def _delete_resource(
             s = globals()[func]
     except (AttributeError, KeyError) as e:
         raise SaltInvocationError(
-            "No function '{0}()' found: {1}".format(func, e.message)
+            "No function '{}()' found: {}".format(func, e.message)
         )
     try:
 
@@ -224,7 +217,7 @@ def _create_resource(
         wait = int(wait)
     except Exception:  # pylint: disable=broad-except
         raise SaltInvocationError(
-            "Bad value ('{0}') passed for 'wait' param - must be an "
+            "Bad value ('{}') passed for 'wait' param - must be an "
             "int or boolean.".format(wait)
         )
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
@@ -238,7 +231,7 @@ def _create_resource(
         name = args[name_param]
     else:
         args[name_param] = name
-    args = dict([(k, v) for k, v in args.items() if not k.startswith("_")])
+    args = {k: v for k, v in args.items() if not k.startswith("_")}
     try:
         func = "create_" + res_type
         f = getattr(conn, func)
@@ -247,7 +240,7 @@ def _create_resource(
             s = globals()[func]
     except (AttributeError, KeyError) as e:
         raise SaltInvocationError(
-            "No function '{0}()' found: {1}".format(func, e.message)
+            "No function '{}()' found: {}".format(func, e.message)
         )
     try:
         f(**args)
@@ -277,7 +270,7 @@ def _create_resource(
         )
         return False
     except botocore.exceptions.ClientError as e:
-        msg = "Failed to create {0} {1}: {2}".format(desc, name, e)
+        msg = "Failed to create {} {}: {}".format(desc, name, e)
         log.error(msg)
         return False
 
@@ -300,7 +293,7 @@ def _modify_resource(
         wait = int(wait)
     except Exception:  # pylint: disable=broad-except
         raise SaltInvocationError(
-            "Bad value ('{0}') passed for 'wait' param - must be an "
+            "Bad value ('{}') passed for 'wait' param - must be an "
             "int or boolean.".format(wait)
         )
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
@@ -314,7 +307,7 @@ def _modify_resource(
         name = args[name_param]
     else:
         args[name_param] = name
-    args = dict([(k, v) for k, v in args.items() if not k.startswith("_")])
+    args = {k: v for k, v in args.items() if not k.startswith("_")}
     try:
         func = "modify_" + res_type
         f = getattr(conn, func)
@@ -323,7 +316,7 @@ def _modify_resource(
             s = globals()[func]
     except (AttributeError, KeyError) as e:
         raise SaltInvocationError(
-            "No function '{0}()' found: {1}".format(func, e.message)
+            "No function '{}()' found: {}".format(func, e.message)
         )
     try:
         f(**args)
@@ -353,7 +346,7 @@ def _modify_resource(
         )
         return False
     except botocore.exceptions.ClientError as e:
-        msg = "Failed to modify {0} {1}: {2}".format(desc, name, e)
+        msg = "Failed to modify {} {}: {}".format(desc, name, e)
         log.error(msg)
         return False
 
@@ -437,7 +430,7 @@ def create_cache_cluster(
         if "SecurityGroupIds" not in args:
             args["SecurityGroupIds"] = []
         args["SecurityGroupIds"] += sgs
-    args = dict([(k, v) for k, v in args.items() if not k.startswith("_")])
+    args = {k: v for k, v in args.items() if not k.startswith("_")}
     return _create_resource(
         name,
         name_param="CacheClusterId",
@@ -491,7 +484,7 @@ def modify_cache_cluster(
         if "SecurityGroupIds" not in args:
             args["SecurityGroupIds"] = []
         args["SecurityGroupIds"] += sgs
-    args = dict([(k, v) for k, v in args.items() if not k.startswith("_")])
+    args = {k: v for k, v in args.items() if not k.startswith("_")}
     return _modify_resource(
         name,
         name_param="CacheClusterId",
@@ -610,7 +603,7 @@ def create_replication_group(
         if "SecurityGroupIds" not in args:
             args["SecurityGroupIds"] = []
         args["SecurityGroupIds"] += sgs
-    args = dict([(k, v) for k, v in args.items() if not k.startswith("_")])
+    args = {k: v for k, v in args.items() if not k.startswith("_")}
     return _create_resource(
         name,
         name_param="ReplicationGroupId",
@@ -656,7 +649,7 @@ def modify_replication_group(
         if "SecurityGroupIds" not in args:
             args["SecurityGroupIds"] = []
         args["SecurityGroupIds"] += sgs
-    args = dict([(k, v) for k, v in args.items() if not k.startswith("_")])
+    args = {k: v for k, v in args.items() if not k.startswith("_")}
     return _modify_resource(
         name,
         name_param="ReplicationGroupId",
@@ -790,15 +783,15 @@ def create_cache_subnet_group(
             ).get("subnets")
             if not sn:
                 raise SaltInvocationError(
-                    "Could not resolve Subnet Name {0} to an ID.".format(subnet)
+                    "Could not resolve Subnet Name {} to an ID.".format(subnet)
                 )
             if len(sn) == 1:
                 args["SubnetIds"] += [sn[0]["id"]]
             elif len(sn) > 1:
                 raise CommandExecutionError(
-                    "Subnet Name {0} returned more than one ID.".format(subnet)
+                    "Subnet Name {} returned more than one ID.".format(subnet)
                 )
-    args = dict([(k, v) for k, v in args.items() if not k.startswith("_")])
+    args = {k: v for k, v in args.items() if not k.startswith("_")}
     return _create_resource(
         name,
         name_param="CacheSubnetGroupName",
@@ -843,16 +836,16 @@ def modify_cache_subnet_group(
                 args["SubnetIds"] += [sn[0]["id"]]
             elif len(sn) > 1:
                 raise CommandExecutionError(
-                    "Subnet Name {0} returned more than one ID.".format(subnet)
+                    "Subnet Name {} returned more than one ID.".format(subnet)
                 )
             elif subnet.startswith("subnet-"):
                 # Moderately safe assumption... :)  Will be caught later if incorrect.
                 args["SubnetIds"] += [subnet]
             else:
                 raise SaltInvocationError(
-                    "Could not resolve Subnet Name {0} to an ID.".format(subnet)
+                    "Could not resolve Subnet Name {} to an ID.".format(subnet)
                 )
-    args = dict([(k, v) for k, v in args.items() if not k.startswith("_")])
+    args = {k: v for k, v in args.items() if not k.startswith("_")}
     return _modify_resource(
         name,
         name_param="CacheSubnetGroupName",
@@ -1010,7 +1003,7 @@ def authorize_cache_security_group_ingress(
         name = args["CacheSecurityGroupName"]
     else:
         args["CacheSubnetGroupName"] = name
-    args = dict([(k, v) for k, v in args.items() if not k.startswith("_")])
+    args = {k: v for k, v in args.items() if not k.startswith("_")}
     try:
         conn.authorize_cache_security_group_ingress(**args)
         log.info(
@@ -1051,7 +1044,7 @@ def revoke_cache_security_group_ingress(
         name = args["CacheSecurityGroupName"]
     else:
         args["CacheSubnetGroupName"] = name
-    args = dict([(k, v) for k, v in args.items() if not k.startswith("_")])
+    args = {k: v for k, v in args.items() if not k.startswith("_")}
     try:
         conn.revoke_cache_security_group_ingress(**args)
         log.info(
@@ -1096,7 +1089,7 @@ def list_tags_for_resource(
         name = args["ResourceName"]
     else:
         args["ResourceName"] = name
-    args = dict([(k, v) for k, v in args.items() if not k.startswith("_")])
+    args = {k: v for k, v in args.items() if not k.startswith("_")}
     try:
         r = conn.list_tags_for_resource(**args)
         if r and "Taglist" in r:
@@ -1137,7 +1130,7 @@ def add_tags_to_resource(name, region=None, key=None, keyid=None, profile=None, 
         name = args["ResourceName"]
     else:
         args["ResourceName"] = name
-    args = dict([(k, v) for k, v in args.items() if not k.startswith("_")])
+    args = {k: v for k, v in args.items() if not k.startswith("_")}
     try:
         conn.add_tags_to_resource(**args)
         log.info("Added tags %s to %s.", args["Tags"], name)
@@ -1179,7 +1172,7 @@ def remove_tags_from_resource(
         name = args["ResourceName"]
     else:
         args["ResourceName"] = name
-    args = dict([(k, v) for k, v in args.items() if not k.startswith("_")])
+    args = {k: v for k, v in args.items() if not k.startswith("_")}
     try:
         conn.remove_tags_from_resource(**args)
         log.info("Added tags %s to %s.", args["Tags"], name)
@@ -1211,7 +1204,7 @@ def copy_snapshot(name, region=None, key=None, keyid=None, profile=None, **args)
         name = args["SourceSnapshotName"]
     else:
         args["SourceSnapshotName"] = name
-    args = dict([(k, v) for k, v in args.items() if not k.startswith("_")])
+    args = {k: v for k, v in args.items() if not k.startswith("_")}
     try:
         conn.copy_snapshot(**args)
         log.info("Snapshot %s copied to %s.", name, args["TargetSnapshotName"])

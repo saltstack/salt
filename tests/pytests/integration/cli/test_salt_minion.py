@@ -1,9 +1,6 @@
 """
-    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
-
-
-    tests.integration.shell.minion
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests.integration.shell.minion
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
 
 
@@ -15,11 +12,14 @@ import pytest
 import salt.defaults.exitcodes
 from saltfactories.exceptions import FactoryNotStarted
 from saltfactories.utils import random_string
-from tests.support.helpers import PRE_PYTEST_SKIP_REASON, slowTest
+from tests.support.helpers import PRE_PYTEST_SKIP_REASON
+
+pytestmark = [
+    pytest.mark.slow_test,
+    pytest.mark.windows_whitelisted,
+]
 
 log = logging.getLogger(__name__)
-
-pytestmark = pytest.mark.windows_whitelisted
 
 
 @pytest.fixture
@@ -38,7 +38,6 @@ def minion_id(salt_factories, salt_master):
             os.unlink(minion_key_file)
 
 
-@slowTest
 @pytest.mark.skip_on_windows(reason="Windows does not do user checks")
 def test_exit_status_unknown_user(salt_master, minion_id):
     """
@@ -54,7 +53,6 @@ def test_exit_status_unknown_user(salt_master, minion_id):
     assert "The user is not available." in exc.value.stderr, exc.value
 
 
-@slowTest
 def test_exit_status_unknown_argument(salt_master, minion_id):
     """
     Ensure correct exit status when an unknown argument is passed to salt-minion.
@@ -68,7 +66,6 @@ def test_exit_status_unknown_argument(salt_master, minion_id):
     assert "no such option: --unknown-argument" in exc.value.stderr, exc.value
 
 
-@slowTest
 @pytest.mark.skip_on_windows(reason=PRE_PYTEST_SKIP_REASON)
 def test_exit_status_correct_usage(salt_master, minion_id):
     factory = salt_master.get_salt_minion_daemon(

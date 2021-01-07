@@ -19,7 +19,6 @@ import shutil
 import ssl
 import stat
 import sys
-import textwrap
 from functools import partial, wraps
 from unittest import TestCase  # pylint: disable=blacklisted-module
 
@@ -155,7 +154,7 @@ def pytest_addoption(parser):
         default="zeromq",
         choices=("zeromq", "tcp"),
         help=(
-            "Select which transport to run the integration tests with, zeromq or tcp. Default: %default"
+            "Select which transport to run the integration tests with, zeromq or tcp. Default: %(default)s"
         ),
     )
     test_selection_group.addoption(
@@ -243,10 +242,14 @@ def pytest_configure(config):
     config.addinivalue_line(
         "markers", "requires_sshd_server: Mark test that require an SSH server running"
     )
+    config.addinivalue_line(
+        "markers",
+        "slow_test: Mark test as being slow. These tests are skipped by default unless `--run-slow` is passed",
+    )
     # Make sure the test suite "knows" this is a pytest test run
     RUNTIME_VARS.PYTEST_SESSION = True
 
-    # "Flag" the slotTest decorator if we're skipping slow tests or not
+    # "Flag" the slowTest decorator if we're skipping slow tests or not
     os.environ["SLOW_TESTS"] = str(config.getoption("--run-slow"))
 
 
@@ -465,7 +468,9 @@ def pytest_runtest_setup(item):
         item._skipped_by_mark = True
         pytest.skip(PRE_PYTEST_SKIP_REASON)
 
-    if saltfactories.utils.compat.has_unittest_attr(item, "__slow_test__"):
+    if saltfactories.utils.compat.has_unittest_attr(
+        item, "__slow_test__"
+    ) or item.get_closest_marker("slow_test"):
         if item.config.getoption("--run-slow") is False:
             item._skipped_by_mark = True
             pytest.skip("Slow tests are disabled!")
@@ -476,6 +481,7 @@ def pytest_runtest_setup(item):
             item._skipped_by_mark = True
             pytest.skip("SSH tests are disabled, pass '--ssh-tests' to enable them.")
         item.fixturenames.append("sshd_server")
+        item.fixturenames.append("salt_ssh_roster_file")
 
     requires_salt_modules_marker = item.get_closest_marker("requires_salt_modules")
     if requires_salt_modules_marker is not None:
@@ -694,6 +700,17 @@ def base_env_pillar_tree_root_dir(pillar_tree_root_dir):
 
 
 @pytest.fixture(scope="session")
+def ext_pillar_file_tree_root_dir(pillar_tree_root_dir):
+    """
+    Fixture which returns the salt pillar file tree directory path.
+    Creates the directory if it does not yet exist.
+    """
+    dirname = pillar_tree_root_dir / "file-tree"
+    dirname.mkdir(exist_ok=True)
+    return dirname
+
+
+@pytest.fixture(scope="session")
 def prod_env_pillar_tree_root_dir(pillar_tree_root_dir):
     """
     Fixture which returns the salt prod environment pillar tree directory path.
@@ -732,7 +749,7 @@ def salt_syndic_master_factory(
     config_defaults["syndic_master"] = "localhost"
     config_defaults["transport"] = request.config.getoption("--transport")
 
-    config_overrides = {}
+    config_overrides = {"log_level_logfile": "quiet"}
     ext_pillar = []
     if salt.utils.platform.is_windows():
         ext_pillar.append(
@@ -808,9 +825,11 @@ def salt_syndic_factory(salt_factories, salt_syndic_master_factory):
         opts["aliases.file"] = os.path.join(RUNTIME_VARS.TMP, "aliases")
         opts["transport"] = salt_syndic_master_factory.config["transport"]
         config_defaults["syndic"] = opts
+    config_overrides = {"log_level_logfile": "quiet"}
     factory = salt_syndic_master_factory.get_salt_syndic_daemon(
         "syndic",
         config_defaults=config_defaults,
+        config_overrides=config_overrides,
         extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
     )
     return factory
@@ -824,6 +843,7 @@ def salt_master_factory(
     base_env_pillar_tree_root_dir,
     prod_env_state_tree_root_dir,
     prod_env_pillar_tree_root_dir,
+    ext_pillar_file_tree_root_dir,
 ):
     root_dir = salt_factories.get_root_dir_for_daemon("master")
     conf_dir = root_dir / "conf"
@@ -840,11 +860,8 @@ def salt_master_factory(
     config_defaults["known_hosts_file"] = tests_known_hosts_file
     config_defaults["syndic_master"] = "localhost"
     config_defaults["transport"] = salt_syndic_master_factory.config["transport"]
-    config_defaults["reactor"] = [
-        {"salt/test/reactor": [os.path.join(RUNTIME_VARS.FILES, "reactor-test.sls")]}
-    ]
 
-    config_overrides = {}
+    config_overrides = {"log_level_logfile": "quiet"}
     ext_pillar = []
     if salt.utils.platform.is_windows():
         ext_pillar.append(
@@ -857,7 +874,7 @@ def salt_master_factory(
     ext_pillar.append(
         {
             "file_tree": {
-                "root_dir": os.path.join(RUNTIME_VARS.PILLAR_DIR, "base", "file_tree"),
+                "root_dir": str(ext_pillar_file_tree_root_dir),
                 "follow_dir_links": False,
                 "keep_newline": True,
             }
@@ -939,6 +956,7 @@ def salt_minion_factory(salt_master_factory):
     config_defaults["transport"] = salt_master_factory.config["transport"]
 
     config_overrides = {
+        "log_level_logfile": "quiet",
         "file_roots": salt_master_factory.config["file_roots"].copy(),
         "pillar_roots": salt_master_factory.config["pillar_roots"].copy(),
     }
@@ -969,6 +987,7 @@ def salt_sub_minion_factory(salt_master_factory):
     config_defaults["transport"] = salt_master_factory.config["transport"]
 
     config_overrides = {
+        "log_level_logfile": "quiet",
         "file_roots": salt_master_factory.config["file_roots"].copy(),
         "pillar_roots": salt_master_factory.config["pillar_roots"].copy(),
     }
@@ -1004,9 +1023,12 @@ def salt_proxy_factory(salt_factories, salt_master_factory):
     config_defaults["aliases.file"] = os.path.join(RUNTIME_VARS.TMP, "aliases")
     config_defaults["transport"] = salt_master_factory.config["transport"]
 
+    config_overrides = {"log_level_logfile": "quiet"}
+
     factory = salt_master_factory.get_salt_proxy_minion_daemon(
         proxy_minion_id,
         config_defaults=config_defaults,
+        config_overrides=config_overrides,
         extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
     )
     factory.register_after_terminate_callback(
@@ -1033,11 +1055,6 @@ def salt_key_cli(salt_master_factory):
 @pytest.fixture(scope="session")
 def salt_run_cli(salt_master_factory):
     return salt_master_factory.get_salt_run_cli()
-
-
-@pytest.fixture(scope="session")
-def salt_ssh_cli(salt_master_factory):
-    return salt_master_factory.get_salt_ssh_cli()
 
 
 @pytest.fixture(scope="session")
@@ -1128,34 +1145,28 @@ def sshd_server(salt_factories, sshd_config_dir, salt_master):
     factory = salt_factories.get_sshd_daemon(
         sshd_config_dict=sshd_config_dict, config_dir=sshd_config_dir,
     )
-    # We also need a salt-ssh roster config file
-    roster_path = pathlib.Path(salt_master.config_dir) / "roster"
-    roster_contents = textwrap.dedent(
-        """\
-        localhost:
-          host: 127.0.0.1
-          port: {}
-          user: {}
-          mine_functions:
-            test.arg: ['itworked']
-        """.format(
-            factory.listen_port, RUNTIME_VARS.RUNNING_TESTS_USER
-        )
+    with factory.started():
+        yield factory
+
+
+@pytest.fixture(scope="module")
+def salt_ssh_roster_file(sshd_server, salt_master):
+    roster_contents = """
+    localhost:
+      host: 127.0.0.1
+      port: {}
+      user: {}
+      mine_functions:
+        test.arg: ['itworked']
+    """.format(
+        sshd_server.listen_port, RUNTIME_VARS.RUNNING_TESTS_USER
     )
     if salt.utils.platform.is_darwin():
         roster_contents += "  set_path: $PATH:/usr/local/bin/\n"
-    log.debug(
-        "Writing to configuration file %s. Configuration:\n%s",
-        roster_path,
-        roster_contents,
-    )
-    with salt.utils.files.fopen(str(roster_path), "w") as wfh:
-        wfh.write(roster_contents)
-
-    with factory.started():
-        yield factory
-    if roster_path.exists():
-        roster_path.unlink()
+    with pytest.helpers.temp_file(
+        "roster", roster_contents, salt_master.config_dir
+    ) as roster_file:
+        yield roster_file
 
 
 # <---- Salt Factories -----------------------------------------------------------------------------------------------
@@ -1330,7 +1341,9 @@ def ssl_webserver(integration_files_dir, scope="module"):
     """
     spins up an https webserver.
     """
-    context = ssl.SSLContext()
+    if sys.version_info < (3, 5, 3):
+        pytest.skip("Python versions older than 3.5.3 do not define `ssl.PROTOCOL_TLS`")
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS)
     context.load_cert_chain(
         str(integration_files_dir / "https" / "cert.pem"),
         str(integration_files_dir / "https" / "key.pem"),

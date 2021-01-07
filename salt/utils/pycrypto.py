@@ -1,22 +1,17 @@
-# -*- coding: utf-8 -*-
 """
 Use pycrypto to generate random passwords on the fly.
 """
 
 # Import python libraries
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import random
 import re
 import string
 
-# Import salt libs
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.ext import six
 
-# Import 3rd-party libs
 try:
     try:
         from M2Crypto.Rand import rand_bytes as get_random_bytes
@@ -63,7 +58,7 @@ def secure_password(length=20, use_random=True):
                         continue
                 pw += re.sub(
                     salt.utils.stringutils.to_str(r"[\W_]"),
-                    str(),  # future lint: disable=blacklisted-function
+                    "",  # future lint: disable=blacklisted-function
                     char,
                 )
             else:
@@ -71,7 +66,7 @@ def secure_password(length=20, use_random=True):
         return pw
     except Exception as exc:  # pylint: disable=broad-except
         log.exception("Failed to generate secure passsword")
-        raise CommandExecutionError(six.text_type(exc))
+        raise CommandExecutionError(str(exc))
 
 
 if HAS_CRYPT:
@@ -116,7 +111,11 @@ def _gen_hash_crypt(crypt_salt=None, password=None, algorithm=None):
             # all non-crypt algorithms are specified as part of the salt
             crypt_salt = "${}${}".format(methods[algorithm].ident, crypt_salt)
 
-    return crypt.crypt(password, crypt_salt)
+    try:
+        ret = crypt.crypt(password, crypt_salt)
+    except OSError:
+        ret = None
+    return ret
 
 
 def gen_hash(crypt_salt=None, password=None, algorithm=None):
@@ -143,9 +142,9 @@ def gen_hash(crypt_salt=None, password=None, algorithm=None):
         )
     else:
         raise SaltInvocationError(
-            "Cannot hash using '{0}' hash algorithm. Natively supported "
-            "algorithms are: {1}. If passlib is installed ({2}), the supported "
-            "algorithms are: {3}.".format(
+            "Cannot hash using '{}' hash algorithm. Natively supported "
+            "algorithms are: {}. If passlib is installed ({}), the supported "
+            "algorithms are: {}.".format(
                 algorithm, list(methods), HAS_PASSLIB, known_methods
             )
         )

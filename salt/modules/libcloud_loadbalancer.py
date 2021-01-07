@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Apache Libcloud Load Balancer Management
 ========================================
@@ -30,20 +29,15 @@ Clouds include Amazon ELB, ALB, Google, Aliyun, CloudStack, Softlayer
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
 
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import logging
 
-# Import salt libs
 import salt.utils.args
 import salt.utils.compat
-from salt.ext import six
 from salt.utils.versions import LooseVersion as _LooseVersion
 
 log = logging.getLogger(__name__)
 
-# Import third party libs
 REQUIRED_LIBCLOUD_VERSION = "1.5.0"
 try:
     # pylint: disable=unused-import
@@ -68,14 +62,10 @@ def __virtual__():
     """
     if not HAS_LIBCLOUD:
         msg = (
-            "A apache-libcloud library with version at least {0} was not " "found"
+            "A apache-libcloud library with version at least {} was not " "found"
         ).format(REQUIRED_LIBCLOUD_VERSION)
         return (False, msg)
     return True
-
-
-def __init__(opts):
-    salt.utils.compat.pack_dunder(__name__)
 
 
 def _algorithm_maps():
@@ -190,7 +180,7 @@ def create_balancer(
     if algorithm is None:
         algorithm = Algorithm.ROUND_ROBIN
     else:
-        if isinstance(algorithm, six.string_types):
+        if isinstance(algorithm, str):
             algorithm = _algorithm_maps()[algorithm]
     starting_members = []
     if members is not None:

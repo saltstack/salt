@@ -1,8 +1,10 @@
 import os
 
+import salt.modules.cmdmod as cmdmod
 import salt.modules.pkg_resource as pkg_resource
 import salt.modules.rpm_lowpkg as rpm
 import salt.modules.yumpkg as yumpkg
+import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, patch
@@ -979,7 +981,9 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
 
             # Test yum
             expected = ["yum", "-y", "install", full_pkg_string]
-            with patch.dict(yumpkg.__grains__, {"os": "CentOS", "osrelease": 7}):
+            with patch.dict(yumpkg.__context__, {"yum_bin": "yum"}), patch.dict(
+                yumpkg.__grains__, {"os": "CentOS", "osrelease": 7}
+            ):
                 yumpkg.install("foo", version=new)
                 call = cmd_mock.mock_calls[0][1][0]
                 assert call == expected, call
@@ -995,10 +999,50 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
             ]
             yumpkg.__context__.pop("yum_bin")
             cmd_mock.reset_mock()
-            with patch.dict(yumpkg.__grains__, {"os": "Fedora", "osrelease": 27}):
+            with patch.dict(yumpkg.__context__, {"yum_bin": "dnf"}), patch.dict(
+                yumpkg.__grains__, {"os": "Fedora", "osrelease": 27}
+            ):
                 yumpkg.install("foo", version=new)
                 call = cmd_mock.mock_calls[0][1][0]
                 assert call == expected, call
+
+    @skipIf(not salt.utils.platform.is_linux(), "Only run on Linux")
+    def test_install_error_reporting(self):
+        """
+        Tests that we properly report yum/dnf errors.
+        """
+        name = "foo"
+        old = "8:3.8.12-6.n.el7"
+        new = "9:3.8.12-4.n.el7"
+        list_pkgs_mock = MagicMock(
+            side_effect=lambda **kwargs: {
+                name: [old] if kwargs.get("versions_as_list", False) else old
+            }
+        )
+        salt_mock = {
+            "cmd.run_all": cmdmod.run_all,
+            "lowpkg.version_cmp": rpm.version_cmp,
+            "pkg_resource.parse_targets": MagicMock(
+                return_value=({name: new}, "repository")
+            ),
+        }
+        full_pkg_string = "-".join((name, new[2:]))
+        with patch.object(yumpkg, "list_pkgs", list_pkgs_mock), patch(
+            "salt.utils.systemd.has_scope", MagicMock(return_value=False)
+        ), patch.dict(yumpkg.__salt__, salt_mock), patch.object(
+            yumpkg, "_yum", MagicMock(return_value="cat")
+        ):
+
+            expected = {
+                "changes": {},
+                "errors": [
+                    "cat: invalid option -- 'y'\n"
+                    "Try 'cat --help' for more information."
+                ],
+            }
+            with pytest.raises(CommandExecutionError) as exc_info:
+                yumpkg.install("foo", version=new)
+            assert exc_info.value.info == expected, exc_info.value.info
 
     def test_upgrade_with_options(self):
         with patch.object(yumpkg, "list_pkgs", MagicMock(return_value={})), patch(
@@ -1184,7 +1228,7 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
 
         # Test Fedora 20
         cmd = MagicMock(return_value={"retcode": 0})
-        with patch.dict(
+        with patch.dict(yumpkg.__context__, {"yum_bin": "yum"}), patch.dict(
             yumpkg.__grains__, {"os": "Fedora", "osrelease": 20}
         ), patch.object(
             yumpkg, "list_pkgs", MagicMock(return_value=list_pkgs_mock)
@@ -1217,9 +1261,13 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
 
         yumpkg.__context__.pop("yum_bin")
         cmd = MagicMock(return_value={"retcode": 0})
-        with patch.dict(yumpkg.__grains__, {"osmajorrelease": 8}), patch.object(
+        with patch.dict(yumpkg.__context__, {"yum_bin": "dnf"}), patch.dict(
+            yumpkg.__grains__, {"osmajorrelease": 8}
+        ), patch.object(
             yumpkg, "list_pkgs", MagicMock(return_value=list_pkgs_mock)
-        ), patch.object(yumpkg, "list_holds", MagicMock(return_value=[])), patch.dict(
+        ), patch.object(
+            yumpkg, "list_holds", MagicMock(return_value=[])
+        ), patch.dict(
             yumpkg.__salt__, {"cmd.run_all": cmd}
         ), patch(
             "salt.utils.systemd.has_scope", MagicMock(return_value=False)
@@ -1233,9 +1281,8 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
             )
 
         # Test Fedora 26+
-        yumpkg.__context__.pop("yum_bin")
         cmd = MagicMock(return_value={"retcode": 0})
-        with patch.dict(
+        with patch.dict(yumpkg.__context__, {"yum_bin": "dnf"}), patch.dict(
             yumpkg.__grains__, {"os": "Fedora", "osrelease": 26}
         ), patch.object(
             yumpkg, "list_pkgs", MagicMock(return_value=list_pkgs_mock)
@@ -1260,9 +1307,8 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
             "python3-dnf-plugins-extras-versionlock": "0:1.0.0-0.n.el8",
         }
 
-        yumpkg.__context__.pop("yum_bin")
         cmd = MagicMock(return_value={"retcode": 0})
-        with patch.dict(
+        with patch.dict(yumpkg.__context__, {"yum_bin": "dnf"}), patch.dict(
             yumpkg.__grains__, {"os": "Fedora", "osrelease": 25}
         ), patch.object(
             yumpkg, "list_pkgs", MagicMock(return_value=list_pkgs_mock)

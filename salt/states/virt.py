@@ -284,8 +284,15 @@ def defined(
     os_type=None,
     arch=None,
     boot=None,
+    numatune=None,
     update=True,
     boot_dev=None,
+    hypervisor_features=None,
+    clock=None,
+    serials=None,
+    consoles=None,
+    stop_on_reboot=False,
+    live=True,
 ):
     """
     Starts an existing guest, or defines and starts a new VM with specified arguments.
@@ -293,28 +300,153 @@ def defined(
     .. versionadded:: 3001
 
     :param name: name of the virtual machine to run
-    :param cpu: number of CPUs for the virtual machine to create
-    :param mem: Amount of memory to allocate to the virtual machine in MiB. Since Magnesium, a dictionary can be used to
+    :param cpu:
+        Number of virtual CPUs to assign to the virtual machine or a dictionary with detailed information to configure
+        cpu model and topology, numa node tuning, cpu tuning and iothreads allocation. The structure of the dictionary is
+        documented in :ref:`init-cpu-def`.
+
+        .. code-block:: yaml
+
+             cpu:
+               placement: static
+               cpuset: 0-11
+               current: 5
+               maximum: 12
+               vcpus:
+                 0:
+                   enabled: 'yes'
+                   hotpluggable: 'no'
+                   order: 1
+                 1:
+                   enabled: 'no'
+                   hotpluggable: 'yes'
+               match: minimum
+               mode: custom
+               check: full
+               vendor: Intel
+               model:
+                 name: core2duo
+                 fallback: allow
+                 vendor_id: GenuineIntel
+               topology:
+                 sockets: 1
+                 cores: 12
+                 threads: 1
+               cache:
+                 level: 3
+                 mode: emulate
+               feature:
+                 policy: optional
+                 name: lahf_lm
+               numa:
+                 0:
+                    cpus: 0-3
+                    memory: 1g
+                    discard: 'yes'
+                    distances:
+                      0: 10     # sibling id : value
+                      1: 21
+                      2: 31
+                      3: 41
+                 1:
+                    cpus: 4-6
+                    memory: 1g
+                    memAccess: shared
+                    distances:
+                      0: 21
+                      1: 10
+                      2: 21
+                      3: 31
+               tuning:
+                    vcpupin:
+                      0: 1-4,^2  # vcpuid : cpuset
+                      1: 0,1
+                      2: 2,3
+                      3: 0,4
+                    emulatorpin: 1-3
+                    iothreadpin:
+                      1: 5,6    # iothread id: cpuset
+                      2: 7,8
+                    shares: 2048
+                    period: 1000000
+                    quota: -1
+                    global_period: 1000000
+                    global_quota: -1
+                    emulator_period: 1000000
+                    emulator_quota: -1
+                    iothread_period: 1000000
+                    iothread_quota: -1
+                    vcpusched:
+                      - scheduler: fifo
+                        priority: 1
+                      - scheduler: fifo
+                        priority: 2
+                        vcpus: 1-3
+                      - scheduler: rr
+                        priority: 3
+                        vcpus: 4
+                    iothreadsched:
+                      - scheduler: batch
+                        iothreads: 2
+                    emulatorsched:
+                      scheduler: idle
+                    cachetune:
+                      0-3:      # vcpus set
+                        0:      # cache id
+                          level: 3
+                          type: both
+                          size: 4
+                        1:
+                          level: 3
+                          type: both
+                          size: 6
+                        monitor:
+                          1: 3
+                          0-3: 3
+                      4-5:
+                        monitor:
+                          4: 3  # vcpus: level
+                          5: 3
+                    memorytune:
+                      0-3:      # vcpus set
+                        0: 60   # node id: bandwidth
+                      4-5:
+                        0: 60
+               iothreads: 4
+
+        .. versionadded:: Aluminium
+
+    :param mem: Amount of memory to allocate to the virtual machine in MiB. Since 3002, a dictionary can be used to
         contain detailed configuration which support memory allocation or tuning. Supported parameters are ``boot``,
-        ``current``, ``max``, ``slots``, ``hard_limit``, ``soft_limit``, ``swap_hard_limit`` and ``min_guarantee``. The
-        structure of the dictionary is documented in  :ref:`init-mem-def`. Both decimal and binary base are supported.
-        Detail unit specification is documented  in :ref:`virt-units`. Please note that the value for ``slots`` must be
-        an integer.
+        ``current``, ``max``, ``slots``, ``hard_limit``, ``soft_limit``, ``swap_hard_limit``, ``min_guarantee``,
+        ``hugepages`` ,  ``nosharepages``, ``locked``, ``source``, ``access``, ``allocation`` and ``discard``. The structure
+        of the dictionary is documented in  :ref:`init-mem-def`. Both decimal and binary base are supported. Detail unit
+        specification is documented  in :ref:`virt-units`. Please note that the value for ``slots`` must be an integer.
 
-        .. code-block:: python
+        .. code-block:: yaml
 
-            {
-                'boot': 1g,
-                'current': 1g,
-                'max': 1g,
-                'slots': 10,
-                'hard_limit': '1024'
-                'soft_limit': '512m'
-                'swap_hard_limit': '1g'
-                'min_guarantee': '512mib'
-            }
+            boot: 1g
+            current: 1g
+            max: 1g
+            slots: 10
+            hard_limit: 1024
+            soft_limit: 512m
+            swap_hard_limit: 1g
+            min_guarantee: 512mib
+            hugepages:
+              - size: 2m
+              - nodeset: 0-2
+                size: 1g
+              - nodeset: 3
+                size: 2g
+            nosharepages: True
+            locked: True
+            source: file
+            access: shared
+            allocation: immediate
+            discard: True
 
-        .. versionchanged:: Magnesium
+        .. versionchanged:: 3002
 
     :param vm_type: force virtual machine type for the new VM. The default value is taken from
         the host capabilities. This could be useful for example to use ``'qemu'`` type instead
@@ -373,7 +505,92 @@ def defined(
 
         By default, the value will ``"hd"``.
 
-        .. versionadded:: Magnesium
+        .. versionadded:: 3002
+
+    :param numatune:
+        The optional numatune element provides details of how to tune the performance of a NUMA host via controlling NUMA
+        policy for domain process. The optional ``memory`` element specifies how to allocate memory for the domain process
+        on a NUMA host. ``memnode`` elements can specify memory allocation policies per each guest NUMA node. The definition
+        used in the dictionary can be found at :ref:`init-cpu-def`.
+
+        .. versionadded:: Aluminium
+
+        .. code-block:: python
+
+            {
+                'memory': {'mode': 'strict', 'nodeset': '0-11'},
+                'memnodes': {0: {'mode': 'strict', 'nodeset': 1}, 1: {'mode': 'preferred', 'nodeset': 2}}
+            }
+
+    :param hypervisor_features:
+        Enable or disable hypervisor-specific features on the virtual machine.
+
+        .. versionadded:: Aluminium
+
+        .. code-block:: yaml
+
+            hypervisor_features:
+              kvm-hint-dedicated: True
+
+    :param clock:
+        Configure the guest clock.
+        The value is a dictionary with the following keys:
+
+        adjustment
+            time adjustment in seconds or ``reset``
+
+        utc
+            set to ``False`` to use the host local time as the guest clock. Defaults to ``True``.
+
+        timezone
+            synchronize the guest to the correspding timezone
+
+        timers
+            a dictionary associating the timer name with its configuration.
+            This configuration is a dictionary with the properties ``track``, ``tickpolicy``,
+            ``catchup``, ``frequency``, ``mode``, ``present``, ``slew``, ``threshold`` and ``limit``.
+            See `libvirt time keeping documentation <https://libvirt.org/formatdomain.html#time-keeping>`_ for the possible values.
+
+        .. versionadded:: Aluminium
+
+        Set the clock to local time using an offset in seconds
+        .. code-block:: yaml
+
+            clock:
+              adjustment: 3600
+              utc: False
+
+        Set the clock to a specific time zone:
+
+        .. code-block:: yaml
+
+            clock:
+              timezone: CEST
+
+    :param serials:
+        Dictionary providing details on the serials connection to create. (Default: ``None``)
+        See :ref:`init-chardevs-def` for more details on the possible values.
+
+        .. versionadded:: Aluminium
+    :param consoles:
+        Dictionary providing details on the consoles device to create. (Default: ``None``)
+        See :ref:`init-chardevs-def` for more details on the possible values.
+
+        .. versionadded:: Aluminium
+
+    :param stop_on_reboot:
+        If set to ``True`` the guest will stop instead of rebooting.
+        This is specially useful when creating a virtual machine with an installation cdrom or
+        an autoinstallation needing a special first boot configuration.
+        Defaults to ``False``
+
+        .. versionadded:: Aluminium
+
+    :param live:
+        If set to ``False`` the changes will not be applied live to the running instance, but will
+        only apply at the next start. Note that reboot will not take those changes.
+
+        .. versionadded:: Aluminium
 
     .. rubric:: Example States
 
@@ -432,13 +649,19 @@ def defined(
                     nic_profile=nic_profile,
                     interfaces=interfaces,
                     graphics=graphics,
-                    live=True,
+                    live=live,
                     connection=connection,
                     username=username,
                     password=password,
                     boot=boot,
+                    numatune=numatune,
+                    serials=serials,
+                    consoles=consoles,
                     test=__opts__["test"],
                     boot_dev=boot_dev,
+                    hypervisor_features=hypervisor_features,
+                    clock=clock,
+                    stop_on_reboot=stop_on_reboot,
                 )
             ret["changes"][name] = status
             if not status.get("definition"):
@@ -472,8 +695,14 @@ def defined(
                     username=username,
                     password=password,
                     boot=boot,
+                    numatune=numatune,
+                    serials=serials,
+                    consoles=consoles,
                     start=False,
                     boot_dev=boot_dev,
+                    hypervisor_features=hypervisor_features,
+                    clock=clock,
+                    stop_on_reboot=stop_on_reboot,
                 )
             ret["changes"][name] = {"definition": True}
             ret["comment"] = "Domain {} defined".format(name)
@@ -507,6 +736,12 @@ def running(
     arch=None,
     boot=None,
     boot_dev=None,
+    numatune=None,
+    hypervisor_features=None,
+    clock=None,
+    serials=None,
+    consoles=None,
+    stop_on_reboot=False,
 ):
     """
     Starts an existing guest, or defines and starts a new VM with specified arguments.
@@ -514,13 +749,20 @@ def running(
     .. versionadded:: 2016.3.0
 
     :param name: name of the virtual machine to run
-    :param cpu: number of CPUs for the virtual machine to create
-    :param mem: Amount of memory to allocate to the virtual machine in MiB. Since Magnesium, a dictionary can be used to
+    :param cpu:
+        Number of virtual CPUs to assign to the virtual machine or a dictionary with detailed information to configure
+        cpu model and topology, numa node tuning, cpu tuning and iothreads allocation. The structure of the dictionary is
+        documented in :ref:`init-cpu-def`.
+
+        To update any cpu parameters specify the new values to the corresponding tag. To remove any element or attribute,
+        specify ``None`` object. Please note that ``None`` object is mapped to ``null`` in yaml, use ``null`` in sls file
+        instead.
+    :param mem: Amount of memory to allocate to the virtual machine in MiB. Since 3002, a dictionary can be used to
         contain detailed configuration which support memory allocation or tuning. Supported parameters are ``boot``,
-        ``current``, ``max``, ``slots``, ``hard_limit``, ``soft_limit``, ``swap_hard_limit`` and ``min_guarantee``. The
-        structure of the dictionary is documented in  :ref:`init-mem-def`. Both decimal and binary base are supported.
-        Detail unit specification is documented  in :ref:`virt-units`. Please note that the value for ``slots`` must be
-        an integer.
+        ``current``, ``max``, ``slots``, ``hard_limit``, ``soft_limit``, ``swap_hard_limit``, ``min_guarantee``,
+        ``hugepages`` ,  ``nosharepages``, ``locked``, ``source``, ``access``, ``allocation`` and ``discard``. The structure
+        of the dictionary is documented in  :ref:`init-mem-def`. Both decimal and binary base are supported. Detail unit
+        specification is documented  in :ref:`virt-units`. Please note that the value for ``slots`` must be an integer.
 
         To remove any parameters, pass a None object, for instance: 'soft_limit': ``None``. Please note  that ``None``
         is mapped to ``null`` in sls file, pass ``null`` in sls file instead.
@@ -531,7 +773,7 @@ def running(
                 hard_limit: null
                 soft_limit: null
 
-        .. versionchanged:: Magnesium
+        .. versionchanged:: 3002
     :param vm_type: force virtual machine type for the new VM. The default value is taken from
         the host capabilities. This could be useful for example to use ``'qemu'`` type instead
         of the ``'kvm'`` one.
@@ -616,6 +858,16 @@ def running(
         pass a None object, for instance: 'kernel': ``None``.
 
         .. versionadded:: 3000
+    :param serials:
+        Dictionary providing details on the serials connection to create. (Default: ``None``)
+        See :ref:`init-chardevs-def` for more details on the possible values.
+
+        .. versionadded:: Aluminium
+    :param consoles:
+        Dictionary providing details on the consoles device to create. (Default: ``None``)
+        See :ref:`init-chardevs-def` for more details on the possible values.
+
+        .. versionadded:: Aluminium
 
     :param boot_dev:
         Space separated list of devices to boot from sorted by decreasing priority.
@@ -623,7 +875,72 @@ def running(
 
         By default, the value will ``"hd"``.
 
-        .. versionadded:: Magnesium
+        .. versionadded:: 3002
+
+    :param numatune:
+        The optional numatune element provides details of how to tune the performance of a NUMA host via controlling NUMA
+        policy for domain process. The optional ``memory`` element specifies how to allocate memory for the domain process
+        on a NUMA host. ``memnode`` elements can specify memory allocation policies per each guest NUMA node. The definition
+        used in the dictionary can be found at :ref:`init-cpu-def`.
+
+        To update any numatune parameters, specify the new value. To remove any ``numatune`` parameters, pass a None object,
+        for instance: 'numatune': ``None``. Please note that ``None`` is mapped to ``null`` in sls file, pass ``null`` in
+        sls file instead.
+
+        .. versionadded:: Aluminium
+
+    :param stop_on_reboot:
+        If set to ``True`` the guest will stop instead of rebooting.
+        This is specially useful when creating a virtual machine with an installation cdrom or
+        an autoinstallation needing a special first boot configuration.
+        Defaults to ``False``
+
+        .. versionadded:: Aluminium
+
+    :param hypervisor_features:
+        Enable or disable hypervisor-specific features on the virtual machine.
+
+        .. versionadded:: Aluminium
+
+        .. code-block:: yaml
+
+            hypervisor_features:
+              kvm-hint-dedicated: True
+
+    :param clock:
+        Configure the guest clock.
+        The value is a dictionary with the following keys:
+
+        adjustment
+            time adjustment in seconds or ``reset``
+
+        utc
+            set to ``False`` to use the host local time as the guest clock. Defaults to ``True``.
+
+        timezone
+            synchronize the guest to the correspding timezone
+
+        timers
+            a dictionary associating the timer name with its configuration.
+            This configuration is a dictionary with the properties ``track``, ``tickpolicy``,
+            ``catchup``, ``frequency``, ``mode``, ``present``, ``slew``, ``threshold`` and ``limit``.
+            See `libvirt time keeping documentation <https://libvirt.org/formatdomain.html#time-keeping>`_ for the possible values.
+
+        .. versionadded:: Aluminium
+
+        Set the clock to local time using an offset in seconds
+        .. code-block:: yaml
+
+            clock:
+              adjustment: 3600
+              utc: False
+
+        Set the clock to a specific time zone:
+
+        .. code-block:: yaml
+
+            clock:
+              timezone: CEST
 
     .. rubric:: Example States
 
@@ -693,9 +1010,15 @@ def running(
         boot=boot,
         update=update,
         boot_dev=boot_dev,
+        numatune=numatune,
+        hypervisor_features=hypervisor_features,
+        clock=clock,
+        stop_on_reboot=stop_on_reboot,
         connection=connection,
         username=username,
         password=password,
+        serials=serials,
+        consoles=consoles,
     )
 
     result = True if not __opts__["test"] else None

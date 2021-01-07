@@ -6,23 +6,31 @@
 """
 
 import logging
+import os
 import random
 
 import pytest
 import salt.proxy.dummy
 import salt.utils.path
 import salt.utils.platform
-from tests.support.helpers import slowTest
 
 log = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="module")
+def salt_proxy(salt_proxy):
+    cachefile = os.path.join(salt_proxy.config["cachedir"], "dummy-proxy.cache")
+    if os.path.exists(cachefile):
+        os.unlink(cachefile)
+    return salt_proxy
+
+
+@pytest.fixture
 def salt_call_cli(salt_proxy):
     return salt_proxy.get_salt_call_cli(default_timeout=120)
 
 
-@slowTest
+@pytest.mark.slow_test
 def test_can_it_ping(salt_call_cli):
     """
     Ensure the proxy can ping
@@ -32,7 +40,7 @@ def test_can_it_ping(salt_call_cli):
     assert ret.json is True
 
 
-@slowTest
+@pytest.mark.slow_test
 def test_list_pkgs(salt_call_cli):
     """
     Package test 1, really just tests that the virtual function capability
@@ -40,13 +48,11 @@ def test_list_pkgs(salt_call_cli):
     """
     ret = salt_call_cli.run("pkg.list_pkgs")
     assert ret.exitcode == 0, ret
-    for package_name in salt.proxy.dummy.DETAILS["packages"]:
+    for package_name in salt.proxy.dummy._initial_state()["packages"]:
         assert package_name in ret.json
 
 
-@slowTest
-@pytest.mark.skip_if_not_root
-@pytest.mark.destructive_test
+@pytest.mark.slow_test
 def test_upgrade(salt_call_cli):
     ret = salt_call_cli.run("pkg.upgrade")
     assert ret.exitcode == 0, ret
@@ -58,36 +64,33 @@ def test_upgrade(salt_call_cli):
 
 @pytest.fixture
 def service_name():
-    return random.choice(list(salt.proxy.dummy.DETAILS["services"]))
+    return random.choice(list(salt.proxy.dummy._initial_state()["services"]))
 
 
-@slowTest
-@pytest.mark.skip_if_not_root
+@pytest.mark.slow_test
 def test_service_list(salt_call_cli, service_name):
     ret = salt_call_cli.run("service.list")
     assert ret.exitcode == 0, ret
     assert service_name in ret.json
 
 
-@slowTest
-@pytest.mark.skip_if_not_root
-def test_service_start(salt_call_cli, service_name):
-    ret = salt_call_cli.run("service.start", service_name)
+@pytest.mark.slow_test
+def test_service_start(salt_call_cli):
+    ret = salt_call_cli.run("service.start", "samba")
     assert ret.exitcode == 0, ret
-    ret = salt_call_cli.run("service.status", service_name)
+    ret = salt_call_cli.run("service.status", "samba")
     assert ret.exitcode == 0, ret
     assert ret.json is True
 
 
-@slowTest
-@pytest.mark.skip_if_not_root
+@pytest.mark.slow_test
 def test_service_get_all(salt_call_cli, service_name):
     ret = salt_call_cli.run("service.get_all")
     assert ret.exitcode == 0, ret
     assert service_name in ret.json
 
 
-@slowTest
+@pytest.mark.slow_test
 def test_grains_items(salt_call_cli):
     ret = salt_call_cli.run("grains.items")
     assert ret.exitcode == 0, ret

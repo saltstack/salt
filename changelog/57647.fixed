@@ -1,1 +1,0 @@
-Do not allow python2 to be added to salt-ssh tar since Salt deprecated Python 2.

@@ -551,7 +551,7 @@ def thread_return(cls, minion_instance, opts, data):
             ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
         except Exception:  # pylint: disable=broad-except
             msg = "The minion function caused an exception"
-            log.warning(msg, exc_info_on_loglevel=True)
+            log.warning(msg, exc_info=True)
             salt.utils.error.fire_exception(
                 salt.exceptions.MinionError(msg), opts, job=data
             )
