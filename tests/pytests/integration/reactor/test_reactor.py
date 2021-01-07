@@ -23,11 +23,6 @@ pytestmark = [
 log = logging.getLogger(__name__)
 
 
-@pytest.fixture(scope="module")
-def event_listener(salt_factories):
-    return salt_factories.event_listener
-
-
 @pytest.fixture
 def master_event_bus(salt_master):
     with salt.utils.event.get_master_event(
