@@ -9,11 +9,7 @@ def test__load_params_size():
     Test that "Size" is added to params
     """
     kwargs = {"zone": "us-west-2", "size": 10}
-    expected = {
-        "Action": "CreateVolume",
-        "AvailabilityZone": "us-west-2",
-        "Size": 10
-    }
+    expected = {"Action": "CreateVolume", "AvailabilityZone": "us-west-2", "Size": 10}
     result = ec2._load_params(kwargs=kwargs)
     assert result == expected
 
@@ -26,7 +22,7 @@ def test__load_params_snapshot():
     expected = {
         "Action": "CreateVolume",
         "AvailabilityZone": "us-west-2",
-        "SnapshotId": 1234
+        "SnapshotId": 1234,
     }
     result = ec2._load_params(kwargs=kwargs)
     assert result == expected
@@ -40,7 +36,7 @@ def test__load_params_type():
     expected = {
         "Action": "CreateVolume",
         "AvailabilityZone": "us-west-2",
-        "VolumeType": "gp2"
+        "VolumeType": "gp2",
     }
     result = ec2._load_params(kwargs=kwargs)
     assert result == expected
@@ -55,7 +51,7 @@ def test__load_params_type_io1():
         "Action": "CreateVolume",
         "AvailabilityZone": "us-west-2",
         "VolumeType": "io1",
-        "Iops": 1000
+        "Iops": 1000,
     }
     result = ec2._load_params(kwargs=kwargs)
     assert result == expected
@@ -70,7 +66,7 @@ def test__load_params_type_io2():
         "Action": "CreateVolume",
         "AvailabilityZone": "us-west-2",
         "VolumeType": "io2",
-        "Iops": 1000
+        "Iops": 1000,
     }
     result = ec2._load_params(kwargs=kwargs)
     assert result == expected
@@ -84,7 +80,7 @@ def test__load_params_encrypted():
     expected = {
         "Action": "CreateVolume",
         "AvailabilityZone": "us-west-2",
-        "Encrypted": True
+        "Encrypted": True,
     }
     result = ec2._load_params(kwargs=kwargs)
     assert result == expected
@@ -99,7 +95,7 @@ def test__load_params_encrypted_kmskeyid():
         "Action": "CreateVolume",
         "AvailabilityZone": "us-west-2",
         "Encrypted": True,
-        "KmsKeyId": "keyid"
+        "KmsKeyId": "keyid",
     }
     result = ec2._load_params(kwargs=kwargs)
     assert result == expected
@@ -138,10 +134,7 @@ def test_create_volume_kmskeyid_without_encrypted():
     """
     Test that returns False if kmskeyid is passed without encrypted
     """
-    kwargs = {
-        "zone": "us-west-2",
-        "kmskeyid": "keyid"
-    }
+    kwargs = {"zone": "us-west-2", "kmskeyid": "keyid"}
     ret = ec2.create_volume(kwargs=kwargs, call="function")
     assert ret is False
 
@@ -150,10 +143,7 @@ def test_create_volume_missing_iops_io1():
     """
     Test that iops must be in kwargs if type is io1
     """
-    kwargs = {
-        "zone": "us-west-2",
-        "type": "io1"
-    }
+    kwargs = {"zone": "us-west-2", "type": "io1"}
     ret = ec2.create_volume(kwargs=kwargs, call="function")
     assert ret is False
 
@@ -162,9 +152,6 @@ def test_create_volume_missing_iops_io2():
     """
     Test that iops must be in kwargs if type is io2
     """
-    kwargs = {
-        "zone": "us-west-2",
-        "type": "io1"
-    }
+    kwargs = {"zone": "us-west-2", "type": "io1"}
     ret = ec2.create_volume(kwargs=kwargs, call="function")
     assert ret is False
