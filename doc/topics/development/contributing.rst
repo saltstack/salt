@@ -38,7 +38,7 @@ first PR.
 This guide assumes at least a passing familiarity with
 `Git <https://git-scm.com/>`__, a common version control tool used
 across many open source projects, and is necessary for contributing to
-salt. For an introduction to Git, watch `Salt Docs Clinic - Git For the
+Salt. For an introduction to Git, watch `Salt Docs Clinic - Git For the
 True
 Beginner <https://www.youtube.com/watch?v=zJw6KNvmuq4&ab_channel=SaltStack>`__.
 Because of its widespread use, there are many resources for learning
@@ -112,7 +112,7 @@ Then activate it:
 
    pyenv activate salt
 
-Sweet! Now you’re ready to clone salt so you can start hacking away! If
+Sweet! Now you’re ready to clone Salt so you can start hacking away! If
 you get stuck at any point, check out the resources at the beginning of
 this guide. IRC and Slack are particularly helpful places to go.
 
@@ -131,14 +131,14 @@ Clones are so shallow. Well, this one is anyway:
 
    git clone --depth=1 --origin salt https://github.com/saltstack/salt.git
 
-This creates a shallow clone of salt, which should be fast. Most of the
+This creates a shallow clone of Salt, which should be fast. Most of the
 time that’s all you’ll need, and you can start building out other
 commits as you go. If you *really* want all 108,300+ commits you can
 just run ``git fetch --unshallow``. Then go make a sandwich because it’s
 gonna be a while.
 
 You’re also going to want to head over to GitHub and create your own
-`fork of salt <https://github.com/saltstack/salt/fork>`__. Once you’ve
+`fork of Salt <https://github.com/saltstack/salt/fork>`__. Once you’ve
 got that set up you can add it as a remote:
 
 ::
@@ -162,7 +162,7 @@ contributors to get quick feedback, for quality control, and to increase
 the chance that your merge request will get reviewed and merged. Nox
 enables us to run multiple different test configurations, as well as
 other common tasks. You can think of it as Make with superpowers.
-Pre-commit does what it sounds like - it configures some Git pre-commit
+Pre-commit does what it sounds like: it configures some Git pre-commit
 hooks to run ``black`` for formatting, ``isort`` for keeping our imports
 sorted, and ``pylint`` to catch issues like unused imports, among
 others. You can easily install them in your virtualenv with:
@@ -173,7 +173,7 @@ others. You can easily install them in your virtualenv with:
    pre-commit install
 
 .. warning::
-    Currently there is an issue with the pip-tools-compile pre-commit hook on windows.
+    Currently there is an issue with the pip-tools-compile pre-commit hook on Windows.
     The details around this issue are included here:
     https://github.com/saltstack/salt/issues/56642.
     Please ensure you export ``SKIP=pip-tools-compile`` to skip pip-tools-compile.
@@ -297,8 +297,8 @@ this:
 And then refresh your browser to get your updated docs. This one should
 be quite a bit faster since Sphinx won’t need to rebuild everything.
 
-If your change is a doc-only change, you can go ahead and commit/push
-your code and open a PR. You can indicate that it’s a doc-only change by
+If your change is a docs-only change, you can go ahead and commit/push
+your code and open a PR. You can indicate that it’s a docs-only change by
 adding ``[Documentation]`` to the title of your PR. Otherwise you’ll
 want to write some tests and code.
 
@@ -477,9 +477,10 @@ instanch, if you fixed issue 123, you would do:
    echo "Made sys.doc inform when no minions return" > changelog/123.fixed
 
 And that’s all that would go into your file. When it comes to your
-commit message, it’s usually a good idea to add other information - what
-does a reviewer need to know about the change that you made? If someone
-isn’t an expert in this area, what will they need to know?
+commit message, it’s usually a good idea to add other information, such as
+
+- What does a reviewer need to know about the change that you made?
+- If someone isn’t an expert in this area, what will they need to know?
 
 This will also help you out, because when you go to create the PR it
 will automatically insert the body of your commit messages.
