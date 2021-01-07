@@ -277,7 +277,7 @@ def _run(
     encoded_cmd=False,
     success_retcodes=None,
     windows_codepage=65001,
-    **kwargs
+    **kwargs,
 ):
     """
     Do the DRY thing and only call subprocess.Popen() once
@@ -359,11 +359,15 @@ def _run(
         # The last item in the list [-1] is the current method.
         # The third item[2] in each tuple is the name of that method.
         if stack[-2][2] == "script":
-            cmd = f'"{shell}" -NonInteractive -NoProfile -ExecutionPolicy Bypass -Command {cmd}'
+            cmd = '"{0}" -NonInteractive -NoProfile -ExecutionPolicy Bypass -Command {1}'.format(
+                shell, cmd
+            )
         elif encoded_cmd:
-            cmd = f'"{shell}" -NonInteractive -NoProfile -EncodedCommand {cmd}'
+            cmd = '"{0}" -NonInteractive -NoProfile -EncodedCommand {1}'.format(
+                shell, cmd
+            )
         else:
-            cmd = f'"{shell}" -NonInteractive -NoProfile -Command "{cmd}"'
+            cmd = '"{0}" -NonInteractive -NoProfile -Command "{1}"'.format(shell, cmd)
 
     # munge the cmd and cwd through the template
     (cmd, cwd) = _render_cmd(cmd, cwd, template, saltenv, pillarenv, pillar_override)
@@ -980,7 +984,7 @@ def run(
     raise_err=False,
     prepend_path=None,
     success_retcodes=None,
-    **kwargs
+    **kwargs,
 ):
     r"""
     Execute the passed command and return the output as a string
@@ -1108,7 +1112,28 @@ def run(
         more interactively to the console and the logs. This is experimental.
 
     :param bool encoded_cmd: Specify if the supplied command is encoded.
-        Only applies to shell 'powershell'.
+        Only applies to shell 'powershell' and 'pwsh'.
+
+        .. versionadded:: 2018.3.0
+
+        Older versions of powershell seem to return raw xml data in the return.
+        To avoid raw xml data in the return, prepend your command with the
+        following before encoding:
+
+        `$ProgressPreference='SilentlyContinue'; <your command>`
+
+        The following powershell code block will encode the `Write-Output`
+        command so that it will not have the raw xml data in the return:
+
+        .. code-block:: powershell
+
+            # target string
+            $Command = '$ProgressPreference="SilentlyContinue"; Write-Output "hello"'
+
+            # Convert to Base64 encoded string
+            $Encoded = [convert]::ToBase64String([System.Text.encoding]::Unicode.GetBytes($command))
+
+            Write-Output $Encoded
 
     :param bool raise_err: If ``True`` and the command has a nonzero exit code,
         a CommandExecutionError exception will be raised.
@@ -1210,7 +1235,7 @@ def run(
         password=password,
         encoded_cmd=encoded_cmd,
         success_retcodes=success_retcodes,
-        **kwargs
+        **kwargs,
     )
 
     log_callback = _check_cb(log_callback)
@@ -1255,7 +1280,7 @@ def shell(
     password=None,
     prepend_path=None,
     success_retcodes=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Execute the passed command and return the output as a string.
@@ -1467,7 +1492,7 @@ def shell(
         bg=bg,
         password=password,
         success_retcodes=success_retcodes,
-        **kwargs
+        **kwargs,
     )
 
 
@@ -1496,7 +1521,7 @@ def run_stdout(
     password=None,
     prepend_path=None,
     success_retcodes=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Execute a command, and only return the standard out
@@ -1681,7 +1706,7 @@ def run_stdout(
         use_vt=use_vt,
         password=password,
         success_retcodes=success_retcodes,
-        **kwargs
+        **kwargs,
     )
 
     return ret["stdout"] if not hide_output else ""
@@ -1712,7 +1737,7 @@ def run_stderr(
     password=None,
     prepend_path=None,
     success_retcodes=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Execute a command and only return the standard error
@@ -1897,7 +1922,7 @@ def run_stderr(
         saltenv=saltenv,
         password=password,
         success_retcodes=success_retcodes,
-        **kwargs
+        **kwargs,
     )
 
     return ret["stderr"] if not hide_output else ""
@@ -1930,7 +1955,7 @@ def run_all(
     encoded_cmd=False,
     prepend_path=None,
     success_retcodes=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Execute the passed command and return a dict of return data
@@ -2056,9 +2081,28 @@ def run_all(
         more interactively to the console and the logs. This is experimental.
 
     :param bool encoded_cmd: Specify if the supplied command is encoded.
-       Only applies to shell 'powershell'.
+        Only applies to shell 'powershell' and 'pwsh'.
 
-       .. versionadded:: 2018.3.0
+        .. versionadded:: 2018.3.0
+
+        Older versions of powershell seem to return raw xml data in the return.
+        To avoid raw xml data in the return, prepend your command with the
+        following before encoding:
+
+        `$ProgressPreference='SilentlyContinue'; <your command>`
+
+        The following powershell code block will encode the `Write-Output`
+        command so that it will not have the raw xml data in the return:
+
+        .. code-block:: powershell
+
+            # target string
+            $Command = '$ProgressPreference="SilentlyContinue"; Write-Output "hello"'
+
+            # Convert to Base64 encoded string
+            $Encoded = [convert]::ToBase64String([System.Text.encoding]::Unicode.GetBytes($command))
+
+            Write-Output $Encoded
 
     :param bool redirect_stderr: If set to ``True``, then stderr will be
         redirected to stdout. This is helpful for cases where obtaining both
@@ -2140,7 +2184,7 @@ def run_all(
         password=password,
         encoded_cmd=encoded_cmd,
         success_retcodes=success_retcodes,
-        **kwargs
+        **kwargs,
     )
 
     if hide_output:
@@ -2170,7 +2214,7 @@ def retcode(
     use_vt=False,
     password=None,
     success_retcodes=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Execute a shell command and return the command's return code.
@@ -2344,7 +2388,7 @@ def retcode(
         use_vt=use_vt,
         password=password,
         success_retcodes=success_retcodes,
-        **kwargs
+        **kwargs,
     )
     return ret["retcode"]
 
@@ -2370,7 +2414,7 @@ def _retcode_quiet(
     use_vt=False,
     password=None,
     success_retcodes=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Helper for running commands quietly for minion startup. Returns same as
@@ -2398,7 +2442,7 @@ def _retcode_quiet(
         use_vt=use_vt,
         password=password,
         success_retcodes=success_retcodes,
-        **kwargs
+        **kwargs,
     )
 
 
@@ -2425,7 +2469,7 @@ def script(
     bg=False,
     password=None,
     success_retcodes=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Download a script from a remote location and execute the script locally.
@@ -2678,7 +2722,7 @@ def script(
         bg=bg,
         password=password,
         success_retcodes=success_retcodes,
-        **kwargs
+        **kwargs,
     )
     _cleanup_tempfile(path)
     # If a temp working directory was created (Windows), let's remove that
@@ -2711,7 +2755,7 @@ def script_retcode(
     use_vt=False,
     password=None,
     success_retcodes=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Download a script from a remote location and execute the script locally.
@@ -2874,7 +2918,7 @@ def script_retcode(
         use_vt=use_vt,
         password=password,
         success_retcodes=success_retcodes,
-        **kwargs
+        **kwargs,
     )["retcode"]
 
 
@@ -3027,7 +3071,7 @@ def run_chroot(
     use_vt=False,
     bg=False,
     success_retcodes=None,
-    **kwargs
+    **kwargs,
 ):
     """
     .. versionadded:: 2014.7.0
@@ -3544,7 +3588,7 @@ def powershell(
     depth=None,
     encode_cmd=False,
     success_retcodes=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Execute the passed PowerShell command and return the output as a dictionary.
@@ -3718,9 +3762,9 @@ def powershell(
         salt '*' cmd.powershell "$PSVersionTable.CLRVersion"
     """
     if shell not in ["powershell", "pwsh"]:
-        msg = "Must specify a valid powershell binary. Must be 'powershell' " \
-              "or 'pwsh'"
-        raise CommandExecutionError(msg)
+        raise CommandExecutionError(
+            "Must specify a valid powershell binary. Must be 'powershell' or 'pwsh'"
+        )
 
     if "python_shell" in kwargs:
         python_shell = kwargs.pop("python_shell")
@@ -3778,7 +3822,7 @@ def powershell(
         password=password,
         encoded_cmd=encoded_cmd,
         success_retcodes=success_retcodes,
-        **kwargs
+        **kwargs,
     )
 
     # Sometimes Powershell returns an empty string, which isn't valid JSON
@@ -3815,7 +3859,7 @@ def powershell_all(
     encode_cmd=False,
     force_list=False,
     success_retcodes=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Execute the passed PowerShell command and return a dictionary with a result
@@ -4062,9 +4106,9 @@ def powershell_all(
         salt '*' cmd.powershell_all "dir mydirectory" force_list=True
     """
     if shell not in ["powershell", "pwsh"]:
-        msg = "Must specify a valid powershell binary. Must be 'powershell' " \
-              "or 'pwsh'"
-        raise CommandExecutionError(msg)
+        raise CommandExecutionError(
+            "Must specify a valid powershell binary. Must be 'powershell' or 'pwsh'"
+        )
 
     if "python_shell" in kwargs:
         python_shell = kwargs.pop("python_shell")
@@ -4112,7 +4156,7 @@ def powershell_all(
         password=password,
         encoded_cmd=encoded_cmd,
         success_retcodes=success_retcodes,
-        **kwargs
+        **kwargs,
     )
     stdoutput = response["stdout"]
 
@@ -4166,7 +4210,7 @@ def run_bg(
     password=None,
     prepend_path=None,
     success_retcodes=None,
-    **kwargs
+    **kwargs,
 ):
     r"""
     .. versionadded:: 2016.3.0
@@ -4368,7 +4412,7 @@ def run_bg(
         saltenv=saltenv,
         password=password,
         success_retcodes=success_retcodes,
-        **kwargs
+        **kwargs,
     )
 
     return {"pid": res["pid"]}
