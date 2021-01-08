@@ -1,21 +1,13 @@
-# -*- coding: utf-8 -*-
 """
 Beacon to announce via Bonjour (zeroconf)
 """
-
-# Import Python libs
-from __future__ import absolute_import
-
 import atexit
 import logging
 import select
 import time
 
 import salt.utils.stringutils
-from salt.ext import six
-from salt.ext.six.moves import map
 
-# Import 3rd Party libs
 try:
     import pybonjour
 
@@ -240,7 +232,7 @@ def beacon(config):
             if SD_REF in ready[0]:
                 pybonjour.DNSServiceProcessResult(SD_REF)
         else:
-            txt_record_raw = six.text_type(txt_record).encode("utf-8")
+            txt_record_raw = str(txt_record).encode("utf-8")
             pybonjour.DNSServiceUpdateRecord(
                 SD_REF, RecordRef=None, flags=0, rdata=txt_record_raw
             )
