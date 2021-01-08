@@ -9,8 +9,6 @@ import re
 import salt.loader
 import salt.utils.event
 import salt.utils.minion
-from salt.exceptions import CommandExecutionError
-from salt.ext.six.moves import map
 
 log = logging.getLogger(__name__)
 
