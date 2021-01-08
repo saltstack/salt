@@ -1375,7 +1375,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                 state.event(count=1)
                 print_cli_mock.assert_called_with(_expected_call)
 
-        now = datetime.datetime.now()
+        now = datetime.datetime.now().isoformat()
         event_returns = {
             "data": {"date": now, "_stamp": "2021-01-08T00:12:32.320928"},
             "tag": "a_event_tag",
