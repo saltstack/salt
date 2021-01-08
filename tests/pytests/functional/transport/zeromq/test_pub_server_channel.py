@@ -38,6 +38,7 @@ class Collector(salt.utils.process.SignalHandlingProcess):
         self.results = self.manager.list()
         self.zmq_filtering = zmq_filtering
         self.stopped = multiprocessing.Event()
+        self.started = multiprocessing.Event()
         self.running = multiprocessing.Event()
 
     def run(self):
@@ -53,7 +54,7 @@ class Collector(salt.utils.process.SignalHandlingProcess):
         last_msg = time.time()
         serial = salt.payload.Serial(self.minion_config)
         crypticle = salt.crypt.Crypticle(self.minion_config, self.aes_key)
-        self.running.set()
+        self.started.set()
         while True:
             curr_time = time.time()
             if time.time() > self.hard_timeout:
@@ -84,8 +85,8 @@ class Collector(salt.utils.process.SignalHandlingProcess):
         self.manager.__enter__()
         self.start()
         # Wait until we can start receiving events
-        self.running.wait()
-        self.running.clear()
+        self.started.wait()
+        self.started.clear()
         return self
 
     def __exit__(self, *args):
@@ -169,7 +170,7 @@ class PubServerChannelProcess(salt.utils.process.SignalHandlingProcess):
     def __enter__(self):
         self.start()
         self.collector.__enter__()
-        attempts = 10
+        attempts = 30
         while attempts > 0:
             self.publish({"tgt_type": "glob", "tgt": "*", "jid": -1, "start": True})
             if self.collector.running.wait(1) is True:
