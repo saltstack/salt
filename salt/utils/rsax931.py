@@ -1,21 +1,15 @@
-# -*- coding: utf-8 -*-
 """
 Create and verify ANSI X9.31 RSA signatures using OpenSSL libcrypto
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import ctypes.util
 import glob
 import os
 import platform
 import sys
-
-# Import 3rd-party libs
 from ctypes import c_char_p, c_int, c_void_p, cdll, create_string_buffer, pointer
 
-# Import Salt libs
 import salt.utils.platform
 import salt.utils.stringutils
 
@@ -53,19 +47,32 @@ def _find_libcrypto():
         lib = glob.glob(os.path.join(os.path.dirname(sys.executable), "libcrypto.so*"))
         lib = lib[0] if lib else None
     else:
+        print(
+            "DGM _find_libcrypto start is sunos '{}', is aix '{}'".format(
+                salt.utils.platform.is_sunos(), salt.utils.platform.is_aix()
+            )
+        )
         lib = ctypes.util.find_library("crypto")
         if not lib:
             if salt.utils.platform.is_sunos():
+                print("DGM _find_libcrypto failed to find libcrypto for Solaris")
                 # Solaris-like distribution that use pkgsrc have libraries
                 # in a non standard location.
                 # (SmartOS, OmniOS, OpenIndiana, ...)
                 # This could be /opt/tools/lib (Global Zone) or
                 # /opt/local/lib (non-Global Zone), thus the two checks
                 # below
-                lib = glob.glob("/opt/local/lib/libcrypto.so*")
+                ## DGM lib = glob.glob("/opt/local/lib/libcrypto.so*")
+                lib = glob.glob("/usr/local/openssl/lib/libcrypto.so*")
+                if lib:
+                    print(
+                        "DGM _find_libcrypto found libcrypto for Solaris in /usr/local/openssl/lib/"
+                    )
+
                 lib = lib or glob.glob("/opt/tools/lib/libcrypto.so*")
                 lib = lib[0] if lib else None
             elif salt.utils.platform.is_aix():
+                print("DGM _find_libcrypto failed to find libcrypto for AIX")
                 if os.path.isdir("/opt/salt/lib"):
                     # preference for Salt installed fileset
                     lib = glob.glob("/opt/salt/lib/libcrypto.so*")
@@ -141,7 +148,7 @@ libcrypto = _init_libcrypto()
 RSA_X931_PADDING = 5
 
 
-class RSAX931Signer(object):
+class RSAX931Signer:
     """
     Create ANSI X9.31 RSA signatures using OpenSSL libcrypto
     """
@@ -186,7 +193,7 @@ class RSAX931Signer(object):
         return buf[0:size]
 
 
-class RSAX931Verifier(object):
+class RSAX931Verifier:
     """
     Verify ANSI X9.31 RSA signatures using OpenSSL libcrypto
     """
