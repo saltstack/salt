@@ -53,11 +53,6 @@ def user_info(salt_master):
 
 
 @pytest.fixture(scope="module")
-def event_listener(salt_factories):
-    return salt_factories.event_listener
-
-
-@pytest.fixture(scope="module")
 def client_config(salt_minion, salt_master):
     opts = salt_minion.config.copy()
     opts.update(
