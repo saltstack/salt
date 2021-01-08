@@ -26,10 +26,10 @@ import _pytest.logging
 import _pytest.skipping
 import psutil
 import pytest
+import salt._logging.impl
 import salt.config
 import salt.loader
 import salt.log.mixins
-import salt.log.setup
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform

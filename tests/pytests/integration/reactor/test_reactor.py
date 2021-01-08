@@ -13,6 +13,7 @@ import pytest
 import salt.utils.event
 import salt.utils.reactor
 from salt.serializers import yaml
+from tests.support.helpers import PRE_PYTEST_SKIP_REASON
 
 pytestmark = [
     pytest.mark.slow_test,
@@ -20,11 +21,6 @@ pytestmark = [
 ]
 
 log = logging.getLogger(__name__)
-
-
-@pytest.fixture(scope="module")
-def event_listener(salt_factories):
-    return salt_factories.event_listener
 
 
 @pytest.fixture
@@ -61,6 +57,7 @@ def test_ping_reaction(event_listener, salt_minion):
         assert event.data == {"a": "b"}
 
 
+@pytest.mark.skip_on_windows(reason=PRE_PYTEST_SKIP_REASON)
 def test_reactor_reaction(
     event_listener, salt_master, salt_minion, master_event_bus, reactor_event
 ):
@@ -79,6 +76,7 @@ def test_reactor_reaction(
         assert event.data["test_reaction"] is True
 
 
+@pytest.mark.skip_on_windows(reason=PRE_PYTEST_SKIP_REASON)
 def test_reactor_is_leader(
     event_listener,
     salt_master,
