@@ -23,6 +23,21 @@ pytestmark = [
 ]
 
 
+def use_static_requirements_ids(value):
+    return "USE_STATIC_REQUIREMENTS={}".format(value)
+
+
+@pytest.fixture(params=[1, 0], ids=use_static_requirements_ids)
+def use_static_requirements(request):
+    return str(request.param)
+
+
+@pytest.fixture
+def virtualenv(virtualenv, use_static_requirements):
+    virtualenv.environ["USE_STATIC_REQUIREMENTS"] = use_static_requirements
+    return virtualenv
+
+
 def test_wheel(virtualenv, cache_dir):
     """
     test building and installing a bdist_wheel package
