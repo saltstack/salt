@@ -726,7 +726,7 @@ def disable_beacon(name, **kwargs):
 
 def reset(**kwargs):
     """
-    Resest beacon configuration on the minion
+    Reset beacon configuration on the minion
 
     CLI Example:
 
