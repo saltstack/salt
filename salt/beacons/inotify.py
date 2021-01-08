@@ -20,13 +20,7 @@ import logging
 import os
 import re
 
-import salt.ext.six
 import salt.utils.beacons
-
-# pylint: disable=import-error
-from salt.ext.six.moves import map
-
-# pylint: enable=import-error
 
 try:
     import pyinotify
