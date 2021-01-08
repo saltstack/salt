@@ -5,15 +5,12 @@ Module for viewing and modifying sysctl parameters
 import logging
 import os
 import re
-import string
 
 import salt.utils.data
 import salt.utils.files
 import salt.utils.stringutils
 import salt.utils.systemd
 from salt.exceptions import CommandExecutionError
-from salt.ext import six
-from salt.ext.six import string_types
 
 log = logging.getLogger(__name__)
 
@@ -130,16 +127,7 @@ def assign(name, value):
     """
     value = str(value)
 
-    if six.PY3:
-        tran_tab = name.translate("".maketrans("./", "/."))
-    else:
-        # pylint: disable=incompatible-py3-code,undefined-variable
-        if isinstance(name, unicode):  # pylint: disable=E0602
-            trans_args = {ord("/"): ".", ord("."): "/"}
-        else:
-            trans_args = string.maketrans("./", "/.")
-        # pylint: enable=incompatible-py3-code,undefined-variable
-        tran_tab = name.translate(trans_args)
+    tran_tab = name.translate("".maketrans("./", "/."))
 
     sysctl_file = "/proc/sys/{}".format(tran_tab)
     if not os.path.exists(sysctl_file):
@@ -221,11 +209,11 @@ def persist(name, value, config=None):
         # other sysctl with whitespace in it consistently uses 1 tab.  Lets
         # allow our users to put a space or tab between multi-value sysctls
         # and have salt not try to set it every single time.
-        if isinstance(comps[1], string_types) and " " in comps[1]:
+        if isinstance(comps[1], str) and " " in comps[1]:
             comps[1] = re.sub(r"\s+", "\t", comps[1])
 
         # Do the same thing for the value 'just in case'
-        if isinstance(value, string_types) and " " in value:
+        if isinstance(value, str) and " " in value:
             value = re.sub(r"\s+", "\t", value)
 
         if len(comps) < 2:

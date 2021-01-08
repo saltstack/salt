@@ -18,11 +18,9 @@ class ZipFileMock(MagicMock):
         return self._files
 
 
-@pytest.fixture(autouse=True)
-def setup_loader():
-    setup_loader_modules = {archive: {"__grains__": {"id": 0}}}
-    with pytest.helpers.loader_mock(setup_loader_modules) as loader_mock:
-        yield loader_mock
+@pytest.fixture
+def configure_loader_modules():
+    return {archive: {"__grains__": {"id": 0}}}
 
 
 def test_tar():

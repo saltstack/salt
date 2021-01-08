@@ -13,11 +13,6 @@ pytestmark = [
 ]
 
 
-@pytest.fixture(scope="module")
-def event_listener(salt_factories):
-    return salt_factories.event_listener
-
-
 def test_fire_master(event_listener, salt_master, salt_minion, salt_call_cli):
     """
     Test firing an event on the master event bus

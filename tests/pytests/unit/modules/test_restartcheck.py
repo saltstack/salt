@@ -8,11 +8,9 @@ import salt.modules.systemd_service as service
 from tests.support.mock import create_autospec, patch
 
 
-@pytest.fixture(autouse=True)
-def setup_loader():
-    setup_loader_modules = {restartcheck: {}}
-    with pytest.helpers.loader_mock(setup_loader_modules) as loader_mock:
-        yield loader_mock
+@pytest.fixture
+def configure_loader_modules():
+    return {restartcheck: {}}
 
 
 def test_when_timestamp_file_does_not_exist_then_file_changed_nilrt_should_be_True():
