@@ -64,7 +64,7 @@ jxmlease==1.0.1
 keyring==5.7.1
 kubernetes==3.0.0
 linode-python==1.1.1
-lxml==4.3.3               # via junos-eznc, napalm, ncclient
+lxml==4.6.2               # via junos-eznc, napalm, ncclient
 mako==1.0.7
 markupsafe==1.1.1
 mock==3.0.5
