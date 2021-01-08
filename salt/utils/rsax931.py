@@ -47,35 +47,26 @@ def _find_libcrypto():
         lib = glob.glob(os.path.join(os.path.dirname(sys.executable), "libcrypto.so*"))
         lib = lib[0] if lib else None
     else:
-        print(
-            "DGM _find_libcrypto start is sunos '{}', is aix '{}'".format(
-                salt.utils.platform.is_sunos(), salt.utils.platform.is_aix()
-            )
-        )
         lib = ctypes.util.find_library("crypto")
         if not lib:
             if salt.utils.platform.is_sunos():
-                print("DGM _find_libcrypto failed to find libcrypto for Solaris")
                 # Solaris-like distribution that use pkgsrc have libraries
                 # in a non standard location.
                 # (SmartOS, OmniOS, OpenIndiana, ...)
                 # This could be /opt/tools/lib (Global Zone) or
                 # /opt/local/lib (non-Global Zone), thus the two checks
                 # below
-                ## DGM lib = glob.glob("/opt/local/lib/libcrypto.so*")
-                lib = glob.glob("/usr/local/openssl/lib/libcrypto.so*")
-                if lib:
-                    print(
-                        "DGM _find_libcrypto found libcrypto for Solaris in /usr/local/openssl/lib/"
-                    )
-
+                lib = glob.glob("/opt/saltstack/salt/run/libcrypto.so*")
+                lib = lib or glob.glob("/opt/local/lib/libcrypto.so*")
                 lib = lib or glob.glob("/opt/tools/lib/libcrypto.so*")
                 lib = lib[0] if lib else None
             elif salt.utils.platform.is_aix():
-                print("DGM _find_libcrypto failed to find libcrypto for AIX")
-                if os.path.isdir("/opt/salt/lib"):
+                if os.path.isdir("/opt/saltstack/salt/run") or os.path.isdir(
+                    "/opt/salt/lib"
+                ):
                     # preference for Salt installed fileset
-                    lib = glob.glob("/opt/salt/lib/libcrypto.so*")
+                    lib = glob.glob("/opt/saltstack/salt/run/libcrypto.so*")
+                    lib = lib or glob.glob("/opt/salt/lib/libcrypto.so*")
                 else:
                     lib = glob.glob("/opt/freeware/lib/libcrypto.so*")
                 lib = lib[0] if lib else None
