@@ -288,7 +288,7 @@ def decode(
             )
         )
     if isinstance(data, datetime.datetime):
-        return str(data)
+        return data.isoformat()
     try:
         data = _decode_func(data, encoding, errors, normalize)
     except TypeError:
