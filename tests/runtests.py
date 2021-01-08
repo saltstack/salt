@@ -115,12 +115,10 @@ TEST_SUITES_UNORDERED = {
         "path": "integration/cloud/clouds",
     },
     "minion": {"display_name": "Minion", "path": "integration/minion"},
-    "reactor": {"display_name": "Reactor", "path": "integration/reactor"},
     "proxy": {"display_name": "Proxy", "path": "integration/proxy"},
     "external_api": {"display_name": "ExternalAPIs", "path": "integration/externalapi"},
     "daemons": {"display_name": "Daemon", "path": "integration/daemons"},
     "sdb": {"display_name": "Sdb", "path": "integration/sdb"},
-    "logging": {"display_name": "Logging", "path": "integration/logging"},
 }
 
 TEST_SUITES = collections.OrderedDict(

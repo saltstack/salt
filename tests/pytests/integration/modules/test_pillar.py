@@ -3,9 +3,9 @@ import textwrap
 
 import attr
 import pytest
-from tests.support.helpers import slowTest
 
 pytestmark = [
+    pytest.mark.slow_test,
     pytest.mark.windows_whitelisted,
 ]
 
@@ -53,7 +53,6 @@ def pillar_tree(base_env_pillar_tree_root_dir, salt_minion, salt_call_cli):
         assert ret.json is True
 
 
-@slowTest
 def test_data(salt_call_cli, pillar_tree):
     """
     pillar.data
@@ -74,7 +73,6 @@ def test_data(salt_call_cli, pillar_tree):
         assert pillar["class"] == "other"
 
 
-@slowTest
 def test_issue_5449_report_actual_file_roots_in_pillar(
     salt_call_cli, pillar_tree, base_env_state_tree_root_dir
 ):
@@ -93,7 +91,6 @@ def test_issue_5449_report_actual_file_roots_in_pillar(
     ]
 
 
-@slowTest
 def test_ext_cmd_yaml(salt_call_cli, pillar_tree):
     """
     pillar.data for ext_pillar cmd.yaml
@@ -105,7 +102,6 @@ def test_ext_cmd_yaml(salt_call_cli, pillar_tree):
     assert pillar["ext_spam"] == "eggs"
 
 
-@slowTest
 def test_issue_5951_actual_file_roots_in_opts(
     salt_call_cli, pillar_tree, base_env_state_tree_root_dir
 ):
@@ -119,7 +115,6 @@ def test_issue_5951_actual_file_roots_in_opts(
     ]
 
 
-@slowTest
 def test_pillar_items(salt_call_cli, pillar_tree):
     """
     Test to ensure we get expected output
@@ -135,7 +130,6 @@ def test_pillar_items(salt_call_cli, pillar_tree):
     assert pillar_items["knights"] == ["Lancelot", "Galahad", "Bedevere", "Robin"]
 
 
-@slowTest
 def test_pillar_command_line(salt_call_cli, pillar_tree):
     """
     Test to ensure when using pillar override
@@ -209,7 +203,6 @@ def key_pillar(salt_minion, salt_cli, base_env_pillar_tree_root_dir):
     )
 
 
-@slowTest
 def test_pillar_refresh_pillar_raw(salt_cli, salt_minion, key_pillar):
     """
     Validate the minion's pillar.raw call behavior for new pillars
@@ -239,7 +232,6 @@ def test_pillar_refresh_pillar_raw(salt_cli, salt_minion, key_pillar):
         assert val is True, repr(val)
 
 
-@slowTest
 def test_pillar_refresh_pillar_get(salt_cli, salt_minion, key_pillar):
     """
     Validate the minion's pillar.get call behavior for new pillars
@@ -270,7 +262,6 @@ def test_pillar_refresh_pillar_get(salt_cli, salt_minion, key_pillar):
         assert val is True, repr(val)
 
 
-@slowTest
 def test_pillar_refresh_pillar_item(salt_cli, salt_minion, key_pillar):
     """
     Validate the minion's pillar.item call behavior for new pillars
@@ -304,7 +295,6 @@ def test_pillar_refresh_pillar_item(salt_cli, salt_minion, key_pillar):
         assert val[key] is True
 
 
-@slowTest
 def test_pillar_refresh_pillar_items(salt_cli, salt_minion, key_pillar):
     """
     Validate the minion's pillar.item call behavior for new pillars
@@ -327,7 +317,6 @@ def test_pillar_refresh_pillar_items(salt_cli, salt_minion, key_pillar):
         assert val[key] is True
 
 
-@slowTest
 def test_pillar_refresh_pillar_ping(salt_cli, salt_minion, key_pillar):
     """
     Validate the minion's test.ping does not update pillars

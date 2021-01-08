@@ -58,18 +58,17 @@ def execution():
 
         salt-run doc.execution
     """
-    client = salt.client.get_local_client(__opts__["conf_file"])
-
     docs = {}
-    try:
-        for ret in client.cmd_iter("*", "sys.doc", timeout=__opts__["timeout"]):
-            for v in ret.values():
-                docs.update(v)
-    except SaltClientError as exc:
-        print(exc)
-        return []
+    with salt.client.get_local_client(__opts__["conf_file"]) as client:
+        try:
+            for ret in client.cmd_iter("*", "sys.doc", timeout=__opts__["timeout"]):
+                for v in ret.values():
+                    docs.update(v)
+        except SaltClientError as exc:
+            print(exc)
+            return []
 
-    i = itertools.chain.from_iterable([docs["ret"].items()])
-    ret = dict(list(i))
+        i = itertools.chain.from_iterable([docs["ret"].items()])
+        ret = dict(list(i))
 
-    return ret
+        return ret
