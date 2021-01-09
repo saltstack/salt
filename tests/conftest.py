@@ -1236,6 +1236,9 @@ def from_filenames_collection_modifyitems(config, items):
     # Let's now go through the list of files gathered
     for path in from_filenames_paths:
         if path.as_posix().startswith("tests/"):
+            if path.name == "conftest.py":
+                # This is not a test module
+                continue
             # Tests in the listing don't require additional matching and will be added to the
             # list of tests to run
             test_module_paths.add(path)
