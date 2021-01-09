@@ -1185,6 +1185,30 @@ def from_filenames_collection_modifyitems(config, items):
         # Don't do anything
         return
 
+    from_filenames_paths = set()
+    for path in [path.strip() for path in from_filenames.split(",")]:
+        # Make sure that, no matter what kind of path we're passed, Windows or Posix path,
+        # we resolve it to the platform slash separator
+        properly_slashed_path = pathlib.Path(
+            path.replace("\\", os.sep).replace("/", os.sep)
+        )
+        if not properly_slashed_path.exists():
+            log.debug("The path %s(%s) does not exist", path, properly_slashed_path)
+            continue
+        if properly_slashed_path.is_absolute():
+            # In this case, this path is considered to be a file containing a line separated list
+            # of files to consider
+            with salt.utils.files.fopen(str(path)) as rfh:
+                for line in rfh:
+                    line_path = pathlib.Path(
+                        line.strip().replace("\\", os.sep).replace("/", os.sep)
+                    )
+                    if not line_path.exists():
+                        continue
+                    from_filenames_paths.add(line_path)
+            continue
+        from_filenames_paths.add(properly_slashed_path)
+
     test_categories_paths = (
         (TESTS_DIR / "integration").relative_to(CODE_DIR),
         (TESTS_DIR / "multimaster").relative_to(CODE_DIR),
@@ -1195,20 +1219,8 @@ def from_filenames_collection_modifyitems(config, items):
         (PYTESTS_DIR / "unit").relative_to(CODE_DIR),
     )
 
+    # Let's start collecting test modules
     test_module_paths = set()
-    from_filenames_listing = set()
-    for path in [pathlib.Path(path.strip()) for path in from_filenames.split(",")]:
-        if path.is_absolute():
-            # In this case, this path is considered to be a file containing a line separated list
-            # of files to consider
-            with salt.utils.files.fopen(str(path)) as rfh:
-                for line in rfh:
-                    line_path = pathlib.Path(line.strip())
-                    if not line_path.exists():
-                        continue
-                    from_filenames_listing.add(line_path)
-            continue
-        from_filenames_listing.add(path)
 
     filename_map = yaml.deserialize((TESTS_DIR / "filename_map.yml").read_text())
     # Let's add the match all rule
@@ -1219,13 +1231,13 @@ def from_filenames_collection_modifyitems(config, items):
             break
 
     # Let's now go through the list of files gathered
-    for filename in from_filenames_listing:
-        if str(filename).startswith("tests/"):
+    for path in from_filenames_paths:
+        if path.as_posix().startswith("tests/"):
             # Tests in the listing don't require additional matching and will be added to the
             # list of tests to run
-            test_module_paths.add(filename)
+            test_module_paths.add(path)
             continue
-        if filename.name == "setup.py" or str(filename).startswith("salt/"):
+        if path.name == "setup.py" or path.as_posix().startswith("salt/"):
             if path.name == "__init__.py":
                 # No direct macthing
                 continue
@@ -1242,7 +1254,7 @@ def from_filenames_collection_modifyitems(config, items):
                     continue
                 elif "|" in rule:
                     # This is regex
-                    if re.match(rule, str(filename)):
+                    if re.match(rule, path.as_posix()):
                         for match in matches:
                             test_module_paths.add(_match_to_test_file(match))
                 elif "*" in rule or "\\" in rule:
@@ -1251,12 +1263,12 @@ def from_filenames_collection_modifyitems(config, items):
                         if not filerule.exists():
                             continue
                         filerule = filerule.relative_to(CODE_DIR)
-                        if filerule != filename:
+                        if filerule != path:
                             continue
                         for match in matches:
                             test_module_paths.add(_match_to_test_file(match))
                 else:
-                    if str(filename) != rule:
+                    if path.as_posix() != rule:
                         continue
                     # Direct file paths as rules
                     filerule = pathlib.Path(rule)
@@ -1266,7 +1278,7 @@ def from_filenames_collection_modifyitems(config, items):
                         test_module_paths.add(_match_to_test_file(match))
             continue
         else:
-            log.debug("Don't know what to do with path %s", filename)
+            log.debug("Don't know what to do with path %s", path)
 
     selected = []
     deselected = []
