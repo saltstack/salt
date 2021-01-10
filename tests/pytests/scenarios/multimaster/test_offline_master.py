@@ -3,11 +3,6 @@ import time
 import pytest
 
 
-@pytest.fixture(scope="module")
-def event_listener(salt_factories):
-    return salt_factories.event_listener
-
-
 @pytest.mark.slow_test
 def test_minion_hangs_on_master_failure_50814(
     event_listener,

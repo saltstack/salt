@@ -47,23 +47,20 @@ class MappedResultMock(MagicMock):
         self._instances[name] = MagicMock()
 
 
-@pytest.fixture(autouse=True)
-def setup_loader():
+def loader_modules_config():
     # Create libvirt mock and connection mock
     mock_libvirt = LibvirtMock()
     mock_conn = MagicMock()
     mock_conn.getStoragePoolCapabilities.return_value = "<storagepoolCapabilities/>"
 
     mock_libvirt.openAuth.return_value = mock_conn
-    setup_loader_modules = {
+    return {
         virt: {
             "libvirt": mock_libvirt,
             "__salt__": {"config.get": config.get, "config.option": config.option},
         },
         config: {},
     }
-    with pytest.helpers.loader_mock(setup_loader_modules) as loader_mock:
-        yield loader_mock
 
 
 @pytest.fixture
