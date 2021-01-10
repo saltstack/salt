@@ -117,10 +117,10 @@ salt/client/*:
   - integration.client.test_standard
 
 salt/cloud/*:
-  - integration.shell.test_cloud
+  - pytests.functional.cli.test_salt_cloud
 
 salt/cloud/__init__.py:
-  - integration.cloud.test_cloud
+  - pytests.functional.cli.test_salt_cloud
 
 salt/grains/*:
   - integration.grains.test_custom
