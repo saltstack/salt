@@ -1355,20 +1355,13 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
         """
         event_returns = {
             "data": {
-                "headers": {
-                    "Host": "127.0.0.1:5001",
-                    "User-Agent": "curl/7.74.0",
-                    "Accept": "*/*",
-                    "Content-Type": "application/json",
-                    "Content-Length": "23",
-                },
                 "body": b'{"text": "Hello World"}',
                 "_stamp": "2021-01-08T00:12:32.320928",
             },
             "tag": "salt/engines/hook/test",
         }
 
-        _expected_call = 'salt/engines/hook/test\t{"headers": {"Host": "127.0.0.1:5001", "User-Agent": "curl/7.74.0", "Accept": "*/*", "Content-Type": "application/json", "Content-Length": "23"}, "body": "{\\"text\\": \\"Hello World\\"}", "_stamp": "2021-01-08T00:12:32.320928"}'
+        _expected_call = 'salt/engines/hook/test\t{"body": "{\\"text\\": \\"Hello World\\"}", "_stamp": "2021-01-08T00:12:32.320928"}'
         with patch.object(SaltEvent, "get_event", return_value=event_returns):
             print_cli_mock = MagicMock()
             with patch.object(salt.utils.stringutils, "print_cli", print_cli_mock):
