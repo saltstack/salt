@@ -13,6 +13,10 @@ pytestmark = [
 
 @pytest.fixture(params=["powershell", "pwsh"])
 def shell(request):
+    """
+    This will run the test on powershell and powershell 7 (pwsh). If powershell
+    7 is not installed that test run will be skipped
+    """
     if request.param == "pwsh" and salt.utils.path.which("pwsh") is None:
         pytest.skip("Powershell 7 Not Present")
     return request.param
