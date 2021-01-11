@@ -11,6 +11,9 @@ where you get data from, and what kinds of access (internal and external) you
 require.
 
 .. important::
+   The guidance here should be taken in combination with :ref:`best-practices`.
+
+.. important::
 
     Refer to the :ref:`saltstack_security_announcements` documentation in order to stay updated
     and secure.
@@ -83,5 +86,75 @@ Salt hardening tips
   messages are logged at the ``error`` log level and start with ``Requested
   method not exposed``.
 
+.. _rotating-salt-keys:
+
+Rotating keys
+=============
+
+There are several reasons to rotate keys. One example is exposure or a
+compromised key. An easy way to rotate a key is to remove the existing keys and
+let the ``salt-master`` or ``salt-minion`` process generate new keys on
+restart.
+
+Rotate a minion key
+-------------------
+
+Run the following on the Salt minion:
+
+.. code-block:: shell
+
+   salt-call saltutil.regen_keys
+   systemctl stop salt-minion
+
+Run the following on the Salt master:
+
+.. code-block:: shell
+
+   salt-key -d
+
+Run the following on the Salt minion:
+
+.. code-block:: shell
+
+   systemctl start salt-minion
+
+Run the following on the Salt master:
+
+.. code-block:: shell
+
+   salt-key -a
+
+Rotate a master key
+-------------------
+
+Run the following on the Salt master:
+
+.. code-block:: shell
+
+   systemctl stop salt-master
+   rm <pki_dir>/master.{pem,pub}
+   systemctl start salt-master
+
+Run the following on the Salt minion:
+
+.. code-block:: shell
+
+   systemctl stop salt-minion
+   rm <pki_dir>/minion_master.pub
+   systemctl start salt-minion
+
+Rotate all keys
+---------------
+
+A script was designed to quickly re-key Salt minions. It was written originally
+as a part of the mitigation efforts for `CVE-2020-11651`_ and `CVE-2020-11652`_
+but it can be used in any scenario in which all minions connected to a Salt
+master should be forced to re-generate their keys and re-connect.
+
+Reference `salt-rekey`_ for directions.
+
 .. _salt-users: https://groups.google.com/forum/#!forum/salt-users
 .. _salt-announce: https://groups.google.com/forum/#!forum/salt-announce
+.. _salt-rekey: https://github.com/dwoz/salt-rekey/
+.. _CVE-2020-11651: https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2020-11651
+.. _CVE-2020-11652: https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2020-11652
