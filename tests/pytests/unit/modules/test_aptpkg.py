@@ -724,6 +724,8 @@ def test_normalize_name():
         assert result == "foo", result
         result = aptpkg.normalize_name("foo:any")
         assert result == "foo", result
+        result = aptpkg.normalize_name("foo:all")
+        assert result == "foo", result
         result = aptpkg.normalize_name("foo:i386")
         assert result == "foo:i386", result
 
