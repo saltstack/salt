@@ -346,7 +346,7 @@ def _run(
                 change_windows_codepage = True
 
     # The powershell binary is "powershell"
-    # The powershell 7 binary is "pwsh"
+    # The powershell core binary is "pwsh"
     # you can also pass a path here as long as the binary name is one of the two
     if any(word in shell.lower().strip() for word in ["powershell", "pwsh"]):
         # Strip whitespace
@@ -3648,7 +3648,7 @@ def powershell(
       .. versionadded:: 2016.3.0
 
     :param str shell: Specify an alternate shell. Defaults to "powershell". Can
-        also use "pwsh" for powershell 7 if present on the system
+        also use "pwsh" for powershell core if present on the system
 
     :param bool python_shell: If False, let python handle the positional
       arguments. Set to True to use shell features, such as pipes or
@@ -3969,7 +3969,7 @@ def powershell_all(
         parameter will be ignored on non-Windows platforms.
 
     :param str shell: Specify an alternate shell. Defaults to "powershell". Can
-        also use "pwsh" for powershell 7 if present on the system
+        also use "pwsh" for powershell core if present on the system
 
     :param bool python_shell: If False, let python handle the positional
         arguments. Set to True to use shell features, such as pipes or
