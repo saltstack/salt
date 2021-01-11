@@ -1361,12 +1361,16 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
             "tag": "salt/engines/hook/test",
         }
 
-        _expected_call = 'salt/engines/hook/test\t{"body": "{\\"text\\": \\"Hello World\\"}", "_stamp": "2021-01-08T00:12:32.320928"}'
+        _expected = '"body": "{\\"text\\": \\"Hello World\\"}"'
         with patch.object(SaltEvent, "get_event", return_value=event_returns):
             print_cli_mock = MagicMock()
             with patch.object(salt.utils.stringutils, "print_cli", print_cli_mock):
+                found = False
                 state.event(count=1)
-                print_cli_mock.assert_called_with(_expected_call)
+                for x in print_cli_mock.mock_calls:
+                    if _expected in x.args[0]:
+                        found = True
+                assert found is True
 
         now = datetime.datetime.now().isoformat()
         event_returns = {
@@ -1374,14 +1378,17 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
             "tag": "a_event_tag",
         }
 
-        _expected_call = 'a_event_tag\t{{"date": "{0}", "_stamp": "2021-01-08T00:12:32.320928"}}'.format(
-            now
-        )
+        _expected = '"date": "{}"'.format(now)
         with patch.object(SaltEvent, "get_event", return_value=event_returns):
             print_cli_mock = MagicMock()
             with patch.object(salt.utils.stringutils, "print_cli", print_cli_mock):
+                found = False
                 state.event(count=1)
-                print_cli_mock.assert_called_with(_expected_call)
+                for x in print_cli_mock.mock_calls:
+                    log.debug("=== %s ===", x.args[0])
+                    if _expected in x.args[0]:
+                        found = True
+                assert found is True
 
 
 class TopFileMergingCase(TestCase, LoaderModuleMockMixin):
