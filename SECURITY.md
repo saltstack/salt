@@ -118,3 +118,12 @@ quickly and safely as is possible.
 
 The fastest place to receive security announcements is via the [salt-announce](https://groups.google.com/forum/#!forum/salt-announce)
 mailing list. This list is low-traffic.
+
+## Guidance on Salt and security best practices
+
+Reference the following documentation to ensure Salt best practices are being
+implemented in your infrastructure:
+
+- [Docs: Hardening Salt](https://docs.saltproject.io/en/latest/topics/hardening.html)
+- [Docs: Salt Best Practices](https://docs.saltproject.io/en/latest/topics/best_practices.html)
+- [Blog: How I Hardened My Salt Environment](https://www.saltstack.com/blog/how-i-hardened-my-salt-environment/)
