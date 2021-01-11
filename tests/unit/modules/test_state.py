@@ -1385,7 +1385,6 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                 found = False
                 state.event(count=1)
                 for x in print_cli_mock.mock_calls:
-                    log.debug("=== %s ===", x.args[0])
                     if _expected in x.args[0]:
                         found = True
                 assert found is True
