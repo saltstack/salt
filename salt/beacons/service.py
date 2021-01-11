@@ -1,18 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 Send events covering service status
 """
-
-# Import Python Libs
-from __future__ import absolute_import, unicode_literals
-
 import logging
 import os
 import time
 
-from salt.ext.six.moves import map
-
-log = logging.getLogger(__name__)  # pylint: disable=invalid-name
+log = logging.getLogger(__name__)
 
 LAST_STATUS = {}
 
