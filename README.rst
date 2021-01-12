@@ -33,17 +33,11 @@
    :align: center
    :alt: Salt Project Logo
 
-
-**Salt** is the world’s fastest, most intelligent and scalable automation
-engine.
-
 * `Latest Salt Documentation`_
 * `Open an issue`_ (bug report, feature request, etc.)
 
-.. image:: https://img.shields.io/twitter/follow/saltstack?style=social&logo=twitter
-   :alt: Latest Salt Release
-   :align: center
-   :target: https://repo.saltproject.io/
+*Salt is the world’s fastest, most intelligent and scalable automation*
+*engine.*
 
 About Salt
 ==========
