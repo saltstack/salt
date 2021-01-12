@@ -62,10 +62,12 @@ def set_option(file_name, sections=None, separator="="):
 
     .. code-block:: python
 
-        import salt
-        sc = salt.client.get_local_client()
-        sc.cmd('target', 'ini.set_option',
-               ['path_to_ini_file', '{"section_to_change": {"key": "value"}}'])
+        import salt.client
+        with salt.client.get_local_client() as sc:
+            sc.cmd(
+                'target', 'ini.set_option',
+                ['path_to_ini_file', '{"section_to_change": {"key": "value"}}']
+            )
 
     CLI Example:
 
@@ -90,10 +92,10 @@ def get_option(file_name, section, option, separator="="):
 
     .. code-block:: python
 
-        import salt
-        sc = salt.client.get_local_client()
-        sc.cmd('target', 'ini.get_option',
-               [path_to_ini_file, section_name, option])
+        import salt.client
+        with salt.client.get_local_client() as sc:
+            sc.cmd('target', 'ini.get_option',
+                   [path_to_ini_file, section_name, option])
 
     CLI Example:
 
@@ -149,10 +151,10 @@ def get_section(file_name, section, separator="="):
 
     .. code-block:: python
 
-        import salt
-        sc = salt.client.get_local_client()
-        sc.cmd('target', 'ini.get_section',
-               [path_to_ini_file, section_name])
+        import salt.client
+        with salt.client.get_local_client() as sc:
+            sc.cmd('target', 'ini.get_section',
+                   [path_to_ini_file, section_name])
 
     CLI Example:
 
@@ -177,10 +179,10 @@ def remove_section(file_name, section, separator="="):
 
     .. code-block:: python
 
-        import salt
-        sc = salt.client.get_local_client()
-        sc.cmd('target', 'ini.remove_section',
-               [path_to_ini_file, section_name])
+        import salt.client
+        with  salt.client.get_local_client() as sc:
+            sc.cmd('target', 'ini.remove_section',
+                   [path_to_ini_file, section_name])
 
     CLI Example:
 
@@ -207,10 +209,10 @@ def get_ini(file_name, separator="="):
 
     .. code-block:: python
 
-        import salt
-        sc = salt.client.get_local_client()
-        sc.cmd('target', 'ini.get_ini',
-               [path_to_ini_file])
+        import salt.client
+        with salt.client.giet_local_client() as sc:
+            sc.cmd('target', 'ini.get_ini',
+                   [path_to_ini_file])
 
     CLI Example:
 

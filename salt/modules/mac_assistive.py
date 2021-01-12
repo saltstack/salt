@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 This module allows you to manage assistive access on macOS minions with 10.9+
 
@@ -9,13 +8,9 @@ This module allows you to manage assistive access on macOS minions with 10.9+
     salt '*' assistive.install /usr/bin/osascript
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import re
 
-# Import salt libs
 import salt.utils.platform
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
@@ -71,7 +66,7 @@ def install(app_id, enable=True):
     enable_str = "1" if enable else "0"
     cmd = (
         'sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db" '
-        "\"INSERT or REPLACE INTO access VALUES('kTCCServiceAccessibility','{0}',{1},{2},1,NULL{3}{4})\"".format(
+        "\"INSERT or REPLACE INTO access VALUES('kTCCServiceAccessibility','{}',{},{},1,NULL{}{})\"".format(
             app_id,
             client_type,
             enable_str,
@@ -88,7 +83,7 @@ def install(app_id, enable=True):
         if "stdout" in call:
             comment += call["stdout"]
 
-        raise CommandExecutionError("Error installing app: {0}".format(comment))
+        raise CommandExecutionError("Error installing app: {}".format(comment))
 
     return True
 
@@ -137,7 +132,7 @@ def enable(app_id, enabled=True):
         if app_id == a[0]:
             cmd = (
                 'sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db" '
-                "\"UPDATE access SET allowed='{0}' WHERE client='{1}'\"".format(
+                "\"UPDATE access SET allowed='{}' WHERE client='{}'\"".format(
                     enable_str, app_id
                 )
             )
@@ -153,7 +148,7 @@ def enable(app_id, enabled=True):
                 if "stdout" in call:
                     comment += call["stdout"]
 
-                raise CommandExecutionError("Error enabling app: {0}".format(comment))
+                raise CommandExecutionError("Error enabling app: {}".format(comment))
 
             return True
 
@@ -198,7 +193,7 @@ def remove(app_id):
     """
     cmd = (
         'sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db" '
-        "\"DELETE from access where client='{0}'\"".format(app_id)
+        "\"DELETE from access where client='{}'\"".format(app_id)
     )
     call = __salt__["cmd.run_all"](cmd, output_loglevel="debug", python_shell=False)
 
@@ -209,7 +204,7 @@ def remove(app_id):
         if "stdout" in call:
             comment += call["stdout"]
 
-        raise CommandExecutionError("Error removing app: {0}".format(comment))
+        raise CommandExecutionError("Error removing app: {}".format(comment))
 
     return True
 
@@ -237,7 +232,7 @@ def _get_assistive_access():
         if "stdout" in call:
             comment += call["stdout"]
 
-        raise CommandExecutionError("Error: {0}".format(comment))
+        raise CommandExecutionError("Error: {}".format(comment))
 
     out = call["stdout"]
     return re.findall(
