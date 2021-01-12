@@ -392,12 +392,15 @@ already have tests.
 Tests to Accompany a Bugfix
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-If you are writing tests for code that fixes a bug in Salt, please write the test
-in the same pull request as the bugfix. If you're unsure of where to submit your
-bugfix and accompanying test, please review the
-:ref:`Which Salt Branch? <which-salt-branch>` documentation in Salt's
-:ref:`Contributing <contributing>` guide.
+If you are writing tests for code that fixes a bug in Salt, tests will be
+required before merging the PR. A great option for most bugfixes is to adopt a
+TDD style approach:
 
+- reproduce the issue
+- write a test that exhibits the behavior
+- write the bugfix
+
+This helps ensure that known issues are not reintroduced into the codebase.
 
 Tests for Entire Files or Functions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
