@@ -201,7 +201,7 @@ class BotoVpcTestCaseMixin:
     def _create_subnet(
         self,
         vpc_id,
-        cidr_block="10.0.0.0/25",
+        cidr_block="10.0.0.0/26",
         name=None,
         tags=None,
         availability_zone=None,
@@ -1012,7 +1012,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         vpc = self._create_vpc()
         subnet1 = self._create_subnet(vpc.id)
-        subnet2 = self._create_subnet(vpc.id)
+        subnet2 = self._create_subnet(vpc.id, cidr_block="10.0.0.64/26")
 
         describe_subnet_results = boto_vpc.describe_subnets(
             region=region,
@@ -1035,7 +1035,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         vpc = self._create_vpc()
         self._create_subnet(vpc.id, name="subnet1")
-        self._create_subnet(vpc.id, name="subnet2")
+        self._create_subnet(vpc.id, name="subnet2", cidr_block="10.0.0.64/26")
 
         describe_subnet_results = boto_vpc.describe_subnets(
             region=region,
