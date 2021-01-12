@@ -1179,6 +1179,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                     "U12",
                     "U12",
                     "U12",
+                    "U12",
                 ]
             )
             mock_gid = MagicMock(
@@ -1199,10 +1200,21 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                     "G12",
                     "G12",
                     "G12",
+                    "G12",
                 ]
             )
             mock_if = MagicMock(
-                side_effect=[True, False, False, False, False, False, False, False]
+                side_effect=[
+                    True,
+                    False,
+                    False,
+                    False,
+                    False,
+                    False,
+                    False,
+                    False,
+                    False,
+                ]
             )
             if salt.utils.platform.is_windows():
                 mock_ret = MagicMock(return_value=ret)
@@ -1222,11 +1234,13 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                     ("", "", True),
                     ("", "", ""),
                     ("", "", ""),
+                    ("", "", ""),
                 ]
             )
             mock_file = MagicMock(
                 side_effect=[
                     CommandExecutionError,
+                    ("", ""),
                     ("", ""),
                     ("", ""),
                     ("", ""),
@@ -1455,6 +1469,36 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                         self.assertDictEqual(
                                             filestate.managed(
                                                 name, user=user, group=group, mode=400
+                                            ),
+                                            ret,
+                                        )
+
+                        # Replace is False, test is True, mode is empty
+                        # should return "File not updated"
+                        #  https://github.com/saltstack/salt/issues/59276
+                        if salt.utils.platform.is_windows():
+                            mock_ret = MagicMock(return_value=ret)
+                        else:
+                            perms = {"luser": user, "lmode": "0644", "lgroup": group}
+                            mock_ret = MagicMock(return_value=(ret, perms))
+                        comt = "File {} not updated".format(name)
+                        with patch.dict(
+                            filestate.__salt__, {"file.check_perms": mock_ret}
+                        ):
+                            with patch.object(os.path, "exists", mock_t):
+                                with patch.dict(filestate.__opts__, {"test": True}):
+                                    ret.update({"comment": comt})
+                                    if salt.utils.platform.is_windows():
+                                        self.assertDictEqual(
+                                            filestate.managed(
+                                                name, user=user, group=group
+                                            ),
+                                            ret,
+                                        )
+                                    else:
+                                        self.assertDictEqual(
+                                            filestate.managed(
+                                                name, user=user, group=group
                                             ),
                                             ret,
                                         )
