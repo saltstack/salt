@@ -1,23 +1,16 @@
-# -*- coding: utf-8 -*-
 """
 Manage the information in the aliases file
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import os
 import re
 import stat
 import tempfile
 
-# Import salt libs
 import salt.utils.files
 import salt.utils.path
 import salt.utils.stringutils
 from salt.exceptions import SaltInvocationError
-
-# Import third party libs
-from salt.ext import six
 
 __outputter__ = {
     "rm_alias": "txt",
@@ -86,11 +79,10 @@ def __write_aliases_file(lines):
         if not line_comment:
             line_comment = ""
         if line_alias and line_target:
-            write_line = "{0}: {1}{2}\n".format(line_alias, line_target, line_comment)
+            write_line = "{}: {}{}\n".format(line_alias, line_target, line_comment)
         else:
-            write_line = "{0}\n".format(line_comment)
-        if six.PY3:
-            write_line = write_line.encode(__salt_system_encoding__)
+            write_line = "{}\n".format(line_comment)
+        write_line = write_line.encode(__salt_system_encoding__)
         out.write(write_line)
 
     out.close()
@@ -116,7 +108,7 @@ def list_aliases():
 
         salt '*' aliases.list_aliases
     """
-    ret = dict((alias, target) for alias, target, comment in __parse_aliases() if alias)
+    ret = {alias: target for (alias, target, _) in __parse_aliases() if alias}
     return ret
 
 
