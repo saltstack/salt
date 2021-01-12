@@ -1903,7 +1903,7 @@ def _mariadb_user_chpass(
 ):
 
     server_version = salt.utils.data.decode(version(**connection_args))
-    compare_version = "10.4"
+    compare_version = "10.2.0"
 
     args = {}
 
