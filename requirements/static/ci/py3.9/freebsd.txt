@@ -59,7 +59,7 @@ kazoo==2.6.1
 keyring==5.7.1
 kubernetes==3.0.0
 libnacl==1.7.1
-lxml==4.3.3               # via junos-eznc, napalm, ncclient
+lxml==4.6.2               # via junos-eznc, napalm, ncclient
 mako==1.1.0
 markupsafe==1.1.1
 mock==3.0.5
@@ -94,7 +94,7 @@ pyopenssl==19.1.0
 pyparsing==2.4.5          # via junos-eznc, packaging
 pyserial==3.4             # via junos-eznc, netmiko
 pytest-helpers-namespace==2019.1.8
-pytest-salt-factories==0.102.0
+pytest-salt-factories==0.120.0
 pytest-salt==2020.1.27
 pytest-tempdir==2019.10.12
 pytest==6.1.2

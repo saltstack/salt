@@ -1090,7 +1090,7 @@ repos:
           )$
 
   - repo: https://github.com/saltstack/pre-commit-remove-import-headers
-    rev: 1.0.0
+    rev: 1.1.0
     hooks:
       - id: remove-import-headers
 
