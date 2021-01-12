@@ -111,10 +111,8 @@ Also, check out some of our community resources including:
 There are lots of ways to get involved in our community. Every month, there are
 around a dozen opportunities to meet with other contributors and the Salt Core
 team and collaborate in real time. The best way to keep track is by subscribing
-to the **Salt Project Community Events Calendar**:
-
-* `Calendar html`_
-* `Calendar ics`_
+to the **Salt Project Community Events Calendar** on the main
+`<https://saltproject.io>`__ website.
 
 If you have additional questions, email us at core@saltstack.com or reach out
 directly to the Community Manager, Janae Andrus via Slack. We’d be glad to
