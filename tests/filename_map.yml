@@ -107,7 +107,6 @@ salt/cli/key.py:
   - pytests.integration.cli.test_salt_key
 
 salt/cli/salt.py:
-  - integration.cli.test_grains
   - integration.shell.test_enabled
   - pytests.integration.cli.test_salt
   - pytests.integration.cli.test_matcher
@@ -118,10 +117,10 @@ salt/client/*:
   - integration.client.test_standard
 
 salt/cloud/*:
-  - integration.shell.test_cloud
+  - pytests.functional.cli.test_salt_cloud
 
 salt/cloud/__init__.py:
-  - integration.cloud.test_cloud
+  - pytests.functional.cli.test_salt_cloud
 
 salt/grains/*:
   - integration.grains.test_custom
@@ -160,7 +159,7 @@ salt/cli/daemons.py:
 salt/(client/ssh/.+|cli/ssh\.py):
   - integration.cli.test_custom_module
   - integration.ssh.test_deploy
-  - integration.ssh.test_grains
+  - pytests.integration.ssh.test_grains
   - integration.ssh.test_jinja_filters
   - integration.ssh.test_master
   - integration.ssh.test_mine
@@ -243,8 +242,7 @@ salt/utils/schedule.py:
 
 salt/utils/vt.py:
   - integration.cli.test_custom_module
-  - integration.cli.test_grains
-  - integration.ssh.test_grains
+  - pytests.integration.ssh.test_grains
   - integration.ssh.test_jinja_filters
   - integration.ssh.test_mine
   - pytests.integration.ssh.test_pillar

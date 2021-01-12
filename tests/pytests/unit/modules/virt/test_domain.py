@@ -1,8 +1,15 @@
+import pytest
 import salt.modules.virt as virt
 from salt._compat import ElementTree as ET
 from tests.support.mock import MagicMock, patch
 
+from .conftest import loader_modules_config
 from .test_helpers import append_to_XMLDesc
+
+
+@pytest.fixture
+def configure_loader_modules():
+    return loader_modules_config()
 
 
 def test_update_xen_disk_volumes(make_mock_vm, make_mock_storage_pool):

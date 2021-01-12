@@ -243,14 +243,13 @@ class MasterPillarUtil:
     def _get_live_minion_grains(self, minion_ids):
         # Returns a dict of grains fetched directly from the minions
         log.debug('Getting live grains for minions: "%s"', minion_ids)
-        client = salt.client.get_local_client(self.opts["conf_file"])
-        ret = client.cmd(
-            ",".join(minion_ids),
-            "grains.items",
-            timeout=self.opts["timeout"],
-            tgt_type="list",
-        )
-        return ret
+        with salt.client.get_local_client(self.opts["conf_file"]) as client:
+            return client.cmd(
+                ",".join(minion_ids),
+                "grains.items",
+                timeout=self.opts["timeout"],
+                tgt_type="list",
+            )
 
     def _get_live_minion_pillar(self, minion_id=None, minion_grains=None):
         # Returns a dict of pillar data for one minion
@@ -841,14 +840,14 @@ class ConnectedCache(Process):
 
 
 def ping_all_connected_minions(opts):
-    client = salt.client.LocalClient()
     if opts["minion_data_cache"]:
         tgt = list(salt.utils.minions.CkMinions(opts).connected_ids())
         form = "list"
     else:
         tgt = "*"
         form = "glob"
-    client.cmd_async(tgt, "test.ping", tgt_type=form)
+    with salt.client.LocalClient() as client:
+        client.cmd_async(tgt, "test.ping", tgt_type=form)
 
 
 def get_master_key(key_user, opts, skip_perm_errors=False):

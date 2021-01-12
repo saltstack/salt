@@ -3,9 +3,9 @@ import salt.beacons.sensehat as sensehat
 from tests.support.mock import MagicMock
 
 
-@pytest.fixture(autouse=True)
-def setup_loader():
-    setup_loader_modules = {
+@pytest.fixture
+def configure_loader_modules():
+    return {
         sensehat: {
             "__salt__": {
                 "sensehat.get_humidity": MagicMock(return_value=80),
@@ -14,8 +14,6 @@ def setup_loader():
             },
         }
     }
-    with pytest.helpers.loader_mock(setup_loader_modules) as loader_mock:
-        yield loader_mock
 
 
 def test_non_list_config():

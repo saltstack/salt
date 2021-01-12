@@ -1,17 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 Beacon to emit Twilio text messages
 """
-
-# Import Python libs
-from __future__ import absolute_import, unicode_literals
-
 import logging
 
-from salt.ext import six
-from salt.ext.six.moves import map
-
-# Import 3rd Party libs
 try:
     import twilio
 
@@ -98,17 +89,17 @@ def beacon(config):
 
     for message in messages:
         item = {}
-        item["id"] = six.text_type(message.sid)
-        item["body"] = six.text_type(message.body)
-        item["from"] = six.text_type(message.from_)
-        item["sent"] = six.text_type(message.date_sent)
+        item["id"] = str(message.sid)
+        item["body"] = str(message.body)
+        item["from"] = str(message.from_)
+        item["sent"] = str(message.date_sent)
         item["images"] = []
 
         if int(message.num_media):
             media = client.media(message.sid).list()
             if media:
                 for pic in media:
-                    item["images"].append(six.text_type(pic.uri))
+                    item["images"].append(str(pic.uri))
         output["texts"].append(item)
         message.delete()
     ret.append(output)

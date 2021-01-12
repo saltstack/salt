@@ -1,17 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 Send events covering process status
 """
-
-# Import Python Libs
-from __future__ import absolute_import, unicode_literals
-
 import logging
 
-from salt.ext.six.moves import map
-
-# Import third party libs
-# pylint: disable=import-error
 try:
     import salt.utils.psutil_compat as psutil
 
@@ -19,8 +10,6 @@ try:
 except ImportError:
     HAS_PSUTIL = False
 
-
-# pylint: enable=import-error
 
 log = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -73,7 +62,11 @@ def beacon(config):
     ret = []
     procs = []
     for proc in psutil.process_iter():
-        _name = proc.name()
+        try:
+            _name = proc.name()
+        except psutil.NoSuchProcess:
+            # The process is now gone
+            continue
         if _name not in procs:
             procs.append(_name)
 
