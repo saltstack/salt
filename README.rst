@@ -36,8 +36,8 @@
 * `Latest Salt Documentation`_
 * `Open an issue`_ (bug report, feature request, etc.)
 
-***Salt** is the world’s fastest, most intelligent and scalable automation
-engine.*
+*Salt is the world’s fastest, most intelligent and scalable automation*
+*engine.*
 
 About Salt
 ==========
