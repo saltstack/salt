@@ -247,11 +247,12 @@ def send(
     if isinstance(data, Mapping):
         data_dict.update(data)
 
-    if (
+    is_local = (
         __opts__.get("local")
         or __opts__.get("file_client") == "local"
         or __opts__.get("master_type") == "disable"
-    ) and not __opts__.get("use_master_when_local"):
+    )
+    if is_local and not __opts__.get("use_master_when_local"):
         return fire(data_dict, tag, timeout=timeout)
     else:
         return fire_master(data_dict, tag, preload=preload, timeout=timeout)
