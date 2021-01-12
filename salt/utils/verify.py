@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 A few checks to make sure the environment is sane
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import errno
 import logging
@@ -13,7 +11,6 @@ import stat
 import sys
 
 import salt.defaults.exitcodes
-import salt.ext.six
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
@@ -52,11 +49,11 @@ def zmq_version():
 
     # Fallthrough and hope for the best
     if not match:
-        msg = "Using untested zmq python bindings version: '{0}'".format(ver)
+        msg = "Using untested zmq python bindings version: '{}'".format(ver)
         if is_console_configured():
             log.warning(msg)
         else:
-            sys.stderr.write("WARNING {0}\n".format(msg))
+            sys.stderr.write("WARNING {}\n".format(msg))
         return True
 
     major, minor, point = match.groups()
@@ -77,7 +74,7 @@ def zmq_version():
             if is_console_configured():
                 log.warning(msg)
             else:
-                sys.stderr.write("WARNING: {0}\n".format(msg))
+                sys.stderr.write("WARNING: {}\n".format(msg))
             return True
         elif point and point >= 9:
             return True
@@ -95,7 +92,7 @@ def zmq_version():
         if is_console_configured():
             log.critical(msg)
         else:
-            sys.stderr.write("CRITICAL {0}\n".format(msg))
+            sys.stderr.write("CRITICAL {}\n".format(msg))
     return False
 
 
@@ -130,16 +127,16 @@ def verify_socket(interface, pub_port, ret_port):
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             sock.bind((interface, int(port)))
         except Exception as exc:  # pylint: disable=broad-except
-            msg = "Unable to bind socket {0}:{1}".format(interface, port)
+            msg = "Unable to bind socket {}:{}".format(interface, port)
             if exc.args:
-                msg = "{0}, error: {1}".format(msg, str(exc))
+                msg = "{}, error: {}".format(msg, str(exc))
             else:
-                msg = "{0}, this might not be a problem.".format(msg)
+                msg = "{}, this might not be a problem.".format(msg)
             msg += "; Is there another salt-master running?"
             if is_console_configured():
                 log.warning(msg)
             else:
-                sys.stderr.write("WARNING: {0}\n".format(msg))
+                sys.stderr.write("WARNING: {}\n".format(msg))
             return False
         finally:
             sock.close()
@@ -169,24 +166,37 @@ def verify_log_files(files, user):
     return verify_files(verify_logs_filter(files), user)
 
 
-def verify_files(files, user):
+def _get_pwnam(user):
     """
-    Verify that the named files exist and are owned by the named user
+    Get the user from passwords database
     """
     if salt.utils.platform.is_windows():
         return True
     import pwd  # after confirming not running Windows
 
     try:
-        pwnam = pwd.getpwnam(user)
-        uid = pwnam[2]
+        return pwd.getpwnam(user)
     except KeyError:
-        err = (
-            "Failed to prepare the Salt environment for user "
-            "{0}. The user is not available.\n"
-        ).format(user)
-        sys.stderr.write(err)
+        msg = "Failed to prepare the Salt environment for user {}. The user is not available.".format(
+            user
+        )
+        if is_console_configured():
+            log.critical(msg)
+        else:
+            print(msg, file=sys.stderr, flush=True)
         sys.exit(salt.defaults.exitcodes.EX_NOUSER)
+
+
+def verify_files(files, user):
+    """
+    Verify that the named files exist and are owned by the named user
+    """
+    if salt.utils.platform.is_windows():
+        return True
+
+    # after confirming not running Windows
+    pwnam = _get_pwnam(user)
+    uid = pwnam[2]
 
     for fn_ in files:
         dirname = os.path.dirname(fn_)
@@ -201,19 +211,19 @@ def verify_files(files, user):
                 with salt.utils.files.fopen(fn_, "w"):
                     pass
 
-        except IOError as err:
+        except OSError as err:
             if os.path.isfile(dirname):
-                msg = "Failed to create path {0}, is {1} a file?".format(fn_, dirname)
+                msg = "Failed to create path {}, is {} a file?".format(fn_, dirname)
                 raise SaltSystemExit(msg=msg)
             if err.errno != errno.EACCES:
                 raise
-            msg = 'No permissions to access "{0}", are you running as the correct user?'.format(
+            msg = 'No permissions to access "{}", are you running as the correct user?'.format(
                 fn_
             )
             raise SaltSystemExit(msg=msg)
 
         except OSError as err:  # pylint: disable=duplicate-except
-            msg = 'Failed to create path "{0}" - {1}'.format(fn_, err)
+            msg = 'Failed to create path "{}" - {}'.format(fn_, err)
             raise SaltSystemExit(msg=msg)
 
         stats = os.stat(fn_)
@@ -236,21 +246,13 @@ def verify_env(
         return win_verify_env(
             root_dir, dirs, permissive=permissive, skip_extra=skip_extra
         )
-    import pwd  # after confirming not running Windows
 
-    try:
-        pwnam = pwd.getpwnam(user)
-        uid = pwnam[2]
-        gid = pwnam[3]
-        groups = salt.utils.user.get_gid_list(user, include_default=False)
+    # after confirming not running Windows
+    pwnam = _get_pwnam(user)
+    uid = pwnam[2]
+    gid = pwnam[3]
+    groups = salt.utils.user.get_gid_list(user, include_default=False)
 
-    except KeyError:
-        err = (
-            "Failed to prepare the Salt environment for user "
-            "{0}. The user is not available.\n"
-        ).format(user)
-        sys.stderr.write(err)
-        sys.exit(salt.defaults.exitcodes.EX_NOUSER)
     for dir_ in dirs:
         if not dir_:
             continue
@@ -280,7 +282,7 @@ def verify_env(
                     os.chown(dir_, uid, gid)
             for subdir in [a for a in os.listdir(dir_) if "jobs" not in a]:
                 fsubdir = os.path.join(dir_, subdir)
-                if "{0}jobs".format(os.path.sep) in fsubdir:
+                if "{}jobs".format(os.path.sep) in fsubdir:
                     continue
                 for root, dirs, files in salt.utils.path.os_walk(fsubdir):
                     for name in files:
@@ -289,7 +291,7 @@ def verify_env(
                         path = os.path.join(root, name)
                         try:
                             fmode = os.stat(path)
-                        except (IOError, OSError):
+                        except OSError:
                             pass
                         if fmode.st_uid != uid or fmode.st_gid != gid:
                             if permissive and fmode.st_gid in groups:
@@ -326,7 +328,7 @@ def verify_env(
                     if is_console_configured():
                         log.critical(msg)
                     else:
-                        sys.stderr.write("CRITICAL: {0}\n".format(msg))
+                        sys.stderr.write("CRITICAL: {}\n".format(msg))
 
     if skip_extra is False:
         # Run the extra verification checks
@@ -341,46 +343,36 @@ def check_user(user):
         return True
     if user == salt.utils.user.get_user():
         return True
-    import pwd  # after confirming not running Windows
+
+    # after confirming not running Windows
+    pwuser = _get_pwnam(user)
 
     try:
-        pwuser = pwd.getpwnam(user)
-        try:
-            if hasattr(os, "initgroups"):
-                os.initgroups(
-                    user, pwuser.pw_gid
-                )  # pylint: disable=minimum-python-version
-            else:
-                os.setgroups(salt.utils.user.get_gid_list(user, include_default=False))
-            os.setgid(pwuser.pw_gid)
-            os.setuid(pwuser.pw_uid)
+        if hasattr(os, "initgroups"):
+            os.initgroups(user, pwuser.pw_gid)  # pylint: disable=minimum-python-version
+        else:
+            os.setgroups(salt.utils.user.get_gid_list(user, include_default=False))
+        os.setgid(pwuser.pw_gid)
+        os.setuid(pwuser.pw_uid)
 
-            # We could just reset the whole environment but let's just override
-            # the variables we can get from pwuser
-            if "HOME" in os.environ:
-                os.environ["HOME"] = pwuser.pw_dir
+        # We could just reset the whole environment but let's just override
+        # the variables we can get from pwuser
+        if "HOME" in os.environ:
+            os.environ["HOME"] = pwuser.pw_dir
 
-            if "SHELL" in os.environ:
-                os.environ["SHELL"] = pwuser.pw_shell
+        if "SHELL" in os.environ:
+            os.environ["SHELL"] = pwuser.pw_shell
 
-            for envvar in ("USER", "LOGNAME"):
-                if envvar in os.environ:
-                    os.environ[envvar] = pwuser.pw_name
+        for envvar in ("USER", "LOGNAME"):
+            if envvar in os.environ:
+                os.environ[envvar] = pwuser.pw_name
 
-        except OSError:
-            msg = 'Salt configured to run as user "{0}" but unable to switch.'
-            msg = msg.format(user)
-            if is_console_configured():
-                log.critical(msg)
-            else:
-                sys.stderr.write("CRITICAL: {0}\n".format(msg))
-            return False
-    except KeyError:
-        msg = 'User not found: "{0}"'.format(user)
+    except OSError:
+        msg = 'Salt configured to run as user "{}" but unable to switch.'.format(user)
         if is_console_configured():
             log.critical(msg)
         else:
-            sys.stderr.write("CRITICAL: {0}\n".format(msg))
+            sys.stderr.write("CRITICAL: {}\n".format(msg))
         return False
     return True
 
@@ -419,7 +411,7 @@ def check_path_traversal(path, user="root", skip_perm_errors=False):
     """
     for tpath in list_path_traversal(path):
         if not os.access(tpath, os.R_OK):
-            msg = "Could not access {0}.".format(tpath)
+            msg = "Could not access {}.".format(tpath)
             if not os.path.exists(tpath):
                 msg += " Path does not exist."
             else:
@@ -427,9 +419,9 @@ def check_path_traversal(path, user="root", skip_perm_errors=False):
                 # Make the error message more intelligent based on how
                 # the user invokes salt-call or whatever other script.
                 if user != current_user:
-                    msg += " Try running as user {0}.".format(user)
+                    msg += " Try running as user {}.".format(user)
                 else:
-                    msg += " Please give {0} read permissions.".format(user)
+                    msg += " Please give {} read permissions.".format(user)
 
             # We don't need to bail on config file permission errors
             # if the CLI
@@ -470,8 +462,8 @@ def check_max_open_files(opts):
         return
 
     msg = (
-        "The number of accepted minion keys({0}) should be lower than 1/4 "
-        "of the max open files soft setting({1}). ".format(accepted_count, mof_s)
+        "The number of accepted minion keys({}) should be lower than 1/4 "
+        "of the max open files soft setting({}). ".format(accepted_count, mof_s)
     )
 
     if accepted_count >= mof_s:
@@ -490,7 +482,7 @@ def check_max_open_files(opts):
     if mof_c < mof_h:
         msg += (
             "According to the system's hard limit, there's still a "
-            "margin of {0} to raise the salt's max_open_files "
+            "margin of {} to raise the salt's max_open_files "
             "setting. "
         ).format(mof_h - mof_c)
 
@@ -528,17 +520,13 @@ def _realpath_windows(path):
 def _realpath(path):
     """
     Cross platform realpath method. On Windows when python 3, this method
-    uses the os.readlink method to resolve any filesystem links. On Windows
-    when python 2, this method is a no-op. All other platforms and version use
-    os.path.realpath
+    uses the os.readlink method to resolve any filesystem links.
+    All other platforms and version use ``os.path.realpath``.
     """
     if salt.utils.platform.is_darwin():
         return _realpath_darwin(path)
     elif salt.utils.platform.is_windows():
-        if salt.ext.six.PY3:
-            return _realpath_windows(path)
-        else:
-            return path
+        return _realpath_windows(path)
     return os.path.realpath(path)
 
 
@@ -569,7 +557,7 @@ def valid_id(opts, id_):
     Returns if the passed id is valid
     """
     try:
-        if any(x in id_ for x in ("/", "\\", str("\0"))):
+        if any(x in id_ for x in ("/", "\\", "\0")):
             return False
         return bool(clean_path(opts["pki_dir"], id_))
     except (AttributeError, KeyError, TypeError, UnicodeDecodeError):
@@ -621,7 +609,7 @@ def win_verify_env(path, dirs, permissive=False, pki_dir="", skip_extra=False):
     allow_path = "\\".join([system_root, "TEMP"])
     if not salt.utils.path.safe_path(path=path, allow_path=allow_path):
         raise CommandExecutionError(
-            "`file_roots` set to a possibly unsafe location: {0}".format(path)
+            "`file_roots` set to a possibly unsafe location: {}".format(path)
         )
 
     # Create the root path directory if missing
@@ -637,11 +625,11 @@ def win_verify_env(path, dirs, permissive=False, pki_dir="", skip_extra=False):
             salt.utils.win_dacl.set_owner(path, "S-1-5-32-544")
 
         except CommandExecutionError:
-            msg = 'Unable to securely set the owner of "{0}".'.format(path)
+            msg = 'Unable to securely set the owner of "{}".'.format(path)
             if is_console_configured():
                 log.critical(msg)
             else:
-                sys.stderr.write("CRITICAL: {0}\n".format(msg))
+                sys.stderr.write("CRITICAL: {}\n".format(msg))
 
         if not permissive:
             try:
@@ -669,11 +657,11 @@ def win_verify_env(path, dirs, permissive=False, pki_dir="", skip_extra=False):
                 dacl.save(path, True)
 
             except CommandExecutionError:
-                msg = "Unable to securely set the permissions of " '"{0}".'.format(path)
+                msg = "Unable to securely set the permissions of " '"{}".'.format(path)
                 if is_console_configured():
                     log.critical(msg)
                 else:
-                    sys.stderr.write("CRITICAL: {0}\n".format(msg))
+                    sys.stderr.write("CRITICAL: {}\n".format(msg))
 
     # Create the directories
     for dir_ in dirs:
@@ -723,7 +711,7 @@ def win_verify_env(path, dirs, permissive=False, pki_dir="", skip_extra=False):
                 if is_console_configured():
                     log.critical(msg)
                 else:
-                    sys.stderr.write("CRITICAL: {0}\n".format(msg))
+                    sys.stderr.write("CRITICAL: {}\n".format(msg))
 
     if skip_extra is False:
         # Run the extra verification checks

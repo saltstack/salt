@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Beacon to fire event when we notice a AIX user is locked due to many failed login attempts.
 
@@ -6,10 +5,6 @@ Beacon to fire event when we notice a AIX user is locked due to many failed logi
 
 :depends: none
 """
-
-# Import Python libs
-from __future__ import absolute_import, unicode_literals
-
 import logging
 
 log = logging.getLogger(__name__)

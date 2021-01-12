@@ -1,8 +1,6 @@
 """
 Zeromq transport classes
 """
-
-
 import copy
 import errno
 import hashlib
@@ -38,7 +36,6 @@ import zmq.eventloop.ioloop
 import zmq.eventloop.zmqstream
 from salt._compat import ipaddress
 from salt.exceptions import SaltException, SaltReqTimeoutError
-from salt.ext import six
 from salt.utils.zeromq import (
     LIBZMQ_VERSION_INFO,
     ZMQ_VERSION_INFO,
@@ -404,7 +401,7 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
             # upload the results to the master
             if data:
                 data = self.auth.crypticle.loads(data, raw)
-            if six.PY3 and not raw:
+            if not raw:
                 data = salt.transport.frame.decode_embedded_strs(data)
             raise salt.ext.tornado.gen.Return(data)
 
@@ -469,6 +466,7 @@ class AsyncZeroMQPubChannel(
         self.opts = opts
         self.ttype = "zeromq"
         self.io_loop = kwargs.get("io_loop")
+        self._closing = False
 
         if self.io_loop is None:
             install_zmq()
@@ -548,16 +546,16 @@ class AsyncZeroMQPubChannel(
             self._monitor.start_io_loop(self.io_loop)
 
     def close(self):
+        if self._closing is True:
+            return
+
+        self._closing = True
+
         if hasattr(self, "_monitor") and self._monitor is not None:
             self._monitor.stop()
             self._monitor = None
         if hasattr(self, "_stream"):
-            if ZMQ_VERSION_INFO < (14, 3, 0):
-                # stream.close() doesn't work properly on pyzmq < 14.3.0
-                self._stream.io_loop.remove_handler(self._stream.socket)
-                self._stream.socket.close(0)
-            else:
-                self._stream.close(0)
+            self._stream.close(0)
         elif hasattr(self, "_socket"):
             self._socket.close(0)
         if hasattr(self, "context") and self.context.closed is False:
@@ -568,6 +566,11 @@ class AsyncZeroMQPubChannel(
         self.close()
 
     # pylint: enable=W1701
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.close()
 
     # TODO: this is the time to see if we are connected, maybe use the req channel to guess?
     @salt.ext.tornado.gen.coroutine
@@ -671,6 +674,8 @@ class ZeroMQReqServerChannel(
     def __init__(self, opts):
         salt.transport.server.ReqServerChannel.__init__(self, opts)
         self._closing = False
+        self._monitor = None
+        self._w_monitor = None
 
     def zmq_device(self):
         """
@@ -729,7 +734,6 @@ class ZeroMQReqServerChannel(
             return
         log.info("MWorkerQueue under PID %s is closing", os.getpid())
         self._closing = True
-        # pylint: disable=E0203
         if getattr(self, "_monitor", None) is not None:
             self._monitor.stop()
             self._monitor = None
@@ -746,7 +750,6 @@ class ZeroMQReqServerChannel(
             self._socket.close()
         if hasattr(self, "context") and self.context.closed is False:
             self.context.term()
-        # pylint: enable=E0203
 
     def pre_fork(self, process_manager):
         """
@@ -1181,8 +1184,8 @@ class AsyncReqMessageClientPool(salt.transport.MessageClientPool):
     """
 
     def __init__(self, opts, args=None, kwargs=None):
-        super().__init__(AsyncReqMessageClient, opts, args=args, kwargs=kwargs)
         self._closing = False
+        super().__init__(AsyncReqMessageClient, opts, args=args, kwargs=kwargs)
 
     def close(self):
         if self._closing:
@@ -1197,11 +1200,11 @@ class AsyncReqMessageClientPool(salt.transport.MessageClientPool):
         message_clients = sorted(self.message_clients, key=lambda x: len(x.send_queue))
         return message_clients[0].send(*args, **kwargs)
 
-    # pylint: disable=W1701
-    def __del__(self):
-        self.close()
+    def __enter__(self):
+        return self
 
-    # pylint: enable=W1701
+    def __exit__(self, *args):
+        self.close()
 
 
 # TODO: unit tests!

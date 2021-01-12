@@ -2,13 +2,11 @@
 Support for DEB packages
 """
 
-# Import python libs
 import datetime
 import logging
 import os
 import re
 
-# Import salt libs
 import salt.utils.args
 import salt.utils.data
 import salt.utils.files
