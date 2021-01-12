@@ -1,17 +1,10 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Nicole Thomas <nicole@saltstack.com>
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Salt Libs
 import salt.modules.mac_brew_pkg as mac_brew
 import salt.utils.pkg
 from salt.exceptions import CommandExecutionError
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, patch
 from tests.support.unit import TestCase
@@ -141,7 +134,7 @@ class BrewTestCase(TestCase, LoaderModuleMockMixin):
                     "stderr": "",
                     "retcode": 0,
                 }
-            elif cmd == "cask list --versions":
+            elif cmd == "list --cask --versions":
                 result = {
                     "stdout": "macvim 8.1.151\nfont-firacode-nerd-font 2.0.0",
                     "stderr": "",

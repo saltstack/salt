@@ -6,7 +6,6 @@ Tests for minion blackout
 import logging
 
 import pytest
-from tests.support.helpers import slowTest
 
 log = logging.getLogger(__name__)
 
@@ -15,7 +14,7 @@ pytestmark = [
 ]
 
 
-@slowTest
+@pytest.mark.slow_test
 def test_blackout(salt_cli, blackout, salt_minion_1):
     """
     Test that basic minion blackout functionality works
@@ -32,7 +31,7 @@ def test_blackout(salt_cli, blackout, salt_minion_1):
     assert ret.json is True
 
 
-@slowTest
+@pytest.mark.slow_test
 def test_blackout_whitelist(salt_cli, blackout, salt_minion_1):
     """
     Test that minion blackout whitelist works
@@ -56,7 +55,7 @@ def test_blackout_whitelist(salt_cli, blackout, salt_minion_1):
         assert ret.json[0] == 13
 
 
-@slowTest
+@pytest.mark.slow_test
 def test_blackout_nonwhitelist(salt_cli, blackout, salt_minion_1):
     """
     Test that minion refuses to run non-whitelisted functions during

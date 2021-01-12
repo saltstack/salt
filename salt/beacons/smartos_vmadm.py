@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Beacon that fires events on vm state changes
 
@@ -18,19 +17,10 @@ Beacon that fires events on vm state changes
         - interval: 60
         - startup_create_event: True
 """
-
-# Import Python libs
-from __future__ import absolute_import, unicode_literals
-
 import logging
 
-# Import 3rd-party libs
-# pylint: disable=import-error
-from salt.ext.six.moves import map
-
-# pylint: enable=import-error
-
 __virtualname__ = "vmadm"
+
 VMADM_STATE = {
     "first_run": True,
     "vms": [],
@@ -48,7 +38,7 @@ def __virtual__():
     else:
         return (
             False,
-            "{0} beacon can only be loaded on SmartOS compute nodes".format(
+            "{} beacon can only be loaded on SmartOS compute nodes".format(
                 __virtualname__
             ),
         )

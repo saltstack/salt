@@ -1,4 +1,3 @@
-#
 # Author: Bo Maryniuk <bo@suse.de>
 
 
@@ -18,6 +17,11 @@ pytestmark = pytest.mark.skipif(
 
 
 @pytest.fixture
+def configure_loader_modules():
+    return {ansible: {}}
+
+
+@pytest.fixture
 def resolver():
     _resolver = ansible.AnsibleModuleResolver({})
     _resolver._modules_map = {
@@ -26,13 +30,6 @@ def resolver():
         "three.six.one": os.sep + os.path.join("three", "six", "one.py"),
     }
     return _resolver
-
-
-@pytest.fixture(autouse=True)
-def setup_loader():
-    setup_loader_modules = {ansible: {}}
-    with pytest.helpers.loader_mock(setup_loader_modules) as loader_mock:
-        yield loader_mock
 
 
 def test_ansible_module_help(resolver):

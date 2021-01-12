@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 integration tests for mac_xattr
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
@@ -50,7 +48,7 @@ class MacXattrModuleTest(ModuleCase):
         # Test file not found
         self.assertEqual(
             self.run_function("xattr.list", [self.no_file]),
-            "ERROR: File not found: {0}".format(self.no_file),
+            "ERROR: File not found: {}".format(self.no_file),
         )
 
     @slowTest
@@ -83,7 +81,7 @@ class MacXattrModuleTest(ModuleCase):
         # Test file not found
         self.assertEqual(
             self.run_function("xattr.write", [self.no_file, "patrick", "jellyfish"]),
-            "ERROR: File not found: {0}".format(self.no_file),
+            "ERROR: File not found: {}".format(self.no_file),
         )
 
     @slowTest
@@ -110,7 +108,7 @@ class MacXattrModuleTest(ModuleCase):
         # Test file not found
         self.assertEqual(
             self.run_function("xattr.read", [self.no_file, "spongebob"]),
-            "ERROR: File not found: {0}".format(self.no_file),
+            "ERROR: File not found: {}".format(self.no_file),
         )
 
         # Test attribute not found
@@ -154,7 +152,7 @@ class MacXattrModuleTest(ModuleCase):
         # Test file not found
         self.assertEqual(
             self.run_function("xattr.delete", [self.no_file, "spongebob"]),
-            "ERROR: File not found: {0}".format(self.no_file),
+            "ERROR: File not found: {}".format(self.no_file),
         )
 
         # Test attribute not found
@@ -190,5 +188,5 @@ class MacXattrModuleTest(ModuleCase):
         # Test file not found
         self.assertEqual(
             self.run_function("xattr.clear", [self.no_file]),
-            "ERROR: File not found: {0}".format(self.no_file),
+            "ERROR: File not found: {}".format(self.no_file),
         )

@@ -635,10 +635,12 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         """
         versionlock_pkg = None
         if grains["os_family"] == "RedHat":
+            from salt.modules.yumpkg import _versionlock_pkg
+
             pkgs = {
                 p
                 for p in self.run_function("pkg.list_repo_pkgs")
-                if "yum-plugin-versionlock" in p
+                if _versionlock_pkg(grains) in p
             }
             if not pkgs:
                 self.skipTest("No versionlock package found in repositories")
@@ -661,19 +663,23 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         target = self._PKG_TARGETS[0]
 
         # First we ensure that the package is installed
-        ret = self.run_state("pkg.installed", name=target, hold=False, refresh=False,)
-        self.assertSaltTrueReturn(ret)
+        target_ret = self.run_state(
+            "pkg.installed", name=target, hold=False, refresh=False,
+        )
+        self.assertSaltTrueReturn(target_ret)
 
-        if versionlock_pkg and "-versionlock is not installed" in str(ret):
-            self.skipTest("{}  `{}` is installed".format(ret, versionlock_pkg))
+        if versionlock_pkg and "-versionlock is not installed" in str(target_ret):
+            self.skipTest("{}  `{}` is installed".format(target_ret, versionlock_pkg))
 
         try:
             tag = "pkg_|-{0}_|-{0}_|-installed".format(target)
-            self.assertSaltTrueReturn(ret)
-            self.assertIn(tag, ret)
-            self.assertIn("changes", ret[tag])
-            self.assertIn(target, ret[tag]["changes"])
-            self.assertIn("held", ret[tag]["comment"])
+            self.assertSaltTrueReturn(target_ret)
+            self.assertIn(tag, target_ret)
+            self.assertIn("changes", target_ret[tag])
+            # On Centos 7 package is already installed, no change happened
+            if target_ret[tag].get("changes"):
+                self.assertIn(target, target_ret[tag]["changes"])
+            self.assertIn("held", target_ret[tag]["comment"])
         finally:
             # Clean up, unhold package and remove
             ret = self.run_state("pkg.removed", name=target)

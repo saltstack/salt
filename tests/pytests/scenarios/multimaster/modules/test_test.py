@@ -1,5 +1,10 @@
+import pytest
 import salt.config
 import salt.version
+
+pytestmark = [
+    pytest.mark.slow_test,
+]
 
 
 def test_ping(
