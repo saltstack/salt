@@ -29,7 +29,7 @@ class RestartcheckTestCase(TestCase, LoaderModuleMockMixin):
     Test cases for salt.modules.restartcheck
     '''
     def setup_loader_modules(self):
-        return {restartcheck: {"__grains__": {"os_family": "RedHat"}, "__salt__": {}}}
+        return {restartcheck: {}}
 
     def test_kernel_versions_debian(self):
         '''
@@ -300,7 +300,10 @@ class RestartcheckTestCase(TestCase, LoaderModuleMockMixin):
         check_error = True
         if salt.utils.path.which("repoquery"):
             check_error = False
-        with patch_kernel, patch_salt, patch_deleted, patch_readlink:
+
+        patch_grains = patch.dict(restartcheck.__grains__,
+                                   {"os_family": "RedHat"})
+        with patch_kernel, patch_salt, patch_deleted, patch_readlink, patch_grains:
             if check_error:
                 if six.PY2:
                     with self.assertRaises(OSError):
