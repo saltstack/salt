@@ -26,10 +26,11 @@
    :alt: Follow SaltStack on Twitter
    :target: https://twitter.com/intent/follow?screen_name=saltstack
 
-.. figure:: https://gitlab.com/saltstack/open/salt-branding-guide/-/raw/master/logos/SaltProject_lockup_teal.png?inline=true
+.. figure:: https://gitlab.com/saltstack/open/salt-branding-guide/-/raw/master/logos/SaltProject_altlogo_teal.png?inline=true
    :scale: 10 %
-   :width: 1000
-   :height: 1240
+   :width: 1000px
+   :height: 356px
+   :align: center
    :alt: Salt Project Logo
 
    **Salt** is the world’s fastest, most intelligent and scalable automation
