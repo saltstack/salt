@@ -1,9 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Validate the mac-defaults module
 """
-
-from __future__ import absolute_import, print_function, unicode_literals
 
 from tests.support.case import ModuleCase
 from tests.support.helpers import destructiveTest, runs_on, skip_if_not_root

@@ -8,7 +8,6 @@ import time
 
 import pytest
 import salt.defaults.events
-from tests.support.helpers import slowTest
 
 log = logging.getLogger(__name__)
 
@@ -28,12 +27,7 @@ def refresh_pillar(salt_call_cli, salt_minion):
         assert ret.json
 
 
-@pytest.fixture(scope="module")
-def event_listener(salt_factories):
-    return salt_factories.event_listener
-
-
-@slowTest
+@pytest.mark.slow_test
 @pytest.mark.parametrize("sync_refresh", [False, True])
 def test_pillar_refresh(
     salt_minion,
@@ -79,35 +73,21 @@ def test_pillar_refresh(
 
     with top_file, add_pillar_file:
         start_time = time.time()
-        stop_time = start_time + 120
 
         ret = salt_call_cli.run(
             "--retcode-passthrough", "saltutil.refresh_pillar", wait=sync_refresh,
         )
         assert ret.exitcode == 0
 
-        minion_event = None
         expected_tag = salt.defaults.events.MINION_PILLAR_REFRESH_COMPLETE
         event_pattern = (salt_minion.id, expected_tag)
-        while True:
-            if time.time() > stop_time:
-                pytest.fail("Failed to receive the refresh pillar complete event.")
-
-            if not minion_event:
-                events = event_listener.get_events(
-                    [event_pattern], after_time=start_time
-                )
-                for event in events:
-                    minion_event = event
-                    break
-
-            if minion_event:
-                # We got all events back
-                break
-
-            time.sleep(0.5)
-
-        log.debug("Refresh pillar complete event received: %s", minion_event)
+        matched_events = event_listener.wait_for_events(
+            [event_pattern], after_time=start_time, timeout=120
+        )
+        assert (
+            matched_events.found_all_events
+        ), "Failed to receive the refresh pillar complete event."
+        log.debug("Refresh pillar complete event received: %s", matched_events.matches)
 
         ret = salt_call_cli.run("pillar.raw")
         assert ret.exitcode == 0
