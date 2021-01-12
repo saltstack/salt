@@ -22,7 +22,7 @@ class RestartcheckTestCase(TestCase, LoaderModuleMockMixin):
     """
 
     def setup_loader_modules(self):
-        return {restartcheck: {"__grains__": {"os_family": "RedHat"}, "__salt__": {}}}
+        return {restartcheck: {}}
 
     def test_kernel_versions_debian(self):
         """
@@ -374,7 +374,8 @@ class RestartcheckTestCase(TestCase, LoaderModuleMockMixin):
         if salt.utils.path.which("repoquery"):
             check_error = False
 
-        with patch_kernel, patch_salt, patch_deleted, patch_readlink:
+        patch_grains = patch.dict(restartcheck.__grains__, {"os_family": "RedHat"})
+        with patch_kernel, patch_salt, patch_deleted, patch_readlink, patch_grains:
             if check_error:
                 with self.assertRaises(FileNotFoundError):
                     restartcheck.restartcheck()
