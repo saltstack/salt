@@ -16,14 +16,14 @@ contextlib2==0.6.0.post1  # via cherrypy
 cryptography==3.2
 distro==1.5.0
 gitdb2==2.0.5
-gitpython==2.1.10
+gitpython==3.1.12
 idna==2.8
 ioloop==0.1a0
 ipaddress==1.0.22
 jaraco.functools==2.0     # via cheroot, tempora
 jinja2==2.10.1
 libnacl==1.7.1
-lxml==4.3.0
+lxml==4.6.2
 mako==1.0.7
 markupsafe==1.1.1
 more-itertools==8.2.0     # via cheroot, cherrypy, jaraco.functools

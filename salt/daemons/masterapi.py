@@ -1037,11 +1037,19 @@ class RemoteFuncs:
         """
         if "id" not in load:
             return False
-        keyapi = salt.key.Key(self.opts)
-        keyapi.delete_key(
-            load["id"], preserve_minions=load.get("preserve_minion_cache", False)
-        )
+        with salt.key.Key(self.opts) as keyapi:
+            keyapi.delete_key(
+                load["id"], preserve_minions=load.get("preserve_minion_cache", False)
+            )
         return True
+
+    def destroy(self):
+        if self.event is not None:
+            self.event.destroy()
+            self.event = None
+        if self.local is not None:
+            self.local.destroy()
+            self.local = None
 
 
 class LocalFuncs:
@@ -1413,3 +1421,11 @@ class LocalFuncs:
             key = self.key
 
         return auth_type, err_name, key
+
+    def destroy(self):
+        if self.event is not None:
+            self.event.destroy()
+            self.event = None
+        if self.local is not None:
+            self.local.destroy()
+            self.local = None

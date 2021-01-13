@@ -310,3 +310,4 @@ class Batch:
                             active.remove(minion)
                             if bwait:
                                 wait.append(datetime.now() + timedelta(seconds=bwait))
+        self.local.destroy()

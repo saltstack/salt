@@ -100,6 +100,3 @@ class PubServerChannel:
         Publish "load" to minions
         """
         raise NotImplementedError()
-
-
-# EOF
