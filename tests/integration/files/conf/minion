@@ -103,11 +103,6 @@ mine_functions:
 osenv:
   driver: env
 
-# cmd blacklist
-cmd_blacklist_glob:
-  - 'bad_command *'
-  - 'second_bad_command *'
-
 autosign_grains:
   - test_grain
 
