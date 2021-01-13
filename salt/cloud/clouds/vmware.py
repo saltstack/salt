@@ -124,11 +124,11 @@ from random import randint
 
 import salt.config as config
 import salt.utils.cloud
+import salt.utils.master
 import salt.utils.network
 import salt.utils.stringutils
 import salt.utils.vmware
 import salt.utils.xmlutil
-import salt.utils.master
 from salt._compat import ipaddress
 from salt.exceptions import SaltCloudSystemExit
 
@@ -1200,10 +1200,10 @@ def _valid_ip(ip_address):
 
 
 def _valid_ip6(ip_address):
-    '''
+    """
     Check if the IPv6 address is valid and routable
     Return either True or False
-    '''
+    """
 
     # Validate IPv6 address
     try:
@@ -1211,11 +1211,13 @@ def _valid_ip6(ip_address):
     except ipaddress.AddressValueError:
         return False
 
-    if address.is_unspecified or \
-        address.is_loopback or \
-        address.is_link_local or \
-        address.is_multicast or \
-        address.is_reserved:
+    if (
+        address.is_unspecified
+        or address.is_loopback
+        or address.is_link_local
+        or address.is_multicast
+        or address.is_reserved
+    ):
         return False
 
     if address.ipv4_mapped is not None:
@@ -1225,18 +1227,20 @@ def _valid_ip6(ip_address):
 
 
 def _master_supports_ipv6():
-    '''
+    """
     Check if the salt master has a valid and
     routable IPv6 address available
-    '''
+    """
     master_fqdn = salt.utils.network.get_fqhostname()
-    pillar_util = salt.utils.master.MasterPillarUtil(master_fqdn,
-                                                     tgt_type='glob',
-                                                     use_cached_grains=False,
-                                                     grains_fallback=False,
-                                                     opts=__opts__)
+    pillar_util = salt.utils.master.MasterPillarUtil(
+        master_fqdn,
+        tgt_type="glob",
+        use_cached_grains=False,
+        grains_fallback=False,
+        opts=__opts__,
+    )
     grains_data = pillar_util.get_minion_grains()
-    ipv6_addresses = grains_data[master_fqdn]['ipv6']
+    ipv6_addresses = grains_data[master_fqdn]["ipv6"]
     for address in ipv6_addresses:
         if _valid_ip6(address):
             return True
@@ -1261,10 +1265,7 @@ def _wait_for_ip(vm_ref, max_wait):
             return resolved_ips[0]
         return False
     master_supports_ipv6 = _master_supports_ipv6()
-    log.info(
-        "[ %s ] Master has IPv6 support: %s",
-        vm_ref.name, master_supports_ipv6
-    )
+    log.info("[ %s ] Master has IPv6 support: %s", vm_ref.name, master_supports_ipv6)
     time_counter = 0
     starttime = time.time()
     ipv4_address = None
@@ -1276,7 +1277,10 @@ def _wait_for_ip(vm_ref, max_wait):
                 time_counter,
             )
 
-        if vm_ref.summary.guest.ipAddress and (_valid_ip(vm_ref.summary.guest.ipAddress) or _valid_ip6(vm_ref.summary.guest.ipAddress)):
+        if vm_ref.summary.guest.ipAddress and (
+            _valid_ip(vm_ref.summary.guest.ipAddress)
+            or _valid_ip6(vm_ref.summary.guest.ipAddress)
+        ):
             log.info(
                 "[ %s ] Successfully retrieved IPv4 information in %s seconds",
                 vm_ref.name,
@@ -1289,7 +1293,9 @@ def _wait_for_ip(vm_ref, max_wait):
                     if master_supports_ipv6 and _valid_ip6(current_ip.ipAddress):
                         log.info(
                             "[ %s ] Successfully retrieved IPv6 information "
-                            "in %s seconds", vm_ref.name, time_counter
+                            "in %s seconds",
+                            vm_ref.name,
+                            time_counter,
                         )
                         return current_ip.ipAddress
                     if _valid_ip(current_ip.ipAddress) and not ipv4_address:
@@ -1298,8 +1304,9 @@ def _wait_for_ip(vm_ref, max_wait):
                         ipv4_address = current_ip
         if ipv4_address:
             log.info(
-                "[ %s ] Successfully retrieved IPv4 information "
-                "in %s seconds", vm_ref.name, time_counter
+                "[ %s ] Successfully retrieved IPv4 information " "in %s seconds",
+                vm_ref.name,
+                time_counter,
             )
             return ipv4_address.ipAddress
         time.sleep(1.0 - ((time.time() - starttime) % 1.0))
