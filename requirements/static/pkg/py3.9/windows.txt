@@ -16,7 +16,7 @@ contextlib2==0.6.0.post1  # via cherrypy
 cryptography==3.2
 distro==1.5.0
 gitdb2==2.0.5
-gitpython==2.1.10
+gitpython==3.1.12
 idna==2.8
 ioloop==0.1a0
 ipaddress==1.0.22
