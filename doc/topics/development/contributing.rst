@@ -4,481 +4,605 @@
 Contributing
 ============
 
-There is a great need for contributions to Salt and patches are welcome! The
-goal here is to make contributions clear, make sure there is a trail for where
-the code has come from, and most importantly, to give credit where credit is
-due!
 
-There are a number of ways to contribute to Salt development, including (but
-not limited to):
+So you want to contribute to the Salt project? Excellent! You can help
+in a number of ways:
 
-* filing well-written bug reports
-* enhancing the documentation
-* providing workarounds, patches, and other code without tests
-* engaging in constructive discussion
-* helping out in `#salt on Freenode <#salt on freenode_>`_,
-  the `Community Slack <SaltStack Community Slack_>`_,
-  the `salt-users <salt-users_>`_ mailing list,
-  a `SaltStack meetup <saltstack meetup_>`_,
-  or `Server Fault <saltstack on serverfault_>`_.
-* telling others about problems you solved with Salt
+-  Using Salt and opening well-written bug reports.
+-  Joining a `working group <https://github.com/saltstack/community>`__.
+-  Answering questions on `irc <https://webchat.freenode.net/#salt>`__,
+   the `community Slack <https://saltstackcommunity.herokuapp.com/>`__,
+   the `salt-users mailing
+   list <https://groups.google.com/forum/#!forum/salt-users>`__,
+   `Server Fault <https://serverfault.com/questions/tagged/saltstack>`__,
+   or `r/saltstack on Reddit <https://www.reddit.com/r/saltstack/>`__.
+-  Fixing bugs.
+-  `Enhancing the documentation <https://docs.saltstack.com/en/latest/topics/development/conventions/documentation.html#salt-docs>`__.
+- Providing workarounds, patches, or other code without tests.
+- Telling other people about problems you solved using Salt.
 
-If this or other Salt documentation is unclear, please review :ref:`Writing
-Salt Documentation <salt-docs>`. PRs are welcome!
+If you’d like to update docs or fix an issue, you’re going to need the
+Salt repo. The best way to contribute is using
+`Git <https://git-scm.com/>`__.
 
+Environment Setup
+-----------------
 
-Quickstart
-----------
+To hack on Salt or the docs you’re going to need to set up your
+development environment. If you already have a workflow that you’re
+comfortable with, you can use that, but otherwise this is an opinionated
+guide for setting up your dev environment. Follow these steps and you’ll
+end out with a functioning dev environment and be able to submit your
+first PR.
 
-If you just want to get started before reading the rest of this guide, you can
-get the process started by running the following:
+This guide assumes at least a passing familiarity with
+`Git <https://git-scm.com/>`__, a common version control tool used
+across many open source projects, and is necessary for contributing to
+Salt. For an introduction to Git, watch `Salt Docs Clinic - Git For the
+True
+Beginner <https://www.youtube.com/watch?v=zJw6KNvmuq4&ab_channel=SaltStack>`__.
+Because of its widespread use, there are many resources for learning
+more about Git. One popular resource is the free online book `Learn Git
+in a Month of
+Lunches <https://www.manning.com/books/learn-git-in-a-month-of-lunches>`__.
 
-.. code-block:: bash
+pyenv, Virtual Environments, and You
+----------------------------------------
 
-    python3 -m pip install --user pre-commit
-    git clone --origin upstream https://github.com/saltstack/salt.git
-    cd salt
-    pre-commit install
+We recommend `pyenv <https://github.com/pyenv/pyenv>`__, since it allows
+installing multiple different Python versions, which is important for
+testing Salt across all the versions of Python that we support.
 
-While those commands are running, finish reading the rest of this guide.
+On Linux
+~~~~~~~~
 
+Install pyenv:
 
-Pre-commit
-----------
+::
 
-To reduce friction during the development process, SaltStack uses `pre-commit
-<pre-commit_>`_. This tool adds pre-commit hooks to git to automate several
-processes that used to be manual. Rather than having to remember to run several
-different tools before you commit, you only have to run ``git commit``, and you
-will be notified about style and lint issues before you ever open a PR.
+   git clone https://github.com/pyenv/pyenv.git ~/.pyenv
+   export PATH="$HOME/.pyenv/bin:$PATH"
+   git clone https://github.com/pyenv/pyenv-virtualenv.git $(pyenv root)/plugins/pyenv-virtualenv
+
+On Mac
+~~~~~~
+
+Install pyenv using brew:
+
+::
+
+   brew update
+   brew install pyenv
+   brew install pyenv-virtualenv
+
+--------------
+
+Now add pyenv to your ``.bashrc``:
+
+::
+
+   echo 'export PATH="$HOME/.pyenv/bin:$PATH"' >> ~/.bashrc
+   pyenv init 2>> ~/.bashrc
+   pyenv virtualenv-init 2>> ~/.bashrc
+
+For other shells, see `the pyenv
+instructions <https://github.com/pyenv/pyenv#basic-github-checkout>`__.
+
+Go ahead and restart your shell. Now you should be able to install a new
+version of Python:
+
+::
+
+   pyenv install 3.7.0
+
+If that fails, don’t panic! You’re probably just missing some build
+dependencies. Check out `pyenv common build
+problems <https://github.com/pyenv/pyenv/wiki/Common-build-problems>`__.
+
+Now that you’ve got your version of Python installed, you can create a
+new virtual environment with this command:
+
+::
+
+   pyenv virtualenv 3.7.0 salt
+
+Then activate it:
+
+::
+
+   pyenv activate salt
+
+Sweet! Now you’re ready to clone Salt so you can start hacking away! If
+you get stuck at any point, check out the resources at the beginning of
+this guide. IRC and Slack are particularly helpful places to go.
+
+Get The Source!
+~~~~~~~~~~~~~~~
+
+Salt uses the fork and clone workflow for Git contributions. See `Using
+the Fork-and-Branch Git
+Workflow <https://blog.scottlowe.org/2015/01/27/using-fork-branch-git-workflow/>`__
+for how to implement it. But if you just want to hurry and get started
+you can go ahead and follow these steps:
+
+Clones are so shallow. Well, this one is anyway:
+
+::
+
+   git clone --depth=1 --origin salt https://github.com/saltstack/salt.git
+
+This creates a shallow clone of Salt, which should be fast. Most of the
+time that’s all you’ll need, and you can start building out other
+commits as you go. If you *really* want all 108,300+ commits you can
+just run ``git fetch --unshallow``. Then go make a sandwich because it’s
+gonna be a while.
+
+You’re also going to want to head over to GitHub and create your own
+`fork of Salt <https://github.com/saltstack/salt/fork>`__. Once you’ve
+got that set up you can add it as a remote:
+
+::
+
+   git remote add yourname <YOUR SALT REMOTE>
+
+If you use your name to refer to your fork, and ``salt`` to refer to the
+official Salt repo you’ll never get ``upstream`` or ``origin`` confused.
+
+.. note::
+
+   Each time you start work on a new issue you should fetch the most recent
+   changes from ``salt/upstream``.
+
+``pre-commit`` and ``nox`` Setup
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Here at Salt we use `pre-commit <https://pre-commit.com/>`__ and
+`nox <https://nox.thea.codes/en/stable/>`__ to make it easier for
+contributors to get quick feedback, for quality control, and to increase
+the chance that your merge request will get reviewed and merged. Nox
+enables us to run multiple different test configurations, as well as
+other common tasks. You can think of it as Make with superpowers.
+Pre-commit does what it sounds like: it configures some Git pre-commit
+hooks to run ``black`` for formatting, ``isort`` for keeping our imports
+sorted, and ``pylint`` to catch issues like unused imports, among
+others. You can easily install them in your virtualenv with:
+
+::
+
+   python -m pip install pre-commit nox
+   pre-commit install
 
 .. warning::
-    Currently there is an issue with the pip-tools-compile pre-commit hook on windows.
+    Currently there is an issue with the pip-tools-compile pre-commit hook on Windows.
     The details around this issue are included here:
     https://github.com/saltstack/salt/issues/56642.
     Please ensure you export ``SKIP=pip-tools-compile`` to skip pip-tools-compile.
 
-Salt Coding Style
------------------
+Now before each commit, it will ensure that your code at least *looks*
+right before you open a pull request. And with that step, it’s time to
+start hacking on Salt!
 
-After the 3000 release, SaltStack is `joining the ranks <SEP 15_>`_ of projects
-in adopting the `Black code formatter <Black_>`_ in order to ease the adoption
-of a unified code formatting style.
+Salt Issues
+-----------
 
-Where Black is silent, SaltStack has its own coding style guide that informs
-contributors on various style points. Please review the :ref:`Salt Coding Style
-<coding-style>` documentation for information about Salt's particular coding
-patterns.
+Create Your Own
+~~~~~~~~~~~~~~~
 
-Within the :ref:`Salt Coding Style <coding-style>` documentation, there is a
-section about running Salt's ``.testing.pylintrc`` file. SaltStack recommends
-running the ``.testing.pylintrc`` file on any files you are changing with your
-code contribution before submitting a pull request to Salt's repository.
+Perhaps you’ve come to this guide because you found a problem in Salt,
+and you’ve diagnosed the cause. Maybe you need some help figuring out
+the problem. In any case, creating quality bug reports is a great way to
+contribute to Salt even if you lack the skills, time, or inclination to
+fix it yourself. If that’s the case, head on over to `Salt’s issue
+tracker on
+GitHub <https://github.com/saltstack/salt/issues/new/choose>`__.
 
-If you've installed ``pre-commit``, this will automatically happen before each
-commit.  Otherwise, see the :ref:`Linting<pylint-instructions>` documentation
-for more information.
+Creating a **good** report can take a little bit of time - but every
+minute you invest in making it easier for others to reproduce and
+understand your issue is time well spent. The faster someone can
+understand your issue, the faster it will be able to get fixed
+correctly.
 
+The thing that every issue needs goes by many names, but one at least as
+good as any other is MCVE - **M**\ inimum **C**\ omplete
+**V**\ erifiable **E**\ xample.
 
-Copyright Headers
------------------
+In a nutshell:
 
-Copyright headers are not needed for files in the Salt project. Files that have
-existing copyright headers should be considered legacy and not an example to
-follow.
+-  **Minimum**: All of the **extra** information has been removed. Will
+   2 or 3 lines of master/minion config still exhibit the behavior?
+-  **Complete**: Minimum also means complete. If your example is missing
+   information, then it’s not complete. Salt, Python, and OS versions
+   are all bits of information that make your example complete. Have you
+   provided the commands that you ran?
+-  **Verifiable**: Can someone take your report and reproduce it?
 
-.. _github-pull-request:
+Slow is smooth, and smooth is fast - it may feel like you’re taking a
+long time to create your issue if you’re creating a proper MCVE, but a
+MCVE eliminates back and forth required to reproduce/verify the issue so
+someone can actually create a fix.
 
-New Features
+Pick An Issue
+~~~~~~~~~~~~~
+
+If you don’t already have an issue in mind, you can search for `help
+wanted <https://github.com/saltstack/salt/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22>`__
+issues. If you also search for `good first
+issue <https://github.com/saltstack/salt/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22+label%3A%22good+first+issue%22>`__
+then you should be able to find some issues that are good for getting
+started contributing to Salt. `Documentation
+issues <https://github.com/saltstack/salt/issues?q=is%3Aissue+is%3Aopen+label%3Adocumentation+>`__
+are also good starter issues. When you find an issue that catches your
+eye (or one of your own), it’s a good idea to comment on the issue and
+mention that you’re working on it. Good communication is key to
+collaboration - so if you don’t have time to complete work on the issue,
+just leaving some information about when you expect to pick things up
+again is a great idea!
+
+Hacking Away
 ------------
 
-Feature requests through Salt go through a multi-stage process.
+Salt, Tests, Documentation, and You
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-All features are added to major releases only. Salt does not accept
-feature additions in bug-fix branches. Therefore, all feature work
-is done exclusively in the develop branch.
+Before approving code contributions, Salt requires:
 
-To formally propose a new feature, the proposal must take the form
-of an RFC. To create an RFC, copy the template file found in the rfcs/
-directory of the Salt codebase and fill the outline with the reasoning
-for the new feature and with implementation details.
+-  documentation
+-  meaningful passing tests
+-  correct code
 
-Upon submitting the written RFC via a pull-request, it will be reviewed
-by the core development team as well as the community. Once discussed
-and agreed upon, the RFC may be merged.
+Documentation fixes just require correct documentation.
 
-A merged RFC indicates that a feature has been accepted and will be
-added to an upcoming release of Salt.
+What If I Don’t Write Tests or Docs?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Sending a GitHub pull request
------------------------------
+If you aren’t into writing documentation or tests, we still welcome your
+contributions! But your PR will be labeled ``Needs Testcase`` and
+``Help Wanted`` until someone can get to write the tests/documentation.
+Of course, if you have a desire but just lack the skill we are more than
+happy to collaborate and help out! There’s the `documentation working
+group <https://github.com/saltstack/docs-hub>`__ and the `testing
+working
+group <https://github.com/saltstack/community/tree/master/working_groups/wg-Testing>`__.
+We also regularly stream our test clinic `live on
+Twitch <https://www.twitch.tv/saltstackinc>`__ every Tuesday afternoon
+and Thursday morning, Central Time. If you’d like specific help with
+tests, bring them to the clinic. If no community members need help, you
+can also just watch tests written in real time.
 
-Sending pull requests on GitHub is the preferred method for receiving
-contributions. The workflow advice below mirrors `GitHub's own guide <GitHub
-Fork a Repo Guide_>`_ and is well worth reading.
+.. _docs-building:
 
-#.  `Fork saltstack/salt`_ on GitHub.
-#.  Make a local clone of your fork. (Skip this step if you followed
-    the Quickstart)
+Documentation
+~~~~~~~~~~~~~
 
-    .. code-block:: bash
+Salt uses both docstrings, as well as normal reStructuredText files in
+the ``salt/doc`` folder for documentation. Since we use nox, you can
+build your docs and view them in your browser with this one-liner:
 
-         git clone git@github.com:my-account/salt.git
-         cd salt
+::
 
-#.  Add `saltstack/salt`_ as a git remote.
+   python -m nox -e 'docs-html(compress=False, clean=False)'; cd doc/_build/html; python -m webbrowser http://localhost:8000/contents.html; python -m http.server
 
-    .. code-block:: bash
+The first time this will take a while because there are a *lot* of
+modules. Maybe you should go grab some dessert if you already finished
+that sandwich. But once Sphinx is done building the docs, python should
+launch your default browser with the URL
+http://localhost:8000/contents.html. Now you can navigate to your docs
+and ensure your changes exist. If you make changes, you can simply run
+this:
 
-         git remote add upstream https://github.com/saltstack/salt.git
+::
 
-    If you followed the Quickstart, you'll add your own remote instead
+   cd -; python -m nox -e 'docs-html(compress=False, clean=False)'; cd doc/_build/html; python -m http.server
 
-    .. code-block:: bash
+And then refresh your browser to get your updated docs. This one should
+be quite a bit faster since Sphinx won’t need to rebuild everything.
 
-         git remote add my-account git@github.com:my-account/salt.git
+If your change is a docs-only change, you can go ahead and commit/push
+your code and open a PR. You can indicate that it’s a docs-only change by
+adding ``[Documentation]`` to the title of your PR. Otherwise you’ll
+want to write some tests and code.
 
-#.  Create a new branch in your clone.
+Running Development Salt
+~~~~~~~~~~~~~~~~~~~~~~~~
 
-    .. note::
+Note: If you run into any issues in this section, check the
+Troubleshooting section.
 
-        A branch should have one purpose. For example, "Fix bug X," or "Add
-        feature Y".  Multiple unrelated fixes and/or features should be
-        isolated into separate branches.
+If you’re going to hack on the Salt codebase you’re going to want to be
+able to run Salt locally. The first thing you need to do is install Salt
+as an editable pip install:
 
-    .. code-block:: bash
+::
 
-        git fetch upstream
-        git checkout -b fix-broken-thing upstream/master
+   python -m pip install -e .
 
-#.  Edit and commit changes to your branch.
+This will let you make changes to Salt without having to re-install it.
 
-    .. code-block:: bash
+After all of the dependencies and Salt are installed, it’s time to set
+up the config for development. Typically Salt runs as ``root``, but you
+can specify which user to run as. To configure that, just copy the
+master and minion configs. We have .gitignore setup to ignore the
+``local/`` directory, so we can put all of our personal files there.
 
-        vim path/to/file1 path/to/file2 tests/test_file1.py tests/test_file2.py
-        git diff
-        git add path/to/file1 path/to/file2
-        git commit
+::
 
-    Write a short, descriptive commit title and a longer commit message if
-    necessary. Use an imperative style for the title.
+   mkdir -p local/etc/salt/
 
-    GOOD
+Create a master config file as ``local/etc/salt/master``:
 
-    .. code-block:: bash
+::
 
-        Fix broken things in file1 and file2
+   cat <<EOF >local/etc/salt/master
+   user: $(whoami)
+   root_dir: $PWD/local/
+   publish_port: 55505
+   ret_port: 55506
+   EOF
 
-        Fixes #31337
+And a minion config as ``local/etc/salt/minion``:
 
-        We needed to make this change because the underlying dependency
-        changed. Now this uses the up-to-date API.
+::
 
-        # Please enter the commit message for your changes. Lines starting
-        # with '#' will be ignored, and an empty message aborts the commit.
-        # On branch fix-broken-thing
-        # Changes to be committed:
-        #       modified:   path/to/file1
-        #       modified:   path/to/file2
+   cat <<EOF >local/etc/salt/minion
+   user: $(whoami)
+   root_dir: $PWD/local/
+   master: localhost
+   id: saltdev
+   master_port: 55506
+   EOF
 
-    BAD
+Now you can start your Salt master and minion, specifying the config
+dir.
 
-    .. code-block:: bash
+::
 
-        Fixes broken things
+   salt-master --config-dir=local/etc/salt/ --log-level=debug --daemon
+   salt-minion --config-dir=local/etc/salt/ --log-level=debug --daemon
 
-        # Please enter the commit message for your changes. Lines starting
-        # with '#' will be ignored, and an empty message aborts the commit.
-        # On branch fix-broken-thing
-        # Changes to be committed:
-        #       modified:   path/to/file1
-        #       modified:   path/to/file2
+Now you should be able to accept the minion key:
 
-    Taking a few moments to explain *why* you made a change will save time
-    and effort in the future when others come to investigate a change. A
-    clear explanation of why something changed can help future developers
-    avoid introducing bugs, or breaking an edge case.
+::
 
-    .. note::
+   salt-key -c local/etc/salt -Ay
 
-        If your change fixes a bug or implements a feature already filed in the
-        `issue tracker`_, be sure to
-	`reference the issue <https://help.github.com/en/github/managing-your-work-on-github/linking-a-pull-request-to-an-issue>`_
-        number in the commit message body.
+And check that your master/minion are communicating:
 
-    If you get stuck, there are many introductory Git resources on
-    https://help.github.com/en.
+::
 
-#.  Push your locally-committed changes to your GitHub fork.
+   salt -c local/etc/salt \* test.version
 
-    .. code-block:: bash
+Rather than running ``test.version`` from your master, you can run it
+from the minion instead:
 
-        git push -u origin fix-broken-thing
+::
 
-    or
+   salt-call -c local/etc/salt test.version
 
-    .. code-block:: bash
+Note that you’re running ``salt-call`` instead of ``salt``, and you’re
+not specifying the minion (``\*``), but if you’re running the dev
+version then you still will need to pass in the config dir. Now that
+you’ve got Salt running, you can hack away on the Salt codebase!
 
-        git push -u origin add-cool-feature
+If you need to restart Salt for some reason, if you’ve made changes and
+they don’t appear to be reflected, this is one option:
 
-    .. note::
+::
 
-        You may want to rebase before pushing to work out any potential
-        conflicts:
+   kill -INT $(pgrep salt-master)
+   kill -INT $(pgrep salt-minion)
 
-        .. code-block:: bash
+If you’d rather not use ``kill``, you can have a couple of terminals
+open with your salt virtualenv activated and omit the ``--daemon``
+argument. Salt will run in the foreground, so you can just use ctrl+c to
+quit.
 
-            git fetch upstream
-            git rebase upstream/master fix-broken-thing
-            git push -u origin fix-broken-thing
+Test First? Test Last? Test Meaningfully!
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-        If you do rebase, and the push is rejected with a
-        ``(non-fast-forward)`` comment, then run ``git status``. You will
-        likely see a message about the branches diverging:
+You can write tests first or tests last, as long as your tests are
+meaningful and complete! *Typically* the best tests for Salt are going
+to be unit tests. Testing is `a whole topic on its
+own <https://docs.saltstack.com/en/master/topics/tutorials/writing_tests.html>`__,
+But you may also want to write functional or integration tests. You’ll
+find those in the ``salt/tests`` directory.
 
-        .. code-block:: text
+When you’re thinking about tests to write, the most important thing to
+keep in mind is, “What, exactly, am I testing?” When a test fails, you
+should know:
 
-            On branch fix-broken-thing
-            Your branch and 'origin/fix-broken-thing' have diverged,
-            and have 1 and 2 different commits each, respectively.
-              (use "git pull" to merge the remote branch into yours)
-            nothing to commit, working tree clean
+-  What, specifically, failed?
+-  Why did it fail?
+-  As much as possible, what do I need to do to fix this failure?
 
-        Do **NOT** perform a ``git pull`` or ``git merge`` here. Instead, add
-        ``--force-with-lease`` to the end of the ``git push`` command to get the changes
-        pushed to your fork. Pulling or merging, while they will resolve the
-        non-fast-forward issue, will likely add extra commits to the pull
-        request which were not part of your changes.
+If you can’t answer those questions then you might need to refactor your
+tests.
 
-#.  Check `Github Actions`_ status on your fork
+When you’re running tests locally, you should make sure that if you
+remove your code changes your tests are failing. If your tests *aren’t*
+failing when you haven’t yet made changes, then it’s possible that
+you’re testing the wrong thing.
 
-    By now, and in case you haven't disabled `Github Actions`_, you should have at least 3
-    workflows running on your fork.
+But whether you adhere to TDD/BDD, or you write your code first and your
+tests last, ensure that your tests are meaningful.
 
-      #. ``Pre-Commit`` - The pre-commit checks salt uses to validate several parts of its codebase
-      #. ``Docs`` - Builds Salt's Documentation
-      #. ``Lint`` - Runs lint checks agraint the salt codebase
+Running Tests
+^^^^^^^^^^^^^
 
-    Go to https://github.com/my-account/salt/actions to check them out.
-    These will give you an early warning in case something is not right, giving you a chance to fix
-    them even before you open a pull request against the Salt repository.
+As previously mentioned, we use ``nox``, and that’s how we run our
+tests. You should have it installed by this point but if not you can
+install it with this:
 
-#.  Find the branch on your GitHub salt fork.
+::
 
-    https://github.com/my-account/salt/branches/fix-broken-thing
+   python -m pip install nox
 
-#.  Open a new pull request.
+Now you can run your tests:
 
-    Click on ``Pull Request`` on the right near the top of the page,
+::
 
-    https://github.com/my-account/salt/pull/new/fix-broken-thing
+   python -m nox -e "pytest-3.7(coverage=False)" -- tests/unit/cli/test_batch.py
 
-    #.  Choose ``master`` as the base Salt branch.
-    #.  Review that the proposed changes are what you expect.
-    #.  Write a descriptive comment. If you added good information to your git
-        commit message, they will already be present here. Include links to
-        related issues (e.g. 'Fixes #31337.') in the comment field.
-    #.  Click ``Create pull request``.
+It’s a good idea to install
+`espeak <https://github.com/espeak-ng/espeak-ng>`__ or use ``say`` on
+Mac if you’re running some long-running tests. You can do something like
+this:
 
-#.  Salt project members will review your pull request and automated tests will
-    run on it.
+::
 
-    If you recognize any test failures as being related to your proposed
-    changes or if a reviewer asks for modifications:
+   python -m nox -e "pytest-3.7(coverage=False)" -- tests/unit/cli/test_batch.py; espeak "Tests done, woohoo!"
 
-    #.  Make the new changes in your local clone on the same local branch.
-    #.  Push the branch to GitHub again using the same commands as before.
-    #.  New and updated commits will be added to the pull request automatically.
-    #.  Feel free to add a comment to the discussion.
+That way you don’t have to keep monitoring the actual test run.
 
-.. note:: Jenkins
+Changelog and Commit!
+~~~~~~~~~~~~~~~~~~~~~
 
-    Pull request against `saltstack/salt`_ are automatically tested on a
-    variety of operating systems and configurations. On average these tests
-    take a couple of hours.  Depending on your GitHub notification settings
-    you may also receive an email message about the test results.
+When you write your commit message you should use imperative style. Do
+this:
 
-    Test progress and results can be found at https://jenkinsci.saltstack.com/.
+   Add frobnosticate capability
 
-.. _which-salt-branch:
+Don’t do this:
 
-Salt's Branch Topology
-----------------------
+   Added frobnosticate capability
 
-Salt will only have one active branch - ``master``.
-This will include bug fixes, features and CVE “Common Vulnerabilities and Exposures”.
+But that advice is backwards for the changelog. We follow the
+`keepachangelog <https://keepachangelog.com/en/1.0.0/>`__ approach for
+our changelog, and use towncrier to generate it for each release. As a
+contributor, all that means is that you need to add a file to the
+``salt/changelog`` directory, using the ``<issue #>.<type>`` format. For
+instanch, if you fixed issue 123, you would do:
 
-The release will be cut from the master when the time comes for a new release,
-which should be every 3 to 4 months.
+::
 
-To be able to merge code:
+   echo "Made sys.doc inform when no minions return" > changelog/123.fixed
 
-    #. The code must have a well-written test.
-       Note that you are only expected to write tests for what you did, not the whole modules or function.
+And that’s all that would go into your file. When it comes to your
+commit message, it’s usually a good idea to add other information, such as
 
-    #. All tests must pass.
+- What does a reviewer need to know about the change that you made?
+- If someone isn’t an expert in this area, what will they need to know?
 
-The SaltStack employee that reviews your pull request might request changes or deny the pull request for various reasons.
+This will also help you out, because when you go to create the PR it
+will automatically insert the body of your commit messages.
 
-Salt uses a typical branch strategy - ``master`` is the next expected release.
-Code should only make it to ``master`` once it's production ready. This means
-that typical changes (fixes, features) should have accompanying tests.\
+PR Time!
+--------
 
-Closing GitHub issues from commits
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Once you’ve done all your dev work and tested locally, you should check
+out our `PR
+guidelines <https://docs.saltstack.com/en/develop/topics/development/pull_requests.html>`__.
+After you read that page, it’s time to `open a new
+PR <https://github.com/saltstack/salt/compare>`__. Fill out the PR
+template - you should have updated or created any necessary docs, and
+written tests if you’re providing a code change. When you submit your
+PR, we have a suite of tests that will run across different platforms to
+help ensure that no known bugs were introduced.
 
-SaltStack encourages using `the magic keywords to close a GitHub issue <Closing
-issues via commit message_>`_. These should appear in the commit message text
-directly.
+Now What?
+~~~~~~~~~
 
+You’ve made your changes, added documentation, opened your PR, and have
+passing tests… now what? When can you expect your code to be merged?
 
-Release Naming Convention
--------------------------
+When you open your PR, a reviewer will get automatically assigned. If
+your PR is submitted during the week you should be able to expect some
+kind of communication within that business day. If your tests are
+passing and we’re not in a code freeze, ideally your code will be merged
+that day. If you haven’t heard from your assigned reviewer, ping them on
+GitHub, `irc <https://webchat.freenode.net/#salt>`__, or Community
+Slack.
 
-A new convention will start when Salt releases Salt 3000.
-Every new release name will increment by one ‘Salt last_release_number + 1’.
+It’s likely that your reviewer will leave some comments that need
+addressing - it may be a style change, or you forgot a changelog entry,
+or need to update the docs. Maybe it’s something more fundamental -
+perhaps you encountered the rare case where your PR has a much larger
+scope than initially assumed.
 
-This naming convention is very different from past releases, which was 'YYYY.MM.PATCH'.
+Whatever the case, simply make the requested changes (or discuss why the
+requests are incorrect), and push up your new commits. If your PR is
+open for a significant period of time it may be worth rebasing your
+changes on the most recent changes to Salt. If you need help, the
+previously linked Git resources will be valuable.
 
-Handling CVE
---------------
+But if, for whatever reason, you’re not interested in driving your PR to
+completion then just note that in your PR. Something like, “I’m not
+interested in writing docs/tests, I just wanted to provide this fix -
+someone else will need to complete this PR.” If you do that then we’ll
+add a “Help Wanted” label and someone will be able to pick up the PR,
+make the required changes, and it can eventually get merged in.
 
-If a CVE is discovered, Salt will create a new release that **only** contains the tests and patch for the CVE.
-This method should improve the upgrade process by reducing the chances of breaking something.
+In any case, now that you have a PR open, congrats! You’re a Salt
+developer! You rock!
 
-.. _backporting-pull-requests:
+Troubleshooting
+---------------
 
+zmq.core.error.ZMQError
+~~~~~~~~~~~~~~~~~~~~~~~
 
-Backporting Pull Requests
--------------------------
+Once the minion starts, you may see an error like the following::
 
-On rare occasions, a serious bug will be found in the middle of a release
-cycle. These bugs will require a point release. Contributors should still
-submit fixes directly to ``master``, but they should also call attention to the
-fact that it addresses a critical issue and will need to be back-ported.
+::
 
-Keeping Salt Forks in Sync
---------------------------
+   zmq.core.error.ZMQError: ipc path "/path/to/your/virtualenv/var/run/salt/minion/minion_event_7824dcbcfd7a8f6755939af70b96249f_pub.ipc" is longer than 107 characters (sizeof(sockaddr_un.sun_path)).
 
-Salt advances quickly. It is therefore critical to pull upstream changes from
-upstream into your fork on a regular basis. Nothing is worse than putting hard
-work into a pull request only to see bunches of merge conflicts because it has
-diverged too far from upstream.
+This means that the path to the socket the minion is using is too long.
+This is a system limitation, so the only workaround is to reduce the
+length of this path. This can be done in a couple different ways:
 
-.. seealso:: `GitHub Fork a Repo Guide`_
+1. Create your virtualenv in a path that is short enough.
+2. Edit the :conf_minion:``sock_dir`` minion config variable and reduce
+   its length. Remember that this path is relative to the value you set
+   in :conf_minion:``root_dir``.
 
-The following assumes ``origin`` is the name of your fork and ``upstream`` is
-the name of the main `saltstack/salt`_ repository.
+NOTE: The socket path is limited to 107 characters on Solaris and Linux,
+and 103 characters on BSD-based systems.
 
-#.  View existing remotes.
+No permissions to access …
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    .. code-block:: bash
+If you forget to pass your config path to any of the ``salt*`` commands,
+you might see
 
-        git remote -v
+::
 
-#.  Add the ``upstream`` remote.
+   No permissions to access "/var/log/salt/master", are you running as the
+   correct user?
 
-    .. code-block:: bash
+Just pass ``-c local/etc/salt`` (or whatever you named it)
 
-        # For ssh github
-        git remote add upstream git@github.com:saltstack/salt.git
+File descriptor limit
+~~~~~~~~~~~~~~~~~~~~~
 
-        # For https github
-        git remote add upstream https://github.com/saltstack/salt.git
+You might need to raise your file descriptor limit. You can check it
+with:
 
-#.  Pull upstream changes into your clone.
+::
 
-    .. code-block:: bash
+   ulimit -n
 
-        git fetch upstream
+If the value is less than 2047, you should increase it with:
 
-#.  Update your copy of the ``master`` branch.
+::
 
-    .. code-block:: bash
+   ulimit -n 2047
+   # For c-shell:
+   limit descriptors 2047
 
-        git checkout master
-        git merge --ff-only upstream/master
+Pygit2 or other dependency install fails
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    If Git complains that a fast-forward merge is not possible, you have local
-    commits.
+You may see some failure messages when installing requirements. You can
+directly access your nox environment and possibly install pygit (or
+other dependency) that way. When you run nox, you’ll see a message like
+this:
 
-    * Run ``git pull --rebase origin master`` to rebase your changes on top of
-      the upstream changes.
-    * Or, run ``git branch <branch-name>`` to create a new branch with your
-      commits. You will then need to reset your ``master`` branch before
-      updating it with the changes from upstream.
+::
 
-    If Git complains that local files will be overwritten, you have changes to
-    files in your working directory. Run ``git status`` to see the files in
-    question.
+   nox > Re-using existing virtual environment at .nox/pytest-parametrized-3-crypto-none-transport-zeromq-coverage-false.
 
-#.  Update your fork.
+For this, you would be able to install with:
 
-    .. code-block:: bash
+::
 
-        git push origin master
-
-#.  Repeat the previous two steps for any other branches you work with, such as
-    the current release branch.
-
-Posting patches to the mailing list
------------------------------------
-
-Patches will also be accepted by email. Format patches using `git
-format-patch`_ and send them to the `salt-users`_ mailing list. The contributor
-will then get credit for the patch, and the Salt community will have an archive
-of the patch and a place for discussion.
-
-Issue and Pull Request Labeling System
---------------------------------------
-
-SaltStack uses several labeling schemes to help facilitate code contributions
-and bug resolution. See the :ref:`Labels and Milestones
-<labels-and-milestones>` documentation for more information.
-
-Mentionbot
-----------
-
-SaltStack runs a mention-bot which notifies contributors who might be able
-to help review incoming pull-requests based on their past contribution to
-files which are being changed.
-
-If you do not wish to receive these notifications, please add your GitHub
-handle to the blacklist line in the ``.mention-bot`` file located in the
-root of the Salt repository.
-
-Bootstrap Script Changes
-------------------------
-
-Salt's Bootstrap Script, known as `bootstrap-salt.sh`_ in the Salt repo, has its own
-repository, contributing guidelines, and release cadence.
-
-All changes to the Bootstrap Script should be made to `salt-bootstrap repo`_. Any
-pull requests made to the `bootstrap-salt.sh`_ file in the Salt repository will be
-automatically overwritten upon the next stable release of the Bootstrap Script.
-
-For more information on the release process or how to contribute to the Bootstrap
-Script, see the Bootstrap Script's `Contributing Guidelines`_.
-
-.. _`saltstack/salt`: https://github.com/saltstack/salt
-.. _`GitHub Fork a Repo Guide`: https://help.github.com/articles/fork-a-repo
-.. _`issue tracker`: https://github.com/saltstack/salt/issues
-.. _`Fork saltstack/salt`: https://github.com/saltstack/salt/fork
-.. _'Git resources`: https://help.github.com/articles/good-resources-for-learning-git-and-github/
-.. _`Closing issues via commit message`: https://help.github.com/en/github/managing-your-work-on-github/linking-a-pull-request-to-an-issue
-.. _`git format-patch`: https://mirrors.edge.kernel.org/pub/software/scm/git/docs/git-format-patch.html
-.. _salt-users: https://groups.google.com/forum/#!forum/salt-users
-.. _GPG Probot: https://probot.github.io/apps/gpg/
-.. _help articles: https://help.github.com/articles/signing-commits-with-gpg/
-.. _GPG Signature Verification feature announcement: https://github.com/blog/2144-gpg-signature-verification
-.. _bootstrap-salt.sh: https://github.com/saltstack/salt/blob/master/salt/cloud/deploy/bootstrap-salt.sh
-.. _salt-bootstrap repo: https://github.com/saltstack/salt-bootstrap
-.. _Contributing Guidelines: https://github.com/saltstack/salt-bootstrap/blob/develop/CONTRIBUTING.md
-.. _`Black`: https://pypi.org/project/black/
-.. _`SEP 15`: https://github.com/saltstack/salt-enhancement-proposals/pull/21
-.. _`pre-commit`: https://pre-commit.com/
-.. _`SaltStack Community Slack`: https://saltstackcommunity.herokuapp.com/
-.. _`#salt on freenode`: https://webchat.freenode.net/#salt
-.. _`saltstack meetup`: https://www.meetup.com/pro/saltstack/
-.. _`saltstack on serverfault`: https://serverfault.com/questions/tagged/saltstack
-.. _`Github Actions`: https://docs.github.com/actions
+   .nox/pytest-parametrized-3-crypto-none-transport-zeromq-coverage-false/bin/python -m pip install pygit2
