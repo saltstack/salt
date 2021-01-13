@@ -1199,6 +1199,12 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                 )
             )
 
+    def _check_ip_fqdn_set(self, value, empty, _set=None):
+        if empty:
+            self.assertEqual(len(value), 0)
+        else:
+            self.assertEqual(sorted(value), sorted(_set))
+
     @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
     def test_fqdn_return(self):
         """
@@ -1244,10 +1250,35 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
     def _run_fqdn_tests(
         self, net_ip4_mock, net_ip6_mock, ip6_empty=True, ip4_empty=True
     ):
+        ip4_mock = [
+            (2, 1, 6, "", (IP4_ADD1, 0)),
+            (2, 2, 17, "", (IP4_ADD1, 0)),
+            (2, 3, 0, "", (IP4_ADD1, 0)),
+            (2, 3, 0, "", (IP4_ADD2, 0)),
+            (2, 1, 6, "", (IP4_ADD2, 0)),
+            (2, 2, 17, "", (IP4_ADD2, 0)),
+        ]
+        ip6_mock = [
+            (10, 1, 6, "", (IP6_ADD1, 0, 0, 0)),
+            (10, 2, 17, "", (IP6_ADD1, 0, 0, 0)),
+            (10, 3, 0, "", (IP6_ADD1, 0, 0, 0)),
+            (10, 1, 6, "", (IP6_ADD2, 0, 0, 0)),
+            (10, 2, 17, "", (IP6_ADD2, 0, 0, 0)),
+            (10, 3, 0, "", (IP6_ADD2, 0, 0, 0)),
+        ]
+
+        def _getaddrinfo(fqdn, port, family=0, *args, **kwargs):
+            if not ip4_empty and family == socket.AF_INET:
+                return ip4_mock
+            elif not ip6_empty and family == socket.AF_INET6:
+                return ip6_mock
+            else:
+                return []
+
         def _check_type(key, value, ip4_empty, ip6_empty):
             """
-            check type and other checks
-            """
+                check type and other checks
+                """
             assert isinstance(value, list)
 
             if "4" in key:
@@ -1257,33 +1288,27 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                 self._check_empty(key, value, ip6_empty)
                 self._check_ipaddress(value, ip_v="6")
 
-        ip4_mock = [(2, 1, 6, "", (IP4_ADD1, 0)), (2, 3, 0, "", (IP4_ADD2, 0))]
-        ip6_mock = [
-            (10, 1, 6, "", (IP6_ADD1, 0, 0, 0)),
-            (10, 3, 0, "", (IP6_ADD2, 0, 0, 0)),
-        ]
-        if ip6_empty:
-            getaddrinfo_side_effect = [ip4_mock, ip4_mock, ip6_mock]
-        elif ip4_empty:
-            getaddrinfo_side_effect = [ip4_mock, ip6_mock, ip6_mock]
-        else:
-            getaddrinfo_side_effect = [ip4_mock, ip6_mock]
-
         with patch.object(
             salt.utils.network, "ip_addrs", MagicMock(return_value=net_ip4_mock)
         ), patch.object(
             salt.utils.network, "ip_addrs6", MagicMock(return_value=net_ip6_mock),
         ), patch.object(
-            core.socket,
-            "getaddrinfo",
-            side_effect=getaddrinfo_side_effect,
-            autospec=True,
+            core.socket, "getaddrinfo", side_effect=_getaddrinfo,
         ):
             get_fqdn = core.ip_fqdn()
             ret_keys = ["fqdn_ip4", "fqdn_ip6", "ipv4", "ipv6"]
             for key in ret_keys:
                 value = get_fqdn[key]
                 _check_type(key, value, ip4_empty, ip6_empty)
+                if key.startswith("fqdn_ip"):
+                    if key.endswith("4"):
+                        self._check_ip_fqdn_set(
+                            value, ip4_empty, _set=[IP4_ADD1, IP4_ADD2]
+                        )
+                    if key.endswith("6"):
+                        self._check_ip_fqdn_set(
+                            value, ip6_empty, _set=[IP6_ADD1, IP6_ADD2]
+                        )
 
     @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
     @patch.object(salt.utils.platform, "is_windows", MagicMock(return_value=False))
