@@ -129,6 +129,7 @@ import salt.utils.stringutils
 import salt.utils.vmware
 import salt.utils.xmlutil
 import salt.utils.master
+from salt._compat import ipaddress
 from salt.exceptions import SaltCloudSystemExit
 
 try:
