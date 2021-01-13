@@ -20,4 +20,4 @@ jobs:
         python3 setup.py --ssh-packaging sdist
     - name: Twine check
       run: |
-        twine check dist/*
+        python3 -m twine check dist/*
