@@ -13,8 +13,8 @@ cherrypy==17.4.1
 contextlib2==0.6.0.post1  # via cherrypy
 cryptography==3.2
 distro==1.5.0
-gitdb2==2.0.6             # via gitpython
-gitpython==2.1.15
+gitdb==4.0.5              # via gitpython
+gitpython==3.1.12
 idna==2.8
 ipaddress==1.0.22
 jaraco.functools==2.0     # via cheroot, tempora
@@ -38,8 +38,7 @@ pyzmq==19.0.2 ; python_version >= "3.9"
 requests==2.21.0
 setproctitle==1.1.10
 six==1.15.0               # via cheroot, cherrypy, cryptography, pyopenssl, python-dateutil, tempora
-smmap2==3.0.1             # via gitdb2
-smmap==3.0.2              # via smmap2
+smmap==3.0.2              # via gitdb
 tempora==1.14.1           # via portend
 timelib==0.2.5
 urllib3==1.24.3           # via requests
