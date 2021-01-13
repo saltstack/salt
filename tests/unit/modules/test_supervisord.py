@@ -1,16 +1,10 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
 import salt.modules.supervisord as supervisord
 from salt.exceptions import CommandExecutionError
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -25,11 +19,11 @@ class SupervisordTestCase(TestCase, LoaderModuleMockMixin):
         return {supervisord: {}}
 
     @staticmethod
-    def _m_all(stdout=True):
+    def _m_all(stdout=True, retcode=0):
         """
         Return value for cmd.run_all.
         """
-        return MagicMock(return_value={"retcode": 0, "stdout": stdout})
+        return MagicMock(return_value={"retcode": retcode, "stdout": stdout})
 
     @staticmethod
     def _m_bin():
@@ -139,7 +133,7 @@ class SupervisordTestCase(TestCase, LoaderModuleMockMixin):
                 supervisord.status(), {"salt": {"state": "running", "reason": ""}}
             )
 
-    # 'status_raw' function tests: 1
+    # 'status_raw' function tests: 2
 
     def test_status_raw(self):
         """
@@ -147,9 +141,20 @@ class SupervisordTestCase(TestCase, LoaderModuleMockMixin):
         """
         with patch.dict(
             supervisord.__salt__,
-            {"cmd.run_all": self._m_all(), "cmd.which_bin": self._m_bin()},
+            {"cmd.run_all": self._m_all("foo"), "cmd.which_bin": self._m_bin()},
         ):
-            self.assertTrue(supervisord.status_raw())
+            self.assertEqual(supervisord.status_raw(), "foo")
+
+    def test_status_raw_error(self):
+        """
+        Tests if raw output of status is correctly displayed
+        in case return code of command is non-zero
+        """
+        with patch.dict(
+            supervisord.__salt__,
+            {"cmd.run_all": self._m_all("foo", 2), "cmd.which_bin": self._m_bin()},
+        ):
+            self.assertEqual(supervisord.status_raw(), "foo")
 
     # 'custom' function tests: 1
 
@@ -171,7 +176,7 @@ class SupervisordTestCase(TestCase, LoaderModuleMockMixin):
         for a given process
         """
 
-        class MockConfig(object):
+        class MockConfig:
             """
             Mock Config class
             """

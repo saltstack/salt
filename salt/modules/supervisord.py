@@ -1,20 +1,13 @@
-# -*- coding: utf-8 -*-
 """
 Provide the service module for system supervisord or supervisord in a
 virtualenv
 """
 
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import os
 
-# Import salt libs
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
-
-# Import 3rd-party libs
 from salt.ext.six import string_types
 from salt.ext.six.moves import configparser  # pylint: disable=import-error
 
@@ -35,7 +28,7 @@ def _get_supervisorctl_bin(bin_env):
     if not bin_env:
         which_result = __salt__["cmd.which_bin"]([cmd])
         if which_result is None:
-            raise CommandNotFoundError("Could not find a `{0}` binary".format(cmd))
+            raise CommandNotFoundError("Could not find a `{}` binary".format(cmd))
         return which_result
 
     # try to get binary from env
@@ -43,7 +36,7 @@ def _get_supervisorctl_bin(bin_env):
         cmd_bin = os.path.join(bin_env, "bin", cmd)
         if os.path.isfile(cmd_bin):
             return cmd_bin
-        raise CommandNotFoundError("Could not find a `{0}` binary".format(cmd))
+        raise CommandNotFoundError("Could not find a `{}` binary".format(cmd))
 
     return bin_env
 
@@ -317,7 +310,13 @@ def status_raw(name=None, user=None, conf_file=None, bin_env=None):
     ret = __salt__["cmd.run_all"](
         _ctl_cmd("status", name, conf_file, bin_env), runas=user, python_shell=False,
     )
-    return _get_return(ret)
+    retmsg = _get_return(ret)
+    # Supervisor>=4.0 sets non zero return code if all processes are not
+    # in RUNNING state. In this case, _get_return appends and "ERROR: " to
+    # the return, which we need to filter out
+    if retmsg.startswith("ERROR: "):
+        retmsg = retmsg[7:]
+    return retmsg
 
 
 def custom(command, user=None, conf_file=None, bin_env=None):
@@ -361,10 +360,8 @@ def _read_config(conf_file=None):
     config = configparser.ConfigParser()
     try:
         config.read(conf_file)
-    except (IOError, OSError) as exc:
-        raise CommandExecutionError(
-            "Unable to read from {0}: {1}".format(conf_file, exc)
-        )
+    except OSError as exc:
+        raise CommandExecutionError("Unable to read from {}: {}".format(conf_file, exc))
     return config
 
 
@@ -386,9 +383,9 @@ def options(name, conf_file=None):
         salt '*' supervisord.options foo
     """
     config = _read_config(conf_file)
-    section_name = "program:{0}".format(name)
+    section_name = "program:{}".format(name)
     if section_name not in config.sections():
-        raise CommandExecutionError("Process '{0}' not found".format(name))
+        raise CommandExecutionError("Process '{}' not found".format(name))
     ret = {}
     for key, val in config.items(section_name):
         val = salt.utils.stringutils.to_num(val.split(";")[0].strip())
