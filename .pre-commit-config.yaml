@@ -277,7 +277,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-linux-py3.5-zmq-requirements
         name: Linux CI Py3.5 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/linux\.in|pkg/py3\.5/linux\.txt))$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(linux|common)\.in|pkg/py3\.5/linux\.txt))$
         pass_filenames: false
         args:
           - -v
@@ -285,12 +285,13 @@ repos:
           - --platform=linux
           - --include=requirements/static/pkg/py{py_version}/linux.txt
           - --include=requirements/pytest.txt
+          - --include=requirements/static/ci/common.in
           - requirements/static/ci/linux.in
 
       - id: pip-tools-compile
         alias: compile-ci-linux-py3.6-zmq-requirements
         name: Linux CI Py3.6 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/linux\.in|pkg/py3\.6/linux\.txt))$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(linux|common)\.in|pkg/py3\.6/linux\.txt))$
         pass_filenames: false
         args:
           - -v
@@ -298,12 +299,13 @@ repos:
           - --platform=linux
           - --include=requirements/static/pkg/py{py_version}/linux.txt
           - --include=requirements/pytest.txt
+          - --include=requirements/static/ci/common.in
           - requirements/static/ci/linux.in
 
       - id: pip-tools-compile
         alias: compile-ci-linux-py3.7-zmq-requirements
         name: Linux CI Py3.7 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/linux\.in|pkg/py3\.7/linux\.txt))$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(linux|common)\.in|pkg/py3\.7/linux\.txt))$
         pass_filenames: false
         args:
           - -v
@@ -311,12 +313,13 @@ repos:
           - --platform=linux
           - --include=requirements/static/pkg/py{py_version}/linux.txt
           - --include=requirements/pytest.txt
+          - --include=requirements/static/ci/common.in
           - requirements/static/ci/linux.in
 
       - id: pip-tools-compile
         alias: compile-ci-linux-py3.8-zmq-requirements
         name: Linux CI Py3.8 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/linux\.in|pkg/py3\.8/linux\.txt))$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(linux|common)\.in|pkg/py3\.8/linux\.txt))$
         pass_filenames: false
         args:
           - -v
@@ -324,12 +327,13 @@ repos:
           - --platform=linux
           - --include=requirements/static/pkg/py{py_version}/linux.txt
           - --include=requirements/pytest.txt
+          - --include=requirements/static/ci/common.in
           - requirements/static/ci/linux.in
 
       - id: pip-tools-compile
         alias: compile-ci-linux-py3.9-zmq-requirements
         name: Linux CI Py3.9 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/linux\.in|pkg/py3\.9/linux\.txt))$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(linux|common)\.in|pkg/py3\.9/linux\.txt))$
         pass_filenames: false
         args:
           - -v
@@ -337,6 +341,7 @@ repos:
           - --platform=linux
           - --include=requirements/static/pkg/py{py_version}/linux.txt
           - --include=requirements/pytest.txt
+          - --include=requirements/static/ci/common.in
           - requirements/static/ci/linux.in
 
       - id: pip-tools-compile
@@ -403,7 +408,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-freebsd-py3.5-zmq-requirements
         name: FreeBSD CI Py3.5 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/freebsd\.in|pkg/py3\.5/freebsd\.txt))$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(freebsd|common)\.in|pkg/py3\.5/freebsd\.txt))$
         pass_filenames: false
         args:
           - -v
@@ -411,12 +416,13 @@ repos:
           - --platform=linux
           - --include=requirements/static/pkg/py{py_version}/freebsd.txt
           - --include=requirements/pytest.txt
+          - --include=requirements/static/ci/common.in
           - requirements/static/ci/freebsd.in
 
       - id: pip-tools-compile
         alias: compile-ci-freebsd-py3.6-zmq-requirements
         name: FreeBSD CI Py3.6 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/freebsd\.in|pkg/py3\.6/freebsd\.txt))$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(freebsd|common)\.in|pkg/py3\.6/freebsd\.txt))$
         pass_filenames: false
         args:
           - -v
@@ -424,12 +430,13 @@ repos:
           - --platform=linux
           - --include=requirements/static/pkg/py{py_version}/freebsd.txt
           - --include=requirements/pytest.txt
+          - --include=requirements/static/ci/common.in
           - requirements/static/ci/freebsd.in
 
       - id: pip-tools-compile
         alias: compile-ci-freebsd-py3.7-zmq-requirements
         name: FreeBSD CI Py3.7 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/freebsd\.in|pkg/py3\.7/freebsd\.txt))$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(freebsd|common)\.in|pkg/py3\.7/freebsd\.txt))$
         pass_filenames: false
         args:
           - -v
@@ -437,12 +444,13 @@ repos:
           - --platform=linux
           - --include=requirements/static/pkg/py{py_version}/freebsd.txt
           - --include=requirements/pytest.txt
+          - --include=requirements/static/ci/common.in
           - requirements/static/ci/freebsd.in
 
       - id: pip-tools-compile
         alias: compile-ci-freebsd-py3.8-zmq-requirements
         name: FreeBSD CI Py3.8 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/freebsd\.in|pkg/py3\.8/freebsd\.txt))$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(freebsd|common)\.in|pkg/py3\.8/freebsd\.txt))$
         pass_filenames: false
         args:
           - -v
@@ -450,12 +458,13 @@ repos:
           - --platform=linux
           - --include=requirements/static/pkg/py{py_version}/freebsd.txt
           - --include=requirements/pytest.txt
+          - --include=requirements/static/ci/common.in
           - requirements/static/ci/freebsd.in
 
       - id: pip-tools-compile
         alias: compile-ci-freebsd-py3.9-zmq-requirements
         name: FreeBSD CI Py3.9 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/freebsd\.in|pkg/py3\.9/freebsd\.txt))$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(freebsd|common)\.in|pkg/py3\.9/freebsd\.txt))$
         pass_filenames: false
         args:
           - -v
@@ -463,6 +472,7 @@ repos:
           - --platform=linux
           - --include=requirements/static/pkg/py{py_version}/freebsd.txt
           - --include=requirements/pytest.txt
+          - --include=requirements/static/ci/common.in
           - requirements/static/ci/freebsd.in
 
       - id: pip-tools-compile
@@ -529,7 +539,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-darwin-py3.5-zmq-requirements
         name: Darwin CI Py3.5 ZeroMQ Requirements
-        files: ^(pkg/osx/(req|req_pyobjc)\.txt|requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/darwin\.in|pkg/py3\.5/darwin\.txt)))$
+        files: ^(pkg/osx/(req|req_pyobjc)\.txt|requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(darwin|common)\.in|pkg/py3\.5/darwin\.txt)))$
         pass_filenames: false
         args:
           - -v
@@ -537,13 +547,14 @@ repos:
           - --platform=darwin
           - --include=requirements/static/pkg/py{py_version}/darwin.txt
           - --include=requirements/pytest.txt
+          - --include=requirements/static/ci/common.in
           - --passthrough-line-from-input=^pyobjc(.*)$
           - requirements/static/ci/darwin.in
 
       - id: pip-tools-compile
         alias: compile-ci-darwin-py3.6-zmq-requirements
         name: Darwin CI Py3.6 ZeroMQ Requirements
-        files: ^(pkg/osx/(req|req_pyobjc)\.txt|requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/darwin\.in|pkg/py3\.6/darwin\.txt)))$
+        files: ^(pkg/osx/(req|req_pyobjc)\.txt|requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(darwin|common)\.in|pkg/py3\.6/darwin\.txt)))$
         pass_filenames: false
         args:
           - -v
@@ -551,13 +562,14 @@ repos:
           - --platform=darwin
           - --include=requirements/static/pkg/py{py_version}/darwin.txt
           - --include=requirements/pytest.txt
+          - --include=requirements/static/ci/common.in
           - --passthrough-line-from-input=^pyobjc(.*)$
           - requirements/static/ci/darwin.in
 
       - id: pip-tools-compile
         alias: compile-ci-darwin-py3.7-zmq-requirements
         name: Darwin CI Py3.7 ZeroMQ Requirements
-        files: ^(pkg/osx/(req|req_pyobjc)\.txt|requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/darwin\.in|pkg/py3\.7/darwin\.txt)))$
+        files: ^(pkg/osx/(req|req_pyobjc)\.txt|requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(darwin|common)\.in|pkg/py3\.7/darwin\.txt)))$
         pass_filenames: false
         args:
           - -v
@@ -565,13 +577,14 @@ repos:
           - --platform=darwin
           - --include=requirements/static/pkg/py{py_version}/darwin.txt
           - --include=requirements/pytest.txt
+          - --include=requirements/static/ci/common.in
           - --passthrough-line-from-input=^pyobjc(.*)$
           - requirements/static/ci/darwin.in
 
       - id: pip-tools-compile
         alias: compile-ci-darwin-py3.8-zmq-requirements
         name: Darwin CI Py3.8 ZeroMQ Requirements
-        files: ^(pkg/osx/(req|req_pyobjc)\.txt|requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/darwin\.in|pkg/py3\.8/darwin\.txt)))$
+        files: ^(pkg/osx/(req|req_pyobjc)\.txt|requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(darwin|common)\.in|pkg/py3\.8/darwin\.txt)))$
         pass_filenames: false
         args:
           - -v
@@ -579,13 +592,14 @@ repos:
           - --platform=darwin
           - --include=requirements/static/pkg/py{py_version}/darwin.txt
           - --include=requirements/pytest.txt
+          - --include=requirements/static/ci/common.in
           - --passthrough-line-from-input=^pyobjc(.*)$
           - requirements/static/ci/darwin.in
 
       - id: pip-tools-compile
         alias: compile-ci-darwin-py3.9-zmq-requirements
         name: Darwin CI Py3.9 ZeroMQ Requirements
-        files: ^(pkg/osx/(req|req_pyobjc)\.txt|requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/darwin\.in|pkg/py3\.9/darwin\.txt)))$
+        files: ^(pkg/osx/(req|req_pyobjc)\.txt|requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(darwin|common)\.in|pkg/py3\.9/darwin\.txt)))$
         pass_filenames: false
         args:
           - -v
@@ -593,6 +607,7 @@ repos:
           - --platform=darwin
           - --include=requirements/static/pkg/py{py_version}/darwin.txt
           - --include=requirements/pytest.txt
+          - --include=requirements/static/ci/common.in
           - --passthrough-line-from-input=^pyobjc(.*)$
           - requirements/static/ci/darwin.in
 
@@ -660,7 +675,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-windows-py3.5-zmq-requirements
         name: Windows CI Py3.5 ZeroMQ Requirements
-        files: requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/windows\.in|pkg/py3\.5/windows\.txt))$
+        files: requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(windows|common)\.in|pkg/py3\.5/windows\.txt))$
         pass_filenames: false
         args:
           - -v
@@ -668,12 +683,13 @@ repos:
           - --platform=windows
           - --include=requirements/static/pkg/py{py_version}/windows.txt
           - --include=requirements/pytest.txt
+          - --include=requirements/static/ci/common.in
           - requirements/static/ci/windows.in
 
       - id: pip-tools-compile
         alias: compile-ci-windows-py3.6-zmq-requirements
         name: Windows CI Py3.6 ZeroMQ Requirements
-        files: requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/windows\.in|pkg/py3\.6/windows\.txt))$
+        files: requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(windows|common)\.in|pkg/py3\.6/windows\.txt))$
         pass_filenames: false
         args:
           - -v
@@ -681,12 +697,13 @@ repos:
           - --platform=windows
           - --include=requirements/static/pkg/py{py_version}/windows.txt
           - --include=requirements/pytest.txt
+          - --include=requirements/static/ci/common.in
           - requirements/static/ci/windows.in
 
       - id: pip-tools-compile
         alias: compile-ci-windows-py3.7-zmq-requirements
         name: Windows CI Py3.7 ZeroMQ Requirements
-        files: requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/windows\.in|pkg/py3\.7/windows\.txt))$
+        files: requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(windows|common)\.in|pkg/py3\.7/windows\.txt))$
         pass_filenames: false
         args:
           - -v
@@ -694,13 +711,14 @@ repos:
           - --platform=windows
           - --include=requirements/static/pkg/py{py_version}/windows.txt
           - --include=requirements/pytest.txt
+          - --include=requirements/static/ci/common.in
           - requirements/static/ci/windows.in
 
 # Commented out since pywin32 and pymssql do not have packages or support for Py >= 3.8
 #      - id: pip-tools-compile
 #        alias: compile-ci-windows-py3.8-zmq-requirements
 #        name: Windows CI Py3.8 ZeroMQ Requirements
-#        files: requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/windows\.in|pkg/py3\.8/windows\.txt))$
+#        files: requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(windows|common)\.in|pkg/py3\.8/windows\.txt))$
 #        pass_filenames: false
 #        args:
 #          - -v
@@ -708,13 +726,14 @@ repos:
 #          - --platform=windows
 #          - --include=requirements/static/pkg/py{py_version}/windows.txt
 #          - --include=requirements/pytest.txt
+#          - --include=requirements/static/ci/common.in
 #          - requirements/static/ci/windows.in
 
 # Commented out since pywin32 and pymssql do not have packages or support for Py >= 3.8
 #      - id: pip-tools-compile
 #        alias: compile-ci-windows-py3.9-zmq-requirements
 #        name: Windows CI Py3.9 ZeroMQ Requirements
-#        files: requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/windows\.in|pkg/py3\.9/windows\.txt))$
+#        files: requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(windows|common)\.in|pkg/py3\.9/windows\.txt))$
 #        pass_filenames: false
 #        args:
 #          - -v
@@ -722,6 +741,7 @@ repos:
 #          - --platform=windows
 #          - --include=requirements/static/pkg/py{py_version}/windows.txt
 #          - --include=requirements/pytest.txt
+#          - --include=requirements/static/ci/common.in
 #          - requirements/static/ci/windows.in
 
       - id: pip-tools-compile
@@ -1090,7 +1110,7 @@ repos:
           )$
 
   - repo: https://github.com/saltstack/pre-commit-remove-import-headers
-    rev: 1.0.0
+    rev: 1.1.0
     hooks:
       - id: remove-import-headers
 
