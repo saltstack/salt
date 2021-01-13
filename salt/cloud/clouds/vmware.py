@@ -419,6 +419,20 @@ def _edit_existing_network_adapter(
             vim.vm.device.VirtualEthernetCard.DistributedVirtualPortBackingInfo()
         )
         edited_network_adapter.backing.port = dvs_port_connection
+    elif switch_type == "opaque":
+        network_ref = salt.utils.vmware.get_mor_by_property(
+            _get_si(),
+            vim.OpaqueNetwork,
+            new_network_name,
+            container_ref=container_ref,
+        )
+        edited_network_adapter.backing = (
+            vim.vm.device.VirtualEthernetCard.OpaqueNetworkBackingInfo()
+        )
+        network_id = network_ref.summary.opaqueNetworkId
+        network_type = network_ref.summary.opaqueNetworkType
+        edited_network_adapter.backing.opaqueNetworkType = network_type
+        edited_network_adapter.backing.opaqueNetworkId = network_id
     else:
         # If switch type not specified or does not match, show error and return
         if not switch_type:
@@ -506,6 +520,21 @@ def _add_new_network_adapter_helper(
             vim.vm.device.VirtualEthernetCard.DistributedVirtualPortBackingInfo()
         )
         network_spec.device.backing.port = dvs_port_connection
+    elif switch_type == "opaque":
+        network_ref = salt.utils.vmware.get_mor_by_property(
+            _get_si(),
+            vim.OpaqueNetwork,
+            network_name,
+            container_ref=container_ref,
+        )
+        network_spec.device.backing = (
+            vim.vm.device.VirtualEthernetCard.OpaqueNetworkBackingInfo()
+        )
+        network_id = network_ref.summary.opaqueNetworkId
+        network_type = network_ref.summary.opaqueNetworkType
+        network_spec.device.backing.opaqueNetworkType = network_type
+        network_spec.device.backing.opaqueNetworkId = network_id
+
     else:
         # If switch type not specified or does not match, show error and return
         if not switch_type:
