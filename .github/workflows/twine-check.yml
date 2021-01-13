@@ -7,24 +7,17 @@ jobs:
     name: Run 'twine check' Against Salt
 
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: [3.8]
 
     steps:
     - uses: actions/checkout@v2
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
-      with:
-        python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip setuptools wheel
-        pip install twine
+        python3 -m pip install --upgrade pip setuptools wheel
+        python3 -m pip install twine
     - name: Python setup
       run: |
-        python setup.py sdist
-        python setup.py --ssh-packaging sdist
+        python3 setup.py sdist
+        python3 setup.py --ssh-packaging sdist
     - name: Twine check
       run: |
         twine check dist/*
