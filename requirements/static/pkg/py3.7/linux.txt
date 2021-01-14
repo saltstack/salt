@@ -9,7 +9,7 @@ certifi==2020.6.20        # via requests
 cffi==1.14.3              # via cryptography
 chardet==3.0.4            # via requests
 cheroot==6.5.4            # via cherrypy
-cherrypy==17.3.0
+cherrypy==17.4.1
 contextlib2==0.5.5        # via cherrypy
 cryptography==3.2         # via pyopenssl
 distro==1.5.0
@@ -20,7 +20,7 @@ markupsafe==1.1.1
 more-itertools==5.0.0     # via cheroot, cherrypy, jaraco.functools
 msgpack==1.0.0
 portend==2.4              # via cherrypy
-psutil==5.6.7
+psutil==5.8.0
 pycparser==2.17           # via cffi
 pycryptodomex==3.9.8
 pyopenssl==19.1.0

@@ -43,8 +43,8 @@ class MappedResultMock(MagicMock):
 
         super().__init__(side_effect=mapped_results)
 
-    def add(self, name):
-        self._instances[name] = MagicMock()
+    def add(self, name, value=None):
+        self._instances[name] = value or MagicMock()
 
 
 def loader_modules_config():
@@ -65,7 +65,7 @@ def loader_modules_config():
 
 @pytest.fixture
 def make_mock_vm():
-    def _make_mock_vm(xml_def):
+    def _make_mock_vm(xml_def, running=False, inactive_def=None):
         mocked_conn = virt.libvirt.openAuth.return_value
 
         doc = ET.fromstring(xml_def)
@@ -78,17 +78,21 @@ def make_mock_vm():
         mocked_conn.listDefinedDomains.return_value = [name]
 
         # Configure the mocked domain
-        domain_mock = virt.libvirt.virDomain()
         if not isinstance(mocked_conn.lookupByName, MappedResultMock):
             mocked_conn.lookupByName = MappedResultMock()
         mocked_conn.lookupByName.add(name)
         domain_mock = mocked_conn.lookupByName(name)
-        domain_mock.XMLDesc.return_value = xml_def
+
+        domain_mock.XMLDesc = MappedResultMock()
+        domain_mock.XMLDesc.add(0, xml_def)
+        domain_mock.XMLDesc.add(
+            virt.libvirt.VIR_DOMAIN_XML_INACTIVE, inactive_def or xml_def
+        )
         domain_mock.OSType.return_value = os_type
 
         # Return state as shutdown
         domain_mock.info.return_value = [
-            4,
+            0 if running else 4,
             2048 * 1024,
             1024 * 1024,
             2,
@@ -99,6 +103,8 @@ def make_mock_vm():
 
         domain_mock.attachDevice.return_value = 0
         domain_mock.detachDevice.return_value = 0
+
+        domain_mock.connect.return_value = mocked_conn
 
         return domain_mock
 
@@ -312,3 +318,66 @@ def make_capabilities():
 </capabilities>"""
 
     return _make_capabilities
+
+
+@pytest.fixture
+def make_mock_network():
+    def _make_mock_net(xml_def):
+        mocked_conn = virt.libvirt.openAuth.return_value
+
+        doc = ET.fromstring(xml_def)
+        name = doc.find("name").text
+
+        if not isinstance(mocked_conn.networkLookupByName, MappedResultMock):
+            mocked_conn.networkLookupByName = MappedResultMock()
+        mocked_conn.networkLookupByName.add(name)
+        net_mock = mocked_conn.networkLookupByName(name)
+        net_mock.XMLDesc.return_value = xml_def
+
+        # libvirt defaults the autostart to unset
+        net_mock.autostart.return_value = 0
+
+        # Append the network to listAllNetworks return value
+        all_nets = mocked_conn.listAllNetworks.return_value
+        if not isinstance(all_nets, list):
+            all_nets = []
+        all_nets.append(net_mock)
+        mocked_conn.listAllNetworks.return_value = all_nets
+
+        return net_mock
+
+    return _make_mock_net
+
+
+@pytest.fixture
+def make_mock_device():
+    """
+    Create a mock host device
+    """
+
+    def _make_mock_device(xml_def):
+        mocked_conn = virt.libvirt.openAuth.return_value
+        if not isinstance(mocked_conn.nodeDeviceLookupByName, MappedResultMock):
+            mocked_conn.nodeDeviceLookupByName = MappedResultMock()
+
+        doc = ET.fromstring(xml_def)
+        name = doc.find("./name").text
+
+        mocked_conn.nodeDeviceLookupByName.add(name)
+        mocked_device = mocked_conn.nodeDeviceLookupByName(name)
+        mocked_device.name.return_value = name
+        mocked_device.XMLDesc.return_value = xml_def
+        mocked_device.listCaps.return_value = [
+            cap.get("type") for cap in doc.findall("./capability")
+        ]
+        return mocked_device
+
+    return _make_mock_device
+
+
+@pytest.fixture(params=[True, False], ids=["test", "notest"])
+def test(request):
+    """
+    Run the test with both True and False test values
+    """
+    return request.param
