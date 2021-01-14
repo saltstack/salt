@@ -6,6 +6,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
+import re
 import sys
 import xml.etree.ElementTree as ET
 
@@ -35,8 +36,9 @@ def _get_version():
     cmd = "gluster --version"
     result = __salt__["cmd.run"](cmd).splitlines()
     for line in result:
-        if line.startswith("glusterfs"):
-            version = line.split()[-1].split(".")
+        m = re.match(r"glusterfs ((?:\d+\.)+\d+)", line)
+        if m:
+            version = m.group(1).split(".")
             version = [int(i) for i in version]
     return tuple(version)
 
