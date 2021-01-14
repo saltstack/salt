@@ -598,7 +598,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 "swap_hard_limit": "1g",
                 "min_guarantee": "256m",
                 "hugepages": [
-                    {"nodeset": "", "size": "128m"},
+                    {"size": "128m"},
                     {"nodeset": "0", "size": "256m"},
                     {"nodeset": "1", "size": "512m"},
                 ],
@@ -1881,70 +1881,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             ],
         )
 
-    def test_diff_nics(self):
-        """
-        Test virt._diff_nics()
-        """
-        old_nics = ET.fromstring(
-            """
-            <devices>
-               <interface type='network'>
-                 <mac address='52:54:00:39:02:b1'/>
-                 <source network='default'/>
-                 <model type='virtio'/>
-                 <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x0'/>
-               </interface>
-               <interface type='network'>
-                 <mac address='52:54:00:39:02:b2'/>
-                 <source network='admin'/>
-                 <model type='virtio'/>
-                 <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x0'/>
-               </interface>
-               <interface type='network'>
-                 <mac address='52:54:00:39:02:b3'/>
-                 <source network='admin'/>
-                 <model type='virtio'/>
-                 <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x0'/>
-               </interface>
-            </devices>
-        """
-        ).findall("interface")
-
-        new_nics = ET.fromstring(
-            """
-            <devices>
-               <interface type='network'>
-                 <mac address='52:54:00:39:02:b1'/>
-                 <source network='default'/>
-                 <model type='virtio'/>
-               </interface>
-               <interface type='network'>
-                 <mac address='52:54:00:39:02:b2'/>
-                 <source network='default'/>
-                 <model type='virtio'/>
-               </interface>
-               <interface type='network'>
-                 <mac address='52:54:00:39:02:b4'/>
-                 <source network='admin'/>
-                 <model type='virtio'/>
-               </interface>
-            </devices>
-        """
-        ).findall("interface")
-        ret = virt._diff_interface_lists(old_nics, new_nics)
-        self.assertEqual(
-            [nic.find("mac").get("address") for nic in ret["unchanged"]],
-            ["52:54:00:39:02:b1"],
-        )
-        self.assertEqual(
-            [nic.find("mac").get("address") for nic in ret["new"]],
-            ["52:54:00:39:02:b2", "52:54:00:39:02:b4"],
-        )
-        self.assertEqual(
-            [nic.find("mac").get("address") for nic in ret["deleted"]],
-            ["52:54:00:39:02:b2", "52:54:00:39:02:b3"],
-        )
-
     def test_init(self):
         """
         Test init() function
@@ -3160,7 +3096,12 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                             "source_file": None,
                             "model": "ide",
                         },
-                        {"name": "added", "size": 2048, "iothreads": True},
+                        {
+                            "name": "added",
+                            "size": 2048,
+                            "io": "threads",
+                            "iothread_id": 2,
+                        },
                     ],
                 )
                 added_disk_path = os.path.join(
@@ -3195,6 +3136,9 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 setxml = ET.fromstring(define_mock.call_args[0][0])
                 self.assertEqual(
                     "threads", setxml.find("devices/disk[3]/driver").get("io")
+                )
+                self.assertEqual(
+                    "2", setxml.find("devices/disk[3]/driver").get("iothread")
                 )
 
         # Update nics case
@@ -3245,7 +3189,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         devattach_mock.reset_mock()
         devdetach_mock.reset_mock()
         ret = virt.update("my_vm", nic_profile=None, interfaces=[])
-        self.assertEqual([], ret["interface"]["attached"])
+        self.assertFalse(ret["interface"].get("attached"))
         self.assertEqual(2, len(ret["interface"]["detached"]))
         devattach_mock.assert_not_called()
         devdetach_mock.assert_called()
@@ -3254,7 +3198,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         devattach_mock.reset_mock()
         devdetach_mock.reset_mock()
         ret = virt.update("my_vm", disk_profile=None, disks=[])
-        self.assertEqual([], ret["disk"]["attached"])
+        self.assertFalse(ret["disk"].get("attached"))
         self.assertEqual(3, len(ret["disk"]["detached"]))
         devattach_mock.assert_not_called()
         devdetach_mock.assert_called()
@@ -3540,8 +3484,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         )
 
         self.assertTrue(ret["definition"])
-        self.assertFalse(ret["disk"]["attached"])
-        self.assertFalse(ret["disk"]["detached"])
+        self.assertFalse(ret["disk"].get("attached"))
+        self.assertFalse(ret["disk"].get("detached"))
         self.assertEqual(
             [
                 {
@@ -6142,59 +6086,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             ],
         }
         self.assertEqual(expected, caps)
-
-    def test_network(self):
-        """
-        Test virt._get_net_xml()
-        """
-        xml_data = virt._gen_net_xml("network", "main", "bridge", "openvswitch")
-        root = ET.fromstring(xml_data)
-        self.assertEqual(root.find("name").text, "network")
-        self.assertEqual(root.find("bridge").attrib["name"], "main")
-        self.assertEqual(root.find("forward").attrib["mode"], "bridge")
-        self.assertEqual(root.find("virtualport").attrib["type"], "openvswitch")
-
-    def test_network_nat(self):
-        """
-        Test virt._get_net_xml() in a nat setup
-        """
-        xml_data = virt._gen_net_xml(
-            "network",
-            "main",
-            "nat",
-            None,
-            ip_configs=[
-                {
-                    "cidr": "192.168.2.0/24",
-                    "dhcp_ranges": [
-                        {"start": "192.168.2.10", "end": "192.168.2.25"},
-                        {"start": "192.168.2.110", "end": "192.168.2.125"},
-                    ],
-                }
-            ],
-        )
-        root = ET.fromstring(xml_data)
-        self.assertEqual(root.find("name").text, "network")
-        self.assertEqual(root.find("bridge").attrib["name"], "main")
-        self.assertEqual(root.find("forward").attrib["mode"], "nat")
-        self.assertEqual(
-            root.find("./ip[@address='192.168.2.0']").attrib["prefix"], "24"
-        )
-        self.assertEqual(
-            root.find("./ip[@address='192.168.2.0']").attrib["family"], "ipv4"
-        )
-        self.assertEqual(
-            root.find(
-                "./ip[@address='192.168.2.0']/dhcp/range[@start='192.168.2.10']"
-            ).attrib["end"],
-            "192.168.2.25",
-        )
-        self.assertEqual(
-            root.find(
-                "./ip[@address='192.168.2.0']/dhcp/range[@start='192.168.2.110']"
-            ).attrib["end"],
-            "192.168.2.125",
-        )
 
     def test_domain_capabilities(self):
         """

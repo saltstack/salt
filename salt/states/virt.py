@@ -158,7 +158,8 @@ def _virt_call(
     :param state: the expected final state of the VM. If None the VM state won't be checked.
     :return: the salt state return
     """
-    ret = {"name": domain, "changes": {}, "result": True, "comment": ""}
+    result = True if not __opts__["test"] else None
+    ret = {"name": domain, "changes": {}, "result": result, "comment": ""}
     targeted_domains = fnmatch.filter(__salt__["virt.list_domains"](), domain)
     changed_domains = list()
     ignored_domains = list()
@@ -171,15 +172,17 @@ def _virt_call(
                 domain_state = __salt__["virt.vm_state"](targeted_domain)
                 action_needed = domain_state.get(targeted_domain) != state
             if action_needed:
-                response = __salt__["virt.{}".format(function)](
-                    targeted_domain,
-                    connection=connection,
-                    username=username,
-                    password=password,
-                    **kwargs
-                )
-                if isinstance(response, dict):
-                    response = response["name"]
+                response = True
+                if not __opts__["test"]:
+                    response = __salt__["virt.{}".format(function)](
+                        targeted_domain,
+                        connection=connection,
+                        username=username,
+                        password=password,
+                        **kwargs
+                    )
+                    if isinstance(response, dict):
+                        response = response["name"]
                 changed_domains.append({"domain": targeted_domain, function: response})
             else:
                 noaction_domains.append(targeted_domain)
@@ -285,7 +288,6 @@ def defined(
     arch=None,
     boot=None,
     numatune=None,
-    update=True,
     boot_dev=None,
     hypervisor_features=None,
     clock=None,
@@ -293,6 +295,7 @@ def defined(
     consoles=None,
     stop_on_reboot=False,
     live=True,
+    host_devices=None,
 ):
     """
     Starts an existing guest, or defines and starts a new VM with specified arguments.
@@ -495,10 +498,6 @@ def defined(
 
         .. versionadded:: 3000
 
-    :param update: set to ``False`` to prevent updating a defined domain. (Default: ``True``)
-
-        .. deprecated:: 3001
-
     :param boot_dev:
         Space separated list of devices to boot from sorted by decreasing priority.
         Values can be ``hd``, ``fd``, ``cdrom`` or ``network``.
@@ -592,6 +591,13 @@ def defined(
 
         .. versionadded:: Aluminium
 
+    :param host_devices:
+        List of host devices to passthrough to the guest.
+        The value is a list of device names as provided by the :py:func:`~salt.modules.virt.node_devices` function.
+        (Default: ``None``)
+
+        .. versionadded:: Aluminium
+
     .. rubric:: Example States
 
     Make sure a virtual machine called ``domain_name`` is defined:
@@ -638,31 +644,30 @@ def defined(
         if name in __salt__["virt.list_domains"](
             connection=connection, username=username, password=password
         ):
-            status = {}
-            if update:
-                status = __salt__["virt.update"](
-                    name,
-                    cpu=cpu,
-                    mem=mem,
-                    disk_profile=disk_profile,
-                    disks=disks,
-                    nic_profile=nic_profile,
-                    interfaces=interfaces,
-                    graphics=graphics,
-                    live=live,
-                    connection=connection,
-                    username=username,
-                    password=password,
-                    boot=boot,
-                    numatune=numatune,
-                    serials=serials,
-                    consoles=consoles,
-                    test=__opts__["test"],
-                    boot_dev=boot_dev,
-                    hypervisor_features=hypervisor_features,
-                    clock=clock,
-                    stop_on_reboot=stop_on_reboot,
-                )
+            status = __salt__["virt.update"](
+                name,
+                cpu=cpu,
+                mem=mem,
+                disk_profile=disk_profile,
+                disks=disks,
+                nic_profile=nic_profile,
+                interfaces=interfaces,
+                graphics=graphics,
+                live=live,
+                connection=connection,
+                username=username,
+                password=password,
+                boot=boot,
+                numatune=numatune,
+                serials=serials,
+                consoles=consoles,
+                test=__opts__["test"],
+                boot_dev=boot_dev,
+                hypervisor_features=hypervisor_features,
+                clock=clock,
+                stop_on_reboot=stop_on_reboot,
+                host_devices=host_devices,
+            )
             ret["changes"][name] = status
             if not status.get("definition"):
                 ret["comment"] = "Domain {} unchanged".format(name)
@@ -703,6 +708,7 @@ def defined(
                     hypervisor_features=hypervisor_features,
                     clock=clock,
                     stop_on_reboot=stop_on_reboot,
+                    host_devices=host_devices,
                 )
             ret["changes"][name] = {"definition": True}
             ret["comment"] = "Domain {} defined".format(name)
@@ -728,7 +734,6 @@ def running(
     install=True,
     pub_key=None,
     priv_key=None,
-    update=False,
     connection=None,
     username=None,
     password=None,
@@ -742,6 +747,7 @@ def running(
     serials=None,
     consoles=None,
     stop_on_reboot=False,
+    host_devices=None,
 ):
     """
     Starts an existing guest, or defines and starts a new VM with specified arguments.
@@ -823,10 +829,6 @@ def running(
     :param seed_cmd: Salt command to execute to seed the image. (Default: ``'seed.apply'``)
 
         .. versionadded:: 2019.2.0
-    :param update: set to ``True`` to update a defined domain. (Default: ``False``)
-
-        .. versionadded:: 2019.2.0
-        .. deprecated:: 3001
     :param connection: libvirt connection URI, overriding defaults
 
         .. versionadded:: 2019.2.0
@@ -942,6 +944,13 @@ def running(
             clock:
               timezone: CEST
 
+    :param host_devices:
+        List of host devices to passthrough to the guest.
+        The value is a list of device names as provided by the :py:func:`~salt.modules.virt.node_devices` function.
+        (Default: ``None``)
+
+        .. versionadded:: Aluminium
+
     .. rubric:: Example States
 
     Make sure an already-defined virtual machine called ``domain_name`` is running:
@@ -985,12 +994,6 @@ def running(
     """
     merged_disks = disks
 
-    if not update:
-        salt.utils.versions.warn_until(
-            "Aluminium",
-            "'update' parameter has been deprecated. Future behavior will be the one of update=True"
-            "It will be removed in {version}.",
-        )
     ret = defined(
         name,
         cpu=cpu,
@@ -1008,7 +1011,6 @@ def running(
         os_type=os_type,
         arch=arch,
         boot=boot,
-        update=update,
         boot_dev=boot_dev,
         numatune=numatune,
         hypervisor_features=hypervisor_features,
@@ -1019,6 +1021,7 @@ def running(
         password=password,
         serials=serials,
         consoles=consoles,
+        host_devices=host_devices,
     )
 
     result = True if not __opts__["test"] else None
@@ -1244,21 +1247,64 @@ def network_defined(
     connection=None,
     username=None,
     password=None,
+    mtu=None,
+    domain=None,
+    nat=None,
+    interfaces=None,
+    addresses=None,
+    physical_function=None,
+    dns=None,
 ):
     """
     Defines a new network with specified arguments.
 
+    :param name: Network name
     :param bridge: Bridge name
     :param forward: Forward mode(bridge, router, nat)
+
+        .. versionchanged:: Aluminium
+           a ``None`` value creates an isolated network with no forwarding at all
+
     :param vport: Virtualport type (Default: ``'None'``)
+        The value can also be a dictionary with ``type`` and ``parameters`` keys.
+        The ``parameters`` value is a dictionary of virtual port parameters.
+
+        .. code-block:: yaml
+
+          - vport:
+              type: openvswitch
+              parameters:
+                interfaceid: 09b11c53-8b5c-4eeb-8f00-d84eaa0aaa4f
+
+        .. versionchanged:: Aluminium
+           possible dictionary value
+
     :param tag: Vlan tag (Default: ``'None'``)
+        The value can also be a dictionary with the ``tags`` and optional ``trunk`` keys.
+        ``trunk`` is a boolean value indicating whether to use VLAN trunking.
+        ``tags`` is a list of dictionaries with keys ``id`` and ``nativeMode``.
+        The ``nativeMode`` value can be one of ``tagged`` or ``untagged``.
+
+        .. code-block:: yaml
+
+          - tag:
+              trunk: True
+              tags:
+                - id: 42
+                  nativeMode: untagged
+                - id: 47
+
+        .. versionchanged:: Aluminium
+           possible dictionary value
+
     :param ipv4_config:
-        IPv4 network configuration. See the :py:func`virt.network_define
-        <salt.modules.virt.network_define>` function corresponding parameter documentation
+        IPv4 network configuration. See the
+        :py:func:`virt.network_define <salt.modules.virt.network_define>`
+        function corresponding parameter documentation
         for more details on this dictionary.
         (Default: None).
     :param ipv6_config:
-        IPv6 network configuration. See the :py:func`virt.network_define
+        IPv6 network configuration. See the :py:func:`virt.network_define
         <salt.modules.virt.network_define>` function corresponding parameter documentation
         for more details on this dictionary.
         (Default: None).
@@ -1266,6 +1312,100 @@ def network_defined(
     :param connection: libvirt connection URI, overriding defaults
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
+    :param mtu: size of the Maximum Transmission Unit (MTU) of the network.
+        (default ``None``)
+
+        .. versionadded:: Aluminium
+
+    :param domain: DNS domain name of the DHCP server.
+        The value is a dictionary with a mandatory ``name`` property and an optional ``localOnly`` boolean one.
+        (default ``None``)
+
+        .. code-block:: yaml
+
+          - domain:
+              name: lab.acme.org
+              localOnly: True
+
+        .. versionadded:: Aluminium
+
+    :param nat: addresses and ports to route in NAT forward mode.
+        The value is a dictionary with optional keys ``address`` and ``port``.
+        Both values are a dictionary with ``start`` and ``end`` values.
+        (default ``None``)
+
+        .. code-block:: yaml
+
+          - forward: nat
+          - nat:
+              address:
+                start: 1.2.3.4
+                end: 1.2.3.10
+              port:
+                start: 500
+                end: 1000
+
+        .. versionadded:: Aluminium
+
+    :param interfaces: whitespace separated list of network interfaces devices that can be used for this network.
+        (default ``None``)
+
+        .. code-block:: yaml
+
+          - forward: passthrough
+          - interfaces: "eth10 eth11 eth12"
+
+        .. versionadded:: Aluminium
+
+    :param addresses: whitespace separated list of addreses of PCI devices that can be used for this network in `hostdev` forward mode.
+        (default ``None``)
+
+        .. code-block:: yaml
+
+          - forward: hostdev
+          - interfaces: "0000:04:00.1 0000:e3:01.2"
+
+        .. versionadded:: Aluminium
+
+    :param physical_function: device name of the physical interface to use in ``hostdev`` forward mode.
+        (default ``None``)
+
+        .. code-block:: yaml
+
+          - forward: hostdev
+          - physical_function: "eth0"
+
+        .. versionadded:: Aluminium
+
+    :param dns: virtual network DNS configuration
+        The value is a dictionary described in :ref:`net-define-dns`.
+        (default ``None``)
+
+        .. code-block:: yaml
+
+          - dns:
+              forwarders:
+                - domain: example.com
+                  addr: 192.168.1.1
+                - addr: 8.8.8.8
+                - domain: www.example.com
+              txt:
+                example.com: "v=spf1 a -all"
+                _http.tcp.example.com: "name=value,paper=A4"
+              hosts:
+                192.168.1.2:
+                  - mirror.acme.lab
+                  - test.acme.lab
+              srvs:
+                - name: ldap
+                  protocol: tcp
+                  domain: ldapserver.example.com
+                  target: .
+                  port: 389
+                  priority: 1
+                  weight: 10
+
+        .. versionadded:: Aluminium
 
     .. versionadded:: 3001
 
@@ -1312,9 +1452,62 @@ def network_defined(
             name, connection=connection, username=username, password=password
         )
         if info and info[name]:
-            ret["comment"] = "Network {} exists".format(name)
-            ret["result"] = True
+            needs_autostart = (
+                info[name]["autostart"]
+                and not autostart
+                or not info[name]["autostart"]
+                and autostart
+            )
+            needs_update = __salt__["virt.network_update"](
+                name,
+                bridge,
+                forward,
+                vport=vport,
+                tag=tag,
+                ipv4_config=ipv4_config,
+                ipv6_config=ipv6_config,
+                mtu=mtu,
+                domain=domain,
+                nat=nat,
+                interfaces=interfaces,
+                addresses=addresses,
+                physical_function=physical_function,
+                dns=dns,
+                test=True,
+                connection=connection,
+                username=username,
+                password=password,
+            )
+            if needs_update:
+                if not __opts__["test"]:
+                    __salt__["virt.network_update"](
+                        name,
+                        bridge,
+                        forward,
+                        vport=vport,
+                        tag=tag,
+                        ipv4_config=ipv4_config,
+                        ipv6_config=ipv6_config,
+                        mtu=mtu,
+                        domain=domain,
+                        nat=nat,
+                        interfaces=interfaces,
+                        addresses=addresses,
+                        physical_function=physical_function,
+                        dns=dns,
+                        test=False,
+                        connection=connection,
+                        username=username,
+                        password=password,
+                    )
+                action = ", autostart flag changed" if needs_autostart else ""
+                ret["changes"][name] = "Network updated{}".format(action)
+                ret["comment"] = "Network {} updated{}".format(name, action)
+            else:
+                ret["comment"] = "Network {} unchanged".format(name)
+                ret["result"] = True
         else:
+            needs_autostart = autostart
             if not __opts__["test"]:
                 __salt__["virt.network_define"](
                     name,
@@ -1324,14 +1517,35 @@ def network_defined(
                     tag=tag,
                     ipv4_config=ipv4_config,
                     ipv6_config=ipv6_config,
-                    autostart=autostart,
+                    mtu=mtu,
+                    domain=domain,
+                    nat=nat,
+                    interfaces=interfaces,
+                    addresses=addresses,
+                    physical_function=physical_function,
+                    dns=dns,
+                    autostart=False,
                     start=False,
                     connection=connection,
                     username=username,
                     password=password,
                 )
-            ret["changes"][name] = "Network defined"
-            ret["comment"] = "Network {} defined".format(name)
+            if needs_autostart:
+                ret["changes"][name] = "Network defined, marked for autostart"
+                ret["comment"] = "Network {} defined, marked for autostart".format(name)
+            else:
+                ret["changes"][name] = "Network defined"
+                ret["comment"] = "Network {} defined".format(name)
+
+        if needs_autostart:
+            if not __opts__["test"]:
+                __salt__["virt.network_set_autostart"](
+                    name,
+                    state="on" if autostart else "off",
+                    connection=connection,
+                    username=username,
+                    password=password,
+                )
     except libvirt.libvirtError as err:
         ret["result"] = False
         ret["comment"] = err.get_error_message()
@@ -1351,14 +1565,56 @@ def network_running(
     connection=None,
     username=None,
     password=None,
+    mtu=None,
+    domain=None,
+    nat=None,
+    interfaces=None,
+    addresses=None,
+    physical_function=None,
+    dns=None,
 ):
     """
     Defines and starts a new network with specified arguments.
 
+    :param name: Network name
     :param bridge: Bridge name
     :param forward: Forward mode(bridge, router, nat)
+
+        .. versionchanged:: Aluminium
+           a ``None`` value creates an isolated network with no forwarding at all
+
     :param vport: Virtualport type (Default: ``'None'``)
+        The value can also be a dictionary with ``type`` and ``parameters`` keys.
+        The ``parameters`` value is a dictionary of virtual port parameters.
+
+        .. code-block:: yaml
+
+          - vport:
+              type: openvswitch
+              parameters:
+                interfaceid: 09b11c53-8b5c-4eeb-8f00-d84eaa0aaa4f
+
+        .. versionchanged:: Aluminium
+           possible dictionary value
+
     :param tag: Vlan tag (Default: ``'None'``)
+        The value can also be a dictionary with the ``tags`` and optional ``trunk`` keys.
+        ``trunk`` is a boolean value indicating whether to use VLAN trunking.
+        ``tags`` is a list of dictionaries with keys ``id`` and ``nativeMode``.
+        The ``nativeMode`` value can be one of ``tagged`` or ``untagged``.
+
+        .. code-block:: yaml
+
+          - tag:
+              trunk: True
+              tags:
+                - id: 42
+                  nativeMode: untagged
+                - id: 47
+
+        .. versionchanged:: Aluminium
+           possible dictionary value
+
     :param ipv4_config:
         IPv4 network configuration. See the :py:func`virt.network_define
         <salt.modules.virt.network_define>` function corresponding parameter documentation
@@ -1383,6 +1639,100 @@ def network_running(
     :param password: password to connect with, overriding defaults
 
         .. versionadded:: 2019.2.0
+    :param mtu: size of the Maximum Transmission Unit (MTU) of the network.
+        (default ``None``)
+
+        .. versionadded:: Aluminium
+
+    :param domain: DNS domain name of the DHCP server.
+        The value is a dictionary with a mandatory ``name`` property and an optional ``localOnly`` boolean one.
+        (default ``None``)
+
+        .. code-block:: yaml
+
+          - domain:
+              name: lab.acme.org
+              localOnly: True
+
+        .. versionadded:: Aluminium
+
+    :param nat: addresses and ports to route in NAT forward mode.
+        The value is a dictionary with optional keys ``address`` and ``port``.
+        Both values are a dictionary with ``start`` and ``end`` values.
+        (default ``None``)
+
+        .. code-block:: yaml
+
+          - forward: nat
+          - nat:
+              address:
+                start: 1.2.3.4
+                end: 1.2.3.10
+              port:
+                start: 500
+                end: 1000
+
+        .. versionadded:: Aluminium
+
+    :param interfaces: whitespace separated list of network interfaces devices that can be used for this network.
+        (default ``None``)
+
+        .. code-block:: yaml
+
+          - forward: passthrough
+          - interfaces: "eth10 eth11 eth12"
+
+        .. versionadded:: Aluminium
+
+    :param addresses: whitespace separated list of addreses of PCI devices that can be used for this network in `hostdev` forward mode.
+        (default ``None``)
+
+        .. code-block:: yaml
+
+          - forward: hostdev
+          - interfaces: "0000:04:00.1 0000:e3:01.2"
+
+        .. versionadded:: Aluminium
+
+    :param physical_function: device name of the physical interface to use in ``hostdev`` forward mode.
+        (default ``None``)
+
+        .. code-block:: yaml
+
+          - forward: hostdev
+          - physical_function: "eth0"
+
+        .. versionadded:: Aluminium
+
+    :param dns: virtual network DNS configuration
+        The value is a dictionary described in :ref:`net-define-dns`.
+        (default ``None``)
+
+        .. code-block:: yaml
+
+          - dns:
+              forwarders:
+                - domain: example.com
+                  addr: 192.168.1.1
+                - addr: 8.8.8.8
+                - domain: www.example.com
+              txt:
+                host.widgets.com.: "printer=lpr5"
+                example.com.: "This domain name is reserved for use in documentation"
+              hosts:
+                192.168.1.2:
+                  - mirror.acme.lab
+                  - test.acme.lab
+              srvs:
+                - name: ldap
+                  protocol: tcp
+                  domain: ldapserver.example.com
+                  target: .
+                  port: 389
+                  priority: 1
+                  weight: 10
+
+        .. versionadded:: Aluminium
 
     .. code-block:: yaml
 
@@ -1423,6 +1773,13 @@ def network_running(
         tag=tag,
         ipv4_config=ipv4_config,
         ipv6_config=ipv6_config,
+        mtu=mtu,
+        domain=domain,
+        nat=nat,
+        interfaces=interfaces,
+        addresses=addresses,
+        physical_function=physical_function,
+        dns=dns,
         autostart=autostart,
         connection=connection,
         username=username,
