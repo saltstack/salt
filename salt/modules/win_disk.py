@@ -40,6 +40,26 @@ def __virtual__():
     return (False, "Module win_disk: module only works on Windows systems")
 
 
+def letters():
+    """
+    Return a list of drive letters for volumes mounted on this minion
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' disk.letters
+
+    .. versionadded:: 3003
+    """
+    drives = []
+    drive_bitmask = ctypes.windll.kernel32.GetLogicalDrives()
+    for letter in UPPERCASE:
+        if drive_bitmask & 1:
+            drives.append(letter)
+        drive_bitmask >>= 1
+    return drives
+
 def usage():
     """
     Return usage information for volumes mounted on this minion
@@ -50,14 +70,9 @@ def usage():
 
         salt '*' disk.usage
     """
-    drives = []
+
     ret = {}
-    drive_bitmask = ctypes.windll.kernel32.GetLogicalDrives()
-    for letter in UPPERCASE:
-        if drive_bitmask & 1:
-            drives.append(letter)
-        drive_bitmask >>= 1
-    for drive in drives:
+    for drive in letters():
         try:
             (
                 available_bytes,
