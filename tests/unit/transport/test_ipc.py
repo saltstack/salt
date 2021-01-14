@@ -19,7 +19,6 @@ import salt.transport.ipc
 import salt.transport.server
 import salt.utils.platform
 from salt.ext.tornado.iostream import StreamClosedError
-
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
