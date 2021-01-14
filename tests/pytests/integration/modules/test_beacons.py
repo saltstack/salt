@@ -234,6 +234,20 @@ def test_list(salt_call_cli, beacon):
     assert ret.json
     assert ret.json == {beacon.name: beacon.data}
 
+    ret = salt_call_cli.run(
+        "beacons.list", return_yaml=False, include_opts=True, include_pillar=False
+    )
+    assert ret.exitcode == 0
+    assert ret.json
+    assert ret.json == {beacon.name: beacon.data}
+
+    ret = salt_call_cli.run(
+        "beacons.list", return_yaml=False, include_opts=False, include_pillar=True
+    )
+    assert ret.exitcode == 0
+    assert ret.json
+    assert ret.json == {"beacons": {}}
+
 
 def test_list_available(salt_call_cli):
     """

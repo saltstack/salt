@@ -2499,23 +2499,29 @@ class Minion(MinionBase):
         include_opts = data.get("include_opts", None)
 
         funcs = {
-            "add": ("add_beacon", (name, beacon_data)),
-            "modify": ("modify_beacon", (name, beacon_data)),
-            "delete": ("delete_beacon", (name,)),
-            "enable": ("enable_beacons", ()),
-            "disable": ("disable_beacons", ()),
-            "enable_beacon": ("enable_beacon", (name,)),
-            "disable_beacon": ("disable_beacon", (name,)),
-            "list": ("list_beacons", (include_opts, include_pillar)),
-            "list_available": ("list_available_beacons", ()),
-            "validate_beacon": ("validate_beacon", (name, beacon_data)),
-            "reset": ("reset", ()),
+            "add": ("add_beacon", {"name": name, "beacon_data": beacon_data}),
+            "modify": ("modify_beacon", {"name": name, "beacon_data": beacon_data}),
+            "delete": ("delete_beacon", {"name": name}),
+            "enable": ("enable_beacons", {}),
+            "disable": ("disable_beacons", {}),
+            "enable_beacon": ("enable_beacon", {"name": name}),
+            "disable_beacon": ("disable_beacon", {"name": name}),
+            "list": (
+                "list_beacons",
+                {"include_opts": include_opts, "include_pillar": include_pillar},
+            ),
+            "list_available": ("list_available_beacons", {}),
+            "validate_beacon": (
+                "validate_beacon",
+                {"name": name, "beacon_data": beacon_data},
+            ),
+            "reset": ("reset", {}),
         }
 
         # Call the appropriate beacon function
         try:
             alias, params = funcs.get(func)
-            getattr(self.beacons, alias)(*params)
+            getattr(self.beacons, alias)(**params)
         except TypeError:
             log.error('Function "%s" is unavailable in salt.utils.beacons', func)
 
