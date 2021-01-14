@@ -576,9 +576,7 @@ class CMDModuleTest(ModuleCase):
         Ensure that powershell processes inline script in args with powershell 7
         """
         val = "i like cheese"
-        args = '-SecureString (ConvertTo-SecureString -String "{}" -AsPlainText -Force) -ErrorAction Stop'.format(
-            val
-        )
+        args = f'-SecureString (ConvertTo-SecureString -String "{val}" -AsPlainText -Force) -ErrorAction Stop'
         script = "salt://issue-56195/test.ps1"
         ret = self.run_function("cmd.script", [script], args=args, shell="pwsh")
         self.assertEqual(ret["stdout"], val)
