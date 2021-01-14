@@ -648,7 +648,7 @@ Load Balancer
 =============
 Compute Engine possess a load-balancer feature for splitting traffic across
 multiple instances. Please reference the
-`documentation <https://developers.google.com/compute/docs/load-balancing/>`_
+`documentation <https://cloud.google.com/load-balancing/docs>`_
 for a more complete description.
 
 The load-balancer functionality is slightly different than that described

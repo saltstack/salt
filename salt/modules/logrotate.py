@@ -1,52 +1,52 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Module for managing logrotate.
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
+
+import logging
 
 # Import python libs
 import os
-import logging
 
-# Import salt libs
-from salt.ext import six
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.stringutils
 from salt.exceptions import SaltInvocationError
 
+# Import salt libs
+from salt.ext import six
+
 _LOG = logging.getLogger(__name__)
-_DEFAULT_CONF = '/etc/logrotate.conf'
+_DEFAULT_CONF = "/etc/logrotate.conf"
 
 
 # Define a function alias in order not to shadow built-in's
-__func_alias__ = {
-    'set_': 'set'
-}
+__func_alias__ = {"set_": "set"}
 
 
 def __virtual__():
-    '''
+    """
     Only work on POSIX-like systems
-    '''
+    """
     if salt.utils.platform.is_windows():
         return (
             False,
-            'The logrotate execution module cannot be loaded: only available '
-            'on non-Windows systems.'
+            "The logrotate execution module cannot be loaded: only available "
+            "on non-Windows systems.",
         )
     return True
 
 
 def _convert_if_int(value):
-    '''
+    """
     Convert to an int if necessary.
 
     :param str value: The value to check/convert.
 
     :return: The converted or passed value.
     :rtype: bool|int|str
-    '''
+    """
     try:
         value = int(six.text_type(value))
     except ValueError:
@@ -55,67 +55,67 @@ def _convert_if_int(value):
 
 
 def _parse_conf(conf_file=_DEFAULT_CONF):
-    '''
+    """
     Parse a logrotate configuration file.
 
     Includes will also be parsed, and their configuration will be stored in the
     return dict, as if they were part of the main config file. A dict of which
     configs came from which includes will be stored in the 'include files' dict
     inside the return dict, for later reference by the user or module.
-    '''
+    """
     ret = {}
-    mode = 'single'
+    mode = "single"
     multi_names = []
     multi = {}
     prev_comps = None
 
-    with salt.utils.files.fopen(conf_file, 'r') as ifile:
+    with salt.utils.files.fopen(conf_file, "r") as ifile:
         for line in ifile:
             line = salt.utils.stringutils.to_unicode(line).strip()
             if not line:
                 continue
-            if line.startswith('#'):
+            if line.startswith("#"):
                 continue
 
             comps = line.split()
-            if '{' in line and '}' not in line:
-                mode = 'multi'
+            if "{" in line and "}" not in line:
+                mode = "multi"
                 if len(comps) == 1 and prev_comps:
                     multi_names = prev_comps
                 else:
                     multi_names = comps
                     multi_names.pop()
                 continue
-            if '}' in line:
-                mode = 'single'
+            if "}" in line:
+                mode = "single"
                 for multi_name in multi_names:
                     ret[multi_name] = multi
                 multi_names = []
                 multi = {}
                 continue
 
-            if mode == 'single':
+            if mode == "single":
                 key = ret
             else:
                 key = multi
 
-            if comps[0] == 'include':
-                if 'include files' not in ret:
-                    ret['include files'] = {}
+            if comps[0] == "include":
+                if "include files" not in ret:
+                    ret["include files"] = {}
                 for include in os.listdir(comps[1]):
-                    if include not in ret['include files']:
-                        ret['include files'][include] = []
+                    if include not in ret["include files"]:
+                        ret["include files"][include] = []
 
                     include_path = os.path.join(comps[1], include)
                     include_conf = _parse_conf(include_path)
 
                     for file_key in include_conf:
                         ret[file_key] = include_conf[file_key]
-                        ret['include files'][include].append(file_key)
+                        ret["include files"][include].append(file_key)
 
             prev_comps = comps
             if len(comps) > 2:
-                key[comps[0]] = ' '.join(comps[1:])
+                key[comps[0]] = " ".join(comps[1:])
             elif len(comps) > 1:
                 key[comps[0]] = _convert_if_int(comps[1])
             else:
@@ -124,7 +124,7 @@ def _parse_conf(conf_file=_DEFAULT_CONF):
 
 
 def show_conf(conf_file=_DEFAULT_CONF):
-    '''
+    """
     Show parsed configuration
 
     :param str conf_file: The logrotate configuration file.
@@ -137,12 +137,12 @@ def show_conf(conf_file=_DEFAULT_CONF):
     .. code-block:: bash
 
         salt '*' logrotate.show_conf
-    '''
+    """
     return _parse_conf(conf_file)
 
 
 def get(key, value=None, conf_file=_DEFAULT_CONF):
-    '''
+    """
     Get the value for a specific configuration line.
 
     :param str key: The command or stanza block to configure.
@@ -159,7 +159,7 @@ def get(key, value=None, conf_file=_DEFAULT_CONF):
         salt '*' logrotate.get rotate
 
         salt '*' logrotate.get /var/log/wtmp rotate /etc/logrotate.conf
-    '''
+    """
     current_conf = _parse_conf(conf_file)
     stanza = current_conf.get(key, False)
 
@@ -171,7 +171,7 @@ def get(key, value=None, conf_file=_DEFAULT_CONF):
 
 
 def set_(key, value, setting=None, conf_file=_DEFAULT_CONF):
-    '''
+    """
     Set a new value for a specific configuration line.
 
     :param str key: The command or block to configure.
@@ -207,27 +207,29 @@ def set_(key, value, setting=None, conf_file=_DEFAULT_CONF):
 
     This module also has the ability to scan files inside an include directory,
     and make changes in the appropriate file.
-    '''
+    """
     conf = _parse_conf(conf_file)
-    for include in conf['include files']:
-        if key in conf['include files'][include]:
-            conf_file = os.path.join(conf['include'], include)
+    for include in conf["include files"]:
+        if key in conf["include files"][include]:
+            conf_file = os.path.join(conf["include"], include)
 
     new_line = six.text_type()
     kwargs = {
-        'flags': 8,
-        'backup': False,
-        'path': conf_file,
-        'pattern': '^{0}.*'.format(key),
-        'show_changes': False
+        "flags": 8,
+        "backup": False,
+        "path": conf_file,
+        "pattern": "^{0}.*".format(key),
+        "show_changes": False,
     }
 
     if setting is None:
         current_value = conf.get(key, False)
 
         if isinstance(current_value, dict):
-            error_msg = ('Error: {0} includes a dict, and a specific setting inside the '
-                         'dict was not declared').format(key)
+            error_msg = (
+                "Error: {0} includes a dict, and a specific setting inside the "
+                "dict was not declared"
+            ).format(key)
             raise SaltInvocationError(error_msg)
 
         if value == current_value:
@@ -238,15 +240,17 @@ def set_(key, value, setting=None, conf_file=_DEFAULT_CONF):
         if value is True:
             new_line = key
         elif value:
-            new_line = '{0} {1}'.format(key, value)
+            new_line = "{0} {1}".format(key, value)
 
-        kwargs.update({'prepend_if_not_found': True})
+        kwargs.update({"prepend_if_not_found": True})
     else:
         stanza = conf.get(key, dict())
 
         if stanza and not isinstance(stanza, dict):
-            error_msg = ('Error: A setting for a dict was declared, but the '
-                         'configuration line given is not a dict')
+            error_msg = (
+                "Error: A setting for a dict was declared, but the "
+                "configuration line given is not a dict"
+            )
             raise SaltInvocationError(error_msg)
 
         if setting == stanza.get(value, False):
@@ -261,25 +265,27 @@ def set_(key, value, setting=None, conf_file=_DEFAULT_CONF):
 
         new_line = _dict_to_stanza(key, stanza)
 
-        kwargs.update({
-            'pattern': '^{0}.*?{{.*?}}'.format(key),
-            'flags': 24,
-            'append_if_not_found': True
-        })
+        kwargs.update(
+            {
+                "pattern": "^{0}.*?{{.*?}}".format(key),
+                "flags": 24,
+                "append_if_not_found": True,
+            }
+        )
 
-    kwargs.update({'repl': new_line})
+    kwargs.update({"repl": new_line})
     _LOG.debug("Setting file '%s' line: %s", conf_file, new_line)
 
-    return __salt__['file.replace'](**kwargs)
+    return __salt__["file.replace"](**kwargs)
 
 
 def _dict_to_stanza(key, stanza):
-    '''
+    """
     Convert a dict to a multi-line stanza
-    '''
-    ret = ''
+    """
+    ret = ""
     for skey in stanza:
         if stanza[skey] is True:
-            stanza[skey] = ''
-        ret += '    {0} {1}\n'.format(skey, stanza[skey])
-    return '{0} {{\n{1}}}'.format(key, ret)
+            stanza[skey] = ""
+        ret += "    {0} {1}\n".format(skey, stanza[skey])
+    return "{0} {{\n{1}}}".format(key, ret)

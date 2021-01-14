@@ -5,7 +5,7 @@ import re
 import sys
 import datetime
 
-import tornado.escape
+import salt.ext.tornado.escape
 from salt.ext.tornado.escape import utf8
 from salt.ext.tornado.util import raise_exc_info, Configurable, exec_in, ArgReplacer, timedelta_to_seconds, import_object, re_unescape, is_finalizing, PY3
 from salt.ext.tornado.test.util import unittest
@@ -194,13 +194,13 @@ class ImportObjectTest(unittest.TestCase):
         self.assertIs(import_object(u'tornado.escape.utf8'), utf8)
 
     def test_import_module(self):
-        self.assertIs(import_object('tornado.escape'), tornado.escape)
+        self.assertIs(import_object('tornado.escape'), salt.ext.tornado.escape)
 
     def test_import_module_unicode(self):
         # The internal implementation of __import__ differs depending on
         # whether the thing being imported is a module or not.
         # This variant requires a byte string in python 2.
-        self.assertIs(import_object(u'tornado.escape'), tornado.escape)
+        self.assertIs(import_object(u'tornado.escape'), salt.ext.tornado.escape)
 
 
 class ReUnescapeTest(unittest.TestCase):

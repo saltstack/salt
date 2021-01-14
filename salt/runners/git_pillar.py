@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Runner module to directly manage the git external pillar
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
@@ -16,7 +16,7 @@ log = logging.getLogger(__name__)
 
 
 def update(branch=None, repo=None):
-    '''
+    """
     .. versionadded:: 2014.1.0
 
     .. versionchanged:: 2015.8.4
@@ -32,6 +32,9 @@ def update(branch=None, repo=None):
         The return for a given git_pillar remote will now be ``None`` when no
         changes were fetched. ``False`` now is reserved only for instances in
         which there were errors.
+
+    .. versionchanged:: 3001
+        The repo parameter also matches against the repo name.
 
     Fetch one or all configured git_pillar remotes.
 
@@ -55,15 +58,17 @@ def update(branch=None, repo=None):
 
         # Update specific branch and repo
         salt-run git_pillar.update branch='branch' repo='https://foo.com/bar.git'
+        # Update specific repo, by name
+        salt-run git_pillar.update repo=myrepo
         # Update all repos
         salt-run git_pillar.update
         # Run with debug logging
         salt-run git_pillar.update -l debug
-    '''
+    """
     ret = {}
-    for ext_pillar in __opts__.get('ext_pillar', []):
+    for ext_pillar in __opts__.get("ext_pillar", []):
         pillar_type = next(iter(ext_pillar))
-        if pillar_type != 'git':
+        if pillar_type != "git":
             continue
         pillar_conf = ext_pillar[pillar_type]
         pillar = salt.utils.gitfs.GitPillar(
@@ -71,22 +76,24 @@ def update(branch=None, repo=None):
             pillar_conf,
             per_remote_overrides=salt.pillar.git_pillar.PER_REMOTE_OVERRIDES,
             per_remote_only=salt.pillar.git_pillar.PER_REMOTE_ONLY,
-            global_only=salt.pillar.git_pillar.GLOBAL_ONLY)
+            global_only=salt.pillar.git_pillar.GLOBAL_ONLY,
+        )
         for remote in pillar.remotes:
             # Skip this remote if it doesn't match the search criteria
             if branch is not None:
                 if branch != remote.branch:
                     continue
             if repo is not None:
-                if repo != remote.url:
+                if repo != remote.url and repo != getattr(remote, "name", None):
                     continue
             try:
                 result = remote.fetch()
             except Exception as exc:  # pylint: disable=broad-except
                 log.error(
-                    'Exception \'%s\' caught while fetching git_pillar '
-                    'remote \'%s\'', exc, remote.id,
-                    exc_info_on_loglevel=logging.DEBUG
+                    "Exception '%s' caught while fetching git_pillar " "remote '%s'",
+                    exc,
+                    remote.id,
+                    exc_info_on_loglevel=logging.DEBUG,
                 )
                 result = False
             finally:
@@ -96,9 +103,9 @@ def update(branch=None, repo=None):
     if not ret:
         if branch is not None or repo is not None:
             raise SaltRunnerError(
-                'Specified git branch/repo not found in ext_pillar config'
+                "Specified git branch/repo not found in ext_pillar config"
             )
         else:
-            raise SaltRunnerError('No git_pillar remotes are configured')
+            raise SaltRunnerError("No git_pillar remotes are configured")
 
     return ret

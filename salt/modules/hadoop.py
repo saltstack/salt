@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Support for hadoop
 
 :maintainer: Yann Jouanin <yann.jouanin@intelunix.fr>
@@ -8,27 +8,30 @@ Support for hadoop
 :platform: linux
 
 
-'''
+"""
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import salt libs
 import salt.utils.path
 
-__authorized_modules__ = ['version', 'namenode', 'dfsadmin', 'dfs', 'fs']
+__authorized_modules__ = ["version", "namenode", "dfsadmin", "dfs", "fs"]
 
 
 def __virtual__():
-    '''
+    """
     Check if hadoop is present, then load the module
-    '''
-    if salt.utils.path.which('hadoop') or salt.utils.path.which('hdfs'):
-        return 'hadoop'
-    return (False, 'The hadoop execution module cannot be loaded: hadoop or hdfs binary not in path.')
+    """
+    if salt.utils.path.which("hadoop") or salt.utils.path.which("hdfs"):
+        return "hadoop"
+    return (
+        False,
+        "The hadoop execution module cannot be loaded: hadoop or hdfs binary not in path.",
+    )
 
 
 def _hadoop_cmd(module, command, *args):
-    '''
+    """
        Hadoop/hdfs command wrapper
 
        As Hadoop command has been deprecated this module will default
@@ -39,26 +42,31 @@ def _hadoop_cmd(module, command, *args):
        Follows hadoop command template:
           hadoop module -command args
        E.g.: hadoop dfs -ls /
-    '''
-    tool = 'hadoop'
-    if salt.utils.path.which('hdfs'):
-        tool = 'hdfs'
+    """
+    tool = "hadoop"
+    if salt.utils.path.which("hdfs"):
+        tool = "hdfs"
 
     out = None
     if module and command:
         if module in __authorized_modules__:
-            mappings = {'tool': tool, 'module': module, 'command': command, 'args': ' '.join(args)}
-            cmd = '{tool} {module} -{command} {args}'.format(**mappings)
-            out = __salt__['cmd.run'](cmd, python_shell=False)
+            mappings = {
+                "tool": tool,
+                "module": module,
+                "command": command,
+                "args": " ".join(args),
+            }
+            cmd = "{tool} {module} -{command} {args}".format(**mappings)
+            out = __salt__["cmd.run"](cmd, python_shell=False)
         else:
-            return 'Error: Unknown module'
+            return "Error: Unknown module"
     else:
-        return 'Error: Module and command not defined'
+        return "Error: Module and command not defined"
     return out
 
 
 def version():
-    '''
+    """
     Return version from hadoop version
 
     CLI Example:
@@ -66,14 +74,14 @@ def version():
     .. code-block:: bash
 
         salt '*' hadoop.version
-    '''
-    module = 'version'
+    """
+    module = "version"
     out = _hadoop_cmd(module, True).split()
     return out[1]
 
 
 def dfs(command=None, *args):
-    '''
+    """
     Execute a command on DFS
 
     CLI Example:
@@ -81,15 +89,15 @@ def dfs(command=None, *args):
     .. code-block:: bash
 
         salt '*' hadoop.dfs ls /
-    '''
+    """
     if command:
-        return _hadoop_cmd('dfs', command, *args)
+        return _hadoop_cmd("dfs", command, *args)
     else:
-        return 'Error: command must be provided'
+        return "Error: command must be provided"
 
 
 def dfsadmin_report(arg=None):
-    '''
+    """
     .. versionadded:: 2019.2.0
 
     Reports basic filesystem information and statistics. Optional flags may be used to filter the list of displayed DataNodes.
@@ -102,18 +110,18 @@ def dfsadmin_report(arg=None):
     .. code-block:: bash
 
         salt '*' hadoop.dfsadmin -report
-    '''
+    """
     if arg is not None:
-        if arg in ['live', 'dead', 'decommissioning']:
-            return _hadoop_cmd('dfsadmin', 'report', arg)
+        if arg in ["live", "dead", "decommissioning"]:
+            return _hadoop_cmd("dfsadmin", "report", arg)
         else:
             return "Error: the arg is wrong, it must be in ['live', 'dead', 'decommissioning']"
     else:
-        return _hadoop_cmd('dfsadmin', 'report')
+        return _hadoop_cmd("dfsadmin", "report")
 
 
 def dfs_present(path):
-    '''
+    """
     Check if a file or directory is present on the distributed FS.
 
     CLI Example:
@@ -123,14 +131,14 @@ def dfs_present(path):
         salt '*' hadoop.dfs_present /some_random_file
 
     Returns True if the file is present
-    '''
-    cmd_return = _hadoop_cmd('dfs', 'stat', path)
-    match = 'No such file or directory'
+    """
+    cmd_return = _hadoop_cmd("dfs", "stat", path)
+    match = "No such file or directory"
     return False if match in cmd_return else True
 
 
 def dfs_absent(path):
-    '''
+    """
     Check if a file or directory is absent on the distributed FS.
 
     CLI Example:
@@ -140,22 +148,22 @@ def dfs_absent(path):
         salt '*' hadoop.dfs_absent /some_random_file
 
     Returns True if the file is absent
-    '''
-    cmd_return = _hadoop_cmd('dfs', 'stat', path)
-    match = 'No such file or directory'
+    """
+    cmd_return = _hadoop_cmd("dfs", "stat", path)
+    match = "No such file or directory"
     return True if match in cmd_return else False
 
 
 def namenode_format(force=None):
-    '''
+    """
     Format a name node
 
     .. code-block:: bash
 
         salt '*' hadoop.namenode_format force=True
-    '''
-    force_param = ''
+    """
+    force_param = ""
     if force:
-        force_param = '-force'
+        force_param = "-force"
 
-    return _hadoop_cmd('namenode', 'format', '-nonInteractive', force_param)
+    return _hadoop_cmd("namenode", "format", "-nonInteractive", force_param)

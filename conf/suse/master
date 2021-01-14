@@ -1202,7 +1202,7 @@ syndic_user: salt
 ############################################
 # Warning: Failure to set TCP keepalives on the salt-master can result in
 # not detecting the loss of a minion when the connection is lost or when
-# it's host has been terminated without first closing the socket.
+# its host has been terminated without first closing the socket.
 # Salt's Presence System depends on this connection status to know if a minion
 # is "present".
 # ZeroMQ now includes support for configuring SO_KEEPALIVE if supported by

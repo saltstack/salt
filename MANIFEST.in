@@ -1,7 +1,6 @@
 include AUTHORS
 include CODE_OF_CONDUCT.md
-include CONTRIBUTING.rst
-include HACKING.rst
+include CONTRIBUTING.md
 include LICENSE
 include NOTICE
 include README.rst
@@ -17,7 +16,6 @@ recursive-include scripts *
 recursive-include conf *
 recursive-include pkg *
 recursive-include salt *.jinja
-recursive-include salt *.flo
 recursive-include templates *
 include salt/templates/git/*
 include salt/templates/lxc/*

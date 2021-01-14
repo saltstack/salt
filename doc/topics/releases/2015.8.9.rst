@@ -1789,12 +1789,12 @@ Changelog for v2015.8.8.2..v2015.8.9
 
   * 4af8c9dbfc Back port nullsoft build script from 2015.8
 
-* **PR** `#31912`_: (`jfindlay`_) log.mixins: remove extermporaneous .record
+* **PR** `#31912`_: (`jfindlay`_) log.mixins: remove extemporaneous .record
   @ *2016-03-16 01:56:46 UTC*
 
   * 43240dc566 Merge pull request `#31912`_ from jfindlay/log_mixin
 
-  * 9f9c694654 log.mixins: remove extermporaneous .record
+  * 9f9c694654 log.mixins: remove extemporaneous .record
 
 .. _`#11801`: https://github.com/saltstack/salt/issues/11801
 .. _`#12422`: https://github.com/saltstack/salt/issues/12422

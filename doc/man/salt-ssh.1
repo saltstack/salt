@@ -1,6 +1,6 @@
 .\" Man page generated from reStructuredText.
 .
-.TH "SALT-SSH" "1" "Jan 15, 2020" "3000"  "Salt"
+.TH "SALT-SSH" "1" "Nov 14, 2020" "3002.2" "Salt"
 .SH NAME
 salt-ssh \- salt-ssh Documentation
 .
@@ -169,6 +169,15 @@ Path to a python3 binary which has salt installed.
 .B \-\-jid=JID
 Pass a JID to be used instead of generating one.
 .UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-pre\-flight
+Run the ssh_pre_flight script defined in the roster.
+By default this script will only run if the thin dir
+does not exist on the target minion. This option will
+force the script to run regardless of the thin dir
+existing or not.
+.UNINDENT
 .SS Authentication Options
 .INDENT 0.0
 .TP
@@ -286,17 +295,6 @@ Some outputters are formatted only for data returned from specific functions.
 If an outputter is used that does not support the data passed into it, then
 Salt will fall back on the \fBpprint\fP outputter and display the return data
 using the Python \fBpprint\fP standard library module.
-.sp
-\fBNOTE:\fP
-.INDENT 7.0
-.INDENT 3.5
-If using \fB\-\-out=json\fP, you will probably want \fB\-\-static\fP as well.
-Without the static option, you will get a separate JSON string per minion
-which makes JSON output invalid as a whole.
-This is due to using an iterative outputter. So if you want to feed it
-to a JSON parser, use \fB\-\-static\fP as well.
-.UNINDENT
-.UNINDENT
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -347,6 +345,17 @@ output. One of \(aqfull\(aq, \(aqterse\(aq, \(aqmixed\(aq, \(aqchanges\(aq or
 .B \-\-state\-verbose=STATE_VERBOSE, \-\-state_verbose=STATE_VERBOSE
 Override the configured state_verbose value for minion
 output. Set to True or False. Default: none.
+.UNINDENT
+.sp
+\fBNOTE:\fP
+.INDENT 0.0
+.INDENT 3.5
+If using \fB\-\-out=json\fP, you will probably want \fB\-\-static\fP as well.
+Without the static option, you will get a separate JSON string per minion
+which makes JSON output invalid as a whole.
+This is due to using an iterative outputter. So if you want to feed it
+to a JSON parser, use \fB\-\-static\fP as well.
+.UNINDENT
 .UNINDENT
 .SH SEE ALSO
 .sp

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Manage RabbitMQ Upstreams
 =========================
 
@@ -16,12 +16,13 @@ Example:
       - max_hops: 1
 
 .. versionadded:: 3000
-'''
+"""
 
 # Import python libs
 from __future__ import absolute_import
-import logging
+
 import json
+import logging
 
 # Import salt libs
 import salt.utils.data
@@ -32,30 +33,36 @@ log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    '''
+    """
     Only load if the appropriate rabbitmq module functions are loaded.
-    '''
-    requirements = ['rabbitmq.list_upstreams',
-                    'rabbitmq.upstream_exists',
-                    'rabbitmq.set_upstream',
-                    'rabbitmq.delete_upstream']
-    return all(req in __salt__ for req in requirements)
+    """
+    requirements = [
+        "rabbitmq.list_upstreams",
+        "rabbitmq.upstream_exists",
+        "rabbitmq.set_upstream",
+        "rabbitmq.delete_upstream",
+    ]
+    if all(req in __salt__ for req in requirements):
+        return True
+    return (False, "rabbitmq module could not be loaded")
 
 
-def present(name,
-            uri,
-            prefetch_count=None,
-            reconnect_delay=None,
-            ack_mode=None,
-            trust_user_id=None,
-            exchange=None,
-            max_hops=None,
-            expires=None,
-            message_ttl=None,
-            ha_policy=None,
-            queue=None,
-            runas=None):
-    '''
+def present(
+    name,
+    uri,
+    prefetch_count=None,
+    reconnect_delay=None,
+    ack_mode=None,
+    trust_user_id=None,
+    exchange=None,
+    max_hops=None,
+    expires=None,
+    message_ttl=None,
+    ha_policy=None,
+    queue=None,
+    runas=None,
+):
+    """
     Ensure the RabbitMQ upstream exists.
 
     :param str name: The name of the upstream connection
@@ -112,48 +119,50 @@ def present(name,
 
     .. versionadded:: 3000
 
-    '''
-    ret = {'name': name, 'result': False, 'comment': '', 'changes': {}}
+    """
+    ret = {"name": name, "result": False, "comment": "", "changes": {}}
     action = None
 
     try:
-        current_upstreams = __salt__['rabbitmq.list_upstreams'](runas=runas)
+        current_upstreams = __salt__["rabbitmq.list_upstreams"](runas=runas)
     except CommandExecutionError as err:
-        ret['comment'] = 'Error: {0}'.format(err)
+        ret["comment"] = "Error: {0}".format(err)
         return ret
-    new_config = salt.utils.data.filter_falsey({
-        'uri': uri,
-        'prefetch-count': prefetch_count,
-        'reconnect-delay': reconnect_delay,
-        'ack-mode': ack_mode,
-        'trust-user-id': trust_user_id,
-        'exchange': exchange,
-        'max-hops': max_hops,
-        'expires': expires,
-        'message-ttl': message_ttl,
-        'ha-policy': ha_policy,
-        'queue': queue,
-    })
+    new_config = salt.utils.data.filter_falsey(
+        {
+            "uri": uri,
+            "prefetch-count": prefetch_count,
+            "reconnect-delay": reconnect_delay,
+            "ack-mode": ack_mode,
+            "trust-user-id": trust_user_id,
+            "exchange": exchange,
+            "max-hops": max_hops,
+            "expires": expires,
+            "message-ttl": message_ttl,
+            "ha-policy": ha_policy,
+            "queue": queue,
+        }
+    )
 
     if name in current_upstreams:
-        current_config = json.loads(current_upstreams.get(name, ''))
+        current_config = json.loads(current_upstreams.get(name, ""))
         diff_config = salt.utils.dictdiffer.deep_diff(current_config, new_config)
         if diff_config:
-            action = 'update'
+            action = "update"
         else:
-            ret['result'] = True
-            ret['comment'] = 'Upstream "{}" already present as specified.'.format(name)
+            ret["result"] = True
+            ret["comment"] = 'Upstream "{}" already present as specified.'.format(name)
     else:
-        action = 'create'
-        diff_config = {'old': None, 'new': new_config}
+        action = "create"
+        diff_config = {"old": None, "new": new_config}
 
     if action:
-        if __opts__['test']:
-            ret['result'] = None
-            ret['comment'] = 'Upstream "{}" would have been {}d.'.format(name, action)
+        if __opts__["test"]:
+            ret["result"] = None
+            ret["comment"] = 'Upstream "{}" would have been {}d.'.format(name, action)
         else:
             try:
-                res = __salt__['rabbitmq.set_upstream'](
+                res = __salt__["rabbitmq.set_upstream"](
                     name,
                     uri,
                     prefetch_count=prefetch_count,
@@ -166,46 +175,47 @@ def present(name,
                     message_ttl=message_ttl,
                     ha_policy=ha_policy,
                     queue=queue,
-                    runas=runas)
-                ret['result'] = res
-                ret['comment'] = 'Upstream "{}" {}d.'.format(name, action)
-                ret['changes'] = diff_config
+                    runas=runas,
+                )
+                ret["result"] = res
+                ret["comment"] = 'Upstream "{}" {}d.'.format(name, action)
+                ret["changes"] = diff_config
             except CommandExecutionError as exp:
-                ret['comment'] = 'Error trying to {} upstream: {}'.format(action, exp)
+                ret["comment"] = "Error trying to {} upstream: {}".format(action, exp)
     return ret
 
 
 def absent(name, runas=None):
-    '''
+    """
     Ensure the named upstream is absent.
 
     :param str name: The name of the upstream to remove
     :param str runas: User to run the command
 
     .. versionadded:: 3000
-    '''
-    ret = {'name': name, 'result': False, 'comment': '', 'changes': {}}
+    """
+    ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
     try:
-        upstream_exists = __salt__['rabbitmq.upstream_exists'](name, runas=runas)
+        upstream_exists = __salt__["rabbitmq.upstream_exists"](name, runas=runas)
     except CommandExecutionError as err:
-        ret['comment'] = 'Error: {0}'.format(err)
+        ret["comment"] = "Error: {0}".format(err)
         return ret
 
     if upstream_exists:
-        if __opts__['test']:
-            ret['result'] = None
-            ret['comment'] = 'Upstream "{}" would have been deleted.'.format(name)
+        if __opts__["test"]:
+            ret["result"] = None
+            ret["comment"] = 'Upstream "{}" would have been deleted.'.format(name)
         else:
             try:
-                res = __salt__['rabbitmq.delete_upstream'](name, runas=runas)
+                res = __salt__["rabbitmq.delete_upstream"](name, runas=runas)
                 if res:
-                    ret['result'] = True
-                    ret['comment'] = 'Upstream "{}" has been deleted.'.format(name)
-                    ret['changes'] = {'old': name, 'new': None}
+                    ret["result"] = True
+                    ret["comment"] = 'Upstream "{}" has been deleted.'.format(name)
+                    ret["changes"] = {"old": name, "new": None}
             except CommandExecutionError as err:
-                ret['comment'] = 'Error: {0}'.format(err)
+                ret["comment"] = "Error: {0}".format(err)
     else:
-        ret['result'] = True
-        ret['comment'] = 'The upstream "{}" is already absent.'.format(name)
+        ret["result"] = True
+        ret["comment"] = 'The upstream "{}" is already absent.'.format(name)
     return ret

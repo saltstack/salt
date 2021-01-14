@@ -1,36 +1,26 @@
-# -*- coding: utf-8 -*-
-'''
+"""
 Functions for manipulating, inspecting, or otherwise working with data types
 and data structures.
-'''
+"""
 
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import copy
 import fnmatch
+import functools
 import logging
 import re
-import functools
+from collections.abc import Mapping, MutableMapping, Sequence
 
-try:
-    from collections.abc import Mapping, MutableMapping, Sequence
-except ImportError:
-    from collections import Mapping, MutableMapping, Sequence
-
-# Import Salt libs
 import salt.utils.dictupdate
 import salt.utils.stringutils
 import salt.utils.yaml
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import SaltException
-from salt.utils.decorators.jinja import jinja_filter
-from salt.utils.odict import OrderedDict
-
-# Import 3rd-party libs
-from salt.ext.six.moves import zip  # pylint: disable=redefined-builtin
 from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
+from salt.ext.six.moves import zip  # pylint: disable=redefined-builtin
+from salt.utils.decorators.jinja import jinja_filter
+from salt.utils.odict import OrderedDict
 
 try:
     import jmespath
@@ -41,15 +31,16 @@ log = logging.getLogger(__name__)
 
 
 class CaseInsensitiveDict(MutableMapping):
-    '''
+    """
     Inspired by requests' case-insensitive dict implementation, but works with
     non-string keys as well.
-    '''
+    """
+
     def __init__(self, init=None, **kwargs):
-        '''
+        """
         Force internal dict to be ordered to ensure a consistent iteration
         order, irrespective of case.
-        '''
+        """
         self._data = OrderedDict()
         self.update(init or {}, **kwargs)
 
@@ -67,7 +58,7 @@ class CaseInsensitiveDict(MutableMapping):
         return self._data[to_lowercase(key)][1]
 
     def __iter__(self):
-        return (item[0] for item in six.itervalues(self._data))
+        return (item[0] for item in self._data.values())
 
     def __eq__(self, rval):
         if not isinstance(rval, Mapping):
@@ -76,28 +67,28 @@ class CaseInsensitiveDict(MutableMapping):
         return dict(self.items_lower()) == dict(CaseInsensitiveDict(rval).items_lower())
 
     def __repr__(self):
-        return repr(dict(six.iteritems(self)))
+        return repr(dict(self.items()))
 
     def items_lower(self):
-        '''
+        """
         Returns a generator iterating over keys and values, with the keys all
         being lowercase.
-        '''
-        return ((key, val[1]) for key, val in six.iteritems(self._data))
+        """
+        return ((key, val[1]) for key, val in self._data.items())
 
     def copy(self):
-        '''
+        """
         Returns a copy of the object
-        '''
-        return CaseInsensitiveDict(six.iteritems(self._data))
+        """
+        return CaseInsensitiveDict(self._data.items())
 
 
 def __change_case(data, attr, preserve_dict_class=False):
-    '''
+    """
     Calls data.attr() if data has an attribute/method called attr.
     Processes data recursively if data is a Mapping or Sequence.
     For Mapping, processes both keys and values.
-    '''
+    """
     try:
         return getattr(data, attr)()
     except AttributeError:
@@ -107,73 +98,120 @@ def __change_case(data, attr, preserve_dict_class=False):
 
     if isinstance(data, Mapping):
         return (data_type if preserve_dict_class else dict)(
-            (__change_case(key, attr, preserve_dict_class),
-             __change_case(val, attr, preserve_dict_class))
-            for key, val in six.iteritems(data)
+            (
+                __change_case(key, attr, preserve_dict_class),
+                __change_case(val, attr, preserve_dict_class),
+            )
+            for key, val in data.items()
         )
     if isinstance(data, Sequence):
         return data_type(
-            __change_case(item, attr, preserve_dict_class) for item in data)
+            __change_case(item, attr, preserve_dict_class) for item in data
+        )
     return data
 
 
 def to_lowercase(data, preserve_dict_class=False):
-    '''
+    """
     Recursively changes everything in data to lowercase.
-    '''
-    return __change_case(data, 'lower', preserve_dict_class)
+    """
+    return __change_case(data, "lower", preserve_dict_class)
 
 
 def to_uppercase(data, preserve_dict_class=False):
-    '''
+    """
     Recursively changes everything in data to uppercase.
-    '''
-    return __change_case(data, 'upper', preserve_dict_class)
+    """
+    return __change_case(data, "upper", preserve_dict_class)
 
 
-@jinja_filter('compare_dicts')
+@jinja_filter("compare_dicts")
 def compare_dicts(old=None, new=None):
-    '''
+    """
     Compare before and after results from various salt functions, returning a
     dict describing the changes that were made.
-    '''
+    """
     ret = {}
-    for key in set((new or {})).union((old or {})):
+    for key in set(new or {}).union(old or {}):
         if key not in old:
             # New key
-            ret[key] = {'old': '',
-                        'new': new[key]}
+            ret[key] = {"old": "", "new": new[key]}
         elif key not in new:
             # Key removed
-            ret[key] = {'new': '',
-                        'old': old[key]}
+            ret[key] = {"new": "", "old": old[key]}
         elif new[key] != old[key]:
             # Key modified
-            ret[key] = {'old': old[key],
-                        'new': new[key]}
+            ret[key] = {"old": old[key], "new": new[key]}
     return ret
 
 
-@jinja_filter('compare_lists')
+@jinja_filter("compare_lists")
 def compare_lists(old=None, new=None):
-    '''
+    """
     Compare before and after results from various salt functions, returning a
     dict describing the changes that were made
-    '''
+    """
     ret = {}
     for item in new:
         if item not in old:
-            ret.setdefault('new', []).append(item)
+            ret.setdefault("new", []).append(item)
     for item in old:
         if item not in new:
-            ret.setdefault('old', []).append(item)
+            ret.setdefault("old", []).append(item)
     return ret
 
 
-def decode(data, encoding=None, errors='strict', keep=False,
-           normalize=False, preserve_dict_class=False, preserve_tuples=False,
-           to_str=False):
-    '''
+def _remove_circular_refs(ob, _seen=None):
+    """
+    Generic method to remove circular references from objects.
+    This has been taken from author Martijn Pieters
+    https://stackoverflow.com/questions/44777369/
+    remove-circular-references-in-dicts-lists-tuples/44777477#44777477
+    :param ob: dict, list, typle, set, and frozenset
+        Standard python object
+    :param object _seen:
+        Object that has circular reference
+    :returns:
+        Cleaned Python object
+    :rtype:
+        type(ob)
+    """
+    if _seen is None:
+        _seen = set()
+    if id(ob) in _seen:
+        # Here we caught a circular reference.
+        # Alert user and cleanup to continue.
+        log.exception(
+            "Caught a circular reference in data structure below."
+            "Cleaning and continuing execution.\n%r\n",
+            ob,
+        )
+        return None
+    _seen.add(id(ob))
+    res = ob
+    if isinstance(ob, dict):
+        res = {
+            _remove_circular_refs(k, _seen): _remove_circular_refs(v, _seen)
+            for k, v in ob.items()
+        }
+    elif isinstance(ob, (list, tuple, set, frozenset)):
+        res = type(ob)(_remove_circular_refs(v, _seen) for v in ob)
+    # remove id again; only *nested* references count
+    _seen.remove(id(ob))
+    return res
+
+
+def decode(
+    data,
+    encoding=None,
+    errors="strict",
+    keep=False,
+    normalize=False,
+    preserve_dict_class=False,
+    preserve_tuples=False,
+    to_str=False,
+):
+    """
     Generic function which will decode whichever type is passed, if necessary.
     Optionally use to_str=True to ensure strings are str types and not unicode
     on Python 2.
@@ -199,22 +237,55 @@ def decode(data, encoding=None, errors='strict', keep=False,
     two strings above, in which "й" is represented as two code points (i.e. one
     for the base character, and one for the breve mark). Normalizing allows for
     a more reliable test case.
-    '''
-    _decode_func = salt.utils.stringutils.to_unicode \
-        if not to_str \
+
+    """
+    # Clean data object before decoding to avoid circular references
+    data = _remove_circular_refs(data)
+
+    _decode_func = (
+        salt.utils.stringutils.to_unicode
+        if not to_str
         else salt.utils.stringutils.to_str
+    )
     if isinstance(data, Mapping):
-        return decode_dict(data, encoding, errors, keep, normalize,
-                           preserve_dict_class, preserve_tuples, to_str)
+        return decode_dict(
+            data,
+            encoding,
+            errors,
+            keep,
+            normalize,
+            preserve_dict_class,
+            preserve_tuples,
+            to_str,
+        )
     if isinstance(data, list):
-        return decode_list(data, encoding, errors, keep, normalize,
-                           preserve_dict_class, preserve_tuples, to_str)
+        return decode_list(
+            data,
+            encoding,
+            errors,
+            keep,
+            normalize,
+            preserve_dict_class,
+            preserve_tuples,
+            to_str,
+        )
     if isinstance(data, tuple):
-        return decode_tuple(data, encoding, errors, keep, normalize,
-                            preserve_dict_class, to_str) \
-            if preserve_tuples \
-            else decode_list(data, encoding, errors, keep, normalize,
-                             preserve_dict_class, preserve_tuples, to_str)
+        return (
+            decode_tuple(
+                data, encoding, errors, keep, normalize, preserve_dict_class, to_str
+            )
+            if preserve_tuples
+            else decode_list(
+                data,
+                encoding,
+                errors,
+                keep,
+                normalize,
+                preserve_dict_class,
+                preserve_tuples,
+                to_str,
+            )
+        )
     try:
         data = _decode_func(data, encoding, errors, normalize)
     except TypeError:
@@ -228,25 +299,48 @@ def decode(data, encoding=None, errors='strict', keep=False,
     return data
 
 
-def decode_dict(data, encoding=None, errors='strict', keep=False,
-                normalize=False, preserve_dict_class=False,
-                preserve_tuples=False, to_str=False):
-    '''
+def decode_dict(
+    data,
+    encoding=None,
+    errors="strict",
+    keep=False,
+    normalize=False,
+    preserve_dict_class=False,
+    preserve_tuples=False,
+    to_str=False,
+):
+    """
     Decode all string values to Unicode. Optionally use to_str=True to ensure
     strings are str types and not unicode on Python 2.
-    '''
-    _decode_func = salt.utils.stringutils.to_unicode \
-        if not to_str \
+    """
+    # Clean data object before decoding to avoid circular references
+    data = _remove_circular_refs(data)
+
+    _decode_func = (
+        salt.utils.stringutils.to_unicode
+        if not to_str
         else salt.utils.stringutils.to_str
+    )
     # Make sure we preserve OrderedDicts
     ret = data.__class__() if preserve_dict_class else {}
-    for key, value in six.iteritems(data):
+    for key, value in data.items():
         if isinstance(key, tuple):
-            key = decode_tuple(key, encoding, errors, keep, normalize,
-                               preserve_dict_class, to_str) \
-                if preserve_tuples \
-                else decode_list(key, encoding, errors, keep, normalize,
-                                 preserve_dict_class, preserve_tuples, to_str)
+            key = (
+                decode_tuple(
+                    key, encoding, errors, keep, normalize, preserve_dict_class, to_str
+                )
+                if preserve_tuples
+                else decode_list(
+                    key,
+                    encoding,
+                    errors,
+                    keep,
+                    normalize,
+                    preserve_dict_class,
+                    preserve_tuples,
+                    to_str,
+                )
+            )
         else:
             try:
                 key = _decode_func(key, encoding, errors, normalize)
@@ -260,17 +354,50 @@ def decode_dict(data, encoding=None, errors='strict', keep=False,
                     raise
 
         if isinstance(value, list):
-            value = decode_list(value, encoding, errors, keep, normalize,
-                                preserve_dict_class, preserve_tuples, to_str)
+            value = decode_list(
+                value,
+                encoding,
+                errors,
+                keep,
+                normalize,
+                preserve_dict_class,
+                preserve_tuples,
+                to_str,
+            )
         elif isinstance(value, tuple):
-            value = decode_tuple(value, encoding, errors, keep, normalize,
-                                 preserve_dict_class, to_str) \
-                if preserve_tuples \
-                else decode_list(value, encoding, errors, keep, normalize,
-                                 preserve_dict_class, preserve_tuples, to_str)
+            value = (
+                decode_tuple(
+                    value,
+                    encoding,
+                    errors,
+                    keep,
+                    normalize,
+                    preserve_dict_class,
+                    to_str,
+                )
+                if preserve_tuples
+                else decode_list(
+                    value,
+                    encoding,
+                    errors,
+                    keep,
+                    normalize,
+                    preserve_dict_class,
+                    preserve_tuples,
+                    to_str,
+                )
+            )
         elif isinstance(value, Mapping):
-            value = decode_dict(value, encoding, errors, keep, normalize,
-                                preserve_dict_class, preserve_tuples, to_str)
+            value = decode_dict(
+                value,
+                encoding,
+                errors,
+                keep,
+                normalize,
+                preserve_dict_class,
+                preserve_tuples,
+                to_str,
+            )
         else:
             try:
                 value = _decode_func(value, encoding, errors, normalize)
@@ -287,30 +414,69 @@ def decode_dict(data, encoding=None, errors='strict', keep=False,
     return ret
 
 
-def decode_list(data, encoding=None, errors='strict', keep=False,
-                normalize=False, preserve_dict_class=False,
-                preserve_tuples=False, to_str=False):
-    '''
+def decode_list(
+    data,
+    encoding=None,
+    errors="strict",
+    keep=False,
+    normalize=False,
+    preserve_dict_class=False,
+    preserve_tuples=False,
+    to_str=False,
+):
+    """
     Decode all string values to Unicode. Optionally use to_str=True to ensure
     strings are str types and not unicode on Python 2.
-    '''
-    _decode_func = salt.utils.stringutils.to_unicode \
-        if not to_str \
+    """
+    # Clean data object before decoding to avoid circular references
+    data = _remove_circular_refs(data)
+
+    _decode_func = (
+        salt.utils.stringutils.to_unicode
+        if not to_str
         else salt.utils.stringutils.to_str
+    )
     ret = []
     for item in data:
         if isinstance(item, list):
-            item = decode_list(item, encoding, errors, keep, normalize,
-                               preserve_dict_class, preserve_tuples, to_str)
+            item = decode_list(
+                item,
+                encoding,
+                errors,
+                keep,
+                normalize,
+                preserve_dict_class,
+                preserve_tuples,
+                to_str,
+            )
         elif isinstance(item, tuple):
-            item = decode_tuple(item, encoding, errors, keep, normalize,
-                                preserve_dict_class, to_str) \
-                if preserve_tuples \
-                else decode_list(item, encoding, errors, keep, normalize,
-                                 preserve_dict_class, preserve_tuples, to_str)
+            item = (
+                decode_tuple(
+                    item, encoding, errors, keep, normalize, preserve_dict_class, to_str
+                )
+                if preserve_tuples
+                else decode_list(
+                    item,
+                    encoding,
+                    errors,
+                    keep,
+                    normalize,
+                    preserve_dict_class,
+                    preserve_tuples,
+                    to_str,
+                )
+            )
         elif isinstance(item, Mapping):
-            item = decode_dict(item, encoding, errors, keep, normalize,
-                               preserve_dict_class, preserve_tuples, to_str)
+            item = decode_dict(
+                item,
+                encoding,
+                errors,
+                keep,
+                normalize,
+                preserve_dict_class,
+                preserve_tuples,
+                to_str,
+            )
         else:
             try:
                 item = _decode_func(item, encoding, errors, normalize)
@@ -327,21 +493,35 @@ def decode_list(data, encoding=None, errors='strict', keep=False,
     return ret
 
 
-def decode_tuple(data, encoding=None, errors='strict', keep=False,
-                 normalize=False, preserve_dict_class=False, to_str=False):
-    '''
+def decode_tuple(
+    data,
+    encoding=None,
+    errors="strict",
+    keep=False,
+    normalize=False,
+    preserve_dict_class=False,
+    to_str=False,
+):
+    """
     Decode all string values to Unicode. Optionally use to_str=True to ensure
     strings are str types and not unicode on Python 2.
-    '''
+    """
     return tuple(
-        decode_list(data, encoding, errors, keep, normalize,
-                    preserve_dict_class, True, to_str)
+        decode_list(
+            data, encoding, errors, keep, normalize, preserve_dict_class, True, to_str
+        )
     )
 
 
-def encode(data, encoding=None, errors='strict', keep=False,
-           preserve_dict_class=False, preserve_tuples=False):
-    '''
+def encode(
+    data,
+    encoding=None,
+    errors="strict",
+    keep=False,
+    preserve_dict_class=False,
+    preserve_tuples=False,
+):
+    """
     Generic function which will encode whichever type is passed, if necessary
 
     If `strict` is True, and `keep` is False, and we fail to encode, a
@@ -349,18 +529,27 @@ def encode(data, encoding=None, errors='strict', keep=False,
     original value to silently be returned in cases where encoding fails. This
     can be useful for cases where the data passed to this function is likely to
     contain binary blobs.
-    '''
+
+    """
+    # Clean data object before encoding to avoid circular references
+    data = _remove_circular_refs(data)
+
     if isinstance(data, Mapping):
-        return encode_dict(data, encoding, errors, keep,
-                           preserve_dict_class, preserve_tuples)
+        return encode_dict(
+            data, encoding, errors, keep, preserve_dict_class, preserve_tuples
+        )
     if isinstance(data, list):
-        return encode_list(data, encoding, errors, keep,
-                           preserve_dict_class, preserve_tuples)
+        return encode_list(
+            data, encoding, errors, keep, preserve_dict_class, preserve_tuples
+        )
     if isinstance(data, tuple):
-        return encode_tuple(data, encoding, errors, keep, preserve_dict_class) \
-            if preserve_tuples \
-            else encode_list(data, encoding, errors, keep,
-                             preserve_dict_class, preserve_tuples)
+        return (
+            encode_tuple(data, encoding, errors, keep, preserve_dict_class)
+            if preserve_tuples
+            else encode_list(
+                data, encoding, errors, keep, preserve_dict_class, preserve_tuples
+            )
+        )
     try:
         return salt.utils.stringutils.to_bytes(data, encoding, errors)
     except TypeError:
@@ -374,20 +563,31 @@ def encode(data, encoding=None, errors='strict', keep=False,
     return data
 
 
-@jinja_filter('json_decode_dict')  # Remove this for Aluminium
-@jinja_filter('json_encode_dict')
-def encode_dict(data, encoding=None, errors='strict', keep=False,
-                preserve_dict_class=False, preserve_tuples=False):
-    '''
+@jinja_filter("json_decode_dict")  # Remove this for Aluminium
+@jinja_filter("json_encode_dict")
+def encode_dict(
+    data,
+    encoding=None,
+    errors="strict",
+    keep=False,
+    preserve_dict_class=False,
+    preserve_tuples=False,
+):
+    """
     Encode all string values to bytes
-    '''
+    """
+    # Clean data object before encoding to avoid circular references
+    data = _remove_circular_refs(data)
     ret = data.__class__() if preserve_dict_class else {}
-    for key, value in six.iteritems(data):
+    for key, value in data.items():
         if isinstance(key, tuple):
-            key = encode_tuple(key, encoding, errors, keep, preserve_dict_class) \
-                if preserve_tuples \
-                else encode_list(key, encoding, errors, keep,
-                                 preserve_dict_class, preserve_tuples)
+            key = (
+                encode_tuple(key, encoding, errors, keep, preserve_dict_class)
+                if preserve_tuples
+                else encode_list(
+                    key, encoding, errors, keep, preserve_dict_class, preserve_tuples
+                )
+            )
         else:
             try:
                 key = salt.utils.stringutils.to_bytes(key, encoding, errors)
@@ -401,16 +601,21 @@ def encode_dict(data, encoding=None, errors='strict', keep=False,
                     raise
 
         if isinstance(value, list):
-            value = encode_list(value, encoding, errors, keep,
-                                preserve_dict_class, preserve_tuples)
+            value = encode_list(
+                value, encoding, errors, keep, preserve_dict_class, preserve_tuples
+            )
         elif isinstance(value, tuple):
-            value = encode_tuple(value, encoding, errors, keep, preserve_dict_class) \
-                if preserve_tuples \
-                else encode_list(value, encoding, errors, keep,
-                                 preserve_dict_class, preserve_tuples)
+            value = (
+                encode_tuple(value, encoding, errors, keep, preserve_dict_class)
+                if preserve_tuples
+                else encode_list(
+                    value, encoding, errors, keep, preserve_dict_class, preserve_tuples
+                )
+            )
         elif isinstance(value, Mapping):
-            value = encode_dict(value, encoding, errors, keep,
-                                preserve_dict_class, preserve_tuples)
+            value = encode_dict(
+                value, encoding, errors, keep, preserve_dict_class, preserve_tuples
+            )
         else:
             try:
                 value = salt.utils.stringutils.to_bytes(value, encoding, errors)
@@ -427,26 +632,40 @@ def encode_dict(data, encoding=None, errors='strict', keep=False,
     return ret
 
 
-@jinja_filter('json_decode_list')  # Remove this for Aluminium
-@jinja_filter('json_encode_list')
-def encode_list(data, encoding=None, errors='strict', keep=False,
-                preserve_dict_class=False, preserve_tuples=False):
-    '''
+@jinja_filter("json_decode_list")  # Remove this for Aluminium
+@jinja_filter("json_encode_list")
+def encode_list(
+    data,
+    encoding=None,
+    errors="strict",
+    keep=False,
+    preserve_dict_class=False,
+    preserve_tuples=False,
+):
+    """
     Encode all string values to bytes
-    '''
+    """
+    # Clean data object before encoding to avoid circular references
+    data = _remove_circular_refs(data)
+
     ret = []
     for item in data:
         if isinstance(item, list):
-            item = encode_list(item, encoding, errors, keep,
-                               preserve_dict_class, preserve_tuples)
+            item = encode_list(
+                item, encoding, errors, keep, preserve_dict_class, preserve_tuples
+            )
         elif isinstance(item, tuple):
-            item = encode_tuple(item, encoding, errors, keep, preserve_dict_class) \
-                if preserve_tuples \
-                else encode_list(item, encoding, errors, keep,
-                                 preserve_dict_class, preserve_tuples)
+            item = (
+                encode_tuple(item, encoding, errors, keep, preserve_dict_class)
+                if preserve_tuples
+                else encode_list(
+                    item, encoding, errors, keep, preserve_dict_class, preserve_tuples
+                )
+            )
         elif isinstance(item, Mapping):
-            item = encode_dict(item, encoding, errors, keep,
-                               preserve_dict_class, preserve_tuples)
+            item = encode_dict(
+                item, encoding, errors, keep, preserve_dict_class, preserve_tuples
+            )
         else:
             try:
                 item = salt.utils.stringutils.to_bytes(item, encoding, errors)
@@ -463,42 +682,37 @@ def encode_list(data, encoding=None, errors='strict', keep=False,
     return ret
 
 
-def encode_tuple(data, encoding=None, errors='strict', keep=False,
-                 preserve_dict_class=False):
-    '''
+def encode_tuple(
+    data, encoding=None, errors="strict", keep=False, preserve_dict_class=False
+):
+    """
     Encode all string values to Unicode
-    '''
-    return tuple(
-        encode_list(data, encoding, errors, keep, preserve_dict_class, True))
+    """
+    return tuple(encode_list(data, encoding, errors, keep, preserve_dict_class, True))
 
 
-@jinja_filter('exactly_n_true')
+@jinja_filter("exactly_n_true")
 def exactly_n(iterable, amount=1):
-    '''
+    """
     Tests that exactly N items in an iterable are "truthy" (neither None,
     False, nor 0).
-    '''
+    """
     i = iter(iterable)
     return all(any(i) for j in range(amount)) and not any(i)
 
 
-@jinja_filter('exactly_one_true')
+@jinja_filter("exactly_one_true")
 def exactly_one(iterable):
-    '''
+    """
     Check if only one item is not None, False, or 0 in an iterable.
-    '''
+    """
     return exactly_n(iterable)
 
 
-def filter_by(lookup_dict,
-              lookup,
-              traverse,
-              merge=None,
-              default='default',
-              base=None):
-    '''
+def filter_by(lookup_dict, lookup, traverse, merge=None, default="default", base=None):
+    """
     Common code to filter data structures like grains and pillar
-    '''
+    """
     ret = None
     # Default value would be an empty list if lookup not found
     val = traverse_dict_and_list(traverse, lookup, [])
@@ -507,10 +721,8 @@ def filter_by(lookup_dict,
     # lookup_dict keys
     for each in val if isinstance(val, list) else [val]:
         for key in lookup_dict:
-            test_key = key if isinstance(key, six.string_types) \
-                else six.text_type(key)
-            test_each = each if isinstance(each, six.string_types) \
-                else six.text_type(each)
+            test_key = key if isinstance(key, str) else str(key)
+            test_each = each if isinstance(each, str) else str(each)
             if fnmatch.fnmatchcase(test_each, test_key):
                 ret = lookup_dict[key]
                 break
@@ -528,14 +740,13 @@ def filter_by(lookup_dict,
         elif isinstance(base_values, Mapping):
             if not isinstance(ret, Mapping):
                 raise SaltException(
-                    'filter_by default and look-up values must both be '
-                    'dictionaries.')
+                    "filter_by default and look-up values must both be " "dictionaries."
+                )
             ret = salt.utils.dictupdate.update(copy.deepcopy(base_values), ret)
 
     if merge:
         if not isinstance(merge, Mapping):
-            raise SaltException(
-                'filter_by merge argument must be a dictionary.')
+            raise SaltException("filter_by merge argument must be a dictionary.")
 
         if ret is None:
             ret = merge
@@ -546,12 +757,12 @@ def filter_by(lookup_dict,
 
 
 def traverse_dict(data, key, default=None, delimiter=DEFAULT_TARGET_DELIM):
-    '''
+    """
     Traverse a dict using a colon-delimited (or otherwise delimited, using the
     'delimiter' param) target string. The target 'foo:bar:baz' will return
     data['foo']['bar']['baz'] if this value exists, and will otherwise return
     the dict in the default argument.
-    '''
+    """
     ptr = data
     try:
         for each in key.split(delimiter):
@@ -562,9 +773,9 @@ def traverse_dict(data, key, default=None, delimiter=DEFAULT_TARGET_DELIM):
     return ptr
 
 
-@jinja_filter('traverse')
+@jinja_filter("traverse")
 def traverse_dict_and_list(data, key, default=None, delimiter=DEFAULT_TARGET_DELIM):
-    '''
+    """
     Traverse a dict or list using a colon-delimited (or otherwise delimited,
     using the 'delimiter' param) target string. The target 'foo:bar:0' will
     return data['foo']['bar'][0] if this value exists, and will otherwise
@@ -573,9 +784,12 @@ def traverse_dict_and_list(data, key, default=None, delimiter=DEFAULT_TARGET_DEL
     The target 'foo:bar:0' will return data['foo']['bar'][0] if data like
     {'foo':{'bar':['baz']}} , if data like {'foo':{'bar':{'0':'baz'}}}
     then return data['foo']['bar']['0']
-    '''
+    """
     ptr = data
-    for each in key.split(delimiter):
+    if isinstance(key, str):
+        key = key.split(delimiter)
+
+    for each in key:
         if isinstance(ptr, list):
             try:
                 idx = int(each)
@@ -600,23 +814,45 @@ def traverse_dict_and_list(data, key, default=None, delimiter=DEFAULT_TARGET_DEL
         else:
             try:
                 ptr = ptr[each]
-            except (KeyError, TypeError):
+            except KeyError:
+                # Late import to avoid circular import
+                import salt.utils.args
+
+                # YAML-load the current key (catches integer/float dict keys)
+                try:
+                    loaded_key = salt.utils.args.yamlify_arg(each)
+                except Exception:  # pylint: disable=broad-except
+                    return default
+                if loaded_key == each:
+                    # After YAML-loading, the desired key is unchanged. This
+                    # means that the KeyError caught above is a legitimate
+                    # failure to match the desired key. Therefore, return the
+                    # default.
+                    return default
+                else:
+                    # YAML-loading the key changed its value, so re-check with
+                    # the loaded key. This is how we can match a numeric key
+                    # with a string-based expression.
+                    try:
+                        ptr = ptr[loaded_key]
+                    except (KeyError, TypeError):
+                        return default
+            except TypeError:
                 return default
     return ptr
 
 
-def subdict_match(data,
-                  expr,
-                  delimiter=DEFAULT_TARGET_DELIM,
-                  regex_match=False,
-                  exact_match=False):
-    '''
+def subdict_match(
+    data, expr, delimiter=DEFAULT_TARGET_DELIM, regex_match=False, exact_match=False
+):
+    """
     Check for a match in a dictionary using a delimiter character to denote
     levels of subdicts, and also allowing the delimiter character to be
     matched. Thus, 'foo:bar:baz' will match data['foo'] == 'bar:baz' and
     data['foo']['bar'] == 'baz'. The latter would take priority over the
     former, as more deeply-nested matches are tried first.
-    '''
+    """
+
     def _match(target, pattern, regex_match=False, exact_match=False):
         # The reason for using six.text_type first and _then_ using
         # to_unicode as a fallback is because we want to eventually have
@@ -628,11 +864,11 @@ def subdict_match(data,
         # begin with is that (by design) to_unicode will raise a TypeError if a
         # non-string/bytestring/bytearray value is passed.
         try:
-            target = six.text_type(target).lower()
+            target = str(target).lower()
         except UnicodeDecodeError:
             target = salt.utils.stringutils.to_unicode(target).lower()
         try:
-            pattern = six.text_type(pattern).lower()
+            pattern = str(pattern).lower()
         except UnicodeDecodeError:
             pattern = salt.utils.stringutils.to_unicode(pattern).lower()
 
@@ -640,48 +876,54 @@ def subdict_match(data,
             try:
                 return re.match(pattern, target)
             except Exception:  # pylint: disable=broad-except
-                log.error('Invalid regex \'%s\' in match', pattern)
+                log.error("Invalid regex '%s' in match", pattern)
                 return False
         else:
-            return target == pattern if exact_match \
-                else fnmatch.fnmatch(target, pattern)
+            return (
+                target == pattern if exact_match else fnmatch.fnmatch(target, pattern)
+            )
 
     def _dict_match(target, pattern, regex_match=False, exact_match=False):
         ret = False
-        wildcard = pattern.startswith('*:')
+        wildcard = pattern.startswith("*:")
         if wildcard:
             pattern = pattern[2:]
 
-        if pattern == '*':
+        if pattern == "*":
             # We are just checking that the key exists
             ret = True
         if not ret and pattern in target:
             # We might want to search for a key
             ret = True
-        if not ret and subdict_match(target,
-                                     pattern,
-                                     regex_match=regex_match,
-                                     exact_match=exact_match):
+        if not ret and subdict_match(
+            target, pattern, regex_match=regex_match, exact_match=exact_match
+        ):
             ret = True
         if not ret and wildcard:
             for key in target:
                 if isinstance(target[key], dict):
-                    if _dict_match(target[key],
-                                   pattern,
-                                   regex_match=regex_match,
-                                   exact_match=exact_match):
+                    if _dict_match(
+                        target[key],
+                        pattern,
+                        regex_match=regex_match,
+                        exact_match=exact_match,
+                    ):
                         return True
                 elif isinstance(target[key], list):
                     for item in target[key]:
-                        if _match(item,
-                                  pattern,
-                                  regex_match=regex_match,
-                                  exact_match=exact_match):
-                            return True
-                elif _match(target[key],
+                        if _match(
+                            item,
                             pattern,
                             regex_match=regex_match,
-                            exact_match=exact_match):
+                            exact_match=exact_match,
+                        ):
+                            return True
+                elif _match(
+                    target[key],
+                    pattern,
+                    regex_match=regex_match,
+                    exact_match=exact_match,
+                ):
                     return True
         return ret
 
@@ -695,7 +937,7 @@ def subdict_match(data,
     # want to use are 3, 2, and 1, in that order.
     for idx in range(num_splits - 1, 0, -1):
         key = delimiter.join(splits[:idx])
-        if key == '*':
+        if key == "*":
             # We are matching on everything under the top level, so we need to
             # treat the match as the entire data being passed in
             matchstr = expr
@@ -703,54 +945,55 @@ def subdict_match(data,
         else:
             matchstr = delimiter.join(splits[idx:])
             match = traverse_dict_and_list(data, key, {}, delimiter=delimiter)
-        log.debug("Attempting to match '%s' in '%s' using delimiter '%s'",
-                  matchstr, key, delimiter)
+        log.debug(
+            "Attempting to match '%s' in '%s' using delimiter '%s'",
+            matchstr,
+            key,
+            delimiter,
+        )
         if match == {}:
             continue
         if isinstance(match, dict):
-            if _dict_match(match,
-                           matchstr,
-                           regex_match=regex_match,
-                           exact_match=exact_match):
+            if _dict_match(
+                match, matchstr, regex_match=regex_match, exact_match=exact_match
+            ):
                 return True
             continue
         if isinstance(match, (list, tuple)):
             # We are matching a single component to a single list member
             for member in match:
                 if isinstance(member, dict):
-                    if _dict_match(member,
-                                   matchstr,
-                                   regex_match=regex_match,
-                                   exact_match=exact_match):
+                    if _dict_match(
+                        member,
+                        matchstr,
+                        regex_match=regex_match,
+                        exact_match=exact_match,
+                    ):
                         return True
-                if _match(member,
-                          matchstr,
-                          regex_match=regex_match,
-                          exact_match=exact_match):
+                if _match(
+                    member, matchstr, regex_match=regex_match, exact_match=exact_match
+                ):
                     return True
             continue
-        if _match(match,
-                  matchstr,
-                  regex_match=regex_match,
-                  exact_match=exact_match):
+        if _match(match, matchstr, regex_match=regex_match, exact_match=exact_match):
             return True
     return False
 
 
-@jinja_filter('substring_in_list')
+@jinja_filter("substring_in_list")
 def substr_in_list(string_to_search_for, list_to_search):
-    '''
+    """
     Return a boolean value that indicates whether or not a given
     string is present in any of the strings which comprise a list
-    '''
+    """
     return any(string_to_search_for in s for s in list_to_search)
 
 
 def is_dictlist(data):
-    '''
+    """
     Returns True if data is a list of one-element dicts (as found in many SLS
     schemas), otherwise returns False
-    '''
+    """
     if isinstance(data, list):
         for element in data:
             if isinstance(element, dict):
@@ -762,16 +1005,12 @@ def is_dictlist(data):
     return False
 
 
-def repack_dictlist(data,
-                    strict=False,
-                    recurse=False,
-                    key_cb=None,
-                    val_cb=None):
-    '''
+def repack_dictlist(data, strict=False, recurse=False, key_cb=None, val_cb=None):
+    """
     Takes a list of one-element dicts (as found in many SLS schemas) and
     repacks into a single dictionary.
-    '''
-    if isinstance(data, six.string_types):
+    """
+    if isinstance(data, str):
         try:
             data = salt.utils.yaml.safe_load(data)
         except salt.utils.yaml.parser.ParserError as err:
@@ -783,7 +1022,7 @@ def repack_dictlist(data,
     if val_cb is None:
         val_cb = lambda x, y: y
 
-    valid_non_dict = (six.string_types, six.integer_types, float)
+    valid_non_dict = ((str,), (int,), float)
     if isinstance(data, list):
         for element in data:
             if isinstance(element, valid_non_dict):
@@ -791,21 +1030,21 @@ def repack_dictlist(data,
             if isinstance(element, dict):
                 if len(element) != 1:
                     log.error(
-                        'Invalid input for repack_dictlist: key/value pairs '
-                        'must contain only one element (data passed: %s).',
-                        element
+                        "Invalid input for repack_dictlist: key/value pairs "
+                        "must contain only one element (data passed: %s).",
+                        element,
                     )
                     return {}
             else:
                 log.error(
-                    'Invalid input for repack_dictlist: element %s is '
-                    'not a string/dict/numeric value', element
+                    "Invalid input for repack_dictlist: element %s is "
+                    "not a string/dict/numeric value",
+                    element,
                 )
                 return {}
     else:
         log.error(
-            'Invalid input for repack_dictlist, data passed is not a list '
-            '(%s)', data
+            "Invalid input for repack_dictlist, data passed is not a list " "(%s)", data
         )
         return {}
 
@@ -821,8 +1060,8 @@ def repack_dictlist(data,
                     ret[key_cb(key)] = repack_dictlist(val, recurse=recurse)
                 elif strict:
                     log.error(
-                        'Invalid input for repack_dictlist: nested dictlist '
-                        'found, but recurse is set to False'
+                        "Invalid input for repack_dictlist: nested dictlist "
+                        "found, but recurse is set to False"
                     )
                     return {}
                 else:
@@ -832,17 +1071,17 @@ def repack_dictlist(data,
     return ret
 
 
-@jinja_filter('is_list')
+@jinja_filter("is_list")
 def is_list(value):
-    '''
+    """
     Check if a variable is a list.
-    '''
+    """
     return isinstance(value, list)
 
 
-@jinja_filter('is_iter')
-def is_iter(thing, ignore=six.string_types):
-    '''
+@jinja_filter("is_iter")
+def is_iter(thing, ignore=(str,)):
+    """
     Test if an object is iterable, but not a string type.
 
     Test if an object is an iterator or is iterable itself. By default this
@@ -853,7 +1092,7 @@ def is_iter(thing, ignore=six.string_types):
     dictionaries or named tuples.
 
     Based on https://bitbucket.org/petershinners/yter
-    '''
+    """
     if ignore and isinstance(thing, ignore):
         return False
     try:
@@ -863,9 +1102,9 @@ def is_iter(thing, ignore=six.string_types):
         return False
 
 
-@jinja_filter('sorted_ignorecase')
+@jinja_filter("sorted_ignorecase")
 def sorted_ignorecase(to_sort):
-    '''
+    """
     Sort a list of strings ignoring case.
 
     >>> L = ['foo', 'Foo', 'bar', 'Bar']
@@ -874,19 +1113,19 @@ def sorted_ignorecase(to_sort):
     >>> sorted(L, key=lambda x: x.lower())
     ['bar', 'Bar', 'foo', 'Foo']
     >>>
-    '''
+    """
     return sorted(to_sort, key=lambda x: x.lower())
 
 
 def is_true(value=None):
-    '''
+    """
     Returns a boolean value representing the "truth" of the value passed. The
     rules for what is a "True" value are:
 
         1. Integer/float values greater than 0
         2. The string values "True" and "true"
         3. Any object for which bool(obj) returns True
-    '''
+    """
     # First, try int/float conversion
     try:
         value = int(value)
@@ -898,26 +1137,26 @@ def is_true(value=None):
         pass
 
     # Now check for truthiness
-    if isinstance(value, (six.integer_types, float)):
+    if isinstance(value, ((int,), float)):
         return value > 0
-    if isinstance(value, six.string_types):
-        return six.text_type(value).lower() == 'true'
+    if isinstance(value, str):
+        return str(value).lower() == "true"
     return bool(value)
 
 
-@jinja_filter('mysql_to_dict')
+@jinja_filter("mysql_to_dict")
 def mysql_to_dict(data, key):
-    '''
+    """
     Convert MySQL-style output to a python dictionary
-    '''
+    """
     ret = {}
-    headers = ['']
+    headers = [""]
     for line in data:
         if not line:
             continue
-        if line.startswith('+'):
+        if line.startswith("+"):
             continue
-        comps = line.split('|')
+        comps = line.split("|")
         for comp in range(len(comps)):
             comps[comp] = comps[comp].strip()
         if len(headers) > 1:
@@ -934,14 +1173,14 @@ def mysql_to_dict(data, key):
 
 
 def simple_types_filter(data):
-    '''
+    """
     Convert the data list, dictionary into simple types, i.e., int, float, string,
     bool, etc.
-    '''
+    """
     if data is None:
         return data
 
-    simpletypes_keys = (six.string_types, six.text_type, six.integer_types, float, bool)
+    simpletypes_keys = ((str,), str, (int,), float, bool)
     simpletypes_values = tuple(list(simpletypes_keys) + [list, tuple])
 
     if isinstance(data, (list, tuple)):
@@ -957,7 +1196,7 @@ def simple_types_filter(data):
 
     if isinstance(data, dict):
         simpledict = {}
-        for key, value in six.iteritems(data):
+        for key, value in data.items():
             if key is not None and not isinstance(key, simpletypes_keys):
                 key = repr(key)
             if value is not None and isinstance(value, (dict, list, tuple)):
@@ -971,23 +1210,23 @@ def simple_types_filter(data):
 
 
 def stringify(data):
-    '''
+    """
     Given an iterable, returns its items as a list, with any non-string items
     converted to unicode strings.
-    '''
+    """
     ret = []
     for item in data:
         if six.PY2 and isinstance(item, str):
             item = salt.utils.stringutils.to_unicode(item)
-        elif not isinstance(item, six.string_types):
-            item = six.text_type(item)
+        elif not isinstance(item, str):
+            item = str(item)
         ret.append(item)
     return ret
 
 
-@jinja_filter('json_query')
+@jinja_filter("json_query")
 def json_query(data, expr):
-    '''
+    """
     Query data using JMESPath language (http://jmespath.org).
 
     Requires the https://github.com/jmespath/jmespath.py library.
@@ -1009,16 +1248,16 @@ def json_query(data, expr):
     .. code-block:: text
 
         [80, 25, 22]
-    '''
+    """
     if jmespath is None:
-        err = 'json_query requires jmespath module installed'
+        err = "json_query requires jmespath module installed"
         log.error(err)
         raise RuntimeError(err)
     return jmespath.search(expr, data)
 
 
 def _is_not_considered_falsey(value, ignore_types=()):
-    '''
+    """
     Helper function for filter_falsey to determine if something is not to be
     considered falsey.
 
@@ -1026,12 +1265,12 @@ def _is_not_considered_falsey(value, ignore_types=()):
     :param list ignore_types: The types to ignore when considering the value.
 
     :return bool
-    '''
+    """
     return isinstance(value, bool) or type(value) in ignore_types or value
 
 
 def filter_falsey(data, recurse_depth=None, ignore_types=()):
-    '''
+    """
     Helper function to remove items from an iterable with falsey value.
     Removes ``None``, ``{}`` and ``[]``, 0, '' (but does not remove ``False``).
     Recurses into sub-iterables if ``recurse`` is set to ``True``.
@@ -1045,37 +1284,42 @@ def filter_falsey(data, recurse_depth=None, ignore_types=()):
     :return type(data)
 
     .. versionadded:: 3000
-    '''
+    """
     filter_element = (
-        functools.partial(filter_falsey,
-                          recurse_depth=recurse_depth-1,
-                          ignore_types=ignore_types)
-        if recurse_depth else lambda x: x
+        functools.partial(
+            filter_falsey, recurse_depth=recurse_depth - 1, ignore_types=ignore_types
+        )
+        if recurse_depth
+        else lambda x: x
     )
 
     if isinstance(data, dict):
-        processed_elements = [(key, filter_element(value)) for key, value in six.iteritems(data)]
-        return type(data)([
-            (key, value)
-            for key, value in processed_elements
-            if _is_not_considered_falsey(value, ignore_types=ignore_types)
-        ])
+        processed_elements = [
+            (key, filter_element(value)) for key, value in data.items()
+        ]
+        return type(data)(
+            [
+                (key, value)
+                for key, value in processed_elements
+                if _is_not_considered_falsey(value, ignore_types=ignore_types)
+            ]
+        )
     if is_iter(data):
         processed_elements = (filter_element(value) for value in data)
-        return type(data)([
-            value for value in processed_elements
-            if _is_not_considered_falsey(value, ignore_types=ignore_types)
-        ])
+        return type(data)(
+            [
+                value
+                for value in processed_elements
+                if _is_not_considered_falsey(value, ignore_types=ignore_types)
+            ]
+        )
     return data
 
 
 def recursive_diff(
-        old,
-        new,
-        ignore_keys=None,
-        ignore_order=False,
-        ignore_missing_keys=False):
-    '''
+    old, new, ignore_keys=None, ignore_order=False, ignore_missing_keys=False
+):
+    """
     Performs a recursive diff on mappings and/or iterables and returns the result
     in a {'old': values, 'new': values}-style.
     Compares dicts and sets unordered (obviously), OrderedDicts and Lists ordered
@@ -1090,12 +1334,16 @@ def recursive_diff(
         but missing in ``new``. Only works for regular dicts.
 
     :return dict: Returns dict with keys 'old' and 'new' containing the differences.
-    '''
+    """
     ignore_keys = ignore_keys or []
     res = {}
     ret_old = copy.deepcopy(old)
     ret_new = copy.deepcopy(new)
-    if isinstance(old, OrderedDict) and isinstance(new, OrderedDict) and not ignore_order:
+    if (
+        isinstance(old, OrderedDict)
+        and isinstance(new, OrderedDict)
+        and not ignore_order
+    ):
         append_old, append_new = [], []
         if len(old) != len(new):
             min_length = min(len(old), len(new))
@@ -1114,13 +1362,14 @@ def recursive_diff(
                         new[key_new],
                         ignore_keys=ignore_keys,
                         ignore_order=ignore_order,
-                        ignore_missing_keys=ignore_missing_keys)
+                        ignore_missing_keys=ignore_missing_keys,
+                    )
                     if not res:  # Equal
                         del ret_old[key_old]
                         del ret_new[key_new]
                     else:
-                        ret_old[key_old] = res['old']
-                        ret_new[key_new] = res['new']
+                        ret_old[key_old] = res["old"]
+                        ret_new[key_new] = res["new"]
             else:
                 if key_old in ignore_keys:
                     del ret_old[key_old]
@@ -1131,7 +1380,7 @@ def recursive_diff(
             ret_old[item] = old[item]
         for item in append_new:
             ret_new[item] = new[item]
-        ret = {'old': ret_old, 'new': ret_new} if ret_old or ret_new else {}
+        ret = {"old": ret_old, "new": ret_new} if ret_old or ret_new else {}
     elif isinstance(old, Mapping) and isinstance(new, Mapping):
         # Compare unordered
         for key in set(list(old) + list(new)):
@@ -1146,16 +1395,17 @@ def recursive_diff(
                     new[key],
                     ignore_keys=ignore_keys,
                     ignore_order=ignore_order,
-                    ignore_missing_keys=ignore_missing_keys)
+                    ignore_missing_keys=ignore_missing_keys,
+                )
                 if not res:  # Equal
                     del ret_old[key]
                     del ret_new[key]
                 else:
-                    ret_old[key] = res['old']
-                    ret_new[key] = res['new']
-        ret = {'old': ret_old, 'new': ret_new} if ret_old or ret_new else {}
+                    ret_old[key] = res["old"]
+                    ret_new[key] = res["new"]
+        ret = {"old": ret_old, "new": ret_new} if ret_old or ret_new else {}
     elif isinstance(old, set) and isinstance(new, set):
-        ret = {'old': old - new, 'new': new - old} if old - new or new - old else {}
+        ret = {"old": old - new, "new": new - old} if old - new or new - old else {}
     elif is_iter(old) and is_iter(new):
         # Create a list so we can edit on an index-basis.
         list_old = list(ret_old)
@@ -1168,7 +1418,8 @@ def recursive_diff(
                         item_new,
                         ignore_keys=ignore_keys,
                         ignore_order=ignore_order,
-                        ignore_missing_keys=ignore_missing_keys)
+                        ignore_missing_keys=ignore_missing_keys,
+                    )
                     if not res:
                         list_old.remove(item_old)
                         list_new.remove(item_new)
@@ -1181,19 +1432,87 @@ def recursive_diff(
                     iter_new,
                     ignore_keys=ignore_keys,
                     ignore_order=ignore_order,
-                    ignore_missing_keys=ignore_missing_keys)
+                    ignore_missing_keys=ignore_missing_keys,
+                )
                 if not res:  # Equal
                     remove_indices.append(index)
                 else:
-                    list_old[index] = res['old']
-                    list_new[index] = res['new']
+                    list_old[index] = res["old"]
+                    list_new[index] = res["new"]
             for index in reversed(remove_indices):
                 list_old.pop(index)
                 list_new.pop(index)
         # Instantiate a new whatever-it-was using the list as iterable source.
         # This may not be the most optimized in way of speed and memory usage,
         # but it will work for all iterable types.
-        ret = {'old': type(old)(list_old), 'new': type(new)(list_new)} if list_old or list_new else {}
+        ret = (
+            {"old": type(old)(list_old), "new": type(new)(list_new)}
+            if list_old or list_new
+            else {}
+        )
     else:
-        ret = {} if old == new else {'old': ret_old, 'new': ret_new}
+        ret = {} if old == new else {"old": ret_old, "new": ret_new}
     return ret
+
+
+def get_value(obj, path, default=None):
+    """
+    Get the values for a given path.
+
+    :param path:
+        keys of the properties in the tree separated by colons.
+        One segment in the path can be replaced by an id surrounded by curly braces.
+        This will match all items in a list of dictionary.
+
+    :param default:
+        default value to return when no value is found
+
+    :return:
+        a list of dictionaries, with at least the "value" key providing the actual value.
+        If a placeholder was used, the placeholder id will be a key providing the replacement for it.
+        Note that a value that wasn't found in the tree will be an empty list.
+        This ensures we can make the difference with a None value set by the user.
+    """
+    res = [{"value": obj}]
+    if path:
+        key = path[: path.find(":")] if ":" in path else path
+        next_path = path[path.find(":") + 1 :] if ":" in path else None
+
+        if key.startswith("{") and key.endswith("}"):
+            placeholder_name = key[1:-1]
+            # There will be multiple values to get here
+            items = []
+            if obj is None:
+                return res
+            if isinstance(obj, dict):
+                items = obj.items()
+            elif isinstance(obj, list):
+                items = enumerate(obj)
+
+            def _append_placeholder(value_dict, key):
+                value_dict[placeholder_name] = key
+                return value_dict
+
+            values = [
+                [
+                    _append_placeholder(item, key)
+                    for item in get_value(val, next_path, default)
+                ]
+                for key, val in items
+            ]
+
+            # flatten the list
+            values = [y for x in values for y in x]
+            return values
+        elif isinstance(obj, dict):
+            if key not in obj.keys():
+                return [{"value": default}]
+
+            value = obj.get(key)
+            if res is not None:
+                res = get_value(value, next_path, default)
+            else:
+                res = [{"value": value}]
+        else:
+            return [{"value": default if obj is not None else obj}]
+    return res

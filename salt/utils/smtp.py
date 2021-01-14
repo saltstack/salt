@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Return salt data via email
 
 The following fields can be set in the minion conf file:
@@ -26,12 +26,13 @@ There are a few things to keep in mind:
 * The field gpgowner specifies a user's ~/.gpg directory. This must contain a
   gpg public key matching the address the mail is sent to. If left unset, no
   encryption will be used.
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
+
+import logging
 
 # Import python libs
 import os
-import logging
 import smtplib
 from email.utils import formatdate
 
@@ -39,6 +40,7 @@ from salt.ext import six
 
 try:
     import gnupg
+
     HAS_GNUPG = True
 except ImportError:
     HAS_GNUPG = False
@@ -48,80 +50,70 @@ log = logging.getLogger(__name__)
 
 
 def send(kwargs, opts):
-    '''
+    """
     Send an email with the data
-    '''
+    """
     opt_keys = (
-        'smtp.to',
-        'smtp.from',
-        'smtp.host',
-        'smtp.port',
-        'smtp.tls',
-        'smtp.username',
-        'smtp.password',
-        'smtp.subject',
-        'smtp.gpgowner',
-        'smtp.content',
+        "smtp.to",
+        "smtp.from",
+        "smtp.host",
+        "smtp.port",
+        "smtp.tls",
+        "smtp.username",
+        "smtp.password",
+        "smtp.subject",
+        "smtp.gpgowner",
+        "smtp.content",
     )
 
     config = {}
     for key in opt_keys:
-        config[key] = opts.get(key, '')
+        config[key] = opts.get(key, "")
 
     config.update(kwargs)
 
-    if not config['smtp.port']:
-        config['smtp.port'] = 25
+    if not config["smtp.port"]:
+        config["smtp.port"] = 25
 
-    log.debug('SMTP port has been set to %s', config['smtp.port'])
-    log.debug("smtp_return: Subject is '%s'", config['smtp.subject'])
+    log.debug("SMTP port has been set to %s", config["smtp.port"])
+    log.debug("smtp_return: Subject is '%s'", config["smtp.subject"])
 
-    if HAS_GNUPG and config['smtp.gpgowner']:
+    if HAS_GNUPG and config["smtp.gpgowner"]:
         gpg = gnupg.GPG(
-            gnupghome=os.path.expanduser(
-                '~{0}/.gnupg'.format(config['smtp.gpgowner'])
-            ),
-            options=['--trust-model always']
+            gnupghome=os.path.expanduser("~{0}/.gnupg".format(config["smtp.gpgowner"])),
+            options=["--trust-model always"],
         )
-        encrypted_data = gpg.encrypt(config['smtp.content'], config['smtp.to'])
+        encrypted_data = gpg.encrypt(config["smtp.content"], config["smtp.to"])
         if encrypted_data.ok:
-            log.debug('smtp_return: Encryption successful')
-            config['smtp.content'] = six.text_type(encrypted_data)
+            log.debug("smtp_return: Encryption successful")
+            config["smtp.content"] = six.text_type(encrypted_data)
         else:
-            log.error(
-                'SMTP: Encryption failed, only an error message will be sent'
-            )
-            config['smtp.content'] = (
-                'Encryption failed, the return data was not sent.'
-                '\r\n\r\n{0}\r\n{1}'
+            log.error("SMTP: Encryption failed, only an error message will be sent")
+            config["smtp.content"] = (
+                "Encryption failed, the return data was not sent." "\r\n\r\n{0}\r\n{1}"
             ).format(encrypted_data.status, encrypted_data.stderr)
 
     message = (
-        'From: {0}\r\n'
-        'To: {1}\r\n'
-        'Date: {2}\r\n'
-        'Subject: {3}\r\n'
-        '\r\n'
-        '{4}'
+        "From: {0}\r\n" "To: {1}\r\n" "Date: {2}\r\n" "Subject: {3}\r\n" "\r\n" "{4}"
     ).format(
-        config['smtp.from'],
-        config['smtp.to'],
+        config["smtp.from"],
+        config["smtp.to"],
         formatdate(localtime=True),
-        config['smtp.subject'],
-        config['smtp.content'],
+        config["smtp.subject"],
+        config["smtp.content"],
     )
 
-    log.debug('smtp_return: Connecting to the server...')
-    server = smtplib.SMTP(config['smtp.host'], int(config['smtp.port']))
+    log.debug("smtp_return: Connecting to the server...")
+    server = smtplib.SMTP(config["smtp.host"], int(config["smtp.port"]))
 
-    if config['smtp.tls'] is True:
+    if config["smtp.tls"] is True:
         server.starttls()
-        log.debug('smtp_return: TLS enabled')
+        log.debug("smtp_return: TLS enabled")
 
-    if config['smtp.username'] and config['smtp.password']:
-        server.login(config['smtp.username'], config['smtp.password'])
-        log.debug('smtp_return: Authenticated')
+    if config["smtp.username"] and config["smtp.password"]:
+        server.login(config["smtp.username"], config["smtp.password"])
+        log.debug("smtp_return: Authenticated")
 
-    server.sendmail(config['smtp.from'], config['smtp.to'], message)
-    log.debug('smtp_return: Message sent.')
+    server.sendmail(config["smtp.from"], config["smtp.to"], message)
+    log.debug("smtp_return: Message sent.")
     server.quit()

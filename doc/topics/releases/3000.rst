@@ -43,7 +43,7 @@ importing the system version of Tornado.
 
 Msgpack 1.0.0rc1 Incompatibility
 ================================
-Salt is currently incompatible with mgspack 1.0.0rc1. We recommend using
+Salt is currently incompatible with msgpack 1.0.0rc1. We recommend using
 versions < 1.0.0 . This impacts the Salt Master's ability to run commands
 against minions. Please see `Issue 56007 <https://github.com/saltstack/salt/issues/56007>`_
 for more details and updates.
@@ -292,7 +292,7 @@ A new :py:func:`state <salt.states.keystore>` and
 Keystore files is now included. It allows for adding/removing/listing
 as well as managing keystore files.
 
-.. code-block:: bash
+.. code-block:: console
 
   # salt-call keystore.list /path/to/keystore.jks changeit
   local:
@@ -447,7 +447,7 @@ filter ``pillar`` data, ``yaml`` maps, and also useful with :jinja_ref:`http_que
 
 Depends on the `jmespath`_ Python module.
 
-.. _`JMESPath language`: http://jmespath.org/
+.. _`JMESPath language`: https://jmespath.org/
 .. _`jmespath`: https://github.com/jmespath/jmespath.py
 
 Slot Syntax Updates
@@ -519,9 +519,21 @@ Module Changes
 - Added new :py:func:`boto_ssm <salt.modules.boto_ssm>` module to set and query
   secrets in AWS SSM parameters.
 
+- Added new :py:func:`flatpak <salt.modules.flatpak>` module to work with flatpak packages.
+
 - The :py:func:`file.remove <salt.modules.file.remove>` module was
   fixed to remove file system entries other than files, directories
   and symbolic links properly.
+
+- The :py:func:`debian_ip <salt.modules.debian_ip>` module used by the
+  :py:func:`network.managed <salt.states.network.managed>` state has been
+  heavily refactored. The order that options appear in inet/inet6 blocks may
+  produce cosmetic changes. Many options without an 'ipvX' prefix will now be
+  shared between inet and inet6 blocks. The options ``enable_ipv4`` and
+  ``enabled_ipv6`` will now fully remove relevant inet/inet6 blocks. Overriding
+  options by prefixing them with 'ipvX' will now work with most options (i.e.
+  ``dns`` can be overridden by ``ipv4dns`` or ``ipv6dns``). The ``proto`` option
+  is now required.
 
 
 Enhancements to Engines
@@ -555,7 +567,7 @@ the ``engine_module`` parameter in the engine configuration.
           host: localhost
           port: 24224
 
-  .. code-block::
+  .. code-block:: none
 
     <source>
       @type forward
@@ -591,6 +603,19 @@ Enhancements to chroot
   :py:func:`sls<salt.modules.chroot.sls>`, and
   :py:func:`highstate<salt.modules.chroot.highstate>` that allow executing
   states in sls files or running apply/highstate inside of a chroot.
+
+Minion-side ACL
+---------------
+
+Salt has had master-side ACL for the salt mine for some time, where the master
+configuration contained `mine_get` that specified which minions could request
+which functions. However, now you can specify which minions can access a function
+in the salt mine function definition itself (or when calling :py:func:`mine.send <salt.modules.mine.send>`).
+This targeting works the same as the generic minion targeting as specified
+:ref:`here <targeting>`. The parameters used are ``allow_tgt`` and ``allow_tgt_type``.
+See also :ref:`the documentation of the Salt Mine <mine_minion-side-acl>`. Please
+note that if you want to use this new feature both your minion and masters will need
+to be on atleast version 3000.
 
 Deprecations
 ============

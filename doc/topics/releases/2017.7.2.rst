@@ -1278,7 +1278,7 @@ Changelog for v2017.7.1..v2017.7.2
 
   * b3e2ae3c58 Merge pull request `#42805`_ from rallytime/bp-42552
 
-    * 5a91c1f2d1 update consul module following this documentation https://www.consul.io/api/acl.html
+    * 5a91c1f2d1 update consul module following this documentation https://www.consul.io/api/acl/acl.html
 
   * d2ee7934ed Merge pull request `#42804`_ from rallytime/bp-42784
 
@@ -2041,7 +2041,7 @@ Changelog for v2017.7.1..v2017.7.2
 
   * 09521602c1 Merge pull request `#42436`_ from garethgreenaway/42374_manage_runner_minion_offline
 
-  * 0fd39498c0 Updating the versions function inside the manage runner to account for when a minion is offline and we are unable to determine it's version.
+  * 0fd39498c0 Updating the versions function inside the manage runner to account for when a minion is offline and we are unable to determine its version.
 
 * **ISSUE** `#42427`_: (`grichmond-salt`_) Issue Passing Variables created from load_json as Inline Pillar Between States (refs: `#42435`_)
 

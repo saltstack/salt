@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 The ``cache`` roster provides a flexible interface to the Salt Masters' minion cache
 to access regular minions over ``salt-ssh``.
 
@@ -92,34 +92,36 @@ This should be especially useful for the other roster keys:
             - salt:ssh:private_key
             - ssh:auth:private_key
 
-'''
+"""
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
+import copy
 import logging
 import re
-import copy
+
+import salt.cache
 
 # Import Salt libs
 import salt.utils.data
 import salt.utils.minions
-import salt.cache
 from salt._compat import ipaddress
 from salt.ext import six
 
 log = logging.getLogger(__name__)
 
 
-def targets(tgt, tgt_type='glob', **kwargs):  # pylint: disable=W0613
-    '''
+def targets(tgt, tgt_type="glob", **kwargs):  # pylint: disable=W0613
+    """
     Return the targets from the Salt Masters' minion cache.
     All targets and matchers are supported.
 
     The resulting roster can be configured using ``roster_order`` and ``roster_default``.
-    '''
+    """
     minions = salt.utils.minions.CkMinions(__opts__)
     _res = minions.check_minions(tgt, tgt_type)
-    minions = _res['minions']
+    minions = _res["minions"]
 
     ret = {}
     if not minions:
@@ -128,9 +130,10 @@ def targets(tgt, tgt_type='glob', **kwargs):  # pylint: disable=W0613
 
     cache = salt.cache.Cache(__opts__)
 
-    roster_order = __opts__.get('roster_order', {
-        'host': ('ipv6-private', 'ipv6-global', 'ipv4-private', 'ipv4-public')
-    })
+    roster_order = __opts__.get(
+        "roster_order",
+        {"host": ("ipv6-private", "ipv6-global", "ipv4-private", "ipv4-public")},
+    )
 
     ret = {}
     for minion_id in minions:
@@ -139,7 +142,7 @@ def targets(tgt, tgt_type='glob', **kwargs):  # pylint: disable=W0613
         except LookupError:
             continue
 
-        minion_res = copy.deepcopy(__opts__.get('roster_defaults', {}))
+        minion_res = copy.deepcopy(__opts__.get("roster_defaults", {}))
         for param, order in roster_order.items():
             if not isinstance(order, (list, tuple)):
                 order = [order]
@@ -149,37 +152,39 @@ def targets(tgt, tgt_type='glob', **kwargs):  # pylint: disable=W0613
                     minion_res[param] = kres
                     break
 
-        if 'host' in minion_res:
+        if "host" in minion_res:
             ret[minion_id] = minion_res
         else:
-            log.warning('Could not determine host information for minion %s', minion_id)
+            log.warning("Could not determine host information for minion %s", minion_id)
 
-    log.debug('Roster lookup result: %s', ret)
+    log.debug("Roster lookup result: %s", ret)
 
     return ret
 
 
 def _load_minion(minion_id, cache):
-    data_minion, grains, pillar = salt.utils.minions.get_minion_data(minion_id, __opts__)
+    data_minion, grains, pillar = salt.utils.minions.get_minion_data(
+        minion_id, __opts__
+    )
 
     if minion_id != data_minion:
-        log.error('Asked for minion %s, got %s', minion_id, data_minion)
+        log.error("Asked for minion %s, got %s", minion_id, data_minion)
         raise LookupError
 
     if not grains:
-        log.warning('No grain data for minion id %s', minion_id)
+        log.warning("No grain data for minion id %s", minion_id)
         grains = {}
 
     if not pillar:
-        log.warning('No pillar data for minion id %s', minion_id)
+        log.warning("No pillar data for minion id %s", minion_id)
         pillar = {}
 
     addrs = {
-        4: sorted([ipaddress.IPv4Address(addr) for addr in grains.get('ipv4', [])]),
-        6: sorted([ipaddress.IPv6Address(addr) for addr in grains.get('ipv6', [])])
+        4: sorted([ipaddress.IPv4Address(addr) for addr in grains.get("ipv4", [])]),
+        6: sorted([ipaddress.IPv6Address(addr) for addr in grains.get("ipv6", [])]),
     }
 
-    mine = cache.fetch('minions/{0}'.format(minion_id), 'mine')
+    mine = cache.fetch("minions/{0}".format(minion_id), "mine")
 
     return grains, pillar, addrs, mine
 
@@ -201,32 +206,28 @@ def _data_lookup(ref, lookup):
 def _minion_lookup(minion_id, key, minion):
     grains, pillar, addrs, mine = minion
 
-    if key == 'id':
+    if key == "id":
         # Just paste in the minion ID
         return minion_id
     elif isinstance(key, dict):
         # Lookup the key in the dict
         for data_id, lookup in key.items():
-            ref = {
-                'pillar': pillar,
-                'grain': grains,
-                'mine': mine,
-            }[data_id]
+            ref = {"pillar": pillar, "grain": grains, "mine": mine}[data_id]
 
             for k in _data_lookup(ref, lookup):
                 if k:
                     return k
 
             return None
-    elif key.startswith('sdb://'):
+    elif key.startswith("sdb://"):
         # It's a Salt SDB url
-        return salt['sdb.get'](key)
-    elif re.match(r'^[0-9a-fA-F:./]+$', key):
+        return salt["sdb.get"](key)
+    elif re.match(r"^[0-9a-fA-F:./]+$", key):
         # It smells like a CIDR block
         try:
             net = ipaddress.ip_network(key, strict=True)
         except ValueError:
-            log.error('%s is an invalid CIDR network', net)
+            log.error("%s is an invalid CIDR network", net)
             return None
 
         for addr in addrs[net.version]:
@@ -235,14 +236,18 @@ def _minion_lookup(minion_id, key, minion):
     else:
         # Take the addresses from the grains and filter them
         filters = {
-            'global': lambda addr: addr.is_global if addr.version == 6 else not addr.is_private,
-            'public': lambda addr: not addr.is_private,
-            'private': lambda addr: addr.is_private and not addr.is_loopback and not addr.is_link_local,
-            'local': lambda addr: addr.is_loopback,
+            "global": lambda addr: addr.is_global
+            if addr.version == 6
+            else not addr.is_private,
+            "public": lambda addr: not addr.is_private,
+            "private": lambda addr: addr.is_private
+            and not addr.is_loopback
+            and not addr.is_link_local,
+            "local": lambda addr: addr.is_loopback,
         }
 
         ip_vers = [4, 6]
-        if key.startswith('ipv'):
+        if key.startswith("ipv"):
             ip_vers = [int(key[3])]
             key = key[5:]
 
@@ -252,4 +257,6 @@ def _minion_lookup(minion_id, key, minion):
                     if filters[key](addr):
                         return six.text_type(addr)
             except KeyError:
-                raise KeyError('Invalid filter {0} specified in roster_order'.format(key))
+                raise KeyError(
+                    "Invalid filter {0} specified in roster_order".format(key)
+                )

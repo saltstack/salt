@@ -58,7 +58,7 @@
     </script>
     {%- for scriptfile in script_files %}
 
-    <script src="{{ pathto(scriptfile, 1) }}"></script>
+    <script type="text/javascript" src="{{ pathto(scriptfile, 1) }}"></script>
 
     {%- endfor %}
 {%- endmacro %}
@@ -99,7 +99,7 @@
         {%- endif %}
 
         <!--[if lt IE 9]>
-        <script src="{{ pathto('_static/js/respond.min.js', 1) }}"></script>
+        <script type="text/javascript" src="{{ pathto('_static/js/respond.min.js', 1) }}"></script>
         <![endif]-->
 
         {%- block linktags %}
@@ -351,7 +351,7 @@
                         <li><a data-container="body" data-delay='{ "show": 500, "hide": 100 }' data-toggle="tooltip" data-placement="top" title="view the latest saltstack tweets" href="http://twitter.com/saltstackinc" target="_blank"><img class="nolightbox" width="24" src="{{ pathto('_static/images/twitter.png', 1) }}" ></a></li>
                         <li><a data-container="body" data-delay='{ "show": 500, "hide": 100 }' data-toggle="tooltip" data-placement="top" title="subscribe to the salt users mailing list" href="https://groups.google.com/forum/#!forum/salt-users" target="_blank"><img class="nolightbox" width="24" src="{{ pathto('_static/images/email.png', 1) }}" ></a></li>
                         <li><a data-container="body" data-delay='{ "show": 500, "hide": 100 }' data-toggle="tooltip" data-placement="top" title="download saltstack code from github" href="https://github.com/saltstack/salt" target="_blank"><img class="nolightbox" width="24" src="{{ pathto('_static/images/github.png', 1) }}" ></a></li>
-                        <li><a data-container="body" data-delay='{ "show": 500, "hide": 100 }' data-toggle="tooltip" data-placement="top" title="chat in #salt on freenode irc" href="http://webchat.freenode.net/?channels=salt&uio=mj10cnvljjk9dhj1zsyxmd10cnvl83" target="_blank"><img class="nolightbox" width="24" src="{{ pathto('_static/images/messenger-generic.png', 1) }}" ></a></li>
+                        <li><a data-container="body" data-delay='{ "show": 500, "hide": 100 }' data-toggle="tooltip" data-placement="top" title="chat in #salt on freenode irc" href="https://webchat.freenode.net/#salt" target="_blank"><img class="nolightbox" width="24" src="{{ pathto('_static/images/messenger-generic.png', 1) }}" ></a></li>
                         <li><a data-container="body" data-delay='{ "show": 500, "hide": 100 }' data-toggle="tooltip" data-placement="top" title="/r/saltstack" href="http://www.reddit.com/r/saltstack/" target="_blank"><img class="nolightbox" width="24" src="{{ pathto('_static/images/reddit.png', 1) }}" ></a></li>
                         <li><a data-container="body" data-delay='{ "show": 500, "hide": 100 }' data-toggle="tooltip" data-placement="top" title="ask a saltstack question on stackoverflow" href="http://stackoverflow.com/questions/tagged/salt-stack" target="_blank"><img class="nolightbox" width="24" src="{{ pathto('_static/images/stackoverflow.png', 1) }}" ></a></li>
                         <li><a data-container="body" data-delay='{ "show": 500, "hide": 100 }' data-toggle="tooltip" data-placement="top" title="join or start a saltstack meetup" href="http://www.meetup.com/find/?keywords=saltstack" target="_blank"><img class="nolightbox" width="24" src="{{ pathto('_static/images/meetup.png', 1) }}" ></a></li>

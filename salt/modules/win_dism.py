@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Install features/packages for Windows using DISM, which is useful for minions
 not running server versions of Windows. Some functions are only available on
 Windows 10.
 
-'''
-from __future__ import absolute_import, unicode_literals, print_function
+"""
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import logging
@@ -33,21 +33,21 @@ try:
     if not salt.utils.platform.is_windows():
         raise OSError
 
-    if os.path.exists(os.path.join(os.environ.get('SystemRoot'), 'SysNative')):
-        bin_path = os.path.join(os.environ.get('SystemRoot'), 'SysNative')
+    if os.path.exists(os.path.join(os.environ.get("SystemRoot"), "SysNative")):
+        bin_path = os.path.join(os.environ.get("SystemRoot"), "SysNative")
     else:
-        bin_path = os.path.join(os.environ.get('SystemRoot'), 'System32')
-    bin_dism = os.path.join(bin_path, 'dism.exe')
+        bin_path = os.path.join(os.environ.get("SystemRoot"), "System32")
+    bin_dism = os.path.join(bin_path, "dism.exe")
 
 except OSError:
-    log.trace('win_dism: Non-Windows system')
-    bin_dism = 'dism.exe'
+    log.trace("win_dism: Non-Windows system")
+    bin_dism = "dism.exe"
 
 
 def __virtual__():
-    '''
+    """
     Only work on Windows
-    '''
+    """
     if not salt.utils.platform.is_windows():
         return False, "Only available on Windows systems"
 
@@ -55,24 +55,23 @@ def __virtual__():
 
 
 def _get_components(type_regex, plural_type, install_value, image=None):
-    cmd = [bin_dism,
-           '/English',
-           '/Image:{0}'.format(image) if image else '/Online',
-           '/Get-{0}'.format(plural_type)]
-    out = __salt__['cmd.run'](cmd)
-    pattern = r'{0} : (.*)\r\n.*State : {1}\r\n'\
-              .format(type_regex, install_value)
+    cmd = [
+        bin_dism,
+        "/English",
+        "/Image:{0}".format(image) if image else "/Online",
+        "/Get-{0}".format(plural_type),
+    ]
+    out = __salt__["cmd.run"](cmd)
+    pattern = r"{0} : (.*)\r\n.*State : {1}\r\n".format(type_regex, install_value)
     capabilities = re.findall(pattern, out, re.MULTILINE)
     capabilities.sort()
     return capabilities
 
 
-def add_capability(capability,
-                   source=None,
-                   limit_access=False,
-                   image=None,
-                   restart=False):
-    '''
+def add_capability(
+    capability, source=None, limit_access=False, image=None, restart=False
+):
+    """
     Install a capability
 
     Args:
@@ -98,30 +97,33 @@ def add_capability(capability,
     .. code-block:: bash
 
         salt '*' dism.add_capability Tools.Graphics.DirectX~~~~0.0.1.0
-    '''
-    if salt.utils.versions.version_cmp(__grains__['osversion'], '10') == -1:
+    """
+    if salt.utils.versions.version_cmp(__grains__["osversion"], "10") == -1:
         raise NotImplementedError(
-            '`install_capability` is not available on this version of Windows: '
-            '{0}'.format(__grains__['osversion']))
+            "`install_capability` is not available on this version of Windows: "
+            "{0}".format(__grains__["osversion"])
+        )
 
-    cmd = [bin_dism,
-           '/Quiet',
-           '/Image:{0}'.format(image) if image else '/Online',
-           '/Add-Capability',
-           '/CapabilityName:{0}'.format(capability)]
+    cmd = [
+        bin_dism,
+        "/Quiet",
+        "/Image:{0}".format(image) if image else "/Online",
+        "/Add-Capability",
+        "/CapabilityName:{0}".format(capability),
+    ]
 
     if source:
-        cmd.append('/Source:{0}'.format(source))
+        cmd.append("/Source:{0}".format(source))
     if limit_access:
-        cmd.append('/LimitAccess')
+        cmd.append("/LimitAccess")
     if not restart:
-        cmd.append('/NoRestart')
+        cmd.append("/NoRestart")
 
-    return __salt__['cmd.run_all'](cmd)
+    return __salt__["cmd.run_all"](cmd)
 
 
 def remove_capability(capability, image=None, restart=False):
-    '''
+    """
     Uninstall a capability
 
     Args:
@@ -143,26 +145,29 @@ def remove_capability(capability, image=None, restart=False):
     .. code-block:: bash
 
         salt '*' dism.remove_capability Tools.Graphics.DirectX~~~~0.0.1.0
-    '''
-    if salt.utils.versions.version_cmp(__grains__['osversion'], '10') == -1:
+    """
+    if salt.utils.versions.version_cmp(__grains__["osversion"], "10") == -1:
         raise NotImplementedError(
-            '`uninstall_capability` is not available on this version of '
-            'Windows: {0}'.format(__grains__['osversion']))
+            "`uninstall_capability` is not available on this version of "
+            "Windows: {0}".format(__grains__["osversion"])
+        )
 
-    cmd = [bin_dism,
-           '/Quiet',
-           '/Image:{0}'.format(image) if image else '/Online',
-           '/Remove-Capability',
-           '/CapabilityName:{0}'.format(capability)]
+    cmd = [
+        bin_dism,
+        "/Quiet",
+        "/Image:{0}".format(image) if image else "/Online",
+        "/Remove-Capability",
+        "/CapabilityName:{0}".format(capability),
+    ]
 
     if not restart:
-        cmd.append('/NoRestart')
+        cmd.append("/NoRestart")
 
-    return __salt__['cmd.run_all'](cmd)
+    return __salt__["cmd.run_all"](cmd)
 
 
 def get_capabilities(image=None):
-    '''
+    """
     List all capabilities on the system
 
     Args:
@@ -182,19 +187,22 @@ def get_capabilities(image=None):
     .. code-block:: bash
 
         salt '*' dism.get_capabilities
-    '''
-    if salt.utils.versions.version_cmp(__grains__['osversion'], '10') == -1:
+    """
+    if salt.utils.versions.version_cmp(__grains__["osversion"], "10") == -1:
         raise NotImplementedError(
-            '`installed_capabilities` is not available on this version of '
-            'Windows: {0}'.format(__grains__['osversion']))
+            "`installed_capabilities` is not available on this version of "
+            "Windows: {0}".format(__grains__["osversion"])
+        )
 
-    cmd = [bin_dism,
-           '/English',
-           '/Image:{0}'.format(image) if image else '/Online',
-           '/Get-Capabilities']
-    out = __salt__['cmd.run'](cmd)
+    cmd = [
+        bin_dism,
+        "/English",
+        "/Image:{0}".format(image) if image else "/Online",
+        "/Get-Capabilities",
+    ]
+    out = __salt__["cmd.run"](cmd)
 
-    pattern = r'Capability Identity : (.*)\r\n'
+    pattern = r"Capability Identity : (.*)\r\n"
     capabilities = re.findall(pattern, out, re.MULTILINE)
     capabilities.sort()
 
@@ -202,7 +210,7 @@ def get_capabilities(image=None):
 
 
 def installed_capabilities(image=None):
-    '''
+    """
     List the capabilities installed on the system
 
     Args:
@@ -222,16 +230,17 @@ def installed_capabilities(image=None):
     .. code-block:: bash
 
         salt '*' dism.installed_capabilities
-    '''
-    if salt.utils.versions.version_cmp(__grains__['osversion'], '10') == -1:
+    """
+    if salt.utils.versions.version_cmp(__grains__["osversion"], "10") == -1:
         raise NotImplementedError(
-            '`installed_capabilities` is not available on this version of '
-            'Windows: {0}'.format(__grains__['osversion']))
+            "`installed_capabilities` is not available on this version of "
+            "Windows: {0}".format(__grains__["osversion"])
+        )
     return _get_components("Capability Identity", "Capabilities", "Installed")
 
 
 def available_capabilities(image=None):
-    '''
+    """
     List the capabilities available on the system
 
     Args:
@@ -251,22 +260,25 @@ def available_capabilities(image=None):
     .. code-block:: bash
 
         salt '*' dism.installed_capabilities
-    '''
-    if salt.utils.versions.version_cmp(__grains__['osversion'], '10') == -1:
+    """
+    if salt.utils.versions.version_cmp(__grains__["osversion"], "10") == -1:
         raise NotImplementedError(
-            '`installed_capabilities` is not available on this version of '
-            'Windows: {0}'.format(__grains__['osversion']))
+            "`installed_capabilities` is not available on this version of "
+            "Windows: {0}".format(__grains__["osversion"])
+        )
     return _get_components("Capability Identity", "Capabilities", "Not Present")
 
 
-def add_feature(feature,
-                package=None,
-                source=None,
-                limit_access=False,
-                enable_parent=False,
-                image=None,
-                restart=False):
-    '''
+def add_feature(
+    feature,
+    package=None,
+    source=None,
+    limit_access=False,
+    enable_parent=False,
+    image=None,
+    restart=False,
+):
+    """
     Install a feature using DISM
 
     Args:
@@ -293,28 +305,30 @@ def add_feature(feature,
     .. code-block:: bash
 
         salt '*' dism.add_feature NetFx3
-    '''
-    cmd = [bin_dism,
-           '/Quiet',
-           '/Image:{0}'.format(image) if image else '/Online',
-           '/Enable-Feature',
-           '/FeatureName:{0}'.format(feature)]
+    """
+    cmd = [
+        bin_dism,
+        "/Quiet",
+        "/Image:{0}".format(image) if image else "/Online",
+        "/Enable-Feature",
+        "/FeatureName:{0}".format(feature),
+    ]
     if package:
-        cmd.append('/PackageName:{0}'.format(package))
+        cmd.append("/PackageName:{0}".format(package))
     if source:
-        cmd.append('/Source:{0}'.format(source))
+        cmd.append("/Source:{0}".format(source))
     if limit_access:
-        cmd.append('/LimitAccess')
+        cmd.append("/LimitAccess")
     if enable_parent:
-        cmd.append('/All')
+        cmd.append("/All")
     if not restart:
-        cmd.append('/NoRestart')
+        cmd.append("/NoRestart")
 
-    return __salt__['cmd.run_all'](cmd)
+    return __salt__["cmd.run_all"](cmd)
 
 
 def remove_feature(feature, remove_payload=False, image=None, restart=False):
-    '''
+    """
     Disables the feature.
 
     Args:
@@ -334,23 +348,25 @@ def remove_feature(feature, remove_payload=False, image=None, restart=False):
     .. code-block:: bash
 
         salt '*' dism.remove_feature NetFx3
-    '''
-    cmd = [bin_dism,
-           '/Quiet',
-           '/Image:{0}'.format(image) if image else '/Online',
-           '/Disable-Feature',
-           '/FeatureName:{0}'.format(feature)]
+    """
+    cmd = [
+        bin_dism,
+        "/Quiet",
+        "/Image:{0}".format(image) if image else "/Online",
+        "/Disable-Feature",
+        "/FeatureName:{0}".format(feature),
+    ]
 
     if remove_payload:
-        cmd.append('/Remove')
+        cmd.append("/Remove")
     if not restart:
-        cmd.append('/NoRestart')
+        cmd.append("/NoRestart")
 
-    return __salt__['cmd.run_all'](cmd)
+    return __salt__["cmd.run_all"](cmd)
 
 
 def get_features(package=None, image=None):
-    '''
+    """
     List features on the system or in a package
 
     Args:
@@ -380,21 +396,23 @@ def get_features(package=None, image=None):
 
             # Return all features in the calc package
             salt '*' dism.get_features Microsoft.Windows.Calc.Demo~6595b6144ccf1df~x86~en~1.0.0.0
-    '''
-    cmd = [bin_dism,
-           '/English',
-           '/Image:{0}'.format(image) if image else '/Online',
-           '/Get-Features']
+    """
+    cmd = [
+        bin_dism,
+        "/English",
+        "/Image:{0}".format(image) if image else "/Online",
+        "/Get-Features",
+    ]
 
     if package:
-        if '~' in package:
-            cmd.append('/PackageName:{0}'.format(package))
+        if "~" in package:
+            cmd.append("/PackageName:{0}".format(package))
         else:
-            cmd.append('/PackagePath:{0}'.format(package))
+            cmd.append("/PackagePath:{0}".format(package))
 
-    out = __salt__['cmd.run'](cmd)
+    out = __salt__["cmd.run"](cmd)
 
-    pattern = r'Feature Name : (.*)\r\n'
+    pattern = r"Feature Name : (.*)\r\n"
     features = re.findall(pattern, out, re.MULTILINE)
     features.sort()
 
@@ -402,7 +420,7 @@ def get_features(package=None, image=None):
 
 
 def installed_features(image=None):
-    '''
+    """
     List the features installed on the system
 
     Args:
@@ -418,12 +436,12 @@ def installed_features(image=None):
     .. code-block:: bash
 
         salt '*' dism.installed_features
-    '''
+    """
     return _get_components("Feature Name", "Features", "Enabled")
 
 
 def available_features(image=None):
-    '''
+    """
     List the features available on the system
 
     Args:
@@ -439,16 +457,14 @@ def available_features(image=None):
     .. code-block:: bash
 
         salt '*' dism.available_features
-    '''
+    """
     return _get_components("Feature Name", "Features", "Disabled")
 
 
-def add_package(package,
-                ignore_check=False,
-                prevent_pending=False,
-                image=None,
-                restart=False):
-    '''
+def add_package(
+    package, ignore_check=False, prevent_pending=False, image=None, restart=False
+):
+    """
     Install a package using DISM
 
     Args:
@@ -482,25 +498,27 @@ def add_package(package,
     .. code-block:: bash
 
         salt '*' dism.add_package C:\\Packages\\package.cab
-    '''
-    cmd = [bin_dism,
-           '/Quiet',
-           '/Image:{0}'.format(image) if image else '/Online',
-           '/Add-Package',
-           '/PackagePath:{0}'.format(package)]
+    """
+    cmd = [
+        bin_dism,
+        "/Quiet",
+        "/Image:{0}".format(image) if image else "/Online",
+        "/Add-Package",
+        "/PackagePath:{0}".format(package),
+    ]
 
     if ignore_check:
-        cmd.append('/IgnoreCheck')
+        cmd.append("/IgnoreCheck")
     if prevent_pending:
-        cmd.append('/PreventPending')
+        cmd.append("/PreventPending")
     if not restart:
-        cmd.append('/NoRestart')
+        cmd.append("/NoRestart")
 
-    return __salt__['cmd.run_all'](cmd)
+    return __salt__["cmd.run_all"](cmd)
 
 
 def remove_package(package, image=None, restart=False):
-    '''
+    """
     Uninstall a package
 
     Args:
@@ -525,25 +543,27 @@ def remove_package(package, image=None, restart=False):
 
         # Remove the package.cab (does not remove C:\\packages\\package.cab)
         salt '*' dism.remove_package C:\\packages\\package.cab
-    '''
-    cmd = [bin_dism,
-           '/Quiet',
-           '/Image:{0}'.format(image) if image else '/Online',
-           '/Remove-Package']
+    """
+    cmd = [
+        bin_dism,
+        "/Quiet",
+        "/Image:{0}".format(image) if image else "/Online",
+        "/Remove-Package",
+    ]
 
     if not restart:
-        cmd.append('/NoRestart')
+        cmd.append("/NoRestart")
 
-    if '~' in package:
-        cmd.append('/PackageName:{0}'.format(package))
+    if "~" in package:
+        cmd.append("/PackageName:{0}".format(package))
     else:
-        cmd.append('/PackagePath:{0}'.format(package))
+        cmd.append("/PackagePath:{0}".format(package))
 
-    return __salt__['cmd.run_all'](cmd)
+    return __salt__["cmd.run_all"](cmd)
 
 
 def installed_packages(image=None):
-    '''
+    """
     List the packages installed on the system
 
     Args:
@@ -559,12 +579,12 @@ def installed_packages(image=None):
     .. code-block:: bash
 
         salt '*' dism.installed_packages
-    '''
+    """
     return _get_components("Package Identity", "Packages", "Installed")
 
 
 def package_info(package, image=None):
-    '''
+    """
     Display information about a package
 
     Args:
@@ -584,24 +604,26 @@ def package_info(package, image=None):
     .. code-block:: bash
 
         salt '*' dism. package_info C:\\packages\\package.cab
-    '''
-    cmd = [bin_dism,
-           '/English',
-           '/Image:{0}'.format(image) if image else '/Online',
-           '/Get-PackageInfo']
+    """
+    cmd = [
+        bin_dism,
+        "/English",
+        "/Image:{0}".format(image) if image else "/Online",
+        "/Get-PackageInfo",
+    ]
 
-    if '~' in package:
-        cmd.append('/PackageName:{0}'.format(package))
+    if "~" in package:
+        cmd.append("/PackageName:{0}".format(package))
     else:
-        cmd.append('/PackagePath:{0}'.format(package))
+        cmd.append("/PackagePath:{0}".format(package))
 
-    out = __salt__['cmd.run_all'](cmd)
+    out = __salt__["cmd.run_all"](cmd)
 
-    if out['retcode'] == 0:
+    if out["retcode"] == 0:
         ret = dict()
-        for line in six.text_type(out['stdout']).splitlines():
-            if ' : ' in line:
-                info = line.split(' : ')
+        for line in six.text_type(out["stdout"]).splitlines():
+            if " : " in line:
+                info = line.split(" : ")
                 if len(info) < 2:
                     continue
                 ret[info[0]] = info[1]

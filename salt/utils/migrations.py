@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Migration tools
-'''
+"""
 from __future__ import absolute_import, unicode_literals
 
 # Import python libs
@@ -13,25 +13,26 @@ import salt.syspaths as syspaths
 
 
 def migrate_paths(opts):
-    '''
+    """
     Migrate old minion and master pki file paths to new ones.
-    '''
-    oldpki_dir = os.path.join(syspaths.CONFIG_DIR, 'pki')
+    """
+    oldpki_dir = os.path.join(syspaths.CONFIG_DIR, "pki")
 
     if not os.path.exists(oldpki_dir):
         # There's not even a pki directory, don't bother migrating
         return
 
-    newpki_dir = opts['pki_dir']
+    newpki_dir = opts["pki_dir"]
 
-    if opts['default_include'].startswith('master'):
-        keepers = ['master.pem',
-                   'master.pub',
-                   'syndic_master.pub',
-                   'minions',
-                   'minions_pre',
-                   'minions_rejected',
-                   ]
+    if opts["default_include"].startswith("master"):
+        keepers = [
+            "master.pem",
+            "master.pub",
+            "syndic_master.pub",
+            "minions",
+            "minions_pre",
+            "minions_rejected",
+        ]
         if not os.path.exists(newpki_dir):
             os.makedirs(newpki_dir)
         for item in keepers:
@@ -40,11 +41,12 @@ def migrate_paths(opts):
             if os.path.exists(oi_path) and not os.path.exists(ni_path):
                 shutil.move(oi_path, ni_path)
 
-    if opts['default_include'].startswith('minion'):
-        keepers = ['minion_master.pub',
-                   'minion.pem',
-                   'minion.pub',
-                   ]
+    if opts["default_include"].startswith("minion"):
+        keepers = [
+            "minion_master.pub",
+            "minion.pem",
+            "minion.pub",
+        ]
         if not os.path.exists(newpki_dir):
             os.makedirs(newpki_dir)
         for item in keepers:

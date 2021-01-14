@@ -3212,7 +3212,7 @@ Changelog for v2018.3.3..v2018.3.4
 
     * 791e3ff Use dwoz/winrm-fs for chunked downloads
 
-    * f3999e1 Move vagrant to it's own group
+    * f3999e1 Move vagrant to its own group
 
   * 0662e37 Merge pull request `#49870`_ from KaiSforza/ci_actually_fail
 

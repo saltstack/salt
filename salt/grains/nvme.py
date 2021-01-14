@@ -1,17 +1,15 @@
-# -*- coding: utf-8 -*-
-'''
+"""
 Grains for NVMe Qualified Names (NQN).
 
 .. versionadded:: 3000
 
-To enable these grains set `nvme_grains: True`.
+To enable these grains set `nvme_grains: True` in the minion config.
 
 .. code-block:: yaml
 
     nvme_grains: True
-'''
+"""
 # Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import errno
 import logging
@@ -21,43 +19,43 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 
-__virtualname__ = 'nvme'
+__virtualname__ = "nvme"
 
 # Get logging started
 log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    if __opts__.get('nvme_grains', False) is False:
+    if __opts__.get("nvme_grains", False) is False:
         return False
     return __virtualname__
 
 
 def nvme_nqn():
-    '''
+    """
     Return NVMe NQN
-    '''
+    """
     grains = {}
-    grains['nvme_nqn'] = False
+    grains["nvme_nqn"] = False
     if salt.utils.platform.is_linux():
-        grains['nvme_nqn'] = _linux_nqn()
+        grains["nvme_nqn"] = _linux_nqn()
     return grains
 
 
 def _linux_nqn():
-    '''
+    """
     Return NVMe NQN from a Linux host.
-    '''
+    """
     ret = []
 
-    initiator = '/etc/nvme/hostnqn'
+    initiator = "/etc/nvme/hostnqn"
     try:
-        with salt.utils.files.fopen(initiator, 'r') as _nvme:
+        with salt.utils.files.fopen(initiator, "r") as _nvme:
             for line in _nvme:
                 line = line.strip()
-                if line.startswith('nqn.'):
+                if line.startswith("nqn."):
                     ret.append(line)
-    except IOError as ex:
+    except OSError as ex:
         if ex.errno != errno.ENOENT:
             log.debug("Error while accessing '%s': %s", initiator, ex)
 

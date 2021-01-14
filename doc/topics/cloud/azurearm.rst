@@ -15,16 +15,16 @@ More information about Azure is located at `http://www.windowsazure.com/
 
 Dependencies
 ============
-* `azure <https://pypi.python.org/pypi/azure>`_ >= 2.0.0rc6
-* `azure-common <https://pypi.python.org/pypi/azure-common>`_ >= 1.1.4
-* `azure-mgmt <https://pypi.python.org/pypi/azure-mgmt>`_ >= 0.30.0rc6
-* `azure-mgmt-compute <https://pypi.python.org/pypi/azure-mgmt-compute>`_ >= 0.33.0
-* `azure-mgmt-network <https://pypi.python.org/pypi/azure-mgmt-network>`_ >= 0.30.0rc6
-* `azure-mgmt-resource <https://pypi.python.org/pypi/azure-mgmt-resource>`_ >= 0.30.0
-* `azure-mgmt-storage <https://pypi.python.org/pypi/azure-mgmt-storage>`_ >= 0.30.0rc6
-* `azure-mgmt-web <https://pypi.python.org/pypi/azure-mgmt-web>`_ >= 0.30.0rc6
-* `azure-storage <https://pypi.python.org/pypi/azure-storage>`_ >= 0.32.0
-* `msrestazure <https://pypi.python.org/pypi/msrestazure>`_ >= 0.4.21
+* `azure <https://pypi.org/project/azure>`_ >= 2.0.0rc6
+* `azure-common <https://pypi.org/project/azure-common>`_ >= 1.1.4
+* `azure-mgmt <https://pypi.org/project/azure-mgmt>`_ >= 0.30.0rc6
+* `azure-mgmt-compute <https://pypi.org/project/azure-mgmt-compute>`_ >= 0.33.0
+* `azure-mgmt-network <https://pypi.org/project/azure-mgmt-network>`_ >= 0.30.0rc6
+* `azure-mgmt-resource <https://pypi.org/project/azure-mgmt-resource>`_ >= 0.30.0
+* `azure-mgmt-storage <https://pypi.org/project/azure-mgmt-storage>`_ >= 0.30.0rc6
+* `azure-mgmt-web <https://pypi.org/project/azure-mgmt-web>`_ >= 0.30.0rc6
+* `azure-storage <https://pypi.org/project/azure-storage>`_ >= 0.32.0
+* `msrestazure <https://pypi.org/project/msrestazure/>`_ >= 0.4.21
 * A Microsoft Azure account
 * `Salt <https://github.com/saltstack/salt>`_
 

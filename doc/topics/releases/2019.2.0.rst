@@ -8,9 +8,18 @@ Python 2.7 Deprecation
 ======================
 
 In light of Python 2.7 reaching its End of Life (EOL) on Jan 1st 2020,
-Python 2 will be deprecated from SaltStack no earlier than the Sodium
-release, that is either the Sodium release or a later release.
+Python 2 will be deprecated from SaltStack no earlier than the 3001
+release, that is either the 3001 release or a later release.
 This decision is pending further community discussion.
+
+Known Issues
+============
+The following are known issues for the 2019.2.0 release and will be fixed for 2019.2.1:
+
+* `#51699`_
+
+.. _`#51699`: https://github.com/saltstack/salt/issues/51699
+
 
 Non-Backward-Compatible Change to YAML Renderer
 ===============================================
@@ -81,7 +90,7 @@ This test case has also been tested with the ``yaml`` and ``json`` filters succe
     cases where :jinja_ref:`json_encode_dict` and :jinja_ref:`json_encode_list`
     would have been used.
 
-.. _`tojson Jinja filter`: http://jinja.pocoo.org/docs/2.10/templates/#tojson
+.. _`tojson Jinja filter`: https://jinja.palletsprojects.com/en/2.11.x/templates/#tojson
 
 Ansible Playbook State and Execution Modules
 ============================================
@@ -704,7 +713,7 @@ Alternatively, the newly-added :py:func:`pkg.show <salt.modules.aptpkg.show>`
 function can be used to get more detailed information about a given package and
 help determine what package name is correct:
 
-.. code-block:: bash
+.. code-block:: console
 
     # salt myminion pkg.show 'nginx*' filter=description,provides
     myminion:
@@ -850,7 +859,7 @@ sent.
 
 The new :conf_minion:`enable_legacy_startup_events` minion config option
 defaults to ``True``, but will be set to default to ``False`` beginning with
-the Sodium release of Salt.
+the 3001 release of Salt.
 
 The Salt Syndic currently sends an old style ``syndic_start`` event as well. The
 syndic respects :conf_minion:`enable_legacy_startup_events` as well.
@@ -946,7 +955,7 @@ Those who are using the :ref:`LocalClient <local-client>` (either directly,
 or implicitly via a :ref:`netapi module <all-netapi-modules>`) need to update
 their code to use ``tgt_type``.
 
-.. code-block:: python
+.. code-block:: pycon
 
     >>> import salt.client
     >>> local = salt.client.LocalClient()
@@ -1335,7 +1344,7 @@ configuration option:
 
 The will cause the JID to be included in any log entries that are related to a
 particular Salt job.  The JID will be included using the default format,
-``[JID: %(jid)s]`` but can be overriden with the ``log_fmt_jid`` configuration item.
+``[JID: %(jid)s]`` but can be overridden with the ``log_fmt_jid`` configuration item.
 
 .. code-block:: yaml
 

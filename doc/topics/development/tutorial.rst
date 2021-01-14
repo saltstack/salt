@@ -72,7 +72,7 @@ local copy of the branch with a single command:
 .. note::
 
     For an explanation on ``pull`` vs ``pull --rebase`` and other excellent
-    points, see `this article <http://mislav.net/2013/02/merge-vs-rebase/>`_ by
+    points, see `this article <https://mislav.net/2013/02/merge-vs-rebase/>`_ by
     Mislav Marohnić.
 
 ------
@@ -146,7 +146,7 @@ Push
 Push your branch to your GitHub account.  You will likely need to enter your
 GitHub username and password.
 
-.. code-block:: bash
+.. code-block:: console
 
     $ git push origin virt_ret
     Username for 'https://github.com': <my_account>
@@ -155,11 +155,11 @@ GitHub username and password.
 .. note::
 
     If authentication over https does not work, you can alternatively setup
-    `ssh keys <https://help.github.com/articles/generating-ssh-keys/>`_.  Once
+    `ssh keys <https://help.github.com/en/github/authenticating-to-github/connecting-to-github-with-ssh>`_.  Once
     you have done this, you may need add the keys to your git repository
     configuration
 
-    .. code-block:: bash
+    .. code-block:: console
 
         $ git config ssh.key ~/.ssh/<key_name>
 

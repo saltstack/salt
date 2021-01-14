@@ -1,5 +1,5 @@
 -r base.txt
 -r crypto.txt
 
-pyzmq>=2.2.0,<17.1.0; python_version == '3.4'  # pyzmq 17.1.0 stopped building wheels for python3.4
-pyzmq>=2.2.0; python_version != '3.4'
+pyzmq>=17.0.0 ; python_version < "3.9"
+pyzmq>=19.0.2 ; python_version >= "3.9"

@@ -8,11 +8,11 @@ extension-pkg-whitelist=
 # Add files or directories to the blacklist. They should be base names, not
 # paths.
 ignore=CVS,
-       ext
+       ext,
 
 # Add files or directories matching the regex patterns to the blacklist. The
 # regex matches against base names, not paths.
-ignore-patterns=
+ignore-patterns=salt.ext.*
 
 # Python code to execute, usually for sys.path manipulation such as
 # pygtk.require().
@@ -30,7 +30,6 @@ limit-inference-results=100
 # List of plugins (as comma separated values of python module names) to load,
 # usually to register additional checkers.
 load-plugins=saltpylint.pep8,
-  saltpylint.pep263,
   saltpylint.strings,
   saltpylint.fileperms,
   saltpylint.py3modernize,
@@ -77,6 +76,7 @@ disable=R,
   no-member,
   unsubscriptable-object,
   un-indexed-curly-braces-error,
+  whitespace-before-colon,
   indentation-is-not-a-multiple-of-four-comment,
   blacklisted-name,
   invalid-name,
@@ -126,13 +126,16 @@ disable=R,
   str-format-in-logging,
   import-outside-toplevel,
   deprecated-method,
-  keyword-arg-before-vararg
+  repr-flag-used-in-string,
+  keyword-arg-before-vararg,
+  incompatible-py3-code
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option
 # multiple time (only on the command line, not in the configuration file where
 # it should appear only once). See also the "--disable" option for examples.
-enable=c-extension-no-member
+enable=c-extension-no-member,
+  literal-comparison
 
 
 [REPORTS]
@@ -396,6 +399,7 @@ init-import=no
 # List of qualified module names which can have objects that can redefine
 # builtins.
 redefining-builtins-modules=six.moves,
+  salt.ext.six.moves,
   past.builtins,
   future.builtins,
   builtins,
@@ -472,7 +476,9 @@ ignored-classes=SQLObject
 # (useful for modules/projects where namespaces are manipulated during runtime
 # and thus existing member attributes cannot be deduced by static analysis). It
 # supports qualified module names, as well as Unix pattern matching.
-ignored-modules=
+ignored-modules=salt.ext.six.moves,
+    six.moves,
+    _MovedItems,
 
 # Show a hint with possible names when a member name was not found. The aspect
 # of finding the hint is based on edit distance.
@@ -511,7 +517,7 @@ min-similarity-lines=4
 fileperms-default=0644
 
 # File paths to ignore file permission. Glob patterns allowed.
-fileperms-ignore-paths=setup.py,noxfile.py,tests/runtests.py,tests/jenkins*.py,tests/saltsh.py,tests/buildpackage.py
+fileperms-ignore-paths=setup.py,noxfile.py,tests/runtests.py,tests/jenkins*.py,tests/saltsh.py,tests/buildpackage.py,tests/unit/files/rosters/ansible/roster.py
 
 
 [MODERNIZE]
@@ -675,9 +681,18 @@ allowed-3rd-party-modules=msgpack,
                           libcloud,
                           zmq,
                           pytest,
+                          attr,
+                          setuptools,
                           pytestsalt,
-                          setuptools
-
+                          saltfactories,
+                          distro,
+                          os,
+                          re,
+                          shutil,
+                          copy,
+                          base64,
+                          tempfile,
+                          fnmatch
 
 [EXCEPTIONS]
 

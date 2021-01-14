@@ -21,9 +21,16 @@ on most systems.
 Modules placed in ``_modules/`` will be synced to the minions when any of the
 following Salt functions are called:
 
-* :mod:`state.apply <salt.modules.state.apply_>`
+* :mod:`state.highstate <salt.modules.state.highstate>` (or :mod:`state.apply
+  <salt.modules.state.apply_>` with no state argument)
 * :mod:`saltutil.sync_modules <salt.modules.saltutil.sync_modules>`
 * :mod:`saltutil.sync_all <salt.modules.saltutil.sync_all>`
+
+Modules placed in ``_modules/`` will be synced to masters when any of the
+following Salt runners are called:
+
+* :mod:`saltutil.sync_modules <salt.runners.saltutil.sync_modules>`
+* :mod:`saltutil.sync_all <salt.runners.saltutil.sync_all>`
 
 Note that a module's default name is its filename
 (i.e. ``foo.py`` becomes module ``foo``), but that its name can be overridden
@@ -37,7 +44,7 @@ the loader knows that the module needs to be imported as a Cython module. The
 compilation of the Cython module is automatic and happens when the minion
 starts, so only the ``*.pyx`` file is required.
 
-.. _`Cython`: http://cython.org/
+.. _`Cython`: https://cython.org/
 
 Zip Archives as Modules
 =======================
@@ -85,12 +92,12 @@ included libraries.
 
 
     def is_ok(person):
-        ''' Checks whether a person is really a lumberjack '''
+        """ Checks whether a person is really a lumberjack """
         return sleep.all_night(person) and work.all_day(person)
 
 Then, create the zip:
 
-.. code-block:: bash
+.. code-block:: console
 
     modules $ zip -r lumberjack lumberjack
       adding: lumberjack/ (stored 0%)
@@ -147,7 +154,7 @@ dict:
 .. code-block:: python
 
     def foo(bar):
-        return __salt__['cmd.run'](bar)
+        return __salt__["cmd.run"](bar)
 
 This code will call the `run` function in the :mod:`cmd <salt.modules.cmdmod>`
 module and pass the argument ``bar`` to it.
@@ -222,14 +229,16 @@ as also available in the ``__opts__`` dict.
 
 .. code-block:: python
 
-    '''
+    """
     Cheese module initialization example
-    '''
+    """
+
+
     def __init__(opts):
-        '''
+        """
         Allow foreign imports if configured to do so
-        '''
-        if opts.get('cheese.allow_foreign', False):
+        """
+        if opts.get("cheese.allow_foreign", False):
             _enable_foreign_products()
 
 
@@ -259,9 +268,7 @@ names to Salt :ref:`outputters <all-salt.output>`.
 
 .. code-block:: python
 
-    __outputter__ = {
-        'run': 'txt'
-    }
+    __outputter__ = {"run": "txt"}
 
 This will ensure that the ``txt`` outputter is used to display output from the
 ``run`` function.
@@ -319,44 +326,50 @@ the case when the dependency is unavailable.
 
 .. code-block:: python
 
-    '''
+    """
     Cheese execution (or returner/beacon/etc.) module
-    '''
+    """
     try:
         import enzymes
+
         HAS_ENZYMES = True
     except ImportError:
         HAS_ENZYMES = False
 
 
     def __virtual__():
-        '''
+        """
         only load cheese if enzymes are available
-        '''
+        """
         if HAS_ENZYMES:
-            return 'cheese'
+            return "cheese"
         else:
-            return False, 'The cheese execution module cannot be loaded: enzymes unavailable.'
+            return (
+                False,
+                "The cheese execution module cannot be loaded: enzymes unavailable.",
+            )
+
 
     def slice():
         pass
 
 .. code-block:: python
 
-    '''
+    """
     Cheese state module. Note that this works in state modules because it is
     guaranteed that execution modules are loaded first
-    '''
+    """
+
 
     def __virtual__():
-        '''
+        """
         only load cheese if enzymes are available
-        '''
+        """
         # predicate loading of the cheese state on the corresponding execution module
-        if 'cheese.slice' in __salt__:
-            return 'cheese'
+        if "cheese.slice" in __salt__:
+            return "cheese"
         else:
-            return False, 'The cheese state module cannot be loaded: enzymes unavailable.'
+            return False, "The cheese state module cannot be loaded: enzymes unavailable."
 
 Examples
 --------
@@ -438,15 +451,15 @@ similar to the following:
 .. code-block:: python
 
    # Define the module's virtual name
-   __virtualname__ = 'pkg'
+   __virtualname__ = "pkg"
 
 
    def __virtual__():
-       '''
+       """
        Confine this module to Mac OS with Homebrew.
-       '''
+       """
 
-       if salt.utils.path.which('brew') and __grains__['os'] == 'MacOS':
+       if salt.utils.path.which("brew") and __grains__["os"] == "MacOS":
            return __virtualname__
        return False
 
@@ -465,12 +478,11 @@ For example:
 .. code-block:: python
 
     def __virtual__():
-        '''
+        """
         Only load if git exists on the system
-        '''
-        if salt.utils.path.which('git') is None:
-            return (False,
-                    'The git execution module cannot be loaded: git unavailable.')
+        """
+        if salt.utils.path.which("git") is None:
+            return (False, "The git execution module cannot be loaded: git unavailable.")
         else:
             return True
 
@@ -498,13 +510,13 @@ To add documentation add a `Python docstring`_ to the function.
 .. code-block:: python
 
     def spam(eggs):
-        '''
+        """
         A function to make some spam with eggs!
 
         CLI Example::
 
             salt '*' test.spam eggs
-        '''
+        """
         return eggs
 
 Now when the sys.doc call is executed the docstring will be cleanly returned
@@ -553,9 +565,9 @@ logs. The following code snippet demonstrates writing log messages:
 
     log = logging.getLogger(__name__)
 
-    log.info('Here is Some Information')
-    log.warning('You Should Not Do That')
-    log.error('It Is Busted')
+    log.info("Here is Some Information")
+    log.warning("You Should Not Do That")
+    log.error("It Is Busted")
 
 Aliasing Functions
 ==================
@@ -573,8 +585,8 @@ module, or from the cli, the alias name should be used.
 .. code-block:: python
 
     __func_alias__ = {
-        'set_': 'set',
-        'list_': 'list',
+        "set_": "set",
+        "list_": "list",
     }
 
 Private Functions
@@ -597,10 +609,11 @@ Objects NOT Loaded into the Salt Minion
 
 .. code-block:: python
 
-    def _foobar(baz): # Preceded with an _
+    def _foobar(baz):  # Preceded with an _
         return baz
 
-    cheese = {} # Not a callable Python object
+
+    cheese = {}  # Not a callable Python object
 
 Useful Decorators for Modules
 =============================
@@ -633,29 +646,32 @@ removing it
     try:
         import dependency_that_sometimes_exists
     except ImportError as e:
-        log.trace('Failed to import dependency_that_sometimes_exists: {0}'.format(e))
+        log.trace("Failed to import dependency_that_sometimes_exists: {0}".format(e))
 
-    @depends('dependency_that_sometimes_exists')
+
+    @depends("dependency_that_sometimes_exists")
     def foo():
-        '''
+        """
         Function with a dependency on the "dependency_that_sometimes_exists" module,
         if the "dependency_that_sometimes_exists" is missing this function will not exist
-        '''
+        """
         return True
 
+
     def _fallback():
-        '''
+        """
         Fallback function for the depends decorator to replace a function with
-        '''
+        """
         return '"dependency_that_sometimes_exists" needs to be installed for this function to exist'
 
-    @depends('dependency_that_sometimes_exists', fallback_function=_fallback)
+
+    @depends("dependency_that_sometimes_exists", fallback_function=_fallback)
     def foo():
-        '''
+        """
         Function with a dependency on the "dependency_that_sometimes_exists" module.
         If the "dependency_that_sometimes_exists" is missing this function will be
         replaced with "_fallback"
-        '''
+        """
         return True
 
 In addition to global dependencies the depends decorator also supports raw
@@ -668,9 +684,11 @@ booleans.
     HAS_DEP = False
     try:
         import dependency_that_sometimes_exists
+
         HAS_DEP = True
     except ImportError:
         pass
+
 
     @depends(HAS_DEP)
     def foo():

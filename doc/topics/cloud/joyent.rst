@@ -93,7 +93,7 @@ command:
 Images can be obtained using the ``--list-images`` option for the ``salt-cloud``
 command:
 
-.. code-block:: bash
+.. code-block:: console
 
     # salt-cloud --list-images my-joyent-config
     my-joyent-config:
@@ -161,7 +161,7 @@ included:
 Miscellaneous Configuration
 ===========================
 The following configuration items can be set in either ``provider`` or
-``profile`` confuration files.
+``profile`` configuration files.
 
 use_ssl
 ~~~~~~~

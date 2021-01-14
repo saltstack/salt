@@ -645,7 +645,7 @@ Changelog for v2016.11.7..v2016.11.8
 
   * b3e2ae3c58 Merge pull request `#42805`_ from rallytime/bp-42552
 
-  * 5a91c1f2d1 update consul module following this documentation https://www.consul.io/api/acl.html
+  * 5a91c1f2d1 update consul module following this documentation https://www.consul.io/api/acl/acl.html
 
 * **ISSUE** `#42731`_: (`infoveinx`_) http.query template_data render exception (refs: `#42804`_)
 

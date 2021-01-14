@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Read Pillar data from a mongodb collection
 
 :depends: pymongo (for salt-master)
@@ -53,7 +53,7 @@ dict in your SLS templates.
 
 Module Documentation
 ====================
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
@@ -62,38 +62,44 @@ import re
 
 # Import third party libs
 from salt.ext import six
+
 try:
     import pymongo
+
     HAS_PYMONGO = True
 except ImportError:
     HAS_PYMONGO = False
 
 
-__opts__ = {'mongo.db': 'salt',
-            'mongo.host': 'salt',
-            'mongo.password': '',
-            'mongo.port': 27017,
-            'mongo.user': ''}
+__opts__ = {
+    "mongo.db": "salt",
+    "mongo.host": "salt",
+    "mongo.password": "",
+    "mongo.port": 27017,
+    "mongo.user": "",
+}
 
 
 def __virtual__():
     if not HAS_PYMONGO:
         return False
-    return 'mongo'
+    return "mongo"
 
 
 # Set up logging
 log = logging.getLogger(__name__)
 
 
-def ext_pillar(minion_id,
-               pillar,  # pylint: disable=W0613
-               collection='pillar',
-               id_field='_id',
-               re_pattern=None,
-               re_replace='',
-               fields=None):
-    '''
+def ext_pillar(
+    minion_id,
+    pillar,  # pylint: disable=W0613
+    collection="pillar",
+    id_field="_id",
+    re_pattern=None,
+    re_replace="",
+    fields=None,
+):
+    """
     Connect to a mongo database and read per-node pillar information.
 
     Parameters:
@@ -115,20 +121,20 @@ def ext_pillar(minion_id,
           entire document, the ``_id`` field will be converted to string. Be
           careful with other fields in the document as they must be string
           serializable. Defaults to ``None``.
-    '''
-    host = __opts__['mongo.host']
-    port = __opts__['mongo.port']
-    log.info('connecting to %s:%s for mongo ext_pillar', host, port)
+    """
+    host = __opts__["mongo.host"]
+    port = __opts__["mongo.port"]
+    log.info("connecting to %s:%s for mongo ext_pillar", host, port)
     conn = pymongo.MongoClient(host, port)
 
-    log.debug('using database \'%s\'', __opts__['mongo.db'])
-    mdb = conn[__opts__['mongo.db']]
+    log.debug("using database '%s'", __opts__["mongo.db"])
+    mdb = conn[__opts__["mongo.db"]]
 
-    user = __opts__.get('mongo.user')
-    password = __opts__.get('mongo.password')
+    user = __opts__.get("mongo.user")
+    password = __opts__.get("mongo.password")
 
     if user and password:
-        log.debug('authenticating as \'%s\'', user)
+        log.debug("authenticating as '%s'", user)
         mdb.authenticate(user, password)
 
     # Do the regex string replacement on the minion id
@@ -136,30 +142,25 @@ def ext_pillar(minion_id,
         minion_id = re.sub(re_pattern, re_replace, minion_id)
 
     log.info(
-        'ext_pillar.mongo: looking up pillar def for {\'%s\': \'%s\'} '
-        'in mongo', id_field, minion_id
+        "ext_pillar.mongo: looking up pillar def for {'%s': '%s'} " "in mongo",
+        id_field,
+        minion_id,
     )
 
     result = mdb[collection].find_one({id_field: minion_id}, projection=fields)
     if result:
         if fields:
-            log.debug(
-                'ext_pillar.mongo: found document, returning fields \'%s\'',
-                fields
-            )
+            log.debug("ext_pillar.mongo: found document, returning fields '%s'", fields)
         else:
-            log.debug('ext_pillar.mongo: found document, returning whole doc')
-        if '_id' in result:
+            log.debug("ext_pillar.mongo: found document, returning whole doc")
+        if "_id" in result:
             # Converting _id to a string
             # will avoid the most common serialization error cases, but DBRefs
             # and whatnot will still cause problems.
-            result['_id'] = six.text_type(result['_id'])
+            result["_id"] = six.text_type(result["_id"])
         return result
     else:
         # If we can't find the minion the database it's not necessarily an
         # error.
-        log.debug(
-            'ext_pillar.mongo: no document found in collection %s',
-            collection
-        )
+        log.debug("ext_pillar.mongo: no document found in collection %s", collection)
         return {}

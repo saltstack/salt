@@ -6,7 +6,7 @@ Compound matchers
 
 Compound matchers allow very granular minion targeting using any of Salt's
 matchers. The default matcher is a :mod:`glob <python2:fnmatch>` match, just as
-with CLI and :term:`top file` matching. To match using anything other than a
+with CLI and :term:`top file <Top File>` matching. To match using anything other than a
 glob, prefix the match string with the appropriate letter from the table below,
 followed by an ``@`` sign.
 
@@ -34,7 +34,7 @@ matches the :mod:`regular expression <python2:re>` ``web-dc1-srv.*``:
 
     salt -C 'webserv* and G@os:Debian or E@web-dc1-srv.*' test.version
 
-That same example expressed in a :term:`top file` looks like the following:
+That same example expressed in a :term:`top file <Top File>` looks like the following:
 
 .. code-block:: yaml
 

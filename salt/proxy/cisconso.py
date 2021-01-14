@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Proxy Minion interface module for managing (practically) any network device with
 Cisco Network Services Orchestrator (Cisco NSO). Cisco NSO uses a series of
 remote polling
@@ -170,21 +170,23 @@ responding:
 .. code-block:: bash
 
     salt <id> test.ping
-'''
+"""
 
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 
 # Import Salt Libs
 from salt.exceptions import SaltSystemExit
 
 # This must be present or the Salt loader won't load this module.
-__proxyenabled__ = ['cisconso']
+__proxyenabled__ = ["cisconso"]
 
 try:
     from pynso.client import NSOClient
     from pynso.datastores import DatastoreType
+
     HAS_PYNSO_LIBS = True
 except ImportError:
     HAS_PYNSO_LIBS = False
@@ -198,7 +200,7 @@ DETAILS = {}
 log = logging.getLogger(__file__)
 
 # Define the module's virtual name
-__virtualname__ = 'cisconso'
+__virtualname__ = "cisconso"
 
 
 def __virtual__():
@@ -207,17 +209,17 @@ def __virtual__():
 
 def init(opts):
     # Set configuration details
-    DETAILS['host'] = opts['proxy'].get('host')
-    DETAILS['username'] = opts['proxy'].get('username')
-    DETAILS['password'] = opts['proxy'].get('password')
-    DETAILS['use_ssl'] = bool(opts['proxy'].get('use_ssl'))
-    DETAILS['port'] = int(opts['proxy'].get('port'))
+    DETAILS["host"] = opts["proxy"].get("host")
+    DETAILS["username"] = opts["proxy"].get("username")
+    DETAILS["password"] = opts["proxy"].get("password")
+    DETAILS["use_ssl"] = bool(opts["proxy"].get("use_ssl"))
+    DETAILS["port"] = int(opts["proxy"].get("port"))
 
 
 def grains():
-    '''
+    """
     Get the grains from the proxy device.
-    '''
+    """
     if not GRAINS_CACHE:
         return _grains()
     return GRAINS_CACHE
@@ -225,15 +227,16 @@ def grains():
 
 def _get_client():
     return NSOClient(
-        host=DETAILS['host'],
-        username=DETAILS['username'],
-        password=DETAILS['password'],
-        port=DETAILS['port'],
-        ssl=DETAILS['use_ssl'])
+        host=DETAILS["host"],
+        username=DETAILS["username"],
+        password=DETAILS["password"],
+        port=DETAILS["port"],
+        ssl=DETAILS["use_ssl"],
+    )
 
 
 def ping():
-    '''
+    """
     Check to see if the host is responding. Returns False if the host didn't
     respond, True otherwise.
 
@@ -242,7 +245,7 @@ def ping():
     .. code-block:: bash
 
         salt cisco-nso test.ping
-    '''
+    """
     try:
         client = _get_client()
         client.info()
@@ -254,15 +257,15 @@ def ping():
 
 
 def shutdown():
-    '''
+    """
     Shutdown the connection to the proxy device. For this proxy,
     shutdown is a no-op.
-    '''
-    log.debug('Cisco NSO proxy shutdown() called...')
+    """
+    log.debug("Cisco NSO proxy shutdown() called...")
 
 
 def get_data(datastore, path):
-    '''
+    """
     Get the configuration of the device tree at the given path
 
     :param datastore: The datastore, e.g. running, operational.
@@ -279,13 +282,13 @@ def get_data(datastore, path):
     .. code-block:: bash
 
         salt cisco-nso cisconso.get_data devices
-    '''
+    """
     client = _get_client()
     return client.get_datastore_data(datastore, path)
 
 
 def set_data_value(datastore, path, data):
-    '''
+    """
     Get a data entry in a datastore
 
     :param datastore: The datastore, e.g. running, operational.
@@ -301,20 +304,20 @@ def set_data_value(datastore, path, data):
 
     :rtype: ``bool``
     :return: ``True`` if successful, otherwise error.
-    '''
+    """
     client = _get_client()
     return client.set_data_value(datastore, path, data)
 
 
 def get_rollbacks():
-    '''
+    """
     Get a list of stored configuration rollbacks
-    '''
+    """
     return _get_client().get_rollbacks()
 
 
 def get_rollback(name):
-    '''
+    """
     Get the backup of stored a configuration rollback
 
     :param name: Typically an ID of the backup
@@ -322,12 +325,12 @@ def get_rollback(name):
 
     :rtype: ``str``
     :return: the contents of the rollback snapshot
-    '''
+    """
     return _get_client().get_rollback(name)
 
 
 def apply_rollback(datastore, name):
-    '''
+    """
     Apply a system rollback
 
     :param datastore: The datastore, e.g. running, operational.
@@ -336,14 +339,14 @@ def apply_rollback(datastore, name):
 
     :param name: an ID of the rollback to restore
     :type  name: ``str``
-    '''
+    """
     return _get_client().apply_rollback(datastore, name)
 
 
 def _grains():
-    '''
+    """
     Helper function to the grains from the proxied devices.
-    '''
+    """
     client = _get_client()
     # This is a collection of the configuration of all running devices under NSO
     ret = client.get_datastore(DatastoreType.RUNNING)

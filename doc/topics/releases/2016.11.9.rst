@@ -642,7 +642,7 @@ Changelog for v2016.11.8..v2016.11.9
 
   * 1b12acd303 Check type before casting
 
-  * 03fa37b445 Cast vdata to it's proper type
+  * 03fa37b445 Cast vdata to its proper type
 
 * **PR** `#43863`_: (`nicholasmhughes`_) Atomicfile only copies mode and not user/group perms
   @ *2017-11-10 18:47:55 UTC*

@@ -506,6 +506,12 @@
 # Boolean to run command via sudo.
 #ssh_sudo: False
 
+# Boolean to run ssh_pre_flight script defined in roster. By default
+# the script will only run if the thin_dir does not exist on the targeted
+# minion. This forces the script to run regardless of the thin dir existing
+# or not.
+#ssh_run_pre_flight: True
+
 # Number of seconds to wait for a response when establishing an SSH connection.
 #ssh_timeout: 60
 
@@ -671,7 +677,9 @@
 
 # The master_roots setting configures a master-only copy of the file_roots dictionary,
 # used by the state compiler.
-#master_roots: /srv/salt-master
+#master_roots:
+#  base:
+#    - /srv/salt-master
 
 # When using multiple environments, each with their own top file, the
 # default behaviour is an unordered merge. To prevent top files from
@@ -1016,6 +1024,24 @@
 #
 #pillar_cache_backend: disk
 
+# A master can also cache GPG data locally to bypass the expense of having to render them
+# for each minion on every request. This feature should only be enabled in cases
+# where pillar rendering time is known to be unsatisfactory and any attendant security
+# concerns about storing decrypted GPG data in a master cache have been addressed.
+#
+# When enabling this feature, be certain to read through the additional ``gpg_cache_*``
+# configuration options to fully understand the tunable parameters and their implications.
+#gpg_cache: False
+
+# If and only if a master has set ``gpg_cache: True``, the cache TTL controls the amount
+# of time, in seconds, before the cache is considered invalid by a master and a fresh
+# pillar is recompiled and stored.
+#gpg_cache_ttl: 86400
+
+# If and only if a master has set `gpg_cache: True`, one of several storage providers
+# can be utilized. Available options are the same as ``pillar_cache_backend``.
+#gpg_cache_backend: disk
+
 
 ######        Reactor Settings        #####
 ###########################################
@@ -1272,7 +1298,7 @@
 ############################################
 # Warning: Failure to set TCP keepalives on the salt-master can result in
 # not detecting the loss of a minion when the connection is lost or when
-# it's host has been terminated without first closing the socket.
+# its host has been terminated without first closing the socket.
 # Salt's Presence System depends on this connection status to know if a minion
 # is "present".
 # ZeroMQ now includes support for configuring SO_KEEPALIVE if supported by

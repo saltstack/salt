@@ -1,12 +1,11 @@
-# -*- coding: utf-8 -*-
-r'''
+r"""
 Execution of Salt modules from within states
 ============================================
 
 .. note::
 
     There are two styles of calling ``module.run``. **The legacy style will no
-    longer be available starting in the Sodium release.** To opt-in early to the
+    longer be available starting in the 3005 release.** To opt-in early to the
     new style you must add the following to your ``/etc/salt/minion`` config
     file:
 
@@ -299,22 +298,19 @@ Windows system:
         }
 
 .. _file_roots: https://docs.saltstack.com/en/latest/ref/configuration/master.html#file-roots
-'''
-from __future__ import absolute_import, print_function, unicode_literals
+"""
 
-# Import salt libs
 import salt.loader
 import salt.utils.args
 import salt.utils.functools
 import salt.utils.jid
-from salt.ext import six
-from salt.ext.six.moves import range
 from salt.exceptions import SaltInvocationError
+from salt.ext.six.moves import range
 from salt.utils.decorators import with_deprecated
 
 
 def wait(name, **kwargs):
-    '''
+    """
     Run a single module function only if the watch statement calls it
 
     ``name``
@@ -334,20 +330,17 @@ def wait(name, **kwargs):
         2. Another state has a :ref:`watch_in requisite
            <requisites-watch-in>` which references this state, and the state
            wth the ``watch_in`` changes.
-    '''
-    return {'name': name,
-            'changes': {},
-            'result': True,
-            'comment': ''}
+    """
+    return {"name": name, "changes": {}, "result": True, "comment": ""}
 
 
 # Alias module.watch to module.wait
-watch = salt.utils.functools.alias_function(wait, 'watch')
+watch = salt.utils.functools.alias_function(wait, "watch")
 
 
-@with_deprecated(globals(), "Sodium", policy=with_deprecated.OPT_IN)
+@with_deprecated(globals(), "Phosphorus", policy=with_deprecated.OPT_IN)
 def run(**kwargs):
-    '''
+    """
     Run a single module function or a range of module functions in a batch.
     Supersedes ``module.run`` function, which requires ``m_`` prefix to
     function-specific parameters.
@@ -377,66 +370,86 @@ def run(**kwargs):
 
 
     :return:
-    '''
+    """
 
-    if 'name' in kwargs:
-        kwargs.pop('name')
+    if "name" in kwargs:
+        kwargs.pop("name")
     ret = {
-        'name': list(kwargs),
-        'changes': {},
-        'comment': '',
-        'result': None,
+        "name": list(kwargs),
+        "changes": {},
+        "comment": "",
+        "result": None,
     }
 
-    functions = [func for func in kwargs if '.' in func]
+    functions = [func for func in kwargs if "." in func]
     missing = []
     tests = []
     for func in functions:
-        func = func.split(':')[0]
+        func = func.split(":")[0]
         if func not in __salt__:
             missing.append(func)
-        elif __opts__['test']:
+        elif __opts__["test"]:
             tests.append(func)
 
     if tests or missing:
-        ret['comment'] = ' '.join([
-            missing and "Unavailable function{plr}: "
-                        "{func}.".format(plr=(len(missing) > 1 or ''),
-                                         func=(', '.join(missing) or '')) or '',
-            tests and "Function{plr} {func} to be "
-                      "executed.".format(plr=(len(tests) > 1 or ''),
-                                         func=(', '.join(tests)) or '') or '',
-        ]).strip()
-        ret['result'] = not (missing or not tests)
+        ret["comment"] = " ".join(
+            [
+                missing
+                and "Unavailable function{plr}: "
+                "{func}.".format(
+                    plr=(len(missing) > 1 or ""), func=(", ".join(missing) or "")
+                )
+                or "",
+                tests
+                and "Function{plr} {func} to be "
+                "executed.".format(
+                    plr=(len(tests) > 1 or ""), func=(", ".join(tests)) or ""
+                )
+                or "",
+            ]
+        ).strip()
+        ret["result"] = not (missing or not tests)
 
-    if ret['result'] is None:
-        ret['result'] = True
+    if ret["result"] is None:
+        ret["result"] = True
 
         failures = []
         success = []
         for func in functions:
-            _func = func.split(':')[0]
+            _func = func.split(":")[0]
             try:
-                func_ret = _call_function(_func, returner=kwargs.get('returner'),
-                                          func_args=kwargs.get(func))
-                if not _get_result(func_ret, ret['changes'].get('ret', {})):
+                func_ret = _call_function(
+                    _func, returner=kwargs.get("returner"), func_args=kwargs.get(func)
+                )
+                if not _get_result(func_ret, ret["changes"].get("ret", {})):
                     if isinstance(func_ret, dict):
-                        failures.append("'{0}' failed: {1}".format(
-                            func, func_ret.get('comment', '(error message N/A)')))
+                        failures.append(
+                            "'{}' failed: {}".format(
+                                func, func_ret.get("comment", "(error message N/A)")
+                            )
+                        )
+                    if func_ret is False:
+                        failures.append("'{}': {}".format(func, func_ret))
                 else:
-                    success.append('{0}: {1}'.format(
-                        func, func_ret.get('comment', 'Success') if isinstance(func_ret, dict) else func_ret))
-                    ret['changes'][func] = func_ret
+                    success.append(
+                        "{}: {}".format(
+                            func,
+                            func_ret.get("comment", "Success")
+                            if isinstance(func_ret, dict)
+                            else func_ret,
+                        )
+                    )
+                    ret["changes"][func] = func_ret
             except (SaltInvocationError, TypeError) as ex:
-                failures.append("'{0}' failed: {1}".format(func, ex))
-        ret['comment'] = ', '.join(failures + success)
-        ret['result'] = not bool(failures)
+                failures.append("'{}' failed: {}".format(func, ex))
+        ret["comment"] = ", ".join(failures + success)
+        ret["result"] = not bool(failures)
 
     return ret
 
 
-def _call_function(name, returner=None, func_args=None):
-    '''
+def _call_function(name, returner=None, func_args=None, func_kwargs=None):
+    """
     Calls a function from the specified module.
 
     :param str name: module.function of the function to call
@@ -444,20 +457,30 @@ def _call_function(name, returner=None, func_args=None):
     :param list func_args: List with args and dicts of kwargs (one dict per kwarg)
         to pass to the function.
     :return: Result of the function call
-    '''
+    """
     if func_args is None:
         func_args = []
-    mret = salt.utils.functools.call_function(__salt__[name], *func_args)
+
+    if func_kwargs is None:
+        func_kwargs = {}
+
+    mret = salt.utils.functools.call_function(__salt__[name], *func_args, **func_kwargs)
     if returner is not None:
         returners = salt.loader.returners(__opts__, __salt__)
         if returner in returners:
-            returners[returner]({'id': __opts__['id'], 'ret': mret,
-                                 'fun': name, 'jid': salt.utils.jid.gen_jid(__opts__)})
+            returners[returner](
+                {
+                    "id": __opts__["id"],
+                    "ret": mret,
+                    "fun": name,
+                    "jid": salt.utils.jid.gen_jid(__opts__),
+                }
+            )
     return mret
 
 
 def _run(name, **kwargs):
-    '''
+    """
     .. deprecated:: 2017.7.0
        Function name stays the same, behaviour will change.
 
@@ -471,18 +494,15 @@ def _run(name, **kwargs):
 
     ``kwargs``
         Pass any arguments needed to execute the function
-    '''
-    ret = {'name': name,
-           'changes': {},
-           'comment': '',
-           'result': None}
+    """
+    ret = {"name": name, "changes": {}, "comment": "", "result": None}
     if name not in __salt__:
-        ret['comment'] = 'Module function {0} is not available'.format(name)
-        ret['result'] = False
+        ret["comment"] = "Module function {} is not available".format(name)
+        ret["result"] = False
         return ret
 
-    if __opts__['test']:
-        ret['comment'] = 'Module function {0} is set to execute'.format(name)
+    if __opts__["test"]:
+        ret["comment"] = "Module function {} is set to execute".format(name)
         return ret
 
     aspec = salt.utils.args.get_function_argspec(__salt__[name])
@@ -502,32 +522,32 @@ def _run(name, **kwargs):
             defaults[aspec.args[ind]] = aspec.defaults[-minus]
     # overwrite passed default kwargs
     for arg in defaults:
-        if arg == 'name':
-            if 'm_name' in kwargs:
-                defaults[arg] = kwargs.pop('m_name')
-        elif arg == 'fun':
-            if 'm_fun' in kwargs:
-                defaults[arg] = kwargs.pop('m_fun')
-        elif arg == 'state':
-            if 'm_state' in kwargs:
-                defaults[arg] = kwargs.pop('m_state')
-        elif arg == 'saltenv':
-            if 'm_saltenv' in kwargs:
-                defaults[arg] = kwargs.pop('m_saltenv')
+        if arg == "name":
+            if "m_name" in kwargs:
+                defaults[arg] = kwargs.pop("m_name")
+        elif arg == "fun":
+            if "m_fun" in kwargs:
+                defaults[arg] = kwargs.pop("m_fun")
+        elif arg == "state":
+            if "m_state" in kwargs:
+                defaults[arg] = kwargs.pop("m_state")
+        elif arg == "saltenv":
+            if "m_saltenv" in kwargs:
+                defaults[arg] = kwargs.pop("m_saltenv")
         if arg in kwargs:
             defaults[arg] = kwargs.pop(arg)
     missing = set()
     for arg in aspec.args:
-        if arg == 'name':
-            rarg = 'm_name'
-        elif arg == 'fun':
-            rarg = 'm_fun'
-        elif arg == 'names':
-            rarg = 'm_names'
-        elif arg == 'state':
-            rarg = 'm_state'
-        elif arg == 'saltenv':
-            rarg = 'm_saltenv'
+        if arg == "name":
+            rarg = "m_name"
+        elif arg == "fun":
+            rarg = "m_fun"
+        elif arg == "names":
+            rarg = "m_names"
+        elif arg == "state":
+            rarg = "m_state"
+        elif arg == "saltenv":
+            rarg = "m_saltenv"
         else:
             rarg = arg
         if rarg not in kwargs and arg not in defaults:
@@ -538,24 +558,24 @@ def _run(name, **kwargs):
         else:
             args.append(kwargs.pop(rarg))
     if missing:
-        comment = 'The following arguments are missing:'
+        comment = "The following arguments are missing:"
         for arg in missing:
-            comment += ' {0}'.format(arg)
-        ret['comment'] = comment
-        ret['result'] = False
+            comment += " {}".format(arg)
+        ret["comment"] = comment
+        ret["result"] = False
         return ret
 
     if aspec.varargs:
-        if aspec.varargs == 'name':
-            rarg = 'm_name'
-        elif aspec.varargs == 'fun':
-            rarg = 'm_fun'
-        elif aspec.varargs == 'names':
-            rarg = 'm_names'
-        elif aspec.varargs == 'state':
-            rarg = 'm_state'
-        elif aspec.varargs == 'saltenv':
-            rarg = 'm_saltenv'
+        if aspec.varargs == "name":
+            rarg = "m_name"
+        elif aspec.varargs == "fun":
+            rarg = "m_fun"
+        elif aspec.varargs == "names":
+            rarg = "m_names"
+        elif aspec.varargs == "state":
+            rarg = "m_state"
+        elif aspec.varargs == "saltenv":
+            rarg = "m_saltenv"
         else:
             rarg = aspec.varargs
 
@@ -564,8 +584,8 @@ def _run(name, **kwargs):
 
             if not isinstance(varargs, list):
                 msg = "'{0}' must be a list."
-                ret['comment'] = msg.format(aspec.varargs)
-                ret['result'] = False
+                ret["comment"] = msg.format(aspec.varargs)
+                ret["result"] = False
                 return ret
 
             args.extend(varargs)
@@ -575,8 +595,8 @@ def _run(name, **kwargs):
         nkwargs = kwargs.pop(aspec.keywords)
         if not isinstance(nkwargs, dict):
             msg = "'{0}' must be a dict."
-            ret['comment'] = msg.format(aspec.keywords)
-            ret['result'] = False
+            ret["comment"] = msg.format(aspec.keywords)
+            ret["result"] = False
             return ret
 
     try:
@@ -585,24 +605,27 @@ def _run(name, **kwargs):
         else:
             mret = __salt__[name](*args)
     except Exception as e:  # pylint: disable=broad-except
-        ret['comment'] = 'Module function {0} threw an exception. Exception: {1}'.format(name, e)
-        ret['result'] = False
+        ret["comment"] = "Module function {} threw an exception. Exception: {}".format(
+            name, e
+        )
+        ret["result"] = False
         return ret
     else:
-        if mret is not None or mret is not {}:
-            ret['changes']['ret'] = mret
+        if mret is not None or mret != {}:
+            ret["changes"]["ret"] = mret
 
-    if 'returner' in kwargs:
+    if "returner" in kwargs:
         ret_ret = {
-                'id': __opts__['id'],
-                'ret': mret,
-                'fun': name,
-                'jid': salt.utils.jid.gen_jid(__opts__)}
+            "id": __opts__["id"],
+            "ret": mret,
+            "fun": name,
+            "jid": salt.utils.jid.gen_jid(__opts__),
+        }
         returners = salt.loader.returners(__opts__, __salt__)
-        if kwargs['returner'] in returners:
-            returners[kwargs['returner']](ret_ret)
-    ret['comment'] = 'Module function {0} executed'.format(name)
-    ret['result'] = _get_result(mret, ret['changes'])
+        if kwargs["returner"] in returners:
+            returners[kwargs["returner"]](ret_ret)
+    ret["comment"] = "Module function {} executed".format(name)
+    ret["result"] = _get_result(mret, ret["changes"])
 
     return ret
 
@@ -610,17 +633,17 @@ def _run(name, **kwargs):
 def _get_result(func_ret, changes):
     res = True
     # if mret is a dict and there is retcode and its non-zero
-    if isinstance(func_ret, dict) and func_ret.get('retcode', 0) != 0:
+    if isinstance(func_ret, dict) and func_ret.get("retcode", 0) != 0:
         res = False
         # if its a boolean, return that as the result
     elif isinstance(func_ret, bool):
         res = func_ret
     else:
-        changes_ret = changes.get('ret', {})
+        changes_ret = changes.get("ret", {})
         if isinstance(changes_ret, dict):
-            if isinstance(changes_ret.get('result', {}), bool):
-                res = changes_ret.get('result', {})
-            elif changes_ret.get('retcode', 0) != 0:
+            if isinstance(changes_ret.get("result", {}), bool):
+                res = changes_ret.get("result", {})
+            elif changes_ret.get("retcode", 0) != 0:
                 res = False
             # Explore dict in depth to determine if there is a
             # 'result' key set to False which sets the global
@@ -633,8 +656,8 @@ def _get_result(func_ret, changes):
 
 def _get_dict_result(node):
     ret = True
-    for key, val in six.iteritems(node):
-        if key == 'result' and val is False:
+    for key, val in node.items():
+        if key == "result" and val is False:
             ret = False
             break
         elif isinstance(val, dict):
@@ -644,4 +667,4 @@ def _get_dict_result(node):
     return ret
 
 
-mod_watch = salt.utils.functools.alias_function(run, 'mod_watch')
+mod_watch = salt.utils.functools.alias_function(run, "mod_watch")

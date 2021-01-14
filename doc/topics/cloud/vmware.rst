@@ -17,7 +17,7 @@ Dependencies
 The vmware module for Salt Cloud requires the ``pyVmomi`` package, which is
 available at PyPI:
 
-https://pypi.python.org/pypi/pyvmomi
+https://pypi.org/project/pyvmomi/
 
 This package can be installed using `pip` or `easy_install`:
 
@@ -171,8 +171,8 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
             type: paravirtual
             bus_sharing: physical
         ide:
-          IDE 2
-          IDE 3
+          IDE 2: {}
+          IDE 3: {}
 
       domain: example.com
       dns_servers:
@@ -363,8 +363,14 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
 
     ide
         Enter the IDE controller specification here. If the IDE controller doesn\'t exist,
-        a new IDE controller will be created. If the IDE controller already exists,
-        no further changes to it will me made.
+        a new IDE controller is created. If the IDE controller already exists,
+        no further changes to it are made. The IDE controller specification is
+        a dictionary.
+
+        .. code-block:: yaml
+
+          ide:
+            IDE 2: {}
 
 ``domain``
     Enter the global domain name to be used for DNS. If not specified and if the VM name
@@ -508,7 +514,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
     Specify the guest id of the VM. For a full list of supported values see the
     VMware vSphere documentation:
 
-    http://pubs.vmware.com/vsphere-60/topic/com.vmware.wssdk.apiref.doc/vim.vm.GuestOsDescriptor.GuestOsIdentifier.html
+    https://code.vmware.com/apis?pid=com.vmware.wssdk.apiref.doc&release=vsphere-60&topic=vim.vm.GuestOsDescriptor.GuestOsIdentifier.html
 
     .. note::
 

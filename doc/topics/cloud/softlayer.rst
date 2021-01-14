@@ -9,7 +9,7 @@ Dependencies
 The SoftLayer driver for Salt Cloud requires the softlayer package, which is
 available at PyPI:
 
-https://pypi.python.org/pypi/SoftLayer
+https://pypi.org/project/SoftLayer/
 
 This package can be installed using ``pip`` or ``easy_install``:
 

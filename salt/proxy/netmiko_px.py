@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-'''
+"""
 Netmiko
 =======
 
@@ -156,6 +155,10 @@ to connect to the network device:
   per proxy minion, as the Netmiko communication channel is mainly SSH
   (default: ``False``)
 
+- ``connection_timeout`` - The number of seconds to attempt to connect to
+  the device in seconds.
+  (default: ``300``)
+
 Proxy Pillar Example
 --------------------
 
@@ -177,38 +180,40 @@ Proxy Pillar Example
       username: test
       use_keys: true
       secret: w3@k
-'''
-from __future__ import absolute_import
+"""
 
-# Import python stdlib
+import contextlib
 import logging
+import time
 
-# Import third party libs
+from salt.utils.args import clean_kwargs
+
 try:
     from netmiko import ConnectHandler
     from netmiko.ssh_exception import NetMikoTimeoutException
     from netmiko.ssh_exception import NetMikoAuthenticationException
+
     HAS_NETMIKO = True
 except ImportError:
     HAS_NETMIKO = False
 
-# Import salt modules
-from salt.utils.args import clean_kwargs
 
 # -----------------------------------------------------------------------------
 # proxy properties
 # -----------------------------------------------------------------------------
 
-__proxyenabled__ = ['netmiko']
+__proxyenabled__ = ["netmiko"]
 # proxy name
 
 # -----------------------------------------------------------------------------
 # globals
 # -----------------------------------------------------------------------------
 
-__virtualname__ = 'netmiko'
+__virtualname__ = "netmiko"
 log = logging.getLogger(__name__)
 netmiko_device = {}
+
+DEFAULT_CONNECTION_TIMEOUT = 300
 
 # -----------------------------------------------------------------------------
 # propery functions
@@ -216,12 +221,16 @@ netmiko_device = {}
 
 
 def __virtual__():
-    '''
+    """
     Proxy module available only if Netmiko is installed.
-    '''
+    """
     if not HAS_NETMIKO:
-        return False, 'The netmiko proxy module requires netmiko library to be installed.'
+        return (
+            False,
+            "The netmiko proxy module requires netmiko library to be installed.",
+        )
     return __virtualname__
+
 
 # -----------------------------------------------------------------------------
 # proxy functions
@@ -229,62 +238,132 @@ def __virtual__():
 
 
 def init(opts):
-    '''
+    """
     Open the connection to the network device
     managed through netmiko.
-    '''
-    proxy_dict = opts.get('proxy', {})
-    opts['multiprocessing'] = proxy_dict.get('multiprocessing', False)
+    """
+    __context__["netmiko_device"] = {}
+    __context__["netmiko_device"]["opts"] = opts
+    __context__["netmiko_device"]["id"] = opts["id"]
+    log.debug("Init for %s", opts["id"])
+    proxy_dict = opts.get("proxy", {})
+    skip_connect = opts.get(
+        "skip_connect_on_init", proxy_dict.get("skip_connect_on_init", False)
+    )
+    opts["multiprocessing"] = proxy_dict.get(
+        "multiprocessing", opts.get("multiprocessing", False)
+    )
+    __context__["netmiko_device"]["connection_timeout"] = opts.get(
+        "connection_timeout", DEFAULT_CONNECTION_TIMEOUT
+    )
+
     netmiko_connection_args = proxy_dict.copy()
-    netmiko_connection_args.pop('proxytype', None)
-    netmiko_device['always_alive'] = netmiko_connection_args.pop('always_alive',
-                                                                 opts.get('proxy_always_alive', True))
+    netmiko_connection_args.pop("proxytype", None)
+    netmiko_connection_args.pop("multiprocessing", None)
+    netmiko_connection_args.pop("skip_connect_on_init", None)
+
+    __context__["netmiko_device"]["args"] = netmiko_connection_args
+
+    _always_alive = netmiko_connection_args.pop(
+        "always_alive", opts.get("proxy_always_alive", True)
+    )
+    __context__["netmiko_device"]["always_alive"] = _always_alive
+
+    if not skip_connect:
+        try:
+            with make_con() as con:
+                __context__["netmiko_device"]["connection"] = con
+                __context__["netmiko_device"]["initialized"] = True
+                __context__["netmiko_device"]["up"] = True
+        except NetMikoTimeoutException as t_err:
+            log.error("Unable to setup the netmiko connection", exc_info=True)
+        except NetMikoAuthenticationException as au_err:
+            log.error("Unable to setup the netmiko connection", exc_info=True)
+    else:
+        __context__["netmiko_device"]["up"] = True
+        __context__["netmiko_device"]["initialized"] = False
+        return True
+
+
+def make_con(connection_timeout=DEFAULT_CONNECTION_TIMEOUT):
+    log.error("Creating connection to %s", __context__["netmiko_device"]["id"])
+    args = __context__["netmiko_device"]["args"]
+    start = time.time()
+    args = args.copy()
+    found_exception = None
+    connection = None
+    while True:
+        try:
+            connection = ConnectHandler(**args)
+        except Exception as exc:  # pylint: disable=broad-except
+            log.warn("Got exception %r", exc)
+            found_exception = exc
+            break
+        else:
+            break
+        if time.time() - start >= connection_timeout:
+            if found_exception:
+                raise found_exception
+            else:
+                raise Exception("Unable to create conneciton")
+    return connection
+
+
+@contextlib.contextmanager
+def connection(connection_timeout=DEFAULT_CONNECTION_TIMEOUT):
+    if "connection" in __context__["netmiko_device"]:
+        con = __context__["netmiko_device"]["connection"]
+        if con.remote_conn is None:
+            con = make_con(connection_timeout)
+            __context__["netmiko_device"]["connection"] = con
+        if con.remote_conn.closed:
+            con = make_con()
+            __context__["netmiko_device"]["connection"] = con
+    else:
+        con = make_con(connection_timeout)
+        __context__["netmiko_device"]["connection"] = con
+    __context__["netmiko_device"]["initialized"] = True
     try:
-        connection = ConnectHandler(**netmiko_connection_args)
-        netmiko_device['connection'] = connection
-        netmiko_device['initialized'] = True
-        netmiko_device['args'] = netmiko_connection_args
-        netmiko_device['up'] = True
-        if not netmiko_device['always_alive']:
-            netmiko_device['connection'].disconnect()
-    except NetMikoTimeoutException as t_err:
-        log.error('Unable to setup the netmiko connection', exc_info=True)
-    except NetMikoAuthenticationException as au_err:
-        log.error('Unable to setup the netmiko connection', exc_info=True)
-    return True
+        yield con
+    finally:
+        if not __context__["netmiko_device"]["always_alive"]:
+            con.disconnect()
 
 
 def alive(opts):
-    '''
+    """
     Return the connection status with the network device.
-    '''
-    log.debug('Checking if %s is still alive', opts.get('id', ''))
-    if not netmiko_device['always_alive']:
+    """
+    log.debug("Checking if %s is still alive", opts.get("id", ""))
+    connection_timeout = __context__["netmiko_device"]["connection_timeout"]
+
+    if not __context__["netmiko_device"]["always_alive"]:
         return True
     if ping() and initialized():
-        return netmiko_device['connection'].remote_conn.transport.is_alive()
+        with connection(connection_timeout) as con:
+            return con.remote_conn.transport.is_alive()
     return False
 
 
 def ping():
-    '''
+    """
     Connection open successfully?
-    '''
-    return netmiko_device.get('up', False)
+    """
+    return __context__["netmiko_device"].get("up", False)
 
 
 def initialized():
-    '''
+    """
     Connection finished initializing?
-    '''
-    return netmiko_device.get('initialized', False)
+    """
+    return __context__["netmiko_device"].get("initialized", False)
 
 
 def shutdown(opts):
-    '''
+    """
     Closes connection with the device.
-    '''
-    return call('disconnect')
+    """
+    return call("disconnect")
 
 
 # -----------------------------------------------------------------------------
@@ -293,27 +372,25 @@ def shutdown(opts):
 
 
 def conn():
-    '''
+    """
     Return the connection object.
-    '''
-    return netmiko_device.get('connection')
+    """
+    return __context__["netmiko_device"].get("connection")
 
 
 def args():
-    '''
+    """
     Return the Netmiko device args.
-    '''
-    return netmiko_device['args']
+    """
+    return __context__["netmiko_device"]["args"]
 
 
 def call(method, *args, **kwargs):
-    '''
+    """
     Calls an arbitrary netmiko method.
-    '''
+    """
     kwargs = clean_kwargs(**kwargs)
-    if not netmiko_device['always_alive']:
-        connection = ConnectHandler(**netmiko_device['args'])
-        ret = getattr(connection, method)(*args, **kwargs)
-        connection.disconnect()
-        return ret
-    return getattr(netmiko_device['connection'], method)(*args, **kwargs)
+    connection_timeout = __context__["netmiko_device"]["connection_timeout"]
+
+    with connection(connection_timeout) as con:
+        return getattr(con, method)(*args, **kwargs)

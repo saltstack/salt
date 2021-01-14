@@ -1,12 +1,10 @@
-# -*- coding: utf-8 -*-
-'''
+"""
 Manage and query Cabal packages
 ===============================
 
 .. versionadded:: 2015.8.0
 
-'''
-from __future__ import absolute_import, print_function, unicode_literals
+"""
 
 import logging
 
@@ -15,22 +13,22 @@ from salt.exceptions import CommandExecutionError
 
 logger = logging.getLogger(__name__)
 
+
 # Function alias to make sure not to shadow built-in's
-__func_alias__ = {
-    'list_': 'list'
-}
+__func_alias__ = {"list_": "list"}
 
 
 def __virtual__():
-    '''
+    """
     Only work when cabal-install is installed.
-    '''
-    return (salt.utils.path.which('cabal') is not None) and \
-        (salt.utils.path.which('ghc-pkg') is not None)
+    """
+    return (salt.utils.path.which("cabal") is not None) and (
+        salt.utils.path.which("ghc-pkg") is not None
+    )
 
 
 def update(user=None, env=None):
-    '''
+    """
     Updates list of known packages.
 
     user
@@ -47,16 +45,12 @@ def update(user=None, env=None):
 
         salt '*' cabal.update
 
-    '''
-    return __salt__['cmd.run_all']('cabal update', runas=user, env=env)
+    """
+    return __salt__["cmd.run_all"]("cabal update", runas=user, env=env)
 
 
-def install(pkg=None,
-            pkgs=None,
-            user=None,
-            install_global=False,
-            env=None):
-    '''
+def install(pkg=None, pkgs=None, user=None, install_global=False, env=None):
+    """
     Install a cabal package.
 
     pkg
@@ -83,32 +77,28 @@ def install(pkg=None,
 
         salt '*' cabal.install shellcheck
         salt '*' cabal.install shellcheck-0.3.5
-    '''
+    """
 
-    cmd = ['cabal install']
+    cmd = ["cabal install"]
 
     if install_global:
-        cmd.append('--global')
+        cmd.append("--global")
 
     if pkg:
-        cmd.append('"{0}"'.format(pkg))
+        cmd.append('"{}"'.format(pkg))
     elif pkgs:
-        cmd.append('"{0}"'.format('" "'.join(pkgs)))
+        cmd.append('"{}"'.format('" "'.join(pkgs)))
 
-    result = __salt__['cmd.run_all'](' '.join(cmd), runas=user, env=env)
+    result = __salt__["cmd.run_all"](" ".join(cmd), runas=user, env=env)
 
-    if result['retcode'] != 0:
-        raise CommandExecutionError(result['stderr'])
+    if result["retcode"] != 0:
+        raise CommandExecutionError(result["stderr"])
 
     return result
 
 
-def list_(
-        pkg=None,
-        user=None,
-        installed=False,
-        env=None):
-    '''
+def list_(pkg=None, user=None, installed=False, env=None):
+    """
     List packages matching a search string.
 
     pkg
@@ -128,19 +118,19 @@ def list_(
 
         salt '*' cabal.list
         salt '*' cabal.list ShellCheck
-    '''
-    cmd = ['cabal list --simple-output']
+    """
+    cmd = ["cabal list --simple-output"]
 
     if installed:
-        cmd.append('--installed')
+        cmd.append("--installed")
 
     if pkg:
-        cmd.append('"{0}"'.format(pkg))
+        cmd.append('"{}"'.format(pkg))
 
-    result = __salt__['cmd.run_all'](' '.join(cmd), runas=user, env=env)
+    result = __salt__["cmd.run_all"](" ".join(cmd), runas=user, env=env)
 
     packages = {}
-    for line in result['stdout'].splitlines():
+    for line in result["stdout"].splitlines():
         data = line.split()
         package_name = data[0]
         package_version = data[1]
@@ -149,10 +139,8 @@ def list_(
     return packages
 
 
-def uninstall(pkg,
-              user=None,
-              env=None):
-    '''
+def uninstall(pkg, user=None, env=None):
+    """
     Uninstall a cabal package.
 
     pkg
@@ -170,13 +158,13 @@ def uninstall(pkg,
 
         salt '*' cabal.uninstall ShellCheck
 
-    '''
-    cmd = ['ghc-pkg unregister']
-    cmd.append('"{0}"'.format(pkg))
+    """
+    cmd = ["ghc-pkg unregister"]
+    cmd.append('"{}"'.format(pkg))
 
-    result = __salt__['cmd.run_all'](' '.join(cmd), runas=user, env=env)
+    result = __salt__["cmd.run_all"](" ".join(cmd), runas=user, env=env)
 
-    if result['retcode'] != 0:
-        raise CommandExecutionError(result['stderr'])
+    if result["retcode"] != 0:
+        raise CommandExecutionError(result["stderr"])
 
     return result

@@ -18,33 +18,23 @@ to treat others without respect, especially people working to improve Salt)!
 Linting
 =======
 
-Most Salt style conventions are codified in Salt's ``.testing.pylintrc`` file.
-Salt's pylint file has two dependencies: pylint_ and saltpylint_. You can
-install these dependencies with ``pip``:
+Most Salt style conventions are codified in Salt's ``.pylintrc`` file.
+Salt's pylint file has two dependencies: pylint_ and saltpylint_, however, linting should
+be done using :ref:`nox <getting_set_up_for_tests>`.
 
 .. code-block:: bash
 
-    pip install pylint
-    pip install saltpylint
+   nox -e lint
 
-The ``.testing.pylintrc`` file is found in the root of the Salt project and can
-be passed as an argument to the pylint_ program as follows:
+One can target either salt's source code or the test suite(different pylint rules apply):
 
 .. code-block:: bash
 
-    pylint --rcfile=/path/to/salt/.testing.pylintrc salt/dir/to/lint
+   nox -e lint-salt
+   nox -e lint-tests
 
-.. note::
 
-    There are two pylint files in the ``salt`` directory. One is the
-    ``.pylintrc`` file and the other is the ``.testing.pylintrc`` file. The
-    tests that run in Jenkins against GitHub Pull Requests use
-    ``.testing.pylintrc``. The ``testing.pylintrc`` file is a little less
-    strict than the ``.pylintrc`` and is used to make it easier for contributors
-    to submit changes. The ``.pylintrc`` file can be used for linting, but the
-    ``testing.pylintrc`` is the source of truth when submitting pull requests.
-
-.. _pylint: http://www.pylint.org
+.. _pylint: https://www.pylint.org/
 .. _saltpylint: https://github.com/saltstack/salt-pylint
 
 Variables
@@ -66,15 +56,23 @@ Formatting Strings
 
 All strings which require formatting should use the `.format` string method:
 
+Please do NOT use printf formatting, unless it's a log message.
+
+Good:
+
 .. code-block:: python
 
-    data = 'some text'
-    more = '{0} and then some'.format(data)
+    data = "some text"
+    more = "{} and then some".format(data)
+    log.debug("%s and then some", data)
 
-Make sure to use indices or identifiers in the format brackets, since empty
-brackets are not supported by python 2.6.
+Bad:
 
-Please do NOT use printf formatting.
+.. code-block:: python
+
+    data = "some text"
+    log.debug("{} and then some".format(data))
+
 
 Docstring Conventions
 ---------------------
@@ -84,15 +82,15 @@ When adding a new function or state, where possible try to use a
 
 .. code-block:: python
 
-    def new_func(msg=''):
-        '''
+    def new_func(msg=""):
+        """
         .. versionadded:: 0.16.0
 
         Prints what was passed to the function.
 
         msg : None
             The string to be printed.
-        '''
+        """
         print(msg)
 
 If you are uncertain what version should be used, either consult a core
@@ -109,8 +107,8 @@ significantly, the ``versionchanged`` directive can be used to clarify this:
 
 .. code-block:: python
 
-    def new_func(msg='', signature=''):
-        '''
+    def new_func(msg="", signature=""):
+        """
         .. versionadded:: 0.16.0
 
         Prints what was passed to the function.
@@ -123,9 +121,9 @@ significantly, the ``versionchanged`` directive can be used to clarify this:
         signature : None
             An optional signature.
 
-        .. versionadded 0.17.0
-        '''
-        print('Greetings! {0}\n\n{1}'.format(msg, signature))
+        .. versionadded:: 0.17.0
+        """
+        print("Greetings! {0}\n\n{1}".format(msg, signature))
 
 
 Dictionaries
@@ -135,7 +133,7 @@ Dictionaries should be initialized using `{}` instead of `dict()`.
 
 See here_ for an in-depth discussion of this topic.
 
-.. _here: http://doughellmann.com/2012/11/12/the-performance-impact-of-using-dict-instead-of-in-cpython-2-7-2.html
+.. _here: https://doughellmann.com/blog/2012/11/12/the-performance-impact-of-using-dict-instead-of-in-cpython-2-7-2/
 
 
 Imports
@@ -154,8 +152,9 @@ To say this more directly with an example, this is `GOOD`:
 
     import os
 
+
     def minion_path():
-        path = os.path.join(self.opts['cachedir'], 'minions')
+        path = os.path.join(self.opts["cachedir"], "minions")
         return path
 
 This on the other hand is `DISCOURAGED`:
@@ -164,8 +163,9 @@ This on the other hand is `DISCOURAGED`:
 
     from os.path import join
 
+
     def minion_path():
-        path = join(self.opts['cachedir'], 'minions')
+        path = join(self.opts["cachedir"], "minions")
         return path
 
 The time when this is changed is for importing exceptions, generally directly
@@ -203,7 +203,7 @@ avoided.
     any custom states or modules. However, the practice of avoiding absolute
     imports still applies to all other cases as to avoid a name conflict.
 
-.. _`absolute imports`: http://legacy.python.org/dev/peps/pep-0328/#rationale-for-absolute-imports
+.. _`absolute imports`: https://legacy.python.org/dev/peps/pep-0328/#rationale-for-absolute-imports
 
 
 Code Churn
@@ -214,7 +214,7 @@ PEP 8. Code churn is a leading source of bugs and is **strongly discouraged**.
 While style fixes are encouraged they should be isolated to a single file per
 commit, and the changes should be legitimate, if there are any questions about
 whether a style change is legitimate please reference this document and the
-official PEP 8 (http://legacy.python.org/dev/peps/pep-0008/) document before
+official PEP 8 (https://legacy.python.org/dev/peps/pep-0008/) document before
 changing code. Many claims that a change is PEP 8 have been invalid, please
 double check before committing fixes.
 

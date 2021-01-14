@@ -62,3 +62,8 @@ grains:
     keystone.password: demopass
     keystone.tenant: demo
     keystone.auth_url: http://127.0.0.1:5000/v3/
+
+mine_functions:
+  test.arg:
+    - isn't
+    - allow_tgt: 'sub_minion'

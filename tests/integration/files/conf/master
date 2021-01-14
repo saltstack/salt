@@ -29,6 +29,7 @@ tcp_master_workers: 64515
 peer:
   '.*':
     - '(x509|test).*'
+    - 'match.*'
 
 ext_pillar:
   - ext_pillar_opts:
@@ -40,7 +41,17 @@ yaml_utf8: True
 
 external_auth:
   pam:
-    saltdev:
+    saltdev-auth:
+      - test.*
+    saltdev-netapi:
+      - '@wheel'
+      - '@runner'
+      - test.*
+    saltdev-key:
+      - '@wheel'
+      - '@runner'
+      - test.*
+    saltdev-runner:
       - '@wheel'
       - '@runner'
       - test.*
@@ -116,11 +127,14 @@ discovery: false
 #ignore_host_keys: True
 
 # test vault
+# set uses to 0 so the token
+# has unlimited uses available.
 vault:
   url: http://127.0.0.1:8200
   auth:
     method: token
     token: testsecret
+    uses: 0
   policies:
   - testpolicy
 peer_run:
@@ -128,5 +142,9 @@ peer_run:
   - vault.generate_token
 sdbvault:
   driver: vault
+sdbetcd:
+  driver: etcd
+  etcd.host: 127.0.0.1
+  etcd.port: 2379
 venafi:
   fake: "true"

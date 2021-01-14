@@ -1,31 +1,27 @@
-# -*- coding: utf-8 -*-
-'''
+"""
 Set defaults on Mac OS
 
-'''
+"""
 
-# Import python libs
-from __future__ import absolute_import, unicode_literals, print_function
 import logging
 
-# Import Salt libs
 import salt.utils.platform
 
 log = logging.getLogger(__name__)
-__virtualname__ = 'macdefaults'
+__virtualname__ = "macdefaults"
 
 
 def __virtual__():
-    '''
+    """
     Only work on Mac OS
-    '''
+    """
     if salt.utils.platform.is_darwin():
         return __virtualname__
     return False
 
 
-def write(domain, key, value, type='string', user=None):
-    '''
+def write(domain, key, value, type="string", user=None):
+    """
     Write a default to the system
 
     CLI Example:
@@ -53,19 +49,19 @@ def write(domain, key, value, type='string', user=None):
         The user to write the defaults to
 
 
-    '''
-    if type == 'bool' or type == 'boolean':
+    """
+    if type == "bool" or type == "boolean":
         if value is True:
-            value = 'TRUE'
+            value = "TRUE"
         elif value is False:
-            value = 'FALSE'
+            value = "FALSE"
 
-    cmd = 'defaults write "{0}" "{1}" -{2} "{3}"'.format(domain, key, type, value)
-    return __salt__['cmd.run_all'](cmd, runas=user)
+    cmd = 'defaults write "{}" "{}" -{} "{}"'.format(domain, key, type, value)
+    return __salt__["cmd.run_all"](cmd, runas=user)
 
 
 def read(domain, key, user=None):
-    '''
+    """
     Write a default to the system
 
     CLI Example:
@@ -85,13 +81,13 @@ def read(domain, key, user=None):
     user
         The user to write the defaults to
 
-    '''
-    cmd = 'defaults read "{0}" "{1}"'.format(domain, key)
-    return __salt__['cmd.run'](cmd, runas=user)
+    """
+    cmd = 'defaults read "{}" "{}"'.format(domain, key)
+    return __salt__["cmd.run"](cmd, runas=user)
 
 
 def delete(domain, key, user=None):
-    '''
+    """
     Delete a default from the system
 
     CLI Example:
@@ -111,6 +107,6 @@ def delete(domain, key, user=None):
     user
         The user to delete the defaults with
 
-    '''
-    cmd = 'defaults delete "{0}" "{1}"'.format(domain, key)
-    return __salt__['cmd.run_all'](cmd, runas=user, output_loglevel='debug')
+    """
+    cmd = 'defaults delete "{}" "{}"'.format(domain, key)
+    return __salt__["cmd.run_all"](cmd, runas=user, output_loglevel="debug")

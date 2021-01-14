@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Functions for StringIO objects
-'''
+"""
 
 from __future__ import absolute_import, print_function, unicode_literals
 
@@ -13,10 +13,12 @@ from salt.ext import six
 if six.PY2:
     import StringIO
     import cStringIO
+
     readable_types = (StringIO.StringIO, cStringIO.InputType)
     writable_types = (StringIO.StringIO, cStringIO.OutputType)
 else:
     import io
+
     readable_types = (io.StringIO,)
     writable_types = (io.StringIO,)
 

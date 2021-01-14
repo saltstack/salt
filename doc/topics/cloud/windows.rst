@@ -12,7 +12,7 @@ Requirements
 
 .. note::
    Support ``winexe`` and ``impacket`` has been deprecated and will be removed in
-   Sodium. These dependencies are replaced by ``pypsexec`` and ``smbprotocol``
+   3001. These dependencies are replaced by ``pypsexec`` and ``smbprotocol``
    respectivly. These are pure python alternatives that are compatible with all
    supported python versions.
 
@@ -25,7 +25,7 @@ Minion installer.
 
 * `impacket project home`__
 
-.. __: https://code.google.com/p/impacket/
+.. __: https://github.com/SecureAuthCorp/impacket
 
 `winexe` is less commonly available in distribution-specific repositories.
 However, it is currently being built for various distributions in 3rd party
@@ -37,7 +37,7 @@ channels:
 
 * `openSUSE Build Service`__
 
-.. __: http://software.opensuse.org/package/winexe
+.. __: https://software.opensuse.org/package/winexe
 
 * `pypsexec project home`__
 

@@ -136,7 +136,7 @@ Changelog for v2017.7.0..v2017.7.1
 
   * 5b99d45f54 Merge pull request `#42473`_ from rallytime/bp-42436
 
-  * 82ed919803 Updating the versions function inside the manage runner to account for when a minion is offline and we are unable to determine it's version.
+  * 82ed919803 Updating the versions function inside the manage runner to account for when a minion is offline and we are unable to determine its version.
 
 * **ISSUE** `#42381`_: (`zebooka`_) Git.detached broken in 2017.7.0 (refs: `#42399`_)
 

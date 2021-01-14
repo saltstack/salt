@@ -1,44 +1,48 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Support for GRUB Legacy
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import os
 
+import salt.utils.decorators as decorators
+
 # Import salt libs
 import salt.utils.files
-import salt.utils.decorators as decorators
 from salt.exceptions import CommandExecutionError
 
 # Define the module's virtual name
-__virtualname__ = 'grub'
+__virtualname__ = "grub"
 
 
 def __virtual__():
-    '''
+    """
     Only load the module if grub is installed
-    '''
+    """
     if os.path.exists(_detect_conf()):
         return __virtualname__
-    return (False, 'The grub_legacy execution module cannot be loaded: '
-       'the grub config file does not exist in /boot/grub/')
+    return (
+        False,
+        "The grub_legacy execution module cannot be loaded: "
+        "the grub config file does not exist in /boot/grub/",
+    )
 
 
 @decorators.memoize
 def _detect_conf():
-    '''
+    """
     GRUB conf location differs depending on distro
-    '''
-    if __grains__['os_family'] == 'RedHat':
-        return '/boot/grub/grub.conf'
+    """
+    if __grains__["os_family"] == "RedHat":
+        return "/boot/grub/grub.conf"
     # Defaults for Ubuntu, Debian, Arch, and others
-    return '/boot/grub/menu.lst'
+    return "/boot/grub/menu.lst"
 
 
 def version():
-    '''
+    """
     Return server version from grub --version
 
     CLI Example:
@@ -46,14 +50,14 @@ def version():
     .. code-block:: bash
 
         salt '*' grub.version
-    '''
-    cmd = '/sbin/grub --version'
-    out = __salt__['cmd.run'](cmd)
+    """
+    cmd = "/sbin/grub --version"
+    out = __salt__["cmd.run"](cmd)
     return out
 
 
 def conf():
-    '''
+    """
     Parse GRUB conf file
 
     CLI Example:
@@ -61,32 +65,32 @@ def conf():
     .. code-block:: bash
 
         salt '*' grub.conf
-    '''
-    stanza = ''
+    """
+    stanza = ""
     stanzas = []
     in_stanza = False
     ret = {}
     pos = 0
     try:
-        with salt.utils.files.fopen(_detect_conf(), 'r') as _fp:
+        with salt.utils.files.fopen(_detect_conf(), "r") as _fp:
             for line in _fp:
                 line = salt.utils.stringutils.to_unicode(line)
-                if line.startswith('#'):
+                if line.startswith("#"):
                     continue
-                if line.startswith('\n'):
+                if line.startswith("\n"):
                     in_stanza = False
-                    if 'title' in stanza:
-                        stanza += 'order {0}'.format(pos)
+                    if "title" in stanza:
+                        stanza += "order {0}".format(pos)
                         pos += 1
                         stanzas.append(stanza)
-                    stanza = ''
+                    stanza = ""
                     continue
-                if line.strip().startswith('title'):
+                if line.strip().startswith("title"):
                     if in_stanza:
-                        stanza += 'order {0}'.format(pos)
+                        stanza += "order {0}".format(pos)
                         pos += 1
                         stanzas.append(stanza)
-                        stanza = ''
+                        stanza = ""
                     else:
                         in_stanza = True
                 if in_stanza:
@@ -95,32 +99,32 @@ def conf():
                     key, value = _parse_line(line)
                     ret[key] = value
             if in_stanza:
-                if not line.endswith('\n'):
-                    line += '\n'
+                if not line.endswith("\n"):
+                    line += "\n"
                 stanza += line
-                stanza += 'order {0}'.format(pos)
+                stanza += "order {0}".format(pos)
                 pos += 1
                 stanzas.append(stanza)
     except (IOError, OSError) as exc:
         msg = "Could not read grub config: {0}"
         raise CommandExecutionError(msg.format(exc))
 
-    ret['stanzas'] = []
+    ret["stanzas"] = []
     for stanza in stanzas:
         mydict = {}
         for line in stanza.strip().splitlines():
             key, value = _parse_line(line)
             mydict[key] = value
-        ret['stanzas'].append(mydict)
+        ret["stanzas"].append(mydict)
     return ret
 
 
-def _parse_line(line=''):
-    '''
+def _parse_line(line=""):
+    """
     Used by conf() to break config lines into
     name/value pairs
-    '''
+    """
     parts = line.split()
     key = parts.pop(0)
-    value = ' '.join(parts)
+    value = " ".join(parts)
     return key, value
