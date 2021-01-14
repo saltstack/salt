@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Nicole Thomas <nicole@saltstack.com>
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import random
@@ -29,7 +27,7 @@ class DarwinSysctlModuleTest(ModuleCase):
         """
         Sets up the test requirements
         """
-        super(DarwinSysctlModuleTest, self).setUp()
+        super().setUp()
         # Data needed for cleanup
         self.has_conf = False
         self.val = self.run_function("sysctl.get", [ASSIGN_CMD])
@@ -75,7 +73,7 @@ class DarwinSysctlModuleTest(ModuleCase):
             os.remove(CONFIG)
         try:
             self.run_function("sysctl.persist", [ASSIGN_CMD, 10])
-            line = "{0}={1}".format(ASSIGN_CMD, 10)
+            line = "{}={}".format(ASSIGN_CMD, 10)
             found = self.__check_string(CONFIG, line)
             self.assertTrue(found)
         except CommandExecutionError:

@@ -2,7 +2,6 @@
 Utility functions for salt.cloud
 """
 
-# Import python libs
 
 import codecs
 import copy
@@ -23,12 +22,8 @@ import traceback
 import uuid
 
 import salt.client
-
-# Import salt cloud libs
 import salt.cloud
 import salt.config
-
-# Import salt libs
 import salt.crypt
 import salt.loader
 import salt.template
@@ -53,10 +48,6 @@ from salt.exceptions import (
     SaltCloudPasswordError,
     SaltCloudSystemExit,
 )
-
-# Import 3rd-party libs
-from salt.ext import six
-from salt.ext.six.moves import range
 from salt.utils.nb_popen import NonBlockingPopen
 from salt.utils.validate.path import is_writeable
 
@@ -2694,8 +2685,7 @@ def cachedir_index_add(minion_id, profile, driver, provider, base=None):
     lock_file(index_file)
 
     if os.path.exists(index_file):
-        mode = "rb" if six.PY3 else "r"
-        with salt.utils.files.fopen(index_file, mode) as fh_:
+        with salt.utils.files.fopen(index_file, "rb") as fh_:
             index = salt.utils.data.decode(
                 salt.utils.msgpack.load(fh_, encoding=MSGPACK_ENCODING)
             )
@@ -2715,8 +2705,7 @@ def cachedir_index_add(minion_id, profile, driver, provider, base=None):
         }
     )
 
-    mode = "wb" if six.PY3 else "w"
-    with salt.utils.files.fopen(index_file, mode) as fh_:
+    with salt.utils.files.fopen(index_file, "wb") as fh_:
         salt.utils.msgpack.dump(index, fh_, encoding=MSGPACK_ENCODING)
 
     unlock_file(index_file)
@@ -2732,8 +2721,7 @@ def cachedir_index_del(minion_id, base=None):
     lock_file(index_file)
 
     if os.path.exists(index_file):
-        mode = "rb" if six.PY3 else "r"
-        with salt.utils.files.fopen(index_file, mode) as fh_:
+        with salt.utils.files.fopen(index_file, "rb") as fh_:
             index = salt.utils.data.decode(
                 salt.utils.msgpack.load(fh_, encoding=MSGPACK_ENCODING)
             )
@@ -2743,8 +2731,7 @@ def cachedir_index_del(minion_id, base=None):
     if minion_id in index:
         del index[minion_id]
 
-    mode = "wb" if six.PY3 else "w"
-    with salt.utils.files.fopen(index_file, mode) as fh_:
+    with salt.utils.files.fopen(index_file, "wb") as fh_:
         salt.utils.msgpack.dump(index, fh_, encoding=MSGPACK_ENCODING)
 
     unlock_file(index_file)
@@ -2796,8 +2783,7 @@ def request_minion_cachedir(
 
     fname = "{}.p".format(minion_id)
     path = os.path.join(base, "requested", fname)
-    mode = "wb" if six.PY3 else "w"
-    with salt.utils.files.fopen(path, mode) as fh_:
+    with salt.utils.files.fopen(path, "wb") as fh_:
         salt.utils.msgpack.dump(data, fh_, encoding=MSGPACK_ENCODING)
 
 
@@ -2906,8 +2892,7 @@ def list_cache_nodes_full(opts=None, provider=None, base=None):
                 # Finally, get a list of full minion data
                 fpath = os.path.join(min_dir, fname)
                 minion_id = fname[:-2]  # strip '.p' from end of msgpack filename
-                mode = "rb" if six.PY3 else "r"
-                with salt.utils.files.fopen(fpath, mode) as fh_:
+                with salt.utils.files.fopen(fpath, "rb") as fh_:
                     minions[driver][prov][minion_id] = salt.utils.data.decode(
                         salt.utils.msgpack.load(fh_, encoding=MSGPACK_ENCODING)
                     )
@@ -3057,8 +3042,7 @@ def cache_node_list(nodes, provider, opts):
     for node in nodes:
         diff_node_cache(prov_dir, node, nodes[node], opts)
         path = os.path.join(prov_dir, "{}.p".format(node))
-        mode = "wb" if six.PY3 else "w"
-        with salt.utils.files.fopen(path, mode) as fh_:
+        with salt.utils.files.fopen(path, "wb") as fh_:
             salt.utils.msgpack.dump(nodes[node], fh_, encoding=MSGPACK_ENCODING)
 
 
@@ -3083,8 +3067,7 @@ def cache_node(node, provider, opts):
     if not os.path.exists(prov_dir):
         os.makedirs(prov_dir)
     path = os.path.join(prov_dir, "{}.p".format(node["name"]))
-    mode = "wb" if six.PY3 else "w"
-    with salt.utils.files.fopen(path, mode) as fh_:
+    with salt.utils.files.fopen(path, "wb") as fh_:
         salt.utils.msgpack.dump(node, fh_, encoding=MSGPACK_ENCODING)
 
 
