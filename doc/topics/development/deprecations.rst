@@ -18,10 +18,10 @@ on the significance and complexity of the changes required by the user.
 
 Salt feature releases are based on the Periodic Table. Any new features going
 into the ``master`` branch will be named after the next element in the Periodic
-Table. For example, Magnesium was the feature release name of the develop
-branch before the ``3002`` branch was tagged. At that point in time, any new
-features going into the ``master`` branch after ``3002`` was branched were part of
-the Aluminium feature release.
+Table. For example, Magnesium was the feature release name associated with the
+``v3002`` tag. At that point in time, any new features going into the
+``master`` branch, after ``v3002`` was tagged, were part of the Aluminium feature
+release.
 
 A deprecation warning should be in place for at least two major releases before
 the deprecated code and its accompanying deprecation warning are removed.  More
@@ -51,7 +51,7 @@ Consider the following example:
                 "required.",
             )
 
-Development begins on the ``Aluminium`` release when the ``3002`` branch is
-forked from the ``master`` branch.  Once this occurs, all uses of the
+Development begins on ``Aluminium``, or ``v3003``, after the ``v3002`` tag is
+applied to the ``master`` branch.  Once this occurs, all uses of the
 ``warn_until`` function targeting ``Aluminium``, along with the code they are
 warning about should be removed from the code.
