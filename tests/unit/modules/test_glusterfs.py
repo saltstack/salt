@@ -1,32 +1,26 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
     :codeauthor: Joe Julian <me@joejulian.name>
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
 import salt.modules.glusterfs as glusterfs
 from salt.exceptions import SaltInvocationError
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
 
 
-class GlusterResults(object):
+class GlusterResults:
     """ This class holds the xml results from gluster cli transactions """
 
-    class v34(object):
+    class v34:
         """ This is for version 3.4 results """
 
-        class list_peers(object):
+        class list_peers:
             """ results from "peer status" """
 
-        class peer_probe(object):
+        class peer_probe:
             fail_cant_connect = fail_bad_hostname = "\n".join(
                 [
                     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>',
@@ -123,8 +117,8 @@ class GlusterResults(object):
             ]
             success_first_ip_from_second_first_time = success_reverse_already_peer["ip"]
 
-    class v37(object):
-        class peer_probe(object):
+    class v37:
+        class peer_probe:
             fail_cant_connect = fail_bad_hostname = "\n".join(
                 [
                     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>',
