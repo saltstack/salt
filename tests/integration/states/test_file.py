@@ -24,8 +24,6 @@ import salt.utils.json
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
-from salt.ext import six
-from salt.ext.six.moves import range
 from salt.utils.versions import LooseVersion as _LooseVersion
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
@@ -1599,13 +1597,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         """
         ret = self.run_state("file.recurse", name=name, source="salt://соль")
         self.assertSaltTrueReturn(ret)
-        if six.PY2 and IS_WINDOWS:
-            # Providing unicode to os.listdir so that we avoid having listdir
-            # try to decode the filenames using the systemencoding on windows
-            # python 2.
-            files = os.listdir(name.decode("utf-8"))
-        else:
-            files = salt.utils.data.decode(os.listdir(name), normalize=True)
+        files = salt.utils.data.decode(os.listdir(name), normalize=True)
         self.assertEqual(
             sorted(files), sorted(["foo.txt", "спам.txt", "яйца.txt"]),
         )
@@ -2523,9 +2515,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         )
 
     @with_tempdir()
-    @skipIf(
-        salt.utils.platform.is_darwin() and six.PY2, "This test hangs on OS X on Py2"
-    )
     def test_issue_11003_immutable_lazy_proxy_sum(self, base_dir):
         # causes the Import-Module ServerManager error on Windows
         template_path = os.path.join(RUNTIME_VARS.TMP_STATE_TREE, "issue-11003.sls")
