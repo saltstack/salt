@@ -8,7 +8,6 @@ import threading
 import time
 
 import pytest
-import salt.utils.atomicfile
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
@@ -16,7 +15,7 @@ import salt.utils.stringutils
 from salt.ext import six
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 from tests.support.case import ModuleCase
-from tests.support.helpers import slowTest, with_tempdir
+from tests.support.helpers import slowTest
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.pytest.helpers import temp_state_file
 from tests.support.runtests import RUNTIME_VARS
@@ -24,9 +23,6 @@ from tests.support.sminion import create_sminion
 from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
-
-
-DEFAULT_ENDING = salt.utils.stringutils.to_bytes(os.linesep)
 
 
 @pytest.mark.windows_whitelisted
@@ -39,20 +35,6 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
     @classmethod
     def setUpClass(cls):
-        def _reline(path, ending=DEFAULT_ENDING):
-            """
-            Normalize the line endings of a file.
-            """
-            with salt.utils.files.fopen(path, "rb") as fhr:
-                lines = fhr.read().splitlines()
-            with salt.utils.atomicfile.atomic_open(path, "wb") as fhw:
-                for line in lines:
-                    fhw.write(line + ending)
-
-        destpath = os.path.join(RUNTIME_VARS.BASE_FILES, "testappend", "firstif")
-        _reline(destpath)
-        destpath = os.path.join(RUNTIME_VARS.BASE_FILES, "testappend", "secondif")
-        _reline(destpath)
         if salt.utils.platform.is_windows():
             cls.TIMEOUT = 600
             # Be sure to have everything sync'ed
@@ -259,63 +241,6 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.run_function("state.clear_request")
         ret = self.run_function("state.run_request")
         self.assertEqual(ret, {})
-
-    @with_tempdir()
-    @slowTest
-    def test_issue_1896_file_append_source(self, base_dir):
-        """
-        Verify that we can append a file's contents
-        """
-        testfile = os.path.join(base_dir, "test.append")
-
-        ret = self.run_state("file.touch", name=testfile)
-        self.assertSaltTrueReturn(ret)
-        ret = self.run_state(
-            "file.append", name=testfile, source="salt://testappend/firstif"
-        )
-        self.assertSaltTrueReturn(ret)
-        ret = self.run_state(
-            "file.append", name=testfile, source="salt://testappend/secondif"
-        )
-        self.assertSaltTrueReturn(ret)
-
-        with salt.utils.files.fopen(testfile, "r") as fp_:
-            testfile_contents = salt.utils.stringutils.to_unicode(fp_.read())
-
-        contents = textwrap.dedent(
-            """\
-            # set variable identifying the chroot you work in (used in the prompt below)
-            if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
-                debian_chroot=$(cat /etc/debian_chroot)
-            fi
-
-            # enable bash completion in interactive shells
-            if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
-                . /etc/bash_completion
-            fi
-            """
-        )
-
-        if salt.utils.platform.is_windows():
-            new_contents = contents.splitlines()
-            contents = os.linesep.join(new_contents)
-            contents += os.linesep
-
-        self.assertMultiLineEqual(contents, testfile_contents)
-
-        ret = self.run_state(
-            "file.append", name=testfile, source="salt://testappend/secondif"
-        )
-        self.assertSaltTrueReturn(ret)
-        ret = self.run_state(
-            "file.append", name=testfile, source="salt://testappend/firstif"
-        )
-        self.assertSaltTrueReturn(ret)
-
-        with salt.utils.files.fopen(testfile, "r") as fp_:
-            testfile_contents = salt.utils.stringutils.to_unicode(fp_.read())
-
-        self.assertMultiLineEqual(contents, testfile_contents)
 
     @slowTest
     def test_issue_1876_syntax_error(self):
@@ -2554,7 +2479,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         barrier:
           cmd.run:
             - name: sleep 1
-  
+
           {%- for x in range(1, 10) %}
             blah-{{x}}:
               cmd.run:
