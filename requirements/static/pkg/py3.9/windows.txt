@@ -16,7 +16,7 @@ contextlib2==0.6.0.post1  # via cherrypy
 cryptography==3.2
 distro==1.5.0
 gitdb2==2.0.5
-gitpython==2.1.10
+gitpython==3.1.12
 idna==2.8
 ioloop==0.1a0
 ipaddress==1.0.22
@@ -30,7 +30,7 @@ more-itertools==8.2.0     # via cheroot, cherrypy, jaraco.functools
 msgpack==0.6.2
 pathtools==0.1.2          # via watchdog
 portend==2.6              # via cherrypy
-psutil==5.6.7
+psutil==5.8.0
 pyasn1==0.4.5
 pycparser==2.19
 pycryptodomex==3.9.7
