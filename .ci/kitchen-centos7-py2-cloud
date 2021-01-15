@@ -12,6 +12,7 @@ runTestSuite(
     nox_passthrough_opts: '',
     python_version: 'py2',
     testrun_timeout: 6,
+    force_run_full: true,
     use_spot_instances: true)
 
 // vim: ft=groovy
