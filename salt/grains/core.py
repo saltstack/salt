@@ -2548,6 +2548,11 @@ def dns():
         if key in resolv:
             resolv[key] = [str(i) for i in resolv[key]]
 
+    systemd_resolve = salt.utils.path.which("systemd-resolve")
+    if systemd_resolve:
+        out = salt.utils.dns.parse_systemd_resolve()
+        resolv.update(out)
+
     return {"dns": resolv} if resolv else {}
 
 
