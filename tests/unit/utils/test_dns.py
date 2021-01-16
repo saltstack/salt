@@ -1,10 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 # Python
+import logging
 import socket
 import textwrap
 
@@ -33,6 +32,8 @@ from salt.utils.odict import OrderedDict
 from tests.support.helpers import requires_network
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
+
+log = logging.getLogger(__name__)
 
 
 class DNShelpersCase(TestCase):
@@ -163,6 +164,79 @@ class DNShelpersCase(TestCase):
         for rdata, res in zip(right, results):
             group = _data2rec_group(rschema, rdata, "prio")
             self.assertEqual(group, res)
+
+    def test_parse_systemd_resolve(self):
+        # all nslookup returns look like this
+        SYSTEMD_RESOLVE = textwrap.dedent(
+            """\
+            Global
+                   LLMNR setting: no
+            MulticastDNS setting: no
+              DNSOverTLS setting: no
+                  DNSSEC setting: no
+                DNSSEC supported: no
+                      DNSSEC NTA: 10.in-addr.arpa
+                                  16.172.in-addr.arpa
+                                  168.192.in-addr.arpa
+                                  17.172.in-addr.arpa
+                                  18.172.in-addr.arpa
+                                  19.172.in-addr.arpa
+                                  20.172.in-addr.arpa
+                                  21.172.in-addr.arpa
+                                  22.172.in-addr.arpa
+                                  23.172.in-addr.arpa
+                                  24.172.in-addr.arpa
+                                  25.172.in-addr.arpa
+                                  26.172.in-addr.arpa
+                                  27.172.in-addr.arpa
+                                  28.172.in-addr.arpa
+                                  29.172.in-addr.arpa
+                                  30.172.in-addr.arpa
+                                  31.172.in-addr.arpa
+                                  corp
+                                  d.f.ip6.arpa
+                                  home
+                                  internal
+                                  intranet
+                                  lan
+                                  local
+                                  private
+                                  test
+
+            Link 2 (ens33)
+                  Current Scopes: DNS
+            DefaultRoute setting: yes
+                   LLMNR setting: yes
+            MulticastDNS setting: no
+              DNSOverTLS setting: no
+                  DNSSEC setting: no
+                DNSSEC supported: no
+              Current DNS Server: 172.23.5.15
+                     DNS Servers: 172.23.5.15
+                                  172.23.5.16
+                                  73cf:ee8c:f2b3:7d0e:25a7:696e:b7f6:d608
+                                  73cf:ee8c:f2b3:7d0e:25a7:696e:b7f6:d609
+                      DNS Domain: loc.wiked.org
+        """
+        )
+
+        cmd_mock = MagicMock(return_value={"stdout": SYSTEMD_RESOLVE, "retcode": 0})
+        expected = {
+            "nameservers": [
+                "172.23.5.15",
+                "172.23.5.16",
+                "73cf:ee8c:f2b3:7d0e:25a7:696e:b7f6:d608",
+                "73cf:ee8c:f2b3:7d0e:25a7:696e:b7f6:d609",
+            ],
+            "ip4_nameservers": ["172.23.5.15", "172.23.5.16"],
+            "ip6_nameservers": [
+                "73cf:ee8c:f2b3:7d0e:25a7:696e:b7f6:d608",
+                "73cf:ee8c:f2b3:7d0e:25a7:696e:b7f6:d609",
+            ],
+        }
+        with patch.dict(salt.utils.dns.__salt__, {"cmd.run_all": cmd_mock}, clear=True):
+            ret = salt.utils.dns.parse_systemd_resolve()
+            self.assertEqual(ret, expected)
 
 
 class DNSlookupsCase(TestCase):
@@ -299,7 +373,7 @@ class DNSlookupsCase(TestCase):
                     self.assertEqual(
                         lookup_cb("mocksrvr.example.com", rec_t, secure=True),
                         False,
-                        msg="Insecure {0} returns should not be returned".format(rec_t),
+                        msg="Insecure {} returns should not be returned".format(rec_t),
                     )
 
         for rec_t, tests in secure.items():
@@ -308,7 +382,7 @@ class DNSlookupsCase(TestCase):
                     self.assertEqual(
                         lookup_cb("mocksrvr.example.com", rec_t, secure=True),
                         test_res,
-                        msg="Error parsing DNSSEC'd {0} returns".format(rec_t),
+                        msg="Error parsing DNSSEC'd {} returns".format(rec_t),
                     )
 
     @skipIf(not salt.utils.dns.HAS_NSLOOKUP, "nslookup is not available")
@@ -354,7 +428,7 @@ class DNSlookupsCase(TestCase):
 
     @skipIf(not salt.utils.dns.HAS_DIG, "dig is not available")
     def test_dig_options(self):
-        cmd = "dig {0} -v".format(salt.utils.dns.DIG_OPTIONS)
+        cmd = "dig {} -v".format(salt.utils.dns.DIG_OPTIONS)
         cmd = salt.modules.cmdmod.retcode(
             cmd, python_shell=False, output_loglevel="quiet"
         )
@@ -557,7 +631,7 @@ class DNSlookupsCase(TestCase):
                     self.assertEqual(
                         _lookup_gai("mockq", rec_t),
                         test_res,
-                        msg="Error parsing {0} returns".format(rec_t),
+                        msg="Error parsing {} returns".format(rec_t),
                     )
 
     def test_host(self):
