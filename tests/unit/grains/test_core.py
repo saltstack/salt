@@ -1313,7 +1313,6 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
     @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
     @patch.object(salt.utils.platform, "is_windows", MagicMock(return_value=False))
     @patch("salt.grains.core.__opts__", {"ipv6": False})
-    @patch.object(salt.utils.path, "which", MagicMock(return_value=False))
     def test_dns_return(self):
         """
         test the return for a dns grain. test for issue:
