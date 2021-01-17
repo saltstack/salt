@@ -106,7 +106,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         mock_domain.name.return_value = name
         return mock_domain
 
-    def assertEqualUnit(self, actual, expected, unit="KiB"):
+    def assert_equal_unit(self, actual, expected, unit="KiB"):
         self.assertEqual(actual.get("unit"), unit)
         self.assertEqual(actual.text, str(expected))
 
@@ -616,14 +616,14 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             "x86_64",
         )
         root = ET.fromstring(xml_data)
-        self.assertEqualUnit(root.find("memory"), 512 * 1024)
-        self.assertEqualUnit(root.find("currentMemory"), 256 * 1024)
-        self.assertEqualUnit(root.find("maxMemory"), 1024 * 1024)
+        self.assert_equal_unit(root.find("memory"), 512 * 1024)
+        self.assert_equal_unit(root.find("currentMemory"), 256 * 1024)
+        self.assert_equal_unit(root.find("maxMemory"), 1024 * 1024)
         self.assertFalse("slots" in root.find("maxMemory").keys())
-        self.assertEqualUnit(root.find("memtune/hard_limit"), 1024 * 1024)
-        self.assertEqualUnit(root.find("memtune/soft_limit"), 512 * 1024)
-        self.assertEqualUnit(root.find("memtune/swap_hard_limit"), 1024 ** 2)
-        self.assertEqualUnit(root.find("memtune/min_guarantee"), 256 * 1024)
+        self.assert_equal_unit(root.find("memtune/hard_limit"), 1024 * 1024)
+        self.assert_equal_unit(root.find("memtune/soft_limit"), 512 * 1024)
+        self.assert_equal_unit(root.find("memtune/swap_hard_limit"), 1024 ** 2)
+        self.assert_equal_unit(root.find("memtune/min_guarantee"), 256 * 1024)
         self.assertEqual(
             [
                 {"nodeset": page.get("nodeset"), "size": page.get("size")}
