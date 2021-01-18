@@ -1,0 +1,1 @@
+Function `status_raw` in supervisord module no longer prepends `ERROR: ` to the output in case the command `supervisorctl status` returns with a non zero exit code
