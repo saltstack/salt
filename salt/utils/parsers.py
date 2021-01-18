@@ -303,6 +303,9 @@ class MergeConfigMixIn(metaclass=MixInMeta):
         # the config options and if needed override them
         self._mixin_after_parsed_funcs.append(self.__merge_config_with_cli)
 
+        # Setup salt features
+        self._mixin_after_parsed_funcs.append(self.__setup_salt_features)
+
     def __merge_config_with_cli(self):
         # Merge parser options
         for option in self.option_list:
@@ -357,6 +360,9 @@ class MergeConfigMixIn(metaclass=MixInMeta):
                     # configuration file. This allows the parsers to make use
                     # of the updated value by using self.options.<option>
                     setattr(self.options, option.dest, self.config[option.dest])
+
+    def __setup_salt_features(self):
+        salt.features.setup_features(self.config)
 
 
 class SaltfileMixIn(metaclass=MixInMeta):
@@ -1945,9 +1951,7 @@ class MasterOptionParser(
     _setup_mp_logging_listener_ = True
 
     def setup_config(self):
-        opts = config.master_config(self.get_config_file_path())
-        salt.features.setup_features(opts)
-        return opts
+        return config.master_config(self.get_config_file_path())
 
 
 class MinionOptionParser(
@@ -1976,7 +1980,6 @@ class MinionOptionParser(
             and self.options.daemon
         ):  # pylint: disable=no-member
             self._setup_mp_logging_listener_ = False
-        salt.features.setup_features(opts)
         return opts
 
 
@@ -2008,11 +2011,9 @@ class ProxyMinionOptionParser(
         except AttributeError:
             minion_id = None
 
-        opts = config.proxy_config(
+        return config.proxy_config(
             self.get_config_file_path(), cache_minion_id=False, minion_id=minion_id
         )
-        salt.features.setup_features(opts)
-        return opts
 
 
 class SyndicOptionParser(
@@ -2042,11 +2043,9 @@ class SyndicOptionParser(
     _setup_mp_logging_listener_ = True
 
     def setup_config(self):
-        opts = config.syndic_config(
+        return config.syndic_config(
             self.get_config_file_path(), self.get_config_file_path("minion")
         )
-        salt.features.setup_features(opts)
-        return opts
 
 
 class SaltCMDOptionParser(
@@ -2384,9 +2383,7 @@ class SaltCMDOptionParser(
                 self.exit(42, "\nIncomplete options passed.\n\n")
 
     def setup_config(self):
-        opts = config.client_config(self.get_config_file_path())
-        salt.features.setup_features(opts)
-        return opts
+        return config.client_config(self.get_config_file_path())
 
 
 class SaltCPOptionParser(
@@ -2455,9 +2452,7 @@ class SaltCPOptionParser(
         self.config["dest"] = self.args[-1]
 
     def setup_config(self):
-        opts = config.master_config(self.get_config_file_path())
-        salt.features.setup_features(opts)
-        return opts
+        return config.master_config(self.get_config_file_path())
 
 
 class SaltKeyOptionParser(
@@ -2744,7 +2739,6 @@ class SaltKeyOptionParser(
             # or tweaked
             keys_config[self._logfile_config_setting_name_] = os.devnull
             keys_config["pki_dir"] = self.options.gen_keys_dir
-        salt.features.setup_features(keys_config)
         return keys_config
 
     def process_rotate_aes_key(self):
@@ -2993,7 +2987,6 @@ class SaltCallOptionParser(
             opts = config.minion_config(
                 self.get_config_file_path(), cache_minion_id=True
             )
-        salt.features.setup_features(opts)
         return opts
 
     def process_module_dirs(self):
@@ -3094,9 +3087,7 @@ class SaltRunOptionParser(
             self.config["arg"] = []
 
     def setup_config(self):
-        opts = config.client_config(self.get_config_file_path())
-        salt.features.setup_features(opts)
-        return opts
+        return config.client_config(self.get_config_file_path())
 
 
 class SaltSSHOptionParser(
@@ -3420,9 +3411,7 @@ class SaltSSHOptionParser(
                         break
 
     def setup_config(self):
-        opts = config.master_config(self.get_config_file_path())
-        salt.features.setup_features(opts)
-        return opts
+        return config.master_config(self.get_config_file_path())
 
     def process_jid(self):
         if self.options.jid is not None:
@@ -3488,11 +3477,9 @@ class SaltCloudParser(
 
     def setup_config(self):
         try:
-            opts = config.cloud_config(self.get_config_file_path())
+            return config.cloud_config(self.get_config_file_path())
         except salt.exceptions.SaltCloudConfigError as exc:
             self.error(exc)
-        salt.features.setup_features(opts)
-        return opts
 
 
 class SPMParser(
@@ -3548,9 +3535,7 @@ class SPMParser(
                 self.error("Insufficient arguments")
 
     def setup_config(self):
-        opts = salt.config.spm_config(self.get_config_file_path())
-        salt.features.setup_features(opts)
-        return opts
+        return salt.config.spm_config(self.get_config_file_path())
 
 
 class SaltAPIParser(
@@ -3576,8 +3561,4 @@ class SaltAPIParser(
     _default_logging_logfile_ = config.DEFAULT_API_OPTS[_logfile_config_setting_name_]
 
     def setup_config(self):
-        opts = salt.config.api_config(
-            self.get_config_file_path()
-        )  # pylint: disable=no-member
-        salt.features.setup_features(opts)
-        return opts
+        return salt.config.api_config(self.get_config_file_path())
