@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Remote package support using ``pkg_add(1)``
 
@@ -72,19 +71,15 @@ variables, if set, but these values can also be overridden in several ways:
               pkg.installed:
                 - fromrepo: ftp://ftp2.freebsd.org/
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import copy
 import logging
 import re
 
-# Import salt libs
 import salt.utils.data
 import salt.utils.functools
 import salt.utils.pkg
 from salt.exceptions import CommandExecutionError, MinionError
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -178,20 +173,20 @@ def _match(names):
         cver = pkgs.get(name)
         if cver is not None:
             if len(cver) == 1:
-                matches.append("{0}-{1}".format(name, cver[0]))
+                matches.append("{}-{}".format(name, cver[0]))
             else:
                 ambiguous.append(name)
                 errors.append(
-                    "Ambiguous package '{0}'. Full name/version required. "
-                    "Possible matches: {1}".format(
-                        name, ", ".join(["{0}-{1}".format(name, x) for x in cver])
+                    "Ambiguous package '{}'. Full name/version required. "
+                    "Possible matches: {}".format(
+                        name, ", ".join(["{}-{}".format(name, x) for x in cver])
                     )
                 )
 
     # Find packages that did not match anything
     not_matched = set(names) - set(matches) - set(full_matches) - set(ambiguous)
     for name in not_matched:
-        errors.append("Package '{0}' not found".format(name))
+        errors.append("Package '{}' not found".format(name))
 
     return matches + full_matches, errors
 
@@ -209,7 +204,7 @@ def latest_version(*names, **kwargs):
         salt '*' pkg.latest_version <package name>
         salt '*' pkg.latest_version <package1> <package2> <package3> ...
     """
-    return "" if len(names) == 1 else dict((x, "") for x in names)
+    return "" if len(names) == 1 else {x: "" for x in names}
 
 
 # available_version is being deprecated
@@ -246,12 +241,7 @@ def version(*names, **kwargs):
     if len(names) == 1:
         ret = {names[0]: ret}
     origins = __context__.get("pkg.origin", {})
-    return dict(
-        [
-            (x, {"origin": origins.get(x, ""), "version": y})
-            for x, y in six.iteritems(ret)
-        ]
-    )
+    return {x: {"origin": origins.get(x, ""), "version": y} for x, y in ret.items()}
 
 
 def refresh_db(**kwargs):
@@ -268,6 +258,19 @@ def refresh_db(**kwargs):
     # Remove rtag file to keep multiple refreshes from happening in pkg states
     salt.utils.pkg.clear_rtag(__opts__)
     return True
+
+
+def _list_pkgs_from_context(versions_as_list, with_origin):
+    """
+    Use pkg list from __context__
+    """
+    ret = copy.deepcopy(__context__["pkg.list_pkgs"])
+    if not versions_as_list:
+        __salt__["pkg_resource.stringify"](ret)
+    if salt.utils.data.is_true(with_origin):
+        origins = __context__.get("pkg.origin", {})
+        return {x: {"origin": origins.get(x, ""), "version": y} for x, y in ret.items()}
+    return ret
 
 
 def list_pkgs(versions_as_list=False, with_origin=False, **kwargs):
@@ -295,19 +298,8 @@ def list_pkgs(versions_as_list=False, with_origin=False, **kwargs):
     ):
         return {}
 
-    if "pkg.list_pkgs" in __context__:
-        ret = copy.deepcopy(__context__["pkg.list_pkgs"])
-        if not versions_as_list:
-            __salt__["pkg_resource.stringify"](ret)
-        if salt.utils.data.is_true(with_origin):
-            origins = __context__.get("pkg.origin", {})
-            return dict(
-                [
-                    (x, {"origin": origins.get(x, ""), "version": y})
-                    for x, y in six.iteritems(ret)
-                ]
-            )
-        return ret
+    if "pkg.list_pkgs" in __context__ and kwargs.get("use_context", True):
+        return _list_pkgs_from_context(versions_as_list, with_origin)
 
     ret = {}
     origins = {}
@@ -331,12 +323,7 @@ def list_pkgs(versions_as_list=False, with_origin=False, **kwargs):
     if not versions_as_list:
         __salt__["pkg_resource.stringify"](ret)
     if salt.utils.data.is_true(with_origin):
-        return dict(
-            [
-                (x, {"origin": origins.get(x, ""), "version": y})
-                for x, y in six.iteritems(ret)
-            ]
-        )
+        return {x: {"origin": origins.get(x, ""), "version": y} for x, y in ret.items()}
     return ret
 
 
@@ -530,7 +517,7 @@ def file_list(*packages, **kwargs):
     """
     ret = file_dict(*packages)
     files = []
-    for pkg_files in six.itervalues(ret["files"]):
+    for pkg_files in ret["files"].values():
         files.extend(pkg_files)
     ret["files"] = files
     return ret

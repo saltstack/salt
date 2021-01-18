@@ -1,3 +1,4 @@
+import logging
 import os
 
 import salt.modules.cmdmod as cmdmod
@@ -14,6 +15,8 @@ try:
     import pytest
 except ImportError:
     pytest = None
+
+log = logging.getLogger(__name__)
 
 LIST_REPOS = {
     "base": {
@@ -122,6 +125,52 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
             }.items():
                 self.assertTrue(pkgs.get(pkg_name))
                 self.assertEqual(pkgs[pkg_name], [pkg_version])
+
+    def test_list_pkgs_no_context(self):
+        """
+        Test packages listing.
+
+        :return:
+        """
+
+        def _add_data(data, key, value):
+            data.setdefault(key, []).append(value)
+
+        rpm_out = [
+            "python-urlgrabber_|-(none)_|-3.10_|-8.el7_|-noarch_|-(none)_|-1487838471",
+            "alsa-lib_|-(none)_|-1.1.1_|-1.el7_|-x86_64_|-(none)_|-1487838475",
+            "gnupg2_|-(none)_|-2.0.22_|-4.el7_|-x86_64_|-(none)_|-1487838477",
+            "rpm-python_|-(none)_|-4.11.3_|-21.el7_|-x86_64_|-(none)_|-1487838477",
+            "pygpgme_|-(none)_|-0.3_|-9.el7_|-x86_64_|-(none)_|-1487838478",
+            "yum_|-(none)_|-3.4.3_|-150.el7.centos_|-noarch_|-(none)_|-1487838479",
+            "lzo_|-(none)_|-2.06_|-8.el7_|-x86_64_|-(none)_|-1487838479",
+            "qrencode-libs_|-(none)_|-3.4.1_|-3.el7_|-x86_64_|-(none)_|-1487838480",
+            "ustr_|-(none)_|-1.0.4_|-16.el7_|-x86_64_|-(none)_|-1487838480",
+            "shadow-utils_|-2_|-4.1.5.1_|-24.el7_|-x86_64_|-(none)_|-1487838481",
+            "util-linux_|-(none)_|-2.23.2_|-33.el7_|-x86_64_|-(none)_|-1487838484",
+            "openssh_|-(none)_|-6.6.1p1_|-33.el7_3_|-x86_64_|-(none)_|-1487838485",
+            "virt-what_|-(none)_|-1.13_|-8.el7_|-x86_64_|-(none)_|-1487838486",
+        ]
+        with patch.dict(yumpkg.__grains__, {"osarch": "x86_64"}), patch.dict(
+            yumpkg.__salt__,
+            {"cmd.run": MagicMock(return_value=os.linesep.join(rpm_out))},
+        ), patch.dict(yumpkg.__salt__, {"pkg_resource.add_pkg": _add_data}), patch.dict(
+            yumpkg.__salt__,
+            {"pkg_resource.format_pkg_list": pkg_resource.format_pkg_list},
+        ), patch.dict(
+            yumpkg.__salt__, {"pkg_resource.stringify": MagicMock()}
+        ), patch.dict(
+            pkg_resource.__salt__, {"pkg.parse_arch": yumpkg.parse_arch}
+        ), patch.object(
+            yumpkg, "_list_pkgs_from_context"
+        ) as list_pkgs_context_mock:
+            pkgs = yumpkg.list_pkgs(versions_as_list=True, use_context=False)
+            list_pkgs_context_mock.assert_not_called()
+            list_pkgs_context_mock.reset_mock()
+
+            pkgs = yumpkg.list_pkgs(versions_as_list=True, use_context=False)
+            list_pkgs_context_mock.assert_not_called()
+            list_pkgs_context_mock.reset_mock()
 
     def test_list_pkgs_with_attr(self):
         """

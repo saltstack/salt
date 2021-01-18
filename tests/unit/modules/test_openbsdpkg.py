@@ -1,21 +1,15 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Eric Radman <ericshane@eradman.com>
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
 import salt.modules.openbsdpkg as openbsdpkg
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, call, patch
 from tests.support.unit import TestCase
 
 
-class ListPackages(object):
+class ListPackages:
     def __init__(self):
         self._iteration = 0
 
@@ -110,6 +104,37 @@ class OpenbsdpkgTestCase(TestCase, LoaderModuleMockMixin):
         ]
         run_all_mock.assert_has_calls(expected_calls, any_order=True)
         self.assertEqual(run_all_mock.call_count, 3)
+
+    def test_list_pkgs_no_context(self):
+        """
+        Test for listing installed packages.
+        """
+
+        def _add_data(data, key, value):
+            data[key] = value
+
+        pkg_info_out = [
+            "png-1.6.23",
+            "vim-7.4.1467p1-gtk2",  # vim--gtk2
+            "ruby-2.3.1p1",  # ruby%2.3
+        ]
+        run_stdout_mock = MagicMock(return_value="\n".join(pkg_info_out))
+        patches = {
+            "cmd.run_stdout": run_stdout_mock,
+            "pkg_resource.add_pkg": _add_data,
+            "pkg_resource.sort_pkglist": MagicMock(),
+            "pkg_resource.stringify": MagicMock(),
+        }
+        with patch.dict(openbsdpkg.__salt__, patches), patch.object(
+            openbsdpkg, "_list_pkgs_from_context"
+        ) as list_pkgs_context_mock:
+            pkgs = openbsdpkg.list_pkgs(use_context=False)
+            list_pkgs_context_mock.assert_not_called()
+            list_pkgs_context_mock.reset_mock()
+
+            pkgs = openbsdpkg.list_pkgs(use_context=False)
+            list_pkgs_context_mock.assert_not_called()
+            list_pkgs_context_mock.reset_mock()
 
     def test_upgrade_available(self):
         """

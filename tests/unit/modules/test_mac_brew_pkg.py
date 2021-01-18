@@ -186,6 +186,86 @@ class BrewTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(mac_brew.list_pkgs(versions_as_list=True), expected_pkgs)
 
+    def test_list_pkgs_no_context(self):
+        """
+        Tests removed implementation
+        """
+
+        def custom_call_brew(cmd, failhard=True):
+            result = dict()
+            if cmd == "info --json=v1 --installed":
+                result = {
+                    "stdout": '[{"name":"zsh","full_name":"zsh","oldname":null,'
+                    '"aliases":[],"homepage":"https://www.zsh.org/",'
+                    '"versions":{"stable":"5.7.1","devel":null,"head":"HEAD","bottle":true},'
+                    '"installed":[{"version":"5.7.1","used_options":[],'
+                    '"built_as_bottle":true,"poured_from_bottle":true,'
+                    '"runtime_dependencies":[{"full_name":"ncurses","version":"6.1"},'
+                    '{"full_name":"pcre","version":"8.42"}],'
+                    '"installed_as_dependency":false,"installed_on_request":true}]}]',
+                    "stderr": "",
+                    "retcode": 0,
+                }
+            elif cmd == "cask list --versions":
+                result = {
+                    "stdout": "macvim 8.1.151\nfont-firacode-nerd-font 2.0.0",
+                    "stderr": "",
+                    "retcode": 0,
+                }
+            elif cmd == "cask info macvim":
+                result = {
+                    "stdout": "macvim: 8.1.1517,156 (auto_updates)\n"
+                    "https://github.com/macvim-dev/macvim\n"
+                    "/usr/local/Caskroom/macvim/8.1.151 (64B)\n"
+                    "From: https://github.com/Homebrew/homebrew-cask/blob/master/Casks/macvim.rb\n"
+                    "==> Name\n"
+                    "MacVim",
+                    "stderr": "",
+                    "retcode": 0,
+                }
+            elif cmd == "cask info font-firacode-nerd-font":
+                result = {
+                    "stdout": "font-firacode-nerd-font: 2.0.0\n"
+                    "https://github.com/ryanoasis/nerd-fonts\n"
+                    "/usr/local/Caskroom/font-firacode-nerd-font/2.0.0 (35 files, 64.8MB)\n"
+                    "From: https://github.com/Homebrew/homebrew-cask-fonts/blob/master/Casks/font-firacode-nerd-font.rb\n"
+                    "==> Name\n"
+                    "FuraCode Nerd Font (FiraCode)",
+                    "stderr": "",
+                    "retcode": "",
+                }
+
+            return result
+
+        def custom_add_pkg(ret, name, newest_version):
+            ret[name] = newest_version
+            return ret
+
+        expected_pkgs = {
+            "zsh": "5.7.1",
+            "homebrew/cask/macvim": "8.1.151",
+            "homebrew/cask-fonts/font-firacode-nerd-font": "2.0.0",
+        }
+
+        with patch(
+            "salt.modules.mac_brew_pkg._call_brew", custom_call_brew
+        ), patch.dict(
+            mac_brew.__salt__,
+            {
+                "pkg_resource.add_pkg": custom_add_pkg,
+                "pkg_resource.sort_pkglist": MagicMock(),
+            },
+        ), patch.object(
+            mac_brew, "_list_pkgs_from_context"
+        ) as list_pkgs_context_mock:
+            pkgs = mac_brew.list_pkgs(versions_as_list=True, use_context=False)
+            list_pkgs_context_mock.assert_not_called()
+            list_pkgs_context_mock.reset_mock()
+
+            pkgs = mac_brew.list_pkgs(versions_as_list=True, use_context=False)
+            list_pkgs_context_mock.assert_not_called()
+            list_pkgs_context_mock.reset_mock()
+
     # 'version' function tests: 1
 
     def test_version(self):

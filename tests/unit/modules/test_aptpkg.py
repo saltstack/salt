@@ -8,10 +8,12 @@
 
 import copy
 import logging
+import os
 import textwrap
 
 import pytest
 import salt.modules.aptpkg as aptpkg
+import salt.modules.pkg_resource as pkg_resource
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, call, patch
@@ -740,6 +742,97 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
 
                     # Make sure last character in of the URI is still a /
                     self.assertEqual(sanitized["uri"][-1], "/")
+
+    def test_list_pkgs(self):
+        """
+        Test packages listing.
+
+        :return:
+        """
+
+        def _add_data(data, key, value):
+            data.setdefault(key, []).append(value)
+
+        apt_out = [
+            "install ok installed accountsservice 0.6.55-0ubuntu12~20.04.1 amd64",
+            "install ok installed acpid 1:2.0.32-1ubuntu1 amd64",
+            "install ok installed adduser 3.118ubuntu2 all",
+            "install ok installed alsa-topology-conf 1.2.2-1 all",
+            "install ok installed alsa-ucm-conf 1.2.2-1ubuntu0.4 all",
+            "install ok installed apparmor 2.13.3-7ubuntu5.1 amd64",
+            "install ok installed apport 2.20.11-0ubuntu27.9 all",
+            "install ok installed apport-symptoms 0.23 all",
+            "install ok installed apt 2.0.2ubuntu0.1 amd64",
+            "install ok installed apt-utils 2.0.2ubuntu0.1 amd64",
+            "install ok installed at 3.1.23-1ubuntu1 amd64",
+        ]
+        with patch.dict(aptpkg.__grains__, {"osarch": "x86_64"}), patch.dict(
+            aptpkg.__salt__,
+            {"cmd.run_stdout": MagicMock(return_value=os.linesep.join(apt_out))},
+        ), patch.dict(aptpkg.__salt__, {"pkg_resource.add_pkg": _add_data}), patch.dict(
+            aptpkg.__salt__,
+            {"pkg_resource.format_pkg_list": pkg_resource.format_pkg_list},
+        ), patch.dict(
+            aptpkg.__salt__, {"pkg_resource.sort_pkglist": pkg_resource.sort_pkglist}
+        ):
+            pkgs = aptpkg.list_pkgs(versions_as_list=True)
+            for pkg_name, pkg_version in {
+                "accountsservice": "0.6.55-0ubuntu12~20.04.1",
+                "acpid": "1:2.0.32-1ubuntu1",
+                "adduser": "3.118ubuntu2",
+                "alsa-topology-conf": "1.2.2-1",
+                "alsa-ucm-conf": "1.2.2-1ubuntu0.4",
+                "apparmor": "2.13.3-7ubuntu5.1",
+                "apport": "2.20.11-0ubuntu27.9",
+                "apport-symptoms": "0.23",
+                "apt": "2.0.2ubuntu0.1",
+                "apt-utils": "2.0.2ubuntu0.1",
+                "at": "3.1.23-1ubuntu1",
+            }.items():
+                self.assertTrue(pkgs.get(pkg_name))
+                self.assertEqual(pkgs[pkg_name], [pkg_version])
+
+    def test_list_pkgs_no_context(self):
+        """
+        Test packages listing and ensure __context__ for pkg.list_pkgs is absent.
+
+        :return:
+        """
+
+        def _add_data(data, key, value):
+            data.setdefault(key, []).append(value)
+
+        apt_out = [
+            "install ok installed accountsservice 0.6.55-0ubuntu12~20.04.1 amd64",
+            "install ok installed acpid 1:2.0.32-1ubuntu1 amd64",
+            "install ok installed adduser 3.118ubuntu2 all",
+            "install ok installed alsa-topology-conf 1.2.2-1 all",
+            "install ok installed alsa-ucm-conf 1.2.2-1ubuntu0.4 all",
+            "install ok installed apparmor 2.13.3-7ubuntu5.1 amd64",
+            "install ok installed apport 2.20.11-0ubuntu27.9 all",
+            "install ok installed apport-symptoms 0.23 all",
+            "install ok installed apt 2.0.2ubuntu0.1 amd64",
+            "install ok installed apt-utils 2.0.2ubuntu0.1 amd64",
+            "install ok installed at 3.1.23-1ubuntu1 amd64",
+        ]
+        with patch.dict(aptpkg.__grains__, {"osarch": "x86_64"}), patch.dict(
+            aptpkg.__salt__,
+            {"cmd.run_stdout": MagicMock(return_value=os.linesep.join(apt_out))},
+        ), patch.dict(aptpkg.__salt__, {"pkg_resource.add_pkg": _add_data}), patch.dict(
+            aptpkg.__salt__,
+            {"pkg_resource.format_pkg_list": pkg_resource.format_pkg_list},
+        ), patch.dict(
+            aptpkg.__salt__, {"pkg_resource.sort_pkglist": pkg_resource.sort_pkglist}
+        ), patch.object(
+            aptpkg, "_list_pkgs_from_context"
+        ) as list_pkgs_context_mock:
+            pkgs = aptpkg.list_pkgs(versions_as_list=True, use_context=False)
+            list_pkgs_context_mock.assert_not_called()
+            list_pkgs_context_mock.reset_mock()
+
+            pkgs = aptpkg.list_pkgs(versions_as_list=True, use_context=False)
+            list_pkgs_context_mock.assert_not_called()
+            list_pkgs_context_mock.reset_mock()
 
 
 @skipIf(pytest is None, "PyTest is missing")

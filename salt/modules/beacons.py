@@ -146,6 +146,7 @@ def add(name, beacon_data, **kwargs):
 
     if name in list_(return_yaml=False, **kwargs):
         ret["comment"] = "Beacon {} is already configured.".format(name)
+        ret["result"] = True
         return ret
 
     # Check to see if a beacon_module is specified, if so, verify it is

@@ -807,6 +807,15 @@ def version_cmp(ver1, ver2, ignore_epoch=False, **kwargs):
     return __salt__["lowpkg.version_cmp"](ver1, ver2, ignore_epoch=ignore_epoch)
 
 
+def _list_pkgs_from_context(versions_as_list, contextkey, attr):
+    """
+    Use pkg list from __context__
+    """
+    return __salt__["pkg_resource.format_pkg_list"](
+        __context__[contextkey], versions_as_list, attr
+    )
+
+
 def list_pkgs(versions_as_list=False, root=None, includes=None, **kwargs):
     """
     List the packages currently installed as a dict. By default, the dict
@@ -870,86 +879,86 @@ def list_pkgs(versions_as_list=False, root=None, includes=None, **kwargs):
     # inclusion types are passed
     contextkey = "pkg.list_pkgs_{}_{}".format(root, includes)
 
-    if contextkey not in __context__:
-        ret = {}
-        cmd = ["rpm"]
-        if root:
-            cmd.extend(["--root", root])
-        cmd.extend(
-            [
-                "-qa",
-                "--queryformat",
-                salt.utils.pkg.rpm.QUERYFORMAT.replace("%{REPOID}", "(none)") + "\n",
-            ]
-        )
-        output = __salt__["cmd.run"](cmd, python_shell=False, output_loglevel="trace")
-        for line in output.splitlines():
-            pkginfo = salt.utils.pkg.rpm.parse_pkginfo(
-                line, osarch=__grains__["osarch"]
-            )
-            if pkginfo:
-                # see rpm version string rules available at https://goo.gl/UGKPNd
-                pkgver = pkginfo.version
-                epoch = None
-                release = None
-                if ":" in pkgver:
-                    epoch, pkgver = pkgver.split(":", 1)
-                if "-" in pkgver:
-                    pkgver, release = pkgver.split("-", 1)
-                all_attr = {
-                    "epoch": epoch,
-                    "version": pkgver,
-                    "release": release,
-                    "arch": pkginfo.arch,
-                    "install_date": pkginfo.install_date,
-                    "install_date_time_t": pkginfo.install_date_time_t,
-                }
-                __salt__["pkg_resource.add_pkg"](ret, pkginfo.name, all_attr)
+    if contextkey in __context__ and kwargs.get("use_context", True):
+        return _list_pkgs_from_context(versions_as_list, contextkey, attr)
 
-        _ret = {}
-        for pkgname in ret:
-            # Filter out GPG public keys packages
-            if pkgname.startswith("gpg-pubkey"):
-                continue
-            _ret[pkgname] = sorted(ret[pkgname], key=lambda d: d["version"])
+    ret = {}
+    cmd = ["rpm"]
+    if root:
+        cmd.extend(["--root", root])
+    cmd.extend(
+        [
+            "-qa",
+            "--queryformat",
+            salt.utils.pkg.rpm.QUERYFORMAT.replace("%{REPOID}", "(none)") + "\n",
+        ]
+    )
+    output = __salt__["cmd.run"](cmd, python_shell=False, output_loglevel="trace")
+    for line in output.splitlines():
+        pkginfo = salt.utils.pkg.rpm.parse_pkginfo(line, osarch=__grains__["osarch"])
+        if pkginfo:
+            # see rpm version string rules available at https://goo.gl/UGKPNd
+            pkgver = pkginfo.version
+            epoch = None
+            release = None
+            if ":" in pkgver:
+                epoch, pkgver = pkgver.split(":", 1)
+            if "-" in pkgver:
+                pkgver, release = pkgver.split("-", 1)
+            all_attr = {
+                "epoch": epoch,
+                "version": pkgver,
+                "release": release,
+                "arch": pkginfo.arch,
+                "install_date": pkginfo.install_date,
+                "install_date_time_t": pkginfo.install_date_time_t,
+            }
+            __salt__["pkg_resource.add_pkg"](ret, pkginfo.name, all_attr)
 
-        for include in includes:
-            if include == "product":
-                products = list_products(all=False, root=root)
-                for product in products:
-                    extended_name = "{}:{}".format(include, product["name"])
-                    _ret[extended_name] = [
-                        {
-                            "epoch": product["epoch"],
-                            "version": product["version"],
-                            "release": product["release"],
-                            "arch": product["arch"],
-                            "install_date": None,
-                            "install_date_time_t": None,
-                        }
-                    ]
-            if include in ("pattern", "patch"):
-                if include == "pattern":
-                    elements = list_installed_patterns(root=root)
-                elif include == "patch":
-                    elements = list_installed_patches(root=root)
-                else:
-                    elements = []
-                for element in elements:
-                    extended_name = "{}:{}".format(include, element)
-                    info = info_available(extended_name, refresh=False, root=root)
-                    _ret[extended_name] = [
-                        {
-                            "epoch": None,
-                            "version": info[element]["version"],
-                            "release": None,
-                            "arch": info[element]["arch"],
-                            "install_date": None,
-                            "install_date_time_t": None,
-                        }
-                    ]
+    _ret = {}
+    for pkgname in ret:
+        # Filter out GPG public keys packages
+        if pkgname.startswith("gpg-pubkey"):
+            continue
+        _ret[pkgname] = sorted(ret[pkgname], key=lambda d: d["version"])
 
-        __context__[contextkey] = _ret
+    for include in includes:
+        if include == "product":
+            products = list_products(all=False, root=root)
+            for product in products:
+                extended_name = "{}:{}".format(include, product["name"])
+                _ret[extended_name] = [
+                    {
+                        "epoch": product["epoch"],
+                        "version": product["version"],
+                        "release": product["release"],
+                        "arch": product["arch"],
+                        "install_date": None,
+                        "install_date_time_t": None,
+                    }
+                ]
+        if include in ("pattern", "patch"):
+            if include == "pattern":
+                elements = list_installed_patterns(root=root)
+            elif include == "patch":
+                elements = list_installed_patches(root=root)
+            else:
+                elements = []
+            for element in elements:
+                extended_name = "{}:{}".format(include, element)
+                info = info_available(extended_name, refresh=False, root=root)
+                _ret[extended_name] = [
+                    {
+                        "epoch": None,
+                        "version": info[element]["version"],
+                        "release": None,
+                        "arch": info[element]["arch"],
+                        "install_date": None,
+                        "install_date_time_t": None,
+                    }
+                ]
+
+    __context__[contextkey] = _ret
 
     return __salt__["pkg_resource.format_pkg_list"](
         __context__[contextkey], versions_as_list, attr

@@ -1,17 +1,11 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
 import salt.modules.pkgutil as pkgutil
 import salt.utils.pkg
 from salt.exceptions import CommandExecutionError, MinionError
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, patch
 from tests.support.unit import TestCase
@@ -122,6 +116,35 @@ class PkgutilTestCase(TestCase, LoaderModuleMockMixin):
             mock_pkg = MagicMock(return_value=True)
             with patch.dict(pkgutil.__salt__, {"pkg_resource.stringify": mock_pkg}):
                 self.assertTrue(pkgutil.list_pkgs())
+
+    def test_list_pkgs_no_context(self):
+        """
+        Test if it list the packages currently installed as a dict.
+        """
+        mock_run = MagicMock(return_value="A\t B\t SAME")
+        mock_ret = MagicMock(return_value=True)
+        mock_pkg = MagicMock(return_value="")
+        with patch.dict(
+            pkgutil.__salt__,
+            {
+                "cmd.run_stdout": mock_run,
+                "cmd.retcode": mock_ret,
+                "pkg_resource.stringify": mock_pkg,
+                "pkg_resource.sort_pkglist": mock_pkg,
+                "cmd.run": mock_run,
+            },
+        ), patch.object(pkgutil, "_list_pkgs_from_context") as list_pkgs_context_mock:
+            pkgs = pkgutil.list_pkgs(
+                versions_as_list=True, removed=True, use_context=False
+            )
+            list_pkgs_context_mock.assert_not_called()
+            list_pkgs_context_mock.reset_mock()
+
+            pkgs = pkgutil.list_pkgs(
+                versions_as_list=True, removed=True, use_context=False
+            )
+            list_pkgs_context_mock.assert_not_called()
+            list_pkgs_context_mock.reset_mock()
 
     # 'version' function tests: 1
 

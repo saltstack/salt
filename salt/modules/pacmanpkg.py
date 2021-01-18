@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 A module to wrap pacman calls, since Arch is the best
 (https://wiki.archlinux.org/index.php/Arch_is_the_best)
@@ -10,15 +9,12 @@ A module to wrap pacman calls, since Arch is the best
     <module-provider-override>`.
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 import fnmatch
 import logging
 import os.path
 
-# Import salt libs
 import salt.utils.args
 import salt.utils.data
 import salt.utils.functools
@@ -26,9 +22,6 @@ import salt.utils.itertools
 import salt.utils.pkg
 import salt.utils.systemd
 from salt.exceptions import CommandExecutionError, MinionError
-
-# Import 3rd-party libs
-from salt.ext import six
 from salt.utils.versions import LooseVersion as _LooseVersion
 
 log = logging.getLogger(__name__)
@@ -186,7 +179,20 @@ def version(*names, **kwargs):
         salt '*' pkg.version <package name>
         salt '*' pkg.version <package1> <package2> <package3> ...
     """
-    return __salt__["pkg_resource.version"](*names, **kwargs)
+    foo = __salt__["pkg_resource.version"](*names, **kwargs)
+    return foo
+
+
+def _list_pkgs_from_context(versions_as_list):
+    """
+    Use pkg list from __context__
+    """
+    if versions_as_list:
+        return __context__["pkg.list_pkgs"]
+    else:
+        ret = copy.deepcopy(__context__["pkg.list_pkgs"])
+        __salt__["pkg_resource.stringify"](ret)
+        return ret
 
 
 def list_pkgs(versions_as_list=False, **kwargs):
@@ -208,13 +214,8 @@ def list_pkgs(versions_as_list=False, **kwargs):
     ):
         return {}
 
-    if "pkg.list_pkgs" in __context__:
-        if versions_as_list:
-            return __context__["pkg.list_pkgs"]
-        else:
-            ret = copy.deepcopy(__context__["pkg.list_pkgs"])
-            __salt__["pkg_resource.stringify"](ret)
-            return ret
+    if "pkg.list_pkgs" in __context__ and kwargs.get("use_context", True):
+        return _list_pkgs_from_context(versions_as_list)
 
     cmd = ["pacman", "-Q"]
 
@@ -558,7 +559,7 @@ def install(
             cmd.append("-u")
         cmd.extend(["--noprogressbar", "--noconfirm", "--needed"])
         wildcards = []
-        for param, version_num in six.iteritems(pkg_params):
+        for param, version_num in pkg_params.items():
             if version_num is None:
                 targets.append(param)
             else:
@@ -570,12 +571,10 @@ def install(
                         wildcards.append((param, verstr))
                     else:
                         errors.append(
-                            "Invalid wildcard for {0}{1}{2}".format(
-                                param, prefix, verstr
-                            )
+                            "Invalid wildcard for {}{}{}".format(param, prefix, verstr)
                         )
                     continue
-                targets.append("{0}{1}{2}".format(param, prefix, verstr))
+                targets.append("{}{}{}".format(param, prefix, verstr))
 
         if wildcards:
             # Resolve wildcard matches
@@ -587,8 +586,8 @@ def install(
                     targets.append("=".join((pkgname, match)))
                 else:
                     errors.append(
-                        "No version matching '{0}' found for package '{1}' "
-                        "(available: {2})".format(
+                        "No version matching '{}' found for package '{}' "
+                        "(available: {})".format(
                             verstr,
                             pkgname,
                             ", ".join(candidates) if candidates else "none",
@@ -902,7 +901,7 @@ def file_dict(*packages, **kwargs):
             comps = line.split()
             if not comps[0] in ret:
                 ret[comps[0]] = []
-            ret[comps[0]].append((" ".join(comps[1:])))
+            ret[comps[0]].append(" ".join(comps[1:]))
     return {"errors": errors, "packages": ret}
 
 
@@ -931,7 +930,7 @@ def owner(*paths, **kwargs):
     for path in paths:
         ret[path] = __salt__["cmd.run_stdout"](cmd_prefix + [path], python_shell=False)
     if len(ret) == 1:
-        return next(six.itervalues(ret))
+        return next(iter(ret.values()))
     return ret
 
 
@@ -999,7 +998,7 @@ def list_repo_pkgs(*args, **kwargs):
         try:
             repos = [x.strip() for x in fromrepo.split(",")]
         except AttributeError:
-            repos = [x.strip() for x in six.text_type(fromrepo).split(",")]
+            repos = [x.strip() for x in str(fromrepo).split(",")]
     else:
         repos = []
 
