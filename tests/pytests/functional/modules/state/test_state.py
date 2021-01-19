@@ -573,6 +573,12 @@ def test_template_str_invalid_items(state, item):
     assert ret == [errmsg]
 
 
+@pytest.mark.skip_on_windows(
+    reason=(
+        "Functional testing this on windows raises unicode errors. "
+        "Tested in tests/pytests/integration/modules/state/test_state.py"
+    )
+)
 def test_pydsl(state, state_tree, tmp_path):
     """
     Test the basics of the pydsl
@@ -804,6 +810,12 @@ def test_parallel_state_with_long_tag(state, state_tree):
 
 
 @pytest.mark.skip_on_darwin(reason="Test is broken on macosx")
+@pytest.mark.skip_on_windows(
+    reason=(
+        "Functional testing this on windows raises unicode errors. "
+        "Tested in tests/pytests/integration/modules/state/test_state.py"
+    )
+)
 def test_state_sls_unicode_characters(state, state_tree):
     """
     test state.sls when state file contains non-ascii characters

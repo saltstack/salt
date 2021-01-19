@@ -71,3 +71,51 @@ def test_issue_56131(salt_minion, base_env_state_tree_root_dir, tmp_path):
             assert extract_path.exists()
     finally:
         zipfile_path.unlink()
+
+
+@pytest.mark.skip_unless_on_windows(
+    reason="Tested in tests/pytests/functional/modules/state/test_state.py"
+)
+def test_pydsl(salt_call_cli, base_env_state_tree_root_dir, tmp_path):
+    """
+    Test the basics of the pydsl
+    """
+    testfile = tmp_path / "testfile"
+    sls_contents = """
+    #!pydsl
+
+    state("{}").file("touch")
+    """.format(
+        testfile
+    )
+    with pytest.helpers.temp_file(
+        "pydsl.sls", sls_contents, base_env_state_tree_root_dir
+    ):
+        ret = salt_call_cli.run("state.sls", "pydsl")
+        assert ret.exitcode == 0
+        assert ret.json
+        ret = pytest.helpers.state_return(ret.json)
+        ret.assert_state_true_return()
+        assert testfile.exists()
+
+
+@pytest.mark.skip_unless_on_windows(
+    reason="Tested in tests/pytests/functional/modules/state/test_state.py"
+)
+def test_state_sls_unicode_characters(salt_call_cli, base_env_state_tree_root_dir):
+    """
+    test state.sls when state file contains non-ascii characters
+    """
+    sls_contents = """
+    echo1:
+      cmd.run:
+        - name: "echo 'This is Æ test!'"
+    """
+    with pytest.helpers.temp_file(
+        "issue-46672.sls", sls_contents, base_env_state_tree_root_dir
+    ):
+        ret = salt_call_cli.run("state.sls", "issue-46672")
+        assert ret.exitcode == 0
+        assert ret.json
+        expected = "cmd_|-echo1_|-echo 'This is Æ test!'_|-run"
+        assert expected in ret.json
