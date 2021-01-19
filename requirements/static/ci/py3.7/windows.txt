@@ -86,7 +86,7 @@ pyopenssl==19.0.0
 pyparsing==2.4.5          # via packaging
 pyrsistent==0.17.3        # via jsonschema
 pytest-helpers-namespace==2019.1.8
-pytest-salt-factories==0.120.0
+pytest-salt-factories==0.120.2
 pytest-salt==2020.1.27
 pytest-tempdir==2019.10.12
 pytest==6.1.2
