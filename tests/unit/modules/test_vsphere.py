@@ -3296,8 +3296,7 @@ class TestVSphereTagging(TestCase, LoaderModuleMockMixin):
             )
             self.assertEqual(mock_details.assert_called_once(), None)
             self.assertEqual(mock_ca.assert_called_once(), None)
-            self.assertEqual(mock_ca.call_args_list, [call({'ca_bundle':
-                                                            cert_path})])
+            self.assertEqual(mock_ca.call_args_list, [call({"ca_bundle": cert_path})])
 
 
 class TestCertificateVerify(TestCase, LoaderModuleMockMixin):
