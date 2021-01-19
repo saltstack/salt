@@ -18,7 +18,6 @@ import salt.utils.platform
 import salt.utils.process
 import salt.utils.stringutils
 import zmq.eventloop.ioloop
-from tests.support.helpers import slowTest
 from tests.support.mock import MagicMock, patch
 
 log = logging.getLogger(__name__)
@@ -197,8 +196,8 @@ class PubServerChannelProcess(salt.utils.process.SignalHandlingProcess):
         log.info("The PubServerChannelProcess has terminated")
 
 
-@slowTest
 @pytest.mark.skip_on_windows
+@pytest.mark.slow_test
 def test_publish_to_pubserv_ipc(salt_master, salt_minion):
     """
     Test sending 10K messags to ZeroMQPubServerChannel using IPC transport
@@ -219,8 +218,8 @@ def test_publish_to_pubserv_ipc(salt_master, salt_minion):
     )
 
 
-@slowTest
 @pytest.mark.skip_on_freebsd
+@pytest.mark.slow_test
 def test_issue_36469_tcp(salt_master, salt_minion):
     """
     Test sending both large and small messags to publisher using TCP
@@ -260,8 +259,8 @@ def test_issue_36469_tcp(salt_master, salt_minion):
     )
 
 
-@slowTest
 @pytest.mark.skip_on_windows
+@pytest.mark.slow_test
 def test_zeromq_filtering(salt_master, salt_minion):
     """
     Test sending messages to publisher using UDP with zeromq_filtering enabled
