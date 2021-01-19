@@ -182,6 +182,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
     # Brew Cask doesn't provide a JSON interface, must be parsed the old way.
     try:
         cask_cmd = "list --cask --versions"
+        out = _call_brew(cask_cmd)
         out = _call_brew(cask_cmd)["stdout"]
 
         for line in out.splitlines():
