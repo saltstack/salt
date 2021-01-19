@@ -555,3 +555,21 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
                 cmdmod.run_chroot('/mnt', 'cmd', binds=['/var'])
                 self.assertEqual(mock_mount.call_count, 4)
                 self.assertEqual(mock_umount.call_count, 4)
+
+    def test_cve_2021_25284(self):
+        proc = MagicMock(
+            return_value=MockTimedProc(
+                stdout=b'foo',
+                stderr=b'wtf',
+                returncode=2
+            )
+        )
+        with patch('salt.utils.timed_subprocess.TimedProc', proc):
+            with TstSuiteLoggingHandler() as log_handler:
+                cmdmod.run("testcmd -p ImAPassword", output_loglevel='error')
+                for x in log_handler.messages:
+                    print(x)
+                    if x.find('Executing command') > -1:
+                        assert x.find('ImAPassword') == -1, x
+                    if x.find('faild with return code') > -1:
+                        assert x.find('ImAPassword') == -1, x

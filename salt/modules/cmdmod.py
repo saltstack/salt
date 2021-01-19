@@ -76,6 +76,12 @@ def __virtual__():
     return __virtualname__
 
 
+def _log_cmd(cmd):
+    if not isinstance(cmd, list):
+        return cmd.split()[0].strip()
+    return cmd[0].strip()
+
+
 def _check_cb(cb_):
     '''
     If the callback is None or is not callable, return a lambda that returns
@@ -370,23 +376,15 @@ def _run(cmd,
                   'Setting value to an empty string', bad_env_key)
         env[bad_env_key] = ''
 
-    def _get_stripped(cmd):
-        # Return stripped command string copies to improve logging.
-        if isinstance(cmd, list):
-            return [x.strip() if isinstance(x, six.string_types) else x for x in cmd]
-        elif isinstance(cmd, six.string_types):
-            return cmd.strip()
-        else:
-            return cmd
-
     if output_loglevel is not None:
         # Always log the shell commands at INFO unless quiet logging is
         # requested. The command output is what will be controlled by the
         # 'loglevel' parameter.
+
         msg = (
             'Executing command {0}{1}{0} {2}{3}in directory \'{4}\'{5}'.format(
                 '\'' if not isinstance(cmd, list) else '',
-                _get_stripped(cmd),
+                _log_cmd(cmd),
                 'as user \'{0}\' '.format(runas) if runas else '',
                 'in group \'{0}\' '.format(group) if group else '',
                 cwd,
@@ -710,7 +708,7 @@ def _run(cmd,
             if output_loglevel != 'quiet':
                 log.error(
                     'Failed to decode stdout from command %s, non-decodable '
-                    'characters have been replaced', cmd
+                    'characters have been replaced', _log_cmd(cmd)
                 )
 
         try:
@@ -728,7 +726,7 @@ def _run(cmd,
             if output_loglevel != 'quiet':
                 log.error(
                     'Failed to decode stderr from command %s, non-decodable '
-                    'characters have been replaced', cmd
+                    'characters have been replaced', _log_cmd(cmd)
                 )
 
         if rstrip:
@@ -831,7 +829,7 @@ def _run(cmd,
                 output_loglevel = LOG_LEVELS['error']
             msg = (
                 'Command \'{0}\' failed with return code: {1}'.format(
-                    cmd,
+                    _log_cmd(cmd),
                     ret['retcode']
                 )
             )
@@ -1187,7 +1185,7 @@ def run(cmd,
                 lvl = LOG_LEVELS['error']
             msg = (
                 'Command \'{0}\' failed with return code: {1}'.format(
-                    cmd,
+                    _log_cmd(cmd),
                     ret['retcode']
                 )
             )
