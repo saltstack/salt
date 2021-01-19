@@ -1,20 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 unittests for highstate outputter
 """
 
-# Import Python Libs
-from __future__ import absolute_import
 
 import salt.output.highstate as highstate
-
-# Import Salt Libs
 import salt.utils.stringutils
-
-# Import 3rd-party libs
-from salt.ext import six
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase
 
@@ -125,10 +115,7 @@ class JsonTestCase(TestCase, LoaderModuleMockMixin):
                 entry = self.data[key]
                 continue
             entry = entry[key]
-        if six.PY2:
-            entry["comment"] = salt.utils.stringutils.to_unicode(entry["comment"])
-        else:
-            entry["comment"] = salt.utils.stringutils.to_bytes(entry["comment"])
+        entry["comment"] = salt.utils.stringutils.to_bytes(entry["comment"])
         ret = highstate.output(self.data)
         self.assertIn("Succeeded: 1 (changed=1)", ret)
         self.assertIn("Failed:    0", ret)
