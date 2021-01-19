@@ -2,7 +2,9 @@ import logging
 import shutil
 
 import pytest
+import salt.features
 import salt.loader
+import salt.pillar
 
 log = logging.getLogger(__name__)
 
@@ -12,9 +14,10 @@ class Loaders:
         self.opts = opts
         self.context = {}
         self._reset_state_funcs = [self.context.clear]
-        # Sadly, we can't use cached_property until Py3.6, and this is using a backports package
-        self._grains = self._utils = self._modules = None
+        self._grains = self._utils = self._modules = self._pillar = None
         self.opts["grains"] = self.grains
+        self.refresh_pillar()
+        salt.features.setup_features(self.opts)
 
     def reset_state(self):
         for func in self._reset_state_funcs:
@@ -40,9 +43,30 @@ class Loaders:
             )
         return self._modules
 
+    @property
+    def pillar(self):
+        if self._pillar is None:
+            self._pillar = salt.pillar.get_pillar(
+                self.opts,
+                self.opts["grains"],
+                self.opts["id"],
+                saltenv=self.opts["saltenv"],
+                pillarenv=self.opts.get("pillarenv"),
+            ).compile_pillar()
+        return self._pillar
+
+    def refresh_pillar(self):
+        self._pillar = None
+        self.opts["pillar"] = self.pillar
+
+
+@pytest.fixture(scope="package")
+def minion_id():
+    return "func-tests-minion"
+
 
 @pytest.fixture(scope="module")
-def state_tree_base(tmp_path_factory):
+def state_tree(tmp_path_factory):
     state_tree_path = tmp_path_factory.mktemp("state-tree-base")
     try:
         yield state_tree_path
@@ -51,8 +75,8 @@ def state_tree_base(tmp_path_factory):
 
 
 @pytest.fixture(scope="module")
-def state_tree(tmp_path_factory):
-    state_tree_path = tmp_path_factory.mktemp("state-tree-overrides")
+def state_tree_prod(tmp_path_factory):
+    state_tree_path = tmp_path_factory.mktemp("state-tree-prod")
     try:
         yield state_tree_path
     finally:
@@ -60,17 +84,18 @@ def state_tree(tmp_path_factory):
 
 
 @pytest.fixture(scope="module")
-def minion_opts(salt_factories, state_tree_base, state_tree):
+def minion_opts(
+    salt_factories, minion_id, state_tree, state_tree_prod,
+):
     config_overrides = {
         "file_client": "local",
-        "file_roots": {"base": [str(state_tree), str(state_tree_base)]},
+        "file_roots": {"base": [str(state_tree)], "prod": [str(state_tree_prod)]},
+        "features": {"enable_slsvars_fixes": True},
     }
     factory = salt_factories.get_salt_minion_daemon(
-        "functional-tests-minion", config_overrides=config_overrides,
+        minion_id, config_overrides=config_overrides,
     )
-    opts = factory.config.copy()
-    # opts["grains"] =
-    return opts
+    return factory.config.copy()
 
 
 @pytest.fixture(scope="module")
