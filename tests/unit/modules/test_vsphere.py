@@ -2678,7 +2678,7 @@ class TestVSphereTagging(TestCase, LoaderModuleMockMixin):
                 mock_client.call_args_list,
                 [
                     call(
-                        ca_bundle=cert_path,
+                        ca_bundle=None,
                         password="testpassword",
                         server="localhost",
                         username="testuser",
@@ -2687,7 +2687,7 @@ class TestVSphereTagging(TestCase, LoaderModuleMockMixin):
                 ],
             )
             self.assertEqual(mock_details.assert_called_once(), None)
-            self.assertEqual(mock_ca.assert_called_once(), None)
+            self.assertEqual(mock_ca.assert_not_called(), None)
 
     def test_get_client_verify_ssl_false(self):
         """
