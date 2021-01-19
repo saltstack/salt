@@ -10172,9 +10172,6 @@ def _get_client(server, username, password, verify_ssl=None, ca_bundle=None):
     if ca_bundle:
         ca_bundle = salt.utils.http.get_ca_bundle({"ca_bundle": ca_bundle})
 
-    if verify_ssl and ca_bundle is None:
-        ca_bundle = salt.utils.http.get_ca_bundle()
-
     # Establish connection with client
     client = salt.utils.vmware.get_vsphere_client(
         server=server, username=username, password=password,
