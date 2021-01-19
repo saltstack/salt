@@ -15,8 +15,7 @@ def test_listen_requisite(state, state_tree):
         - name: echo "Successful Change"
 
     non_changing_state:
-      pip.installed:
-        - name: pytest
+      test.succeed_without_changes
 
     test_listening_change_state:
       cmd.run:
@@ -28,7 +27,7 @@ def test_listen_requisite(state, state_tree):
       cmd.run:
         - name: echo "Only run once"
         - listen:
-          - pip: non_changing_state
+          - test: non_changing_state
 
     # test that requisite resolution for listen uses ID declaration.
     # test_listening_resolution_one and test_listening_resolution_two
@@ -66,8 +65,7 @@ def test_listen_in_requisite(state, state_tree):
           - cmd: test_listening_change_state
 
     non_changing_state:
-      pip.installed:
-        - name: pytest
+      test.succeed_without_changes:
         - listen_in:
           - cmd: test_listening_non_changing_state
 
@@ -118,8 +116,7 @@ def test_listen_in_requisite_resolution(state, state_tree):
           - cmd: test_listening_change_state
 
     non_changing_state:
-      pip.installed:
-        - name: pytest
+      test.succeed_without_changes:
         - listen_in:
           - cmd: test_listening_non_changing_state
 
@@ -165,8 +162,7 @@ def test_listen_requisite_resolution(state, state_tree):
         - name: echo "Successful Change"
 
     non_changing_state:
-      pip.installed:
-        - name: pytest
+      test.succeed_without_changes
 
     test_listening_change_state:
       cmd.run:
@@ -178,7 +174,7 @@ def test_listen_requisite_resolution(state, state_tree):
       cmd.run:
         - name: echo "Only run once"
         - listen:
-          - pip: non_changing_state
+          - test: non_changing_state
 
     # test that requisite resolution for listen uses ID declaration.
     # test_listening_resolution_one and test_listening_resolution_two
@@ -211,8 +207,7 @@ def test_listen_requisite_no_state_module(state, state_tree):
         - name: echo "Successful Change"
 
     non_changing_state:
-      pip.installed:
-        - name: pytest
+      test.succeed_without_changes
 
     test_listening_change_state:
       cmd.run:

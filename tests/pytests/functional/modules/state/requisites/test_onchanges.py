@@ -23,12 +23,12 @@ def test_requisites_onchanges_any(state, state_tree):
         - name: echo "Changed!"
 
     non_changing_state:
-      pip.installed:
-        - name: pytest
+      test.succeed_without_changes:
+        - comment: non_changing_state not changed
 
     another_non_changing_state:
-      pip.installed:
-        - name: pytest-salt-factories
+      test.succeed_without_changes:
+        - comment: another_non_changing_state not changed
 
     # Should succeed since at least one will have changes
     test_one_changing_states:
@@ -37,15 +37,15 @@ def test_requisites_onchanges_any(state, state_tree):
         - onchanges_any:
           - cmd: changing_state
           - cmd: another_changing_state
-          - pip: non_changing_state
-          - pip: another_non_changing_state
+          - test: non_changing_state
+          - test: another_non_changing_state
 
     test_two_non_changing_states:
       cmd.run:
         - name: echo "Should not run"
         - onchanges_any:
-          - pip: non_changing_state
-          - pip: another_non_changing_state
+          - test: non_changing_state
+          - test: another_non_changing_state
     """
     expected_result = {
         'cmd_|-another_changing_state_|-echo "Changed!"_|-run': {
@@ -72,19 +72,16 @@ def test_requisites_onchanges_any(state, state_tree):
             "comment": "State was not run because none of the onchanges reqs changed",
             "result": True,
         },
-        "pip_|-another_non_changing_state_|-pytest-salt-factories_|-installed": {
+        "test_|-another_non_changing_state_|-another_non_changing_state_|-succeed_without_changes": {
             "__run_num__": 3,
             "changes": False,
-            "comment": (
-                "Python package pytest-salt-factories was already installed\n"
-                "All specified packages are already installed"
-            ),
+            "comment": "another_non_changing_state not changed",
             "result": True,
         },
-        "pip_|-non_changing_state_|-pytest_|-installed": {
+        "test_|-non_changing_state_|-non_changing_state_|-succeed_without_changes": {
             "__run_num__": 2,
             "changes": False,
-            "comment": "Python package pytest was already installed\nAll specified packages are already installed",
+            "comment": "non_changing_state not changed",
             "result": True,
         },
     }
@@ -106,8 +103,8 @@ def test_onchanges_requisite(state, state_tree):
         - name: echo "Changed!"
 
     non_changing_state:
-      pip.installed:
-        - name: pytest
+      test.succeed_without_changes:
+        - comment: non_changing_state not changed
 
     test_changing_state:
       cmd.run:
@@ -119,7 +116,7 @@ def test_onchanges_requisite(state, state_tree):
       cmd.run:
         - name: echo "Should not run"
         - onchanges:
-          - pip: non_changing_state
+          - test: non_changing_state
     """
     with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
         ret = state.sls("requisite")
@@ -149,12 +146,12 @@ def test_onchanges_requisite_multiple(state, state_tree):
         - name: echo "Changed!"
 
     non_changing_state:
-      pip.installed:
-        - name: pytest
+      test.succeed_without_changes:
+        - comment: non_changing_state not changed
 
     another_non_changing_state:
-      pip.installed:
-        - name: pytest
+      test.succeed_without_changes:
+        - comment: another_non_changing_state not changed
 
     test_two_changing_states:
       cmd.run:
@@ -167,15 +164,15 @@ def test_onchanges_requisite_multiple(state, state_tree):
       cmd.run:
         - name: echo "Should not run"
         - onchanges:
-          - pip: non_changing_state
-          - pip: another_non_changing_state
+          - test: non_changing_state
+          - test: another_non_changing_state
 
     test_one_changing_state:
       cmd.run:
         - name: echo "Success!"
         - onchanges:
           - cmd: changing_state
-          - pip: non_changing_state
+          - test: non_changing_state
     """
     with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
         ret = state.sls("requisite")
@@ -209,8 +206,8 @@ def test_onchanges_in_requisite(state, state_tree):
           - cmd: test_changes_expected
 
     non_changing_state:
-      pip.installed:
-        - name: pytest
+      test.succeed_without_changes:
+        - comment: non_changing_state not changed
         - onchanges_in:
           - cmd: test_changes_not_expected
 
@@ -247,8 +244,8 @@ def test_onchanges_requisite_no_state_module(state, state_tree):
         - name: echo "Changed!"
 
     non_changing_state:
-      pip.installed:
-        - name: pytest
+      test.succeed_without_changes:
+        - comment: non_changing_state not changed
 
     test_changing_state:
       cmd.run:
@@ -281,8 +278,8 @@ def test_onchanges_requisite_with_duration(state, state_tree):
         - name: echo "Changed!"
 
     non_changing_state:
-      pip.installed:
-        - name: pytest
+      test.succeed_without_changes:
+        - comment: non_changing_state not changed
 
     test_changing_state:
       cmd.run:
@@ -294,7 +291,7 @@ def test_onchanges_requisite_with_duration(state, state_tree):
       cmd.run:
         - name: echo "Should not run"
         - onchanges:
-          - pip: non_changing_state
+          - test: non_changing_state
     """
     with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
         ret = state.sls("requisite")
