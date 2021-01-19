@@ -77,6 +77,12 @@ def __virtual__():
     return __virtualname__
 
 
+def _log_cmd(cmd):
+    if not isinstance(cmd, list):
+        return cmd.split()[0].strip()
+    return cmd[0].strip()
+
+
 def _check_cb(cb_):
     """
     If the callback is None or is not callable, return a lambda that returns
@@ -386,22 +392,13 @@ def _run(
         )
         env[bad_env_key] = ""
 
-    def _get_stripped(cmd):
-        # Return stripped command string copies to improve logging.
-        if isinstance(cmd, list):
-            return [x.strip() if isinstance(x, str) else x for x in cmd]
-        elif isinstance(cmd, str):
-            return cmd.strip()
-        else:
-            return cmd
-
     if output_loglevel is not None:
         # Always log the shell commands at INFO unless quiet logging is
         # requested. The command output is what will be controlled by the
         # 'loglevel' parameter.
         msg = "Executing command {}{}{} {}{}in directory '{}'{}".format(
             "'" if not isinstance(cmd, list) else "",
-            _get_stripped(cmd),
+            _log_cmd(cmd),
             "'" if not isinstance(cmd, list) else "",
             "as user '{}' ".format(runas) if runas else "",
             "in group '{}' ".format(group) if group else "",
@@ -723,7 +720,7 @@ def _run(
                 log.error(
                     "Failed to decode stdout from command %s, non-decodable "
                     "characters have been replaced",
-                    cmd,
+                    _log_cmd(cmd),
                 )
 
         try:
@@ -741,7 +738,7 @@ def _run(
                 log.error(
                     "Failed to decode stderr from command %s, non-decodable "
                     "characters have been replaced",
-                    cmd,
+                    _log_cmd(cmd),
                 )
 
         if rstrip:
@@ -841,7 +838,7 @@ def _run(
         if not ignore_retcode and ret["retcode"] != 0:
             if output_loglevel < LOG_LEVELS["error"]:
                 output_loglevel = LOG_LEVELS["error"]
-            msg = "Command '{}' failed with return code: {}".format(cmd, ret["retcode"])
+            msg = "Command '{}' failed with return code: {}".format(_log_cmd(cmd), ret["retcode"])
             log.error(log_callback(msg))
         if ret["stdout"]:
             log.log(output_loglevel, "stdout: %s", log_callback(ret["stdout"]))
@@ -1211,7 +1208,7 @@ def run(
         if not ignore_retcode and ret["retcode"] != 0:
             if lvl < LOG_LEVELS["error"]:
                 lvl = LOG_LEVELS["error"]
-            msg = "Command '{}' failed with return code: {}".format(cmd, ret["retcode"])
+            msg = "Command '{}' failed with return code: {}".format(_log_cmd(cmd), ret["retcode"])
             log.error(log_callback(msg))
             if raise_err:
                 raise CommandExecutionError(
