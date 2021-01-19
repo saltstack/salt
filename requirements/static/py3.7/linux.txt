@@ -4,6 +4,9 @@
 #
 #    pip-compile -o requirements/static/py3.7/linux.txt -v requirements/base.txt requirements/zeromq.txt requirements/pytest.txt requirements/static/linux.in requirements/static/git-sources.txt
 #
+--extra-index-url https://cdn.githubraw.com/vmware/vsphere-automation-sdk-python/master/lib/
+
+-e git+https://github.com/vmware/vsphere-automation-sdk-python.git#egg=vSphere-Automation-SDK
 adal==1.2.3               # via azure-datalake-store, msrestazure
 apache-libcloud==2.0.0
 appdirs==1.4.4            # via virtualenv
@@ -153,6 +156,10 @@ msrest==0.6.14            # via azure-applicationinsights, azure-eventgrid, azur
 msrestazure==0.6.3        # via azure-batch, azure-eventgrid, azure-graphrbac, azure-keyvault, azure-mgmt-advisor, azure-mgmt-applicationinsights, azure-mgmt-authorization, azure-mgmt-batch, azure-mgmt-batchai, azure-mgmt-billing, azure-mgmt-cdn, azure-mgmt-cognitiveservices, azure-mgmt-commerce, azure-mgmt-compute, azure-mgmt-consumption, azure-mgmt-containerinstance, azure-mgmt-containerregistry, azure-mgmt-containerservice, azure-mgmt-cosmosdb, azure-mgmt-datafactory, azure-mgmt-datalake-analytics, azure-mgmt-datalake-store, azure-mgmt-datamigration, azure-mgmt-devspaces, azure-mgmt-devtestlabs, azure-mgmt-dns, azure-mgmt-eventgrid, azure-mgmt-eventhub, azure-mgmt-hanaonazure, azure-mgmt-iotcentral, azure-mgmt-iothub, azure-mgmt-iothubprovisioningservices, azure-mgmt-keyvault, azure-mgmt-loganalytics, azure-mgmt-logic, azure-mgmt-machinelearningcompute, azure-mgmt-managementgroups, azure-mgmt-managementpartner, azure-mgmt-maps, azure-mgmt-marketplaceordering, azure-mgmt-media, azure-mgmt-monitor, azure-mgmt-msi, azure-mgmt-network, azure-mgmt-notificationhubs, azure-mgmt-policyinsights, azure-mgmt-powerbiembedded, azure-mgmt-rdbms, azure-mgmt-recoveryservices, azure-mgmt-recoveryservicesbackup, azure-mgmt-redis, azure-mgmt-relay, azure-mgmt-reservations, azure-mgmt-resource, azure-mgmt-scheduler, azure-mgmt-search, azure-mgmt-servicebus, azure-mgmt-servicefabric, azure-mgmt-signalr, azure-mgmt-sql, azure-mgmt-storage, azure-mgmt-subscription, azure-mgmt-trafficmanager, azure-mgmt-web
 ncclient==0.6.4           # via junos-eznc
 netaddr==0.7.19           # via junos-eznc
+nsx-policy-python-sdk==3.0.2.0.0.16837625
+nsx-python-sdk==3.0.2.0.0.16837625
+nsx-vmc-aws-integration-python-sdk==3.0.2.0.0.16837625
+nsx-vmc-policy-python-sdk==3.0.2.0.0.16837625
 ntc-templates==1.4.0      # via junos-eznc
 oauthlib==3.1.0           # via requests-oauthlib
 oscrypto==1.2.0           # via certvalidator
@@ -204,14 +211,20 @@ six==1.12.0               # via bcrypt, cassandra-driver, cheroot, cherrypy, cry
 smmap2==2.0.5             # via gitdb2
 strict-rfc3339==0.7
 tempora==1.14.1           # via portend
+suds-jurko==0.6
 terminal==0.4.0           # via ntc-templates
 textfsm==1.1.0            # via ntc-templates
 timelib==0.2.4
 toml==0.10.0
 transitions==0.8.1        # via junos-eznc
 urllib3==1.24.2           # via botocore, kubernetes, python-etcd, requests
+vapi-client-bindings==3.5.0
+vapi-common-client==2.19.0  # via nsx-policy-python-sdk, nsx-python-sdk, nsx-vmc-aws-integration-python-sdk, nsx-vmc-policy-python-sdk, vmc-client-bindings, vmc-draas-client-bindings
+vapi-runtime==2.19.0      # via nsx-policy-python-sdk, nsx-python-sdk, nsx-vmc-aws-integration-python-sdk, nsx-vmc-policy-python-sdk, vapi-client-bindings, vapi-common-client, vmc-client-bindings, vmc-draas-client-bindings
 vcert==0.7.3
 virtualenv==20.0.20
+vmc-client-bindings==1.31.0
+vmc-draas-client-bindings==1.17.0
 watchdog==0.9.0
 wcwidth==0.1.7            # via pytest
 websocket-client==0.40.0  # via docker, kubernetes
@@ -221,5 +234,3 @@ xmltodict==0.12.0         # via moto
 yamlordereddictloader==0.4.0  # via junos-eznc
 zc.lockfile==1.4          # via cherrypy
 zipp==0.6.0               # via importlib-metadata
-# Passthrough dependencies from requirements/static/ci/git-sources.txt
-git+https://github.com/vmware/vsphere-automation-sdk-python.git
