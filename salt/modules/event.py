@@ -111,9 +111,8 @@ def fire(data, tag, timeout=None):
         salt '*' event.fire '{"data":"my event data"}' 'tag'
     """
     if timeout is None:
-        timeout = 60000
-    else:
-        timeout = timeout * 1000
+        timeout = 60
+    timeout = timeout * 1000
     try:
         event = salt.utils.event.get_event(
             __opts__.get("__role", "minion"),

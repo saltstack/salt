@@ -1,3 +1,4 @@
+# pylint: disable=confusing-with-statement
 import pytest
 import salt.modules.event as event
 from tests.support.mock import patch
@@ -8,6 +9,22 @@ def setup_loader():
     setup_loader_modules = {event: {}}
     with pytest.helpers.loader_mock(setup_loader_modules) as loader_mock:
         yield loader_mock
+
+
+@pytest.fixture
+def fake_crypto():
+    with patch("salt.crypt.SAuth", autospec=True) as fake_sauth:
+        yield fake_sauth
+
+
+@pytest.fixture
+def fake_get_event():
+    patch_get_event = patch("salt.utils.event.get_event", autospec=True)
+    patch_opts = patch.dict(
+        event.__opts__, {"sock_dir": "/tmp/sock", "transport": "tachyon"}
+    )
+    with patch_get_event as fake_event, patch_opts:
+        yield fake_event
 
 
 @pytest.fixture
@@ -152,6 +169,11 @@ def event_override_data(request):
     yield request.param["extra_kwargs"], request.param["data"]
 
 
+@pytest.fixture(params=[None, 10, 6000])
+def event_timeout(request):
+    yield request.param
+
+
 @pytest.fixture
 def expected_call_data(
     event_environ_data,
@@ -159,6 +181,7 @@ def expected_call_data(
     event_pillar_data,
     event_env_opt_data,
     event_override_data,
+    event_timeout,
 ):
     call_data = {"tag": "some/tag"}
     call_data.update(event_environ_data[0])
@@ -167,6 +190,7 @@ def expected_call_data(
     call_data.update(event_env_opt_data[0])
     call_data.update(event_override_data[0])
     call_data.setdefault("data", event_override_data[1])
+    call_data["timeout"] = event_timeout
     expected_data_dict = {}
     expected_data_dict.update(event_environ_data[1])
     expected_data_dict.update(event_grain_data[1])
@@ -174,7 +198,11 @@ def expected_call_data(
     expected_data_dict.update(event_env_opt_data[1])
     expected_data_dict.update(event_override_data[0])
     expected_data_dict.update(event_override_data[1])
-    return call_data, (expected_data_dict, "some/tag"), {"preload": None, "timeout": 60}
+    return (
+        call_data,
+        (expected_data_dict, "some/tag"),
+        {"preload": None, "timeout": event_timeout},
+    )
 
 
 @pytest.mark.parametrize("use_master_when_local", [True, False])
@@ -205,3 +233,69 @@ def test_when_local_opts_and_not_use_master_then_fire_should_be_called(
 
     fake_fire.assert_called()
     fake_fire_master.assert_not_called()
+
+
+def test_when_opts_has_no_role_then_default_to_minion_for_get_event(fake_get_event):
+    expected_node = "minion"
+    event.fire(data="Fnord", tag="fnord/fnord")
+
+    actual_node = fake_get_event.mock_calls[0].args[0]
+
+    assert actual_node == expected_node
+
+
+def test_when_opts_has_a_role_it_should_be_used_for_get_event(fake_get_event):
+    expected_node = "fnord"
+
+    with patch.dict(event.__opts__, {"__role": expected_node}):
+        event.fire(data="Fnord", tag="fnord/fnord")
+
+    actual_node = fake_get_event.mock_calls[0].args[0]
+
+    assert actual_node == expected_node
+
+
+# Not 100% sure that 0 is a valid timeout. Also unsure if negative values are
+# allowable.
+@pytest.mark.parametrize(
+    "timeout,expected_timeout", [(None, 60_000), (10, 10_000), (60, 60_000), (0, 0)],
+)
+def test_when_timeout_is_None_then_default_should_be_60000_millis(
+    timeout, expected_timeout, fake_get_event
+):
+    event.fire(data="fnord", tag="fnord/fnord", timeout=timeout)
+
+    actual_timeout = fake_get_event.return_value.fire_event.mock_calls[0].kwargs[
+        "timeout"
+    ]
+    assert actual_timeout == expected_timeout
+
+
+@pytest.mark.parametrize(
+    "expected_timeout", [60, 0, None, 10, 1000],
+)
+def test_fire_master_should_use_the_provided_timeout(expected_timeout, fake_crypto):
+
+    with patch(
+        "salt.transport.client.ReqChannel.factory", autospec=True
+    ) as fake_factory, patch.dict(
+        event.__opts__,
+        {
+            "master_uri_list": ["fnord://fnord.fnord"],
+            "interface": "127.0.0.1",
+            "pki_dir": "/tmp",
+            "id": "fnord",
+            "keysize": 1024,
+        },
+    ):
+        event.fire_master(
+            data="fnord", tag="fnord/fnord", preload=True, timeout=expected_timeout
+        )
+
+        actual_timeout = fake_factory.return_value.__enter__.return_value.send.mock_calls[
+            0
+        ].kwargs[
+            "timeout"
+        ]
+
+    assert actual_timeout == expected_timeout
