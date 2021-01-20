@@ -19,6 +19,7 @@ import copy
 import logging
 
 import salt.config
+
 try:
     from cohesity_management_sdk.cohesity_client import CohesityClient
     from cohesity_management_sdk.exceptions.api_exception import APIException
