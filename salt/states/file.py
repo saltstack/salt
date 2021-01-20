@@ -6378,6 +6378,7 @@ def prepend(
     defaults=None,
     context=None,
     header=None,
+    show_changes=True,
 ):
     """
     Ensure that some text appears at the beginning of a file
@@ -6468,6 +6469,9 @@ def prepend(
         Spaces and Tabs in text are ignored by default, when searching for the
         appending content, one space or multiple tabs are the same for salt.
         Set this option to ``False`` if you want to change this behavior.
+
+    show_changes
+        Output any lines  to the file. Set to ``False`` to disable.
 
     Multi-line example:
 
@@ -6621,6 +6625,8 @@ def prepend(
         if slines != nlines:
             if not __utils__["files.is_text"](name):
                 ret["changes"]["diff"] = "Replace binary file"
+            elif not show_changes:
+                ret["changes"]["diff"] = "<show_changes=False>"
             else:
                 # Changes happened, add them
                 ret["changes"]["diff"] = "".join(difflib.unified_diff(slines, nlines))
@@ -6660,6 +6666,8 @@ def prepend(
     if slines != nlines:
         if not __utils__["files.is_text"](name):
             ret["changes"]["diff"] = "Replace binary file"
+        elif not show_changes:
+            ret["changes"]["diff"] = "<show_changes=False>"
         else:
             # Changes happened, add them
             ret["changes"]["diff"] = "".join(difflib.unified_diff(slines, nlines))
