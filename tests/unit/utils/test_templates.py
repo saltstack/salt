@@ -8,6 +8,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import os
 import sys
 import logging
+import pytest
 
 # Import Salt libs
 import salt.utils.templates
@@ -184,6 +185,13 @@ class RenderTestCase(TestCase):
         ctx['var'] = 'OK'
         res = salt.utils.templates.render_cheetah_tmpl(tmpl, ctx)
         self.assertEqual(res.strip(), 'OK')
+
+    def test_render_jinja_cve_2021_25283(self):
+        tmpl = '''{{ [].__class__ }}'''
+        ctx = dict(self.context)
+        ctx['var'] = 'OK'
+        with pytest.raises(salt.exceptions.SaltRenderError):
+            res = salt.utils.templates.render_jinja_tmpl(tmpl, ctx)
 
 
 class MockRender(object):
