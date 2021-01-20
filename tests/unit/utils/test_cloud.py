@@ -13,7 +13,6 @@ import tempfile
 
 import salt.utils.cloud as cloud
 import salt.utils.platform
-
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
