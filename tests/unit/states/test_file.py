@@ -2123,8 +2123,22 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                 ret.update(
                                     {"comment": comt, "result": True, "changes": {}}
                                 )
-                                self.assertDictEqual(
-                                    filestate.prepend(name, text=text), ret
+                                self.assertDictEqual(test_fun(name, text=text), ret)
+                    with patch.object(
+                        salt.utils.files,
+                        "fopen",
+                        MagicMock(mock_open(read_data="File contents.\n")),
+                    ):
+                        with patch.dict(filestate.__utils__, {"files.is_text": mock_t}):
+                            with patch.dict(filestate.__opts__, {"test": False}):
+                                self.assertIn(
+                                    "diff",
+                                    test_fun(name, text=text, show_changes=False)[
+                                        "changes"
+                                    ],
+                                )
+                                self.assertNotIn(
+                                    "diff", test_fun(name, text=text)["changes"]
                                 )
 
     # 'touch' function tests: 1
