@@ -13,7 +13,7 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt libs
-from salt.utils.schema import ArrayItem, IntegerItem, Schema, StringItem, BooleanItem
+from salt.utils.schema import ArrayItem, BooleanItem, IntegerItem, Schema, StringItem
 
 
 class VCenterEntitySchema(Schema):
