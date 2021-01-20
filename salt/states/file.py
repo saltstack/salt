@@ -6102,6 +6102,7 @@ def append(
     defaults=None,
     context=None,
     ignore_whitespace=True,
+    show_changes=True,
 ):
     """
     Ensure that some text appears at the end of a file.
@@ -6192,6 +6193,9 @@ def append(
         Spaces and Tabs in text are ignored by default, when searching for the
         appending content, one space or multiple tabs are the same for salt.
         Set this option to ``False`` if you want to change this behavior.
+
+    show_changes
+        Output any lines appended to the file. Set to ``False`` to disable.
 
     Multi-line example:
 
@@ -6351,6 +6355,8 @@ def append(
     if slines != nlines:
         if not __utils__["files.is_text"](name):
             ret["changes"]["diff"] = "Replace binary file"
+        elif not show_changes:
+            ret["changes"]["diff"] = "<show_changes=False>"
         else:
             # Changes happened, add them
             ret["changes"]["diff"] = "\n".join(difflib.unified_diff(slines, nlines))
