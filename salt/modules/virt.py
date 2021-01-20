@@ -431,7 +431,8 @@ def _get_nics(dom):
     Get domain network interfaces from a libvirt domain object.
     """
     nics = {}
-    doc = ElementTree.fromstring(dom.XMLDesc(0))
+    # Don't expose the active configuration since it may be changed by libvirt
+    doc = ElementTree.fromstring(dom.XMLDesc(libvirt.VIR_DOMAIN_XML_INACTIVE))
     for iface_node in doc.findall("devices/interface"):
         nic = {}
         nic["type"] = iface_node.get("type")
@@ -948,6 +949,8 @@ def _gen_xml(
     clock=None,
     serials=None,
     consoles=None,
+    stop_on_reboot=False,
+    host_devices=None,
     **kwargs
 ):
     """
@@ -958,6 +961,7 @@ def _gen_xml(
         "name": name,
         "hypervisor_features": hypervisor_features or {},
         "clock": clock or {},
+        "on_reboot": "destroy" if stop_on_reboot else "restart",
     }
 
     context["to_kib"] = lambda v: int(_handle_unit(v) / 1024)
@@ -1086,7 +1090,8 @@ def _gen_xml(
             "disk_bus": disk["model"],
             "format": disk.get("format", "raw"),
             "index": str(i),
-            "io": "threads" if disk.get("iothreads", False) else "native",
+            "io": disk.get("io", "native"),
+            "iothread": disk.get("iothread_id", None),
         }
         targets.append(disk_context["target_dev"])
         if disk.get("source_file"):
@@ -1134,6 +1139,44 @@ def _gen_xml(
         context["disks"].append(disk_context)
     context["nics"] = nicp
 
+    # Process host devices passthrough
+    hostdev_context = []
+    try:
+        for hostdev_name in host_devices or []:
+            hostdevice = conn.nodeDeviceLookupByName(hostdev_name)
+            doc = ElementTree.fromstring(hostdevice.XMLDesc())
+            if "pci" in hostdevice.listCaps():
+                hostdev_context.append(
+                    {
+                        "type": "pci",
+                        "domain": "0x{:04x}".format(
+                            int(doc.find("./capability[@type='pci']/domain").text)
+                        ),
+                        "bus": "0x{:02x}".format(
+                            int(doc.find("./capability[@type='pci']/bus").text)
+                        ),
+                        "slot": "0x{:02x}".format(
+                            int(doc.find("./capability[@type='pci']/slot").text)
+                        ),
+                        "function": "0x{}".format(
+                            doc.find("./capability[@type='pci']/function").text
+                        ),
+                    }
+                )
+            elif "usb_device" in hostdevice.listCaps():
+                vendor_id = doc.find(".//vendor").get("id")
+                product_id = doc.find(".//product").get("id")
+                hostdev_context.append(
+                    {"type": "usb", "vendor": vendor_id, "product": product_id}
+                )
+            # For the while we only handle pci and usb passthrough
+    except libvirt.libvirtError as err:
+        conn.close()
+        raise CommandExecutionError(
+            "Failed to get host devices: " + err.get_error_message()
+        )
+    context["hostdevs"] = hostdev_context
+
     context["os_type"] = os_type
     context["arch"] = arch
     fn_ = "libvirt_domain.jinja"
@@ -1177,23 +1220,75 @@ def _gen_vol_xml(
     return template.render(**context)
 
 
-def _gen_net_xml(name, bridge, forward, vport, tag=None, ip_configs=None):
+def _gen_net_xml(
+    name,
+    bridge,
+    forward,
+    vport,
+    tag=None,
+    ip_configs=None,
+    mtu=None,
+    domain=None,
+    nat=None,
+    interfaces=None,
+    addresses=None,
+    physical_function=None,
+    dns=None,
+):
     """
     Generate the XML string to define a libvirt network
     """
+    if isinstance(vport, str):
+        vport_context = {"type": vport}
+    else:
+        vport_context = vport
+
+    if isinstance(tag, (str, int)):
+        tag_context = {"tags": [{"id": tag}]}
+    else:
+        tag_context = tag
+
+    addresses_context = []
+    if addresses:
+        matches = [
+            re.fullmatch(r"([0-9]+):([0-9A-Fa-f]+):([0-9A-Fa-f]+)\.([0-9])", addr)
+            for addr in addresses.lower().split(" ")
+        ]
+        addresses_context = [
+            {
+                "domain": m.group(1),
+                "bus": m.group(2),
+                "slot": m.group(3),
+                "function": m.group(4),
+            }
+            for m in matches
+            if m
+        ]
+
     context = {
         "name": name,
         "bridge": bridge,
+        "mtu": mtu,
+        "domain": domain,
         "forward": forward,
-        "vport": vport,
-        "tag": tag,
+        "nat": nat,
+        "interfaces": interfaces.split(" ") if interfaces else [],
+        "addresses": addresses_context,
+        "pf": physical_function,
+        "vport": vport_context,
+        "vlan": tag_context,
+        "dns": dns,
         "ip_configs": [
             {
                 "address": ipaddress.ip_network(config["cidr"]),
                 "dhcp_ranges": config.get("dhcp_ranges", []),
+                "hosts": config.get("hosts", {}),
+                "bootp": config.get("bootp", {}),
+                "tftp": config.get("tftp"),
             }
             for config in ip_configs or []
         ],
+        "yesno": lambda v: "yes" if v else "no",
     }
     fn_ = "libvirt_network.jinja"
     try:
@@ -1947,6 +2042,8 @@ def init(
     clock=None,
     serials=None,
     consoles=None,
+    stop_on_reboot=False,
+    host_devices=None,
     **kwargs
 ):
     """
@@ -2152,6 +2249,15 @@ def init(
     :param password: password to connect with, overriding defaults
 
                      .. versionadded:: 2019.2.0
+
+    :param stop_on_reboot:
+        If set to ``True`` the guest will stop instead of rebooting.
+        This is specially useful when creating a virtual machine with an installation cdrom or
+        an autoinstallation needing a special first boot configuration.
+        Defaults to ``False``
+
+        .. versionadded:: Aluminium
+
     :param boot:
         Specifies kernel, initial ramdisk and kernel command line parameters for the virtual machine.
         This is an optional parameter, all of the keys are optional within the dictionary. The structure of
@@ -2265,6 +2371,13 @@ def init(
     :param consoles:
         Dictionary providing details on the consoles device to create. (Default: ``None``)
         See :ref:`init-chardevs-def` for more details on the possible values.
+
+        .. versionadded:: Aluminium
+
+    :param host_devices:
+        List of host devices to passthrough to the guest.
+        The value is a list of device names as provided by the :py:func:`~salt.modules.virt.node_devices` function.
+        (Default: ``None``)
 
         .. versionadded:: Aluminium
 
@@ -2610,9 +2723,17 @@ def init(
                       hostname_property: virt:hostname
                       sparse_volume: True
 
-    iothreads
-        When ``True`` dedicated threads will be used for the I/O of the disk.
-        (Default: ``False``)
+    io
+        I/O control policy. String value amongst ``native``, ``threads`` and ``io_uring``.
+        (Default: ``native``)
+
+        ..versionadded:: Aluminium
+
+    iothread_id
+        I/O thread id to assign the disk to.
+        (Default: none assigned)
+
+        ..versionadded:: Aluminium
 
     .. _init-graphics-def:
 
@@ -2830,6 +2951,8 @@ def init(
             clock,
             serials,
             consoles,
+            stop_on_reboot,
+            host_devices,
             **kwargs
         )
         log.debug("New virtual machine definition: %s", vm_xml)
@@ -2888,10 +3011,20 @@ def _nics_equal(nic1, nic2):
         """
         Filter out elements to ignore when comparing nics
         """
+        source_node = nic.find("source")
+        source_attrib = source_node.attrib if source_node is not None else {}
+        source_type = "network" if "network" in source_attrib else nic.attrib["type"]
+
+        source_getters = {
+            "network": lambda n: n.get("network"),
+            "bridge": lambda n: n.get("bridge"),
+            "direct": lambda n: n.get("dev"),
+            "hostdev": lambda n: _format_pci_address(n.find("address")),
+        }
         return {
-            "type": nic.attrib["type"],
-            "source": nic.find("source").attrib[nic.attrib["type"]]
-            if nic.find("source") is not None
+            "type": source_type,
+            "source": source_getters[source_type](source_node)
+            if source_node is not None
             else None,
             "model": nic.find("model").attrib["type"]
             if nic.find("model") is not None
@@ -2941,6 +3074,32 @@ def _graphics_equal(gfx1, gfx2):
     return xmlutil.to_dict(_filter_graphics(gfx1), True) == xmlutil.to_dict(
         _filter_graphics(gfx2), True
     )
+
+
+def _hostdevs_equal(dev1, dev2):
+    """
+    Test if two hostdevs devices should be considered the same device
+    """
+
+    def _filter_hostdevs(dev):
+        """
+        When the domain is running, the hostdevs element may contain additional properties.
+        This function will only keep the ones we care about
+        """
+        type_ = dev.get("type")
+        definition = {
+            "type": type_,
+        }
+        if type_ == "pci":
+            address_node = dev.find("./source/address")
+            for attr in ["domain", "bus", "slot", "function"]:
+                definition[attr] = address_node.get(attr)
+        elif type_ == "usb":
+            for attr in ["vendor", "product"]:
+                definition[attr] = dev.find("./source/" + attr).get("id")
+        return definition
+
+    return _filter_hostdevs(dev1) == _filter_hostdevs(dev2)
 
 
 def _diff_lists(old, new, comparator):
@@ -3043,6 +3202,16 @@ def _diff_graphics_lists(old, new):
     return _diff_lists(old, new, _graphics_equal)
 
 
+def _diff_hostdev_lists(old, new):
+    """
+    Compare hostdev devices definitions to extract the changes
+
+    :param old: list of ElementTree nodes representing the old hostdev devices
+    :param new: list of ElementTree nodes representing the new hostdev devices
+    """
+    return _diff_lists(old, new, _hostdevs_equal)
+
+
 def _expand_cpuset(cpuset):
     """
     Expand the libvirt cpuset and nodeset values into a list of cpu/node IDs
@@ -3138,6 +3307,218 @@ def _diff_console_list(old, new):
     return _diff_lists(old, new, _serial_or_concole_equal)
 
 
+def _format_pci_address(node):
+    return "{}:{}:{}.{}".format(
+        node.get("domain").replace("0x", ""),
+        node.get("bus").replace("0x", ""),
+        node.get("slot").replace("0x", ""),
+        node.get("function").replace("0x", ""),
+    )
+
+
+def _almost_equal(current, new):
+    """
+    return True if the parameters are numbers that are almost
+    """
+    if current is None or new is None:
+        return False
+    return abs(current - new) / current < 1e-03
+
+
+def _compute_device_changes(old_xml, new_xml, to_skip):
+    """
+    Compute the device changes between two domain XML definitions.
+    """
+    devices_node = old_xml.find("devices")
+    changes = {}
+    for dev_type in to_skip:
+        changes[dev_type] = {}
+        if not to_skip[dev_type]:
+            old = devices_node.findall(dev_type)
+            new = new_xml.findall("devices/{}".format(dev_type))
+            changes[dev_type] = globals()["_diff_{}_lists".format(dev_type)](old, new)
+    return changes
+
+
+def _get_pci_addresses(node):
+    """
+    Get all the pci addresses in the node in 0000:00:00.0 form
+    """
+    return {_format_pci_address(address) for address in node.findall(".//address")}
+
+
+def _correct_networks(conn, desc):
+    """
+    Adjust the interface devices matching existing networks.
+    Returns the network interfaces XML definition as string mapped to the new device node.
+    """
+    networks = [ElementTree.fromstring(net.XMLDesc()) for net in conn.listAllNetworks()]
+    nics = desc.findall("devices/interface")
+    device_map = {}
+    for nic in nics:
+        if nic.get("type") == "hostdev":
+            # Do we have a network matching this NIC PCI address?
+            addr = _get_pci_addresses(nic.find("source"))
+            matching_nets = [
+                net
+                for net in networks
+                if net.find("forward").get("mode") == "hostdev"
+                and addr & _get_pci_addresses(net)
+            ]
+            if matching_nets:
+                # We need to store the XML before modifying it
+                # since libvirt needs it to detach the device
+                old_xml = ElementTree.tostring(nic)
+                nic.set("type", "network")
+                nic.find("source").set("network", matching_nets[0].find("name").text)
+                device_map[nic] = old_xml
+    return device_map
+
+
+def _update_live(domain, new_desc, mem, cpu, old_mem, old_cpu, to_skip, test):
+    """
+    Perform the live update of a domain.
+    """
+    status = {}
+    errors = []
+
+    if not domain.isActive():
+        return status, errors
+
+    # Do the live changes now that we know the definition has been properly set
+    # From that point on, failures are not blocking to try to live update as much
+    # as possible.
+    commands = []
+    if cpu and (isinstance(cpu, int) or isinstance(cpu, dict) and cpu.get("maximum")):
+        new_cpu = cpu.get("maximum") if isinstance(cpu, dict) else cpu
+        if old_cpu != new_cpu and new_cpu is not None:
+            commands.append(
+                {
+                    "device": "cpu",
+                    "cmd": "setVcpusFlags",
+                    "args": [new_cpu, libvirt.VIR_DOMAIN_AFFECT_LIVE],
+                }
+            )
+    if mem:
+        if isinstance(mem, dict):
+            # setMemoryFlags takes memory amount in KiB
+            new_mem = (
+                int(_handle_unit(mem.get("current")) / 1024)
+                if "current" in mem
+                else None
+            )
+        elif isinstance(mem, int):
+            new_mem = int(mem * 1024)
+
+        if not _almost_equal(old_mem, new_mem) and new_mem is not None:
+            commands.append(
+                {
+                    "device": "mem",
+                    "cmd": "setMemoryFlags",
+                    "args": [new_mem, libvirt.VIR_DOMAIN_AFFECT_LIVE],
+                }
+            )
+
+    # Compute the changes with the live definition
+    old_desc = ElementTree.fromstring(domain.XMLDesc(0))
+    changed_devices = {"interface": _correct_networks(domain.connect(), old_desc)}
+    changes = _compute_device_changes(old_desc, new_desc, to_skip)
+
+    # Look for removable device source changes
+    removable_changes = []
+    new_disks = []
+    for new_disk in changes["disk"].get("new", []):
+        device = new_disk.get("device", "disk")
+        if device not in ["cdrom", "floppy"]:
+            new_disks.append(new_disk)
+            continue
+
+        target_dev = new_disk.find("target").get("dev")
+        matching = [
+            old_disk
+            for old_disk in changes["disk"].get("deleted", [])
+            if old_disk.get("device", "disk") == device
+            and old_disk.find("target").get("dev") == target_dev
+        ]
+        if not matching:
+            new_disks.append(new_disk)
+        else:
+            # libvirt needs to keep the XML exactly as it was before
+            updated_disk = matching[0]
+            changes["disk"]["deleted"].remove(updated_disk)
+            removable_changes.append(updated_disk)
+            source_node = updated_disk.find("source")
+            new_source_node = new_disk.find("source")
+            source_file = (
+                new_source_node.get("file") if new_source_node is not None else None
+            )
+
+            updated_disk.set("type", "file")
+            # Detaching device
+            if source_node is not None:
+                updated_disk.remove(source_node)
+
+            # Attaching device
+            if source_file:
+                ElementTree.SubElement(
+                    updated_disk, "source", attrib={"file": source_file}
+                )
+
+    changes["disk"]["new"] = new_disks
+
+    for dev_type in ["disk", "interface", "hostdev"]:
+        for added in changes[dev_type].get("new", []):
+            commands.append(
+                {
+                    "device": dev_type,
+                    "cmd": "attachDevice",
+                    "args": [xmlutil.element_to_str(added)],
+                }
+            )
+
+        for removed in changes[dev_type].get("deleted", []):
+            removed_def = changed_devices.get(dev_type, {}).get(
+                removed, ElementTree.tostring(removed)
+            )
+            commands.append(
+                {
+                    "device": dev_type,
+                    "cmd": "detachDevice",
+                    "args": [salt.utils.stringutils.to_str(removed_def)],
+                }
+            )
+
+    for updated_disk in removable_changes:
+        commands.append(
+            {
+                "device": "disk",
+                "cmd": "updateDeviceFlags",
+                "args": [xmlutil.element_to_str(updated_disk)],
+            }
+        )
+
+    for cmd in commands:
+        try:
+            ret = 0 if test else getattr(domain, cmd["cmd"])(*cmd["args"])
+            device_type = cmd["device"]
+            if device_type in ["cpu", "mem"]:
+                status[device_type] = not ret
+            else:
+                actions = {
+                    "attachDevice": "attached",
+                    "detachDevice": "detached",
+                    "updateDeviceFlags": "updated",
+                }
+                device_status = status.setdefault(device_type, {})
+                cmd_status = device_status.setdefault(actions[cmd["cmd"]], [])
+                cmd_status.append(cmd["args"][0])
+
+        except libvirt.libvirtError as err:
+            errors.append(str(err))
+
+    return status, errors
+
+
 def update(
     name,
     cpu=0,
@@ -3156,6 +3537,8 @@ def update(
     clock=None,
     serials=None,
     consoles=None,
+    stop_on_reboot=False,
+    host_devices=None,
     **kwargs
 ):
     """
@@ -3268,6 +3651,14 @@ def update(
 
         .. versionadded:: Aluminium
 
+    :param stop_on_reboot:
+        If set to ``True`` the guest will stop instead of rebooting.
+        This is specially useful when creating a virtual machine with an installation cdrom or
+        an autoinstallation needing a special first boot configuration.
+        Defaults to ``False``
+
+        .. versionadded:: Aluminium
+
     :param test: run in dry-run mode if set to True
 
         .. versionadded:: 3001
@@ -3335,6 +3726,13 @@ def update(
                 hpet:
                   present: False
 
+    :param host_devices:
+        List of host devices to passthrough to the guest.
+        The value is a list of device names as provided by the :py:func:`~salt.modules.virt.node_devices` function.
+        (Default: ``None``)
+
+        .. versionadded:: Aluminium
+
     :return:
 
         Returns a dictionary indicating the status of what has been done. It is structured in
@@ -3369,7 +3767,7 @@ def update(
     }
     conn = __get_conn(**kwargs)
     domain = _get_domain(conn, name)
-    desc = ElementTree.fromstring(domain.XMLDesc(0))
+    desc = ElementTree.fromstring(domain.XMLDesc(libvirt.VIR_DOMAIN_XML_INACTIVE))
     need_update = False
 
     # Compute the XML to get the disks, interfaces and graphics
@@ -3394,8 +3792,11 @@ def update(
             graphics,
             boot,
             boot_dev,
+            numatune,
             serial=serials,
             consoles=consoles,
+            stop_on_reboot=stop_on_reboot,
+            host_devices=host_devices,
             **kwargs
         )
     )
@@ -3439,11 +3840,6 @@ def update(
     old_mem = int(_get_with_unit(desc.find("memory")) / 1024)
     old_cpu = int(desc.find("./vcpu").text)
 
-    def _almost_equal(current, new):
-        if current is None or new is None:
-            return False
-        return abs(current - new) / current < 1e-03
-
     def _yesno_attribute(path, xpath, attr_name, ignored=None):
         return xmlutil.attribute(
             path, xpath, attr_name, ignored, lambda v: "yes" if v else "no"
@@ -3482,6 +3878,7 @@ def update(
 
     # Update the kernel boot parameters
     data = {k: v for k, v in locals().items() if bool(v)}
+    data["stop_on_reboot"] = stop_on_reboot
     if boot_dev:
         data["boot_dev"] = boot_dev.split()
 
@@ -3519,6 +3916,11 @@ def update(
     _normalize_cpusets(desc, data)
 
     params_mapping = [
+        {
+            "path": "stop_on_reboot",
+            "xpath": "on_reboot",
+            "convert": lambda v: "destroy" if v else "restart",
+        },
         {"path": "boot:kernel", "xpath": "os/kernel"},
         {"path": "boot:initrd", "xpath": "os/initrd"},
         {"path": "boot:cmdline", "xpath": "os/cmdline"},
@@ -3776,26 +4178,24 @@ def update(
 
     # Update the XML definition with the new disks and diff changes
     devices_node = desc.find("devices")
-    parameters = {
-        "disk": ["disks", "disk_profile"],
-        "interface": ["interfaces", "nic_profile"],
-        "graphics": ["graphics"],
-        "serial": ["serial"],
-        "console": ["console"],
+    func_locals = locals()
+
+    def _skip_update(names):
+        return all(func_locals.get(n) is None for n in names)
+
+    to_skip = {
+        "disk": _skip_update(["disks", "disk_profile"]),
+        "interface": _skip_update(["interfaces", "nic_profile"]),
+        "graphics": _skip_update(["graphics"]),
+        "serial": _skip_update(["serial"]),
+        "console": _skip_update(["console"]),
+        "hostdev": _skip_update(["host_devices"]),
     }
-    changes = {}
-    for dev_type in parameters:
-        changes[dev_type] = {}
-        func_locals = locals()
-        if [
-            param
-            for param in parameters[dev_type]
-            if func_locals.get(param, None) is not None
-        ]:
+    changes = _compute_device_changes(desc, new_desc, to_skip)
+    for dev_type in changes:
+        if not to_skip[dev_type]:
             old = devices_node.findall(dev_type)
-            new = new_desc.findall("devices/{}".format(dev_type))
-            changes[dev_type] = globals()["_diff_{}_lists".format(dev_type)](old, new)
-            if changes[dev_type]["deleted"] or changes[dev_type]["new"]:
+            if changes[dev_type].get("deleted") or changes[dev_type].get("new"):
                 for item in old:
                     devices_node.remove(item)
                 devices_node.extend(changes[dev_type]["sorted"])
@@ -3820,153 +4220,22 @@ def update(
                     elif item in changes["disk"]["new"] and not source_file:
                         _disk_volume_create(conn, all_disks[idx])
             if not test:
-                xml_desc = ElementTree.tostring(desc)
+                xml_desc = xmlutil.element_to_str(desc)
                 log.debug("Update virtual machine definition: %s", xml_desc)
-                conn.defineXML(salt.utils.stringutils.to_str(xml_desc))
+                conn.defineXML(xml_desc)
             status["definition"] = True
         except libvirt.libvirtError as err:
             conn.close()
             raise err
 
-        # Do the live changes now that we know the definition has been properly set
-        # From that point on, failures are not blocking to try to live update as much
-        # as possible.
-        commands = []
-        removable_changes = []
-        if domain.isActive() and live:
-            if cpu and (
-                isinstance(cpu, int) or isinstance(cpu, dict) and cpu.get("maximum")
-            ):
-                new_cpu = cpu.get("maximum") if isinstance(cpu, dict) else cpu
-                if old_cpu != new_cpu and new_cpu is not None:
-                    commands.append(
-                        {
-                            "device": "cpu",
-                            "cmd": "setVcpusFlags",
-                            "args": [new_cpu, libvirt.VIR_DOMAIN_AFFECT_LIVE],
-                        }
-                    )
-            if mem:
-                if isinstance(mem, dict):
-                    # setMemoryFlags takes memory amount in KiB
-                    new_mem = (
-                        int(_handle_unit(mem.get("current")) / 1024)
-                        if "current" in mem
-                        else None
-                    )
-                elif isinstance(mem, int):
-                    new_mem = int(mem * 1024)
-
-                if not _almost_equal(old_mem, new_mem) and new_mem is not None:
-                    commands.append(
-                        {
-                            "device": "mem",
-                            "cmd": "setMemoryFlags",
-                            "args": [new_mem, libvirt.VIR_DOMAIN_AFFECT_LIVE],
-                        }
-                    )
-
-            # Look for removable device source changes
-            new_disks = []
-            for new_disk in changes["disk"].get("new", []):
-                device = new_disk.get("device", "disk")
-                if device not in ["cdrom", "floppy"]:
-                    new_disks.append(new_disk)
-                    continue
-
-                target_dev = new_disk.find("target").get("dev")
-                matching = [
-                    old_disk
-                    for old_disk in changes["disk"].get("deleted", [])
-                    if old_disk.get("device", "disk") == device
-                    and old_disk.find("target").get("dev") == target_dev
-                ]
-                if not matching:
-                    new_disks.append(new_disk)
-                else:
-                    # libvirt needs to keep the XML exactly as it was before
-                    updated_disk = matching[0]
-                    changes["disk"]["deleted"].remove(updated_disk)
-                    removable_changes.append(updated_disk)
-                    source_node = updated_disk.find("source")
-                    new_source_node = new_disk.find("source")
-                    source_file = (
-                        new_source_node.get("file")
-                        if new_source_node is not None
-                        else None
-                    )
-
-                    updated_disk.set("type", "file")
-                    # Detaching device
-                    if source_node is not None:
-                        updated_disk.remove(source_node)
-
-                    # Attaching device
-                    if source_file:
-                        ElementTree.SubElement(
-                            updated_disk, "source", attrib={"file": source_file}
-                        )
-
-            changes["disk"]["new"] = new_disks
-
-            for dev_type in ["disk", "interface"]:
-                for added in changes[dev_type].get("new", []):
-                    commands.append(
-                        {
-                            "device": dev_type,
-                            "cmd": "attachDevice",
-                            "args": [
-                                salt.utils.stringutils.to_str(
-                                    ElementTree.tostring(added)
-                                )
-                            ],
-                        }
-                    )
-
-                for removed in changes[dev_type].get("deleted", []):
-                    commands.append(
-                        {
-                            "device": dev_type,
-                            "cmd": "detachDevice",
-                            "args": [
-                                salt.utils.stringutils.to_str(
-                                    ElementTree.tostring(removed)
-                                )
-                            ],
-                        }
-                    )
-
-        for updated_disk in removable_changes:
-            commands.append(
-                {
-                    "device": "disk",
-                    "cmd": "updateDeviceFlags",
-                    "args": [
-                        salt.utils.stringutils.to_str(
-                            ElementTree.tostring(updated_disk)
-                        )
-                    ],
-                }
-            )
-
-        for cmd in commands:
-            try:
-                ret = getattr(domain, cmd["cmd"])(*cmd["args"]) if not test else 0
-                device_type = cmd["device"]
-                if device_type in ["cpu", "mem"]:
-                    status[device_type] = not bool(ret)
-                else:
-                    actions = {
-                        "attachDevice": "attached",
-                        "detachDevice": "detached",
-                        "updateDeviceFlags": "updated",
-                    }
-                    status[device_type][actions[cmd["cmd"]]].append(cmd["args"][0])
-
-            except libvirt.libvirtError as err:
-                if "errors" not in status:
-                    status["errors"] = []
-                status["errors"].append(str(err))
+    if live:
+        live_status, errors = _update_live(
+            domain, new_desc, mem, cpu, old_mem, old_cpu, to_skip, test
+        )
+        status.update(live_status)
+        if errors:
+            status_errors = status.setdefault("errors", [])
+            status_errors += errors
 
     conn.close()
     return status
@@ -4214,6 +4483,121 @@ def node_info(**kwargs):
     info = _node_info(conn)
     conn.close()
     return info
+
+
+def _node_devices(conn):
+    """
+    List the host available devices, using an established connection.
+
+    :param conn: the libvirt connection handle to use.
+
+    .. versionadded:: Aluminium
+    """
+    devices = conn.listAllDevices()
+
+    devices_infos = []
+    for dev in devices:
+        root = ElementTree.fromstring(dev.XMLDesc())
+
+        # Only list PCI and USB devices that can be passed through as well as NICs
+        if not set(dev.listCaps()) & {"pci", "usb_device", "net"}:
+            continue
+
+        infos = {
+            "caps": " ".join(dev.listCaps()),
+        }
+
+        if "net" in dev.listCaps():
+            parent = root.find(".//parent").text
+            # Don't show, lo, dummies and libvirt-created NICs
+            if parent == "computer":
+                continue
+            infos.update(
+                {
+                    "name": root.find(".//interface").text,
+                    "address": root.find(".//address").text,
+                    "device name": parent,
+                    "state": root.find(".//link").get("state"),
+                }
+            )
+            devices_infos.append(infos)
+            continue
+
+        vendor_node = root.find(".//vendor")
+        vendor_id = vendor_node.get("id").lower()
+        product_node = root.find(".//product")
+        product_id = product_node.get("id").lower()
+        infos.update(
+            {"name": dev.name(), "vendor_id": vendor_id, "product_id": product_id}
+        )
+
+        # Vendor or product display name may not be set
+        if vendor_node.text:
+            infos["vendor"] = vendor_node.text
+        if product_node.text:
+            infos["product"] = product_node.text
+
+        if "pci" in dev.listCaps():
+            infos["address"] = "{:04x}:{:02x}:{:02x}.{}".format(
+                int(root.find(".//domain").text),
+                int(root.find(".//bus").text),
+                int(root.find(".//slot").text),
+                root.find(".//function").text,
+            )
+            class_node = root.find(".//class")
+            if class_node is not None:
+                infos["PCI class"] = class_node.text
+
+            # Get the list of Virtual Functions if any
+            vf_addresses = [
+                _format_pci_address(vf)
+                for vf in root.findall(
+                    "./capability[@type='pci']/capability[@type='virt_functions']/address"
+                )
+            ]
+            if vf_addresses:
+                infos["virtual functions"] = vf_addresses
+
+            # Get the Physical Function if any
+            pf = root.find(
+                "./capability[@type='pci']/capability[@type='phys_function']/address"
+            )
+            if pf is not None:
+                infos["physical function"] = _format_pci_address(pf)
+        elif "usb_device" in dev.listCaps():
+            infos["address"] = "{:03}:{:03}".format(
+                int(root.find(".//bus").text), int(root.find(".//device").text)
+            )
+
+        # Don't list the pci bridges and USB hosts from the linux foundation
+        linux_usb_host = vendor_id == "0x1d6b" and product_id in [
+            "0x0001",
+            "0x0002",
+            "0x0003",
+        ]
+        if (
+            root.find(".//capability[@type='pci-bridge']") is None
+            and not linux_usb_host
+        ):
+            devices_infos.append(infos)
+
+    return devices_infos
+
+
+def node_devices(**kwargs):
+    """
+    List the host available devices.
+
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    .. versionadded:: Aluminium
+    """
+    conn = __get_conn(**kwargs)
+    devs = _node_devices(conn)
+    conn.close()
+    return devs
 
 
 def get_nics(vm_, **kwargs):
@@ -5945,9 +6329,7 @@ def snapshot(domain, name=None, suffix=None, **kwargs):
     n_name.text = name
 
     conn = __get_conn(**kwargs)
-    _get_domain(conn, domain).snapshotCreateXML(
-        salt.utils.stringutils.to_str(ElementTree.tostring(doc))
-    )
+    _get_domain(conn, domain).snapshotCreateXML(xmlutil.element_to_str(doc))
     conn.close()
 
     return {"name": name}
@@ -6615,10 +6997,8 @@ def cpu_baseline(full=False, migratable=False, out="libvirt", **kwargs):
     conn = __get_conn(**kwargs)
     caps = ElementTree.fromstring(conn.getCapabilities())
     cpu = caps.find("host/cpu")
-    log.debug(
-        "Host CPU model definition: %s",
-        salt.utils.stringutils.to_str(ElementTree.tostring(cpu)),
-    )
+    host_cpu_def = xmlutil.element_to_str(cpu)
+    log.debug("Host CPU model definition: %s", host_cpu_def)
 
     flags = 0
     if migratable:
@@ -6633,11 +7013,7 @@ def cpu_baseline(full=False, migratable=False, out="libvirt", **kwargs):
         # This one is only in 1.1.3+
         flags += libvirt.VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES
 
-    cpu = ElementTree.fromstring(
-        conn.baselineCPU(
-            [salt.utils.stringutils.to_str(ElementTree.tostring(cpu))], flags
-        )
-    )
+    cpu = ElementTree.fromstring(conn.baselineCPU([host_cpu_def], flags))
     conn.close()
 
     if full and not getattr(libvirt, "VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES", False):
@@ -6683,18 +7059,70 @@ def cpu_baseline(full=False, migratable=False, out="libvirt", **kwargs):
     return ElementTree.tostring(cpu)
 
 
-def network_define(name, bridge, forward, ipv4_config=None, ipv6_config=None, **kwargs):
+def network_define(
+    name,
+    bridge,
+    forward,
+    ipv4_config=None,
+    ipv6_config=None,
+    vport=None,
+    tag=None,
+    autostart=True,
+    start=True,
+    mtu=None,
+    domain=None,
+    nat=None,
+    interfaces=None,
+    addresses=None,
+    physical_function=None,
+    dns=None,
+    **kwargs
+):
     """
     Create libvirt network.
 
-    :param name: Network name
-    :param bridge: Bridge name
-    :param forward: Forward mode(bridge, router, nat)
-    :param vport: Virtualport type
-    :param tag: Vlan tag
-    :param autostart: Network autostart (default True)
-    :param start: Network start (default True)
-    :param ipv4_config: IP v4 configuration
+    :param name: Network name.
+    :param bridge: Bridge name.
+    :param forward: Forward mode (bridge, router, nat).
+
+        .. versionchanged:: Aluminium
+           a ``None`` value creates an isolated network with no forwarding at all
+
+    :param vport: Virtualport type.
+        The value can also be a dictionary with ``type`` and ``parameters`` keys.
+        The ``parameters`` value is a dictionary of virtual port parameters.
+
+        .. code-block:: yaml
+
+          - vport:
+              type: openvswitch
+              parameters:
+                interfaceid: 09b11c53-8b5c-4eeb-8f00-d84eaa0aaa4f
+
+        .. versionchanged:: Aluminium
+           possible dictionary value
+
+    :param tag: Vlan tag.
+        The value can also be a dictionary with the ``tags`` and optional ``trunk`` keys.
+        ``trunk`` is a boolean value indicating whether to use VLAN trunking.
+        ``tags`` is a list of dictionaries with keys ``id`` and ``nativeMode``.
+        The ``nativeMode`` value can be one of ``tagged`` or ``untagged``.
+
+        .. code-block:: yaml
+
+          - tag:
+              trunk: True
+              tags:
+                - id: 42
+                  nativeMode: untagged
+                - id: 47
+
+        .. versionchanged:: Aluminium
+           possible dictionary value
+
+    :param autostart: Network autostart (default True).
+    :param start: Network start (default True).
+    :param ipv4_config: IP v4 configuration.
         Dictionary describing the IP v4 setup like IP range and
         a possible DHCP configuration. The structure is documented
         in net-define-ip_.
@@ -6702,7 +7130,7 @@ def network_define(name, bridge, forward, ipv4_config=None, ipv6_config=None, **
         .. versionadded:: 3000
     :type ipv4_config: dict or None
 
-    :param ipv6_config: IP v6 configuration
+    :param ipv6_config: IP v6 configuration.
         Dictionary describing the IP v6 setup like IP range and
         a possible DHCP configuration. The structure is documented
         in net-define-ip_.
@@ -6710,13 +7138,108 @@ def network_define(name, bridge, forward, ipv4_config=None, ipv6_config=None, **
         .. versionadded:: 3000
     :type ipv6_config: dict or None
 
-    :param connection: libvirt connection URI, overriding defaults
-    :param username: username to connect with, overriding defaults
-    :param password: password to connect with, overriding defaults
+    :param connection: libvirt connection URI, overriding defaults.
+    :param username: username to connect with, overriding defaults.
+    :param password: password to connect with, overriding defaults.
+
+    :param mtu: size of the Maximum Transmission Unit (MTU) of the network.
+        (default ``None``)
+
+        .. versionadded:: Aluminium
+
+    :param domain: DNS domain name of the DHCP server.
+        The value is a dictionary with a mandatory ``name`` property and an optional ``localOnly`` boolean one.
+        (default ``None``)
+
+        .. code-block:: yaml
+
+          - domain:
+              name: lab.acme.org
+              localOnly: True
+
+        .. versionadded:: Aluminium
+
+    :param nat: addresses and ports to route in NAT forward mode.
+        The value is a dictionary with optional keys ``address`` and ``port``.
+        Both values are a dictionary with ``start`` and ``end`` values.
+        (default ``None``)
+
+        .. code-block:: yaml
+
+          - forward: nat
+          - nat:
+              address:
+                start: 1.2.3.4
+                end: 1.2.3.10
+              port:
+                start: 500
+                end: 1000
+
+        .. versionadded:: Aluminium
+
+    :param interfaces: whitespace separated list of network interfaces devices that can be used for this network.
+        (default ``None``)
+
+        .. code-block:: yaml
+
+          - forward: passthrough
+          - interfaces: "eth10 eth11 eth12"
+
+        .. versionadded:: Aluminium
+
+    :param addresses: whitespace separated list of addreses of PCI devices that can be used for this network in `hostdev` forward mode.
+        (default ``None``)
+
+        .. code-block:: yaml
+
+          - forward: hostdev
+          - interfaces: "0000:04:00.1 0000:e3:01.2"
+
+        .. versionadded:: Aluminium
+
+    :param physical_function: device name of the physical interface to use in ``hostdev`` forward mode.
+        (default ``None``)
+
+        .. code-block:: yaml
+
+          - forward: hostdev
+          - physical_function: "eth0"
+
+        .. versionadded:: Aluminium
+
+    :param dns: virtual network DNS configuration.
+        The value is a dictionary described in net-define-dns_.
+        (default ``None``)
+
+        .. code-block:: yaml
+
+          - dns:
+              forwarders:
+                - domain: example.com
+                  addr: 192.168.1.1
+                - addr: 8.8.8.8
+                - domain: www.example.com
+              txt:
+                example.com: "v=spf1 a -all"
+                _http.tcp.example.com: "name=value,paper=A4"
+              hosts:
+                192.168.1.2:
+                  - mirror.acme.lab
+                  - test.acme.lab
+              srvs:
+                - name: ldap
+                  protocol: tcp
+                  domain: ldapserver.example.com
+                  target: .
+                  port: 389
+                  priority: 1
+                  weight: 10
+
+        .. versionadded:: Aluminium
 
     .. _net-define-ip:
 
-    ** IP configuration definition
+    .. rubric:: IP configuration definition
 
     Both the IPv4 and IPv6 configuration dictionaries can contain the following properties:
 
@@ -6724,7 +7247,47 @@ def network_define(name, bridge, forward, ipv4_config=None, ipv6_config=None, **
         CIDR notation for the network. For example '192.168.124.0/24'
 
     dhcp_ranges
-        A list of dictionary with ``'start'`` and ``'end'`` properties.
+        A list of dictionaries with ``'start'`` and ``'end'`` properties.
+
+    hosts
+        A list of dictionaries with ``ip`` property and optional ``name``, ``mac`` and ``id`` properties.
+
+        .. versionadded:: Aluminium
+
+    bootp
+        A dictionary with a ``file`` property and an optional ``server`` one.
+
+        .. versionadded:: Aluminium
+
+    tftp
+        The path to the TFTP root directory to serve.
+
+        .. versionadded:: Aluminium
+
+    .. _net-define-dns:
+
+    .. rubric:: DNS configuration definition
+
+    The DNS configuration dictionary contains the following optional properties:
+
+    forwarders
+        List of alternate DNS forwarders to use.
+        Each item is a dictionary with the optional ``domain`` and ``addr`` keys.
+        If both are provided, the requests to the domain are forwarded to the server at the ``addr``.
+        If only ``domain`` is provided the requests matching this domain will be resolved locally.
+        If only ``addr`` is provided all requests will be forwarded to this DNS server.
+
+    txt:
+        Dictionary of TXT fields to set.
+
+    hosts:
+        Dictionary of host DNS entries.
+        The key is the IP of the host, and the value is a list of hostnames for it.
+
+    srvs:
+        List of SRV DNS entries.
+        Each entry is a dictionary with the mandatory ``name`` and ``protocol`` keys.
+        Entries can also have ``target``, ``port``, ``priority`` and ``weight`` optional properties.
 
     CLI Example:
 
@@ -6737,8 +7300,6 @@ def network_define(name, bridge, forward, ipv4_config=None, ipv6_config=None, **
     conn = __get_conn(**kwargs)
     vport = kwargs.get("vport", None)
     tag = kwargs.get("tag", None)
-    autostart = kwargs.get("autostart", True)
-    starting = kwargs.get("start", True)
 
     net_xml = _gen_net_xml(
         name,
@@ -6747,6 +7308,13 @@ def network_define(name, bridge, forward, ipv4_config=None, ipv6_config=None, **
         vport,
         tag=tag,
         ip_configs=[config for config in [ipv4_config, ipv6_config] if config],
+        mtu=mtu,
+        domain=domain,
+        nat=nat,
+        interfaces=interfaces,
+        addresses=addresses,
+        physical_function=physical_function,
+        dns=dns,
     )
     try:
         conn.networkDefineXML(net_xml)
@@ -6766,17 +7334,282 @@ def network_define(name, bridge, forward, ipv4_config=None, ipv6_config=None, **
         conn.close()
         return False
 
-    if (starting is True or autostart is True) and network.isActive() != 1:
+    if (start or autostart) and network.isActive() != 1:
         network.create()
 
-    if autostart is True and network.autostart() != 1:
+    if autostart and network.autostart() != 1:
         network.setAutostart(int(autostart))
-    elif autostart is False and network.autostart() == 1:
+    elif not autostart and network.autostart() == 1:
         network.setAutostart(int(autostart))
 
     conn.close()
 
     return True
+
+
+def _remove_empty_xml_node(node):
+    """
+    Remove the nodes with no children, no text and no attribute
+    """
+    for child in node:
+        if not child.tail and not child.text and not child.items() and not child:
+            node.remove(child)
+        else:
+            _remove_empty_xml_node(child)
+    return node
+
+
+def network_update(
+    name,
+    bridge,
+    forward,
+    ipv4_config=None,
+    ipv6_config=None,
+    vport=None,
+    tag=None,
+    mtu=None,
+    domain=None,
+    nat=None,
+    interfaces=None,
+    addresses=None,
+    physical_function=None,
+    dns=None,
+    test=False,
+    **kwargs
+):
+    """
+    Update a virtual network if needed.
+
+    :param name: Network name.
+    :param bridge: Bridge name.
+    :param forward: Forward mode (bridge, router, nat).
+        A ``None`` value creates an isolated network with no forwarding at all.
+
+    :param vport: Virtualport type.
+        The value can also be a dictionary with ``type`` and ``parameters`` keys.
+        The ``parameters`` value is a dictionary of virtual port parameters.
+
+        .. code-block:: yaml
+
+          - vport:
+              type: openvswitch
+              parameters:
+                interfaceid: 09b11c53-8b5c-4eeb-8f00-d84eaa0aaa4f
+
+    :param tag: Vlan tag.
+        The value can also be a dictionary with the ``tags`` and optional ``trunk`` keys.
+        ``trunk`` is a boolean value indicating whether to use VLAN trunking.
+        ``tags`` is a list of dictionaries with keys ``id`` and ``nativeMode``.
+        The ``nativeMode`` value can be one of ``tagged`` or ``untagged``.
+
+        .. code-block:: yaml
+
+          - tag:
+              trunk: True
+              tags:
+                - id: 42
+                  nativeMode: untagged
+                - id: 47
+
+    :param ipv4_config: IP v4 configuration.
+        Dictionary describing the IP v4 setup like IP range and
+        a possible DHCP configuration. The structure is documented
+        in net-define-ip_.
+
+    :type ipv4_config: dict or None
+
+    :param ipv6_config: IP v6 configuration.
+        Dictionary describing the IP v6 setup like IP range and
+        a possible DHCP configuration. The structure is documented
+        in net-define-ip_.
+
+    :type ipv6_config: dict or None
+
+    :param connection: libvirt connection URI, overriding defaults.
+    :param username: username to connect with, overriding defaults.
+    :param password: password to connect with, overriding defaults.
+
+    :param mtu: size of the Maximum Transmission Unit (MTU) of the network.
+        (default ``None``)
+
+    :param domain: DNS domain name of the DHCP server.
+        The value is a dictionary with a mandatory ``name`` property and an optional ``localOnly`` boolean one.
+        (default ``None``)
+
+        .. code-block:: yaml
+
+          - domain:
+              name: lab.acme.org
+              localOnly: True
+
+    :param nat: addresses and ports to route in NAT forward mode.
+        The value is a dictionary with optional keys ``address`` and ``port``.
+        Both values are a dictionary with ``start`` and ``end`` values.
+        (default ``None``)
+
+        .. code-block:: yaml
+
+          - forward: nat
+          - nat:
+              address:
+                start: 1.2.3.4
+                end: 1.2.3.10
+              port:
+                start: 500
+                end: 1000
+
+    :param interfaces: whitespace separated list of network interfaces devices that can be used for this network.
+        (default ``None``)
+
+        .. code-block:: yaml
+
+          - forward: passthrough
+          - interfaces: "eth10 eth11 eth12"
+
+    :param addresses: whitespace separated list of addreses of PCI devices that can be used for this network in `hostdev` forward mode.
+        (default ``None``)
+
+        .. code-block:: yaml
+
+          - forward: hostdev
+          - interfaces: "0000:04:00.1 0000:e3:01.2"
+
+    :param physical_function: device name of the physical interface to use in ``hostdev`` forward mode.
+        (default ``None``)
+
+        .. code-block:: yaml
+
+          - forward: hostdev
+          - physical_function: "eth0"
+
+    :param dns: virtual network DNS configuration.
+        The value is a dictionary described in net-define-dns_.
+        (default ``None``)
+
+        .. code-block:: yaml
+
+          - dns:
+              forwarders:
+                - domain: example.com
+                  addr: 192.168.1.1
+                - addr: 8.8.8.8
+                - domain: www.example.com
+              txt:
+                example.com: "v=spf1 a -all"
+                _http.tcp.example.com: "name=value,paper=A4"
+              hosts:
+                192.168.1.2:
+                  - mirror.acme.lab
+                  - test.acme.lab
+              srvs:
+                - name: ldap
+                  protocol: tcp
+                  domain: ldapserver.example.com
+                  target: .
+                  port: 389
+                  priority: 1
+                  weight: 10
+
+    .. versionadded:: Aluminium
+    """
+    # Get the current definition to compare the two
+    conn = __get_conn(**kwargs)
+    needs_update = False
+    try:
+        net = conn.networkLookupByName(name)
+        old_xml = ElementTree.fromstring(net.XMLDesc())
+
+        # Compute new definition
+        new_xml = ElementTree.fromstring(
+            _gen_net_xml(
+                name,
+                bridge,
+                forward,
+                vport,
+                tag=tag,
+                ip_configs=[config for config in [ipv4_config, ipv6_config] if config],
+                mtu=mtu,
+                domain=domain,
+                nat=nat,
+                interfaces=interfaces,
+                addresses=addresses,
+                physical_function=physical_function,
+                dns=dns,
+            )
+        )
+
+        elements_to_copy = ["uuid", "mac"]
+        for to_copy in elements_to_copy:
+            element = old_xml.find(to_copy)
+            # mac may not be present (hostdev network for instance)
+            if element is not None:
+                new_xml.insert(1, element)
+
+        # Libvirt adds a connection attribute on running networks, remove before comparing
+        old_xml.attrib.pop("connections", None)
+
+        # Libvirt adds the addresses of the VF devices on running networks with the ph passed
+        # Those need to be removed before comparing
+        if old_xml.find("forward/pf") is not None:
+            forward_node = old_xml.find("forward")
+            address_nodes = forward_node.findall("address")
+            for node in address_nodes:
+                forward_node.remove(node)
+
+        # Remove libvirt auto-added bridge attributes to compare
+        default_bridge_attribs = {"stp": "on", "delay": "0"}
+        old_bridge_node = old_xml.find("bridge")
+        if old_bridge_node is not None:
+            for key, value in default_bridge_attribs.items():
+                if old_bridge_node.get(key, None) == value:
+                    old_bridge_node.attrib.pop(key, None)
+
+            # Libvirt may also add the whole bridge network since the name can be computed
+            # If the bridge name starts with virbr in a nat, route, open or isolated network
+            # there is a good change it has been autogenerated...
+            old_forward = (
+                old_xml.find("forward").get("mode")
+                if old_xml.find("forward") is not None
+                else None
+            )
+            if (
+                old_forward == forward
+                and forward in ["nat", "route", "open", None]
+                and bridge is None
+                and old_bridge_node.get("name", "").startswith("virbr")
+            ):
+                old_bridge_node.attrib.pop("name", None)
+
+        # In the ipv4 address, we need to convert netmask to prefix in the old XML
+        ipv4_nodes = [
+            node
+            for node in old_xml.findall("ip")
+            if node.get("family", "ipv4") == "ipv4"
+        ]
+        for ip_node in ipv4_nodes:
+            netmask = ip_node.attrib.pop("netmask")
+            if netmask:
+                address = ipaddress.ip_network(
+                    "{}/{}".format(ip_node.get("address"), netmask), strict=False
+                )
+                ip_node.set("prefix", str(address.prefixlen))
+
+        # Add default ipv4 family if needed
+        for doc in [old_xml, new_xml]:
+            for node in doc.findall("ip"):
+                if "family" not in node.keys():
+                    node.set("family", "ipv4")
+
+        # Filter out spaces and empty elements since those would mislead the comparison
+        _remove_empty_xml_node(xmlutil.strip_spaces(old_xml))
+        xmlutil.strip_spaces(new_xml)
+
+        needs_update = xmlutil.to_dict(old_xml, True) != xmlutil.to_dict(new_xml, True)
+        if needs_update and not test:
+            conn.networkDefineXML(xmlutil.element_to_str(new_xml))
+    finally:
+        conn.close()
+    return needs_update
 
 
 def list_networks(**kwargs):
@@ -6838,6 +7671,16 @@ def network_info(name=None, **kwargs):
                 lease["type"] = "unknown"
         return leases
 
+    def _net_get_bridge(net):
+        """
+        Get the bridge of the network or None
+        """
+        try:
+            return net.bridgeName()
+        except libvirt.libvirtError as err:
+            # Some network configurations have no bridge
+            return None
+
     try:
         nets = [
             net for net in conn.listAllNetworks() if name is None or net.name() == name
@@ -6845,7 +7688,7 @@ def network_info(name=None, **kwargs):
         result = {
             net.name(): {
                 "uuid": net.UUIDString(),
-                "bridge": net.bridgeName(),
+                "bridge": _net_get_bridge(net),
                 "autostart": net.autostart(),
                 "active": net.isActive(),
                 "persistent": net.isPersistent(),
@@ -7604,37 +8447,12 @@ def pool_update(
             new_xml.insert(1, element)
 
         # Filter out spaces and empty elements like <source/> since those would mislead the comparison
-        def visit_xml(node, fn):
-            fn(node)
-            for child in node:
-                visit_xml(child, fn)
-
-        def space_stripper(node):
-            if node.tail is not None:
-                node.tail = node.tail.strip(" \t\n")
-            if node.text is not None:
-                node.text = node.text.strip(" \t\n")
-
-        visit_xml(old_xml, space_stripper)
-        visit_xml(new_xml, space_stripper)
-
-        def empty_node_remover(node):
-            for child in node:
-                if (
-                    not child.tail
-                    and not child.text
-                    and not child.items()
-                    and not child
-                ):
-                    node.remove(child)
-
-        visit_xml(old_xml, empty_node_remover)
+        _remove_empty_xml_node(xmlutil.strip_spaces(old_xml))
+        xmlutil.strip_spaces(new_xml)
 
         needs_update = xmlutil.to_dict(old_xml, True) != xmlutil.to_dict(new_xml, True)
         if needs_update and not test:
-            conn.storagePoolDefineXML(
-                salt.utils.stringutils.to_str(ElementTree.tostring(new_xml))
-            )
+            conn.storagePoolDefineXML(xmlutil.element_to_str(new_xml))
     finally:
         conn.close()
     return needs_update
