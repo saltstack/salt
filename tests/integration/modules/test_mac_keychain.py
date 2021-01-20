@@ -1,14 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 Validate the mac-keychain module
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
-
 import os
 
 from salt.exceptions import CommandExecutionError
-from salt.ext import six
 from tests.support.case import ModuleCase
 from tests.support.helpers import destructiveTest, runs_on, skip_if_not_root, slowTest
 from tests.support.runtests import RUNTIME_VARS
@@ -69,7 +65,7 @@ class MacKeychainModuleTest(ModuleCase):
 
         # check to ensure the cert was uninstalled
         try:
-            self.assertNotIn(self.cert_alias, six.text_type(certs_list))
+            self.assertNotIn(self.cert_alias, str(certs_list))
         except CommandExecutionError:
             self.run_function("keychain.uninstall", [self.cert_alias])
 

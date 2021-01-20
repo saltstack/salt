@@ -51,12 +51,12 @@ def active(display_progress=False):
         salt-run jobs.active
     """
     ret = {}
-    client = salt.client.get_local_client(__opts__["conf_file"])
-    try:
-        active_ = client.cmd("*", "saltutil.running", timeout=__opts__["timeout"])
-    except SaltClientError as client_error:
-        print(client_error)
-        return ret
+    with salt.client.get_local_client(__opts__["conf_file"]) as client:
+        try:
+            active_ = client.cmd("*", "saltutil.running", timeout=__opts__["timeout"])
+        except SaltClientError as client_error:
+            print(client_error)
+            return ret
 
     if display_progress:
         __jid_event__.fire_event(

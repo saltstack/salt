@@ -1,16 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 Unit Tests for the mac_desktop execution module.
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Salt Libs
 import salt.modules.mac_desktop as mac_desktop
 from salt.exceptions import CommandExecutionError
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
