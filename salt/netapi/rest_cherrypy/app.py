@@ -75,12 +75,12 @@ A REST API for Salt
     debug : ``False``
         Starts the web server in development mode. It will reload itself when
         the underlying code is changed and will output more debugging info.
-    log.access_file
+    log_access_file
         Path to a file to write HTTP access logs.
 
         .. versionadded:: 2016.11.0
 
-    log.error_file
+    log_error_file
         Path to a file to write HTTP error logs.
 
         .. versionadded:: 2016.11.0
@@ -2354,25 +2354,25 @@ class Events:
             """
             An iterator to yield Salt events
             """
-            event = salt.utils.event.get_event(
+            with salt.utils.event.get_event(
                 "master",
                 sock_dir=self.opts["sock_dir"],
                 transport=self.opts["transport"],
                 opts=self.opts,
                 listen=True,
-            )
-            stream = event.iter_events(full=True, auto_reconnect=True)
+            ) as event:
+                stream = event.iter_events(full=True, auto_reconnect=True)
 
-            yield "retry: 400\n"  # future lint: disable=blacklisted-function
+                yield "retry: 400\n"  # future lint: disable=blacklisted-function
 
-            while True:
-                data = next(stream)
-                yield "tag: {}\n".format(
-                    data.get("tag", "")
-                )  # future lint: disable=blacklisted-function
-                yield "data: {}\n\n".format(
-                    salt.utils.json.dumps(data)
-                )  # future lint: disable=blacklisted-function
+                while True:
+                    data = next(stream)
+                    yield "tag: {}\n".format(
+                        data.get("tag", "")
+                    )  # future lint: disable=blacklisted-function
+                    yield "data: {}\n\n".format(
+                        salt.utils.json.dumps(data)
+                    )  # future lint: disable=blacklisted-function
 
         return listen()
 
@@ -2534,38 +2534,38 @@ class WebsocketEndpoint:
             # blocks until send is called on the parent end of this pipe.
             pipe.recv()
 
-            event = salt.utils.event.get_event(
+            with salt.utils.event.get_event(
                 "master",
                 sock_dir=self.opts["sock_dir"],
                 transport=self.opts["transport"],
                 opts=self.opts,
                 listen=True,
-            )
-            stream = event.iter_events(full=True, auto_reconnect=True)
-            SaltInfo = event_processor.SaltInfo(handler)
+            ) as event:
+                stream = event.iter_events(full=True, auto_reconnect=True)
+                SaltInfo = event_processor.SaltInfo(handler)
 
-            def signal_handler(signal, frame):
-                os._exit(0)
+                def signal_handler(signal, frame):
+                    os._exit(0)
 
-            signal.signal(signal.SIGTERM, signal_handler)
+                signal.signal(signal.SIGTERM, signal_handler)
 
-            while True:
-                data = next(stream)
-                if data:
-                    try:  # work around try to decode catch unicode errors
-                        if "format_events" in kwargs:
-                            SaltInfo.process(data, salt_token, self.opts)
-                        else:
-                            handler.send(
-                                "data: {}\n\n".format(
-                                    salt.utils.json.dumps(data)
-                                ),  # future lint: disable=blacklisted-function
-                                False,
+                while True:
+                    data = next(stream)
+                    if data:
+                        try:  # work around try to decode catch unicode errors
+                            if "format_events" in kwargs:
+                                SaltInfo.process(data, salt_token, self.opts)
+                            else:
+                                handler.send(
+                                    "data: {}\n\n".format(
+                                        salt.utils.json.dumps(data)
+                                    ),  # future lint: disable=blacklisted-function
+                                    False,
+                                )
+                        except UnicodeDecodeError:
+                            logger.error(
+                                "Error: Salt event has non UTF-8 data:\n{}".format(data)
                             )
-                    except UnicodeDecodeError:
-                        logger.error(
-                            "Error: Salt event has non UTF-8 data:\n{}".format(data)
-                        )
 
         parent_pipe, child_pipe = Pipe()
         handler.pipe = parent_pipe

@@ -1,13 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 Watch for pkgs that have upgrades, then fire an event.
 
 .. versionadded:: 2016.3.0
 """
-
-# Import python libs
-from __future__ import absolute_import, unicode_literals
-
 import logging
 
 __virtualname__ = "pkg"

@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
 """
     tests.integration.shell.master_tops
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import pytest
 from tests.support.case import ShellCase

@@ -10,12 +10,14 @@ import salt.utils.files
 import salt.utils.platform
 import salt.utils.pycrypto
 import salt.utils.yaml
-from tests.support.helpers import slowTest
+
+pytestmark = [
+    pytest.mark.slow_test,
+    pytest.mark.windows_whitelisted,
+]
 
 USERA = "saltdev-runner"
 USERA_PWD = "saltdev"
-
-pytestmark = pytest.mark.windows_whitelisted
 
 
 @pytest.fixture(scope="module")
@@ -43,7 +45,6 @@ def salt_run_cli(salt_master):
     return salt_master.get_salt_run_cli(default_timeout=120)
 
 
-@slowTest
 def test_in_docs(salt_run_cli):
     """
     test the salt-run docs system
@@ -58,7 +59,6 @@ def test_in_docs(salt_run_cli):
     assert "network.wollist:" in ret.stdout
 
 
-@slowTest
 def test_not_in_docs(salt_run_cli):
     """
     test the salt-run docs system
@@ -67,7 +67,6 @@ def test_not_in_docs(salt_run_cli):
     assert "jobs.SaltException:" not in ret.stdout
 
 
-@slowTest
 def test_salt_documentation_too_many_arguments(salt_run_cli):
     """
     Test to see if passing additional arguments shows an error
@@ -77,7 +76,6 @@ def test_salt_documentation_too_many_arguments(salt_run_cli):
     assert "You can only get documentation for one method at one time" in ret.stderr
 
 
-@slowTest
 def test_exit_status_unknown_argument(salt_run_cli):
     """
     Ensure correct exit status when an unknown argument is passed to salt-run.
@@ -88,7 +86,6 @@ def test_exit_status_unknown_argument(salt_run_cli):
     assert "no such option: --unknown-argument" in ret.stderr
 
 
-@slowTest
 def test_exit_status_correct_usage(salt_run_cli):
     """
     Ensure correct exit status when salt-run starts correctly.
@@ -97,7 +94,6 @@ def test_exit_status_correct_usage(salt_run_cli):
     assert ret.exitcode == salt.defaults.exitcodes.EX_OK, ret
 
 
-@slowTest
 @pytest.mark.skip_if_not_root
 @pytest.mark.parametrize("flag", ["--auth", "--eauth", "--external-auth", "-a"])
 @pytest.mark.skip_on_windows(reason="PAM is not supported on Windows")
@@ -124,7 +120,6 @@ def test_salt_run_with_eauth_all_args(salt_run_cli, saltdev_account, flag):
     assert ret.json == expected, ret
 
 
-@slowTest
 @pytest.mark.skip_if_not_root
 @pytest.mark.skip_on_windows(reason="PAM is not supported on Windows")
 def test_salt_run_with_eauth_bad_passwd(salt_run_cli, saltdev_account):
@@ -148,7 +143,6 @@ def test_salt_run_with_eauth_bad_passwd(salt_run_cli, saltdev_account):
     )
 
 
-@slowTest
 def test_salt_run_with_wrong_eauth(salt_run_cli):
     """
     test salt-run with wrong eauth parameter

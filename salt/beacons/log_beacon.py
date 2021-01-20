@@ -4,15 +4,10 @@ Beacon to fire events at specific log messages.
 .. versionadded:: 2017.7.0
 
 """
-
-# Import Python libs
-
 import logging
 
-# Import salt libs
 import salt.utils.files
 import salt.utils.platform
-from salt.ext.six.moves import map
 
 try:
     import re
