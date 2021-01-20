@@ -6,7 +6,7 @@
 #
 backports.functools-lru-cache==1.5  # via cheroot
 certifi==2020.6.20        # via requests
-cffi==1.14.3              # via cryptography
+cffi==1.14.4              # via cryptography
 chardet==3.0.4            # via requests
 cheroot==6.5.4            # via cherrypy
 cherrypy==17.4.1
