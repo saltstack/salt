@@ -2021,12 +2021,35 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                             ret.update({"comment": comt, "result": True, "changes": {}})
                             self.assertDictEqual(filestate.uncomment(name, regex), ret)
 
+    # 'append' function tests: 1
+
+    def test_append(self):
+        """
+        Test to ensure that some text appears at the end of a file.
+        """
+        self.add_line_to_file()
+
     # 'prepend' function tests: 1
 
     def test_prepend(self):
         """
         Test to ensure that some text appears at the beginning of a file.
         """
+        self.add_line_to_file(prepend=True)
+
+    def add_line_to_file(self, prepend=False):
+        """
+        Test prepending and appending a line to a file
+
+        Both file.prepend() and file.append() have a near identical
+        set of arguments.
+        """
+        state_module = "file.append"
+        test_fun = filestate.append
+        if prepend:
+            state_module = "file.prepend"
+            test_fun = filestate.prepend
+
         name = "/tmp/etc/motd"
         if salt.utils.platform.is_windows():
             name = "c:\\tmp\\etc\\motd"
@@ -2037,15 +2060,13 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
         ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
-        comt = "Must provide name to file.prepend"
+        comt = "Must provide name to {}".format(state_module)
         ret.update({"comment": comt, "name": ""})
-        self.assertDictEqual(filestate.prepend(""), ret)
+        self.assertDictEqual(test_fun(""), ret)
 
         comt = "source and sources are mutually exclusive"
         ret.update({"comment": comt, "name": name})
-        self.assertDictEqual(
-            filestate.prepend(name, source=source, sources=sources), ret
-        )
+        self.assertDictEqual(test_fun(name, source=source, sources=sources), ret)
 
         mock_t = MagicMock(return_value=True)
         mock_f = MagicMock(return_value=False)
@@ -2057,7 +2078,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                 "file.stats": mock_f,
                 "cp.get_template": mock_f,
                 "file.search": mock_f,
-                "file.prepend": mock_t,
+                state_module: mock_t,
             },
         ):
             comt = (
@@ -2068,18 +2089,18 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                 comt = 'The directory "c:\\tmp\\etc" will be changed'
                 changes = {"c:\\tmp\\etc": {"directory": "new"}}
             ret.update({"comment": comt, "name": name, "changes": changes})
-            self.assertDictEqual(filestate.prepend(name, makedirs=True), ret)
+            self.assertDictEqual(test_fun(name, makedirs=True), ret)
 
             with patch.object(os.path, "isabs", mock_f):
                 comt = "Specified file {} is not an absolute path".format(name)
                 ret.update({"comment": comt, "changes": {}})
-                self.assertDictEqual(filestate.prepend(name), ret)
+                self.assertDictEqual(test_fun(name), ret)
 
             with patch.object(os.path, "isabs", mock_t):
                 with patch.object(os.path, "exists", mock_t):
                     comt = "Failed to load template file {}".format(source)
                     ret.update({"comment": comt, "name": source, "data": []})
-                    self.assertDictEqual(filestate.prepend(name, source=source), ret)
+                    self.assertDictEqual(test_fun(name, source=source), ret)
 
                     ret.pop("data", None)
                     ret.update({"name": name})
@@ -2093,12 +2114,12 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                 ret.update(
                                     {"comment": comt, "result": None, "changes": change}
                                 )
-                                self.assertDictEqual(
-                                    filestate.prepend(name, text=text), ret
-                                )
+                                self.assertDictEqual(test_fun(name, text=text), ret)
 
                             with patch.dict(filestate.__opts__, {"test": False}):
-                                comt = "Prepended 1 lines"
+                                comt = "Appended 1 lines"
+                                if prepend:
+                                    comt = comt.replace("Appended", "Prepended")
                                 ret.update(
                                     {"comment": comt, "result": True, "changes": {}}
                                 )
