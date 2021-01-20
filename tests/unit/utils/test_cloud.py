@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
@@ -8,23 +7,16 @@
 
     Test the salt-cloud utilities module
 """
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import os
 import shutil
 import tempfile
 
-# Import salt libs
 import salt.utils.cloud as cloud
 import salt.utils.platform
-from salt.ext import six
 
-# Import Salt Testing libs
-from tests.support.runtests import RUNTIME_VARS
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import SkipTest, TestCase, skipIf
 
 
@@ -151,8 +143,7 @@ class CloudUtilsTestCase(TestCase, LoaderModuleMockMixin):
             cloud.sftp_file("/tmp/test", "ТЕСТ test content")
         # we successful pass the place with os.write(tmpfd, ...
         self.assertNotEqual(
-            "a bytes-like object is required, not 'str'",
-            six.text_type(context.exception),
+            "a bytes-like object is required, not 'str'", str(context.exception),
         )
 
     @skipIf(salt.utils.platform.is_windows(), "Not applicable to Windows")
@@ -176,7 +167,8 @@ class CloudUtilsTestCase(TestCase, LoaderModuleMockMixin):
         """
         mock_true = MagicMock(return_value=True)
         mock_tuple = MagicMock(return_value=(0, 0, 0))
-        with patch('salt.utils.smb.get_conn', MagicMock()) as mock,\
+        # fmt: off
+        with patch("salt.utils.smb.get_conn", MagicMock()) as mock,\
                 patch("salt.utils.smb.mkdirs", MagicMock()), \
                 patch("salt.utils.smb.put_file", MagicMock()), \
                 patch("salt.utils.smb.delete_file", MagicMock()), \
@@ -189,6 +181,7 @@ class CloudUtilsTestCase(TestCase, LoaderModuleMockMixin):
 
             cloud.deploy_windows(host="test", win_installer="")
             mock.assert_called_once_with("test", "Administrator", None, 445)
+        # fmt: on
 
     def test_deploy_windows_custom_port(self):
         """
@@ -196,7 +189,8 @@ class CloudUtilsTestCase(TestCase, LoaderModuleMockMixin):
         """
         mock_true = MagicMock(return_value=True)
         mock_tuple = MagicMock(return_value=(0, 0, 0))
-        with patch('salt.utils.smb.get_conn', MagicMock()) as mock, \
+        # fmt: off
+        with patch("salt.utils.smb.get_conn", MagicMock()) as mock, \
                 patch("salt.utils.smb.mkdirs", MagicMock()), \
                 patch("salt.utils.smb.put_file", MagicMock()), \
                 patch("salt.utils.smb.delete_file", MagicMock()), \
@@ -209,3 +203,4 @@ class CloudUtilsTestCase(TestCase, LoaderModuleMockMixin):
 
             cloud.deploy_windows(host="test", port=1234, win_installer="")
             mock.assert_called_once_with("test", "Administrator", None, 1234)
+        # fmt: on
