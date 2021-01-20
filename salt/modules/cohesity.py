@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 This module have been tested on Cohesity API v1.
 :depends: cohesity_management_sdk,
@@ -37,24 +36,20 @@ from cohesity_management_sdk.models.environment_register_protection_source_param
 from cohesity_management_sdk.models.protection_job_request_body import (
     ProtectionJobRequestBody,
 )
-from cohesity_management_sdk.models.recover_task_request import (
-    RecoverTaskRequest,
-)
-from cohesity_management_sdk.models.restore_object_details import (
-    RestoreObjectDetails,
-)
-from cohesity_management_sdk.models.run_protection_job_param import (
-    RunProtectionJobParam,
-)
+from cohesity_management_sdk.models.recover_task_request import RecoverTaskRequest
 from cohesity_management_sdk.models.register_protection_source_parameters import (
     RegisterProtectionSourceParameters,
 )
-from cohesity_management_sdk.models.universal_id import UniversalId
-from cohesity_management_sdk.models.vmware_restore_parameters import (
-    VmwareRestoreParameters,
+from cohesity_management_sdk.models.restore_object_details import RestoreObjectDetails
+from cohesity_management_sdk.models.run_protection_job_param import (
+    RunProtectionJobParam,
 )
+from cohesity_management_sdk.models.universal_id import UniversalId
 from cohesity_management_sdk.models.update_protection_jobs_state_request_body import (
     UpdateProtectionJobsStateRequestBody,
+)
+from cohesity_management_sdk.models.vmware_restore_parameters import (
+    VmwareRestoreParameters,
 )
 
 logger = logging.getLogger(__name__)
@@ -81,7 +76,7 @@ def get_sd_id(name):
     Function to fetch storage domain available in the cluster.
     : return storage domain id.
     """
-    logger.info("Getting sorage domain with name %s" % name)
+    logger.info("Getting sorage domain with name {}".format(name))
     resp = cohesity_client.view_boxes.get_view_boxes(names=name)
     if resp:
         return resp[0].id
@@ -92,7 +87,7 @@ def get_policy_id(name):
     Function to fetch policy available in the cluster.
     : return policy id.
     """
-    logger.info("Getting policy with name %s" % name)
+    logger.info("Getting policy with name {}".format(name))
     resp = cohesity_client.protection_policies.get_protection_policies(names=name)
     if resp:
         return resp[0].id
@@ -109,23 +104,26 @@ def get_vmware_source_ids(name, vm_list):
     try:
         result = cohesity_client.protection_sources.list_protection_sources_root_nodes(
             environments=env_enum.K_VMWARE
-    )
+        )
         for each_source in result:
             if each_source.registration_info.access_info.endpoint == name:
                 parent_id = each_source.protection_source.id
         if parent_id == -1:
-            logger.error("Vcenter %s not available in the cluster" % name)
+            logger.error("Vcenter {} not available in the cluster".format(name))
             exit()
         vms = cohesity_client.protection_sources.list_virtual_machines(
-            v_center_id=parent_id, names=vm_list)
+            v_center_id=parent_id, names=vm_list
+        )
         vm_names = [vm_list] if type(vm_list) == str else copy.deepcopy(vm_list)
         for vm in vms:
             vm_names.remove(vm.name)
             source_id_list.append(vm.id)
         if vm_names:
-            return "Following list of vms %s are not available in vcenter, " \
-            "please make sure the virtual machine names are correct" \
-            % ",".join(vm_names)
+            return (
+                "Following list of vms {} are not available in vcenter, " 
+                "please make sure the virtual machine names are correct" 
+               .format(",".join(vm_names))
+            )
         return parent_id, source_id_list
     except APIException as err:
         logger.error(err)
@@ -141,10 +139,11 @@ def register_vcenter(vcenter, username, password):
     """
     try:
         existing_sources = cohesity_client.protection_sources.list_protection_sources_root_nodes(
-            environment=env_enum.K_VMWARE)
+            environment=env_enum.K_VMWARE
+        )
         for source in existing_sources:
             if source.registration_info.access_info.endpoint == vcenter:
-                return "Source with name %s is already registered" % vcenter
+                return "Source with name {} is already registered".format(vcenter)
         body = RegisterProtectionSourceParameters()
         body.endpoint = vcenter
         body.environment = env_enum.K_VMWARE
@@ -152,7 +151,7 @@ def register_vcenter(vcenter, username, password):
         body.password = password
         body.vmware_type = "kVCenter"
         cohesity_client.protection_sources.create_register_protection_source(body)
-        return "Successfully registered Vcenter %s" % vcenter
+        return "Successfully registered Vcenter {}".format(vcenter)
     except Exception as err:
         logger.error(err)
         return str(err)
@@ -167,7 +166,7 @@ def create_vmware_protection_job(
     pause_job=True,
     timezone="Europe/Berlin",
     description="",
-    ):
+):
     """
     Create Virtual Protection Source
     :param jobname
@@ -186,7 +185,7 @@ def create_vmware_protection_job(
             names=job_name, is_deleted=False
         )
         if resp and resp[0].name == job_name:
-            return "Job with name %s already exists." % job_name
+            return "Job with name {} already exists.".format(job_name)
         body = ProtectionJobRequestBody()
         body.name = job_name
         body.description = description
@@ -199,20 +198,21 @@ def create_vmware_protection_job(
             vcenter_name, sources
         )
         if body.parent_source_id == -1:
-            return "Unable to fetch Vcenter with name %s" % vcenter_name
+            return "Unable to fetch Vcenter with name {}".format(vcenter_name)
         elif len(body.source_ids) == 0:
             return "Minimum of one VM is required to created protection job."\
-                " Unable to find atleast provided VMs %s in the Vcenter %s" \
-                % (",".join(sources), vcenter_name)
+                " Unable to find atleast provided VMs {} in the Vcenter {}" \
+                .format(",".join(sources), vcenter_name)
         else:
             resp = cohesity_client.protection_jobs.create_protection_job(body)
             if pause_job:
                 # Pause the job.
                 jobstate_body = ChangeProtectionJobStateParam()
                 jobstate_body.pause = pause_job
-                resp = cohesity_client.protection_jobs.\
-                    change_protection_job_state(resp.id, jobstate_body)
-            return "Successfully created ProtectionGroup: %s" % body.name
+                resp = cohesity_client.protection_jobs.change_protection_job_state(
+                    resp.id, jobstate_body
+                )
+            return "Successfully created ProtectionGroup: {}".format(body.name)
     except APIException as err:
         return "Error creating job {} {}".format(body.name, err)
     except Exception as err:
@@ -221,16 +221,17 @@ def create_vmware_protection_job(
 
 def update_vmware_protection_job(
     job_name, vcenter_name, sources, replace_existing=True
-    ):
+):
     """
     Function to update vmware protection job, updatee virtual machines
     available in the job.
     """
     try:
         resp = cohesity_client.protection_jobs.get_protection_jobs(
-            is_deleted=False, names=job_name)
+            is_deleted=False, names=job_name
+        )
         if not resp:
-            return "Job with name %s not available" % job_name
+            return "Job with name {} not available".format(job_name)
         body = resp[0]
         job_id = body.id
         _, new_source_ids = get_vmware_source_ids(vcenter_name, sources)
@@ -239,7 +240,7 @@ def update_vmware_protection_job(
             if source_id not in body.source_ids:
                 body.source_ids.append(source_id)
         cohesity_client.protection_jobs.update_protection_job(body, job_id)
-        return "Successfully Updated ProtectionGroup: %s" % body.name
+        return "Successfully Updated ProtectionGroup: {}".format(body.name)
     except Exception as err:
         return "Error updating job {} {}".format(job_name, err)
 
@@ -253,7 +254,7 @@ def update_vmware_protection_job_state(job_name, state):
         jobs = cohesity_client.protection_jobs.get_protection_jobs(
             is_deleted=False, names=job_name)
         if not jobs:
-            return "Job with name %s not available." % job_name
+            return "Job with name {} not available.".format(job_name)
         for job in jobs:
             if job.name == job_name:
                 job_id = job.id
@@ -261,15 +262,19 @@ def update_vmware_protection_job_state(job_name, state):
         body = UpdateProtectionJobsStateRequestBody()
         supported_states = ["activate", "deactivate", "pause", "resume"]
         if state not in supported_states:
-            return "Job state %s not supported. Please provide one of the " \
-                   "following states %s" % ", ".join(supported_states)
+            return (
+                "Job state {} not supported. Please provide one of the " 
+                "following states {}".format(", ".join(supported_states))
+            )
         body.action = "k" + state.capitalize()
         body.job_ids = [job_id]
         cohesity_client.protection_jobs.update_protection_jobs_state(body)
         return "Successfully {}d future run for job {}".format(state, job_name)
     except Exception as err:
-        return "Error while attempting to {} the job {} {}".format(
+        return (
+            "Error while attempting to {} the job {} {}".format(
             state, job_name, err)
+        )
 
 
 def cancel_vmware_protection_job(job_name):
@@ -278,31 +283,32 @@ def cancel_vmware_protection_job(job_name):
     """
     try:
         jobs = cohesity_client.protection_jobs.get_protection_jobs(
-            is_deleted=False, names=job_name)
+            is_deleted=False, names=job_name
+        )
         if not jobs:
-            return "Job with name %s not available." % job_name
+            return "Job with name {} not available.".format(job_name)
         for job in jobs:
             if job.name == job_name:
                 job_id = job.id
                 break
         if not job_id:
-            return "Job with name %s not available." % job_name
+            return "Job with name {} not available.".format(job_name)
         # Get recent job run id and status.
         runs = cohesity_client.protection_runs.get_protection_runs(job_id=job_id)
         if not runs:
-            return "Job run details not available for job %s" % job_name
+            return "Job run details not available for job {}".format(job_name)
         latest_run = runs[0]
         if latest_run.backup_run.status not in ["kRunning", "kAccepted"]:
-            return "No active job run available for job %s" % job_name
+            return "No active job run available for job {}".format(job_name)
         run_id = latest_run.backup_run.job_run_id
         body = CancelProtectionJobRunParam()
         body.job_run_id = run_id
-        cohesity_client.protection_runs.create_cancel_protection_job_run(
-            job_id, body)
-        return "Successfully cancelled the run for job %s" % (job_name)
+        cohesity_client.protection_runs.create_cancel_protection_job_run(job_id, body)
+        return "Successfully cancelled the run for job {}" .format(job_name)
     except Exception as err:
         return "Error while attempting to cancel the job {}, error : {}".format(
-            job_name, err)
+            job_name, err
+        )
 
 
 def run_vmware_protection_job(job_name):
@@ -311,19 +317,20 @@ def run_vmware_protection_job(job_name):
     """
     try:
         jobs = cohesity_client.protection_jobs.get_protection_jobs(
-            is_deleted=False, names=job_name)
+            is_deleted=False, names=job_name
+        )
         if not jobs:
-            return "Job with name %s not available." % job_name
+            return "Job with name {} not available.".format(job_name)
         for job in jobs:
             if job.name == job_name:
                 job_id = job.id
                 break
         if not job_id:
-            return "Job with name %s not available." % job_name
+            return "Job with name {} not available.".format(job_name)
         # Get recent job run id and status.
         body = RunProtectionJobParam()
         cohesity_client.protection_jobs.create_run_protection_job(job_id, body)
-        return "Successfully started run for job %s" % (job_name)
+        return "Successfully started run for job {}" .format(job_name)
     except Exception as err:
         return "Error while attempting to start the job {}, error : {}".format(
             job_name, err)
@@ -337,22 +344,23 @@ def delete_vmware_protection_job(job_name, delete_snapshots=True):
         jobs = cohesity_client.protection_jobs.get_protection_jobs(
             is_deleted=False, names=job_name)
         if not jobs:
-            return "Job with name %s not available." % job_name
+            return "Job with name {} not available.".format(job_name)
         for job in jobs:
             if job.name == job_name:
                 job_id = job.id
                 break
         if not job_id:
-            return "Job with name %s not available." % job_name
+            return "Job with name {} not available.".format(job_name)
         # Get recent job run id and status.
         body = DeleteProtectionJobParam()
         body.delete_snapshots = delete_snapshots
         cohesity_client.protection_jobs.delete_protection_job(
                job_id, body)
-        return "Successfully deleted job %s" % (job_name)
+        return "Successfully deleted job {}" .format(job_name)
     except Exception as err:
         return "Error while attempting to delete the job {}, error : {}".format(
-            job_name, err)
+            job_name, err
+        )
 
 
 def fetch_source_objects(source_objects, source_type, name=None):
@@ -366,8 +374,8 @@ def fetch_source_objects(source_objects, source_type, name=None):
                 nodes.extend(node["nodes"])
             else:
                 if (
-                    node["protectionSource"]["vmWareProtectionSource"][
-                    "type"] == source_type
+                    node["protectionSource"]["vmWareProtectionSource"]["type"]
+                    == source_type
                 ):
                     obj_name = node["protectionSource"]["name"]
                     if not name:
@@ -387,7 +395,7 @@ def restore_vms(
     prefix="",
     suffix="",
     powered_on=True
-    ):
+):
     """
     Function to recover vm.
     """
@@ -398,8 +406,7 @@ def restore_vms(
         body.new_parent_id = parent_id
         body.type = "kRecoverVMs"
         body.objects = []
-        source_objects = \
-            cohesity_client.protection_sources.list_protection_sources(
+        source_objects = cohesity_client.protection_sources.list_protection_sources(
             id=parent_id,
             include_datastores=True,
             exclude_types=["kHostSystem", "kVirtualMachine"],
@@ -409,12 +416,13 @@ def restore_vms(
             source_objects, "kResourcePool", resource_pool
         )
         datastore_id = fetch_source_objects(
-            source_objects, "kDatastore", datastore_name)
+            source_objects, "kDatastore", datastore_name
+        )
         # Fetch the latest snapshot details.
         resp = cohesity_client.restore_tasks.search_objects(
             search=vm_names[0],
             environments=env_enum.K_VMWARE,
-            registered_source_ids=parent_id
+            registered_source_ids=parent_id,
         )
         snapshots = resp.object_snapshot_info
         timestamp = 0
@@ -445,6 +453,6 @@ def restore_vms(
         vmware_params.suffix = suffix
         body.vmware_parameters = vmware_params
         cohesity_client.restore_tasks.create_recover_task(body)
-        return "Successfully created restore task %s " % task_name
+        return "Successfully created restore task {} ".format(task_name)
     except Exception as err:
         return str(err)
