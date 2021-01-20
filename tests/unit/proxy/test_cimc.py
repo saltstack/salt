@@ -99,7 +99,7 @@ def http_query_response(*args, data=None, **kwargs):
         response = CONFIG_CON_MO_RESPONSE
     else:
         response = ""
-    return {"text": response}
+    return {"text": response, "status": 200}
 
 
 class CIMCProxyTestCase(TestCase, LoaderModuleMockMixin):
