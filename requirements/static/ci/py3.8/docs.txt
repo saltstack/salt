@@ -8,6 +8,7 @@ alabaster==0.7.12         # via sphinx
 babel==2.7.0              # via sphinx
 certifi==2019.3.9         # via requests
 chardet==3.0.4            # via requests
+cohesity_management_sdk==1.5.2
 docutils==0.15.2          # via sphinx
 idna==2.8                 # via requests
 imagesize==1.1.0          # via sphinx
