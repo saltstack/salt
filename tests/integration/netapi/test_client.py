@@ -125,12 +125,53 @@ class NetapiClientTest(TestCase):
     def test_wheel_async(self):
         # Give this test a little breathing room
         time.sleep(3)
-        low = {'client': 'wheel_async', 'fun': 'key.list_all'}
-        low.update(self.eauth_creds)
+        timeout = 60
+        opts = salt.config.master_config(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'master'))
+        with salt.utils.event.get_event("master", opts=opts) as event:
+            low = {"client": "wheel_async", "fun": "key.list_all"}
+            low.update(self.eauth_creds)
 
-        ret = self.netapi.run(low)
-        self.assertIn('jid', ret)
-        self.assertIn('tag', ret)
+            ret = self.netapi.run(low)
+            self.assertIn("jid", ret)
+            self.assertIn("tag", ret)
+            jid = ret['jid']
+            start = time.time()
+            found_return = False
+            while time.time() - start <= timeout:
+                evt = event.get_event(tag=ret['tag'])
+                if evt is None:
+                    continue
+                assert 'error' not in evt
+                if 'return' in evt:
+                    found_return = True
+                    assert evt['success'] is True
+                    break
+            assert found_return is True
+
+    def test_wheel_async_unauthenticated(self):
+        """
+        This is a test for CVE-2021-25281
+        """
+        # Give this test a little breathing room
+        time.sleep(3)
+        opts = salt.config.master_config(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'master'))
+        with salt.utils.event.get_event("master", opts=opts) as event:
+            low = {"client": "wheel_async", "fun": "key.list_all"}
+            low.update({
+                "eauth": "pam",
+                "username": "notvalid",
+                "password": "notvalid",
+            })
+            ret = self.netapi.run(low)
+            self.assertIn("jid", ret)
+            self.assertIn("tag", ret)
+            jid = ret['jid']
+            evt = event.get_event(tag=ret['tag'])
+            assert 'error' in evt
+            assert evt['error'] == {
+                'name': 'EauthAuthenticationError',
+                'message': 'Authentication failure of type "eauth" occurred for user notvalid.'
+            }
 
     def test_wheel_unauthenticated(self):
         low = {'client': 'wheel', 'tgt': '*', 'fun': 'test.ping'}

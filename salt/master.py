@@ -1994,6 +1994,7 @@ class ClearFuncs(TransportMethods):
         '''
         Send a master control function back to the wheel system
         '''
+        jid = clear_load.get('__jid__', salt.utils.jid.gen_jid(self.opts))
         # All wheel ops pass through eauth
         auth_type, err_name, key, sensitive_load_keys = self._prep_auth_info(clear_load)
 
@@ -2003,6 +2004,8 @@ class ClearFuncs(TransportMethods):
 
         if error:
             # Authentication error occurred: do not continue.
+            data = {'error': error, 'jid': jid}
+            self.event.fire_event(data, tagify([jid, "new"], "wheel"))
             return {'error': error}
 
         # Authorize
@@ -2014,9 +2017,14 @@ class ClearFuncs(TransportMethods):
                 clear_load.get('kwarg', {})
             )
             if not wheel_check:
-                return {'error': {'name': err_name,
-                                  'message': 'Authentication failure of type "{0}" occurred for '
-                                             'user {1}.'.format(auth_type, username)}}
+                err_data = {
+                    'name': err_name,
+                    'message': 'Authentication failure of type "{0}" occurred for '
+                    'user {1}.'.format(auth_type, username)
+                }
+                data = {'error': err_data, 'jid': jid}
+                self.event.fire_event(data, tagify([jid, "new"], "wheel"))
+                return {'error': err_data}
             elif isinstance(wheel_check, dict) and 'error' in wheel_check:
                 # A dictionary with an error name/message was handled by ckminions.wheel_check
                 return wheel_check
@@ -2034,7 +2042,6 @@ class ClearFuncs(TransportMethods):
 
         # Authorized. Do the job!
         try:
-            jid = salt.utils.jid.gen_jid(self.opts)
             fun = clear_load.pop('fun')
             tag = tagify(jid, prefix='wheel')
             data = {'fun': "wheel.{0}".format(fun),
