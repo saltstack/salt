@@ -1,19 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 Beacon to emit system load averages
 """
-
-# Import Python libs
-from __future__ import absolute_import, unicode_literals
-
 import logging
 import os
 
-# Import Salt libs
 import salt.utils.platform
-
-# Import Py3 compat
-from salt.ext.six.moves import map, zip
 
 log = logging.getLogger(__name__)
 

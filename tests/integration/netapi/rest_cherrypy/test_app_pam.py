@@ -1,8 +1,6 @@
-# coding: utf-8
 """
 Integration Tests for restcherry salt-api with pam eauth
 """
-from __future__ import absolute_import
 
 import salt.utils.platform
 import tests.support.cherrypy_testclasses as cptc
@@ -16,7 +14,7 @@ from tests.support.unit import skipIf
 if cptc.HAS_CHERRYPY:
     import cherrypy
 
-USERA = "saltdev"
+USERA = "saltdev-netapi"
 USERA_PWD = "saltdev"
 HASHED_USERA_PWD = "$6$SALTsalt$ZZFD90fKFWq8AGmmX0L3uBtS9fXL62SrTk5zcnQ6EkD6zoiM3kB88G1Zvs0xm/gZ7WXJRs5nsTBybUvGSqZkT."
 
@@ -32,7 +30,7 @@ class TestAuthPAM(cptc.BaseRestCherryPyTest, ModuleCase):
     @destructiveTest
     @skip_if_not_root
     def setUp(self):
-        super(TestAuthPAM, self).setUp()
+        super().setUp()
         try:
             add_user = self.run_function("user.add", [USERA], createhome=False)
             add_pwd = self.run_function(
@@ -130,7 +128,7 @@ class TestAuthPAM(cptc.BaseRestCherryPyTest, ModuleCase):
         """
         Clean up after tests. Delete user
         """
-        super(TestAuthPAM, self).tearDown()
+        super().tearDown()
         user_list = self.run_function("user.list_users")
         # Remove saltdev user
         if USERA in user_list:

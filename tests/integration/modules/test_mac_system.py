@@ -1,12 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 integration tests for mac_system
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
+import pytest
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
     destructiveTest,
@@ -30,6 +29,7 @@ SET_SUBNET_NAME = random_string("RS-", lowercase=False)
 @flaky(attempts=10)
 @runs_on(kernel="Darwin")
 @skip_if_binaries_missing("systemsetup")
+@pytest.mark.usefixtures("salt_sub_minion")
 class MacSystemModuleTest(ModuleCase):
     """
     Validate the mac_system module

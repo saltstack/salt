@@ -1,8 +1,6 @@
 """
 Tests for the file state
 """
-
-
 import errno
 import filecmp
 import logging
@@ -18,20 +16,20 @@ import textwrap
 import pytest
 import salt.serializers.configparser
 import salt.serializers.plist
+import salt.utils.atomicfile
 import salt.utils.data
 import salt.utils.files
 import salt.utils.json
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
-from salt.ext import six
-from salt.ext.six.moves import range
 from salt.utils.versions import LooseVersion as _LooseVersion
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
     Webserver,
     dedent,
     destructiveTest,
+    requires_system_grains,
     skip_if_not_root,
     with_system_user_and_group,
     with_tempdir,
@@ -63,6 +61,8 @@ BINARY_FILE = b"GIF89a\x01\x00\x01\x00\x80\x00\x00\x05\x04\x04\x00\x00\x00,\x00\
 
 TEST_SYSTEM_USER = "test_system_user"
 TEST_SYSTEM_GROUP = "test_system_group"
+
+DEFAULT_ENDING = salt.utils.stringutils.to_bytes(os.linesep)
 
 
 def _test_managed_file_mode_keep_helper(testcase, local=False):
@@ -129,6 +129,21 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
     @classmethod
     def setUpClass(cls):
         cls.tmp_dir = pathlib.Path(tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)).resolve()
+
+        def _reline(path, ending=DEFAULT_ENDING):
+            """
+            Normalize the line endings of a file.
+            """
+            with salt.utils.files.fopen(path, "rb") as fhr:
+                lines = fhr.read().splitlines()
+            with salt.utils.atomicfile.atomic_open(path, "wb") as fhw:
+                for line in lines:
+                    fhw.write(line + ending)
+
+        destpath = os.path.join(RUNTIME_VARS.BASE_FILES, "testappend", "firstif")
+        _reline(destpath)
+        destpath = os.path.join(RUNTIME_VARS.BASE_FILES, "testappend", "secondif")
+        _reline(destpath)
 
     @classmethod
     def tearDownClass(cls):
@@ -361,24 +376,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 
         match = "^minion\n"
         self.assertTrue(re.match(match, file_contents[0]))
-
-    def test_managed_file_with_pillar_sls(self):
-        """
-        Test to ensure pillar data in sls file
-        is rendered properly and file is created.
-        """
-
-        file_pillar = os.path.join(RUNTIME_VARS.TMP, "filepillar-python")
-        self.addCleanup(self._delete_file, file_pillar)
-        state_name = "file-pillarget"
-
-        log.warning("File Path: %s", file_pillar)
-        ret = self.run_function("state.sls", [state_name])
-        self.assertSaltTrueReturn(ret)
-
-        # Check to make sure the file was created
-        check_file = self.run_function("file.file_exists", [file_pillar])
-        self.assertTrue(check_file)
 
     def test_managed_file_with_pillardefault_sls(self):
         """
@@ -1077,9 +1074,10 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             )
         self.assertSaltTrueReturn(ret)
 
+    @requires_system_grains
     @skip_if_not_root
     @skipIf(IS_WINDOWS, "Mode not available in Windows")
-    def test_directory_max_depth(self):
+    def test_directory_max_depth(self, grains):
         """
         file.directory
         Test the max_depth option by iteratively increasing the depth and
@@ -1101,11 +1099,18 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         initial_mode = "0111"
         changed_mode = "0555"
 
-        initial_modes = {
-            0: {sub: "0755", subsub: "0111"},
-            1: {sub: "0111", subsub: "0111"},
-            2: {sub: "0111", subsub: "0111"},
-        }
+        if grains["os_family"] in ("VMware Photon OS",):
+            initial_modes = {
+                0: {sub: "0750", subsub: "0110"},
+                1: {sub: "0110", subsub: "0110"},
+                2: {sub: "0110", subsub: "0110"},
+            }
+        else:
+            initial_modes = {
+                0: {sub: "0755", subsub: "0111"},
+                1: {sub: "0111", subsub: "0111"},
+                2: {sub: "0111", subsub: "0111"},
+            }
 
         if not os.path.isdir(subsub):
             os.makedirs(subsub, int(initial_mode, 8))
@@ -1608,13 +1613,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         """
         ret = self.run_state("file.recurse", name=name, source="salt://соль")
         self.assertSaltTrueReturn(ret)
-        if six.PY2 and IS_WINDOWS:
-            # Providing unicode to os.listdir so that we avoid having listdir
-            # try to decode the filenames using the systemencoding on windows
-            # python 2.
-            files = os.listdir(name.decode("utf-8"))
-        else:
-            files = salt.utils.data.decode(os.listdir(name), normalize=True)
+        files = salt.utils.data.decode(os.listdir(name), normalize=True)
         self.assertEqual(
             sorted(files), sorted(["foo.txt", "спам.txt", "яйца.txt"]),
         )
@@ -2532,9 +2531,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         )
 
     @with_tempdir()
-    @skipIf(
-        salt.utils.platform.is_darwin() and six.PY2, "This test hangs on OS X on Py2"
-    )
     def test_issue_11003_immutable_lazy_proxy_sum(self, base_dir):
         # causes the Import-Module ServerManager error on Windows
         template_path = os.path.join(RUNTIME_VARS.TMP_STATE_TREE, "issue-11003.sls")
@@ -2882,16 +2878,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertEqual(user_check, user)
             self.assertEqual(salt.utils.files.normalize_mode(mode_check), mode)
 
-    def test_contents_pillar_with_pillar_list(self):
-        """
-        This tests for any regressions for this issue:
-        https://github.com/saltstack/salt/issues/30934
-        """
-        state_file = "file_contents_pillar"
-
-        ret = self.run_function("state.sls", mods=state_file)
-        self.assertSaltTrueReturn(ret)
-
     @skip_if_not_root
     @skipIf(not HAS_PWD, "pwd not available. Skipping test")
     @skipIf(not HAS_GRP, "grp not available. Skipping test")
@@ -3012,17 +2998,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             os.linesep.join(["test1", "test2", "test4", "test3", ""]).encode("utf-8"),
         )
 
-    @with_tempfile()
-    def test_issue_50221(self, name):
-        expected = "abc{0}{0}{0}".format(os.linesep)
-        ret = self.run_function("pillar.get", ["issue-50221"])
-        assert ret == expected
-        ret = self.run_function("state.apply", ["issue-50221"], pillar={"name": name},)
-        self.assertSaltTrueReturn(ret)
-        with salt.utils.files.fopen(name, "r") as fp:
-            contents = fp.read()
-        assert contents == expected
-
     def test_managed_file_issue_51208(self):
         """
         Test to ensure we can handle a file with escaped double-quotes
@@ -3099,6 +3074,63 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertIn("PermitRootLogin no", file_contents)
 
         self.assertSaltTrueReturn(ret)
+
+    @with_tempdir()
+    @pytest.mark.slow_test
+    def test_issue_1896_file_append_source(self, base_dir):
+        """
+        Verify that we can append a file's contents
+        """
+        testfile = os.path.join(base_dir, "test.append")
+
+        ret = self.run_state("file.touch", name=testfile)
+        self.assertSaltTrueReturn(ret)
+        ret = self.run_state(
+            "file.append", name=testfile, source="salt://testappend/firstif"
+        )
+        self.assertSaltTrueReturn(ret)
+        ret = self.run_state(
+            "file.append", name=testfile, source="salt://testappend/secondif"
+        )
+        self.assertSaltTrueReturn(ret)
+
+        with salt.utils.files.fopen(testfile, "r") as fp_:
+            testfile_contents = salt.utils.stringutils.to_unicode(fp_.read())
+
+        contents = textwrap.dedent(
+            """\
+            # set variable identifying the chroot you work in (used in the prompt below)
+            if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
+                debian_chroot=$(cat /etc/debian_chroot)
+            fi
+
+            # enable bash completion in interactive shells
+            if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
+                . /etc/bash_completion
+            fi
+            """
+        )
+
+        if salt.utils.platform.is_windows():
+            new_contents = contents.splitlines()
+            contents = os.linesep.join(new_contents)
+            contents += os.linesep
+
+        self.assertMultiLineEqual(contents, testfile_contents)
+
+        ret = self.run_state(
+            "file.append", name=testfile, source="salt://testappend/secondif"
+        )
+        self.assertSaltTrueReturn(ret)
+        ret = self.run_state(
+            "file.append", name=testfile, source="salt://testappend/firstif"
+        )
+        self.assertSaltTrueReturn(ret)
+
+        with salt.utils.files.fopen(testfile, "r") as fp_:
+            testfile_contents = salt.utils.stringutils.to_unicode(fp_.read())
+
+        self.assertMultiLineEqual(contents, testfile_contents)
 
 
 @pytest.mark.windows_whitelisted

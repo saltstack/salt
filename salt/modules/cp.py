@@ -2,18 +2,15 @@
 Minion side functions for salt-cp
 """
 
-# Import python libs
 import base64
 import errno
 import fnmatch
 import logging
 import os
-from urllib.parse import urlparse
+import urllib.parse
 
 import salt.crypt
 import salt.fileclient
-
-# Import salt libs
 import salt.minion
 import salt.transport.client
 import salt.utils.data
@@ -428,7 +425,7 @@ def get_file_str(path, saltenv="base"):
     return fn_
 
 
-def cache_file(path, saltenv="base", source_hash=None):
+def cache_file(path, saltenv="base", source_hash=None, verify_ssl=True):
     """
     Used to cache a single file on the Minion
 
@@ -440,6 +437,12 @@ def cache_file(path, saltenv="base", source_hash=None):
         re-downloading the file if the cached copy matches the specified hash.
 
         .. versionadded:: 2018.3.0
+
+    verify_ssl
+        If ``False``, remote https file sources (``https://``) and source_hash
+        will not attempt to validate the servers certificate. Default is True.
+
+        .. versionadded:: 3002
 
     CLI Example:
 
@@ -469,7 +472,9 @@ def cache_file(path, saltenv="base", source_hash=None):
 
     contextkey = "{}_|-{}_|-{}".format("cp.cache_file", path, saltenv)
 
-    path_is_remote = urlparse(path).scheme in salt.utils.files.REMOTE_PROTOS
+    path_is_remote = (
+        urllib.parse.urlparse(path).scheme in salt.utils.files.REMOTE_PROTOS
+    )
     try:
         if path_is_remote and contextkey in __context__:
             # Prevent multiple caches in the same salt run. Affects remote URLs
@@ -491,7 +496,9 @@ def cache_file(path, saltenv="base", source_hash=None):
     if senv:
         saltenv = senv
 
-    result = _client().cache_file(path, saltenv, source_hash=source_hash)
+    result = _client().cache_file(
+        path, saltenv, source_hash=source_hash, verify_ssl=verify_ssl
+    )
     if not result:
         log.error("Unable to cache file '%s' from saltenv '%s'.", path, saltenv)
     if path_is_remote:

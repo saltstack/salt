@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import os
 import threading
 import time
@@ -8,19 +5,14 @@ import time
 import pytest
 import salt.utils.json
 import salt.utils.stringutils
-from salt.ext import six
 from salt.netapi.rest_tornado import saltnado
-from salt.utils.versions import StrictVersion
 from salt.utils.zeromq import ZMQDefaultLoop as ZMQIOLoop
-from salt.utils.zeromq import zmq
-from tests.support.helpers import flaky, slowTest
+from tests.support.helpers import TstSuiteLoggingHandler, flaky, slowTest
 from tests.support.unit import skipIf
-from tests.unit.netapi.test_rest_tornado import SaltnadoTestCase
-
-HAS_ZMQ_IOLOOP = bool(zmq)
+from tests.unit.netapi.test_rest_tornado import SaltnadoTestsBase
 
 
-class _SaltnadoIntegrationTestCase(SaltnadoTestCase):  # pylint: disable=abstract-method
+class SaltnadoIntegrationTestsBase(SaltnadoTestsBase):
     @property
     def opts(self):
         return self.get_config("client_config", from_scratch=True)
@@ -29,16 +21,14 @@ class _SaltnadoIntegrationTestCase(SaltnadoTestCase):  # pylint: disable=abstrac
     def mod_opts(self):
         return self.get_config("minion", from_scratch=True)
 
+    def get_app(self):
+        raise NotImplementedError
 
-@skipIf(HAS_ZMQ_IOLOOP is False, "PyZMQ version must be >= 14.0.1 to run these tests.")
-@skipIf(
-    StrictVersion(zmq.__version__) < StrictVersion("14.0.1"),
-    "PyZMQ must be >= 14.0.1 to run these tests.",
-)
+
 @pytest.mark.usefixtures("salt_sub_minion")
-class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
+class TestSaltAPIHandler(SaltnadoIntegrationTestsBase):
     def setUp(self):
-        super(TestSaltAPIHandler, self).setUp()
+        super().setUp()
         os.environ["ASYNC_TEST_TIMEOUT"] = "300"
 
     def get_app(self):
@@ -84,7 +74,38 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
 
     # Local client tests
 
-    @skipIf(True, "to be re-enabled when #23623 is merged")
+    @slowTest
+    def test_regression_49572(self):
+        with TstSuiteLoggingHandler() as handler:
+            GATHER_JOB_TIMEOUT = 1
+            self.application.opts["gather_job_timeout"] = GATHER_JOB_TIMEOUT
+
+            low = [{"client": "local", "tgt": "*", "fun": "test.ping"}]
+            fetch_kwargs = {
+                "method": "POST",
+                "body": salt.utils.json.dumps(low),
+                "headers": {
+                    "Content-Type": self.content_type_map["json"],
+                    saltnado.AUTH_TOKEN_HEADER: self.token["token"],
+                },
+                "connect_timeout": 30,
+                "request_timeout": 30,
+            }
+
+            self.fetch("/", **fetch_kwargs)
+            time.sleep(GATHER_JOB_TIMEOUT + 0.1)  # ick
+
+            #  While the traceback is in the logs after the sleep without this
+            #  follow up fetch, the logging handler doesn't see it in its list
+            #  of messages unless something else runs.
+            self.fetch("/", **fetch_kwargs)
+
+            for message in handler.messages:
+                if "TypeError: 'NoneType' object is not iterable" in message:
+                    raise AssertionError(
+                        "#49572: regression: set_result on completed event"
+                    )
+
     def test_simple_local_post(self):
         """
         Test a basic API of /
@@ -138,7 +159,6 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
 
     # local client request body test
 
-    @skipIf(True, "Undetermined race condition in test. Temporarily disabled.")
     def test_simple_local_post_only_dictionary_request(self):
         """
         Test a basic API of /
@@ -406,8 +426,7 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
 
 
 @flaky
-@skipIf(HAS_ZMQ_IOLOOP is False, "PyZMQ version must be >= 14.0.1 to run these tests.")
-class TestMinionSaltAPIHandler(_SaltnadoIntegrationTestCase):
+class TestMinionSaltAPIHandler(SaltnadoIntegrationTestsBase):
     def get_app(self):
         urls = [
             (r"/minions/(.*)", saltnado.MinionSaltAPIHandler),
@@ -417,7 +436,6 @@ class TestMinionSaltAPIHandler(_SaltnadoIntegrationTestCase):
         application.event_listener = saltnado.EventListener({}, self.opts)
         return application
 
-    @skipIf(True, "issue #34753")
     def test_get_no_mid(self):
         response = self.fetch(
             "/minions",
@@ -430,10 +448,9 @@ class TestMinionSaltAPIHandler(_SaltnadoIntegrationTestCase):
         # one per minion
         self.assertEqual(len(response_obj["return"][0]), 2)
         # check a single grain
-        for minion_id, grains in six.iteritems(response_obj["return"][0]):
+        for minion_id, grains in response_obj["return"][0].items():
             self.assertEqual(minion_id, grains["id"])
 
-    @skipIf(True, "to be re-enabled when #23623 is merged")
     @slowTest
     def test_get(self):
         response = self.fetch(
@@ -512,8 +529,7 @@ class TestMinionSaltAPIHandler(_SaltnadoIntegrationTestCase):
         self.assertEqual(response.code, 400)
 
 
-@skipIf(HAS_ZMQ_IOLOOP is False, "PyZMQ version must be >= 14.0.1 to run these tests.")
-class TestJobsSaltAPIHandler(_SaltnadoIntegrationTestCase):
+class TestJobsSaltAPIHandler(SaltnadoIntegrationTestsBase):
     def get_app(self):
         urls = [
             (r"/jobs/(.*)", saltnado.JobsSaltAPIHandler),
@@ -523,7 +539,6 @@ class TestJobsSaltAPIHandler(_SaltnadoIntegrationTestCase):
         application.event_listener = saltnado.EventListener({}, self.opts)
         return application
 
-    @skipIf(True, "to be re-enabled when #23623 is merged")
     @slowTest
     def test_get(self):
         # test with no JID
@@ -537,7 +552,7 @@ class TestJobsSaltAPIHandler(_SaltnadoIntegrationTestCase):
         response = self.wait(timeout=30)
         response_obj = salt.utils.json.loads(response.body)["return"][0]
         try:
-            for jid, ret in six.iteritems(response_obj):
+            for jid, ret in response_obj.items():
                 self.assertIn("Function", ret)
                 self.assertIn("Target", ret)
                 self.assertIn("Target-type", ret)
@@ -549,9 +564,9 @@ class TestJobsSaltAPIHandler(_SaltnadoIntegrationTestCase):
             raise
 
         # test with a specific JID passed in
-        jid = next(six.iterkeys(response_obj))
+        jid = next(iter(response_obj.keys()))
         self.http_client.fetch(
-            self.get_url("/jobs/{0}".format(jid)),
+            self.get_url("/jobs/{}".format(jid)),
             self.stop,
             method="GET",
             headers={saltnado.AUTH_TOKEN_HEADER: self.token["token"]},
@@ -570,8 +585,7 @@ class TestJobsSaltAPIHandler(_SaltnadoIntegrationTestCase):
 
 # TODO: run all the same tests from the root handler, but for now since they are
 # the same code, we'll just sanity check
-@skipIf(HAS_ZMQ_IOLOOP is False, "PyZMQ version must be >= 14.0.1 to run these tests.")
-class TestRunSaltAPIHandler(_SaltnadoIntegrationTestCase):
+class TestRunSaltAPIHandler(SaltnadoIntegrationTestsBase):
     def get_app(self):
         urls = [
             ("/run", saltnado.RunSaltAPIHandler),
@@ -580,7 +594,6 @@ class TestRunSaltAPIHandler(_SaltnadoIntegrationTestCase):
         application.event_listener = saltnado.EventListener({}, self.opts)
         return application
 
-    @skipIf(True, "to be re-enabled when #23623 is merged")
     @slowTest
     def test_get(self):
         low = [{"client": "local", "tgt": "*", "fun": "test.ping"}]
@@ -597,8 +610,7 @@ class TestRunSaltAPIHandler(_SaltnadoIntegrationTestCase):
         self.assertEqual(response_obj["return"], [{"minion": True, "sub_minion": True}])
 
 
-@skipIf(HAS_ZMQ_IOLOOP is False, "PyZMQ version must be >= 14.0.1 to run these tests.")
-class TestEventsSaltAPIHandler(_SaltnadoIntegrationTestCase):
+class TestEventsSaltAPIHandler(SaltnadoIntegrationTestsBase):
     def get_app(self):
         urls = [
             (r"/events", saltnado.EventsSaltAPIHandler),
@@ -624,8 +636,7 @@ class TestEventsSaltAPIHandler(_SaltnadoIntegrationTestCase):
         self.stop()
 
     def on_event(self, event):
-        if six.PY3:
-            event = event.decode("utf-8")
+        event = event.decode("utf-8")
         if self.events_to_fire > 0:
             self.application.event_listener.event.fire_event(
                 {"foo": "bar", "baz": "qux"}, "salt/netapi/test"
@@ -645,8 +656,7 @@ class TestEventsSaltAPIHandler(_SaltnadoIntegrationTestCase):
             self.assertTrue(data.startswith("data: "))
 
 
-@skipIf(HAS_ZMQ_IOLOOP is False, "PyZMQ version must be >= 14.0.1 to run these tests.")
-class TestWebhookSaltAPIHandler(_SaltnadoIntegrationTestCase):
+class TestWebhookSaltAPIHandler(SaltnadoIntegrationTestsBase):
     def get_app(self):
 
         urls = [
@@ -700,9 +710,7 @@ class TestWebhookSaltAPIHandler(_SaltnadoIntegrationTestCase):
                 )
             self.assertEqual(event["tag"], "salt/netapi/hook")
             self.assertIn("headers", event["data"])
-            self.assertEqual(
-                event["data"]["post"], {"foo": salt.utils.stringutils.to_bytes("bar")}
-            )
+            self.assertEqual(event["data"]["post"], {"foo": "bar"})
         finally:
             self._future_resolved.clear()
             del self._future_resolved

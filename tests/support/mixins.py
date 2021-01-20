@@ -35,14 +35,10 @@ from salt.ext.six.moves import zip
 from salt.ext.six.moves.queue import Empty
 from salt.utils.immutabletypes import freeze
 from salt.utils.verify import verify_env
+from saltfactories.utils import random_string
 from tests.support.paths import CODE_DIR
 from tests.support.pytest.loader import LoaderModuleMock
 from tests.support.runtests import RUNTIME_VARS
-
-try:
-    from salt.utils.odict import OrderedDict
-except ImportError:
-    from collections import OrderedDict
 
 log = logging.getLogger(__name__)
 
@@ -89,6 +85,8 @@ class AdaptedConfigurationTestCaseMixin:
         rootdir = config_overrides.get(
             "root_dir", tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         )
+        if not os.path.exists(rootdir):
+            os.makedirs(rootdir)
         conf_dir = config_overrides.pop("conf_dir", os.path.join(rootdir, "conf"))
         for key in ("cachedir", "pki_dir", "sock_dir"):
             if key not in config_overrides:
@@ -106,7 +104,17 @@ class AdaptedConfigurationTestCaseMixin:
         if config_for in ("master", "client_config"):
             rdict = salt.config.apply_master_config(config_overrides, cdict)
         if config_for == "minion":
-            rdict = salt.config.apply_minion_config(config_overrides, cdict)
+            minion_id = (
+                config_overrides.get("id")
+                or config_overrides.get("minion_id")
+                or cdict.get("id")
+                or cdict.get("minion_id")
+                or random_string("temp-minion-")
+            )
+            config_overrides["minion_id"] = config_overrides["id"] = minion_id
+            rdict = salt.config.apply_minion_config(
+                config_overrides, cdict, cache_minion_id=False, minion_id=minion_id
+            )
 
         verify_env(
             [
@@ -142,7 +150,8 @@ class AdaptedConfigurationTestCaseMixin:
                 )
             elif config_for in ("minion", "sub_minion"):
                 return salt.config.minion_config(
-                    AdaptedConfigurationTestCaseMixin.get_config_file_path(config_for)
+                    AdaptedConfigurationTestCaseMixin.get_config_file_path(config_for),
+                    cache_minion_id=False,
                 )
             elif config_for in ("syndic",):
                 return salt.config.syndic_config(
@@ -241,27 +250,6 @@ class AdaptedConfigurationTestCaseMixin:
         """
         return self.get_config("sub_minion")
 
-    @property
-    def mm_master_opts(self):
-        """
-        Return the options used for the multimaster master
-        """
-        return self.get_config("mm_master")
-
-    @property
-    def mm_sub_master_opts(self):
-        """
-        Return the options used for the multimaster sub-master
-        """
-        return self.get_config("mm_sub_master")
-
-    @property
-    def mm_minion_opts(self):
-        """
-        Return the options used for the minion
-        """
-        return self.get_config("mm_minion")
-
 
 class SaltClientTestCaseMixin(AdaptedConfigurationTestCaseMixin):
     """
@@ -304,52 +292,6 @@ class SaltClientTestCaseMixin(AdaptedConfigurationTestCaseMixin):
                 "runtime_client"
             ] = salt.client.get_local_client(mopts=mopts)
         return RUNTIME_VARS.RUNTIME_CONFIGS["runtime_client"]
-
-
-class SaltMultimasterClientTestCaseMixin(AdaptedConfigurationTestCaseMixin):
-    """
-    Mix-in class that provides a ``clients`` attribute which returns a list of Salt
-    :class:`LocalClient<salt:salt.client.LocalClient>`.
-
-    .. code-block:: python
-
-        class LocalClientTestCase(TestCase, SaltMultimasterClientTestCaseMixin):
-
-            def test_check_pub_data(self):
-                just_minions = {'minions': ['m1', 'm2']}
-                jid_no_minions = {'jid': '1234', 'minions': []}
-                valid_pub_data = {'minions': ['m1', 'm2'], 'jid': '1234'}
-
-                for client in self.clients:
-                    self.assertRaises(EauthAuthenticationError,
-                                      client._check_pub_data, None)
-                    self.assertDictEqual({},
-                        client._check_pub_data(just_minions),
-                        'Did not handle lack of jid correctly')
-
-                    self.assertDictEqual(
-                        {},
-                        client._check_pub_data({'jid': '0'}),
-                        'Passing JID of zero is not handled gracefully')
-    """
-
-    _salt_client_config_file_name_ = "master"
-
-    @property
-    def clients(self):
-        # Late import
-        import salt.client
-
-        if "runtime_clients" not in RUNTIME_VARS.RUNTIME_CONFIGS:
-            RUNTIME_VARS.RUNTIME_CONFIGS["runtime_clients"] = OrderedDict()
-
-        runtime_clients = RUNTIME_VARS.RUNTIME_CONFIGS["runtime_clients"]
-        for master_id in ("mm-master", "mm-sub-master"):
-            if master_id in runtime_clients:
-                continue
-            mopts = self.get_config(master_id.replace("-", "_"), from_scratch=True)
-            runtime_clients[master_id] = salt.client.get_local_client(mopts=mopts)
-        return runtime_clients
 
 
 class ShellCaseCommonTestsMixin(CheckShellBinaryNameAndVersionMixin):
@@ -455,9 +397,9 @@ class LoaderModuleMockMixin(metaclass=_FixLoaderModuleMockMixinMroOrder):
                     "'__opts__', etc.".format(self.__class__.__name__)
                 )
 
-            mocker = LoaderModuleMock(self, loader_modules_configs)
-            mocker.__enter__()
-            self.addCleanup(mocker.__exit__)
+            mocker = LoaderModuleMock(loader_modules_configs)
+            mocker.start()
+            self.addCleanup(mocker.stop)
             return setup_func(self)
 
         return wrapper
@@ -656,23 +598,25 @@ def _fetch_events(q, opts):
             queue_item.task_done()
 
     atexit.register(_clean_queue)
-    event = salt.utils.event.get_event("minion", sock_dir=opts["sock_dir"], opts=opts)
+    with salt.utils.event.get_event(
+        "minion", sock_dir=opts["sock_dir"], opts=opts
+    ) as event:
 
-    # Wait for event bus to be connected
-    while not event.connect_pull(30):
-        time.sleep(1)
+        # Wait for event bus to be connected
+        while not event.connect_pull(30):
+            time.sleep(1)
 
-    # Notify parent process that the event bus is connected
-    q.put("CONNECTED")
+        # Notify parent process that the event bus is connected
+        q.put("CONNECTED")
 
-    while True:
-        try:
-            events = event.get_event(full=False)
-        except Exception as exc:  # pylint: disable=broad-except
-            # This is broad but we'll see all kinds of issues right now
-            # if we drop the proc out from under the socket while we're reading
-            log.exception("Exception caught while getting events %r", exc)
-        q.put(events)
+        while True:
+            try:
+                events = event.get_event(full=False)
+            except Exception as exc:  # pylint: disable=broad-except
+                # This is broad but we'll see all kinds of issues right now
+                # if we drop the proc out from under the socket while we're reading
+                log.exception("Exception caught while getting events %r", exc)
+            q.put(events)
 
 
 class SaltMinionEventAssertsMixin:

@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 salt-ssh testing
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import shutil
@@ -16,6 +14,10 @@ class SSHTest(SSHCase):
     """
     Test general salt-ssh functionality
     """
+
+    def setUp(self):
+        thin_dir = self.run_function("config.get", ["thin_dir"], wipe=False)
+        self.addCleanup(shutil.rmtree, thin_dir, ignore_errors=True)
 
     @slowTest
     def test_ping(self):
@@ -36,6 +38,7 @@ class SSHTest(SSHCase):
         os.path.exists(os.path.join(thin_dir, "salt-call"))
         os.path.exists(os.path.join(thin_dir, "running_data"))
 
+    @slowTest
     def test_set_path(self):
         """
         test setting the path env variable
@@ -43,15 +46,17 @@ class SSHTest(SSHCase):
         path = "/pathdoesnotexist/"
         roster = os.path.join(RUNTIME_VARS.TMP, "roster-set-path")
         self.custom_roster(
-            roster, data={"set_path": "$PATH:/usr/local/bin/:{0}".format(path)}
+            roster, data={"set_path": "$PATH:/usr/local/bin/:{}".format(path)}
         )
         ret = self.run_function("environ.get", ["PATH"], roster_file=roster)
         assert path in ret
 
-    def tearDown(self):
+    @slowTest
+    def test_tty(self):
         """
-        make sure to clean up any old ssh directories
+        test using tty
         """
-        salt_dir = self.run_function("config.get", ["thin_dir"], wipe=False)
-        if os.path.exists(salt_dir):
-            shutil.rmtree(salt_dir)
+        roster = os.path.join(RUNTIME_VARS.TMP, "roster-tty")
+        self.custom_roster(roster, data={"tty": True})
+        ret = self.run_function("test.ping", roster_file=roster)
+        assert ret is True

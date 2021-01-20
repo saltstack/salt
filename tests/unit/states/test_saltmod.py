@@ -1,12 +1,9 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import tempfile
-import time
 
 import salt.config
 import salt.loader
@@ -206,7 +203,7 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
             "name": name,
             "changes": {},
             "result": None,
-            "comment": "Function state would be executed " "on target {0}".format(tgt),
+            "comment": "Function state would be executed " "on target {}".format(tgt),
         }
 
         with patch.dict(saltmod.__opts__, {"test": True}):
@@ -217,12 +214,34 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
                 "result": True,
                 "changes": {"out": "highstate", "ret": {tgt: ""}},
                 "comment": "Function ran successfully."
-                " Function state ran on {0}.".format(tgt),
+                " Function state ran on {}.".format(tgt),
             }
         )
         with patch.dict(saltmod.__opts__, {"test": False}):
             mock_ret = {"larry": {"ret": "", "retcode": 0, "failed": False}}
             mock_cmd = MagicMock(return_value=mock_ret)
+            with patch.dict(saltmod.__salt__, {"saltutil.cmd": mock_cmd}):
+                self.assertDictEqual(saltmod.function(name, tgt), ret)
+
+    @slowTest
+    def test_function_when_no_minions_match(self):
+        """
+        Test to execute a single module function on a remote
+        minion via salt or salt-ssh
+        """
+        name = "state"
+        tgt = "larry"
+        mock_ret = {}
+        mock_cmd = MagicMock(return_value=mock_ret)
+
+        ret = {
+            "name": name,
+            "changes": {},
+            "result": False,
+            "comment": "No minions responded",
+        }
+
+        with patch.dict(saltmod.__opts__, {"test": False}):
             with patch.dict(saltmod.__salt__, {"saltutil.cmd": mock_cmd}):
                 self.assertDictEqual(saltmod.function(name, tgt), ret)
 
@@ -239,7 +258,7 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
 
         ret = {"name": name, "changes": {}, "result": False, "comment": comt}
 
-        class Mockevent(object):
+        class Mockevent:
             """
             Mock event class
             """
@@ -258,11 +277,19 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
                     return {"tag": name, "data": {}}
                 return None
 
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                pass
+
         with patch.object(
             salt.utils.event, "get_event", MagicMock(return_value=Mockevent())
         ):
             with patch.dict(saltmod.__opts__, {"sock_dir": True, "transport": True}):
-                with patch.object(time, "time", MagicMock(return_value=1.0)):
+                with patch(
+                    "salt.states.saltmod.time.time", MagicMock(return_value=1.0)
+                ):
                     self.assertDictEqual(
                         saltmod.wait_for_event(name, "salt", timeout=-1.0), ret
                     )

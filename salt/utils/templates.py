@@ -1,23 +1,16 @@
-# -*- coding: utf-8 -*-
 """
 Template render systems
 """
-
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Python libs
 import codecs
 import logging
 import os
 import sys
 import tempfile
 import traceback
+from pathlib import Path
 
-# Import 3rd-party libs
 import jinja2
 import jinja2.ext
-
-# Import Salt libs
 import salt.utils.data
 import salt.utils.dateutils
 import salt.utils.files
@@ -31,6 +24,7 @@ import salt.utils.yamlencoding
 from salt import __path__ as saltpath
 from salt.exceptions import CommandExecutionError, SaltInvocationError, SaltRenderError
 from salt.ext import six
+from salt.features import features
 from salt.utils.decorators.jinja import JinjaFilter, JinjaGlobal, JinjaTest
 from salt.utils.odict import OrderedDict
 from salt.utils.versions import LooseVersion
@@ -56,7 +50,7 @@ SLS_ENCODING = "utf-8"  # this one has no BOM.
 SLS_ENCODER = codecs.getencoder(SLS_ENCODING)
 
 
-class AliasedLoader(object):
+class AliasedLoader:
     """
     Light wrapper around the LazyLoader to redirect 'cmd.run' calls to
     'cmd.shell', for easy use of shellisms during templating calls
@@ -81,7 +75,7 @@ class AliasedLoader(object):
         return name in self.wrapped
 
 
-class AliasedModule(object):
+class AliasedModule:
     """
     Light wrapper around module objects returned by the LazyLoader's getattr
     for the purposes of `salt.cmd.run()` syntax in templates
@@ -96,6 +90,124 @@ class AliasedModule(object):
 
     def __getattr__(self, name):
         return getattr(self.wrapped, name)
+
+
+def _generate_sls_context_legacy(tmplpath, sls):
+    """
+    Legacy version of generate_sls_context, this method should be remove in the
+    Phosphorus release.
+    """
+    salt.utils.versions.warn_until(
+        "Phosphorus",
+        "There have been significant improvement to template variables. "
+        "To enable these improvements set features.enable_slsvars_fixes "
+        "to True in your config file. This feature will become the default "
+        "in the Phoshorus release.",
+    )
+    context = {}
+    slspath = sls.replace(".", "/")
+    if tmplpath is not None:
+        context["tplpath"] = tmplpath
+        if not tmplpath.lower().replace("\\", "/").endswith("/init.sls"):
+            slspath = os.path.dirname(slspath)
+        template = tmplpath.replace("\\", "/")
+        i = template.rfind(slspath.replace(".", "/"))
+        if i != -1:
+            template = template[i:]
+        tpldir = os.path.dirname(template).replace("\\", "/")
+        tpldata = {
+            "tplfile": template,
+            "tpldir": "." if tpldir == "" else tpldir,
+            "tpldot": tpldir.replace("/", "."),
+        }
+        context.update(tpldata)
+    context["slsdotpath"] = slspath.replace("/", ".")
+    context["slscolonpath"] = slspath.replace("/", ":")
+    context["sls_path"] = slspath.replace("/", "_")
+    context["slspath"] = slspath
+    return context
+
+
+def _generate_sls_context(tmplpath, sls):
+    """
+    Generate SLS/Template Context Items
+
+    Return values:
+
+    tplpath - full path to template on filesystem including filename
+    tplfile - relative path to template -- relative to file roots
+    tpldir - directory of the template relative to file roots. If none, "."
+    tpldot - tpldir using dots instead of slashes, if none, ""
+    slspath - directory containing current sls - (same as tpldir), if none, ""
+    sls_path - slspath with underscores separating parts, if none, ""
+    slsdotpath - slspath with dots separating parts, if none, ""
+    slscolonpath- slspath with colons separating parts, if none, ""
+
+    """
+
+    sls_context = {}
+
+    # Normalize SLS as path.
+    slspath = sls.replace(".", "/")
+
+    if tmplpath:
+        # Normalize template path
+        template = str(Path(tmplpath).as_posix())
+
+        # Determine proper template name without root
+        if not sls:
+            template = template.rsplit("/", 1)[-1]
+        elif template.endswith("{}.sls".format(slspath)):
+            template = template[-(4 + len(slspath)) :]
+        elif template.endswith("{}/init.sls".format(slspath)):
+            template = template[-(9 + len(slspath)) :]
+        else:
+            # Something went wrong
+            log.warning("Failed to determine proper template path")
+
+        slspath = template.rsplit("/", 1)[0] if "/" in template else ""
+
+        sls_context.update(
+            dict(
+                tplpath=tmplpath,
+                tplfile=template,
+                tpldir=slspath if slspath else ".",
+                tpldot=slspath.replace("/", "."),
+            )
+        )
+
+    # Should this be normalized?
+    sls_context.update(
+        dict(
+            slspath=slspath,
+            slsdotpath=slspath.replace("/", "."),
+            slscolonpath=slspath.replace("/", ":"),
+            sls_path=slspath.replace("/", "_"),
+        )
+    )
+
+    return sls_context
+
+
+def generate_sls_context(tmplpath, sls):
+    """
+    Generate SLS/Template Context Items
+
+    Return values:
+
+    tplpath - full path to template on filesystem including filename
+    tplfile - relative path to template -- relative to file roots
+    tpldir - directory of the template relative to file roots. If none, "."
+    tpldot - tpldir using dots instead of slashes, if none, ""
+    slspath - directory containing current sls - (same as tpldir), if none, ""
+    sls_path - slspath with underscores separating parts, if none, ""
+    slsdotpath - slspath with dots separating parts, if none, ""
+    slscolonpath- slspath with colons separating parts, if none, ""
+
+    """
+    if not features.get("enable_slsvars_fixes", False):
+        return _generate_sls_context_legacy(tmplpath, sls)
+    return _generate_sls_context(tmplpath, sls)
 
 
 def wrap_tmpl_func(render_str):
@@ -118,28 +230,10 @@ def wrap_tmpl_func(render_str):
         assert "saltenv" in context
 
         if "sls" in context:
-            slspath = context["sls"].replace(".", "/")
-            if tmplpath is not None:
-                context["tplpath"] = tmplpath
-                if not tmplpath.lower().replace("\\", "/").endswith("/init.sls"):
-                    slspath = os.path.dirname(slspath)
-                template = tmplpath.replace("\\", "/")
-                i = template.rfind(slspath.replace(".", "/"))
-                if i != -1:
-                    template = template[i:]
-                tpldir = os.path.dirname(template).replace("\\", "/")
-                tpldata = {
-                    "tplfile": template,
-                    "tpldir": "." if tpldir == "" else tpldir,
-                    "tpldot": tpldir.replace("/", "."),
-                }
-                context.update(tpldata)
-            context["slsdotpath"] = slspath.replace("/", ".")
-            context["slscolonpath"] = slspath.replace("/", ":")
-            context["sls_path"] = slspath.replace("/", "_")
-            context["slspath"] = slspath
+            sls_context = generate_sls_context(tmplpath, context["sls"])
+            context.update(sls_context)
 
-        if isinstance(tmplsrc, six.string_types):
+        if isinstance(tmplsrc, str):
             if from_str:
                 tmplstr = tmplsrc
             else:
@@ -148,7 +242,7 @@ def wrap_tmpl_func(render_str):
                         tmplsrc = os.path.join(tmplpath, tmplsrc)
                     with codecs.open(tmplsrc, "r", SLS_ENCODING) as _tmplsrc:
                         tmplstr = _tmplsrc.read()
-                except (UnicodeDecodeError, ValueError, OSError, IOError) as exc:
+                except (UnicodeDecodeError, ValueError, OSError) as exc:
                     if salt.utils.files.is_binary(tmplsrc):
                         # Template is a bin file, return the raw file
                         return dict(result=True, data=tmplsrc)
@@ -158,7 +252,7 @@ def wrap_tmpl_func(render_str):
                         exc,
                         exc_info_on_loglevel=logging.DEBUG,
                     )
-                    six.reraise(*sys.exc_info())
+                    raise
         else:  # assume tmplsrc is file-like.
             tmplstr = tmplsrc.read()
             tmplsrc.close()
@@ -270,14 +364,14 @@ def _get_jinja_error(trace, context=None):
     # error log place at the beginning
     if add_log:
         if template_path:
-            out = "\n{0}\n".format(msg.splitlines()[0])
+            out = "\n{}\n".format(msg.splitlines()[0])
             with salt.utils.files.fopen(template_path) as fp_:
                 template_contents = salt.utils.stringutils.to_unicode(fp_.read())
             out += salt.utils.stringutils.get_context(
                 template_contents, line, marker="    <======================"
             )
         else:
-            out = "\n{0}\n".format(msg)
+            out = "\n{}\n".format(msg)
         line = 0
     return line, out
 
@@ -287,8 +381,9 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     saltenv = context["saltenv"]
     loader = None
     newline = False
+    file_client = context.get("fileclient", None)
 
-    if tmplstr and not isinstance(tmplstr, six.text_type):
+    if tmplstr and not isinstance(tmplstr, str):
         # https://jinja.palletsprojects.com/en/2.11.x/api/#unicode
         tmplstr = tmplstr.decode(SLS_ENCODING)
 
@@ -302,7 +397,10 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
             loader = jinja2.FileSystemLoader(os.path.dirname(tmplpath))
     else:
         loader = salt.utils.jinja.SaltCacheLoader(
-            opts, saltenv, pillar_rend=context.get("_pillar_rend", False)
+            opts,
+            saltenv,
+            pillar_rend=context.get("_pillar_rend", False),
+            _file_client=file_client,
         )
 
     env_args = {"extensions": [], "loader": loader}
@@ -341,7 +439,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
         opt_jinja_sls_env["lstrip_blocks"] = True
 
     def opt_jinja_env_helper(opts, optname):
-        for k, v in six.iteritems(opts):
+        for k, v in opts.items():
             k = k.lower()
             if hasattr(jinja2.defaults, k.upper()):
                 log.debug("Jinja2 environment %s was set to %s by %s", k, v, optname)
@@ -378,8 +476,8 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     jinja_env.tests["list"] = salt.utils.data.is_list
 
     decoded_context = {}
-    for key, value in six.iteritems(context):
-        if not isinstance(value, six.string_types):
+    for key, value in context.items():
+        if not isinstance(value, str):
             decoded_context[key] = value
             continue
 
@@ -404,7 +502,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
         tmplstr = ""
         # Don't include the line number, since it is misreported
         # https://github.com/mitsuhiko/jinja2/issues/276
-        raise SaltRenderError("Jinja variable {0}{1}".format(exc, out), buf=tmplstr)
+        raise SaltRenderError("Jinja variable {}{}".format(exc, out), buf=tmplstr)
     except (
         jinja2.exceptions.TemplateRuntimeError,
         jinja2.exceptions.TemplateSyntaxError,
@@ -414,7 +512,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
         if not line:
             tmplstr = ""
         raise SaltRenderError(
-            "Jinja syntax error: {0}{1}".format(exc, out), line, tmplstr
+            "Jinja syntax error: {}{}".format(exc, out), line, tmplstr
         )
     except (SaltInvocationError, CommandExecutionError) as exc:
         trace = traceback.extract_tb(sys.exc_info()[2])
@@ -422,7 +520,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
         if not line:
             tmplstr = ""
         raise SaltRenderError(
-            "Problem running salt function in Jinja template: {0}{1}".format(exc, out),
+            "Problem running salt function in Jinja template: {}{}".format(exc, out),
             line,
             tmplstr,
         )
@@ -433,7 +531,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
         if not line:
             tmplstr = ""
         else:
-            tmplstr += "\n{0}".format(tracestr)
+            tmplstr += "\n{}".format(tracestr)
         log.debug("Jinja Error")
         log.debug("Exception:", exc_info=True)
         log.debug("Out: %s", out)
@@ -442,7 +540,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
         log.debug("TraceStr: %s", tracestr)
 
         raise SaltRenderError(
-            "Jinja error: {0}{1}".format(exc, out), line, tmplstr, trace=tracestr
+            "Jinja error: {}{}".format(exc, out), line, tmplstr, trace=tracestr
         )
 
     # Workaround a bug in Jinja that removes the final newline
@@ -533,13 +631,13 @@ def render_cheetah_tmpl(tmplstr, context, tmplpath=None):
     data = tclass(namespaces=[context])
 
     # Figure out which method to call based on the type of tmplstr
-    if six.PY3 and isinstance(tmplstr, six.string_types):
+    if six.PY3 and isinstance(tmplstr, str):
         # This should call .__unicode__()
         res = str(data)
-    elif six.PY2 and isinstance(tmplstr, six.text_type):
+    elif six.PY2 and isinstance(tmplstr, str):
         # Expicitly call .__unicode__()
         res = data.__unicode__()
-    elif isinstance(tmplstr, six.binary_type):
+    elif isinstance(tmplstr, bytes):
         # This should call .__str()
         res = str(data)
     else:
@@ -589,7 +687,7 @@ def py(sfn, string=False, **kwargs):  # pylint: disable=C0103
         setattr(mod, "__env__", kwargs["saltenv"])
         builtins = ["salt", "grains", "pillar", "opts"]
         for builtin in builtins:
-            arg = "__{0}__".format(builtin)
+            arg = "__{}__".format(builtin)
             setattr(mod, arg, kwargs[builtin])
 
     for kwarg in kwargs:

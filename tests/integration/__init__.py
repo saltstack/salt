@@ -138,7 +138,7 @@ class ThreadedSocketServer(ThreadingMixIn, socketserver.TCPServer):
 
 class SocketServerRequestHandler(socketserver.StreamRequestHandler):
     def handle(self):
-        unpacker = salt.utils.msgpack.Unpacker(encoding="utf-8")
+        unpacker = salt.utils.msgpack.Unpacker(raw=False)
         while not self.server.shutting_down.is_set():
             try:
                 wire_bytes = self.request.recv(1024)
@@ -1003,9 +1003,6 @@ class TestDaemon:
         master_opts.setdefault("reactor", []).append(
             {"salt/minion/*/start": [os.path.join(FILES, "reactor-sync-minion.sls")]}
         )
-        master_opts.setdefault("reactor", []).append(
-            {"salt/test/reactor": [os.path.join(FILES, "reactor-test.sls")]}
-        )
         for opts_dict in (master_opts, syndic_master_opts):
             if "ext_pillar" not in opts_dict:
                 opts_dict["ext_pillar"] = []
@@ -1316,12 +1313,13 @@ class TestDaemon:
             except OSError as exc:
                 if exc.errno != 3:
                     raise
-            with salt.utils.files.fopen(self.sshd_pidfile) as fhr:
-                try:
-                    os.kill(int(fhr.read()), signal.SIGKILL)
-                except OSError as exc:
-                    if exc.errno != 3:
-                        raise
+            if os.path.exists(self.sshd_pidfile):
+                with salt.utils.files.fopen(self.sshd_pidfile) as fhr:
+                    try:
+                        os.kill(int(fhr.read()), signal.SIGKILL)
+                    except OSError as exc:
+                        if exc.errno != 3:
+                            raise
 
     def _exit_mockbin(self):
         path = os.environ.get("PATH", "")
