@@ -41,7 +41,9 @@ try:
     from cohesity_management_sdk.models.register_protection_source_parameters import (
         RegisterProtectionSourceParameters,
     )
-    from cohesity_management_sdk.models.restore_object_details import RestoreObjectDetails
+    from cohesity_management_sdk.models.restore_object_details import (
+        RestoreObjectDetails,
+    )
     from cohesity_management_sdk.models.run_protection_job_param import (
         RunProtectionJobParam,
     )
@@ -52,8 +54,8 @@ try:
     from cohesity_management_sdk.models.vmware_restore_parameters import (
         VmwareRestoreParameters,
     )
-except APIException as err:
-    logger.error("Error while importing Cohesity SDk modules.")
+except ModuleNotFoundError as err:
+    print("Error while importing Cohesity SDk modules.")
     exit()
 
 logger = logging.getLogger(__name__)
@@ -126,7 +128,8 @@ def get_vmware_source_ids(name, vm_list):
             return (
                 "Following list of vms {} are not available in vcenter, "
                 "please make sure the virtual machine names are correct".format(
-                    ",".join(vm_names))
+                    ",".join(vm_names)
+                )
             )
         return parent_id, source_id_list
     except APIException as err:
@@ -269,7 +272,7 @@ def update_vmware_protection_job_state(job_name, state):
         if state not in supported_states:
             return (
                 "Job state {} not supported. Please provide one of the "
-                "following states {}".format(", ".join(supported_states))
+                "following states {}".format(state, ", ".join(supported_states))
             )
         body.action = "k" + state.capitalize()
         body.job_ids = [job_id]
@@ -345,7 +348,8 @@ def delete_vmware_protection_job(job_name, delete_snapshots=True):
     """
     try:
         jobs = cohesity_client.protection_jobs.get_protection_jobs(
-            is_deleted=False, names=job_name)
+            is_deleted=False, names=job_name
+        )
         if not jobs:
             return "Job with name {} not available.".format(job_name)
         for job in jobs:
@@ -357,8 +361,7 @@ def delete_vmware_protection_job(job_name, delete_snapshots=True):
         # Get recent job run id and status.
         body = DeleteProtectionJobParam()
         body.delete_snapshots = delete_snapshots
-        cohesity_client.protection_jobs.delete_protection_job(
-               job_id, body)
+        cohesity_client.protection_jobs.delete_protection_job(job_id, body)
         return "Successfully deleted job {}".format(job_name)
     except APIException as err:
         return "Error while attempting to delete the job {}, error : {}".format(
@@ -397,7 +400,7 @@ def restore_vms(
     datastore_name="",
     prefix="",
     suffix="",
-    powered_on=True
+    powered_on=True,
 ):
     """
     Function to recover vm.
