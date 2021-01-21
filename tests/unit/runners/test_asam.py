@@ -39,19 +39,13 @@ class AsamRunnerVerifySslTest(TestCase, LoaderModuleMockMixin):
         with patch("salt.runners.asam._parse_html_content", parse_html_content), patch(
             "salt.runners.asam._get_platformset_name", get_platform_set_name
         ), patch("salt.runners.asam.requests.post", requests_mock):
-            asam.remove_platform("plat-foo-2", "prov1.domain.com")
+            asam.add_platform("plat-foo-2", "plat-foo", "prov1.domain.com")
 
         requests_mock.assert_called_with(
-            "https://prov1.domain.com:3451/config/PlatformConfig.html",
-            auth=("TheUsername", "ThePassword"),
-            data={
-                "manual": "false",
-                "platformName": "plat-foo-2",
-                "platformSetName": "plat-foo",
-                "postType": "platformRemove",
-                "Submit": "Yes",
-            },
-            verify=True,
+            'https://prov1.domain.com:3451/config/PlatformSetConfig.html',
+            auth=('TheUsername', 'ThePassword'),
+            data={'manual': 'false'},
+            verify=True
         )
 
     def test_remove_platform(self):
