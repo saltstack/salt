@@ -2117,7 +2117,7 @@ class GetNewServiceInstanceStub(TestCase, LoaderModuleMockMixin):
     def setUp(self):
         self.mock_stub = MagicMock(
             host='fake_host:1000',
-            cookie='ignore'fake_cookie')
+            cookie='ignore"fake_cookie')
         self.mock_si = MagicMock(
             _stub=self.mock_stub)
         self.mock_ret = MagicMock()
@@ -2190,7 +2190,7 @@ class GetNewServiceInstanceStub(TestCase, LoaderModuleMockMixin):
     def test_new_stub_returned(self):
         ret = salt.utils.vmware.get_new_service_instance_stub(
             self.mock_si, 'fake_path')
-        self.assertEqual(self.mock_new_stub.cookie, 'ignore'fake_cookie')
+        self.assertEqual(self.mock_new_stub.cookie, 'ignore"fake_cookie')
         self.assertEqual(ret, self.mock_new_stub)
 
 
@@ -3663,7 +3663,7 @@ class GetAssignedLicensesTestCase(TestCase):
                                                     self.mock_entity_ref,
                                                     'fake_entity_name')
         mock_trace.assert_called_once_with(
-            'Retrieving licenses assigned to '%s'', 'fake_entity_name')
+            "Retrieving licenses assigned to '%s'", 'fake_entity_name')
 
     def test_instance_uuid(self):
         mock_instance_uuid_prop = PropertyMock()
@@ -3840,7 +3840,7 @@ class AssignLicenseTestCase(TestCase):
                                              self.mock_entity_ref,
                                              'fake_entity_name')
         mock_trace.assert_called_once_with(
-            'Assigning license to '%s'', 'fake_entity_name')
+            "Assigning license to '%s'", 'fake_entity_name')
 
     def test_instance_uuid(self):
         mock_instance_uuid_prop = PropertyMock()

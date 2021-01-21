@@ -1458,7 +1458,7 @@ def get_ssh_key(host,
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs("credstore")
+@ignores_kwargs('credstore')
 def get_host_datetime(
     host, username, password, protocol=None, port=None, host_names=None,
     verify_ssl=True
@@ -1522,7 +1522,7 @@ def get_host_datetime(
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs("credstore")
+@ignores_kwargs('credstore')
 def get_ntp_config(host, username, password, protocol=None, port=None,
                    host_names=None, verify_ssl=True):
     '''
@@ -1583,7 +1583,7 @@ def get_ntp_config(host, username, password, protocol=None, port=None,
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs("credstore")
+@ignores_kwargs('credstore')
 def get_service_policy(
     host, username, password, service_name, protocol=None, port=None,
     host_names=None, verify_ssl=True,
@@ -1652,20 +1652,20 @@ def get_service_policy(
         port=port, verify_ssl=verify_ssl,
     )
     valid_services = [
-        "DCUI",
-        "TSM",
-        "SSH",
-        "ssh",
-        "lbtd",
-        "lsassd",
-        "lwiod",
-        "netlogond",
-        "ntpd",
-        "sfcbd-watchdog",
-        "snmpd",
-        "vprobed",
-        "vpxa",
-        "xorg",
+        'DCUI',
+        'TSM',
+        'SSH',
+        'ssh',
+        'lbtd',
+        'lsassd',
+        'lwiod',
+        'netlogond',
+        'ntpd',
+        'sfcbd-watchdog',
+        'snmpd',
+        'vprobed',
+        'vpxa',
+        'xorg',
     ]
     host_names = _check_hosts(service_instance, host, host_names)
 
@@ -1709,7 +1709,7 @@ def get_service_policy(
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs("credstore")
+@ignores_kwargs('credstore')
 def get_service_running(
     host, username, password, service_name, protocol=None, port=None,
     host_names=None, verify_ssl=True,
@@ -1778,20 +1778,20 @@ def get_service_running(
         port=port, verify_ssl=verify_ssl,
     )
     valid_services = [
-        "DCUI",
-        "TSM",
-        "SSH",
-        "ssh",
-        "lbtd",
-        "lsassd",
-        "lwiod",
-        "netlogond",
-        "ntpd",
-        "sfcbd-watchdog",
-        "snmpd",
-        "vprobed",
-        "vpxa",
-        "xorg",
+        'DCUI',
+        'TSM',
+        'SSH',
+        'ssh',
+        'lbtd',
+        'lsassd',
+        'lwiod',
+        'netlogond',
+        'ntpd',
+        'sfcbd-watchdog',
+        'snmpd',
+        'vprobed',
+        'vpxa',
+        'xorg',
     ]
     host_names = _check_hosts(service_instance, host, host_names)
 
@@ -1835,7 +1835,7 @@ def get_service_running(
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs("credstore")
+@ignores_kwargs('credstore')
 def get_vmotion_enabled(
     host, username, password, protocol=None, port=None, host_names=None,
     verify_ssl=True,
@@ -1902,7 +1902,7 @@ def get_vmotion_enabled(
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs("credstore")
+@ignores_kwargs('credstore')
 def get_vsan_enabled(
     host, username, password, protocol=None, port=None, host_names=None,
     verify_ssl=True,
@@ -1974,7 +1974,7 @@ def get_vsan_enabled(
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs("credstore")
+@ignores_kwargs('credstore')
 def get_vsan_eligible_disks(
     host, username, password, protocol=None, port=None, host_names=None,
     verify_ssl=True,
@@ -2075,7 +2075,7 @@ def test_vcenter_connection(service_instance=None):
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs("credstore")
+@ignores_kwargs('credstore')
 def system_info(host, username, password, protocol=None, port=None,
                 verify_ssl=True,):
     '''
@@ -2119,7 +2119,7 @@ def system_info(host, username, password, protocol=None, port=None,
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs("credstore")
+@ignores_kwargs('credstore')
 def list_datacenters(host, username, password, protocol=None, port=None,
                      verify_ssl=True):
     '''
@@ -2160,7 +2160,7 @@ def list_datacenters(host, username, password, protocol=None, port=None,
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs("credstore")
+@ignores_kwargs('credstore')
 def list_clusters(host, username, password, protocol=None, port=None,
                   verify_ssl=True):
     '''
@@ -2201,7 +2201,7 @@ def list_clusters(host, username, password, protocol=None, port=None,
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs("credstore")
+@ignores_kwargs('credstore')
 def list_datastore_clusters(host, username, password, protocol=None, port=None,
                            verify_ssl=True):
     '''
@@ -2241,7 +2241,7 @@ def list_datastore_clusters(host, username, password, protocol=None, port=None,
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs("credstore")
+@ignores_kwargs('credstore')
 def list_datastores(host, username, password, protocol=None, port=None,
                     verify_ssl=True):
     '''
@@ -2281,7 +2281,7 @@ def list_datastores(host, username, password, protocol=None, port=None,
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs("credstore")
+@ignores_kwargs('credstore')
 def list_hosts(host, username, password, protocol=None, port=None,
                verify_ssl=True):
     '''
@@ -2321,7 +2321,7 @@ def list_hosts(host, username, password, protocol=None, port=None,
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs("credstore")
+@ignores_kwargs('credstore')
 def list_resourcepools(host, username, password, protocol=None, port=None,
                        verify_ssl=True):
     '''
@@ -2361,7 +2361,7 @@ def list_resourcepools(host, username, password, protocol=None, port=None,
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs("credstore")
+@ignores_kwargs('credstore')
 def list_networks(host, username, password, protocol=None, port=None,
                   verify_ssl=True):
     '''
@@ -2401,7 +2401,7 @@ def list_networks(host, username, password, protocol=None, port=None,
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs("credstore")
+@ignores_kwargs('credstore')
 def list_vms(host, username, password, protocol=None, port=None,
              verify_ssl=True):
     '''
@@ -2441,7 +2441,7 @@ def list_vms(host, username, password, protocol=None, port=None,
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs("credstore")
+@ignores_kwargs('credstore')
 def list_folders(host, username, password, protocol=None, port=None,
                  verify_ssl=True):
     '''
@@ -2481,7 +2481,7 @@ def list_folders(host, username, password, protocol=None, port=None,
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs("credstore")
+@ignores_kwargs('credstore')
 def list_dvs(host, username, password, protocol=None, port=None,
              verify_ssl=True):
     '''
@@ -2521,7 +2521,7 @@ def list_dvs(host, username, password, protocol=None, port=None,
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs("credstore")
+@ignores_kwargs('credstore')
 def list_vapps(host, username, password, protocol=None, port=None,
                verify_ssl=True):
     '''
@@ -2562,7 +2562,7 @@ def list_vapps(host, username, password, protocol=None, port=None,
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs("credstore")
+@ignores_kwargs('credstore')
 def list_ssds(host, username, password, protocol=None, port=None,
               host_names=None, verify_ssl=True):
     '''
@@ -2626,7 +2626,7 @@ def list_ssds(host, username, password, protocol=None, port=None,
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs("credstore")
+@ignores_kwargs('credstore')
 def list_non_ssds(host, username, password, protocol=None, port=None,
                   host_names=None, verify_ssl=True):
     '''
@@ -2697,7 +2697,7 @@ def list_non_ssds(host, username, password, protocol=None, port=None,
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs("credstore")
+@ignores_kwargs('credstore')
 def set_ntp_config(
     host, username, password, ntp_servers, protocol=None, port=None,
     host_names=None, verify_ssl=True
@@ -2782,7 +2782,7 @@ def set_ntp_config(
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs("credstore")
+@ignores_kwargs('credstore')
 def service_start(
     host, username, password, service_name, protocol=None, port=None,
     host_names=None, verify_ssl=True
@@ -2892,7 +2892,7 @@ def service_start(
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs("credstore")
+@ignores_kwargs('credstore')
 def service_stop(
     host, username, password, service_name, protocol=None, port=None,
     host_names=None, verify_ssl=True,
@@ -3002,7 +3002,7 @@ def service_stop(
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs("credstore")
+@ignores_kwargs('credstore')
 def service_restart(
     host, username, password, service_name, protocol=None, port=None,
     host_names=None, verify_ssl=True,
@@ -3112,7 +3112,7 @@ def service_restart(
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs("credstore")
+@ignores_kwargs('credstore')
 def set_service_policy(
     host,
     username,
@@ -3246,7 +3246,7 @@ def set_service_policy(
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs("credstore")
+@ignores_kwargs('credstore')
 def update_host_datetime(
     host, username, password, protocol=None, port=None, host_names=None,
     verify_ssl=True
@@ -3318,7 +3318,7 @@ def update_host_datetime(
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs("credstore")
+@ignores_kwargs('credstore')
 def update_host_password(
     host, username, password, new_password, protocol=None, port=None,
     verify_ssl=True
@@ -3386,7 +3386,7 @@ def update_host_password(
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs("credstore")
+@ignores_kwargs('credstore')
 def vmotion_disable(
     host, username, password, protocol=None, port=None, host_names=None,
     verify_ssl=True
@@ -3460,10 +3460,10 @@ def vmotion_disable(
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs("credstore")
+@ignores_kwargs('credstore')
 def vmotion_enable(
     host, username, password, protocol=None, port=None, host_names=None,
-    device="vmk0", verify_ssl=True
+    device='vmk0', verify_ssl=True
 ):
     '''
     Enable vMotion for a given host or list of host_names.
@@ -3538,7 +3538,7 @@ def vmotion_enable(
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs("credstore")
+@ignores_kwargs('credstore')
 def vsan_add_disks(host, username, password, protocol=None, port=None,
                    host_names=None, verify_ssl=True):
     '''
@@ -3645,7 +3645,7 @@ def vsan_add_disks(host, username, password, protocol=None, port=None,
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs("credstore")
+@ignores_kwargs('credstore')
 def vsan_disable(host, username, password, protocol=None, port=None,
                  host_names=None, verify_ssl=True):
     '''
@@ -3733,7 +3733,7 @@ def vsan_disable(host, username, password, protocol=None, port=None,
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs("credstore")
+@ignores_kwargs('credstore')
 def vsan_enable(host, username, password, protocol=None, port=None,
                 host_names=None, verify_ssl=True):
     '''
@@ -5009,7 +5009,7 @@ def create_storage_policy(policy_name, policy_dict, service_instance=None):
     .. code-block:: bash
 
         salt '*' vsphere.create_storage_policy policy_name='policy name'
-            policy_dict="$policy_dict"
+            policy_dict='$policy_dict'
     '''
     log.trace('create storage policy \'{0}\', dict = {1}'
               ''.format(policy_name, policy_dict))
@@ -5049,7 +5049,7 @@ def update_storage_policy(policy, policy_dict, service_instance=None):
     .. code-block:: bash
 
         salt '*' vsphere.update_storage_policy policy='policy name'
-            policy_dict="$policy_dict"
+            policy_dict='$policy_dict'
     '''
     log.trace('updating storage policy, dict = {0}'.format(policy_dict))
     profile_manager = salt.utils.pbm.get_profile_manager(service_instance)
@@ -6997,7 +6997,7 @@ def _set_syslog_config_helper(host, username, password, syslog_config, config_va
 
 
 @depends(HAS_PYVMOMI)
-@ignores_kwargs("credstore")
+@ignores_kwargs('credstore')
 def add_host_to_dvs(
     host,
     username,
@@ -7064,7 +7064,7 @@ def add_host_to_dvs(
             username='administrator@vsphere.corp.com' password='vsphere_password'
             vmknic_name='vmk0' vmnic_name='vnmic0' dvs_name='DSwitch'
             target_portgroup_name='DPortGroup' uplink_portgroup_name='DSwitch1-DVUplinks-181'
-            protocol='https' port='443', host_names="['esxi1.corp.com','esxi2.corp.com','esxi3.corp.com']"
+            protocol='https' port='443', host_names='['esxi1.corp.com','esxi2.corp.com','esxi3.corp.com']'
 
     Return Example:
 
@@ -7127,7 +7127,7 @@ def add_host_to_dvs(
     says to create the DVS, create distributed portgroups, and then add the
     host to the DVS specifying which physical NIC to use as the port backing.
     However, if the physical NIC is in use as the only link from the host
-    to vSphere, this will fail with an unhelpful "busy" error.
+    to vSphere, this will fail with an unhelpful 'busy' error.
 
     There is, however, a Powershell PowerCLI cmdlet called Add-VDSwitchPhysicalNetworkAdapter
     that does what we want.  I used Onyx (https://labs.vmware.com/flings/onyx)
@@ -7136,8 +7136,8 @@ def add_host_to_dvs(
 
     .. code-block:: xml
 
-        <UpdateNetworkConfig xmlns="urn:vim25">
-          <_this type="HostNetworkSystem">networkSystem-187</_this>
+        <UpdateNetworkConfig xmlns='urn:vim25'>
+          <_this type='HostNetworkSystem'>networkSystem-187</_this>
           <config>
             <vswitch>
               <changeOperation>edit</changeOperation>
@@ -7150,7 +7150,7 @@ def add_host_to_dvs(
                 <changeOperation>edit</changeOperation>
                 <uuid>73 a4 05 50 b0 d2 7e b9-38 80 5d 24 65 8f da 70</uuid>
                 <spec>
-                <backing xsi:type="DistributedVirtualSwitchHostMemberPnicBacking">
+                <backing xsi:type='DistributedVirtualSwitchHostMemberPnicBacking'>
                     <pnicSpec><pnicDevice>vmnic0</pnicDevice></pnicSpec>
                 </backing>
                 </spec>
@@ -7885,7 +7885,7 @@ def _create_adapter_type(network_adapter, adapter_type,
                 log.trace('Changing type of \'{0}\' from'
                           ' \'{1}\' to \'{2}\''.format(
                               network_adapter.deviceInfo.label,
-                              type(network_adapter).__name__.rsplit(".", 1)[1][7:].lower(),
+                              type(network_adapter).__name__.rsplit('.', 1)[1][7:].lower(),
                               adapter_type))
     else:
         # If device is edited and type not specified or does not match,
@@ -8256,12 +8256,12 @@ def _apply_cd_drive(drive_label, key, device_type, operation,
     .. code-block:: bash
 
         cd:
-            adapter: "CD/DVD drive 1"
+            adapter: 'CD/DVD drive 1'
             device_type: datastore_iso_file or client_device
             client_device:
               mode: atapi or passthrough
             datastore_iso_file:
-              path: "[share] iso/disk.iso"
+              path: '[share] iso/disk.iso'
             connectable:
               start_connected: True
               allow_guest_control:
@@ -9277,22 +9277,22 @@ def _get_client(server, username, password, verify_ssl=None, ca_bundle=None):
 
     if verify_ssl is None:
         if details is None:
-            details = __salt__["vcenter.get_details"]()
-        verify_ssl = details.get("verify_ssl", True)
+            details = __salt__['vcenter.get_details']()
+        verify_ssl = details.get('verify_ssl', True)
         if verify_ssl is None:
             verify_ssl = True
 
     if ca_bundle is None:
         if details is None:
-            details = __salt__["vcenter.get_details"]()
-        ca_bundle = details.get("ca_bundle", None)
+            details = __salt__['vcenter.get_details']()
+        ca_bundle = details.get('ca_bundle', None)
 
     if verify_ssl is False and ca_bundle is not None:
-        log.error("Cannot set verify_ssl to False and ca_bundle together")
+        log.error('Cannot set verify_ssl to False and ca_bundle together')
         return False
 
     if ca_bundle:
-        ca_bundle = salt.utils.http.get_ca_bundle({"ca_bundle": ca_bundle})
+        ca_bundle = salt.utils.http.get_ca_bundle({'ca_bundle': ca_bundle})
 
     # Establish connection with client
     client = salt.utils.vmware.get_vsphere_client(
@@ -9387,7 +9387,7 @@ def list_tags(server=None, username=None, password=None, service_instance=None,
 def attach_tag(
     object_id,
     tag_id,
-    managed_obj="ClusterComputeResource",
+    managed_obj='ClusterComputeResource',
     server=None,
     username=None,
     password=None,
@@ -9467,7 +9467,7 @@ def attach_tag(
 @gets_service_instance_via_proxy
 def list_attached_tags(
     object_id,
-    managed_obj="ClusterComputeResource",
+    managed_obj='ClusterComputeResource',
     server=None,
     username=None,
     password=None,

@@ -70,8 +70,6 @@ nsx-policy-python-sdk==3.0.2.0.0.16837625
 nsx-python-sdk==3.0.2.0.0.16837625
 nsx-vmc-aws-integration-python-sdk==3.0.2.0.0.16837625
 nsx-vmc-policy-python-sdk==3.0.2.0.0.16837625
-ntc-templates==1.4.0      # via junos-eznc
-oauthlib==3.1.0           # via requests-oauthlib
 oscrypto==1.2.0           # via certvalidator
 packaging==19.2           # via pytest
 paramiko==2.4.2
