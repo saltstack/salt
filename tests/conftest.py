@@ -36,9 +36,11 @@ import salt.utils.win_functions
 import saltfactories.utils.compat
 from _pytest.mark.evaluate import MarkEvaluator
 from salt.serializers import yaml
-from tests.support.helpers import (PRE_PYTEST_SKIP_OR_NOT,
-                                  PRE_PYTEST_SKIP_REASON,
-                                  Webserver)
+from tests.support.helpers import (
+    PRE_PYTEST_SKIP_OR_NOT,
+    PRE_PYTEST_SKIP_REASON,
+    Webserver,
+)
 from tests.support.pytest.helpers import *  # pylint: disable=unused-wildcard-import
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.sminion import check_required_sminion_attributes, create_sminion

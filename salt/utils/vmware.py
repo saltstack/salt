@@ -331,7 +331,11 @@ def _get_service_instance(
                 pwd=password,
                 protocol=protocol,
                 port=port,
-                sslContext=ssl._create_unverified_context(),
+                sslContext=getattr(
+                    ssl,
+                    "_create_unverified_context",
+                    getattr(ssl, "_create_stdlib_context"),
+                )(),
                 b64token=token,
                 mechanism=mechanism,
             )

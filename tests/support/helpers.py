@@ -1439,8 +1439,7 @@ class Webserver(object):
         webserver.stop()
     """
 
-    def __init__(self, root=None, port=None, wait=5, handler=None,
-                 ssl_opts=None):
+    def __init__(self, root=None, port=None, wait=5, handler=None, ssl_opts=None):
         """
         root
             Root directory of webserver. If not passed, it will default to the
@@ -1532,7 +1531,8 @@ class Webserver(object):
             self.port = get_unused_localhost_port()
 
         self.web_root = "http{0}://127.0.0.1:{1}".format(
-            "s" if self.ssl_opts else "", self.port)
+            "s" if self.ssl_opts else "", self.port
+        )
 
         self.server_thread = threading.Thread(target=self.target)
         self.server_thread.daemon = True
