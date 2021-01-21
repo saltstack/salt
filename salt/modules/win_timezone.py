@@ -224,7 +224,8 @@ def get_zone():
         raise CommandExecutionError(
             "tzutil encountered an error getting timezone", info=res
         )
-    return mapper.get_unix(res["stdout"].lower(), "Unknown")
+    tz = res["stdout"].lower().strip("_dstoff")
+    return mapper.get_unix(tz, "Unknown")
 
 
 def get_offset():

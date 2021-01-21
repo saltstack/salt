@@ -39,6 +39,21 @@ class WinTimezoneTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(win_timezone.__salt__, {"cmd.run_all": mock_read_ok}):
             self.assertEqual(win_timezone.get_zone(), "Asia/Calcutta")
 
+    def test_get_zone_normal_dstoff(self):
+        """
+        Test if it gets current timezone with dst off (i.e. America/Denver)
+        """
+        mock_read_ok = MagicMock(
+            return_value={
+                "pid": 78,
+                "retcode": 0,
+                "stderr": "",
+                "stdout": "Mountain Standard Time_dstoff",
+            }
+        )
+        with patch.dict(win_timezone.__salt__, {"cmd.run_all": mock_read_ok}):
+            self.assertEqual(win_timezone.get_zone(), "America/Denver")
+
     def test_get_zone_unknown(self):
         """
         Test get_zone with unknown timezone (i.e. Indian Standard Time)
