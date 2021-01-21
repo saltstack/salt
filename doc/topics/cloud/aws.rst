@@ -758,7 +758,7 @@ them have never been used, much less tested, by the Salt Stack team.
 
 * `FreeBSD`__
 
-.. __: http://www.daemonology.net/freebsd-on-ec2/
+.. __: https://aws.amazon.com/marketplace/search/results?filters=vendor_id&vendor_id=92bb514d-02bc-49fd-9727-c474863f63da
 
 * `Fedora`__
 
