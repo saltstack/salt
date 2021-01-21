@@ -284,3 +284,50 @@ def test_host_names_should_be_correctly_returned():
         )
 
         assert actual_items["hosts"] == expected_hosts
+
+
+def test_when_no_datastores_are_found_then_list_datastores_full_should_be_empty_dict():
+    expected_datastores = {}
+    with patch("salt.utils.vmware.list_objects", return_value=[]):
+        actual_datastores = vmware.list_datastores_full("fnord")
+
+        assert actual_datastores == expected_datastores
+
+
+def test_when_datastores_are_found_then_list_datastore_full_should_get_correct_args():
+    expected_server_instance = "fnord"
+    expected_datastores = ["different fnord", "more different fnord"]
+    expected_calls = [
+        call(expected_server_instance, expected_datastores[0]),
+        call(expected_server_instance, expected_datastores[1]),
+    ]
+    patch_list_obj = patch(
+        "salt.utils.vmware.list_objects", return_value=expected_datastores
+    )
+    patch_list_datastore = patch("salt.utils.vmware.list_datastore_full")
+    with patch_list_obj, patch_list_datastore as fake_list_dsf:
+        vmware.list_datastores_full(expected_server_instance)
+
+        fake_list_dsf.assert_has_calls(expected_calls)
+
+
+def test_when_datastores_are_found_then_list__datastores_full_should_return_all_the_datastores_from_list_datastore_full():
+    datastore_names = ["different fnord", "more different fnord"]
+    datastores = [
+        "this is a fnord datastore",
+        "this is a more different fnord datastore",
+    ]
+    expected_datastores = {
+        "different fnord": "this is a fnord datastore",
+        "more different fnord": "this is a more different fnord datastore",
+    }
+    patch_list_obj = patch(
+        "salt.utils.vmware.list_objects", return_value=datastore_names,
+    )
+    patch_list_datastore = patch(
+        "salt.utils.vmware.list_datastore_full", side_effect=datastores
+    )
+    with patch_list_obj, patch_list_datastore:
+        actual_datastores = vmware.list_datastores_full("some server instance")
+
+    assert actual_datastores == expected_datastores
