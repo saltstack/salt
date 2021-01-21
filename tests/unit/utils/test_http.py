@@ -5,15 +5,30 @@
 
 # Import Python Libs
 from __future__ import absolute_import, unicode_literals, print_function
+import requests
+import os
 import socket
+import ssl
+import sys
 from contextlib import closing
 
 # Import Salt Testing Libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 from tests.support.helpers import MirrorPostHandler, Webserver
+from tests.support.mock import MagicMock, patch
+from tests.support.runtests import RUNTIME_VARS
+
 
 # Import Salt Libs
 import salt.utils.http as http
+
+try:
+    import pytest
+except ImportError:
+    pytest = None
+
+
+
 
 
 class HTTPTestCase(TestCase):
@@ -134,3 +149,68 @@ class HTTPTestCase(TestCase):
         body = ret.get('body', '')
         boundary = body[:body.find('\r')]
         self.assertEqual(body, match_this.format(boundary))
+
+
+@skipIf(pytest is None, 'PyTest is missing')
+class HTTPSTestCase(TestCase):
+    def setUp(self):
+        """
+        spins up an https webserver.
+        """
+        if sys.version_info < (3, 5, 3):
+            pytest.skip("Python versions older than 3.5.3 do not define `ssl.PROTOCOL_TLS`")
+        context = ssl.SSLContext(ssl.PROTOCOL_TLS)
+        context.load_cert_chain(
+            str(os.path.join(RUNTIME_VARS.FILES, "https", "cert.pem")),
+            str(os.path.join(RUNTIME_VARS.FILES, "https", "key.pem")),
+        )
+
+        self.webserver = Webserver(root=str(RUNTIME_VARS.FILES), ssl_opts=context)
+        self.webserver.start()
+
+    def tearDown(self):
+        self.webserver.stop()
+
+    def test_requests_session_verify_ssl_false(self):
+        """
+        test salt.utils.http.session when using verify_ssl
+        """
+        for verify in [True, False, None]:
+            kwargs = {"verify_ssl": verify}
+            if verify is None:
+                kwargs.pop("verify_ssl")
+
+            if verify is True or verify is None:
+                with pytest.raises(requests.exceptions.SSLError) as excinfo:
+                    session = http.session(**kwargs)
+                    ret = session.get(self.webserver.url("this.txt"))
+            else:
+                session = http.session(**kwargs)
+                ret = session.get(self.webserver.url("this.txt"))
+                assert ret.status_code == 200
+
+    def test_session_ca_bundle_verify_false(self):
+        """
+        test salt.utils.http.session when using
+        both ca_bunlde and verify_ssl false
+        """
+        ret = http.session(ca_bundle="/tmp/test_bundle", verify_ssl=False)
+        assert ret is False
+
+    def test_session_headers(self):
+        """
+        test salt.utils.http.session when setting
+        headers
+        """
+        ret = http.session(headers={"Content-Type": "application/json"})
+        assert ret.headers["Content-Type"] == "application/json"
+
+    def test_session_ca_bundle(self):
+        """
+        test salt.utils.https.session when setting ca_bundle
+        """
+        fpath = "/tmp/test_bundle"
+        patch_os = patch("os.path.exists", MagicMock(return_value=True))
+        with patch_os:
+            ret = http.session(ca_bundle=fpath)
+        assert ret.verify == fpath

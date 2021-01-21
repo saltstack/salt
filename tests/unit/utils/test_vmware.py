@@ -1657,7 +1657,7 @@ class PrivateGetServiceInstanceTestCase(TestCase):
 
         self.assertEqual(mock_sc.call_count, 1)
         self.assertIn(
-            'Could not connect to host 'fake_host.fqdn'', excinfo.exception.message,
+            'Could not connect to host "fake_host.fqdn"', excinfo.exception.message,
         )
 
     def test_attempt_unsuccessful_connection_vim_fault(self):
@@ -1706,7 +1706,7 @@ class PrivateGetServiceInstanceTestCase(TestCase):
 
             self.assertEqual(mock_sc.call_count, 2)
             self.assertIn(
-                'Could not connect to host 'fake_host.fqdn'', excinfo.exception.message
+                'Could not connect to host "fake_host.fqdn"', excinfo.exception.message
             )
 
     @skipIf(not SSL_VALIDATION, 'SSL validation is not enabled')
@@ -1761,7 +1761,7 @@ class PrivateGetServiceInstanceTestCase(TestCase):
 
             self.assertEqual(mock_sc.call_count, 2)
             self.assertIn(
-                'Could not connect to host 'fake_host.fqdn'', excinfo.exception.message
+                'Could not connect to host "fake_host.fqdn"', excinfo.exception.message
             )
 
     @skipIf(not SSL_VALIDATION, 'SSL validation is not enabled')

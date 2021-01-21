@@ -1416,7 +1416,8 @@ class Webserver(object):
                  root=None,
                  port=None,
                  wait=5,
-                 handler=None):
+                 handler=None,
+                 ssl_opts=None):
         '''
         root
             Root directory of webserver. If not passed, it will default to the
@@ -1452,6 +1453,7 @@ class Webserver(object):
             if handler is not None \
             else salt.ext.tornado.web.StaticFileHandler
         self.web_root = None
+        self.ssl_opts = ssl_opts
 
     def target(self):
         '''
@@ -1465,7 +1467,7 @@ class Webserver(object):
         else:
             self.application = salt.ext.tornado.web.Application(
                 [(r'/(.*)', self.handler)])
-        self.application.listen(self.port)
+        self.application.listen(self.port, ssl_options=self.ssl_opts)
         self.ioloop.start()
 
     @property
@@ -1502,7 +1504,8 @@ class Webserver(object):
         if self.port is None:
             self.port = get_unused_localhost_port()
 
-        self.web_root = 'http://127.0.0.1:{0}'.format(self.port)
+        self.web_root = "http{0}://127.0.0.1:{1}".format(
+            "s" if self.ssl_opts else "", self.port)
 
         self.server_thread = threading.Thread(target=self.target)
         self.server_thread.daemon = True
