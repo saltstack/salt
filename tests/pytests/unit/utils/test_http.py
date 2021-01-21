@@ -5,7 +5,7 @@ import salt.utils.http
 from tests.support.mock import MagicMock, patch
 
 
-def test_requests_session_verify_ssl_false(ssl_webserver, integration_files_dir):
+def test_requests_session_verify_ssl_false(ssl_webserver):
     """
     test salt.utils.http.session when using verify_ssl
     """

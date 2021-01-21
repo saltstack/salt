@@ -17,6 +17,7 @@ import os
 import pathlib
 import pprint
 import re
+import ssl
 import sys
 from functools import partial, wraps
 
@@ -35,7 +36,9 @@ import salt.utils.win_functions
 import saltfactories.utils.compat
 from _pytest.mark.evaluate import MarkEvaluator
 from salt.serializers import yaml
-from tests.support.helpers import PRE_PYTEST_SKIP_OR_NOT, PRE_PYTEST_SKIP_REASON
+from tests.support.helpers import (PRE_PYTEST_SKIP_OR_NOT,
+                                  PRE_PYTEST_SKIP_REASON,
+                                  Webserver)
 from tests.support.pytest.helpers import *  # pylint: disable=unused-wildcard-import
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.sminion import check_required_sminion_attributes, create_sminion
@@ -758,6 +761,25 @@ def reap_stray_processes():
 def grains(request):
     sminion = create_sminion()
     return sminion.opts["grains"].copy()
+
+
+@pytest.fixture
+def ssl_webserver(scope="module"):
+    """
+    spins up an https webserver.
+    """
+    if sys.version_info < (3, 5, 3):
+        pytest.skip("Python versions older than 3.5.3 do not define `ssl.PROTOCOL_TLS`")
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS)
+    context.load_cert_chain(
+        str(os.path.join(RUNTIME_VARS.FILES, "https", "cert.pem")),
+        str(os.path.join(RUNTIME_VARS.FILES, "https", "key.pem")),
+    )
+
+    webserver = Webserver(root=str(RUNTIME_VARS.FILES), ssl_opts=context)
+    webserver.start()
+    yield webserver
+    webserver.stop()
 
 
 # <---- Custom Fixtures ----------------------------------------------------------------------------------------------
