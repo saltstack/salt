@@ -1347,6 +1347,11 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         ):
             assert core.dns() == ret
 
+        with patch("os.path.exists", return_value=True), patch.object(
+            salt.utils.dns, "parse_resolv", MagicMock(return_value=resolv_mock)
+        ):
+            assert core.dns() == ret
+
     def test_enable_fqdns_false(self):
         """
         tests enable_fqdns_grains is set to False
