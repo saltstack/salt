@@ -194,54 +194,47 @@ def _install_system_packages(session):
                         shutil.copyfile(src, dst)
 
 
-def _get_distro_pip_constraints(session, transport):
+def _get_pip_requirements_file(session, transport, crypto=None):
     # Install requirements
-    distro_constraints = []
-
-    if transport == 'tcp':
-        # The TCP requirements are the exact same requirements as the ZeroMQ ones
-        transport = 'zeromq'
 
     pydir = _get_pydir(session)
 
     if IS_WINDOWS:
-        _distro_constraints = os.path.join('requirements',
-                                           'static',
-                                           pydir,
-                                           '{}-windows.txt'.format(transport))
-        if os.path.exists(_distro_constraints):
-            distro_constraints.append(_distro_constraints)
-        _distro_constraints = os.path.join('requirements',
-                                           'static',
-                                           pydir,
-                                           'windows.txt')
-        if os.path.exists(_distro_constraints):
-            distro_constraints.append(_distro_constraints)
-        _distro_constraints = os.path.join('requirements',
-                                           'static',
-                                           pydir,
-                                           'windows-crypto.txt')
-        if os.path.exists(_distro_constraints):
-            distro_constraints.append(_distro_constraints)
+        if crypto is None:
+            _requirements_file = os.path.join(
+                "requirements", "static", pydir, "{}-windows.txt".format(transport),
+            )
+            if os.path.exists(_requirements_file):
+                return _requirements_file
+            _requirements_file = os.path.join(
+                "requirements", "static", pydir, "windows.txt"
+            )
+            if os.path.exists(_requirements_file):
+                return _requirements_file
+        _requirements_file = os.path.join(
+            "requirements", "static", pydir, "windows-crypto.txt"
+        )
+
+        if os.path.exists(_requirements_file):
+            return _requirements_file
     elif IS_DARWIN:
-        _distro_constraints = os.path.join('requirements',
-                                           'static',
-                                           pydir,
-                                           '{}-darwin.txt'.format(transport))
-        if os.path.exists(_distro_constraints):
-            distro_constraints.append(_distro_constraints)
-        _distro_constraints = os.path.join('requirements',
-                                           'static',
-                                           pydir,
-                                           'darwin.txt')
-        if os.path.exists(_distro_constraints):
-            distro_constraints.append(_distro_constraints)
-        _distro_constraints = os.path.join('requirements',
-                                           'static',
-                                           pydir,
-                                           'darwin-crypto.txt')
-        if os.path.exists(_distro_constraints):
-            distro_constraints.append(_distro_constraints)
+        if crypto is None:
+            _requirements_file = os.path.join(
+                "requirements", "static", pydir, "{}-darwin.txt".format(transport)
+            )
+            if os.path.exists(_requirements_file):
+                return _requirements_file
+            _requirements_file = os.path.join(
+                "requirements", "static", pydir, "darwin.txt"
+            )
+            if os.path.exists(_requirements_file):
+                return _requirements_file
+        _requirements_file = os.path.join(
+            "requirements", "static", pydir, "darwin-crypto.txt"
+        )
+
+        if os.path.exists(_requirements_file):
+            return _requirements_file
     else:
         _install_system_packages(session)
         distro = _get_distro_info(session)
@@ -252,99 +245,45 @@ def _get_distro_pip_constraints(session, transport):
             '{id}-{version_parts[major]}'.format(**distro)
         ]
         for distro_key in distro_keys:
-            _distro_constraints = os.path.join('requirements',
-                                               'static',
-                                               pydir,
-                                               '{}.txt'.format(distro_key))
-            if os.path.exists(_distro_constraints):
-                distro_constraints.append(_distro_constraints)
-            _distro_constraints = os.path.join('requirements',
-                                               'static',
-                                               pydir,
-                                               '{}-crypto.txt'.format(distro_key))
-            if os.path.exists(_distro_constraints):
-                distro_constraints.append(_distro_constraints)
-            _distro_constraints = os.path.join('requirements',
-                                               'static',
-                                               pydir,
-                                               '{}-{}.txt'.format(transport, distro_key))
-            if os.path.exists(_distro_constraints):
-                distro_constraints.append(_distro_constraints)
-                distro_constraints.append(_distro_constraints)
-            _distro_constraints = os.path.join('requirements',
+            if crypto is None:
+                _requirements_file = os.path.join(
+                    "requirements", "static", pydir, "{}.txt".format(distro_key)
+                )
+                if os.path.exists(_requirements_file):
+                    return _requirements_file
+                _requirements_file = os.path.join(
+                    "requirements",
+                    "static",
+                    pydir,
+                    "{}-{}.txt".format(transport, distro_key),
+                )
+                if os.path.exists(_requirements_file):
+                    return _requirements_file
+            _requirements_file = os.path.join(
+                "requirements", "static", pydir, "{}-crypto.txt".format(distro_key),
+            )
+            if os.path.exists(_requirements_file):
+                return _requirements_file
+            _requirements_file = os.path.join('requirements',
                                                'static',
                                                pydir,
                                                '{}-{}-crypto.txt'.format(transport, distro_key))
-            if os.path.exists(_distro_constraints):
-                distro_constraints.append(_distro_constraints)
-    return distro_constraints
+            if os.path.exists(_requirements_file):
+                return _requirements_file
 
 
 def _install_requirements(session, transport, *extra_requirements):
-    # Install requirements
-    distro_constraints = _get_distro_pip_constraints(session, transport)
-
-    _requirements_files = [
-        os.path.join('requirements', 'base.txt'),
-        os.path.join('requirements', 'zeromq.txt'),
-        os.path.join('requirements', 'pytest.txt')
+    install_command = [
+        "--progress-bar=off",
+        "-r",
+        _get_pip_requirements_file(session, transport),
     ]
-    if sys.platform.startswith('linux'):
-        requirements_files = [
-            os.path.join('requirements', 'static', 'linux.in')
-        ]
-    elif sys.platform.startswith('win'):
-        requirements_files = [
-            os.path.join('pkg', 'windows', 'req.txt'),
-            os.path.join('requirements', 'static', 'windows.in')
-        ]
-    elif sys.platform.startswith('darwin'):
-        requirements_files = [
-            os.path.join('pkg', 'osx', 'req.txt'),
-            os.path.join('pkg', 'osx', 'req_ext.txt'),
-            os.path.join('pkg', 'osx', 'req_pyobjc.txt'),
-            os.path.join('requirements', 'static', 'darwin.in')
-        ]
-
-    while True:
-        if not requirements_files:
-            break
-        requirements_file = requirements_files.pop(0)
-
-        if requirements_file not in _requirements_files:
-            _requirements_files.append(requirements_file)
-
-        session.log('Processing {}'.format(requirements_file))
-        with open(requirements_file) as rfh:  # pylint: disable=resource-leakage
-            for line in rfh:
-                line = line.strip()
-                if not line:
-                    continue
-                if line.startswith('-r'):
-                    reqfile = os.path.join(os.path.dirname(requirements_file), line.strip().split()[-1])
-                    if reqfile in _requirements_files:
-                        continue
-                    _requirements_files.append(reqfile)
-                    continue
-
-    for requirements_file in _requirements_files:
-        install_command = [
-            '--progress-bar=off', '-r', requirements_file
-        ]
-        for distro_constraint in distro_constraints:
-            install_command.extend([
-                '--constraint', distro_constraint
-            ])
-        session.install(*install_command, silent=PIP_INSTALL_SILENT)
+    session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
     if extra_requirements:
         install_command = [
             '--progress-bar=off',
         ]
-        for distro_constraint in distro_constraints:
-            install_command.extend([
-                '--constraint', distro_constraint
-            ])
         install_command += list(extra_requirements)
         session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
@@ -483,14 +422,11 @@ def runtests_parametrized(session, coverage, transport, crypto):
             session.run('pip', 'uninstall', '-y', 'pycrypto', 'pycryptodome', 'pycryptodomex', silent=True)
         else:
             session.run('pip', 'uninstall', '-y', 'm2crypto', silent=True)
-        distro_constraints = _get_distro_pip_constraints(session, transport)
         install_command = [
             '--progress-bar=off',
+            "--constraint",
+            _get_pip_requirements_file(session, transport, crypto=True),
         ]
-        for distro_constraint in distro_constraints:
-            install_command.extend([
-                '--constraint', distro_constraint
-            ])
         install_command.append(crypto)
         session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
@@ -633,10 +569,12 @@ def runtests_cloud(session, coverage):
     # Install requirements
     _install_requirements(session, 'zeromq', 'unittest-xml-reporting==2.2.1')
 
-    pydir = _get_pydir(session)
-    cloud_requirements = os.path.join('requirements', 'static', pydir, 'cloud.txt')
+    requirements_file = os.path.join(
+        "requirements", "static", _get_pydir(session), "cloud.txt"
+    )
 
-    session.install('--progress-bar=off', '-r', cloud_requirements, silent=PIP_INSTALL_SILENT)
+    install_command = ["--progress-bar=off", "-r", requirements_file]
+    session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
     cmd_args = [
         '--tests-logfile={}'.format(RUNTESTS_LOGFILE),
@@ -672,14 +610,11 @@ def pytest_parametrized(session, coverage, transport, crypto):
             session.run('pip', 'uninstall', '-y', 'pycrypto', 'pycryptodome', 'pycryptodomex', silent=True)
         else:
             session.run('pip', 'uninstall', '-y', 'm2crypto', silent=True)
-        distro_constraints = _get_distro_pip_constraints(session, transport)
         install_command = [
             '--progress-bar=off',
+            "--constraint",
+            _get_pip_requirements_file(session, transport, crypto=True),
         ]
-        for distro_constraint in distro_constraints:
-            install_command.extend([
-                '--constraint', distro_constraint
-            ])
         install_command.append(crypto)
         session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
@@ -826,10 +761,12 @@ def pytest_zeromq_pycryptodomex(session, coverage):
 def pytest_cloud(session, coverage):
     # Install requirements
     _install_requirements(session, 'zeromq')
-    pydir = _get_pydir(session)
-    cloud_requirements = os.path.join('requirements', 'static', pydir, 'cloud.txt')
+    requirements_file = os.path.join(
+        "requirements", "static", _get_pydir(session), "cloud.txt"
+    )
 
-    session.install('--progress-bar=off', '-r', cloud_requirements, silent=PIP_INSTALL_SILENT)
+    install_command = ["--progress-bar=off", "-r", requirements_file]
+    session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
     cmd_args = [
         '--rootdir', REPO_ROOT,
@@ -917,16 +854,9 @@ class Tee:
 def _lint(session, rcfile, flags, paths, tee_output=True):
     _install_requirements(session, 'zeromq')
     requirements_file = 'requirements/static/lint.in'
-    distro_constraints = [
-        'requirements/static/{}/lint.txt'.format(_get_pydir(session))
-    ]
     install_command = [
         '--progress-bar=off', '-r', requirements_file
     ]
-    for distro_constraint in distro_constraints:
-        install_command.extend([
-            '--constraint', distro_constraint
-        ])
     session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
     if tee_output:
@@ -1093,16 +1023,9 @@ def docs_html(session, compress):
     if pydir == 'py3.4':
         session.error('Sphinx only runs on Python >= 3.5')
     requirements_file = 'requirements/static/docs.in'
-    distro_constraints = [
-        'requirements/static/{}/docs.txt'.format(_get_pydir(session))
-    ]
     install_command = [
         '--progress-bar=off', '-r', requirements_file
     ]
-    for distro_constraint in distro_constraints:
-        install_command.extend([
-            '--constraint', distro_constraint
-        ])
     session.install(*install_command, silent=PIP_INSTALL_SILENT)
     os.chdir('doc/')
     session.run('make', 'clean', external=True)
@@ -1123,16 +1046,9 @@ def docs_man(session, compress, update):
     if pydir == 'py3.4':
         session.error('Sphinx only runs on Python >= 3.5')
     requirements_file = 'requirements/static/docs.in'
-    distro_constraints = [
-        'requirements/static/{}/docs.txt'.format(_get_pydir(session))
-    ]
     install_command = [
         '--progress-bar=off', '-r', requirements_file
     ]
-    for distro_constraint in distro_constraints:
-        install_command.extend([
-            '--constraint', distro_constraint
-        ])
     session.install(*install_command, silent=PIP_INSTALL_SILENT)
     os.chdir('doc/')
     session.run('make', 'clean', external=True)
