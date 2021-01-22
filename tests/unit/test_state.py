@@ -209,7 +209,7 @@ class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             "__sls__": "tests.cmd",
             "__env__": "base",
             "__id__": "check unless",
-            "unless": ["/bin/true", "/bin/false"],
+            "unless": ["exit 0", "exit 1"],
             "order": 10001,
             "fun": "run",
         }
@@ -231,7 +231,7 @@ class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             "__sls__": "tests.cmd",
             "__env__": "base",
             "__id__": "check unless",
-            "unless": ["/bin/false", "/bin/true"],
+            "unless": ["exit 1", "exit 0"],
             "order": 10001,
             "fun": "run",
         }
@@ -253,7 +253,7 @@ class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             "__sls__": "tests.cmd",
             "__env__": "base",
             "__id__": "check onlyif",
-            "onlyif": ["/bin/false", "/bin/true"],
+            "onlyif": ["exit 1", "exit 0"],
             "order": 10001,
             "fun": "run",
         }
@@ -275,7 +275,7 @@ class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             "__sls__": "tests.cmd",
             "__env__": "base",
             "__id__": "check unless",
-            "unless": ["/bin/false", "/bin/false"],
+            "unless": ["exit 1", "exit 1"],
             "order": 10001,
             "fun": "run",
         }
@@ -293,7 +293,7 @@ class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             "__sls__": "tests.cmd",
             "__env__": "base",
             "__id__": "check onlyif",
-            "onlyif": ["/bin/true", "/bin/true"],
+            "onlyif": ["exit 0", "exit 0"],
             "order": 10001,
             "fun": "run",
         }
@@ -311,7 +311,7 @@ class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             "__sls__": "tests.cmd",
             "__env__": "base",
             "__id__": "check unless",
-            "unless": ["/bin/true", "/bin/true"],
+            "unless": ["exit 0", "exit 0"],
             "order": 10001,
             "fun": "run",
         }
@@ -333,7 +333,7 @@ class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             "__sls__": "tests.cmd",
             "__env__": "base",
             "__id__": "check onlyif",
-            "onlyif": ["/bin/false", "/bin/false"],
+            "onlyif": ["exit 1", "exit 1"],
             "order": 10001,
             "fun": "run",
         }
@@ -519,7 +519,7 @@ class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             "__sls__": "tests.cmd",
             "__env__": "base",
             "__id__": "check onlyif",
-            "onlyif": ["/bin/true", "/bin/false"],
+            "onlyif": ["exit 0", "exit 1"],
             "order": 10001,
             "fun": "run",
         }
