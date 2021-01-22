@@ -853,7 +853,9 @@ class Tee:
 
 def _lint(session, rcfile, flags, paths, tee_output=True):
     _install_requirements(session, 'zeromq')
-    requirements_file = 'requirements/static/lint.in'
+    requirements_file = os.path.join(
+        "requirements", "static", _get_pydir(session), "lint.txt"
+    )
     install_command = [
         '--progress-bar=off', '-r', requirements_file
     ]
@@ -1022,7 +1024,9 @@ def docs_html(session, compress):
     pydir = _get_pydir(session)
     if pydir == 'py3.4':
         session.error('Sphinx only runs on Python >= 3.5')
-    requirements_file = 'requirements/static/docs.in'
+    requirements_file = os.path.join(
+        "requirements", "static", _get_pydir(session), "docs.txt"
+    )
     install_command = [
         '--progress-bar=off', '-r', requirements_file
     ]
@@ -1045,7 +1049,9 @@ def docs_man(session, compress, update):
     pydir = _get_pydir(session)
     if pydir == 'py3.4':
         session.error('Sphinx only runs on Python >= 3.5')
-    requirements_file = 'requirements/static/docs.in'
+    requirements_file = os.path.join(
+        "requirements", "static", _get_pydir(session), "docs.txt"
+    )
     install_command = [
         '--progress-bar=off', '-r', requirements_file
     ]
