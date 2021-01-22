@@ -6,7 +6,7 @@ from salt.cloud.clouds import hetzner
 from salt.exceptions import SaltCloudException, SaltCloudSystemExit
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 KEY = "abcdefgh"
 
@@ -61,12 +61,6 @@ class HetznerTestCase(TestCase, LoaderModuleMockMixin):
             },
         }
 
-    def setUp(self):
-        super().setUp()
-        patcher = patch("salt.cloud.clouds.hetzner.hcloud")
-        patcher.start()
-        self.addCleanup(patcher.stop)
-
     @patch("salt.cloud.clouds.hetzner.get_configured_provider")
     @patch("salt.cloud.clouds.hetzner.get_dependencies")
     def test_virtual(self, dependency, config):
@@ -96,9 +90,11 @@ class HetznerTestCase(TestCase, LoaderModuleMockMixin):
         with patch("salt.cloud.clouds.hetzner.HAS_HCLOUD", False):
             self.assertFalse(hetzner.get_dependencies())
 
+    @skipIf(not hetzner.HAS_HCLOUD, "Install hcloud to be able to run this test.")
     def test_connect_client(self):
-        hetzner._connect_client()
-        hetzner.hcloud.Client.assert_called_once_with(KEY)
+        with patch("salt.cloud.clouds.hetzner.hcloud"):
+            hetzner._connect_client()
+            hetzner.hcloud.Client.assert_called_once_with(KEY)
 
     @patch("salt.cloud.clouds.hetzner._connect_client", return_value=MagicMock())
     def test_avail_images_action(self, connect):
