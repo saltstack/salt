@@ -20,7 +20,6 @@ log = logging.getLogger(__name__)
 
 
 class SplunkReturnerTest(TestCase, LoaderModuleMockMixin):
-
     def setup_loader_modules(self):
         opts = {
             "splunk_http_forwarder": {
@@ -55,18 +54,20 @@ class SplunkReturnerTest(TestCase, LoaderModuleMockMixin):
             "requests.post", requests_post
         ):
             splunk.returner(payload.copy())
-        requests_post.assert_called_with(
-            "https://the.splunk.domain:8088/services/collector/event",
-            data=json.dumps(data),
-            headers={"Authorization": "Splunk TheToken"},
-            verify=True,
+        assert json.loads(requests_post.call_args_list[0][1]["data"]) == data
+        assert requests_post.call_args_list[0][1]["verify"]
+        assert requests_post.call_args_list[0][1]["headers"] == {
+            "Authorization": "Splunk TheToken"
+        }
+        assert (
+            requests_post.call_args_list[0][0][0]
+            == "https://the.splunk.domain:8088/services/collector/event"
         )
 
     def test_verify_ssl(self):
         payload = {"some": "payload"}
         verify_ssl_values = [True, False, None]
         payload = {"some": "payload"}
-        requests_post = MagicMock()
         ts = 1234565789
         host = "TheHostName"
         data = {
@@ -77,6 +78,7 @@ class SplunkReturnerTest(TestCase, LoaderModuleMockMixin):
             "host": host,
         }
         for verify_ssl in verify_ssl_values:
+            requests_post = MagicMock()
             with patch(
                 "salt.returners.splunk.time.time", MagicMock(return_value=ts)
             ), patch(
@@ -87,9 +89,12 @@ class SplunkReturnerTest(TestCase, LoaderModuleMockMixin):
                 splunk.__opts__["splunk_http_forwarder"], verify_ssl=verify_ssl
             ):
                 splunk.returner(payload.copy())
-            requests_post.assert_called_with(
-                "https://the.splunk.domain:8088/services/collector/event",
-                data=json.dumps(data),
-                headers={"Authorization": "Splunk TheToken"},
-                verify=verify_ssl,
-            )
+                assert json.loads(requests_post.call_args_list[0][1]["data"]) == data
+                assert requests_post.call_args_list[0][1]["verify"] == verify_ssl
+                assert requests_post.call_args_list[0][1]["headers"] == {
+                    "Authorization": "Splunk TheToken"
+                }
+                assert (
+                    requests_post.call_args_list[0][0][0]
+                    == "https://the.splunk.domain:8088/services/collector/event"
+                )
