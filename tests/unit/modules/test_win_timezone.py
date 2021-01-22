@@ -3,7 +3,6 @@
 """
 import salt.modules.win_timezone as win_timezone
 from salt.exceptions import CommandExecutionError
-
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
