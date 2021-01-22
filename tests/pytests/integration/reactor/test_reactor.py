@@ -19,6 +19,7 @@ from tests.support.helpers import PRE_PYTEST_SKIP_REASON
 pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.windows_whitelisted,
+    pytest.mark.skip_on_windows(reason=PRE_PYTEST_SKIP_REASON),
 ]
 
 log = logging.getLogger(__name__)
