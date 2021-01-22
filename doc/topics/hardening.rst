@@ -110,7 +110,7 @@ Run the following on the Salt master:
 
 .. code-block:: shell
 
-   salt-key -d
+   salt-key -d <minion-id>
 
 Run the following on the Salt minion:
 
@@ -122,7 +122,7 @@ Run the following on the Salt master:
 
 .. code-block:: shell
 
-   salt-key -a
+   salt-key -a <minion-id>
 
 Rotate a master key
 -------------------
@@ -143,18 +143,6 @@ Run the following on the Salt minion:
    rm <pki_dir>/minion_master.pub
    systemctl start salt-minion
 
-Rotate all keys
----------------
-
-A script was designed to quickly re-key Salt minions. It was written originally
-as a part of the mitigation efforts for `CVE-2020-11651`_ and `CVE-2020-11652`_
-but it can be used in any scenario in which all minions connected to a Salt
-master should be forced to re-generate their keys and re-connect.
-
-Reference `salt-rekey`_ for directions.
 
 .. _salt-users: https://groups.google.com/forum/#!forum/salt-users
 .. _salt-announce: https://groups.google.com/forum/#!forum/salt-announce
-.. _salt-rekey: https://github.com/dwoz/salt-rekey/
-.. _CVE-2020-11651: https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2020-11651
-.. _CVE-2020-11652: https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2020-11652
