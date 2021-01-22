@@ -123,7 +123,7 @@ class WheelClient(
             })
             {'jid': '20131219224744416681', 'tag': 'salt/wheel/20131219224744416681'}
         """
-        fun = low.pop("fun")
+        fun = low.get("fun")
         return self.asynchronous(fun, low)
 
     def cmd(

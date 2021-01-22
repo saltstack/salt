@@ -504,7 +504,10 @@ class AsyncClientMixin(object):
         low["__user__"] = user
         low["__tag__"] = tag
 
-        return self.low(fun, low, full_return=False)
+        try:
+            return self.cmd_sync(low)
+        except salt.exceptions.EauthAuthenticationError as exc:
+            log.error(exc)
 
     def cmd_async(self, low):
         """
