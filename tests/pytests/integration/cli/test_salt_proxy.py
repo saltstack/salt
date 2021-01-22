@@ -14,7 +14,7 @@ import pytest
 import salt.defaults.exitcodes
 from saltfactories.exceptions import FactoryNotStarted
 from saltfactories.utils import random_string
-from tests.support.helpers import PRE_PYTEST_SKIP_REASON, slowTest
+from tests.support.helpers import PRE_PYTEST_SKIP_REASON
 
 log = logging.getLogger(__name__)
 
@@ -30,7 +30,7 @@ def proxy_minion_id(salt_factories, salt_master):
         pytest.helpers.remove_stale_minion_key(salt_master, _proxy_minion_id)
 
 
-@slowTest
+@pytest.mark.slow_test
 def test_exit_status_no_proxyid(salt_master, proxy_minion_id):
     """
     Ensure correct exit status when --proxyid argument is missing.
@@ -62,7 +62,7 @@ def test_exit_status_unknown_user(salt_master, proxy_minion_id):
     assert "The user is not available." in exc.value.stderr, exc.value
 
 
-@slowTest
+@pytest.mark.slow_test
 def test_exit_status_unknown_argument(salt_master, proxy_minion_id):
     """
     Ensure correct exit status when an unknown argument is passed to

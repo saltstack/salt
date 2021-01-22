@@ -102,9 +102,9 @@ class Listener:
 def start(hosts, channels, tag=None):
     if tag is None:
         tag = "salt/engine/redis_sentinel"
-    local = salt.client.LocalClient()
-    ips = local.cmd(
-        hosts["matching"], "network.ip_addrs", [hosts["interface"]]
-    ).values()
+    with salt.client.LocalClient() as local:
+        ips = local.cmd(
+            hosts["matching"], "network.ip_addrs", [hosts["interface"]]
+        ).values()
     client = Listener(host=ips.pop()[0], port=hosts["port"], channels=channels, tag=tag)
     client.run()
