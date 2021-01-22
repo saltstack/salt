@@ -246,6 +246,24 @@ class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             return_result = state_obj._run_check_onlyif(low_data, {})
             self.assertEqual(expected_result, return_result)
 
+    def test_verify_unless_list_cmd_valid(self):
+        low_data = {
+            "state": "cmd",
+            "name": 'echo "something"',
+            "__sls__": "tests.cmd",
+            "__env__": "base",
+            "__id__": "check unless",
+            "onlyif": ["/bin/true", "/bin/true"],
+            "order": 10001,
+            "fun": "run",
+        }
+        expected_result = {"comment": "unless condition is false", "result": False}
+        with patch("salt.state.State._gather_pillar") as state_patch:
+            minion_opts = self.get_temp_config("minion")
+            state_obj = salt.state.State(minion_opts)
+            return_result = state_obj._run_check_onlyif(low_data, {})
+            self.assertEqual(expected_result, return_result)
+
     def test_verify_unless_parse(self):
         low_data = {
             "unless": [{"fun": "test.arg", "args": ["arg1", "arg2"]}],
