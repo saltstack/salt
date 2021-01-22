@@ -45,12 +45,58 @@ class SSHClient(object):
         # Salt API should never offer a custom roster!
         self.opts["__disable_custom_roster"] = disable_custom_roster
 
+    def sanitize_kwargs(self, kwargs):
+        roster_vals = [
+            ("host", str),
+            ("ssh_user", str),
+            ("ssh_passwd", str),
+            ("ssh_port", int),
+            ("ssh_sudo", bool),
+            ("ssh_sudo_user", str),
+            ("ssh_priv", str),
+            ("ssh_priv_passwd", str),
+            ("ssh_identities_only", bool),
+            ("ssh_remote_port_forwards", bool),
+            ("ssh_options", list),
+            ("roster_file", str),
+            ("rosters", list),
+            ("ignore_host_keys", bool),
+            ("raw_shell", bool),
+        ]
+        sane_kwargs = {}
+        for name, kind in roster_vals:
+            if name not in kwargs:
+                continue
+            try:
+                val = kind(kwargs[name])
+            except ValueError:
+                log.warn("Unable to cast kwarg %s", name)
+                continue
+            if kind is bool or kind is int:
+                sane_kwargs[name] = val
+            elif kind is str:
+                if val.find("ProxyCommand") != -1:
+                    log.warn("Filter unsafe value for kwarg %s", name)
+                    continue
+                sane_kwargs[name] = val
+            elif kind is list:
+                sane_val = []
+                for item in val:
+                    # This assumes the values are strings
+                    if item.find("ProxyCommand") != -1:
+                        log.warn("Filter unsafe value for kwarg %s", name)
+                        continue
+                    sane_val.append(item)
+                sane_kwargs[name] = sane_val
+        return sane_kwargs
+
     def _prep_ssh(
         self, tgt, fun, arg=(), timeout=None, tgt_type="glob", kwarg=None, **kwargs
     ):
         """
         Prepare the arguments
         """
+        kwargs = self.sanitize_kwargs(kwargs)
         opts = copy.deepcopy(self.opts)
         opts.update(kwargs)
         if timeout:
