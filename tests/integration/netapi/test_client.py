@@ -486,8 +486,14 @@ class NetapiSSHClientAuthTest(SSHCase, ModuleCase):
         except AssertionError:
             ModuleCase.run_function(self, "user.delete", [self.USERA], remove=True)
             self.skipTest("Could not add user or password, skipping test")
+        self.expfile = os.path.join(RUNTIME_VARS.TMP, "exploited")
 
     def tearDown(self):
+        try:
+            os.remove(self.expfile)
+        except OSError:
+            pass
+        del self.expfile
         del self.netapi
         ModuleCase.run_function(self, "user.delete", [self.USERA], remove=True)
 
@@ -629,3 +635,35 @@ class NetapiSSHClientAuthTest(SSHCase, ModuleCase):
         ret = self.netapi.run(low)
         assert "localhost" in ret
         assert ret["localhost"]["return"] is True
+
+    def test_ssh_cve_2021_3197_a(self):
+        assert not os.path.exists(self.expfile)
+        low = {
+            "eauth": "auto",
+            "username": self.USERA,
+            "password": self.USERA_PWD,
+            "client": "ssh",
+            "tgt": "localhost",
+            "fun": "test.ping",
+            "ssh_port": '22 -o ProxyCommand="touch {}"'.format(self.expfile),
+            "ssh_priv": self.priv_file,
+        }
+        ret = self.netapi.run(low)
+        assert not os.path.exists(self.expfile)
+
+    def test_ssh_cve_2021_3197_b(self):
+        assert not os.path.exists(self.expfile)
+        low = {
+            "eauth": "auto",
+            "username": self.USERA,
+            "password": self.USERA_PWD,
+            "client": "ssh",
+            "tgt": "localhost",
+            "fun": "test.ping",
+            "ssh_port": 22,
+            "ssh_priv": self.priv_file,
+            'ssh_options': ['ProxyCommand="touch {}"'.format(self.expfile),]
+        }
+        ret = self.netapi.run(low)
+        assert not os.path.exists(self.expfile)
+
