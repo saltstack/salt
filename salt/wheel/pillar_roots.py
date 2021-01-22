@@ -4,16 +4,14 @@ The `pillar_roots` wheel module is used to manage files under the pillar roots
 directories on the master server.
 """
 
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
-# Import salt libs
 import salt.utils.files
 import salt.utils.path
+import salt.utils.verify
 
-# Import 3rd-party libs
 from salt.ext import six
 
 
@@ -109,6 +107,10 @@ def write(data, path, saltenv="base", index=0):
         return (
             "The path passed in {0} is not relative to the environment " "{1}"
         ).format(path, saltenv)
+    roots_dir = __opts__["pillar_roots"][saltenv][index]
+    dest = os.path.join(roots_dir, path)
+    if not salt.utils.verify.clean_path(roots_dir, dest):
+        return "Invalid path"
     dest = os.path.join(__opts__["pillar_roots"][saltenv][index], path)
     dest_dir = os.path.dirname(dest)
     if not os.path.isdir(dest_dir):
