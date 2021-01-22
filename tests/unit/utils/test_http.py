@@ -28,9 +28,6 @@ except ImportError:
     pytest = None
 
 
-
-
-
 class HTTPTestCase(TestCase):
     '''
     Unit TestCase for the salt.utils.http module.
@@ -153,7 +150,8 @@ class HTTPTestCase(TestCase):
 
 @skipIf(pytest is None, 'PyTest is missing')
 class HTTPSTestCase(TestCase):
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
         """
         spins up an https webserver.
         """
@@ -165,11 +163,12 @@ class HTTPSTestCase(TestCase):
             str(os.path.join(RUNTIME_VARS.FILES, "https", "key.pem")),
         )
 
-        self.webserver = Webserver(root=str(RUNTIME_VARS.FILES), ssl_opts=context)
-        self.webserver.start()
+        cls.webserver = Webserver(root=str(RUNTIME_VARS.FILES), ssl_opts=context)
+        cls.webserver.start()
 
-    def tearDown(self):
-        self.webserver.stop()
+    @classmethod
+    def tearDownClass(cls):
+        cls.webserver.stop()
 
     def test_requests_session_verify_ssl_false(self):
         """
@@ -183,10 +182,10 @@ class HTTPSTestCase(TestCase):
             if verify is True or verify is None:
                 with pytest.raises(requests.exceptions.SSLError) as excinfo:
                     session = http.session(**kwargs)
-                    ret = session.get(self.webserver.url("this.txt"))
+                    ret = session.get(self.webserver.url("hosts"))
             else:
                 session = http.session(**kwargs)
-                ret = session.get(self.webserver.url("this.txt"))
+                ret = session.get(self.webserver.url("hosts"))
                 assert ret.status_code == 200
 
     def test_session_ca_bundle_verify_false(self):
