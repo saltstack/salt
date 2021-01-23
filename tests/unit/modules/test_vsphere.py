@@ -5,6 +5,7 @@
     Tests for functions in salt.modules.vsphere
 """
 
+
 import salt.modules.vsphere as vsphere
 import salt.utils.args
 import salt.utils.vmware
@@ -1099,6 +1100,34 @@ class _GetProxyConnectionDetailsTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(
             "'unsupported' proxy is not supported", excinfo.exception.strerror
         )
+
+    def test_vcenter_proxy_details_verify_ssl(self):
+        for verify_ssl in [True, False]:
+            details = self.vcenter_details.copy()
+            details["verify_ssl"] = verify_ssl
+
+            with patch(
+                "salt.modules.vsphere.get_proxy_type", MagicMock(return_value="vcenter")
+            ):
+                with patch.dict(
+                    vsphere.__salt__,
+                    {"vcenter.get_details": MagicMock(return_value=details)},
+                ):
+                    ret = vsphere._get_proxy_connection_details()
+            self.assertEqual(
+                (
+                    "fake_vcenter",
+                    "fake_username",
+                    "fake_password",
+                    "fake_protocol",
+                    "fake_port",
+                    "fake_mechanism",
+                    "fake_principal",
+                    "fake_domain",
+                    verify_ssl,
+                ),
+                ret,
+            )
 
 
 class GetsServiceInstanceViaProxyTestCase(TestCase, LoaderModuleMockMixin):
