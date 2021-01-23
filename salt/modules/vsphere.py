@@ -309,13 +309,19 @@ def _get_proxy_connection_details():
     else:
         raise CommandExecutionError('\'{0}\' proxy is not supported'
                                     ''.format(proxytype))
-    return \
-            details.get('vcenter') if 'vcenter' in details \
-            else details.get('host'), \
-            details.get('username'), \
-            details.get('password'), details.get('protocol'), \
-            details.get('port'), details.get('mechanism'), \
-            details.get('principal'), details.get('domain')
+    proxy_details = [
+        details.get("vcenter") if "vcenter" in details else details.get("host"),
+        details.get("username"),
+        details.get("password"),
+        details.get("protocol"),
+        details.get("port"),
+        details.get("mechanism"),
+        details.get("principal"),
+        details.get("domain"),
+    ]
+    if "verify_ssl" in details:
+        proxy_details.append(details.get("verify_ssl"))
+    return tuple(proxy_details)
 
 
 def supports_proxies(*proxy_types):
@@ -395,9 +401,9 @@ def gets_service_instance_via_proxy(fn):
                     # case 1: The call was made with enough positional
                     # parameters to include 'service_instance'
                     if not args[idx]:
-                        local_service_instance = \
-                                salt.utils.vmware.get_service_instance(
-                                    *connection_details)
+                        local_service_instance = salt.utils.vmware.get_service_instance(  # pylint: disable=no-value-for-parameter
+                            *connection_details
+                        )
                         # Tuples are immutable, so if we want to change what
                         # was passed in, we need to first convert to a list.
                         args = list(args)
@@ -407,7 +413,7 @@ def gets_service_instance_via_proxy(fn):
                     # 'service_instance' must be a named parameter
                     if not kwargs.get('service_instance'):
                         local_service_instance = \
-                                salt.utils.vmware.get_service_instance(
+                                salt.utils.vmware.get_service_instance(  # pylint: disable=no-value-for-parameter
                                     *connection_details)
                         kwargs['service_instance'] = local_service_instance
         else:
@@ -415,7 +421,7 @@ def gets_service_instance_via_proxy(fn):
             # but it will be caught by the **kwargs parameter
             if not kwargs.get('service_instance'):
                 local_service_instance = \
-                        salt.utils.vmware.get_service_instance(
+                        salt.utils.vmware.get_service_instance(  # pylint: disable=no-value-for-parameter
                             *connection_details)
                 kwargs['service_instance'] = local_service_instance
         try:
@@ -450,7 +456,9 @@ def get_service_instance_via_proxy(service_instance=None):
         See note above
     '''
     connection_details = _get_proxy_connection_details()
-    return salt.utils.vmware.get_service_instance(*connection_details)
+    return salt.utils.vmware.get_service_instance(  # pylint: disable=no-value-for-parameter
+        *connection_details
+    )
 
 
 @depends(HAS_PYVMOMI)
