@@ -75,7 +75,13 @@ try:
     import winrm
     from winrm.exceptions import WinRMTransportError
 
-    HAS_WINRM = True
+    # Verify WinRM 0.3.0 or greater
+    import pkg_resources  # pylint: disable=3rd-party-module-not-gated
+    winrm_pkg = pkg_resources.get_distribution("pywinrm")
+    if not salt.utils.versions.compare(winrm_pkg.version, ">=", "0.3.0"):
+        HAS_WINRM = False
+    else:
+        HAS_WINRM = True
 except ImportError:
     HAS_WINRM = False
 
