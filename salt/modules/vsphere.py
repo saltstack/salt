@@ -10365,7 +10365,7 @@ def list_tag_categories(
     username=None,
     password=None,
     service_instance=None,
-    verify_ssl=True,
+    verify_ssl=None,
     ca_bundle=None,
 ):
     """
@@ -10410,7 +10410,7 @@ def list_tags(
     username=None,
     password=None,
     service_instance=None,
-    verify_ssl=True,
+    verify_ssl=None,
     ca_bundle=None,
 ):
     """
@@ -10458,7 +10458,7 @@ def attach_tag(
     username=None,
     password=None,
     service_instance=None,
-    verify_ssl=True,
+    verify_ssl=None,
     ca_bundle=None,
 ):
     """
@@ -10542,7 +10542,7 @@ def list_attached_tags(
     username=None,
     password=None,
     service_instance=None,
-    verify_ssl=True,
+    verify_ssl=None,
     ca_bundle=None,
 ):
     """
@@ -10615,7 +10615,7 @@ def create_tag_category(
     username=None,
     password=None,
     service_instance=None,
-    verify_ssl=True,
+    verify_ssl=None,
     ca_bundle=None,
 ):
     """
@@ -10694,7 +10694,7 @@ def delete_tag_category(
     username=None,
     password=None,
     service_instance=None,
-    verify_ssl=True,
+    verify_ssl=None,
     ca_bundle=None,
 ):
     """
@@ -10754,7 +10754,7 @@ def create_tag(
     username=None,
     password=None,
     service_instance=None,
-    verify_ssl=True,
+    verify_ssl=None,
     ca_bundle=None,
 ):
     """
@@ -10826,7 +10826,7 @@ def delete_tag(
     username=None,
     password=None,
     service_instance=None,
-    verify_ssl=True,
+    verify_ssl=None,
     ca_bundle=None,
 ):
     """
