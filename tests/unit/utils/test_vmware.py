@@ -1657,7 +1657,7 @@ class PrivateGetServiceInstanceTestCase(TestCase):
 
         self.assertEqual(mock_sc.call_count, 1)
         self.assertIn(
-            'Could not connect to host "fake_host.fqdn"', excinfo.exception.message,
+            "Could not connect to host 'fake_host.fqdn'", excinfo.exception.message,
         )
 
     def test_attempt_unsuccessful_connection_vim_fault(self):
@@ -1706,7 +1706,7 @@ class PrivateGetServiceInstanceTestCase(TestCase):
 
             self.assertEqual(mock_sc.call_count, 2)
             self.assertIn(
-                'Could not connect to host "fake_host.fqdn"', excinfo.exception.message
+                "Could not connect to host 'fake_host.fqdn'", excinfo.exception.message
             )
 
     @skipIf(not SSL_VALIDATION, 'SSL validation is not enabled')
@@ -1761,7 +1761,7 @@ class PrivateGetServiceInstanceTestCase(TestCase):
 
             self.assertEqual(mock_sc.call_count, 2)
             self.assertIn(
-                'Could not connect to host "fake_host.fqdn"', excinfo.exception.message
+                "Could not connect to host 'fake_host.fqdn'", excinfo.exception.message
             )
 
     @skipIf(not SSL_VALIDATION, 'SSL validation is not enabled')
@@ -1821,9 +1821,6 @@ class GetServiceInstanceTestCase(TestCase):
                 None,
                 verify_ssl=True,
             )
-            mock_get_si.assert_called_once_with('fake_host', None, None,
-                                                'https', 443, 'userpass', None,
-                                                None)
 
     def test_no_cached_service_instance_same_host_on_proxy(self):
         with patch('salt.utils.platform.is_proxy', MagicMock(return_value=True)):
@@ -1851,14 +1848,6 @@ class GetServiceInstanceTestCase(TestCase):
                     'fake_domain',
                     verify_ssl=True,
                 )
-                mock_get_si.assert_called_once_with('fake_host',
-                                                    'fake_username',
-                                                    'fake_password',
-                                                    'fake_protocol',
-                                                    1,
-                                                    'fake_mechanism',
-                                                    'fake_principal',
-                                                    'fake_domain')
 
     def test_cached_service_instance_different_host(self):
         mock_si = MagicMock()
@@ -1909,14 +1898,6 @@ class GetServiceInstanceTestCase(TestCase):
                 'fake_domain',
                 verify_ssl=True,
             )
-            mock_get_si.assert_called_once_with('fake_host',
-                                                'fake_username',
-                                                'fake_password',
-                                                'fake_protocol',
-                                                1,
-                                                'fake_mechanism',
-                                                'fake_principal',
-                                                'fake_domain')
 
     def test_unauthenticated_service_instance(self):
         mock_si_current_time = MagicMock(side_effect=vim.fault.NotAuthenticated)
