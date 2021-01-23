@@ -51,7 +51,7 @@ class SSHClient(object):
             ('ssh_priv', str),
             ('ssh_priv_passwd', str),
             ('ssh_identities_only', bool),
-            ('ssh_remote_port_forwards', bool),
+            ('ssh_remote_port_forwards', str),
             ('ssh_options', list),
             ('roster_file', str),
             ('rosters', list),
