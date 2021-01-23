@@ -280,6 +280,10 @@ def _get_service_instance(
     log.trace(
         "Connecting using the '%s' mechanism, with username '%s'", mechanism, username,
     )
+    default_msg = (
+        "Could not connect to host '{0}'. "
+        "Please check the debug log for more information.".format(host)
+    )
 
     try:
         if verify_ssl:
@@ -304,10 +308,6 @@ def _get_service_instance(
             raise
     except Exception as exc:  # pylint: disable=broad-except
         # pyVmomi's SmartConnect() actually raises Exception in some cases.
-        default_msg = (
-            "Could not connect to host '{0}'. "
-            "Please check the debug log for more information.".format(host)
-        )
         if (
             isinstance(exc, vim.fault.HostConnectFault)
             and "[SSL: CERTIFICATE_VERIFY_FAILED]" in exc.msg
