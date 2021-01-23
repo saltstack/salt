@@ -15,11 +15,13 @@ Fixed
 - CVE-2020-28243 - Fix local privilege escalation in the restartcheck module.
 
 - CVE-2020-28972 - Ensure authentication to vcenter, vsphere, and esxi server
-  validates the SSL/TLS certificate by default.
+  validates the SSL/TLS certificate by default. If you want to skip SSL verification
+  you can use `verify_ssl: False`.
 
 - CVE-2020-35662 - Ensure the asam runner, qingcloud, splunk returner, panos
   proxy, cimc proxy, zenoss module, esxi module, vsphere module, glassfish
-  module, bigip module, and keystone module validate SSL by default.
+  module, bigip module, and keystone module validate SSL by default. If you want 
+  to skip SSL verification you can use `verify_ssl: False`.
 
 - CVE-2021-3148 - Fix a command injection in the Salt-API when using the
   Salt-SSH client.
