@@ -9316,7 +9316,7 @@ def _get_client(server, username, password, verify_ssl=None, ca_bundle=None):
 @gets_service_instance_via_proxy
 def list_tag_categories(
     server=None, username=None, password=None, service_instance=None,
-    verify_ssl=True, ca_bundle=None
+    verify_ssl=None, ca_bundle=None
 ):
     '''
     List existing categories a user has access to.
@@ -9355,7 +9355,7 @@ def list_tag_categories(
 @supports_proxies('vcenter')
 @gets_service_instance_via_proxy
 def list_tags(server=None, username=None, password=None, service_instance=None,
-             verify_ssl=True, ca_bundle=None):
+             verify_ssl=None, ca_bundle=None):
     '''
     List existing tags a user has access to.
 
@@ -9400,7 +9400,7 @@ def attach_tag(
     username=None,
     password=None,
     service_instance=None,
-    verify_ssl=True,
+    verify_ssl=None,
     ca_bundle=None,
 ):
     '''
@@ -9480,7 +9480,7 @@ def list_attached_tags(
     username=None,
     password=None,
     service_instance=None,
-    verify_ssl=True,
+    verify_ssl=None,
     ca_bundle=None,
 ):
     '''
@@ -9551,7 +9551,7 @@ def create_tag_category(
     username=None,
     password=None,
     service_instance=None,
-    verify_ssl=True,
+    verify_ssl=None,
     ca_bundle=None,
 ):
     '''
@@ -9623,7 +9623,7 @@ def create_tag_category(
 @gets_service_instance_via_proxy
 def delete_tag_category(
     category_id, server=None, username=None, password=None,
-    service_instance=None, verify_ssl=True, ca_bundle=None
+    service_instance=None, verify_ssl=None, ca_bundle=None
 ):
     '''
     Delete a category.
@@ -9679,7 +9679,7 @@ def create_tag(
     username=None,
     password=None,
     service_instance=None,
-    verify_ssl=True,
+    verify_ssl=None,
     ca_bundle=None,
 ):
     '''
@@ -9744,7 +9744,7 @@ def create_tag(
 @gets_service_instance_via_proxy
 def delete_tag(
     tag_id, server=None, username=None, password=None, service_instance=None,
-    verify_ssl=True, ca_bundle=None
+    verify_ssl=None, ca_bundle=None
 ):
     '''
     Delete a tag.
