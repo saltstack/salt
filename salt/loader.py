@@ -7,6 +7,7 @@ plugin interfaces used by Salt.
 import contextvars
 import copy
 import functools
+import importlib
 import importlib.machinery  # pylint: disable=no-name-in-module,import-error
 import importlib.util  # pylint: disable=no-name-in-module,import-error
 import inspect
@@ -39,8 +40,6 @@ import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.versions
 from salt.exceptions import LoaderError
-from salt.ext import six
-from salt.ext.six.moves import reload_module
 from salt.template import check_render_pipe_str
 from salt.utils.decorators import Depends
 
@@ -1524,7 +1523,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                                 self.file_mapping[f_noext][0],
                             )
 
-                        if six.PY3 and ext == ".pyc" and curr_ext == ".pyc":
+                        if ext == ".pyc" and curr_ext == ".pyc":
                             # Check the optimization level
                             if opt_index >= curr_opt_index:
                                 # Module name match, but a higher-priority
@@ -1537,7 +1536,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                             # exists, so skip this.
                             continue
 
-                    if six.PY3 and not dirname and ext == ".pyc":
+                    if not dirname and ext == ".pyc":
                         # On Python 3, we should only load .pyc files from the
                         # __pycache__ subdirectory (i.e. when dirname is not an
                         # empty string).
@@ -1625,7 +1624,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         for submodule in submodules:
             # it is a submodule if the name is in a namespace under mod
             if submodule.__name__.startswith(mod.__name__ + "."):
-                reload_module(submodule)
+                importlib.reload(submodule)
                 self._reload_submodules(submodule)
 
     def __populate_sys_path(self):
