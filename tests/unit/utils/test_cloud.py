@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
@@ -9,19 +8,14 @@
     Test the salt-cloud utilities module
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import shutil
 import tempfile
 
-# Import salt libs
 import salt.utils.cloud as cloud
 import salt.utils.platform
 from salt.ext import six
-
-# Import Salt Testing libs
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import SkipTest, TestCase, skipIf
@@ -145,8 +139,7 @@ class CloudUtilsTestCase(TestCase):
             cloud.sftp_file("/tmp/test", "ТЕСТ test content")
         # we successful pass the place with os.write(tmpfd, ...
         self.assertNotEqual(
-            "a bytes-like object is required, not 'str'",
-            six.text_type(context.exception),
+            "a bytes-like object is required, not 'str'", str(context.exception),
         )
 
     @skipIf(salt.utils.platform.is_windows(), "Not applicable to Windows")
@@ -167,7 +160,7 @@ class CloudUtilsTestCase(TestCase):
     @skipIf(not salt.utils.platform.is_windows(), "Only applicable to Windows")
     def test_winrm_pinnned_version(self):
         """
-        Test that winrm is pinned to a version 0.3.0 or higher.
+        Test that winrm is pinned to a version 0.3.0 or higher
         """
         mock_true = MagicMock(return_value=True)
         mock_tuple = MagicMock(return_value=(0, 0, 0))
