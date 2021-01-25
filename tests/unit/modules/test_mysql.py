@@ -11,7 +11,7 @@ import logging
 
 import salt.modules.mysql as mysql
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import MagicMock, call, patch
+from tests.support.mock import MagicMock, call, mock_open, patch
 from tests.support.unit import TestCase, skipIf
 
 log = logging.getLogger(__name__)
@@ -726,14 +726,39 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
         insert into test_update values ("crazy -- not comment"); -- another ending comment
         -- another comment type
         """
-        expected_response = """/*
-multiline
-comment
-*/
-CREATE TABLE test_update (a VARCHAR(25));
+        expected_response = """CREATE TABLE test_update (a VARCHAR(25));
+
 insert into test_update values ("some #hash value");
 insert into test_update values ("crazy -- not comment");
+
 """
+        output = mysql._sanitize_comments(input_data)
+        self.assertEqual(output, expected_response)
+
+        input_data = """-- --------------------------------------------------------
+                        -- SQL Commands to set up the pmadb as described in the documentation.
+                        --
+                        -- This file is meant for use with MySQL 5 and above!
+                        --
+                        -- This script expects the user pma to already be existing. If we would put a
+                        -- line here to create them too many users might just use this script and end
+                        -- up with having the same password for the controluser.
+                        --
+                        -- This user "pma" must be defined in config.inc.php (controluser/controlpass)
+                        --
+                        -- Please don't forget to set up the tablenames in config.inc.php
+                        --
+                        -- --------------------------------------------------------
+                        --
+                        CREATE DATABASE IF NOT EXISTS `phpmyadmin`
+                          DEFAULT CHARACTER SET utf8 COLLATE utf8_bin;
+                        USE phpmyadmin;
+        """
+
+        expected_response = """CREATE DATABASE IF NOT EXISTS `phpmyadmin`
+                          DEFAULT CHARACTER SET utf8 COLLATE utf8_bin;
+                        USE phpmyadmin;"""
+
         output = mysql._sanitize_comments(input_data)
         self.assertEqual(output, expected_response)
 
@@ -753,6 +778,62 @@ insert into test_update values ("crazy -- not comment");
                 else:
                     calls = call().cursor().execute("{}".format(expected_sql))
                 connect_mock.assert_has_calls((calls,), True)
+
+    def test_file_query(self):
+        """
+        Test file_query
+        """
+        with patch.object(mysql, "HAS_SQLPARSE", False):
+            ret = mysql.file_query("database", "filename")
+            self.assertFalse(ret)
+
+        file_data = """-- --------------------------------------------------------
+                       -- SQL Commands to set up the pmadb as described in the documentation.
+                       --
+                       -- This file is meant for use with MySQL 5 and above!
+                       --
+                       -- This script expects the user pma to already be existing. If we would put a
+                       -- line here to create them too many users might just use this script and end
+                       -- up with having the same password for the controluser.
+                       --
+                       -- This user "pma" must be defined in config.inc.php (controluser/controlpass)
+                       --
+                       -- Please don't forget to set up the tablenames in config.inc.php
+                       --
+                       -- --------------------------------------------------------
+                       --
+                       USE phpmyadmin;
+
+                       --
+                       -- Table structure for table `pma__bookmark`
+                       --
+
+                       CREATE TABLE IF NOT EXISTS `pma__bookmark` (
+                         `id` int(10) unsigned NOT NULL auto_increment,
+                         `dbase` varchar(255) NOT NULL default '',
+                         `user` varchar(255) NOT NULL default '',
+                         `label` varchar(255) COLLATE utf8_general_ci NOT NULL default '',
+                         `query` text NOT NULL,
+                         PRIMARY KEY  (`id`)
+                       )
+                         COMMENT='Bookmarks'
+                         DEFAULT CHARACTER SET utf8 COLLATE utf8_bin;
+        """
+
+        side_effect = [
+            {"query time": {"human": "0.4ms", "raw": "0.00038"}, "rows affected": 0},
+            {"query time": {"human": "8.9ms", "raw": "0.00893"}, "rows affected": 0},
+        ]
+        expected = {
+            "query time": {"human": "8.9ms", "raw": "0.00893"},
+            "rows affected": 0,
+        }
+
+        with patch("os.path.exists", MagicMock(return_value=True)):
+            with patch("salt.utils.files.fopen", mock_open(read_data=file_data)):
+                with patch.object(mysql, "query", side_effect=side_effect):
+                    ret = mysql.file_query("database", "filename")
+                    self.assertTrue(ret, expected)
 
     @skipIf(
         NO_PyMYSQL, "Install pymysql bindings before running test__connect_pymysql."
