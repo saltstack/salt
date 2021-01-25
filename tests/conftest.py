@@ -1175,6 +1175,9 @@ def salt_ssh_roster_file(sshd_server, salt_master):
 # ----- From Filenames Test Selection ------------------------------------------------------------------------------->
 def _match_to_test_file(match):
     parts = match.split(".")
+    test_module_path = TESTS_DIR.joinpath(*parts)
+    if test_module_path.exists():
+        return test_module_path
     parts[-1] += ".py"
     return TESTS_DIR.joinpath(*parts).relative_to(CODE_DIR)
 
@@ -1185,30 +1188,42 @@ def from_filenames_collection_modifyitems(config, items):
         # Don't do anything
         return
 
-    test_categories_paths = (
-        (TESTS_DIR / "integration").relative_to(CODE_DIR),
-        (TESTS_DIR / "multimaster").relative_to(CODE_DIR),
-        (TESTS_DIR / "unit").relative_to(CODE_DIR),
-        (PYTESTS_DIR / "e2e").relative_to(CODE_DIR),
-        (PYTESTS_DIR / "functional").relative_to(CODE_DIR),
-        (PYTESTS_DIR / "integration").relative_to(CODE_DIR),
-        (PYTESTS_DIR / "unit").relative_to(CODE_DIR),
-    )
-
-    test_module_paths = set()
-    from_filenames_listing = set()
-    for path in [pathlib.Path(path.strip()) for path in from_filenames.split(",")]:
-        if path.is_absolute():
+    log.info("Calculating test modules to run based on the paths in --from-filenames")
+    from_filenames_paths = set()
+    for path in [path.strip() for path in from_filenames.split(",")]:
+        # Make sure that, no matter what kind of path we're passed, Windows or Posix path,
+        # we resolve it to the platform slash separator
+        properly_slashed_path = pathlib.Path(
+            path.replace("\\", os.sep).replace("/", os.sep)
+        )
+        if not properly_slashed_path.exists():
+            log.info(
+                "The path %s(%s) passed in --from-filenames does not exist",
+                path,
+                properly_slashed_path,
+            )
+            continue
+        if properly_slashed_path.is_absolute():
             # In this case, this path is considered to be a file containing a line separated list
             # of files to consider
             with salt.utils.files.fopen(str(path)) as rfh:
                 for line in rfh:
-                    line_path = pathlib.Path(line.strip())
+                    line_path = pathlib.Path(
+                        line.strip().replace("\\", os.sep).replace("/", os.sep)
+                    )
                     if not line_path.exists():
+                        log.info(
+                            "The path %s contained in %s passed in --from-filenames does not exist",
+                            line_path,
+                            properly_slashed_path,
+                        )
                         continue
-                    from_filenames_listing.add(line_path)
+                    from_filenames_paths.add(line_path)
             continue
-        from_filenames_listing.add(path)
+        from_filenames_paths.add(properly_slashed_path)
+
+    # Let's start collecting test modules
+    test_module_paths = set()
 
     filename_map = yaml.deserialize((TESTS_DIR / "filename_map.yml").read_text())
     # Let's add the match all rule
@@ -1219,22 +1234,43 @@ def from_filenames_collection_modifyitems(config, items):
             break
 
     # Let's now go through the list of files gathered
-    for filename in from_filenames_listing:
-        if str(filename).startswith("tests/"):
+    for path in from_filenames_paths:
+        if path.as_posix().startswith("tests/"):
+            if path.name == "conftest.py":
+                # This is not a test module
+                continue
             # Tests in the listing don't require additional matching and will be added to the
             # list of tests to run
-            test_module_paths.add(filename)
+            test_module_paths.add(path)
             continue
-        if filename.name == "setup.py" or str(filename).startswith("salt/"):
+        if path.name == "setup.py" or path.as_posix().startswith("salt/"):
             if path.name == "__init__.py":
-                # No direct macthing
+                # No direct matching
                 continue
-            # Now let's try a direct match between the passed file and possible test modules
-            for test_categories_path in test_categories_paths:
-                test_module_path = test_categories_path / "test_{}".format(path.name)
-                if test_module_path.is_file():
-                    test_module_paths.add(test_module_path)
-                    continue
+
+            # Let's try a direct match between the passed file and possible test modules
+            glob_patterns = (
+                # salt/version.py ->
+                #    tests/unit/test_version.py
+                #    tests/pytests/unit/test_version.py
+                "**/test_{}".format(path.name),
+                # salt/modules/grains.py ->
+                #    tests/pytests/integration/modules/grains/tests_*.py
+                # salt/modules/saltutil.py ->
+                #    tests/pytests/integration/modules/saltutil/test_*.py
+                "**/{}/test_*.py".format(path.stem),
+                # salt/modules/config.py ->
+                #    tests/unit/modules/test_config.py
+                #    tests/integration/modules/test_config.py
+                #    tests/pytests/unit/modules/test_config.py
+                #    tests/pytests/integration/modules/test_config.py
+                "**/{}/test_{}".format(path.parent.name, path.name),
+            )
+            for pattern in glob_patterns:
+                for match in TESTS_DIR.rglob(pattern):
+                    relative_path = match.relative_to(CODE_DIR)
+                    log.info("Glob pattern %r matched '%s'", pattern, relative_path)
+                    test_module_paths.add(relative_path)
 
             # Do we have an entry in tests/filename_map.yml
             for rule, matches in filename_map.items():
@@ -1242,7 +1278,7 @@ def from_filenames_collection_modifyitems(config, items):
                     continue
                 elif "|" in rule:
                     # This is regex
-                    if re.match(rule, str(filename)):
+                    if re.match(rule, path.as_posix()):
                         for match in matches:
                             test_module_paths.add(_match_to_test_file(match))
                 elif "*" in rule or "\\" in rule:
@@ -1251,12 +1287,12 @@ def from_filenames_collection_modifyitems(config, items):
                         if not filerule.exists():
                             continue
                         filerule = filerule.relative_to(CODE_DIR)
-                        if filerule != filename:
+                        if filerule != path:
                             continue
                         for match in matches:
                             test_module_paths.add(_match_to_test_file(match))
                 else:
-                    if str(filename) != rule:
+                    if path.as_posix() != rule:
                         continue
                     # Direct file paths as rules
                     filerule = pathlib.Path(rule)
@@ -1266,8 +1302,12 @@ def from_filenames_collection_modifyitems(config, items):
                         test_module_paths.add(_match_to_test_file(match))
             continue
         else:
-            log.debug("Don't know what to do with path %s", filename)
+            log.info("Don't know what to do with path %s", path)
 
+    log.info(
+        "Collected the following paths from --from-filenames processing:\n%s",
+        "\n".join(sorted(map(str, test_module_paths))),
+    )
     selected = []
     deselected = []
     for item in items:

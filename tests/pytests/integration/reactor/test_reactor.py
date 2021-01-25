@@ -8,6 +8,7 @@ Test Salt's reactor system
 import logging
 import pathlib
 import time
+import types
 
 import pytest
 import salt.utils.event
@@ -18,6 +19,7 @@ from tests.support.helpers import PRE_PYTEST_SKIP_REASON
 pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.windows_whitelisted,
+    pytest.mark.skip_on_windows(reason=PRE_PYTEST_SKIP_REASON),
 ]
 
 log = logging.getLogger(__name__)
@@ -25,32 +27,51 @@ log = logging.getLogger(__name__)
 
 @pytest.fixture
 def master_event_bus(salt_master):
-    with salt.utils.event.get_master_event(
-        salt_master.config.copy(),
-        salt_master.config["sock_dir"],
+    with salt.utils.event.get_event(
+        "master",
+        opts=salt_master.config.copy(),
+        sock_dir=salt_master.config["sock_dir"],
         listen=True,
         raise_errors=True,
     ) as event:
         yield event
 
 
-def test_ping_reaction(event_listener, salt_minion):
+@pytest.fixture
+def minion_event_bus(salt_minion):
+    with salt.utils.event.get_event(
+        "minion",
+        opts=salt_minion.config.copy(),
+        sock_dir=salt_minion.config["sock_dir"],
+        listen=True,
+        raise_errors=True,
+    ) as event:
+        yield event
+
+
+@pytest.fixture
+def event_listerner_timeout(grains):
+    if grains["os"] == "Windows":
+        if grains["osrelease"].startswith("2019"):
+            return types.SimpleNamespace(catch=120, miss=30)
+        return types.SimpleNamespace(catch=90, miss=10)
+    return types.SimpleNamespace(catch=60, miss=10)
+
+
+def test_ping_reaction(
+    event_listener, salt_minion, minion_event_bus, event_listerner_timeout
+):
     """
     Fire an event on the master and ensure that it pings the minion
     """
-    event_tag = "/test_event"
+    event_tag = "reactor/test-ping-reaction"
     start_time = time.time()
-    # Create event bus connection
-    with salt.utils.event.get_event(
-        "minion",
-        sock_dir=salt_minion.config["sock_dir"],
-        opts=salt_minion.config.copy(),
-    ) as event:
-        event.fire_event({"a": "b"}, event_tag)
+    # Send test event
+    minion_event_bus.fire_event({"a": "b"}, event_tag)
 
     event_pattern = (salt_minion.id, event_tag)
     matched_events = event_listener.wait_for_events(
-        [event_pattern], after_time=start_time, timeout=90
+        [event_pattern], after_time=start_time, timeout=event_listerner_timeout.catch
     )
     assert matched_events.found_all_events
     for event in matched_events:
@@ -59,7 +80,12 @@ def test_ping_reaction(event_listener, salt_minion):
 
 @pytest.mark.skip_on_windows(reason=PRE_PYTEST_SKIP_REASON)
 def test_reactor_reaction(
-    event_listener, salt_master, salt_minion, master_event_bus, reactor_event
+    event_listener,
+    salt_master,
+    salt_minion,
+    master_event_bus,
+    reactor_event,
+    event_listerner_timeout,
 ):
     """
     Fire an event on the master and ensure the reactor event responds
@@ -69,7 +95,7 @@ def test_reactor_reaction(
     master_event_bus.fire_event({"id": salt_minion.id}, reactor_event.tag)
     event_pattern = (salt_master.id, reactor_event.event_tag)
     matched_events = event_listener.wait_for_events(
-        [event_pattern], after_time=start_time, timeout=90
+        [event_pattern], after_time=start_time, timeout=event_listerner_timeout.catch
     )
     assert matched_events.found_all_events
     for event in matched_events:
@@ -84,6 +110,7 @@ def test_reactor_is_leader(
     master_event_bus,
     reactor_event,
     salt_minion,
+    event_listerner_timeout,
 ):
     """
     If reactor system is unavailable, an exception is thrown.
@@ -143,29 +170,30 @@ def test_reactor_is_leader(
 
         ret = salt_run_cli.run("reactor.is_leader")
         assert ret.exitcode == 0
-        assert ret.stdout.endswith("\ntrue\n")
+        assert ret.stdout.rstrip().splitlines()[-1] == "true"
 
         ret = salt_run_cli.run("reactor.set_leader", value=False)
         assert ret.exitcode == 0
 
         ret = salt_run_cli.run("reactor.is_leader")
         assert ret.exitcode == 0
-        assert ret.stdout.endswith("\nfalse\n")
+        assert ret.stdout.rstrip().splitlines()[-1] == "false"
 
         start_time = time.time()
-        log.warning("START\n\n\n")
         master_event_bus.fire_event({"id": salt_minion.id}, reactor_event.tag)
 
         # Since leader is false, let's try and get the fire event to ensure it was triggered
         event_pattern = (salt_master.id, reactor_event.tag)
         matched_events = event_listener.wait_for_events(
-            [event_pattern], after_time=start_time, timeout=90
+            [event_pattern],
+            after_time=start_time,
+            timeout=event_listerner_timeout.catch,
         )
         assert matched_events.found_all_events
         # Now that we matched the trigger event, let's confirm we don't get the reaction event
         event_pattern = (salt_master.id, reactor_event.event_tag)
         matched_events = event_listener.wait_for_events(
-            [event_pattern], after_time=start_time, timeout=30
+            [event_pattern], after_time=start_time, timeout=event_listerner_timeout.miss
         )
         assert matched_events.found_all_events is not True
 
@@ -174,14 +202,16 @@ def test_reactor_is_leader(
         assert ret.exitcode == 0
         ret = salt_run_cli.run("reactor.is_leader")
         assert ret.exitcode == 0
-        assert ret.stdout.endswith("\ntrue\n")
+        assert ret.stdout.rstrip().splitlines()[-1] == "true"
 
         # trigger a reaction
         start_time = time.time()
         master_event_bus.fire_event({"id": salt_minion.id}, reactor_event.tag)
         event_pattern = (salt_master.id, reactor_event.event_tag)
         matched_events = event_listener.wait_for_events(
-            [event_pattern], after_time=start_time, timeout=90
+            [event_pattern],
+            after_time=start_time,
+            timeout=event_listerner_timeout.catch,
         )
         assert matched_events.found_all_events
         for event in matched_events:
