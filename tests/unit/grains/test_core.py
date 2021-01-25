@@ -825,6 +825,46 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         }
         self._run_os_grains_tests("pop-20.10", _os_release_map, expectation)
 
+    @skipIf(not salt.utils.platform.is_linux(), "System is not Linux based")
+    def test_astralinuxce_os_grains(self):
+        """
+        Test that OS grains are parsed correctly for Astra Linux Orel
+        """
+        _os_release_map = {
+            "_linux_distribution": ("AstraLinuxCE", "2.12.40", "orel"),
+        }
+        expectation = {
+            "os": "AstraLinuxCE",
+            "os_family": "Debian",
+            "oscodename": "orel",
+            "osfullname": "AstraLinuxCE",
+            "osrelease": "2.12.40",
+            "osrelease_info": (2, 12, 40),
+            "osmajorrelease": 2,
+            "osfinger": "AstraLinuxCE-2",
+        }
+        self._run_os_grains_tests(None, _os_release_map, expectation)
+
+    @skipIf(not salt.utils.platform.is_linux(), "System is not Linux based")
+    def test_astralinuxse_os_grains(self):
+        """
+        Test that OS grains are parsed correctly for Astra Linux Smolensk
+        """
+        _os_release_map = {
+            "_linux_distribution": ("AstraLinuxSE", "1.6", "smolensk"),
+        }
+        expectation = {
+            "os": "AstraLinuxSE",
+            "os_family": "Debian",
+            "oscodename": "smolensk",
+            "osfullname": "AstraLinuxSE",
+            "osrelease": "1.6",
+            "osrelease_info": (1, 6),
+            "osmajorrelease": 1,
+            "osfinger": "AstraLinuxSE-1",
+        }
+        self._run_os_grains_tests(None, _os_release_map, expectation)
+
     @skipIf(not salt.utils.platform.is_windows(), "System is not Windows")
     def test_windows_platform_data(self):
         """
