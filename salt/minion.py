@@ -1583,11 +1583,12 @@ class Minion(MinionBase):
             load["sig"] = sig
 
         with salt.transport.client.ReqChannel.factory(self.opts) as channel:
-            return channel.send(load, timeout=timeout)
+            return channel.send(
+                load, timeout=timeout, tries=self.opts["return_retry_tries"]
+            )
 
     @salt.ext.tornado.gen.coroutine
     def _send_req_async(self, load, timeout):
-
         if self.opts["minion_sign_messages"]:
             log.trace("Signing event to be published onto the bus.")
             minion_privkey_path = os.path.join(self.opts["pki_dir"], "minion.pem")
@@ -1597,7 +1598,9 @@ class Minion(MinionBase):
             load["sig"] = sig
 
         with salt.transport.client.AsyncReqChannel.factory(self.opts) as channel:
-            ret = yield channel.send(load, timeout=timeout)
+            ret = yield channel.send(
+                load, timeout=timeout, tries=self.opts["return_retry_tries"]
+            )
             raise salt.ext.tornado.gen.Return(ret)
 
     def _fire_master(
@@ -2578,7 +2581,11 @@ class Minion(MinionBase):
         with salt.transport.client.ReqChannel.factory(self.opts) as channel:
             data["tok"] = self.tok
             try:
-                ret = channel.send(data)
+                ret = channel.send(
+                    data,
+                    timeout=self._return_retry_timer(),
+                    tries=self.opts["return_retry_tries"],
+                )
                 return ret
             except SaltReqTimeoutError:
                 log.warning("Unable to send mine data to master.")
