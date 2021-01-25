@@ -383,6 +383,69 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                     _patch in patches["my-fake-patch-installed-1234"]["summary"]
                 )
 
+    def test_list_patches_with_unexpected_output(self):
+        """
+        Test patches listin with unexpected output from updateinfo list
+
+        :return:
+        """
+        yum_out = [
+            "Update notice RHBA-2014:0722 (from rhel7-dev-rhel7-rpm-x86_64) is broken, or a bad duplicate, skipping.",
+            "You should report this problem to the owner of the rhel7-dev-rhel7-rpm-x86_64 repository.",
+            'To help pinpoint the issue, please attach the output of "yum updateinfo --verbose" to the report.',
+            "Update notice RHSA-2014:1971 (from rhel7-dev-rhel7-rpm-x86_64) is broken, or a bad duplicate, skipping.",
+            "Update notice RHSA-2015:1981 (from rhel7-dev-rhel7-rpm-x86_64) is broken, or a bad duplicate, skipping.",
+            "Update notice RHSA-2015:0067 (from rhel7-dev-rhel7-rpm-x86_64) is broken, or a bad duplicate, skipping",
+            "i my-fake-patch-not-installed-1234 recommended    spacewalk-usix-2.7.5.2-2.2.noarch",
+            "  my-fake-patch-not-installed-1234 recommended    spacewalksd-5.0.26.2-21.2.x86_64",
+            "i my-fake-patch-not-installed-1234 recommended    suseRegisterInfo-3.1.1-18.2.x86_64",
+            "i my-fake-patch-installed-1234 recommended        my-package-one-1.1-0.1.x86_64",
+            "i my-fake-patch-installed-1234 recommended        my-package-two-1.1-0.1.x86_64",
+        ]
+
+        expected_patches = {
+            "my-fake-patch-not-installed-1234": {
+                "installed": False,
+                "summary": [
+                    "spacewalk-usix-2.7.5.2-2.2.noarch",
+                    "spacewalksd-5.0.26.2-21.2.x86_64",
+                    "suseRegisterInfo-3.1.1-18.2.x86_64",
+                ],
+            },
+            "my-fake-patch-installed-1234": {
+                "installed": True,
+                "summary": [
+                    "my-package-one-1.1-0.1.x86_64",
+                    "my-package-two-1.1-0.1.x86_64",
+                ],
+            },
+        }
+
+        with patch.dict(yumpkg.__grains__, {"osarch": "x86_64"}), patch.dict(
+            yumpkg.__salt__,
+            {"cmd.run_stdout": MagicMock(return_value=os.linesep.join(yum_out))},
+        ):
+            patches = yumpkg.list_patches()
+            self.assertFalse(patches["my-fake-patch-not-installed-1234"]["installed"])
+            self.assertTrue(
+                len(patches["my-fake-patch-not-installed-1234"]["summary"]) == 3
+            )
+            for _patch in expected_patches["my-fake-patch-not-installed-1234"][
+                "summary"
+            ]:
+                self.assertTrue(
+                    _patch in patches["my-fake-patch-not-installed-1234"]["summary"]
+                )
+
+            self.assertTrue(patches["my-fake-patch-installed-1234"]["installed"])
+            self.assertTrue(
+                len(patches["my-fake-patch-installed-1234"]["summary"]) == 2
+            )
+            for _patch in expected_patches["my-fake-patch-installed-1234"]["summary"]:
+                self.assertTrue(
+                    _patch in patches["my-fake-patch-installed-1234"]["summary"]
+                )
+
     def test_latest_version_with_options(self):
         with patch.object(yumpkg, "list_pkgs", MagicMock(return_value={})):
 
