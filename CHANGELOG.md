@@ -10,8 +10,29 @@ Versions are `MAJOR.PATCH`.
 Salt 3002.3 (2021-01-25)
 ========================
 
-No significant changes.
+Fixed
+-----
 
+- CVE-2020-28243 - Fix local privilege escalation in the restartcheck module. (CVE-2020-28243)
+- CVE-2020-28972 - Ensure authentication to vcenter, vsphere, and esxi server
+  validates the SSL/TLS certificate by default. If you want to skip SSL verification
+  you can use `verify_ssl: False`. (CVE-2020-28972)
+- CVE-2020-35662 - Ensure the asam runner, qingcloud, splunk returner, panos
+  proxy, cimc proxy, zenoss module, esxi module, vsphere module, glassfish
+  module, bigip module, and keystone module validate SSL by default. If you want 
+  to skip SSL verification you can use `verify_ssl: False`. (CVE-2020-35662)
+- CVE-2021-25281 - Fix salt-api so it honors eauth credentials for the
+  wheel_async client. (CVE-2021-25281)
+- CVE-2021-25282 - Fix the salt.wheel.pillar_roots.write method so it is not
+  vulnerable to directory traversal. (CVE-2021-25282)
+- CVE-2021-25283 - Fix the jinja render to protect against server side template
+  injection attacks. (CVE-2021-25283)
+- CVE-2021-25284 - Fix cmdmod so it will not log credentials to log levels info
+  and error. (CVE-2021-25284)
+- CVE-2021-3144 - Fix eauth tokens can be used once after expiration. (CVE-2021-3144)
+- CVE-2021-3148 - Fix a command injection in the Salt-API when using the Salt-SSH client. (CVE-2021-3148)
+- CVE-2021-3197 - Fix ssh client to remove ProxyCommand from arguments provided
+  by cli and netapi. (CVE-2021-3197)
 
 Salt 3002.2 (2020-11-16)
 ========================
@@ -278,6 +299,42 @@ Added
   `enable_slsvars_fixes` to enable fixes to tpldir, tplfile and sls_path.
   This flag will be deprecated in the Phosphorus release when this functionality
   becomes the default. (#58652)
+
+Salt 3001.5
+===========
+
+Fixed
+-----
+
+- CVE-2020-28243 - Fix local privilege escalation in the restartcheck module. (CVE-2020-28243)
+- CVE-2020-28972 - Ensure authentication to vcenter, vsphere, and esxi server
+  validates the SSL/TLS certificate by default. If you want to skip SSL verification
+  you can use `verify_ssl: False`. (CVE-2020-28972)
+- CVE-2020-35662 - Ensure the asam runner, qingcloud, splunk returner, panos
+  proxy, cimc proxy, zenoss module, esxi module, vsphere module, glassfish
+  module, bigip module, and keystone module validate SSL by default. If you want 
+  to skip SSL verification you can use `verify_ssl: False`. (CVE-2020-35662)
+- CVE-2021-25281 - Fix salt-api so it honors eauth credentials for the
+  wheel_async client. (CVE-2021-25281)
+- CVE-2021-25282 - Fix the salt.wheel.pillar_roots.write method so it is not
+  vulnerable to directory traversal. (CVE-2021-25282)
+- CVE-2021-25283 - Fix the jinja render to protect against server side template
+  injection attacks. (CVE-2021-25283)
+- CVE-2021-25284 - Fix cmdmod so it will not log credentials to log levels info
+  and error. (CVE-2021-25284)
+- CVE-2021-3144 - Fix eauth tokens can be used once after expiration. (CVE-2021-3144)
+- CVE-2021-3148 - Fix a command injection in the Salt-API when using the Salt-SSH client. (CVE-2021-3148)
+- CVE-2021-3197 - Fix ssh client to remove ProxyCommand from arguments provided
+  by cli and netapi. (CVE-2021-3197)
+
+
+Salt 3001.4
+===========
+
+Fixed
+-----
+
+- Fixes salt-ssh authentication when using tty (#58922)
 
 Salt 3001.3
 ===========
@@ -724,6 +781,41 @@ Added
 - Added `efi` parameter to virt module, so `uefi` firmware can be auto selected. (#57397)
 - [#56637](https://github.com/saltstack/salt/pull/56637) - Add ``win_wua.installed`` to the ``win_wua`` execution module
 - Clarify how to get the master fingerprint (#54699)
+
+Salt 3000.7
+===========
+
+Fixed
+-----
+
+- CVE-2020-28243 - Fix local privilege escalation in the restartcheck module. (CVE-2020-28243)
+- CVE-2020-28972 - Ensure authentication to vcenter, vsphere, and esxi server
+  validates the SSL/TLS certificate by default. If you want to skip SSL verification
+  you can use `verify_ssl: False`. (CVE-2020-28972)
+- CVE-2020-35662 - Ensure the asam runner, qingcloud, splunk returner, panos
+  proxy, cimc proxy, zenoss module, esxi module, vsphere module, glassfish
+  module, bigip module, and keystone module validate SSL by default. If you want
+  to skip SSL verification you can use `verify_ssl: False`. (CVE-2020-35662)
+- CVE-2021-25281 - Fix salt-api so it honors eauth credentials for the
+  wheel_async client. (CVE-2021-25281)
+- CVE-2021-25282 - Fix the salt.wheel.pillar_roots.write method so it is not
+  vulnerable to directory traversal. (CVE-2021-25282)
+- CVE-2021-25283 - Fix the jinja render to protect against server side template
+  injection attacks. (CVE-2021-25283)
+- CVE-2021-25284 - Fix cmdmod so it will not log credentials to log levels info
+  and error. (CVE-2021-25284)
+- CVE-2021-3144 - Fix eauth tokens can be used once after expiration. (CVE-2021-3144)
+- CVE-2021-3148 - Fix a command injection in the Salt-API when using the Salt-SSH client. (CVE-2021-3148)
+- CVE-2021-3197 - Fix ssh client to remove ProxyCommand from arguments provided
+  by cli and netapi. (CVE-2021-3197)
+
+Salt 3000.6
+===========
+
+Fixed
+-----
+
+- Fixes salt-ssh authentication when using tty (#58922)
 
 Salt 3000.5
 ===========
