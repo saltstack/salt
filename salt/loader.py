@@ -41,14 +41,8 @@ import salt.utils.stringutils
 import salt.utils.versions
 from salt.exceptions import LoaderError
 from salt.template import check_render_pipe_str
+from salt.utils import entrypoints
 from salt.utils.decorators import Depends
-
-try:
-    import pkg_resources
-
-    HAS_PKG_RESOURCES = True
-except ImportError:
-    HAS_PKG_RESOURCES = False
 
 log = logging.getLogger(__name__)
 
@@ -119,18 +113,6 @@ def static_loader(
     return ret
 
 
-def _format_entrypoint_target(ep):
-    """
-    Makes a string describing the target of an EntryPoint object.
-
-    Base strongly on EntryPoint.__str__().
-    """
-    s = ep.module_name
-    if ep.attrs:
-        s += ":" + ".".join(ep.attrs)
-    return s
-
-
 def _module_dirs(
     opts,
     ext_type,
@@ -151,18 +133,22 @@ def _module_dirs(
             ext_type_dirs = "{}_dirs".format(tag)
         if ext_type_dirs in opts:
             ext_type_types.extend(opts[ext_type_dirs])
-        if HAS_PKG_RESOURCES and ext_type_dirs:
-            for entry_point in pkg_resources.iter_entry_points(
-                "salt.loader", ext_type_dirs
+        if ext_type_dirs:
+            for entry_point in entrypoints.iter_entry_points(
+                "salt.loader", name=ext_type_dirs
             ):
                 try:
                     loaded_entry_point = entry_point.load()
                     for path in loaded_entry_point():
                         ext_type_types.append(path)
                 except Exception as exc:  # pylint: disable=broad-except
+                    entry_point_details = entrypoints.name_and_version_from_entry_point(
+                        entry_point
+                    )
                     log.error(
-                        "Error getting module directories from %s: %s",
-                        _format_entrypoint_target(entry_point),
+                        "Error getting module directories from Salt Extension %s(version: %s): %s",
+                        entry_point_details.name,
+                        entry_point_details.version,
                         exc,
                     )
                     log.debug(
