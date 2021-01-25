@@ -187,8 +187,9 @@ pyparsing==2.4.5          # via junos-eznc, packaging
 pyrsistent==0.17.3        # via jsonschema
 pyserial==3.4             # via junos-eznc, netmiko
 pytest-helpers-namespace==2019.1.8
-pytest-salt-factories==0.120.0
+pytest-salt-factories==0.120.2
 pytest-salt==2020.1.27
+pytest-subtests==0.4.0
 pytest-tempdir==2019.10.12
 pytest==6.1.2
 python-dateutil==2.8.0
@@ -215,7 +216,7 @@ tempora==1.14.1
 terminal==0.4.0           # via ntc-templates
 textfsm==1.1.0            # via napalm, netmiko, ntc-templates
 timelib==0.2.5
-toml==0.10.0
+toml==0.10.2
 transitions==0.8.1        # via junos-eznc
 urllib3==1.24.3
 vcert==0.7.3 ; sys_platform != "win32"

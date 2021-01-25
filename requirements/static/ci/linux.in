@@ -2,4 +2,4 @@
 pyiface
 pygit2<=0.28.2; python_version < '3.8'
 pygit2<1.1.0; python_version == '3.8'
-pygit2>=1.2.0; python_version >= '3.9'
+pygit2>=1.4.0; python_version >= '3.9'
