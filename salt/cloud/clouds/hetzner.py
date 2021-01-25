@@ -111,7 +111,7 @@ def avail_locations(call=None):
 def avail_images(call=None):
     if call == "action":
         raise SaltCloudSystemExit(
-            "The list_images function must be called with " "-f or --function"
+            "The avail_images function must be called with " "-f or --function"
         )
 
     client = _connect_client()
@@ -124,7 +124,7 @@ def avail_images(call=None):
 def avail_sizes(call=None):
     if call == "action":
         raise SaltCloudSystemExit(
-            "The list_sizes function must be called with " "-f or --function"
+            "The avail_sizes function must be called with " "-f or --function"
         )
 
     client = _connect_client()
@@ -175,7 +175,7 @@ def list_nodes_full(call=None):
 def list_nodes(call=None):
     if call == "action":
         raise SaltCloudSystemExit(
-            "The list_hosted_services function must be called with " "-f or --function"
+            "The list_nodes function must be called with " "-f or --function"
         )
 
     ret = {}
@@ -206,7 +206,7 @@ def wait_until(name, state, timeout=300):
 def show_instance(name, call=None):
     if call == "action":
         raise SaltCloudSystemExit(
-            "The list_hosted_services function must be called with " "-f or --function"
+            "The show_instances function must be called with " "-f or --function"
         )
 
     try:
