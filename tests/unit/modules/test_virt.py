@@ -106,6 +106,10 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         mock_domain.name.return_value = name
         return mock_domain
 
+    def assertEqualUnit(self, actual, expected, unit="KiB"):
+        self.assertEqual(actual.get("unit"), unit)
+        self.assertEqual(actual.text, str(expected))
+
     def test_disk_profile_merge(self):
         """
         Test virt._disk_profile() when merging with user-defined disks
@@ -215,16 +219,14 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             "kvm",
             "hvm",
             "x86_64",
-            serial_type="pty",
-            console=True,
+            serials=[{"type": "pty"}],
         )
         root = ET.fromstring(xml_data)
         self.assertEqual(root.find("devices/serial").attrib["type"], "pty")
-        self.assertEqual(root.find("devices/console").attrib["type"], "pty")
 
-    def test_gen_xml_for_serial_console(self):
+    def test_gen_xml_for_telnet_serial(self):
         """
-        Test virt._gen_xml() serial console
+        Test virt._gen_xml() telnet serial
         """
         diskp = virt._disk_profile(self.mock_conn, "default", "kvm", [], "hello")
         nicp = virt._nic_profile("default", "kvm")
@@ -238,11 +240,134 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             "kvm",
             "hvm",
             "x86_64",
-            serial_type="pty",
-            console=True,
+            serials=[{"type": "tcp", "port": 22223, "protocol": "telnet"}],
         )
         root = ET.fromstring(xml_data)
-        self.assertEqual(root.find("devices/serial").attrib["type"], "pty")
+        self.assertEqual(root.find("devices/serial").attrib["type"], "tcp")
+        self.assertEqual(root.find("devices/serial/source").attrib["service"], "22223")
+        self.assertEqual(root.find("devices/serial/protocol").attrib["type"], "telnet")
+
+    def test_gen_xml_for_telnet_serial_unspecified_port(self):
+        """
+        Test virt._gen_xml() telnet serial without any specified port
+        """
+        diskp = virt._disk_profile(self.mock_conn, "default", "kvm", [], "hello")
+        nicp = virt._nic_profile("default", "kvm")
+        xml_data = virt._gen_xml(
+            self.mock_conn,
+            "hello",
+            1,
+            512,
+            diskp,
+            nicp,
+            "kvm",
+            "hvm",
+            "x86_64",
+            serials=[{"type": "tcp"}],
+        )
+        root = ET.fromstring(xml_data)
+        self.assertEqual(root.find("devices/serial").attrib["type"], "tcp")
+        self.assertEqual(root.find("devices/serial/source").attrib["service"], "23023")
+        self.assertFalse("tls" in root.find("devices/serial/source").keys())
+        self.assertEqual(root.find("devices/serial/protocol").attrib["type"], "telnet")
+
+    def test_gen_xml_for_chardev_types(self):
+        """
+        Test virt._gen_xml() consoles and serials of various types
+        """
+        diskp = virt._disk_profile(self.mock_conn, "default", "kvm", [], "hello")
+        nicp = virt._nic_profile("default", "kvm")
+        xml_data = virt._gen_xml(
+            self.mock_conn,
+            "hello",
+            1,
+            512,
+            diskp,
+            nicp,
+            "kvm",
+            "hvm",
+            "x86_64",
+            consoles=[
+                {"type": "pty", "path": "/dev/pts/2", "target_port": 2},
+                {"type": "pty", "target_type": "usb-serial"},
+                {"type": "stdio"},
+                {"type": "file", "path": "/path/to/serial.log"},
+            ],
+            serials=[
+                {"type": "pipe", "path": "/tmp/mypipe"},
+                {"type": "udp", "host": "127.0.0.1", "port": 1234},
+                {"type": "tcp", "port": 22223, "protocol": "raw", "tls": True},
+                {"type": "unix", "path": "/path/to/socket"},
+            ],
+        )
+        root = ET.fromstring(xml_data)
+
+        self.assertEqual(root.find("devices/console[1]").attrib["type"], "pty")
+        self.assertEqual(
+            root.find("devices/console[1]/source").attrib["path"], "/dev/pts/2"
+        )
+        self.assertEqual(root.find("devices/console[1]/target").attrib["port"], "2")
+
+        self.assertEqual(root.find("devices/console[2]").attrib["type"], "pty")
+        self.assertIsNone(root.find("devices/console[2]/source"))
+        self.assertEqual(
+            root.find("devices/console[2]/target").attrib["type"], "usb-serial"
+        )
+
+        self.assertEqual(root.find("devices/console[3]").attrib["type"], "stdio")
+        self.assertIsNone(root.find("devices/console[3]/source"))
+
+        self.assertEqual(root.find("devices/console[4]").attrib["type"], "file")
+        self.assertEqual(
+            root.find("devices/console[4]/source").attrib["path"], "/path/to/serial.log"
+        )
+
+        self.assertEqual(root.find("devices/serial[1]").attrib["type"], "pipe")
+        self.assertEqual(
+            root.find("devices/serial[1]/source").attrib["path"], "/tmp/mypipe"
+        )
+
+        self.assertEqual(root.find("devices/serial[2]").attrib["type"], "udp")
+        self.assertEqual(root.find("devices/serial[2]/source").attrib["mode"], "bind")
+        self.assertEqual(
+            root.find("devices/serial[2]/source").attrib["service"], "1234"
+        )
+        self.assertEqual(
+            root.find("devices/serial[2]/source").attrib["host"], "127.0.0.1"
+        )
+
+        self.assertEqual(root.find("devices/serial[3]").attrib["type"], "tcp")
+        self.assertEqual(root.find("devices/serial[3]/source").attrib["mode"], "bind")
+        self.assertEqual(
+            root.find("devices/serial[3]/source").attrib["service"], "22223"
+        )
+        self.assertEqual(root.find("devices/serial[3]/source").attrib["tls"], "yes")
+        self.assertEqual(root.find("devices/serial[3]/protocol").attrib["type"], "raw")
+
+        self.assertEqual(root.find("devices/serial[4]").attrib["type"], "unix")
+        self.assertEqual(
+            root.find("devices/serial[4]/source").attrib["path"], "/path/to/socket"
+        )
+
+    def test_gen_xml_no_nic_console(self):
+        """
+        Test virt._gen_xml()  console
+        """
+        diskp = virt._disk_profile(self.mock_conn, "default", "kvm", [], "hello")
+        nicp = virt._nic_profile("default", "kvm")
+        xml_data = virt._gen_xml(
+            self.mock_conn,
+            "hello",
+            1,
+            512,
+            diskp,
+            nicp,
+            "kvm",
+            "hvm",
+            "x86_64",
+            consoles=[{"type": "pty"}],
+        )
+        root = ET.fromstring(xml_data)
         self.assertEqual(root.find("devices/console").attrib["type"], "pty")
 
     def test_gen_xml_for_telnet_console(self):
@@ -261,14 +386,12 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             "kvm",
             "hvm",
             "x86_64",
-            serial_type="tcp",
-            console=True,
-            telnet_port=22223,
+            consoles=[{"type": "tcp", "port": 22223, "protocol": "telnet"}],
         )
         root = ET.fromstring(xml_data)
-        self.assertEqual(root.find("devices/serial").attrib["type"], "tcp")
         self.assertEqual(root.find("devices/console").attrib["type"], "tcp")
         self.assertEqual(root.find("devices/console/source").attrib["service"], "22223")
+        self.assertEqual(root.find("devices/console/protocol").attrib["type"], "telnet")
 
     def test_gen_xml_for_telnet_console_unspecified_port(self):
         """
@@ -286,15 +409,12 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             "kvm",
             "hvm",
             "x86_64",
-            serial_type="tcp",
-            console=True,
+            consoles=[{"type": "tcp"}],
         )
         root = ET.fromstring(xml_data)
-        self.assertEqual(root.find("devices/serial").attrib["type"], "tcp")
         self.assertEqual(root.find("devices/console").attrib["type"], "tcp")
-        self.assertIsInstance(
-            int(root.find("devices/console/source").attrib["service"]), int
-        )
+        self.assertEqual(root.find("devices/console/source").attrib["service"], "23023")
+        self.assertEqual(root.find("devices/console/protocol").attrib["type"], "telnet")
 
     def test_gen_xml_for_serial_no_console(self):
         """
@@ -312,8 +432,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             "kvm",
             "hvm",
             "x86_64",
-            serial_type="pty",
-            console=False,
+            serials=[{"type": "pty"}],
+            consoles=[],
         )
         root = ET.fromstring(xml_data)
         self.assertEqual(root.find("devices/serial").attrib["type"], "pty")
@@ -335,8 +455,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             "kvm",
             "hvm",
             "x86_64",
-            serial_type="tcp",
-            console=False,
+            serials=[{"type": "tcp", "port": 22223, "protocol": "telnet"}],
+            consoles=[],
         )
         root = ET.fromstring(xml_data)
         self.assertEqual(root.find("devices/serial").attrib["type"], "tcp")
@@ -458,6 +578,390 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertFalse("listen" in root.find("devices/graphics").attrib)
         self.assertEqual(root.find("devices/graphics/listen").attrib["type"], "none")
         self.assertFalse("address" in root.find("devices/graphics/listen").attrib)
+
+    def test_gen_xml_memory(self):
+        """
+        Test virt._gen_xml() with advanced memory settings
+        """
+        diskp = virt._disk_profile(self.mock_conn, "default", "kvm", [], "hello")
+        nicp = virt._nic_profile("default", "kvm")
+        xml_data = virt._gen_xml(
+            self.mock_conn,
+            "hello",
+            1,
+            {
+                "boot": "512m",
+                "current": "256m",
+                "max": "1g",
+                "hard_limit": "1024",
+                "soft_limit": "512m",
+                "swap_hard_limit": "1g",
+                "min_guarantee": "256m",
+                "hugepages": [
+                    {"size": "128m"},
+                    {"nodeset": "0", "size": "256m"},
+                    {"nodeset": "1", "size": "512m"},
+                ],
+                "nosharepages": True,
+                "locked": True,
+                "source": "file",
+                "access": "shared",
+                "allocation": "immediate",
+                "discard": True,
+            },
+            diskp,
+            nicp,
+            "kvm",
+            "hvm",
+            "x86_64",
+        )
+        root = ET.fromstring(xml_data)
+        self.assertEqualUnit(root.find("memory"), 512 * 1024)
+        self.assertEqualUnit(root.find("currentMemory"), 256 * 1024)
+        self.assertEqualUnit(root.find("maxMemory"), 1024 * 1024)
+        self.assertFalse("slots" in root.find("maxMemory").keys())
+        self.assertEqualUnit(root.find("memtune/hard_limit"), 1024 * 1024)
+        self.assertEqualUnit(root.find("memtune/soft_limit"), 512 * 1024)
+        self.assertEqualUnit(root.find("memtune/swap_hard_limit"), 1024 ** 2)
+        self.assertEqualUnit(root.find("memtune/min_guarantee"), 256 * 1024)
+        self.assertEqual(
+            [
+                {"nodeset": page.get("nodeset"), "size": page.get("size")}
+                for page in root.findall("memoryBacking/hugepages/page")
+            ],
+            [
+                {"nodeset": None, "size": str(128 * 1024)},
+                {"nodeset": "0", "size": str(256 * 1024)},
+                {"nodeset": "1", "size": str(512 * 1024)},
+            ],
+        )
+        self.assertIsNotNone(root.find("memoryBacking/nosharepages"))
+        self.assertIsNotNone(root.find("memoryBacking/locked"))
+        self.assertIsNotNone(root.find("memoryBacking/discard"))
+        self.assertEqual(root.find("memoryBacking/source").get("type"), "file")
+        self.assertEqual(root.find("memoryBacking/access").get("mode"), "shared")
+        self.assertEqual(root.find("memoryBacking/allocation").get("mode"), "immediate")
+
+    def test_gen_xml_cpu(self):
+        """
+        Test virt._gen_xml() with CPU advanced properties
+        """
+        diskp = virt._disk_profile(self.mock_conn, "default", "kvm", [], "hello")
+        nicp = virt._nic_profile("default", "kvm")
+        xml_data = virt._gen_xml(
+            self.mock_conn,
+            "hello",
+            {
+                "maximum": 12,
+                "placement": "static",
+                "cpuset": "0-11",
+                "current": 5,
+                "mode": "custom",
+                "match": "minimum",
+                "check": "full",
+                "vendor": "Intel",
+                "model": {
+                    "name": "core2duo",
+                    "fallback": "allow",
+                    "vendor_id": "GenuineIntel",
+                },
+                "cache": {"level": 3, "mode": "emulate"},
+                "features": {"lahf": "optional", "vmx": "require"},
+                "vcpus": {
+                    0: {"enabled": True, "hotpluggable": True},
+                    1: {"enabled": False},
+                },
+            },
+            512,
+            diskp,
+            nicp,
+            "kvm",
+            "hvm",
+            "x86_64",
+        )
+        root = ET.fromstring(xml_data)
+        self.assertEqual(root.find("vcpu").get("current"), "5")
+        self.assertEqual(root.find("vcpu").get("placement"), "static")
+        self.assertEqual(root.find("vcpu").get("cpuset"), "0-11")
+        self.assertEqual(root.find("vcpu").text, "12")
+        self.assertEqual(root.find("cpu").get("match"), "minimum")
+        self.assertEqual(root.find("cpu").get("mode"), "custom")
+        self.assertEqual(root.find("cpu").get("check"), "full")
+        self.assertEqual(root.find("cpu/vendor").text, "Intel")
+        self.assertEqual(root.find("cpu/model").text, "core2duo")
+        self.assertEqual(root.find("cpu/model").get("fallback"), "allow")
+        self.assertEqual(root.find("cpu/model").get("vendor_id"), "GenuineIntel")
+        self.assertEqual(root.find("cpu/cache").get("level"), "3")
+        self.assertEqual(root.find("cpu/cache").get("mode"), "emulate")
+        self.assertEqual(
+            {f.get("name"): f.get("policy") for f in root.findall("cpu/feature")},
+            {"lahf": "optional", "vmx": "require"},
+        )
+        self.assertEqual(
+            {
+                v.get("id"): {
+                    "enabled": v.get("enabled"),
+                    "hotpluggable": v.get("hotpluggable"),
+                }
+                for v in root.findall("vcpus/vcpu")
+            },
+            {
+                "0": {"enabled": "yes", "hotpluggable": "yes"},
+                "1": {"enabled": "no", "hotpluggable": None},
+            },
+        )
+
+    def test_gen_xml_cpu_topology(self):
+        """
+        Test virt._gen_xml() with CPU topology
+        """
+        diskp = virt._disk_profile(self.mock_conn, "default", "kvm", [], "hello")
+        nicp = virt._nic_profile("default", "kvm")
+        xml_data = virt._gen_xml(
+            self.mock_conn,
+            "hello",
+            {"maximum": 1, "topology": {"sockets": 4, "cores": 16, "threads": 2}},
+            512,
+            diskp,
+            nicp,
+            "kvm",
+            "hvm",
+            "x86_64",
+        )
+        root = ET.fromstring(xml_data)
+        self.assertEqual(root.find("cpu/topology").get("sockets"), "4")
+        self.assertEqual(root.find("cpu/topology").get("cores"), "16")
+        self.assertEqual(root.find("cpu/topology").get("threads"), "2")
+
+    def test_gen_xml_cpu_numa(self):
+        """
+        Test virt._gen_xml() with CPU numa settings
+        """
+        diskp = virt._disk_profile(self.mock_conn, "default", "kvm", [], "hello")
+        nicp = virt._nic_profile("default", "kvm")
+        xml_data = virt._gen_xml(
+            self.mock_conn,
+            "hello",
+            {
+                "maximum": 1,
+                "numa": {
+                    0: {
+                        "cpus": "0-3",
+                        "memory": "1g",
+                        "discard": True,
+                        "distances": {0: 10, 1: 20},
+                    },
+                    1: {"cpus": "4-7", "memory": "2g", "distances": {0: 20, 1: 10}},
+                },
+            },
+            512,
+            diskp,
+            nicp,
+            "kvm",
+            "hvm",
+            "x86_64",
+        )
+        root = ET.fromstring(xml_data)
+        cell0 = root.find("cpu/numa/cell[@id='0']")
+        self.assertEqual(cell0.get("cpus"), "0-3")
+        self.assertIsNone(cell0.get("unit"))
+        self.assertEqual(cell0.get("memory"), str(1024 ** 2))
+        self.assertEqual(cell0.get("discard"), "yes")
+        self.assertEqual(
+            {d.get("id"): d.get("value") for d in cell0.findall("distances/sibling")},
+            {"0": "10", "1": "20"},
+        )
+
+        cell1 = root.find("cpu/numa/cell[@id='1']")
+        self.assertEqual(cell1.get("cpus"), "4-7")
+        self.assertIsNone(cell0.get("unit"))
+        self.assertEqual(cell1.get("memory"), str(2 * 1024 ** 2))
+        self.assertFalse("discard" in cell1.keys())
+        self.assertEqual(
+            {d.get("id"): d.get("value") for d in cell1.findall("distances/sibling")},
+            {"0": "20", "1": "10"},
+        )
+
+    def test_gen_xml_cputune(self):
+        """
+        Test virt._gen_xml() with CPU tuning
+        """
+        diskp = virt._disk_profile(self.mock_conn, "default", "kvm", [], "hello")
+        nicp = virt._nic_profile("default", "kvm")
+        cputune = {
+            "shares": 2048,
+            "period": 122000,
+            "quota": -1,
+            "global_period": 1000000,
+            "global_quota": -3,
+            "emulator_period": 1200000,
+            "emulator_quota": -10,
+            "iothread_period": 133000,
+            "iothread_quota": -1,
+            "vcpupin": {0: "1-4,^2", 1: "0,1", 2: "2,3", 3: "0,4"},
+            "emulatorpin": "1-3",
+            "iothreadpin": {1: "5-6", 2: "7-8"},
+            "vcpusched": [
+                {"scheduler": "fifo", "priority": 1, "vcpus": "0"},
+                {"scheduler": "fifo", "priority": 2, "vcpus": "1"},
+                {"scheduler": "idle", "priority": 3, "vcpus": "2"},
+            ],
+            "iothreadsched": [
+                {"scheduler": "idle"},
+                {"scheduler": "batch", "iothreads": "5-7", "priority": 1},
+            ],
+            "emulatorsched": {"scheduler": "rr", "priority": 2},
+            "cachetune": {
+                "0-3": {
+                    0: {"level": 3, "type": "both", "size": 3},
+                    1: {"level": 3, "type": "both", "size": 3},
+                    "monitor": {1: 3, "0-3": 3},
+                },
+                "4-5": {"monitor": {4: 3, 5: 2}},
+            },
+            "memorytune": {"0-2": {0: 60}, "3-4": {0: 50, 1: 70}},
+        }
+        xml_data = virt._gen_xml(
+            self.mock_conn,
+            "hello",
+            {"maximum": 1, "tuning": cputune, "iothreads": 2},
+            512,
+            diskp,
+            nicp,
+            "kvm",
+            "hvm",
+            "x86_64",
+        )
+        root = ET.fromstring(xml_data)
+        self.assertEqual(root.find("cputune").find("shares").text, "2048")
+        self.assertEqual(root.find("cputune").find("period").text, "122000")
+        self.assertEqual(root.find("cputune").find("quota").text, "-1")
+        self.assertEqual(root.find("cputune").find("global_period").text, "1000000")
+        self.assertEqual(root.find("cputune").find("global_quota").text, "-3")
+        self.assertEqual(root.find("cputune").find("emulator_period").text, "1200000")
+        self.assertEqual(root.find("cputune").find("emulator_quota").text, "-10")
+        self.assertEqual(root.find("cputune").find("iothread_period").text, "133000")
+        self.assertEqual(root.find("cputune").find("iothread_quota").text, "-1")
+        self.assertEqual(
+            root.find("cputune").find("vcpupin[@vcpu='0']").attrib.get("cpuset"),
+            "1-4,^2",
+        )
+        self.assertEqual(
+            root.find("cputune").find("vcpupin[@vcpu='1']").attrib.get("cpuset"), "0,1",
+        )
+        self.assertEqual(
+            root.find("cputune").find("vcpupin[@vcpu='2']").attrib.get("cpuset"), "2,3",
+        )
+        self.assertEqual(
+            root.find("cputune").find("vcpupin[@vcpu='3']").attrib.get("cpuset"), "0,4",
+        )
+        self.assertEqual(
+            root.find("cputune").find("emulatorpin").attrib.get("cpuset"), "1-3"
+        )
+        self.assertEqual(
+            root.find("cputune")
+            .find("iothreadpin[@iothread='1']")
+            .attrib.get("cpuset"),
+            "5-6",
+        )
+        self.assertEqual(
+            root.find("cputune")
+            .find("iothreadpin[@iothread='2']")
+            .attrib.get("cpuset"),
+            "7-8",
+        )
+        self.assertDictEqual(
+            {
+                s.get("vcpus"): {
+                    "scheduler": s.get("scheduler"),
+                    "priority": s.get("priority"),
+                }
+                for s in root.findall("cputune/vcpusched")
+            },
+            {
+                "0": {"scheduler": "fifo", "priority": "1"},
+                "1": {"scheduler": "fifo", "priority": "2"},
+                "2": {"scheduler": "idle", "priority": "3"},
+            },
+        )
+        self.assertDictEqual(
+            {
+                s.get("iothreads"): {
+                    "scheduler": s.get("scheduler"),
+                    "priority": s.get("priority"),
+                }
+                for s in root.findall("cputune/iothreadsched")
+            },
+            {
+                None: {"scheduler": "idle", "priority": None},
+                "5-7": {"scheduler": "batch", "priority": "1"},
+            },
+        )
+        self.assertEqual(root.find("cputune/emulatorsched").get("scheduler"), "rr")
+        self.assertEqual(root.find("cputune/emulatorsched").get("priority"), "2")
+        self.assertEqual(
+            root.find("./cputune/cachetune[@vcpus='0-3']").attrib.get("vcpus"), "0-3"
+        )
+        self.assertEqual(
+            root.find("./cputune/cachetune[@vcpus='0-3']/cache[@id='0']").attrib.get(
+                "level"
+            ),
+            "3",
+        )
+        self.assertEqual(
+            root.find("./cputune/cachetune[@vcpus='0-3']/cache[@id='0']").attrib.get(
+                "type"
+            ),
+            "both",
+        )
+        self.assertEqual(
+            root.find(
+                "./cputune/cachetune[@vcpus='0-3']/monitor[@vcpus='1']"
+            ).attrib.get("level"),
+            "3",
+        )
+        self.assertNotEqual(
+            root.find("./cputune/cachetune[@vcpus='0-3']/monitor[@vcpus='1']"), None
+        )
+        self.assertNotEqual(
+            root.find("./cputune/cachetune[@vcpus='4-5']").attrib.get("vcpus"), None
+        )
+        self.assertEqual(
+            root.find("./cputune/cachetune[@vcpus='4-5']/cache[@id='0']"), None
+        )
+        self.assertEqual(
+            root.find(
+                "./cputune/cachetune[@vcpus='4-5']/monitor[@vcpus='4']"
+            ).attrib.get("level"),
+            "3",
+        )
+        self.assertEqual(
+            root.find(
+                "./cputune/cachetune[@vcpus='4-5']/monitor[@vcpus='5']"
+            ).attrib.get("level"),
+            "2",
+        )
+        self.assertNotEqual(root.find("./cputune/memorytune[@vcpus='0-2']"), None)
+        self.assertEqual(
+            root.find("./cputune/memorytune[@vcpus='0-2']/node[@id='0']").attrib.get(
+                "bandwidth"
+            ),
+            "60",
+        )
+        self.assertNotEqual(root.find("./cputune/memorytune[@vcpus='3-4']"), None)
+        self.assertEqual(
+            root.find("./cputune/memorytune[@vcpus='3-4']/node[@id='0']").attrib.get(
+                "bandwidth"
+            ),
+            "50",
+        )
+        self.assertEqual(
+            root.find("./cputune/memorytune[@vcpus='3-4']/node[@id='1']").attrib.get(
+                "bandwidth"
+            ),
+            "70",
+        )
+        self.assertEqual(root.find("iothreads").text, "2")
 
     def test_default_disk_profile_hypervisor_esxi(self):
         """
@@ -1377,70 +1881,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             ],
         )
 
-    def test_diff_nics(self):
-        """
-        Test virt._diff_nics()
-        """
-        old_nics = ET.fromstring(
-            """
-            <devices>
-               <interface type='network'>
-                 <mac address='52:54:00:39:02:b1'/>
-                 <source network='default'/>
-                 <model type='virtio'/>
-                 <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x0'/>
-               </interface>
-               <interface type='network'>
-                 <mac address='52:54:00:39:02:b2'/>
-                 <source network='admin'/>
-                 <model type='virtio'/>
-                 <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x0'/>
-               </interface>
-               <interface type='network'>
-                 <mac address='52:54:00:39:02:b3'/>
-                 <source network='admin'/>
-                 <model type='virtio'/>
-                 <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x0'/>
-               </interface>
-            </devices>
-        """
-        ).findall("interface")
-
-        new_nics = ET.fromstring(
-            """
-            <devices>
-               <interface type='network'>
-                 <mac address='52:54:00:39:02:b1'/>
-                 <source network='default'/>
-                 <model type='virtio'/>
-               </interface>
-               <interface type='network'>
-                 <mac address='52:54:00:39:02:b2'/>
-                 <source network='default'/>
-                 <model type='virtio'/>
-               </interface>
-               <interface type='network'>
-                 <mac address='52:54:00:39:02:b4'/>
-                 <source network='admin'/>
-                 <model type='virtio'/>
-               </interface>
-            </devices>
-        """
-        ).findall("interface")
-        ret = virt._diff_interface_lists(old_nics, new_nics)
-        self.assertEqual(
-            [nic.find("mac").get("address") for nic in ret["unchanged"]],
-            ["52:54:00:39:02:b1"],
-        )
-        self.assertEqual(
-            [nic.find("mac").get("address") for nic in ret["new"]],
-            ["52:54:00:39:02:b2", "52:54:00:39:02:b4"],
-        )
-        self.assertEqual(
-            [nic.find("mac").get("address") for nic in ret["deleted"]],
-            ["52:54:00:39:02:b2", "52:54:00:39:02:b3"],
-        )
-
     def test_init(self):
         """
         Test init() function
@@ -1777,6 +2217,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
               <memory unit='KiB'>1048576</memory>
               <currentMemory unit='KiB'>1048576</currentMemory>
               <vcpu placement='auto'>1</vcpu>
+              <on_reboot>restart</on_reboot>
               <os>
                 <type arch='x86_64' machine='pc-i440fx-2.6'>hvm</type>
                 <boot dev="hd"/>
@@ -1835,6 +2276,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                   <alias name='video0'/>
                   <address type='pci' domain='0x0000' bus='0x00' slot='0x02' function='0x0'/>
                 </video>
+                <serial type='pty'/>
+                <console type='pty'/>
               </devices>
             </domain>
         """.format(
@@ -1895,10 +2338,11 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 username=None,
                 password=None,
                 boot=None,
+                numatune=None,
             ),
         )
 
-        # Update vcpus case
+        # test cpu passed as an integer case
         setvcpus_mock = MagicMock(return_value=0)
         domain_mock.setVcpusFlags = setvcpus_mock
         self.assertEqual(
@@ -1913,7 +2357,266 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         setxml = ET.fromstring(define_mock.call_args[0][0])
         self.assertEqual(setxml.find("vcpu").text, "2")
         self.assertEqual(setvcpus_mock.call_args[0][0], 2)
+        define_mock.reset_mock()
 
+        # test updating vcpu attribute
+        vcpu = {
+            "placement": "static",
+            "cpuset": "0-11",
+            "current": 5,
+            "maximum": 12,
+        }
+        self.assertEqual(
+            {
+                "definition": True,
+                "cpu": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("my_vm", cpu=vcpu),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("vcpu").text, "12")
+        self.assertEqual(setxml.find("vcpu").attrib["placement"], "static")
+        self.assertEqual(
+            setxml.find("vcpu").attrib["cpuset"], "0,1,2,3,4,5,6,7,8,9,10,11"
+        )
+        self.assertEqual(setxml.find("vcpu").attrib["current"], "5")
+
+        # test adding vcpus elements
+        vcpus = {
+            "vcpus": {
+                "0": {"enabled": True, "hotpluggable": False, "order": 1},
+                "1": {"enabled": False, "hotpluggable": True},
+            }
+        }
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("my_vm", cpu=vcpus),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("./vcpus/vcpu/[@id='0']").attrib["id"], "0")
+        self.assertEqual(setxml.find("./vcpus/vcpu/[@id='0']").attrib["enabled"], "yes")
+        self.assertEqual(
+            setxml.find("./vcpus/vcpu/[@id='0']").attrib["hotpluggable"], "no"
+        )
+        self.assertEqual(setxml.find("./vcpus/vcpu/[@id='0']").attrib["order"], "1")
+        self.assertEqual(setxml.find("./vcpus/vcpu/[@id='1']").attrib["id"], "1")
+        self.assertEqual(setxml.find("./vcpus/vcpu/[@id='1']").attrib["enabled"], "no")
+        self.assertEqual(
+            setxml.find("./vcpus/vcpu/[@id='1']").attrib["hotpluggable"], "yes"
+        )
+        self.assertEqual(
+            setxml.find("./vcpus/vcpu/[@id='1']").attrib.get("order"), None
+        )
+
+        # test adding cpu attribute
+        cpu_atr = {"mode": "custom", "match": "exact", "check": "full"}
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("my_vm", cpu=cpu_atr),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("cpu").attrib["mode"], "custom")
+        self.assertEqual(setxml.find("cpu").attrib["match"], "exact")
+        self.assertEqual(setxml.find("cpu").attrib["check"], "full")
+
+        # test adding cpu model
+        cpu_model = {
+            "model": {
+                "name": "coreduo",
+                "fallback": "allow",
+                "vendor_id": "Genuine20201",
+            }
+        }
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("my_vm", cpu=cpu_model),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(
+            setxml.find("cpu").find("model").attrib.get("vendor_id"), "Genuine20201"
+        )
+        self.assertEqual(
+            setxml.find("cpu").find("model").attrib.get("fallback"), "allow"
+        )
+        self.assertEqual(setxml.find("cpu").find("model").text, "coreduo")
+
+        # test adding cpu vendor
+        cpu_vendor = {"vendor": "Intel"}
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("my_vm", cpu=cpu_vendor),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("cpu").find("vendor").text, "Intel")
+
+        # test adding cpu topology
+        cpu_topology = {"topology": {"sockets": 1, "cores": 12, "threads": 1}}
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("my_vm", cpu=cpu_topology),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("cpu").find("topology").attrib.get("sockets"), "1")
+        self.assertEqual(setxml.find("cpu").find("topology").attrib.get("cores"), "12")
+        self.assertEqual(setxml.find("cpu").find("topology").attrib.get("threads"), "1")
+
+        # test adding cache
+        cpu_cache = {"cache": {"mode": "emulate", "level": 3}}
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("my_vm", cpu=cpu_cache),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("cpu").find("cache").attrib.get("level"), "3")
+        self.assertEqual(setxml.find("cpu").find("cache").attrib.get("mode"), "emulate")
+
+        # test adding feature
+        cpu_feature = {"features": {"lahf": "optional", "pcid": "disable"}}
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("my_vm", cpu=cpu_feature),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(
+            setxml.find("./cpu/feature[@name='pcid']").attrib.get("policy"), "disable"
+        )
+        self.assertEqual(
+            setxml.find("./cpu/feature[@name='lahf']").attrib.get("policy"), "optional"
+        )
+
+        # test adding numa cell
+        numa_cell = {
+            "numa": {
+                "0": {
+                    "cpus": "0-3",
+                    "memory": "1g",
+                    "discard": True,
+                    "distances": {0: 10, 1: 21, 2: 31, 3: 41},
+                },
+                "1": {
+                    "cpus": "4-6",
+                    "memory": "0.5g",
+                    "discard": False,
+                    "memAccess": "shared",
+                    "distances": {0: 21, 1: 10, 2: 15, 3: 30},
+                },
+            }
+        }
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("my_vm", cpu=numa_cell),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='0']").attrib["cpus"], "0,1,2,3"
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='0']").attrib["memory"], str(1024 ** 3)
+        )
+        self.assertEqual(setxml.find("./cpu/numa/cell/[@id='0']").get("unit"), "bytes")
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='0']").attrib["discard"], "yes"
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='0']/distances/sibling/[@id='0']").attrib[
+                "value"
+            ],
+            "10",
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='0']/distances/sibling/[@id='1']").attrib[
+                "value"
+            ],
+            "21",
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='0']/distances/sibling/[@id='2']").attrib[
+                "value"
+            ],
+            "31",
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='0']/distances/sibling/[@id='3']").attrib[
+                "value"
+            ],
+            "41",
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='1']").attrib["cpus"], "4,5,6"
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='1']").attrib["memory"],
+            str(int(1024 ** 3 / 2)),
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='1']").get("unit"), "bytes",
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='1']").attrib["discard"], "no"
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='1']").attrib["memAccess"], "shared"
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='1']/distances/sibling/[@id='0']").attrib[
+                "value"
+            ],
+            "21",
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='1']/distances/sibling/[@id='1']").attrib[
+                "value"
+            ],
+            "10",
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='1']/distances/sibling/[@id='2']").attrib[
+                "value"
+            ],
+            "15",
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='1']/distances/sibling/[@id='3']").attrib[
+                "value"
+            ],
+            "30",
+        )
+
+        # Update boot parameter case
         boot = {
             "kernel": "/root/f8-i386-vmlinuz",
             "initrd": "/root/f8-i386-initrd",
@@ -2037,18 +2740,17 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         )
 
         setxml = ET.fromstring(define_mock.call_args[0][0])
-        self.assertEqual(
-            setxml.find("memtune").find("soft_limit").text, str(int(0.5 * 1024 ** 3))
+        self.assertEqualUnit(
+            setxml.find("memtune").find("soft_limit"), int(0.5 * 1024 ** 3), "bytes"
         )
-        self.assertEqual(setxml.find("memtune").find("soft_limit").get("unit"), "bytes")
-        self.assertEqual(
-            setxml.find("memtune").find("hard_limit").text, str(1024 * 1024 ** 2)
+        self.assertEqualUnit(
+            setxml.find("memtune").find("hard_limit"), 1024 * 1024 ** 2, "bytes"
         )
-        self.assertEqual(
-            setxml.find("memtune").find("swap_hard_limit").text, str(2048 * 1024 ** 2)
+        self.assertEqualUnit(
+            setxml.find("memtune").find("swap_hard_limit"), 2048 * 1024 ** 2, "bytes"
         )
-        self.assertEqual(
-            setxml.find("memtune").find("min_guarantee").text, str(1 * 1024 ** 3)
+        self.assertEqualUnit(
+            setxml.find("memtune").find("min_guarantee"), 1 * 1024 ** 3, "bytes"
         )
 
         invalid_unit = {"soft_limit": "2HB"}
@@ -2062,6 +2764,50 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
 
         with self.assertRaises(SaltInvocationError):
             virt.update("my_vm", mem=invalid_number)
+
+        # Update numatune case
+        numatune = {
+            "memory": {"mode": "strict", "nodeset": 1},
+            "memnodes": {
+                0: {"mode": "strict", "nodeset": 1},
+                1: {"mode": "preferred", "nodeset": 2},
+            },
+        }
+
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("my_vm", numatune=numatune),
+        )
+
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(
+            setxml.find("numatune").find("memory").attrib.get("mode"), "strict"
+        )
+
+        self.assertEqual(
+            setxml.find("numatune").find("memory").attrib.get("nodeset"), "1"
+        )
+
+        self.assertEqual(
+            setxml.find("./numatune/memnode/[@cellid='0']").attrib.get("mode"), "strict"
+        )
+
+        self.assertEqual(
+            setxml.find("./numatune/memnode/[@cellid='0']").attrib.get("nodeset"), "1"
+        )
+
+        self.assertEqual(
+            setxml.find("./numatune/memnode/[@cellid='1']").attrib.get("mode"),
+            "preferred",
+        )
+
+        self.assertEqual(
+            setxml.find("./numatune/memnode/[@cellid='1']").attrib.get("nodeset"), "2"
+        )
 
         # Update memory case
         setmem_mock = MagicMock(return_value=0)
@@ -2114,6 +2860,219 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(setxml.find("maxMemory").text, str(3096 * 1024 ** 2))
         self.assertEqual(setxml.find("maxMemory").attrib.get("slots"), "10")
 
+        # update memory backing case
+        mem_back = {
+            "hugepages": [
+                {"nodeset": "1-5,^4", "size": "1g"},
+                {"nodeset": "4", "size": "2g"},
+            ],
+            "nosharepages": True,
+            "locked": True,
+            "source": "file",
+            "access": "shared",
+            "allocation": "immediate",
+            "discard": True,
+        }
+
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("my_vm", mem=mem_back),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertDictEqual(
+            {
+                p.get("nodeset"): {"size": p.get("size"), "unit": p.get("unit")}
+                for p in setxml.findall("memoryBacking/hugepages/page")
+            },
+            {
+                "1,2,3,5": {"size": str(1024 ** 3), "unit": "bytes"},
+                "4": {"size": str(2 * 1024 ** 3), "unit": "bytes"},
+            },
+        )
+        self.assertNotEqual(setxml.find("./memoryBacking/nosharepages"), None)
+        self.assertIsNone(setxml.find("./memoryBacking/nosharepages").text)
+        self.assertEqual([], setxml.find("./memoryBacking/nosharepages").keys())
+        self.assertNotEqual(setxml.find("./memoryBacking/locked"), None)
+        self.assertIsNone(setxml.find("./memoryBacking/locked").text)
+        self.assertEqual([], setxml.find("./memoryBacking/locked").keys())
+        self.assertEqual(setxml.find("./memoryBacking/source").attrib["type"], "file")
+        self.assertEqual(setxml.find("./memoryBacking/access").attrib["mode"], "shared")
+        self.assertNotEqual(setxml.find("./memoryBacking/discard"), None)
+
+        # test adding iothreads
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("my_vm", cpu={"iothreads": 5}),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("iothreads").text, "5")
+
+        # test adding cpu tune parameters
+        cputune = {
+            "shares": 2048,
+            "period": 122000,
+            "quota": -1,
+            "global_period": 1000000,
+            "global_quota": -3,
+            "emulator_period": 1200000,
+            "emulator_quota": -10,
+            "iothread_period": 133000,
+            "iothread_quota": -1,
+            "vcpupin": {0: "1-4,^2", 1: "0,1", 2: "2,3", 3: "0,4"},
+            "emulatorpin": "1-3",
+            "iothreadpin": {1: "5-6", 2: "7-8"},
+            "vcpusched": [
+                {"scheduler": "fifo", "priority": 1, "vcpus": "0"},
+                {"scheduler": "fifo", "priotity": 2, "vcpus": "1"},
+                {"scheduler": "idle", "priotity": 3, "vcpus": "2"},
+            ],
+            "iothreadsched": [{"scheduler": "batch", "iothreads": "7"}],
+            "cachetune": {
+                "0-3": {
+                    0: {"level": 3, "type": "both", "size": 3},
+                    1: {"level": 3, "type": "both", "size": 3},
+                    "monitor": {1: 3, "0-3": 3},
+                },
+                "4-5": {"monitor": {4: 3, 5: 2}},
+            },
+            "memorytune": {"0-2": {0: 60}, "3-4": {0: 50, 1: 70}},
+        }
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("my_vm", cpu={"tuning": cputune}),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("cputune").find("shares").text, "2048")
+        self.assertEqual(setxml.find("cputune").find("period").text, "122000")
+        self.assertEqual(setxml.find("cputune").find("quota").text, "-1")
+        self.assertEqual(setxml.find("cputune").find("global_period").text, "1000000")
+        self.assertEqual(setxml.find("cputune").find("global_quota").text, "-3")
+        self.assertEqual(setxml.find("cputune").find("emulator_period").text, "1200000")
+        self.assertEqual(setxml.find("cputune").find("emulator_quota").text, "-10")
+        self.assertEqual(setxml.find("cputune").find("iothread_period").text, "133000")
+        self.assertEqual(setxml.find("cputune").find("iothread_quota").text, "-1")
+        self.assertEqual(
+            setxml.find("cputune").find("vcpupin[@vcpu='0']").attrib.get("cpuset"),
+            "1,3,4",
+        )
+        self.assertEqual(
+            setxml.find("cputune").find("vcpupin[@vcpu='1']").attrib.get("cpuset"),
+            "0,1",
+        )
+        self.assertEqual(
+            setxml.find("cputune").find("vcpupin[@vcpu='2']").attrib.get("cpuset"),
+            "2,3",
+        )
+        self.assertEqual(
+            setxml.find("cputune").find("vcpupin[@vcpu='3']").attrib.get("cpuset"),
+            "0,4",
+        )
+        self.assertEqual(
+            setxml.find("cputune").find("emulatorpin").attrib.get("cpuset"), "1,2,3"
+        )
+        self.assertEqual(
+            setxml.find("cputune")
+            .find("iothreadpin[@iothread='1']")
+            .attrib.get("cpuset"),
+            "5,6",
+        )
+        self.assertEqual(
+            setxml.find("cputune")
+            .find("iothreadpin[@iothread='2']")
+            .attrib.get("cpuset"),
+            "7,8",
+        )
+        self.assertEqual(
+            setxml.find("cputune").find("vcpusched[@vcpus='0']").attrib.get("priority"),
+            "1",
+        )
+        self.assertEqual(
+            setxml.find("cputune")
+            .find("vcpusched[@vcpus='0']")
+            .attrib.get("scheduler"),
+            "fifo",
+        )
+        self.assertEqual(
+            setxml.find("cputune").find("iothreadsched").attrib.get("iothreads"), "7"
+        )
+        self.assertEqual(
+            setxml.find("cputune").find("iothreadsched").attrib.get("scheduler"),
+            "batch",
+        )
+        self.assertIsNotNone(setxml.find("./cputune/cachetune[@vcpus='0,1,2,3']"))
+        self.assertEqual(
+            setxml.find(
+                "./cputune/cachetune[@vcpus='0,1,2,3']/cache[@id='0']"
+            ).attrib.get("level"),
+            "3",
+        )
+        self.assertEqual(
+            setxml.find(
+                "./cputune/cachetune[@vcpus='0,1,2,3']/cache[@id='0']"
+            ).attrib.get("type"),
+            "both",
+        )
+        self.assertEqual(
+            setxml.find(
+                "./cputune/cachetune[@vcpus='0,1,2,3']/monitor[@vcpus='1']"
+            ).attrib.get("level"),
+            "3",
+        )
+        self.assertNotEqual(
+            setxml.find("./cputune/cachetune[@vcpus='0,1,2,3']/monitor[@vcpus='1']"),
+            None,
+        )
+        self.assertNotEqual(
+            setxml.find("./cputune/cachetune[@vcpus='4,5']").attrib.get("vcpus"), None
+        )
+        self.assertEqual(
+            setxml.find("./cputune/cachetune[@vcpus='4,5']/cache[@id='0']"), None
+        )
+        self.assertEqual(
+            setxml.find(
+                "./cputune/cachetune[@vcpus='4,5']/monitor[@vcpus='4']"
+            ).attrib.get("level"),
+            "3",
+        )
+        self.assertEqual(
+            setxml.find(
+                "./cputune/cachetune[@vcpus='4,5']/monitor[@vcpus='5']"
+            ).attrib.get("level"),
+            "2",
+        )
+        self.assertNotEqual(setxml.find("./cputune/memorytune[@vcpus='0,1,2']"), None)
+        self.assertEqual(
+            setxml.find(
+                "./cputune/memorytune[@vcpus='0,1,2']/node[@id='0']"
+            ).attrib.get("bandwidth"),
+            "60",
+        )
+        self.assertNotEqual(setxml.find("./cputune/memorytune[@vcpus='3,4']"), None)
+        self.assertEqual(
+            setxml.find("./cputune/memorytune[@vcpus='3,4']/node[@id='0']").attrib.get(
+                "bandwidth"
+            ),
+            "50",
+        )
+        self.assertEqual(
+            setxml.find("./cputune/memorytune[@vcpus='3,4']/node[@id='1']").attrib.get(
+                "bandwidth"
+            ),
+            "70",
+        )
+
         # Update disks case
         devattach_mock = MagicMock(return_value=0)
         devdetach_mock = MagicMock(return_value=0)
@@ -2137,7 +3096,12 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                             "source_file": None,
                             "model": "ide",
                         },
-                        {"name": "added", "size": 2048},
+                        {
+                            "name": "added",
+                            "size": 2048,
+                            "io": "threads",
+                            "iothread_id": 2,
+                        },
                     ],
                 )
                 added_disk_path = os.path.join(
@@ -2168,6 +3132,14 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 self.assertEqual(devattach_mock.call_count, 2)
                 self.assertEqual(devdetach_mock.call_count, 2)
+
+                setxml = ET.fromstring(define_mock.call_args[0][0])
+                self.assertEqual(
+                    "threads", setxml.find("devices/disk[3]/driver").get("io")
+                )
+                self.assertEqual(
+                    "2", setxml.find("devices/disk[3]/driver").get("iothread")
+                )
 
         # Update nics case
         yaml_config = """
@@ -2217,7 +3189,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         devattach_mock.reset_mock()
         devdetach_mock.reset_mock()
         ret = virt.update("my_vm", nic_profile=None, interfaces=[])
-        self.assertEqual([], ret["interface"]["attached"])
+        self.assertFalse(ret["interface"].get("attached"))
         self.assertEqual(2, len(ret["interface"]["detached"]))
         devattach_mock.assert_not_called()
         devdetach_mock.assert_called()
@@ -2226,7 +3198,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         devattach_mock.reset_mock()
         devdetach_mock.reset_mock()
         ret = virt.update("my_vm", disk_profile=None, disks=[])
-        self.assertEqual([], ret["disk"]["attached"])
+        self.assertFalse(ret["disk"].get("attached"))
         self.assertEqual(3, len(ret["disk"]["detached"]))
         devattach_mock.assert_not_called()
         devdetach_mock.assert_called()
@@ -2242,6 +3214,19 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         )
         setxml = ET.fromstring(define_mock.call_args[0][0])
         self.assertEqual("vnc", setxml.find("devices/graphics").get("type"))
+
+        # Serial and console test case
+        self.assertEqual(
+            {
+                "definition": False,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("my_vm", serials=[{"type": "tcp"}], consoles=[{"type": "tcp"}]),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("devices/serial").attrib["type"], "pty")
+        self.assertEqual(setxml.find("devices/console").attrib["type"], "pty")
 
         # Update with no diff case
         pool_mock = MagicMock()
@@ -2349,6 +3334,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
               <memory unit='KiB'>1048576</memory>
               <currentMemory unit='KiB'>1048576</currentMemory>
               <vcpu placement='auto'>1</vcpu>
+              <on_reboot>restart</on_reboot>
               <os>
                 <type arch='x86_64' machine='pc-i440fx-2.6'>hvm</type>
               </os>
@@ -2498,8 +3484,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         )
 
         self.assertTrue(ret["definition"])
-        self.assertFalse(ret["disk"]["attached"])
-        self.assertFalse(ret["disk"]["detached"])
+        self.assertFalse(ret["disk"].get("attached"))
+        self.assertFalse(ret["disk"].get("detached"))
         self.assertEqual(
             [
                 {
@@ -2642,48 +3628,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 <loader>/usr/share/old/OVMF_CODE.fd</loader>
                 <nvram>/usr/share/old/OVMF_VARS.ms.fd</nvram>
               </os>
-              <devices>
-                <disk type='file' device='disk'>
-                  <driver name='qemu' type='qcow2'/>
-                  <source file='{0}{1}vm_with_boot_param_system.qcow2'/>
-                  <backingStore/>
-                  <target dev='vda' bus='virtio'/>
-                  <alias name='virtio-disk0'/>
-                  <address type='pci' domain='0x0000' bus='0x00' slot='0x07' function='0x0'/>
-                </disk>
-                <disk type='file' device='disk'>
-                  <driver name='qemu' type='qcow2'/>
-                  <source file='{0}{1}vm_with_boot_param_data.qcow2'/>
-                  <backingStore/>
-                  <target dev='vdb' bus='virtio'/>
-                  <alias name='virtio-disk1'/>
-                  <address type='pci' domain='0x0000' bus='0x00' slot='0x07' function='0x1'/>
-                </disk>
-                <interface type='network'>
-                  <mac address='52:54:00:39:02:b1'/>
-                  <source network='default' bridge='virbr0'/>
-                  <target dev='vnet0'/>
-                  <model type='virtio'/>
-                  <alias name='net0'/>
-                  <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x0'/>
-                </interface>
-                <interface type='network'>
-                  <mac address='52:54:00:39:02:b2'/>
-                  <source network='oldnet' bridge='virbr1'/>
-                  <target dev='vnet1'/>
-                  <model type='virtio'/>
-                  <alias name='net1'/>
-                  <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x1'/>
-                </interface>
-                <graphics type='spice' port='5900' autoport='yes' listen='127.0.0.1'>
-                  <listen type='address' address='127.0.0.1'/>
-                </graphics>
-                <video>
-                  <model type='qxl' ram='65536' vram='65536' vgamem='16384' heads='1' primary='yes'/>
-                  <alias name='video0'/>
-                  <address type='pci' domain='0x0000' bus='0x00' slot='0x02' function='0x0'/>
-                </video>
-              </devices>
             </domain>
         """
         domain_mock_boot = self.set_mock_vm("vm_with_boot_param", xml_boot)
@@ -2785,6 +3729,844 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         setxml = ET.fromstring(define_mock_boot.call_args[0][0])
         self.assertEqual(setxml.find("os").find("loader"), None)
         self.assertEqual(setxml.find("os").find("nvram"), None)
+
+    def test_update_existing_numatune_params(self):
+        """
+        Test virt.update() with existing numatune parameters.
+        """
+        xml_numatune = """
+            <domain type='kvm' id='8'>
+              <name>vm_with_numatune_param</name>
+              <memory unit='KiB'>1048576</memory>
+              <currentMemory unit='KiB'>1048576</currentMemory>
+              <maxMemory slots="12" unit="bytes">1048576</maxMemory>
+              <vcpu placement='auto'>1</vcpu>
+              <numatune>
+                <memory mode="strict" nodeset="0-11"/>
+                <memnode cellid="1" mode="strict" nodeset="3"/>
+                <memnode cellid="3" mode="preferred" nodeset="7"/>
+              </numatune>
+              <os>
+                <type arch='x86_64' machine='pc-i440fx-2.6'>hvm</type>
+              </os>
+              <on_reboot>restart</on_reboot>
+            </domain>
+        """
+        domain_mock = self.set_mock_vm("vm_with_numatune_param", xml_numatune)
+        domain_mock.OSType = MagicMock(return_value="hvm")
+        define_mock = MagicMock(return_value=True)
+        self.mock_conn.defineXML = define_mock
+
+        # test update existing numatune node
+        numatune = {
+            "memory": {"mode": "preferred", "nodeset": "0-5"},
+            "memnodes": {
+                0: {"mode": "strict", "nodeset": "4"},
+                3: {"mode": "preferred", "nodeset": "7"},
+                4: {"mode": "strict", "nodeset": "6"},
+            },
+        }
+
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm_with_numatune_param", numatune=numatune),
+        )
+
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(
+            setxml.find("numatune").find("memory").attrib.get("mode"), "preferred"
+        )
+
+        self.assertEqual(
+            setxml.find("numatune").find("memory").attrib.get("nodeset"),
+            ",".join([str(i) for i in range(0, 6)]),
+        )
+
+        self.assertEqual(
+            setxml.find("./numatune/memnode/[@cellid='0']").attrib.get("mode"), "strict"
+        )
+
+        self.assertEqual(
+            setxml.find("./numatune/memnode/[@cellid='0']").attrib.get("nodeset"), "4"
+        )
+
+        self.assertEqual(setxml.find("./numatune/memnode/[@cellid='1']"), None)
+
+        self.assertEqual(
+            setxml.find("./numatune/memnode/[@cellid='3']").attrib.get("mode"),
+            "preferred",
+        )
+
+        self.assertEqual(
+            setxml.find("./numatune/memnode/[@cellid='3']").attrib.get("nodeset"), "7"
+        )
+
+        self.assertEqual(
+            setxml.find("./numatune/memnode/[@cellid='4']").attrib.get("mode"), "strict"
+        )
+
+        self.assertEqual(
+            setxml.find("./numatune/memnode/[@cellid='4']").attrib.get("nodeset"), "6"
+        )
+
+        self.assertEqual(setxml.find("./numatune/memnode/[@cellid='2']"), None)
+
+        numatune_mem_none = {
+            "memory": None,
+            "memnodes": {
+                0: {"mode": "strict", "nodeset": "4"},
+                3: {"mode": "preferred", "nodeset": "7"},
+                4: {"mode": "strict", "nodeset": "6"},
+            },
+        }
+
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm_with_numatune_param", numatune=numatune_mem_none),
+        )
+
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("numatune").find("memory"), None)
+
+        self.assertEqual(
+            setxml.find("./numatune/memnode/[@cellid='0']").attrib.get("mode"), "strict"
+        )
+
+        self.assertEqual(
+            setxml.find("./numatune/memnode/[@cellid='0']").attrib.get("nodeset"), "4"
+        )
+
+        self.assertEqual(
+            setxml.find("./numatune/memnode/[@cellid='3']").attrib.get("mode"),
+            "preferred",
+        )
+
+        self.assertEqual(
+            setxml.find("./numatune/memnode/[@cellid='3']").attrib.get("nodeset"), "7"
+        )
+
+        self.assertEqual(setxml.find("./numatune/memnode/[@cellid='2']"), None)
+
+        numatune_mnodes_none = {
+            "memory": {"mode": "preferred", "nodeset": "0-5"},
+            "memnodes": None,
+        }
+
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm_with_numatune_param", numatune=numatune_mnodes_none),
+        )
+
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(
+            setxml.find("numatune").find("memory").attrib.get("mode"), "preferred"
+        )
+
+        self.assertEqual(
+            setxml.find("numatune").find("memory").attrib.get("nodeset"),
+            ",".join([str(i) for i in range(0, 6)]),
+        )
+
+        self.assertEqual(setxml.find("./numatune/memnode"), None)
+
+        numatune_without_change = {
+            "memory": {"mode": "strict", "nodeset": "0-5,6,7-11"},
+            "memnodes": {
+                1: {"mode": "strict", "nodeset": "3"},
+                3: {"mode": "preferred", "nodeset": "7"},
+            },
+        }
+
+        self.assertEqual(
+            {
+                "definition": False,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm_with_numatune_param", numatune=numatune_without_change),
+        )
+
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update(
+                "vm_with_numatune_param", numatune={"memory": None, "memnodes": None}
+            ),
+        )
+
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("numatune"), None)
+
+    def test_update_existing_cpu_params(self):
+        """
+        Test virt.update() with existing cpu-related parameters.
+        """
+        xml_with_existing_params = """
+            <domain type='kvm' id='8'>
+              <name>vm_with_boot_param</name>
+              <memory unit='KiB'>1048576</memory>
+              <currentMemory unit='KiB'>1048576</currentMemory>
+              <vcpu placement="static" cpuset="0-11" current="3">6</vcpu>
+              <vcpus>
+                <vcpu id="0" enabled="yes" hotpluggable="no" order="1"/>
+                <vcpu id="1" enabled="no" hotpluggable="yes"/>
+                <vcpu id="2" enabled="no" hotpluggable="yes"/>
+                <vcpu id="3" enabled="no" hotpluggable="yes"/>
+                <vcpu id="4" enabled="no" hotpluggable="yes"/>
+                <vcpu id="5" enabled="no" hotpluggable="yes"/>
+                <vcpu id="6" enabled="no" hotpluggable="yes"/>
+                <vcpu id="7" enabled="no" hotpluggable="yes"/>
+                <vcpu id="8" enabled="no" hotpluggable="yes"/>
+                <vcpu id="9" enabled="no" hotpluggable="yes"/>
+                <vcpu id="10" enabled="no" hotpluggable="yes"/>
+                <vcpu id="11" enabled="no" hotpluggable="yes"/>
+              </vcpus>
+              <cpu mode="custom" match="exact" check="full">
+                 <model fallback="allow" vendor_id="Genuine20201">core2duo</model>
+                 <vendor>Intel</vendor>
+                 <topology sockets="2" cores="5" threads="2"/>
+                 <cache level="3" mode="emulate"/>
+                 <feature policy="optional" name="lahf_lm"/>
+                 <feature policy="require" name="pcid"/>
+                 <numa>
+                    <cell id="0" cpus="0-3" memory="1073741824" unit="KiB" discard="no">
+                        <distances>
+                            <sibling id="0" value="10"/>
+                            <sibling id="1" value="21"/>
+                            <sibling id="2" value="31"/>
+                            <sibling id="3" value="41"/>
+                        </distances>
+                    </cell>
+                    <cell id="1" cpus="4-6" memory="1073741824" unit="KiB" memAccess="private">
+                        <distances>
+                            <sibling id="0" value="21"/>
+                            <sibling id="1" value="10"/>
+                            <sibling id="2" value="21"/>
+                            <sibling id="3" value="31"/>
+                        </distances>
+                    </cell>
+                 </numa>
+              </cpu>
+              <os>
+                <type arch='x86_64' machine='pc-i440fx-2.6'>hvm</type>
+              </os>
+              </domain>
+         """
+        domain_mock = self.set_mock_vm(
+            "vm_with_existing_param", xml_with_existing_params
+        )
+        domain_mock.OSType = MagicMock(return_value="hvm")
+        define_mock = MagicMock(return_value=True)
+        self.mock_conn.defineXML = define_mock
+
+        # test update vcpu with existing attributes case
+        setvcpus_mock = MagicMock(return_value=0)
+        domain_mock.setVcpusFlags = setvcpus_mock
+
+        cpu_attr = {"placement": "static", "cpuset": "0-5", "current": 3, "maximum": 5}
+        self.assertEqual(
+            {
+                "definition": True,
+                "cpu": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm_with_existing_param", cpu=cpu_attr),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("vcpu").text, "5")
+        self.assertEqual(setxml.find("vcpu").attrib["placement"], "static")
+        self.assertEqual(
+            setxml.find("vcpu").attrib["cpuset"],
+            ",".join([str(i) for i in range(0, 6)]),
+        )
+        self.assertEqual(setxml.find("vcpu").attrib["current"], "3")
+
+        # test removing vcpu attribute
+        cpu_none = {"placement": "auto", "cpuset": None, "current": 2, "maximum": 5}
+        self.assertEqual(
+            {
+                "definition": True,
+                "cpu": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm_with_existing_param", cpu=cpu_none),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("vcpu").text, "5")
+        self.assertEqual(setxml.find("vcpu").attrib["placement"], "auto")
+        self.assertEqual(setxml.find("vcpu").attrib.get("cpuset"), None)
+        self.assertEqual(setxml.find("vcpu").attrib.get("current"), "2")
+
+        # test update individual vcpu with exisiting attributes
+        vcpus = {
+            "vcpus": {
+                "0": {"enabled": False, "hotpluggable": True, "order": 5},
+                "3": {"enabled": True, "hotpluggable": False, "order": 3},
+                "7": {"enabled": True, "hotpluggable": False},
+            }
+        }
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm_with_existing_param", cpu=vcpus),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("./vcpus/vcpu/[@id='0']").attrib["id"], "0")
+        self.assertEqual(setxml.find("./vcpus/vcpu/[@id='0']").attrib["enabled"], "no")
+        self.assertEqual(
+            setxml.find("./vcpus/vcpu/[@id='0']").attrib["hotpluggable"], "yes"
+        )
+        self.assertEqual(setxml.find("./vcpus/vcpu/[@id='0']").attrib["order"], "5")
+        self.assertEqual(setxml.find("./vcpus/vcpu/[@id='3']").attrib["id"], "3")
+        self.assertEqual(setxml.find("./vcpus/vcpu/[@id='3']").attrib["enabled"], "yes")
+        self.assertEqual(
+            setxml.find("./vcpus/vcpu/[@id='3']").attrib["hotpluggable"], "no"
+        )
+        self.assertEqual(setxml.find("./vcpus/vcpu/[@id='3']").attrib["order"], "3")
+        self.assertEqual(setxml.find("./vcpus/vcpu/[@id='7']").attrib["id"], "7")
+        self.assertEqual(setxml.find("./vcpus/vcpu/[@id='7']").attrib["enabled"], "yes")
+        self.assertEqual(
+            setxml.find("./vcpus/vcpu/[@id='7']").attrib["hotpluggable"], "no"
+        )
+        self.assertEqual(
+            setxml.find("./vcpus/vcpu/[@id='7']").attrib.get("order"), None
+        )
+
+        # test removing vcpu element
+        ind_vcpu = {
+            "vcpus": {"3": {"enabled": True, "hotpluggable": False, "order": None}}
+        }
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm_with_existing_param", cpu=ind_vcpu),
+        )
+
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("./vcpus/vcpu/[@id='0']"), None)
+        self.assertEqual(setxml.find("./vcpus/vcpu/[@id='3']").attrib["enabled"], "yes")
+        self.assertEqual(
+            setxml.find("./vcpus/vcpu/[@id='3']").attrib["hotpluggable"], "no"
+        )
+        self.assertEqual(
+            setxml.find("./vcpus/vcpu/[@id='3']").attrib.get("order"), None
+        )
+
+        # test removing vcpus element
+        vcpus_none = {"vcpus": None}
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm_with_existing_param", cpu=vcpus_none),
+        )
+
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("vcpus"), None)
+
+        # test removing cpu attrbutes
+        cpu_atr_none = {"match": None, "mode": None, "check": None}
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm_with_existing_param", cpu=cpu_atr_none),
+        )
+
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("cpu").attrib, {})
+
+        cpu_atr_mn = {"match": None}
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm_with_existing_param", cpu=cpu_atr_mn),
+        )
+
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("cpu").attrib.get("match"), None)
+        self.assertEqual(setxml.find("cpu").attrib.get("mode"), "custom")
+        self.assertEqual(setxml.find("cpu").attrib.get("check"), "full")
+
+        # test update existing cpu model
+        cpu_model_none = {"model": None}
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm_with_existing_param", cpu=cpu_model_none),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("cpu").find("model"), None)
+
+        cpu_model_atr_none = {
+            "model": {"name": "coresolo", "fallback": "forbid", "vendor_id": None}
+        }
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm_with_existing_param", cpu=cpu_model_atr_none),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("cpu").find("model").attrib.get("vendor_id"), None)
+        self.assertEqual(
+            setxml.find("cpu").find("model").attrib.get("fallback"), "forbid"
+        )
+        self.assertEqual(setxml.find("cpu").find("model").text, "coresolo")
+
+        cpu_model_atr = {
+            "model": {
+                "name": "coresolo",
+                "fallback": "forbid",
+                "vendor_id": "AuthenticAMD",
+            }
+        }
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm_with_existing_param", cpu=cpu_model_atr),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(
+            setxml.find("cpu").find("model").attrib.get("fallback"), "forbid"
+        )
+        self.assertEqual(
+            setxml.find("cpu").find("model").attrib.get("vendor_id"), "AuthenticAMD"
+        )
+        self.assertEqual(setxml.find("cpu").find("model").text, "coresolo")
+
+        # test update existing cpu vendor
+        cpu_vendor = {"vendor": "AMD"}
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm_with_existing_param", cpu=cpu_vendor),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("cpu").find("vendor").text, "AMD")
+
+        cpu_vendor_none = {"vendor": None}
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm_with_existing_param", cpu=cpu_vendor_none),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("cpu").find("vendor"), None)
+
+        # test update exisiting cpu topology
+        cpu_topology = {"topology": {"sockets": 1, "cores": 12, "threads": 1}}
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm_with_existing_param", cpu=cpu_topology),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("cpu").find("topology").attrib.get("sockets"), "1")
+        self.assertEqual(setxml.find("cpu").find("topology").attrib.get("cores"), "12")
+        self.assertEqual(setxml.find("cpu").find("topology").attrib.get("threads"), "1")
+
+        cpu_topology_atr_none = {
+            "topology": {"sockets": None, "cores": 12, "threads": 1}
+        }
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm_with_existing_param", cpu=cpu_topology_atr_none),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(
+            setxml.find("cpu").find("topology").attrib.get("sockets"), None
+        )
+        self.assertEqual(setxml.find("cpu").find("topology").attrib.get("cores"), "12")
+        self.assertEqual(setxml.find("cpu").find("topology").attrib.get("threads"), "1")
+
+        cpu_topology_none = {"topology": None}
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm_with_existing_param", cpu=cpu_topology_none),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("cpu").find("topology"), None)
+
+        # test update existing cache
+        cpu_cache = {"cache": {"mode": "passthrough", "level": 2}}
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm_with_existing_param", cpu=cpu_cache),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("cpu").find("cache").attrib.get("level"), "2")
+        self.assertEqual(
+            setxml.find("cpu").find("cache").attrib.get("mode"), "passthrough"
+        )
+
+        cpu_cache_atr_none = {"cache": {"mode": "passthrough", "level": None}}
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm_with_existing_param", cpu=cpu_cache_atr_none),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("cpu").find("cache").attrib.get("level"), None)
+        self.assertEqual(
+            setxml.find("cpu").find("cache").attrib.get("mode"), "passthrough"
+        )
+
+        cpu_cache_none = {"cache": None}
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm_with_existing_param", cpu=cpu_cache_none),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("cpu").find("cache"), None)
+
+        # test update existing feature
+        cpu_feature = {"features": {"lahf_lm": "require", "pcid": "optional"}}
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm_with_existing_param", cpu=cpu_feature),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(
+            setxml.find("./cpu/feature[@name='pcid']").attrib.get("policy"), "optional"
+        )
+        self.assertEqual(
+            setxml.find("./cpu/feature[@name='lahf_lm']").attrib.get("policy"),
+            "require",
+        )
+
+        cpu_feature_atr_none = {"features": {"pcid": "optional", "lahf_lm": "disable"}}
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm_with_existing_param", cpu=cpu_feature_atr_none),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(
+            setxml.find("./cpu/feature[@name='lahf_lm']").attrib.get("policy"),
+            "disable",
+        )
+        self.assertEqual(
+            setxml.find("./cpu/feature[@name='pcid']").attrib.get("policy"), "optional"
+        )
+
+        cpu_feature_none = {"features": {"lahf_lm": None, "pcid": None}}
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm_with_existing_param", cpu=cpu_feature_none),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("./cpu/feature"), None)
+
+        # test update existing numa cell
+        numa_cell = {
+            "numa": {
+                0: {
+                    "cpus": "0-6",
+                    "memory": "512m",
+                    "discard": True,
+                    "distances": {0: 15, 1: 16, 2: 17, 3: 18},
+                },
+                1: {
+                    "cpus": "7-12",
+                    "memory": "2g",
+                    "discard": True,
+                    "memAccess": "shared",
+                    "distances": {0: 23, 1: 24, 2: 25, 3: 26},
+                },
+            }
+        }
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm_with_existing_param", cpu=numa_cell),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='0']").attrib["cpus"],
+            ",".join([str(i) for i in range(0, 7)]),
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='0']").attrib["memory"],
+            str(512 * 1024 ** 2),
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='0']").get("unit"), "bytes",
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='0']").attrib["discard"], "yes"
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='0']/distances/sibling/[@id='0']").attrib[
+                "value"
+            ],
+            "15",
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='0']/distances/sibling/[@id='1']").attrib[
+                "value"
+            ],
+            "16",
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='0']/distances/sibling/[@id='2']").attrib[
+                "value"
+            ],
+            "17",
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='0']/distances/sibling/[@id='3']").attrib[
+                "value"
+            ],
+            "18",
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='1']").attrib["cpus"],
+            ",".join([str(i) for i in range(7, 13)]),
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='1']").attrib["memory"],
+            str(int(2 * 1024 ** 3)),
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='1']").get("unit"), "bytes",
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='1']").attrib["discard"], "yes"
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='1']").attrib["memAccess"], "shared"
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='1']/distances/sibling/[@id='0']").attrib[
+                "value"
+            ],
+            "23",
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='1']/distances/sibling/[@id='1']").attrib[
+                "value"
+            ],
+            "24",
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='1']/distances/sibling/[@id='2']").attrib[
+                "value"
+            ],
+            "25",
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='1']/distances/sibling/[@id='3']").attrib[
+                "value"
+            ],
+            "26",
+        )
+
+        numa_cell_atr_none = {
+            "numa": {
+                "0": {
+                    "cpus": "0-6",
+                    "memory": "512m",
+                    "discard": False,
+                    "distances": {0: 15, 2: 17, 3: 18},
+                },
+                "1": {
+                    "cpus": "7-12",
+                    "memory": "2g",
+                    "discard": True,
+                    "distances": {0: 23, 1: 24, 2: 25},
+                },
+            }
+        }
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm_with_existing_param", cpu=numa_cell_atr_none),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='0']").attrib["cpus"],
+            ",".join([str(i) for i in range(0, 7)]),
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='0']").attrib["memory"],
+            str(512 * 1024 ** 2),
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='0']").get("unit"), "bytes",
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='0']").attrib.get("discard"), "no"
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='0']/distances/sibling/[@id='0']").attrib[
+                "value"
+            ],
+            "15",
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='0']/distances/sibling/[@id='1']"), None
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='0']/distances/sibling/[@id='2']").attrib[
+                "value"
+            ],
+            "17",
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='0']/distances/sibling/[@id='3']").attrib[
+                "value"
+            ],
+            "18",
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='1']").attrib["cpus"],
+            ",".join([str(i) for i in range(7, 13)]),
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='1']").attrib["memory"],
+            str(int(2 * 1024 ** 3)),
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='1']").attrib["discard"], "yes"
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='1']/distances/sibling/[@id='0']").attrib[
+                "value"
+            ],
+            "23",
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='1']/distances/sibling/[@id='1']").attrib[
+                "value"
+            ],
+            "24",
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='1']/distances/sibling/[@id='2']").attrib[
+                "value"
+            ],
+            "25",
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='1']/distances/sibling/[@id='3']"), None
+        )
+
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='1']").attrib["cpus"],
+            ",".join([str(i) for i in range(7, 13)]),
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='1']").attrib["memory"],
+            str(int(1024 ** 3 * 2)),
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='1']").attrib["discard"], "yes"
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='1']/distances/sibling/[@id='0']").attrib[
+                "value"
+            ],
+            "23",
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='1']/distances/sibling/[@id='1']").attrib[
+                "value"
+            ],
+            "24",
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='1']/distances/sibling/[@id='2']").attrib[
+                "value"
+            ],
+            "25",
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='1']/distances/sibling/[@id='3']"), None,
+        )
 
     def test_update_memtune_params(self):
         """
@@ -2962,6 +4744,517 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(setxml.find("maxMemory"), None)
         self.assertEqual(setxml.find("currentMemory").text, str(int(1 * 1024 ** 2)))
         self.assertEqual(setxml.find("memory").text, str(int(1 * 1024 ** 2)))
+
+    def test_update_exist_memorybacking_params(self):
+        """
+        Test virt.update() with memory backing parameters.
+        """
+        xml_with_memback_params = """
+            <domain type='kvm' id='8'>
+              <name>vm_with_memback_param</name>
+              <memory unit='KiB'>1048576</memory>
+              <currentMemory unit='KiB'>1048576</currentMemory>
+              <maxMemory slots="12" unit="KiB">1048576</maxMemory>
+              <vcpu placement='auto'>1</vcpu>
+              <memoryBacking>
+                <hugepages>
+                  <page size="2048" unit="KiB"/>
+                  <page size="3145728" nodeset="1-4,^3" unit="KiB"/>
+                  <page size="1048576" nodeset="3" unit="KiB"/>
+                </hugepages>
+                <nosharepages/>
+                <locked/>
+                <source type="file"/>
+                <access mode="shared"/>
+                <discard/>
+              </memoryBacking>
+              <os>
+                <type arch='x86_64' machine='pc-i440fx-2.6'>hvm</type>
+              </os>
+              <on_reboot>restart</on_reboot>
+            </domain>
+        """
+        domain_mock = self.set_mock_vm("vm_with_memback_param", xml_with_memback_params)
+        domain_mock.OSType = MagicMock(return_value="hvm")
+        define_mock = MagicMock(return_value=True)
+        self.mock_conn.defineXML = define_mock
+
+        # update memory backing case
+        mem_back_param = {
+            "hugepages": [
+                {"nodeset": "1-4,^3", "size": "1g"},
+                {"nodeset": "3", "size": "2g"},
+            ],
+            "nosharepages": None,
+            "locked": None,
+            "source": "anonymous",
+            "access": "private",
+            "allocation": "ondemand",
+            "discard": None,
+        }
+
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm_with_memback_param", mem=mem_back_param),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertDictEqual(
+            {
+                p.get("nodeset"): {"size": p.get("size"), "unit": p.get("unit")}
+                for p in setxml.findall("memoryBacking/hugepages/page")
+            },
+            {
+                "1,2,4": {"size": str(1024 ** 3), "unit": "bytes"},
+                "3": {"size": str(2 * 1024 ** 3), "unit": "bytes"},
+            },
+        )
+        self.assertEqual(setxml.find("./memoryBacking/nosharepages"), None)
+        self.assertEqual(setxml.find("./memoryBacking/locked"), None)
+        self.assertEqual(
+            setxml.find("./memoryBacking/source").attrib["type"], "anonymous"
+        )
+        self.assertEqual(
+            setxml.find("./memoryBacking/access").attrib["mode"], "private"
+        )
+        self.assertEqual(
+            setxml.find("./memoryBacking/allocation").attrib["mode"], "ondemand"
+        )
+        self.assertEqual(setxml.find("./memoryBacking/discard"), None)
+
+        unchanged_page = {
+            "hugepages": [
+                {"size": "2m"},
+                {"nodeset": "1-4,^3", "size": "3g"},
+                {"nodeset": "3", "size": "1g"},
+            ],
+        }
+
+        self.assertEqual(
+            {
+                "definition": False,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm_with_memback_param", mem=unchanged_page),
+        )
+
+    def test_update_iothreads_params(self):
+        """
+        Test virt.update() with iothreads parameters.
+        """
+        xml_with_iothreads_params = """
+            <domain type='kvm' id='8'>
+              <name>xml_with_iothreads_params</name>
+              <memory unit='KiB'>1048576</memory>
+              <currentMemory unit='KiB'>1048576</currentMemory>
+              <maxMemory slots="12" unit="KiB">1048576</maxMemory>
+              <vcpu placement='auto'>1</vcpu>
+              <iothreads>6</iothreads>
+              <os>
+                <type arch='x86_64' machine='pc-i440fx-2.6'>hvm</type>
+              </os>
+            </domain>
+        """
+        domain_mock = self.set_mock_vm(
+            "xml_with_iothreads_params", xml_with_iothreads_params
+        )
+        domain_mock.OSType = MagicMock(return_value="hvm")
+        define_mock = MagicMock(return_value=True)
+        self.mock_conn.defineXML = define_mock
+
+        # test updating existing iothreads
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("xml_with_iothreads_params", cpu={"iothreads": 7}),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("iothreads").text, "7")
+
+    def test_update_cputune_paramters(self):
+        """
+        Test virt.update() with cputune parameters.
+        """
+        xml_with_cputune_params = """
+                    <domain type='kvm' id='8'>
+                      <name>xml_with_cputune_params</name>
+                      <memory unit='KiB'>1048576</memory>
+                      <currentMemory unit='KiB'>1048576</currentMemory>
+                      <maxMemory slots="12" unit="KiB">1048576</maxMemory>
+                      <vcpu placement='auto'>1</vcpu>
+                      <iothreads>4</iothreads>
+                      <cputune>
+                        <shares>2048</shares>
+                        <period>1000000</period>
+                        <quota>-1</quota>
+                        <global_period>1000000</global_period>
+                        <global_quota>-1</global_quota>
+                        <emulator_period>1000000</emulator_period>
+                        <emulator_quota>-1</emulator_quota>
+                        <iothread_period>1000000</iothread_period>
+                        <iothread_quota>-1</iothread_quota>
+                        <vcpupin vcpu="0" cpuset="0-2"/>
+                        <vcpupin vcpu="1" cpuset="3"/>
+                        <vcpupin vcpu="2" cpuset="4"/>
+                        <vcpupin vcpu="3" cpuset="5-7"/>
+                        <emulatorpin cpuset="1-2"/>
+                        <iothreadpin iothread="1" cpuset="1-5"/>
+                        <iothreadpin iothread="2" cpuset="6-7"/>
+                        <vcpusched vcpus="0" scheduler="idle" priority="3"/>
+                        <vcpusched vcpus="1" scheduler="rr" priority="1"/>
+                        <vcpusched vcpus="2" scheduler="fifo" priority="2"/>
+                        <iothreadsched iothreads="4" scheduler="fifo"/>
+                        <emulatorsched scheduler="idle"/>
+                        <cachetune vcpus="0-4">
+                          <cache id="0" level="2" type="both" size="4" unit="KiB"/>
+                          <cache id="1" level="2" type="both" size="4" unit="KiB"/>
+                          <monitor level="5" vcpus="0-2"/>
+                          <monitor level="6" vcpus="1-3"/>
+                        </cachetune>
+                        <cachetune vcpus="5-8">
+                          <monitor level="5" vcpus="5-6"/>
+                          <monitor level="3" vcpus="7-8"/>
+                        </cachetune>
+                        <memorytune vcpus="0-6">
+                          <node id="0" bandwidth="45"/>
+                        </memorytune>
+                        <memorytune vcpus="7-8">
+                          <node id="0" bandwidth="120"/>
+                        </memorytune>
+                      </cputune>
+                      <os>
+                        <type arch='x86_64' machine='pc-i440fx-2.6'>hvm</type>
+                      </os>
+                    </domain>
+                """
+        domain_mock = self.set_mock_vm(
+            "xml_with_cputune_params", xml_with_cputune_params
+        )
+        domain_mock.OSType = MagicMock(return_value="hvm")
+        define_mock = MagicMock(return_value=True)
+        self.mock_conn.defineXML = define_mock
+
+        # test updating existing cputune parameters
+        cputune = {
+            "shares": 1024,
+            "period": 5000,
+            "quota": -20,
+            "global_period": 4000,
+            "global_quota": -30,
+            "emulator_period": 3000,
+            "emulator_quota": -4,
+            "iothread_period": 7000,
+            "iothread_quota": -5,
+            "vcpupin": {0: "1-4,^2", 1: "0,1", 2: "2,3", 3: "0,4"},
+            "emulatorpin": "1-3",
+            "iothreadpin": {1: "5-6", 2: "7-8"},
+            "vcpusched": [
+                {"scheduler": "fifo", "priority": 1, "vcpus": "0"},
+                {"scheduler": "fifo", "priority": 2, "vcpus": "1"},
+                {"scheduler": "idle", "priority": 3, "vcpus": "2"},
+            ],
+            "iothreadsched": [
+                {"scheduler": "batch", "iothreads": "5-7", "priority": 1}
+            ],
+            "emulatorsched": {"scheduler": "rr", "priority": 2},
+            "cachetune": {
+                "0-3": {
+                    0: {"level": 3, "type": "both", "size": 3},
+                    1: {"level": 3, "type": "both", "size": 3},
+                    "monitor": {1: 3, "0-3": 3},
+                },
+                "4-5": {"monitor": {4: 3, 5: 2}},
+            },
+            "memorytune": {"0-2": {0: 60}, "3-4": {0: 50, 1: 70}},
+        }
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("xml_with_cputune_params", cpu={"tuning": cputune}),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("cputune").find("shares").text, "1024")
+        self.assertEqual(setxml.find("cputune").find("period").text, "5000")
+        self.assertEqual(setxml.find("cputune").find("quota").text, "-20")
+        self.assertEqual(setxml.find("cputune").find("global_period").text, "4000")
+        self.assertEqual(setxml.find("cputune").find("global_quota").text, "-30")
+        self.assertEqual(setxml.find("cputune").find("emulator_period").text, "3000")
+        self.assertEqual(setxml.find("cputune").find("emulator_quota").text, "-4")
+        self.assertEqual(setxml.find("cputune").find("iothread_period").text, "7000")
+        self.assertEqual(setxml.find("cputune").find("iothread_quota").text, "-5")
+        self.assertEqual(
+            setxml.find("cputune").find("vcpupin[@vcpu='0']").attrib.get("cpuset"),
+            "1,3,4",
+        )
+        self.assertEqual(
+            setxml.find("cputune").find("vcpupin[@vcpu='1']").attrib.get("cpuset"),
+            "0,1",
+        )
+        self.assertEqual(
+            setxml.find("cputune").find("vcpupin[@vcpu='2']").attrib.get("cpuset"),
+            "2,3",
+        )
+        self.assertEqual(
+            setxml.find("cputune").find("vcpupin[@vcpu='3']").attrib.get("cpuset"),
+            "0,4",
+        )
+        self.assertEqual(
+            setxml.find("cputune").find("emulatorpin").attrib.get("cpuset"), "1,2,3"
+        )
+        self.assertEqual(
+            setxml.find("cputune")
+            .find("iothreadpin[@iothread='1']")
+            .attrib.get("cpuset"),
+            "5,6",
+        )
+        self.assertEqual(
+            setxml.find("cputune")
+            .find("iothreadpin[@iothread='2']")
+            .attrib.get("cpuset"),
+            "7,8",
+        )
+        self.assertDictEqual(
+            {
+                s.get("vcpus"): {
+                    "scheduler": s.get("scheduler"),
+                    "priority": s.get("priority"),
+                }
+                for s in setxml.findall("cputune/vcpusched")
+            },
+            {
+                "0": {"scheduler": "fifo", "priority": "1"},
+                "1": {"scheduler": "fifo", "priority": "2"},
+                "2": {"scheduler": "idle", "priority": "3"},
+            },
+        )
+        self.assertDictEqual(
+            {
+                s.get("iothreads"): {
+                    "scheduler": s.get("scheduler"),
+                    "priority": s.get("priority"),
+                }
+                for s in setxml.findall("cputune/iothreadsched")
+            },
+            {"5,6,7": {"scheduler": "batch", "priority": "1"}},
+        )
+        self.assertEqual(setxml.find("cputune/emulatorsched").get("scheduler"), "rr")
+        self.assertEqual(setxml.find("cputune/emulatorsched").get("priority"), "2")
+        self.assertIsNotNone(setxml.find("./cputune/cachetune[@vcpus='0,1,2,3']"))
+        self.assertEqual(
+            setxml.find(
+                "./cputune/cachetune[@vcpus='0,1,2,3']/cache[@id='0']"
+            ).attrib.get("level"),
+            "3",
+        )
+        self.assertEqual(
+            setxml.find(
+                "./cputune/cachetune[@vcpus='0,1,2,3']/cache[@id='0']"
+            ).attrib.get("type"),
+            "both",
+        )
+        self.assertEqual(
+            setxml.find(
+                "./cputune/cachetune[@vcpus='0,1,2,3']/monitor[@vcpus='1']"
+            ).attrib.get("level"),
+            "3",
+        )
+        self.assertNotEqual(
+            setxml.find("./cputune/cachetune[@vcpus='0,1,2,3']/monitor[@vcpus='1']"),
+            None,
+        )
+        self.assertNotEqual(
+            setxml.find("./cputune/cachetune[@vcpus='4,5']").attrib.get("vcpus"), None
+        )
+        self.assertEqual(
+            setxml.find("./cputune/cachetune[@vcpus='4,5']/cache[@id='0']"), None
+        )
+        self.assertEqual(
+            setxml.find(
+                "./cputune/cachetune[@vcpus='4,5']/monitor[@vcpus='4']"
+            ).attrib.get("level"),
+            "3",
+        )
+        self.assertEqual(
+            setxml.find(
+                "./cputune/cachetune[@vcpus='4,5']/monitor[@vcpus='5']"
+            ).attrib.get("level"),
+            "2",
+        )
+        self.assertNotEqual(setxml.find("./cputune/memorytune[@vcpus='0,1,2']"), None)
+        self.assertEqual(
+            setxml.find(
+                "./cputune/memorytune[@vcpus='0,1,2']/node[@id='0']"
+            ).attrib.get("bandwidth"),
+            "60",
+        )
+        self.assertNotEqual(setxml.find("./cputune/memorytune[@vcpus='3,4']"), None)
+        self.assertEqual(
+            setxml.find("./cputune/memorytune[@vcpus='3,4']/node[@id='0']").attrib.get(
+                "bandwidth"
+            ),
+            "50",
+        )
+        self.assertEqual(
+            setxml.find("./cputune/memorytune[@vcpus='3,4']/node[@id='1']").attrib.get(
+                "bandwidth"
+            ),
+            "70",
+        )
+
+        # test removing cputune attributes and sub elements
+        cputune = {
+            "shares": None,
+            "period": 20000,
+            "quota": None,
+            "global_period": 5000,
+            "global_quota": None,
+            "emulator_period": 2000,
+            "emulator_quota": -4,
+            "iothread_period": None,
+            "iothread_quota": -5,
+            "vcpupin": {0: "1-4,^2", 2: "2,4"},
+            "emulatorpin": None,
+            "iothreadpin": {1: "5-6"},
+            "vcpusched": [{"scheduler": "idle", "priority": 5, "vcpus": "1"}],
+            "iothreadsched": None,
+            "cachetune": {
+                "0-3": {
+                    0: {"level": 4, "type": "data", "size": 7},
+                    "monitor": {"1-2": 11},
+                },
+            },
+            "memorytune": {"3-4": {0: 37, 1: 73}},
+        }
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("xml_with_cputune_params", cpu={"tuning": cputune}),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("cputune").find("shares"), None)
+        self.assertEqual(setxml.find("cputune").find("period").text, "20000")
+        self.assertEqual(setxml.find("cputune").find("quota"), None)
+        self.assertEqual(setxml.find("cputune").find("global_period").text, "5000")
+        self.assertEqual(setxml.find("cputune").find("global_quota"), None)
+        self.assertEqual(setxml.find("cputune").find("emulator_period").text, "2000")
+        self.assertEqual(setxml.find("cputune").find("emulator_quota").text, "-4")
+        self.assertEqual(setxml.find("cputune").find("iothread_period"), None)
+        self.assertEqual(setxml.find("cputune").find("iothread_quota").text, "-5")
+        self.assertEqual(
+            setxml.find("cputune").find("vcpupin[@vcpu='0']").attrib.get("cpuset"),
+            "1,3,4",
+        )
+        self.assertEqual(setxml.find("cputune").find("vcpupin[@vcpu='1']"), None)
+        self.assertEqual(
+            setxml.find("cputune").find("vcpupin[@vcpu='2']").attrib.get("cpuset"),
+            "2,4",
+        )
+        self.assertEqual(setxml.find("cputune").find("vcpupin[@vcpu='3']"), None)
+        self.assertEqual(setxml.find("cputune").find("emulatorpin"), None)
+        self.assertEqual(
+            setxml.find("cputune")
+            .find("iothreadpin[@iothread='1']")
+            .attrib.get("cpuset"),
+            "5,6",
+        )
+        self.assertEqual(
+            setxml.find("cputune").find("iothreadpin[@iothread='2']"), None
+        )
+        self.assertDictEqual(
+            {
+                s.get("vcpus"): {
+                    "scheduler": s.get("scheduler"),
+                    "priority": s.get("priority"),
+                }
+                for s in setxml.findall("cputune/vcpusched")
+            },
+            {"1": {"scheduler": "idle", "priority": "5"}},
+        )
+        self.assertEqual(setxml.find("cputune").find("iothreadsched"), None)
+        self.assertIsNotNone(setxml.find("./cputune/cachetune[@vcpus='0,1,2,3']"))
+        self.assertEqual(
+            setxml.find(
+                "./cputune/cachetune[@vcpus='0,1,2,3']/cache[@id='0']"
+            ).attrib.get("size"),
+            "7",
+        )
+        self.assertEqual(
+            setxml.find(
+                "./cputune/cachetune[@vcpus='0,1,2,3']/cache[@id='0']"
+            ).attrib.get("level"),
+            "4",
+        )
+        self.assertEqual(
+            setxml.find(
+                "./cputune/cachetune[@vcpus='0,1,2,3']/cache[@id='0']"
+            ).attrib.get("type"),
+            "data",
+        )
+        self.assertEqual(
+            setxml.find(
+                "./cputune/cachetune[@vcpus='0,1,2,3']/monitor[@vcpus='1,2']"
+            ).attrib.get("level"),
+            "11",
+        )
+        self.assertEqual(
+            setxml.find("./cputune/cachetune[@vcpus='0,1,2,3']/monitor[@vcpus='3,4']"),
+            None,
+        )
+        self.assertEqual(
+            setxml.find("./cputune/cachetune[@vcpus='0,1,2,3']/cache[@id='1']"), None
+        )
+        self.assertEqual(setxml.find("./cputune/cachetune[@vcpus='4,5']"), None)
+        self.assertEqual(setxml.find("./cputune/memorytune[@vcpus='0,1,2']"), None)
+        self.assertEqual(
+            setxml.find("./cputune/memorytune[@vcpus='3,4']/node[@id='0']").attrib.get(
+                "bandwidth"
+            ),
+            "37",
+        )
+        self.assertEqual(
+            setxml.find("./cputune/memorytune[@vcpus='3,4']/node[@id='1']").attrib.get(
+                "bandwidth"
+            ),
+            "73",
+        )
+
+        cputune_subelement = {
+            "vcpupin": None,
+            "iothreadpin": None,
+            "vcpusched": None,
+            "iothreadsched": None,
+            "cachetune": None,
+            "memorytune": None,
+        }
+
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("xml_with_cputune_params", cpu={"tuning": cputune_subelement}),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("cputune").find("vcpupin"), None)
+        self.assertEqual(setxml.find("cputune").find("iothreadpin"), None)
+        self.assertEqual(setxml.find("cputune").find("vcpusched"), None)
+        self.assertEqual(setxml.find("cputune").find("iothreadsched"), None)
+        self.assertEqual(setxml.find("cputune").find("cachetune"), None)
+        self.assertEqual(setxml.find("cputune").find("memorytune"), None)
 
     def test_handle_unit(self):
         """
@@ -3793,59 +6086,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             ],
         }
         self.assertEqual(expected, caps)
-
-    def test_network(self):
-        """
-        Test virt._get_net_xml()
-        """
-        xml_data = virt._gen_net_xml("network", "main", "bridge", "openvswitch")
-        root = ET.fromstring(xml_data)
-        self.assertEqual(root.find("name").text, "network")
-        self.assertEqual(root.find("bridge").attrib["name"], "main")
-        self.assertEqual(root.find("forward").attrib["mode"], "bridge")
-        self.assertEqual(root.find("virtualport").attrib["type"], "openvswitch")
-
-    def test_network_nat(self):
-        """
-        Test virt._get_net_xml() in a nat setup
-        """
-        xml_data = virt._gen_net_xml(
-            "network",
-            "main",
-            "nat",
-            None,
-            ip_configs=[
-                {
-                    "cidr": "192.168.2.0/24",
-                    "dhcp_ranges": [
-                        {"start": "192.168.2.10", "end": "192.168.2.25"},
-                        {"start": "192.168.2.110", "end": "192.168.2.125"},
-                    ],
-                }
-            ],
-        )
-        root = ET.fromstring(xml_data)
-        self.assertEqual(root.find("name").text, "network")
-        self.assertEqual(root.find("bridge").attrib["name"], "main")
-        self.assertEqual(root.find("forward").attrib["mode"], "nat")
-        self.assertEqual(
-            root.find("./ip[@address='192.168.2.0']").attrib["prefix"], "24"
-        )
-        self.assertEqual(
-            root.find("./ip[@address='192.168.2.0']").attrib["family"], "ipv4"
-        )
-        self.assertEqual(
-            root.find(
-                "./ip[@address='192.168.2.0']/dhcp/range[@start='192.168.2.10']"
-            ).attrib["end"],
-            "192.168.2.25",
-        )
-        self.assertEqual(
-            root.find(
-                "./ip[@address='192.168.2.0']/dhcp/range[@start='192.168.2.110']"
-            ).attrib["end"],
-            "192.168.2.125",
-        )
 
     def test_domain_capabilities(self):
         """

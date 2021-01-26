@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 An engine that sends events to the Logentries logging service.
 
@@ -42,21 +41,16 @@ To test this engine
          salt '*' test.ping cmd.run uptime
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import random
-
-# Import Python libs
 import socket
 import time
 import uuid
 
-# Import Salt libs
 import salt.utils.event
 import salt.utils.json
 
-# Import third party libs
 try:
     import certifi
 
@@ -81,7 +75,7 @@ def __virtual__():
     return True if HAS_CERTIFI and HAS_SSL else False
 
 
-class PlainTextSocketAppender(object):
+class PlainTextSocketAppender:
     def __init__(
         self, verbose=True, LE_API="data.logentries.com", LE_PORT=80, LE_TLS_PORT=443
     ):
@@ -142,7 +136,7 @@ class PlainTextSocketAppender(object):
         while True:
             try:
                 self._conn.send(multiline)
-            except socket.error:
+            except OSError:
                 self.reopen_connection()
                 continue
             break
@@ -218,7 +212,7 @@ def start(
             event = event_bus.get_event()
             if event:
                 # future lint: disable=blacklisted-function
-                msg = str(" ").join(
+                msg = " ".join(
                     (
                         salt.utils.stringutils.to_str(token),
                         salt.utils.stringutils.to_str(tag),

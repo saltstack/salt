@@ -27,11 +27,9 @@ import salt.crypt
 import salt.defaults.events
 import salt.defaults.exitcodes
 import salt.engines
-
-# pylint: enable=no-name-in-module,redefined-builtin
 import salt.ext.tornado
-import salt.ext.tornado.gen  # pylint: disable=F0401
-import salt.ext.tornado.ioloop  # pylint: disable=F0401
+import salt.ext.tornado.gen
+import salt.ext.tornado.ioloop
 import salt.loader
 import salt.log.setup
 import salt.payload
@@ -71,10 +69,6 @@ from salt.exceptions import (
     SaltReqTimeoutError,
     SaltSystemExit,
 )
-
-# pylint: disable=import-error,no-name-in-module,redefined-builtin
-from salt.ext import six
-from salt.ext.six.moves import range
 from salt.template import SLS_ENCODING
 from salt.utils.ctx import RequestContext
 from salt.utils.debug import enable_sigusr1_handler
@@ -444,6 +438,8 @@ class MinionBase:
 
             salt '*' sys.reload_modules
         """
+        if context is None:
+            context = {}
         if initial_load:
             self.opts["pillar"] = salt.pillar.get_pillar(
                 self.opts,
@@ -630,27 +626,24 @@ class MinionBase:
                         else:
                             opts["master"] = opts["master_list"]
                 else:
-                    msg = (
-                        "master_type set to 'failover' but 'master' "
-                        "is not of type list but of type "
-                        "{}".format(type(opts["master"]))
+                    log.error(
+                        "master_type set to 'failover' but 'master' is not of type list but of type %s",
+                        type(opts["master"]),
                     )
-                    log.error(msg)
                     sys.exit(salt.defaults.exitcodes.EX_GENERIC)
                 # If failover is set, minion have to failover on DNS errors instead of retry DNS resolve.
                 # See issue 21082 for details
                 if opts["retry_dns"] and opts["master_type"] == "failover":
-                    msg = (
+                    log.critical(
                         "'master_type' set to 'failover' but 'retry_dns' is not 0. "
                         "Setting 'retry_dns' to 0 to failover to the next master on DNS errors."
                     )
-                    log.critical(msg)
                     opts["retry_dns"] = 0
             else:
-                msg = "Invalid keyword '{}' for variable " "'master_type'".format(
-                    opts["master_type"]
+                log.error(
+                    "Invalid keyword '%s' for variable 'master_type'",
+                    opts["master_type"],
                 )
-                log.error(msg)
                 sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
         # FIXME: if SMinion don't define io_loop, it can't switch master see #29088
@@ -744,20 +737,17 @@ class MinionBase:
                     except SaltClientError as exc:
                         last_exc = exc
                         if exc.strerror.startswith("Could not access"):
-                            msg = (
-                                "Failed to initiate connection with Master "
-                                "%s: check ownership/permissions. Error "
-                                "message: %s",
+                            log.info(
+                                "Failed to initiate connection with Master %s: check ownership/permissions. "
+                                "Error message: %s",
                                 opts["master"],
                                 exc,
                             )
                         else:
-                            msg = (
-                                "Master %s could not be reached, trying next "
-                                "next master (if any)",
+                            log.info(
+                                "Master %s could not be reached, trying next master (if any)",
                                 opts["master"],
                             )
-                        log.info(msg)
                         pub_channel.close()
                         pub_channel = None
                         continue
@@ -933,7 +923,7 @@ class SMinion(MinionBase):
             install_zmq()
             io_loop = ZMQDefaultLoop.current()
             io_loop.run_sync(lambda: self.eval_master(self.opts, failed=True))
-        self.gen_modules(initial_load=True, context=context or {})
+        self.gen_modules(initial_load=True, context=context)
 
         # If configured, cache pillar data on the minion
         if self.opts["file_client"] == "remote" and self.opts.get(
@@ -1042,6 +1032,8 @@ class MinionManager(MinionBase):
         self.io_loop.spawn_callback(
             self.process_manager.run, **{"asynchronous": True}
         )  # Tornado backward compat
+        self.event_publisher = None
+        self.event = None
 
     # pylint: disable=W1701
     def __del__(self):
@@ -1093,8 +1085,7 @@ class MinionManager(MinionBase):
         Check the size of self.minions and raise an error if it's empty
         """
         if not self.minions:
-            err = "Minion unable to successfully connect to " "a Salt Master."
-            log.error(err)
+            log.error("Minion unable to successfully connect to a Salt Master.")
 
     def _spawn_minions(self, timeout=60):
         """
@@ -1200,10 +1191,22 @@ class MinionManager(MinionBase):
             # kill any remaining processes
             minion.process_manager.kill_children()
             minion.destroy()
+        if self.event_publisher is not None:
+            self.event_publisher.close()
+            self.event_publisher = None
+        if self.event is not None:
+            self.event.destroy()
+            self.event = None
 
     def destroy(self):
         for minion in self.minions:
             minion.destroy()
+        if self.event_publisher is not None:
+            self.event_publisher.close()
+            self.event_publisher = None
+        if self.event is not None:
+            self.event.destroy()
+            self.event = None
 
 
 class Minion(MinionBase):
@@ -1344,8 +1347,9 @@ class Minion(MinionBase):
         if self._connect_master_future.done():
             future_exception = self._connect_master_future.exception()
             if future_exception:
+                exc_info = self._connect_master_future.exc_info()
                 # This needs to be re-raised to preserve restart_on_error behavior.
-                raise six.reraise(*future_exception)
+                raise exc_info[0].with_traceback(exc_info[1], exc_info[2])
         if timeout and self._sync_connect_master_success is False:
             raise SaltDaemonNotRunning("Failed to connect to the salt-master")
 
@@ -1579,11 +1583,12 @@ class Minion(MinionBase):
             load["sig"] = sig
 
         with salt.transport.client.ReqChannel.factory(self.opts) as channel:
-            return channel.send(load, timeout=timeout)
+            return channel.send(
+                load, timeout=timeout, tries=self.opts["return_retry_tries"]
+            )
 
     @salt.ext.tornado.gen.coroutine
     def _send_req_async(self, load, timeout):
-
         if self.opts["minion_sign_messages"]:
             log.trace("Signing event to be published onto the bus.")
             minion_privkey_path = os.path.join(self.opts["pki_dir"], "minion.pem")
@@ -1593,7 +1598,9 @@ class Minion(MinionBase):
             load["sig"] = sig
 
         with salt.transport.client.AsyncReqChannel.factory(self.opts) as channel:
-            ret = yield channel.send(load, timeout=timeout)
+            ret = yield channel.send(
+                load, timeout=timeout, tries=self.opts["return_retry_tries"]
+            )
             raise salt.ext.tornado.gen.Return(ret)
 
     def _fire_master(
@@ -1670,8 +1677,6 @@ class Minion(MinionBase):
         differently.
         """
         # Ensure payload is unicode. Disregard failure to decode binary blobs.
-        if six.PY2:
-            data = salt.utils.data.decode(data, keep=True)
         if "user" in data:
             log.info(
                 "User %s Executing command %s with jid %s",
@@ -2576,7 +2581,11 @@ class Minion(MinionBase):
         with salt.transport.client.ReqChannel.factory(self.opts) as channel:
             data["tok"] = self.tok
             try:
-                ret = channel.send(data)
+                ret = channel.send(
+                    data,
+                    timeout=self._return_retry_timer(),
+                    tries=self.opts["return_retry_tries"],
+                )
                 return ret
             except SaltReqTimeoutError:
                 log.warning("Unable to send mine data to master.")
@@ -2887,11 +2896,10 @@ class Minion(MinionBase):
                 except Exception:  # pylint: disable=broad-except
                     log.critical("The beacon errored: ", exc_info=True)
                 if beacons:
-                    event = salt.utils.event.get_event(
+                    with salt.utils.event.get_event(
                         "minion", opts=self.opts, listen=False
-                    )
-                    event.fire_event({"beacons": beacons}, "__beacons_return")
-                    event.destroy()
+                    ) as event:
+                        event.fire_event({"beacons": beacons}, "__beacons_return")
 
             if before_connect:
                 # Make sure there is a chance for one iteration to occur before connect
@@ -3141,6 +3149,8 @@ class Syndic(Minion):
     """
 
     def __init__(self, opts, **kwargs):
+        self.local = None
+        self.forward_events = None
         self._syndic_interface = opts.get("interface")
         self._syndic = True
         # force auth_safemode True because Syndic don't support autorestart
@@ -3263,11 +3273,13 @@ class Syndic(Minion):
         # We borrowed the local clients poller so give it back before
         # it's destroyed. Reset the local poller reference.
         super().destroy()
-        if hasattr(self, "local"):
-            del self.local
+        if self.local is not None:
+            self.local.destroy()
+            self.local = None
 
-        if hasattr(self, "forward_events"):
+        if self.forward_events is not None:
             self.forward_events.stop()
+            self.forward_events = None
 
 
 # TODO: need a way of knowing if the syndic connection is busted
@@ -3298,6 +3310,7 @@ class SyndicManager(MinionBase):
     def __init__(self, opts, io_loop=None):
         opts["loop_interval"] = 1
         super().__init__(opts)
+        self._closing = False
         self.mminion = salt.minion.MasterMinion(opts)
         # sync (old behavior), cluster (only returns and publishes)
         self.syndic_mode = self.opts.get("syndic_mode", "sync")
@@ -3398,7 +3411,7 @@ class SyndicManager(MinionBase):
         else:
             # TODO: debug?
             log.info(
-                "Attempting to mark %s as dead, although it is already " "marked dead",
+                "Attempting to mark %s as dead, although it is already marked dead",
                 master,
             )
 
@@ -3610,6 +3623,13 @@ class SyndicManager(MinionBase):
             if res:
                 del self.job_rets[master]
 
+    def destroy(self):
+        if self._closing is True:
+            return
+        self._closing = True
+        if self.local is not None:
+            self.local.destroy()
+
 
 class ProxyMinionManager(MinionManager):
     """
@@ -3647,13 +3667,10 @@ def _metaproxy_call(opts, fn_name):
         metaproxy_name = opts["metaproxy"]
     except KeyError:
         metaproxy_name = "proxy"
-        errmsg = (
-            "No metaproxy key found in opts for id "
-            + opts["id"]
-            + ". "
-            + "Defaulting to standard proxy minion"
+        log.error(
+            "No metaproxy key found in opts for id %s. Defaulting to standard proxy minion",
+            opts["id"],
         )
-        log.error(errmsg)
 
     metaproxy_fn = metaproxy_name + "." + fn_name
     return metaproxy[metaproxy_fn]
