@@ -58,6 +58,7 @@ def test_version_parsing(version_string, full_info, version):
             STRIP_INITIAL_NON_NUMBERS_REGEX.search(version_string)
             .group("vs")  # Strip leading non numeric chars
             # Now, make it Wheel metadata 1.2 compliant post release
+            .replace("n/a", "0na")
             .replace("-", "+", 1)
             .replace("-", ".", 1)
         )
@@ -281,10 +282,10 @@ def test_full_info_all_versions(vstr, full_info):
         (3000, None, b"v3000.0rc2-12-g44fe283a77\n", "3000rc2-12-g44fe283a77"),
         (3000, None, b"v3000.0rc2-0-g44fe283a77\n", "3000rc2"),
         (3000, None, b"v3000", "3000"),
-        (3000, None, b"1234567", "3000-n/a-1234567"),
+        (3000, None, b"1234567", "3000-0na-1234567"),
         (2019, 2, b"v2019.2.0rc2-12-g44fe283a77\n", "2019.2.0rc2-12-g44fe283a77"),
         (2019, 2, b"v2019.2.0", "2019.2.0"),
-        (2019, 2, b"afc9830198dj", "2019.2.0-n/a-afc9830198dj"),
+        (2019, 2, b"afc9830198dj", "2019.2.0-0na-afc9830198dj"),
     ],
 )
 def test_discover_version(major, minor, tag, expected):
