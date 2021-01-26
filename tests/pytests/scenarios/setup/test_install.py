@@ -95,9 +95,20 @@ def test_egg(virtualenv, cache_dir):
     """
     test building and installing a bdist_egg package
     """
-    # TODO: We should actually dissallow generating an egg file
+    # TODO: We should actually disallow generating an egg file
     # Let's create the testing virtualenv
     with virtualenv as venv:
+        ret = venv.run(
+            venv.venv_python, "-c", "import setuptools; print(setuptools.__version__)",
+        )
+        setuptools_version = ret.stdout.strip()
+        ret = venv.run(venv.venv_python, "-m", "easy_install", "--version", check=False)
+        if ret.exitcode != 0:
+            pytest.skip(
+                "Setuptools version, {}, does not include the easy_install module".format(
+                    setuptools_version
+                )
+            )
         venv.run(venv.venv_python, "setup.py", "clean", cwd=RUNTIME_VARS.CODE_DIR)
 
         # Setuptools installs pre-release packages if we don't pin to an exact version
@@ -117,6 +128,20 @@ def test_egg(virtualenv, cache_dir):
         venv.install(*[str(pkg) for pkg in packages])
         for package in packages:
             package.unlink()
+
+        # Looks like, at least on windows, setuptools also get's downloaded as a salt dependency.
+        # Let's check and see if this newly installed version also has easy_install
+        ret = venv.run(
+            venv.venv_python, "-c", "import setuptools; print(setuptools.__version__)",
+        )
+        setuptools_version = ret.stdout.strip()
+        ret = venv.run(venv.venv_python, "-m", "easy_install", "--version", check=False)
+        if ret.exitcode != 0:
+            pytest.skip(
+                "Setuptools version, {}, does not include the easy_install module".format(
+                    setuptools_version
+                )
+            )
 
         venv.run(
             venv.venv_python,
