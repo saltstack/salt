@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module for running ZFS zpool command
 
@@ -13,14 +12,10 @@ Module for running ZFS zpool command
   consistency in output.
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
-
-# Import Python libs
 import os
 
-# Import Salt libs
 import salt.utils.decorators
 import salt.utils.decorators.path
 import salt.utils.path
@@ -149,7 +144,7 @@ def status(zpool=None):
     for zpd in res["stdout"].splitlines():
         if zpd.strip() == "":
             continue
-        if ":" in zpd:
+        if ":" in zpd and zpd[0] != "\t":
             # NOTE: line is 'key: value' format, we just update a dict
             prop = zpd.split(":")[0].strip()
             value = ":".join(zpd.split(":")[1:]).strip()
@@ -164,7 +159,7 @@ def status(zpool=None):
             # NOTE: we append the line output to the last property
             #       this should only happens once we hit the config
             #       section
-            ret[current_pool][current_prop] = "{0}\n{1}".format(
+            ret[current_pool][current_prop] = "{}\n{}".format(
                 ret[current_pool][current_prop], zpd
             )
 
