@@ -106,7 +106,6 @@ execution modules
     cisconso
     cloud
     cmdmod
-    cohesity
     composer
     config
     consul
