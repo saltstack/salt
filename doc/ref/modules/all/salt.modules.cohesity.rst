@@ -1,6 +1,6 @@
-salt.modules.win_snmp module
-============================
+=====================
+salt.modules.cohesity
+=====================
 
 .. automodule:: salt.modules.cohesity
     :members:
-    :undoc-members:
