@@ -167,7 +167,7 @@ class CloudUtilsTestCase(TestCase, LoaderModuleMockMixin):
         mock_true = MagicMock(return_value=True)
         mock_tuple = MagicMock(return_value=(0, 0, 0))
         # fmt: off
-        with patch("salt.utils.smb.get_conn", MagicMock()) as mock,\
+        with patch("salt.utils.smb.get_conn", MagicMock()),\
                 patch("salt.utils.smb.mkdirs", MagicMock()), \
                 patch("salt.utils.smb.put_file", MagicMock()), \
                 patch("salt.utils.smb.delete_file", MagicMock()), \
