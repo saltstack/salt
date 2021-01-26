@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
@@ -9,18 +8,12 @@
     Test salt's regex git describe version parsing
 """
 
-# Import python libs
-from __future__ import absolute_import
 
 import re
 
 import salt.version
-
-# Import Salt libs
 from salt.version import SaltStackVersion, system_information, versions_report
 from tests.support.mock import MagicMock, patch
-
-# Import Salt Testing libs
 from tests.support.unit import TestCase, skipIf
 
 
@@ -53,6 +46,16 @@ class VersionTestCase(TestCase):
             ("v3000rc1-n/a-abcdefff", (3000, "rc", 1, -1, "abcdefff"), None),
             ("3000-n/a-1e7bc8f", (3000, "", 0, -1, "1e7bc8f"), None),
             ("3000.1-n/a-1e7bc8f", (3000, 1, "", 0, -1, "1e7bc8f"), None),
+            (
+                "v3000nb20201214010203-1-1e7bc8f",
+                (3000, "nb", 20201214010203, 1, "1e7bc8f"),
+                None,
+            ),
+            (
+                "v3000.2nb20201214010203-0-1e7bc8f",
+                (3000, 2, "nb", 20201214010203, 0, "1e7bc8f"),
+                "3000.2nb20201214010203",
+            ),
         )
 
         for vstr, full_info, version in expect:
@@ -90,6 +93,8 @@ class VersionTestCase(TestCase):
             ("v3000.1rc1", "v3000.0rc1"),
             ("v3000", "v2019.2.1rc1"),
             ("v3001rc1", "v2019.2.1rc1"),
+            ("v3002", "v3002nb20201213"),
+            ("v3002rc1", "v3002nb20201213"),
         )
         for higher_version, lower_version in examples:
             self.assertTrue(SaltStackVersion.parse(higher_version) > lower_version)
@@ -112,6 +117,7 @@ class VersionTestCase(TestCase):
             ("2880105", True),
             ("v3000.0.1", False),
             ("v0.12.0-85-g2880105", False),
+            ("v0.12.0-0-g2880105", False),
         )
         for commit, exp in exp_ret:
             ret = SaltStackVersion.git_sha_regex.match(commit)
@@ -125,13 +131,11 @@ class VersionTestCase(TestCase):
         Validate padding in versions report is correct
         """
         # Get a set of all version report name lenghts including padding
-        line_lengths = set(
-            [
-                len(line.split(":")[0])
-                for line in list(versions_report())[4:]
-                if line != " " and line != "System Versions:"
-            ]
-        )
+        line_lengths = {
+            len(line.split(":")[0])
+            for line in list(versions_report())[4:]
+            if line != " " and line != "System Versions:"
+        }
         # Check that they are all the same size (only one element in the set)
         assert len(line_lengths) == 1
 
@@ -157,7 +161,7 @@ class VersionTestCase(TestCase):
         ver = SaltStackVersion(major=maj_ver, minor=min_ver)
         assert ver.minor == min_ver
         assert not ver.bugfix
-        assert ver.string == "{0}.{1}".format(maj_ver, min_ver)
+        assert ver.string == "{}.{}".format(maj_ver, min_ver)
 
     def test_string_new_version_minor_as_string(self):
         """
@@ -170,7 +174,7 @@ class VersionTestCase(TestCase):
         ver = SaltStackVersion(major=maj_ver, minor=min_ver)
         assert ver.minor == int(min_ver)
         assert not ver.bugfix
-        assert ver.string == "{0}.{1}".format(maj_ver, min_ver)
+        assert ver.string == "{}.{}".format(maj_ver, min_ver)
 
         # This only seems to happen on a cloned repo without its tags
         maj_ver = "3000"
@@ -190,7 +194,7 @@ class VersionTestCase(TestCase):
         min_ver = "2"
         ver = SaltStackVersion(major=maj_ver, minor=min_ver)
         assert ver.bugfix == 0
-        assert ver.string == "{0}.{1}.0".format(maj_ver, min_ver)
+        assert ver.string == "{}.{}.0".format(maj_ver, min_ver)
 
     def test_noc_info(self):
         """
@@ -204,6 +208,7 @@ class VersionTestCase(TestCase):
             ("v4518.1", (4518, 1, "", 0, 0)),
             ("v3000rc1", (3000, "rc", 1, 0)),
             ("v3000rc1-n/a-abcdefff", (3000, "rc", 1, -1)),
+            ("v3000nb1-0-abcdefff", (3000, "nb", 1, 0)),
         )
 
         for vstr, noc_info in expect:
@@ -223,6 +228,7 @@ class VersionTestCase(TestCase):
             ("v4518.1", (4518, 1, "", 0, 0, None)),
             ("v3000rc1", (3000, "rc", 1, 0, None)),
             ("v3000rc1-n/a-abcdefff", (3000, "rc", 1, -1, "abcdefff")),
+            ("v3000nb20201214-0-gabcdefff", (3000, "nb", 20201214, 0, "gabcdefff")),
         )
 
         for vstr, full_info in expect:
@@ -242,6 +248,7 @@ class VersionTestCase(TestCase):
             ("v4518.1", (4518, 1, None, 0, "", 0, 0, None)),
             ("v3000rc1", (3000, None, None, 0, "rc", 2, 0, None)),
             ("v3000rc1-n/a-abcdefff", (3000, None, None, 0, "rc", 1, -1, "abcdefff")),
+            ("v3000nb2-0-abcdefff", (3000, None, None, 0, "nb", 2, 0, "abcdefff")),
         )
 
         for vstr, full_info in expect:
@@ -257,6 +264,7 @@ class VersionTestCase(TestCase):
         version = {
             ("3000", None): {
                 (b"v3000.0rc2-12-g44fe283a77\n", "3000rc2-12-g44fe283a77"),
+                (b"v3000.0rc2-0-g44fe283a77\n", "3000rc2"),
                 (b"v3000", "3000"),
                 (b"1234567", "3000-n/a-1234567"),
             },
@@ -337,6 +345,10 @@ class VersionTestCase(TestCase):
             (
                 (2019, 2, 3, None, "rc", 1, 0, None),
                 "<SaltStackVersion name='Fluorine' major=2019 minor=2 bugfix=3 rc=1>",
+            ),
+            (
+                (2019, 2, 3, None, "nb", 20201214, 0, None),
+                "<SaltStackVersion name='Fluorine' major=2019 minor=2 bugfix=3 nb=20201214>",
             ),
         )
 
