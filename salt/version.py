@@ -59,7 +59,7 @@ class SaltStackVersion:
         r"(?:\.(?P<bugfix>[\d]{0,2}))?"
         r"(?:\.(?P<mbugfix>[\d]{0,2}))?"
         r"(?:(?P<pre_type>rc|a|b|alpha|beta|nb)(?P<pre_num>[\d]+))?"
-        r"(?:(?:.*)-(?P<noc>(?:[\d]+|n/a))-" + git_sha_regex + r")?"
+        r"(?:(?:.*)(?:\+|-)(?P<noc>(?:[\d]+|n/a))(?:-|\.)" + git_sha_regex + r")?"
     )
     git_sha_regex = r"^" + git_sha_regex
 
@@ -385,7 +385,7 @@ class SaltStackVersion:
             noc = self.noc
             if noc < 0:
                 noc = "n/a"
-            version_string += "-{}-{}".format(noc, self.sha)
+            version_string += "+{}.{}".format(noc, self.sha)
         return version_string
 
     @property

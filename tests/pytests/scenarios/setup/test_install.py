@@ -52,7 +52,7 @@ def test_wheel(virtualenv, cache_dir):
             if re.search(r"^\d.\d*", x)
         ][0]
         whl_ver_cmp = whl_ver.replace("_", "-")
-        salt_ver_cmp = salt.version.__version__.replace("/", "-")
+        salt_ver_cmp = salt.version.__version__.replace("/", "-").replace("+", "-")
         assert whl_ver_cmp == salt_ver_cmp, "{} != {}".format(whl_ver_cmp, salt_ver_cmp)
 
         # Because bdist_wheel supports pep517, we don't have to pre-install Salt's
@@ -140,7 +140,7 @@ def test_egg(virtualenv, cache_dir):
             if re.search(r"^\d.\d*", x)
         ][0]
         egg_ver_cmp = egg_ver.replace("_", "-")
-        salt_ver_cmp = salt.version.__version__.replace("/", "-")
+        salt_ver_cmp = salt.version.__version__.replace("/", "-").replace("+", "-")
         assert egg_ver_cmp == salt_ver_cmp, "{} != {}".format(egg_ver_cmp, salt_ver_cmp)
 
         # We cannot pip install an egg file, let's go old school
@@ -238,7 +238,7 @@ def test_sdist(virtualenv, cache_dir):
         sdist_ver_cmp = salt_generated_package.name.split(".tar.gz")[0].split("salt-")[
             -1
         ]
-        salt_ver_cmp = salt.version.__version__.replace("/", "-")
+        salt_ver_cmp = salt.version.__version__.replace("/", "-").replace("+", "-")
         assert sdist_ver_cmp == salt_ver_cmp, "{} != {}".format(
             sdist_ver_cmp, salt.version.__version__
         )
@@ -326,7 +326,7 @@ def test_setup_install(virtualenv, cache_dir):
         else:
             pytest.fail("Salt was not found installed")
 
-        salt_ver_cmp = salt.version.__version__.replace("/", "-")
+        salt_ver_cmp = salt.version.__version__.replace("/", "-").replace("+", "-")
         # Let's compare the installed version with the version salt reports
         assert installed_version == salt_ver_cmp, "{} != {}".format(
             installed_version, salt_ver_cmp
