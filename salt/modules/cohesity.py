@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 This module have been tested on Cohesity API v1.
 :depends: cohesity_management_sdk,
