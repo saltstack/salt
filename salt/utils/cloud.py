@@ -72,7 +72,7 @@ except ImportError:
     HAS_PSEXEC = False
 
 
-# Set the minimum version of PyWinrm.
+# Set the minimum version of PyWinrm
 WINRM_MIN_VER = "0.3.0"
 
 try:
@@ -1207,7 +1207,7 @@ def deploy_windows(
     winrm_port=5986,
     winrm_use_ssl=True,
     winrm_verify_ssl=True,
-    **kwargs
+    **kwargs,
 ):
     """
     Copy the install files to a remote Windows box, and execute them
@@ -1216,8 +1216,10 @@ def deploy_windows(
         opts = {}
 
     if use_winrm and not HAS_WINRM:
-        log.error(f"WinRM requested but module winrm could not be imported."
-                  f"Ensure you are using version {WINRM_MIN_VER} or higher.")
+        log.error(
+            f"WinRM requested but module winrm could not be imported."
+            f"Ensure you are using version {WINRM_MIN_VER} or higher."
+        )
         return False
 
     starttime = time.mktime(time.localtime())
@@ -1435,7 +1437,7 @@ def deploy_script(
     master_sign_pub_file=None,
     cloud_grains=None,
     force_minion_config=False,
-    **kwargs
+    **kwargs,
 ):
     """
     Copy a deploy script to a remote server, execute it, and remove it
@@ -1501,13 +1503,13 @@ def deploy_script(
                 tty,
                 sudo,
                 allow_failure=True,
-                **ssh_kwargs
+                **ssh_kwargs,
             ):
                 ret = root_cmd(
                     ("sh -c \"( mkdir -p -m 700 '{}' )\"").format(tmp_dir),
                     tty,
                     sudo,
-                    **ssh_kwargs
+                    **ssh_kwargs,
                 )
                 if ret:
                     raise SaltCloudSystemExit(
@@ -1521,7 +1523,7 @@ def deploy_script(
                             'chown {} "{}"'.format(username, tmp_dir),
                             tty,
                             sudo,
-                            **ssh_kwargs
+                            **ssh_kwargs,
                         )
                         if ret:
                             raise SaltCloudSystemExit(
@@ -1563,7 +1565,7 @@ def deploy_script(
                             "chown {} '{}'".format(ssh_kwargs["username"], remote_dir),
                             tty,
                             sudo,
-                            **ssh_kwargs
+                            **ssh_kwargs,
                         )
                     remote_dirs.append(remote_dir)
                 ssh_file(opts, remote_file, kwargs=ssh_kwargs, local_file=local_file)
@@ -1655,7 +1657,7 @@ def deploy_script(
                     "mkdir '{}'".format(preseed_minion_keys_tempdir),
                     tty,
                     sudo,
-                    **ssh_kwargs
+                    **ssh_kwargs,
                 )
                 if ret:
                     raise SaltCloudSystemExit(
@@ -1665,7 +1667,7 @@ def deploy_script(
                     "chmod 700 '{}'".format(preseed_minion_keys_tempdir),
                     tty,
                     sudo,
-                    **ssh_kwargs
+                    **ssh_kwargs,
                 )
                 if ret:
                     raise SaltCloudSystemExit(
@@ -1678,7 +1680,7 @@ def deploy_script(
                         ),
                         tty,
                         sudo,
-                        **ssh_kwargs
+                        **ssh_kwargs,
                     )
 
                 # Copy pre-seed minion keys
@@ -1691,7 +1693,7 @@ def deploy_script(
                         "chown -R root '{}'".format(preseed_minion_keys_tempdir),
                         tty,
                         sudo,
-                        **ssh_kwargs
+                        **ssh_kwargs,
                     )
                     if ret:
                         raise SaltCloudSystemExit(
@@ -1720,7 +1722,7 @@ def deploy_script(
                     ),
                     tty,
                     sudo,
-                    **ssh_kwargs
+                    **ssh_kwargs,
                 )
                 if ret:
                     raise SaltCloudSystemExit(
@@ -1789,7 +1791,7 @@ def deploy_script(
                         "chmod +x '{}/environ-deploy-wrapper.sh'".format(tmp_dir),
                         tty,
                         sudo,
-                        **ssh_kwargs
+                        **ssh_kwargs,
                     )
                     # The deploy command is now our wrapper
                     deploy_command = "'{}/environ-deploy-wrapper.sh'".format(tmp_dir,)
@@ -1810,7 +1812,7 @@ def deploy_script(
                             "rm -f '{}/environ-deploy-wrapper.sh'".format(tmp_dir),
                             tty,
                             sudo,
-                            **ssh_kwargs
+                            **ssh_kwargs,
                         )
                         log.debug("Removed %s/environ-deploy-wrapper.sh", tmp_dir)
 
@@ -1842,7 +1844,7 @@ def deploy_script(
                         "rm -f {}/master_sign.pub".format(tmp_dir),
                         tty,
                         sudo,
-                        **ssh_kwargs
+                        **ssh_kwargs,
                     )
                     log.debug("Removed %s/master_sign.pub", tmp_dir)
 
@@ -1869,7 +1871,7 @@ def deploy_script(
                         "rm -rf '{}'".format(preseed_minion_keys_tempdir),
                         tty,
                         sudo,
-                        **ssh_kwargs
+                        **ssh_kwargs,
                     )
                     log.debug("Removed %s", preseed_minion_keys_tempdir)
 
@@ -1925,7 +1927,7 @@ def run_inline_script(
     tty=None,
     opts=None,
     tmp_dir="/tmp/.saltcloud-inline_script",
-    **kwargs
+    **kwargs,
 ):
     """
     Run the inline script commands, one by one
@@ -1986,7 +1988,7 @@ def run_inline_script(
                     tty,
                     sudo,
                     allow_failure=True,
-                    **ssh_kwargs
+                    **ssh_kwargs,
                 )
                 and inline_script
             ):
@@ -1998,7 +2000,7 @@ def run_inline_script(
                         tty,
                         sudo,
                         allow_failure=True,
-                        **ssh_kwargs
+                        **ssh_kwargs,
                     )
                     if ret:
                         log.info("[%s] Output: %s", cmd_line, ret)
@@ -2200,7 +2202,7 @@ def scp_file(dest_path, contents=None, kwargs=None, local_file=None):
             cmd,
             error_msg="Failed to upload file '{0}': {1}\n{2}",
             password_retries=3,
-            **kwargs
+            **kwargs,
         )
     finally:
         if contents is not None:
@@ -2311,7 +2313,7 @@ def sftp_file(dest_path, contents=None, kwargs=None, local_file=None):
             cmd,
             error_msg="Failed to upload file '{0}': {1}\n{2}",
             password_retries=3,
-            **kwargs
+            **kwargs,
         )
     finally:
         if contents is not None:
