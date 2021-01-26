@@ -95,6 +95,7 @@ azure-storage-file==1.4.0  # via azure
 azure-storage-queue==1.4.0  # via azure
 azure==4.0.0 ; sys_platform != "win32"
 backports.functools-lru-cache==1.5
+backports.ssl-match-hostname==3.7.0.1  # via websocket-client
 bcrypt==3.1.6             # via paramiko
 boto3==1.13.5
 boto==2.49.0
@@ -215,6 +216,7 @@ scp==0.13.2               # via junos-eznc, napalm, netmiko
 setproctitle==1.1.10
 six==1.15.0
 smmap==3.0.4              # via gitdb
+sqlparse==0.4.1
 sshpubkeys==3.1.0         # via moto
 strict-rfc3339==0.7
 tempora==1.14.1
