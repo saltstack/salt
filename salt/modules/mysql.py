@@ -46,9 +46,6 @@ import salt.utils.data
 import salt.utils.files
 import salt.utils.stringutils
 
-# pylint: disable=import-error
-from salt.ext.six.moves import range, zip
-
 try:
     # Trying to import MySQLdb
     import MySQLdb
@@ -2617,7 +2614,7 @@ def processlist(**connection_args):
     for _ in range(cur.rowcount):
         row = cur.fetchone()
         idx_r = {}
-        for idx_j in range(len(hdr)):
+        for idx_j, value_j in enumerate(hdr):
             idx_r[hdr[idx_j]] = row[idx_j]
         ret.append(idx_r)
     cur.close()
