@@ -59,7 +59,7 @@ class SaltStackVersion:
         r"(?:\.(?P<bugfix>[\d]{0,2}))?"
         r"(?:\.(?P<mbugfix>[\d]{0,2}))?"
         r"(?:(?P<pre_type>rc|a|b|alpha|beta|nb)(?P<pre_num>[\d]+))?"
-        r"(?:(?:.*)(?:\+|-)(?P<noc>(?:[\d]+|n/a))(?:-|\.)" + git_sha_regex + r")?"
+        r"(?:(?:.*)(?:\+|-)(?P<noc>(?:0na|[\d]+|n/a))(?:-|\.)" + git_sha_regex + r")?"
     )
     git_sha_regex = r"^" + git_sha_regex
 
@@ -241,7 +241,7 @@ class SaltStackVersion:
 
         if noc is None:
             noc = 0
-        elif isinstance(noc, str) and noc == "n/a":
+        elif isinstance(noc, str) and noc in ("0na", "n/a"):
             noc = -1
         elif isinstance(noc, str):
             noc = int(noc)
@@ -384,7 +384,7 @@ class SaltStackVersion:
         if self.noc and self.sha:
             noc = self.noc
             if noc < 0:
-                noc = "n/a"
+                noc = "0na"
             version_string += "+{}.{}".format(noc, self.sha)
         return version_string
 
@@ -489,7 +489,7 @@ class SaltStackVersion:
             parts.append("{}={}".format(self.pre_type, self.pre_num))
         noc = self.noc
         if noc == -1:
-            noc = "n/a"
+            noc = "0na"
         if noc and self.sha:
             parts.extend(["noc={}".format(noc), "sha={}".format(self.sha)])
         return "<{} {}>".format(self.__class__.__name__, " ".join(parts))
