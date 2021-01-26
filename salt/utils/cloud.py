@@ -71,6 +71,10 @@ try:
 except ImportError:
     HAS_PSEXEC = False
 
+
+# Set the minimum version of PyWinrm.
+WINRM_MIN_VER = "0.3.0"
+
 try:
     import winrm
     from winrm.exceptions import WinRMTransportError
@@ -79,7 +83,7 @@ try:
     import pkg_resources  # pylint: disable=3rd-party-module-not-gated
 
     winrm_pkg = pkg_resources.get_distribution("pywinrm")
-    if not salt.utils.versions.compare(winrm_pkg.version, ">=", "0.3.0"):
+    if not salt.utils.versions.compare(winrm_pkg.version, ">=", WINRM_MIN_VER):
         HAS_WINRM = False
     else:
         HAS_WINRM = True
@@ -1212,7 +1216,8 @@ def deploy_windows(
         opts = {}
 
     if use_winrm and not HAS_WINRM:
-        log.error("WinRM requested but module winrm could not be imported")
+        log.error(f"WinRM requested but module winrm could not be imported."
+                  f"Ensure you are using version {WINRM_MIN_VER} or higher.")
         return False
 
     starttime = time.mktime(time.localtime())
