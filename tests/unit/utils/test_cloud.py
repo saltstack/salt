@@ -175,7 +175,12 @@ class CloudUtilsTestCase(TestCase):
                 patch.object(cloud, "wait_for_psexecsvc", mock_true),\
                 patch.object(cloud, "run_psexec_command", mock_tuple):
 
-            import pkg_resources
-            winrm_pkg = pkg_resources.get_distribution("pywinrm")
-            self.assertGreaterEqual(winrm_pkg.version, '0.3.0')
+            try:
+                import winrm
+            except ImportError:
+                raise SkipTest('The "winrm" python module is not installed in this env.')
+            else:
+                import pkg_resources
+                winrm_pkg = pkg_resources.get_distribution("pywinrm")
+                self.assertGreaterEqual(winrm_pkg.version, '0.3.0')
         # fmt: on
