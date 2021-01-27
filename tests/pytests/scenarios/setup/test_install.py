@@ -52,8 +52,9 @@ def test_wheel(virtualenv, cache_dir):
             if re.search(r"^\d.\d*", x)
         ][0]
         whl_ver_cmp = whl_ver.replace("_", "-")
-        salt_ver_cmp = salt.version.__version__.replace("/", "-")
-        assert whl_ver_cmp == salt_ver_cmp, "{} != {}".format(whl_ver_cmp, salt_ver_cmp)
+        assert whl_ver_cmp == salt.version.__version__, "{} != {}".format(
+            whl_ver_cmp, salt.version.__version__
+        )
 
         # Because bdist_wheel supports pep517, we don't have to pre-install Salt's
         # dependencies before installing the wheel package
@@ -70,8 +71,8 @@ def test_wheel(virtualenv, cache_dir):
             pytest.fail("Salt was not found installed")
 
         # Let's compare the installed version with the version salt reports
-        assert installed_version == salt_ver_cmp, "{} != {}".format(
-            installed_version, salt_ver_cmp
+        assert installed_version == salt.version.__version__, "{} != {}".format(
+            installed_version, salt.version.__version__
         )
 
         # Let's also ensure we have a salt/_version.py from the installed salt wheel
@@ -95,9 +96,20 @@ def test_egg(virtualenv, cache_dir):
     """
     test building and installing a bdist_egg package
     """
-    # TODO: We should actually dissallow generating an egg file
+    # TODO: We should actually disallow generating an egg file
     # Let's create the testing virtualenv
     with virtualenv as venv:
+        ret = venv.run(
+            venv.venv_python, "-c", "import setuptools; print(setuptools.__version__)",
+        )
+        setuptools_version = ret.stdout.strip()
+        ret = venv.run(venv.venv_python, "-m", "easy_install", "--version", check=False)
+        if ret.exitcode != 0:
+            pytest.skip(
+                "Setuptools version, {}, does not include the easy_install module".format(
+                    setuptools_version
+                )
+            )
         venv.run(venv.venv_python, "setup.py", "clean", cwd=RUNTIME_VARS.CODE_DIR)
 
         # Setuptools installs pre-release packages if we don't pin to an exact version
@@ -117,6 +129,20 @@ def test_egg(virtualenv, cache_dir):
         venv.install(*[str(pkg) for pkg in packages])
         for package in packages:
             package.unlink()
+
+        # Looks like, at least on windows, setuptools also get's downloaded as a salt dependency.
+        # Let's check and see if this newly installed version also has easy_install
+        ret = venv.run(
+            venv.venv_python, "-c", "import setuptools; print(setuptools.__version__)",
+        )
+        setuptools_version = ret.stdout.strip()
+        ret = venv.run(venv.venv_python, "-m", "easy_install", "--version", check=False)
+        if ret.exitcode != 0:
+            pytest.skip(
+                "Setuptools version, {}, does not include the easy_install module".format(
+                    setuptools_version
+                )
+            )
 
         venv.run(
             venv.venv_python,
@@ -140,8 +166,9 @@ def test_egg(virtualenv, cache_dir):
             if re.search(r"^\d.\d*", x)
         ][0]
         egg_ver_cmp = egg_ver.replace("_", "-")
-        salt_ver_cmp = salt.version.__version__.replace("/", "-")
-        assert egg_ver_cmp == salt_ver_cmp, "{} != {}".format(egg_ver_cmp, salt_ver_cmp)
+        assert egg_ver_cmp == salt.version.__version__, "{} != {}".format(
+            egg_ver_cmp, salt.version.__version__
+        )
 
         # We cannot pip install an egg file, let's go old school
         venv.run(venv.venv_python, "-m", "easy_install", str(salt_generated_package))
@@ -157,8 +184,8 @@ def test_egg(virtualenv, cache_dir):
             pytest.fail("Salt was not found installed")
 
         # Let's compare the installed version with the version salt reports
-        assert installed_version == salt_ver_cmp, "{} != {}".format(
-            installed_version, salt_ver_cmp
+        assert installed_version == salt.version.__version__, "{} != {}".format(
+            installed_version, salt.version.__version__
         )
 
         # Let's also ensure we have a salt/_version.py from the installed salt egg
@@ -238,8 +265,7 @@ def test_sdist(virtualenv, cache_dir):
         sdist_ver_cmp = salt_generated_package.name.split(".tar.gz")[0].split("salt-")[
             -1
         ]
-        salt_ver_cmp = salt.version.__version__.replace("/", "-")
-        assert sdist_ver_cmp == salt_ver_cmp, "{} != {}".format(
+        assert sdist_ver_cmp == salt.version.__version__, "{} != {}".format(
             sdist_ver_cmp, salt.version.__version__
         )
 
@@ -274,8 +300,8 @@ def test_sdist(virtualenv, cache_dir):
             pytest.fail("Salt was not found installed")
 
         # Let's compare the installed version with the version salt reports
-        assert installed_version == salt_ver_cmp, "{} != {}".format(
-            installed_version, salt_ver_cmp
+        assert installed_version == salt.version.__version__, "{} != {}".format(
+            installed_version, salt.version.__version__
         )
 
 
@@ -326,10 +352,9 @@ def test_setup_install(virtualenv, cache_dir):
         else:
             pytest.fail("Salt was not found installed")
 
-        salt_ver_cmp = salt.version.__version__.replace("/", "-")
         # Let's compare the installed version with the version salt reports
-        assert installed_version == salt_ver_cmp, "{} != {}".format(
-            installed_version, salt_ver_cmp
+        assert installed_version == salt.version.__version__, "{} != {}".format(
+            installed_version, salt.version.__version__
         )
 
         # Let's also ensure we have a salt/_version.py from the installed salt
