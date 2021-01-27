@@ -1217,8 +1217,8 @@ def deploy_windows(
 
     if use_winrm and not HAS_WINRM:
         log.error(
-            f"WinRM requested but module winrm could not be imported."
-            f"Ensure you are using version {WINRM_MIN_VER} or higher."
+            "WinRM requested but module winrm could not be importe. Ensure you are using version %s or higher.",
+            WINRM_MIN_VER,
         )
         return False
 
