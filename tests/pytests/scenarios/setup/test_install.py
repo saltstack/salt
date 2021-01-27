@@ -24,21 +24,23 @@ pytestmark = [
 
 
 def use_static_requirements_ids(value):
-    return "USE_STATIC_REQUIREMENTS={}".format(value)
+    return "USE_STATIC_REQUIREMENTS={}".format("1" if value else "0")
 
 
-@pytest.fixture(params=[1, 0], ids=use_static_requirements_ids)
+@pytest.fixture(params=[True, False], ids=use_static_requirements_ids)
 def use_static_requirements(request):
-    return str(request.param)
+    return request.param
 
 
 @pytest.fixture
 def virtualenv(virtualenv, use_static_requirements):
-    virtualenv.environ["USE_STATIC_REQUIREMENTS"] = use_static_requirements
+    virtualenv.environ["USE_STATIC_REQUIREMENTS"] = (
+        "1" if use_static_requirements else "0"
+    )
     return virtualenv
 
 
-def test_wheel(virtualenv, cache_dir):
+def test_wheel(virtualenv, cache_dir, use_static_requirements):
     """
     test building and installing a bdist_wheel package
     """
@@ -73,6 +75,11 @@ def test_wheel(virtualenv, cache_dir):
 
         # Because bdist_wheel supports pep517, we don't have to pre-install Salt's
         # dependencies before installing the wheel package
+        if not use_static_requirements and salt.utils.platform.is_windows():
+            # However, on windows, the latest pycurl release, 7.43.0.6 at the time of writing,
+            # does not have wheel files uploaded, so, we force pycurl==7.43.0.5 to be
+            # pre-installed before installing salt
+            venv.install("pycurl==7.43.0.5")
         venv.install(str(salt_generated_package))
 
         # Let's ensure the version is correct
@@ -107,7 +114,7 @@ def test_wheel(virtualenv, cache_dir):
         assert salt_generated_version_file_path.is_file()
 
 
-def test_egg(virtualenv, cache_dir):
+def test_egg(virtualenv, cache_dir, use_static_requirements):
     """
     test building and installing a bdist_egg package
     """
@@ -140,6 +147,17 @@ def test_egg(virtualenv, cache_dir):
         )
         packages = []
         for fname in cache_dir.iterdir():
+            if (
+                fname.name.startswith("pycurl")
+                and salt.utils.platform.is_windows()
+                and not use_static_requirements
+            ):
+                # On windows, the latest pycurl release, 7.43.0.6 at the time of writing,
+                # does not have wheel files uploaded, so, delete the downloaded source
+                # tarball and will later force pycurl==7.43.0.5 to be pre-installed before
+                # installing salt
+                fname.unlink()
+                continue
             packages.append(fname)
         venv.install(*[str(pkg) for pkg in packages])
         for package in packages:
@@ -158,6 +176,13 @@ def test_egg(virtualenv, cache_dir):
                     setuptools_version
                 )
             )
+
+        if salt.utils.platform.is_windows() and not use_static_requirements:
+            # Like mentioned above, install pycurl==7.43.0.5
+            # However, on windows, the latest pycurl release, 7.43.0.6 at the time of writing,
+            # does not have wheel files uploaded, so, we force pycurl==7.43.0.5 to be
+            # pre-installed before installing salt
+            venv.install("pycurl==7.43.0.5")
 
         venv.run(
             venv.venv_python,
@@ -234,7 +259,7 @@ def test_egg(virtualenv, cache_dir):
     and sys.version_info < (3, 6),
     reason="Skip on python 3.5",
 )
-def test_sdist(virtualenv, cache_dir):
+def test_sdist(virtualenv, cache_dir, use_static_requirements):
     """
     test building and installing a sdist package
     """
@@ -255,10 +280,28 @@ def test_sdist(virtualenv, cache_dir):
         )
         packages = []
         for fname in cache_dir.iterdir():
+            if (
+                fname.name.startswith("pycurl")
+                and salt.utils.platform.is_windows()
+                and not use_static_requirements
+            ):
+                # On windows, the latest pycurl release, 7.43.0.6 at the time of writing,
+                # does not have wheel files uploaded, so, delete the downloaded source
+                # tarball and will later force pycurl==7.43.0.5 to be pre-installed before
+                # installing salt
+                fname.unlink()
+                continue
             packages.append(fname)
         venv.install(*[str(pkg) for pkg in packages])
         for package in packages:
             package.unlink()
+
+        if salt.utils.platform.is_windows() and not use_static_requirements:
+            # Like mentioned above, install pycurl==7.43.0.5
+            # However, on windows, the latest pycurl release, 7.43.0.6 at the time of writing,
+            # does not have wheel files uploaded, so, we force pycurl==7.43.0.5 to be
+            # pre-installed before installing salt
+            venv.install("pycurl==7.43.0.5")
 
         venv.run(
             venv.venv_python,
@@ -320,7 +363,7 @@ def test_sdist(virtualenv, cache_dir):
         )
 
 
-def test_setup_install(virtualenv, cache_dir):
+def test_setup_install(virtualenv, cache_dir, use_static_requirements):
     """
     test installing directly from source
     """
@@ -341,10 +384,28 @@ def test_setup_install(virtualenv, cache_dir):
         )
         packages = []
         for fname in cache_dir.iterdir():
+            if (
+                fname.name.startswith("pycurl")
+                and salt.utils.platform.is_windows()
+                and not use_static_requirements
+            ):
+                # On windows, the latest pycurl release, 7.43.0.6 at the time of writing,
+                # does not have wheel files uploaded, so, delete the downloaded source
+                # tarball and will later force pycurl==7.43.0.5 to be pre-installed before
+                # installing salt
+                fname.unlink()
+                continue
             packages.append(fname)
         venv.install(*[str(pkg) for pkg in packages])
         for package in packages:
             package.unlink()
+
+        if salt.utils.platform.is_windows() and not use_static_requirements:
+            # Like mentioned above, install pycurl==7.43.0.5
+            # However, on windows, the latest pycurl release, 7.43.0.6 at the time of writing,
+            # does not have wheel files uploaded, so, we force pycurl==7.43.0.5 to be
+            # pre-installed before installing salt
+            venv.install("pycurl==7.43.0.5")
 
         venv.run(
             venv.venv_python,
