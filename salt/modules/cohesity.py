@@ -78,6 +78,7 @@ cohesity_client = CohesityClient(
 )
 ERROR_LIST = []
 
+
 def __virtual__():
     return True
 

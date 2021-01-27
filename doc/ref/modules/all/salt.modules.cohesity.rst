@@ -2,5 +2,5 @@
 salt.modules.cohesity
 =====================
 
-.. automodule:: salt.modules.cohesity
+.. automodule:: salt.modules.helm
     :members:
