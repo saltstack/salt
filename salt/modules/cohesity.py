@@ -78,6 +78,9 @@ cohesity_client = CohesityClient(
 )
 ERROR_LIST = []
 
+def __virtual__():
+    return True
+
 
 def get_sd_id(name):
     """
