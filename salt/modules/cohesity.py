@@ -57,8 +57,9 @@ try:
         VmwareRestoreParameters,
     )
 except ModuleNotFoundError as err:
-    print("Error while importing Cohesity SDk modules.")
-    exit()
+    print("Error while importing Cohesity SDK modules.")
+    print(err)
+    exit(0)
 
 logger = logging.getLogger(__name__)
 cohesity_config = salt.config.client_config("/etc/salt/master.d/cohesity.conf").get(
