@@ -144,7 +144,7 @@ jinja2==2.10.1
 jmespath==0.9.4
 jsondiff==1.2.0           # via moto
 jsonpatch==1.28           # via cfn-lint
-jsonpickle==1.1           # via aws-xray-sdk
+jsonpickle           # via aws-xray-sdk
 jsonpointer==2.0          # via jsonpatch
 jsonschema==3.2.0
 junit-xml==1.9            # via cfn-lint
