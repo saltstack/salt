@@ -20,6 +20,7 @@ import logging
 from salt.ext import six
 from salt.utils.odict import OrderedDict
 from salt.utils.oset import OrderedSet
+from salt.utils.stringutils import to_bytes
 
 log = logging.getLogger(__name__)
 
@@ -484,7 +485,7 @@ def _update_entry(entry, status, directives):
             continue
         for attr, vals in six.iteritems(state):
             status["mentioned_attributes"].add(attr)
-            vals = _toset(vals)
+            vals = [to_bytes(val) for val in _toset(vals)]
             if directive == "default":
                 if vals and (attr not in entry or not entry[attr]):
                     entry[attr] = vals
