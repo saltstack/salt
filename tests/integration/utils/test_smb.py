@@ -107,9 +107,7 @@ class TestSmb(TestCase):
                     user=cls.username,
                 )
             )
-        cls._smbd = subprocess.Popen(
-            "{0} -FS -P0 -s {1}".format(which_smbd(), samba_conf), shell=True
-        )
+        cls._smbd = subprocess.Popen([which_smbd(), "-FS", "-P0", "-s", samba_conf])
         time.sleep(1)
         pidfile = os.path.join(cls.samba_dir, "smbd.pid")
         with salt.utils.files.fopen(pidfile, "r") as fp:
