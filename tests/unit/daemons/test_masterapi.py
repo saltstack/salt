@@ -1,9 +1,4 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import io
-import os
 import stat
 from functools import wraps
 
@@ -11,8 +6,8 @@ import salt.config
 import salt.daemons.masterapi as masterapi
 import salt.utils.platform
 from tests.support.helpers import slowTest
+from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
 
 
@@ -273,6 +268,8 @@ class LocalFuncsTestCase(TestCase):
     def setUp(self):
         opts = salt.config.master_config(None)
         self.local_funcs = masterapi.LocalFuncs(opts, "test-key")
+        self.addCleanup(self.local_funcs.destroy)
+        self.addCleanup(delattr, self, "local_funcs")
 
     # runner tests
 
@@ -781,7 +778,7 @@ class LocalFuncsTestCase(TestCase):
             self.assertEqual(mock_ret, self.local_funcs.publish(load))
 
 
-class FakeCache(object):
+class FakeCache:
     def __init__(self):
         self.data = {}
 
@@ -798,11 +795,12 @@ class RemoteFuncsTestCase(TestCase):
     """
 
     def setUp(self):
-        opts = salt.config.master_config(
-            os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "master")
-        )
+        opts = AdaptedConfigurationTestCaseMixin.get_temp_config("master")
+        salt.cache.MemCache.data.clear()
         self.funcs = masterapi.RemoteFuncs(opts)
         self.funcs.cache = FakeCache()
+        self.addCleanup(self.funcs.destroy)
+        self.addCleanup(delattr, self, "funcs")
 
     @slowTest
     def test_mine_get(self, tgt_type_key="tgt_type"):

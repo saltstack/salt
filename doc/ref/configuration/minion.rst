@@ -1420,6 +1420,19 @@ retry timeout will be a random int between ``return_retry_timer`` and
 
     return_retry_timer_max: 10
 
+.. conf_minion:: return_retry_tries
+
+``return_retry_tries``
+--------------------------
+
+Default: ``3``
+
+The maximum number of retries for a minion return attempt.
+
+.. code-block:: yaml
+
+    return_retry_tries: 3
+
 .. conf_minion:: cache_sreqs
 
 ``cache_sreqs``
@@ -2188,6 +2201,28 @@ or just post what changes are going to be made.
 .. code-block:: yaml
 
     test: False
+
+.. conf_minion:: state_aggregate
+
+``state_aggregate``
+-------------------
+
+Default: ``False``
+
+Automatically aggregate all states that have support for ``mod_aggregate`` by
+setting to ``True``.
+
+.. code-block:: yaml
+
+    state_aggregate: True
+
+Or pass a list of state module names to automatically
+aggregate just those types.
+
+.. code-block:: yaml
+
+    state_aggregate:
+      - pkg
 
 .. conf_minion:: state_verbose
 

@@ -62,6 +62,7 @@ PRE_PYTEST_SKIP = pytest.mark.skipif(
 SKIP_IF_NOT_RUNNING_PYTEST = skipIf(
     RUNTIME_VARS.PYTEST_SESSION is False, "These tests now require running under PyTest"
 )
+ON_PY35 = sys.version_info < (3, 6)
 
 
 def no_symlinks():
@@ -1631,8 +1632,12 @@ patched_environ = PatchedEnviron
 
 
 class VirtualEnv:
-    def __init__(self, venv_dir=None):
+    def __init__(self, venv_dir=None, env=None):
         self.venv_dir = venv_dir or tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
+        environ = os.environ.copy()
+        if env:
+            environ.update(env)
+        self.environ = environ
         if salt.utils.platform.is_windows():
             self.venv_python = os.path.join(self.venv_dir, "Scripts", "python.exe")
         else:
@@ -1658,6 +1663,7 @@ class VirtualEnv:
         kwargs.setdefault("stdout", subprocess.PIPE)
         kwargs.setdefault("stderr", subprocess.PIPE)
         kwargs.setdefault("universal_newlines", True)
+        kwargs.setdefault("env", self.environ)
         proc = subprocess.run(args, check=False, **kwargs)
         ret = ProcessResult(
             exitcode=proc.returncode,
