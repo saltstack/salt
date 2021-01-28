@@ -223,12 +223,10 @@ def create_vmware_protection_job(
                 # Pause the job.
                 jobstate_body = ChangeProtectionJobStateParam()
                 jobstate_body.pause = pause_job
-                resp = cohesity_client.protection_jobs.change_protection_job_state(
+                cohesity_client.protection_jobs.change_protection_job_state(
                     resp.id, jobstate_body
                 )
             return "Successfully created ProtectionGroup: {}".format(body.name)
-    except APIException as err:
-        return "Error creating job {} {}".format(body.name, err)
     except APIException as err:
         return "Error creating job {} {}".format(body.name, err)
 
