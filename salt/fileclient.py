@@ -1,7 +1,6 @@
 """
 Classes that manage file clients
 """
-
 import contextlib
 import errno
 import ftplib
