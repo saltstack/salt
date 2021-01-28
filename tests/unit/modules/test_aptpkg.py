@@ -752,7 +752,7 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
             # Make sure the architecture is in line
             self.assertEqual(
                 sanitized["line"],
-                "deb [arch=amd64] http://cdn-aws.deb.debian.org/debian/ stretch",
+                "deb [arch=amd64] http://cdn-aws.deb.debian.org/debian/ stretch main",
             )
 
 
