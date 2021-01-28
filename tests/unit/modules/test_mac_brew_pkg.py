@@ -119,9 +119,9 @@ class BrewTestCase(TestCase, LoaderModuleMockMixin):
         Tests if pkg.list_pkgs list properly homebrew cask packages
         """
 
-        def custom_call_brew(cmd, failhard=True):
+        def custom_call_brew(*cmd, failhard=True):
             result = dict()
-            if cmd == "info --json=v1 --installed":
+            if cmd == ("info", "--json=v2", "--installed"):
                 result = {
                     "stdout": '[{"name":"zsh","full_name":"zsh","oldname":null,'
                     '"aliases":[],"homepage":"https://www.zsh.org/",'
@@ -134,13 +134,13 @@ class BrewTestCase(TestCase, LoaderModuleMockMixin):
                     "stderr": "",
                     "retcode": 0,
                 }
-            elif cmd == "list --cask --versions":
+            elif cmd == ("list", "--cask", "--versions"):
                 result = {
                     "stdout": "macvim 8.1.151\nfont-firacode-nerd-font 2.0.0",
                     "stderr": "",
                     "retcode": 0,
                 }
-            elif cmd == "cask info macvim":
+            elif cmd == ("cask", "info", "macvim"):
                 result = {
                     "stdout": "macvim: 8.1.1517,156 (auto_updates)\n"
                     "https://github.com/macvim-dev/macvim\n"
@@ -151,7 +151,7 @@ class BrewTestCase(TestCase, LoaderModuleMockMixin):
                     "stderr": "",
                     "retcode": 0,
                 }
-            elif cmd == "cask info font-firacode-nerd-font":
+            elif cmd == ("cask", "info", "font-firacode-nerd-font"):
                 result = {
                     "stdout": "font-firacode-nerd-font: 2.0.0\n"
                     "https://github.com/ryanoasis/nerd-fonts\n"
