@@ -4,8 +4,6 @@ TCP transport classes
 Wire protocol: "len(payload) msgpack({'head': SOMEHEADER, 'body': SOMEBODY})"
 
 """
-
-
 import errno
 import logging
 import os
