@@ -1,0 +1,1 @@
+Fix broken onfail requisite check when it is used with onchanges in salt/state.py file
