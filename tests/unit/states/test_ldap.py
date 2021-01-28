@@ -16,6 +16,7 @@ import copy
 import salt.states.ldap
 from salt.ext import six
 from salt.utils.oset import OrderedSet
+from salt.utils.stringutils import to_bytes
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase
 
@@ -34,12 +35,12 @@ def _init_db(newdb=None):
 def _complex_db():
     return {
         "dnfoo": {
-            "attrfoo1": OrderedSet(("valfoo1.1", "valfoo1.2",)),
-            "attrfoo2": OrderedSet(("valfoo2.1",)),
+            "attrfoo1": OrderedSet((b"valfoo1.1", b"valfoo1.2",)),
+            "attrfoo2": OrderedSet((b"valfoo2.1",)),
         },
         "dnbar": {
-            "attrbar1": OrderedSet(("valbar1.1", "valbar1.2",)),
-            "attrbar2": OrderedSet(("valbar2.1",)),
+            "attrbar1": OrderedSet((b"valbar1.1", b"valbar1.2",)),
+            "attrbar2": OrderedSet((b"valbar2.1",)),
         },
     }
 
@@ -169,6 +170,7 @@ class LDAPTestCase(TestCase, LoaderModuleMockMixin):
         expected_db = copy.deepcopy(init_db)
         for dn, attrs in six.iteritems(replace):
             for attr, vals in six.iteritems(attrs):
+                vals = [to_bytes(val) for val in vals]
                 if vals:
                     new.setdefault(dn, {})[attr] = list(OrderedSet(vals))
                     expected_db.setdefault(dn, {})[attr] = OrderedSet(vals)
