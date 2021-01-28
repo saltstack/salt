@@ -24,7 +24,7 @@
 
 .. image:: https://img.shields.io/twitter/follow/saltstack?style=social&logo=twitter
    :alt: Follow SaltStack on Twitter
-   :target: https://twitter.com/intent/follow?screen_name=saltstack
+   :target: https://twitter.com/intent/follow?screen_name=Salt_Project_OS
 
 .. figure:: https://gitlab.com/saltstack/open/salt-branding-guide/-/raw/master/logos/SaltProject_altlogo_teal.png?inline=true
    :scale: 80 %
