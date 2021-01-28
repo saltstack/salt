@@ -12,7 +12,7 @@ cffi==1.14.4
 chardet==3.0.4            # via requests
 cheroot==8.3.0            # via cherrypy
 cherrypy==17.4.1
-cohesity_management_sdk==1.5.2
+cohesity_management_sdk
 contextlib2==0.6.0.post1  # via cherrypy
 cryptography==3.2
 distro==1.5.0
