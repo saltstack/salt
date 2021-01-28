@@ -2558,8 +2558,8 @@ def expand_repo_def(**kwargs):
         type=source_entry.type,
         uri=source_entry.uri,
         dist=source_entry.dist,
-        orig_comps=kwargs.get("comps", []),
-        architectures=kwargs.get("architectures", []),
+        orig_comps=getattr(source_entry, "comps", []),
+        architectures=getattr(source_entry, "architectures", []),
     )
 
     sanitized["file"] = source_entry.file
