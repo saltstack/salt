@@ -111,6 +111,7 @@ cheroot==8.3.0
 cherrypy==17.4.1
 click==7.0                # via geomet
 clustershell==1.8.1
+cohesity_management_sdk==1.5.2
 contextlib2==0.6.0.post1
 contextvars==2.4 ; python_version < "3.7"
 croniter==0.3.29 ; sys_platform != "win32"
