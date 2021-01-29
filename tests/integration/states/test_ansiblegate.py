@@ -11,18 +11,12 @@ import salt.utils.files
 import salt.utils.path
 import yaml
 from tests.support.case import ModuleCase
-from tests.support.helpers import (
-    SKIP_IF_NOT_RUNNING_PYTEST,
-    destructiveTest,
-    flaky,
-    requires_system_grains,
-)
+from tests.support.helpers import destructiveTest, flaky, requires_system_grains
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import SkipTest, skipIf
 
 
-@SKIP_IF_NOT_RUNNING_PYTEST
 @destructiveTest
 @pytest.mark.requires_sshd_server
 @skipIf(
