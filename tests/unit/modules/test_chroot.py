@@ -323,10 +323,13 @@ class ChrootTestCase(TestCase, LoaderModuleMockMixin):
 
         with self.assertLogs(level=logging.DEBUG) as cm:
             chroot.relog("test message\nanother line")
-        self.assertEqual(cm.output, [
-            'ERROR:salt.modules.chroot:(chroot) test message',
-            'ERROR:salt.modules.chroot:(chroot) another line'
-        ])
+        self.assertEqual(
+            cm.output,
+            [
+                "ERROR:salt.modules.chroot:(chroot) test message",
+                "ERROR:salt.modules.chroot:(chroot) another line",
+            ],
+        )
 
     def test_relog_formatted(self):
         """
@@ -334,17 +337,22 @@ class ChrootTestCase(TestCase, LoaderModuleMockMixin):
         """
 
         with self.assertLogs(level=logging.DEBUG) as cm:
-            chroot.relog("""
+            chroot.relog(
+                """
 [ERROR] An example error message
 [WARN] An example warning message
 [INFO] An example info message
-[DEBUG] An example debug message""")
-        self.assertEqual(cm.output, [
-            'ERROR:salt.modules.chroot:(chroot) An example error message',
-            'WARNING:salt.modules.chroot:(chroot) An example warning message',
-            'INFO:salt.modules.chroot:(chroot) An example info message',
-            'DEBUG:salt.modules.chroot:(chroot) An example debug message'
-        ])
+[DEBUG] An example debug message"""
+            )
+        self.assertEqual(
+            cm.output,
+            [
+                "ERROR:salt.modules.chroot:(chroot) An example error message",
+                "WARNING:salt.modules.chroot:(chroot) An example warning message",
+                "INFO:salt.modules.chroot:(chroot) An example info message",
+                "DEBUG:salt.modules.chroot:(chroot) An example debug message",
+            ],
+        )
 
     @patch("salt.modules.chroot.exist")
     @patch("tempfile.mkdtemp")
@@ -364,7 +372,9 @@ class ChrootTestCase(TestCase, LoaderModuleMockMixin):
         salt_mock = {
             "cmd.run": MagicMock(return_value=""),
             "config.option": MagicMock(),
-            "cmd.run_chroot": MagicMock(return_value={"retcode": 1, "stderr": "[ERROR] This went wrong"}),
+            "cmd.run_chroot": MagicMock(
+                return_value={"retcode": 1, "stderr": "[ERROR] This went wrong"}
+            ),
         }
         with patch.dict(chroot.__utils__, utils_mock), patch.dict(
             chroot.__salt__, salt_mock
@@ -372,6 +382,11 @@ class ChrootTestCase(TestCase, LoaderModuleMockMixin):
             with self.assertLogs(level=logging.DEBUG) as cm:
                 self.assertEqual(
                     chroot.call("/chroot", "test.ping"),
-                    {"result": False, "comment": "Can't parse container command output"},
+                    {
+                        "result": False,
+                        "comment": "Can't parse container command output",
+                    },
                 )
-            self.assertEqual(cm.output, ["ERROR:salt.modules.chroot:(chroot) This went wrong"])
+            self.assertEqual(
+                cm.output, ["ERROR:salt.modules.chroot:(chroot) This went wrong"]
+            )

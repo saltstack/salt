@@ -1,18 +1,15 @@
-# -*- coding: utf-8 -*-
-
 """
 :maintainer:    Alberto Planas <aplanas@suse.com>
 :maturity:      new
 :depends:       None
 :platform:      Linux
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 import logging
 import os
-import sys
 import re
+import sys
 import tempfile
 
 import salt
@@ -85,7 +82,7 @@ def relog(message):
     Takes a multiline string containing log lines as usually returned as
     stderr from `cmd.run_chroot` and logs it.
     """
-    for logline in message.split('\n'):
+    for logline in message.split("\n"):
         # Skip blank lines
         if logline == "":
             continue
@@ -94,7 +91,7 @@ def relog(message):
         # Extract the loglevel to relog at the same level.
         # Otherwise, log the whole line at ERROR.
         try:
-            match = re.search(r'\[([A-Z]+)\s*\]\s(.*)', logline)
+            match = re.search(r"\[([A-Z]+)\s*\]\s(.*)", logline)
             level = match.group(1)
             message = match.group(2)
             log.log(logging._nameToLevel[level], "(chroot) %s", message)
