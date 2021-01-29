@@ -1,0 +1,1 @@
+Propergate logs from a module call using `chroot.call` to make them visable.
