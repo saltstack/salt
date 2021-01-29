@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 CloudStack Cloud Module
 =======================
@@ -21,21 +20,16 @@ Use of this module requires the ``apikey``, ``secretkey``, ``host`` and
       driver: cloudstack
 
 """
-# pylint: disable=invalid-name,function-redefined
-
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
+# pylint: disable=function-redefined
 
 import logging
 import pprint
 
-# Import salt cloud libs
 import salt.config as config
 import salt.utils.cloud
 import salt.utils.event
 from salt.cloud.libcloudfuncs import *  # pylint: disable=redefined-builtin,wildcard-import,unused-wildcard-import
 from salt.exceptions import SaltCloudSystemExit
-from salt.ext import six
 from salt.utils.functools import namespaced_function
 from salt.utils.versions import LooseVersion as _LooseVersion
 
@@ -171,10 +165,7 @@ def get_location(conn, vm_):
     # Default to Dallas if not otherwise set
     loc = config.get_cloud_config_value("location", vm_, __opts__, default=2)
     for location in locations:
-        if six.text_type(loc) in (
-            six.text_type(location.id),
-            six.text_type(location.name),
-        ):
+        if str(loc) in (str(location.id), str(location.name),):
             return location
 
 
@@ -272,10 +263,7 @@ def get_project(conn, vm_):
         return False
 
     for project in projects:
-        if six.text_type(projid) in (
-            six.text_type(project.id),
-            six.text_type(project.name),
-        ):
+        if str(projid) in (str(project.id), str(project.name),):
             return project
 
     log.warning("Couldn't find project %s in projects", projid)
@@ -305,7 +293,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "starting create",
-        "salt/cloud/{0}/creating".format(vm_["name"]),
+        "salt/cloud/{}/creating".format(vm_["name"]),
         sock_dir=__opts__["sock_dir"],
         args=__utils__["cloud.filter_event"](
             "creating", vm_, ["name", "profile", "provider", "driver"]
@@ -347,7 +335,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "requesting instance",
-        "salt/cloud/{0}/requesting".format(vm_["name"]),
+        "salt/cloud/{}/requesting".format(vm_["name"]),
         sock_dir=__opts__["sock_dir"],
         args={
             "kwargs": __utils__["cloud.filter_event"](
@@ -370,15 +358,13 @@ def create(vm_):
     if ex_blockdevicemappings:
         for ex_blockdevicemapping in ex_blockdevicemappings:
             if "VirtualName" not in ex_blockdevicemapping:
-                ex_blockdevicemapping["VirtualName"] = "{0}-{1}".format(
+                ex_blockdevicemapping["VirtualName"] = "{}-{}".format(
                     vm_["name"], len(volumes)
                 )
             __utils__["cloud.fire_event"](
                 "event",
                 "requesting volume",
-                "salt/cloud/{0}/requesting".format(
-                    ex_blockdevicemapping["VirtualName"]
-                ),
+                "salt/cloud/{}/requesting".format(ex_blockdevicemapping["VirtualName"]),
                 sock_dir=__opts__["sock_dir"],
                 args={
                     "kwargs": {
@@ -420,7 +406,7 @@ def create(vm_):
         )
         return False
 
-    for device_name in six.iterkeys(volumes):
+    for device_name in volumes:
         try:
             conn.attach_volume(data, volumes[device_name], device_name)
         except Exception as exc:  # pylint: disable=broad-except
@@ -457,7 +443,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "created instance",
-        "salt/cloud/{0}/created".format(vm_["name"]),
+        "salt/cloud/{}/created".format(vm_["name"]),
         sock_dir=__opts__["sock_dir"],
         args=__utils__["cloud.filter_event"](
             "created", vm_, ["name", "profile", "provider", "driver"]
@@ -480,7 +466,7 @@ def destroy(name, conn=None, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroying instance",
-        "salt/cloud/{0}/destroying".format(name),
+        "salt/cloud/{}/destroying".format(name),
         sock_dir=__opts__["sock_dir"],
         args={"name": name},
     )
@@ -505,7 +491,7 @@ def destroy(name, conn=None, call=None):
         __utils__["cloud.fire_event"](
             "event",
             "detaching volume",
-            "salt/cloud/{0}/detaching".format(volume.name),
+            "salt/cloud/{}/detaching".format(volume.name),
             sock_dir=__opts__["sock_dir"],
             args={"name": volume.name},
         )
@@ -516,7 +502,7 @@ def destroy(name, conn=None, call=None):
         __utils__["cloud.fire_event"](
             "event",
             "detached volume",
-            "salt/cloud/{0}/detached".format(volume.name),
+            "salt/cloud/{}/detached".format(volume.name),
             sock_dir=__opts__["sock_dir"],
             args={"name": volume.name},
         )
@@ -525,7 +511,7 @@ def destroy(name, conn=None, call=None):
         __utils__["cloud.fire_event"](
             "event",
             "destroying volume",
-            "salt/cloud/{0}/destroying".format(volume.name),
+            "salt/cloud/{}/destroying".format(volume.name),
             sock_dir=__opts__["sock_dir"],
             args={"name": volume.name},
         )
@@ -536,7 +522,7 @@ def destroy(name, conn=None, call=None):
         __utils__["cloud.fire_event"](
             "event",
             "destroyed volume",
-            "salt/cloud/{0}/destroyed".format(volume.name),
+            "salt/cloud/{}/destroyed".format(volume.name),
             sock_dir=__opts__["sock_dir"],
             args={"name": volume.name},
         )
@@ -551,7 +537,7 @@ def destroy(name, conn=None, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroyed instance",
-        "salt/cloud/{0}/destroyed".format(name),
+        "salt/cloud/{}/destroyed".format(name),
         sock_dir=__opts__["sock_dir"],
         args={"name": name},
     )
