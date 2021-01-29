@@ -202,6 +202,16 @@ class CMDModuleTest(ModuleCase):
         self.assertEqual(ret["stdout"], args)
 
     @slowTest
+    def test_script_query_string(self):
+        """
+        cmd.script
+        """
+        args = "saltines crackers biscuits=yes"
+        script = "salt://script.py?saltenv=base"
+        ret = self.run_function("cmd.script", [script, args])
+        self.assertEqual(ret["stdout"], args)
+
+    @slowTest
     def test_script_retcode(self):
         """
         cmd.script_retcode
