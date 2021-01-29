@@ -1,0 +1,1 @@
+Fix "aptpkg.normalize_name" in case the arch is "all" for DEB packages
