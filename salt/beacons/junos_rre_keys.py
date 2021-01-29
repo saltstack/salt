@@ -1,18 +1,21 @@
-#
-# Junos redundant routing engine beacon
-#
-# NOTE this beacon only works on the Juniper native minion
-#
-# Copies salt-minion keys to the backup RE when present
-#
-# Configure with
-#
-# beacon:
-#   beacons:
-#     junos_rre_keys:
-#       - interval: 43200
-#
-# `interval` above is in seconds, 43200 is recommended (every 12 hours)
+"""
+Junos redundant routing engine beacon.
+
+NOTE this beacon only works on the Juniper native minion
+
+Copies salt-minion keys to the backup RE when present
+
+Configure with
+
+.. code-block:: yaml
+
+    beacon:
+      beacons:
+        junos_rre_keys:
+          - interval: 43200
+
+`interval` above is in seconds, 43200 is recommended (every 12 hours)
+"""
 
 __virtualname__ = "junos_rre_keys"
 
