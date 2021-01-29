@@ -206,6 +206,5 @@ RUNTIME_VARS = RuntimeVars(
     BASE_FILES=paths.BASE_FILES,
     PROD_FILES=paths.PROD_FILES,
     TESTS_DIR=paths.TESTS_DIR,
-    PYTEST_SESSION="PYTEST_SESSION" in os.environ,
 )
 # <---- Tests Runtime Variables --------------------------------------------------------------------------------------
