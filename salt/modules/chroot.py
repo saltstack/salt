@@ -295,12 +295,12 @@ def sls(root, mods, saltenv="base", test=None, exclude=None, **kwargs):
         opts, pillar, __salt__, salt.fileclient.get_file_client(__opts__)
     )
 
-    if isinstance(mods, six.string_types):
+    if isinstance(mods, str):
         mods = mods.split(",")
 
     high_data, errors = st_.render_highstate({saltenv: mods})
     if exclude:
-        if isinstance(exclude, six.string_types):
+        if isinstance(exclude, str):
             exclude = exclude.split(",")
         if "__exclude__" in high_data:
             high_data["__exclude__"].extend(exclude)

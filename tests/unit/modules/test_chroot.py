@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-#
 # Author: Alberto Planas <aplanas@suse.com>
 #
 # Copyright 2018 SUSE LINUX GmbH, Nuernberg, Germany.
@@ -26,17 +24,13 @@
 :platform:      Linux
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-import sys
 import logging
+import sys
 
 import salt.modules.chroot as chroot
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
