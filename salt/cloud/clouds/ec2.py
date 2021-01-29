@@ -171,12 +171,19 @@ def __virtual__():
     return __virtualname__
 
 
+def _get_active_provider_name():
+    try:
+        return __active_provider_name__.value()
+    except AttributeError:
+        return __active_provider_name__
+
+
 def get_configured_provider():
     """
     Return the first configured instance.
     """
     return config.is_provider_configured(
-        __opts__, __active_provider_name__ or __virtualname__, ("id", "key")
+        __opts__, _get_active_provider_name() or __virtualname__, ("id", "key")
     )
 
 
@@ -1343,7 +1350,7 @@ def get_provider(vm_=None):
     Extract the provider name from vm
     """
     if vm_ is None:
-        provider = __active_provider_name__ or "ec2"
+        provider = _get_active_provider_name() or "ec2"
     else:
         provider = vm_.get("provider", "ec2")
 
@@ -2586,7 +2593,7 @@ def create(vm_=None, call=None):
         if (
             vm_["profile"]
             and config.is_profile_configured(
-                __opts__, __active_provider_name__ or "ec2", vm_["profile"], vm_=vm_
+                __opts__, _get_active_provider_name() or "ec2", vm_["profile"], vm_=vm_
             )
             is False
         ):
@@ -2882,7 +2889,7 @@ def create(vm_=None, call=None):
 
     # Ensure that the latest node data is returned
     node = _get_node(instance_id=vm_["instance_id"])
-    __utils__["cloud.cache_node"](node, __active_provider_name__, __opts__)
+    __utils__["cloud.cache_node"](node, _get_active_provider_name(), __opts__)
     ret.update(node)
 
     # Add any block device tags specified
@@ -2954,7 +2961,7 @@ def queue_instances(instances):
     """
     for instance_id in instances:
         node = _get_node(instance_id=instance_id)
-        __utils__["cloud.cache_node"](node, __active_provider_name__, __opts__)
+        __utils__["cloud.cache_node"](node, _get_active_provider_name(), __opts__)
 
 
 def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
@@ -3417,7 +3424,7 @@ def destroy(name, call=None):
 
     if __opts__.get("update_cachedir", False) is True:
         __utils__["cloud.delete_minion_cachedir"](
-            name, __active_provider_name__.split(":")[0], __opts__
+            name, _get_active_provider_name().split(":")[0], __opts__
         )
 
     return ret
@@ -3504,7 +3511,7 @@ def show_instance(name=None, instance_id=None, call=None, kwargs=None):
         )
 
     node = _get_node(name=name, instance_id=instance_id)
-    __utils__["cloud.cache_node"](node, __active_provider_name__, __opts__)
+    __utils__["cloud.cache_node"](node, _get_active_provider_name(), __opts__)
     return node
 
 
@@ -3615,7 +3622,7 @@ def _list_nodes_full(location=None):
     """
     Return a list of the VMs that in this location
     """
-    provider = __active_provider_name__ or "ec2"
+    provider = _get_active_provider_name() or "ec2"
     if ":" in provider:
         comps = provider.split(":")
         provider = comps[0]
