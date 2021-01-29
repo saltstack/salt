@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 A salt cloud provider that lets you use virtualbox on your machine
 and act as a cloud.
@@ -17,17 +16,11 @@ Dicts provided by salt:
         as well as a set of configuration and environment variables
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 
 import salt.config as config
-
-# Import salt libs
 from salt.exceptions import SaltCloudSystemExit
 
-# Import Third Party Libs
 try:
     import vboxapi  # pylint: disable=unused-import
     from salt.utils.virtualbox import (
@@ -187,7 +180,7 @@ def create(vm_info):
     __utils__["cloud.fire_event"](
         "event",
         "starting create",
-        "salt/cloud/{0}/creating".format(vm_info["name"]),
+        "salt/cloud/{}/creating".format(vm_info["name"]),
         args=__utils__["cloud.filter_event"](
             "creating", vm_info, ["name", "profile", "provider", "driver"]
         ),
@@ -205,7 +198,7 @@ def create(vm_info):
     __utils__["cloud.fire_event"](
         "event",
         "requesting instance",
-        "salt/cloud/{0}/requesting".format(vm_info["name"]),
+        "salt/cloud/{}/requesting".format(vm_info["name"]),
         args=__utils__["cloud.filter_event"](
             "requesting", request_kwargs, list(request_kwargs)
         ),
@@ -235,7 +228,7 @@ def create(vm_info):
     __utils__["cloud.fire_event"](
         "event",
         "created machine",
-        "salt/cloud/{0}/created".format(vm_info["name"]),
+        "salt/cloud/{}/created".format(vm_info["name"]),
         args=__utils__["cloud.filter_event"]("created", vm_result, list(vm_result)),
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -360,12 +353,12 @@ def destroy(name, call=None):
     """
     log.info("Attempting to delete instance %s", name)
     if not vb_machine_exists(name):
-        return "{0} doesn't exist and can't be deleted".format(name)
+        return "{} doesn't exist and can't be deleted".format(name)
 
     __utils__["cloud.fire_event"](
         "event",
         "destroying instance",
-        "salt/cloud/{0}/destroying".format(name),
+        "salt/cloud/{}/destroying".format(name),
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -376,7 +369,7 @@ def destroy(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroyed instance",
-        "salt/cloud/{0}/destroyed".format(name),
+        "salt/cloud/{}/destroyed".format(name),
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
