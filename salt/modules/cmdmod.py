@@ -2580,8 +2580,7 @@ def script(
         )
 
     path = salt.utils.files.mkstemp(
-        dir=cwd,
-        suffix=os.path.splitext(salt.utils.url.split_env(source)[0])[1]
+        dir=cwd, suffix=os.path.splitext(salt.utils.url.split_env(source)[0])[1]
     )
 
     if template:
