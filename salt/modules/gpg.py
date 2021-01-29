@@ -768,7 +768,9 @@ def import_key(text=None, filename=None, user=None, gnupghome=None):
     return ret
 
 
-def export_key(keyids=None, secret=False, user=None, gnupghome=None):
+def export_key(
+    keyids=None, secret=False, user=None, gnupghome=None, use_passphrase=False
+):
     """
     Export a key from the GPG keychain
 
@@ -789,6 +791,10 @@ def export_key(keyids=None, secret=False, user=None, gnupghome=None):
     gnupghome
         Specify the location where GPG keyring and related files are stored.
 
+    use_passphrase
+        Whether to use a passphrase with the signing key. Passphrase is received
+        from Pillar.
+
     CLI Example:
 
     .. code-block:: bash
@@ -804,7 +810,15 @@ def export_key(keyids=None, secret=False, user=None, gnupghome=None):
 
     if isinstance(keyids, str):
         keyids = keyids.split(",")
-    return gpg.export_keys(keyids, secret)
+
+    if use_passphrase:
+        gpg_passphrase = __salt__["pillar.get"]("gpg_passphrase")
+        if not gpg_passphrase:
+            raise SaltInvocationError("gpg_passphrase not available in pillar.")
+        ret = gpg.export_keys(keyids, secret, passphrase=gpg_passphrase)
+    else:
+        ret = gpg.export_keys(keyids, secret, expect_passphrase=False)
+    return ret
 
 
 @_restore_ownership
