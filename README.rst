@@ -78,9 +78,9 @@ Security Advisories
 ===================
 
 Keep an eye on the Salt Project
-`Security Announcements <https://www.saltproject.io/security-announcements/>`_
+`Security Announcements <https://saltproject.io/security-announcements/>`_
 landing page. Salt Project recommends subscribing to the
-`Salt Project Security RSS feed <http://www.saltproject.io/feed/?post_type=security>`_
+`Salt Project Security RSS feed <https://saltproject.io/feed/?post_type=security>`_
 to receive notification when new information is available regarding security
 announcements.
 
@@ -112,7 +112,7 @@ There are lots of ways to get involved in our community. Every month, there are
 around a dozen opportunities to meet with other contributors and the Salt Core
 team and collaborate in real time. The best way to keep track is by subscribing
 to the **Salt Project Community Events Calendar** on the main
-`<https://saltproject.io>`__ website.
+`<https://saltproject.io>`_ website.
 
 If you have additional questions, email us at core@saltstack.com or reach out
 directly to the Community Manager, Janae Andrus via Slack. We’d be glad to
