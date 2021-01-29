@@ -56,7 +56,9 @@ try:
     from cohesity_management_sdk.models.vmware_restore_parameters import (
         VmwareRestoreParameters,
     )
+    HAS_LIBS = True
 except ModuleNotFoundError as err:
+    HAS_LIBS = False
     print("Error while importing Cohesity SDK modules.")
     print(err)
     exit(0)
@@ -78,9 +80,12 @@ cohesity_client = CohesityClient(
     cluster_vip=cluster_vip, username=c_username, password=c_password, domain=c_domain
 )
 ERROR_LIST = []
+__virtualname__ = "cohesity"
 
 
 def __virtual__():
+    if HAS_LIBS:
+        return __virtualname__
     return True
 
 

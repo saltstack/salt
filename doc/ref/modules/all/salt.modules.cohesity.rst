@@ -1,6 +1,6 @@
-=====================
-salt.modules.cohesity
-=====================
+============================
+salt.modules.cohesity module
+============================
 
-.. automodule:: salt.modules.helm
+.. automodule:: salt.modules.cohesity
     :members:
