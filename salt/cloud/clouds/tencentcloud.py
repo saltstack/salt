@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 Tencent Cloud Cloud Module
 =============================
@@ -26,18 +24,11 @@ To use this module, set up the cloud configuration at
 :depends: tencentcloud-sdk-python
 """
 
-# pylint: disable=invalid-name,redefined-builtin,function-redefined,undefined-variable,broad-except,too-many-locals,too-many-branches
-
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import pprint
 import time
 
 import salt.config as config
-
-# Import salt cloud libs
 import salt.utils.cloud
 import salt.utils.data
 import salt.utils.json
@@ -47,10 +38,6 @@ from salt.exceptions import (
     SaltCloudNotFound,
     SaltCloudSystemExit,
 )
-
-# Import 3rd-party libs
-from salt.ext import six
-from salt.ext.six.moves import range
 
 try:
     # Try import tencentcloud sdk
@@ -129,7 +116,7 @@ def get_provider_client(name=None):
     elif name == "vpc_client":
         client = vpc_client.VpcClient(crd, region, cpf)
     else:
-        raise SaltCloudSystemExit("Client name {0} is not supported".format(name))
+        raise SaltCloudSystemExit("Client name {} is not supported".format(name))
 
     return client
 
@@ -212,11 +199,11 @@ def avail_sizes(call=None):
         ret[typeConfig.InstanceType] = {
             "Zone": typeConfig.Zone,
             "InstanceFamily": typeConfig.InstanceFamily,
-            "Memory": "{0}GB".format(typeConfig.Memory),
-            "CPU": "{0}-Core".format(typeConfig.CPU),
+            "Memory": "{}GB".format(typeConfig.Memory),
+            "CPU": "{}-Core".format(typeConfig.CPU),
         }
         if typeConfig.GPU:
-            ret[typeConfig.InstanceType]["GPU"] = "{0}-Core".format(typeConfig.GPU)
+            ret[typeConfig.InstanceType]["GPU"] = "{}-Core".format(typeConfig.GPU)
 
     return ret
 
@@ -361,7 +348,7 @@ def list_nodes_full(call=None):
             "Tags",
             "VirtualPrivateCloud",
         ]:
-            ret[instance.InstanceName][k] = six.text_type(instanceAttribute[k])
+            ret[instance.InstanceName][k] = str(instanceAttribute[k])
 
     provider = __active_provider_name__ or "tencentcloud"
     if ":" in provider:
@@ -460,7 +447,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "starting create",
-        "salt/cloud/{0}/creating".format(vm_["name"]),
+        "salt/cloud/{}/creating".format(vm_["name"]),
         args=__utils__["cloud.filter_event"](
             "creating", vm_, ["name", "profile", "provider", "driver"]
         ),
@@ -542,7 +529,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "requesting instance",
-        "salt/cloud/{0}/requesting".format(vm_["name"]),
+        "salt/cloud/{}/requesting".format(vm_["name"]),
         args=__utils__["cloud.filter_event"]("requesting", vm_, list(vm_)),
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -552,13 +539,13 @@ def create(vm_):
         resp = client.RunInstances(req)
         if not resp.InstanceIdSet:
             raise SaltCloudSystemExit("Unexpected error, no instance created")
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.error(
             "Error creating %s on tencentcloud\n\n"
             "The following exception was thrown when trying to "
             "run the initial deployment: %s",
             vm_["name"],
-            six.text_type(exc),
+            str(exc),
             # Show the traceback if the debug logging level is enabled
             exc_info_on_loglevel=logging.DEBUG,
         )
@@ -592,7 +579,7 @@ def create(vm_):
         except SaltCloudSystemExit:
             pass
         finally:
-            raise SaltCloudSystemExit(six.text_type(exc))
+            raise SaltCloudSystemExit(str(exc))
 
     if data["PublicIpAddresses"]:
         ssh_ip = data["PublicIpAddresses"][0]
@@ -614,7 +601,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "created instance",
-        "salt/cloud/{0}/created".format(vm_["name"]),
+        "salt/cloud/{}/created".format(vm_["name"]),
         args=__utils__["cloud.filter_event"](
             "created", vm_, ["name", "profile", "provider", "driver"]
         ),
@@ -718,7 +705,7 @@ def destroy(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroying instance",
-        "salt/cloud/{0}/destroying".format(name),
+        "salt/cloud/{}/destroying".format(name),
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -734,7 +721,7 @@ def destroy(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroyed instance",
-        "salt/cloud/{0}/destroyed".format(name),
+        "salt/cloud/{}/destroyed".format(name),
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -787,7 +774,7 @@ def show_image(kwargs, call=None):
 
     if not resp.ImageSet:
         raise SaltCloudNotFound(
-            "The specified image '{0}' could not be found.".format(image)
+            "The specified image '{}' could not be found.".format(image)
         )
 
     ret = {}
@@ -798,7 +785,7 @@ def show_image(kwargs, call=None):
             "ImageSource": image.ImageSource,
             "Platform": image.Platform,
             "Architecture": image.Architecture,
-            "ImageSize": "{0}GB".format(image.ImageSize),
+            "ImageSize": "{}GB".format(image.ImageSize),
             "ImageState": image.ImageState,
         }
 
@@ -831,7 +818,7 @@ def show_instance(name, call=None):
         "Tags",
         "VirtualPrivateCloud",
     ]:
-        ret[k] = six.text_type(ret[k])
+        ret[k] = str(ret[k])
 
     return ret
 
@@ -887,7 +874,7 @@ def _get_node(name):
             req.Filters = [{"Name": "instance-name", "Values": [name]}]
             resp = client.DescribeInstances(req)
             return resp.InstanceSet[0]
-        except Exception as ex:
+        except Exception as ex:  # pylint: disable=broad-except
             attempts -= 1
             log.debug(
                 "Failed to get data for node '%s': %s. Remaining attempts: %d",
@@ -897,7 +884,7 @@ def _get_node(name):
             )
             time.sleep(0.5)
 
-    raise SaltCloudNotFound("Failed to get instance info {0}".format(name))
+    raise SaltCloudNotFound("Failed to get instance info {}".format(name))
 
 
 def _get_nodes():
@@ -944,14 +931,14 @@ def _get_images(image_type):
             "ImageSource": image.ImageSource,
             "Platform": image.Platform,
             "Architecture": image.Architecture,
-            "ImageSize": "{0}GB".format(image.ImageSize),
+            "ImageSize": "{}GB".format(image.ImageSize),
         }
 
     return ret
 
 
 def __get_image(vm_):
-    vm_image = six.text_type(
+    vm_image = str(
         config.get_cloud_config_value("image", vm_, __opts__, search_global=False)
     )
 
@@ -963,12 +950,12 @@ def __get_image(vm_):
         return vm_image
 
     raise SaltCloudNotFound(
-        "The specified image '{0}' could not be found.".format(vm_image)
+        "The specified image '{}' could not be found.".format(vm_image)
     )
 
 
 def __get_size(vm_):
-    vm_size = six.text_type(
+    vm_size = str(
         config.get_cloud_config_value("size", vm_, __opts__, search_global=False)
     )
 
@@ -980,7 +967,7 @@ def __get_size(vm_):
         return vm_size
 
     raise SaltCloudNotFound(
-        "The specified size '{0}' could not be found.".format(vm_size)
+        "The specified size '{}' could not be found.".format(vm_size)
     )
 
 
@@ -993,12 +980,12 @@ def __get_securitygroups(vm_):
         return []
 
     securitygroups = list_securitygroups()
-    for i in range(len(vm_securitygroups)):
-        vm_securitygroups[i] = six.text_type(vm_securitygroups[i])
-        if vm_securitygroups[i] not in securitygroups:
+    for idx, value in enumerate(vm_securitygroups):
+        vm_securitygroups[idx] = str(value)
+        if vm_securitygroups[idx] not in securitygroups:
             raise SaltCloudNotFound(
-                "The specified securitygroups '{0}' could not be found.".format(
-                    vm_securitygroups[i]
+                "The specified securitygroups '{}' could not be found.".format(
+                    vm_securitygroups[idx]
                 )
             )
 
@@ -1006,7 +993,7 @@ def __get_securitygroups(vm_):
 
 
 def __get_availability_zone(vm_):
-    vm_availability_zone = six.text_type(
+    vm_availability_zone = str(
         config.get_cloud_config_value(
             "availability_zone", vm_, __opts__, search_global=False
         )
@@ -1020,7 +1007,7 @@ def __get_availability_zone(vm_):
         return vm_availability_zone
 
     raise SaltCloudNotFound(
-        "The specified availability_zone '{0}' could not be found.".format(
+        "The specified availability_zone '{}' could not be found.".format(
             vm_availability_zone
         )
     )
@@ -1033,7 +1020,7 @@ def __get_location(vm_):
         - VM parameter
         - Cloud profile setting
     """
-    vm_location = six.text_type(
+    vm_location = str(
         __opts__.get(
             "location",
             config.get_cloud_config_value(
