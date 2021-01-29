@@ -11,12 +11,7 @@ import salt.utils.platform
 import salt.utils.pycrypto
 from salt.exceptions import EauthAuthenticationError
 from tests.support.case import ModuleCase, SSHCase
-from tests.support.helpers import (
-    SKIP_IF_NOT_RUNNING_PYTEST,
-    SaveRequestsPostHandler,
-    Webserver,
-    slowTest,
-)
+from tests.support.helpers import SaveRequestsPostHandler, Webserver, slowTest
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import patch
 from tests.support.runtests import RUNTIME_VARS
@@ -163,7 +158,6 @@ class NetapiClientTest(TestCase):
             ret = self.netapi.run(low)
 
 
-@SKIP_IF_NOT_RUNNING_PYTEST
 @pytest.mark.requires_sshd_server
 class NetapiSSHClientTest(SSHCase):
     eauth_creds = {

@@ -45,7 +45,7 @@ from saltfactories.utils.processes import ProcessResult
 from tests.support.mock import patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.sminion import create_sminion
-from tests.support.unit import SkipTest, _id, skip, skipIf
+from tests.support.unit import SkipTest, _id, skip
 
 log = logging.getLogger(__name__)
 
@@ -58,9 +58,6 @@ PRE_PYTEST_SKIP_REASON = (
 )
 PRE_PYTEST_SKIP = pytest.mark.skipif(
     PRE_PYTEST_SKIP_OR_NOT, reason=PRE_PYTEST_SKIP_REASON
-)
-SKIP_IF_NOT_RUNNING_PYTEST = skipIf(
-    RUNTIME_VARS.PYTEST_SESSION is False, "These tests now require running under PyTest"
 )
 ON_PY35 = sys.version_info < (3, 6)
 
@@ -104,11 +101,7 @@ def destructiveTest(caller):
             def test_create_user(self):
                 pass
     """
-    # Late import
-    from tests.support.runtests import RUNTIME_VARS
-
-    if RUNTIME_VARS.PYTEST_SESSION:
-        setattr(caller, "__destructive_test__", True)
+    setattr(caller, "__destructive_test__", True)
 
     if os.environ.get("DESTRUCTIVE_TESTS", "False").lower() == "false":
         reason = "Destructive tests are disabled"
@@ -140,11 +133,7 @@ def expensiveTest(caller):
             def test_create_user(self):
                 pass
     """
-    # Late import
-    from tests.support.runtests import RUNTIME_VARS
-
-    if RUNTIME_VARS.PYTEST_SESSION:
-        setattr(caller, "__expensive_test__", True)
+    setattr(caller, "__expensive_test__", True)
 
     if os.environ.get("EXPENSIVE_TESTS", "False").lower() == "false":
         reason = "Expensive tests are disabled"
@@ -172,26 +161,7 @@ def slowTest(caller):
             def test_that_takes_much_time(self):
                 pass
     """
-    # Late import
-    from tests.support.runtests import RUNTIME_VARS
-
-    if RUNTIME_VARS.PYTEST_SESSION:
-        setattr(caller, "__slow_test__", True)
-        return caller
-
-    if os.environ.get("SLOW_TESTS", "False").lower() == "false":
-        reason = "Slow tests are disabled"
-
-        if not isinstance(caller, type):
-
-            @functools.wraps(caller)
-            def skip_wrapper(*args, **kwargs):
-                raise SkipTest(reason)
-
-            caller = skip_wrapper
-
-        caller.__unittest_skip__ = True
-        caller.__unittest_skip_why__ = reason
+    setattr(caller, "__slow_test__", True)
     return caller
 
 
@@ -1230,11 +1200,7 @@ def skip_if_binaries_missing(*binaries, **kwargs):
 
 
 def skip_if_not_root(func):
-    # Late import
-    from tests.support.runtests import RUNTIME_VARS
-
-    if RUNTIME_VARS.PYTEST_SESSION:
-        setattr(func, "__skip_if_not_root__", True)
+    setattr(func, "__skip_if_not_root__", True)
 
     if not sys.platform.startswith("win"):
         if os.getuid() != 0:
