@@ -1,2 +1,3 @@
 [bandit]
 exclude: salt/ext/tornado/*
+skip: B701
