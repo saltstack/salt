@@ -22,7 +22,7 @@
    :alt: Salt Project subreddit
    :target: https://www.reddit.com/r/saltstack/
 
-.. image:: https://img.shields.io/twitter/follow/saltstack?style=social&logo=twitter
+.. image:: https://img.shields.io/twitter/follow/Salt_Project_OS?style=social&logo=twitter
    :alt: Follow SaltStack on Twitter
    :target: https://twitter.com/intent/follow?screen_name=Salt_Project_OS
 
