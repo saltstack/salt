@@ -1,10 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 # Python
+import logging
 import socket
 import textwrap
 
@@ -33,6 +32,8 @@ from salt.utils.odict import OrderedDict
 from tests.support.helpers import requires_network
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
+
+log = logging.getLogger(__name__)
 
 
 class DNShelpersCase(TestCase):
@@ -299,7 +300,7 @@ class DNSlookupsCase(TestCase):
                     self.assertEqual(
                         lookup_cb("mocksrvr.example.com", rec_t, secure=True),
                         False,
-                        msg="Insecure {0} returns should not be returned".format(rec_t),
+                        msg="Insecure {} returns should not be returned".format(rec_t),
                     )
 
         for rec_t, tests in secure.items():
@@ -308,7 +309,7 @@ class DNSlookupsCase(TestCase):
                     self.assertEqual(
                         lookup_cb("mocksrvr.example.com", rec_t, secure=True),
                         test_res,
-                        msg="Error parsing DNSSEC'd {0} returns".format(rec_t),
+                        msg="Error parsing DNSSEC'd {} returns".format(rec_t),
                     )
 
     @skipIf(not salt.utils.dns.HAS_NSLOOKUP, "nslookup is not available")
@@ -354,7 +355,7 @@ class DNSlookupsCase(TestCase):
 
     @skipIf(not salt.utils.dns.HAS_DIG, "dig is not available")
     def test_dig_options(self):
-        cmd = "dig {0} -v".format(salt.utils.dns.DIG_OPTIONS)
+        cmd = "dig {} -v".format(salt.utils.dns.DIG_OPTIONS)
         cmd = salt.modules.cmdmod.retcode(
             cmd, python_shell=False, output_loglevel="quiet"
         )
@@ -557,7 +558,7 @@ class DNSlookupsCase(TestCase):
                     self.assertEqual(
                         _lookup_gai("mockq", rec_t),
                         test_res,
-                        msg="Error parsing {0} returns".format(rec_t),
+                        msg="Error parsing {} returns".format(rec_t),
                     )
 
     def test_host(self):

@@ -1,10 +1,10 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Rahul Handay <rahulha@saltstack.com>
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
+import datetime
+import logging
 import os
 import shutil
 import tempfile
@@ -24,15 +24,17 @@ import salt.utils.odict
 import salt.utils.platform
 import salt.utils.state
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.ext import six
+from salt.utils.event import SaltEvent
 from tests.support.helpers import slowTest
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, mock_open, patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
 
+log = logging.getLogger(__name__)
 
-class MockState(object):
+
+class MockState:
     """
         Mock class
     """
@@ -40,7 +42,7 @@ class MockState(object):
     def __init__(self):
         pass
 
-    class State(object):
+    class State:
         """
             Mock state class
         """
@@ -129,7 +131,7 @@ class MockState(object):
         def requisite_in(self, data):  # pylint: disable=unused-argument
             return data, []
 
-    class HighState(object):
+    class HighState:
         """
             Mock HighState class
         """
@@ -232,7 +234,7 @@ class MockState(object):
             return True
 
 
-class MockSerial(object):
+class MockSerial:
     """
         Mock Class
     """
@@ -240,7 +242,7 @@ class MockSerial(object):
     def __init__(self):
         pass
 
-    class Serial(object):
+    class Serial:
         """
             Mock Serial class
         """
@@ -263,7 +265,7 @@ class MockSerial(object):
             return True
 
 
-class MockTarFile(object):
+class MockTarFile:
     """
         Mock tarfile class
     """
@@ -318,7 +320,13 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
         self.addCleanup(patcher.stop)
         return {
             state: {
-                "__opts__": {"cachedir": "/D", "saltenv": None, "__cli": "salt"},
+                "__opts__": {
+                    "cachedir": "/D",
+                    "saltenv": None,
+                    "sock_dir": "/var/run/salt/master",
+                    "transport": "zeromq",
+                    "__cli": "salt",
+                },
                 "__utils__": utils,
                 "__salt__": {
                     "config.get": config.get,
@@ -950,57 +958,57 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(state.__opts__, {test_arg: True}):
             self.assertTrue(
                 state._get_test_value(test=None),
-                msg="Failure when {0} is True in __opts__".format(test_arg),
+                msg="Failure when {} is True in __opts__".format(test_arg),
             )
 
         with patch.dict(config.__pillar__, {test_arg: "blah"}):
             self.assertFalse(
                 state._get_test_value(test=None),
-                msg="Failure when {0} is blah in __opts__".format(test_arg),
+                msg="Failure when {} is blah in __opts__".format(test_arg),
             )
 
         with patch.dict(config.__pillar__, {test_arg: "true"}):
             self.assertFalse(
                 state._get_test_value(test=None),
-                msg="Failure when {0} is true in __opts__".format(test_arg),
+                msg="Failure when {} is true in __opts__".format(test_arg),
             )
 
         with patch.dict(config.__opts__, {test_arg: False}):
             self.assertFalse(
                 state._get_test_value(test=None),
-                msg="Failure when {0} is False in __opts__".format(test_arg),
+                msg="Failure when {} is False in __opts__".format(test_arg),
             )
 
         with patch.dict(config.__opts__, {}):
             self.assertFalse(
                 state._get_test_value(test=None),
-                msg="Failure when {0} does not exist in __opts__".format(test_arg),
+                msg="Failure when {} does not exist in __opts__".format(test_arg),
             )
 
         with patch.dict(config.__pillar__, {test_arg: None}):
             self.assertEqual(
                 state._get_test_value(test=None),
                 None,
-                msg="Failure when {0} is None in __opts__".format(test_arg),
+                msg="Failure when {} is None in __opts__".format(test_arg),
             )
 
         with patch.dict(config.__pillar__, {test_arg: True}):
             self.assertTrue(
                 state._get_test_value(test=None),
-                msg="Failure when {0} is True in __pillar__".format(test_arg),
+                msg="Failure when {} is True in __pillar__".format(test_arg),
             )
 
         with patch.dict(config.__pillar__, {"master": {test_arg: True}}):
             self.assertTrue(
                 state._get_test_value(test=None),
-                msg="Failure when {0} is True in master __pillar__".format(test_arg),
+                msg="Failure when {} is True in master __pillar__".format(test_arg),
             )
 
         with patch.dict(config.__pillar__, {"master": {test_arg: False}}):
             with patch.dict(config.__pillar__, {test_arg: True}):
                 self.assertTrue(
                     state._get_test_value(test=None),
-                    msg="Failure when {0} is False in master __pillar__ and True in pillar".format(
+                    msg="Failure when {} is False in master __pillar__ and True in pillar".format(
                         test_arg
                     ),
                 )
@@ -1009,7 +1017,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(config.__pillar__, {test_arg: False}):
                 self.assertFalse(
                     state._get_test_value(test=None),
-                    msg="Failure when {0} is True in master __pillar__ and False in pillar".format(
+                    msg="Failure when {} is True in master __pillar__ and False in pillar".format(
                         test_arg
                     ),
                 )
@@ -1017,14 +1025,14 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(state.__opts__, {"test": False}):
             self.assertFalse(
                 state._get_test_value(test=None),
-                msg="Failure when {0} is False in __opts__".format(test_arg),
+                msg="Failure when {} is False in __opts__".format(test_arg),
             )
 
         with patch.dict(state.__opts__, {"test": False}):
             with patch.dict(config.__pillar__, {"master": {test_arg: True}}):
                 self.assertTrue(
                     state._get_test_value(test=None),
-                    msg="Failure when {0} is False in __opts__".format(test_arg),
+                    msg="Failure when {} is False in __opts__".format(test_arg),
                 )
 
         with patch.dict(state.__opts__, {}):
@@ -1077,7 +1085,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                 expected = 1
                 assert (
                     call_count == expected
-                ), "{0} called {1} time(s) (expected: {2})".format(
+                ), "{} called {} time(s) (expected: {})".format(
                     key, call_count, expected
                 )
 
@@ -1091,7 +1099,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                 expected = 1
                 assert (
                     call_count == expected
-                ), "{0} called {1} time(s) (expected: {2})".format(
+                ), "{} called {} time(s) (expected: {})".format(
                     key, call_count, expected
                 )
 
@@ -1105,7 +1113,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                 expected = 1
                 assert (
                     call_count == expected
-                ), "{0} called {1} time(s) (expected: {2})".format(
+                ), "{} called {} time(s) (expected: {})".format(
                     key, call_count, expected
                 )
 
@@ -1121,7 +1129,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                 expected = 1
                 assert (
                     call_count == expected
-                ), "{0} called {1} time(s) (expected: {2})".format(
+                ), "{} called {} time(s) (expected: {})".format(
                     key, call_count, expected
                 )
 
@@ -1168,15 +1176,8 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                     state._format_cached_grains.assert_called_once()
 
                 MockTarFile.path = ""
-                if six.PY2:
-                    with patch("salt.utils.files.fopen", mock_open()), patch.dict(
-                        state.__utils__,
-                        {"state.check_result": MagicMock(return_value=True)},
-                    ):
-                        self.assertTrue(state.pkg(tar_file, 0, "md5"))
-                else:
-                    with patch("salt.utils.files.fopen", mock_open()):
-                        self.assertTrue(state.pkg(tar_file, 0, "md5"))
+                with patch("salt.utils.files.fopen", mock_open()):
+                    self.assertTrue(state.pkg(tar_file, 0, "md5"))
 
     def test_lock_saltenv(self):
         """
@@ -1347,6 +1348,46 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                     assert res == state._get_pillar_errors(
                         kwargs=opts, pillar=ext_pillar
                     )
+
+    def test_event(self):
+        """
+        test state.event runner
+        """
+        event_returns = {
+            "data": {
+                "body": b'{"text": "Hello World"}',
+                "_stamp": "2021-01-08T00:12:32.320928",
+            },
+            "tag": "salt/engines/hook/test",
+        }
+
+        _expected = '"body": "{\\"text\\": \\"Hello World\\"}"'
+        with patch.object(SaltEvent, "get_event", return_value=event_returns):
+            print_cli_mock = MagicMock()
+            with patch.object(salt.utils.stringutils, "print_cli", print_cli_mock):
+                found = False
+                state.event(count=1)
+                for x in print_cli_mock.mock_calls:
+                    if _expected in x.args[0]:
+                        found = True
+                assert found is True
+
+        now = datetime.datetime.now().isoformat()
+        event_returns = {
+            "data": {"date": now, "_stamp": "2021-01-08T00:12:32.320928"},
+            "tag": "a_event_tag",
+        }
+
+        _expected = '"date": "{}"'.format(now)
+        with patch.object(SaltEvent, "get_event", return_value=event_returns):
+            print_cli_mock = MagicMock()
+            with patch.object(salt.utils.stringutils, "print_cli", print_cli_mock):
+                found = False
+                state.event(count=1)
+                for x in print_cli_mock.mock_calls:
+                    if _expected in x.args[0]:
+                        found = True
+                assert found is True
 
 
 class TopFileMergingCase(TestCase, LoaderModuleMockMixin):
