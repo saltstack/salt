@@ -180,7 +180,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
                 # Get cask namespace
                 match = re.search(
                     r"^From: .*/(.+?)/homebrew-(.+?)/.*$",
-                    _call_brew("cask", "info", pkg_name)["stdout"],
+                    _call_brew("info", "--cask", pkg_name)["stdout"],
                     re.MULTILINE,
                 )
                 if match:
