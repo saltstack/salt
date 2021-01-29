@@ -17,7 +17,6 @@ import salt.client.ssh.state
 import salt.client.ssh.wrapper.state
 import salt.defaults.exitcodes
 import salt.exceptions
-import salt.ext.six as six
 import salt.utils.args
 
 __func_alias__ = {"apply_": "apply"}
