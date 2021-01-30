@@ -1,7 +1,6 @@
 import pytest
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
-    destructiveTest,
     random_string,
     requires_system_grains,
     runs_on,
@@ -10,9 +9,9 @@ from tests.support.helpers import (
 )
 
 
-@destructiveTest
 @skip_if_not_root
 @runs_on(kernel="Linux")
+@pytest.mark.destructive_test
 class UseraddModuleTestLinux(ModuleCase):
     @requires_system_grains
     @slowTest
@@ -81,10 +80,10 @@ class UseraddModuleTestLinux(ModuleCase):
             raise
 
 
-@destructiveTest
 @skip_if_not_root
 @runs_on(kernel="Windows")
 @pytest.mark.windows_whitelisted
+@pytest.mark.destructive_test
 class UseraddModuleTestWindows(ModuleCase):
     def setUp(self):
         self.user_name = random_string("RS-", lowercase=False)

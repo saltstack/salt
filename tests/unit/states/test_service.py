@@ -2,11 +2,12 @@
     :codeauthor: Rahul Handay <rahulha@saltstack.com>
 """
 
+import pytest
 import salt.config
 import salt.loader
 import salt.states.service as service
 import salt.utils.platform
-from tests.support.helpers import destructiveTest, slowTest
+from tests.support.helpers import slowTest
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
@@ -508,8 +509,8 @@ class ServiceTestCase(TestCase, LoaderModuleMockMixin):
             self.assertDictEqual(service.mod_watch("salt", "stack"), ret[1])
 
 
-@destructiveTest
 @skipIf(salt.utils.platform.is_darwin(), "service.running is currently failing on OSX")
+@pytest.mark.destructive_test
 class ServiceTestCaseFunctional(TestCase, LoaderModuleMockMixin):
     """
         Validate the service state

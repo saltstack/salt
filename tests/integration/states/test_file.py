@@ -28,7 +28,6 @@ from tests.support.case import ModuleCase
 from tests.support.helpers import (
     Webserver,
     dedent,
-    destructiveTest,
     requires_system_grains,
     skip_if_not_root,
     with_system_user_and_group,
@@ -2846,7 +2845,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         os.remove(source)
         os.remove(dest)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @skip_if_not_root
     @skipIf(IS_WINDOWS, "Windows does not report any file modes. Skipping.")
     @with_tempfile()
@@ -5219,7 +5218,7 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
 WIN_TEST_FILE = "c:/testfile"
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 @skipIf(not IS_WINDOWS, "windows test only")
 @pytest.mark.windows_whitelisted
 class WinFileTest(ModuleCase):

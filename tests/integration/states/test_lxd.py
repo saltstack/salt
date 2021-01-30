@@ -2,9 +2,10 @@
 Integration tests for the lxd states
 """
 
+import pytest
 import salt.utils.path
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, flaky
+from tests.support.helpers import flaky
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.unit import skipIf
 
@@ -16,10 +17,10 @@ except ImportError:
     HAS_PYLXD = False
 
 
-@destructiveTest
 @skipIf(not salt.utils.path.which("lxd"), "LXD not installed")
 @skipIf(not salt.utils.path.which("lxc"), "LXC not installed")
 @skipIf(not HAS_PYLXD, "pylxd not installed")
+@pytest.mark.destructive_test
 class LxdTestCase(ModuleCase, SaltReturnAssertsMixin):
 
     run_once = False

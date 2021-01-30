@@ -7,7 +7,6 @@ import salt.utils.pkg
 import salt.utils.platform
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
-    destructiveTest,
     requires_network,
     requires_salt_modules,
     requires_salt_states,
@@ -76,7 +75,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(self.run_function(func, eq), 0)
         self.assertEqual(self.run_function(func, gt), 1)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @requires_salt_modules("pkg.mod_repo", "pkg.del_repo", "pkg.get_repo")
     @requires_network()
     @requires_system_grains
@@ -213,7 +212,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_function(func, ["/usr/local/bin/salt-call"])
         self.assertNotEqual(len(ret), 0)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @requires_salt_modules("pkg.version", "pkg.install", "pkg.remove")
     @requires_network()
     @slowTest
@@ -241,7 +240,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
             test_install()
             test_remove()
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @requires_salt_modules(
         "pkg.hold",
         "pkg.unhold",
@@ -296,7 +295,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
                 ret = self.run_state("pkg.removed", name=versionlock_pkg)
                 self.assertSaltTrueReturn(ret)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @requires_salt_modules("pkg.refresh_db")
     @requires_network()
     @requires_system_grains
@@ -360,7 +359,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertIn(self.pkg, keys)
 
     @skipIf(True, "Temporary Skip - Causes centos 8 test to fail")
-    @destructiveTest
+    @pytest.mark.destructive_test
     @requires_network()
     @requires_salt_modules(
         "pkg.refresh_db",
@@ -440,7 +439,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
                 ret = self.run_function(func, args)
                 self.assertNotEqual(ret, {})
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @skipIf(
         salt.utils.platform.is_darwin(),
         "The jenkins user is equivalent to root on mac, causing the test to be unrunnable",

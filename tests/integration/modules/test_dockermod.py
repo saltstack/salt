@@ -6,9 +6,10 @@ import random
 import string
 import sys
 
+import pytest
 import salt.utils.path
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, slowTest
+from tests.support.helpers import slowTest
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.unit import skipIf
 
@@ -20,8 +21,8 @@ def _random_name(prefix=""):
     return ret
 
 
-@destructiveTest
 @skipIf(not salt.utils.path.which("dockerd"), "Docker not installed")
+@pytest.mark.destructive_test
 class DockerCallTestCase(ModuleCase, SaltReturnAssertsMixin):
     """
     Test docker_container states

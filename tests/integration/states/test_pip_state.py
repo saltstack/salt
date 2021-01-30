@@ -25,7 +25,6 @@ from salt.exceptions import CommandExecutionError
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
-    destructiveTest,
     patched_environ,
     requires_system_grains,
     skip_if_not_root,
@@ -322,7 +321,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
                     "the --mirrors arg has been deprecated and removed in pip==7.0.0"
                 )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @skip_if_not_root
     @with_system_user(
         "issue-6912", on_existing="delete", delete=True, password="PassWord1!"
@@ -383,7 +382,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
                 elif salt.utils.platform.is_windows():
                     self.assertEqual(salt.utils.win_dacl.get_owner(path), username)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @skip_if_not_root
     @skipIf(salt.utils.platform.is_darwin(), "Test is flaky on macosx")
     @with_system_user(
@@ -452,7 +451,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
                 elif salt.utils.platform.is_windows():
                     self.assertEqual(salt.utils.win_dacl.get_owner(path), username)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @slowTest
     def test_issue_6833_pip_upgrade_pip(self):
         # Create the testing virtualenv

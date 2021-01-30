@@ -2,9 +2,9 @@
 integration tests for mac_softwareupdate
 """
 
+import pytest
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
-    destructiveTest,
     runs_on,
     skip_if_binaries_missing,
     skip_if_not_root,
@@ -62,7 +62,7 @@ class MacSoftwareUpdateModuleTest(ModuleCase):
         # is the correct type, dict
         self.assertIsInstance(self.run_function("softwareupdate.list_available"), dict)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @slowTest
     def test_ignore(self):
         """
@@ -82,7 +82,7 @@ class MacSoftwareUpdateModuleTest(ModuleCase):
         self.assertIn("spongebob", self.run_function("softwareupdate.list_ignored"))
         self.assertIn("squidward", self.run_function("softwareupdate.list_ignored"))
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @slowTest
     def test_schedule(self):
         """
@@ -97,7 +97,7 @@ class MacSoftwareUpdateModuleTest(ModuleCase):
         self.assertTrue(self.run_function("softwareupdate.schedule_enable", [False]))
         self.assertFalse(self.run_function("softwareupdate.schedule_enabled"))
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @slowTest
     def test_update(self):
         """
@@ -130,7 +130,7 @@ class MacSoftwareUpdateModuleTest(ModuleCase):
         """
         self.assertIsInstance(self.run_function("softwareupdate.list_downloads"), list)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @slowTest
     def test_download(self):
         """
@@ -145,7 +145,7 @@ class MacSoftwareUpdateModuleTest(ModuleCase):
             self.run_function("softwareupdate.download", ["spongebob"]),
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @slowTest
     def test_download_all(self):
         """
@@ -153,7 +153,7 @@ class MacSoftwareUpdateModuleTest(ModuleCase):
         """
         self.assertIsInstance(self.run_function("softwareupdate.download_all"), list)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @slowTest
     def test_get_set_reset_catalog(self):
         """

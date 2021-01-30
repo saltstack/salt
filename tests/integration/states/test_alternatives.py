@@ -4,8 +4,9 @@ Integration tests for the alternatives state module
 
 import os
 
+import pytest
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, slowTest
+from tests.support.helpers import slowTest
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
@@ -17,7 +18,7 @@ if not os.path.exists("/etc/alternatives"):
 
 @skipIf(NO_ALTERNATIVES, "/etc/alternatives does not exist on the system")
 class AlterantivesStateTest(ModuleCase, SaltReturnAssertsMixin):
-    @destructiveTest
+    @pytest.mark.destructive_test
     @slowTest
     def test_install_set_and_remove(self):
         ret = self.run_state(

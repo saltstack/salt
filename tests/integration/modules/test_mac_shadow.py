@@ -4,9 +4,9 @@ integration tests for mac_shadow
 
 import datetime
 
+import pytest
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
-    destructiveTest,
     random_string,
     runs_on,
     skip_if_binaries_missing,
@@ -51,7 +51,7 @@ class MacShadowModuleTest(ModuleCase):
         ret = self.run_function("shadow.info", [NO_USER])
         self.assertEqual(ret["name"], "")
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @slowTest
     def test_get_account_created(self):
         """
@@ -69,7 +69,7 @@ class MacShadowModuleTest(ModuleCase):
             "ERROR: User not found: {}".format(NO_USER),
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @slowTest
     def test_get_last_change(self):
         """
@@ -87,7 +87,7 @@ class MacShadowModuleTest(ModuleCase):
             "ERROR: User not found: {}".format(NO_USER),
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @slowTest
     def test_get_login_failed_last(self):
         """
@@ -105,7 +105,7 @@ class MacShadowModuleTest(ModuleCase):
             "ERROR: User not found: {}".format(NO_USER),
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @slowTest
     def test_get_login_failed_count(self):
         """
@@ -122,7 +122,7 @@ class MacShadowModuleTest(ModuleCase):
             "ERROR: User not found: {}".format(NO_USER),
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @slowTest
     def test_get_set_maxdays(self):
         """
@@ -143,7 +143,7 @@ class MacShadowModuleTest(ModuleCase):
             "ERROR: User not found: {}".format(NO_USER),
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @slowTest
     def test_get_set_change(self):
         """
@@ -168,7 +168,7 @@ class MacShadowModuleTest(ModuleCase):
             "ERROR: User not found: {}".format(NO_USER),
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @slowTest
     def test_get_set_expire(self):
         """
@@ -193,7 +193,7 @@ class MacShadowModuleTest(ModuleCase):
             "ERROR: User not found: {}".format(NO_USER),
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @slowTest
     def test_del_password(self):
         """
@@ -209,7 +209,7 @@ class MacShadowModuleTest(ModuleCase):
             "ERROR: User not found: {}".format(NO_USER),
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @slowTest
     def test_set_password(self):
         """

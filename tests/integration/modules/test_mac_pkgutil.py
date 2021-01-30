@@ -4,9 +4,9 @@ integration tests for mac_pkgutil
 
 import os
 
+import pytest
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
-    destructiveTest,
     requires_system_grains,
     runs_on,
     skip_if_binaries_missing,
@@ -71,7 +71,7 @@ class MacPkgutilModuleTest(ModuleCase):
         # Test Package is not installed
         self.assertFalse(self.run_function("pkgutil.is_installed", ["spongebob"]))
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @slowTest
     def test_install_forget(self):
         """

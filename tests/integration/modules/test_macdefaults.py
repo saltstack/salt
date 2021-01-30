@@ -1,16 +1,16 @@
 """
 Validate the mac-defaults module
 """
-
+import pytest
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, runs_on, skip_if_not_root
+from tests.support.helpers import runs_on, skip_if_not_root
 
 DEFAULT_DOMAIN = "com.apple.AppleMultitouchMouse"
 DEFAULT_KEY = "MouseHorizontalScroll"
 DEFAULT_VALUE = "0"
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 @skip_if_not_root
 @runs_on(kernel="Darwin")
 class MacDefaultsModuleTest(ModuleCase):

@@ -4,20 +4,16 @@ Test the ssh_auth states
 
 import os
 
+import pytest
 import salt.utils.files
 from tests.support.case import ModuleCase
-from tests.support.helpers import (
-    destructiveTest,
-    skip_if_not_root,
-    slowTest,
-    with_system_user,
-)
+from tests.support.helpers import skip_if_not_root, slowTest, with_system_user
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
 
 
 class SSHAuthStateTests(ModuleCase, SaltReturnAssertsMixin):
-    @destructiveTest
+    @pytest.mark.destructive_test
     @skip_if_not_root
     @with_system_user("issue_7409", on_existing="delete", delete=True)
     @slowTest
@@ -53,7 +49,7 @@ class SSHAuthStateTests(ModuleCase, SaltReturnAssertsMixin):
                 "ssh-rsa AAAAB3NzaC1kcQ9J5bYTEyZ== {}\n".format(username),
             )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @skip_if_not_root
     @with_system_user("issue_10198", on_existing="delete", delete=True)
     @slowTest
