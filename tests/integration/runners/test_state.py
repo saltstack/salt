@@ -21,7 +21,7 @@ import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.yaml
 from tests.support.case import ShellCase
-from tests.support.helpers import expensiveTest, flaky, slowTest
+from tests.support.helpers import flaky, slowTest
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
@@ -382,7 +382,7 @@ class OrchEventTest(ShellCase):
         self.conf.write(salt.utils.yaml.safe_dump(data, default_flow_style=False))
         self.conf.flush()
 
-    @expensiveTest
+    @slowTest
     def test_jid_in_ret_event(self):
         """
         Test to confirm that the ret event for the orchestration contains the
@@ -461,7 +461,7 @@ class OrchEventTest(ShellCase):
             finally:
                 signal.alarm(0)
 
-    @expensiveTest
+    @slowTest
     def test_parallel_orchestrations(self):
         """
         Test to confirm that the parallel state requisite works in orch
@@ -542,7 +542,7 @@ class OrchEventTest(ShellCase):
                 self.assertTrue(received)
                 signal.alarm(0)
 
-    @expensiveTest
+    @slowTest
     def test_orchestration_soft_kill(self):
         """
         Test to confirm that the parallel state requisite works in orch
