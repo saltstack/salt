@@ -2,10 +2,10 @@
     :codeauthor: Nicole Thomas <nicole@saltstack.com>
 """
 
+import pytest
 from salt.exceptions import CommandExecutionError
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
-    destructiveTest,
     runs_on,
     skip_if_binaries_missing,
     skip_if_not_root,
@@ -18,10 +18,10 @@ ADD_PKG = "algol68g"
 DEL_PKG = "acme"
 
 
-@destructiveTest
 @skip_if_not_root
 @skip_if_binaries_missing("brew")
 @runs_on(kernel="Darwin")
+@pytest.mark.destructive_test
 class BrewModuleTest(ModuleCase):
     """
     Integration tests for the brew module

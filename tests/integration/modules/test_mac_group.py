@@ -2,15 +2,10 @@
     :codeauthor: Nicole Thomas <nicole@saltstack.com>
 """
 
+import pytest
 from salt.exceptions import CommandExecutionError
 from tests.support.case import ModuleCase
-from tests.support.helpers import (
-    destructiveTest,
-    random_string,
-    runs_on,
-    skip_if_not_root,
-    slowTest,
-)
+from tests.support.helpers import random_string, runs_on, skip_if_not_root, slowTest
 
 # Create group name strings for tests
 ADD_GROUP = random_string("RS-", lowercase=False)
@@ -20,9 +15,9 @@ ADD_USER = random_string("RS-", lowercase=False)
 REP_USER_GROUP = random_string("RS-", lowercase=False)
 
 
-@destructiveTest
 @skip_if_not_root
 @runs_on(kernel="Darwin")
+@pytest.mark.destructive_test
 class MacGroupModuleTest(ModuleCase):
     """
     Integration tests for the mac_group module

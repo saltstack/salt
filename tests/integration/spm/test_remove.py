@@ -7,11 +7,11 @@ import shutil
 
 import pytest
 from tests.support.case import SPMCase
-from tests.support.helpers import destructiveTest, slowTest
+from tests.support.helpers import slowTest
 
 
-@destructiveTest
 @pytest.mark.windows_whitelisted
+@pytest.mark.destructive_test
 class SPMRemoveTest(SPMCase):
     """
     Validate the spm remove command

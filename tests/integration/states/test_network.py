@@ -5,12 +5,13 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
 
+import pytest
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, slowTest
+from tests.support.helpers import slowTest
 from tests.support.mixins import SaltReturnAssertsMixin
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 class NetworkTest(ModuleCase, SaltReturnAssertsMixin):
     """
     Validate network state module
