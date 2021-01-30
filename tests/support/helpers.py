@@ -10,6 +10,7 @@
 """
 
 import base64
+import builtins
 import errno
 import fnmatch
 import functools
@@ -37,8 +38,6 @@ import salt.utils.platform
 import salt.utils.pycrypto
 import salt.utils.stringutils
 import salt.utils.versions
-from salt.ext import six
-from salt.ext.six.moves import builtins
 from saltfactories.exceptions import FactoryFailure as ProcessFailed
 from saltfactories.utils.ports import get_unused_localhost_port
 from saltfactories.utils.processes import ProcessResult
@@ -224,7 +223,7 @@ def flaky(caller=None, condition=True, attempts=4):
             except Exception as exc:  # pylint: disable=broad-except
                 exc_info = sys.exc_info()
                 if isinstance(exc, SkipTest):
-                    six.reraise(*exc_info)
+                    raise exc_info[0].with_traceback(exc_info[1], exc_info[2])
                 if not isinstance(exc, AssertionError) and log.isEnabledFor(
                     logging.DEBUG
                 ):
@@ -232,7 +231,7 @@ def flaky(caller=None, condition=True, attempts=4):
                 if attempt >= attempts - 1:
                     # We won't try to run tearDown once the attempts are exhausted
                     # because the regular test runner will do that for us
-                    six.reraise(*exc_info)
+                    raise exc_info[0].with_traceback(exc_info[1], exc_info[2])
                 # Run through tearDown again
                 teardown = getattr(cls, "tearDown", None)
                 if callable(teardown):
@@ -479,12 +478,6 @@ class ForceImportErrorOn:
     def __fake_import__(
         self, name, globals_=None, locals_=None, fromlist=None, level=None
     ):
-        if six.PY2:
-            if globals_ is None:
-                globals_ = {}
-            if locals_ is None:
-                locals_ = {}
-
         if level is None:
             level = 0
         if fromlist is None:
