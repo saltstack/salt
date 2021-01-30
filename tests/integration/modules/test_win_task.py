@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import, unicode_literals
-
 import salt.modules.win_task as task
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError
