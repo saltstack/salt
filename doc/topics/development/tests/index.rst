@@ -35,11 +35,25 @@ python3 you would need to specify the zeromq transport and python3.
 
     nox -e 'pytest-zeromq-3(coverage=False)'
 
+As a contrast, when using the deprecated ``runtests.py`` test runner, the
+command would be:
+
+.. code-block:: bash
+
+    nox -e 'runtests-zeromq-3(coverage=False)'
+
 To run all the tests but on the tcp transport, you would need to specify the tcp session.
 
 .. code-block:: bash
 
     nox -e 'pytest-tcp-3(coverage=False)'
+
+As a contrast, when using the deprecated ``runtests.py`` test runner, the
+command would be:
+
+.. code-block:: bash
+
+    nox -e 'runtests-tcp-3(coverage=False)'
 
 You can view all available sessions by running:
 
@@ -177,13 +191,25 @@ Running Test Subsections
 Instead of running the entire test suite all at once, which can take a long time,
 there are several ways to run only specific groups of tests or individual tests:
 
-* Run :ref:`unit tests only<running-unit-tests-no-daemons>`: ``nox -e 'pytest-zeromq-3(coverage=False)' -- tests/unit/``
-* Run unit and integration tests for states: ``nox -e 'pytest-zeromq-3(coverage=False)' -- tests/unit/states/ tests/integration/states/``
-* Run integration tests for an individual module: ``nox -e 'pytest-zeromq-3(coverage=False)' -- tests/integration/modules/test_virt.py``
-* Run unit tests for an individual module: ``nox -e 'pytest-zeromq-3(coverage=False)' -- tests/unit/modules/test_virt.py``
+* Run :ref:`unit tests only<running-unit-tests-no-daemons>`: ``nox -e
+  'pytest-zeromq-3(coverage=False)' -- tests/unit/``, using the deprecated ``runtests.py`` the command would be ``nox -e
+  'runtests-zeromq-3(coverage=False)' -- --unit-tests``
+* Run unit and integration tests for states: ``nox -e
+  'pytest-zeromq-3(coverage=False)' -- tests/unit/states/ tests/integration/states/``, using the deprecated
+  ``runtests.py`` the command would be ``nox -e 'runtests-zeromq-3(coverage=False)' -- --state-tests``
+* Run integration tests for an individual module: ``nox -e 'pytest-zeromq-3(coverage=False)' --
+  tests/integration/modules/test_virt.py``, using the deprecated ``runtests.py`` the command would be ``nox -e
+  'runtests-zeromq-3(coverage=False)' -- -n integration.modules.test_virt``
+* Run unit tests for an individual module: ``nox -e 'pytest-zeromq-3(coverage=False)' --
+  tests/unit/modules/test_virt.py``, using the deprecated ``runtests.py`` the command would be ``nox -e
+  'runtests-zeromq-3(coverage=False)' -- -n unit.modules.test_virt``
 * Run an individual test by using the class and test name (this example is for the
   ``test_default_kvm_profile`` test in the ``tests/integration/module/test_virt.py``):
-  ``nox -e 'pytest-zeromq-3(coverage=False)' -- tests/integration/modules/test_virt.py::VirtTest::test_default_kvm_profile``
+  ``nox -e 'pytest-zeromq-3(coverage=False)' --
+  tests/integration/modules/test_virt.py::VirtTest::test_default_kvm_profile``, using the deprecated ``runtests.py`` the
+  command would be ``nox -e 'runtests-zeromq-3(coverage=False)' -- -n
+  integration.modules.test_virt.VirtTest.test_default_kvm_profile``
+
 
 For more specific examples of how to run various test subsections or individual
 tests, please see the `pytest`_ documentation on how to run specific tests or
@@ -206,6 +232,13 @@ integration test daemons, simply add the unit directory as an argument:
 .. code-block:: bash
 
     nox -e 'pytest-zeromq-3(coverage=False)' -- tests/unit/
+
+As a contrast, when using the deprecated ``runtests.py`` test runner, the
+command would be:
+
+.. code-block:: bash
+
+    nox -e 'runtests-zeromq-3(coverage=False)' -- --unit-tests
 
 All of the other options to run individual tests, entire classes of tests, or
 entire test modules still apply.
@@ -237,6 +270,13 @@ To run tests marked as destructive, set the ``--run-destructive`` flag:
 .. code-block:: bash
 
     nox -e 'pytest-zeromq-3(coverage=False)' -- --run-destructive
+
+As a contrast, when using the deprecated ``runtests.py`` test runner, the
+command would be:
+
+.. code-block:: bash
+
+    nox -e 'runtests-zeromq-3(coverage=False)' -- --run-destuctive
 
 
 Running Cloud Provider Tests
@@ -284,6 +324,13 @@ cloud provider tests can be run by setting the ``--cloud-provider-tests`` flag:
 .. code-block:: bash
 
     nox -e 'pytest-cloud-3(coverage=False)'
+
+As a contrast, when using the deprecated ``runtests.py`` test runner, the
+command would be:
+
+.. code-block:: bash
+
+    nox -e 'runtests-cloud-3(coverage=False)'
 
 Automated Test Runs
 ===================
