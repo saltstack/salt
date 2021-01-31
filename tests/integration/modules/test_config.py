@@ -1,9 +1,6 @@
-# -*- coding: utf-8 -*-
-
 """
 Validate the config system
 """
-from __future__ import absolute_import
 
 import pytest
 from tests.support.case import ModuleCase
