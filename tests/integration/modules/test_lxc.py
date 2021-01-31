@@ -4,7 +4,6 @@ Test the lxc module
 
 import pytest
 from tests.support.case import ModuleCase
-from tests.support.helpers import skip_if_binaries_missing
 from tests.support.unit import skipIf
 
 
@@ -13,11 +12,11 @@ from tests.support.unit import skipIf
     "Needs rewrite to be more distro agnostic. Also, the tearDown "
     "function destroys ALL containers on the box, which is BAD.",
 )
-@skip_if_binaries_missing(
-    "lxc-start", message="LXC is not installed or minimal version not met"
-)
 @pytest.mark.windows_whitelisted
 @pytest.mark.skip_if_not_root
+@pytest.mark.skip_if_binaries_missing(
+    "lxc-start", message="LXC is not installed or minimal version not met"
+)
 class LXCModuleTest(ModuleCase):
     """
     Test the lxc module
