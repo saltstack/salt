@@ -7,7 +7,6 @@ import pytest
 import salt.loader
 import salt.utils.platform
 from tests.support.case import ModuleCase
-from tests.support.helpers import slowTest
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf
 
@@ -61,7 +60,7 @@ class TestGrainsReg(ModuleCase, LoaderModuleMockMixin):
         return {salt.modules.reg: {"__opts__": opts, "__utils__": utils}}
 
     @skipIf(not salt.utils.platform.is_windows(), "Only run on Windows")
-    @slowTest
+    @pytest.mark.slow_test
     def test_win_cpu_model(self):
         """
         test grains['cpu_model']

@@ -5,10 +5,11 @@ tests.integration.states.match
 
 import os
 
+import pytest
 import salt.utils.files
 import salt.utils.stringutils
 from tests.support.case import ModuleCase
-from tests.support.helpers import skip_if_not_root, slowTest
+from tests.support.helpers import skip_if_not_root
 from tests.support.runtests import RUNTIME_VARS
 
 
@@ -18,7 +19,7 @@ class StateMatchTest(ModuleCase):
     """
 
     @skip_if_not_root
-    @slowTest
+    @pytest.mark.slow_test
     def test_issue_2167_ipcidr_no_AttributeError(self):
         subnets = self.run_function("network.subnets")
         self.assertTrue(len(subnets) > 0)

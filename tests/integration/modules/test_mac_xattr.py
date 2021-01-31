@@ -4,8 +4,9 @@ integration tests for mac_xattr
 
 import os
 
+import pytest
 from tests.support.case import ModuleCase
-from tests.support.helpers import runs_on, skip_if_binaries_missing, slowTest
+from tests.support.helpers import runs_on, skip_if_binaries_missing
 from tests.support.runtests import RUNTIME_VARS
 
 
@@ -34,7 +35,7 @@ class MacXattrModuleTest(ModuleCase):
         if os.path.exists(self.test_file):
             os.remove(self.test_file)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_list_no_xattr(self):
         """
         Make sure there are no attributes
@@ -51,7 +52,7 @@ class MacXattrModuleTest(ModuleCase):
             "ERROR: File not found: {}".format(self.no_file),
         )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_write(self):
         """
         Write an attribute
@@ -84,7 +85,7 @@ class MacXattrModuleTest(ModuleCase):
             "ERROR: File not found: {}".format(self.no_file),
         )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_read(self):
         """
         Test xattr.read
@@ -117,7 +118,7 @@ class MacXattrModuleTest(ModuleCase):
             "ERROR: Attribute not found: patrick",
         )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_delete(self):
         """
         Test xattr.delete
@@ -161,7 +162,7 @@ class MacXattrModuleTest(ModuleCase):
             "ERROR: Attribute not found: patrick",
         )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_clear(self):
         """
         Test xattr.clear

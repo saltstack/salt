@@ -9,7 +9,6 @@ from tests.support.helpers import (
     runs_on,
     skip_if_binaries_missing,
     skip_if_not_root,
-    slowTest,
 )
 
 
@@ -40,7 +39,7 @@ class MacPowerModuleTest(ModuleCase):
         self.run_function("power.set_harddisk_sleep", [self.HARD_DISK_SLEEP])
 
     @pytest.mark.destructive_test
-    @slowTest
+    @pytest.mark.slow_test
     def test_computer_sleep(self):
         """
         Test power.get_computer_sleep
@@ -74,7 +73,7 @@ class MacPowerModuleTest(ModuleCase):
         )
 
     @pytest.mark.destructive_test
-    @slowTest
+    @pytest.mark.slow_test
     def test_display_sleep(self):
         """
         Test power.get_display_sleep
@@ -108,7 +107,7 @@ class MacPowerModuleTest(ModuleCase):
         )
 
     @pytest.mark.destructive_test
-    @slowTest
+    @pytest.mark.slow_test
     def test_harddisk_sleep(self):
         """
         Test power.get_harddisk_sleep
@@ -141,7 +140,7 @@ class MacPowerModuleTest(ModuleCase):
             self.run_function("power.set_harddisk_sleep", [True]),
         )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_restart_freeze(self):
         """
         Test power.get_restart_freeze
@@ -186,7 +185,7 @@ class MacPowerModuleTestSleepOnPowerButton(ModuleCase):
         if self.SLEEP_ON_BUTTON is not None:
             self.run_function("power.set_sleep_on_power_button", [self.SLEEP_ON_BUTTON])
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_sleep_on_power_button(self):
         """
         Test power.get_sleep_on_power_button

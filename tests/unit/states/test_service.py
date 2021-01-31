@@ -7,7 +7,6 @@ import salt.config
 import salt.loader
 import salt.states.service as service
 import salt.utils.platform
-from tests.support.helpers import slowTest
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
@@ -565,7 +564,7 @@ class ServiceTestCaseFunctional(TestCase, LoaderModuleMockMixin):
         if self.post_srv_disable:
             self.modules["service.disable"](self.service_name)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_running_with_reload(self):
         with patch.dict(service.__opts__, {"test": False}):
             service.dead(self.service_name, enable=False)

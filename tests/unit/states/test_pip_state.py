@@ -8,11 +8,12 @@ import os
 import subprocess
 import sys
 
+import pytest
 import salt.states.pip_state as pip_state
 import salt.utils.path
 import salt.version
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
-from tests.support.helpers import VirtualEnv, dedent, requires_network, slowTest
+from tests.support.helpers import VirtualEnv, dedent, requires_network
 from tests.support.mixins import LoaderModuleMockMixin, SaltReturnAssertsMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
@@ -409,7 +410,7 @@ class PipStateUtilsTest(TestCase):
 )
 @requires_network()
 class PipStateInstallationErrorTest(TestCase):
-    @slowTest
+    @pytest.mark.slow_test
     def test_importable_installation_error(self):
         extra_requirements = []
         for name, version in salt.version.dependency_information():

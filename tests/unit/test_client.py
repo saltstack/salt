@@ -2,6 +2,7 @@
     :codeauthor: Mike Place <mp@saltstack.com>
 """
 
+import pytest
 import salt.utils.platform
 from salt import client
 from salt.exceptions import (
@@ -10,7 +11,6 @@ from salt.exceptions import (
     SaltInvocationError,
     SaltReqTimeoutError,
 )
-from tests.support.helpers import slowTest
 from tests.support.mixins import SaltClientTestCaseMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
@@ -203,7 +203,7 @@ class LocalClientTestCase(TestCase, SaltClientTestCaseMixin):
                 )
 
     @skipIf(not salt.utils.platform.is_windows(), "Windows only test")
-    @slowTest
+    @pytest.mark.slow_test
     def test_pub_win32(self):
         """
         Tests that the client raises a timeout error when using ZeroMQ's TCP

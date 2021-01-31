@@ -5,7 +5,6 @@ Integration tests for the docker swarm modules
 import pytest
 import salt.utils.path
 from tests.support.case import ModuleCase
-from tests.support.helpers import slowTest
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.unit import skipIf
 
@@ -20,7 +19,7 @@ class SwarmCallTestCase(ModuleCase, SaltReturnAssertsMixin):
     Test docker swarm states
     """
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_swarm_init(self):
         """
         check that swarm.swarm_init works when a swarm exists
