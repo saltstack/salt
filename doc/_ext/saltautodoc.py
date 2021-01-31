@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
@@ -9,8 +8,7 @@
     Properly handle ``__func_alias__``
 """
 
-# Import Sphinx libs
-from sphinx.ext.autodoc import FunctionDocumenter as FunctionDocumenter
+from sphinx.ext.autodoc import FunctionDocumenter
 
 
 class SaltFunctionDocumenter(FunctionDocumenter):

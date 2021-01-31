@@ -6027,9 +6027,9 @@ def _processValueItem(
             element_valuenames = []
             element_values = this_element_value
             if this_element_value is not None:
-                element_valuenames = list(
-                    [str(z) for z in range(1, len(this_element_value) + 1)]
-                )
+                element_valuenames = [
+                    str(z) for z in range(1, len(this_element_value) + 1)
+                ]
             if "additive" in element.attrib:
                 if element.attrib["additive"].lower() == "false":
                     # a delete values will be added before all the other

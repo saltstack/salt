@@ -169,7 +169,7 @@ _CREATE_OPTIONS_REQUIRED = {
 _ADD_OPTIONS = {
     "bitmap:ip": {"timeout", "packets", "bytes", "skbmark", "skbprio", "skbqueue"},
     "bitmap:ip,mac": {"timeout", "packets", "bytes", "skbmark", "skbprio", "skbqueue"},
-    "bitmap:port": {"timeout", "packets", "bytes", "skbmark", "skbprio", "skbprio"},
+    "bitmap:port": {"timeout", "packets", "bytes", "skbmark", "skbprio"},
     "hash:ip": {"timeout", "packets", "bytes", "skbmark", "skbprio", "skbqueue"},
     "hash:mac": {"timeout", "packets", "bytes", "skbmark", "skbprio", "skbqueue"},
     "hash:net": {
