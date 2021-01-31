@@ -1,9 +1,6 @@
-# -*- coding: utf-8 -*-
-
 """
 Test the ssh module
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import shutil
@@ -48,7 +45,7 @@ class SSHModuleTest(ModuleCase):
         """
         if not check_status():
             self.skipTest("External source, github.com is down")
-        super(SSHModuleTest, self).setUp()
+        super().setUp()
         if not os.path.isdir(self.subsalt_dir):
             os.makedirs(self.subsalt_dir)
 
@@ -62,7 +59,7 @@ class SSHModuleTest(ModuleCase):
         """
         if os.path.isdir(self.subsalt_dir):
             shutil.rmtree(self.subsalt_dir)
-        super(SSHModuleTest, self).tearDown()
+        super().tearDown()
         del self.key
 
     @slowTest
@@ -89,7 +86,7 @@ class SSHModuleTest(ModuleCase):
             self.assertEqual(key_data["fingerprint"], GITHUB_FINGERPRINT)
         except AssertionError as exc:
             raise AssertionError(
-                "AssertionError: {0}. Function returned: {1}".format(exc, ret)
+                "AssertionError: {}. Function returned: {}".format(exc, ret)
             )
 
     @slowTest
@@ -128,7 +125,7 @@ class SSHModuleTest(ModuleCase):
             self.assertEqual(ret["fingerprint"], GITHUB_FINGERPRINT)
         except AssertionError as exc:
             raise AssertionError(
-                "AssertionError: {0}. Function returned: {1}".format(exc, ret)
+                "AssertionError: {}. Function returned: {}".format(exc, ret)
             )
 
     @slowTest
@@ -144,7 +141,7 @@ class SSHModuleTest(ModuleCase):
             self.assertEqual(ret[0]["fingerprint"], GITHUB_FINGERPRINT)
         except AssertionError as exc:
             raise AssertionError(
-                "AssertionError: {0}. Function returned: {1}".format(exc, ret)
+                "AssertionError: {}. Function returned: {}".format(exc, ret)
             )
 
     @slowTest
@@ -231,7 +228,7 @@ class SSHModuleTest(ModuleCase):
             self.assertEqual(ret["new"][0]["fingerprint"], GITHUB_FINGERPRINT)
         except AssertionError as exc:
             raise AssertionError(
-                "AssertionError: {0}. Function returned: {1}".format(exc, ret)
+                "AssertionError: {}. Function returned: {}".format(exc, ret)
             )
         # check that item does exist
         ret = self.run_function(
@@ -243,7 +240,7 @@ class SSHModuleTest(ModuleCase):
             self.assertEqual(ret["fingerprint"], GITHUB_FINGERPRINT)
         except AssertionError as exc:
             raise AssertionError(
-                "AssertionError: {0}. Function returned: {1}".format(exc, ret)
+                "AssertionError: {}. Function returned: {}".format(exc, ret)
             )
         # add the same item once again
         ret = self.run_function(
@@ -253,5 +250,5 @@ class SSHModuleTest(ModuleCase):
             self.assertEqual(ret["status"], "exists")
         except AssertionError as exc:
             raise AssertionError(
-                "AssertionError: {0}. Function returned: {1}".format(exc, ret)
+                "AssertionError: {}. Function returned: {}".format(exc, ret)
             )
