@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import random
 import string
@@ -8,7 +5,6 @@ import string
 import salt.config
 import salt.loader
 import salt.states.boto_cognitoidentity as boto_cognitoidentity
-from salt.ext.six.moves import range
 from salt.utils.versions import LooseVersion
 from tests.support.helpers import slowTest
 from tests.support.mixins import LoaderModuleMockMixin
@@ -20,7 +16,6 @@ from tests.unit.modules.test_boto_cognitoidentity import (
     BotoCognitoIdentityTestCaseMixin,
 )
 
-# Import 3rd-party libs
 try:
     import boto3
     from botocore.exceptions import ClientError
@@ -208,7 +203,7 @@ class BotoCognitoIdentityStateTestCaseBase(TestCase, LoaderModuleMockMixin):
 @skipIf(
     _has_required_boto() is False,
     "The boto3 module must be greater than"
-    " or equal to version {0}".format(required_boto3_version),
+    " or equal to version {}".format(required_boto3_version),
 )
 class BotoCognitoIdentityTestCase(
     BotoCognitoIdentityStateTestCaseBase, BotoCognitoIdentityTestCaseMixin
@@ -261,7 +256,7 @@ class BotoCognitoIdentityTestCase(
         )
         self.assertEqual(result.get("result"), False)
         self.assertIn(
-            "{0}".format([first_pool_ret, third_pool_ret]), result.get("comment", "")
+            "{}".format([first_pool_ret, third_pool_ret]), result.get("comment", "")
         )
 
     def test_present_when_failing_to_create_a_new_identity_pool(self):
@@ -525,7 +520,7 @@ class BotoCognitoIdentityTestCase(
         self.assertEqual(result.get("result"), False)
         self.assertEqual(result["changes"], {})
         self.assertTrue(
-            "{0}".format([first_pool_ret, third_pool_ret]) in result.get("comment", "")
+            "{}".format([first_pool_ret, third_pool_ret]) in result.get("comment", "")
         )
 
     def test_absent_when_failing_to_describe_identity_pools(self):
@@ -582,8 +577,8 @@ class BotoCognitoIdentityTestCase(
         )
         self.assertEqual(result.get("result"), True)
         expected_changes = {
-            "new": {"Identity Pool Id {0}".format(second_pool_id): None},
-            "old": {"Identity Pool Id {0}".format(second_pool_id): second_pool_name},
+            "new": {"Identity Pool Id {}".format(second_pool_id): None},
+            "old": {"Identity Pool Id {}".format(second_pool_id): second_pool_name},
         }
         self.assertEqual(result["changes"], expected_changes)
 
@@ -608,12 +603,12 @@ class BotoCognitoIdentityTestCase(
         self.assertEqual(result.get("result"), True)
         expected_changes = {
             "new": {
-                "Identity Pool Id {0}".format(first_pool_id): None,
-                "Identity Pool Id {0}".format(third_pool_id): None,
+                "Identity Pool Id {}".format(first_pool_id): None,
+                "Identity Pool Id {}".format(third_pool_id): None,
             },
             "old": {
-                "Identity Pool Id {0}".format(first_pool_id): first_pool_name,
-                "Identity Pool Id {0}".format(third_pool_id): third_pool_name,
+                "Identity Pool Id {}".format(first_pool_id): first_pool_name,
+                "Identity Pool Id {}".format(third_pool_id): third_pool_name,
             },
         }
         self.assertEqual(result["changes"], expected_changes)
