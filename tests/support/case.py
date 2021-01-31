@@ -27,7 +27,7 @@ import pytest
 import salt.utils.files
 from saltfactories.utils.processes import terminate_process
 from tests.support.cli_scripts import ScriptPathMixin
-from tests.support.helpers import SKIP_IF_NOT_RUNNING_PYTEST, RedirectStdStreams
+from tests.support.helpers import RedirectStdStreams
 from tests.support.mixins import (  # pylint: disable=unused-import
     AdaptedConfigurationTestCaseMixin,
     SaltClientTestCaseMixin,
@@ -752,18 +752,13 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
         )
         orig = client.cmd(minion_tgt, function, arg, timeout=timeout, kwarg=kwargs)
 
-        if RUNTIME_VARS.PYTEST_SESSION:
-            fail_or_skip_func = self.fail
-        else:
-            fail_or_skip_func = self.skipTest
-
         if minion_tgt not in orig:
-            fail_or_skip_func(
+            self.fail(
                 "WARNING(SHOULD NOT HAPPEN #1935): Failed to get a reply "
                 "from the minion '{}'. Command output: {}".format(minion_tgt, orig)
             )
         elif orig[minion_tgt] is None and function not in known_to_return_none:
-            fail_or_skip_func(
+            self.fail(
                 "WARNING(SHOULD NOT HAPPEN #1935): Failed to get '{}' from "
                 "the minion '{}'. Command output: {}".format(function, minion_tgt, orig)
             )
@@ -829,19 +824,14 @@ class SyndicCase(TestCase, SaltClientTestCaseMixin):
         behavior of the raw function call
         """
         orig = self.client.cmd("minion", function, arg, timeout=timeout)
-        if RUNTIME_VARS.PYTEST_SESSION:
-            fail_or_skip_func = self.fail
-        else:
-            fail_or_skip_func = self.skipTest
         if "minion" not in orig:
-            fail_or_skip_func(
+            self.fail(
                 "WARNING(SHOULD NOT HAPPEN #1935): Failed to get a reply "
                 "from the minion. Command output: {}".format(orig)
             )
         return orig["minion"]
 
 
-@SKIP_IF_NOT_RUNNING_PYTEST
 @pytest.mark.requires_sshd_server
 class SSHCase(ShellCase):
     """
