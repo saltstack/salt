@@ -64,13 +64,13 @@ class SSHClient:
             try:
                 val = kind(kwargs[name])
             except ValueError:
-                log.warn("Unable to cast kwarg %s", name)
+                log.warning("Unable to cast kwarg %s", name)
                 continue
             if kind is bool or kind is int:
                 sane_kwargs[name] = val
             elif kind is str:
                 if val.find("ProxyCommand") != -1:
-                    log.warn("Filter unsafe value for kwarg %s", name)
+                    log.warning("Filter unsafe value for kwarg %s", name)
                     continue
                 sane_kwargs[name] = val
             elif kind is list:
@@ -78,7 +78,7 @@ class SSHClient:
                 for item in val:
                     # This assumes the values are strings
                     if item.find("ProxyCommand") != -1:
-                        log.warn("Filter unsafe value for kwarg %s", name)
+                        log.warning("Filter unsafe value for kwarg %s", name)
                         continue
                     sane_val.append(item)
                 sane_kwargs[name] = sane_val
