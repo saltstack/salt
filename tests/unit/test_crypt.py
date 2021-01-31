@@ -3,8 +3,8 @@ import shutil
 import tempfile
 
 import salt.utils.files
+import salt.utils.stringutils
 from salt import crypt
-from salt.ext import six
 from tests.support.helpers import slowTest
 from tests.support.mock import MagicMock, MockCall, mock_open, patch
 from tests.support.unit import TestCase, skipIf
@@ -232,12 +232,16 @@ class M2CryptTestCase(TestCase):
                     )
 
     def test_sign_message(self):
-        key = M2Crypto.RSA.load_key_string(six.b(PRIVKEY_DATA))
+        key = M2Crypto.RSA.load_key_string(
+            salt.utils.stringutils.to_bytes(PRIVKEY_DATA)
+        )
         with patch("salt.crypt.get_rsa_key", return_value=key):
             self.assertEqual(SIG, salt.crypt.sign_message("/keydir/keyname.pem", MSG))
 
     def test_sign_message_with_passphrase(self):
-        key = M2Crypto.RSA.load_key_string(six.b(PRIVKEY_DATA))
+        key = M2Crypto.RSA.load_key_string(
+            salt.utils.stringutils.to_bytes(PRIVKEY_DATA)
+        )
         with patch("salt.crypt.get_rsa_key", return_value=key):
             self.assertEqual(
                 SIG,
@@ -245,13 +249,18 @@ class M2CryptTestCase(TestCase):
             )
 
     def test_verify_signature(self):
-        with patch("salt.utils.files.fopen", mock_open(read_data=six.b(PUBKEY_DATA))):
+        with patch(
+            "salt.utils.files.fopen",
+            mock_open(read_data=salt.utils.stringutils.to_bytes(PUBKEY_DATA)),
+        ):
             self.assertTrue(crypt.verify_signature("/keydir/keyname.pub", MSG, SIG))
 
     def test_encrypt_decrypt_bin(self):
-        priv_key = M2Crypto.RSA.load_key_string(six.b(PRIVKEY_DATA))
+        priv_key = M2Crypto.RSA.load_key_string(
+            salt.utils.stringutils.to_bytes(PRIVKEY_DATA)
+        )
         pub_key = M2Crypto.RSA.load_pub_key_bio(
-            M2Crypto.BIO.MemoryBuffer(six.b(PUBKEY_DATA))
+            M2Crypto.BIO.MemoryBuffer(salt.utils.stringutils.to_bytes(PUBKEY_DATA))
         )
         encrypted = salt.crypt.private_encrypt(priv_key, b"salt")
         decrypted = salt.crypt.public_decrypt(pub_key, encrypted)
@@ -321,19 +330,27 @@ class TestM2CryptoRegression47124(TestCase):
     @skipIf(not HAS_M2, "Skip when m2crypto is not installed")
     def test_m2crypto_verify_bytes(self):
         message = salt.utils.stringutils.to_unicode("meh")
-        with patch("salt.utils.files.fopen", mock_open(read_data=six.b(PUBKEY_DATA))):
+        with patch(
+            "salt.utils.files.fopen",
+            mock_open(read_data=salt.utils.stringutils.to_bytes(PUBKEY_DATA)),
+        ):
             salt.crypt.verify_signature("/keydir/keyname.pub", message, self.SIGNATURE)
 
     @skipIf(not HAS_M2, "Skip when m2crypto is not installed")
     def test_m2crypto_verify_unicode(self):
         message = salt.utils.stringutils.to_bytes("meh")
-        with patch("salt.utils.files.fopen", mock_open(read_data=six.b(PUBKEY_DATA))):
+        with patch(
+            "salt.utils.files.fopen",
+            mock_open(read_data=salt.utils.stringutils.to_bytes(PUBKEY_DATA)),
+        ):
             salt.crypt.verify_signature("/keydir/keyname.pub", message, self.SIGNATURE)
 
     @skipIf(not HAS_M2, "Skip when m2crypto is not installed")
     def test_m2crypto_sign_bytes(self):
         message = salt.utils.stringutils.to_unicode("meh")
-        key = M2Crypto.RSA.load_key_string(six.b(PRIVKEY_DATA))
+        key = M2Crypto.RSA.load_key_string(
+            salt.utils.stringutils.to_bytes(PRIVKEY_DATA)
+        )
         with patch("salt.crypt.get_rsa_key", return_value=key):
             signature = salt.crypt.sign_message(
                 "/keydir/keyname.pem", message, passphrase="password"
@@ -343,7 +360,9 @@ class TestM2CryptoRegression47124(TestCase):
     @skipIf(not HAS_M2, "Skip when m2crypto is not installed")
     def test_m2crypto_sign_unicode(self):
         message = salt.utils.stringutils.to_bytes("meh")
-        key = M2Crypto.RSA.load_key_string(six.b(PRIVKEY_DATA))
+        key = M2Crypto.RSA.load_key_string(
+            salt.utils.stringutils.to_bytes(PRIVKEY_DATA)
+        )
         with patch("salt.crypt.get_rsa_key", return_value=key):
             signature = salt.crypt.sign_message(
                 "/keydir/keyname.pem", message, passphrase="password"
