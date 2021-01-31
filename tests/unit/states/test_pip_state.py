@@ -13,7 +13,7 @@ import salt.states.pip_state as pip_state
 import salt.utils.path
 import salt.version
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
-from tests.support.helpers import VirtualEnv, dedent, requires_network
+from tests.support.helpers import VirtualEnv, dedent
 from tests.support.mixins import LoaderModuleMockMixin, SaltReturnAssertsMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
@@ -408,7 +408,7 @@ class PipStateUtilsTest(TestCase):
 @skipIf(
     salt.utils.path.which_bin(KNOWN_BINARY_NAMES) is None, "virtualenv not installed"
 )
-@requires_network()
+@pytest.mark.requires_network
 class PipStateInstallationErrorTest(TestCase):
     @pytest.mark.slow_test
     def test_importable_installation_error(self):
