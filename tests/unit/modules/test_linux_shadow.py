@@ -1,25 +1,16 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Erik Johnson <erik@saltstack.com>
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import textwrap
 
-# Import Salt Testing libs
 import salt.utils.platform
 import salt.utils.stringutils
-
-# Import 3rd-party libs
-from salt.ext import six
 from tests.support.helpers import skip_if_not_root
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import DEFAULT, MagicMock, mock_open, patch
 from tests.support.unit import TestCase, skipIf
 
-# Import salt libs
 try:
     import salt.modules.linux_shadow as shadow
 
@@ -55,7 +46,7 @@ class LinuxShadowTest(TestCase, LoaderModuleMockMixin):
         Test shadow.gen_password
         """
         self.assertTrue(HAS_SHADOW)
-        for algorithm, hash_info in six.iteritems(_HASHES):
+        for algorithm, hash_info in _HASHES.items():
             self.assertEqual(
                 shadow.gen_password(
                     _PASSWORD, crypt_salt=hash_info["pw_salt"], algorithm=algorithm
