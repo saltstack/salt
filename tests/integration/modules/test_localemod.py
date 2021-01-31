@@ -1,7 +1,6 @@
 import pytest
 import salt.utils.platform
 from tests.support.case import ModuleCase
-from tests.support.helpers import requires_salt_modules
 from tests.support.unit import skipIf
 
 
@@ -11,7 +10,7 @@ from tests.support.unit import skipIf
     salt.utils.platform.is_freebsd(),
     "locale method is supported only within login classes or environment variables",
 )
-@requires_salt_modules("locale")
+@pytest.mark.requires_salt_modules("locale")
 @pytest.mark.windows_whitelisted
 class LocaleModuleTest(ModuleCase):
     def _find_new_locale(self, current_locale):
