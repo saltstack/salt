@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     integration.loader.ext_grains
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -6,7 +5,6 @@
     Test Salt's loader regarding external grains
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import time
