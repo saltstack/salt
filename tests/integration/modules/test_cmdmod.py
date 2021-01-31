@@ -8,7 +8,7 @@ import salt.utils.path
 import salt.utils.platform
 import salt.utils.user
 from tests.support.case import ModuleCase
-from tests.support.helpers import dedent, skip_if_binaries_missing
+from tests.support.helpers import dedent
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
@@ -240,7 +240,7 @@ class CMDModuleTest(ModuleCase):
                 ret = self.run_function("cmd.tty", [tty, "apply salt liberally"])
                 self.assertTrue("Success" in ret)
 
-    @skip_if_binaries_missing(["which"])
+    @pytest.mark.skip_if_binaries_missing("which")
     def test_which(self):
         """
         cmd.which
@@ -251,7 +251,7 @@ class CMDModuleTest(ModuleCase):
         self.assertIsInstance(cmd_run, str)
         self.assertEqual(cmd_which.rstrip(), cmd_run.rstrip())
 
-    @skip_if_binaries_missing(["which"])
+    @pytest.mark.skip_if_binaries_missing("which")
     def test_which_bin(self):
         """
         cmd.which_bin

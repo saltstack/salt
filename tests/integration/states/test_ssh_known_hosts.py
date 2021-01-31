@@ -7,7 +7,6 @@ import shutil
 
 import pytest
 from tests.support.case import ModuleCase
-from tests.support.helpers import skip_if_binaries_missing
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
 
@@ -15,7 +14,7 @@ GITHUB_FINGERPRINT = "9d:38:5b:83:a9:17:52:92:56:1a:5e:c4:d4:81:8e:0a:ca:51:a2:6
 GITHUB_IP = "192.30.253.113"
 
 
-@skip_if_binaries_missing(["ssh", "ssh-keygen"], check_all=True)
+@pytest.mark.skip_if_binaries_missing("ssh", "ssh-keygen", check_all=True)
 class SSHKnownHostsStateTest(ModuleCase, SaltReturnAssertsMixin):
     """
     Validate the ssh state
