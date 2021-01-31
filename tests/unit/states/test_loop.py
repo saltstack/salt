@@ -2,8 +2,8 @@
 Tests for loop state(s)
 """
 
+import pytest
 import salt.states.loop
-from tests.support.helpers import slowTest
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -113,7 +113,7 @@ class LoopTestCaseNoEval(TestCase, LoaderModuleMockMixin):
                 },
             )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_immediate_success(self):
         """
         Test for an immediate success.

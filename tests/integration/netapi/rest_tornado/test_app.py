@@ -7,7 +7,7 @@ import salt.utils.json
 import salt.utils.stringutils
 from salt.netapi.rest_tornado import saltnado
 from salt.utils.zeromq import ZMQDefaultLoop as ZMQIOLoop
-from tests.support.helpers import TstSuiteLoggingHandler, flaky, slowTest
+from tests.support.helpers import TstSuiteLoggingHandler, flaky
 from tests.support.unit import skipIf
 from tests.unit.netapi.test_rest_tornado import SaltnadoTestsBase
 
@@ -53,7 +53,7 @@ class TestSaltAPIHandler(SaltnadoIntegrationTestsBase):
         )
         self.assertEqual(response_obj["return"], "Welcome")
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_post_no_auth(self):
         """
         Test post with no auth token, should 401
@@ -74,7 +74,7 @@ class TestSaltAPIHandler(SaltnadoIntegrationTestsBase):
 
     # Local client tests
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_regression_49572(self):
         with TstSuiteLoggingHandler() as handler:
             GATHER_JOB_TIMEOUT = 1
@@ -273,7 +273,7 @@ class TestSaltAPIHandler(SaltnadoIntegrationTestsBase):
         self.assertEqual(ret[0]["minions"], sorted(["minion", "sub_minion"]))
         self.assertEqual(ret[1]["minions"], sorted(["minion", "sub_minion"]))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_multi_local_async_post_multitoken(self):
         low = [
             {"client": "local_async", "tgt": "*", "fun": "test.ping"},
@@ -323,7 +323,7 @@ class TestSaltAPIHandler(SaltnadoIntegrationTestsBase):
         self.assertEqual(ret[0]["minions"], sorted(["minion", "sub_minion"]))
         self.assertEqual(ret[1]["minions"], sorted(["minion", "sub_minion"]))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_simple_local_async_post_no_tgt(self):
         low = [
             {"client": "local_async", "tgt": "minion_we_dont_have", "fun": "test.ping"}
@@ -376,7 +376,7 @@ class TestSaltAPIHandler(SaltnadoIntegrationTestsBase):
         self.assertEqual(response_obj["return"], [{"minion": True, "sub_minion": True}])
 
     # runner tests
-    @slowTest
+    @pytest.mark.slow_test
     def test_simple_local_runner_post(self):
         low = [{"client": "runner", "fun": "manage.up"}]
         response = self.fetch(
@@ -451,7 +451,7 @@ class TestMinionSaltAPIHandler(SaltnadoIntegrationTestsBase):
         for minion_id, grains in response_obj["return"][0].items():
             self.assertEqual(minion_id, grains["id"])
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_get(self):
         response = self.fetch(
             "/minions/minion",
@@ -486,7 +486,7 @@ class TestMinionSaltAPIHandler(SaltnadoIntegrationTestsBase):
         self.assertIn("jid", ret[0])
         self.assertEqual(ret[0]["minions"], sorted(["minion", "sub_minion"]))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_post_with_client(self):
         # get a token for this test
         low = [{"client": "local_async", "tgt": "*minion", "fun": "test.ping"}]
@@ -509,7 +509,7 @@ class TestMinionSaltAPIHandler(SaltnadoIntegrationTestsBase):
         self.assertIn("jid", ret[0])
         self.assertEqual(ret[0]["minions"], sorted(["minion", "sub_minion"]))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_post_with_incorrect_client(self):
         """
         The /minions endpoint is asynchronous only, so if you try something else
@@ -539,7 +539,7 @@ class TestJobsSaltAPIHandler(SaltnadoIntegrationTestsBase):
         application.event_listener = saltnado.EventListener({}, self.opts)
         return application
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_get(self):
         # test with no JID
         self.http_client.fetch(
@@ -594,7 +594,7 @@ class TestRunSaltAPIHandler(SaltnadoIntegrationTestsBase):
         application.event_listener = saltnado.EventListener({}, self.opts)
         return application
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_get(self):
         low = [{"client": "local", "tgt": "*", "fun": "test.ping"}]
         response = self.fetch(
@@ -623,7 +623,7 @@ class TestEventsSaltAPIHandler(SaltnadoIntegrationTestsBase):
         self.events_to_fire = 0
         return application
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_get(self):
         self.events_to_fire = 5
         response = self.fetch(

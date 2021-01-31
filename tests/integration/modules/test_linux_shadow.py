@@ -9,7 +9,7 @@ import salt.modules.linux_shadow
 import salt.utils.files
 import salt.utils.platform
 from tests.support.case import ModuleCase
-from tests.support.helpers import flaky, random_string, skip_if_not_root, slowTest
+from tests.support.helpers import flaky, random_string, skip_if_not_root
 from tests.support.unit import skipIf
 
 
@@ -33,7 +33,7 @@ class ShadowModuleTest(ModuleCase):
         self._password = salt.modules.linux_shadow.gen_password("Password1234")
 
     @pytest.mark.destructive_test
-    @slowTest
+    @pytest.mark.slow_test
     def test_info(self):
         """
         Test shadow.info
@@ -50,7 +50,7 @@ class ShadowModuleTest(ModuleCase):
         self.assertEqual(ret["name"], "")
 
     @pytest.mark.destructive_test
-    @slowTest
+    @pytest.mark.slow_test
     def test_del_password(self):
         """
         Test shadow.del_password
@@ -68,7 +68,7 @@ class ShadowModuleTest(ModuleCase):
         self.assertFalse(self.run_function("shadow.del_password", [self._no_user]))
 
     @pytest.mark.destructive_test
-    @slowTest
+    @pytest.mark.slow_test
     def test_set_password(self):
         """
         Test shadow.set_password
@@ -87,7 +87,7 @@ class ShadowModuleTest(ModuleCase):
         )
 
     @pytest.mark.destructive_test
-    @slowTest
+    @pytest.mark.slow_test
     def test_set_inactdays(self):
         """
         Test shadow.set_inactdays
@@ -104,7 +104,7 @@ class ShadowModuleTest(ModuleCase):
         self.assertFalse(self.run_function("shadow.set_inactdays", [self._no_user, 12]))
 
     @pytest.mark.destructive_test
-    @slowTest
+    @pytest.mark.slow_test
     def test_set_maxdays(self):
         """
         Test shadow.set_maxdays
@@ -119,7 +119,7 @@ class ShadowModuleTest(ModuleCase):
         self.assertFalse(self.run_function("shadow.set_maxdays", [self._no_user, 12]))
 
     @pytest.mark.destructive_test
-    @slowTest
+    @pytest.mark.slow_test
     def test_set_mindays(self):
         """
         Test shadow.set_mindays
@@ -135,7 +135,7 @@ class ShadowModuleTest(ModuleCase):
 
     @flaky
     @pytest.mark.destructive_test
-    @slowTest
+    @pytest.mark.slow_test
     def test_lock_password(self):
         """
         Test shadow.lock_password
@@ -151,7 +151,7 @@ class ShadowModuleTest(ModuleCase):
         self.assertFalse(self.run_function("shadow.lock_password", [self._no_user]))
 
     @pytest.mark.destructive_test
-    @slowTest
+    @pytest.mark.slow_test
     def test_unlock_password(self):
         """
         Test shadow.lock_password
@@ -167,7 +167,7 @@ class ShadowModuleTest(ModuleCase):
         self.assertFalse(self.run_function("shadow.unlock_password", [self._no_user]))
 
     @pytest.mark.destructive_test
-    @slowTest
+    @pytest.mark.slow_test
     def test_set_warndays(self):
         """
         Test shadow.set_warndays
@@ -182,7 +182,7 @@ class ShadowModuleTest(ModuleCase):
         self.assertFalse(self.run_function("shadow.set_warndays", [self._no_user, 12]))
 
     @pytest.mark.destructive_test
-    @slowTest
+    @pytest.mark.slow_test
     def test_set_date(self):
         """
         Test shadow.set_date
@@ -201,7 +201,7 @@ class ShadowModuleTest(ModuleCase):
         )
 
     @pytest.mark.destructive_test
-    @slowTest
+    @pytest.mark.slow_test
     def test_set_expire(self):
         """
         Test shadow.set_exipre
@@ -220,7 +220,7 @@ class ShadowModuleTest(ModuleCase):
         )
 
     @pytest.mark.destructive_test
-    @slowTest
+    @pytest.mark.slow_test
     def test_set_del_root_password(self):
         """
         Test set/del password for root
