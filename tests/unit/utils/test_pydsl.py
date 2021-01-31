@@ -1,7 +1,5 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import
-
 import copy
+import io
 import os
 import shutil
 import sys
@@ -12,8 +10,6 @@ import salt.config
 import salt.loader
 import salt.utils.files
 import salt.utils.versions
-from salt.ext import six
-from salt.ext.six.moves import StringIO
 from salt.state import HighState
 from salt.utils.pydsl import PyDslError
 from tests.support.helpers import slowTest, with_tempdir
@@ -89,7 +85,7 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
             kws.pop("env")
 
         return self.HIGHSTATE.state.rend["pydsl"](
-            StringIO(content), saltenv=saltenv, sls=sls, **kws
+            io.StringIO(content), saltenv=saltenv, sls=sls, **kws
         )
 
     @slowTest
@@ -129,7 +125,7 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
         # 2 rather than 1 because pydsl adds an extra no-op state
         # declaration.
 
-        s_iter = six.itervalues(result)
+        s_iter = iter(result.values())
         try:
             s = next(s_iter)["file"]
         except KeyError:
@@ -231,13 +227,13 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
         """
             )
         )
-        ret = next(result[k] for k in six.iterkeys(result) if "do_something" in k)
+        ret = next(result[k] for k in result.keys() if "do_something" in k)
         changes = ret["changes"]
         self.assertEqual(
             changes, dict(a=1, b=2, args=(3,), kws=dict(x=1, y=2), some_var=12345)
         )
 
-        ret = next(result[k] for k in six.iterkeys(result) if "-G_" in k)
+        ret = next(result[k] for k in result.keys() if "-G_" in k)
         self.assertEqual(ret["changes"]["stdout"], "this is state G")
 
     @slowTest
