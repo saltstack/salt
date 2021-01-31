@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Unit tests for the docker module
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
@@ -10,7 +8,6 @@ import salt.config
 import salt.loader
 import salt.modules.dockermod as docker_mod
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.ext.six.moves import range
 from tests.support.helpers import slowTest
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, call, patch
@@ -394,8 +391,8 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
                     )
                 except AssertionError as exc:
                     raise Exception(
-                        "command '{0}' did not call docker.ps with expected "
-                        "arguments: {1}".format(command_name, exc)
+                        "command '{}' did not call docker.ps with expected "
+                        "arguments: {}".format(command_name, exc)
                     )
 
     def test_update_mine(self):
