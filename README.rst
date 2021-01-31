@@ -22,8 +22,8 @@
         <a href="https://www.reddit.com/r/saltstack/">
             <img src="https://img.shields.io/reddit/subreddit-subscribers/saltstack?style=social"
                 alt="chat on reddit"></a>
-        <a href="https://twitter.com/intent/follow?screen_name=saltstack">
-            <img src="https://img.shields.io/twitter/follow/saltstack?style=social&logo=twitter"
+        <a href="https://twitter.com/intent/follow?screen_name=Salt_Project_OS">
+            <img src="https://img.shields.io/twitter/follow/Salt_Project_OS?style=social&logo=twitter"
                 alt="follow on Twitter"></a>
     </p>
 
