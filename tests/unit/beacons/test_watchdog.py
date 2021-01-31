@@ -3,10 +3,10 @@ import shutil
 import tempfile
 import time
 
+import pytest
 import salt.utils.files
 import salt.utils.platform
 from salt.beacons import watchdog
-from tests.support.helpers import slowTest
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 
@@ -165,7 +165,7 @@ class IWatchdogBeaconTestCase(TestCase, LoaderModuleMockMixin):
         salt.utils.platform.is_freebsd(),
         "Skip on FreeBSD - does not yet have full inotify/watchdog support",
     )
-    @slowTest
+    @pytest.mark.slow_test
     def test_trigger_all_possible_events(self):
         path = os.path.join(self.tmpdir, "tmpfile")
         moved = path + "_moved"

@@ -18,7 +18,6 @@ from tests.support.helpers import (
     runs_on,
     skip_if_binaries_missing,
     skip_if_not_root,
-    slowTest,
 )
 from tests.support.unit import skipIf
 
@@ -83,7 +82,7 @@ class MacTimezoneModuleTest(ModuleCase):
             "Invalid Date/Time Format: 13/12/2014",
         )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_get_time(self):
         """
         Test timezone.get_time
@@ -166,7 +165,7 @@ class MacTimezoneModuleTest(ModuleCase):
         self.assertIsInstance(self.run_function("timezone.get_zonecode"), (str,))
         self.assertEqual(self.run_function("timezone.get_zonecode"), "WAKT")
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_list_zones(self):
         """
         Test timezone.list_zones

@@ -4,7 +4,6 @@ import shutil
 import pytest
 import salt.utils.platform
 from tests.support.case import ModuleCase
-from tests.support.helpers import slowTest
 from tests.support.unit import skipIf
 
 
@@ -40,7 +39,7 @@ class DiskModuleTest(ModuleCase):
     Validate the disk module
     """
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_usage(self):
         """
         disk.usage

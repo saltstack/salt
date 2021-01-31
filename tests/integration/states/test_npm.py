@@ -11,7 +11,7 @@ import salt.utils.path
 import salt.utils.platform
 from salt.utils.versions import LooseVersion
 from tests.support.case import ModuleCase
-from tests.support.helpers import requires_network, slowTest
+from tests.support.helpers import requires_network
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
@@ -23,7 +23,7 @@ MAX_NPM_VERSION = "5.0.0"
 class NpmStateTest(ModuleCase, SaltReturnAssertsMixin):
     @requires_network()
     @pytest.mark.destructive_test
-    @slowTest
+    @pytest.mark.slow_test
     def test_npm_installed_removed(self):
         """
         Basic test to determine if NPM module was successfully installed and
@@ -39,7 +39,7 @@ class NpmStateTest(ModuleCase, SaltReturnAssertsMixin):
     @skipIf(salt.utils.platform.is_darwin(), "TODO this test hangs on mac.")
     @requires_network()
     @pytest.mark.destructive_test
-    @slowTest
+    @pytest.mark.slow_test
     def test_npm_install_url_referenced_package(self):
         """
         Determine if URL-referenced NPM module can be successfully installed.
@@ -72,7 +72,7 @@ class NpmStateTest(ModuleCase, SaltReturnAssertsMixin):
 
     @requires_network()
     @pytest.mark.destructive_test
-    @slowTest
+    @pytest.mark.slow_test
     def test_npm_installed_pkgs(self):
         """
         Basic test to determine if NPM module successfully installs multiple
@@ -87,7 +87,7 @@ class NpmStateTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
     @pytest.mark.destructive_test
-    @slowTest
+    @pytest.mark.slow_test
     def test_npm_cache_clean(self):
         """
         Basic test to determine if NPM successfully cleans its cached packages.

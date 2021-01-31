@@ -5,8 +5,9 @@ Test the ssh_known_hosts states
 import os
 import shutil
 
+import pytest
 from tests.support.case import ModuleCase
-from tests.support.helpers import skip_if_binaries_missing, slowTest
+from tests.support.helpers import skip_if_binaries_missing
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
 
@@ -29,7 +30,7 @@ class SSHKnownHostsStateTest(ModuleCase, SaltReturnAssertsMixin):
             os.remove(self.known_hosts)
         super().tearDown()
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_present(self):
         """
         ssh_known_hosts.present
@@ -95,7 +96,7 @@ class SSHKnownHostsStateTest(ModuleCase, SaltReturnAssertsMixin):
                 "Salt return '{}' is in ('', None,".format(ret) + " {})"
             )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_present_fail(self):
         # save something wrong
         ret = self.run_state(
@@ -107,7 +108,7 @@ class SSHKnownHostsStateTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltFalseReturn(ret)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_absent(self):
         """
         ssh_known_hosts.absent

@@ -2,7 +2,6 @@ import os
 
 import pytest
 from tests.support.case import ShellCase, SPMCase
-from tests.support.helpers import slowTest
 
 
 @pytest.mark.windows_whitelisted
@@ -11,7 +10,7 @@ class SPMTest(ShellCase, SPMCase):
     Test spm script
     """
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_spm_help(self):
         """
         test --help argument for spm
@@ -21,7 +20,7 @@ class SPMTest(ShellCase, SPMCase):
         for arg in expected_args:
             self.assertIn(arg, "".join(output))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_spm_bad_arg(self):
         """
         test correct output when bad argument passed
@@ -31,7 +30,7 @@ class SPMTest(ShellCase, SPMCase):
         for arg in expected_args:
             self.assertIn(arg, "".join(output))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_spm_assume_yes(self):
         """
         test spm install with -y arg
@@ -49,7 +48,7 @@ class SPMTest(ShellCase, SPMCase):
             os.path.exists(os.path.join(config["formula_path"], "apache", "apache.sls"))
         )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_spm_force(self):
         """
         test spm install with -f arg

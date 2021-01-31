@@ -8,12 +8,7 @@ import pytest
 import salt.utils.files
 import salt.utils.platform
 from tests.support.case import ModuleCase
-from tests.support.helpers import (
-    requires_salt_states,
-    requires_system_grains,
-    runs_on,
-    slowTest,
-)
+from tests.support.helpers import requires_salt_states, requires_system_grains, runs_on
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.pytest.helpers import temp_state_file
 from tests.support.unit import skipIf
@@ -63,7 +58,7 @@ class PkgrepoTest(ModuleCase, SaltReturnAssertsMixin):
 
     @requires_salt_states("pkgrepo.absent", "pkgrepo.managed")
     @requires_system_grains
-    @slowTest
+    @pytest.mark.slow_test
     def test_pkgrepo_03_with_comments(self, grains):
         """
         Test adding a repo with comments
@@ -116,7 +111,7 @@ class PkgrepoTest(ModuleCase, SaltReturnAssertsMixin):
 
     @requires_salt_states("pkgrepo.managed")
     @requires_system_grains
-    @slowTest
+    @pytest.mark.slow_test
     def test_pkgrepo_04_apt_with_architectures(self, grains):
         """
         Test managing a repo with architectures specified
@@ -249,7 +244,7 @@ class PkgrepoTest(ModuleCase, SaltReturnAssertsMixin):
 
     @requires_salt_states("pkgrepo.absent", "pkgrepo.managed")
     @requires_system_grains
-    @slowTest
+    @pytest.mark.slow_test
     def test_pkgrepo_05_copr_with_comments(self, grains):
         """
         Test copr

@@ -8,7 +8,7 @@ import pytest
 import salt.utils.platform
 import salt.utils.win_reg as reg
 from tests.support.case import ModuleCase
-from tests.support.helpers import random_string, slowTest
+from tests.support.helpers import random_string
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.unit import skipIf
 
@@ -34,7 +34,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
         reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
         reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY, use_32bit_registry=True)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_present_reg_sz(self):
         """
         Testing reg.present with REG_SZ
@@ -74,7 +74,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
         }
         self.assertEqual(ret, expected)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_present_reg_sz_unicode_value(self):
         """
         Testing reg.present with REG_SZ and a unicode value
@@ -114,7 +114,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
         }
         self.assertEqual(ret, expected)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_present_reg_sz_unicode_default_value(self):
         """
         Testing reg.present with REG_SZ and a unicode default value
@@ -152,7 +152,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
         }
         self.assertEqual(ret, expected)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_present_reg_sz_unicode_value_name(self):
         """
         Testing reg.present with REG_SZ and a unicode value name
@@ -193,7 +193,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
         }
         self.assertEqual(ret, expected)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_present_reg_binary(self):
         """
         Testing reg.present with REG_BINARY
@@ -235,7 +235,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
         }
         self.assertEqual(ret, expected)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_present_reg_multi_sz(self):
         """
         Testing reg.present with REG_MULTI_SZ
@@ -276,7 +276,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
         }
         self.assertEqual(ret, expected)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_present_32_bit(self):
         """
         Testing reg.present with REG_SZ using 32bit registry

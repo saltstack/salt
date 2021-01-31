@@ -1,6 +1,6 @@
+import pytest
 import salt.utils.platform
 from tests.support.case import SSHCase
-from tests.support.helpers import slowTest
 from tests.support.unit import skipIf
 
 
@@ -10,7 +10,7 @@ class SSHSaltcheckTest(SSHCase):
     testing saltcheck with salt-ssh
     """
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_saltcheck_run_test(self):
         """
         test saltcheck.run_test with salt-ssh
@@ -24,7 +24,7 @@ class SSHSaltcheckTest(SSHCase):
         ret = self.run_function("saltcheck.run_test", test=saltcheck_test)
         self.assertDictContainsSubset({"status": "Pass"}, ret)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_saltcheck_state(self):
         """
         saltcheck.run_state_tests
