@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Tests for salt.modules.zfs
 
@@ -8,7 +7,6 @@ Tests for salt.modules.zfs
 :depends:       salt.utils.zfs
 :platform:      illumos,freebsd,linux
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.loader
 import salt.modules.zfs as zfs
@@ -22,7 +20,6 @@ from tests.support.unit import TestCase
 from tests.support.zfs import ZFSMockData
 
 
-# Skip this test case if we don't have access to mock!
 class ZfsTestCase(TestCase, LoaderModuleMockMixin):
     """
     This class contains a set of functions that test salt.modules.zfs module
