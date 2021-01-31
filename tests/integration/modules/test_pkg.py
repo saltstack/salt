@@ -6,11 +6,7 @@ import salt.utils.path
 import salt.utils.pkg
 import salt.utils.platform
 from tests.support.case import ModuleCase
-from tests.support.helpers import (
-    requires_network,
-    requires_salt_states,
-    requires_system_grains,
-)
+from tests.support.helpers import requires_network, requires_system_grains
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.unit import skipIf
 
@@ -246,10 +242,10 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         "pkg.remove",
         "pkg.list_pkgs",
     )
-    @requires_salt_states("pkg.installed")
     @requires_network()
     @requires_system_grains
     @pytest.mark.slow_test
+    @pytest.mark.requires_salt_states("pkg.installed")
     def test_hold_unhold(self, grains):
         """
         test holding and unholding a package
@@ -442,9 +438,9 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         "The jenkins user is equivalent to root on mac, causing the test to be unrunnable",
     )
     @pytest.mark.requires_salt_modules("pkg.remove", "pkg.latest_version")
-    @requires_salt_states("pkg.removed")
     @requires_system_grains
     @pytest.mark.slow_test
+    @pytest.mark.requires_salt_states("pkg.removed")
     def test_pkg_latest_version(self, grains):
         """
         Check that pkg.latest_version returns the latest version of the uninstalled package.
