@@ -6,7 +6,7 @@ import salt.utils.path
 import salt.utils.pkg
 import salt.utils.platform
 from tests.support.case import ModuleCase
-from tests.support.helpers import requires_network, requires_system_grains
+from tests.support.helpers import requires_system_grains
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.unit import skipIf
 
@@ -70,9 +70,9 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
     @pytest.mark.destructive_test
     @pytest.mark.requires_salt_modules("pkg.mod_repo", "pkg.del_repo", "pkg.get_repo")
-    @requires_network()
     @requires_system_grains
     @pytest.mark.slow_test
+    @pytest.mark.requires_network
     def test_mod_del_repo(self, grains):
         """
         test modifying and deleting a software repository
@@ -207,8 +207,8 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
     @pytest.mark.destructive_test
     @pytest.mark.requires_salt_modules("pkg.version", "pkg.install", "pkg.remove")
-    @requires_network()
     @pytest.mark.slow_test
+    @pytest.mark.requires_network
     def test_install_remove(self):
         """
         successfully install and uninstall a package
@@ -242,9 +242,9 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         "pkg.remove",
         "pkg.list_pkgs",
     )
-    @requires_network()
     @requires_system_grains
     @pytest.mark.slow_test
+    @pytest.mark.requires_network
     @pytest.mark.requires_salt_states("pkg.installed")
     def test_hold_unhold(self, grains):
         """
@@ -290,9 +290,9 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
     @pytest.mark.destructive_test
     @pytest.mark.requires_salt_modules("pkg.refresh_db")
-    @requires_network()
     @requires_system_grains
     @pytest.mark.slow_test
+    @pytest.mark.requires_network
     def test_refresh_db(self, grains):
         """
         test refreshing the package database
@@ -353,7 +353,6 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
     @skipIf(True, "Temporary Skip - Causes centos 8 test to fail")
     @pytest.mark.destructive_test
-    @requires_network()
     @pytest.mark.requires_salt_modules(
         "pkg.refresh_db",
         "pkg.upgrade",
@@ -363,6 +362,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
     )
     @requires_system_grains
     @pytest.mark.slow_test
+    @pytest.mark.requires_network
     def test_pkg_upgrade_has_pending_upgrades(self, grains):
         """
         Test running a system upgrade when there are packages that need upgrading
