@@ -6,12 +6,7 @@ import logging
 
 import pytest
 from tests.support.case import ModuleCase
-from tests.support.helpers import (
-    flaky,
-    random_string,
-    runs_on,
-    skip_if_binaries_missing,
-)
+from tests.support.helpers import flaky, random_string, runs_on
 from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
@@ -23,9 +18,9 @@ SET_SUBNET_NAME = random_string("RS-", lowercase=False)
 
 @flaky(attempts=10)
 @runs_on(kernel="Darwin")
-@skip_if_binaries_missing("systemsetup")
 @pytest.mark.usefixtures("salt_sub_minion")
 @pytest.mark.skip_if_not_root
+@pytest.mark.skip_if_binaries_missing("systemsetup")
 class MacSystemModuleTest(ModuleCase):
     """
     Validate the mac_system module
