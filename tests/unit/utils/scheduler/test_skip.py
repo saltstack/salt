@@ -1,7 +1,3 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import
-
 import logging
 
 from tests.support.helpers import slowTest
@@ -27,12 +23,12 @@ class SchedulerSkipTest(SchedulerTestsBase):
     """
 
     def setUp(self):
-        super(SchedulerSkipTest, self).setUp()
+        super().setUp()
         self.schedule.opts["loop_interval"] = 1
 
     def tearDown(self):
         self.schedule.reset()
-        super(SchedulerSkipTest, self).tearDown()
+        super().tearDown()
 
     @slowTest
     def test_skip(self):
@@ -154,9 +150,7 @@ class SchedulerSkipTest(SchedulerTestsBase):
         # Check the first job
         ret = self.schedule.job_status(job_name1)
         _expected = (
-            "Invalid date string for start in "
-            "skip_during_range. Ignoring "
-            "job {0}."
+            "Invalid date string for start in " "skip_during_range. Ignoring " "job {}."
         ).format(job_name1)
         self.assertEqual(ret["_error"], _expected)
 
@@ -172,7 +166,7 @@ class SchedulerSkipTest(SchedulerTestsBase):
         # Check the second job
         ret = self.schedule.job_status(job_name2)
         _expected = (
-            "Invalid date string for end in " "skip_during_range. Ignoring " "job {0}."
+            "Invalid date string for end in " "skip_during_range. Ignoring " "job {}."
         ).format(job_name2)
         self.assertEqual(ret["_error"], _expected)
 
