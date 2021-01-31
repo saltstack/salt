@@ -4,12 +4,12 @@ integration tests for mac_ports
 
 import pytest
 from tests.support.case import ModuleCase
-from tests.support.helpers import runs_on, skip_if_binaries_missing
+from tests.support.helpers import runs_on
 
 
 @pytest.mark.skip_if_not_root
 @runs_on(kernel="Darwin")
-@skip_if_binaries_missing("port")
+@pytest.mark.skip_if_binaries_missing("port")
 class MacPortsModuleTest(ModuleCase):
     """
     Validate the mac_ports module

@@ -6,11 +6,7 @@ import os
 
 import pytest
 from tests.support.case import ModuleCase
-from tests.support.helpers import (
-    requires_system_grains,
-    runs_on,
-    skip_if_binaries_missing,
-)
+from tests.support.helpers import requires_system_grains, runs_on
 from tests.support.runtests import RUNTIME_VARS
 
 TEST_PKG_URL = (
@@ -20,8 +16,8 @@ TEST_PKG_NAME = "org.macports.MacPorts"
 
 
 @runs_on(kernel="Darwin")
-@skip_if_binaries_missing("pkgutil")
 @pytest.mark.skip_if_not_root
+@pytest.mark.skip_if_binaries_missing("pkgutil")
 class MacPkgutilModuleTest(ModuleCase):
     """
     Validate the mac_pkgutil module

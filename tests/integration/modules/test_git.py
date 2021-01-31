@@ -22,7 +22,7 @@ import salt.utils.files
 import salt.utils.platform
 from salt.utils.versions import LooseVersion
 from tests.support.case import ModuleCase
-from tests.support.helpers import change_cwd, skip_if_binaries_missing
+from tests.support.helpers import change_cwd
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
@@ -59,8 +59,8 @@ def _worktrees_supported():
         return False
 
 
-@skip_if_binaries_missing("git")
 @pytest.mark.windows_whitelisted
+@pytest.mark.skip_if_binaries_missing("git")
 class GitModuleTest(ModuleCase):
     def setUp(self):
         super().setUp()
