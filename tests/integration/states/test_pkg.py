@@ -14,7 +14,6 @@ import salt.utils.platform
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
     not_runs_on,
-    requires_salt_modules,
     requires_salt_states,
     requires_system_grains,
     runs_on,
@@ -117,7 +116,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             else:
                 raise Exception("Package database locked after 60 seconds, bailing out")
 
-    @requires_salt_modules("pkg.version")
+    @pytest.mark.requires_salt_modules("pkg.version")
     @requires_salt_states("pkg.installed", "pkg.removed")
     @pytest.mark.slow_test
     def test_pkg_001_installed(self):
@@ -207,7 +206,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             ret = self.run_state("pkg.removed", name=None, pkgs=self._PKG_TARGETS)
             self.assertSaltTrueReturn(ret)
 
-    @requires_salt_modules("pkg.version")
+    @pytest.mark.requires_salt_modules("pkg.version")
     @requires_salt_states("pkg.installed", "pkg.removed")
     def test_pkg_005_installed_32bit(self):
         """
@@ -312,7 +311,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state("pkg.removed", name=target)
         self.assertSaltTrueReturn(ret)
 
-    @requires_salt_modules("pkg.version", "pkg.info_installed")
+    @pytest.mark.requires_salt_modules("pkg.version", "pkg.info_installed")
     @requires_salt_states("pkg.installed", "pkg.removed")
     @runs_on(kernel="linux")
     @not_runs_on(os="Amazon")
@@ -353,7 +352,9 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state("pkg.removed", name=target)
         self.assertSaltTrueReturn(ret)
 
-    @requires_salt_modules("pkg.list_pkgs", "pkg.list_upgrades", "pkg.version")
+    @pytest.mark.requires_salt_modules(
+        "pkg.list_pkgs", "pkg.list_upgrades", "pkg.version"
+    )
     @requires_salt_states("pkg.latest")
     @runs_on(kernel="linux", os_family="Debian")
     @pytest.mark.slow_test
@@ -409,7 +410,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
                 "Package {} is already up-to-date".format(target),
             )
 
-    @requires_salt_modules("pkg.version")
+    @pytest.mark.requires_salt_modules("pkg.version")
     @requires_salt_states("pkg.installed", "pkg.removed")
     def test_pkg_012_installed_with_wildcard_version(self):
         """
@@ -449,7 +450,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state("pkg.removed", name=target)
         self.assertSaltTrueReturn(ret)
 
-    @requires_salt_modules("pkg.version", "pkg.latest_version")
+    @pytest.mark.requires_salt_modules("pkg.version", "pkg.latest_version")
     @requires_salt_states("pkg.installed", "pkg.removed")
     @runs_on(kernel="linux", os_family=["Debian", "RedHat"])
     @pytest.mark.slow_test
@@ -483,7 +484,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             ret = self.run_state("pkg.removed", name=target)
             self.assertSaltTrueReturn(ret)
 
-    @requires_salt_modules("pkg.version")
+    @pytest.mark.requires_salt_modules("pkg.version")
     @requires_salt_states("pkg.installed", "pkg.removed")
     @runs_on(kernel="linux", os_familiy="RedHat")
     def test_pkg_014_installed_missing_release(self):
@@ -511,7 +512,9 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state("pkg.removed", name=target)
         self.assertSaltTrueReturn(ret)
 
-    @requires_salt_modules("pkg.hold", "pkg.unhold", "pkg.version", "pkg.list_pkgs")
+    @pytest.mark.requires_salt_modules(
+        "pkg.hold", "pkg.unhold", "pkg.version", "pkg.list_pkgs"
+    )
     @requires_salt_states("pkg.installed", "pkg.removed")
     @requires_system_grains
     @pytest.mark.slow_test
@@ -622,7 +625,9 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state("pkg.removed", name=target)
         self.assertSaltTrueReturn(ret)
 
-    @requires_salt_modules("pkg.hold", "pkg.unhold", "pkg.version", "pkg.list_pkgs")
+    @pytest.mark.requires_salt_modules(
+        "pkg.hold", "pkg.unhold", "pkg.version", "pkg.list_pkgs"
+    )
     @requires_salt_states("pkg.installed", "pkg.removed")
     @requires_system_grains
     @pytest.mark.slow_test
@@ -685,7 +690,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
                 ret = self.run_state("pkg.removed", name=versionlock_pkg)
                 self.assertSaltTrueReturn(ret)
 
-    @requires_salt_modules("pkg.version")
+    @pytest.mark.requires_salt_modules("pkg.version")
     @requires_salt_states("pkg.installed", "pkg.removed")
     def test_pkg_cap_001_installed(self):
         """
@@ -830,7 +835,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             )
             self.assertSaltTrueReturn(ret)
 
-    @requires_salt_modules("pkg.version")
+    @pytest.mark.requires_salt_modules("pkg.version")
     @requires_salt_states("pkg.latest", "pkg.removed")
     def test_pkg_cap_004_latest(self):
         """
@@ -878,7 +883,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             ret = self.run_state("pkg.removed", name=realpkg)
             self.assertSaltTrueReturn(ret)
 
-    @requires_salt_modules("pkg.version")
+    @pytest.mark.requires_salt_modules("pkg.version")
     @requires_salt_states("pkg.installed", "pkg.removed", "pkg.downloaded")
     def test_pkg_cap_005_downloaded(self):
         """
@@ -916,7 +921,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
 
-    @requires_salt_modules("pkg.version")
+    @pytest.mark.requires_salt_modules("pkg.version")
     @requires_salt_states("pkg.installed", "pkg.removed", "pkg.uptodate")
     def test_pkg_cap_006_uptodate(self):
         """
