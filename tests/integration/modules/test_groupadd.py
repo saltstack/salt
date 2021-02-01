@@ -1,13 +1,7 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import pytest
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.stringutils
-from salt.ext import six
-from salt.ext.six.moves import range
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
     destructiveTest,
@@ -35,7 +29,7 @@ class GroupModuleTest(ModuleCase):
         """
         Get current settings
         """
-        super(GroupModuleTest, self).setUp()
+        super().setUp()
         self._user = random_string("tg-", uppercase=False)
         self._user1 = random_string("tg-", uppercase=False)
         self._no_user = random_string("tg-", uppercase=False)
@@ -229,7 +223,7 @@ class GroupModuleTest(ModuleCase):
         self.run_function("group.add", [self._group], gid=self._gid)
         self.run_function("user.add", [self._user])
         self.run_function("user.add", [self._user1])
-        m = "{0},{1}".format(self._user, self._user1)
+        m = "{},{}".format(self._user, self._user1)
         ret = self.run_function("group.members", [self._group, m])
         self.assertTrue(ret)
         group_info = self.run_function("group.info", [self._group])
@@ -245,7 +239,7 @@ class GroupModuleTest(ModuleCase):
         self.run_function("user.add", [self._user])
         self.run_function("group.adduser", [self._group, self._user])
         ginfo = self.run_function("user.getent")
-        self.assertIn(self._group, six.text_type(ginfo))
-        self.assertIn(self._user, six.text_type(ginfo))
-        self.assertNotIn(self._no_group, six.text_type(ginfo))
-        self.assertNotIn(self._no_user, six.text_type(ginfo))
+        self.assertIn(self._group, str(ginfo))
+        self.assertIn(self._user, str(ginfo))
+        self.assertNotIn(self._no_group, str(ginfo))
+        self.assertNotIn(self._no_user, str(ginfo))

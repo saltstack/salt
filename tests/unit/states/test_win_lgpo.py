@@ -4,7 +4,6 @@
 import copy
 
 import salt.config
-import salt.ext.six as six
 import salt.loader
 import salt.states.win_lgpo as win_lgpo
 import salt.utils.platform
@@ -170,8 +169,6 @@ class WinLGPOPolicyElementNames(TestCase, LoaderModuleMockMixin):
 
         with patch.dict(win_lgpo.__opts__, {"test": False}):
             result = win_lgpo.set_(name="test_state", computer_policy=computer_policy)
-            if six.PY2:
-                result = win_lgpo._convert_to_unicode(result)
         expected = {
             "Point and Print Restrictions": {
                 "Enter fully qualified server names separated by "

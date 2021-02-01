@@ -1,10 +1,5 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import pytest
 import salt.utils.platform
-from salt.ext import six
 from tests.support.case import ModuleCase
 from tests.support.helpers import slowTest
 
@@ -89,10 +84,10 @@ class StdTest(ModuleCase):
             timeout=self.TIMEOUT,
         )
         data = ret["minion"]["ret"]
-        self.assertIn(six.text_type.__name__, data["args"][0])
+        self.assertIn(str.__name__, data["args"][0])
         self.assertIn("int", data["args"][1])
         self.assertIn("dict", data["kwargs"]["outer"])
-        self.assertIn(six.text_type.__name__, data["kwargs"]["inner"])
+        self.assertIn(str.__name__, data["kwargs"]["inner"])
 
     @slowTest
     def test_full_return_kwarg(self):
