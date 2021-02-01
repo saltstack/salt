@@ -1,12 +1,7 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import random
 
 import pytest
 import salt.utils.platform
-from salt.ext import six
 from tests.support.case import ModuleCase
 from tests.support.helpers import flaky, slowTest
 from tests.support.unit import skipIf
@@ -68,7 +63,7 @@ class StatusModuleTest(ModuleCase):
         status.procs
         """
         ret = self.run_function("status.procs")
-        for x, y in six.iteritems(ret):
+        for x, y in ret.items():
             self.assertIn("cmd", y)
 
     @slowTest

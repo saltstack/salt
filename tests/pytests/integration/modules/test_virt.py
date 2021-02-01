@@ -7,7 +7,7 @@ from xml.etree import ElementTree
 
 import pytest
 from saltfactories.utils import cli_scripts
-from tests.support.helpers import skip_if_binaries_missing, slowTest
+from tests.support.helpers import skip_if_binaries_missing
 from tests.support.virt import SaltVirtMinionContainerFactory
 
 docker = pytest.importorskip("docker")
@@ -158,7 +158,7 @@ def salt_cli(salt_master, virt_minion_0, virt_minion_1):
 
 
 @skip_if_binaries_missing("docker")
-@slowTest
+@pytest.mark.slow_test
 class TestVirtTest:
     """
     Test virt routines
@@ -415,7 +415,7 @@ def prep_virt(salt_cli, virt_minion_0, virt_minion_1, virt_domain):
 
 
 @skip_if_binaries_missing("docker")
-@slowTest
+@pytest.mark.slow_test
 class TestVirtMigrateTest:
     def test_define_xml_path(self, salt_cli, virt_minion_0, virt_domain):
         """

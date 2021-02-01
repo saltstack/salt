@@ -2,54 +2,28 @@ import copy
 import hashlib
 import os
 import shutil
-from urllib.parse import urlencode, urlparse
+import urllib.parse
 
 import salt.auth
+import salt.ext.tornado.concurrent
+import salt.ext.tornado.escape
+import salt.ext.tornado.testing
+import salt.netapi.rest_tornado as rest_tornado
 import salt.utils.event
 import salt.utils.json
 import salt.utils.yaml
+from salt.ext.tornado.httpclient import HTTPError, HTTPRequest
+from salt.ext.tornado.testing import AsyncHTTPTestCase, AsyncTestCase, gen_test
+from salt.ext.tornado.websocket import websocket_connect
+from salt.netapi.rest_tornado import saltnado
 from tests.support.events import eventpublisher_process
 from tests.support.helpers import patched_environ, slowTest
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase, skipIf
-
-try:
-    HAS_TORNADO = True
-except ImportError:
-    HAS_TORNADO = False
-
-# pylint: disable=import-error
-try:
-    import salt.ext.tornado.escape
-    import salt.ext.tornado.testing
-    import salt.ext.tornado.concurrent
-    from salt.ext.tornado.testing import AsyncTestCase, AsyncHTTPTestCase, gen_test
-    from salt.ext.tornado.httpclient import HTTPRequest, HTTPError
-    from salt.ext.tornado.websocket import websocket_connect
-    import salt.netapi.rest_tornado as rest_tornado
-    from salt.netapi.rest_tornado import saltnado
-
-    HAS_TORNADO = True
-except ImportError:
-    HAS_TORNADO = False
-
-    # Create fake test case classes so we can properly skip the test case
-    class AsyncTestCase:
-        pass
-
-    class AsyncHTTPTestCase:
-        pass
 
 
-# pylint: enable=import-error
-
-
-@skipIf(
-    not HAS_TORNADO, "The tornado package needs to be installed"
-)  # pylint: disable=W0223
-class SaltnadoTestCase(TestCase, AdaptedConfigurationTestCaseMixin, AsyncHTTPTestCase):
+class SaltnadoTestsBase(AsyncHTTPTestCase, AdaptedConfigurationTestCaseMixin):
     """
     Mixin to hold some shared things
     """
@@ -115,8 +89,8 @@ class SaltnadoTestCase(TestCase, AdaptedConfigurationTestCaseMixin, AsyncHTTPTes
             del self._AsyncHTTPTestCase__port
         if hasattr(self, "__auth"):
             del self.__auth
-        if hasattr(self, "_SaltnadoTestCase__auth"):
-            del self._SaltnadoTestCase__auth
+        if hasattr(self, "_SaltnadoTestsBase__auth"):
+            del self._SaltnadoTestsBase__auth
         if hasattr(self, "_test_generator"):
             del self._test_generator
         if hasattr(self, "application"):
@@ -147,8 +121,11 @@ class SaltnadoTestCase(TestCase, AdaptedConfigurationTestCaseMixin, AsyncHTTPTes
     def fetch(self, path, **kwargs):
         return self.decode_body(super().fetch(path, **kwargs))
 
+    def get_app(self):
+        raise NotImplementedError
 
-class TestBaseSaltAPIHandler(SaltnadoTestCase):
+
+class TestBaseSaltAPIHandler(SaltnadoTestsBase):
     def get_app(self):
         class StubHandler(saltnado.BaseSaltAPIHandler):  # pylint: disable=W0223
             def get(self, *args, **kwargs):
@@ -328,7 +305,7 @@ class TestBaseSaltAPIHandler(SaltnadoTestCase):
         response = self.fetch(
             "/",
             method="POST",
-            body=urlencode(form_lowstate),
+            body=urllib.parse.urlencode(form_lowstate),
             headers={"Content-Type": self.content_type_map["form"]},
         )
         returned_lowstate = salt.utils.json.loads(response.body)["lowstate"]
@@ -450,7 +427,7 @@ class TestBaseSaltAPIHandler(SaltnadoTestCase):
         response = self.fetch(
             "/",
             method="POST",
-            body=urlencode(request_form_lowstate),
+            body=urllib.parse.urlencode(request_form_lowstate),
             headers={"Content-Type": self.content_type_map["form"]},
         )
         self.assertEqual(
@@ -539,7 +516,7 @@ class TestBaseSaltAPIHandler(SaltnadoTestCase):
         self.assertEqual(headers["Access-Control-Allow-Origin"], "*")
 
 
-class TestWebhookSaltHandler(SaltnadoTestCase):
+class TestWebhookSaltHandler(SaltnadoTestsBase):
     def get_app(self):
         urls = [
             (r"/hook(/.*)?", saltnado.WebhookSaltAPIHandler),
@@ -559,7 +536,7 @@ class TestWebhookSaltHandler(SaltnadoTestCase):
                     headers={"Content-Type": self.content_type_map["json"]},
                 )
                 self.assertEqual(response.code, 200, response.body)
-                host = urlparse(response.effective_url).netloc
+                host = urllib.parse.urlparse(response.effective_url).netloc
                 event.fire_event.assert_called_once_with(
                     {
                         "headers": {
@@ -576,7 +553,7 @@ class TestWebhookSaltHandler(SaltnadoTestCase):
                 )
 
 
-class TestSaltAuthHandler(SaltnadoTestCase):
+class TestSaltAuthHandler(SaltnadoTestsBase):
     def get_app(self):
         urls = [("/login", saltnado.SaltAuthHandler)]
         return self.build_tornado_app(urls)
@@ -596,7 +573,7 @@ class TestSaltAuthHandler(SaltnadoTestCase):
         response = self.fetch(
             "/login",
             method="POST",
-            body=urlencode(self.auth_creds),
+            body=urllib.parse.urlencode(self.auth_creds),
             headers={"Content-Type": self.content_type_map["form"]},
         )
 
@@ -673,7 +650,7 @@ class TestSaltAuthHandler(SaltnadoTestCase):
         response = self.fetch(
             "/login",
             method="POST",
-            body=urlencode(bad_creds),
+            body=urllib.parse.urlencode(bad_creds),
             headers={"Content-Type": self.content_type_map["form"]},
         )
 
@@ -694,7 +671,7 @@ class TestSaltAuthHandler(SaltnadoTestCase):
         response = self.fetch(
             "/login",
             method="POST",
-            body=urlencode(bad_creds),
+            body=urllib.parse.urlencode(bad_creds),
             headers={"Content-Type": self.content_type_map["form"]},
         )
 
@@ -732,7 +709,7 @@ class TestSaltAuthHandler(SaltnadoTestCase):
         self.assertEqual(response.code, 400)
 
 
-class TestSaltRunHandler(SaltnadoTestCase):
+class TestSaltRunHandler(SaltnadoTestsBase):
     def get_app(self):
         urls = [("/run", saltnado.RunSaltAPIHandler)]
         return self.build_tornado_app(urls)
@@ -765,10 +742,7 @@ class TestSaltRunHandler(SaltnadoTestCase):
             self.assertEqual(valid_response, salt.utils.json.loads(response.body))
 
 
-@skipIf(
-    not HAS_TORNADO, "The tornado package needs to be installed"
-)  # pylint: disable=W0223
-class TestWebsocketSaltAPIHandler(SaltnadoTestCase):
+class TestWebsocketSaltAPIHandler(SaltnadoTestsBase):
     def get_app(self):
         opts = copy.deepcopy(self.opts)
         opts.setdefault("rest_tornado", {})["websockets"] = True
@@ -779,7 +753,7 @@ class TestWebsocketSaltAPIHandler(SaltnadoTestCase):
         response = yield self.http_client.fetch(
             self.get_url("/login"),
             method="POST",
-            body=urlencode(self.auth_creds),
+            body=urllib.parse.urlencode(self.auth_creds),
             headers={"Content-Type": self.content_type_map["form"]},
         )
         token = salt.utils.json.loads(self.decode_body(response).body)["return"][0][
@@ -819,7 +793,7 @@ class TestWebsocketSaltAPIHandler(SaltnadoTestCase):
         response = yield self.http_client.fetch(
             self.get_url("/login"),
             method="POST",
-            body=urlencode(self.auth_creds),
+            body=urllib.parse.urlencode(self.auth_creds),
             headers={"Content-Type": self.content_type_map["form"]},
         )
         token = salt.utils.json.loads(self.decode_body(response).body)["return"][0][
@@ -841,7 +815,7 @@ class TestWebsocketSaltAPIHandler(SaltnadoTestCase):
         response = yield self.http_client.fetch(
             self.get_url("/login"),
             method="POST",
-            body=urlencode(self.auth_creds),
+            body=urllib.parse.urlencode(self.auth_creds),
             headers={"Content-Type": self.content_type_map["form"]},
         )
         token = salt.utils.json.loads(self.decode_body(response).body)["return"][0][
@@ -873,7 +847,7 @@ class TestWebsocketSaltAPIHandler(SaltnadoTestCase):
         response = yield self.http_client.fetch(
             self.get_url("/login"),
             method="POST",
-            body=urlencode(self.auth_creds),
+            body=urllib.parse.urlencode(self.auth_creds),
             headers={"Content-Type": self.content_type_map["form"]},
         )
         token = salt.utils.json.loads(self.decode_body(response).body)["return"][0][
@@ -898,7 +872,6 @@ class TestWebsocketSaltAPIHandler(SaltnadoTestCase):
         ws.close()
 
 
-@skipIf(not HAS_TORNADO, "The tornado package needs to be installed")
 class TestSaltnadoUtils(AsyncTestCase):
     def test_any_future(self):
         """
@@ -937,7 +910,6 @@ class TestSaltnadoUtils(AsyncTestCase):
         self.assertIs(futures[1].done(), False)
 
 
-@skipIf(not HAS_TORNADO, "The tornado package needs to be installed")
 class TestEventListener(AsyncTestCase):
     def setUp(self):
         self.sock_dir = os.path.join(RUNTIME_VARS.TMP, "test-socks")
@@ -952,23 +924,23 @@ class TestEventListener(AsyncTestCase):
         Test getting a few events
         """
         with eventpublisher_process(self.sock_dir):
-            me = salt.utils.event.MasterEvent(self.sock_dir)
-            event_listener = saltnado.EventListener(
-                {},  # we don't use mod_opts, don't save?
-                {"sock_dir": self.sock_dir, "transport": "zeromq"},
-            )
-            self._finished = False  # fit to event_listener's behavior
-            event_future = event_listener.get_event(
-                self, "evt1", callback=self.stop
-            )  # get an event future
-            me.fire_event({"data": "foo2"}, "evt2")  # fire an event we don't want
-            me.fire_event({"data": "foo1"}, "evt1")  # fire an event we do want
-            self.wait()  # wait for the future
+            with salt.utils.event.MasterEvent(self.sock_dir) as me:
+                event_listener = saltnado.EventListener(
+                    {},  # we don't use mod_opts, don't save?
+                    {"sock_dir": self.sock_dir, "transport": "zeromq"},
+                )
+                self._finished = False  # fit to event_listener's behavior
+                event_future = event_listener.get_event(
+                    self, "evt1", callback=self.stop
+                )  # get an event future
+                me.fire_event({"data": "foo2"}, "evt2")  # fire an event we don't want
+                me.fire_event({"data": "foo1"}, "evt1")  # fire an event we do want
+                self.wait()  # wait for the future
 
-            # check that we got the event we wanted
-            self.assertTrue(event_future.done())
-            self.assertEqual(event_future.result()["tag"], "evt1")
-            self.assertEqual(event_future.result()["data"]["data"], "foo1")
+                # check that we got the event we wanted
+                self.assertTrue(event_future.done())
+                self.assertEqual(event_future.result()["tag"], "evt1")
+                self.assertEqual(event_future.result()["data"]["data"], "foo1")
 
     @slowTest
     def test_set_event_handler(self):
@@ -976,20 +948,20 @@ class TestEventListener(AsyncTestCase):
         Test subscribing events using set_event_handler
         """
         with eventpublisher_process(self.sock_dir):
-            me = salt.utils.event.MasterEvent(self.sock_dir)
-            event_listener = saltnado.EventListener(
-                {},  # we don't use mod_opts, don't save?
-                {"sock_dir": self.sock_dir, "transport": "zeromq"},
-            )
-            self._finished = False  # fit to event_listener's behavior
-            event_future = event_listener.get_event(
-                self, tag="evt", callback=self.stop, timeout=1,
-            )  # get an event future
-            me.fire_event({"data": "foo"}, "evt")  # fire an event we do want
-            self.wait()
+            with salt.utils.event.MasterEvent(self.sock_dir) as me:
+                event_listener = saltnado.EventListener(
+                    {},  # we don't use mod_opts, don't save?
+                    {"sock_dir": self.sock_dir, "transport": "zeromq"},
+                )
+                self._finished = False  # fit to event_listener's behavior
+                event_future = event_listener.get_event(
+                    self, tag="evt", callback=self.stop, timeout=1,
+                )  # get an event future
+                me.fire_event({"data": "foo"}, "evt")  # fire an event we do want
+                self.wait()
 
-            # check that we subscribed the event we wanted
-            self.assertEqual(len(event_listener.timeout_map), 0)
+                # check that we subscribed the event we wanted
+                self.assertEqual(len(event_listener.timeout_map), 0)
 
     @slowTest
     def test_timeout(self):
@@ -1045,58 +1017,60 @@ class TestEventListener(AsyncTestCase):
                 self.stop()
 
         with eventpublisher_process(self.sock_dir):
-            me = salt.utils.event.MasterEvent(self.sock_dir)
-            event_listener = saltnado.EventListener(
-                {},  # we don't use mod_opts, don't save?
-                {"sock_dir": self.sock_dir, "transport": "zeromq"},
-            )
+            with salt.utils.event.MasterEvent(self.sock_dir) as me:
+                event_listener = saltnado.EventListener(
+                    {},  # we don't use mod_opts, don't save?
+                    {"sock_dir": self.sock_dir, "transport": "zeromq"},
+                )
 
-            self.assertEqual(0, len(event_listener.tag_map))
-            self.assertEqual(0, len(event_listener.request_map))
+                self.assertEqual(0, len(event_listener.tag_map))
+                self.assertEqual(0, len(event_listener.request_map))
 
-            self._finished = False  # fit to event_listener's behavior
-            dummy_request = DummyRequest()
-            request_future_1 = event_listener.get_event(self, tag="evt1")
-            request_future_2 = event_listener.get_event(
-                self, tag="evt2", callback=lambda f: stop()
-            )
-            dummy_request_future_1 = event_listener.get_event(
-                dummy_request, tag="evt3", callback=lambda f: stop()
-            )
-            dummy_request_future_2 = event_listener.get_event(
-                dummy_request, timeout=10, tag="evt4"
-            )
+                self._finished = False  # fit to event_listener's behavior
+                dummy_request = DummyRequest()
+                request_future_1 = event_listener.get_event(self, tag="evt1")
+                request_future_2 = event_listener.get_event(
+                    self, tag="evt2", callback=lambda f: stop()
+                )
+                dummy_request_future_1 = event_listener.get_event(
+                    dummy_request, tag="evt3", callback=lambda f: stop()
+                )
+                dummy_request_future_2 = event_listener.get_event(
+                    dummy_request, timeout=10, tag="evt4"
+                )
 
-            self.assertEqual(4, len(event_listener.tag_map))
-            self.assertEqual(2, len(event_listener.request_map))
+                self.assertEqual(4, len(event_listener.tag_map))
+                self.assertEqual(2, len(event_listener.request_map))
 
-            me.fire_event({"data": "foo2"}, "evt2")
-            me.fire_event({"data": "foo3"}, "evt3")
-            self.wait()
-            event_listener.clean_by_request(self)
-            me.fire_event({"data": "foo1"}, "evt1")
+                me.fire_event({"data": "foo2"}, "evt2")
+                me.fire_event({"data": "foo3"}, "evt3")
+                self.wait()
+                event_listener.clean_by_request(self)
+                me.fire_event({"data": "foo1"}, "evt1")
 
-            self.assertTrue(request_future_1.done())
-            with self.assertRaises(saltnado.TimeoutException):
-                request_future_1.result()
+                self.assertTrue(request_future_1.done())
+                with self.assertRaises(saltnado.TimeoutException):
+                    request_future_1.result()
 
-            self.assertTrue(request_future_2.done())
-            self.assertEqual(request_future_2.result()["tag"], "evt2")
-            self.assertEqual(request_future_2.result()["data"]["data"], "foo2")
+                self.assertTrue(request_future_2.done())
+                self.assertEqual(request_future_2.result()["tag"], "evt2")
+                self.assertEqual(request_future_2.result()["data"]["data"], "foo2")
 
-            self.assertTrue(dummy_request_future_1.done())
-            self.assertEqual(dummy_request_future_1.result()["tag"], "evt3")
-            self.assertEqual(dummy_request_future_1.result()["data"]["data"], "foo3")
+                self.assertTrue(dummy_request_future_1.done())
+                self.assertEqual(dummy_request_future_1.result()["tag"], "evt3")
+                self.assertEqual(
+                    dummy_request_future_1.result()["data"]["data"], "foo3"
+                )
 
-            self.assertFalse(dummy_request_future_2.done())
+                self.assertFalse(dummy_request_future_2.done())
 
-            self.assertEqual(2, len(event_listener.tag_map))
-            self.assertEqual(1, len(event_listener.request_map))
+                self.assertEqual(2, len(event_listener.tag_map))
+                self.assertEqual(1, len(event_listener.request_map))
 
-            event_listener.clean_by_request(dummy_request)
+                event_listener.clean_by_request(dummy_request)
 
-            with self.assertRaises(saltnado.TimeoutException):
-                dummy_request_future_2.result()
+                with self.assertRaises(saltnado.TimeoutException):
+                    dummy_request_future_2.result()
 
-            self.assertEqual(0, len(event_listener.tag_map))
-            self.assertEqual(0, len(event_listener.request_map))
+                self.assertEqual(0, len(event_listener.tag_map))
+                self.assertEqual(0, len(event_listener.request_map))

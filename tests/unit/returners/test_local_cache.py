@@ -1,12 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 tests.unit.returners.local_cache_test
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Unit tests for the Default Job Cache (local_cache).
 """
-
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
@@ -19,7 +16,6 @@ import salt.utils.files
 import salt.utils.jid
 import salt.utils.job
 import salt.utils.platform
-from salt.ext import six
 from tests.support.helpers import slowTest
 from tests.support.mixins import (
     AdaptedConfigurationTestCaseMixin,
@@ -256,7 +252,7 @@ class Local_CacheTest(
         ):
             try:
                 attr_instance = getattr(cls, attrname)
-                if isinstance(attr_instance, six.string_types):
+                if isinstance(attr_instance, str):
                     if os.path.isdir(attr_instance):
                         shutil.rmtree(attr_instance, ignore_errors=True)
                     elif os.path.isfile(attr_instance):
@@ -367,7 +363,7 @@ class Local_CacheTest(
                     time.sleep(1)
                     os.rename(lock_dir, new_jid_dir)
                     break
-                except WindowsError:  # pylint: disable=E0602
+                except OSError:  # pylint: disable=E0602
                     continue
 
         # check dir exists

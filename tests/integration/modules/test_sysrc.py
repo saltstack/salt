@@ -1,11 +1,5 @@
-# -*- coding: utf-8 -*-
-
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import sys
 
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.helpers import destructiveTest
 from tests.support.unit import skipIf
@@ -13,7 +7,7 @@ from tests.support.unit import skipIf
 
 class SysrcModuleTest(ModuleCase):
     def setUp(self):
-        super(SysrcModuleTest, self).setUp()
+        super().setUp()
         ret = self.run_function("cmd.has_exec", ["sysrc"])
         if not ret:
             self.skipTest("sysrc not found")

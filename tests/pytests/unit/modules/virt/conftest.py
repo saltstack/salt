@@ -43,32 +43,29 @@ class MappedResultMock(MagicMock):
 
         super().__init__(side_effect=mapped_results)
 
-    def add(self, name):
-        self._instances[name] = MagicMock()
+    def add(self, name, value=None):
+        self._instances[name] = value or MagicMock()
 
 
-@pytest.fixture(autouse=True)
-def setup_loader():
+def loader_modules_config():
     # Create libvirt mock and connection mock
     mock_libvirt = LibvirtMock()
     mock_conn = MagicMock()
     mock_conn.getStoragePoolCapabilities.return_value = "<storagepoolCapabilities/>"
 
     mock_libvirt.openAuth.return_value = mock_conn
-    setup_loader_modules = {
+    return {
         virt: {
             "libvirt": mock_libvirt,
             "__salt__": {"config.get": config.get, "config.option": config.option},
         },
         config: {},
     }
-    with pytest.helpers.loader_mock(setup_loader_modules) as loader_mock:
-        yield loader_mock
 
 
 @pytest.fixture
 def make_mock_vm():
-    def _make_mock_vm(xml_def):
+    def _make_mock_vm(xml_def, running=False, inactive_def=None):
         mocked_conn = virt.libvirt.openAuth.return_value
 
         doc = ET.fromstring(xml_def)
@@ -81,17 +78,21 @@ def make_mock_vm():
         mocked_conn.listDefinedDomains.return_value = [name]
 
         # Configure the mocked domain
-        domain_mock = virt.libvirt.virDomain()
         if not isinstance(mocked_conn.lookupByName, MappedResultMock):
             mocked_conn.lookupByName = MappedResultMock()
         mocked_conn.lookupByName.add(name)
         domain_mock = mocked_conn.lookupByName(name)
-        domain_mock.XMLDesc.return_value = xml_def
+
+        domain_mock.XMLDesc = MappedResultMock()
+        domain_mock.XMLDesc.add(0, xml_def)
+        domain_mock.XMLDesc.add(
+            virt.libvirt.VIR_DOMAIN_XML_INACTIVE, inactive_def or xml_def
+        )
         domain_mock.OSType.return_value = os_type
 
         # Return state as shutdown
         domain_mock.info.return_value = [
-            4,
+            0 if running else 4,
             2048 * 1024,
             1024 * 1024,
             2,
@@ -102,6 +103,8 @@ def make_mock_vm():
 
         domain_mock.attachDevice.return_value = 0
         domain_mock.detachDevice.return_value = 0
+
+        domain_mock.connect.return_value = mocked_conn
 
         return domain_mock
 
@@ -189,3 +192,192 @@ def make_mock_storage_pool():
         return mocked_pool
 
     return _make_mock_storage_pool
+
+
+@pytest.fixture
+def make_capabilities():
+    def _make_capabilities():
+        mocked_conn = virt.libvirt.openAuth.return_value
+        mocked_conn.getCapabilities.return_value = """
+<capabilities>
+  <host>
+    <uuid>44454c4c-3400-105a-8033-b3c04f4b344a</uuid>
+    <cpu>
+      <arch>x86_64</arch>
+      <model>Nehalem</model>
+      <vendor>Intel</vendor>
+      <microcode version='25'/>
+      <topology sockets='1' cores='4' threads='2'/>
+      <feature name='vme'/>
+      <feature name='ds'/>
+      <feature name='acpi'/>
+      <pages unit='KiB' size='4'/>
+      <pages unit='KiB' size='2048'/>
+    </cpu>
+    <power_management>
+      <suspend_mem/>
+      <suspend_disk/>
+      <suspend_hybrid/>
+    </power_management>
+    <migration_features>
+      <live/>
+      <uri_transports>
+        <uri_transport>tcp</uri_transport>
+        <uri_transport>rdma</uri_transport>
+      </uri_transports>
+    </migration_features>
+    <topology>
+      <cells num='1'>
+        <cell id='0'>
+          <memory unit='KiB'>12367120</memory>
+          <pages unit='KiB' size='4'>3091780</pages>
+          <pages unit='KiB' size='2048'>0</pages>
+          <distances>
+            <sibling id='0' value='10'/>
+          </distances>
+          <cpus num='8'>
+            <cpu id='0' socket_id='0' core_id='0' siblings='0,4'/>
+            <cpu id='1' socket_id='0' core_id='1' siblings='1,5'/>
+            <cpu id='2' socket_id='0' core_id='2' siblings='2,6'/>
+            <cpu id='3' socket_id='0' core_id='3' siblings='3,7'/>
+            <cpu id='4' socket_id='0' core_id='0' siblings='0,4'/>
+            <cpu id='5' socket_id='0' core_id='1' siblings='1,5'/>
+            <cpu id='6' socket_id='0' core_id='2' siblings='2,6'/>
+            <cpu id='7' socket_id='0' core_id='3' siblings='3,7'/>
+          </cpus>
+        </cell>
+      </cells>
+    </topology>
+    <cache>
+      <bank id='0' level='3' type='both' size='8' unit='MiB' cpus='0-7'/>
+    </cache>
+    <secmodel>
+      <model>apparmor</model>
+      <doi>0</doi>
+    </secmodel>
+    <secmodel>
+      <model>dac</model>
+      <doi>0</doi>
+      <baselabel type='kvm'>+487:+486</baselabel>
+      <baselabel type='qemu'>+487:+486</baselabel>
+    </secmodel>
+  </host>
+
+  <guest>
+    <os_type>hvm</os_type>
+    <arch name='i686'>
+      <wordsize>32</wordsize>
+      <emulator>/usr/bin/qemu-system-i386</emulator>
+      <machine maxCpus='255'>pc-i440fx-2.6</machine>
+      <machine canonical='pc-i440fx-2.6' maxCpus='255'>pc</machine>
+      <machine maxCpus='255'>pc-0.12</machine>
+      <domain type='qemu'/>
+      <domain type='kvm'>
+        <emulator>/usr/bin/qemu-kvm</emulator>
+        <machine maxCpus='255'>pc-i440fx-2.6</machine>
+        <machine canonical='pc-i440fx-2.6' maxCpus='255'>pc</machine>
+        <machine maxCpus='255'>pc-0.12</machine>
+      </domain>
+    </arch>
+    <features>
+      <cpuselection/>
+      <deviceboot/>
+      <disksnapshot default='on' toggle='no'/>
+      <acpi default='on' toggle='yes'/>
+      <apic default='on' toggle='no'/>
+      <pae/>
+      <nonpae/>
+    </features>
+  </guest>
+
+  <guest>
+    <os_type>hvm</os_type>
+    <arch name='x86_64'>
+      <wordsize>64</wordsize>
+      <emulator>/usr/bin/qemu-system-x86_64</emulator>
+      <machine maxCpus='255'>pc-i440fx-2.6</machine>
+      <machine canonical='pc-i440fx-2.6' maxCpus='255'>pc</machine>
+      <machine maxCpus='255'>pc-0.12</machine>
+      <domain type='qemu'/>
+      <domain type='kvm'>
+        <emulator>/usr/bin/qemu-kvm</emulator>
+        <machine maxCpus='255'>pc-i440fx-2.6</machine>
+        <machine canonical='pc-i440fx-2.6' maxCpus='255'>pc</machine>
+        <machine maxCpus='255'>pc-0.12</machine>
+      </domain>
+    </arch>
+    <features>
+      <cpuselection/>
+      <deviceboot/>
+      <disksnapshot default='on' toggle='no'/>
+      <acpi default='on' toggle='yes'/>
+      <apic default='on' toggle='no'/>
+    </features>
+  </guest>
+
+</capabilities>"""
+
+    return _make_capabilities
+
+
+@pytest.fixture
+def make_mock_network():
+    def _make_mock_net(xml_def):
+        mocked_conn = virt.libvirt.openAuth.return_value
+
+        doc = ET.fromstring(xml_def)
+        name = doc.find("name").text
+
+        if not isinstance(mocked_conn.networkLookupByName, MappedResultMock):
+            mocked_conn.networkLookupByName = MappedResultMock()
+        mocked_conn.networkLookupByName.add(name)
+        net_mock = mocked_conn.networkLookupByName(name)
+        net_mock.XMLDesc.return_value = xml_def
+
+        # libvirt defaults the autostart to unset
+        net_mock.autostart.return_value = 0
+
+        # Append the network to listAllNetworks return value
+        all_nets = mocked_conn.listAllNetworks.return_value
+        if not isinstance(all_nets, list):
+            all_nets = []
+        all_nets.append(net_mock)
+        mocked_conn.listAllNetworks.return_value = all_nets
+
+        return net_mock
+
+    return _make_mock_net
+
+
+@pytest.fixture
+def make_mock_device():
+    """
+    Create a mock host device
+    """
+
+    def _make_mock_device(xml_def):
+        mocked_conn = virt.libvirt.openAuth.return_value
+        if not isinstance(mocked_conn.nodeDeviceLookupByName, MappedResultMock):
+            mocked_conn.nodeDeviceLookupByName = MappedResultMock()
+
+        doc = ET.fromstring(xml_def)
+        name = doc.find("./name").text
+
+        mocked_conn.nodeDeviceLookupByName.add(name)
+        mocked_device = mocked_conn.nodeDeviceLookupByName(name)
+        mocked_device.name.return_value = name
+        mocked_device.XMLDesc.return_value = xml_def
+        mocked_device.listCaps.return_value = [
+            cap.get("type") for cap in doc.findall("./capability")
+        ]
+        return mocked_device
+
+    return _make_mock_device
+
+
+@pytest.fixture(params=[True, False], ids=["test", "notest"])
+def test(request):
+    """
+    Run the test with both True and False test values
+    """
+    return request.param

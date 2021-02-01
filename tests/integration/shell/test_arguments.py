@@ -1,9 +1,6 @@
-# -*- coding: utf-8 -*-
 """
     Test Salt's argument parser
 """
-
-from __future__ import absolute_import
 
 import pytest
 import salt.utils.args

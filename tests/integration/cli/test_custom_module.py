@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Daniel Mizyrycki (mzdaniel@glidelink.net)
 
@@ -28,13 +27,7 @@
     $ salt-ssh localhost state.sls custom_module
     localhost:
         olleh
-
-
-    This test can be run in a small test suite with:
-
-    $ python tests/runtests.py -C --ssh
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import pytest
 from tests.support.case import SSHCase
@@ -77,7 +70,7 @@ class SSHCustomModuleTest(SSHCase):
         cmd = self.run_function("state.sls", arg=["custom_module"])
         for key in cmd:
             if not isinstance(cmd, dict) or not isinstance(cmd[key], dict):
-                raise AssertionError("{0} is not a proper state return".format(cmd))
+                raise AssertionError("{} is not a proper state return".format(cmd))
             elif not cmd[key]["result"]:
                 raise AssertionError(cmd[key]["comment"])
             cmd_ret = cmd[key]["changes"].get("ret", None)

@@ -14,8 +14,8 @@ contextlib2==0.6.0.post1  # via cherrypy
 contextvars==2.4 ; python_version < "3.7"
 cryptography==3.2
 distro==1.5.0
-gitdb2==2.0.5             # via gitpython
-gitpython==2.1.10
+gitdb==4.0.5              # via gitpython
+gitpython==3.1.12
 idna==2.8
 immutables==0.14          # via contextvars
 ioloop==0.1a0
@@ -23,13 +23,13 @@ ipaddress==1.0.22
 jaraco.functools==2.0     # via cheroot, tempora
 jinja2==2.10.1
 libnacl==1.7.1
-lxml==4.3.0
+lxml==4.6.2
 mako==1.0.7
 markupsafe==1.1.1
 more-itertools==8.2.0     # via cheroot, cherrypy, jaraco.functools
 msgpack==1.0.0
 portend==2.6              # via cherrypy
-psutil==5.6.7
+psutil==5.8.0
 pyasn1==0.4.5
 pycparser==2.19
 pycryptodomex==3.9.8
@@ -47,7 +47,7 @@ pyzmq==18.0.1 ; python_version < "3.8"
 requests==2.21.0
 setproctitle==1.1.10
 six==1.15.0               # via cheroot, cherrypy, cryptography, pyopenssl, python-dateutil, tempora
-smmap2==2.0.5             # via gitdb2
+smmap==3.0.4              # via gitdb
 tempora==1.14.1           # via portend
 timelib==0.2.5
 urllib3==1.24.3           # via requests

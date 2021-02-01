@@ -1,15 +1,12 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Nicole Thomas <nicole@saltstack.com>
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import traceback
 
 import salt.config
 import salt.utils.yaml
-from salt.ext import six
 from salt.output import display_output
 from tests.support.case import ShellCase
 from tests.support.helpers import slowTest
@@ -56,7 +53,7 @@ class OutputReturnTest(ShellCase):
         """
         Tests the return of pprint-formatted data
         """
-        expected = ["{u'local': True}"] if six.PY2 else ["{'local': True}"]
+        expected = ["{'local': True}"]
         ret = self.run_call("test.ping --out=pprint")
         self.assertEqual(ret, expected)
 
@@ -65,7 +62,7 @@ class OutputReturnTest(ShellCase):
         """
         Tests the return of raw-formatted data
         """
-        expected = ["{u'local': True}"] if six.PY2 else ["{'local': True}"]
+        expected = ["{'local': True}"]
         ret = self.run_call("test.ping --out=raw")
         self.assertEqual(ret, expected)
 
