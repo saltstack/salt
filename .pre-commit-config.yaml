@@ -1111,10 +1111,11 @@ repos:
 
   - repo: https://github.com/s0undt3ch/salt-rewrite
     # Automatically rewrite code with known rules
-    rev: 0.8.2
+    rev: 1.0.0
     hooks:
       - id: salt-rewrite
-        files: ^tests/pytests/.*\.py$
+        files: ^tests/.*\.py$
+        args: [-E, fix_asserts]
 
   - repo: https://github.com/timothycrosley/isort
     rev: "1e78a9acf3110e1f9721feb591f89a451fc9876a"
