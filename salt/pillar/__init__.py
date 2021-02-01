@@ -431,6 +431,14 @@ class PillarCache:
         )
         return fresh_pillar.compile_pillar()
 
+    def clear_pillar(self):
+        """
+        Clear the cache
+        """
+        self.cache.clear()
+
+        return True
+
     def compile_pillar(self, *args, **kwargs):  # Will likely just be pillar_dirs
         log.debug(
             "Scanning pillar cache for information about minion %s and pillarenv %s",
