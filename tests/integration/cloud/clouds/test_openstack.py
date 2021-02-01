@@ -1,17 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 Tests for the Openstack Cloud Provider
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 
-# Import Salt Libs
 from tests.integration.cloud.helpers.cloud_test_base import TIMEOUT, CloudTest
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.helpers import destructiveTest
 from tests.support.mixins import SaltReturnAssertsMixin
@@ -28,7 +21,6 @@ try:
 except ImportError:
     HAS_KEYSTONE = False
 
-# Import Third-Party Libs
 try:
     import shade  # pylint: disable=unused-import
 
@@ -225,7 +217,7 @@ class RackspaceTest(CloudTest):
         """
         # check if instance with salt installed returned
         ret_val = self.run_cloud(
-            "-p rackspace-test {0}".format(self.instance_name), timeout=TIMEOUT
+            "-p rackspace-test {}".format(self.instance_name), timeout=TIMEOUT
         )
         self.assertInstanceExists(ret_val)
 

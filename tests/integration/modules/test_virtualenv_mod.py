@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import os
 import tempfile
 
@@ -21,7 +18,7 @@ class VirtualenvModuleTest(ModuleCase):
     """
 
     def setUp(self):
-        super(VirtualenvModuleTest, self).setUp()
+        super().setUp()
         self.venv_test_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         self.venv_dir = os.path.join(self.venv_test_dir, "venv")
 

@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 Tests for various minion timeouts
 """
 
-from __future__ import absolute_import
 
 import os
 import sys
@@ -33,18 +31,18 @@ class MinionTimeoutTestCase(ShellCase):
         else:
             popen_kwargs = None
         ret = self.run_salt(
-            "minion test.sleep {0}".format(sleep_length),
+            "minion test.sleep {}".format(sleep_length),
             timeout=90,
             catch_stderr=True,
             popen_kwargs=popen_kwargs,
         )
         self.assertTrue(
             isinstance(ret[0], list),
-            "Return is not a list. Minion" " may have returned error: {0}".format(ret),
+            "Return is not a list. Minion" " may have returned error: {}".format(ret),
         )
         self.assertEqual(len(ret[0]), 2, "Standard out wrong length {}".format(ret))
         self.assertTrue(
             "True" in ret[0][1],
             "Minion did not return True after "
-            "{0} seconds. ret={1}".format(sleep_length, ret),
+            "{} seconds. ret={}".format(sleep_length, ret),
         )

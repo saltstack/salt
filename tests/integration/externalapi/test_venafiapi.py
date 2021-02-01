@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Tests for the salt-run command
 """
-from __future__ import absolute_import
 
 import functools
 import random
@@ -47,7 +45,7 @@ class VenafiTest(ShellCase):
     @with_random_name
     @slowTest
     def test_request(self, name):
-        cn = "{0}.example.com".format(name)
+        cn = "{}.example.com".format(name)
 
         # Provide python27 compatibility
         if not isinstance(cn, text_type):

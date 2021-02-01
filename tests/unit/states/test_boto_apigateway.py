@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import datetime
 import logging
 import os
@@ -12,7 +9,6 @@ import salt.loader
 import salt.states.boto_apigateway as boto_apigateway
 import salt.utils.files
 import salt.utils.yaml
-from salt.ext.six.moves import range
 from salt.utils.versions import LooseVersion
 from tests.support.helpers import slowTest
 from tests.support.mixins import LoaderModuleMockMixin
@@ -391,7 +387,7 @@ def _has_required_botocore():
         return True
 
 
-class TempSwaggerFile(object):
+class TempSwaggerFile:
     _tmp_swagger_dict = {
         "info": {
             "version": "0.0.0",
@@ -543,7 +539,7 @@ class BotoApiGatewayStateTestCaseBase(TestCase, LoaderModuleMockMixin):
 @skipIf(
     _has_required_boto() is False,
     "The boto3 module must be greater than"
-    " or equal to version {0}".format(required_boto3_version),
+    " or equal to version {}".format(required_boto3_version),
 )
 class BotoApiGatewayTestCase(
     BotoApiGatewayStateTestCaseBase, BotoApiGatewayTestCaseMixin
@@ -1273,12 +1269,12 @@ class BotoApiGatewayTestCase(
 @skipIf(
     _has_required_boto() is False,
     "The boto3 module must be greater than"
-    " or equal to version {0}".format(required_boto3_version),
+    " or equal to version {}".format(required_boto3_version),
 )
 @skipIf(
     _has_required_botocore() is False,
     "The botocore module must be greater than"
-    " or equal to version {0}".format(required_botocore_version),
+    " or equal to version {}".format(required_botocore_version),
 )
 class BotoApiGatewayUsagePlanTestCase(
     BotoApiGatewayStateTestCaseBase, BotoApiGatewayTestCaseMixin
@@ -1817,12 +1813,12 @@ class BotoApiGatewayUsagePlanTestCase(
 @skipIf(
     _has_required_boto() is False,
     "The boto3 module must be greater than"
-    " or equal to version {0}".format(required_boto3_version),
+    " or equal to version {}".format(required_boto3_version),
 )
 @skipIf(
     _has_required_botocore() is False,
     "The botocore module must be greater than"
-    " or equal to version {0}".format(required_botocore_version),
+    " or equal to version {}".format(required_botocore_version),
 )
 class BotoApiGatewayUsagePlanAssociationTestCase(
     BotoApiGatewayStateTestCaseBase, BotoApiGatewayTestCaseMixin
