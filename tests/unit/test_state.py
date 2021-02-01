@@ -6,6 +6,7 @@ import os
 import shutil
 import tempfile
 
+import pytest  # pylint: disable=unused-import
 import salt.exceptions
 import salt.state
 import salt.utils.files
@@ -19,11 +20,6 @@ from tests.support.mock import MagicMock, patch
 from tests.support.pytest.helpers import temp_state_file
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
-
-try:
-    import pytest
-except ImportError as err:
-    pytest = None
 
 
 class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
@@ -871,7 +867,6 @@ class MultiEnvHighStateTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             )
 
 
-@skipIf(pytest is None, "PyTest is missing")
 class StateReturnsTestCase(TestCase):
     """
     TestCase for code handling state returns.
@@ -970,7 +965,6 @@ class StateReturnsTestCase(TestCase):
         assert statedecorators.OutputUnifier("unify")(lambda: data)()["result"] is False
 
 
-@skipIf(pytest is None, "PyTest is missing")
 class SubStateReturnsTestCase(TestCase):
     """
     TestCase for code handling state returns.
