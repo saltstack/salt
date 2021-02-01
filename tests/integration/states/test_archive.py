@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Tests for the archive state
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import errno
 import logging
@@ -23,7 +21,7 @@ ARCHIVE_DIR = (
 )
 
 ARCHIVE_NAME = "custom.tar.gz"
-ARCHIVE_TAR_SOURCE = "http://localhost:{0}/{1}".format(9999, ARCHIVE_NAME)
+ARCHIVE_TAR_SOURCE = "http://localhost:{}/{}".format(9999, ARCHIVE_NAME)
 ARCHIVE_TAR_HASH = "md5=7643861ac07c30fe7d2310e9f25ca514"
 ARCHIVE_TAR_SHA_HASH = (
     "sha256=9591159d86f0a180e4e0645b2320d0235e23e66c66797df61508bf185e0ac1d2"
@@ -42,7 +40,7 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
         cls.webserver = Webserver()
         cls.webserver.start()
         cls.archive_tar_source = cls.webserver.url("custom.tar.gz")
-        cls.archive_local_tar_source = "file://{0}".format(
+        cls.archive_local_tar_source = "file://{}".format(
             os.path.join(RUNTIME_VARS.BASE_FILES, ARCHIVE_NAME)
         )
         cls.untar_file = os.path.join(ARCHIVE_DIR, "custom/README")
@@ -80,12 +78,12 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(os.path.isfile(path))
 
     def run_function(self, *args, **kwargs):  # pylint: disable=arguments-differ
-        ret = super(ArchiveTest, self).run_function(*args, **kwargs)
+        ret = super().run_function(*args, **kwargs)
         log.debug("ret = %s", ret)
         return ret
 
     def run_state(self, *args, **kwargs):  # pylint: disable=arguments-differ
-        ret = super(ArchiveTest, self).run_state(*args, **kwargs)
+        ret = super().run_state(*args, **kwargs)
         log.debug("ret = %s", ret)
         return ret
 
