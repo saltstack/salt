@@ -111,7 +111,6 @@ cherrypy==17.4.1
 ciscoconfparse==1.5.19    # via napalm
 click==7.0                # via geomet
 clustershell==1.8.1
-cohesity_management_sdk
 colorama==0.4.3           # via ciscoconfparse
 contextlib2==0.6.0.post1
 croniter==0.3.29 ; sys_platform != "win32"
@@ -142,7 +141,7 @@ jinja2==2.10.1
 jmespath==0.9.4
 jsondiff==1.2.0           # via moto
 jsonpatch==1.28           # via cfn-lint
-jsonpickle           # via aws-xray-sdk
+jsonpickle==1.1           # via aws-xray-sdk
 jsonpointer==2.0          # via jsonpatch
 jsonschema==3.2.0
 junit-xml==1.9            # via cfn-lint
