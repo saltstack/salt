@@ -11,7 +11,6 @@ import logging
 import os
 import pprint
 import re
-import shutil
 import sys
 
 import pytest
@@ -20,8 +19,6 @@ import salt.utils.json
 import salt.utils.platform
 import salt.utils.yaml
 from tests.support.helpers import PRE_PYTEST_SKIP, PRE_PYTEST_SKIP_REASON
-from tests.support.pytest.helpers import temp_state_file
-from tests.support.runtests import RUNTIME_VARS
 
 pytestmark = [
     pytest.mark.slow_test,
@@ -62,16 +59,28 @@ def test_json_out_indent(salt_call_cli, indent):
     assert ret.stdout == expected_output
 
 
-def test_local_sls_call(salt_call_cli):
-    fileroot = os.path.join(RUNTIME_VARS.FILES, "file", "base")
-    ret = salt_call_cli.run(
-        "--local", "--file-root", fileroot, "state.sls", "saltcalllocal"
-    )
-    assert ret.exitcode == 0
-    state_run_dict = next(iter(ret.json.values()))
-    assert state_run_dict["name"] == "test.echo"
-    assert state_run_dict["result"] is True
-    assert state_run_dict["changes"]["ret"] == "hello"
+def test_local_sls_call(salt_call_cli, base_env_state_tree_root_dir):
+    sls_contents = """
+    regular-module:
+      module.run:
+        - name: test.echo
+        - text: hello
+    """
+    with pytest.helpers.temp_file(
+        "saltcalllocal.sls", sls_contents, base_env_state_tree_root_dir
+    ):
+        ret = salt_call_cli.run(
+            "--local",
+            "--file-root",
+            base_env_state_tree_root_dir,
+            "state.sls",
+            "saltcalllocal",
+        )
+        assert ret.exitcode == 0
+        state_run_dict = next(iter(ret.json.values()))
+        assert state_run_dict["name"] == "test.echo"
+        assert state_run_dict["result"] is True
+        assert state_run_dict["changes"]["ret"] == "hello"
 
 
 def test_local_salt_call(salt_call_cli):
@@ -119,22 +128,10 @@ def test_issue_6973_state_highstate_exit_code(salt_call_cli):
     for this minion, salt-call should exit non-zero if invoked with
     option --retcode-passthrough
     """
-    top_sls = """
-    base:
-      '*':
-        - core
-        """
-
-    with temp_state_file("top.sls", top_sls) as src:
-        dst = "{0}.bak"
-        shutil.move(src, dst)
-        expected_comment = "No states found for this minion"
-        try:
-            ret = salt_call_cli.run("--retcode-passthrough", "state.highstate")
-        finally:
-            shutil.move(dst, src)
-        assert ret.exitcode != 0
-        assert expected_comment in ret.stdout
+    expected_comment = "No states found for this minion"
+    ret = salt_call_cli.run("--retcode-passthrough", "state.highstate")
+    assert ret.exitcode != 0
+    assert expected_comment in ret.stdout
 
 
 @PRE_PYTEST_SKIP
@@ -259,7 +256,7 @@ def test_pillar_items_masterless(
         assert ret.json["monty"] == "python"
 
 
-def test_masterless_highstate(salt_call_cli):
+def test_masterless_highstate(salt_call_cli, base_env_state_tree_root_dir, tmp_path):
     """
     test state.highstate in masterless mode
     """
@@ -269,23 +266,27 @@ def test_masterless_highstate(salt_call_cli):
         - core
         """
 
+    testfile = tmp_path / "testfile"
     core_state = """
-    {}/testfile:
+    {}:
       file:
         - managed
         - source: salt://testfile
         - makedirs: true
         """.format(
-        RUNTIME_VARS.TMP
+        testfile
     )
 
-    with temp_state_file("top.sls", top_sls), temp_state_file("core.sls", core_state):
-        destpath = os.path.join(RUNTIME_VARS.TMP, "testfile")
+    expected_id = "{}".format(testfile)
+
+    with pytest.helpers.temp_file(
+        "top.sls", top_sls, base_env_state_tree_root_dir
+    ), pytest.helpers.temp_file("core.sls", core_state, base_env_state_tree_root_dir):
         ret = salt_call_cli.run("--local", "state.highstate")
         assert ret.exitcode == 0
         state_run_dict = next(iter(ret.json.values()))
         assert state_run_dict["result"] is True
-        assert state_run_dict["__id__"] == destpath
+        assert state_run_dict["__id__"] == expected_id
 
 
 @pytest.mark.skip_on_windows
