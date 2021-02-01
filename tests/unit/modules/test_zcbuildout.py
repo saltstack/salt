@@ -78,7 +78,7 @@ class Base(TestCase, LoaderModuleMockMixin):
             [salt.utils.path.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES), cls.ppy_st]
         )
         subprocess.check_call(
-            [os.path.join(cls.bin_st, "pip"), "install", "-U", "setuptools"]
+            [os.path.join(cls.bin_st, "pip"), "install", "-U", "setuptools<50.0.0"]
         )
         # distribute has been merged back in to setuptools as of v0.7. So, no
         # need to upgrade distribute, but this seems to be the only way to get
