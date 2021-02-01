@@ -1,3 +1,4 @@
+import contextlib
 import socket
 
 import attr
@@ -341,11 +342,9 @@ def test_timeout_message_retry(salt_message_client):
     assert message_body_1 == message_body_2
 
     # now try again, should not call send
-    try:
+    with contextlib.suppress(salt.exceptions.SaltReqTimeoutError):
         salt_message_client.timeout_message(message_id_2, message_body_2)
         raise future_new.exception()
-    except salt.exceptions.SaltReqTimeoutError:
-        pass
 
     # assert it's really "consumed"
     assert message_id_2 not in salt_message_client.send_future_map
