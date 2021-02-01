@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Erik Johnson <erik@saltstack.com>
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import errno
 import logging
@@ -12,7 +10,6 @@ import stat
 import tempfile
 import textwrap
 
-import salt.ext.six
 import salt.ext.tornado.ioloop
 import salt.fileserver.gitfs as gitfs
 import salt.utils.files
@@ -77,7 +74,7 @@ def _clear_instance_map():
         pass
 
 
-@skipIf(not HAS_GITPYTHON, "GitPython >= {0} required".format(GITPYTHON_MINVER))
+@skipIf(not HAS_GITPYTHON, "GitPython >= {} required".format(GITPYTHON_MINVER))
 class GitfsConfigTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         opts = {
@@ -226,7 +223,7 @@ class GitfsConfigTestCase(TestCase, LoaderModuleMockMixin):
 LOAD = {"saltenv": "base"}
 
 
-class GitFSTestFuncs(object):
+class GitFSTestFuncs:
     """
     These are where the tests go, so that they can be run using both GitPython
     and pygit2.
@@ -466,7 +463,7 @@ class GitFSTestFuncs(object):
                 """\
             gitfs_disable_saltenv_mapping: True
             gitfs_remotes:
-              - {0}:
+              - {}:
                 - saltenv:
                   - bar:
                     - ref: somebranch
@@ -493,7 +490,7 @@ class GitFSTestFuncs(object):
             textwrap.dedent(
                 """\
             gitfs_remotes:
-              - {0}:
+              - {}:
                 - disable_saltenv_mapping: True
 
             gitfs_saltenv:
@@ -522,7 +519,7 @@ class GitFSTestFuncs(object):
             textwrap.dedent(
                 """\
             gitfs_remotes:
-              - {0}:
+              - {}:
                 - disable_saltenv_mapping: True
                 - saltenv:
                   - world:
@@ -540,7 +537,7 @@ class GitFSTestFuncs(object):
             self.assertEqual(ret, ["base", "world"])
 
 
-class GitFSTestBase(object):
+class GitFSTestBase:
     @classmethod
     def setUpClass(cls):
         cls.tmp_repo_dir = os.path.join(RUNTIME_VARS.TMP, "gitfs_root")
@@ -558,9 +555,7 @@ class GitFSTestBase(object):
                 raise
 
         shutil.copytree(
-            salt.ext.six.text_type(RUNTIME_VARS.BASE_FILES),
-            salt.ext.six.text_type(cls.tmp_repo_dir + "/"),
-            symlinks=True,
+            str(RUNTIME_VARS.BASE_FILES), str(cls.tmp_repo_dir + "/"), symlinks=True,
         )
 
         repo = git.Repo.init(cls.tmp_repo_dir)
@@ -572,7 +567,7 @@ class GitFSTestBase(object):
                 username = pwd.getpwuid(os.geteuid()).pw_name
         except AttributeError:
             log.error("Unable to get effective username, falling back to 'root'.")
-            username = str("root")
+            username = "root"
 
         with patched_environ(USERNAME=username):
             repo.index.add([x for x in os.listdir(cls.tmp_repo_dir) if x != ".git"])
@@ -628,12 +623,12 @@ class GitFSTestBase(object):
                     continue
                 if exc.errno != errno.ENOENT:
                     raise
-        if salt.ext.six.PY3 and salt.utils.platform.is_windows():
+        if salt.utils.platform.is_windows():
             self.setUpClass()
             self.setup_loader_modules()
 
 
-@skipIf(not HAS_GITPYTHON, "GitPython >= {0} required".format(GITPYTHON_MINVER))
+@skipIf(not HAS_GITPYTHON, "GitPython >= {} required".format(GITPYTHON_MINVER))
 class GitPythonTest(GitFSTestBase, GitFSTestFuncs, TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         opts = {
@@ -673,11 +668,11 @@ class GitPythonTest(GitFSTestBase, GitFSTestFuncs, TestCase, LoaderModuleMockMix
 
 @skipIf(
     not HAS_GITPYTHON,
-    "GitPython >= {0} required for temp repo setup".format(GITPYTHON_MINVER),
+    "GitPython >= {} required for temp repo setup".format(GITPYTHON_MINVER),
 )
 @skipIf(
     not HAS_PYGIT2,
-    "pygit2 >= {0} and libgit2 >= {1} required".format(PYGIT2_MINVER, LIBGIT2_MINVER),
+    "pygit2 >= {} and libgit2 >= {} required".format(PYGIT2_MINVER, LIBGIT2_MINVER),
 )
 @skipIf(
     salt.utils.platform.is_windows(),

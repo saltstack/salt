@@ -1,20 +1,15 @@
-# -*- coding: utf-8 -*-
 """
 Integration tests for the docker_container states
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import random
 import string
 import sys
 
 import salt.utils.path
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 from tests.support.case import ModuleCase
 from tests.support.helpers import destructiveTest, slowTest
 from tests.support.mixins import SaltReturnAssertsMixin
-
-# Import Salt Testing Libs
 from tests.support.unit import skipIf
 
 
@@ -44,7 +39,7 @@ class DockerCallTestCase(ModuleCase, SaltReturnAssertsMixin):
         self.run_state(
             "docker_container.running",
             name=self.random_name,
-            image="python:{0}".format(self.image_tag),
+            image="python:{}".format(self.image_tag),
             entrypoint="tail -f /dev/null",
         )
 
@@ -55,7 +50,7 @@ class DockerCallTestCase(ModuleCase, SaltReturnAssertsMixin):
         self.run_state("docker_container.absent", name=self.random_name, force=True)
         self.run_state(
             "docker_image.absent",
-            images=["python:{0}".format(self.image_tag)],
+            images=["python:{}".format(self.image_tag)],
             force=True,
         )
         delattr(self, "random_name")

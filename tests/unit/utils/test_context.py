@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
 """
-    tests.unit.context_test
-    ~~~~~~~~~~~~~~~~~~~~
+tests.unit.context_test
+~~~~~~~~~~~~~~~~~~~~~~~
 """
-from __future__ import absolute_import
 
 import threading
 import time
@@ -11,7 +9,6 @@ import time
 import salt.ext.tornado.gen
 import salt.ext.tornado.stack_context
 import salt.utils.json
-from salt.ext.six.moves import range
 from salt.ext.tornado.testing import AsyncTestCase, gen_test
 from salt.utils.context import ContextDict, NamespacedDictWrapper
 from tests.support.helpers import slowTest
@@ -23,7 +20,7 @@ class ContextDictTests(AsyncTestCase):
     num_concurrent_tasks = 5
 
     def setUp(self):
-        super(ContextDictTests, self).setUp()
+        super().setUp()
         self.cd = ContextDict()
         # set a global value
         self.cd["foo"] = "global"

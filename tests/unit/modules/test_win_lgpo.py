@@ -6,7 +6,6 @@ import glob
 import os
 
 import salt.config
-import salt.ext.six as six
 import salt.loader
 import salt.modules.win_lgpo as win_lgpo
 import salt.states.win_lgpo
@@ -862,8 +861,6 @@ class WinLGPOGetPointAndPrintENTestCase(TestCase, LoaderModuleMockMixin):
                 return_full_policy_names=return_full_policy_names,
                 hierarchical_return=hierarchical_return,
             )
-            if six.PY2:
-                results = salt.states.win_lgpo._convert_to_unicode(results)
             return results
         return "Policy Not Found"
 
