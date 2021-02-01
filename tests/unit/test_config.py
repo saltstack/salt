@@ -17,7 +17,6 @@ from salt.exceptions import (
     SaltCloudConfigError,
     SaltConfigurationError,
 )
-from salt.ext import six
 from salt.syspaths import CONFIG_DIR
 from tests.support.helpers import patched_environ, slowTest, with_tempdir, with_tempfile
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
@@ -790,18 +789,10 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         self.assertEqual(syndic_opts["id"], "syndic")
         self.assertEqual(syndic_opts["pki_dir"], os.path.join(root_dir, "pki"))
         # the rest is configured master side
-        if RUNTIME_VARS.PYTEST_SESSION is False:
-            # Pytest assigns ports dynamically
-            self.assertEqual(syndic_opts["master_port"], 54506)
-            self.assertEqual(syndic_opts["master"], "localhost")
-            self.assertEqual(
-                syndic_opts["sock_dir"], os.path.join(root_dir, "syndic_sock")
-            )
-        else:
-            self.assertEqual(syndic_opts["master"], "127.0.0.1")
-            self.assertEqual(
-                syndic_opts["sock_dir"], os.path.join(root_dir, "run", "minion")
-            )
+        self.assertEqual(syndic_opts["master"], "127.0.0.1")
+        self.assertEqual(
+            syndic_opts["sock_dir"], os.path.join(root_dir, "run", "minion")
+        )
         self.assertEqual(syndic_opts["cachedir"], os.path.join(root_dir, "cache"))
         self.assertEqual(
             syndic_opts["log_file"], os.path.join(root_dir, "logs", "syndic.log")
@@ -889,7 +880,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         tally = self._get_tally(salt.config.master_config)
         # pylint: enable=no-value-for-parameter
         non_unicode = tally.get("non_unicode", [])
-        self.assertEqual(len(non_unicode), 8 if six.PY2 else 0, non_unicode)
+        self.assertEqual(len(non_unicode), 0, non_unicode)
         self.assertTrue(tally["unicode"] > 0)
 
     def test_conf_file_strings_are_unicode_for_minion(self):

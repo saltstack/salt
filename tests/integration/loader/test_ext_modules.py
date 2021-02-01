@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
@@ -9,7 +8,6 @@
     Test Salt's loader regarding external overrides
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import time

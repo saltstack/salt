@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 tests.integration.modules.pip
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import pprint
@@ -30,7 +28,7 @@ from tests.support.unit import skipIf
 @pytest.mark.windows_whitelisted
 class PipModuleTest(ModuleCase):
     def setUp(self):
-        super(PipModuleTest, self).setUp()
+        super().setUp()
         self.venv_test_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         # Remove the venv test directory
         self.addCleanup(shutil.rmtree, self.venv_test_dir, ignore_errors=True)
@@ -102,9 +100,7 @@ class PipModuleTest(ModuleCase):
         )
 
         success_for = (
-            re.findall(
-                r"({0})(?:-(?:[\d\.-]))?".format(expect_str), success.groups()[0]
-            )
+            re.findall(r"({})(?:-(?:[\d\.-]))?".format(expect_str), success.groups()[0])
             if success
             else []
         )
@@ -138,7 +134,7 @@ class PipModuleTest(ModuleCase):
         for func in ("pip.freeze", "pip.list"):
             ret = self.run_function(func, bin_env=self.venv_dir)
             self.assertIn(
-                "Command required for '{0}' not found: "
+                "Command required for '{}' not found: "
                 "Could not find a `pip` binary".format(func),
                 ret,
             )
@@ -549,7 +545,7 @@ class PipModuleTest(ModuleCase):
         ret = self.run_function(
             "pip.install",
             [],
-            editable="{0}".format(",".join(editables)),
+            editable="{}".format(",".join(editables)),
             bin_env=self.venv_dir,
         )
 
@@ -584,7 +580,7 @@ class PipModuleTest(ModuleCase):
         ret = self.run_function(
             "pip.install",
             ["pep8"],
-            editable="{0}".format(",".join(editables)),
+            editable="{}".format(",".join(editables)),
             bin_env=self.venv_dir,
         )
 
@@ -602,7 +598,7 @@ class PipModuleTest(ModuleCase):
             for package in ("Blinker", "SaltTesting", "pep8"):
                 self.assertRegex(
                     ret["stdout"],
-                    r"(?:.*)(Successfully installed)(?:.*)({0})(?:.*)".format(package),
+                    r"(?:.*)(Successfully installed)(?:.*)({})(?:.*)".format(package),
                 )
         except KeyError as exc:
             self.fail(

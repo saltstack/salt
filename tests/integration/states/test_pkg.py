@@ -11,7 +11,6 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.pkg.rpm
 import salt.utils.platform
-from salt.ext.six.moves import range
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
     destructiveTest,
