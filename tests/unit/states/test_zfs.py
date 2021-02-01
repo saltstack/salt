@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Tests for salt.states.zfs
 
@@ -8,7 +7,6 @@ Tests for salt.states.zfs
 :depends:       salt.utils.zfs, salt.modules.zfs
 :platform:      illumos,freebsd,linux
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.loader
 import salt.states.zfs as zfs

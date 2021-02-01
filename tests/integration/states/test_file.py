@@ -1,8 +1,6 @@
 """
 Tests for the file state
 """
-
-
 import errno
 import filecmp
 import logging
@@ -18,14 +16,13 @@ import textwrap
 import pytest
 import salt.serializers.configparser
 import salt.serializers.plist
+import salt.utils.atomicfile
 import salt.utils.data
 import salt.utils.files
 import salt.utils.json
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
-from salt.ext import six
-from salt.ext.six.moves import range
 from salt.utils.versions import LooseVersion as _LooseVersion
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
@@ -64,6 +61,8 @@ BINARY_FILE = b"GIF89a\x01\x00\x01\x00\x80\x00\x00\x05\x04\x04\x00\x00\x00,\x00\
 
 TEST_SYSTEM_USER = "test_system_user"
 TEST_SYSTEM_GROUP = "test_system_group"
+
+DEFAULT_ENDING = salt.utils.stringutils.to_bytes(os.linesep)
 
 
 def _test_managed_file_mode_keep_helper(testcase, local=False):
@@ -130,6 +129,21 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
     @classmethod
     def setUpClass(cls):
         cls.tmp_dir = pathlib.Path(tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)).resolve()
+
+        def _reline(path, ending=DEFAULT_ENDING):
+            """
+            Normalize the line endings of a file.
+            """
+            with salt.utils.files.fopen(path, "rb") as fhr:
+                lines = fhr.read().splitlines()
+            with salt.utils.atomicfile.atomic_open(path, "wb") as fhw:
+                for line in lines:
+                    fhw.write(line + ending)
+
+        destpath = os.path.join(RUNTIME_VARS.BASE_FILES, "testappend", "firstif")
+        _reline(destpath)
+        destpath = os.path.join(RUNTIME_VARS.BASE_FILES, "testappend", "secondif")
+        _reline(destpath)
 
     @classmethod
     def tearDownClass(cls):
@@ -1599,13 +1613,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         """
         ret = self.run_state("file.recurse", name=name, source="salt://соль")
         self.assertSaltTrueReturn(ret)
-        if six.PY2 and IS_WINDOWS:
-            # Providing unicode to os.listdir so that we avoid having listdir
-            # try to decode the filenames using the systemencoding on windows
-            # python 2.
-            files = os.listdir(name.decode("utf-8"))
-        else:
-            files = salt.utils.data.decode(os.listdir(name), normalize=True)
+        files = salt.utils.data.decode(os.listdir(name), normalize=True)
         self.assertEqual(
             sorted(files), sorted(["foo.txt", "спам.txt", "яйца.txt"]),
         )
@@ -2523,9 +2531,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         )
 
     @with_tempdir()
-    @skipIf(
-        salt.utils.platform.is_darwin() and six.PY2, "This test hangs on OS X on Py2"
-    )
     def test_issue_11003_immutable_lazy_proxy_sum(self, base_dir):
         # causes the Import-Module ServerManager error on Windows
         template_path = os.path.join(RUNTIME_VARS.TMP_STATE_TREE, "issue-11003.sls")
@@ -3069,6 +3074,63 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertIn("PermitRootLogin no", file_contents)
 
         self.assertSaltTrueReturn(ret)
+
+    @with_tempdir()
+    @pytest.mark.slow_test
+    def test_issue_1896_file_append_source(self, base_dir):
+        """
+        Verify that we can append a file's contents
+        """
+        testfile = os.path.join(base_dir, "test.append")
+
+        ret = self.run_state("file.touch", name=testfile)
+        self.assertSaltTrueReturn(ret)
+        ret = self.run_state(
+            "file.append", name=testfile, source="salt://testappend/firstif"
+        )
+        self.assertSaltTrueReturn(ret)
+        ret = self.run_state(
+            "file.append", name=testfile, source="salt://testappend/secondif"
+        )
+        self.assertSaltTrueReturn(ret)
+
+        with salt.utils.files.fopen(testfile, "r") as fp_:
+            testfile_contents = salt.utils.stringutils.to_unicode(fp_.read())
+
+        contents = textwrap.dedent(
+            """\
+            # set variable identifying the chroot you work in (used in the prompt below)
+            if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
+                debian_chroot=$(cat /etc/debian_chroot)
+            fi
+
+            # enable bash completion in interactive shells
+            if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
+                . /etc/bash_completion
+            fi
+            """
+        )
+
+        if salt.utils.platform.is_windows():
+            new_contents = contents.splitlines()
+            contents = os.linesep.join(new_contents)
+            contents += os.linesep
+
+        self.assertMultiLineEqual(contents, testfile_contents)
+
+        ret = self.run_state(
+            "file.append", name=testfile, source="salt://testappend/secondif"
+        )
+        self.assertSaltTrueReturn(ret)
+        ret = self.run_state(
+            "file.append", name=testfile, source="salt://testappend/firstif"
+        )
+        self.assertSaltTrueReturn(ret)
+
+        with salt.utils.files.fopen(testfile, "r") as fp_:
+            testfile_contents = salt.utils.stringutils.to_unicode(fp_.read())
+
+        self.assertMultiLineEqual(contents, testfile_contents)
 
 
 @pytest.mark.windows_whitelisted

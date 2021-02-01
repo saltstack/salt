@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Tests for salt.modules.zpool
 
@@ -9,28 +8,19 @@ Tests for salt.modules.zpool
 :platform:      illumos,freebsd,linux
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Salt Utils
 import salt.loader
 import salt.modules.zpool as zpool
 import salt.utils.decorators
 import salt.utils.decorators.path
-
-# Import Salt Execution module to test
 import salt.utils.zfs
 from salt.utils.odict import OrderedDict
 from tests.support.helpers import slowTest
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
-
-# Import Salt Testing libs
 from tests.support.zfs import ZFSMockData
 
 
-# Skip this test case if we don't have access to mock!
 class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
     """
     This class contains a set of functions that test salt.modules.zpool module
@@ -114,6 +104,36 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
                 "\t  mirror-0  ONLINE       0     0     0",
                 "\t    c2t0d0  ONLINE       0     0     0",
                 "\t    c2t1d0  ONLINE       0     0     0",
+                "",
+                "errors: No known data errors",
+            ]
+        )
+        ret["stderr"] = ""
+        ret["retcode"] = 0
+        mock_cmd = MagicMock(return_value=ret)
+        with patch.dict(zpool.__salt__, {"cmd.run_all": mock_cmd}), patch.dict(
+            zpool.__utils__, self.utils_patch
+        ):
+            ret = zpool.status()
+            self.assertEqual("ONLINE", ret["mypool"]["state"])
+
+    def test_status_with_colons_in_vdevs(self):
+        """
+        Tests successful return of status function
+        """
+        ret = {}
+        ret["stdout"] = "\n".join(
+            [
+                "  pool: mypool",
+                " state: ONLINE",
+                "  scan: scrub repaired 0 in 0h6m with 0 errors on Mon Dec 21 02:06:17 2015",
+                "config:",
+                "",
+                "\tNAME        STATE     READ WRITE CKSUM",
+                "\tmypool      ONLINE       0     0     0",
+                "\t  mirror-0  ONLINE       0     0     0",
+                "\t    usb-WD_My_Book_Duo_25F6_....32-0:0  ONLINE       0     0     0",
+                "\t    usb-WD_My_Book_Duo_25F6_....32-0:1  ONLINE       0     0     0",
                 "",
                 "errors: No known data errors",
             ]

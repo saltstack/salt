@@ -77,9 +77,6 @@ Example arguments for ``git checkout``:
   | v3000.1    | Tag signaling the commit for a 3000.1 patch fix.                           |
   +------------+----------------------------------------------------------------------------+
 
-Further reading on `release branch and develop branch
-<https://docs.saltstack.com/en/latest/topics/development/contributing.html#which-salt-branch>`_.
-
 Influence of the ``git checkout`` argument on ``git describe``:
 
   +------------+----------------------------+-----------------------------------------------+
