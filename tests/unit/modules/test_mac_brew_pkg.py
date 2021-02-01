@@ -1,9 +1,8 @@
 """
     :codeauthor: Nicole Thomas <nicole@saltstack.com>
 """
-import textwrap
-
 import logging
+import textwrap
 
 import salt.modules.mac_brew_pkg as mac_brew
 import salt.utils.pkg
@@ -26,7 +25,7 @@ class BrewTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {mac_brew: {"__opts__": {"user": MagicMock(return_value="bar")}}}
 
-    def custom_call_brew(*cmd, failhard=True):
+    def custom_call_brew(self, *cmd, failhard=True):
         result = dict()
         if cmd == ("info", "--json=v2", "--installed"):
             result = {
@@ -346,7 +345,7 @@ class BrewTestCase(TestCase, LoaderModuleMockMixin):
                 "retcode": "",
             }
 
-          return result
+        return result
 
     def custom_add_pkg(self, ret, name, newest_version):
         ret[name] = newest_version
