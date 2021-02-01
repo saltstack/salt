@@ -51,7 +51,7 @@ try:
     import MySQLdb
     import MySQLdb.cursors
     import MySQLdb.converters
-    from MySQLdb.constants import FIELD_TYPE, FLAG
+    from MySQLdb.constants import FIELD_TYPE, FLAG, CLIENT
     from MySQLdb import OperationalError
 except ImportError:
     try:
@@ -62,7 +62,7 @@ except ImportError:
         import MySQLdb
         import MySQLdb.cursors
         import MySQLdb.converters
-        from MySQLdb.constants import FIELD_TYPE, FLAG
+        from MySQLdb.constants import FIELD_TYPE, FLAG, CLIENT
         from MySQLdb import OperationalError
     except ImportError:
         MySQLdb = None
@@ -391,6 +391,19 @@ def _connect(**kwargs):
         get_opts = False
     else:
         get_opts = True
+
+    connargs["client_flag"] = 0
+
+    available_client_flags = {}
+    for flag in dir(CLIENT):
+        if not flag.startswith("__"):
+            available_client_flags[flag.lower()] = getattr(CLIENT, flag)
+
+    for flag in kwargs.get("client_flags", []):
+        if available_client_flags.get(flag):
+            connargs["client_flag"] |= available_client_flags[flag]
+        else:
+            log.error("MySQL client flag %s not valid, ignoring.", flag)
 
     _connarg("connection_host", "host", get_opts)
     _connarg("connection_user", "user", get_opts)

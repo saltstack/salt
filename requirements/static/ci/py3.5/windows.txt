@@ -69,7 +69,7 @@ markupsafe==1.1.1
 mock==3.0.5
 more-itertools==8.2.0
 moto==1.3.16
-msgpack==1.0.0
+msgpack==1.0.2
 networkx==2.4             # via cfn-lint
 packaging==19.2           # via pytest
 patch==1.16
@@ -92,7 +92,6 @@ pyparsing==2.4.5          # via packaging
 pyrsistent==0.17.3        # via jsonschema
 pytest-helpers-namespace==2019.1.8
 pytest-salt-factories==0.120.2
-pytest-salt==2020.1.27
 pytest-subtests==0.4.0
 pytest-tempdir==2019.10.12
 pytest==6.1.2
