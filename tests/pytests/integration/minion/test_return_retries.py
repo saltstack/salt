@@ -2,7 +2,6 @@ import time
 
 import pytest
 from saltfactories.utils import random_string
-from tests.support.helpers import slowTest
 
 
 @pytest.fixture(scope="function")
@@ -10,7 +9,8 @@ def salt_minion_retry(salt_master_factory, salt_minion_id):
     # override the defaults for this test
     config_overrides = {
         "return_retry_timer_max": 0,
-        "return_retry_timer": 60,
+        "return_retry_timer": 5,
+        "return_retry_tries": 30,
     }
     factory = salt_master_factory.get_salt_minion_daemon(
         random_string("retry-minion-"),
@@ -25,7 +25,7 @@ def salt_minion_retry(salt_master_factory, salt_minion_id):
         yield factory
 
 
-@slowTest
+@pytest.mark.slow_test
 def test_publish_retry(salt_master, salt_minion_retry, salt_cli, salt_run_cli):
     # run job that takes some time for warmup
     rtn = salt_cli.run("test.sleep", "5", "--async", minion_tgt=salt_minion_retry.id)
@@ -39,11 +39,11 @@ def test_publish_retry(salt_master, salt_minion_retry, salt_cli, salt_run_cli):
 
         # the 70s sleep (and 60s timer value) is to reduce flakiness due to slower test runs
         # and should be addresses when number of tries is configurable through minion opts
-        time.sleep(70)
+        time.sleep(5)
 
     data = None
     for i in range(1, 30):
-        time.sleep(10)
+        time.sleep(1)
         data = salt_run_cli.run("jobs.lookup_jid", jid, _timeout=60).json
         if data:
             break
