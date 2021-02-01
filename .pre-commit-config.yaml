@@ -4,7 +4,7 @@ default_language_version:
 exclude: ^(doc/_static/.*|doc/_themes/.*)$
 repos:
   - repo: https://github.com/saltstack/pip-tools-compile-impersonate
-    rev: master
+    rev: dff9089c1003af49665064067ff63c75b9b69dcd
     hooks:
 
   # ----- Packaging Requirements ------------------------------------------------------------------------------------>
@@ -142,13 +142,12 @@ repos:
       - id: pip-tools-compile
         alias: compile-pkg-darwin-3.5-zmq-requirements
         name: Darwin Packaging Py3.5 ZeroMQ Requirements
-        files: ^(pkg/osx/req_pyobjc\.txt|requirements/((base|zeromq|crypto|darwin)\.txt|static/pkg/(darwin\.in|py3\.5/darwin\.txt)))$
+        files: ^(requirements/((base|zeromq|crypto|darwin)\.txt|static/pkg/(darwin\.in|py3\.5/darwin\.txt)))$
         pass_filenames: false
         args:
           - -v
           - --py-version=3.5
           - --platform=darwin
-          - --include=pkg/osx/req_pyobjc.txt
           - --include=requirements/darwin.txt
           - --passthrough-line-from-input=^pyobjc(.*)$
           - requirements/static/pkg/darwin.in
@@ -156,13 +155,12 @@ repos:
       - id: pip-tools-compile
         alias: compile-pkg-darwin-3.6-zmq-requirements
         name: Darwin Packaging Py3.6 ZeroMQ Requirements
-        files: ^(pkg/osx/req_pyobjc\.txt|requirements/((base|zeromq|crypto|darwin)\.txt|static/pkg/(darwin\.in|py3\.6/darwin\.txt)))$
+        files: ^(requirements/((base|zeromq|crypto|darwin)\.txt|static/pkg/(darwin\.in|py3\.6/darwin\.txt)))$
         pass_filenames: false
         args:
           - -v
           - --py-version=3.6
           - --platform=darwin
-          - --include=pkg/osx/req_pyobjc.txt
           - --include=requirements/darwin.txt
           - --passthrough-line-from-input=^pyobjc(.*)$
           - requirements/static/pkg/darwin.in
@@ -170,13 +168,12 @@ repos:
       - id: pip-tools-compile
         alias: compile-pkg-darwin-3.7-zmq-requirements
         name: Darwin Packaging Py3.7 ZeroMQ Requirements
-        files: ^(pkg/osx/req_pyobjc\.txt|requirements/((base|zeromq|crypto|darwin)\.txt|static/pkg/(darwin\.in|py3\.7/darwin\.txt)))$
+        files: ^(requirements/((base|zeromq|crypto|darwin)\.txt|static/pkg/(darwin\.in|py3\.7/darwin\.txt)))$
         pass_filenames: false
         args:
           - -v
           - --py-version=3.7
           - --platform=darwin
-          - --include=pkg/osx/req_pyobjc.txt
           - --include=requirements/darwin.txt
           - --passthrough-line-from-input=^pyobjc(.*)$
           - requirements/static/pkg/darwin.in
@@ -184,13 +181,12 @@ repos:
       - id: pip-tools-compile
         alias: compile-pkg-darwin-3.8-zmq-requirements
         name: Darwin Packaging Py3.8 ZeroMQ Requirements
-        files: ^(pkg/osx/req_pyobjc\.txt|requirements/((base|zeromq|crypto|darwin)\.txt|static/pkg/(darwin\.in|py3\.8/darwin\.txt)))$
+        files: ^(requirements/((base|zeromq|crypto|darwin)\.txt|static/pkg/(darwin\.in|py3\.8/darwin\.txt)))$
         pass_filenames: false
         args:
           - -v
           - --py-version=3.8
           - --platform=darwin
-          - --include=pkg/osx/req_pyobjc.txt
           - --include=requirements/darwin.txt
           - --passthrough-line-from-input=^pyobjc(.*)$
           - requirements/static/pkg/darwin.in
@@ -198,13 +194,12 @@ repos:
       - id: pip-tools-compile
         alias: compile-pkg-darwin-3.9-zmq-requirements
         name: Darwin Packaging Py3.9 ZeroMQ Requirements
-        files: ^(pkg/osx/req_pyobjc\.txt|requirements/((base|zeromq|crypto|darwin)\.txt|static/pkg/(darwin\.in|py3\.9/darwin\.txt)))$
+        files: ^(requirements/((base|zeromq|crypto|darwin)\.txt|static/pkg/(darwin\.in|py3\.9/darwin\.txt)))$
         pass_filenames: false
         args:
           - -v
           - --py-version=3.9
           - --platform=darwin
-          - --include=pkg/osx/req_pyobjc.txt
           - --include=requirements/darwin.txt
           - --passthrough-line-from-input=^pyobjc(.*)$
           - requirements/static/pkg/darwin.in
