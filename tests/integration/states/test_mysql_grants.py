@@ -1,19 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 Tests for the MySQL states
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 
-# Import salt libs
 import salt.utils.path
-from salt.ext import six
 from salt.modules import mysql as mysqlmod
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.helpers import destructiveTest
 from tests.support.mixins import SaltReturnAssertsMixin
@@ -64,7 +56,7 @@ class MysqlGrantsStateTest(ModuleCase, SaltReturnAssertsMixin):
         """
         Test presence of MySQL server, enforce a root password
         """
-        super(MysqlGrantsStateTest, self).setUp()
+        super().setUp()
         NO_MYSQL_SERVER = True
         # now ensure we know the mysql root password
         # one of theses two at least should work
@@ -92,7 +84,7 @@ class MysqlGrantsStateTest(ModuleCase, SaltReturnAssertsMixin):
         else:
             self.skipTest("No MySQL Server running, or no root access on it.")
         # Create some users and a test db
-        for user, userdef in six.iteritems(self.users):
+        for user, userdef in self.users.items():
             self._userCreation(uname=userdef["name"], password=userdef["pwd"])
         self.run_state(
             "mysql_database.present",
@@ -146,7 +138,7 @@ class MysqlGrantsStateTest(ModuleCase, SaltReturnAssertsMixin):
         """
         Removes created users and db
         """
-        for user, userdef in six.iteritems(self.users):
+        for user, userdef in self.users.items():
             self._userRemoval(uname=userdef["name"], password=userdef["pwd"])
         self.run_state(
             "mysql_database.absent",

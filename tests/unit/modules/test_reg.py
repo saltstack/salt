@@ -1,7 +1,3 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import salt.modules.reg as reg
 import salt.utils.stringutils
 import salt.utils.win_reg
@@ -193,7 +189,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
         """
         Test the list_keys function using a non existing registry key
         """
-        expected = (False, "Cannot find key: HKLM\\{0}".format(FAKE_KEY))
+        expected = (False, "Cannot find key: HKLM\\{}".format(FAKE_KEY))
         self.assertEqual(reg.list_keys(hive="HKLM", key=FAKE_KEY), expected)
 
     def test_list_keys_invalid_hive(self):
@@ -235,7 +231,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
         """
         Test the list_values function using a non existing registry key
         """
-        expected = (False, "Cannot find key: HKLM\\{0}".format(FAKE_KEY))
+        expected = (False, "Cannot find key: HKLM\\{}".format(FAKE_KEY))
         self.assertEqual(reg.list_values(hive="HKLM", key=FAKE_KEY), expected)
 
     def test_list_values_invalid_hive(self):
@@ -309,7 +305,7 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
         Test the read_value function using a non existing registry key
         """
         expected = {
-            "comment": "Cannot find key: HKLM\\{0}".format(FAKE_KEY),
+            "comment": "Cannot find key: HKLM\\{}".format(FAKE_KEY),
             "vdata": None,
             "vname": "fake_name",
             "success": False,

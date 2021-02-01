@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Alexander Pyatkin <asp@thexyz.net
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.utils.json
 import salt.utils.path

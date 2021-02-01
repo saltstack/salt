@@ -1,14 +1,10 @@
-# -*- encoding: utf-8 -*-
 """
     :codeauthor: :email: `Justin Anderson <janderson@saltstack.com>`
 
     tests.integration.states.network
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
-# Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import salt testing libs
 from tests.support.case import ModuleCase
 from tests.support.helpers import destructiveTest, slowTest
 from tests.support.mixins import SaltReturnAssertsMixin
@@ -63,7 +59,7 @@ class NetworkTest(ModuleCase, SaltReturnAssertsMixin):
         global_settings = self.run_function("ip.get_network_settings")
         ret = self.run_function("state.sls", mods="network.system", test=True)
         self.assertIn(
-            "Global network settings are set to be {0}".format(
+            "Global network settings are set to be {}".format(
                 "added" if not global_settings else "updated"
             ),
             ret[state_key]["comment"],

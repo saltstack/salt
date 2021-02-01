@@ -2,7 +2,6 @@
 tests for pkgrepo states
 """
 
-
 import os
 
 import salt.utils.files
