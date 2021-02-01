@@ -277,7 +277,7 @@ def test_masterless_highstate(salt_call_cli, base_env_state_tree_root_dir, tmp_p
         testfile
     )
 
-    expected_id = "{}".format(testfile)
+    expected_id = str(testfile)
 
     with pytest.helpers.temp_file(
         "top.sls", top_sls, base_env_state_tree_root_dir
