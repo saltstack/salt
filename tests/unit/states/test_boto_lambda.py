@@ -1,33 +1,19 @@
-# -*- coding: utf-8 -*-
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import random
 import string
 
-# Import Salt libs
 import salt.config
 import salt.loader
 import salt.states.boto_lambda as boto_lambda
 import salt.utils.json
-
-# Import 3rd-party libs
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 from salt.utils.versions import LooseVersion
 from tests.support.helpers import slowTest
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
 
 # pylint: disable=import-error,no-name-in-module
 from tests.unit.modules.test_boto_lambda import BotoLambdaTestCaseMixin, TempZipFile
-
-# Import test suite libs
-
 
 try:
     import boto3
@@ -112,8 +98,8 @@ def _has_required_boto():
 @skipIf(
     _has_required_boto() is False,
     (
-        "The boto3 module must be greater than or equal to version {0}, "
-        "and botocore must be greater than or equal to {1}".format(
+        "The boto3 module must be greater than or equal to version {}, "
+        "and botocore must be greater than or equal to {}".format(
             required_boto3_version, required_botocore_version
         )
     ),
@@ -370,8 +356,8 @@ class BotoLambdaFunctionTestCase(BotoLambdaStateTestCaseBase, BotoLambdaTestCase
 @skipIf(
     _has_required_boto() is False,
     (
-        "The boto3 module must be greater than or equal to version {0}, "
-        "and botocore must be greater than or equal to {1}".format(
+        "The boto3 module must be greater than or equal to version {}, "
+        "and botocore must be greater than or equal to {}".format(
             required_boto3_version, required_botocore_version
         )
     ),
@@ -456,8 +442,8 @@ class BotoLambdaAliasTestCase(BotoLambdaStateTestCaseBase, BotoLambdaTestCaseMix
 @skipIf(
     _has_required_boto() is False,
     (
-        "The boto3 module must be greater than or equal to version {0}, "
-        "and botocore must be greater than or equal to {1}".format(
+        "The boto3 module must be greater than or equal to version {}, "
+        "and botocore must be greater than or equal to {}".format(
             required_boto3_version, required_botocore_version
         )
     ),
