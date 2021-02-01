@@ -1,14 +1,6 @@
-# -*- coding: utf-8 -*-
-
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Salt Libs
 import salt.utils.platform
 import salt.utils.win_lgpo_netsh as win_lgpo_netsh
 from salt.exceptions import CommandExecutionError
-
-# Import Salt Testing Libs
 from tests.support.helpers import destructiveTest
 from tests.support.mock import patch
 from tests.support.unit import TestCase, skipIf

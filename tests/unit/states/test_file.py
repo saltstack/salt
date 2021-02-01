@@ -20,7 +20,6 @@ import salt.utils.platform
 import salt.utils.win_functions
 import salt.utils.yaml
 from salt.exceptions import CommandExecutionError
-from salt.ext.six.moves import range
 from tests.support.helpers import dedent, destructiveTest, slowTest, with_tempfile
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, call, mock_open, patch
