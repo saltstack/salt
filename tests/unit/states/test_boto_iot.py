@@ -1,32 +1,18 @@
-# -*- coding: utf-8 -*-
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import random
 import string
 
-# Import Salt libs
 import salt.config
 import salt.loader
 import salt.states.boto_iot as boto_iot
-
-# Import 3rd-party libs
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 from salt.utils.versions import LooseVersion
 from tests.support.helpers import slowTest
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
 
 # pylint: disable=import-error,no-name-in-module,unused-import
 from tests.unit.modules.test_boto_iot import BotoIoTTestCaseMixin
-
-# Import test suite libs
-
 
 try:
     import boto
@@ -143,7 +129,7 @@ if _has_required_boto():
 @skipIf(
     _has_required_boto() is False,
     "The boto3 module must be greater than"
-    " or equal to version {0}".format(required_boto3_version),
+    " or equal to version {}".format(required_boto3_version),
 )
 class BotoIoTStateTestCaseBase(TestCase, LoaderModuleMockMixin):
     conn = None
@@ -463,9 +449,9 @@ class BotoIoTPolicyTestCase(BotoIoTStateTestCaseBase, BotoIoTTestCaseMixin):
 @skipIf(
     _has_required_boto() is False,
     "The boto3 module must be greater than"
-    " or equal to version {0}.  The botocore"
+    " or equal to version {}.  The botocore"
     " module must be greater than or equal to"
-    " version {1}.".format(required_boto3_version, required_botocore_version),
+    " version {}.".format(required_boto3_version, required_botocore_version),
 )
 class BotoIoTTopicRuleTestCase(BotoIoTStateTestCaseBase, BotoIoTTestCaseMixin):
     """

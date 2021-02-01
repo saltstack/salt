@@ -1,7 +1,6 @@
 """
 Integration tests for the docker_container states
 """
-# Import Python Libs
 
 import errno
 import functools
@@ -10,16 +9,11 @@ import os
 import subprocess
 import tempfile
 
-# Import Salt Libs
 import salt.utils.files
 import salt.utils.network
 import salt.utils.path
 from salt.exceptions import CommandExecutionError
-
-# Import 3rd-party libs
 from salt.modules.config import DEFAULTS as _config_defaults
-
-# Import Salt Testing Libs
 from tests.support.case import ModuleCase
 from tests.support.docker import random_name, with_network
 from tests.support.helpers import destructiveTest, slowTest, with_tempdir

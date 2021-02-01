@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import salt.utils.platform
 from tests.support.case import SSHCase
 from tests.support.helpers import slowTest
@@ -19,5 +16,5 @@ class SSHRawTest(SSHCase):
         test salt-ssh with -r argument
         """
         msg = "running raw msg"
-        ret = self.run_function("echo {0}".format(msg), raw=True)
+        ret = self.run_function("echo {}".format(msg), raw=True)
         self.assertEqual(ret["stdout"], msg + "\n")

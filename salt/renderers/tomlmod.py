@@ -1,15 +1,19 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import python libs
 import logging
 import warnings
 
-# Import salt libs
+import salt.serializers.toml
 import salt.utils.url
-from salt.serializers.toml import deserialize
 
 log = logging.getLogger(__name__)
+
+
+__virtualname__ = "toml"
+
+
+def __virtual__():
+    if salt.serializers.toml.HAS_TOML is False:
+        return (False, "The 'toml' library is missing")
+    return __virtualname__
 
 
 def render(sls_data, saltenv="base", sls="", **kws):
@@ -20,7 +24,7 @@ def render(sls_data, saltenv="base", sls="", **kws):
     :rtype: A Python data structure
     """
     with warnings.catch_warnings(record=True) as warn_list:
-        data = deserialize(sls_data) or {}
+        data = salt.serializers.toml.deserialize(sls_data) or {}
 
         for item in warn_list:
             log.warning(

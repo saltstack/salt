@@ -31,38 +31,33 @@ def __virtual__():
     """
     Confine this module to Mac OS with Homebrew.
     """
-
-    if salt.utils.path.which("brew") and __grains__["os"] == "MacOS":
-        return __virtualname__
-    return (
-        False,
-        "The brew module could not be loaded: brew not found or grain os != MacOS",
-    )
+    if __grains__["os"] != "MacOS":
+        return False, "brew module is macos specific"
+    if not salt.utils.path.which("brew"):
+        return False, "The 'brew' binary was not found"
+    return __virtualname__
 
 
 def _list_taps():
     """
     List currently installed brew taps
     """
-    cmd = "tap"
-    return _call_brew(cmd)["stdout"].splitlines()
+    return _call_brew("tap")["stdout"].splitlines()
 
 
 def _list_pinned():
     """
     List currently pinned formulas
     """
-    cmd = "list --pinned"
-    return _call_brew(cmd)["stdout"].splitlines()
+    return _call_brew("list", "--pinned")["stdout"].splitlines()
 
 
 def _pin(pkg, runas=None):
     """
     Pin pkg
     """
-    cmd = "pin {}".format(pkg)
     try:
-        _call_brew(cmd)
+        _call_brew("pin", pkg)
     except CommandExecutionError:
         log.error('Failed to pin "%s"', pkg)
         return False
@@ -74,9 +69,8 @@ def _unpin(pkg, runas=None):
     """
     Pin pkg
     """
-    cmd = "unpin {}".format(pkg)
     try:
-        _call_brew(cmd)
+        _call_brew("unpin", pkg)
     except CommandExecutionError:
         log.error('Failed to unpin "%s"', pkg)
         return False
@@ -92,9 +86,8 @@ def _tap(tap, runas=None):
     if tap in _list_taps():
         return True
 
-    cmd = "tap {}".format(tap)
     try:
-        _call_brew(cmd)
+        _call_brew("tap", tap)
     except CommandExecutionError:
         log.error('Failed to tap "%s"', tap)
         return False
@@ -111,15 +104,17 @@ def _homebrew_bin():
     return ret
 
 
-def _call_brew(cmd, failhard=True):
+def _call_brew(*cmd, failhard=True):
     """
     Calls the brew command with the user account of brew
     """
     user = __salt__["file.get_user"](_homebrew_bin())
     runas = user if user != __opts__["user"] else None
-    cmd = "{} {}".format(salt.utils.path.which("brew"), cmd)
     result = __salt__["cmd.run_all"](
-        cmd, runas=runas, output_loglevel="trace", python_shell=False
+        [salt.utils.path.which("brew")] + list(cmd),
+        runas=runas,
+        output_loglevel="trace",
+        python_shell=False,
     )
     if failhard and result["retcode"] != 0:
         raise CommandExecutionError("Brew command failed", info={"result": result})
@@ -161,10 +156,11 @@ def list_pkgs(versions_as_list=False, **kwargs):
         return _list_pkgs_from_context(versions_as_list)
 
     ret = {}
-    cmd = "info --json=v1 --installed"
-    package_info = salt.utils.json.loads(_call_brew(cmd)["stdout"])
+    package_info = salt.utils.json.loads(
+        _call_brew("info", "--json=v2", "--installed")["stdout"]
+    )
 
-    for package in package_info:
+    for package in package_info["formulae"]:
         # Brew allows multiple versions of the same package to be installed.
         # Salt allows for this, so it must be accounted for.
         versions = [v["version"] for v in package["installed"]]
@@ -181,9 +177,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
     # Grab packages from brew cask, if available.
     # Brew Cask doesn't provide a JSON interface, must be parsed the old way.
     try:
-        cask_cmd = "list --cask --versions"
-        out = _call_brew(cask_cmd)
-        out = _call_brew(cask_cmd)["stdout"]
+        out = _call_brew("list", "--cask", "--versions")["stdout"]
 
         for line in out.splitlines():
             try:
@@ -191,10 +185,9 @@ def list_pkgs(versions_as_list=False, **kwargs):
                 pkg_name = name_and_versions[0]
 
                 # Get cask namespace
-                info_cmd = "cask info {}".format(pkg_name)
                 match = re.search(
                     r"^From: .*/(.+?)/homebrew-(.+?)/.*$",
-                    _call_brew(info_cmd)["stdout"],
+                    _call_brew("info", "--cask", pkg_name)["stdout"],
                     re.MULTILINE,
                 )
                 if match:
@@ -310,9 +303,8 @@ def remove(name=None, pkgs=None, **kwargs):
     targets = [x for x in pkg_params if x in old]
     if not targets:
         return {}
-    cmd = "uninstall {}".format(" ".join(targets))
 
-    out = _call_brew(cmd)
+    out = _call_brew("uninstall", *targets)
     if out["retcode"] != 0 and out["stderr"]:
         errors = [out["stderr"]]
     else:
@@ -343,8 +335,7 @@ def refresh_db(**kwargs):
     """
     # Remove rtag file to keep multiple refreshes from happening in pkg states
     salt.utils.pkg.clear_rtag(__opts__)
-    cmd = "update"
-    if _call_brew(cmd)["retcode"]:
+    if _call_brew("update")["retcode"]:
         log.error("Failed to update")
         return False
 
@@ -366,13 +357,12 @@ def _info(*pkgs):
     Caveat: If one of the packages does not exist, no packages will be
             included in the output.
     """
-    cmd = "info --json=v1 {}".format(" ".join(pkgs))
-    brew_result = _call_brew(cmd)
+    brew_result = _call_brew("info", "--json=v2", *pkgs)
     if brew_result["retcode"]:
         log.error("Failed to get info about packages: %s", " ".join(pkgs))
         return {}
     output = salt.utils.json.loads(brew_result["stdout"])
-    return dict(zip(pkgs, output))
+    return dict(zip(pkgs, output["formulae"]))
 
 
 def install(name=None, pkgs=None, taps=None, options=None, **kwargs):
@@ -447,7 +437,9 @@ def install(name=None, pkgs=None, taps=None, options=None, **kwargs):
     if not pkg_params:
         return {}
 
-    formulas = " ".join(pkg_params)
+    cmd = ["install"]
+    cmd.extend(list(pkg_params))
+
     old = list_pkgs()
 
     # Ensure we've tapped the repo if necessary
@@ -461,11 +453,9 @@ def install(name=None, pkgs=None, taps=None, options=None, **kwargs):
             _tap(tap)
 
     if options:
-        cmd = "install {} {}".format(formulas, " ".join(options))
-    else:
-        cmd = "install {}".format(formulas)
+        cmd.extend(options)
 
-    out = _call_brew(cmd)
+    out = _call_brew(*cmd)
     if out["retcode"] != 0 and out["stderr"]:
         errors = [out["stderr"]]
     else:
@@ -497,11 +487,11 @@ def list_upgrades(refresh=True, **kwargs):  # pylint: disable=W0613
     if refresh:
         refresh_db()
 
-    res = _call_brew("outdated --json=v1")
+    res = _call_brew("outdated", "--json=v2")
     ret = {}
 
     try:
-        data = salt.utils.json.loads(res["stdout"])
+        data = salt.utils.json.loads(res["stdout"])["formulae"]
     except ValueError as err:
         msg = 'unable to interpret output from "brew outdated": {}'.format(err)
         log.error(msg)

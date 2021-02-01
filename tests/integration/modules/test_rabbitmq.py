@@ -1,7 +1,3 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import pytest
 from tests.support.case import ModuleCase
 from tests.support.helpers import requires_salt_modules, skip_if_not_root

@@ -2,7 +2,6 @@
     Test Salt's argument parser
 """
 
-
 import pytest
 import salt.utils.args
 from tests.support.case import ModuleCase

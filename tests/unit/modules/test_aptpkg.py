@@ -19,6 +19,13 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, call, patch
 from tests.support.unit import TestCase, skipIf
 
+try:
+    from aptsources import sourceslist  # pylint: disable=unused-import
+
+    HAS_APTSOURCES = True
+except ImportError:
+    HAS_APTSOURCES = False
+
 log = logging.getLogger(__name__)
 
 
@@ -713,6 +720,7 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
                     self.assertIn("uri", repos[source_uri][0])
                     self.assertEqual(repos[source_uri][0]["uri"][-1], "/")
 
+    @skipIf(HAS_APTSOURCES is False, "The 'aptsources' library is missing.")
     def test_expand_repo_def(self):
         """
         Checks results from expand_repo_def
@@ -722,26 +730,32 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
         source_line = "deb http://cdn-aws.deb.debian.org/debian/ stretch main\n"
         source_file = "/etc/apt/sources.list"
 
-        mock_source = MockSourceEntry(
-            source_uri, source_type, source_line, False, file=source_file
-        )
-
         # Valid source
         with patch("salt.modules.aptpkg._check_apt", MagicMock(return_value=True)):
-            with patch("salt.modules.aptpkg.sourceslist", MagicMock(), create=True):
-                with patch(
-                    "salt.modules.aptpkg.sourceslist.SourceEntry",
-                    MagicMock(return_value=mock_source),
-                    create=True,
-                ):
-                    repo = "deb http://cdn-aws.deb.debian.org/debian/ stretch main\n"
-                    sanitized = aptpkg.expand_repo_def(repo=repo, file=source_file)
+            repo = "deb http://cdn-aws.deb.debian.org/debian/ stretch main\n"
+            sanitized = aptpkg.expand_repo_def(repo=repo, file=source_file)
 
-                    assert isinstance(sanitized, dict)
-                    self.assertIn("uri", sanitized)
+            assert isinstance(sanitized, dict)
+            self.assertIn("uri", sanitized)
 
-                    # Make sure last character in of the URI is still a /
-                    self.assertEqual(sanitized["uri"][-1], "/")
+            # Make sure last character in of the URI is still a /
+            self.assertEqual(sanitized["uri"][-1], "/")
+
+            # Pass the architecture and make sure it is added the the line attribute
+            repo = "deb http://cdn-aws.deb.debian.org/debian/ stretch main\n"
+            sanitized = aptpkg.expand_repo_def(
+                repo=repo, file=source_file, architectures="amd64"
+            )
+
+            # Make sure line is in the dict
+            assert isinstance(sanitized, dict)
+            self.assertIn("line", sanitized)
+
+            # Make sure the architecture is in line
+            self.assertEqual(
+                sanitized["line"],
+                "deb [arch=amd64] http://cdn-aws.deb.debian.org/debian/ stretch main",
+            )
 
     def test_list_pkgs(self):
         """
