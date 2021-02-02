@@ -562,3 +562,27 @@ class ScheduleTestCase(TestCase, LoaderModuleMockMixin):
 
                     ret = schedule.is_enabled()
                     self.assertEqual(ret, True)
+
+    # 'job_status' function tests: 1
+
+    def test_job_status(self):
+        """
+        Test is_enabled
+        """
+        job1 = {"function": "salt", "seconds": 3600}
+
+        comm1 = "Modified job: job1 in schedule."
+
+        mock_schedule = {"enabled": True, "job1": job1}
+
+        mock_lst = MagicMock(return_value=mock_schedule)
+
+        with patch.dict(
+            schedule.__opts__, {"schedule": {"job1": job1}, "sock_dir": self.sock_dir}
+        ):
+            mock = MagicMock(return_value=True)
+            with patch.dict(schedule.__salt__, {"event.fire": mock}):
+                _ret_value = {"complete": True, "data": job1}
+                with patch.object(SaltEvent, "get_event", return_value=_ret_value):
+                    ret = schedule.job_status("job1")
+                    self.assertDictEqual(ret, job1)
