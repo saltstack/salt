@@ -1,1 +1,1 @@
-When checking if the mode had changed, only do so if the passed mode is not None.
+When checking if the mode had changed in the file state module, only do so if the passed mode is not None.
