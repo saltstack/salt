@@ -10,7 +10,7 @@ import pytest
 import salt.utils.files
 import salt.utils.platform
 from tests.support.case import ModuleCase
-from tests.support.helpers import Webserver, skip_if_not_root
+from tests.support.helpers import Webserver
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
 
@@ -125,7 +125,7 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
 
         self._check_extracted(self.untar_file)
 
-    @skip_if_not_root
+    @pytest.mark.skip_if_not_root
     def test_archive_extracted_with_root_user_and_group(self):
         """
         test archive.extracted with user and group set to "root"

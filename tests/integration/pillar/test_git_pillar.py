@@ -88,7 +88,7 @@ from tests.support.gitfs import (  # pylint: disable=unused-import
     webserver_pillar_tests_prep,
     webserver_pillar_tests_prep_authenticated,
 )
-from tests.support.helpers import requires_system_grains, skip_if_not_root
+from tests.support.helpers import requires_system_grains
 from tests.support.unit import skipIf
 
 # Check for requisite components
@@ -683,11 +683,11 @@ class GitPythonMixin:
 
 
 @skipIf(_windows_or_mac(), "minion is windows or mac")
-@skip_if_not_root
 @skipIf(not HAS_GITPYTHON, "GitPython >= {} required".format(GITPYTHON_MINVER))
 @skipIf(not HAS_SSHD, "sshd not present")
 @pytest.mark.usefixtures("ssh_pillar_tests_prep")
 @pytest.mark.destructive_test
+@pytest.mark.skip_if_not_root
 class TestGitPythonSSH(GitPillarSSHTestBase, GitPythonMixin):
     """
     Test git_pillar with GitPython using SSH authentication
@@ -700,11 +700,11 @@ class TestGitPythonSSH(GitPillarSSHTestBase, GitPythonMixin):
 
 
 @skipIf(_windows_or_mac(), "minion is windows or mac")
-@skip_if_not_root
 @skipIf(not HAS_GITPYTHON, "GitPython >= {} required".format(GITPYTHON_MINVER))
 @skipIf(not HAS_NGINX, "nginx not present")
 @skipIf(not HAS_VIRTUALENV, "virtualenv not present")
 @pytest.mark.usefixtures("webserver_pillar_tests_prep")
+@pytest.mark.skip_if_not_root
 class TestGitPythonHTTP(GitPillarHTTPTestBase, GitPythonMixin):
     """
     Test git_pillar with GitPython using unauthenticated HTTP
@@ -712,11 +712,11 @@ class TestGitPythonHTTP(GitPillarHTTPTestBase, GitPythonMixin):
 
 
 @skipIf(_windows_or_mac(), "minion is windows or mac")
-@skip_if_not_root
 @skipIf(not HAS_GITPYTHON, "GitPython >= {} required".format(GITPYTHON_MINVER))
 @skipIf(not HAS_NGINX, "nginx not present")
 @skipIf(not HAS_VIRTUALENV, "virtualenv not present")
 @pytest.mark.usefixtures("webserver_pillar_tests_prep_authenticated")
+@pytest.mark.skip_if_not_root
 class TestGitPythonAuthenticatedHTTP(TestGitPythonHTTP, GitPythonMixin):
     """
     Test git_pillar with GitPython using authenticated HTTP
@@ -727,7 +727,6 @@ class TestGitPythonAuthenticatedHTTP(TestGitPythonHTTP, GitPythonMixin):
 
 
 @skipIf(_windows_or_mac(), "minion is windows or mac")
-@skip_if_not_root
 @skipIf(
     not HAS_PYGIT2,
     "pygit2 >= {} and libgit2 >= {} required".format(PYGIT2_MINVER, LIBGIT2_MINVER),
@@ -735,6 +734,7 @@ class TestGitPythonAuthenticatedHTTP(TestGitPythonHTTP, GitPythonMixin):
 @skipIf(not HAS_SSHD, "sshd not present")
 @pytest.mark.usefixtures("ssh_pillar_tests_prep")
 @pytest.mark.destructive_test
+@pytest.mark.skip_if_not_root
 class TestPygit2SSH(GitPillarSSHTestBase):
     """
     Test git_pillar with pygit2 using SSH authentication
@@ -2335,7 +2335,6 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
 
 @skipIf(_windows_or_mac(), "minion is windows or mac")
-@skip_if_not_root
 @skipIf(
     not HAS_PYGIT2,
     "pygit2 >= {} and libgit2 >= {} required".format(PYGIT2_MINVER, LIBGIT2_MINVER),
@@ -2343,6 +2342,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 @skipIf(not HAS_NGINX, "nginx not present")
 @skipIf(not HAS_VIRTUALENV, "virtualenv not present")
 @pytest.mark.usefixtures("webserver_pillar_tests_prep")
+@pytest.mark.skip_if_not_root
 class TestPygit2HTTP(GitPillarHTTPTestBase):
     """
     Test git_pillar with pygit2 using SSH authentication
@@ -2900,7 +2900,6 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
 
 
 @skipIf(_windows_or_mac(), "minion is windows or mac")
-@skip_if_not_root
 @skipIf(
     not HAS_PYGIT2,
     "pygit2 >= {} and libgit2 >= {} required".format(PYGIT2_MINVER, LIBGIT2_MINVER),
@@ -2908,6 +2907,7 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
 @skipIf(not HAS_NGINX, "nginx not present")
 @skipIf(not HAS_VIRTUALENV, "virtualenv not present")
 @pytest.mark.usefixtures("webserver_pillar_tests_prep_authenticated")
+@pytest.mark.skip_if_not_root
 class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
     """
     Test git_pillar with pygit2 using SSH authentication

@@ -17,7 +17,6 @@ import salt.utils.platform
 import salt.utils.process
 from salt._compat import ipaddress
 from salt.exceptions import SaltClientError, SaltMasterUnresolvableError, SaltSystemExit
-from tests.support.helpers import skip_if_not_root
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
@@ -669,7 +668,7 @@ class MinionAsyncTestCase(
         self.opts = {}
         self.addCleanup(delattr, self, "opts")
 
-    @skip_if_not_root
+    @pytest.mark.skip_if_not_root
     def test_sock_path_len(self):
         """
         This tests whether or not a larger hash causes the sock path to exceed

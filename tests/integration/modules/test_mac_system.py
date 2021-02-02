@@ -11,7 +11,6 @@ from tests.support.helpers import (
     random_string,
     runs_on,
     skip_if_binaries_missing,
-    skip_if_not_root,
 )
 from tests.support.unit import skipIf
 
@@ -22,11 +21,11 @@ SET_COMPUTER_NAME = random_string("RS-", lowercase=False)
 SET_SUBNET_NAME = random_string("RS-", lowercase=False)
 
 
-@skip_if_not_root
 @flaky(attempts=10)
 @runs_on(kernel="Darwin")
 @skip_if_binaries_missing("systemsetup")
 @pytest.mark.usefixtures("salt_sub_minion")
+@pytest.mark.skip_if_not_root
 class MacSystemModuleTest(ModuleCase):
     """
     Validate the mac_system module
@@ -236,8 +235,8 @@ class MacSystemModuleTest(ModuleCase):
         )
 
 
-@skip_if_not_root
 @runs_on(kernel="Darwin")
+@pytest.mark.skip_if_not_root
 class MacSystemComputerNameTest(ModuleCase):
     def setUp(self):
         self.COMPUTER_NAME = self.run_function("system.get_computer_name")

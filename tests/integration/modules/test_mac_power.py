@@ -4,18 +4,13 @@ integration tests for mac_power
 
 import pytest
 from tests.support.case import ModuleCase
-from tests.support.helpers import (
-    flaky,
-    runs_on,
-    skip_if_binaries_missing,
-    skip_if_not_root,
-)
+from tests.support.helpers import flaky, runs_on, skip_if_binaries_missing
 
 
-@skip_if_not_root
 @flaky(attempts=10)
 @runs_on(kernel="Darwin")
 @skip_if_binaries_missing("systemsetup")
+@pytest.mark.skip_if_not_root
 class MacPowerModuleTest(ModuleCase):
     """
     Validate the mac_power module
@@ -156,10 +151,10 @@ class MacPowerModuleTest(ModuleCase):
         self.assertTrue(self.run_function("power.get_restart_freeze"))
 
 
-@skip_if_not_root
 @flaky(attempts=10)
 @runs_on(kernel="Darwin")
 @skip_if_binaries_missing("systemsetup")
+@pytest.mark.skip_if_not_root
 class MacPowerModuleTestSleepOnPowerButton(ModuleCase):
     """
     Test power.get_sleep_on_power_button
@@ -207,10 +202,10 @@ class MacPowerModuleTestSleepOnPowerButton(ModuleCase):
             self.assertFalse(self.run_function("power.get_sleep_on_power_button"))
 
 
-@skip_if_not_root
 @flaky(attempts=10)
 @runs_on(kernel="Darwin")
 @skip_if_binaries_missing("systemsetup")
+@pytest.mark.skip_if_not_root
 class MacPowerModuleTestRestartPowerFailure(ModuleCase):
     """
     Test power.get_restart_power_failure
@@ -257,10 +252,10 @@ class MacPowerModuleTestRestartPowerFailure(ModuleCase):
             self.assertFalse(self.run_function("power.get_restart_power_failure"))
 
 
-@skip_if_not_root
 @flaky(attempts=10)
 @runs_on(kernel="Darwin")
 @skip_if_binaries_missing("systemsetup")
+@pytest.mark.skip_if_not_root
 class MacPowerModuleTestWakeOnNet(ModuleCase):
     """
     Test power.get_wake_on_network
@@ -303,10 +298,10 @@ class MacPowerModuleTestWakeOnNet(ModuleCase):
             self.assertFalse(self.run_function("power.get_wake_on_network"))
 
 
-@skip_if_not_root
 @flaky(attempts=10)
 @runs_on(kernel="Darwin")
 @skip_if_binaries_missing("systemsetup")
+@pytest.mark.skip_if_not_root
 class MacPowerModuleTestWakeOnModem(ModuleCase):
     """
     Test power.get_wake_on_modem

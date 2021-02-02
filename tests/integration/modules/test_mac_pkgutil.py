@@ -10,7 +10,6 @@ from tests.support.helpers import (
     requires_system_grains,
     runs_on,
     skip_if_binaries_missing,
-    skip_if_not_root,
 )
 from tests.support.runtests import RUNTIME_VARS
 
@@ -21,8 +20,8 @@ TEST_PKG_NAME = "org.macports.MacPorts"
 
 
 @runs_on(kernel="Darwin")
-@skip_if_not_root
 @skip_if_binaries_missing("pkgutil")
+@pytest.mark.skip_if_not_root
 class MacPkgutilModuleTest(ModuleCase):
     """
     Validate the mac_pkgutil module
