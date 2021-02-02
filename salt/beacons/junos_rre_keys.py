@@ -1,7 +1,9 @@
 """
 Junos redundant routing engine beacon.
 
-NOTE this beacon only works on the Juniper native minion
+.. note::
+
+   This beacon only works on the Juniper native minion.
 
 Copies salt-minion keys to the backup RE when present
 
