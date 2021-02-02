@@ -17,7 +17,7 @@ import salt.utils.platform
 import salt.utils.stringutils
 from saltfactories.utils.ports import get_unused_localhost_port
 from tests.support.case import ModuleCase
-from tests.support.helpers import skip_if_not_root, with_tempfile
+from tests.support.helpers import with_tempfile
 from tests.support.pytest.helpers import temp_state_file
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
@@ -425,8 +425,8 @@ class CPModuleTest(ModuleCase):
             self.assertEqual(salt.utils.stringutils.to_unicode(cp_.read()), "foo")
 
     @skipIf(not salt.utils.path.which("nginx"), "nginx not installed")
-    @skip_if_not_root
     @pytest.mark.slow_test
+    @pytest.mark.skip_if_not_root
     def test_cache_remote_file(self):
         """
         cp.cache_file

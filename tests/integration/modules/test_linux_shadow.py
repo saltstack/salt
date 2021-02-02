@@ -9,11 +9,11 @@ import salt.modules.linux_shadow
 import salt.utils.files
 import salt.utils.platform
 from tests.support.case import ModuleCase
-from tests.support.helpers import flaky, random_string, skip_if_not_root
+from tests.support.helpers import flaky, random_string
 from tests.support.unit import skipIf
 
 
-@skip_if_not_root
+@pytest.mark.skip_if_not_root
 @skipIf(not salt.utils.platform.is_linux(), "These tests can only be run on linux")
 class ShadowModuleTest(ModuleCase):
     """
