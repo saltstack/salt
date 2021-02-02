@@ -88,12 +88,7 @@ from tests.support.gitfs import (  # pylint: disable=unused-import
     webserver_pillar_tests_prep,
     webserver_pillar_tests_prep_authenticated,
 )
-from tests.support.helpers import (
-    destructiveTest,
-    requires_system_grains,
-    skip_if_not_root,
-    slowTest,
-)
+from tests.support.helpers import requires_system_grains, skip_if_not_root, slowTest
 from tests.support.unit import skipIf
 
 # Check for requisite components
@@ -687,12 +682,12 @@ class GitPythonMixin:
         self.assertEqual(excinfo.exception.strerror, "Failed to load git_pillar")
 
 
-@destructiveTest
 @skipIf(_windows_or_mac(), "minion is windows or mac")
 @skip_if_not_root
 @skipIf(not HAS_GITPYTHON, "GitPython >= {} required".format(GITPYTHON_MINVER))
 @skipIf(not HAS_SSHD, "sshd not present")
 @pytest.mark.usefixtures("ssh_pillar_tests_prep")
+@pytest.mark.destructive_test
 class TestGitPythonSSH(GitPillarSSHTestBase, GitPythonMixin):
     """
     Test git_pillar with GitPython using SSH authentication
@@ -731,7 +726,6 @@ class TestGitPythonAuthenticatedHTTP(TestGitPythonHTTP, GitPythonMixin):
     password = PASSWORD
 
 
-@destructiveTest
 @skipIf(_windows_or_mac(), "minion is windows or mac")
 @skip_if_not_root
 @skipIf(
@@ -740,6 +734,7 @@ class TestGitPythonAuthenticatedHTTP(TestGitPythonHTTP, GitPythonMixin):
 )
 @skipIf(not HAS_SSHD, "sshd not present")
 @pytest.mark.usefixtures("ssh_pillar_tests_prep")
+@pytest.mark.destructive_test
 class TestPygit2SSH(GitPillarSSHTestBase):
     """
     Test git_pillar with pygit2 using SSH authentication

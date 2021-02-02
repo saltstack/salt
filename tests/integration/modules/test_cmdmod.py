@@ -10,7 +10,6 @@ import salt.utils.user
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
     dedent,
-    destructiveTest,
     skip_if_binaries_missing,
     skip_if_not_root,
     slowTest,
@@ -236,7 +235,7 @@ class CMDModuleTest(ModuleCase):
         ret = self.run_function("cmd.script", [script, args], cwd=tmp_cwd)
         self.assertEqual(ret["stdout"], args)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_tty(self):
         """
         cmd.tty
@@ -361,7 +360,7 @@ class CMDModuleTest(ModuleCase):
         self.assertEqual(result["retcode"], 0, errmsg)
         self.assertEqual(result["stdout"], expected_result, errmsg)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @skip_if_not_root
     @skipIf(salt.utils.platform.is_windows(), "skip windows, uses unix commands")
     @slowTest
@@ -383,7 +382,7 @@ class CMDModuleTest(ModuleCase):
         self.assertNotEqual(user_id, runas_root_id)
         self.assertEqual(root_id, runas_root_id)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @skip_if_not_root
     @skipIf(salt.utils.platform.is_windows(), "skip windows, uses unix commands")
     @slowTest
@@ -407,7 +406,7 @@ class CMDModuleTest(ModuleCase):
             ).rstrip("\n")
         self.assertEqual(tmp_cwd, cwd_runas)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @skip_if_not_root
     @skipIf(not salt.utils.platform.is_darwin(), "applicable to MacOS only")
     @slowTest
@@ -425,7 +424,7 @@ class CMDModuleTest(ModuleCase):
         # profile.
         self.assertNotEqual("/bin:/usr/bin", user_path)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @skip_if_not_root
     @skipIf(not salt.utils.platform.is_darwin(), "applicable to MacOS only")
     @slowTest
@@ -457,7 +456,7 @@ class CMDModuleTest(ModuleCase):
 
     @skipIf(salt.utils.platform.is_windows(), "minion is windows")
     @skip_if_not_root
-    @destructiveTest
+    @pytest.mark.destructive_test
     @slowTest
     def test_runas(self):
         """

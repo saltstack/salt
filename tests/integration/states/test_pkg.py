@@ -13,7 +13,6 @@ import salt.utils.pkg.rpm
 import salt.utils.platform
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
-    destructiveTest,
     not_runs_on,
     requires_salt_modules,
     requires_salt_states,
@@ -27,8 +26,8 @@ from tests.support.unit import skipIf
 log = logging.getLogger(__name__)
 
 
-@destructiveTest
 @pytest.mark.windows_whitelisted
+@pytest.mark.destructive_test
 class PkgTest(ModuleCase, SaltReturnAssertsMixin):
     _PKG_EPOCH_TARGETS = []
     _PKG_32_TARGETS = []

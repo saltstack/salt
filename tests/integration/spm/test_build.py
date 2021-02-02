@@ -9,12 +9,12 @@ import pytest
 import salt.utils.files
 import salt.utils.path
 from tests.support.case import ModuleCase, SPMCase
-from tests.support.helpers import destructiveTest, slowTest
+from tests.support.helpers import slowTest
 from tests.support.unit import skipIf
 
 
-@destructiveTest
 @pytest.mark.windows_whitelisted
+@pytest.mark.destructive_test
 class SPMBuildTest(SPMCase, ModuleCase):
     """
     Validate the spm build command

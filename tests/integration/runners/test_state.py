@@ -21,7 +21,7 @@ import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.yaml
 from tests.support.case import ShellCase
-from tests.support.helpers import expensiveTest, flaky, slowTest
+from tests.support.helpers import flaky, slowTest
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
@@ -364,13 +364,26 @@ class OrchEventTest(ShellCase):
             mode="w", suffix=".conf", dir=self.master_d_dir, delete=True,
         )
         self.base_env = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
-        self.addCleanup(shutil.rmtree, self.base_env)
-        self.addCleanup(self.conf.close)
-        for attr in ("timeout", "master_d_dir", "conf", "base_env"):
-            self.addCleanup(delattr, self, attr)
+
+    def tearDown(self):
+        try:
+            shutil.rmtree(self.base_env, ignore_errors=True)
+            del self.base_env
+        except AttributeError:
+            pass
+        try:
+            self.conf.close()
+            del self.conf
+        except AttributeError:
+            pass
+        for attr in ("timeout", "master_d_dir"):
+            try:
+                delattr(self, attr)
+            except AttributeError:
+                pass
         # Force a reload of the configuration now that our temp config file has
         # been removed.
-        self.addCleanup(self.run_run_plus, "test.arg")
+        self.run_run_plus("test.arg")
 
     def alarm_handler(self, signal, frame):
         raise Exception("Timeout of {} seconds reached".format(self.timeout))
@@ -382,7 +395,7 @@ class OrchEventTest(ShellCase):
         self.conf.write(salt.utils.yaml.safe_dump(data, default_flow_style=False))
         self.conf.flush()
 
-    @expensiveTest
+    @slowTest
     def test_jid_in_ret_event(self):
         """
         Test to confirm that the ret event for the orchestration contains the
@@ -461,7 +474,7 @@ class OrchEventTest(ShellCase):
             finally:
                 signal.alarm(0)
 
-    @expensiveTest
+    @slowTest
     def test_parallel_orchestrations(self):
         """
         Test to confirm that the parallel state requisite works in orch
@@ -542,7 +555,7 @@ class OrchEventTest(ShellCase):
                 self.assertTrue(received)
                 signal.alarm(0)
 
-    @expensiveTest
+    @slowTest
     def test_orchestration_soft_kill(self):
         """
         Test to confirm that the parallel state requisite works in orch
