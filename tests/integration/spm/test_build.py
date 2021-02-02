@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Tests for the spm build utility
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import shutil
@@ -52,7 +50,7 @@ class SPMBuildTest(SPMCase, ModuleCase):
         self.run_function(
             "cmd.run",
             [
-                "fallocate -l 1G {0}".format(
+                "fallocate -l 1G {}".format(
                     os.path.join(self.formula_sls_dir, "bigfile.txt")
                 )
             ],

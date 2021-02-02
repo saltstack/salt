@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import, print_function, unicode_literals
-
 from tests.support.case import SSHCase
 from tests.support.helpers import slowTest
 

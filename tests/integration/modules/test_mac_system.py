@@ -2,7 +2,6 @@
 integration tests for mac_system
 """
 
-
 import logging
 
 import pytest

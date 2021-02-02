@@ -1,7 +1,3 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import
-
 import datetime
 import logging
 
@@ -28,12 +24,12 @@ class SchedulerPostponeTest(SchedulerTestsBase):
     """
 
     def setUp(self):
-        super(SchedulerPostponeTest, self).setUp()
+        super().setUp()
         self.schedule.opts["loop_interval"] = 1
 
     def tearDown(self):
         self.schedule.reset()
-        super(SchedulerPostponeTest, self).tearDown()
+        super().tearDown()
 
     @slowTest
     def test_postpone(self):

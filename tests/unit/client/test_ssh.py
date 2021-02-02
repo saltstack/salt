@@ -2,7 +2,6 @@
     :codeauthor: :email:`Daniel Wallace <dwallace@saltstack.com`
 """
 
-
 import os
 import re
 import shutil

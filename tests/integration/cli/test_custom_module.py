@@ -27,11 +27,6 @@
     $ salt-ssh localhost state.sls custom_module
     localhost:
         olleh
-
-
-    This test can be run in a small test suite with:
-
-    $ python tests/runtests.py -C --ssh
 """
 
 import pytest

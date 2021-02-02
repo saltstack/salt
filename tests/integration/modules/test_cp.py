@@ -1,7 +1,3 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import hashlib
 import logging
 import os
@@ -40,9 +36,7 @@ class CPModuleTest(ModuleCase):
 
         TODO: maybe move this behavior to ModuleCase itself?
         """
-        return salt.utils.data.decode(
-            super(CPModuleTest, self).run_function(*args, **kwargs)
-        )
+        return salt.utils.data.decode(super().run_function(*args, **kwargs))
 
     @with_tempfile()
     @slowTest
@@ -437,7 +431,7 @@ class CPModuleTest(ModuleCase):
         cp.cache_file
         """
         nginx_port = get_unused_localhost_port()
-        url_prefix = "http://localhost:{0}/".format(nginx_port)
+        url_prefix = "http://localhost:{}/".format(nginx_port)
         temp_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         self.addCleanup(shutil.rmtree, temp_dir, ignore_errors=True)
         nginx_root_dir = os.path.join(temp_dir, "root")

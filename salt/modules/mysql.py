@@ -46,15 +46,12 @@ import salt.utils.data
 import salt.utils.files
 import salt.utils.stringutils
 
-# pylint: disable=import-error
-from salt.ext.six.moves import range, zip
-
 try:
     # Trying to import MySQLdb
     import MySQLdb
     import MySQLdb.cursors
     import MySQLdb.converters
-    from MySQLdb.constants import FIELD_TYPE, FLAG
+    from MySQLdb.constants import FIELD_TYPE, FLAG, CLIENT
     from MySQLdb import OperationalError
 except ImportError:
     try:
@@ -65,10 +62,17 @@ except ImportError:
         import MySQLdb
         import MySQLdb.cursors
         import MySQLdb.converters
-        from MySQLdb.constants import FIELD_TYPE, FLAG
+        from MySQLdb.constants import FIELD_TYPE, FLAG, CLIENT
         from MySQLdb import OperationalError
     except ImportError:
         MySQLdb = None
+
+try:
+    import sqlparse
+
+    HAS_SQLPARSE = True
+except ImportError:
+    HAS_SQLPARSE = False
 
 log = logging.getLogger(__name__)
 
@@ -388,6 +392,19 @@ def _connect(**kwargs):
     else:
         get_opts = True
 
+    connargs["client_flag"] = 0
+
+    available_client_flags = {}
+    for flag in dir(CLIENT):
+        if not flag.startswith("__"):
+            available_client_flags[flag.lower()] = getattr(CLIENT, flag)
+
+    for flag in kwargs.get("client_flags", []):
+        if available_client_flags.get(flag):
+            connargs["client_flag"] |= available_client_flags[flag]
+        else:
+            log.error("MySQL client flag %s not valid, ignoring.", flag)
+
     _connarg("connection_host", "host", get_opts)
     _connarg("connection_user", "user", get_opts)
     _connarg("connection_pass", "passwd", get_opts)
@@ -659,24 +676,7 @@ def _execute(cur, qry, args=None):
 def _sanitize_comments(content):
     # Remove comments which might affect line by line parsing
     # Regex should remove any text beginning with # (or --) not inside of ' or "
-    content = re.sub(
-        r"""(['"](?:[^'"]+|(?<=\\)['"])*['"])|#[^\n]*""",
-        lambda m: m.group(1) or "",
-        content,
-        re.S,
-    )
-    content = re.sub(
-        r"""(['"](?:[^'"]+|(?<=\\)['"])*['"])|--[^\n]*""",
-        lambda m: m.group(1) or "",
-        content,
-        re.S,
-    )
-    cleaned = ""
-    for line in content.splitlines():
-        line = line.strip()
-        if line != "":
-            cleaned += line + "\n"
-    return cleaned
+    return sqlparse.format(content, strip_comments=True)
 
 
 def query(database, query, **connection_args):
@@ -840,6 +840,10 @@ def file_query(database, file_name, **connection_args):
         {'query time': {'human': '39.0ms', 'raw': '0.03899'}, 'rows affected': 1L}
 
     """
+    if not HAS_SQLPARSE:
+        log.error("mysql.file_query unavailable, no python sqlparse library installed.")
+        return False
+
     if any(
         file_name.startswith(proto)
         for proto in ("salt://", "http://", "https://", "swift://", "s3://")
@@ -2623,7 +2627,7 @@ def processlist(**connection_args):
     for _ in range(cur.rowcount):
         row = cur.fetchone()
         idx_r = {}
-        for idx_j in range(len(hdr)):
+        for idx_j, value_j in enumerate(hdr):
             idx_r[hdr[idx_j]] = row[idx_j]
         ret.append(idx_r)
     cur.close()
