@@ -62,7 +62,6 @@ import salt.utils.files
 import salt.utils.http
 import salt.utils.json
 import salt.utils.yaml
-from salt.cloud.libcloudfuncs import node_state
 from salt.exceptions import (
     SaltCloudExecutionFailure,
     SaltCloudExecutionTimeout,
@@ -700,6 +699,38 @@ def show_instance(name, call=None):
     return ret
 
 
+def _old_libcloud_node_state(id_):
+    """
+    Libcloud supported node states
+    """
+    states_int = {
+        0: "RUNNING",
+        1: "REBOOTING",
+        2: "TERMINATED",
+        3: "PENDING",
+        4: "UNKNOWN",
+        5: "STOPPED",
+        6: "SUSPENDED",
+        7: "ERROR",
+        8: "PAUSED",
+    }
+    states_str = {
+        "running": "RUNNING",
+        "rebooting": "REBOOTING",
+        "starting": "STARTING",
+        "terminated": "TERMINATED",
+        "pending": "PENDING",
+        "unknown": "UNKNOWN",
+        "stopping": "STOPPING",
+        "stopped": "STOPPED",
+        "suspended": "SUSPENDED",
+        "error": "ERROR",
+        "paused": "PAUSED",
+        "reconfiguring": "RECONFIGURING",
+    }
+    return states_str[id_] if isinstance(id_, str) else states_int[id_]
+
+
 def joyent_node_state(id_):
     """
     Convert joyent returned state to state common to other data center return
@@ -720,7 +751,7 @@ def joyent_node_state(id_):
     if id_ not in states:
         id_ = "unknown"
 
-    return node_state(states[id_])
+    return _old_libcloud_node_state(states[id_])
 
 
 def reformat_node(item=None, full=False):
