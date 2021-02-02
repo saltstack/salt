@@ -7,13 +7,13 @@ import os
 import pytest
 from salt.exceptions import CommandExecutionError
 from tests.support.case import ModuleCase
-from tests.support.helpers import runs_on, skip_if_not_root
+from tests.support.helpers import runs_on
 from tests.support.runtests import RUNTIME_VARS
 
 
 @pytest.mark.destructive_test
-@skip_if_not_root
 @runs_on(kernel="Darwin")
+@pytest.mark.skip_if_not_root
 class MacKeychainModuleTest(ModuleCase):
     """
     Integration tests for the mac_keychain module

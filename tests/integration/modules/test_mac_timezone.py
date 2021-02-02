@@ -13,19 +13,14 @@ import datetime
 
 import pytest
 from tests.support.case import ModuleCase
-from tests.support.helpers import (
-    flaky,
-    runs_on,
-    skip_if_binaries_missing,
-    skip_if_not_root,
-)
+from tests.support.helpers import flaky, runs_on, skip_if_binaries_missing
 from tests.support.unit import skipIf
 
 
-@skip_if_not_root
 @flaky
 @runs_on(kernel="Darwin")
 @skip_if_binaries_missing("systemsetup")
+@pytest.mark.skip_if_not_root
 class MacTimezoneModuleTest(ModuleCase):
     """
     Validate the mac_timezone module

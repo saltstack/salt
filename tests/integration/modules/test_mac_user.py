@@ -8,7 +8,7 @@ import pytest
 import salt.utils.files
 from salt.exceptions import CommandExecutionError
 from tests.support.case import ModuleCase
-from tests.support.helpers import random_string, runs_on, skip_if_not_root
+from tests.support.helpers import random_string, runs_on
 
 # Create user strings for tests
 ADD_USER = random_string("RS-", lowercase=False)
@@ -17,7 +17,7 @@ PRIMARY_GROUP_USER = random_string("RS-", lowercase=False)
 CHANGE_USER = random_string("RS-", lowercase=False)
 
 
-@skip_if_not_root
+@pytest.mark.skip_if_not_root
 @runs_on(kernel="Darwin")
 @pytest.mark.destructive_test
 class MacUserModuleTest(ModuleCase):

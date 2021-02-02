@@ -12,7 +12,7 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 from tests.support.case import ModuleCase
-from tests.support.helpers import flaky, runs_on, skip_if_not_root
+from tests.support.helpers import flaky, runs_on
 from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
@@ -187,7 +187,7 @@ class SystemModuleTest(ModuleCase):
         self.assertTrue(self._same_times(t1, t2, seconds_diff=2), msg=msg)
 
     @pytest.mark.destructive_test
-    @skip_if_not_root
+    @pytest.mark.skip_if_not_root
     @pytest.mark.slow_test
     def test_set_system_date_time(self):
         """
@@ -206,7 +206,7 @@ class SystemModuleTest(ModuleCase):
         self._test_hwclock_sync()
 
     @pytest.mark.destructive_test
-    @skip_if_not_root
+    @pytest.mark.skip_if_not_root
     @pytest.mark.slow_test
     def test_set_system_date_time_utc(self):
         """
@@ -226,7 +226,7 @@ class SystemModuleTest(ModuleCase):
         self._test_hwclock_sync()
 
     @pytest.mark.destructive_test
-    @skip_if_not_root
+    @pytest.mark.skip_if_not_root
     @pytest.mark.slow_test
     def test_set_system_date_time_utcoffset_east(self):
         """
@@ -248,7 +248,7 @@ class SystemModuleTest(ModuleCase):
         self._test_hwclock_sync()
 
     @pytest.mark.destructive_test
-    @skip_if_not_root
+    @pytest.mark.skip_if_not_root
     @pytest.mark.slow_test
     def test_set_system_date_time_utcoffset_west(self):
         """
@@ -271,7 +271,7 @@ class SystemModuleTest(ModuleCase):
 
     @flaky
     @pytest.mark.destructive_test
-    @skip_if_not_root
+    @pytest.mark.skip_if_not_root
     @pytest.mark.slow_test
     def test_set_system_time(self):
         """
@@ -292,7 +292,7 @@ class SystemModuleTest(ModuleCase):
         self._test_hwclock_sync()
 
     @pytest.mark.destructive_test
-    @skip_if_not_root
+    @pytest.mark.skip_if_not_root
     @pytest.mark.slow_test
     def test_set_system_date(self):
         """
@@ -314,7 +314,7 @@ class SystemModuleTest(ModuleCase):
         self.assertTrue(self._same_times(time_now, cmp_time), msg=msg)
         self._test_hwclock_sync()
 
-    @skip_if_not_root
+    @pytest.mark.skip_if_not_root
     @pytest.mark.slow_test
     def test_get_computer_desc(self):
         """
@@ -335,7 +335,7 @@ class SystemModuleTest(ModuleCase):
                     self.assertIn(res, data.decode("string_escape"))
 
     @pytest.mark.destructive_test
-    @skip_if_not_root
+    @pytest.mark.skip_if_not_root
     @pytest.mark.slow_test
     def test_set_computer_desc(self):
         """
@@ -350,7 +350,7 @@ class SystemModuleTest(ModuleCase):
         self.assertIn(desc, computer_desc)
 
     @pytest.mark.destructive_test
-    @skip_if_not_root
+    @pytest.mark.skip_if_not_root
     @pytest.mark.slow_test
     def test_set_computer_desc_multiline(self):
         """
@@ -374,7 +374,7 @@ class SystemModuleTest(ModuleCase):
         self.assertTrue(ret)
         self.assertIn(desc, computer_desc)
 
-    @skip_if_not_root
+    @pytest.mark.skip_if_not_root
     @pytest.mark.slow_test
     def test_has_hwclock(self):
         """

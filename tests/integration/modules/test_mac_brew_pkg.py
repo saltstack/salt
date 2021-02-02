@@ -5,7 +5,7 @@
 import pytest
 from salt.exceptions import CommandExecutionError
 from tests.support.case import ModuleCase
-from tests.support.helpers import runs_on, skip_if_binaries_missing, skip_if_not_root
+from tests.support.helpers import runs_on, skip_if_binaries_missing
 
 # Brew doesn't support local package installation - So, let's
 # Grab some small packages available online for brew
@@ -13,7 +13,7 @@ ADD_PKG = "algol68g"
 DEL_PKG = "acme"
 
 
-@skip_if_not_root
+@pytest.mark.skip_if_not_root
 @skip_if_binaries_missing("brew")
 @runs_on(kernel="Darwin")
 @pytest.mark.destructive_test

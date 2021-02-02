@@ -5,7 +5,7 @@
 import pytest
 from salt.exceptions import CommandExecutionError
 from tests.support.case import ModuleCase
-from tests.support.helpers import random_string, runs_on, skip_if_not_root
+from tests.support.helpers import random_string, runs_on
 
 # Create group name strings for tests
 ADD_GROUP = random_string("RS-", lowercase=False)
@@ -15,7 +15,7 @@ ADD_USER = random_string("RS-", lowercase=False)
 REP_USER_GROUP = random_string("RS-", lowercase=False)
 
 
-@skip_if_not_root
+@pytest.mark.skip_if_not_root
 @runs_on(kernel="Darwin")
 @pytest.mark.destructive_test
 class MacGroupModuleTest(ModuleCase):

@@ -3,14 +3,14 @@ import salt.utils.files
 import salt.utils.platform
 import salt.utils.stringutils
 from tests.support.case import ModuleCase
-from tests.support.helpers import random_string, runs_on, skip_if_not_root
+from tests.support.helpers import random_string, runs_on
 from tests.support.unit import skipIf
 
 if not salt.utils.platform.is_windows():
     import grp
 
 
-@skip_if_not_root
+@pytest.mark.skip_if_not_root
 @pytest.mark.destructive_test
 @pytest.mark.windows_whitelisted
 @runs_on(kernel=("Linux", "Windows"))

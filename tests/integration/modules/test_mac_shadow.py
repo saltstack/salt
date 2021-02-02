@@ -6,20 +6,15 @@ import datetime
 
 import pytest
 from tests.support.case import ModuleCase
-from tests.support.helpers import (
-    random_string,
-    runs_on,
-    skip_if_binaries_missing,
-    skip_if_not_root,
-)
+from tests.support.helpers import random_string, runs_on, skip_if_binaries_missing
 
 TEST_USER = random_string("RS-", lowercase=False)
 NO_USER = random_string("RS-", lowercase=False)
 
 
-@skip_if_not_root
 @runs_on(kernel="Darwin")
 @skip_if_binaries_missing("dscl", "pwpolicy")
+@pytest.mark.skip_if_not_root
 class MacShadowModuleTest(ModuleCase):
     """
     Validate the mac_shadow module

@@ -12,7 +12,7 @@ import salt.modules.nilrt_ip as ip
 import salt.utils.files
 import salt.utils.platform
 from tests.support.case import ModuleCase
-from tests.support.helpers import requires_system_grains, runs_on, skip_if_not_root
+from tests.support.helpers import requires_system_grains, runs_on
 from tests.support.unit import skipIf
 
 try:
@@ -29,7 +29,7 @@ except ImportError:
 INTERFACE_FOR_TEST = "eth1"
 
 
-@skip_if_not_root
+@pytest.mark.skip_if_not_root
 @skipIf(not pyiface, "The python pyiface package is not installed")
 @skipIf(not CaseInsensitiveDict, "The python package requests is not installed")
 @runs_on(os_family="NILinuxRT", reason="Tests applicable only to NILinuxRT")

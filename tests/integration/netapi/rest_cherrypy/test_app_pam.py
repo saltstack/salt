@@ -7,7 +7,6 @@ import pytest
 import salt.utils.platform
 import tests.support.cherrypy_testclasses as cptc
 from tests.support.case import ModuleCase
-from tests.support.helpers import skip_if_not_root
 from tests.support.unit import skipIf
 
 if cptc.HAS_CHERRYPY:
@@ -27,7 +26,7 @@ class TestAuthPAM(cptc.BaseRestCherryPyTest, ModuleCase):
     """
 
     @pytest.mark.destructive_test
-    @skip_if_not_root
+    @pytest.mark.skip_if_not_root
     def setUp(self):
         super().setUp()
         try:
@@ -122,7 +121,7 @@ class TestAuthPAM(cptc.BaseRestCherryPyTest, ModuleCase):
         self.assertEqual(response.status, "200 OK")
 
     @pytest.mark.destructive_test
-    @skip_if_not_root
+    @pytest.mark.skip_if_not_root
     def tearDown(self):
         """
         Clean up after tests. Delete user

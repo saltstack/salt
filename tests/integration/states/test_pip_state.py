@@ -27,7 +27,6 @@ from tests.support.case import ModuleCase
 from tests.support.helpers import (
     patched_environ,
     requires_system_grains,
-    skip_if_not_root,
     with_system_user,
     with_tempdir,
 )
@@ -321,12 +320,12 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
                 )
 
     @pytest.mark.destructive_test
-    @skip_if_not_root
     @with_system_user(
         "issue-6912", on_existing="delete", delete=True, password="PassWord1!"
     )
     @with_tempdir()
     @pytest.mark.slow_test
+    @pytest.mark.skip_if_not_root
     def test_issue_6912_wrong_owner(self, temp_dir, username):
         # Setup virtual environment directory to be used throughout the test
         venv_dir = os.path.join(temp_dir, "6912-wrong-owner")
@@ -382,13 +381,13 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
                     self.assertEqual(salt.utils.win_dacl.get_owner(path), username)
 
     @pytest.mark.destructive_test
-    @skip_if_not_root
     @skipIf(salt.utils.platform.is_darwin(), "Test is flaky on macosx")
     @with_system_user(
         "issue-6912", on_existing="delete", delete=True, password="PassWord1!"
     )
     @with_tempdir()
     @pytest.mark.slow_test
+    @pytest.mark.skip_if_not_root
     def test_issue_6912_wrong_owner_requirements_file(self, temp_dir, username):
         # Setup virtual environment directory to be used throughout the test
         venv_dir = os.path.join(temp_dir, "6912-wrong-owner")

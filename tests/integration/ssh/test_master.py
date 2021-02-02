@@ -4,7 +4,7 @@ Simple Smoke Tests for Connected SSH minions
 
 import pytest
 from tests.support.case import SSHCase
-from tests.support.helpers import requires_system_grains, skip_if_not_root
+from tests.support.helpers import requires_system_grains
 from tests.support.pytest.helpers import temp_state_file
 from tests.support.runtests import RUNTIME_VARS
 
@@ -23,8 +23,8 @@ class SSHMasterTestCase(SSHCase):
         self.assertEqual(ret, True)
 
     @requires_system_grains
-    @skip_if_not_root
     @pytest.mark.slow_test
+    @pytest.mark.skip_if_not_root
     def test_service(self, grains):
         service = "cron"
         os_family = grains["os_family"]

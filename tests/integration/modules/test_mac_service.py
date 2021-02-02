@@ -7,10 +7,10 @@ import plistlib
 import pytest
 import salt.utils.files
 from tests.support.case import ModuleCase
-from tests.support.helpers import runs_on, skip_if_binaries_missing, skip_if_not_root
+from tests.support.helpers import runs_on, skip_if_binaries_missing
 
 
-@skip_if_not_root
+@pytest.mark.skip_if_not_root
 @runs_on(kernel="Darwin")
 @skip_if_binaries_missing("launchctl", "plutil")
 class MacServiceModuleTest(ModuleCase):

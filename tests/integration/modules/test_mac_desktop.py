@@ -4,12 +4,12 @@ Integration tests for the mac_desktop execution module.
 
 import pytest
 from tests.support.case import ModuleCase
-from tests.support.helpers import runs_on, skip_if_not_root
+from tests.support.helpers import runs_on
 
 
 @pytest.mark.destructive_test
-@skip_if_not_root
 @runs_on(kernel="Darwin")
+@pytest.mark.skip_if_not_root
 class MacDesktopTestCase(ModuleCase):
     """
     Integration tests for the mac_desktop module.
