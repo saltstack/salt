@@ -1,4 +1,5 @@
-# This is a compilation of requirements installed on salt-jenkins git.salt state run
+# Cloud tests requirements
+apache-libcloud>=1.5.0
 netaddr
 profitbricks
 pypsexec
