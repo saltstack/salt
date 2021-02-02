@@ -364,13 +364,26 @@ class OrchEventTest(ShellCase):
             mode="w", suffix=".conf", dir=self.master_d_dir, delete=True,
         )
         self.base_env = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
-        self.addCleanup(shutil.rmtree, self.base_env)
-        self.addCleanup(self.conf.close)
-        for attr in ("timeout", "master_d_dir", "conf", "base_env"):
-            self.addCleanup(delattr, self, attr)
+
+    def tearDown(self):
+        try:
+            shutil.rmtree(self.base_env, ignore_errors=True)
+            del self.base_env
+        except AttributeError:
+            pass
+        try:
+            self.conf.close()
+            del self.conf
+        except AttributeError:
+            pass
+        for attr in ("timeout", "master_d_dir"):
+            try:
+                delattr(self, attr)
+            except AttributeError:
+                pass
         # Force a reload of the configuration now that our temp config file has
         # been removed.
-        self.addCleanup(self.run_run_plus, "test.arg")
+        self.run_run_plus("test.arg")
 
     def alarm_handler(self, signal, frame):
         raise Exception("Timeout of {} seconds reached".format(self.timeout))
