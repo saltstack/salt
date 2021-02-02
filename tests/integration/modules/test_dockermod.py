@@ -1,20 +1,17 @@
-# -*- coding: utf-8 -*-
 """
 Integration tests for the docker_container states
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import random
 import string
 import sys
 
 import salt.utils.path
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 from tests.support.case import ModuleCase
 from tests.support.helpers import destructiveTest, slowTest
 from tests.support.mixins import SaltReturnAssertsMixin
-
-# Import Salt Testing Libs
+from tests.support.pytest.helpers import temp_state_file
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
 
@@ -44,7 +41,7 @@ class DockerCallTestCase(ModuleCase, SaltReturnAssertsMixin):
         self.run_state(
             "docker_container.running",
             name=self.random_name,
-            image="python:{0}".format(self.image_tag),
+            image="python:{}".format(self.image_tag),
             entrypoint="tail -f /dev/null",
         )
 
@@ -55,7 +52,7 @@ class DockerCallTestCase(ModuleCase, SaltReturnAssertsMixin):
         self.run_state("docker_container.absent", name=self.random_name, force=True)
         self.run_state(
             "docker_image.absent",
-            images=["python:{0}".format(self.image_tag)],
+            images=["python:{}".format(self.image_tag)],
             force=True,
         )
         delattr(self, "random_name")
@@ -74,13 +71,43 @@ class DockerCallTestCase(ModuleCase, SaltReturnAssertsMixin):
         """
         check that docker.sls works, and works with a container not running as root
         """
-        ret = self.run_function("docker.apply", [self.random_name, "core"])
-        self.assertSaltTrueReturn(ret)
+        core_state = """
+        {}/testfile:
+          file:
+            - managed
+            - source: salt://testfile
+            - makedirs: true
+            """.format(
+            RUNTIME_VARS.TMP
+        )
+
+        with temp_state_file("core.sls", core_state):
+            ret = self.run_function("docker.apply", [self.random_name, "core"])
+            self.assertSaltTrueReturn(ret)
 
     @slowTest
     def test_docker_highstate(self):
         """
         check that docker.highstate works, and works with a container not running as root
         """
-        ret = self.run_function("docker.apply", [self.random_name])
-        self.assertSaltTrueReturn(ret)
+        top_sls = """
+        base:
+          '*':
+            - core
+            """
+
+        core_state = """
+        {}/testfile:
+          file:
+            - managed
+            - source: salt://testfile
+            - makedirs: true
+            """.format(
+            RUNTIME_VARS.TMP
+        )
+
+        with temp_state_file("top.sls", top_sls), temp_state_file(
+            "core.sls", core_state
+        ):
+            ret = self.run_function("docker.apply", [self.random_name])
+            self.assertSaltTrueReturn(ret)

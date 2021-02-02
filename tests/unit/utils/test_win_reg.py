@@ -1,11 +1,6 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import salt.utils.stringutils
 import salt.utils.win_reg as win_reg
 from salt.exceptions import CommandExecutionError
-from salt.ext import six
 from tests.support.helpers import destructiveTest, random_string
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
@@ -21,7 +16,7 @@ UNICODE_KEY = "Unicode Key \N{TRADE MARK SIGN}"
 UNICODE_VALUE = (
     "Unicode Value " "\N{COPYRIGHT SIGN},\N{TRADE MARK SIGN},\N{REGISTERED SIGN}"
 )
-FAKE_KEY = "SOFTWARE\\{0}".format(random_string("SaltTesting-", lowercase=False))
+FAKE_KEY = "SOFTWARE\\{}".format(random_string("SaltTesting-", lowercase=False))
 
 
 @skipIf(not HAS_WIN32, "Tests require win32 libraries")
@@ -193,7 +188,7 @@ class WinFunctionsTestCase(TestCase):
         """
         Test the list_keys function using a non existing registry key
         """
-        expected = (False, "Cannot find key: HKLM\\{0}".format(FAKE_KEY))
+        expected = (False, "Cannot find key: HKLM\\{}".format(FAKE_KEY))
         self.assertEqual(win_reg.list_keys(hive="HKLM", key=FAKE_KEY), expected)
 
     def test_list_keys_invalid_hive(self):
@@ -238,7 +233,7 @@ class WinFunctionsTestCase(TestCase):
         """
         Test the list_values function using a non existing registry key
         """
-        expected = (False, "Cannot find key: HKLM\\{0}".format(FAKE_KEY))
+        expected = (False, "Cannot find key: HKLM\\{}".format(FAKE_KEY))
         self.assertEqual(win_reg.list_values(hive="HKLM", key=FAKE_KEY), expected)
 
     def test_list_values_invalid_hive(self):
@@ -315,7 +310,7 @@ class WinFunctionsTestCase(TestCase):
         Test the read_value function using a non existing registry key
         """
         expected = {
-            "comment": "Cannot find key: HKLM\\{0}".format(FAKE_KEY),
+            "comment": "Cannot find key: HKLM\\{}".format(FAKE_KEY),
             "vdata": None,
             "vname": "fake_name",
             "success": False,
@@ -639,15 +634,15 @@ class WinFunctionsTestCase(TestCase):
         """
         vdata = salt.utils.stringutils.to_bytes("test data")
         result = win_reg.cast_vdata(vdata=vdata, vtype="REG_BINARY")
-        self.assertTrue(isinstance(result, six.binary_type))
+        self.assertTrue(isinstance(result, bytes))
 
         vdata = salt.utils.stringutils.to_str("test data")
         result = win_reg.cast_vdata(vdata=vdata, vtype="REG_BINARY")
-        self.assertTrue(isinstance(result, six.binary_type))
+        self.assertTrue(isinstance(result, bytes))
 
         vdata = salt.utils.stringutils.to_unicode("test data")
         result = win_reg.cast_vdata(vdata=vdata, vtype="REG_BINARY")
-        self.assertTrue(isinstance(result, six.binary_type))
+        self.assertTrue(isinstance(result, bytes))
 
     def test_cast_vdata_reg_dword(self):
         """
@@ -674,11 +669,11 @@ class WinFunctionsTestCase(TestCase):
         """
         vdata = salt.utils.stringutils.to_str("test data")
         result = win_reg.cast_vdata(vdata=vdata, vtype="REG_EXPAND_SZ")
-        self.assertTrue(isinstance(result, six.text_type))
+        self.assertTrue(isinstance(result, str))
 
         vdata = salt.utils.stringutils.to_bytes("test data")
         result = win_reg.cast_vdata(vdata=vdata, vtype="REG_EXPAND_SZ")
-        self.assertTrue(isinstance(result, six.text_type))
+        self.assertTrue(isinstance(result, str))
 
     def test_cast_vdata_reg_multi_sz(self):
         """
@@ -692,7 +687,7 @@ class WinFunctionsTestCase(TestCase):
         result = win_reg.cast_vdata(vdata=vdata, vtype="REG_MULTI_SZ")
         self.assertTrue(isinstance(result, list))
         for item in result:
-            self.assertTrue(isinstance(item, six.text_type))
+            self.assertTrue(isinstance(item, str))
 
     def test_cast_vdata_reg_qword(self):
         """
@@ -702,21 +697,11 @@ class WinFunctionsTestCase(TestCase):
         """
         vdata = 1
         result = win_reg.cast_vdata(vdata=vdata, vtype="REG_QWORD")
-        if six.PY2:
-            # pylint: disable=incompatible-py3-code,undefined-variable
-            self.assertTrue(isinstance(result, long))
-            # pylint: enable=incompatible-py3-code,undefined-variable
-        else:
-            self.assertTrue(isinstance(result, int))
+        self.assertTrue(isinstance(result, int))
 
         vdata = "1"
         result = win_reg.cast_vdata(vdata=vdata, vtype="REG_QWORD")
-        if six.PY2:
-            # pylint: disable=incompatible-py3-code,undefined-variable
-            self.assertTrue(isinstance(result, long))
-            # pylint: enable=incompatible-py3-code,undefined-variable
-        else:
-            self.assertTrue(isinstance(result, int))
+        self.assertTrue(isinstance(result, int))
 
     def test_cast_vdata_reg_sz(self):
         """
@@ -725,15 +710,15 @@ class WinFunctionsTestCase(TestCase):
         """
         vdata = salt.utils.stringutils.to_str("test data")
         result = win_reg.cast_vdata(vdata=vdata, vtype="REG_SZ")
-        self.assertTrue(isinstance(result, six.text_type))
+        self.assertTrue(isinstance(result, str))
 
         vdata = salt.utils.stringutils.to_bytes("test data")
         result = win_reg.cast_vdata(vdata=vdata, vtype="REG_SZ")
-        self.assertTrue(isinstance(result, six.text_type))
+        self.assertTrue(isinstance(result, str))
 
         vdata = None
         result = win_reg.cast_vdata(vdata=vdata, vtype="REG_SZ")
-        self.assertTrue(isinstance(result, six.text_type))
+        self.assertTrue(isinstance(result, str))
         self.assertEqual(result, "")
 
     @destructiveTest
@@ -985,14 +970,4 @@ class WinFunctionsTestCase(TestCase):
         Test the ``_to_unicode`` function when it receives an integer value.
         Should return a unicode value, which is unicode in PY2 and str in PY3.
         """
-        if six.PY3:
-            self.assertTrue(isinstance(win_reg._to_unicode(1), str))
-        else:
-            # fmt: off
-            self.assertTrue(
-                isinstance(
-                    win_reg._to_unicode(1),
-                    unicode,  # pylint: disable=incompatible-py3-code,undefined-variable
-                )
-            )
-            # fmt: on
+        self.assertTrue(isinstance(win_reg._to_unicode(1), str))

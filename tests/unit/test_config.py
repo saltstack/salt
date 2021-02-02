@@ -17,7 +17,6 @@ from salt.exceptions import (
     SaltCloudConfigError,
     SaltConfigurationError,
 )
-from salt.ext import six
 from salt.syspaths import CONFIG_DIR
 from tests.support.helpers import patched_environ, slowTest, with_tempdir, with_tempfile
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
@@ -881,7 +880,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         tally = self._get_tally(salt.config.master_config)
         # pylint: enable=no-value-for-parameter
         non_unicode = tally.get("non_unicode", [])
-        self.assertEqual(len(non_unicode), 8 if six.PY2 else 0, non_unicode)
+        self.assertEqual(len(non_unicode), 0, non_unicode)
         self.assertTrue(tally["unicode"] > 0)
 
     def test_conf_file_strings_are_unicode_for_minion(self):

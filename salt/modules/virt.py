@@ -7287,7 +7287,7 @@ def network_define(
     srvs:
         List of SRV DNS entries.
         Each entry is a dictionary with the mandatory ``name`` and ``protocol`` keys.
-        Entries can also have ``target``, ``port``, ``priority`` and ``weight`` optional properties.
+        Entries can also have ``target``, ``port``, ``priority``, ``domain`` and ``weight`` optional properties.
 
     CLI Example:
 
