@@ -26,7 +26,7 @@ def find(path, saltenv="base"):
         return ret
     for root in __opts__["file_roots"][saltenv]:
         full = os.path.join(root, path)
-        if not salt.utils.verify.clean_path(root, full):
+        if not salt.utils.verify.clean_path(root, full, subdir=True):
             continue
         if os.path.isfile(full):
             # Add it to the dict
