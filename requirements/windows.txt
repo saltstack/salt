@@ -10,7 +10,7 @@ backports.ssl-match-hostname>=3.7.0.1; python_version < '3.7'
 certifi>=2020.4.5.1
 cffi>=1.12.2
 cherrypy>=17.4.1
-cohesity_management_sdk
+cohesity-management-sdk
 cryptography>=2.6.1
 distro>=1.5.0
 gitpython>=2.1.10

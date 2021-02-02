@@ -115,7 +115,7 @@ click==7.1.1              # via geomet
 clustershell==1.8.3
 colorama==0.4.3           # via ciscoconfparse
 contextlib2==0.5.5
-cohesity_management_sdk
+cohesity-management-sdk
 croniter==0.3.29 ; sys_platform != "win32"
 cryptography==3.2
 decorator==4.4.2          # via networkx
