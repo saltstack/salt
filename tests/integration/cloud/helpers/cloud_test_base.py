@@ -9,7 +9,6 @@ import shutil
 from time import sleep
 
 from salt.config import cloud_config, cloud_providers_config
-from salt.ext.six.moves import range
 from salt.utils.yaml import safe_load
 from tests.support.case import ShellCase
 from tests.support.helpers import expensiveTest, random_string

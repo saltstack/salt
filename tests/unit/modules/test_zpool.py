@@ -8,14 +8,10 @@ Tests for salt.modules.zpool
 :platform:      illumos,freebsd,linux
 """
 
-
-# Import Salt Utils
 import salt.loader
 import salt.modules.zpool as zpool
 import salt.utils.decorators
 import salt.utils.decorators.path
-
-# Import Salt Execution module to test
 import salt.utils.zfs
 from salt.utils.odict import OrderedDict
 from tests.support.helpers import slowTest
@@ -25,7 +21,6 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.zfs import ZFSMockData
 
 
-# Skip this test case if we don't have access to mock!
 class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
     """
     This class contains a set of functions that test salt.modules.zpool module

@@ -1,8 +1,5 @@
-# Import python libs
-
 import logging
 
-# Import Salt Testing libs
 from tests.support.case import ModuleCase, ShellCase
 from tests.support.helpers import slowTest
 

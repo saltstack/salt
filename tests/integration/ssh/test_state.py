@@ -7,6 +7,7 @@ import time
 
 from tests.support.case import SSHCase
 from tests.support.helpers import flaky, slowTest
+from tests.support.pytest.helpers import temp_state_file
 from tests.support.runtests import RUNTIME_VARS
 
 SSH_SLS = "ssh_state_tests"
@@ -117,8 +118,27 @@ class SSHStateTest(SSHCase):
         """
         test state.show_top with salt-ssh
         """
-        ret = self.run_function("state.show_top")
-        self.assertEqual(ret, {"base": ["core", "master_tops_test"]})
+        top_sls = """
+        base:
+          '*':
+            - core
+            """
+
+        core_state = """
+        {}/testfile:
+          file:
+            - managed
+            - source: salt://testfile
+            - makedirs: true
+            """.format(
+            RUNTIME_VARS.TMP
+        )
+
+        with temp_state_file("top.sls", top_sls), temp_state_file(
+            "core.sls", core_state
+        ):
+            ret = self.run_function("state.show_top")
+            self.assertEqual(ret, {"base": ["core", "master_tops_test"]})
 
     @slowTest
     def test_state_single(self):
@@ -143,11 +163,30 @@ class SSHStateTest(SSHCase):
         """
         state.show_highstate with salt-ssh
         """
-        high = self.run_function("state.show_highstate")
-        destpath = os.path.join(RUNTIME_VARS.TMP, "testfile")
-        self.assertIsInstance(high, dict)
-        self.assertIn(destpath, high)
-        self.assertEqual(high[destpath]["__env__"], "base")
+        top_sls = """
+        base:
+          '*':
+            - core
+            """
+
+        core_state = """
+        {}/testfile:
+          file:
+            - managed
+            - source: salt://testfile
+            - makedirs: true
+            """.format(
+            RUNTIME_VARS.TMP
+        )
+
+        with temp_state_file("top.sls", top_sls), temp_state_file(
+            "core.sls", core_state
+        ):
+            high = self.run_function("state.show_highstate")
+            destpath = os.path.join(RUNTIME_VARS.TMP, "testfile")
+            self.assertIsInstance(high, dict)
+            self.assertIn(destpath, high)
+            self.assertEqual(high[destpath]["__env__"], "base")
 
     @slowTest
     def test_state_high(self):
@@ -172,9 +211,28 @@ class SSHStateTest(SSHCase):
         """
         state.show_lowstate with salt-ssh
         """
-        low = self.run_function("state.show_lowstate")
-        self.assertIsInstance(low, list)
-        self.assertIsInstance(low[0], dict)
+        top_sls = """
+        base:
+          '*':
+            - core
+            """
+
+        core_state = """
+        {}/testfile:
+          file:
+            - managed
+            - source: salt://testfile
+            - makedirs: true
+            """.format(
+            RUNTIME_VARS.TMP
+        )
+
+        with temp_state_file("top.sls", top_sls), temp_state_file(
+            "core.sls", core_state
+        ):
+            low = self.run_function("state.show_lowstate")
+            self.assertIsInstance(low, list)
+            self.assertIsInstance(low[0], dict)
 
     @slowTest
     def test_state_low(self):
