@@ -4,6 +4,7 @@
 #
 #    pip-compile -o requirements/static/ci/py3.7/cloud.txt -v requirements/static/ci/cloud.in
 #
+apache-libcloud==2.4.0
 certifi==2019.3.9         # via requests
 cffi==1.12.2              # via cryptography
 chardet==3.0.4            # via requests
@@ -17,7 +18,7 @@ pycparser==2.19           # via cffi
 pypsexec==0.1.0
 pywinrm==0.3.0
 requests-ntlm==1.1.0      # via pywinrm
-requests==2.21.0          # via profitbricks, pywinrm, requests-ntlm
+requests==2.21.0          # via apache-libcloud, profitbricks, pywinrm, requests-ntlm
 six==1.15.0               # via cryptography, profitbricks, pypsexec, pywinrm, smbprotocol
 smbprotocol==0.1.1        # via pypsexec
 urllib3==1.24.2           # via requests

@@ -2,7 +2,7 @@
 # We can also exclude platforms from the requirements using markers, but if a requirement only applies
 # to a particular platform, please add it to the corresponding `<platform>.in` file in this directory.
 azure==4.0.0; sys_platform != 'win32'
-apache-libcloud>=2.4.0; sys_platform != 'win32'
+apache-libcloud>=1.5.0; sys_platform != 'win32'
 boto3>=1.13.5
 boto>=2.46.0
 cassandra-driver>=2.0
