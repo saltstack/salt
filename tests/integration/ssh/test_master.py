@@ -4,6 +4,8 @@ Simple Smoke Tests for Connected SSH minions
 
 from tests.support.case import SSHCase
 from tests.support.helpers import requires_system_grains, skip_if_not_root, slowTest
+from tests.support.pytest.helpers import temp_state_file
+from tests.support.runtests import RUNTIME_VARS
 
 
 class SSHMasterTestCase(SSHCase):
@@ -46,12 +48,42 @@ class SSHMasterTestCase(SSHCase):
 
     @slowTest
     def test_state_apply(self):
-        ret = self.run_function("state.apply", ["core"])
-        for key, value in ret.items():
-            self.assertTrue(value["result"])
+        core_state = """
+        {}/testfile:
+          file:
+            - managed
+            - source: salt://testfile
+            - makedirs: true
+            """.format(
+            RUNTIME_VARS.TMP
+        )
+
+        with temp_state_file("core.sls", core_state):
+            ret = self.run_function("state.apply", ["core"])
+            for key, value in ret.items():
+                self.assertTrue(value["result"])
 
     @slowTest
     def test_state_highstate(self):
-        ret = self.run_function("state.highstate")
-        for key, value in ret.items():
-            self.assertTrue(value["result"])
+        top_sls = """
+        base:
+          '*':
+            - core
+            """
+
+        core_state = """
+        {}/testfile:
+          file:
+            - managed
+            - source: salt://testfile
+            - makedirs: true
+            """.format(
+            RUNTIME_VARS.TMP
+        )
+
+        with temp_state_file("top.sls", top_sls), temp_state_file(
+            "core.sls", core_state
+        ):
+            ret = self.run_function("state.highstate")
+            for key, value in ret.items():
+                self.assertTrue(value["result"])

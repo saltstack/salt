@@ -2,6 +2,7 @@
 integration tests for nilirt_ip
 """
 
+import configparser
 import re
 import shutil
 import time
@@ -9,7 +10,6 @@ import time
 import salt.modules.nilrt_ip as ip
 import salt.utils.files
 import salt.utils.platform
-from salt.ext.six.moves import configparser
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
     destructiveTest,

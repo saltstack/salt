@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: :email:`Jayesh Kariya <jayeshk@saltstack.com>`
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
@@ -117,7 +115,7 @@ class BeaconsTestCase(TestCase, LoaderModuleMockMixin):
         """
         Test saving beacons.
         """
-        comm1 = "Beacons saved to {0}beacons.conf.".format(RUNTIME_VARS.TMP + os.sep)
+        comm1 = "Beacons saved to {}beacons.conf.".format(RUNTIME_VARS.TMP + os.sep)
         with patch.dict(
             beacons.__opts__,
             {

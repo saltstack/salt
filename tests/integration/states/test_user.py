@@ -5,7 +5,6 @@ user present
 user present with custom homedir
 """
 
-
 import os
 import sys
 from random import randint

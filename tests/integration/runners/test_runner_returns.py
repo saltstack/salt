@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Tests for runner_returns
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import errno
 import os
@@ -125,11 +123,11 @@ class RunnerReturnsTest(ShellCase):
 
         # Now we have something sane we can reliably compare in an assert.
         if "SUDO_USER" in os.environ:
-            user = "sudo_{0}".format(os.environ["SUDO_USER"])
+            user = "sudo_{}".format(os.environ["SUDO_USER"])
         else:
             user = RUNTIME_VARS.RUNNING_TESTS_USER
         if salt.utils.platform.is_windows():
-            user = "sudo_{0}\\{1}".format(socket.gethostname(), user)
+            user = "sudo_{}\\{}".format(socket.gethostname(), user)
         self.assertEqual(
             deserialized,
             {

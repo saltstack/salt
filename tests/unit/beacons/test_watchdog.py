@@ -6,7 +6,6 @@ import time
 import salt.utils.files
 import salt.utils.platform
 from salt.beacons import watchdog
-from salt.ext.six.moves import range
 from tests.support.helpers import slowTest
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf

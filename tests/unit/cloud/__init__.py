@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
 """
     tests.unit.cloud
     ~~~~~~~~~~~~~~~~
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.cloud
 from tests.support.helpers import slowTest

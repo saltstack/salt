@@ -1,20 +1,14 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Erik Johnson (erik@saltstack.com)
     tests.integration.states.npm
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
-# Import salt libs
 import salt.utils.path
 import salt.utils.platform
 from salt.utils.versions import LooseVersion
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.helpers import destructiveTest, requires_network, slowTest
 from tests.support.mixins import SaltReturnAssertsMixin

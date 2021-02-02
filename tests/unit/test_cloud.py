@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Eric Radman <ericshane@eradman.com>
 """
-from __future__ import absolute_import
 
 import os
 
