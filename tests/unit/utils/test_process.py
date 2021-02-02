@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import datetime
 import functools
 import io
@@ -14,8 +11,6 @@ import warnings
 
 import salt.utils.platform
 import salt.utils.process
-from salt.ext import six
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 from salt.utils.versions import warn_until_date
 from tests.support.helpers import slowTest
 from tests.support.mock import patch
@@ -41,7 +36,7 @@ def die(func):
         name = func.__name__[5:]
 
         def _die():
-            salt.utils.process.appendproctitle("test_{0}".format(name))
+            salt.utils.process.appendproctitle("test_{}".format(name))
 
         attrname = "die_" + name
         setattr(self, attrname, _die)
@@ -61,7 +56,7 @@ def incr(func):
         name = func.__name__[5:]
 
         def _incr(counter, num):
-            salt.utils.process.appendproctitle("test_{0}".format(name))
+            salt.utils.process.appendproctitle("test_{}".format(name))
             for _ in range(0, num):
                 counter.value += 1
 
@@ -83,7 +78,7 @@ def spin(func):
         name = func.__name__[5:]
 
         def _spin():
-            salt.utils.process.appendproctitle("test_{0}".format(name))
+            salt.utils.process.appendproctitle("test_{}".format(name))
             while True:
                 time.sleep(1)
 
@@ -103,11 +98,11 @@ class TestProcessManager(TestCase):
         """
         process_manager = salt.utils.process.ProcessManager()
         process_manager.add_process(self.spin_basic)
-        initial_pid = next(six.iterkeys(process_manager._process_map))
+        initial_pid = next(iter(process_manager._process_map.keys()))
         time.sleep(2)
         process_manager.check_children()
         try:
-            assert initial_pid == next(six.iterkeys(process_manager._process_map))
+            assert initial_pid == next(iter(process_manager._process_map.keys()))
         finally:
             process_manager.stop_restarting()
             process_manager.kill_children()
@@ -122,7 +117,7 @@ class TestProcessManager(TestCase):
     def test_kill(self):
         process_manager = salt.utils.process.ProcessManager()
         process_manager.add_process(self.spin_kill)
-        initial_pid = next(six.iterkeys(process_manager._process_map))
+        initial_pid = next(iter(process_manager._process_map.keys()))
         # kill the child
         if salt.utils.platform.is_windows():
             os.kill(initial_pid, signal.SIGTERM)
@@ -132,7 +127,7 @@ class TestProcessManager(TestCase):
         time.sleep(0.1)
         process_manager.check_children()
         try:
-            assert initial_pid != next(six.iterkeys(process_manager._process_map))
+            assert initial_pid != next(iter(process_manager._process_map.keys()))
         finally:
             process_manager.stop_restarting()
             process_manager.kill_children()
@@ -150,11 +145,11 @@ class TestProcessManager(TestCase):
         """
         process_manager = salt.utils.process.ProcessManager()
         process_manager.add_process(self.die_restarting)
-        initial_pid = next(six.iterkeys(process_manager._process_map))
+        initial_pid = next(iter(process_manager._process_map.keys()))
         time.sleep(2)
         process_manager.check_children()
         try:
-            assert initial_pid != next(six.iterkeys(process_manager._process_map))
+            assert initial_pid != next(iter(process_manager._process_map.keys()))
         finally:
             process_manager.stop_restarting()
             process_manager.kill_children()
@@ -275,7 +270,7 @@ class TestProcessCallbacks(TestCase):
 
         class MyProcess(salt.utils.process.Process):
             def __init__(self):
-                super(MyProcess, self).__init__()
+                super().__init__()
                 self.evt = multiprocessing.Event()
 
             def run(self):
@@ -454,7 +449,7 @@ class TestSignalHandlingProcessCallbacks(TestCase):
 
         class MyProcess(salt.utils.process.SignalHandlingProcess):
             def __init__(self):
-                super(MyProcess, self).__init__()
+                super().__init__()
                 self.evt = multiprocessing.Event()
 
             def run(self):
@@ -599,7 +594,7 @@ class TestDeprecatedClassNames(TestCase):
                         "and instead use 'salt.utils.process.Process'. "
                         "'salt.utils.process.MultiprocessingProcess' will go away "
                         "after 2022-01-01.",
-                        six.text_type(recorded_warnings[0].message),
+                        str(recorded_warnings[0].message),
                     )
         finally:
             if proc is not None:
@@ -656,7 +651,7 @@ class TestDeprecatedClassNames(TestCase):
                         "and instead use 'salt.utils.process.SignalHandlingProcess'. "
                         "'salt.utils.process.SignalHandlingMultiprocessingProcess' will go away "
                         "after 2022-01-01.",
-                        six.text_type(recorded_warnings[0].message),
+                        str(recorded_warnings[0].message),
                     )
         finally:
             if proc is not None:

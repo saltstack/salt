@@ -1,16 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 Tests for the MySQL states
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import salt libs
 import salt.utils.path
-from salt.ext import six
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.helpers import destructiveTest
 from tests.support.mixins import SaltReturnAssertsMixin
@@ -44,7 +36,7 @@ class MysqlDatabaseStateTest(ModuleCase, SaltReturnAssertsMixin):
         """
         Test presence of MySQL server, enforce a root password
         """
-        super(MysqlDatabaseStateTest, self).setUp()
+        super().setUp()
         NO_MYSQL_SERVER = True
         # now ensure we know the mysql root password
         # one of theses two at least should work
@@ -93,7 +85,7 @@ class MysqlDatabaseStateTest(ModuleCase, SaltReturnAssertsMixin):
             if not isinstance(ret, dict) or "results" not in ret:
                 raise AssertionError(
                     (
-                        "Unexpected result while testing connection" " on db '{0}': {1}"
+                        "Unexpected result while testing connection" " on db '{}': {}"
                     ).format(db_name, repr(ret))
                 )
             self.assertEqual([["1"]], ret["results"])
@@ -190,10 +182,10 @@ class MysqlDatabaseStateTest(ModuleCase, SaltReturnAssertsMixin):
         if not isinstance(ret, dict):
             raise AssertionError(
                 (
-                    "Unexpected result while testing external mysql utf8 sls" ": {0}"
+                    "Unexpected result while testing external mysql utf8 sls" ": {}"
                 ).format(repr(ret))
             )
-        for item, descr in six.iteritems(ret):
+        for item, descr in ret.items():
             result[item] = {
                 "__run_num__": descr["__run_num__"],
                 "comment": descr["comment"],

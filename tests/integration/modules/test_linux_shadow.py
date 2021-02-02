@@ -2,7 +2,6 @@
 integration tests for shadow linux
 """
 
-
 import os
 
 import salt.modules.linux_shadow

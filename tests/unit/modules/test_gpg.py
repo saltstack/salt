@@ -1,10 +1,7 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: :email:`Gareth J. Greenaway <gareth@saltstack.com>`
     :codeauthor: :email:`David Murphy <dmurphy@saltstack.com>`
 """
-
-from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
 import os
@@ -170,7 +167,7 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
 
     @skipIf(not HAS_GPG, "GPG Module Unavailable")
     def setUp(self):
-        super(GpgTestCase, self).setUp()
+        super().setUp()
         self.gpghome = os.path.join(RUNTIME_VARS.TMP, "gpghome")
         if not os.path.isdir(self.gpghome):
             # left behind... Don't fail because of this!
@@ -188,7 +185,7 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
         if os.path.isfile(self.gpgfile_pub):
             os.remove(self.gpgfile_pub)
         shutil.rmtree(self.gpghome, ignore_errors=True)
-        super(GpgTestCase, self).tearDown()
+        super().tearDown()
 
     @skipIf(not HAS_GPG, "GPG Module Unavailable")
     def test_list_keys(self):

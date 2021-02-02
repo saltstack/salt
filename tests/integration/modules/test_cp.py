@@ -1,7 +1,3 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import hashlib
 import logging
 import os
@@ -12,7 +8,7 @@ import textwrap
 import time
 import uuid
 
-import psutil
+import psutil  # pylint: disable=3rd-party-module-not-gated
 import pytest
 import salt.ext.six as six
 import salt.utils.files
@@ -22,6 +18,7 @@ import salt.utils.stringutils
 from saltfactories.utils.ports import get_unused_localhost_port
 from tests.support.case import ModuleCase
 from tests.support.helpers import skip_if_not_root, slowTest, with_tempfile
+from tests.support.pytest.helpers import temp_state_file
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
@@ -40,9 +37,7 @@ class CPModuleTest(ModuleCase):
 
         TODO: maybe move this behavior to ModuleCase itself?
         """
-        return salt.utils.data.decode(
-            super(CPModuleTest, self).run_function(*args, **kwargs)
-        )
+        return salt.utils.data.decode(super().run_function(*args, **kwargs))
 
     @with_tempfile()
     @slowTest
@@ -437,7 +432,7 @@ class CPModuleTest(ModuleCase):
         cp.cache_file
         """
         nginx_port = get_unused_localhost_port()
-        url_prefix = "http://localhost:{0}/".format(nginx_port)
+        url_prefix = "http://localhost:{}/".format(nginx_port)
         temp_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         self.addCleanup(shutil.rmtree, temp_dir, ignore_errors=True)
         nginx_root_dir = os.path.join(temp_dir, "root")
@@ -517,9 +512,28 @@ class CPModuleTest(ModuleCase):
         """
         cp.list_states
         """
-        ret = self.run_function("cp.list_states",)
-        self.assertIn("core", ret)
-        self.assertIn("top", ret)
+        top_sls = """
+        base:
+          '*':
+            - core
+            """
+
+        core_state = """
+        {}/testfile:
+          file:
+            - managed
+            - source: salt://testfile
+            - makedirs: true
+            """.format(
+            RUNTIME_VARS.TMP
+        )
+
+        with temp_state_file("top.sls", top_sls), temp_state_file(
+            "core.sls", core_state
+        ):
+            ret = self.run_function("cp.list_states",)
+            self.assertIn("core", ret)
+            self.assertIn("top", ret)
 
     @slowTest
     def test_list_minion(self):
