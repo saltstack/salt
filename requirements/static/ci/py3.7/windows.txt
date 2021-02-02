@@ -110,6 +110,7 @@ sed==0.3.1
 setproctitle==1.1.10
 six==1.15.0
 smmap==3.0.4
+sqlparse==0.4.1
 sshpubkeys==3.1.0         # via moto
 strict-rfc3339==0.7
 tempora==1.14.1
