@@ -1,6 +1,6 @@
 """
 Various functions to be used by windows during start up and to monkey patch
-missing functions in other modules
+missing functions in other modules.
 """
 
 import ctypes
@@ -84,7 +84,7 @@ def get_user_groups(name, sid=False):
     else:
         try:
             groups = win32net.NetUserGetLocalGroups(None, name)
-        except  (win32net.error, pywintypes.error) as exc:
+        except (win32net.error, pywintypes.error) as exc:
             # ERROR_ACCESS_DENIED, NERR_DCNotFound, RPC_S_SERVER_UNAVAILABLE
             if exc.winerror in (5, 1722, 2453, 1927, 1355):
                 # Try without LG_INCLUDE_INDIRECT flag, because the user might
