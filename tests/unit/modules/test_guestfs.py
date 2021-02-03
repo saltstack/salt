@@ -2,8 +2,8 @@
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
+import pytest
 import salt.modules.guestfs as guestfs
-from tests.support.helpers import slowTest
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, call, patch
 from tests.support.unit import TestCase
@@ -79,7 +79,7 @@ class GuestfsTestCase(TestCase, LoaderModuleMockMixin):
             )
             makedirs_mock.assert_called_once()
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_umount(self):
         """
         Test the guestfs.unmount function

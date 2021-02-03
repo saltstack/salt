@@ -6,7 +6,6 @@ import shutil
 
 import pytest
 from tests.support.case import SPMCase
-from tests.support.helpers import slowTest
 
 
 @pytest.mark.windows_whitelisted
@@ -20,7 +19,7 @@ class SPMInfoTest(SPMCase):
         self.config = self._spm_config()
         self._spm_build_files(self.config)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_spm_info(self):
         """
         test spm build

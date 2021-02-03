@@ -7,17 +7,12 @@ import plistlib
 import pytest
 import salt.utils.files
 from tests.support.case import ModuleCase
-from tests.support.helpers import (
-    runs_on,
-    skip_if_binaries_missing,
-    skip_if_not_root,
-    slowTest,
-)
+from tests.support.helpers import runs_on
 
 
-@skip_if_not_root
+@pytest.mark.skip_if_not_root
 @runs_on(kernel="Darwin")
-@skip_if_binaries_missing("launchctl", "plutil")
+@pytest.mark.skip_if_binaries_missing("launchctl", "plutil")
 class MacServiceModuleTest(ModuleCase):
     """
     Validate the mac_service module
@@ -48,7 +43,7 @@ class MacServiceModuleTest(ModuleCase):
         self.run_function("service.stop", [self.SERVICE_NAME])
         salt.utils.files.safe_rm(self.SERVICE_PATH)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_show(self):
         """
         Test service.show
@@ -63,7 +58,7 @@ class MacServiceModuleTest(ModuleCase):
             "Service not found", self.run_function("service.show", ["spongebob"])
         )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_launchctl(self):
         """
         Test service.launchctl
@@ -85,7 +80,7 @@ class MacServiceModuleTest(ModuleCase):
             self.run_function("service.launchctl", ["error", "bootstrap"]),
         )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_list(self):
         """
         Test service.list
@@ -100,7 +95,7 @@ class MacServiceModuleTest(ModuleCase):
         )
 
     @pytest.mark.destructive_test
-    @slowTest
+    @pytest.mark.slow_test
     def test_enable(self):
         """
         Test service.enable
@@ -112,7 +107,7 @@ class MacServiceModuleTest(ModuleCase):
         )
 
     @pytest.mark.destructive_test
-    @slowTest
+    @pytest.mark.slow_test
     def test_disable(self):
         """
         Test service.disable
@@ -124,7 +119,7 @@ class MacServiceModuleTest(ModuleCase):
         )
 
     @pytest.mark.destructive_test
-    @slowTest
+    @pytest.mark.slow_test
     def test_start(self):
         """
         Test service.start
@@ -138,7 +133,7 @@ class MacServiceModuleTest(ModuleCase):
         )
 
     @pytest.mark.destructive_test
-    @slowTest
+    @pytest.mark.slow_test
     def test_stop(self):
         """
         Test service.stop
@@ -150,7 +145,7 @@ class MacServiceModuleTest(ModuleCase):
         )
 
     @pytest.mark.destructive_test
-    @slowTest
+    @pytest.mark.slow_test
     def test_status(self):
         """
         Test service.status
@@ -166,7 +161,7 @@ class MacServiceModuleTest(ModuleCase):
         # Service not found
         self.assertFalse(self.run_function("service.status", ["spongebob"]))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_available(self):
         """
         Test service.available
@@ -174,7 +169,7 @@ class MacServiceModuleTest(ModuleCase):
         self.assertTrue(self.run_function("service.available", [self.SERVICE_NAME]))
         self.assertFalse(self.run_function("service.available", ["spongebob"]))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_missing(self):
         """
         Test service.missing
@@ -183,7 +178,7 @@ class MacServiceModuleTest(ModuleCase):
         self.assertTrue(self.run_function("service.missing", ["spongebob"]))
 
     @pytest.mark.destructive_test
-    @slowTest
+    @pytest.mark.slow_test
     def test_enabled(self):
         """
         Test service.enabled
@@ -197,7 +192,7 @@ class MacServiceModuleTest(ModuleCase):
         self.assertTrue(self.run_function("service.enabled", ["spongebob"]))
 
     @pytest.mark.destructive_test
-    @slowTest
+    @pytest.mark.slow_test
     def test_disabled(self):
         """
         Test service.disabled
@@ -212,7 +207,7 @@ class MacServiceModuleTest(ModuleCase):
             "Service not found", self.run_function("service.stop", ["spongebob"])
         )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_get_all(self):
         """
         Test service.get_all
@@ -221,7 +216,7 @@ class MacServiceModuleTest(ModuleCase):
         self.assertIsInstance(services, list)
         self.assertIn(self.SERVICE_NAME, services)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_get_enabled(self):
         """
         Test service.get_enabled
@@ -230,7 +225,7 @@ class MacServiceModuleTest(ModuleCase):
         self.assertIsInstance(services, list)
         self.assertIn(self.SERVICE_NAME, services)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_service_laoded(self):
         """
         Test service.get_enabled

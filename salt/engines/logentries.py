@@ -58,8 +58,7 @@ try:
 except ImportError:
     HAS_CERTIFI = False
 
-# This is here for older python installs, it is needed to setup an
-# encrypted tcp connection
+# This is here for older python installs, it is needed to setup an encrypted tcp connection
 try:
     import ssl
 

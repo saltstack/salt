@@ -4,14 +4,14 @@
 
 import pytest
 from tests.support.case import ModuleCase
-from tests.support.helpers import runs_on, skip_if_not_root, slowTest
+from tests.support.helpers import runs_on
 
 OSA_SCRIPT = "/usr/bin/osascript"
 
 
 @pytest.mark.destructive_test
-@skip_if_not_root
 @runs_on(kernel="Darwin")
+@pytest.mark.skip_if_not_root
 class MacAssistiveTest(ModuleCase):
     """
     Integration tests for the mac_assistive module.
@@ -38,7 +38,7 @@ class MacAssistiveTest(ModuleCase):
         if smile_bundle_present:
             self.run_function("assistive.remove", [smile_bundle])
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_install_and_remove(self):
         """
         Tests installing and removing a bundled ID or command to use assistive access.
@@ -47,7 +47,7 @@ class MacAssistiveTest(ModuleCase):
         self.assertTrue(self.run_function("assistive.install", [new_bundle]))
         self.assertTrue(self.run_function("assistive.remove", [new_bundle]))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_installed(self):
         """
         Tests the True and False return of assistive.installed.
@@ -59,7 +59,7 @@ class MacAssistiveTest(ModuleCase):
         # Installed should now return False
         self.assertFalse(self.run_function("assistive.installed", [OSA_SCRIPT]))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_enable(self):
         """
         Tests setting the enabled status of a bundled ID or command.
@@ -74,7 +74,7 @@ class MacAssistiveTest(ModuleCase):
         # Double check the script was enabled, as intended.
         self.assertTrue(self.run_function("assistive.enabled", [OSA_SCRIPT]))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_enabled(self):
         """
         Tests if a bundled ID or command is listed in assistive access returns True.

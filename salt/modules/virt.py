@@ -1964,27 +1964,24 @@ def _handle_remote_boot_params(orig_boot):
         {"kernel", "initrd", "cmdline", "loader", "nvram"},
     ]
 
-    try:
-        if keys in cases:
-            for key in keys:
-                if key == "efi" and type(orig_boot.get(key)) == bool:
-                    new_boot[key] = orig_boot.get(key)
-                elif orig_boot.get(key) is not None and salt.utils.virt.check_remote(
-                    orig_boot.get(key)
-                ):
-                    if saltinst_dir is None:
-                        os.makedirs(CACHE_DIR)
-                        saltinst_dir = CACHE_DIR
-                    new_boot[key] = salt.utils.virt.download_remote(
-                        orig_boot.get(key), saltinst_dir
-                    )
-            return new_boot
-        else:
-            raise SaltInvocationError(
-                "Invalid boot parameters,It has to follow this combination: [(kernel, initrd) or/and cmdline] or/and [(loader, nvram) or efi]"
-            )
-    except Exception as err:  # pylint: disable=broad-except
-        raise err
+    if keys in cases:
+        for key in keys:
+            if key == "efi" and type(orig_boot.get(key)) == bool:
+                new_boot[key] = orig_boot.get(key)
+            elif orig_boot.get(key) is not None and salt.utils.virt.check_remote(
+                orig_boot.get(key)
+            ):
+                if saltinst_dir is None:
+                    os.makedirs(CACHE_DIR)
+                    saltinst_dir = CACHE_DIR
+                new_boot[key] = salt.utils.virt.download_remote(
+                    orig_boot.get(key), saltinst_dir
+                )
+        return new_boot
+    else:
+        raise SaltInvocationError(
+            "Invalid boot parameters,It has to follow this combination: [(kernel, initrd) or/and cmdline] or/and [(loader, nvram) or efi]"
+        )
 
 
 def _handle_efi_param(boot, desc):
@@ -2007,10 +2004,11 @@ def _handle_efi_param(boot, desc):
     elif type(efi_value) == bool and os_attrib == {}:
         if efi_value is True and parent_tag.find("loader") is None:
             parent_tag.set("firmware", "efi")
+            return True
         if efi_value is False and parent_tag.find("loader") is not None:
             parent_tag.remove(parent_tag.find("loader"))
             parent_tag.remove(parent_tag.find("nvram"))
-        return True
+            return True
     elif type(efi_value) != bool:
         raise SaltInvocationError("Invalid efi value")
     return False
@@ -3287,7 +3285,7 @@ def _serial_or_concole_equal(old, new):
     return _filter_serial_or_concole(old) == _filter_serial_or_concole(new)
 
 
-def _diff_serial_list(old, new):
+def _diff_serial_lists(old, new):
     """
     Compare serial definitions to extract the changes
 
@@ -3297,7 +3295,7 @@ def _diff_serial_list(old, new):
     return _diff_lists(old, new, _serial_or_concole_equal)
 
 
-def _diff_console_list(old, new):
+def _diff_console_lists(old, new):
     """
     Compare console definitions to extract the changes
 
@@ -3793,7 +3791,7 @@ def update(
             boot,
             boot_dev,
             numatune,
-            serial=serials,
+            serials=serials,
             consoles=consoles,
             stop_on_reboot=stop_on_reboot,
             host_devices=host_devices,
@@ -4187,8 +4185,8 @@ def update(
         "disk": _skip_update(["disks", "disk_profile"]),
         "interface": _skip_update(["interfaces", "nic_profile"]),
         "graphics": _skip_update(["graphics"]),
-        "serial": _skip_update(["serial"]),
-        "console": _skip_update(["console"]),
+        "serial": _skip_update(["serials"]),
+        "console": _skip_update(["consoles"]),
         "hostdev": _skip_update(["host_devices"]),
     }
     changes = _compute_device_changes(desc, new_desc, to_skip)

@@ -21,7 +21,7 @@ import salt.utils.platform
 import salt.utils.win_functions
 import salt.utils.yaml
 from salt.exceptions import CommandExecutionError
-from tests.support.helpers import dedent, slowTest, with_tempfile
+from tests.support.helpers import dedent, with_tempfile
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, call, mock_open, patch
 from tests.support.runtests import RUNTIME_VARS
@@ -2553,7 +2553,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             self.assertTrue(filestate.mod_run_check_cmd(cmd, filename))
 
     @skipIf(not HAS_DATEUTIL, NO_DATEUTIL_REASON)
-    @slowTest
+    @pytest.mark.slow_test
     def test_retention_schedule(self):
         """
         Test to execute the retention_schedule logic.

@@ -1,7 +1,7 @@
 import pytest
 import salt.utils.platform
 from tests.support.case import ModuleCase
-from tests.support.helpers import flaky, slowTest
+from tests.support.helpers import flaky
 from tests.support.unit import skipIf
 
 
@@ -14,7 +14,7 @@ class NTPTest(ModuleCase):
     """
 
     @pytest.mark.destructive_test
-    @slowTest
+    @pytest.mark.slow_test
     def test_ntp_set_servers(self):
         """
         test ntp get and set servers
