@@ -20,77 +20,65 @@ import logging
 
 import salt.config
 
-
-def load_config():
-    """
-    """
-    try:
-        from cohesity_management_sdk.cohesity_client import CohesityClient
-        from cohesity_management_sdk.exceptions.api_exception import APIException
-        from cohesity_management_sdk.models.cancel_protection_job_run_param import (
-            CancelProtectionJobRunParam,
-        )
-        from cohesity_management_sdk.models.change_protection_job_state_param import (
-            ChangeProtectionJobStateParam,
-        )
-        from cohesity_management_sdk.models.delete_protection_job_param import (
-            DeleteProtectionJobParam,
-        )
-        from cohesity_management_sdk.models.environment_register_protection_source_parameters_enum import (
-            EnvironmentRegisterProtectionSourceParametersEnum as env_enum,
-        )
-        from cohesity_management_sdk.models.protection_job_request_body import (
-            ProtectionJobRequestBody,
-        )
-        from cohesity_management_sdk.models.recover_task_request import (
-            RecoverTaskRequest,
-        )
-        from cohesity_management_sdk.models.register_protection_source_parameters import (
-            RegisterProtectionSourceParameters,
-        )
-        from cohesity_management_sdk.models.restore_object_details import (
-            RestoreObjectDetails,
-        )
-        from cohesity_management_sdk.models.run_protection_job_param import (
-            RunProtectionJobParam,
-        )
-        from cohesity_management_sdk.models.universal_id import UniversalId
-        from cohesity_management_sdk.models.update_protection_jobs_state_request_body import (
-            UpdateProtectionJobsStateRequestBody,
-        )
-        from cohesity_management_sdk.models.vmware_restore_parameters import (
-            VmwareRestoreParameters,
-        )
-    
-        HAS_LIBS = True
-    except ModuleNotFoundError as err:
-        HAS_LIBS = False
-        print("Error while importing Cohesity SDK modules.")
-        print(err)
-        exit(0)
-    
-    logger = logging.getLogger(__name__)
-    cohesity_config = salt.config.client_config("/etc/salt/master.d/cohesity.conf").get(
-        "cohesity_config", {}
+try:
+    from cohesity_management_sdk.cohesity_client import CohesityClient
+    from cohesity_management_sdk.exceptions.api_exception import APIException
+    from cohesity_management_sdk.models.cancel_protection_job_run_param import (
+        CancelProtectionJobRunParam,
     )
-    if not cohesity_config:
-        logger.error("Please update /etc/salt/master.d/cohesity.conf file")
-        exit()
-    
-    cluster_vip = cohesity_config["cluster_vip"]
-    c_username = cohesity_config["username"]
-    c_password = cohesity_config["password"]
-    c_domain = cohesity_config["domain"]
-    
-    global cohesity_client
-    cohesity_client = CohesityClient(
-        cluster_vip=cluster_vip,
-        username=c_username,
-        password=c_password,
-        domain=c_domain,
+    from cohesity_management_sdk.models.change_protection_job_state_param import (
+        ChangeProtectionJobStateParam,
+    )
+    from cohesity_management_sdk.models.delete_protection_job_param import (
+        DeleteProtectionJobParam,
+    )
+    from cohesity_management_sdk.models.environment_register_protection_source_parameters_enum import (
+        EnvironmentRegisterProtectionSourceParametersEnum as env_enum,
+    )
+    from cohesity_management_sdk.models.protection_job_request_body import (
+        ProtectionJobRequestBody,
+    )
+    from cohesity_management_sdk.models.recover_task_request import RecoverTaskRequest
+    from cohesity_management_sdk.models.register_protection_source_parameters import (
+        RegisterProtectionSourceParameters,
+    )
+    from cohesity_management_sdk.models.restore_object_details import (
+        RestoreObjectDetails,
+    )
+    from cohesity_management_sdk.models.run_protection_job_param import (
+        RunProtectionJobParam,
+    )
+    from cohesity_management_sdk.models.universal_id import UniversalId
+    from cohesity_management_sdk.models.update_protection_jobs_state_request_body import (
+        UpdateProtectionJobsStateRequestBody,
+    )
+    from cohesity_management_sdk.models.vmware_restore_parameters import (
+        VmwareRestoreParameters,
     )
 
+    HAS_LIBS = True
+except ModuleNotFoundError as err:
+    HAS_LIBS = False
+    print("Error while importing Cohesity SDK modules.")
+    print(err)
+    exit(0)
 
+logger = logging.getLogger(__name__)
+cohesity_config = salt.config.client_config("/etc/salt/master.d/cohesity.conf").get(
+    "cohesity_config", {}
+)
+if not cohesity_config:
+    logger.error("Please update /etc/salt/master.d/cohesity.conf file")
+    exit()
+
+cluster_vip = cohesity_config["cluster_vip"]
+c_username = cohesity_config["username"]
+c_password = cohesity_config["password"]
+c_domain = cohesity_config["domain"]
+
+cohesity_client = CohesityClient(
+    cluster_vip=cluster_vip, username=c_username, password=c_password, domain=c_domain
+)
 ERROR_LIST = []
 __virtualname__ = "cohesity"
 
@@ -484,7 +472,3 @@ def restore_vms(
         return "Successfully created restore task {} ".format(task_name)
     except APIException as err:
         return str(err)
-
-
-if __name__ == "main":
-    load_config()
