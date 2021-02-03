@@ -42,7 +42,9 @@ def load_config():
         from cohesity_management_sdk.models.protection_job_request_body import (
             ProtectionJobRequestBody,
         )
-        from cohesity_management_sdk.models.recover_task_request import RecoverTaskRequest
+        from cohesity_management_sdk.models.recover_task_request import (
+            RecoverTaskRequest,
+        )
         from cohesity_management_sdk.models.register_protection_source_parameters import (
             RegisterProtectionSourceParameters,
         )
@@ -82,7 +84,10 @@ def load_config():
     
     global cohesity_client
     cohesity_client = CohesityClient(
-        cluster_vip=cluster_vip, username=c_username, password=c_password, domain=c_domain
+        cluster_vip=cluster_vip,
+        username=c_username,
+        password=c_password,
+        domain=c_domain,
     )
 
 
