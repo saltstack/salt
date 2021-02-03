@@ -2478,7 +2478,7 @@ def event(
                         "{}\t{}".format(  # future lint: blacklisted-function
                             salt.utils.stringutils.to_str(ret["tag"]),
                             salt.utils.json.dumps(
-                                ret["data"],
+                                salt.utils.data.decode(ret["data"]),
                                 sort_keys=pretty,
                                 indent=None if not pretty else 4,
                             ),

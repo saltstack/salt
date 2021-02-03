@@ -1,6 +1,11 @@
+==========================
+Salt Project Documentation
+==========================
+
+.. include:: ../README.rst
+
 .. _table-of-contents:
 
-======================
 Salt Table of Contents
 ======================
 

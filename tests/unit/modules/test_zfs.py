@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Tests for salt.modules.zfs
 
@@ -8,21 +7,19 @@ Tests for salt.modules.zfs
 :depends:       salt.utils.zfs
 :platform:      illumos,freebsd,linux
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
+import pytest
 import salt.loader
 import salt.modules.zfs as zfs
 import salt.utils.zfs
 from salt.utils.dateutils import strftime
 from salt.utils.odict import OrderedDict
-from tests.support.helpers import slowTest
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
 from tests.support.zfs import ZFSMockData
 
 
-# Skip this test case if we don't have access to mock!
 class ZfsTestCase(TestCase, LoaderModuleMockMixin):
     """
     This class contains a set of functions that test salt.modules.zfs module
@@ -293,7 +290,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(res, zfs.destroy("myzpool/mydataset"))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_rename_success(self):
         """
         Tests successful return of rename function
@@ -358,7 +355,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(res, zfs.list_("myzpool"))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_list_parsable_success(self):
         """
         Tests zfs list with parsable set to False
@@ -470,7 +467,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(res, zfs.list_("myzpool"))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_list_mount_success(self):
         """
         Tests zfs list_mount
@@ -597,7 +594,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(res, zfs.inherit("canmount", "myzpool/mydataset"))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_diff(self):
         """
         Tests zfs diff
@@ -665,7 +662,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
                 res, zfs.diff("myzpool/data@yesterday", "myzpool/data", parsable=False)
             )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_rollback_success(self):
         """
         Tests zfs rollback success
@@ -678,7 +675,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(res, zfs.rollback("myzpool/mydataset@yesterday"))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_rollback_failure(self):
         """
         Tests zfs rollback failure
@@ -754,7 +751,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
                 zfs.clone("myzpool/mydataset@yesterday", "myzpool/archive/yesterday"),
             )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_promote_success(self):
         """
         Tests zfs promote success
@@ -792,7 +789,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(res, zfs.promote("myzpool/yesterday"))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_bookmark_success(self):
         """
         Tests zfs bookmark success
@@ -811,7 +808,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
                     ),
                 )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_holds_success(self):
         """
         Tests zfs holds success
@@ -921,7 +918,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
                 ),
             )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_release_failure(self):
         """
         Tests zfs release failure
@@ -1020,7 +1017,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertEqual(res, zfs.set("myzpool/mydataset", compression="lz4"))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_set_failure(self):
         """
         Tests zfs set failure
