@@ -2128,7 +2128,7 @@ class ClearFuncs(TransportMethods):
             fun = clear_load.pop("fun")
             runner_client = salt.runner.RunnerClient(self.opts)
             return runner_client.asynchronous(
-                fun, clear_load.get("kwarg", {}), username
+                fun, clear_load.get("kwarg", {}), username, local=True
             )
         except Exception as exc:  # pylint: disable=broad-except
             log.error("Exception occurred while introspecting %s: %s", fun, exc)
