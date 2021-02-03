@@ -13,6 +13,7 @@ backports.ssl-match-hostname==3.7.0.1 ; python_version < "3.7"
 boto3==1.13.5
 boto==2.49.0
 botocore==1.16.26         # via boto3, moto, s3transfer
+cachecontrol==0.12.6
 cachetools==3.1.0         # via google-auth
 cassandra-driver==3.23.0
 certifi==2020.6.20
@@ -24,7 +25,7 @@ cheroot==8.3.0
 cherrypy==17.4.1
 click==7.1.2              # via geomet
 clustershell==1.8.3
-cohesity-management-sdk
+cohesity-management-sdk==1.5.2
 colorama==0.4.1           # via pytest
 contextlib2==0.6.0.post1
 contextvars==2.4 ; python_version < "3.7"
@@ -57,7 +58,7 @@ jinja2==2.10.1
 jmespath==0.9.4
 jsondiff==1.2.0           # via moto
 jsonpatch==1.28           # via cfn-lint
-jsonpickle           # via aws-xray-sdk
+jsonpickle==0.12.6
 jsonpointer==2.0          # via jsonpatch
 jsonschema==3.2.0
 junit-xml==1.9            # via cfn-lint

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 This module have been tested on Cohesity API v1.
 :depends: cohesity-management-sdk,
@@ -56,6 +55,7 @@ try:
     from cohesity_management_sdk.models.vmware_restore_parameters import (
         VmwareRestoreParameters,
     )
+
     HAS_LIBS = True
 except ModuleNotFoundError as err:
     HAS_LIBS = False

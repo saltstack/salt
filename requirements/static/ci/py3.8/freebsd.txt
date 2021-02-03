@@ -99,6 +99,7 @@ bcrypt==3.1.6             # via paramiko
 boto3==1.13.5
 boto==2.49.0
 botocore==1.16.26         # via boto3, moto, s3transfer
+cachecontrol==0.12.6      # via cohesity-management-sdk
 cached-property==1.5.1    # via pygit2
 cachetools==3.1.0         # via google-auth
 cassandra-driver==3.24.0
@@ -113,6 +114,7 @@ cherrypy==17.4.1
 ciscoconfparse==1.5.19    # via napalm
 click==7.1.2              # via geomet
 clustershell==1.8.3
+cohesity-management-sdk==1.5.2
 colorama==0.4.3           # via ciscoconfparse
 contextlib2==0.5.5
 croniter==0.3.29 ; sys_platform != "win32"
@@ -142,7 +144,7 @@ jinja2==2.10.1
 jmespath==0.9.4
 jsondiff==1.2.0           # via moto
 jsonpatch==1.28           # via cfn-lint
-jsonpickle           # via aws-xray-sdk
+jsonpickle==0.9.6         # via aws-xray-sdk, cohesity-management-sdk
 jsonpointer==2.0          # via jsonpatch
 jsonschema==3.2.0
 junit-xml==1.9            # via cfn-lint
