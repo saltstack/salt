@@ -1,20 +1,14 @@
 import pytest
 from tests.support.case import ModuleCase
-from tests.support.helpers import (
-    random_string,
-    requires_system_grains,
-    runs_on,
-    skip_if_not_root,
-    slowTest,
-)
+from tests.support.helpers import random_string, requires_system_grains, runs_on
 
 
-@skip_if_not_root
 @runs_on(kernel="Linux")
 @pytest.mark.destructive_test
+@pytest.mark.skip_if_not_root
 class UseraddModuleTestLinux(ModuleCase):
     @requires_system_grains
-    @slowTest
+    @pytest.mark.slow_test
     def test_groups_includes_primary(self, grains):
         # Let's create a user, which usually creates the group matching the
         # name
@@ -57,7 +51,7 @@ class UseraddModuleTestLinux(ModuleCase):
             self.run_function("user.delete", [uname, True, True])
             raise
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_user_primary_group(self):
         """
         Tests the primary_group function
@@ -80,10 +74,10 @@ class UseraddModuleTestLinux(ModuleCase):
             raise
 
 
-@skip_if_not_root
 @runs_on(kernel="Windows")
 @pytest.mark.windows_whitelisted
 @pytest.mark.destructive_test
+@pytest.mark.skip_if_not_root
 class UseraddModuleTestWindows(ModuleCase):
     def setUp(self):
         self.user_name = random_string("RS-", lowercase=False)
@@ -109,7 +103,7 @@ class UseraddModuleTestWindows(ModuleCase):
             # Skip because creating is not what we're testing here
             self.skipTest("Failed to create group")
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_add_user(self):
         """
         Test adding a user
@@ -118,7 +112,7 @@ class UseraddModuleTestWindows(ModuleCase):
         user_list = self.run_function("user.list_users")
         self.assertIn(self.user_name, user_list)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_add_group(self):
         """
         Test adding a user
@@ -127,7 +121,7 @@ class UseraddModuleTestWindows(ModuleCase):
         group_list = self.run_function("group.list_groups")
         self.assertIn(self.group_name, group_list)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_add_user_to_group(self):
         """
         Test adding a user to a group
@@ -138,7 +132,7 @@ class UseraddModuleTestWindows(ModuleCase):
         user_info = self.run_function("user.info", [self.user_name])
         self.assertIn(self.group_name, user_info["groups"])
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_add_user_addgroup(self):
         """
         Test adding a user to a group with groupadd
@@ -149,7 +143,7 @@ class UseraddModuleTestWindows(ModuleCase):
         info = self.run_function("user.info", [self.user_name])
         self.assertEqual(info["groups"], [self.group_name])
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_user_chhome(self):
         """
         Test changing a users home dir
@@ -160,7 +154,7 @@ class UseraddModuleTestWindows(ModuleCase):
         info = self.run_function("user.info", [self.user_name])
         self.assertEqual(info["home"], user_dir)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_user_chprofile(self):
         """
         Test changing a users profile
@@ -171,7 +165,7 @@ class UseraddModuleTestWindows(ModuleCase):
         info = self.run_function("user.info", [self.user_name])
         self.assertEqual(info["profile"], config)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_user_chfullname(self):
         """
         Test changing a users fullname
@@ -182,7 +176,7 @@ class UseraddModuleTestWindows(ModuleCase):
         info = self.run_function("user.info", [self.user_name])
         self.assertEqual(info["fullname"], name)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_user_delete(self):
         """
         Test deleting a user
@@ -192,7 +186,7 @@ class UseraddModuleTestWindows(ModuleCase):
         self.run_function("user.delete", [self.user_name])
         self.assertEqual({}, self.run_function("user.info", [self.user_name]))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_user_removegroup(self):
         """
         Test removing a group
@@ -208,7 +202,7 @@ class UseraddModuleTestWindows(ModuleCase):
             self.group_name, self.run_function("user.list_groups", [self.user_name])
         )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_user_rename(self):
         """
         Test changing a users name
@@ -222,7 +216,7 @@ class UseraddModuleTestWindows(ModuleCase):
         # delete new user
         self.run_function("user.delete", [name, True, True])
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_user_setpassword(self):
         """
         Test setting a password

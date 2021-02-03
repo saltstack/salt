@@ -4,12 +4,12 @@ Integration tests for the mac_desktop execution module.
 
 import pytest
 from tests.support.case import ModuleCase
-from tests.support.helpers import runs_on, skip_if_not_root, slowTest
+from tests.support.helpers import runs_on
 
 
 @pytest.mark.destructive_test
-@skip_if_not_root
 @runs_on(kernel="Darwin")
+@pytest.mark.skip_if_not_root
 class MacDesktopTestCase(ModuleCase):
     """
     Integration tests for the mac_desktop module.
@@ -22,7 +22,7 @@ class MacDesktopTestCase(ModuleCase):
         ret = self.run_function("desktop.get_output_volume")
         self.assertIsNotNone(ret)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_set_output_volume(self):
         """
         Tests the return of set_output_volume.
@@ -50,7 +50,7 @@ class MacDesktopTestCase(ModuleCase):
         """
         self.assertTrue(self.run_function("desktop.lock"))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_say(self):
         """
         Tests the return of the say function.

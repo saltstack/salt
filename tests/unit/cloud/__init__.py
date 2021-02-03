@@ -2,14 +2,13 @@
     tests.unit.cloud
     ~~~~~~~~~~~~~~~~
 """
-
+import pytest
 import salt.cloud
-from tests.support.helpers import slowTest
 from tests.support.unit import TestCase
 
 
 class CloudTest(TestCase):
-    @slowTest
+    @pytest.mark.slow_test
     def test_vm_config_merger(self):
         """
         Validate the vm's config is generated correctly.

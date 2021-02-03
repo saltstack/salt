@@ -13,20 +13,14 @@ import datetime
 
 import pytest
 from tests.support.case import ModuleCase
-from tests.support.helpers import (
-    flaky,
-    runs_on,
-    skip_if_binaries_missing,
-    skip_if_not_root,
-    slowTest,
-)
+from tests.support.helpers import flaky, runs_on
 from tests.support.unit import skipIf
 
 
-@skip_if_not_root
 @flaky
 @runs_on(kernel="Darwin")
-@skip_if_binaries_missing("systemsetup")
+@pytest.mark.skip_if_binaries_missing("systemsetup")
+@pytest.mark.skip_if_not_root
 class MacTimezoneModuleTest(ModuleCase):
     """
     Validate the mac_timezone module
@@ -83,7 +77,7 @@ class MacTimezoneModuleTest(ModuleCase):
             "Invalid Date/Time Format: 13/12/2014",
         )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_get_time(self):
         """
         Test timezone.get_time
@@ -166,7 +160,7 @@ class MacTimezoneModuleTest(ModuleCase):
         self.assertIsInstance(self.run_function("timezone.get_zonecode"), (str,))
         self.assertEqual(self.run_function("timezone.get_zonecode"), "WAKT")
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_list_zones(self):
         """
         Test timezone.list_zones

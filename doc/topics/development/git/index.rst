@@ -32,7 +32,7 @@ Feature Release Branching
 
 Each feature release is maintained in a dedicated git branch derived from the
 last applicable release commit on develop. All file changes relevant to the
-feature release will be completed in the develop branch prior to the creation
+feature release will be completed in the ``master`` branch prior to the creation
 of the feature release branch. The feature release branch will be named after
 the relevant numbers to the feature release, which constitute the first two
 numbers. This means that the release branch for the 2015.8.0 series is named
@@ -42,7 +42,7 @@ A feature release branch is created with the following command:
 
 .. code-block:: bash
 
-    # git checkout -b 2015.8 # From the develop branch
+    # git checkout -b 2015.8 # From the master branch
     # git push origin 2015.8
 
 Point Releases

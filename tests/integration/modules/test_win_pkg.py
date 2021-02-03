@@ -5,7 +5,6 @@ import pytest
 import salt.utils.files
 import salt.utils.platform
 from tests.support.case import ModuleCase
-from tests.support.helpers import slowTest
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
@@ -33,7 +32,7 @@ class WinPKGTest(ModuleCase):
             os.remove(self.curl_sls_path)
 
     @pytest.mark.destructive_test
-    @slowTest
+    @pytest.mark.slow_test
     def test_adding_removing_pkg_sls(self):
         """
         Test add and removing a new pkg sls

@@ -6,14 +6,7 @@ import logging
 
 import pytest
 from tests.support.case import ModuleCase
-from tests.support.helpers import (
-    flaky,
-    random_string,
-    runs_on,
-    skip_if_binaries_missing,
-    skip_if_not_root,
-    slowTest,
-)
+from tests.support.helpers import flaky, random_string, runs_on
 from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
@@ -23,11 +16,11 @@ SET_COMPUTER_NAME = random_string("RS-", lowercase=False)
 SET_SUBNET_NAME = random_string("RS-", lowercase=False)
 
 
-@skip_if_not_root
 @flaky(attempts=10)
 @runs_on(kernel="Darwin")
-@skip_if_binaries_missing("systemsetup")
 @pytest.mark.usefixtures("salt_sub_minion")
+@pytest.mark.skip_if_not_root
+@pytest.mark.skip_if_binaries_missing("systemsetup")
 class MacSystemModuleTest(ModuleCase):
     """
     Validate the mac_system module
@@ -67,7 +60,7 @@ class MacSystemModuleTest(ModuleCase):
         )
 
     @pytest.mark.destructive_test
-    @slowTest
+    @pytest.mark.slow_test
     def test_get_set_remote_login(self):
         """
         Test system.get_remote_login
@@ -96,7 +89,7 @@ class MacSystemModuleTest(ModuleCase):
         )
 
     @pytest.mark.destructive_test
-    @slowTest
+    @pytest.mark.slow_test
     def test_get_set_remote_events(self):
         """
         Test system.get_remote_events
@@ -125,7 +118,7 @@ class MacSystemModuleTest(ModuleCase):
         )
 
     @pytest.mark.destructive_test
-    @slowTest
+    @pytest.mark.slow_test
     def test_get_set_subnet_name(self):
         """
         Test system.get_subnet_name
@@ -134,7 +127,7 @@ class MacSystemModuleTest(ModuleCase):
         self.assertTrue(self.run_function("system.set_subnet_name", [SET_SUBNET_NAME]))
         self.assertEqual(self.run_function("system.get_subnet_name"), SET_SUBNET_NAME)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_get_list_startup_disk(self):
         """
         Test system.get_startup_disk
@@ -171,7 +164,7 @@ class MacSystemModuleTest(ModuleCase):
             self.run_function("system.set_restart_delay", [70]),
         )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_get_set_disable_keyboard_on_lock(self):
         """
         Test system.get_disable_keyboard_on_lock
@@ -237,8 +230,8 @@ class MacSystemModuleTest(ModuleCase):
         )
 
 
-@skip_if_not_root
 @runs_on(kernel="Darwin")
+@pytest.mark.skip_if_not_root
 class MacSystemComputerNameTest(ModuleCase):
     def setUp(self):
         self.COMPUTER_NAME = self.run_function("system.get_computer_name")
@@ -253,7 +246,7 @@ class MacSystemComputerNameTest(ModuleCase):
     # investigate
     # @skipIf(salt.utils.platform.is_darwin() and six.PY3, 'This test hangs on OS X on Py3.  Skipping until #53566 is merged.')
     @pytest.mark.destructive_test
-    @slowTest
+    @pytest.mark.slow_test
     def test_get_set_computer_name(self):
         """
         Test system.get_computer_name

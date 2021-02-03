@@ -13,12 +13,12 @@ import logging
 import threading
 import time
 
+import pytest
 import salt.exceptions
 import salt.payload
 import zmq
 from salt.utils import immutabletypes
 from salt.utils.odict import OrderedDict
-from tests.support.helpers import slowTest
 from tests.support.unit import TestCase, skipIf
 
 log = logging.getLogger(__name__)
@@ -246,7 +246,7 @@ class SREQTestCase(TestCase):
     def get_sreq(self):
         return salt.payload.SREQ("tcp://127.0.0.1:{}".format(SREQTestCase.port))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_send_auto(self):
         """
         Test creation, send/rect
