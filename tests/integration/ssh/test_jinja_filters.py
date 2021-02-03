@@ -1,8 +1,5 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import, print_function, unicode_literals
-
+import pytest
 from tests.support.case import SSHCase
-from tests.support.helpers import slowTest
 
 
 class SSHJinjaFiltersTest(SSHCase):
@@ -10,7 +7,7 @@ class SSHJinjaFiltersTest(SSHCase):
     testing Jinja filters are available via state system & salt-ssh
     """
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_dateutils_strftime(self):
         """
         test jinja filter datautils.strftime
