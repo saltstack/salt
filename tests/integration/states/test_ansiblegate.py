@@ -11,13 +11,13 @@ import salt.utils.files
 import salt.utils.path
 import yaml
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, flaky, requires_system_grains
+from tests.support.helpers import flaky, requires_system_grains
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import SkipTest, skipIf
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 @pytest.mark.requires_sshd_server
 @skipIf(
     not salt.utils.path.which("ansible-playbook"), "ansible-playbook is not installed"

@@ -1,7 +1,8 @@
+import pytest
 import salt.utils.stringutils
 import salt.utils.win_reg as win_reg
 from salt.exceptions import CommandExecutionError
-from tests.support.helpers import destructiveTest, random_string
+from tests.support.helpers import random_string
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
 
@@ -365,7 +366,7 @@ class WinFunctionsTestCase(TestCase):
                 vname="ProgramFilesPath",
             )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_read_value_multi_sz_empty_list(self):
         """
         An empty REG_MULTI_SZ value should return an empty list, not None
@@ -395,7 +396,7 @@ class WinFunctionsTestCase(TestCase):
         finally:
             win_reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_value(self):
         """
         Test the set_value function
@@ -421,7 +422,7 @@ class WinFunctionsTestCase(TestCase):
         finally:
             win_reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_value_default(self):
         """
         Test the set_value function on the default value
@@ -442,7 +443,7 @@ class WinFunctionsTestCase(TestCase):
         finally:
             win_reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_value_unicode_key(self):
         """
         Test the set_value function on a unicode key
@@ -475,7 +476,7 @@ class WinFunctionsTestCase(TestCase):
         finally:
             win_reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_value_unicode_value(self):
         """
         Test the set_value function on a unicode value
@@ -501,7 +502,7 @@ class WinFunctionsTestCase(TestCase):
         finally:
             win_reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_value_reg_dword(self):
         """
         Test the set_value function on a REG_DWORD value
@@ -531,7 +532,7 @@ class WinFunctionsTestCase(TestCase):
         finally:
             win_reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_value_reg_qword(self):
         """
         Test the set_value function on a REG_QWORD value
@@ -721,7 +722,7 @@ class WinFunctionsTestCase(TestCase):
         self.assertTrue(isinstance(result, str))
         self.assertEqual(result, "")
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_delete_value(self):
         """
         Test the delete_value function
@@ -778,7 +779,7 @@ class WinFunctionsTestCase(TestCase):
                 vname="fake_name",
             )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_delete_value_unicode(self):
         """
         Test the delete_value function on a unicode value
@@ -795,7 +796,7 @@ class WinFunctionsTestCase(TestCase):
         finally:
             win_reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_delete_value_unicode_vname(self):
         """
         Test the delete_value function on a unicode vname
@@ -812,7 +813,7 @@ class WinFunctionsTestCase(TestCase):
         finally:
             win_reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_delete_value_unicode_key(self):
         """
         Test the delete_value function on a unicode key
@@ -864,7 +865,7 @@ class WinFunctionsTestCase(TestCase):
         with patch("salt.utils.win_reg.key_exists", mock_true):
             self.assertFalse(win_reg.delete_key_recursive(hive="HKLM", key="FAKE_KEY"))
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_delete_key_recursive(self):
         """
         Test the delete_key_recursive function
@@ -882,7 +883,7 @@ class WinFunctionsTestCase(TestCase):
         finally:
             win_reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_delete_key_recursive_failed_to_open_key(self):
         """
         Test the delete_key_recursive function on failure to open the key
@@ -913,7 +914,7 @@ class WinFunctionsTestCase(TestCase):
         finally:
             win_reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_delete_key_recursive_failed_to_delete(self):
         """
         Test the delete_key_recursive function on failure to delete a key
@@ -938,7 +939,7 @@ class WinFunctionsTestCase(TestCase):
         finally:
             win_reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_delete_key_recursive_unicode(self):
         """
         Test the delete_key_recursive function on value within a unicode key

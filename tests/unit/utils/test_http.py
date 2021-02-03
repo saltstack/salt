@@ -5,13 +5,16 @@
 import socket
 from contextlib import closing
 
+import pytest
 import salt.utils.http as http
-from tests.support.helpers import MirrorPostHandler, Webserver, slowTest
+from tests.support.helpers import MirrorPostHandler, Webserver
 from tests.support.mock import MagicMock, patch
+from tests.support.pytest.helpers import temp_state_file
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
 
 try:
-    import tornado.curl_httpclient  # pylint: disable=unused-import
+    import salt.ext.tornado.curl_httpclient  # pylint: disable=unused-import
 
     HAS_CURL = True
 except ImportError:
@@ -113,7 +116,7 @@ class HTTPTestCase(TestCase):
         ret = http._sanitize_url_components(mock_component_list, "foo")
         self.assertEqual(ret, mock_ret)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_query_null_response(self):
         """
         This tests that we get a null response when raise_error=False and the
@@ -274,7 +277,18 @@ class HTTPGetTestCase(TestCase):
         decode_body=True that it returns
         string and decodes it.
         """
-        for backend in ["tornado", "requests", "urllib2"]:
-            ret = http.query(self.get_webserver.url("core.sls"), backend=backend)
-            body = ret.get("body", "")
-            assert isinstance(body, str)
+        core_state = """
+        {}:
+          file:
+            - managed
+            - source: salt://testfile
+            - makedirs: true
+            """.format(
+            RUNTIME_VARS.TMP
+        )
+
+        with temp_state_file("{}/core.sls".format(self.get_webserver.root), core_state):
+            for backend in ["tornado", "requests", "urllib2"]:
+                ret = http.query(self.get_webserver.url("core.sls"), backend=backend)
+                body = ret.get("body", "")
+                assert isinstance(body, str)

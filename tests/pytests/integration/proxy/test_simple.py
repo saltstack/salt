@@ -1,9 +1,12 @@
 """
 Simple Smoke Tests for Connected Proxy Minion
 """
+import logging
 import os
 
 import pytest
+
+log = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="module")
@@ -88,14 +91,46 @@ def test_grains_items(salt_cli, salt_proxy):
     assert ret.json["kernelrelease"] == "proxy"
 
 
-def test_state_apply(salt_cli, salt_proxy):
-    ret = salt_cli.run("state.apply", "core", minion_tgt=salt_proxy.id)
-    for value in ret.json.values():
-        assert value["result"] is True
+def test_state_apply(salt_cli, salt_proxy, tmp_path, base_env_state_tree_root_dir):
+    test_file = tmp_path / "testfile"
+    core_state = """
+    {}:
+      file:
+        - managed
+        - source: salt://testfile
+        - makedirs: true
+        """.format(
+        test_file
+    )
+
+    with pytest.helpers.temp_file("core.sls", core_state, base_env_state_tree_root_dir):
+        ret = salt_cli.run("state.apply", "core", minion_tgt=salt_proxy.id)
+        for value in ret.json.values():
+            assert value["result"] is True
 
 
 @pytest.mark.slow_test
-def test_state_highstate(salt_cli, salt_proxy):
-    ret = salt_cli.run("state.highstate", minion_tgt=salt_proxy.id)
-    for value in ret.json.values():
-        assert value["result"] is True
+def test_state_highstate(salt_cli, salt_proxy, tmp_path, base_env_state_tree_root_dir):
+    test_file = tmp_path / "testfile"
+    top_sls = """
+    base:
+      '*':
+        - core
+        """
+
+    core_state = """
+    {}:
+      file:
+        - managed
+        - source: salt://testfile
+        - makedirs: true
+        """.format(
+        test_file
+    )
+
+    with pytest.helpers.temp_file(
+        "top.sls", top_sls, base_env_state_tree_root_dir
+    ), pytest.helpers.temp_file("core.sls", core_state, base_env_state_tree_root_dir):
+        ret = salt_cli.run("state.highstate", minion_tgt=salt_proxy.id)
+        for value in ret.json.values():
+            assert value["result"] is True
