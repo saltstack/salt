@@ -215,6 +215,7 @@ scp==0.13.2               # via junos-eznc
 setproctitle==1.1.10
 six==1.15.0
 smmap==3.0.4              # via gitdb
+sqlparse==0.4.1
 sshpubkeys==3.1.0         # via moto
 strict-rfc3339==0.7
 tempora==1.14.1

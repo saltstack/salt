@@ -8,10 +8,10 @@ import os
 import shutil
 import time
 
+import pytest
 import salt.modules.gpg as gpg
 import salt.utils.files
 import salt.utils.platform
-from tests.support.helpers import destructiveTest, slowTest
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
@@ -155,7 +155,7 @@ except ImportError:
     HAS_GPG = False
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 @skipIf(not salt.utils.platform.is_linux(), "These tests can only be run on linux")
 class GpgTestCase(TestCase, LoaderModuleMockMixin):
     """
@@ -318,7 +318,7 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
                     ret = gpg.get_key("xxxxxxxxxxxxxxxx")
                     self.assertEqual(ret, _expected_result)
 
-    @destructiveTest  # Need to run as root!?
+    @pytest.mark.destructive_test  # Need to run as root!?
     @skipIf(not HAS_GPG, "GPG Module Unavailable")
     def test_delete_key(self):
         """
@@ -434,7 +434,7 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
                     self.assertEqual(ret, _expected_result)
 
     @skipIf(not HAS_GPG, "GPG Module Unavailable")
-    @slowTest
+    @pytest.mark.slow_test
     def test_gpg_import_pub_key(self):
         config_user = MagicMock(return_value="salt")
         user_info = MagicMock(
@@ -446,7 +446,7 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertEqual(ret["res"], True)
 
     @skipIf(not HAS_GPG, "GPG Module Unavailable")
-    @slowTest
+    @pytest.mark.slow_test
     def test_gpg_import_priv_key(self):
         config_user = MagicMock(return_value="salt")
         user_info = MagicMock(
@@ -458,7 +458,7 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertEqual(ret["res"], True)
 
     @skipIf(not HAS_GPG, "GPG Module Unavailable")
-    @slowTest
+    @pytest.mark.slow_test
     def test_gpg_sign(self):
         config_user = MagicMock(return_value="salt")
         user_info = MagicMock(

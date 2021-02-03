@@ -13,6 +13,7 @@ import textwrap
 import threading
 import time
 
+import pytest
 import salt.exceptions
 import salt.utils.event
 import salt.utils.files
@@ -21,7 +22,7 @@ import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.yaml
 from tests.support.case import ShellCase
-from tests.support.helpers import expensiveTest, flaky, slowTest
+from tests.support.helpers import flaky
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
@@ -46,7 +47,7 @@ class StateRunnerTest(ShellCase):
         q.put(ret)
         q.task_done()
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_orchestrate_output(self):
         """
         Ensure the orchestrate runner outputs useful state data.
@@ -76,7 +77,7 @@ class StateRunnerTest(ShellCase):
         for item in good_out:
             assert item in ret_output
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_orchestrate_nested(self):
         """
         test salt-run state.orchestrate and failhard with nested orchestration
@@ -89,7 +90,7 @@ class StateRunnerTest(ShellCase):
         assert os.path.exists("/tmp/ewu-2016-12-13") is False
         assert code != 0
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_orchestrate_with_mine(self):
         """
         test salt-run state.orchestrate with mine.get call in sls
@@ -109,7 +110,7 @@ class StateRunnerTest(ShellCase):
                         '"{}" was not found in the orchestration call'.format(exp_ret)
                     )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_orchestrate_state_and_function_failure(self):
         """
         Ensure that returns from failed minions are in the changes dict where
@@ -161,7 +162,7 @@ class StateRunnerTest(ShellCase):
 
         self.assertEqual(func_ret, {"out": "highstate", "ret": {"minion": False}})
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_orchestrate_target_exists(self):
         """
         test orchestration when target exists
@@ -189,7 +190,7 @@ class StateRunnerTest(ShellCase):
             for item in out:
                 assert item in ret
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_orchestrate_retcode(self):
         """
         Test orchestration with nonzero retcode set in __context__
@@ -218,7 +219,7 @@ class StateRunnerTest(ShellCase):
         ):
             self.assertIn(result, ret)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_orchestrate_target_does_not_exist(self):
         """
         test orchestration when target doesn't exist
@@ -251,7 +252,7 @@ class StateRunnerTest(ShellCase):
             for item in out:
                 assert item in ret
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_orchestrate_batch_with_failhard_error(self):
         """
         test orchestration properly stops with failhard and batch.
@@ -282,7 +283,7 @@ class StateRunnerTest(ShellCase):
             # The execution should stop after first error, so return dict should contain only one minion
             assert len(changes_ret) == 1
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_state_event(self):
         """
         test to ensure state.event
@@ -303,7 +304,7 @@ class StateRunnerTest(ShellCase):
 
         server_thread.join()
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_orchestrate_subset(self):
         """
         test orchestration state using subset
@@ -317,7 +318,7 @@ class StateRunnerTest(ShellCase):
         assert count("Succeeded: 1", ret) == 1
         assert count("Failed:    0", ret) == 1
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_orchestrate_salt_function_return_false_failure(self):
         """
         Ensure that functions that only return False in the return
@@ -364,13 +365,26 @@ class OrchEventTest(ShellCase):
             mode="w", suffix=".conf", dir=self.master_d_dir, delete=True,
         )
         self.base_env = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
-        self.addCleanup(shutil.rmtree, self.base_env)
-        self.addCleanup(self.conf.close)
-        for attr in ("timeout", "master_d_dir", "conf", "base_env"):
-            self.addCleanup(delattr, self, attr)
+
+    def tearDown(self):
+        try:
+            shutil.rmtree(self.base_env, ignore_errors=True)
+            del self.base_env
+        except AttributeError:
+            pass
+        try:
+            self.conf.close()
+            del self.conf
+        except AttributeError:
+            pass
+        for attr in ("timeout", "master_d_dir"):
+            try:
+                delattr(self, attr)
+            except AttributeError:
+                pass
         # Force a reload of the configuration now that our temp config file has
         # been removed.
-        self.addCleanup(self.run_run_plus, "test.arg")
+        self.run_run_plus("test.arg")
 
     def alarm_handler(self, signal, frame):
         raise Exception("Timeout of {} seconds reached".format(self.timeout))
@@ -382,7 +396,7 @@ class OrchEventTest(ShellCase):
         self.conf.write(salt.utils.yaml.safe_dump(data, default_flow_style=False))
         self.conf.flush()
 
-    @expensiveTest
+    @pytest.mark.slow_test
     def test_jid_in_ret_event(self):
         """
         Test to confirm that the ret event for the orchestration contains the
@@ -461,7 +475,7 @@ class OrchEventTest(ShellCase):
             finally:
                 signal.alarm(0)
 
-    @expensiveTest
+    @pytest.mark.slow_test
     def test_parallel_orchestrations(self):
         """
         Test to confirm that the parallel state requisite works in orch
@@ -542,7 +556,7 @@ class OrchEventTest(ShellCase):
                 self.assertTrue(received)
                 signal.alarm(0)
 
-    @expensiveTest
+    @pytest.mark.slow_test
     def test_orchestration_soft_kill(self):
         """
         Test to confirm that the parallel state requisite works in orch
@@ -608,7 +622,7 @@ class OrchEventTest(ShellCase):
                 self.assertTrue(received)
                 signal.alarm(0)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_orchestration_with_pillar_dot_items(self):
         """
         Test to confirm when using a state file that includes other state file, if
@@ -705,7 +719,7 @@ class OrchEventTest(ShellCase):
                 self.assertTrue(received)
                 signal.alarm(0)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_orchestration_onchanges_and_prereq(self):
         """
         Test to confirm that the parallel state requisite works in orch

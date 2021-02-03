@@ -3,10 +3,10 @@ Integration Tests for restcherry salt-api with pam eauth
 """
 import urllib.parse
 
+import pytest
 import salt.utils.platform
 import tests.support.cherrypy_testclasses as cptc
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, skip_if_not_root, slowTest
 from tests.support.unit import skipIf
 
 if cptc.HAS_CHERRYPY:
@@ -25,8 +25,8 @@ class TestAuthPAM(cptc.BaseRestCherryPyTest, ModuleCase):
     Test auth with pam using salt-api
     """
 
-    @destructiveTest
-    @skip_if_not_root
+    @pytest.mark.destructive_test
+    @pytest.mark.skip_if_not_root
     def setUp(self):
         super().setUp()
         try:
@@ -46,7 +46,7 @@ class TestAuthPAM(cptc.BaseRestCherryPyTest, ModuleCase):
             self.run_function("user.delete", [USERA], remove=True)
             self.skipTest("Could not add user or password, skipping test")
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_bad_pwd_pam_chsh_service(self):
         """
         Test login while specifying chsh service with bad passwd
@@ -65,7 +65,7 @@ class TestAuthPAM(cptc.BaseRestCherryPyTest, ModuleCase):
         )
         self.assertEqual(response.status, "401 Unauthorized")
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_bad_pwd_pam_login_service(self):
         """
         Test login while specifying login service with bad passwd
@@ -84,7 +84,7 @@ class TestAuthPAM(cptc.BaseRestCherryPyTest, ModuleCase):
         )
         self.assertEqual(response.status, "401 Unauthorized")
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_good_pwd_pam_chsh_service(self):
         """
         Test login while specifying chsh service with good passwd
@@ -102,7 +102,7 @@ class TestAuthPAM(cptc.BaseRestCherryPyTest, ModuleCase):
         )
         self.assertEqual(response.status, "200 OK")
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_good_pwd_pam_login_service(self):
         """
         Test login while specifying login service with good passwd
@@ -120,8 +120,8 @@ class TestAuthPAM(cptc.BaseRestCherryPyTest, ModuleCase):
         )
         self.assertEqual(response.status, "200 OK")
 
-    @destructiveTest
-    @skip_if_not_root
+    @pytest.mark.destructive_test
+    @pytest.mark.skip_if_not_root
     def tearDown(self):
         """
         Clean up after tests. Delete user

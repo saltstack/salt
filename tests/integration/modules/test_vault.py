@@ -5,9 +5,9 @@ Integration tests for the vault execution module
 import logging
 import time
 
+import pytest
 import salt.utils.path
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, slowTest
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.sminion import create_sminion
 from tests.support.unit import SkipTest, skipIf
@@ -17,9 +17,9 @@ log = logging.getLogger(__name__)
 VAULT_BINARY_PATH = salt.utils.path.which("vault")
 
 
-@destructiveTest
 @skipIf(not salt.utils.path.which("dockerd"), "Docker not installed")
 @skipIf(not VAULT_BINARY_PATH, "Vault not installed")
+@pytest.mark.destructive_test
 class VaultTestCase(ModuleCase):
     """
     Test vault module
@@ -77,7 +77,7 @@ class VaultTestCase(ModuleCase):
         cls.sminion.states.docker_image.absent(name="vault", force=True)
         cls.sminion = None
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_write_read_secret(self):
         write_return = self.run_function(
             "vault.write_secret", path="secret/my/secret", user="foo", password="bar"
@@ -92,7 +92,7 @@ class VaultTestCase(ModuleCase):
             == "foo"
         )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_write_raw_read_secret(self):
         assert (
             self.run_function(
@@ -107,7 +107,7 @@ class VaultTestCase(ModuleCase):
             "user2": "foo2",
         }
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_delete_secret(self):
         assert (
             self.run_function(
@@ -122,7 +122,7 @@ class VaultTestCase(ModuleCase):
             self.run_function("vault.delete_secret", arg=["secret/my/secret"]) is True
         )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_list_secrets(self):
         assert (
             self.run_function(
@@ -138,9 +138,9 @@ class VaultTestCase(ModuleCase):
         }
 
 
-@destructiveTest
 @skipIf(not salt.utils.path.which("dockerd"), "Docker not installed")
 @skipIf(not salt.utils.path.which("vault"), "Vault not installed")
+@pytest.mark.destructive_test
 class VaultTestCaseCurrent(ModuleCase):
     """
     Test vault module against current vault
@@ -198,7 +198,7 @@ class VaultTestCaseCurrent(ModuleCase):
         cls.sminion.states.docker_image.absent(name="vault", force=True)
         cls.sminion = None
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_write_read_secret_kv2(self):
         write_return = self.run_function(
             "vault.write_secret", path="secret/my/secret", user="foo", password="bar"
@@ -227,7 +227,7 @@ class VaultTestCaseCurrent(ModuleCase):
         )
         self.assertEqual(read_return, "foo")
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_list_secrets_kv2(self):
         write_return = self.run_function(
             "vault.write_secret", path="secret/my/secret", user="foo", password="bar"
@@ -238,7 +238,7 @@ class VaultTestCaseCurrent(ModuleCase):
         list_return = self.run_function("vault.list_secrets", arg=["secret/my/"])
         self.assertIn("secret", list_return["keys"])
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_write_raw_read_secret_kv2(self):
         write_return = self.run_function(
             "vault.write_raw",
@@ -258,7 +258,7 @@ class VaultTestCaseCurrent(ModuleCase):
         expected_read = {"password2": "bar2", "user2": "foo2"}
         self.assertDictContainsSubset(expected_read, read_return)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_delete_secret_kv2(self):
         write_return = self.run_function(
             "vault.write_secret",
@@ -274,7 +274,7 @@ class VaultTestCaseCurrent(ModuleCase):
         )
         self.assertEqual(delete_return, True)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_destroy_secret_kv2(self):
         write_return = self.run_function(
             "vault.write_secret",
