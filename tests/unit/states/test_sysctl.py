@@ -34,9 +34,11 @@ class SysctlPresentTestCase(SysctlTestCase, LoaderModuleMockMixin):
         ret = {"name": name, "result": None, "changes": {}, "comment": comment}
 
         with patch.dict(sysctl.__opts__, {"test": True}):
-            mock = MagicMock(return_value={})
-            with patch.dict(sysctl.__salt__, {"sysctl.show": mock}):
-                self.assertDictEqual(sysctl.present(name, value), ret)
+            mock_show = MagicMock(return_value={})
+            with patch.dict(sysctl.__salt__, {"sysctl.show": mock_show}):
+                mock_get = MagicMock(return_value="")
+                with patch.dict(sysctl.__salt__, {"sysctl.get": mock_get}):
+                    self.assertDictEqual(sysctl.present(name, value), ret)
 
     def test_inaccessible_config_file(self):
         """
@@ -73,11 +75,13 @@ class SysctlPresentTestCase(SysctlTestCase, LoaderModuleMockMixin):
             """
             if config_file is None:
                 return {name: "0"}
-            return [""]
+            return {}
 
         with patch.dict(sysctl.__opts__, {"test": True}):
             with patch.dict(sysctl.__salt__, {"sysctl.show": mock_current}):
-                self.assertDictEqual(sysctl.present(name, value), ret)
+                mock_get = MagicMock(return_value="0")
+                with patch.dict(sysctl.__salt__, {"sysctl.get": mock_get}):
+                    self.assertDictEqual(sysctl.present(name, value), ret)
 
     def test_not_to_be_changed_not_configured(self):
         """
@@ -96,12 +100,14 @@ class SysctlPresentTestCase(SysctlTestCase, LoaderModuleMockMixin):
 
         def mock_current(config_file=None):
             if config_file is None:
-                return {name: "1"}
-            return [""]
+                return {name: value}
+            return {}
 
         with patch.dict(sysctl.__opts__, {"test": True}):
             with patch.dict(sysctl.__salt__, {"sysctl.show": mock_current}):
-                self.assertDictEqual(sysctl.present(name, value), ret)
+                mock_get = MagicMock(return_value=value)
+                with patch.dict(sysctl.__salt__, {"sysctl.get": mock_get}):
+                    self.assertDictEqual(sysctl.present(name, value), ret)
 
     def test_configured_but_unknown(self):
         """
@@ -121,11 +127,13 @@ class SysctlPresentTestCase(SysctlTestCase, LoaderModuleMockMixin):
         def mock_config(config_file=None):
             if config_file is None:
                 return {}
-            return {name: 1}
+            return {name: value}
 
         with patch.dict(sysctl.__opts__, {"test": True}):
             with patch.dict(sysctl.__salt__, {"sysctl.show": mock_config}):
-                self.assertDictEqual(sysctl.present(name, value), ret)
+                mock_get = MagicMock(return_value="")
+                with patch.dict(sysctl.__salt__, {"sysctl.get": mock_get}):
+                    self.assertDictEqual(sysctl.present(name, value), ret)
 
     def test_no_change(self):
         """
@@ -136,38 +144,37 @@ class SysctlPresentTestCase(SysctlTestCase, LoaderModuleMockMixin):
         comment = "Sysctl value {} = {} is already set".format(name, value)
         ret = {"name": name, "result": True, "changes": {}, "comment": comment}
 
-        def mock_both(config_file=None):
+        def mock_config(config_file=None):
             if config_file is None:
-                return {name: value}
+                return {}
             return {name: value}
 
         with patch.dict(sysctl.__opts__, {"test": True}):
-            mock = MagicMock(return_value=value)
-            with patch.dict(
-                sysctl.__salt__, {"sysctl.show": mock_both, "sysctl.get": mock}
-            ):
-                self.assertDictEqual(sysctl.present(name, value), ret)
+            with patch.dict(sysctl.__salt__, {"sysctl.show": mock_config}):
+                mock_get = MagicMock(return_value=value)
+                with patch.dict(sysctl.__salt__, {"sysctl.get": mock_get}):
+                    self.assertDictEqual(sysctl.present(name, value), ret)
 
     def test_change(self):
         """
         Test sysctl.present for a value whose configuration must change
         """
         name = "vfs.usermount"
+        old_value = "2"
         value = "1"
         comment = "Sysctl option {} would be changed to {}".format(name, value)
         ret = {"name": name, "result": None, "changes": {}, "comment": comment}
 
-        def mock_both(config_file=None):
+        def mock_config(config_file=None):
             if config_file is None:
-                return {name: "2"}
-            return {name: "2"}
+                return {name: old_value}
+            return {name: old_value}
 
         with patch.dict(sysctl.__opts__, {"test": True}):
-            mock = MagicMock(return_value="2")
-            with patch.dict(
-                sysctl.__salt__, {"sysctl.show": mock_both, "sysctl.get": mock}
-            ):
-                self.assertDictEqual(sysctl.present(name, value), ret)
+            with patch.dict(sysctl.__salt__, {"sysctl.show": mock_config}):
+                mock_get = MagicMock(return_value=old_value)
+                with patch.dict(sysctl.__salt__, {"sysctl.get": mock_get}):
+                    self.assertDictEqual(sysctl.present(name, value), ret)
 
     def test_failed_to_set(self):
         """

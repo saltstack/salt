@@ -20,3 +20,4 @@ python-gnupg>=0.4.4
 setproctitle>=1.1.10
 timelib>=0.2.5
 vultr>=1.0.1
+pyobjc==6.2.2

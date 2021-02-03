@@ -901,7 +901,7 @@ class Pillar:
                 )
             else:
                 errors.append(msg)
-        mods.add(sls)
+        mods[sls] = state
         nstate = None
         if state:
             if not isinstance(state, dict):
@@ -958,29 +958,27 @@ class Pillar:
                                     nstate, mods, err = self.render_pstate(
                                         m_sub_sls, saltenv, mods, defaults
                                     )
-                                    if nstate:
-                                        if key:
-                                            # If key is x:y, convert it to {x: {y: nstate}}
-                                            for key_fragment in reversed(
-                                                key.split(":")
-                                            ):
-                                                nstate = {key_fragment: nstate}
-                                        if not self.opts.get(
-                                            "pillar_includes_override_sls", False
-                                        ):
-                                            include_states.append(nstate)
-                                        else:
-                                            state = merge(
-                                                state,
-                                                nstate,
-                                                self.merge_strategy,
-                                                self.opts.get("renderer", "yaml"),
-                                                self.opts.get(
-                                                    "pillar_merge_lists", False
-                                                ),
-                                            )
-                                    if err:
-                                        errors += err
+                                else:
+                                    nstate = mods[m_sub_sls]
+                                if nstate:
+                                    if key:
+                                        # If key is x:y, convert it to {x: {y: nstate}}
+                                        for key_fragment in reversed(key.split(":")):
+                                            nstate = {key_fragment: nstate}
+                                    if not self.opts.get(
+                                        "pillar_includes_override_sls", False
+                                    ):
+                                        include_states.append(nstate)
+                                    else:
+                                        state = merge(
+                                            state,
+                                            nstate,
+                                            self.merge_strategy,
+                                            self.opts.get("renderer", "yaml"),
+                                            self.opts.get("pillar_merge_lists", False),
+                                        )
+                                if err:
+                                    errors += err
                         if not self.opts.get("pillar_includes_override_sls", False):
                             # merge included state(s) with the current state
                             # merged last to ensure that its values are
@@ -1010,7 +1008,7 @@ class Pillar:
             errors = []
         for saltenv, pstates in matches.items():
             pstatefiles = []
-            mods = set()
+            mods = {}
             for sls_match in pstates:
                 matched_pstates = []
                 try:

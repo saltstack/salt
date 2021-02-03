@@ -1,12 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 Tests for the salt-run command
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import pytest
 from tests.support.case import ShellCase
-from tests.support.helpers import slowTest
 
 
 @pytest.mark.windows_whitelisted
@@ -16,7 +13,7 @@ class JobsTest(ShellCase):
     Test the jobs runner.
     """
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_master(self):
         """
         jobs.master
@@ -25,7 +22,7 @@ class JobsTest(ShellCase):
         self.assertEqual(ret["return"], [])
         self.assertEqual(ret["out"], [])
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_active(self):
         """
         jobs.active
@@ -34,7 +31,7 @@ class JobsTest(ShellCase):
         self.assertEqual(ret["return"], {})
         self.assertEqual(ret["out"], {})
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_lookup_jid(self):
         """
         jobs.lookup_jid
@@ -43,7 +40,7 @@ class JobsTest(ShellCase):
         self.assertEqual(ret["return"], {})
         self.assertEqual(ret["out"], {})
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_lookup_jid_invalid(self):
         """
         jobs.lookup_jid
@@ -52,7 +49,7 @@ class JobsTest(ShellCase):
         expected = "Passed invalid arguments:"
         self.assertIn(expected, ret["return"])
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_list_jobs(self):
         """
         jobs.list_jobs
@@ -77,7 +74,7 @@ class LocalCacheTargetTest(ShellCase):
     Test that a job stored in the local_cache has target information
     """
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_target_info(self):
         """
         This is a test case for issue #48734

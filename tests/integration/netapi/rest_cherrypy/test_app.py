@@ -1,10 +1,11 @@
 import os
 import urllib.parse
 
+import pytest
 import salt.utils.json
 import salt.utils.stringutils
 import tests.support.cherrypy_testclasses as cptc
-from tests.support.helpers import flaky, slowTest
+from tests.support.helpers import flaky
 
 
 class TestAuth(cptc.BaseRestCherryPyTest):
@@ -97,7 +98,7 @@ class TestRun(cptc.BaseRestCherryPyTest):
         ("fun", "test.ping"),
     )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_run_good_login(self):
         """
         Test the run URL with good auth credentials
@@ -203,7 +204,7 @@ class TestRun(cptc.BaseRestCherryPyTest):
         )
         assert response.status == "401 Unauthorized"
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_run_extra_parameters(self):
         """
         Test the run URL with good auth credentials
@@ -269,7 +270,7 @@ class TestArgKwarg(cptc.BaseRestCherryPyTest):
         )
         return response.headers["X-Auth-Token"]
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_accepts_arg_kwarg_keys(self):
         """
         Ensure that (singular) arg and kwarg keys (for passing parameters)
@@ -335,7 +336,7 @@ class TestJobs(cptc.BaseRestCherryPyTest):
         self.assertEqual(response.status, "200 OK")
 
     @flaky
-    @slowTest
+    @pytest.mark.slow_test
     def test_all_jobs(self):
         """
         test query to /jobs returns job data
