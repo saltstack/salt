@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 DigitalOcean Cloud Module
 =========================
@@ -25,8 +24,6 @@ under the "SSH Keys" section.
 :depends: requests
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import decimal
 import logging
@@ -35,8 +32,6 @@ import pprint
 import time
 
 import salt.config as config
-
-# Import Salt Libs
 import salt.utils.cloud
 import salt.utils.files
 import salt.utils.json
@@ -49,10 +44,7 @@ from salt.exceptions import (
     SaltCloudSystemExit,
     SaltInvocationError,
 )
-from salt.ext import six
-from salt.ext.six.moves import zip
 
-# Import Third Party Libs
 try:
     import requests
 
@@ -115,8 +107,8 @@ def avail_locations(call=None):
     ret = {}
     for region in items["regions"]:
         ret[region["name"]] = {}
-        for item in six.iterkeys(region):
-            ret[region["name"]][item] = six.text_type(region[item])
+        for item in region.keys():
+            ret[region["name"]][item] = str(region[item])
 
     return ret
 
@@ -136,13 +128,11 @@ def avail_images(call=None):
     ret = {}
 
     while fetch:
-        items = query(
-            method="images", command="?page=" + six.text_type(page) + "&per_page=200"
-        )
+        items = query(method="images", command="?page=" + str(page) + "&per_page=200")
 
         for image in items["images"]:
             ret[image["name"]] = {}
-            for item in six.iterkeys(image):
+            for item in image.keys():
                 ret[image["name"]][item] = image[item]
 
         page += 1
@@ -168,8 +158,8 @@ def avail_sizes(call=None):
     ret = {}
     for size in items["sizes"]:
         ret[size["slug"]] = {}
-        for item in six.iterkeys(size):
-            ret[size["slug"]][item] = six.text_type(size[item])
+        for item in size.keys():
+            ret[size["slug"]][item] = str(size[item])
 
     return ret
 
@@ -213,8 +203,8 @@ def get_image(vm_):
     vm_image = config.get_cloud_config_value(
         "image", vm_, __opts__, search_global=False
     )
-    if not isinstance(vm_image, six.string_types):
-        vm_image = six.text_type(vm_image)
+    if not isinstance(vm_image, str):
+        vm_image = str(vm_image)
 
     for image in images:
         if vm_image in (
@@ -226,7 +216,7 @@ def get_image(vm_):
                 return images[image]["slug"]
             return int(images[image]["id"])
     raise SaltCloudNotFound(
-        "The specified image, '{0}', could not be found.".format(vm_image)
+        "The specified image, '{}', could not be found.".format(vm_image)
     )
 
 
@@ -235,14 +225,14 @@ def get_size(vm_):
     Return the VM's size. Used by create_node().
     """
     sizes = avail_sizes()
-    vm_size = six.text_type(
+    vm_size = str(
         config.get_cloud_config_value("size", vm_, __opts__, search_global=False)
     )
     for size in sizes:
         if vm_size.lower() == sizes[size]["slug"]:
             return sizes[size]["slug"]
     raise SaltCloudNotFound(
-        "The specified size, '{0}', could not be found.".format(vm_size)
+        "The specified size, '{}', could not be found.".format(vm_size)
     )
 
 
@@ -251,7 +241,7 @@ def get_location(vm_):
     Return the VM's location
     """
     locations = avail_locations()
-    vm_location = six.text_type(
+    vm_location = str(
         config.get_cloud_config_value("location", vm_, __opts__, search_global=False)
     )
 
@@ -259,7 +249,7 @@ def get_location(vm_):
         if vm_location in (locations[location]["name"], locations[location]["slug"]):
             return locations[location]["slug"]
     raise SaltCloudNotFound(
-        "The specified location, '{0}', could not be found.".format(vm_location)
+        "The specified location, '{}', could not be found.".format(vm_location)
     )
 
 
@@ -294,7 +284,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "starting create",
-        "salt/cloud/{0}/creating".format(vm_["name"]),
+        "salt/cloud/{}/creating".format(vm_["name"]),
         args=__utils__["cloud.filter_event"](
             "creating", vm_, ["name", "profile", "provider", "driver"]
         ),
@@ -335,7 +325,7 @@ def create(vm_):
 
     if key_filename is not None and not os.path.isfile(key_filename):
         raise SaltCloudConfigError(
-            "The defined key_filename '{0}' does not exist".format(key_filename)
+            "The defined key_filename '{}' does not exist".format(key_filename)
         )
 
     if not __opts__.get("ssh_agent", False) and key_filename is None:
@@ -471,7 +461,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "requesting instance",
-        "salt/cloud/{0}/requesting".format(vm_["name"]),
+        "salt/cloud/{}/requesting".format(vm_["name"]),
         args=__utils__["cloud.filter_event"]("requesting", kwargs, list(kwargs)),
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -520,7 +510,7 @@ def create(vm_):
         except SaltCloudSystemExit:
             pass
         finally:
-            raise SaltCloudSystemExit(six.text_type(exc))
+            raise SaltCloudSystemExit(str(exc))
 
     if not vm_.get("ssh_host"):
         vm_["ssh_host"] = None
@@ -544,7 +534,7 @@ def create(vm_):
 
     if vm_["ssh_host"] is None:
         raise SaltCloudSystemExit(
-            "No suitable IP addresses found for ssh minion bootstrapping: {0}".format(
+            "No suitable IP addresses found for ssh minion bootstrapping: {}".format(
                 repr(data["networks"])
             )
         )
@@ -564,7 +554,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "created instance",
-        "salt/cloud/{0}/created".format(vm_["name"]),
+        "salt/cloud/{}/created".format(vm_["name"]),
         args=__utils__["cloud.filter_event"](
             "created", vm_, ["name", "profile", "provider", "driver"]
         ),
@@ -581,7 +571,7 @@ def query(
     """
     Make a web call to DigitalOcean
     """
-    base_path = six.text_type(
+    base_path = str(
         config.get_cloud_config_value(
             "api_root",
             get_configured_provider(),
@@ -591,10 +581,10 @@ def query(
         )
     )
 
-    path = "{0}/{1}/".format(base_path, method)
+    path = "{}/{}/".format(base_path, method)
 
     if droplet_id:
-        path += "{0}/".format(droplet_id)
+        path += "{}/".format(droplet_id)
 
     if command:
         path += command
@@ -622,8 +612,8 @@ def query(
     )
     if request.status_code > 299:
         raise SaltCloudSystemExit(
-            "An error occurred while querying DigitalOcean. HTTP Code: {0}  "
-            "Error: '{1}'".format(
+            "An error occurred while querying DigitalOcean. HTTP Code: {}  "
+            "Error: '{}'".format(
                 request.status_code,
                 # request.read()
                 request.text,
@@ -705,22 +695,21 @@ def list_keypairs(call=None):
 
     while fetch:
         items = query(
-            method="account/keys",
-            command="?page=" + six.text_type(page) + "&per_page=100",
+            method="account/keys", command="?page=" + str(page) + "&per_page=100",
         )
 
         for key_pair in items["ssh_keys"]:
             name = key_pair["name"]
             if name in ret:
                 raise SaltCloudSystemExit(
-                    "A duplicate key pair name, '{0}', was found in DigitalOcean's "
+                    "A duplicate key pair name, '{}', was found in DigitalOcean's "
                     "key pair list. Please change the key name stored by DigitalOcean. "
                     "Be sure to adjust the value of 'ssh_key_file' in your cloud "
                     "profile or provider configuration, if necessary.".format(name)
                 )
             ret[name] = {}
-            for item in six.iterkeys(key_pair):
-                ret[name][item] = six.text_type(key_pair[item])
+            for item in key_pair.keys():
+                ret[name][item] = str(key_pair[item])
 
         page += 1
         try:
@@ -849,7 +838,7 @@ def destroy(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroying instance",
-        "salt/cloud/{0}/destroying".format(name),
+        "salt/cloud/{}/destroying".format(name),
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -886,7 +875,7 @@ def destroy(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroyed instance",
-        "salt/cloud/{0}/destroyed".format(name),
+        "salt/cloud/{}/destroyed".format(name),
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -913,7 +902,7 @@ def post_dns_record(**kwargs):
         if kwargs[i]:
             pass
         else:
-            error = '{0}="{1}" ## all mandatory args must be provided: {2}'.format(
+            error = '{}="{}" ## all mandatory args must be provided: {}'.format(
                 i, kwargs[i], mandatory_kwargs
             )
             raise SaltInvocationError(error)
@@ -961,7 +950,7 @@ def destroy_dns_records(fqdn):
                 ret = query(
                     method="domains",
                     droplet_id=domain,
-                    command="records/{0}".format(id_),
+                    command="records/{}".format(id_),
                     http_method="delete",
                 )
             except SaltCloudSystemExit:
@@ -1036,13 +1025,12 @@ def list_floating_ips(call=None):
 
     while fetch:
         items = query(
-            method="floating_ips",
-            command="?page=" + six.text_type(page) + "&per_page=200",
+            method="floating_ips", command="?page=" + str(page) + "&per_page=200",
         )
 
         for floating_ip in items["floating_ips"]:
             ret[floating_ip["ip"]] = {}
-            for item in six.iterkeys(floating_ip):
+            for item in floating_ip.keys():
                 ret[floating_ip["ip"]][item] = floating_ip[item]
 
         page += 1
@@ -1241,9 +1229,7 @@ def _list_nodes(full=False, for_output=False):
     ret = {}
 
     while fetch:
-        items = query(
-            method="droplets", command="?page=" + six.text_type(page) + "&per_page=200"
-        )
+        items = query(method="droplets", command="?page=" + str(page) + "&per_page=200")
         for node in items["droplets"]:
             name = node["name"]
             ret[name] = {}
@@ -1258,7 +1244,7 @@ def _list_nodes(full=False, for_output=False):
                     "private_ips": private_ips,
                     "public_ips": public_ips,
                     "size": node["size_slug"],
-                    "state": six.text_type(node["status"]),
+                    "state": str(node["status"]),
                 }
 
         page += 1
@@ -1287,7 +1273,7 @@ def reboot(name, call=None):
     """
     if call != "action":
         raise SaltCloudSystemExit(
-            "The restart action must be called with -a or --action."
+            "The reboot action must be called with -a or --action."
         )
 
     data = show_instance(name, call="action")
@@ -1403,10 +1389,10 @@ def _get_full_output(node, for_output=False):
     Returns a dictionary containing the full information of a node.
     """
     ret = {}
-    for item in six.iterkeys(node):
+    for item in node.keys():
         value = node[item]
         if value is not None and for_output:
-            value = six.text_type(value)
+            value = str(value)
         ret[item] = value
     return ret
 

@@ -564,6 +564,8 @@ def query(
         if urlparse(url_full).hostname in no_proxy:
             proxy_host = None
             proxy_port = None
+            proxy_username = None
+            proxy_password = None
 
         # We want to use curl_http if we have a proxy defined
         if proxy_host and proxy_port:
@@ -582,6 +584,7 @@ def query(
                 salt.ext.tornado.curl_httpclient.CurlAsyncHTTPClient.initialize
             )
         else:
+            salt.ext.tornado.httpclient.AsyncHTTPClient.configure(None)
             client_argspec = salt.utils.args.get_function_argspec(
                 salt.ext.tornado.simple_httpclient.SimpleAsyncHTTPClient.initialize
             )

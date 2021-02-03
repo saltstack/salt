@@ -2,7 +2,6 @@
 Render the pillar data
 """
 
-# Import python libs
 
 import collections
 import copy
@@ -15,8 +14,6 @@ import traceback
 
 import salt.ext.tornado.gen
 import salt.fileclient
-
-# Import salt libs
 import salt.loader
 import salt.minion
 import salt.transport.client
@@ -27,8 +24,6 @@ import salt.utils.data
 import salt.utils.dictupdate
 import salt.utils.url
 from salt.exceptions import SaltClientError
-
-# Import 3rd-party libs
 from salt.ext import six
 from salt.template import compile_template
 
@@ -442,7 +437,12 @@ class PillarCache:
             self.minion_id,
             self.pillarenv,
         )
-        log.debug("Scanning cache: %s", self.cache._dict)
+        if self.opts["pillar_cache_backend"] == "memory":
+            cache_dict = self.cache
+        else:
+            cache_dict = self.cache._dict
+
+        log.debug("Scanning cache: %s", cache_dict)
         # Check the cache!
         if self.minion_id in self.cache:  # Keyed by minion_id
             # TODO Compare grains, etc?
@@ -473,7 +473,7 @@ class PillarCache:
             fresh_pillar = self.fetch_pillar()
             self.cache[self.minion_id] = {self.pillarenv: fresh_pillar}
             log.debug("Pillar cache miss for minion %s", self.minion_id)
-            log.debug("Current pillar cache: %s", self.cache._dict)  # FIXME hack!
+            log.debug("Current pillar cache: %s", cache_dict)  # FIXME hack!
             return fresh_pillar
 
 
@@ -893,7 +893,7 @@ class Pillar:
                 )
             else:
                 errors.append(msg)
-        mods.add(sls)
+        mods[sls] = state
         nstate = None
         if state:
             if not isinstance(state, dict):
@@ -950,29 +950,27 @@ class Pillar:
                                     nstate, mods, err = self.render_pstate(
                                         m_sub_sls, saltenv, mods, defaults
                                     )
-                                    if nstate:
-                                        if key:
-                                            # If key is x:y, convert it to {x: {y: nstate}}
-                                            for key_fragment in reversed(
-                                                key.split(":")
-                                            ):
-                                                nstate = {key_fragment: nstate}
-                                        if not self.opts.get(
-                                            "pillar_includes_override_sls", False
-                                        ):
-                                            include_states.append(nstate)
-                                        else:
-                                            state = merge(
-                                                state,
-                                                nstate,
-                                                self.merge_strategy,
-                                                self.opts.get("renderer", "yaml"),
-                                                self.opts.get(
-                                                    "pillar_merge_lists", False
-                                                ),
-                                            )
-                                    if err:
-                                        errors += err
+                                else:
+                                    nstate = mods[m_sub_sls]
+                                if nstate:
+                                    if key:
+                                        # If key is x:y, convert it to {x: {y: nstate}}
+                                        for key_fragment in reversed(key.split(":")):
+                                            nstate = {key_fragment: nstate}
+                                    if not self.opts.get(
+                                        "pillar_includes_override_sls", False
+                                    ):
+                                        include_states.append(nstate)
+                                    else:
+                                        state = merge(
+                                            state,
+                                            nstate,
+                                            self.merge_strategy,
+                                            self.opts.get("renderer", "yaml"),
+                                            self.opts.get("pillar_merge_lists", False),
+                                        )
+                                if err:
+                                    errors += err
                         if not self.opts.get("pillar_includes_override_sls", False):
                             # merge included state(s) with the current state
                             # merged last to ensure that its values are
@@ -1002,7 +1000,7 @@ class Pillar:
             errors = []
         for saltenv, pstates in matches.items():
             pstatefiles = []
-            mods = set()
+            mods = {}
             for sls_match in pstates:
                 matched_pstates = []
                 try:

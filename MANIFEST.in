@@ -1,7 +1,6 @@
 include AUTHORS
 include CODE_OF_CONDUCT.md
 include CONTRIBUTING.rst
-include HACKING.rst
 include LICENSE
 include NOTICE
 include README.rst

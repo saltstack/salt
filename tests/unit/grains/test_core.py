@@ -677,6 +677,36 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         }
         self._run_os_grains_tests(None, _os_release_map, expectation)
 
+    @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
+    def test_centos_stream_8_os_grains(self):
+        """
+        Test if OS grains are parsed correctly in Centos 8
+        """
+        _os_release_map = {
+            "os_release_file": {
+                "NAME": "CentOS Stream",
+                "VERSION": "8",
+                "VERSION_ID": "8",
+                "PRETTY_NAME": "CentOS Stream 8",
+                "ID": "centos",
+                "ANSI_COLOR": "0;31",
+                "CPE_NAME": "cpe:/o:centos:centos:8",
+            },
+            "_linux_distribution": ("centos", "8", ""),
+        }
+
+        expectation = {
+            "os": "CentOS Stream",
+            "os_family": "RedHat",
+            "oscodename": "CentOS Stream 8",
+            "osfullname": "CentOS Stream",
+            "osrelease": "8",
+            "osrelease_info": (8,),
+            "osmajorrelease": 8,
+            "osfinger": "CentOS Stream-8",
+        }
+        self._run_os_grains_tests(None, _os_release_map, expectation)
+
     def test_unicode_error(self):
         raise_unicode_mock = MagicMock(
             name="raise_unicode_error", side_effect=UnicodeError
@@ -725,6 +755,46 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             "osfinger": "Ubuntu-17.10",
         }
         self._run_os_grains_tests("ubuntu-17.10", _os_release_map, expectation)
+
+    @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
+    def test_pop_focal_os_grains(self):
+        """
+        Test if OS grains are parsed correctly in Pop!_OS 20.04 "Focal Fossa"
+        """
+        _os_release_map = {
+            "_linux_distribution": ("Pop", "20.04", "focal"),
+        }
+        expectation = {
+            "os": "Pop",
+            "os_family": "Debian",
+            "oscodename": "focal",
+            "osfullname": "Pop",
+            "osrelease": "20.04",
+            "osrelease_info": (20, 4),
+            "osmajorrelease": 20,
+            "osfinger": "Pop-20",
+        }
+        self._run_os_grains_tests("pop-20.04", _os_release_map, expectation)
+
+    @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
+    def test_pop_groovy_os_grains(self):
+        """
+        Test if OS grains are parsed correctly in Pop!_OS 20.10 "Groovy Gorilla"
+        """
+        _os_release_map = {
+            "_linux_distribution": ("Pop", "20.10", "groovy"),
+        }
+        expectation = {
+            "os": "Pop",
+            "os_family": "Debian",
+            "oscodename": "groovy",
+            "osfullname": "Pop",
+            "osrelease": "20.10",
+            "osrelease_info": (20, 10),
+            "osmajorrelease": 20,
+            "osfinger": "Pop-20",
+        }
+        self._run_os_grains_tests("pop-20.10", _os_release_map, expectation)
 
     @skipIf(not salt.utils.platform.is_windows(), "System is not Windows")
     def test_windows_platform_data(self):
@@ -1169,6 +1239,12 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                 )
             )
 
+    def _check_ip_fqdn_set(self, value, empty, _set=None):
+        if empty:
+            self.assertEqual(len(value), 0)
+        else:
+            self.assertEqual(sorted(value), sorted(_set))
+
     @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
     def test_fqdn_return(self):
         """
@@ -1214,10 +1290,35 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
     def _run_fqdn_tests(
         self, net_ip4_mock, net_ip6_mock, ip6_empty=True, ip4_empty=True
     ):
+        ip4_mock = [
+            (2, 1, 6, "", (IP4_ADD1, 0)),
+            (2, 2, 17, "", (IP4_ADD1, 0)),
+            (2, 3, 0, "", (IP4_ADD1, 0)),
+            (2, 3, 0, "", (IP4_ADD2, 0)),
+            (2, 1, 6, "", (IP4_ADD2, 0)),
+            (2, 2, 17, "", (IP4_ADD2, 0)),
+        ]
+        ip6_mock = [
+            (10, 1, 6, "", (IP6_ADD1, 0, 0, 0)),
+            (10, 2, 17, "", (IP6_ADD1, 0, 0, 0)),
+            (10, 3, 0, "", (IP6_ADD1, 0, 0, 0)),
+            (10, 1, 6, "", (IP6_ADD2, 0, 0, 0)),
+            (10, 2, 17, "", (IP6_ADD2, 0, 0, 0)),
+            (10, 3, 0, "", (IP6_ADD2, 0, 0, 0)),
+        ]
+
+        def _getaddrinfo(fqdn, port, family=0, *args, **kwargs):
+            if not ip4_empty and family == socket.AF_INET:
+                return ip4_mock
+            elif not ip6_empty and family == socket.AF_INET6:
+                return ip6_mock
+            else:
+                return []
+
         def _check_type(key, value, ip4_empty, ip6_empty):
             """
-            check type and other checks
-            """
+                check type and other checks
+                """
             assert isinstance(value, list)
 
             if "4" in key:
@@ -1227,33 +1328,27 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                 self._check_empty(key, value, ip6_empty)
                 self._check_ipaddress(value, ip_v="6")
 
-        ip4_mock = [(2, 1, 6, "", (IP4_ADD1, 0)), (2, 3, 0, "", (IP4_ADD2, 0))]
-        ip6_mock = [
-            (10, 1, 6, "", (IP6_ADD1, 0, 0, 0)),
-            (10, 3, 0, "", (IP6_ADD2, 0, 0, 0)),
-        ]
-        if ip6_empty:
-            getaddrinfo_side_effect = [ip4_mock, ip4_mock, ip6_mock]
-        elif ip4_empty:
-            getaddrinfo_side_effect = [ip4_mock, ip6_mock, ip6_mock]
-        else:
-            getaddrinfo_side_effect = [ip4_mock, ip6_mock]
-
         with patch.object(
             salt.utils.network, "ip_addrs", MagicMock(return_value=net_ip4_mock)
         ), patch.object(
             salt.utils.network, "ip_addrs6", MagicMock(return_value=net_ip6_mock),
         ), patch.object(
-            core.socket,
-            "getaddrinfo",
-            side_effect=getaddrinfo_side_effect,
-            autospec=True,
+            core.socket, "getaddrinfo", side_effect=_getaddrinfo,
         ):
             get_fqdn = core.ip_fqdn()
             ret_keys = ["fqdn_ip4", "fqdn_ip6", "ipv4", "ipv6"]
             for key in ret_keys:
                 value = get_fqdn[key]
                 _check_type(key, value, ip4_empty, ip6_empty)
+                if key.startswith("fqdn_ip"):
+                    if key.endswith("4"):
+                        self._check_ip_fqdn_set(
+                            value, ip4_empty, _set=[IP4_ADD1, IP4_ADD2]
+                        )
+                    if key.endswith("6"):
+                        self._check_ip_fqdn_set(
+                            value, ip6_empty, _set=[IP6_ADD1, IP6_ADD2]
+                        )
 
     @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
     @patch.object(salt.utils.platform, "is_windows", MagicMock(return_value=False))
@@ -1288,6 +1383,11 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             }
         }
         with patch.object(
+            salt.utils.dns, "parse_resolv", MagicMock(return_value=resolv_mock)
+        ):
+            assert core.dns() == ret
+
+        with patch("os.path.exists", return_value=True), patch.object(
             salt.utils.dns, "parse_resolv", MagicMock(return_value=resolv_mock)
         ):
             assert core.dns() == ret

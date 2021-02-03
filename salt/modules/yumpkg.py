@@ -38,9 +38,6 @@ import salt.utils.pkg.rpm
 import salt.utils.systemd
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationError
-
-# pylint: disable=import-error,redefined-builtin
-from salt.ext.six.moves import configparser, zip
 from salt.utils.versions import LooseVersion as _LooseVersion
 
 try:
@@ -49,9 +46,6 @@ try:
     HAS_YUM = True
 except ImportError:
     HAS_YUM = False
-
-
-# pylint: enable=import-error,redefined-builtin
 
 
 log = logging.getLogger(__name__)
@@ -79,6 +73,8 @@ def __virtual__():
     enabled = ("amazon", "xcp", "xenserver", "virtuozzolinux", "virtuozzo")
 
     if os_family == "redhat" or os_grain in enabled:
+        if _yum() is None:
+            return (False, "DNF nor YUM found")
         return __virtualname__
     return (False, "Module yumpkg: no yum based system detected")
 
@@ -140,20 +136,35 @@ def _get_hold(line, pattern=__HOLD_PATTERN, full=True):
 def _yum():
     """
     Determine package manager name (yum or dnf),
-    depending on the system version.
+    depending on the executable existence in $PATH.
     """
+
+    # Do import due to function clonning to kernelpkg_linux_yum mod
+    import os
+
+    def _check(file):
+        return (
+            os.path.exists(file)
+            and os.access(file, os.F_OK | os.X_OK)
+            and not os.path.isdir(file)
+        )
+
+    # allow calling function outside execution module
+    try:
+        context = __context__
+    except NameError:
+        context = {}
+
     contextkey = "yum_bin"
-    if contextkey not in __context__:
-        if (
-            "fedora" in __grains__["os"].lower() and int(__grains__["osrelease"]) >= 22
-        ) or (
-            __grains__["os"].lower() in ("redhat", "centos")
-            and int(__grains__["osmajorrelease"]) >= 8
-        ):
-            __context__[contextkey] = "dnf"
-        else:
-            __context__[contextkey] = "yum"
-    return __context__[contextkey]
+    if contextkey not in context:
+        for dir in os.environ.get("PATH", os.defpath).split(os.pathsep):
+            if _check(os.path.join(dir, "dnf")):
+                context[contextkey] = "dnf"
+                break
+            elif _check(os.path.join(dir, "yum")):
+                context[contextkey] = "yum"
+                break
+    return context.get(contextkey)
 
 
 def _call_yum(args, **kwargs):
@@ -215,28 +226,35 @@ def _yum_pkginfo(output):
                     yield pkginfo
 
 
+def _versionlock_pkg(grains=None):
+    """
+    Determine versionlock plugin package name
+    """
+    if grains is None:
+        grains = __grains__
+    if _yum() == "dnf":
+        if grains["os"].lower() == "fedora":
+            return (
+                "python3-dnf-plugin-versionlock"
+                if int(grains.get("osrelease")) >= 26
+                else "python3-dnf-plugins-extras-versionlock"
+            )
+        if int(grains.get("osmajorrelease")) >= 8:
+            return "python3-dnf-plugin-versionlock"
+        return "python2-dnf-plugin-versionlock"
+    else:
+        return (
+            "yum-versionlock"
+            if int(grains.get("osmajorrelease")) == 5
+            else "yum-plugin-versionlock"
+        )
+
+
 def _check_versionlock():
     """
     Ensure that the appropriate versionlock plugin is present
     """
-    if _yum() == "dnf":
-        if (
-            "fedora" in __grains__["os"].lower()
-            and int(__grains__.get("osrelease")) >= 26
-        ) or (
-            __grains__.get("os").lower() in ("redhat", "centos")
-            and int(__grains__.get("osmajorrelease")) >= 8
-        ):
-            vl_plugin = "python3-dnf-plugin-versionlock"
-        else:
-            vl_plugin = "python3-dnf-plugins-extras-versionlock"
-    else:
-        vl_plugin = (
-            "yum-versionlock"
-            if __grains__.get("osmajorrelease") == "5"
-            else "yum-plugin-versionlock"
-        )
-
+    vl_plugin = _versionlock_pkg()
     if vl_plugin not in list_pkgs():
         raise SaltInvocationError(
             "Cannot proceed, {} is not installed.".format(vl_plugin)
@@ -2256,8 +2274,7 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
 
     targets = []
     if pkgs:
-        for pkg in salt.utils.data.repack_dictlist(pkgs):
-            targets.append(pkg)
+        targets.extend(pkgs)
     elif sources:
         for source in sources:
             targets.append(next(iter(source)))
