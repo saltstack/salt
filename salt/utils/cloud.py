@@ -1207,7 +1207,7 @@ def deploy_windows(
     winrm_port=5986,
     winrm_use_ssl=True,
     winrm_verify_ssl=True,
-    **kwargs,
+    **kwargs
 ):
     """
     Copy the install files to a remote Windows box, and execute them
@@ -1438,7 +1438,7 @@ def deploy_script(
     master_sign_pub_file=None,
     cloud_grains=None,
     force_minion_config=False,
-    **kwargs,
+    **kwargs
 ):
     """
     Copy a deploy script to a remote server, execute it, and remove it
@@ -1928,7 +1928,7 @@ def run_inline_script(
     tty=None,
     opts=None,
     tmp_dir="/tmp/.saltcloud-inline_script",
-    **kwargs,
+    **kwargs
 ):
     """
     Run the inline script commands, one by one
