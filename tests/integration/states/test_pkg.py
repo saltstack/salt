@@ -11,16 +11,13 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.pkg.rpm
 import salt.utils.platform
-from salt.ext.six.moves import range
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
-    destructiveTest,
     not_runs_on,
     requires_salt_modules,
     requires_salt_states,
     requires_system_grains,
     runs_on,
-    slowTest,
 )
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.unit import skipIf
@@ -28,8 +25,8 @@ from tests.support.unit import skipIf
 log = logging.getLogger(__name__)
 
 
-@destructiveTest
 @pytest.mark.windows_whitelisted
+@pytest.mark.destructive_test
 class PkgTest(ModuleCase, SaltReturnAssertsMixin):
     _PKG_EPOCH_TARGETS = []
     _PKG_32_TARGETS = []
@@ -122,7 +119,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
 
     @requires_salt_modules("pkg.version")
     @requires_salt_states("pkg.installed", "pkg.removed")
-    @slowTest
+    @pytest.mark.slow_test
     def test_pkg_001_installed(self):
         """
         This is a destructive test as it installs and then removes a package
@@ -163,7 +160,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
     @requires_salt_states("pkg.installed", "pkg.removed")
-    @slowTest
+    @pytest.mark.slow_test
     def test_pkg_003_installed_multipkg(self):
         """
         This is a destructive test as it installs and then removes two packages
@@ -319,7 +316,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
     @requires_salt_states("pkg.installed", "pkg.removed")
     @runs_on(kernel="linux")
     @not_runs_on(os="Amazon")
-    @slowTest
+    @pytest.mark.slow_test
     def test_pkg_009_latest_with_epoch(self):
         """
         This tests for the following issue:
@@ -337,7 +334,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(pkgquery in str(ret))
 
     @requires_salt_states("pkg.latest", "pkg.removed")
-    @slowTest
+    @pytest.mark.slow_test
     def test_pkg_010_latest(self):
         """
         This tests pkg.latest with a package that has no epoch (or a zero
@@ -359,7 +356,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
     @requires_salt_modules("pkg.list_pkgs", "pkg.list_upgrades", "pkg.version")
     @requires_salt_states("pkg.latest")
     @runs_on(kernel="linux", os_family="Debian")
-    @slowTest
+    @pytest.mark.slow_test
     def test_pkg_011_latest_only_upgrade(self):
         """
         WARNING: This test will pick a package with an available upgrade (if
@@ -455,7 +452,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
     @requires_salt_modules("pkg.version", "pkg.latest_version")
     @requires_salt_states("pkg.installed", "pkg.removed")
     @runs_on(kernel="linux", os_family=["Debian", "RedHat"])
-    @slowTest
+    @pytest.mark.slow_test
     def test_pkg_013_installed_with_comparison_operator(self):
         """
         This is a destructive test as it installs and then removes a package
@@ -517,7 +514,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
     @requires_salt_modules("pkg.hold", "pkg.unhold", "pkg.version", "pkg.list_pkgs")
     @requires_salt_states("pkg.installed", "pkg.removed")
     @requires_system_grains
-    @slowTest
+    @pytest.mark.slow_test
     def test_pkg_015_installed_held(self, grains=None):
         """
         Tests that a package can be held even when the package is already installed.
@@ -525,7 +522,9 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         versionlock_pkg = None
         if grains["os_family"] == "RedHat":
             pkgs = {
-                p for p in self.run_function("pkg.list_pkgs") if "-versionlock" in p
+                p
+                for p in self.run_function("pkg.list_repo_pkgs")
+                if "yum-plugin-versionlock" in p
             }
             if not pkgs:
                 self.skipTest("No versionlock package found in repositories")
@@ -622,6 +621,69 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
         ret = self.run_state("pkg.removed", name=target)
         self.assertSaltTrueReturn(ret)
+
+    @requires_salt_modules("pkg.hold", "pkg.unhold", "pkg.version", "pkg.list_pkgs")
+    @requires_salt_states("pkg.installed", "pkg.removed")
+    @requires_system_grains
+    @pytest.mark.slow_test
+    def test_pkg_017_installed_held_equals_false(self, grains=None):
+        """
+        Tests that a package installed with held set to False
+        """
+        versionlock_pkg = None
+        if grains["os_family"] == "RedHat":
+            from salt.modules.yumpkg import _versionlock_pkg
+
+            pkgs = {
+                p
+                for p in self.run_function("pkg.list_repo_pkgs")
+                if _versionlock_pkg(grains) in p
+            }
+            if not pkgs:
+                self.skipTest("No versionlock package found in repositories")
+            for versionlock_pkg in pkgs:
+                ret = self.run_state(
+                    "pkg.installed", name=versionlock_pkg, refresh=False
+                )
+                # Exit loop if a versionlock package installed correctly
+                try:
+                    self.assertSaltTrueReturn(ret)
+                    log.debug(
+                        "Installed versionlock package: {}".format(versionlock_pkg)
+                    )
+                    break
+                except AssertionError as e:
+                    log.debug("Versionlock package not found:\n{}".format(e))
+            else:
+                self.fail("Could not install versionlock package from {}".format(pkgs))
+
+        target = self._PKG_TARGETS[0]
+
+        # First we ensure that the package is installed
+        target_ret = self.run_state(
+            "pkg.installed", name=target, hold=False, refresh=False,
+        )
+        self.assertSaltTrueReturn(target_ret)
+
+        if versionlock_pkg and "-versionlock is not installed" in str(target_ret):
+            self.skipTest("{}  `{}` is installed".format(target_ret, versionlock_pkg))
+
+        try:
+            tag = "pkg_|-{0}_|-{0}_|-installed".format(target)
+            self.assertSaltTrueReturn(target_ret)
+            self.assertIn(tag, target_ret)
+            self.assertIn("changes", target_ret[tag])
+            # On Centos 7 package is already installed, no change happened
+            if target_ret[tag].get("changes"):
+                self.assertIn(target, target_ret[tag]["changes"])
+            self.assertIn("held", target_ret[tag]["comment"])
+        finally:
+            # Clean up, unhold package and remove
+            ret = self.run_state("pkg.removed", name=target)
+            self.assertSaltTrueReturn(ret)
+            if versionlock_pkg:
+                ret = self.run_state("pkg.removed", name=versionlock_pkg)
+                self.assertSaltTrueReturn(ret)
 
     @requires_salt_modules("pkg.version")
     @requires_salt_states("pkg.installed", "pkg.removed")

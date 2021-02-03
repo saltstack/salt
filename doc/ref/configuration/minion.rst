@@ -103,6 +103,16 @@ The option can also be set to a list of masters, enabling
           - address2
         master_type: failover
 
+.. conf_minion:: color
+
+``color``
+---------
+
+Default: ``True``
+
+By default output is colored. To disable colored output, set the color value to
+``False``.
+
 .. conf_minion:: ipv6
 
 ``ipv6``
@@ -1410,6 +1420,19 @@ retry timeout will be a random int between ``return_retry_timer`` and
 
     return_retry_timer_max: 10
 
+.. conf_minion:: return_retry_tries
+
+``return_retry_tries``
+--------------------------
+
+Default: ``3``
+
+The maximum number of retries for a minion return attempt.
+
+.. code-block:: yaml
+
+    return_retry_tries: 3
+
 .. conf_minion:: cache_sreqs
 
 ``cache_sreqs``
@@ -2179,6 +2202,28 @@ or just post what changes are going to be made.
 
     test: False
 
+.. conf_minion:: state_aggregate
+
+``state_aggregate``
+-------------------
+
+Default: ``False``
+
+Automatically aggregate all states that have support for ``mod_aggregate`` by
+setting to ``True``.
+
+.. code-block:: yaml
+
+    state_aggregate: True
+
+Or pass a list of state module names to automatically
+aggregate just those types.
+
+.. code-block:: yaml
+
+    state_aggregate:
+      - pkg
+
 .. conf_minion:: state_verbose
 
 ``state_verbose``
@@ -2945,7 +2990,7 @@ Default: ``None``
 TLS/SSL connection options. This could be set to a dictionary containing
 arguments corresponding to python ``ssl.wrap_socket`` method. For details see
 `Tornado <http://www.tornadoweb.org/en/stable/tcpserver.html#tornado.tcpserver.TCPServer>`_
-and `Python <https://docs.python.org/2/library/ssl.html#ssl.wrap_socket>`_
+and `Python <https://docs.python.org/3/library/ssl.html#ssl.wrap_socket>`_
 documentation.
 
 Note: to set enum arguments values like ``cert_reqs`` and ``ssl_version`` use

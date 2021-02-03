@@ -1,7 +1,3 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import os
 import pprint
 
@@ -11,13 +7,10 @@ import salt.utils.pkg
 import salt.utils.platform
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
-    destructiveTest,
     requires_network,
     requires_salt_modules,
     requires_salt_states,
     requires_system_grains,
-    skip_if_not_root,
-    slowTest,
 )
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.unit import skipIf
@@ -39,7 +32,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         elif grains["os_family"] == "RedHat":
             cls.pkg = "units"
 
-    @skip_if_not_root
+    @pytest.mark.skip_if_not_root
     @requires_salt_modules("pkg.refresh_db")
     def setUp(self):
         if "refresh" not in self.ctx:
@@ -47,7 +40,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
             self.ctx["refresh"] = True
 
     @requires_salt_modules("pkg.list_pkgs")
-    @slowTest
+    @pytest.mark.slow_test
     def test_list(self):
         """
         verify that packages are installed
@@ -57,7 +50,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
     @requires_salt_modules("pkg.version_cmp")
     @requires_system_grains
-    @slowTest
+    @pytest.mark.slow_test
     def test_version_cmp(self, grains):
         """
         test package version comparison on supported platforms
@@ -80,11 +73,11 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(self.run_function(func, eq), 0)
         self.assertEqual(self.run_function(func, gt), 1)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @requires_salt_modules("pkg.mod_repo", "pkg.del_repo", "pkg.get_repo")
     @requires_network()
     @requires_system_grains
-    @slowTest
+    @pytest.mark.slow_test
     def test_mod_del_repo(self, grains):
         """
         test modifying and deleting a software repository
@@ -114,13 +107,13 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
                 )
             elif grains["os_family"] == "RedHat":
                 repo = "saltstack"
-                name = "SaltStack repo for RHEL/CentOS {0}".format(
+                name = "SaltStack repo for RHEL/CentOS {}".format(
                     grains["osmajorrelease"]
                 )
-                baseurl = "http://repo.saltstack.com/yum/redhat/{0}/x86_64/latest/".format(
+                baseurl = "http://repo.saltstack.com/yum/redhat/{}/x86_64/latest/".format(
                     grains["osmajorrelease"]
                 )
-                gpgkey = "https://repo.saltstack.com/yum/rhel{0}/SALTSTACK-GPG-KEY.pub".format(
+                gpgkey = "https://repo.saltstack.com/yum/rhel{}/SALTSTACK-GPG-KEY.pub".format(
                     grains["osmajorrelease"]
                 )
                 gpgcheck = 1
@@ -146,7 +139,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
             if repo is not None:
                 self.run_function("pkg.del_repo", [repo])
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_mod_del_repo_multiline_values(self):
         """
         test modifying and deleting a software repository defined with multiline values
@@ -217,10 +210,10 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_function(func, ["/usr/local/bin/salt-call"])
         self.assertNotEqual(len(ret), 0)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @requires_salt_modules("pkg.version", "pkg.install", "pkg.remove")
     @requires_network()
-    @slowTest
+    @pytest.mark.slow_test
     def test_install_remove(self):
         """
         successfully install and uninstall a package
@@ -245,7 +238,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
             test_install()
             test_remove()
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @requires_salt_modules(
         "pkg.hold",
         "pkg.unhold",
@@ -257,7 +250,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
     @requires_salt_states("pkg.installed")
     @requires_network()
     @requires_system_grains
-    @slowTest
+    @pytest.mark.slow_test
     def test_hold_unhold(self, grains):
         """
         test holding and unholding a package
@@ -300,11 +293,11 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
                 ret = self.run_state("pkg.removed", name=versionlock_pkg)
                 self.assertSaltTrueReturn(ret)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @requires_salt_modules("pkg.refresh_db")
     @requires_network()
     @requires_system_grains
-    @slowTest
+    @pytest.mark.slow_test
     def test_refresh_db(self, grains):
         """
         test refreshing the package database
@@ -336,7 +329,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
     @requires_salt_modules("pkg.info_installed")
     @requires_system_grains
-    @slowTest
+    @pytest.mark.slow_test
     def test_pkg_info(self, grains):
         """
         Test returning useful information on Ubuntu systems.
@@ -364,7 +357,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertIn(self.pkg, keys)
 
     @skipIf(True, "Temporary Skip - Causes centos 8 test to fail")
-    @destructiveTest
+    @pytest.mark.destructive_test
     @requires_network()
     @requires_salt_modules(
         "pkg.refresh_db",
@@ -374,7 +367,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         "pkg.list_upgrades",
     )
     @requires_system_grains
-    @slowTest
+    @pytest.mark.slow_test
     def test_pkg_upgrade_has_pending_upgrades(self, grains):
         """
         Test running a system upgrade when there are packages that need upgrading
@@ -419,8 +412,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
             if not isinstance(ret, dict):
                 if ret.startswith("ERROR"):
                     self.skipTest(
-                        "Could not install older {0} to complete "
-                        "test.".format(target)
+                        "Could not install older {} to complete " "test.".format(target)
                     )
 
             # Run a system upgrade, which should catch the fact that the
@@ -445,7 +437,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
                 ret = self.run_function(func, args)
                 self.assertNotEqual(ret, {})
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @skipIf(
         salt.utils.platform.is_darwin(),
         "The jenkins user is equivalent to root on mac, causing the test to be unrunnable",
@@ -453,7 +445,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
     @requires_salt_modules("pkg.remove", "pkg.latest_version")
     @requires_salt_states("pkg.removed")
     @requires_system_grains
-    @slowTest
+    @pytest.mark.slow_test
     def test_pkg_latest_version(self, grains):
         """
         Check that pkg.latest_version returns the latest version of the uninstalled package.
@@ -463,19 +455,19 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
         cmd_pkg = []
         if grains["os_family"] == "RedHat":
-            cmd_pkg = self.run_function("cmd.run", ["yum list {0}".format(self.pkg)])
+            cmd_pkg = self.run_function("cmd.run", ["yum list {}".format(self.pkg)])
         elif salt.utils.platform.is_windows():
             cmd_pkg = self.run_function("pkg.list_available", [self.pkg])
         elif grains["os_family"] == "Debian":
-            cmd_pkg = self.run_function("cmd.run", ["apt list {0}".format(self.pkg)])
+            cmd_pkg = self.run_function("cmd.run", ["apt list {}".format(self.pkg)])
         elif grains["os_family"] == "Arch":
-            cmd_pkg = self.run_function("cmd.run", ["pacman -Si {0}".format(self.pkg)])
+            cmd_pkg = self.run_function("cmd.run", ["pacman -Si {}".format(self.pkg)])
         elif grains["os_family"] == "FreeBSD":
             cmd_pkg = self.run_function(
-                "cmd.run", ["pkg search -S name -qQ version -e {0}".format(self.pkg)]
+                "cmd.run", ["pkg search -S name -qQ version -e {}".format(self.pkg)]
             )
         elif grains["os_family"] == "Suse":
-            cmd_pkg = self.run_function("cmd.run", ["zypper info {0}".format(self.pkg)])
+            cmd_pkg = self.run_function("cmd.run", ["zypper info {}".format(self.pkg)])
         elif grains["os_family"] == "MacOS":
             brew_bin = salt.utils.path.which("brew")
             mac_user = self.run_function("file.get_user", [brew_bin])
@@ -486,7 +478,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
                     )
                 )
             cmd_pkg = self.run_function(
-                "cmd.run", ["brew info {0}".format(self.pkg)], run_as=mac_user
+                "cmd.run", ["brew info {}".format(self.pkg)], run_as=mac_user
             )
         else:
             self.skipTest(

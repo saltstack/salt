@@ -1,18 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 Send events covering service status
 """
-
-# Import Python Libs
-from __future__ import absolute_import, unicode_literals
-
 import logging
 import os
 import time
 
-from salt.ext.six.moves import map
-
-log = logging.getLogger(__name__)  # pylint: disable=invalid-name
+log = logging.getLogger(__name__)
 
 LAST_STATUS = {}
 
@@ -33,6 +26,14 @@ def validate(config):
         if "services" not in _config:
             return False, ("Configuration for service beacon requires services.")
         else:
+            if not isinstance(_config["services"], dict):
+                return (
+                    False,
+                    (
+                        "Services configuration item for service beacon must "
+                        "be a dictionary."
+                    ),
+                )
             for config_item in _config["services"]:
                 if not isinstance(_config["services"][config_item], dict):
                     return (

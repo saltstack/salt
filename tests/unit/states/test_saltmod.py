@@ -4,14 +4,13 @@
 
 import os
 import tempfile
-import time
 
+import pytest
 import salt.config
 import salt.loader
 import salt.states.saltmod as saltmod
 import salt.utils.event
 import salt.utils.jid
-from tests.support.helpers import slowTest
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
@@ -44,7 +43,7 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'state' function tests: 1
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_state(self):
         """
         Test to invoke a state run on a given target
@@ -191,7 +190,7 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'function' function tests: 1
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_function(self):
         """
         Test to execute a single module function on a remote
@@ -224,7 +223,7 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(saltmod.__salt__, {"saltutil.cmd": mock_cmd}):
                 self.assertDictEqual(saltmod.function(name, tgt), ret)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_function_when_no_minions_match(self):
         """
         Test to execute a single module function on a remote
@@ -278,11 +277,19 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
                     return {"tag": name, "data": {}}
                 return None
 
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                pass
+
         with patch.object(
             salt.utils.event, "get_event", MagicMock(return_value=Mockevent())
         ):
             with patch.dict(saltmod.__opts__, {"sock_dir": True, "transport": True}):
-                with patch.object(time, "time", MagicMock(return_value=1.0)):
+                with patch(
+                    "salt.states.saltmod.time.time", MagicMock(return_value=1.0)
+                ):
                     self.assertDictEqual(
                         saltmod.wait_for_event(name, "salt", timeout=-1.0), ret
                     )
@@ -338,7 +345,7 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(saltmod.__salt__, {"saltutil.wheel": wheel_mock}):
             self.assertDictEqual(saltmod.wheel(name), ret)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_state_ssh(self):
         """
         Test saltmod passes roster to saltutil.cmd

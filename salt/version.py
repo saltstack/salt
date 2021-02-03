@@ -58,8 +58,8 @@ class SaltStackVersion:
         r"(?:\.(?P<minor>[\d]{1,2}))?"
         r"(?:\.(?P<bugfix>[\d]{0,2}))?"
         r"(?:\.(?P<mbugfix>[\d]{0,2}))?"
-        r"(?:(?P<pre_type>rc|a|b|alpha|beta|nb)(?P<pre_num>[\d]{1}))?"
-        r"(?:(?:.*)-(?P<noc>(?:[\d]+|n/a))-" + git_sha_regex + r")?"
+        r"(?:(?P<pre_type>rc|a|b|alpha|beta|nb)(?P<pre_num>[\d]+))?"
+        r"(?:(?:.*)(?:\+|-)(?P<noc>(?:0na|[\d]+|n/a))(?:-|\.)" + git_sha_regex + r")?"
     )
     git_sha_regex = r"^" + git_sha_regex
 
@@ -241,7 +241,7 @@ class SaltStackVersion:
 
         if noc is None:
             noc = 0
-        elif isinstance(noc, str) and noc == "n/a":
+        elif isinstance(noc, str) and noc in ("0na", "n/a"):
             noc = -1
         elif isinstance(noc, str):
             noc = int(noc)
@@ -384,8 +384,8 @@ class SaltStackVersion:
         if self.noc and self.sha:
             noc = self.noc
             if noc < 0:
-                noc = "n/a"
-            version_string += "-{}-{}".format(noc, self.sha)
+                noc = "0na"
+            version_string += "+{}.{}".format(noc, self.sha)
         return version_string
 
     @property
@@ -489,7 +489,7 @@ class SaltStackVersion:
             parts.append("{}={}".format(self.pre_type, self.pre_num))
         noc = self.noc
         if noc == -1:
-            noc = "n/a"
+            noc = "0na"
         if noc and self.sha:
             parts.extend(["noc={}".format(noc), "sha={}".format(self.sha)])
         return "<{} {}>".format(self.__class__.__name__, " ".join(parts))
@@ -534,6 +534,7 @@ def __discover_version(saltstack_version):
                 "git",
                 "describe",
                 "--tags",
+                "--long",
                 "--first-parent",
                 "--match",
                 "v[0-9]*",
@@ -548,7 +549,15 @@ def __discover_version(saltstack_version):
             # The git version running this might not support --first-parent
             # Revert to old command
             process = subprocess.Popen(
-                ["git", "describe", "--tags", "--match", "v[0-9]*", "--always"],
+                [
+                    "git",
+                    "describe",
+                    "--tags",
+                    "--long",
+                    "--match",
+                    "v[0-9]*",
+                    "--always",
+                ],
                 **kwargs
             )
             out, err = process.communicate()
@@ -617,7 +626,7 @@ def dependency_information(include_salt_cloud=False):
         ("Python", None, sys.version.rsplit("\n")[0].strip()),
         ("Jinja2", "jinja2", "__version__"),
         ("M2Crypto", "M2Crypto", "version"),
-        ("msgpack-python", "msgpack", "version"),
+        ("msgpack", "msgpack", "version"),
         ("msgpack-pure", "msgpack_pure", "version"),
         ("pycrypto", "Crypto", "__version__"),
         ("pycryptodome", "Cryptodome", "version_info"),

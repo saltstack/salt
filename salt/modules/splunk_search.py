@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module for interop with the Splunk API
 
@@ -20,17 +19,11 @@ Module for interop with the Splunk API
             port: 8080
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import urllib
 
-# Import salt libs
 import salt.utils.yaml
-
-# Import third party libs
-from salt.ext import six
 from salt.utils.odict import OrderedDict
 
 HAS_LIBS = False
@@ -69,7 +62,7 @@ def _get_splunk(profile):
     Return the splunk client, cached into __context__ for performance
     """
     config = __salt__["config.option"](profile)
-    key = "splunk_search.{0}:{1}:{2}:{3}".format(
+    key = "splunk_search.{}:{}:{}:{}".format(
         config.get("host"),
         config.get("port"),
         config.get("username"),
@@ -131,14 +124,14 @@ def update(name, profile="splunk", **kwargs):
     for key in sorted(kwargs):
         old_value = props.get(key, None)
         new_value = updates.get(key, None)
-        if isinstance(old_value, six.string_types):
+        if isinstance(old_value, str):
             old_value = old_value.strip()
-        if isinstance(new_value, six.string_types):
+        if isinstance(new_value, str):
             new_value = new_value.strip()
         if old_value != new_value:
             update_set[key] = new_value
             update_needed = True
-            diffs.append("{0}: '{1}' => '{2}'".format(key, old_value, new_value))
+            diffs.append("{}: '{}' => '{}'".format(key, old_value, new_value))
     if update_needed:
         search.update(**update_set).refresh()
         return update_set, diffs
@@ -160,14 +153,14 @@ def create(name, profile="splunk", **kwargs):
     # this is hard-coded for now; all managed searches are app scope and
     # readable by all
     config = __salt__["config.option"](profile)
-    url = "https://{0}:{1}".format(config.get("host"), config.get("port"))
+    url = "https://{}:{}".format(config.get("host"), config.get("port"))
     auth = (config.get("username"), config.get("password"))
     data = {
         "owner": config.get("username"),
         "sharing": "app",
         "perms.read": "*",
     }
-    _req_url = "{0}/servicesNS/{1}/search/saved/searches/{2}/acl".format(
+    _req_url = "{}/servicesNS/{}/search/saved/searches/{}/acl".format(
         url, config.get("username"), urllib.quote(name)
     )
     requests.post(_req_url, auth=auth, verify=True, data=data)

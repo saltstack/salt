@@ -1,28 +1,20 @@
-# -*- coding: utf-8 -*-
 """
 IPC transport classes
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import errno
 import logging
 import socket
-import sys
 import time
 
-# Import Tornado libs
 import salt.ext.tornado
 import salt.ext.tornado.concurrent
 import salt.ext.tornado.gen
 import salt.ext.tornado.netutil
 import salt.transport.client
 import salt.transport.frame
-
-# Import Salt libs
 import salt.utils.msgpack
-from salt.ext import six
 from salt.ext.tornado.ioloop import IOLoop
 from salt.ext.tornado.ioloop import TimeoutError as TornadoTimeoutError
 from salt.ext.tornado.iostream import IOStream, StreamClosedError
@@ -42,7 +34,7 @@ def future_with_timeout_callback(future):
 
 class FutureWithTimeout(salt.ext.tornado.concurrent.Future):
     def __init__(self, io_loop, future, timeout):
-        super(FutureWithTimeout, self).__init__()
+        super().__init__()
         self.io_loop = io_loop
         self._future = future
         if timeout is not None:
@@ -85,7 +77,7 @@ class FutureWithTimeout(salt.ext.tornado.concurrent.Future):
             self.set_exception(exc)
 
 
-class IPCServer(object):
+class IPCServer:
     """
     A Tornado IPC server very similar to Tornado's TCPServer class
     but using either UNIX domain sockets or TCP sockets
@@ -179,12 +171,9 @@ class IPCServer(object):
         # msgpack deprecated `encoding` starting with version 0.5.2
         if salt.utils.msgpack.version >= (0, 5, 2):
             # Under Py2 we still want raw to be set to True
-            msgpack_kwargs = {"raw": six.PY2}
+            msgpack_kwargs = {"raw": False}
         else:
-            if six.PY2:
-                msgpack_kwargs = {"encoding": None}
-            else:
-                msgpack_kwargs = {"encoding": "utf-8"}
+            msgpack_kwargs = {"encoding": "utf-8"}
         unpacker = salt.utils.msgpack.Unpacker(**msgpack_kwargs)
         while not stream.closed():
             try:
@@ -200,7 +189,7 @@ class IPCServer(object):
             except StreamClosedError:
                 log.trace("Client disconnected from IPC %s", self.socket_path)
                 break
-            except socket.error as exc:
+            except OSError as exc:
                 # On occasion an exception will occur with
                 # an error code of 0, it's a spurious exception.
                 if exc.errno == 0:
@@ -246,8 +235,14 @@ class IPCServer(object):
 
     # pylint: enable=W1701
 
+    def __enter__(self):
+        return self
 
-class IPCClient(object):
+    def __exit__(self, *args):
+        self.close()
+
+
+class IPCClient:
     """
     A Tornado IPC client very similar to Tornado's TCPClient class
     but using either UNIX domain sockets or TCP sockets
@@ -280,12 +275,9 @@ class IPCClient(object):
         # msgpack deprecated `encoding` starting with version 0.5.2
         if salt.utils.msgpack.version >= (0, 5, 2):
             # Under Py2 we still want raw to be set to True
-            msgpack_kwargs = {"raw": six.PY2}
+            msgpack_kwargs = {"raw": False}
         else:
-            if six.PY2:
-                msgpack_kwargs = {"encoding": None}
-            else:
-                msgpack_kwargs = {"encoding": "utf-8"}
+            msgpack_kwargs = {"encoding": "utf-8"}
         self.unpacker = salt.utils.msgpack.Unpacker(**msgpack_kwargs)
 
     def connected(self):
@@ -358,17 +350,6 @@ class IPCClient(object):
 
                 yield salt.ext.tornado.gen.sleep(1)
 
-    # pylint: disable=W1701
-    def __del__(self):
-        try:
-            self.close()
-        except TypeError:
-            # This is raised when Python's GC has collected objects which
-            # would be needed when calling self.close()
-            pass
-
-    # pylint: enable=W1701
-
     def close(self):
         """
         Routines to handle any cleanup before the instance shuts down.
@@ -385,10 +366,27 @@ class IPCClient(object):
         if self.stream is not None and not self.stream.closed():
             try:
                 self.stream.close()
-            except socket.error as exc:
+            except OSError as exc:
                 if exc.errno != errno.EBADF:
                     # If its not a bad file descriptor error, raise
-                    six.reraise(*sys.exc_info())
+                    raise
+
+    # pylint: disable=W1701
+    def __del__(self):
+        try:
+            self.close()
+        except TypeError:
+            # This is raised when Python's GC has collected objects which
+            # would be needed when calling self.close()
+            pass
+
+    # pylint: enable=W1701
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.close()
 
 
 class IPCMessageClient(IPCClient):
@@ -483,7 +481,7 @@ class IPCMessageServer(IPCServer):
     """
 
 
-class IPCMessagePublisher(object):
+class IPCMessagePublisher:
     """
     A Tornado IPC Publisher similar to Tornado's TCPServer class
     but using either UNIX domain sockets or TCP sockets
@@ -598,16 +596,11 @@ class IPCMessagePublisher(object):
         if hasattr(self.sock, "close"):
             self.sock.close()
 
-    # pylint: disable=W1701
-    def __del__(self):
-        try:
-            self.close()
-        except TypeError:
-            # This is raised when Python's GC has collected objects which
-            # would be needed when calling self.close()
-            pass
+    def __enter__(self):
+        return self
 
-    # pylint: enable=W1701
+    def __exit__(self, *args):
+        self.close()
 
 
 class IPCMessageSubscriber(IPCClient):
@@ -645,7 +638,7 @@ class IPCMessageSubscriber(IPCClient):
     """
 
     def __init__(self, socket_path, io_loop=None):
-        super(IPCMessageSubscriber, self).__init__(socket_path, io_loop=io_loop)
+        super().__init__(socket_path, io_loop=io_loop)
         self._read_stream_future = None
         self._saved_data = []
         self._read_in_progress = Lock()
@@ -754,7 +747,7 @@ class IPCMessageSubscriber(IPCClient):
         """
         if self._closing:
             return
-        super(IPCMessageSubscriber, self).close()
+        super().close()
         # This will prevent this message from showing up:
         # '[ERROR   ] Future exception was never retrieved:
         # StreamClosedError'
@@ -762,10 +755,3 @@ class IPCMessageSubscriber(IPCClient):
             exc = self._read_stream_future.exception()
             if exc and not isinstance(exc, StreamClosedError):
                 log.error("Read future returned exception %r", exc)
-
-    # pylint: disable=W1701
-    def __del__(self):
-        if IPCMessageSubscriber in globals():
-            self.close()
-
-    # pylint: enable=W1701

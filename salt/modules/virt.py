@@ -431,7 +431,8 @@ def _get_nics(dom):
     Get domain network interfaces from a libvirt domain object.
     """
     nics = {}
-    doc = ElementTree.fromstring(dom.XMLDesc(0))
+    # Don't expose the active configuration since it may be changed by libvirt
+    doc = ElementTree.fromstring(dom.XMLDesc(libvirt.VIR_DOMAIN_XML_INACTIVE))
     for iface_node in doc.findall("devices/interface"):
         nic = {}
         nic["type"] = iface_node.get("type")
@@ -923,11 +924,11 @@ def _handle_unit(s, def_unit="m"):
     return int(value)
 
 
-def nesthash():
+def nesthash(value=None):
     """
     create default dict that allows arbitrary level of nesting
     """
-    return collections.defaultdict(nesthash)
+    return collections.defaultdict(nesthash, value or {})
 
 
 def _gen_xml(
@@ -943,6 +944,13 @@ def _gen_xml(
     graphics=None,
     boot=None,
     boot_dev=None,
+    numatune=None,
+    hypervisor_features=None,
+    clock=None,
+    serials=None,
+    consoles=None,
+    stop_on_reboot=False,
+    host_devices=None,
     **kwargs
 ):
     """
@@ -951,23 +959,36 @@ def _gen_xml(
     context = {
         "hypervisor": hypervisor,
         "name": name,
-        "cpu": str(cpu),
+        "hypervisor_features": hypervisor_features or {},
+        "clock": clock or {},
+        "on_reboot": "destroy" if stop_on_reboot else "restart",
     }
+
+    context["to_kib"] = lambda v: int(_handle_unit(v) / 1024)
+    context["yesno"] = lambda v: "yes" if v else "no"
 
     context["mem"] = nesthash()
     if isinstance(mem, int):
-        mem = int(mem) * 1024  # MB
-        context["mem"]["boot"] = str(mem)
-        context["mem"]["current"] = str(mem)
+        context["mem"]["boot"] = mem
+        context["mem"]["current"] = mem
     elif isinstance(mem, dict):
-        for tag, val in mem.items():
-            if val:
-                if tag == "slots":
-                    context["mem"]["slots"] = "{}='{}'".format(tag, val)
-                else:
-                    context["mem"][tag] = str(int(_handle_unit(val) / 1024))
+        context["mem"] = nesthash(mem)
+
+    context["cpu"] = nesthash()
+    context["cputune"] = nesthash()
+    if isinstance(cpu, int):
+        context["cpu"]["maximum"] = str(cpu)
+    elif isinstance(cpu, dict):
+        context["cpu"] = nesthash(cpu)
+
+    if clock:
+        offset = "utc" if clock.get("utc", True) else "localtime"
+        if "timezone" in clock:
+            offset = "timezone"
+        context["clock"]["offset"] = offset
 
     if hypervisor in ["qemu", "kvm"]:
+        context["numatune"] = numatune if numatune else {}
         context["controller_model"] = False
     elif hypervisor == "vmware":
         # TODO: make bus and model parameterized, this works for 64-bit Linux
@@ -1006,18 +1027,57 @@ def _gen_xml(
                 context["boot"]["kernel"] = "/usr/lib/grub2/x86_64-xen/grub.xen"
                 context["boot_dev"] = []
 
-    if "serial_type" in kwargs:
-        context["serial_type"] = kwargs["serial_type"]
-    if "serial_type" in context and context["serial_type"] == "tcp":
-        if "telnet_port" in kwargs:
-            context["telnet_port"] = kwargs["telnet_port"]
-        else:
-            context["telnet_port"] = 23023  # FIXME: use random unused port
-    if "serial_type" in context:
-        if "console" in kwargs:
-            context["console"] = kwargs["console"]
-        else:
-            context["console"] = True
+    default_port = 23023
+    default_chardev_type = "tcp"
+
+    chardev_types = ["serial", "console"]
+    for chardev_type in chardev_types:
+        context[chardev_type + "s"] = []
+        parameter_value = locals()[chardev_type + "s"]
+        if parameter_value is not None:
+            for chardev in parameter_value:
+                chardev_context = chardev
+                chardev_context["type"] = chardev.get("type", default_chardev_type)
+
+                if chardev_context["type"] == "tcp":
+                    chardev_context["port"] = chardev.get("port", default_port)
+                    chardev_context["protocol"] = chardev.get("protocol", "telnet")
+                context[chardev_type + "s"].append(chardev_context)
+
+    # processing of deprecated parameters
+    old_port = kwargs.get("telnet_port")
+    if old_port:
+        salt.utils.versions.warn_until(
+            "Phosphorus",
+            "'telnet_port' parameter has been deprecated, use the 'serials' and 'consoles' parameters instead. "
+            "'telnet_port' parameter has been deprecated, use the 'serials' parameter with a value "
+            "like ``{{{{'type': 'tcp', 'protocol': 'telnet', 'port': {}}}}}`` instead and a similar `consoles` parameter. "
+            "It will be removed in {{version}}.".format(old_port),
+        )
+
+    old_serial_type = kwargs.get("serial_type")
+    if old_serial_type:
+        salt.utils.versions.warn_until(
+            "Phosphorus",
+            "'serial_type' parameter has been deprecated, use the 'serials' parameter with a value "
+            "like ``{{{{'type': '{}', 'protocol':  'telnet' }}}}`` instead and a similar `consoles` parameter. "
+            "It will be removed in {{version}}.".format(old_serial_type),
+        )
+        serial_context = {"type": old_serial_type}
+        if serial_context["type"] == "tcp":
+            serial_context["port"] = old_port or default_port
+            serial_context["protocol"] = "telnet"
+        context["serials"].append(serial_context)
+
+        old_console = kwargs.get("console")
+        if old_console:
+            salt.utils.versions.warn_until(
+                "Phosphorus",
+                "'console' parameter has been deprecated, use the 'serials' and 'consoles' parameters instead. "
+                "It will be removed in {version}.",
+            )
+            if old_console is True:
+                context["consoles"].append(serial_context)
 
     context["disks"] = []
     disk_bus_map = {"virtio": "vd", "xen": "xvd", "fdc": "fd", "ide": "hd"}
@@ -1030,6 +1090,8 @@ def _gen_xml(
             "disk_bus": disk["model"],
             "format": disk.get("format", "raw"),
             "index": str(i),
+            "io": disk.get("io", "native"),
+            "iothread": disk.get("iothread_id", None),
         }
         targets.append(disk_context["target_dev"])
         if disk.get("source_file"):
@@ -1077,9 +1139,46 @@ def _gen_xml(
         context["disks"].append(disk_context)
     context["nics"] = nicp
 
+    # Process host devices passthrough
+    hostdev_context = []
+    try:
+        for hostdev_name in host_devices or []:
+            hostdevice = conn.nodeDeviceLookupByName(hostdev_name)
+            doc = ElementTree.fromstring(hostdevice.XMLDesc())
+            if "pci" in hostdevice.listCaps():
+                hostdev_context.append(
+                    {
+                        "type": "pci",
+                        "domain": "0x{:04x}".format(
+                            int(doc.find("./capability[@type='pci']/domain").text)
+                        ),
+                        "bus": "0x{:02x}".format(
+                            int(doc.find("./capability[@type='pci']/bus").text)
+                        ),
+                        "slot": "0x{:02x}".format(
+                            int(doc.find("./capability[@type='pci']/slot").text)
+                        ),
+                        "function": "0x{}".format(
+                            doc.find("./capability[@type='pci']/function").text
+                        ),
+                    }
+                )
+            elif "usb_device" in hostdevice.listCaps():
+                vendor_id = doc.find(".//vendor").get("id")
+                product_id = doc.find(".//product").get("id")
+                hostdev_context.append(
+                    {"type": "usb", "vendor": vendor_id, "product": product_id}
+                )
+            # For the while we only handle pci and usb passthrough
+    except libvirt.libvirtError as err:
+        conn.close()
+        raise CommandExecutionError(
+            "Failed to get host devices: " + err.get_error_message()
+        )
+    context["hostdevs"] = hostdev_context
+
     context["os_type"] = os_type
     context["arch"] = arch
-
     fn_ = "libvirt_domain.jinja"
     try:
         template = JINJA.get_template(fn_)
@@ -1121,23 +1220,75 @@ def _gen_vol_xml(
     return template.render(**context)
 
 
-def _gen_net_xml(name, bridge, forward, vport, tag=None, ip_configs=None):
+def _gen_net_xml(
+    name,
+    bridge,
+    forward,
+    vport,
+    tag=None,
+    ip_configs=None,
+    mtu=None,
+    domain=None,
+    nat=None,
+    interfaces=None,
+    addresses=None,
+    physical_function=None,
+    dns=None,
+):
     """
     Generate the XML string to define a libvirt network
     """
+    if isinstance(vport, str):
+        vport_context = {"type": vport}
+    else:
+        vport_context = vport
+
+    if isinstance(tag, (str, int)):
+        tag_context = {"tags": [{"id": tag}]}
+    else:
+        tag_context = tag
+
+    addresses_context = []
+    if addresses:
+        matches = [
+            re.fullmatch(r"([0-9]+):([0-9A-Fa-f]+):([0-9A-Fa-f]+)\.([0-9])", addr)
+            for addr in addresses.lower().split(" ")
+        ]
+        addresses_context = [
+            {
+                "domain": m.group(1),
+                "bus": m.group(2),
+                "slot": m.group(3),
+                "function": m.group(4),
+            }
+            for m in matches
+            if m
+        ]
+
     context = {
         "name": name,
         "bridge": bridge,
+        "mtu": mtu,
+        "domain": domain,
         "forward": forward,
-        "vport": vport,
-        "tag": tag,
+        "nat": nat,
+        "interfaces": interfaces.split(" ") if interfaces else [],
+        "addresses": addresses_context,
+        "pf": physical_function,
+        "vport": vport_context,
+        "vlan": tag_context,
+        "dns": dns,
         "ip_configs": [
             {
                 "address": ipaddress.ip_network(config["cidr"]),
                 "dhcp_ranges": config.get("dhcp_ranges", []),
+                "hosts": config.get("hosts", {}),
+                "bootp": config.get("bootp", {}),
+                "tftp": config.get("tftp"),
             }
             for config in ip_configs or []
         ],
+        "yesno": lambda v: "yes" if v else "no",
     }
     fn_ = "libvirt_network.jinja"
     try:
@@ -1813,27 +1964,24 @@ def _handle_remote_boot_params(orig_boot):
         {"kernel", "initrd", "cmdline", "loader", "nvram"},
     ]
 
-    try:
-        if keys in cases:
-            for key in keys:
-                if key == "efi" and type(orig_boot.get(key)) == bool:
-                    new_boot[key] = orig_boot.get(key)
-                elif orig_boot.get(key) is not None and salt.utils.virt.check_remote(
-                    orig_boot.get(key)
-                ):
-                    if saltinst_dir is None:
-                        os.makedirs(CACHE_DIR)
-                        saltinst_dir = CACHE_DIR
-                    new_boot[key] = salt.utils.virt.download_remote(
-                        orig_boot.get(key), saltinst_dir
-                    )
-            return new_boot
-        else:
-            raise SaltInvocationError(
-                "Invalid boot parameters,It has to follow this combination: [(kernel, initrd) or/and cmdline] or/and [(loader, nvram) or efi]"
-            )
-    except Exception as err:  # pylint: disable=broad-except
-        raise err
+    if keys in cases:
+        for key in keys:
+            if key == "efi" and type(orig_boot.get(key)) == bool:
+                new_boot[key] = orig_boot.get(key)
+            elif orig_boot.get(key) is not None and salt.utils.virt.check_remote(
+                orig_boot.get(key)
+            ):
+                if saltinst_dir is None:
+                    os.makedirs(CACHE_DIR)
+                    saltinst_dir = CACHE_DIR
+                new_boot[key] = salt.utils.virt.download_remote(
+                    orig_boot.get(key), saltinst_dir
+                )
+        return new_boot
+    else:
+        raise SaltInvocationError(
+            "Invalid boot parameters,It has to follow this combination: [(kernel, initrd) or/and cmdline] or/and [(loader, nvram) or efi]"
+        )
 
 
 def _handle_efi_param(boot, desc):
@@ -1856,10 +2004,11 @@ def _handle_efi_param(boot, desc):
     elif type(efi_value) == bool and os_attrib == {}:
         if efi_value is True and parent_tag.find("loader") is None:
             parent_tag.set("firmware", "efi")
+            return True
         if efi_value is False and parent_tag.find("loader") is not None:
             parent_tag.remove(parent_tag.find("loader"))
             parent_tag.remove(parent_tag.find("nvram"))
-        return True
+            return True
     elif type(efi_value) != bool:
         raise SaltInvocationError("Invalid efi value")
     return False
@@ -1886,19 +2035,139 @@ def init(
     arch=None,
     boot=None,
     boot_dev=None,
+    numatune=None,
+    hypervisor_features=None,
+    clock=None,
+    serials=None,
+    consoles=None,
+    stop_on_reboot=False,
+    host_devices=None,
     **kwargs
 ):
     """
     Initialize a new vm
 
     :param name: name of the virtual machine to create
-    :param cpu: Number of virtual CPUs to assign to the virtual machine
+    :param cpu:
+        Number of virtual CPUs to assign to the virtual machine or a dictionary with detailed information to configure
+        cpu model and topology, numa node tuning, cpu tuning and iothreads allocation. The structure of the dictionary is
+        documented in :ref:`init-cpu-def`.
+
+        .. code-block:: yaml
+
+             cpu:
+               placement: static
+               cpuset: 0-11
+               current: 5
+               maximum: 12
+               vcpus:
+                 0:
+                   enabled: True
+                   hotpluggable: False
+                   order: 1
+                 1:
+                   enabled: False
+                   hotpluggable: True
+               match: minimum
+               mode: custom
+               check: full
+               vendor: Intel
+               model:
+                 name: core2duo
+                 fallback: allow
+                 vendor_id: GenuineIntel
+               topology:
+                 sockets: 1
+                 cores: 12
+                 threads: 1
+               cache:
+                 level: 3
+                 mode: emulate
+               features:
+                 lahf: optional
+                 pcid: require
+               numa:
+                 0:
+                    cpus: 0-3
+                    memory: 1g
+                    discard: True
+                    distances:
+                      0: 10     # sibling id : value
+                      1: 21
+                      2: 31
+                      3: 41
+                 1:
+                    cpus: 4-6
+                    memory: 1g
+                    memAccess: shared
+                    distances:
+                      0: 21
+                      1: 10
+                      2: 21
+                      3: 31
+               tuning:
+                    vcpupin:
+                      0: 1-4,^2  # vcpuid : cpuset
+                      1: 0,1
+                      2: 2,3
+                      3: 0,4
+                    emulatorpin: 1-3
+                    iothreadpin:
+                      1: 5,6    # iothread id: cpuset
+                      2: 7,8
+                    shares: 2048
+                    period: 1000000
+                    quota: -1
+                    global_period: 1000000
+                    global_quota: -1
+                    emulator_period: 1000000
+                    emulator_quota: -1
+                    iothread_period: 1000000
+                    iothread_quota: -1
+                    vcpusched:
+                      - scheduler: fifo
+                        priority: 1
+                        vcpus: 0,3-5
+                      - scheduler: rr
+                        priority: 3
+                    iothreadsched:
+                      - scheduler: idle
+                      - scheduler: batch
+                        iothreads: 2,3
+                    emulatorsched:
+                      - scheduler: batch
+                    cachetune:
+                      0-3:      # vcpus set
+                        0:      # cache id
+                          level: 3
+                          type: both
+                          size: 4
+                        1:
+                          level: 3
+                          type: both
+                          size: 6
+                        monitor:
+                          1: 3
+                          0-3: 3
+                      4-5:
+                        monitor:
+                          4: 3  # vcpus: level
+                          5: 3
+                    memorytune:
+                      0-3:      # vcpus set
+                        0: 60   # node id: bandwidth
+                      4-5:
+                        0: 60
+               iothreads: 4
+
+        .. versionadded:: Aluminium
+
     :param mem: Amount of memory to allocate to the virtual machine in MiB. Since 3002, a dictionary can be used to
         contain detailed configuration which support memory allocation or tuning. Supported parameters are ``boot``,
-        ``current``, ``max``, ``slots``, ``hard_limit``, ``soft_limit``, ``swap_hard_limit`` and ``min_guarantee``. The
-        structure of the dictionary is documented in  :ref:`init-mem-def`. Both decimal and binary base are supported.
-        Detail unit specification is documented  in :ref:`virt-units`. Please note that the value for ``slots`` must be
-        an integer.
+        ``current``, ``max``, ``slots``, ``hard_limit``, ``soft_limit``, ``swap_hard_limit``, ``min_guarantee``,
+        ``hugepages`` ,  ``nosharepages``, ``locked``, ``source``, ``access``, ``allocation`` and ``discard``. The structure
+        of the dictionary is documented in  :ref:`init-mem-def`. Both decimal and binary base are supported. Detail unit
+        specification is documented  in :ref:`virt-units`. Please note that the value for ``slots`` must be an integer.
 
         .. code-block:: python
 
@@ -1907,10 +2176,17 @@ def init(
                 'current': 1g,
                 'max': 1g,
                 'slots': 10,
-                'hard_limit': '1024'
-                'soft_limit': '512m'
-                'swap_hard_limit': '1g'
-                'min_guarantee': '512mib'
+                'hard_limit': '1024',
+                'soft_limit': '512m',
+                'swap_hard_limit': '1g',
+                'min_guarantee': '512mib',
+                'hugepages': [{'nodeset': '0-3,^2', 'size': '1g'}, {'nodeset': '2', 'size': '2m'}],
+                'nosharepages': True,
+                'locked': True,
+                'source': 'file',
+                'access': 'shared',
+                'allocation': 'immediate',
+                'discard': True
             }
 
         .. versionchanged:: 3002
@@ -1971,6 +2247,15 @@ def init(
     :param password: password to connect with, overriding defaults
 
                      .. versionadded:: 2019.2.0
+
+    :param stop_on_reboot:
+        If set to ``True`` the guest will stop instead of rebooting.
+        This is specially useful when creating a virtual machine with an installation cdrom or
+        an autoinstallation needing a special first boot configuration.
+        Defaults to ``False``
+
+        .. versionadded:: Aluminium
+
     :param boot:
         Specifies kernel, initial ramdisk and kernel command line parameters for the virtual machine.
         This is an optional parameter, all of the keys are optional within the dictionary. The structure of
@@ -1996,6 +2281,239 @@ def init(
         Values can be ``hd``, ``fd``, ``cdrom`` or ``network``.
 
         By default, the value will ``"hd"``.
+
+    :param numatune:
+        The optional numatune element provides details of how to tune the performance of a NUMA host via controlling NUMA
+        policy for domain process. The optional ``memory`` element specifies how to allocate memory for the domain process
+        on a NUMA host. ``memnode`` elements can specify memory allocation policies per each guest NUMA node. The definition
+        used in the dictionary can be found at :ref:`init-cpu-def`.
+
+        .. versionadded:: Aluminium
+
+        .. code-block:: python
+
+            {
+                'memory': {'mode': 'strict', 'nodeset': '0-11'},
+                'memnodes': {0: {'mode': 'strict', 'nodeset': 1}, 1: {'mode': 'preferred', 'nodeset': 2}}
+            }
+
+    :param hypervisor_features:
+        Enable or disable hypervisor-specific features on the virtual machine.
+
+        .. versionadded:: Aluminium
+
+        .. code-block:: yaml
+
+            hypervisor_features:
+              kvm-hint-dedicated: True
+
+    :param clock:
+        Configure the guest clock.
+        The value is a dictionary with the following keys:
+
+        adjustment
+            time adjustment in seconds or ``reset``
+
+        utc
+            set to ``False`` to use the host local time as the guest clock. Defaults to ``True``.
+
+        timezone
+            synchronize the guest to the correspding timezone
+
+        timers
+            a dictionary associating the timer name with its configuration.
+            This configuration is a dictionary with the properties ``track``, ``tickpolicy``,
+            ``catchup``, ``frequency``, ``mode``, ``present``, ``slew``, ``threshold`` and ``limit``.
+            See `libvirt time keeping documentation <https://libvirt.org/formatdomain.html#time-keeping>`_ for the possible values.
+
+        .. versionadded:: Aluminium
+
+        Set the clock to local time using an offset in seconds
+        .. code-block:: yaml
+
+            clock:
+              adjustment: 3600
+              utc: False
+
+        Set the clock to a specific time zone:
+
+        .. code-block:: yaml
+
+            clock:
+              timezone: CEST
+
+        Tweak guest timers:
+
+        .. code-block:: yaml
+
+            clock:
+              timers:
+                tsc:
+                  frequency: 3504000000
+                  mode: native
+                rtc:
+                  track: wall
+                  tickpolicy: catchup
+                  slew: 4636
+                  threshold: 123
+                  limit: 2342
+                hpet:
+                  present: False
+
+    :param serials:
+        Dictionary providing details on the serials connection to create. (Default: ``None``)
+        See :ref:`init-chardevs-def` for more details on the possible values.
+
+        .. versionadded:: Aluminium
+
+    :param consoles:
+        Dictionary providing details on the consoles device to create. (Default: ``None``)
+        See :ref:`init-chardevs-def` for more details on the possible values.
+
+        .. versionadded:: Aluminium
+
+    :param host_devices:
+        List of host devices to passthrough to the guest.
+        The value is a list of device names as provided by the :py:func:`~salt.modules.virt.node_devices` function.
+        (Default: ``None``)
+
+        .. versionadded:: Aluminium
+
+    .. _init-cpu-def:
+
+    .. rubric:: cpu parameters definition
+
+    The cpu parameters dictionary can contain the following properties:
+
+    cpuset
+        a comma-separated list of physical CPU numbers that domain process and virtual CPUs can be pinned to by default.
+        eg. ``1-4,^3`` cpuset 3 is excluded.
+
+    current
+        the number of virtual cpus available at startup
+
+    placement
+        indicate the CPU placement mode for domain process. the value can be either ``static`` or ``auto``
+
+    vcpus
+        specify the state of individual vcpu. Possible attribute for each individual vcpu include: ``id``, ``enabled``,
+        ``hotpluggable`` and ``order``. Valid ``ids`` are from 0 to the maximum vCPU count minus 1. ``enabled`` takes
+        boolean values which controls the state of the vcpu. ``hotpluggable`` take boolean value which controls whether
+        given vCPU can be hotplugged and hotunplugged. ``order`` takes an integer value which specifies the order to add
+        the online vCPUs.
+
+    match
+        The cpu attribute ``match`` attribute specifies how strictly the virtual CPU provided to the guest matches the CPU
+        requirements, possible values are ``minimum``, ``exact`` or ``strict``.
+
+    check
+        Optional cpu attribute ``check`` attribute can be used to request a specific way of checking whether the virtual
+        CPU matches the specification, possible values are ``none``, ``partial`` and ``full``.
+
+    mode
+        Optional cpu attribute ``mode`` attribute may be used to make it easier to configure a guest CPU to be as close
+        to host CPU as possible, possible values are ``custom``, ``host-model`` and ``host-passthrough``.
+
+    model
+        specifies CPU model requested by the guest. An optional ``fallback`` attribute can be used to forbid libvirt falls
+        back to the closest model supported by the hypervisor, possible values are ``allow`` or ``forbid``. ``vendor_id``
+        attribute can be used to set the vendor id seen by the guest, the length must be exactly 12 characters long.
+
+    vendor
+        specifies CPU vendor requested by the guest.
+
+    topology
+        specifies requested topology of virtual CPU provided to the guest. Four possible attributes , ``sockets``, ``dies``,
+        ``cores``, and ``threads``, accept non-zero positive integer values. They refer to the number of CPU sockets per
+        NUMA node, number of dies per socket, number of cores per die, and number of threads per core, respectively.
+
+    features
+        A dictionary conains a set of cpu features to fine-tune features provided by the selected CPU model. Use cpu
+        feature ``name`` as the key and the ``policy`` as the value. ``policy`` Attribute takes ``force``, ``require``,
+        ``optional``, ``disable`` or ``forbid``.
+
+    cache
+        describes the virtual CPU cache. Optional attribute ``level`` takes an integer value which describes cache level
+        ``mode`` attribute supported three possible values: ``emulate``, ``passthrough``, ``disable``
+
+    numa
+        specify the guest numa topology. ``cell`` element specifies a NUMA cell or a NUMA node, ``cpus`` specifies the
+        CPU or range of CPUs that are part of the node, ``memory`` specifies the size of the node memory. All cells
+        should have ``id`` attribute in case referring to some cell is necessary in the code. optional attribute
+        ``memAccess`` control whether the memory is to be mapped as ``shared`` or ``private``, ``discard`` attribute which
+        fine tunes the discard feature for given numa node, possible values are ``True`` or ``False``.  ``distances``
+        element define the distance between NUMA cells and ``sibling`` sub-element is used to specify the distance value
+        between sibling NUMA cells.
+
+    vcpupin
+        The optional vcpupin element specifies which of host's physical CPUs the domain vCPU will be pinned to.
+
+    emulatorpin
+        The optional emulatorpin element specifies which of host physical CPUs the "emulator", a subset of a domain not
+        including vCPU or iothreads will be pinned to.
+
+    iothreadpin
+        The optional iothreadpin element specifies which of host physical CPUs the IOThreads will be pinned to.
+
+    shares
+        The optional shares element specifies the proportional weighted share for the domain.
+
+    period
+        The optional period element specifies the enforcement interval (unit: microseconds).
+
+    quota
+        The optional quota element specifies the maximum allowed bandwidth (unit: microseconds).
+
+    global_period
+        The optional global_period element specifies the enforcement CFS scheduler interval (unit: microseconds) for the
+        whole domain in contrast with period which enforces the interval per vCPU.
+
+    global_quota
+        The optional global_quota element specifies the maximum allowed bandwidth (unit: microseconds) within a period
+        for the whole domain.
+
+    emulator_period
+        The optional emulator_period element specifies the enforcement interval (unit: microseconds).
+
+    emulator_quota
+        The optional emulator_quota element specifies the maximum allowed bandwidth (unit: microseconds) for domain's
+        emulator threads (those excluding vCPUs).
+
+    iothread_period
+        The optional iothread_period element specifies the enforcement interval (unit: microseconds) for IOThreads.
+
+    iothread_quota
+        The optional iothread_quota element specifies the maximum allowed bandwidth (unit: microseconds) for IOThreads.
+
+    vcpusched
+        specify the scheduler type for vCPUs.
+        The value is a list of dictionaries with the ``scheduler`` key (values ``batch``, ``idle``, ``fifo``, ``rr``)
+        and the optional ``priority`` and ``vcpus`` keys. The ``priority`` value usually is a positive integer and the
+        ``vcpus`` value is a cpu set like ``1-4,^3,6`` or simply the vcpu id.
+
+    iothreadsched
+        specify the scheduler type for IO threads.
+        The value is a list of dictionaries with the ``scheduler`` key (values ``batch``, ``idle``, ``fifo``, ``rr``)
+        and the optional ``priority`` and ``vcpus`` keys. The ``priority`` value usually is a positive integer and the
+        ``vcpus`` value is a cpu set like ``1-4,^3,6`` or simply the vcpu id.
+
+    emulatorsched
+        specify the scheduler type (values batch, idle, fifo, rr) for particular the emulator.
+        The value is a dictionary with the ``scheduler`` key (values ``batch``, ``idle``, ``fifo``, ``rr``)
+        and the optional ``priority`` and ``vcpus`` keys. The ``priority`` value usually is a positive integer.
+
+    cachetune
+        Optional cachetune element can control allocations for CPU caches using the resctrl on the host.
+
+    monitor
+        The optional element monitor creates the cache monitor(s) for current cache allocation.
+
+    memorytune
+        Optional memorytune element can control allocations for memory bandwidth using the resctrl on the host.
+
+    iothreads
+        Number of threads for supported disk devices to perform I/O requests. iothread id will be numbered from 1 to
+        the provided number (Default: None).
 
     .. _init-boot-def:
 
@@ -2056,6 +2574,33 @@ def init(
 
     min_guarantee
         the guaranteed minimum memory allocation for the guest
+
+    hugepages
+        memory allocated using ``hugepages`` instead of the normal native page size. It takes a list of
+        dictionaries with ``nodeset`` and ``size`` keys.
+        For example ``"hugepages": [{"nodeset": "1-4,^3", "size": "2m"}, {"nodeset": "3", "size": "1g"}]``.
+
+    nosharepages
+        boolean value to instruct hypervisor to disable shared pages (memory merge, KSM) for this domain
+
+    locked
+        boolean value that allows memory pages belonging to the domain will be locked in host's memory and the host will
+        not be allowed to swap them out, which might be required for some workloads such as real-time.
+
+    source
+        possible values are ``file`` which utilizes file memorybacking, ``anonymous`` by default and ``memfd`` backing.
+        (QEMU/KVM only)
+
+    access
+        specify if the memory is to be ``shared`` or ``private``. This can be overridden per numa node by memAccess.
+
+    allocation
+        specify when to allocate the memory by supplying either ``immediate`` or ``ondemand``.
+
+    discard
+        boolean value to ensure the memory content is discarded just before guest shuts down (or when DIMM module is
+        unplugged). Please note that this is just an optimization and is not guaranteed to work in all cases
+        (e.g. when hypervisor crashes). (QEMU/KVM only)
 
     .. _init-nic-def:
 
@@ -2176,6 +2721,18 @@ def init(
                       hostname_property: virt:hostname
                       sparse_volume: True
 
+    io
+        I/O control policy. String value amongst ``native``, ``threads`` and ``io_uring``.
+        (Default: ``native``)
+
+        ..versionadded:: Aluminium
+
+    iothread_id
+        I/O thread id to assign the disk to.
+        (Default: none assigned)
+
+        ..versionadded:: Aluminium
+
     .. _init-graphics-def:
 
     .. rubric:: Graphics Definition
@@ -2201,6 +2758,42 @@ def init(
 
         By default, not setting the ``listen`` part of the dictionary will default to
         listen on all addresses.
+
+    .. _init-chardevs-def:
+
+    .. rubric:: Serials and Consoles Definitions
+
+    Serial dictionaries can contain the following properties:
+
+    type
+        Type of the serial connection, like ``'tcp'``, ``'pty'``, ``'file'``, ``'udp'``, ``'dev'``,
+        ``'pipe'``, ``'unix'``.
+
+    path
+        Path to the source device. Can be a log file, a host character device to pass through,
+        a unix socket, a named pipe path.
+
+    host
+        The serial UDP or TCP host name.
+        (Default: 23023)
+
+    port
+        The serial UDP or TCP port number.
+        (Default: 23023)
+
+    protocol
+        Name of the TCP connection protocol.
+        (Default: telnet)
+
+    tls
+        Boolean value indicating whether to use hypervisor TLS certificates environment for TCP devices.
+
+    target_port
+        The guest device port number starting from 0
+
+    target_type
+        The guest device type. Common values are ``serial``, ``virtio`` or ``usb-serial``, but more are documented in
+        `the libvirt documentation <https://libvirt.org/formatdomain.html#consoles-serial-parallel-channel-devices>`_.
 
     .. rubric:: CLI Example
 
@@ -2351,6 +2944,13 @@ def init(
             graphics,
             boot,
             boot_dev,
+            numatune,
+            hypervisor_features,
+            clock,
+            serials,
+            consoles,
+            stop_on_reboot,
+            host_devices,
             **kwargs
         )
         log.debug("New virtual machine definition: %s", vm_xml)
@@ -2373,19 +2973,15 @@ def _disks_equal(disk1, disk2):
     """
     target1 = disk1.find("target")
     target2 = disk2.find("target")
-    source1 = (
-        disk1.find("source")
-        if disk1.find("source") is not None
-        else ElementTree.Element("source")
-    )
-    source2 = (
-        disk2.find("source")
-        if disk2.find("source") is not None
-        else ElementTree.Element("source")
-    )
 
-    source1_dict = xmlutil.to_dict(source1, True)
-    source2_dict = xmlutil.to_dict(source2, True)
+    disk1_dict = xmlutil.to_dict(disk1, True)
+    disk2_dict = xmlutil.to_dict(disk2, True)
+
+    source1_dict = disk1_dict.get("source", {})
+    source2_dict = disk2_dict.get("source", {})
+
+    io1 = disk1_dict.get("driver", {}).get("io", "native")
+    io2 = disk2_dict.get("driver", {}).get("io", "native")
 
     # Remove the index added by libvirt in the source for backing chain
     if source1_dict:
@@ -2400,6 +2996,7 @@ def _disks_equal(disk1, disk2):
         and target1.get("bus") == target2.get("bus")
         and disk1.get("device", "disk") == disk2.get("device", "disk")
         and target1.get("dev") == target2.get("dev")
+        and io1 == io2
     )
 
 
@@ -2412,10 +3009,20 @@ def _nics_equal(nic1, nic2):
         """
         Filter out elements to ignore when comparing nics
         """
+        source_node = nic.find("source")
+        source_attrib = source_node.attrib if source_node is not None else {}
+        source_type = "network" if "network" in source_attrib else nic.attrib["type"]
+
+        source_getters = {
+            "network": lambda n: n.get("network"),
+            "bridge": lambda n: n.get("bridge"),
+            "direct": lambda n: n.get("dev"),
+            "hostdev": lambda n: _format_pci_address(n.find("address")),
+        }
         return {
-            "type": nic.attrib["type"],
-            "source": nic.find("source").attrib[nic.attrib["type"]]
-            if nic.find("source") is not None
+            "type": source_type,
+            "source": source_getters[source_type](source_node)
+            if source_node is not None
             else None,
             "model": nic.find("model").attrib["type"]
             if nic.find("model") is not None
@@ -2465,6 +3072,32 @@ def _graphics_equal(gfx1, gfx2):
     return xmlutil.to_dict(_filter_graphics(gfx1), True) == xmlutil.to_dict(
         _filter_graphics(gfx2), True
     )
+
+
+def _hostdevs_equal(dev1, dev2):
+    """
+    Test if two hostdevs devices should be considered the same device
+    """
+
+    def _filter_hostdevs(dev):
+        """
+        When the domain is running, the hostdevs element may contain additional properties.
+        This function will only keep the ones we care about
+        """
+        type_ = dev.get("type")
+        definition = {
+            "type": type_,
+        }
+        if type_ == "pci":
+            address_node = dev.find("./source/address")
+            for attr in ["domain", "bus", "slot", "function"]:
+                definition[attr] = address_node.get(attr)
+        elif type_ == "usb":
+            for attr in ["vendor", "product"]:
+                definition[attr] = dev.find("./source/" + attr).get("id")
+        return definition
+
+    return _filter_hostdevs(dev1) == _filter_hostdevs(dev2)
 
 
 def _diff_lists(old, new, comparator):
@@ -2567,6 +3200,323 @@ def _diff_graphics_lists(old, new):
     return _diff_lists(old, new, _graphics_equal)
 
 
+def _diff_hostdev_lists(old, new):
+    """
+    Compare hostdev devices definitions to extract the changes
+
+    :param old: list of ElementTree nodes representing the old hostdev devices
+    :param new: list of ElementTree nodes representing the new hostdev devices
+    """
+    return _diff_lists(old, new, _hostdevs_equal)
+
+
+def _expand_cpuset(cpuset):
+    """
+    Expand the libvirt cpuset and nodeset values into a list of cpu/node IDs
+    """
+    if cpuset is None:
+        return None
+
+    if isinstance(cpuset, int):
+        return str(cpuset)
+
+    result = set()
+    toremove = set()
+    for part in cpuset.split(","):
+        m = re.match("([0-9]+)-([0-9]+)", part)
+        if m:
+            result |= set(range(int(m.group(1)), int(m.group(2)) + 1))
+        elif part.startswith("^"):
+            toremove.add(int(part[1:]))
+        else:
+            result.add(int(part))
+    cpus = list(result - toremove)
+    cpus.sort()
+    cpus = [str(cpu) for cpu in cpus]
+    return ",".join(cpus)
+
+
+def _normalize_cpusets(desc, data):
+    """
+    Expand the cpusets that can't be expanded by the change_xml() function,
+    namely the ones that are used as keys and in the middle of the XPath expressions.
+    """
+    # Normalize the cpusets keys in the XML
+    xpaths = ["cputune/cachetune", "cputune/cachetune/monitor", "cputune/memorytune"]
+    for xpath in xpaths:
+        nodes = desc.findall(xpath)
+        for node in nodes:
+            node.set("vcpus", _expand_cpuset(node.get("vcpus")))
+
+    # data paths to change:
+    #  - cpu:tuning:cachetune:{id}:monitor:{sid}
+    #  - cpu:tuning:memorytune:{id}
+    if not isinstance(data.get("cpu"), dict):
+        return
+    tuning = data["cpu"].get("tuning", {})
+    for child in ["cachetune", "memorytune"]:
+        if tuning.get(child):
+            new_item = dict()
+            for cpuset, value in tuning[child].items():
+                if child == "cachetune" and value.get("monitor"):
+                    value["monitor"] = {
+                        _expand_cpuset(monitor_cpus): monitor
+                        for monitor_cpus, monitor in value["monitor"].items()
+                    }
+                new_item[_expand_cpuset(cpuset)] = value
+            tuning[child] = new_item
+
+
+def _serial_or_concole_equal(old, new):
+    def _filter_serial_or_concole(item):
+        """
+        Filter out elements to ignore when comparing items
+        """
+        return {
+            "type": item.attrib["type"],
+            "port": item.find("source").attrib["service"]
+            if item.find("source") is not None
+            else None,
+            "protocol": item.find("protocol").attrib["type"]
+            if item.find("protocol") is not None
+            else None,
+        }
+
+    return _filter_serial_or_concole(old) == _filter_serial_or_concole(new)
+
+
+def _diff_serial_lists(old, new):
+    """
+    Compare serial definitions to extract the changes
+
+    :param old: list of ElementTree nodes representing the old serials
+    :param new: list of ElementTree nodes representing the new serials
+    """
+    return _diff_lists(old, new, _serial_or_concole_equal)
+
+
+def _diff_console_lists(old, new):
+    """
+    Compare console definitions to extract the changes
+
+    :param old: list of ElementTree nodes representing the old consoles
+    :param new: list of ElementTree nodes representing the new consoles
+    """
+    return _diff_lists(old, new, _serial_or_concole_equal)
+
+
+def _format_pci_address(node):
+    return "{}:{}:{}.{}".format(
+        node.get("domain").replace("0x", ""),
+        node.get("bus").replace("0x", ""),
+        node.get("slot").replace("0x", ""),
+        node.get("function").replace("0x", ""),
+    )
+
+
+def _almost_equal(current, new):
+    """
+    return True if the parameters are numbers that are almost
+    """
+    if current is None or new is None:
+        return False
+    return abs(current - new) / current < 1e-03
+
+
+def _compute_device_changes(old_xml, new_xml, to_skip):
+    """
+    Compute the device changes between two domain XML definitions.
+    """
+    devices_node = old_xml.find("devices")
+    changes = {}
+    for dev_type in to_skip:
+        changes[dev_type] = {}
+        if not to_skip[dev_type]:
+            old = devices_node.findall(dev_type)
+            new = new_xml.findall("devices/{}".format(dev_type))
+            changes[dev_type] = globals()["_diff_{}_lists".format(dev_type)](old, new)
+    return changes
+
+
+def _get_pci_addresses(node):
+    """
+    Get all the pci addresses in the node in 0000:00:00.0 form
+    """
+    return {_format_pci_address(address) for address in node.findall(".//address")}
+
+
+def _correct_networks(conn, desc):
+    """
+    Adjust the interface devices matching existing networks.
+    Returns the network interfaces XML definition as string mapped to the new device node.
+    """
+    networks = [ElementTree.fromstring(net.XMLDesc()) for net in conn.listAllNetworks()]
+    nics = desc.findall("devices/interface")
+    device_map = {}
+    for nic in nics:
+        if nic.get("type") == "hostdev":
+            # Do we have a network matching this NIC PCI address?
+            addr = _get_pci_addresses(nic.find("source"))
+            matching_nets = [
+                net
+                for net in networks
+                if net.find("forward").get("mode") == "hostdev"
+                and addr & _get_pci_addresses(net)
+            ]
+            if matching_nets:
+                # We need to store the XML before modifying it
+                # since libvirt needs it to detach the device
+                old_xml = ElementTree.tostring(nic)
+                nic.set("type", "network")
+                nic.find("source").set("network", matching_nets[0].find("name").text)
+                device_map[nic] = old_xml
+    return device_map
+
+
+def _update_live(domain, new_desc, mem, cpu, old_mem, old_cpu, to_skip, test):
+    """
+    Perform the live update of a domain.
+    """
+    status = {}
+    errors = []
+
+    if not domain.isActive():
+        return status, errors
+
+    # Do the live changes now that we know the definition has been properly set
+    # From that point on, failures are not blocking to try to live update as much
+    # as possible.
+    commands = []
+    if cpu and (isinstance(cpu, int) or isinstance(cpu, dict) and cpu.get("maximum")):
+        new_cpu = cpu.get("maximum") if isinstance(cpu, dict) else cpu
+        if old_cpu != new_cpu and new_cpu is not None:
+            commands.append(
+                {
+                    "device": "cpu",
+                    "cmd": "setVcpusFlags",
+                    "args": [new_cpu, libvirt.VIR_DOMAIN_AFFECT_LIVE],
+                }
+            )
+    if mem:
+        if isinstance(mem, dict):
+            # setMemoryFlags takes memory amount in KiB
+            new_mem = (
+                int(_handle_unit(mem.get("current")) / 1024)
+                if "current" in mem
+                else None
+            )
+        elif isinstance(mem, int):
+            new_mem = int(mem * 1024)
+
+        if not _almost_equal(old_mem, new_mem) and new_mem is not None:
+            commands.append(
+                {
+                    "device": "mem",
+                    "cmd": "setMemoryFlags",
+                    "args": [new_mem, libvirt.VIR_DOMAIN_AFFECT_LIVE],
+                }
+            )
+
+    # Compute the changes with the live definition
+    old_desc = ElementTree.fromstring(domain.XMLDesc(0))
+    changed_devices = {"interface": _correct_networks(domain.connect(), old_desc)}
+    changes = _compute_device_changes(old_desc, new_desc, to_skip)
+
+    # Look for removable device source changes
+    removable_changes = []
+    new_disks = []
+    for new_disk in changes["disk"].get("new", []):
+        device = new_disk.get("device", "disk")
+        if device not in ["cdrom", "floppy"]:
+            new_disks.append(new_disk)
+            continue
+
+        target_dev = new_disk.find("target").get("dev")
+        matching = [
+            old_disk
+            for old_disk in changes["disk"].get("deleted", [])
+            if old_disk.get("device", "disk") == device
+            and old_disk.find("target").get("dev") == target_dev
+        ]
+        if not matching:
+            new_disks.append(new_disk)
+        else:
+            # libvirt needs to keep the XML exactly as it was before
+            updated_disk = matching[0]
+            changes["disk"]["deleted"].remove(updated_disk)
+            removable_changes.append(updated_disk)
+            source_node = updated_disk.find("source")
+            new_source_node = new_disk.find("source")
+            source_file = (
+                new_source_node.get("file") if new_source_node is not None else None
+            )
+
+            updated_disk.set("type", "file")
+            # Detaching device
+            if source_node is not None:
+                updated_disk.remove(source_node)
+
+            # Attaching device
+            if source_file:
+                ElementTree.SubElement(
+                    updated_disk, "source", attrib={"file": source_file}
+                )
+
+    changes["disk"]["new"] = new_disks
+
+    for dev_type in ["disk", "interface", "hostdev"]:
+        for added in changes[dev_type].get("new", []):
+            commands.append(
+                {
+                    "device": dev_type,
+                    "cmd": "attachDevice",
+                    "args": [xmlutil.element_to_str(added)],
+                }
+            )
+
+        for removed in changes[dev_type].get("deleted", []):
+            removed_def = changed_devices.get(dev_type, {}).get(
+                removed, ElementTree.tostring(removed)
+            )
+            commands.append(
+                {
+                    "device": dev_type,
+                    "cmd": "detachDevice",
+                    "args": [salt.utils.stringutils.to_str(removed_def)],
+                }
+            )
+
+    for updated_disk in removable_changes:
+        commands.append(
+            {
+                "device": "disk",
+                "cmd": "updateDeviceFlags",
+                "args": [xmlutil.element_to_str(updated_disk)],
+            }
+        )
+
+    for cmd in commands:
+        try:
+            ret = 0 if test else getattr(domain, cmd["cmd"])(*cmd["args"])
+            device_type = cmd["device"]
+            if device_type in ["cpu", "mem"]:
+                status[device_type] = not ret
+            else:
+                actions = {
+                    "attachDevice": "attached",
+                    "detachDevice": "detached",
+                    "updateDeviceFlags": "updated",
+                }
+                device_status = status.setdefault(device_type, {})
+                cmd_status = device_status.setdefault(actions[cmd["cmd"]], [])
+                cmd_status.append(cmd["args"][0])
+
+        except libvirt.libvirtError as err:
+            errors.append(str(err))
+
+    return status, errors
+
+
 def update(
     name,
     cpu=0,
@@ -2578,21 +3528,35 @@ def update(
     graphics=None,
     live=True,
     boot=None,
+    numatune=None,
     test=False,
     boot_dev=None,
+    hypervisor_features=None,
+    clock=None,
+    serials=None,
+    consoles=None,
+    stop_on_reboot=False,
+    host_devices=None,
     **kwargs
 ):
     """
     Update the definition of an existing domain.
 
     :param name: Name of the domain to update
-    :param cpu: Number of virtual CPUs to assign to the virtual machine
+    :param cpu:
+        Number of virtual CPUs to assign to the virtual machine or a dictionary with detailed information to configure
+        cpu model and topology, numa node tuning, cpu tuning and iothreads allocation. The structure of the dictionary is
+        documented in :ref:`init-cpu-def`.
+
+        To update any cpu parameters specify the new values to the corresponding tag. To remove any element or attribute,
+        specify ``None`` object. Please note that ``None`` object is mapped to ``null`` in yaml, use ``null`` in sls file
+        instead.
     :param mem: Amount of memory to allocate to the virtual machine in MiB. Since 3002, a dictionary can be used to
         contain detailed configuration which support memory allocation or tuning. Supported parameters are ``boot``,
-        ``current``, ``max``, ``slots``, ``hard_limit``, ``soft_limit``, ``swap_hard_limit`` and ``min_guarantee``. The
-        structure of the dictionary is documented in  :ref:`init-mem-def`. Both decimal and binary base are supported.
-        Detail unit specification is documented  in :ref:`virt-units`. Please note that the value for ``slots`` must be
-        an integer.
+        ``current``, ``max``, ``slots``, ``hard_limit``, ``soft_limit``, ``swap_hard_limit``, ``min_guarantee``,
+        ``hugepages`` ,  ``nosharepages``, ``locked``, ``source``, ``access``, ``allocation`` and ``discard``. The structure
+        of the dictionary is documented in  :ref:`init-mem-def`. Both decimal and binary base are supported. Detail unit
+        specification is documented  in :ref:`virt-units`. Please note that the value for ``slots`` must be an integer.
 
         To remove any parameters, pass a None object, for instance: 'soft_limit': ``None``. Please note  that ``None``
         is mapped to ``null`` in sls file, pass ``null`` in sls file instead.
@@ -2661,9 +3625,111 @@ def update(
 
         .. versionadded:: 3002
 
+    :param numatune:
+        The optional numatune element provides details of how to tune the performance of a NUMA host via controlling NUMA
+        policy for domain process. The optional ``memory`` element specifies how to allocate memory for the domain process
+        on a NUMA host. ``memnode`` elements can specify memory allocation policies per each guest NUMA node. The definition
+        used in the dictionary can be found at :ref:`init-cpu-def`.
+
+        To update any numatune parameters, specify the new value. To remove any ``numatune`` parameters, pass a None object,
+        for instance: 'numatune': ``None``. Please note that ``None`` is mapped to ``null`` in sls file, pass ``null`` in
+        sls file instead.
+
+        .. versionadded:: Aluminium
+
+    :param serials:
+        Dictionary providing details on the serials connection to create. (Default: ``None``)
+        See :ref:`init-chardevs-def` for more details on the possible values.
+
+        .. versionadded:: Aluminium
+
+    :param consoles:
+        Dictionary providing details on the consoles device to create. (Default: ``None``)
+        See :ref:`init-chardevs-def` for more details on the possible values.
+
+        .. versionadded:: Aluminium
+
+    :param stop_on_reboot:
+        If set to ``True`` the guest will stop instead of rebooting.
+        This is specially useful when creating a virtual machine with an installation cdrom or
+        an autoinstallation needing a special first boot configuration.
+        Defaults to ``False``
+
+        .. versionadded:: Aluminium
+
     :param test: run in dry-run mode if set to True
 
         .. versionadded:: 3001
+
+    :param hypervisor_features:
+        Enable or disable hypervisor-specific features on the virtual machine.
+
+        .. versionadded:: Aluminium
+
+        .. code-block:: yaml
+
+            hypervisor_features:
+              kvm-hint-dedicated: True
+
+    :param clock:
+        Configure the guest clock.
+        The value is a dictionary with the following keys:
+
+        adjustment
+            time adjustment in seconds or ``reset``
+
+        utc
+            set to ``False`` to use the host local time as the guest clock. Defaults to ``True``.
+
+        timezone
+            synchronize the guest to the correspding timezone
+
+        timers
+            a dictionary associating the timer name with its configuration.
+            This configuration is a dictionary with the properties ``track``, ``tickpolicy``,
+            ``catchup``, ``frequency``, ``mode``, ``present``, ``slew``, ``threshold`` and ``limit``.
+            See `libvirt time keeping documentation <https://libvirt.org/formatdomain.html#time-keeping>`_ for the possible values.
+
+        .. versionadded:: Aluminium
+
+        Set the clock to local time using an offset in seconds
+        .. code-block:: yaml
+
+            clock:
+              adjustment: 3600
+              utc: False
+
+        Set the clock to a specific time zone:
+
+        .. code-block:: yaml
+
+            clock:
+              timezone: CEST
+
+        Tweak guest timers:
+
+        .. code-block:: yaml
+
+            clock:
+              timers:
+                tsc:
+                  frequency: 3504000000
+                  mode: native
+                rtc:
+                  track: wall
+                  tickpolicy: catchup
+                  slew: 4636
+                  threshold: 123
+                  limit: 2342
+                hpet:
+                  present: False
+
+    :param host_devices:
+        List of host devices to passthrough to the guest.
+        The value is a list of device names as provided by the :py:func:`~salt.modules.virt.node_devices` function.
+        (Default: ``None``)
+
+        .. versionadded:: Aluminium
 
     :return:
 
@@ -2699,7 +3765,7 @@ def update(
     }
     conn = __get_conn(**kwargs)
     domain = _get_domain(conn, name)
-    desc = ElementTree.fromstring(domain.XMLDesc(0))
+    desc = ElementTree.fromstring(domain.XMLDesc(libvirt.VIR_DOMAIN_XML_INACTIVE))
     need_update = False
 
     # Compute the XML to get the disks, interfaces and graphics
@@ -2710,12 +3776,11 @@ def update(
         boot = _handle_remote_boot_params(boot)
         if boot.get("efi", None) is not None:
             need_update = _handle_efi_param(boot, desc)
-
     new_desc = ElementTree.fromstring(
         _gen_xml(
             conn,
             name,
-            cpu or 0,
+            cpu,
             mem or 0,
             all_disks,
             _get_merged_nics(hypervisor, nic_profile, interfaces),
@@ -2724,16 +3789,21 @@ def update(
             desc.find(".//os/type").get("arch"),
             graphics,
             boot,
+            boot_dev,
+            numatune,
+            serials=serials,
+            consoles=consoles,
+            stop_on_reboot=stop_on_reboot,
+            host_devices=host_devices,
             **kwargs
         )
     )
 
-    # Update the cpu
-    cpu_node = desc.find("vcpu")
-    if cpu and int(cpu_node.text) != cpu:
-        cpu_node.text = str(cpu)
-        cpu_node.set("current", str(cpu))
-        need_update = True
+    if clock:
+        offset = "utc" if clock.get("utc", True) else "localtime"
+        if "timezone" in clock:
+            offset = "timezone"
+        clock["offset"] = offset
 
     def _set_loader(node, value):
         salt.utils.xmlutil.set_node_text(node, value)
@@ -2744,133 +3814,386 @@ def update(
     def _set_nvram(node, value):
         node.set("template", value)
 
-    def _set_with_byte_unit(node, value):
-        node.text = str(value)
-        node.set("unit", "bytes")
+    def _set_with_byte_unit(attr_name=None):
+        def _setter(node, value):
+            if attr_name:
+                node.set(attr_name, str(value))
+            else:
+                node.text = str(value)
+            node.set("unit", "bytes")
+
+        return _setter
 
     def _get_with_unit(node):
         unit = node.get("unit", "KiB")
         # _handle_unit treats bytes as invalid unit for the purpose of consistency
         unit = unit if unit != "bytes" else "b"
-        value = node.get("memory") or node.text
+        value = node.get("memory") or node.get("size") or node.text
         return _handle_unit("{}{}".format(value, unit)) if value else None
 
+    def _set_vcpu(node, value):
+        node.text = str(value)
+        node.set("current", str(value))
+
     old_mem = int(_get_with_unit(desc.find("memory")) / 1024)
+    old_cpu = int(desc.find("./vcpu").text)
+
+    def _yesno_attribute(path, xpath, attr_name, ignored=None):
+        return xmlutil.attribute(
+            path, xpath, attr_name, ignored, lambda v: "yes" if v else "no"
+        )
+
+    def _memory_parameter(path, xpath, attr_name=None, ignored=None):
+        entry = {
+            "path": path,
+            "xpath": xpath,
+            "convert": _handle_unit,
+            "get": _get_with_unit,
+            "set": _set_with_byte_unit(attr_name),
+            "equals": _almost_equal,
+        }
+        if attr_name:
+            entry["del"] = salt.utils.xmlutil.del_attribute(attr_name, ignored)
+        return entry
+
+    def _cpuset_parameter(path, xpath, attr_name=None, ignored=None):
+        def _set_cpuset(node, value):
+            if attr_name:
+                node.set(attr_name, value)
+            else:
+                node.text = value
+
+        entry = {
+            "path": path,
+            "xpath": xpath,
+            "convert": _expand_cpuset,
+            "get": lambda n: _expand_cpuset(n.get(attr_name) if attr_name else n.text),
+            "set": _set_cpuset,
+        }
+        if attr_name:
+            entry["del"] = salt.utils.xmlutil.del_attribute(attr_name, ignored)
+        return entry
 
     # Update the kernel boot parameters
+    data = {k: v for k, v in locals().items() if bool(v)}
+    data["stop_on_reboot"] = stop_on_reboot
+    if boot_dev:
+        data["boot_dev"] = boot_dev.split()
+
+    # Set the missing optional attributes and timers to None in timers to help cleaning up
+    timer_names = [
+        "platform",
+        "hpet",
+        "kvmclock",
+        "pit",
+        "rtc",
+        "tsc",
+        "hypervclock",
+        "armvtimer",
+    ]
+    if data.get("clock", {}).get("timers"):
+        attributes = [
+            "track",
+            "tickpolicy",
+            "frequency",
+            "mode",
+            "present",
+            "slew",
+            "threshold",
+            "limit",
+        ]
+        for timer in data["clock"]["timers"].values():
+            for attribute in attributes:
+                if attribute not in timer:
+                    timer[attribute] = None
+
+        for timer_name in timer_names:
+            if timer_name not in data["clock"]["timers"]:
+                data["clock"]["timers"][timer_name] = None
+
+    _normalize_cpusets(desc, data)
+
     params_mapping = [
+        {
+            "path": "stop_on_reboot",
+            "xpath": "on_reboot",
+            "convert": lambda v: "destroy" if v else "restart",
+        },
         {"path": "boot:kernel", "xpath": "os/kernel"},
         {"path": "boot:initrd", "xpath": "os/initrd"},
         {"path": "boot:cmdline", "xpath": "os/cmdline"},
         {"path": "boot:loader", "xpath": "os/loader", "set": _set_loader},
         {"path": "boot:nvram", "xpath": "os/nvram", "set": _set_nvram},
         # Update the memory, note that libvirt outputs all memory sizes in KiB
+        _memory_parameter("mem", "memory"),
+        _memory_parameter("mem", "currentMemory"),
+        _memory_parameter("mem:max", "maxMemory"),
+        _memory_parameter("mem:boot", "memory"),
+        _memory_parameter("mem:current", "currentMemory"),
+        xmlutil.attribute("mem:slots", "maxMemory", "slots", ["unit"]),
+        _memory_parameter("mem:hard_limit", "memtune/hard_limit"),
+        _memory_parameter("mem:soft_limit", "memtune/soft_limit"),
+        _memory_parameter("mem:swap_hard_limit", "memtune/swap_hard_limit"),
+        _memory_parameter("mem:min_guarantee", "memtune/min_guarantee"),
+        xmlutil.attribute("boot_dev:{dev}", "os/boot[$dev]", "dev"),
+        _memory_parameter(
+            "mem:hugepages:{id}:size",
+            "memoryBacking/hugepages/page[$id]",
+            "size",
+            ["unit", "nodeset"],
+        ),
+        _cpuset_parameter(
+            "mem:hugepages:{id}:nodeset", "memoryBacking/hugepages/page[$id]", "nodeset"
+        ),
         {
-            "path": "mem",
-            "xpath": "memory",
-            "convert": _handle_unit,
-            "get": _get_with_unit,
-            "set": _set_with_byte_unit,
+            "path": "mem:nosharepages",
+            "xpath": "memoryBacking/nosharepages",
+            "get": lambda n: n is not None,
+            "set": lambda n, v: None,
         },
         {
-            "path": "mem",
-            "xpath": "currentMemory",
-            "convert": _handle_unit,
-            "get": _get_with_unit,
-            "set": _set_with_byte_unit,
+            "path": "mem:locked",
+            "xpath": "memoryBacking/locked",
+            "get": lambda n: n is not None,
+            "set": lambda n, v: None,
         },
+        xmlutil.attribute("mem:source", "memoryBacking/source", "type"),
+        xmlutil.attribute("mem:access", "memoryBacking/access", "mode"),
+        xmlutil.attribute("mem:allocation", "memoryBacking/allocation", "mode"),
+        {"path": "mem:discard", "xpath": "memoryBacking/discard"},
         {
-            "path": "mem:max",
-            "convert": _handle_unit,
-            "xpath": "maxMemory",
-            "get": _get_with_unit,
-            "set": _set_with_byte_unit,
+            "path": "cpu",
+            "xpath": "vcpu",
+            "get": lambda n: int(n.text),
+            "set": _set_vcpu,
         },
-        {
-            "path": "mem:boot",
-            "convert": _handle_unit,
-            "xpath": "memory",
-            "get": _get_with_unit,
-            "set": _set_with_byte_unit,
-        },
-        {
-            "path": "mem:current",
-            "convert": _handle_unit,
-            "xpath": "currentMemory",
-            "get": _get_with_unit,
-            "set": _set_with_byte_unit,
-        },
-        {
-            "path": "mem:slots",
-            "xpath": "maxMemory",
-            "get": lambda n: n.get("slots"),
-            "set": lambda n, v: n.set("slots", str(v)),
-            "del": salt.utils.xmlutil.del_attribute("slots", ["unit"]),
-        },
-        {
-            "path": "mem:hard_limit",
-            "convert": _handle_unit,
-            "xpath": "memtune/hard_limit",
-            "get": _get_with_unit,
-            "set": _set_with_byte_unit,
-        },
-        {
-            "path": "mem:soft_limit",
-            "convert": _handle_unit,
-            "xpath": "memtune/soft_limit",
-            "get": _get_with_unit,
-            "set": _set_with_byte_unit,
-        },
-        {
-            "path": "mem:swap_hard_limit",
-            "convert": _handle_unit,
-            "xpath": "memtune/swap_hard_limit",
-            "get": _get_with_unit,
-            "set": _set_with_byte_unit,
-        },
-        {
-            "path": "mem:min_guarantee",
-            "convert": _handle_unit,
-            "xpath": "memtune/min_guarantee",
-            "get": _get_with_unit,
-            "set": _set_with_byte_unit,
-        },
-        {
-            "path": "boot_dev:{dev}",
-            "xpath": "os/boot[$dev]",
-            "get": lambda n: n.get("dev"),
-            "set": lambda n, v: n.set("dev", v),
-            "del": salt.utils.xmlutil.del_attribute("dev"),
-        },
+        {"path": "cpu:maximum", "xpath": "vcpu", "get": lambda n: int(n.text)},
+        xmlutil.attribute("cpu:placement", "vcpu", "placement"),
+        _cpuset_parameter("cpu:cpuset", "vcpu", "cpuset"),
+        xmlutil.attribute("cpu:current", "vcpu", "current"),
+        xmlutil.attribute("cpu:match", "cpu", "match"),
+        xmlutil.attribute("cpu:mode", "cpu", "mode"),
+        xmlutil.attribute("cpu:check", "cpu", "check"),
+        {"path": "cpu:model:name", "xpath": "cpu/model"},
+        xmlutil.attribute("cpu:model:fallback", "cpu/model", "fallback"),
+        xmlutil.attribute("cpu:model:vendor_id", "cpu/model", "vendor_id"),
+        {"path": "cpu:vendor", "xpath": "cpu/vendor"},
+        xmlutil.attribute("cpu:topology:sockets", "cpu/topology", "sockets"),
+        xmlutil.attribute("cpu:topology:cores", "cpu/topology", "cores"),
+        xmlutil.attribute("cpu:topology:threads", "cpu/topology", "threads"),
+        xmlutil.attribute("cpu:cache:level", "cpu/cache", "level"),
+        xmlutil.attribute("cpu:cache:mode", "cpu/cache", "mode"),
+        xmlutil.attribute(
+            "cpu:features:{id}", "cpu/feature[@name='$id']", "policy", ["name"]
+        ),
+        _yesno_attribute(
+            "cpu:vcpus:{id}:enabled", "vcpus/vcpu[@id='$id']", "enabled", ["id"]
+        ),
+        _yesno_attribute(
+            "cpu:vcpus:{id}:hotpluggable",
+            "vcpus/vcpu[@id='$id']",
+            "hotpluggable",
+            ["id"],
+        ),
+        xmlutil.int_attribute(
+            "cpu:vcpus:{id}:order", "vcpus/vcpu[@id='$id']", "order", ["id"]
+        ),
+        _cpuset_parameter(
+            "cpu:numa:{id}:cpus", "cpu/numa/cell[@id='$id']", "cpus", ["id"]
+        ),
+        _memory_parameter(
+            "cpu:numa:{id}:memory", "cpu/numa/cell[@id='$id']", "memory", ["id"]
+        ),
+        _yesno_attribute(
+            "cpu:numa:{id}:discard", "cpu/numa/cell[@id='$id']", "discard", ["id"]
+        ),
+        xmlutil.attribute(
+            "cpu:numa:{id}:memAccess", "cpu/numa/cell[@id='$id']", "memAccess", ["id"]
+        ),
+        xmlutil.attribute(
+            "cpu:numa:{id}:distances:{sid}",
+            "cpu/numa/cell[@id='$id']/distances/sibling[@id='$sid']",
+            "value",
+            ["id"],
+        ),
+        {"path": "cpu:iothreads", "xpath": "iothreads"},
+        {"path": "cpu:tuning:shares", "xpath": "cputune/shares"},
+        {"path": "cpu:tuning:period", "xpath": "cputune/period"},
+        {"path": "cpu:tuning:quota", "xpath": "cputune/quota"},
+        {"path": "cpu:tuning:global_period", "xpath": "cputune/global_period"},
+        {"path": "cpu:tuning:global_quota", "xpath": "cputune/global_quota"},
+        {"path": "cpu:tuning:emulator_period", "xpath": "cputune/emulator_period"},
+        {"path": "cpu:tuning:emulator_quota", "xpath": "cputune/emulator_quota"},
+        {"path": "cpu:tuning:iothread_period", "xpath": "cputune/iothread_period"},
+        {"path": "cpu:tuning:iothread_quota", "xpath": "cputune/iothread_quota"},
+        _cpuset_parameter(
+            "cpu:tuning:vcpupin:{id}",
+            "cputune/vcpupin[@vcpu='$id']",
+            "cpuset",
+            ["vcpu"],
+        ),
+        _cpuset_parameter("cpu:tuning:emulatorpin", "cputune/emulatorpin", "cpuset"),
+        _cpuset_parameter(
+            "cpu:tuning:iothreadpin:{id}",
+            "cputune/iothreadpin[@iothread='$id']",
+            "cpuset",
+            ["iothread"],
+        ),
+        xmlutil.attribute(
+            "cpu:tuning:vcpusched:{id}:scheduler",
+            "cputune/vcpusched[$id]",
+            "scheduler",
+            ["priority", "vcpus"],
+        ),
+        xmlutil.attribute(
+            "cpu:tuning:vcpusched:{id}:priority", "cputune/vcpusched[$id]", "priority"
+        ),
+        _cpuset_parameter(
+            "cpu:tuning:vcpusched:{id}:vcpus", "cputune/vcpusched[$id]", "vcpus"
+        ),
+        xmlutil.attribute(
+            "cpu:tuning:iothreadsched:{id}:scheduler",
+            "cputune/iothreadsched[$id]",
+            "scheduler",
+            ["priority", "iothreads"],
+        ),
+        xmlutil.attribute(
+            "cpu:tuning:iothreadsched:{id}:priority",
+            "cputune/iothreadsched[$id]",
+            "priority",
+        ),
+        _cpuset_parameter(
+            "cpu:tuning:iothreadsched:{id}:iothreads",
+            "cputune/iothreadsched[$id]",
+            "iothreads",
+        ),
+        xmlutil.attribute(
+            "cpu:tuning:emulatorsched:scheduler",
+            "cputune/emulatorsched",
+            "scheduler",
+            ["priority"],
+        ),
+        xmlutil.attribute(
+            "cpu:tuning:emulatorsched:priority", "cputune/emulatorsched", "priority"
+        ),
+        xmlutil.attribute(
+            "cpu:tuning:cachetune:{id}:monitor:{sid}",
+            "cputune/cachetune[@vcpus='$id']/monitor[@vcpus='$sid']",
+            "level",
+            ["vcpus"],
+        ),
+        xmlutil.attribute(
+            "cpu:tuning:memorytune:{id}:{sid}",
+            "cputune/memorytune[@vcpus='$id']/node[@id='$sid']",
+            "bandwidth",
+            ["id", "vcpus"],
+        ),
+        xmlutil.attribute("clock:offset", "clock", "offset"),
+        xmlutil.attribute("clock:adjustment", "clock", "adjustment", convert=str),
+        xmlutil.attribute("clock:timezone", "clock", "timezone"),
     ]
 
-    data = {k: v for k, v in locals().items() if bool(v)}
-    if boot_dev:
-        data["boot_dev"] = {i + 1: dev for i, dev in enumerate(boot_dev.split())}
+    for timer in timer_names:
+        params_mapping += [
+            xmlutil.attribute(
+                "clock:timers:{}:track".format(timer),
+                "clock/timer[@name='{}']".format(timer),
+                "track",
+                ["name"],
+            ),
+            xmlutil.attribute(
+                "clock:timers:{}:tickpolicy".format(timer),
+                "clock/timer[@name='{}']".format(timer),
+                "tickpolicy",
+                ["name"],
+            ),
+            xmlutil.int_attribute(
+                "clock:timers:{}:frequency".format(timer),
+                "clock/timer[@name='{}']".format(timer),
+                "frequency",
+                ["name"],
+            ),
+            xmlutil.attribute(
+                "clock:timers:{}:mode".format(timer),
+                "clock/timer[@name='{}']".format(timer),
+                "mode",
+                ["name"],
+            ),
+            _yesno_attribute(
+                "clock:timers:{}:present".format(timer),
+                "clock/timer[@name='{}']".format(timer),
+                "present",
+                ["name"],
+            ),
+        ]
+        for attr in ["slew", "threshold", "limit"]:
+            params_mapping.append(
+                xmlutil.int_attribute(
+                    "clock:timers:{}:{}".format(timer, attr),
+                    "clock/timer[@name='{}']/catchup".format(timer),
+                    attr,
+                )
+            )
+
+    for attr in ["level", "type", "size"]:
+        params_mapping.append(
+            xmlutil.attribute(
+                "cpu:tuning:cachetune:{id}:{sid}:" + attr,
+                "cputune/cachetune[@vcpus='$id']/cache[@id='$sid']",
+                attr,
+                ["id", "unit", "vcpus"],
+            )
+        )
+
+    # update NUMA host policy
+    if hypervisor in ["qemu", "kvm"]:
+        params_mapping += [
+            xmlutil.attribute("numatune:memory:mode", "numatune/memory", "mode"),
+            _cpuset_parameter("numatune:memory:nodeset", "numatune/memory", "nodeset"),
+            xmlutil.attribute(
+                "numatune:memnodes:{id}:mode",
+                "numatune/memnode[@cellid='$id']",
+                "mode",
+                ["cellid"],
+            ),
+            _cpuset_parameter(
+                "numatune:memnodes:{id}:nodeset",
+                "numatune/memnode[@cellid='$id']",
+                "nodeset",
+                ["cellid"],
+            ),
+            xmlutil.attribute(
+                "hypervisor_features:kvm-hint-dedicated",
+                "features/kvm/hint-dedicated",
+                "state",
+                convert=lambda v: "on" if v else "off",
+            ),
+        ]
+
     need_update = (
         salt.utils.xmlutil.change_xml(desc, data, params_mapping) or need_update
     )
 
     # Update the XML definition with the new disks and diff changes
     devices_node = desc.find("devices")
-    parameters = {
-        "disk": ["disks", "disk_profile"],
-        "interface": ["interfaces", "nic_profile"],
-        "graphics": ["graphics"],
+    func_locals = locals()
+
+    def _skip_update(names):
+        return all(func_locals.get(n) is None for n in names)
+
+    to_skip = {
+        "disk": _skip_update(["disks", "disk_profile"]),
+        "interface": _skip_update(["interfaces", "nic_profile"]),
+        "graphics": _skip_update(["graphics"]),
+        "serial": _skip_update(["serials"]),
+        "console": _skip_update(["consoles"]),
+        "hostdev": _skip_update(["host_devices"]),
     }
-    changes = {}
-    for dev_type in parameters:
-        changes[dev_type] = {}
-        func_locals = locals()
-        if [
-            param
-            for param in parameters[dev_type]
-            if func_locals.get(param, None) is not None
-        ]:
+    changes = _compute_device_changes(desc, new_desc, to_skip)
+    for dev_type in changes:
+        if not to_skip[dev_type]:
             old = devices_node.findall(dev_type)
-            new = new_desc.findall("devices/{}".format(dev_type))
-            changes[dev_type] = globals()["_diff_{}_lists".format(dev_type)](old, new)
-            if changes[dev_type]["deleted"] or changes[dev_type]["new"]:
+            if changes[dev_type].get("deleted") or changes[dev_type].get("new"):
                 for item in old:
                     devices_node.remove(item)
                 devices_node.extend(changes[dev_type]["sorted"])
@@ -2894,151 +4217,23 @@ def update(
                         _qemu_image_create(all_disks[idx])
                     elif item in changes["disk"]["new"] and not source_file:
                         _disk_volume_create(conn, all_disks[idx])
-
             if not test:
-                xml_desc = ElementTree.tostring(desc)
+                xml_desc = xmlutil.element_to_str(desc)
                 log.debug("Update virtual machine definition: %s", xml_desc)
-                conn.defineXML(salt.utils.stringutils.to_str(xml_desc))
+                conn.defineXML(xml_desc)
             status["definition"] = True
         except libvirt.libvirtError as err:
             conn.close()
             raise err
 
-        # Do the live changes now that we know the definition has been properly set
-        # From that point on, failures are not blocking to try to live update as much
-        # as possible.
-        commands = []
-        removable_changes = []
-        if domain.isActive() and live:
-            if cpu:
-                commands.append(
-                    {
-                        "device": "cpu",
-                        "cmd": "setVcpusFlags",
-                        "args": [cpu, libvirt.VIR_DOMAIN_AFFECT_LIVE],
-                    }
-                )
-            if mem:
-                if isinstance(mem, dict):
-                    # setMemoryFlags takes memory amount in KiB
-                    new_mem = (
-                        int(_handle_unit(mem.get("current")) / 1024)
-                        if "current" in mem
-                        else None
-                    )
-                elif isinstance(mem, int):
-                    new_mem = int(mem * 1024)
-
-                if old_mem != new_mem and new_mem is not None:
-                    commands.append(
-                        {
-                            "device": "mem",
-                            "cmd": "setMemoryFlags",
-                            "args": [new_mem, libvirt.VIR_DOMAIN_AFFECT_LIVE],
-                        }
-                    )
-
-            # Look for removable device source changes
-            new_disks = []
-            for new_disk in changes["disk"].get("new", []):
-                device = new_disk.get("device", "disk")
-                if device not in ["cdrom", "floppy"]:
-                    new_disks.append(new_disk)
-                    continue
-
-                target_dev = new_disk.find("target").get("dev")
-                matching = [
-                    old_disk
-                    for old_disk in changes["disk"].get("deleted", [])
-                    if old_disk.get("device", "disk") == device
-                    and old_disk.find("target").get("dev") == target_dev
-                ]
-                if not matching:
-                    new_disks.append(new_disk)
-                else:
-                    # libvirt needs to keep the XML exactly as it was before
-                    updated_disk = matching[0]
-                    changes["disk"]["deleted"].remove(updated_disk)
-                    removable_changes.append(updated_disk)
-                    source_node = updated_disk.find("source")
-                    new_source_node = new_disk.find("source")
-                    source_file = (
-                        new_source_node.get("file")
-                        if new_source_node is not None
-                        else None
-                    )
-
-                    updated_disk.set("type", "file")
-                    # Detaching device
-                    if source_node is not None:
-                        updated_disk.remove(source_node)
-
-                    # Attaching device
-                    if source_file:
-                        ElementTree.SubElement(
-                            updated_disk, "source", attrib={"file": source_file}
-                        )
-
-            changes["disk"]["new"] = new_disks
-
-            for dev_type in ["disk", "interface"]:
-                for added in changes[dev_type].get("new", []):
-                    commands.append(
-                        {
-                            "device": dev_type,
-                            "cmd": "attachDevice",
-                            "args": [
-                                salt.utils.stringutils.to_str(
-                                    ElementTree.tostring(added)
-                                )
-                            ],
-                        }
-                    )
-
-                for removed in changes[dev_type].get("deleted", []):
-                    commands.append(
-                        {
-                            "device": dev_type,
-                            "cmd": "detachDevice",
-                            "args": [
-                                salt.utils.stringutils.to_str(
-                                    ElementTree.tostring(removed)
-                                )
-                            ],
-                        }
-                    )
-
-        for updated_disk in removable_changes:
-            commands.append(
-                {
-                    "device": "disk",
-                    "cmd": "updateDeviceFlags",
-                    "args": [
-                        salt.utils.stringutils.to_str(
-                            ElementTree.tostring(updated_disk)
-                        )
-                    ],
-                }
-            )
-
-        for cmd in commands:
-            try:
-                ret = getattr(domain, cmd["cmd"])(*cmd["args"]) if not test else 0
-                device_type = cmd["device"]
-                if device_type in ["cpu", "mem"]:
-                    status[device_type] = not bool(ret)
-                else:
-                    actions = {
-                        "attachDevice": "attached",
-                        "detachDevice": "detached",
-                        "updateDeviceFlags": "updated",
-                    }
-                    status[device_type][actions[cmd["cmd"]]].append(cmd["args"][0])
-
-            except libvirt.libvirtError as err:
-                if "errors" not in status:
-                    status["errors"] = []
-                status["errors"].append(str(err))
+    if live:
+        live_status, errors = _update_live(
+            domain, new_desc, mem, cpu, old_mem, old_cpu, to_skip, test
+        )
+        status.update(live_status)
+        if errors:
+            status_errors = status.setdefault("errors", [])
+            status_errors += errors
 
     conn.close()
     return status
@@ -3286,6 +4481,121 @@ def node_info(**kwargs):
     info = _node_info(conn)
     conn.close()
     return info
+
+
+def _node_devices(conn):
+    """
+    List the host available devices, using an established connection.
+
+    :param conn: the libvirt connection handle to use.
+
+    .. versionadded:: Aluminium
+    """
+    devices = conn.listAllDevices()
+
+    devices_infos = []
+    for dev in devices:
+        root = ElementTree.fromstring(dev.XMLDesc())
+
+        # Only list PCI and USB devices that can be passed through as well as NICs
+        if not set(dev.listCaps()) & {"pci", "usb_device", "net"}:
+            continue
+
+        infos = {
+            "caps": " ".join(dev.listCaps()),
+        }
+
+        if "net" in dev.listCaps():
+            parent = root.find(".//parent").text
+            # Don't show, lo, dummies and libvirt-created NICs
+            if parent == "computer":
+                continue
+            infos.update(
+                {
+                    "name": root.find(".//interface").text,
+                    "address": root.find(".//address").text,
+                    "device name": parent,
+                    "state": root.find(".//link").get("state"),
+                }
+            )
+            devices_infos.append(infos)
+            continue
+
+        vendor_node = root.find(".//vendor")
+        vendor_id = vendor_node.get("id").lower()
+        product_node = root.find(".//product")
+        product_id = product_node.get("id").lower()
+        infos.update(
+            {"name": dev.name(), "vendor_id": vendor_id, "product_id": product_id}
+        )
+
+        # Vendor or product display name may not be set
+        if vendor_node.text:
+            infos["vendor"] = vendor_node.text
+        if product_node.text:
+            infos["product"] = product_node.text
+
+        if "pci" in dev.listCaps():
+            infos["address"] = "{:04x}:{:02x}:{:02x}.{}".format(
+                int(root.find(".//domain").text),
+                int(root.find(".//bus").text),
+                int(root.find(".//slot").text),
+                root.find(".//function").text,
+            )
+            class_node = root.find(".//class")
+            if class_node is not None:
+                infos["PCI class"] = class_node.text
+
+            # Get the list of Virtual Functions if any
+            vf_addresses = [
+                _format_pci_address(vf)
+                for vf in root.findall(
+                    "./capability[@type='pci']/capability[@type='virt_functions']/address"
+                )
+            ]
+            if vf_addresses:
+                infos["virtual functions"] = vf_addresses
+
+            # Get the Physical Function if any
+            pf = root.find(
+                "./capability[@type='pci']/capability[@type='phys_function']/address"
+            )
+            if pf is not None:
+                infos["physical function"] = _format_pci_address(pf)
+        elif "usb_device" in dev.listCaps():
+            infos["address"] = "{:03}:{:03}".format(
+                int(root.find(".//bus").text), int(root.find(".//device").text)
+            )
+
+        # Don't list the pci bridges and USB hosts from the linux foundation
+        linux_usb_host = vendor_id == "0x1d6b" and product_id in [
+            "0x0001",
+            "0x0002",
+            "0x0003",
+        ]
+        if (
+            root.find(".//capability[@type='pci-bridge']") is None
+            and not linux_usb_host
+        ):
+            devices_infos.append(infos)
+
+    return devices_infos
+
+
+def node_devices(**kwargs):
+    """
+    List the host available devices.
+
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    .. versionadded:: Aluminium
+    """
+    conn = __get_conn(**kwargs)
+    devs = _node_devices(conn)
+    conn.close()
+    return devs
 
 
 def get_nics(vm_, **kwargs):
@@ -4556,7 +5866,7 @@ def purge(vm_, dirs=False, removables=False, **kwargs):
             directories.add(os.path.dirname(disks[disk]["file"]))
         else:
             # We may have a volume to delete here
-            matcher = re.match("^(?P<pool>[^/]+)/(?P<volume>.*)$", disks[disk]["file"],)
+            matcher = re.match("^(?P<pool>[^/]+)/(?P<volume>.*)$", disks[disk]["file"])
             if matcher:
                 pool_name = matcher.group("pool")
                 pool = None
@@ -5017,9 +6327,7 @@ def snapshot(domain, name=None, suffix=None, **kwargs):
     n_name.text = name
 
     conn = __get_conn(**kwargs)
-    _get_domain(conn, domain).snapshotCreateXML(
-        salt.utils.stringutils.to_str(ElementTree.tostring(doc))
-    )
+    _get_domain(conn, domain).snapshotCreateXML(xmlutil.element_to_str(doc))
     conn.close()
 
     return {"name": name}
@@ -5197,6 +6505,7 @@ def _parse_caps_guest(guest):
         "arch": {"name": arch_node.get("name"), "machines": {}, "domains": {}},
     }
 
+    child = None
     for child in arch_node:
         if child.tag == "wordsize":
             result["arch"]["wordsize"] = int(child.text)
@@ -5219,15 +6528,14 @@ def _parse_caps_guest(guest):
     # without possibility to toggle them.
     # Some guests may also have no feature at all (xen pv for instance)
     features_nodes = guest.find("features")
-    if features_nodes is not None:
+    if features_nodes is not None and child is not None:
         result["features"] = {
             child.tag: {
-                "toggle": True if child.get("toggle") == "yes" else False,
-                "default": True if child.get("default") == "no" else True,
+                "toggle": child.get("toggle", "no") == "yes",
+                "default": child.get("default", "on") == "on",
             }
             for child in features_nodes
         }
-
     return result
 
 
@@ -5625,7 +6933,6 @@ def all_capabilities(**kwargs):
 
     """
     conn = __get_conn(**kwargs)
-    result = {}
     try:
         host_caps = ElementTree.fromstring(conn.getCapabilities())
         domains = [
@@ -5654,10 +6961,9 @@ def all_capabilities(**kwargs):
                 for (arch, domain) in flattened
             ],
         }
+        return result
     finally:
         conn.close()
-
-    return result
 
 
 def cpu_baseline(full=False, migratable=False, out="libvirt", **kwargs):
@@ -5689,10 +6995,8 @@ def cpu_baseline(full=False, migratable=False, out="libvirt", **kwargs):
     conn = __get_conn(**kwargs)
     caps = ElementTree.fromstring(conn.getCapabilities())
     cpu = caps.find("host/cpu")
-    log.debug(
-        "Host CPU model definition: %s",
-        salt.utils.stringutils.to_str(ElementTree.tostring(cpu)),
-    )
+    host_cpu_def = xmlutil.element_to_str(cpu)
+    log.debug("Host CPU model definition: %s", host_cpu_def)
 
     flags = 0
     if migratable:
@@ -5707,11 +7011,7 @@ def cpu_baseline(full=False, migratable=False, out="libvirt", **kwargs):
         # This one is only in 1.1.3+
         flags += libvirt.VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES
 
-    cpu = ElementTree.fromstring(
-        conn.baselineCPU(
-            [salt.utils.stringutils.to_str(ElementTree.tostring(cpu))], flags
-        )
-    )
+    cpu = ElementTree.fromstring(conn.baselineCPU([host_cpu_def], flags))
     conn.close()
 
     if full and not getattr(libvirt, "VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES", False):
@@ -5757,18 +7057,70 @@ def cpu_baseline(full=False, migratable=False, out="libvirt", **kwargs):
     return ElementTree.tostring(cpu)
 
 
-def network_define(name, bridge, forward, ipv4_config=None, ipv6_config=None, **kwargs):
+def network_define(
+    name,
+    bridge,
+    forward,
+    ipv4_config=None,
+    ipv6_config=None,
+    vport=None,
+    tag=None,
+    autostart=True,
+    start=True,
+    mtu=None,
+    domain=None,
+    nat=None,
+    interfaces=None,
+    addresses=None,
+    physical_function=None,
+    dns=None,
+    **kwargs
+):
     """
     Create libvirt network.
 
-    :param name: Network name
-    :param bridge: Bridge name
-    :param forward: Forward mode(bridge, router, nat)
-    :param vport: Virtualport type
-    :param tag: Vlan tag
-    :param autostart: Network autostart (default True)
-    :param start: Network start (default True)
-    :param ipv4_config: IP v4 configuration
+    :param name: Network name.
+    :param bridge: Bridge name.
+    :param forward: Forward mode (bridge, router, nat).
+
+        .. versionchanged:: Aluminium
+           a ``None`` value creates an isolated network with no forwarding at all
+
+    :param vport: Virtualport type.
+        The value can also be a dictionary with ``type`` and ``parameters`` keys.
+        The ``parameters`` value is a dictionary of virtual port parameters.
+
+        .. code-block:: yaml
+
+          - vport:
+              type: openvswitch
+              parameters:
+                interfaceid: 09b11c53-8b5c-4eeb-8f00-d84eaa0aaa4f
+
+        .. versionchanged:: Aluminium
+           possible dictionary value
+
+    :param tag: Vlan tag.
+        The value can also be a dictionary with the ``tags`` and optional ``trunk`` keys.
+        ``trunk`` is a boolean value indicating whether to use VLAN trunking.
+        ``tags`` is a list of dictionaries with keys ``id`` and ``nativeMode``.
+        The ``nativeMode`` value can be one of ``tagged`` or ``untagged``.
+
+        .. code-block:: yaml
+
+          - tag:
+              trunk: True
+              tags:
+                - id: 42
+                  nativeMode: untagged
+                - id: 47
+
+        .. versionchanged:: Aluminium
+           possible dictionary value
+
+    :param autostart: Network autostart (default True).
+    :param start: Network start (default True).
+    :param ipv4_config: IP v4 configuration.
         Dictionary describing the IP v4 setup like IP range and
         a possible DHCP configuration. The structure is documented
         in net-define-ip_.
@@ -5776,7 +7128,7 @@ def network_define(name, bridge, forward, ipv4_config=None, ipv6_config=None, **
         .. versionadded:: 3000
     :type ipv4_config: dict or None
 
-    :param ipv6_config: IP v6 configuration
+    :param ipv6_config: IP v6 configuration.
         Dictionary describing the IP v6 setup like IP range and
         a possible DHCP configuration. The structure is documented
         in net-define-ip_.
@@ -5784,13 +7136,108 @@ def network_define(name, bridge, forward, ipv4_config=None, ipv6_config=None, **
         .. versionadded:: 3000
     :type ipv6_config: dict or None
 
-    :param connection: libvirt connection URI, overriding defaults
-    :param username: username to connect with, overriding defaults
-    :param password: password to connect with, overriding defaults
+    :param connection: libvirt connection URI, overriding defaults.
+    :param username: username to connect with, overriding defaults.
+    :param password: password to connect with, overriding defaults.
+
+    :param mtu: size of the Maximum Transmission Unit (MTU) of the network.
+        (default ``None``)
+
+        .. versionadded:: Aluminium
+
+    :param domain: DNS domain name of the DHCP server.
+        The value is a dictionary with a mandatory ``name`` property and an optional ``localOnly`` boolean one.
+        (default ``None``)
+
+        .. code-block:: yaml
+
+          - domain:
+              name: lab.acme.org
+              localOnly: True
+
+        .. versionadded:: Aluminium
+
+    :param nat: addresses and ports to route in NAT forward mode.
+        The value is a dictionary with optional keys ``address`` and ``port``.
+        Both values are a dictionary with ``start`` and ``end`` values.
+        (default ``None``)
+
+        .. code-block:: yaml
+
+          - forward: nat
+          - nat:
+              address:
+                start: 1.2.3.4
+                end: 1.2.3.10
+              port:
+                start: 500
+                end: 1000
+
+        .. versionadded:: Aluminium
+
+    :param interfaces: whitespace separated list of network interfaces devices that can be used for this network.
+        (default ``None``)
+
+        .. code-block:: yaml
+
+          - forward: passthrough
+          - interfaces: "eth10 eth11 eth12"
+
+        .. versionadded:: Aluminium
+
+    :param addresses: whitespace separated list of addreses of PCI devices that can be used for this network in `hostdev` forward mode.
+        (default ``None``)
+
+        .. code-block:: yaml
+
+          - forward: hostdev
+          - interfaces: "0000:04:00.1 0000:e3:01.2"
+
+        .. versionadded:: Aluminium
+
+    :param physical_function: device name of the physical interface to use in ``hostdev`` forward mode.
+        (default ``None``)
+
+        .. code-block:: yaml
+
+          - forward: hostdev
+          - physical_function: "eth0"
+
+        .. versionadded:: Aluminium
+
+    :param dns: virtual network DNS configuration.
+        The value is a dictionary described in net-define-dns_.
+        (default ``None``)
+
+        .. code-block:: yaml
+
+          - dns:
+              forwarders:
+                - domain: example.com
+                  addr: 192.168.1.1
+                - addr: 8.8.8.8
+                - domain: www.example.com
+              txt:
+                example.com: "v=spf1 a -all"
+                _http.tcp.example.com: "name=value,paper=A4"
+              hosts:
+                192.168.1.2:
+                  - mirror.acme.lab
+                  - test.acme.lab
+              srvs:
+                - name: ldap
+                  protocol: tcp
+                  domain: ldapserver.example.com
+                  target: .
+                  port: 389
+                  priority: 1
+                  weight: 10
+
+        .. versionadded:: Aluminium
 
     .. _net-define-ip:
 
-    ** IP configuration definition
+    .. rubric:: IP configuration definition
 
     Both the IPv4 and IPv6 configuration dictionaries can contain the following properties:
 
@@ -5798,7 +7245,47 @@ def network_define(name, bridge, forward, ipv4_config=None, ipv6_config=None, **
         CIDR notation for the network. For example '192.168.124.0/24'
 
     dhcp_ranges
-        A list of dictionary with ``'start'`` and ``'end'`` properties.
+        A list of dictionaries with ``'start'`` and ``'end'`` properties.
+
+    hosts
+        A list of dictionaries with ``ip`` property and optional ``name``, ``mac`` and ``id`` properties.
+
+        .. versionadded:: Aluminium
+
+    bootp
+        A dictionary with a ``file`` property and an optional ``server`` one.
+
+        .. versionadded:: Aluminium
+
+    tftp
+        The path to the TFTP root directory to serve.
+
+        .. versionadded:: Aluminium
+
+    .. _net-define-dns:
+
+    .. rubric:: DNS configuration definition
+
+    The DNS configuration dictionary contains the following optional properties:
+
+    forwarders
+        List of alternate DNS forwarders to use.
+        Each item is a dictionary with the optional ``domain`` and ``addr`` keys.
+        If both are provided, the requests to the domain are forwarded to the server at the ``addr``.
+        If only ``domain`` is provided the requests matching this domain will be resolved locally.
+        If only ``addr`` is provided all requests will be forwarded to this DNS server.
+
+    txt:
+        Dictionary of TXT fields to set.
+
+    hosts:
+        Dictionary of host DNS entries.
+        The key is the IP of the host, and the value is a list of hostnames for it.
+
+    srvs:
+        List of SRV DNS entries.
+        Each entry is a dictionary with the mandatory ``name`` and ``protocol`` keys.
+        Entries can also have ``target``, ``port``, ``priority``, ``domain`` and ``weight`` optional properties.
 
     CLI Example:
 
@@ -5811,8 +7298,6 @@ def network_define(name, bridge, forward, ipv4_config=None, ipv6_config=None, **
     conn = __get_conn(**kwargs)
     vport = kwargs.get("vport", None)
     tag = kwargs.get("tag", None)
-    autostart = kwargs.get("autostart", True)
-    starting = kwargs.get("start", True)
 
     net_xml = _gen_net_xml(
         name,
@@ -5821,6 +7306,13 @@ def network_define(name, bridge, forward, ipv4_config=None, ipv6_config=None, **
         vport,
         tag=tag,
         ip_configs=[config for config in [ipv4_config, ipv6_config] if config],
+        mtu=mtu,
+        domain=domain,
+        nat=nat,
+        interfaces=interfaces,
+        addresses=addresses,
+        physical_function=physical_function,
+        dns=dns,
     )
     try:
         conn.networkDefineXML(net_xml)
@@ -5840,17 +7332,282 @@ def network_define(name, bridge, forward, ipv4_config=None, ipv6_config=None, **
         conn.close()
         return False
 
-    if (starting is True or autostart is True) and network.isActive() != 1:
+    if (start or autostart) and network.isActive() != 1:
         network.create()
 
-    if autostart is True and network.autostart() != 1:
+    if autostart and network.autostart() != 1:
         network.setAutostart(int(autostart))
-    elif autostart is False and network.autostart() == 1:
+    elif not autostart and network.autostart() == 1:
         network.setAutostart(int(autostart))
 
     conn.close()
 
     return True
+
+
+def _remove_empty_xml_node(node):
+    """
+    Remove the nodes with no children, no text and no attribute
+    """
+    for child in node:
+        if not child.tail and not child.text and not child.items() and not child:
+            node.remove(child)
+        else:
+            _remove_empty_xml_node(child)
+    return node
+
+
+def network_update(
+    name,
+    bridge,
+    forward,
+    ipv4_config=None,
+    ipv6_config=None,
+    vport=None,
+    tag=None,
+    mtu=None,
+    domain=None,
+    nat=None,
+    interfaces=None,
+    addresses=None,
+    physical_function=None,
+    dns=None,
+    test=False,
+    **kwargs
+):
+    """
+    Update a virtual network if needed.
+
+    :param name: Network name.
+    :param bridge: Bridge name.
+    :param forward: Forward mode (bridge, router, nat).
+        A ``None`` value creates an isolated network with no forwarding at all.
+
+    :param vport: Virtualport type.
+        The value can also be a dictionary with ``type`` and ``parameters`` keys.
+        The ``parameters`` value is a dictionary of virtual port parameters.
+
+        .. code-block:: yaml
+
+          - vport:
+              type: openvswitch
+              parameters:
+                interfaceid: 09b11c53-8b5c-4eeb-8f00-d84eaa0aaa4f
+
+    :param tag: Vlan tag.
+        The value can also be a dictionary with the ``tags`` and optional ``trunk`` keys.
+        ``trunk`` is a boolean value indicating whether to use VLAN trunking.
+        ``tags`` is a list of dictionaries with keys ``id`` and ``nativeMode``.
+        The ``nativeMode`` value can be one of ``tagged`` or ``untagged``.
+
+        .. code-block:: yaml
+
+          - tag:
+              trunk: True
+              tags:
+                - id: 42
+                  nativeMode: untagged
+                - id: 47
+
+    :param ipv4_config: IP v4 configuration.
+        Dictionary describing the IP v4 setup like IP range and
+        a possible DHCP configuration. The structure is documented
+        in net-define-ip_.
+
+    :type ipv4_config: dict or None
+
+    :param ipv6_config: IP v6 configuration.
+        Dictionary describing the IP v6 setup like IP range and
+        a possible DHCP configuration. The structure is documented
+        in net-define-ip_.
+
+    :type ipv6_config: dict or None
+
+    :param connection: libvirt connection URI, overriding defaults.
+    :param username: username to connect with, overriding defaults.
+    :param password: password to connect with, overriding defaults.
+
+    :param mtu: size of the Maximum Transmission Unit (MTU) of the network.
+        (default ``None``)
+
+    :param domain: DNS domain name of the DHCP server.
+        The value is a dictionary with a mandatory ``name`` property and an optional ``localOnly`` boolean one.
+        (default ``None``)
+
+        .. code-block:: yaml
+
+          - domain:
+              name: lab.acme.org
+              localOnly: True
+
+    :param nat: addresses and ports to route in NAT forward mode.
+        The value is a dictionary with optional keys ``address`` and ``port``.
+        Both values are a dictionary with ``start`` and ``end`` values.
+        (default ``None``)
+
+        .. code-block:: yaml
+
+          - forward: nat
+          - nat:
+              address:
+                start: 1.2.3.4
+                end: 1.2.3.10
+              port:
+                start: 500
+                end: 1000
+
+    :param interfaces: whitespace separated list of network interfaces devices that can be used for this network.
+        (default ``None``)
+
+        .. code-block:: yaml
+
+          - forward: passthrough
+          - interfaces: "eth10 eth11 eth12"
+
+    :param addresses: whitespace separated list of addreses of PCI devices that can be used for this network in `hostdev` forward mode.
+        (default ``None``)
+
+        .. code-block:: yaml
+
+          - forward: hostdev
+          - interfaces: "0000:04:00.1 0000:e3:01.2"
+
+    :param physical_function: device name of the physical interface to use in ``hostdev`` forward mode.
+        (default ``None``)
+
+        .. code-block:: yaml
+
+          - forward: hostdev
+          - physical_function: "eth0"
+
+    :param dns: virtual network DNS configuration.
+        The value is a dictionary described in net-define-dns_.
+        (default ``None``)
+
+        .. code-block:: yaml
+
+          - dns:
+              forwarders:
+                - domain: example.com
+                  addr: 192.168.1.1
+                - addr: 8.8.8.8
+                - domain: www.example.com
+              txt:
+                example.com: "v=spf1 a -all"
+                _http.tcp.example.com: "name=value,paper=A4"
+              hosts:
+                192.168.1.2:
+                  - mirror.acme.lab
+                  - test.acme.lab
+              srvs:
+                - name: ldap
+                  protocol: tcp
+                  domain: ldapserver.example.com
+                  target: .
+                  port: 389
+                  priority: 1
+                  weight: 10
+
+    .. versionadded:: Aluminium
+    """
+    # Get the current definition to compare the two
+    conn = __get_conn(**kwargs)
+    needs_update = False
+    try:
+        net = conn.networkLookupByName(name)
+        old_xml = ElementTree.fromstring(net.XMLDesc())
+
+        # Compute new definition
+        new_xml = ElementTree.fromstring(
+            _gen_net_xml(
+                name,
+                bridge,
+                forward,
+                vport,
+                tag=tag,
+                ip_configs=[config for config in [ipv4_config, ipv6_config] if config],
+                mtu=mtu,
+                domain=domain,
+                nat=nat,
+                interfaces=interfaces,
+                addresses=addresses,
+                physical_function=physical_function,
+                dns=dns,
+            )
+        )
+
+        elements_to_copy = ["uuid", "mac"]
+        for to_copy in elements_to_copy:
+            element = old_xml.find(to_copy)
+            # mac may not be present (hostdev network for instance)
+            if element is not None:
+                new_xml.insert(1, element)
+
+        # Libvirt adds a connection attribute on running networks, remove before comparing
+        old_xml.attrib.pop("connections", None)
+
+        # Libvirt adds the addresses of the VF devices on running networks with the ph passed
+        # Those need to be removed before comparing
+        if old_xml.find("forward/pf") is not None:
+            forward_node = old_xml.find("forward")
+            address_nodes = forward_node.findall("address")
+            for node in address_nodes:
+                forward_node.remove(node)
+
+        # Remove libvirt auto-added bridge attributes to compare
+        default_bridge_attribs = {"stp": "on", "delay": "0"}
+        old_bridge_node = old_xml.find("bridge")
+        if old_bridge_node is not None:
+            for key, value in default_bridge_attribs.items():
+                if old_bridge_node.get(key, None) == value:
+                    old_bridge_node.attrib.pop(key, None)
+
+            # Libvirt may also add the whole bridge network since the name can be computed
+            # If the bridge name starts with virbr in a nat, route, open or isolated network
+            # there is a good change it has been autogenerated...
+            old_forward = (
+                old_xml.find("forward").get("mode")
+                if old_xml.find("forward") is not None
+                else None
+            )
+            if (
+                old_forward == forward
+                and forward in ["nat", "route", "open", None]
+                and bridge is None
+                and old_bridge_node.get("name", "").startswith("virbr")
+            ):
+                old_bridge_node.attrib.pop("name", None)
+
+        # In the ipv4 address, we need to convert netmask to prefix in the old XML
+        ipv4_nodes = [
+            node
+            for node in old_xml.findall("ip")
+            if node.get("family", "ipv4") == "ipv4"
+        ]
+        for ip_node in ipv4_nodes:
+            netmask = ip_node.attrib.pop("netmask")
+            if netmask:
+                address = ipaddress.ip_network(
+                    "{}/{}".format(ip_node.get("address"), netmask), strict=False
+                )
+                ip_node.set("prefix", str(address.prefixlen))
+
+        # Add default ipv4 family if needed
+        for doc in [old_xml, new_xml]:
+            for node in doc.findall("ip"):
+                if "family" not in node.keys():
+                    node.set("family", "ipv4")
+
+        # Filter out spaces and empty elements since those would mislead the comparison
+        _remove_empty_xml_node(xmlutil.strip_spaces(old_xml))
+        xmlutil.strip_spaces(new_xml)
+
+        needs_update = xmlutil.to_dict(old_xml, True) != xmlutil.to_dict(new_xml, True)
+        if needs_update and not test:
+            conn.networkDefineXML(xmlutil.element_to_str(new_xml))
+    finally:
+        conn.close()
+    return needs_update
 
 
 def list_networks(**kwargs):
@@ -5912,6 +7669,16 @@ def network_info(name=None, **kwargs):
                 lease["type"] = "unknown"
         return leases
 
+    def _net_get_bridge(net):
+        """
+        Get the bridge of the network or None
+        """
+        try:
+            return net.bridgeName()
+        except libvirt.libvirtError as err:
+            # Some network configurations have no bridge
+            return None
+
     try:
         nets = [
             net for net in conn.listAllNetworks() if name is None or net.name() == name
@@ -5919,7 +7686,7 @@ def network_info(name=None, **kwargs):
         result = {
             net.name(): {
                 "uuid": net.UUIDString(),
-                "bridge": net.bridgeName(),
+                "bridge": _net_get_bridge(net),
                 "autostart": net.autostart(),
                 "active": net.isActive(),
                 "persistent": net.isPersistent(),
@@ -6678,37 +8445,12 @@ def pool_update(
             new_xml.insert(1, element)
 
         # Filter out spaces and empty elements like <source/> since those would mislead the comparison
-        def visit_xml(node, fn):
-            fn(node)
-            for child in node:
-                visit_xml(child, fn)
-
-        def space_stripper(node):
-            if node.tail is not None:
-                node.tail = node.tail.strip(" \t\n")
-            if node.text is not None:
-                node.text = node.text.strip(" \t\n")
-
-        visit_xml(old_xml, space_stripper)
-        visit_xml(new_xml, space_stripper)
-
-        def empty_node_remover(node):
-            for child in node:
-                if (
-                    not child.tail
-                    and not child.text
-                    and not child.items()
-                    and not child
-                ):
-                    node.remove(child)
-
-        visit_xml(old_xml, empty_node_remover)
+        _remove_empty_xml_node(xmlutil.strip_spaces(old_xml))
+        xmlutil.strip_spaces(new_xml)
 
         needs_update = xmlutil.to_dict(old_xml, True) != xmlutil.to_dict(new_xml, True)
         if needs_update and not test:
-            conn.storagePoolDefineXML(
-                salt.utils.stringutils.to_str(ElementTree.tostring(new_xml))
-            )
+            conn.storagePoolDefineXML(xmlutil.element_to_str(new_xml))
     finally:
         conn.close()
     return needs_update

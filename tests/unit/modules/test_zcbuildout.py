@@ -1,34 +1,22 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import os
 import shutil
 import subprocess
 import tempfile
+from urllib.error import URLError
+from urllib.request import urlopen
 
+import pytest
 import salt.modules.cmdmod as cmd
 import salt.modules.virtualenv_mod
 import salt.modules.zcbuildout as buildout
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
-
-# pylint: disable=import-error,no-name-in-module,redefined-builtin
-from salt.ext import six
-from salt.ext.six.moves.urllib.error import URLError
-from salt.ext.six.moves.urllib.request import urlopen
-from tests.support.helpers import patched_environ, requires_network, slowTest
+from tests.support.helpers import patched_environ, requires_network
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
-
-# Import 3rd-party libs
-
-
-# pylint: enable=import-error,no-name-in-module,redefined-builtin
-
 
 KNOWN_VIRTUALENV_BINARY_NAMES = (
     "virtualenv",
@@ -36,11 +24,6 @@ KNOWN_VIRTUALENV_BINARY_NAMES = (
     "virtualenv-2.6",
     "virtualenv-2.7",
 )
-
-# temp workaround since virtualenv pip wheel package does not include
-# backports.ssl_match_hostname on windows python2.7
-if salt.utils.platform.is_windows() and six.PY2:
-    KNOWN_VIRTUALENV_BINARY_NAMES = ("c:\\Python27\\Scripts\\virtualenv.EXE",)
 
 BOOT_INIT = {
     1: ["var/ver/1/bootstrap/bootstrap.py"],
@@ -75,9 +58,9 @@ class Base(TestCase, LoaderModuleMockMixin):
         cls.root = os.path.join(RUNTIME_VARS.BASE_FILES, "buildout")
         cls.rdir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         cls.tdir = os.path.join(cls.rdir, "test")
-        for idx, url in six.iteritems(buildout._URL_VERSIONS):
+        for idx, url in buildout._URL_VERSIONS.items():
             log.debug("Downloading bootstrap from %s", url)
-            dest = os.path.join(cls.rdir, "{0}_bootstrap.py".format(idx))
+            dest = os.path.join(cls.rdir, "{}_bootstrap.py".format(idx))
             try:
                 download_to(url, dest)
             except URLError:
@@ -96,7 +79,7 @@ class Base(TestCase, LoaderModuleMockMixin):
             [salt.utils.path.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES), cls.ppy_st]
         )
         subprocess.check_call(
-            [os.path.join(cls.bin_st, "pip"), "install", "-U", "setuptools"]
+            [os.path.join(cls.bin_st, "pip"), "install", "-U", "setuptools<50.0.0"]
         )
         # distribute has been merged back in to setuptools as of v0.7. So, no
         # need to upgrade distribute, but this seems to be the only way to get
@@ -113,22 +96,22 @@ class Base(TestCase, LoaderModuleMockMixin):
         )
 
     def setUp(self):
-        if salt.utils.platform.is_darwin and six.PY3:
+        if salt.utils.platform.is_darwin():
             self.patched_environ = patched_environ(__cleanup__=["__PYVENV_LAUNCHER__"])
             self.patched_environ.__enter__()
             self.addCleanup(self.patched_environ.__exit__)
 
-        super(Base, self).setUp()
+        super().setUp()
         self._remove_dir()
         shutil.copytree(self.root, self.tdir)
 
         for idx in BOOT_INIT:
-            path = os.path.join(self.rdir, "{0}_bootstrap.py".format(idx))
+            path = os.path.join(self.rdir, "{}_bootstrap.py".format(idx))
             for fname in BOOT_INIT[idx]:
                 shutil.copy2(path, os.path.join(self.tdir, fname))
 
     def tearDown(self):
-        super(Base, self).tearDown()
+        super().tearDown()
         self._remove_dir()
 
     def _remove_dir(self):
@@ -142,7 +125,7 @@ class Base(TestCase, LoaderModuleMockMixin):
 )
 @requires_network()
 class BuildoutTestCase(Base):
-    @slowTest
+    @pytest.mark.slow_test
     def test_onlyif_unless(self):
         b_dir = os.path.join(self.tdir, "b")
         ret = buildout.buildout(b_dir, onlyif=RUNTIME_VARS.SHELL_FALSE_PATH)
@@ -152,12 +135,12 @@ class BuildoutTestCase(Base):
         self.assertTrue(ret["comment"] == "unless condition is true")
         self.assertTrue(ret["status"] is True)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_salt_callback(self):
         @buildout._salt_callback
         def callback1(a, b=1):
             for i in buildout.LOG.levels:
-                getattr(buildout.LOG, i)("{0}bar".format(i[0]))
+                getattr(buildout.LOG, i)("{}bar".format(i[0]))
             return "foo"
 
         def callback2(a, b=1):
@@ -209,7 +192,7 @@ class BuildoutTestCase(Base):
             self.assertTrue(0 == len(buildout.LOG.by_level[l]))
         # pylint: enable=invalid-sequence-index
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_get_bootstrap_url(self):
         for path in [
             os.path.join(self.tdir, "var/ver/1/dumppicked"),
@@ -219,7 +202,7 @@ class BuildoutTestCase(Base):
             self.assertEqual(
                 buildout._URL_VERSIONS[1],
                 buildout._get_bootstrap_url(path),
-                "b1 url for {0}".format(path),
+                "b1 url for {}".format(path),
             )
         for path in [
             os.path.join(self.tdir, "/non/existing"),
@@ -230,10 +213,10 @@ class BuildoutTestCase(Base):
             self.assertEqual(
                 buildout._URL_VERSIONS[2],
                 buildout._get_bootstrap_url(path),
-                "b2 url for {0}".format(path),
+                "b2 url for {}".format(path),
             )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_get_buildout_ver(self):
         for path in [
             os.path.join(self.tdir, "var/ver/1/dumppicked"),
@@ -241,7 +224,7 @@ class BuildoutTestCase(Base):
             os.path.join(self.tdir, "var/ver/1/versions"),
         ]:
             self.assertEqual(
-                1, buildout._get_buildout_ver(path), "1 for {0}".format(path)
+                1, buildout._get_buildout_ver(path), "1 for {}".format(path)
             )
         for path in [
             os.path.join(self.tdir, "/non/existing"),
@@ -250,10 +233,10 @@ class BuildoutTestCase(Base):
             os.path.join(self.tdir, "var/ver/2/default"),
         ]:
             self.assertEqual(
-                2, buildout._get_buildout_ver(path), "2 for {0}".format(path)
+                2, buildout._get_buildout_ver(path), "2 for {}".format(path)
             )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_get_bootstrap_content(self):
         self.assertEqual(
             "",
@@ -264,11 +247,11 @@ class BuildoutTestCase(Base):
             buildout._get_bootstrap_content(os.path.join(self.tdir, "var", "tb", "1")),
         )
         self.assertEqual(
-            "foo{0}".format(os.linesep),
+            "foo{}".format(os.linesep),
             buildout._get_bootstrap_content(os.path.join(self.tdir, "var", "tb", "2")),
         )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_logger_clean(self):
         buildout.LOG.clear()
         # nothing in there
@@ -286,7 +269,7 @@ class BuildoutTestCase(Base):
             not in [len(buildout.LOG.by_level[a]) > 0 for a in buildout.LOG.by_level]
         )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_logger_loggers(self):
         buildout.LOG.clear()
         # nothing in there
@@ -298,7 +281,7 @@ class BuildoutTestCase(Base):
             self.assertEqual(buildout.LOG.by_level[i][0], "foo")
             self.assertEqual(buildout.LOG.by_level[i][-1], "moo")
 
-    @slowTest
+    @pytest.mark.slow_test
     def test__find_cfgs(self):
         result = sorted(
             [a.replace(self.root, "") for a in buildout._find_cfgs(self.root)]
@@ -348,7 +331,7 @@ class BuildoutTestCase(Base):
 class BuildoutOnlineTestCase(Base):
     @classmethod
     def setUpClass(cls):
-        super(BuildoutOnlineTestCase, cls).setUpClass()
+        super().setUpClass()
         cls.ppy_dis = os.path.join(cls.rdir, "pdistribute")
         cls.ppy_blank = os.path.join(cls.rdir, "pblank")
         cls.py_dis = os.path.join(cls.ppy_dis, "bin", "python")
@@ -384,14 +367,14 @@ class BuildoutOnlineTestCase(Base):
                     "-C",
                     cls.ppy_dis,
                     "-xzvf",
-                    "{0}/distribute-0.6.43.tar.gz".format(cls.ppy_dis),
+                    "{}/distribute-0.6.43.tar.gz".format(cls.ppy_dis),
                 ]
             )
 
             subprocess.check_call(
                 [
-                    "{0}/bin/python".format(cls.ppy_dis),
-                    "{0}/distribute-0.6.43/setup.py".format(cls.ppy_dis),
+                    "{}/bin/python".format(cls.ppy_dis),
+                    "{}/distribute-0.6.43/setup.py".format(cls.ppy_dis),
                     "install",
                 ]
             )
@@ -464,7 +447,7 @@ class BuildoutOnlineTestCase(Base):
             or ("setuptools>=0.7" in comment)
         )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_run_buildout(self):
         if salt.modules.virtualenv_mod.virtualenv_ver(self.ppy_st) >= (20, 0, 0):
             self.skipTest(
@@ -479,7 +462,7 @@ class BuildoutOnlineTestCase(Base):
         self.assertTrue("Installing a" in out)
         self.assertTrue("Installing b" in out)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_buildout(self):
         if salt.modules.virtualenv_mod.virtualenv_ver(self.ppy_st) >= (20, 0, 0):
             self.skipTest(
@@ -494,7 +477,7 @@ class BuildoutOnlineTestCase(Base):
         self.assertTrue(ret["status"])
         self.assertTrue("Creating directory" in out)
         self.assertTrue("Installing a." in out)
-        self.assertTrue("{0} bootstrap.py".format(self.py_st) in comment)
+        self.assertTrue("{} bootstrap.py".format(self.py_st) in comment)
         self.assertTrue("buildout -c buildout.cfg" in comment)
         ret = buildout.buildout(
             b_dir, parts=["a", "b", "c"], buildout_ver=2, python=self.py_st
@@ -535,7 +518,7 @@ class BuildoutAPITestCase(TestCase):
         uretm = buildout._merge_statuses([ret1, uret1, ret2, uret2])
         for ret in ret1, uret1, ret2, uret2:
             out = ret["out"]
-            if not isinstance(ret["out"], six.text_type):
+            if not isinstance(ret["out"], str):
                 out = ret["out"].decode("utf-8")
 
         for out in ["àé", "ççàé"]:

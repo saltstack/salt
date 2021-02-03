@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Mike Place (mp@saltstack.com)
 
@@ -7,17 +6,12 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import salt libs
 import salt.modules.mysql as mysql
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import MagicMock, call, patch
+from tests.support.mock import MagicMock, call, mock_open, patch
 from tests.support.unit import TestCase, skipIf
 
 log = logging.getLogger(__name__)
@@ -81,7 +75,7 @@ __all_privileges__ = [
 ]
 
 
-class MockMySQLConnect(object):
+class MockMySQLConnect:
     def __init__(self, *args, **kwargs):
         self.args = args
         self.kwargs = kwargs
@@ -201,6 +195,30 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
                 password="BLUECOW",
             )
 
+        with patch.object(
+            mysql, "version", side_effect=["", "10.2.21-MariaDB", "10.2.21-MariaDB"]
+        ):
+            self._test_call(
+                mysql.user_exists,
+                {
+                    "sql": (
+                        "SELECT User,Host FROM mysql.user WHERE "
+                        "User = %(user)s AND Host = %(host)s AND "
+                        "Password = PASSWORD(%(password)s)"
+                    ),
+                    "sql_args": {
+                        "host": "localhost",
+                        "password": "new_pass",
+                        "user": "root",
+                    },
+                },
+                user="root",
+                host="localhost",
+                password="new_pass",
+                connection_user="root",
+                connection_pass="old_pass",
+            )
+
         # test_user_create_when_user_exists(self):
         # ensure we don't try to create a user when one already exists
         # mock the version of MySQL
@@ -292,6 +310,30 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
                     unix_socket=True,
                 )
 
+        with patch.object(mysql, "version", side_effect=["", "8.0.10", "8.0.10"]):
+            with patch.object(
+                mysql, "user_exists", MagicMock(return_value=False)
+            ), patch.object(
+                mysql,
+                "__get_auth_plugin",
+                MagicMock(return_value="mysql_native_password"),
+            ):
+                self._test_call(
+                    mysql.user_create,
+                    {
+                        "sql": "CREATE USER %(user)s@%(host)s IDENTIFIED BY %(password)s",
+                        "sql_args": {
+                            "password": "new_pass",
+                            "user": "root",
+                            "host": "localhost",
+                        },
+                    },
+                    "root",
+                    password="new_pass",
+                    connection_user="root",
+                    connection_pass="old_pass",
+                )
+
     def test_user_chpass(self):
         """
         Test changing a MySQL user password in mysql exec module
@@ -331,6 +373,32 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
                                 {
                                     "password": "BLUECOW",
                                     "user": "testuser",
+                                    "host": "localhost",
+                                },
+                            ),
+                            call().cursor().execute("FLUSH PRIVILEGES;"),
+                        )
+                        connect_mock.assert_has_calls(calls, any_order=True)
+
+        connect_mock = MagicMock()
+        with patch.object(mysql, "_connect", connect_mock):
+            with patch.object(mysql, "version", side_effect=["", "8.0.11", "8.0.11"]):
+                with patch.object(mysql, "user_exists", MagicMock(return_value=True)):
+                    with patch.dict(mysql.__salt__, {"config.option": MagicMock()}):
+                        mysql.user_chpass(
+                            "root",
+                            password="new_pass",
+                            connection_user="root",
+                            connection_pass="old_pass",
+                        )
+                        calls = (
+                            call()
+                            .cursor()
+                            .execute(
+                                "ALTER USER %(user)s@%(host)s IDENTIFIED BY %(password)s;",
+                                {
+                                    "password": "new_pass",
+                                    "user": "root",
                                     "host": "localhost",
                                 },
                             ),
@@ -519,6 +587,16 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
                 ret = mysql.grant_exists("ALL", "testdb.testtableone", "testuser", "%")
                 self.assertEqual(ret, True)
 
+        with patch.object(mysql, "version", return_value="8.0.10"):
+            mock = MagicMock(return_value=mock_grants)
+            with patch.object(
+                mysql, "user_grants", return_value=mock_grants
+            ) as mock_user_grants:
+                ret = mysql.grant_exists(
+                    "all privileges", "testdb.testtableone", "testuser", "%"
+                )
+                self.assertEqual(ret, True)
+
         mock_grants = ["GRANT ALL PRIVILEGES ON testdb.testtableone TO `testuser`@`%`"]
         with patch.object(mysql, "version", return_value="5.6.41"):
             mock = MagicMock(return_value=mock_grants)
@@ -658,14 +736,39 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
         insert into test_update values ("crazy -- not comment"); -- another ending comment
         -- another comment type
         """
-        expected_response = """/*
-multiline
-comment
-*/
-CREATE TABLE test_update (a VARCHAR(25));
+        expected_response = """CREATE TABLE test_update (a VARCHAR(25));
+
 insert into test_update values ("some #hash value");
 insert into test_update values ("crazy -- not comment");
+
 """
+        output = mysql._sanitize_comments(input_data)
+        self.assertEqual(output, expected_response)
+
+        input_data = """-- --------------------------------------------------------
+                        -- SQL Commands to set up the pmadb as described in the documentation.
+                        --
+                        -- This file is meant for use with MySQL 5 and above!
+                        --
+                        -- This script expects the user pma to already be existing. If we would put a
+                        -- line here to create them too many users might just use this script and end
+                        -- up with having the same password for the controluser.
+                        --
+                        -- This user "pma" must be defined in config.inc.php (controluser/controlpass)
+                        --
+                        -- Please don't forget to set up the tablenames in config.inc.php
+                        --
+                        -- --------------------------------------------------------
+                        --
+                        CREATE DATABASE IF NOT EXISTS `phpmyadmin`
+                          DEFAULT CHARACTER SET utf8 COLLATE utf8_bin;
+                        USE phpmyadmin;
+        """
+
+        expected_response = """CREATE DATABASE IF NOT EXISTS `phpmyadmin`
+                          DEFAULT CHARACTER SET utf8 COLLATE utf8_bin;
+                        USE phpmyadmin;"""
+
         output = mysql._sanitize_comments(input_data)
         self.assertEqual(output, expected_response)
 
@@ -679,12 +782,68 @@ insert into test_update values ("crazy -- not comment");
                         call()
                         .cursor()
                         .execute(
-                            "{0}".format(expected_sql["sql"]), expected_sql["sql_args"]
+                            "{}".format(expected_sql["sql"]), expected_sql["sql_args"]
                         )
                     )
                 else:
-                    calls = call().cursor().execute("{0}".format(expected_sql))
+                    calls = call().cursor().execute("{}".format(expected_sql))
                 connect_mock.assert_has_calls((calls,), True)
+
+    def test_file_query(self):
+        """
+        Test file_query
+        """
+        with patch.object(mysql, "HAS_SQLPARSE", False):
+            ret = mysql.file_query("database", "filename")
+            self.assertFalse(ret)
+
+        file_data = """-- --------------------------------------------------------
+                       -- SQL Commands to set up the pmadb as described in the documentation.
+                       --
+                       -- This file is meant for use with MySQL 5 and above!
+                       --
+                       -- This script expects the user pma to already be existing. If we would put a
+                       -- line here to create them too many users might just use this script and end
+                       -- up with having the same password for the controluser.
+                       --
+                       -- This user "pma" must be defined in config.inc.php (controluser/controlpass)
+                       --
+                       -- Please don't forget to set up the tablenames in config.inc.php
+                       --
+                       -- --------------------------------------------------------
+                       --
+                       USE phpmyadmin;
+
+                       --
+                       -- Table structure for table `pma__bookmark`
+                       --
+
+                       CREATE TABLE IF NOT EXISTS `pma__bookmark` (
+                         `id` int(10) unsigned NOT NULL auto_increment,
+                         `dbase` varchar(255) NOT NULL default '',
+                         `user` varchar(255) NOT NULL default '',
+                         `label` varchar(255) COLLATE utf8_general_ci NOT NULL default '',
+                         `query` text NOT NULL,
+                         PRIMARY KEY  (`id`)
+                       )
+                         COMMENT='Bookmarks'
+                         DEFAULT CHARACTER SET utf8 COLLATE utf8_bin;
+        """
+
+        side_effect = [
+            {"query time": {"human": "0.4ms", "raw": "0.00038"}, "rows affected": 0},
+            {"query time": {"human": "8.9ms", "raw": "0.00893"}, "rows affected": 0},
+        ]
+        expected = {
+            "query time": {"human": "8.9ms", "raw": "0.00893"},
+            "rows affected": 0,
+        }
+
+        with patch("os.path.exists", MagicMock(return_value=True)):
+            with patch("salt.utils.files.fopen", mock_open(read_data=file_data)):
+                with patch.object(mysql, "query", side_effect=side_effect):
+                    ret = mysql.file_query("database", "filename")
+                    self.assertTrue(ret, expected)
 
     @skipIf(
         NO_PyMYSQL, "Install pymysql bindings before running test__connect_pymysql."
