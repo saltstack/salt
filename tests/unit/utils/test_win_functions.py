@@ -25,6 +25,20 @@ except ImportError:
     HAS_WIN32 = False
 
 
+# Import 3rd Party Libs
+try:
+    import pywintypes
+
+    HAS_PYWIN = True
+
+    class PyWinError(pywintypes.error):
+        pywinerror = 0
+
+except ImportError:
+    HAS_PYWIN = False
+
+
+
 class WinFunctionsTestCase(TestCase):
     """
     Test cases for salt.utils.win_functions
@@ -132,4 +146,14 @@ class WinFunctionsTestCase(TestCase):
         mock_error = MagicMock(side_effect=win_error)
         with patch("win32net.NetUserGetLocalGroups", side_effect=mock_error):
             with self.assertRaises(WinError):
+                win_functions.get_user_groups("Administrator")\
+
+    @skipIf(not salt.utils.platform.is_windows(), "WinDLL only available on Windows")
+    @skipIf(not HAS_WIN32, "Requires pywin32 libraries")
+    def test_get_user_groups_localpywin_error(self):
+        win_error = PyWinError()
+        win_error.winerror = 1355
+        mock_error = MagicMock(side_effect=win_error)
+        with patch("win32net.NetUserGetLocalGroups", side_effect=mock_error):
+            with self.assertRaises(PyWinError):
                 win_functions.get_user_groups("Administrator")
