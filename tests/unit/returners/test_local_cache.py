@@ -11,12 +11,12 @@ import shutil
 import tempfile
 import time
 
+import pytest
 import salt.returners.local_cache as local_cache
 import salt.utils.files
 import salt.utils.jid
 import salt.utils.job
 import salt.utils.platform
-from tests.support.helpers import slowTest
 from tests.support.mixins import (
     AdaptedConfigurationTestCaseMixin,
     LoaderModuleMockMixin,
@@ -301,7 +301,7 @@ class Local_CacheTest(
             "Dir/file does not exist: ", self.JOB_CACHE_DIR_FILES, status="present"
         )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_clean_old_jobs(self):
         """
         test to ensure jobs are removed from job cache
@@ -318,7 +318,7 @@ class Local_CacheTest(
             "job cache was not removed: ", self.JOB_CACHE_DIR_FILES, status="removed"
         )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_not_clean_new_jobs(self):
         """
         test to ensure jobs are not removed when
@@ -333,7 +333,7 @@ class Local_CacheTest(
                 "job cache was removed: ", self.JOB_CACHE_DIR_FILES, status="present"
             )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_empty_jid_dir(self):
         """
         test to ensure removal of empty jid dir

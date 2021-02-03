@@ -4,7 +4,6 @@ Tests for the salt-run command
 
 import pytest
 from tests.support.case import ShellCase
-from tests.support.helpers import slowTest
 
 
 @pytest.mark.windows_whitelisted
@@ -14,7 +13,7 @@ class ManageTest(ShellCase):
     Test the manage runner
     """
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_up(self):
         """
         manage.up
@@ -25,7 +24,7 @@ class ManageTest(ShellCase):
         self.assertTrue(any("- minion" in out for out in ret["out"]))
         self.assertTrue(any("- sub_minion" in out for out in ret["out"]))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_down(self):
         """
         manage.down

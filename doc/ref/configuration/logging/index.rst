@@ -34,7 +34,7 @@ available in salt are shown in the table below.
     Python dependencies used by salt may define and use additional logging
     levels.  For example, the Python 2 version of the ``multiprocessing``
     standard Python library `uses the levels
-    <https://docs.python.org/2/library/multiprocessing.html#logging>`_
+    <https://docs.python.org/3/library/multiprocessing.html#logging>`_
     ``subwarning``, 25 and ``subdebug``, 5.
 
 +----------+---------------+--------------------------------------------------------------------------+
