@@ -124,6 +124,7 @@ def clear_pillar_cache(minion="*", **kwargs):
     pillarenv = kwargs.pop("pillarenv", None)
     saltenv = kwargs.pop("saltenv", None)
 
+    pillar_cache = {}
     for tgt in ret.get("minions", []):
         saltenv = "base"
         id_, grains, _ = salt.utils.minions.get_minion_data(tgt, __opts__)
@@ -139,7 +140,15 @@ def clear_pillar_cache(minion="*", **kwargs):
         )
         pillar.clear_pillar()
 
-    return True
+        if __opts__.get("pillar_cache_backend") == "memory":
+            _pillar_cache = pillar.cache
+        else:
+            _pillar_cache = pillar.cache._dict
+
+        if tgt in _pillar_cache and _pillar_cache[tgt]:
+            pillar_cache[tgt] = _pillar_cache.get(tgt).get(pillarenv)
+
+    return pillar_cache
 
 
 def show_pillar_cache(minion="*", **kwargs):
@@ -186,7 +195,7 @@ def show_pillar_cache(minion="*", **kwargs):
         else:
             _pillar_cache = pillar.cache._dict
 
-        if _pillar_cache:
+        if tgt in _pillar_cache and _pillar_cache[tgt]:
             pillar_cache[tgt] = _pillar_cache.get(tgt).get(pillarenv)
 
     return pillar_cache
