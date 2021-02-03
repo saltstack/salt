@@ -7,11 +7,10 @@ import shutil
 
 import pytest
 from tests.support.case import SPMCase
-from tests.support.helpers import destructiveTest, slowTest
 
 
-@destructiveTest
 @pytest.mark.windows_whitelisted
+@pytest.mark.destructive_test
 class SPMFilesTest(SPMCase):
     """
     Validate the spm files command
@@ -21,7 +20,7 @@ class SPMFilesTest(SPMCase):
         self.config = self._spm_config()
         self._spm_build_files(self.config)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_spm_files(self):
         """
         test spm files

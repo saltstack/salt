@@ -1,9 +1,9 @@
 import os
 import shutil
 
+import pytest
 import salt.utils.platform
 from tests.support.case import SSHCase
-from tests.support.helpers import slowTest
 from tests.support.unit import skipIf
 
 
@@ -13,7 +13,7 @@ class SSHMineTest(SSHCase):
     testing salt-ssh with mine
     """
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_ssh_mine_get(self):
         """
         test salt-ssh with mine

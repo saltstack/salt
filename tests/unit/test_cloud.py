@@ -4,9 +4,9 @@
 
 import os
 
+import pytest
 import salt.cloud
 import salt.config
-from tests.support.helpers import slowTest
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
@@ -97,7 +97,7 @@ class MapConfTest(TestCase):
     Validate evaluation of salt-cloud map configuration
     """
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_cloud_map_merge_conf(self):
         """
         Ensure that nested values can be selectivly overridden in a map file

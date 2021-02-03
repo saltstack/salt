@@ -6,9 +6,9 @@ import random
 import string
 import sys
 
+import pytest
 import salt.utils.path
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, slowTest
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.pytest.helpers import temp_state_file
 from tests.support.runtests import RUNTIME_VARS
@@ -22,8 +22,8 @@ def _random_name(prefix=""):
     return ret
 
 
-@destructiveTest
 @skipIf(not salt.utils.path.which("dockerd"), "Docker not installed")
+@pytest.mark.destructive_test
 class DockerCallTestCase(ModuleCase, SaltReturnAssertsMixin):
     """
     Test docker_container states
@@ -58,7 +58,7 @@ class DockerCallTestCase(ModuleCase, SaltReturnAssertsMixin):
         delattr(self, "random_name")
         delattr(self, "image_tag")
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_docker_call(self):
         """
         check that docker.call works, and works with a container not running as root
@@ -66,7 +66,7 @@ class DockerCallTestCase(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_function("docker.call", [self.random_name, "test.ping"])
         assert ret is True
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_docker_sls(self):
         """
         check that docker.sls works, and works with a container not running as root
@@ -85,7 +85,7 @@ class DockerCallTestCase(ModuleCase, SaltReturnAssertsMixin):
             ret = self.run_function("docker.apply", [self.random_name, "core"])
             self.assertSaltTrueReturn(ret)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_docker_highstate(self):
         """
         check that docker.highstate works, and works with a container not running as root

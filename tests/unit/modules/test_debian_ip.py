@@ -5,10 +5,10 @@
 import tempfile
 
 import jinja2.exceptions
+import pytest
 import salt.modules.debian_ip as debian_ip
 import salt.utils.files
 import salt.utils.platform
-from tests.support.helpers import slowTest
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
@@ -1079,7 +1079,7 @@ class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'apply_network_settings' function tests: 1
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_apply_network_settings(self):
         """
         Test if it apply global network configuration.

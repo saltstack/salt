@@ -1,6 +1,6 @@
+import pytest
 import salt.utils.platform
 from tests.support.case import SSHCase
-from tests.support.helpers import slowTest
 from tests.support.unit import skipIf
 
 
@@ -10,7 +10,7 @@ class SSHRawTest(SSHCase):
     testing salt-ssh with raw calls
     """
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_ssh_raw(self):
         """
         test salt-ssh with -r argument

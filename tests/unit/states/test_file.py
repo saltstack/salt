@@ -7,6 +7,7 @@ import shutil
 from datetime import datetime
 
 import msgpack
+import pytest
 import salt.modules.file as filemod
 import salt.serializers.json as jsonserializer
 import salt.serializers.msgpack as msgpackserializer
@@ -20,7 +21,7 @@ import salt.utils.platform
 import salt.utils.win_functions
 import salt.utils.yaml
 from salt.exceptions import CommandExecutionError
-from tests.support.helpers import dedent, destructiveTest, slowTest, with_tempfile
+from tests.support.helpers import dedent, with_tempfile
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, call, mock_open, patch
 from tests.support.runtests import RUNTIME_VARS
@@ -1178,6 +1179,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                     "U12",
                     "U12",
                     "U12",
+                    "U12",
                 ]
             )
             mock_gid = MagicMock(
@@ -1198,10 +1200,21 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                     "G12",
                     "G12",
                     "G12",
+                    "G12",
                 ]
             )
             mock_if = MagicMock(
-                side_effect=[True, False, False, False, False, False, False, False]
+                side_effect=[
+                    True,
+                    False,
+                    False,
+                    False,
+                    False,
+                    False,
+                    False,
+                    False,
+                    False,
+                ]
             )
             if salt.utils.platform.is_windows():
                 mock_ret = MagicMock(return_value=ret)
@@ -1221,11 +1234,13 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                     ("", "", True),
                     ("", "", ""),
                     ("", "", ""),
+                    ("", "", ""),
                 ]
             )
             mock_file = MagicMock(
                 side_effect=[
                     CommandExecutionError,
+                    ("", ""),
                     ("", ""),
                     ("", ""),
                     ("", ""),
@@ -1454,6 +1469,36 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                         self.assertDictEqual(
                                             filestate.managed(
                                                 name, user=user, group=group, mode=400
+                                            ),
+                                            ret,
+                                        )
+
+                        # Replace is False, test is True, mode is empty
+                        # should return "File not updated"
+                        #  https://github.com/saltstack/salt/issues/59276
+                        if salt.utils.platform.is_windows():
+                            mock_ret = MagicMock(return_value=ret)
+                        else:
+                            perms = {"luser": user, "lmode": "0644", "lgroup": group}
+                            mock_ret = MagicMock(return_value=(ret, perms))
+                        comt = "File {} not updated".format(name)
+                        with patch.dict(
+                            filestate.__salt__, {"file.check_perms": mock_ret}
+                        ):
+                            with patch.object(os.path, "exists", mock_t):
+                                with patch.dict(filestate.__opts__, {"test": True}):
+                                    ret.update({"comment": comt})
+                                    if salt.utils.platform.is_windows():
+                                        self.assertDictEqual(
+                                            filestate.managed(
+                                                name, user=user, group=group
+                                            ),
+                                            ret,
+                                        )
+                                    else:
+                                        self.assertDictEqual(
+                                            filestate.managed(
+                                                name, user=user, group=group
                                             ),
                                             ret,
                                         )
@@ -2552,7 +2597,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             self.assertTrue(filestate.mod_run_check_cmd(cmd, filename))
 
     @skipIf(not HAS_DATEUTIL, NO_DATEUTIL_REASON)
-    @slowTest
+    @pytest.mark.slow_test
     def test_retention_schedule(self):
         """
         Test to execute the retention_schedule logic.
@@ -2973,7 +3018,7 @@ class TestFilePrivateFunctions(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {filestate: {"__salt__": {"file.stats": filemod.stats}}}
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @skipIf(salt.utils.platform.is_windows(), "File modes do not exist on windows")
     def test__check_directory(self):
         """
