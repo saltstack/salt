@@ -1,0 +1,1 @@
+Salt's versions report `salt --versions-report` now includes all installed salt extensions into its versions report.
