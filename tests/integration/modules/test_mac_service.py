@@ -4,10 +4,10 @@ integration tests for mac_service
 
 import plistlib
 
+import pytest
 import salt.utils.files
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
-    destructiveTest,
     runs_on,
     skip_if_binaries_missing,
     skip_if_not_root,
@@ -99,7 +99,7 @@ class MacServiceModuleTest(ModuleCase):
             "Service not found", self.run_function("service.list", ["spongebob"])
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @slowTest
     def test_enable(self):
         """
@@ -111,7 +111,7 @@ class MacServiceModuleTest(ModuleCase):
             "Service not found", self.run_function("service.enable", ["spongebob"])
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @slowTest
     def test_disable(self):
         """
@@ -123,7 +123,7 @@ class MacServiceModuleTest(ModuleCase):
             "Service not found", self.run_function("service.disable", ["spongebob"])
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @slowTest
     def test_start(self):
         """
@@ -137,7 +137,7 @@ class MacServiceModuleTest(ModuleCase):
             "Service not found", self.run_function("service.start", ["spongebob"])
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @slowTest
     def test_stop(self):
         """
@@ -149,7 +149,7 @@ class MacServiceModuleTest(ModuleCase):
             "Service not found", self.run_function("service.stop", ["spongebob"])
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @slowTest
     def test_status(self):
         """
@@ -182,7 +182,7 @@ class MacServiceModuleTest(ModuleCase):
         self.assertFalse(self.run_function("service.missing", [self.SERVICE_NAME]))
         self.assertTrue(self.run_function("service.missing", ["spongebob"]))
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @slowTest
     def test_enabled(self):
         """
@@ -196,7 +196,7 @@ class MacServiceModuleTest(ModuleCase):
 
         self.assertTrue(self.run_function("service.enabled", ["spongebob"]))
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @slowTest
     def test_disabled(self):
         """

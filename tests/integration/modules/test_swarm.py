@@ -2,18 +2,19 @@
 Integration tests for the docker swarm modules
 """
 
+import pytest
 import salt.utils.path
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, slowTest
+from tests.support.helpers import slowTest
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.unit import skipIf
 
 
-@destructiveTest
 @skipIf(
     not any(salt.utils.path.which(exe) for exe in ("dockerd", "docker")),
     "Docker not installed",
 )
+@pytest.mark.destructive_test
 class SwarmCallTestCase(ModuleCase, SaltReturnAssertsMixin):
     """
     Test docker swarm states

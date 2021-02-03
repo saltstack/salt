@@ -2,13 +2,14 @@
     :codeauthor: Nicole Thomas <nicole@saltstack.com>
 """
 
+import pytest
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, runs_on, skip_if_not_root, slowTest
+from tests.support.helpers import runs_on, skip_if_not_root, slowTest
 
 OSA_SCRIPT = "/usr/bin/osascript"
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 @skip_if_not_root
 @runs_on(kernel="Darwin")
 class MacAssistiveTest(ModuleCase):

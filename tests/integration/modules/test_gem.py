@@ -6,7 +6,7 @@ import pytest
 import salt.utils.path
 from salt.ext.tornado.httpclient import HTTPClient
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, slowTest
+from tests.support.helpers import slowTest
 from tests.support.unit import skipIf
 
 
@@ -20,9 +20,9 @@ def check_status():
         return False
 
 
-@destructiveTest
 @skipIf(not salt.utils.path.which("gem"), "Gem is not available")
 @pytest.mark.windows_whitelisted
+@pytest.mark.destructive_test
 class GemModuleTest(ModuleCase):
     """
     Validate gem module
