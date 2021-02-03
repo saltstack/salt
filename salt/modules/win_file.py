@@ -29,6 +29,7 @@ import stat
 import string  # do not remove, used in imported file.py functions
 import sys  # do not remove, used in imported file.py functions
 import tempfile  # do not remove. Used in salt.modules.file.__clean_tmp
+import time
 import urllib.parse
 from collections.abc import Iterable, Mapping
 from functools import reduce  # do not remove
@@ -1413,8 +1414,9 @@ def mkdir(
                 salt.utils.win_dacl.set_owner(obj_name=path, principal=owner)
 
             # Set permissions
-            set_perms(
-                path=path,
+            salt.utils.win_dacl.set_perms(
+                obj_name=path,
+                obj_type="file",
                 grant_perms=grant_perms,
                 deny_perms=deny_perms,
                 inheritance=inheritance,
