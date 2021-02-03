@@ -119,7 +119,6 @@ YB      10**24
 # Special Thanks to Michael Dehann, many of the concepts, and a few structures
 # of his in the virt func module have been used
 
-
 import base64
 import collections
 import copy
@@ -132,6 +131,7 @@ import string  # pylint: disable=deprecated-module
 import subprocess
 import sys
 import time
+import urllib.parse
 from xml.etree import ElementTree
 from xml.sax import saxutils
 
@@ -147,8 +147,6 @@ import salt.utils.xmlutil as xmlutil
 import salt.utils.yaml
 from salt._compat import ipaddress
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
-from salt.ext.six.moves.urllib.parse import urlparse, urlunparse
 
 try:
     import libvirt  # pylint: disable=import-error
@@ -621,7 +619,7 @@ def _get_disks(conn, dom):
                     if host_node is not None:
                         hostname = host_node.get("name")
                         port = host_node.get("port")
-                        qemu_target = urlunparse(
+                        qemu_target = urllib.parse.urlunparse(
                             (
                                 source.get("protocol"),
                                 "{}:{}".format(hostname, port) if port else hostname,
@@ -1102,7 +1100,7 @@ def _gen_xml(
         }
         targets.append(disk_context["target_dev"])
         if disk.get("source_file"):
-            url = urlparse(disk["source_file"])
+            url = urllib.parse.urlparse(disk["source_file"])
             if not url.scheme or not url.hostname:
                 disk_context["source_file"] = disk["source_file"]
                 disk_context["type"] = "file"
@@ -5671,7 +5669,7 @@ def migrate(vm_, target, ssh=False, **kwargs):
     conn = __get_conn()
     dom = _get_domain(conn, vm_)
 
-    if not urlparse(target).scheme:
+    if not urllib.parse.urlparse(target).scheme:
         proto = "qemu"
         if ssh:
             proto += "+ssh"
