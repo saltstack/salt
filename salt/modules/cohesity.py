@@ -472,4 +472,3 @@ def restore_vms(
         return "Successfully created restore task {} ".format(task_name)
     except APIException as err:
         return str(err)
-
