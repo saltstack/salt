@@ -406,6 +406,11 @@ def wait(
                 - env:
                   - PATH: {{ [current_path, '/my/special/bin']|join(':') }}
 
+        .. note::
+            When using environment variables on Window's, case-sensitivity
+            matters, i.e. Window's uses `Path` as opposed to `PATH` for other
+            systems.
+
     umask
          The umask (in octal) to use when running the command.
 
@@ -541,6 +546,11 @@ def wait_script(
                 - env:
                   - PATH: {{ [current_path, '/my/special/bin']|join(':') }}
 
+        .. note::
+            When using environment variables on Window's, case-sensitivity
+            matters, i.e. Window's uses `Path` as opposed to `PATH` for other
+            systems.
+
     umask
          The umask (in octal) to use when running the command.
 
@@ -660,6 +670,11 @@ def run(
                 - name: ls -l /
                 - env:
                   - PATH: {{ [current_path, '/my/special/bin']|join(':') }}
+
+        .. note::
+            When using environment variables on Window's, case-sensitivity
+            matters, i.e. Window's uses `Path` as opposed to `PATH` for other
+            systems.
 
     prepend_path
         $PATH segment to prepend (trailing ':' not necessary) to $PATH. This is
@@ -937,6 +952,11 @@ def script(
                 - name: ls -l /
                 - env:
                   - PATH: {{ [current_path, '/my/special/bin']|join(':') }}
+
+        .. note::
+            When using environment variables on Window's, case-sensitivity
+            matters, i.e. Window's uses `Path` as opposed to `PATH` for other
+            systems.
 
     saltenv : ``base``
         The Salt environment to use
