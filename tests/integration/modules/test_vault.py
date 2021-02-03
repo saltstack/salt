@@ -1,16 +1,14 @@
-# -*- coding: utf-8 -*-
 """
 Integration tests for the vault execution module
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import time
 
+import pytest
 import salt.utils.path
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, slowTest
+from tests.support.helpers import slowTest
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.sminion import create_sminion
 from tests.support.unit import SkipTest, skipIf
@@ -20,9 +18,9 @@ log = logging.getLogger(__name__)
 VAULT_BINARY_PATH = salt.utils.path.which("vault")
 
 
-@destructiveTest
 @skipIf(not salt.utils.path.which("dockerd"), "Docker not installed")
 @skipIf(not VAULT_BINARY_PATH, "Vault not installed")
+@pytest.mark.destructive_test
 class VaultTestCase(ModuleCase):
     """
     Test vault module
@@ -141,9 +139,9 @@ class VaultTestCase(ModuleCase):
         }
 
 
-@destructiveTest
 @skipIf(not salt.utils.path.which("dockerd"), "Docker not installed")
 @skipIf(not salt.utils.path.which("vault"), "Vault not installed")
+@pytest.mark.destructive_test
 class VaultTestCaseCurrent(ModuleCase):
     """
     Test vault module against current vault

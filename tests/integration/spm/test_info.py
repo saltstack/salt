@@ -1,18 +1,16 @@
-# -*- coding: utf-8 -*-
 """
 Tests for the spm info utility
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import shutil
 
 import pytest
 from tests.support.case import SPMCase
-from tests.support.helpers import destructiveTest, slowTest
+from tests.support.helpers import slowTest
 
 
-@destructiveTest
 @pytest.mark.windows_whitelisted
+@pytest.mark.destructive_test
 class SPMInfoTest(SPMCase):
     """
     Validate the spm info command

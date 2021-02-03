@@ -3,13 +3,13 @@
 """
 import copy
 
+import pytest
 import salt.config
-import salt.ext.six as six
 import salt.loader
 import salt.states.win_lgpo as win_lgpo
 import salt.utils.platform
 import salt.utils.stringutils
-from tests.support.helpers import destructiveTest, slowTest
+from tests.support.helpers import slowTest
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch
 from tests.support.unit import TestCase, skipIf
@@ -93,8 +93,8 @@ class WinLGPOComparePoliciesTestCase(TestCase):
         self.assertFalse(win_lgpo._compare_policies(compare_integer, None))
 
 
-@destructiveTest
 @skipIf(not salt.utils.platform.is_windows(), "System is not Windows")
+@pytest.mark.destructive_test
 class WinLGPOPolicyElementNames(TestCase, LoaderModuleMockMixin):
     """
     Test variations of the Point and Print Restrictions policy when Not
@@ -170,8 +170,6 @@ class WinLGPOPolicyElementNames(TestCase, LoaderModuleMockMixin):
 
         with patch.dict(win_lgpo.__opts__, {"test": False}):
             result = win_lgpo.set_(name="test_state", computer_policy=computer_policy)
-            if six.PY2:
-                result = win_lgpo._convert_to_unicode(result)
         expected = {
             "Point and Print Restrictions": {
                 "Enter fully qualified server names separated by "
@@ -218,8 +216,8 @@ class WinLGPOPolicyElementNames(TestCase, LoaderModuleMockMixin):
         self.assertFalse(expected["result"])
 
 
-@destructiveTest
 @skipIf(not salt.utils.platform.is_windows(), "System is not Windows")
+@pytest.mark.destructive_test
 class WinLGPOPolicyElementNamesTestTrue(TestCase, LoaderModuleMockMixin):
     """
     Test variations of the Point and Print Restrictions policy when Not

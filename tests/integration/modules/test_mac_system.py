@@ -2,13 +2,11 @@
 integration tests for mac_system
 """
 
-
 import logging
 
 import pytest
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
-    destructiveTest,
     flaky,
     random_string,
     runs_on,
@@ -68,7 +66,7 @@ class MacSystemModuleTest(ModuleCase):
             "system.set_disable_keyboard_on_lock", [self.KEYBOARD_DISABLED]
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @slowTest
     def test_get_set_remote_login(self):
         """
@@ -97,7 +95,7 @@ class MacSystemModuleTest(ModuleCase):
             self.run_function("system.set_remote_login", ["spongebob"]),
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @slowTest
     def test_get_set_remote_events(self):
         """
@@ -126,7 +124,7 @@ class MacSystemModuleTest(ModuleCase):
             self.run_function("system.set_remote_events", ["spongebob"]),
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @slowTest
     def test_get_set_subnet_name(self):
         """
@@ -254,7 +252,7 @@ class MacSystemComputerNameTest(ModuleCase):
     # something similar again we may want to skip this gain until we
     # investigate
     # @skipIf(salt.utils.platform.is_darwin() and six.PY3, 'This test hangs on OS X on Py3.  Skipping until #53566 is merged.')
-    @destructiveTest
+    @pytest.mark.destructive_test
     @slowTest
     def test_get_set_computer_name(self):
         """

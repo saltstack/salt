@@ -1,7 +1,6 @@
 """
 Integration tests for the docker_container states
 """
-# Import Python Libs
 
 import errno
 import functools
@@ -10,19 +9,15 @@ import os
 import subprocess
 import tempfile
 
-# Import Salt Libs
+import pytest
 import salt.utils.files
 import salt.utils.network
 import salt.utils.path
 from salt.exceptions import CommandExecutionError
-
-# Import 3rd-party libs
 from salt.modules.config import DEFAULTS as _config_defaults
-
-# Import Salt Testing Libs
 from tests.support.case import ModuleCase
 from tests.support.docker import random_name, with_network
-from tests.support.helpers import destructiveTest, slowTest, with_tempdir
+from tests.support.helpers import slowTest, with_tempdir
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
@@ -52,7 +47,7 @@ def container_name(func):
     return wrapper
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 @skipIf(salt.utils.platform.is_freebsd(), "No Docker on FreeBSD available")
 @skipIf(not salt.utils.path.which("busybox"), "Busybox not installed")
 @skipIf(not salt.utils.path.which("dockerd"), "Docker not installed")

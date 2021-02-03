@@ -16,7 +16,6 @@ import salt.utils.platform
 import salt.utils.process
 from salt._compat import ipaddress
 from salt.exceptions import SaltClientError, SaltMasterUnresolvableError, SaltSystemExit
-from salt.ext.six.moves import range
 from tests.support.helpers import skip_if_not_root, slowTest
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, patch

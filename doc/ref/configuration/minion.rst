@@ -1420,6 +1420,19 @@ retry timeout will be a random int between ``return_retry_timer`` and
 
     return_retry_timer_max: 10
 
+.. conf_minion:: return_retry_tries
+
+``return_retry_tries``
+--------------------------
+
+Default: ``3``
+
+The maximum number of retries for a minion return attempt.
+
+.. code-block:: yaml
+
+    return_retry_tries: 3
+
 .. conf_minion:: cache_sreqs
 
 ``cache_sreqs``

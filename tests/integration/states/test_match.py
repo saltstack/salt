@@ -1,12 +1,7 @@
-# -*- coding: utf-8 -*-
 """
-    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
-
-
-    tests.integration.states.match
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests.integration.states.match
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
@@ -34,7 +29,7 @@ class StateMatchTest(ModuleCase):
                 fp_.write(
                     salt.utils.stringutils.to_str(
                         "base:\n"
-                        "  {0}:\n"
+                        "  {}:\n"
                         "    - match: ipcidr\n"
                         "    - test\n".format(subnets[0])
                     )

@@ -2,9 +2,9 @@
 integration tests for mac_power
 """
 
+import pytest
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
-    destructiveTest,
     flaky,
     runs_on,
     skip_if_binaries_missing,
@@ -39,7 +39,7 @@ class MacPowerModuleTest(ModuleCase):
         self.run_function("power.set_display_sleep", [self.DISPLAY_SLEEP])
         self.run_function("power.set_harddisk_sleep", [self.HARD_DISK_SLEEP])
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @slowTest
     def test_computer_sleep(self):
         """
@@ -73,7 +73,7 @@ class MacPowerModuleTest(ModuleCase):
             self.run_function("power.set_computer_sleep", [True]),
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @slowTest
     def test_display_sleep(self):
         """
@@ -107,7 +107,7 @@ class MacPowerModuleTest(ModuleCase):
             self.run_function("power.set_display_sleep", [True]),
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @slowTest
     def test_harddisk_sleep(self):
         """

@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Tests for the spm install utility
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import shutil
@@ -12,10 +10,10 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.yaml
 from tests.support.case import SPMCase
-from tests.support.helpers import Webserver, destructiveTest, slowTest
+from tests.support.helpers import Webserver, slowTest
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 @pytest.mark.windows_whitelisted
 class SPMInstallTest(SPMCase):
     """

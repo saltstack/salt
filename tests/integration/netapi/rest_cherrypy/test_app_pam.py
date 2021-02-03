@@ -1,14 +1,13 @@
 """
 Integration Tests for restcherry salt-api with pam eauth
 """
+import urllib.parse
 
+import pytest
 import salt.utils.platform
 import tests.support.cherrypy_testclasses as cptc
-from salt.ext.six.moves.urllib.parse import (  # pylint: disable=no-name-in-module,import-error
-    urlencode,
-)
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, skip_if_not_root, slowTest
+from tests.support.helpers import skip_if_not_root, slowTest
 from tests.support.unit import skipIf
 
 if cptc.HAS_CHERRYPY:
@@ -27,7 +26,7 @@ class TestAuthPAM(cptc.BaseRestCherryPyTest, ModuleCase):
     Test auth with pam using salt-api
     """
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @skip_if_not_root
     def setUp(self):
         super().setUp()
@@ -58,7 +57,7 @@ class TestAuthPAM(cptc.BaseRestCherryPyTest, ModuleCase):
         copyauth_creds = AUTH_CREDS.copy()
         copyauth_creds["service"] = "chsh"
         copyauth_creds["password"] = "wrong_password"
-        body = urlencode(copyauth_creds)
+        body = urllib.parse.urlencode(copyauth_creds)
         request, response = self.request(
             "/login",
             method="POST",
@@ -77,7 +76,7 @@ class TestAuthPAM(cptc.BaseRestCherryPyTest, ModuleCase):
         copyauth_creds = AUTH_CREDS.copy()
         copyauth_creds["service"] = "login"
         copyauth_creds["password"] = "wrong_password"
-        body = urlencode(copyauth_creds)
+        body = urllib.parse.urlencode(copyauth_creds)
         request, response = self.request(
             "/login",
             method="POST",
@@ -95,7 +94,7 @@ class TestAuthPAM(cptc.BaseRestCherryPyTest, ModuleCase):
         """
         copyauth_creds = AUTH_CREDS.copy()
         copyauth_creds["service"] = "chsh"
-        body = urlencode(copyauth_creds)
+        body = urllib.parse.urlencode(copyauth_creds)
         request, response = self.request(
             "/login",
             method="POST",
@@ -113,7 +112,7 @@ class TestAuthPAM(cptc.BaseRestCherryPyTest, ModuleCase):
         """
         copyauth_creds = AUTH_CREDS.copy()
         copyauth_creds["service"] = "login"
-        body = urlencode(copyauth_creds)
+        body = urllib.parse.urlencode(copyauth_creds)
         request, response = self.request(
             "/login",
             method="POST",
@@ -122,7 +121,7 @@ class TestAuthPAM(cptc.BaseRestCherryPyTest, ModuleCase):
         )
         self.assertEqual(response.status, "200 OK")
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @skip_if_not_root
     def tearDown(self):
         """

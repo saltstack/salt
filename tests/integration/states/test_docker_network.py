@@ -1,7 +1,6 @@
 """
 Integration tests for the docker_network states
 """
-# Import Python Libs
 
 import errno
 import functools
@@ -10,17 +9,15 @@ import os
 import subprocess
 import tempfile
 
-# Import Salt Libs
+import pytest
 import salt.utils.files
 import salt.utils.network
 import salt.utils.path
 from salt.exceptions import CommandExecutionError
 from tests.support.case import ModuleCase
 from tests.support.docker import random_name, with_network
-from tests.support.helpers import destructiveTest, requires_system_grains, slowTest
+from tests.support.helpers import requires_system_grains, slowTest
 from tests.support.mixins import SaltReturnAssertsMixin
-
-# Import Salt Testing Libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
@@ -108,7 +105,7 @@ def container_name(func):
 
 
 @slowTest
-@destructiveTest
+@pytest.mark.destructive_test
 @skipIf(salt.utils.platform.is_freebsd(), "No Docker on FreeBSD available")
 @skipIf(not salt.utils.path.which("dockerd"), "Docker not installed")
 class DockerNetworkTestCase(ModuleCase, SaltReturnAssertsMixin):
