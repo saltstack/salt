@@ -100,7 +100,7 @@ bcrypt==3.1.6             # via paramiko
 boto3==1.13.5
 boto==2.49.0
 botocore==1.16.26         # via boto3, moto, s3transfer
-cachecontrol==0.9.6       # via cohesity-management-sdk
+cachecontrol==0.12.6      # via cohesity-management-sdk
 cached-property==1.5.1    # via pygit2
 cachetools==3.1.0         # via google-auth
 cassandra-driver==3.24.0
