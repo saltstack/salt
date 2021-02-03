@@ -947,23 +947,15 @@ def _check_directory_win(
 
         # Check reset
         if win_perms_reset:
-            for user_name in perms:
-                if user_name not in win_perms:
-                    if (
-                        "grant" in perms[user_name]
-                        and not perms[user_name]["grant"]["inherited"]
-                    ):
-                        if "remove_perms" not in changes:
-                            changes["remove_perms"] = {}
-                        changes["remove_perms"].update({user_name: perms[user_name]})
-                if user_name not in win_deny_perms:
-                    if (
-                        "deny" in perms[user_name]
-                        and not perms[user_name]["deny"]["inherited"]
-                    ):
-                        if "remove_perms" not in changes:
-                            changes["remove_perms"] = {}
-                        changes["remove_perms"].update({user_name: perms[user_name]})
+            for user_name in perms["Not Inherited"]:
+                if user_name not in {salt.utils.win_dacl.get_name(k) for k in (win_perms or {})}:
+                    if "grant" in perms["Not Inherited"][user_name]:
+                        changes.setdefault("remove_perms", {})
+                        changes["remove_perms"].update({user_name: perms["Not Inherited"][user_name]})
+                if user_name not in {salt.utils.win_dacl.get_name(k) for k in (win_deny_perms or {})}:
+                    if "deny" in perms["Not Inherited"][user_name]:
+                        changes.setdefault("remove_perms", {})
+                        changes["remove_perms"].update({user_name: perms["Not Inherited"][user_name]})
 
     if changes:
         return None, 'The directory "{}" will be changed'.format(name), changes
@@ -3806,10 +3798,11 @@ def directory(
         else:
             __salt__["file.mkdir"](name, user=user, group=group, mode=dir_mode)
 
-        ret["changes"][name] = "New Dir"
+        if not os.path.isdir(name):
+            return _error(ret, "Failed to create directory {}".format(name))
 
-    if not os.path.isdir(name):
-        return _error(ret, "Failed to create directory {}".format(name))
+        ret["changes"][name] = "New Dir"
+        return ret
 
     # issue 32707: skip this __salt__['file.check_perms'] call if children_only == True
     # Check permissions
