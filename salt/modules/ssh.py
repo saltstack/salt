@@ -63,6 +63,21 @@ def _refine_enc(enc):
         "ecdsa-sha2-nistp256",
     ]
     ed25519 = ["ed25519", "ssh-ed25519"]
+    also_allowed = [
+        "rsa-sha2-512",
+        "rsa-sha2-256",
+        "rsa-sha2-512-cert-v01@openssh.com",
+        "rsa-sha2-256-cert-v01@openssh.com",
+        "ssh-rsa-cert-v01@openssh.com",
+        "ecdsa-sha2-nistp256-cert-v01@openssh.com",
+        "ecdsa-sha2-nistp384-cert-v01@openssh.com",
+        "ecdsa-sha2-nistp521-cert-v01@openssh.com",
+        "sk-ecdsa-sha2-nistp256@openssh.com",
+        "sk-ecdsa-sha2-nistp256-cert-v01@openssh.com",
+        "ssh-ed25519-cert-v01@openssh.com",
+        "sk-ssh-ed25519@openssh.com",
+        "sk-ssh-ed25519-cert-v01@openssh.com",
+    ]
 
     if enc in rsa:
         return "ssh-rsa"
@@ -76,6 +91,8 @@ def _refine_enc(enc):
         return enc
     elif enc in ed25519:
         return "ssh-ed25519"
+    elif enc in also_allowed:
+        return enc
     else:
         raise CommandExecutionError("Incorrect encryption key type '{0}'.".format(enc))
 
