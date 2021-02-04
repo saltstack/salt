@@ -24,6 +24,32 @@ def __virtual__():
 
 def options_present(name, sections=None, separator="=", strict=False):
     """
+    Ensure that the given options and sections are present in an ini file.
+    Existing options with different values will be overwritten with the values
+    specified in this state.
+
+    If the file does not exist, this state will fail with an error.
+
+    name
+        The location of the ini file to configure.
+
+    sections
+        A dictionary of section names to section contents, where the contents
+        are each dictionaries of key name to value.
+
+        Each section will be created in the ini file if it does not exist, and
+        each key-value pair will be replaced if its key exists or added if its
+        key does not exist.
+
+    separator
+        The character which separates keys from values in the ini file.
+
+    strict
+        If ``True``, removes any other options from the ini file in the sections
+        specified via the ``sections`` parameter.
+
+    Example:
+
     .. code-block:: yaml
 
         /home/saltminion/api-paste.ini:
@@ -36,12 +62,6 @@ def options_present(name, sections=None, separator="=", strict=False):
                   secondoption: 'secondvalue'
                 test1:
                   testkey1: 'testval121'
-
-    options present in file and not specified in sections
-    dict will be untouched, unless `strict: True` flag is
-    used
-
-    changes dict will contain the list of changes made
     """
     ret = {
         "name": name,
@@ -168,6 +188,24 @@ def options_present(name, sections=None, separator="=", strict=False):
 
 def options_absent(name, sections=None, separator="="):
     """
+    Ensure that the given options do not exist in an ini file.
+
+    If the file does not exist, this state will fail with an error.
+
+    name
+        The location of the ini file to configure.
+
+    sections
+        A dictionary of section names to lists of option names to remove.
+
+        If a section is empty after having all options removed, the section
+        itself is not removed.
+
+    separator
+        The character which separates keys from values in the ini file.
+
+    Example:
+
     .. code-block:: yaml
 
         /home/saltminion/api-paste.ini:
@@ -179,11 +217,6 @@ def options_absent(name, sections=None, separator="="):
                   - secondoption
                 test1:
                   - testkey1
-
-    options present in file and not specified in sections
-    dict will be untouched
-
-    changes dict will contain the list of changes made
     """
     ret = {
         "name": name,
@@ -250,6 +283,23 @@ def options_absent(name, sections=None, separator="="):
 
 def sections_present(name, sections=None, separator="="):
     """
+    Ensure that the given sections are present in an ini file. If they are not
+    present, they will be added as empty sections to the file. If they are
+    present, they will be left untouched.
+
+    If the file does not exist, this state will fail with an error.
+
+    name
+        The location of the ini file to configure.
+
+    sections
+        A list of section names to add to the file.
+
+    separator
+        The character which separates keys from values in the ini file.
+
+    Example:
+
     .. code-block:: yaml
 
         /home/saltminion/api-paste.ini:
@@ -258,12 +308,6 @@ def sections_present(name, sections=None, separator="="):
             - sections:
                 - section_one
                 - section_two
-
-    This will only create empty sections. To also create options, use
-    options_present state
-
-    options present in file and not specified in sections will be deleted
-    changes dict will contain the sections that changed
     """
     ret = {
         "name": name,
@@ -310,6 +354,21 @@ def sections_present(name, sections=None, separator="="):
 
 def sections_absent(name, sections=None, separator="="):
     """
+    Ensure that the given sections are not present in an ini file.
+
+    If the file does not exist, this state will fail with an error.
+
+    name
+        The location of the ini file to configure.
+
+    sections
+        A list of section names to remove from the ini file.
+
+    separator
+        The character which separates keys from values in the ini file.
+
+    Example:
+
     .. code-block:: yaml
 
         /home/saltminion/api-paste.ini:
@@ -318,9 +377,6 @@ def sections_absent(name, sections=None, separator="="):
             - sections:
                 - test
                 - test1
-
-    options present in file and not specified in sections will be deleted
-    changes dict will contain the sections that changed
     """
     ret = {
         "name": name,
