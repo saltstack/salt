@@ -9,11 +9,19 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    - name: Setup Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.8'
+    - uses: actions/cache@v2
+      with:
+        path: ${{ env.pythonLocation }}
+        key: ${{ env.pythonLocation }}-${{ hashFiles('README.rst') }}-${{ hashFiles('.github/workflows/twine-check.yml') }}
     - uses: actions/checkout@v2
     - name: Install dependencies
       run: |
-        python3 -m pip install --upgrade pip setuptools wheel
-        python3 -m pip install twine
+        pip install --upgrade pip setuptools wheel
+        pip install twine==3.3.0
     - name: Python setup
       run: |
         python3 setup.py sdist
