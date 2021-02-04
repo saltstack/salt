@@ -1101,7 +1101,8 @@ repos:
         args: [--py3-plus, --keep-mock]
         exclude: >
           (?x)^(
-            salt/client/ssh/ssh_py_shim.py
+            salt/client/ssh/ssh_py_shim.py|
+            salt/ext/ipaddress.py
           )$
 
   - repo: https://github.com/saltstack/pre-commit-remove-import-headers
@@ -1171,6 +1172,11 @@ repos:
         alias: lint-salt
         name: Lint Salt
         files: ^((setup|noxfile)|(salt|tasks)/.*)\.py$
+        exclude: >
+            (?x)^(
+                templates/.*|
+                salt/ext/.*|
+            )$
         args:
           - -e
           - lint-salt-pre-commit
