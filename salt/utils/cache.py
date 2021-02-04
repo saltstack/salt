@@ -2,6 +2,7 @@
 In-memory caching used by Salt
 """
 
+import functools
 import logging
 import os
 import re
@@ -14,7 +15,6 @@ import salt.utils.data
 import salt.utils.dictupdate
 import salt.utils.files
 import salt.utils.msgpack
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 from salt.utils.zeromq import zmq
 
 log = logging.getLogger(__name__)
@@ -310,9 +310,16 @@ def context_cache(func):
     is empty or contains no items, pass a list of keys to evaulate.
     """
 
+    @functools.wraps(func)
     def context_cache_wrap(*args, **kwargs):
-        func_context = func.__globals__["__context__"]
-        func_opts = func.__globals__["__opts__"]
+        try:
+            func_context = func.__globals__["__context__"].value()
+        except AttributeError:
+            func_context = func.__globals__["__context__"]
+        try:
+            func_opts = func.__globals__["__opts__"].value()
+        except AttributeError:
+            func_opts = func.__globals__["__opts__"]
         func_name = func.__globals__["__name__"]
 
         context_cache = ContextCache(func_opts, func_name)
@@ -325,17 +332,3 @@ def context_cache(func):
         return func(*args, **kwargs)
 
     return context_cache_wrap
-
-
-# test code for the CacheCli
-if __name__ == "__main__":
-
-    opts = salt.config.master_config("/etc/salt/master")
-
-    ccli = CacheCli(opts)
-
-    ccli.put_cache(["test1", "test10", "test34"])
-    ccli.put_cache(["test12"])
-    ccli.put_cache(["test18"])
-    ccli.put_cache(["test21"])
-    print("minions: {}".format(ccli.get_cached()))
