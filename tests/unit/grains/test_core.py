@@ -715,13 +715,13 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         _os_release_map = {
             "os_release_file": {
                 "NAME": "AlmaLinux",
-                "VERSION_ID": "8",
+                "VERSION_ID": "8.3",
                 "PRETTY_NAME": "AlmaLinux 8",
                 "ID": "almalinux",
                 "ANSI_COLOR": "0;31",
-                "CPE_NAME": "cpe:/o:almalinux:almalinux:8",
+                "CPE_NAME": "cpe:/o:almalinux:almalinux:8.3",
             },
-            "_linux_distribution": ("almaLinux", "8.3.2011", "Core"),
+            "_linux_distribution": ("almaLinux", "8.3", ""),
         }
 
         expectation = {
@@ -729,8 +729,8 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             "os_family": "RedHat",
             "oscodename": "AlmaLinux 8",
             "osfullname": "AlmaLinux",
-            "osrelease": "8.3.2011",
-            "osrelease_info": (8, 3, 2011),
+            "osrelease": "8.3",
+            "osrelease_info": (8, 3,),
             "osmajorrelease": 8,
             "osfinger": "AlmaLinux-8",
         }
