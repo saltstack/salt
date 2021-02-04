@@ -1,10 +1,32 @@
 import io
-import pwd
 from textwrap import dedent
 
 import pytest
 import salt.modules.solaris_shadow as solaris_shadow
 from tests.support.mock import MagicMock, patch
+
+try:
+    import pwd
+
+    missing_pwd = True
+except ImportError:
+    pwd = None
+    missing_pwd = True
+
+try:
+    import spwd  # pylint: disable=unused-import
+
+    missing_spwd = True
+except ImportError:
+    missing_swpd = True
+
+
+skip_on_missing_spwd = pytest.mark.skipif(
+    missing_spwd, reason="Has no spwd module for accessing /etc/shadow passwords"
+)
+skip_on_missing_pwd = pytest.mark.skipif(
+    missing_pwd, reason="Has no pwd module for accessing /etc/password passwords"
+)
 
 # pylint: disable=singleton-comparison,comparison-to-True-should-be-if-cond-is-True-or-if-cond
 
@@ -79,6 +101,7 @@ def has_not_shadow_file():
         yield
 
 
+@skip_on_missing_spwd
 def test_when_spwd_module_exists_results_should_be_returned_from_getspnam(
     has_spwd, fake_spnam
 ):
@@ -106,6 +129,7 @@ def test_when_spwd_module_exists_results_should_be_returned_from_getspnam(
     assert actual_results == expected_results
 
 
+@skip_on_missing_spwd
 def test_when_swpd_module_exists_and_no_results_then_results_should_be_empty(
     has_spwd, fake_spnam
 ):
@@ -126,6 +150,7 @@ def test_when_swpd_module_exists_and_no_results_then_results_should_be_empty(
     assert actual_results == expected_results
 
 
+@skip_on_missing_pwd
 def test_when_pwd_fallback_is_used_and_no_name_exists_results_should_be_empty(
     has_not_spwd, fake_pwnam
 ):
@@ -146,6 +171,7 @@ def test_when_pwd_fallback_is_used_and_no_name_exists_results_should_be_empty(
     assert actual_results == expected_results
 
 
+@skip_on_missing_pwd
 def test_when_etc_shadow_does_not_exist_info_should_be_empty_except_for_name(
     has_not_spwd, fake_pwnam, has_not_shadow_file
 ):
@@ -166,6 +192,7 @@ def test_when_etc_shadow_does_not_exist_info_should_be_empty_except_for_name(
     assert actual_results == expected_results
 
 
+@skip_on_missing_pwd
 def test_when_etc_shadow_exists_but_name_not_in_shadow_passwd_field_should_be_empty(
     fake_fopen_has_etc_shadow, has_not_spwd, fake_pwnam, has_shadow_file
 ):
@@ -178,6 +205,7 @@ def test_when_etc_shadow_exists_but_name_not_in_shadow_passwd_field_should_be_em
     assert actual_result["passwd"] == ""
 
 
+@skip_on_missing_pwd
 def test_when_name_in_etc_shadow_passwd_should_be_in_info(
     fake_fopen_has_etc_shadow, has_not_spwd, fake_pwnam, has_shadow_file
 ):
@@ -215,6 +243,7 @@ def test_set_password_should_return_False_if_passwd_in_info_is_different_than_ne
         assert actual_result == False
 
 
+@skip_on_missing_spwd
 def test_when_set_password_and_name_in_shadow_then_password_should_be_changed_for_that_user(
     has_shadow_file, fake_fopen_has_etc_shadow, has_spwd, fake_spnam
 ):
