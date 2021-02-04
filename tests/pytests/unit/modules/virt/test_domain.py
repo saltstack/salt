@@ -2128,3 +2128,58 @@ def test_update_failure(make_mock_vm):
         "disk": {"attached": [], "detached": [], "updated": []},
         "interface": {"attached": [], "detached": []},
     }
+
+
+def test_gen_xml_spice_default():
+    """
+    Test virt._gen_xml() with default spice graphics device
+    """
+    xml_data = virt._gen_xml(
+        virt.libvirt.openAuth.return_value,
+        "hello",
+        1,
+        512,
+        {},
+        {},
+        "kvm",
+        "hvm",
+        "x86_64",
+        graphics={"type": "spice"},
+    )
+    root = ET.fromstring(xml_data)
+    assert root.find("devices/graphics").attrib["type"] == "spice"
+    assert root.find("devices/graphics").attrib["autoport"] == "yes"
+    assert root.find("devices/graphics").attrib["listen"] == "0.0.0.0"
+    assert root.find("devices/graphics/listen").attrib["type"] == "address"
+    assert root.find("devices/graphics/listen").attrib["address"] == "0.0.0.0"
+
+
+def test_gen_xml_spice():
+    """
+    Test virt._gen_xml() with spice graphics device
+    """
+    xml_data = virt._gen_xml(
+        virt.libvirt.openAuth.return_value,
+        "hello",
+        1,
+        512,
+        {},
+        {},
+        "kvm",
+        "hvm",
+        "x86_64",
+        graphics={
+            "type": "spice",
+            "port": 1234,
+            "tls_port": 5678,
+            "listen": {"type": "none"},
+        },
+    )
+    root = ET.fromstring(xml_data)
+    assert root.find("devices/graphics").attrib["type"] == "spice"
+    assert root.find("devices/graphics").attrib["autoport"] == "no"
+    assert root.find("devices/graphics").attrib["port"] == "1234"
+    assert root.find("devices/graphics").attrib["tlsPort"] == "5678"
+    assert "listen" not in root.find("devices/graphics").attrib
+    assert root.find("devices/graphics/listen").attrib["type"] == "none"
+    assert "address" not in root.find("devices/graphics/listen").attrib
