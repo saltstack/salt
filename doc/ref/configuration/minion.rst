@@ -1241,7 +1241,7 @@ when trying to authenticate to the master.
 
 .. versionadded:: 2014.7.0
 
-Default: ``60``
+Default: ``5``
 
 When waiting for a master to accept the minion's public key, salt will
 continuously attempt to reconnect until successful. This is the timeout value,
@@ -1250,9 +1250,12 @@ will wait for :conf_minion:`acceptance_wait_time` seconds before trying again.
 Unless your master is under unusually heavy load, this should be left at the
 default.
 
+.. note::
+    For high latency networks try increasing this value
+
 .. code-block:: yaml
 
-    auth_timeout: 60
+    auth_timeout: 5
 
 .. conf_minion:: auth_safemode
 
