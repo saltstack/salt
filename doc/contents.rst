@@ -1,6 +1,11 @@
+==========================
+Salt Project Documentation
+==========================
+
+.. include:: ../README.rst
+
 .. _table-of-contents:
 
-======================
 Salt Table of Contents
 ======================
 
@@ -8,6 +13,7 @@ Salt Table of Contents
     :maxdepth: 2
 
     topics/index
+    topics/salt_system_architecture
     topics/installation/index
     topics/configuration/index
     topics/using_salt

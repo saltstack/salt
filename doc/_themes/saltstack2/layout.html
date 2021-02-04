@@ -33,7 +33,13 @@
 
         {%- for rellink in rellinks|reverse %}
         <li>
+            {%- if rellink[3] == "Table of Contents" and pathto(rellink[0]) != '#' %}
+            <a href="{{ pathto(rellink[0]) }}#table-of-contents" title="{{ rellink[1]|striptags|e }}">{{ rellink[3] }}</a>
+            {%- elif rellink[3] == "Table of Contents" and pathto(rellink[0]) == '#' %}
+            <a href="{{ pathto(rellink[0]) }}table-of-contents" title="{{ rellink[1]|striptags|e }}">{{ rellink[3] }}</a>
+            {%- else %}
             <a href="{{ pathto(rellink[0]) }}" title="{{ rellink[1]|striptags|e }}">{{ rellink[3] }}</a>
+            {% endif %}
             {#
             {%- if not loop.last %}{{ reldelim2 }}{% endif %}
             #}
@@ -160,7 +166,7 @@
                 <li><a href="/en/latest/">Overview</a></li>
                 <li><a href="/en/getstarted/">Tutorials</a></li>
                 <li><a href="/en/latest/contents.html">Documentation</a></li>
-                <li><a href="https://repo.saltstack.com">Downloads</a></li>
+                <li><a href="https://repo.saltproject.io">Downloads</a></li>
                 <li><a href="/en/latest/topics/development/">Develop</a></li>
                             <!--<li><a href="/en/2016.3/faq/">FAQ</a></li>
                             <li><a href="/en/2016.3/samples/">Code Samples</a></li>-->

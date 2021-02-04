@@ -27,11 +27,9 @@ import salt.crypt
 import salt.defaults.events
 import salt.defaults.exitcodes
 import salt.engines
-
-# pylint: enable=no-name-in-module,redefined-builtin
 import salt.ext.tornado
-import salt.ext.tornado.gen  # pylint: disable=F0401
-import salt.ext.tornado.ioloop  # pylint: disable=F0401
+import salt.ext.tornado.gen
+import salt.ext.tornado.ioloop
 import salt.loader
 import salt.log.setup
 import salt.payload
@@ -43,6 +41,7 @@ import salt.utils.args
 import salt.utils.context
 import salt.utils.crypt
 import salt.utils.data
+import salt.utils.dictdiffer
 import salt.utils.dictupdate
 import salt.utils.error
 import salt.utils.event
@@ -71,10 +70,6 @@ from salt.exceptions import (
     SaltReqTimeoutError,
     SaltSystemExit,
 )
-
-# pylint: disable=import-error,no-name-in-module,redefined-builtin
-from salt.ext import six
-from salt.ext.six.moves import range
 from salt.template import SLS_ENCODING
 from salt.utils.ctx import RequestContext
 from salt.utils.debug import enable_sigusr1_handler
@@ -1038,6 +1033,8 @@ class MinionManager(MinionBase):
         self.io_loop.spawn_callback(
             self.process_manager.run, **{"asynchronous": True}
         )  # Tornado backward compat
+        self.event_publisher = None
+        self.event = None
 
     # pylint: disable=W1701
     def __del__(self):
@@ -1195,10 +1192,22 @@ class MinionManager(MinionBase):
             # kill any remaining processes
             minion.process_manager.kill_children()
             minion.destroy()
+        if self.event_publisher is not None:
+            self.event_publisher.close()
+            self.event_publisher = None
+        if self.event is not None:
+            self.event.destroy()
+            self.event = None
 
     def destroy(self):
         for minion in self.minions:
             minion.destroy()
+        if self.event_publisher is not None:
+            self.event_publisher.close()
+            self.event_publisher = None
+        if self.event is not None:
+            self.event.destroy()
+            self.event = None
 
 
 class Minion(MinionBase):
@@ -1339,8 +1348,9 @@ class Minion(MinionBase):
         if self._connect_master_future.done():
             future_exception = self._connect_master_future.exception()
             if future_exception:
+                exc_info = self._connect_master_future.exc_info()
                 # This needs to be re-raised to preserve restart_on_error behavior.
-                raise six.reraise(*future_exception)
+                raise exc_info[0].with_traceback(exc_info[1], exc_info[2])
         if timeout and self._sync_connect_master_success is False:
             raise SaltDaemonNotRunning("Failed to connect to the salt-master")
 
@@ -1574,11 +1584,12 @@ class Minion(MinionBase):
             load["sig"] = sig
 
         with salt.transport.client.ReqChannel.factory(self.opts) as channel:
-            return channel.send(load, timeout=timeout)
+            return channel.send(
+                load, timeout=timeout, tries=self.opts["return_retry_tries"]
+            )
 
     @salt.ext.tornado.gen.coroutine
     def _send_req_async(self, load, timeout):
-
         if self.opts["minion_sign_messages"]:
             log.trace("Signing event to be published onto the bus.")
             minion_privkey_path = os.path.join(self.opts["pki_dir"], "minion.pem")
@@ -1588,7 +1599,9 @@ class Minion(MinionBase):
             load["sig"] = sig
 
         with salt.transport.client.AsyncReqChannel.factory(self.opts) as channel:
-            ret = yield channel.send(load, timeout=timeout)
+            ret = yield channel.send(
+                load, timeout=timeout, tries=self.opts["return_retry_tries"]
+            )
             raise salt.ext.tornado.gen.Return(ret)
 
     def _fire_master(
@@ -1665,8 +1678,6 @@ class Minion(MinionBase):
         differently.
         """
         # Ensure payload is unicode. Disregard failure to decode binary blobs.
-        if six.PY2:
-            data = salt.utils.data.decode(data, keep=True)
         if "user" in data:
             log.info(
                 "User %s Executing command %s with jid %s",
@@ -2409,6 +2420,38 @@ class Minion(MinionBase):
         log.debug("Refreshing matchers.")
         self.matchers = salt.loader.matchers(self.opts)
 
+    def pillar_schedule_refresh(self, current, new):
+        """
+        Refresh the schedule in pillar
+        """
+        # delete any pillar schedule items not
+        # in the updated pillar values.
+        for item in list(current):
+            if item not in new:
+                del current[item]
+
+        # Update any entries that have changed
+        pillar_schedule = {}
+        for item in current:
+            schedule_item = current[item]
+            # ignore any of the internal keys
+            ignore = [item for item in schedule_item if item.startswith("_")]
+            if item in new:
+                diff = salt.utils.dictdiffer.deep_diff(
+                    schedule_item, new[item], ignore=ignore
+                )
+                if diff.get("new"):
+                    pillar_schedule[item] = new[item]
+                else:
+                    pillar_schedule[item] = schedule_item
+
+        # Add any new entries
+        for item in new:
+            if item not in pillar_schedule:
+                pillar_schedule[item] = new[item]
+
+        return pillar_schedule
+
     # TODO: only allow one future in flight at a time?
     @salt.ext.tornado.gen.coroutine
     def pillar_refresh(self, force_refresh=False):
@@ -2427,13 +2470,20 @@ class Minion(MinionBase):
                 pillarenv=self.opts.get("pillarenv"),
             )
             try:
-                self.opts["pillar"] = yield async_pillar.compile_pillar()
+                new_pillar = yield async_pillar.compile_pillar()
             except SaltClientError:
                 # Do not exit if a pillar refresh fails.
                 log.error(
                     "Pillar data could not be refreshed. "
                     "One or more masters may be down!"
                 )
+            else:
+                current_schedule = self.opts["pillar"].get("schedule", {})
+                new_schedule = new_pillar.get("schedule", {})
+                new_pillar["schedule"] = self.pillar_schedule_refresh(
+                    current_schedule, new_schedule
+                )
+                self.opts["pillar"] = new_pillar
             finally:
                 async_pillar.destroy()
         self.matchers_refresh()
@@ -2453,6 +2503,7 @@ class Minion(MinionBase):
         schedule = data.get("schedule", None)
         where = data.get("where", None)
         persist = data.get("persist", None)
+        fire_event = data.get("fire_event", None)
 
         funcs = {
             "delete": ("delete_job", (name, persist)),
@@ -2469,6 +2520,7 @@ class Minion(MinionBase):
             "list": ("list", (where,)),
             "save_schedule": ("save_schedule", ()),
             "get_next_fire_time": ("get_next_fire_time", (name,)),
+            "job_status": ("job_status", (name, fire_event)),
         }
 
         # Call the appropriate schedule function
@@ -2492,23 +2544,29 @@ class Minion(MinionBase):
         include_opts = data.get("include_opts", None)
 
         funcs = {
-            "add": ("add_beacon", (name, beacon_data)),
-            "modify": ("modify_beacon", (name, beacon_data)),
-            "delete": ("delete_beacon", (name,)),
-            "enable": ("enable_beacons", ()),
-            "disable": ("disable_beacons", ()),
-            "enable_beacon": ("enable_beacon", (name,)),
-            "disable_beacon": ("disable_beacon", (name,)),
-            "list": ("list_beacons", (include_opts, include_pillar)),
-            "list_available": ("list_available_beacons", ()),
-            "validate_beacon": ("validate_beacon", (name, beacon_data)),
-            "reset": ("reset", ()),
+            "add": ("add_beacon", {"name": name, "beacon_data": beacon_data}),
+            "modify": ("modify_beacon", {"name": name, "beacon_data": beacon_data}),
+            "delete": ("delete_beacon", {"name": name}),
+            "enable": ("enable_beacons", {}),
+            "disable": ("disable_beacons", {}),
+            "enable_beacon": ("enable_beacon", {"name": name}),
+            "disable_beacon": ("disable_beacon", {"name": name}),
+            "list": (
+                "list_beacons",
+                {"include_opts": include_opts, "include_pillar": include_pillar},
+            ),
+            "list_available": ("list_available_beacons", {}),
+            "validate_beacon": (
+                "validate_beacon",
+                {"name": name, "beacon_data": beacon_data},
+            ),
+            "reset": ("reset", {}),
         }
 
         # Call the appropriate beacon function
         try:
             alias, params = funcs.get(func)
-            getattr(self.beacons, alias)(*params)
+            getattr(self.beacons, alias)(**params)
         except TypeError:
             log.error('Function "%s" is unavailable in salt.utils.beacons', func)
 
@@ -2571,7 +2629,11 @@ class Minion(MinionBase):
         with salt.transport.client.ReqChannel.factory(self.opts) as channel:
             data["tok"] = self.tok
             try:
-                ret = channel.send(data)
+                ret = channel.send(
+                    data,
+                    timeout=self._return_retry_timer(),
+                    tries=self.opts["return_retry_tries"],
+                )
                 return ret
             except SaltReqTimeoutError:
                 log.warning("Unable to send mine data to master.")
@@ -2882,11 +2944,10 @@ class Minion(MinionBase):
                 except Exception:  # pylint: disable=broad-except
                     log.critical("The beacon errored: ", exc_info=True)
                 if beacons:
-                    event = salt.utils.event.get_event(
+                    with salt.utils.event.get_event(
                         "minion", opts=self.opts, listen=False
-                    )
-                    event.fire_event({"beacons": beacons}, "__beacons_return")
-                    event.destroy()
+                    ) as event:
+                        event.fire_event({"beacons": beacons}, "__beacons_return")
 
             if before_connect:
                 # Make sure there is a chance for one iteration to occur before connect
@@ -3136,6 +3197,8 @@ class Syndic(Minion):
     """
 
     def __init__(self, opts, **kwargs):
+        self.local = None
+        self.forward_events = None
         self._syndic_interface = opts.get("interface")
         self._syndic = True
         # force auth_safemode True because Syndic don't support autorestart
@@ -3258,11 +3321,13 @@ class Syndic(Minion):
         # We borrowed the local clients poller so give it back before
         # it's destroyed. Reset the local poller reference.
         super().destroy()
-        if hasattr(self, "local"):
-            del self.local
+        if self.local is not None:
+            self.local.destroy()
+            self.local = None
 
-        if hasattr(self, "forward_events"):
+        if self.forward_events is not None:
             self.forward_events.stop()
+            self.forward_events = None
 
 
 # TODO: need a way of knowing if the syndic connection is busted
@@ -3293,6 +3358,7 @@ class SyndicManager(MinionBase):
     def __init__(self, opts, io_loop=None):
         opts["loop_interval"] = 1
         super().__init__(opts)
+        self._closing = False
         self.mminion = salt.minion.MasterMinion(opts)
         # sync (old behavior), cluster (only returns and publishes)
         self.syndic_mode = self.opts.get("syndic_mode", "sync")
@@ -3604,6 +3670,13 @@ class SyndicManager(MinionBase):
             res = self._return_pub_syndic(values, master_id=master)
             if res:
                 del self.job_rets[master]
+
+    def destroy(self):
+        if self._closing is True:
+            return
+        self._closing = True
+        if self.local is not None:
+            self.local.destroy()
 
 
 class ProxyMinionManager(MinionManager):

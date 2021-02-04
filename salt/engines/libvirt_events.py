@@ -63,16 +63,10 @@ A polkit rule like the following one will allow `salt` user to connect to libvir
 .. versionadded:: 2019.2.0
 """
 
-
 import logging
+import urllib.parse
 
-# Import salt libs
 import salt.utils.event
-
-# pylint: disable=no-name-in-module,import-error
-from salt.ext.six.moves.urllib.parse import urlparse
-
-# pylint: enable=no-name-in-module,import-error
 
 log = logging.getLogger(__name__)
 
@@ -217,7 +211,7 @@ def _salt_send_event(opaque, conn, data):
 
     # Prepare the connection URI to fit in the tag
     # qemu+ssh://user@host:1234/system -> qemu+ssh/user@host:1234/system
-    uri = urlparse(conn.getURI())
+    uri = urllib.parse.urlparse(conn.getURI())
     uri_tag = [uri.scheme]
     if uri.netloc:
         uri_tag.append(uri.netloc)

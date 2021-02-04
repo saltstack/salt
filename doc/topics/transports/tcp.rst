@@ -46,7 +46,7 @@ The TCP transport allows for the master/minion communication to be optionally
 wrapped in a TLS connection. Enabling this is simple, the master and minion need
 to be using the tcp connection, then the `ssl` option is enabled. The `ssl`
 option is passed as a dict and corresponds to the options passed to the
-Python `ssl.wrap_socket <https://docs.python.org/2/library/ssl.html#ssl.wrap_socket>`
+Python `ssl.wrap_socket <https://docs.python.org/3/library/ssl.html#ssl.wrap_socket>`
 function.
 
 A simple setup looks like this, on the Salt Master add the `ssl` option to the

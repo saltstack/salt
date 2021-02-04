@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 State module to manage Elasticsearch index templates
 
@@ -6,13 +5,8 @@ State module to manage Elasticsearch index templates
 .. deprecated:: 2017.7.0 Use elasticsearch state instead
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
-
-# Import Salt libs
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -31,7 +25,7 @@ def absent(name):
         index_template = __salt__["elasticsearch.index_template_get"](name=name)
         if index_template and name in index_template:
             if __opts__["test"]:
-                ret["comment"] = "Index template {0} will be removed".format(name)
+                ret["comment"] = "Index template {} will be removed".format(name)
                 ret["changes"]["old"] = index_template[name]
                 ret["result"] = None
             else:
@@ -39,21 +33,21 @@ def absent(name):
                     name=name
                 )
                 if ret["result"]:
-                    ret["comment"] = "Successfully removed index template {0}".format(
+                    ret["comment"] = "Successfully removed index template {}".format(
                         name
                     )
                     ret["changes"]["old"] = index_template[name]
                 else:
                     ret[
                         "comment"
-                    ] = "Failed to remove index template {0} for unknown reasons".format(
+                    ] = "Failed to remove index template {} for unknown reasons".format(
                         name
                     )
         else:
-            ret["comment"] = "Index template {0} is already absent".format(name)
+            ret["comment"] = "Index template {} is already absent".format(name)
     except Exception as err:  # pylint: disable=broad-except
         ret["result"] = False
-        ret["comment"] = six.text_type(err)
+        ret["comment"] = str(err)
 
     return ret
 
@@ -95,7 +89,7 @@ def present(name, definition):
             if __opts__["test"]:
                 ret[
                     "comment"
-                ] = "Index template {0} does not exist and will be created".format(name)
+                ] = "Index template {} does not exist and will be created".format(name)
                 ret["changes"] = {"new": definition}
                 ret["result"] = None
             else:
@@ -103,7 +97,7 @@ def present(name, definition):
                     name=name, body=definition
                 )
                 if output:
-                    ret["comment"] = "Successfully created index template {0}".format(
+                    ret["comment"] = "Successfully created index template {}".format(
                         name
                     )
                     ret["changes"] = {
@@ -113,13 +107,13 @@ def present(name, definition):
                     }
                 else:
                     ret["result"] = False
-                    ret["comment"] = "Cannot create index template {0}, {1}".format(
+                    ret["comment"] = "Cannot create index template {}, {}".format(
                         name, output
                     )
         else:
-            ret["comment"] = "Index template {0} is already present".format(name)
+            ret["comment"] = "Index template {} is already present".format(name)
     except Exception as err:  # pylint: disable=broad-except
         ret["result"] = False
-        ret["comment"] = six.text_type(err)
+        ret["comment"] = str(err)
 
     return ret
