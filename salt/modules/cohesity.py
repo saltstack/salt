@@ -16,10 +16,11 @@ This module have been tested on Cohesity API v1.
 
 # Python Modules Import
 import copy
+import json
 import logging
 import os
 
-#import salt.config
+import salt.utils.files
 
 try:
     from cohesity_management_sdk.cohesity_client import CohesityClient
@@ -73,8 +74,8 @@ def load_config():
     config_path = "/etc/salt/master.d/cohesity.conf"
     cohesity_config = {}
     if os.path.isfile(config_path):
-        with open(config_path) as file_obj:
-            config = json.load(file_obj)
+        with salt.utils.files.fopen(config_path, "rb") as file_obj:
+            config = json.loads(file_obj)
             cohesity_config = config.get("cohesity_config", {})
         if not cohesity_config:
             logger.error("Please update {} file".format(config_path))
@@ -91,6 +92,7 @@ def load_config():
         password=c_password,
         domain=c_domain,
     )
+
 
 
 def __virtual__():
