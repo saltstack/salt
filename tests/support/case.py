@@ -385,7 +385,7 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
         if salt.utils.platform.is_windows():
             cmd = "python "
         else:
-            cmd += "python{}.{} ".format(*sys.version_info)
+            cmd = "python{}.{} ".format(*sys.version_info)
 
         cmd += "{} --config-dir={} {} ".format(
             script_path, config_dir or RUNTIME_VARS.TMP_CONF_DIR, arg_str
