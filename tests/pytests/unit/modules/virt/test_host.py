@@ -173,7 +173,7 @@ def test_node_devices(make_mock_device):
     ]
     virt.libvirt.openAuth().listAllDevices.return_value = mock_devs
 
-    assert [
+    assert virt.node_devices() == [
         {
             "name": "pci_1002_71c4",
             "caps": "pci",
@@ -216,4 +216,4 @@ def test_node_devices(make_mock_device):
             "state": "down",
             "device name": "pci_0000_02_10_7",
         },
-    ] == virt.node_devices()
+    ]
