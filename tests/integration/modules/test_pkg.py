@@ -6,12 +6,7 @@ import salt.utils.path
 import salt.utils.pkg
 import salt.utils.platform
 from tests.support.case import ModuleCase
-from tests.support.helpers import (
-    requires_network,
-    requires_salt_modules,
-    requires_salt_states,
-    requires_system_grains,
-)
+from tests.support.helpers import requires_system_grains
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.unit import skipIf
 
@@ -33,13 +28,13 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
             cls.pkg = "units"
 
     @pytest.mark.skip_if_not_root
-    @requires_salt_modules("pkg.refresh_db")
+    @pytest.mark.requires_salt_modules("pkg.refresh_db")
     def setUp(self):
         if "refresh" not in self.ctx:
             self.run_function("pkg.refresh_db")
             self.ctx["refresh"] = True
 
-    @requires_salt_modules("pkg.list_pkgs")
+    @pytest.mark.requires_salt_modules("pkg.list_pkgs")
     @pytest.mark.slow_test
     def test_list(self):
         """
@@ -48,7 +43,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_function("pkg.list_pkgs")
         self.assertNotEqual(len(ret.keys()), 0)
 
-    @requires_salt_modules("pkg.version_cmp")
+    @pytest.mark.requires_salt_modules("pkg.version_cmp")
     @requires_system_grains
     @pytest.mark.slow_test
     def test_version_cmp(self, grains):
@@ -74,10 +69,10 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(self.run_function(func, gt), 1)
 
     @pytest.mark.destructive_test
-    @requires_salt_modules("pkg.mod_repo", "pkg.del_repo", "pkg.get_repo")
-    @requires_network()
+    @pytest.mark.requires_salt_modules("pkg.mod_repo", "pkg.del_repo", "pkg.get_repo")
     @requires_system_grains
     @pytest.mark.slow_test
+    @pytest.mark.requires_network
     def test_mod_del_repo(self, grains):
         """
         test modifying and deleting a software repository
@@ -191,7 +186,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
             if repo is not None:
                 self.run_function("pkg.del_repo", [repo])
 
-    @requires_salt_modules("pkg.owner")
+    @pytest.mark.requires_salt_modules("pkg.owner")
     def test_owner(self):
         """
         test finding the package owning a file
@@ -201,7 +196,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertNotEqual(len(ret), 0)
 
     # Similar to pkg.owner, but for FreeBSD's pkgng
-    @requires_salt_modules("pkg.which")
+    @pytest.mark.requires_salt_modules("pkg.which")
     def test_which(self):
         """
         test finding the package owning a file
@@ -211,9 +206,9 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertNotEqual(len(ret), 0)
 
     @pytest.mark.destructive_test
-    @requires_salt_modules("pkg.version", "pkg.install", "pkg.remove")
-    @requires_network()
+    @pytest.mark.requires_salt_modules("pkg.version", "pkg.install", "pkg.remove")
     @pytest.mark.slow_test
+    @pytest.mark.requires_network
     def test_install_remove(self):
         """
         successfully install and uninstall a package
@@ -239,7 +234,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
             test_remove()
 
     @pytest.mark.destructive_test
-    @requires_salt_modules(
+    @pytest.mark.requires_salt_modules(
         "pkg.hold",
         "pkg.unhold",
         "pkg.install",
@@ -247,10 +242,10 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         "pkg.remove",
         "pkg.list_pkgs",
     )
-    @requires_salt_states("pkg.installed")
-    @requires_network()
     @requires_system_grains
     @pytest.mark.slow_test
+    @pytest.mark.requires_network
+    @pytest.mark.requires_salt_states("pkg.installed")
     def test_hold_unhold(self, grains):
         """
         test holding and unholding a package
@@ -294,10 +289,10 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
                 self.assertSaltTrueReturn(ret)
 
     @pytest.mark.destructive_test
-    @requires_salt_modules("pkg.refresh_db")
-    @requires_network()
+    @pytest.mark.requires_salt_modules("pkg.refresh_db")
     @requires_system_grains
     @pytest.mark.slow_test
+    @pytest.mark.requires_network
     def test_refresh_db(self, grains):
         """
         test refreshing the package database
@@ -327,7 +322,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
         self.assertFalse(os.path.isfile(rtag))
 
-    @requires_salt_modules("pkg.info_installed")
+    @pytest.mark.requires_salt_modules("pkg.info_installed")
     @requires_system_grains
     @pytest.mark.slow_test
     def test_pkg_info(self, grains):
@@ -358,8 +353,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
     @skipIf(True, "Temporary Skip - Causes centos 8 test to fail")
     @pytest.mark.destructive_test
-    @requires_network()
-    @requires_salt_modules(
+    @pytest.mark.requires_salt_modules(
         "pkg.refresh_db",
         "pkg.upgrade",
         "pkg.install",
@@ -368,6 +362,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
     )
     @requires_system_grains
     @pytest.mark.slow_test
+    @pytest.mark.requires_network
     def test_pkg_upgrade_has_pending_upgrades(self, grains):
         """
         Test running a system upgrade when there are packages that need upgrading
@@ -442,10 +437,10 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         salt.utils.platform.is_darwin(),
         "The jenkins user is equivalent to root on mac, causing the test to be unrunnable",
     )
-    @requires_salt_modules("pkg.remove", "pkg.latest_version")
-    @requires_salt_states("pkg.removed")
+    @pytest.mark.requires_salt_modules("pkg.remove", "pkg.latest_version")
     @requires_system_grains
     @pytest.mark.slow_test
+    @pytest.mark.requires_salt_states("pkg.removed")
     def test_pkg_latest_version(self, grains):
         """
         Check that pkg.latest_version returns the latest version of the uninstalled package.

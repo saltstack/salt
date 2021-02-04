@@ -5,10 +5,9 @@
 import pytest
 import salt.utils.args
 from tests.support.case import ModuleCase
-from tests.support.helpers import requires_salt_modules
 
 
-@requires_salt_modules("test.ping", "test.arg")
+@pytest.mark.requires_salt_modules("test.ping", "test.arg")
 @pytest.mark.windows_whitelisted
 class ArgumentTestCase(ModuleCase):
     @pytest.mark.slow_test

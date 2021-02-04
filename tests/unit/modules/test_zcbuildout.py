@@ -13,7 +13,7 @@ import salt.modules.zcbuildout as buildout
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
-from tests.support.helpers import patched_environ, requires_network
+from tests.support.helpers import patched_environ
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
@@ -123,7 +123,7 @@ class Base(TestCase, LoaderModuleMockMixin):
     salt.utils.path.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES) is None,
     "The 'virtualenv' packaged needs to be installed",
 )
-@requires_network()
+@pytest.mark.requires_network
 class BuildoutTestCase(Base):
     @pytest.mark.slow_test
     def test_onlyif_unless(self):
@@ -327,7 +327,7 @@ class BuildoutTestCase(Base):
     salt.utils.path.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES) is None,
     "The 'virtualenv' packaged needs to be installed",
 )
-@requires_network()
+@pytest.mark.requires_network
 class BuildoutOnlineTestCase(Base):
     @classmethod
     def setUpClass(cls):
