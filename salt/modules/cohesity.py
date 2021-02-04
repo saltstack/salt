@@ -16,9 +16,9 @@ This module have been tested on Cohesity API v1.
 
 # Python Modules Import
 import copy
-import json
+# import json
 import logging
-import os
+# import os
 
 try:
     #import salt.utils.files
@@ -80,9 +80,9 @@ cohesity_config = {}
 #        exit()
 
 cluster_vip = cohesity_config.get("cluster_vip", "")
-c_username = cohesity_config("username", "")
-c_password = cohesity_config("password", "")
-c_domain = cohesity_config("domain", "")
+c_username = cohesity_config.get("username", "")
+c_password = cohesity_config.get("password", "")
+c_domain = cohesity_config.get("domain", "")
 cohesity_client = CohesityClient(
     cluster_vip=cluster_vip,
     username=c_username,
