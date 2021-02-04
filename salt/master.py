@@ -1983,7 +1983,8 @@ class ClearFuncs(TransportMethods):
             runner_client = salt.runner.RunnerClient(self.opts)
             return runner_client.asynchronous(fun,
                                               clear_load.get('kwarg', {}),
-                                              username)
+                                              username,
+                                              local=True)
         except Exception as exc:  # pylint: disable=broad-except
             log.error('Exception occurred while introspecting %s: %s', fun, exc)
             return {'error': {'name': exc.__class__.__name__,
