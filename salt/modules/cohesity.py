@@ -92,7 +92,7 @@ def load_config():
         password=c_password,
         domain=c_domain,
     )
-
+    cohesity_client.groups.get_groups()
 
 
 def __virtual__():
