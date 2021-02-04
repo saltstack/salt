@@ -7,12 +7,14 @@ sdk can be installed using `pip install cohesity-management-sdk`
 
 # Python Modules Import
 import copy
+
 # import json
 import logging
+
 # import os
 
 try:
-    #import salt.utils.files
+    # import salt.utils.files
 
     from cohesity_management_sdk.cohesity_client import CohesityClient
     from cohesity_management_sdk.exceptions.api_exception import APIException
@@ -62,7 +64,7 @@ __virtualname__ = "cohesity"
 
 config_path = "/etc/salt/master.d/cohesity.conf"
 cohesity_config = {}
-#if os.path.isfile(config_path):
+# if os.path.isfile(config_path):
 #    with salt.utils.files.fopen(config_path, "rb") as file_obj:
 #        config = json.loads(file_obj)
 #        cohesity_config = config.get("cohesity_config", {})

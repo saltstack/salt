@@ -6,19 +6,24 @@
 #
 alabaster==0.7.12         # via sphinx
 babel==2.8.0              # via sphinx
+cachecontrol==0.12.6      # via cohesity-management-sdk
 certifi==2020.4.5.1       # via requests
 chardet==3.0.4            # via requests
+cohesity-management-sdk==1.5.2
 docutils==0.15.2          # via sphinx
 idna==2.9                 # via requests
 imagesize==1.2.0          # via sphinx
 jinja2==2.11.2            # via sphinx
+jsonpickle==0.9.6         # via cohesity-management-sdk
 markupsafe==1.1.1         # via jinja2
+msgpack==1.0.2            # via cachecontrol
 packaging==20.3           # via sphinx
 pygments==2.6.1           # via sphinx
 pyparsing==2.4.7          # via packaging
+python-dateutil==2.8.1    # via cohesity-management-sdk
 pytz==2019.3              # via babel
-requests==2.23.0          # via sphinx
-six==1.15.0               # via packaging
+requests==2.23.0          # via cachecontrol, cohesity-management-sdk, sphinx
+six==1.15.0               # via packaging, python-dateutil
 snowballstemmer==2.0.0    # via sphinx
 sphinx==3.0.1
 sphinxcontrib-applehelp==1.0.2  # via sphinx
