@@ -17,8 +17,9 @@ This module have been tested on Cohesity API v1.
 # Python Modules Import
 import copy
 import logging
+import os
 
-import salt.config
+#import salt.config
 
 try:
     from cohesity_management_sdk.cohesity_client import CohesityClient
@@ -57,30 +58,39 @@ try:
     )
 
     HAS_LIBS = True
-except ModuleNotFoundError as err:
+except ImportError as err:
     HAS_LIBS = False
     print("Error while importing Cohesity SDK modules.")
     print(err)
     exit(0)
 
 logger = logging.getLogger(__name__)
-cohesity_config = salt.config.client_config("/etc/salt/master.d/cohesity.conf").get(
-    "cohesity_config", {}
-)
-if not cohesity_config:
-    logger.error("Please update /etc/salt/master.d/cohesity.conf file")
-    exit()
-
-cluster_vip = cohesity_config["cluster_vip"]
-c_username = cohesity_config["username"]
-c_password = cohesity_config["password"]
-c_domain = cohesity_config["domain"]
-
-cohesity_client = CohesityClient(
-    cluster_vip=cluster_vip, username=c_username, password=c_password, domain=c_domain
-)
 ERROR_LIST = []
 __virtualname__ = "cohesity"
+
+
+def load_config():
+    config_path = "/etc/salt/master.d/cohesity.conf"
+    cohesity_config = {}
+    if os.path.isfile(config_path):
+        with open(config_path) as file_obj:
+            config = json.load(file_obj)
+            cohesity_config = config.get("cohesity_config", {})
+        if not cohesity_config:
+            logger.error("Please update {} file".format(config_path))
+            exit()
+
+    cluster_vip = cohesity_config["cluster_vip"]
+    c_username = cohesity_config["username"]
+    c_password = cohesity_config["password"]
+    c_domain = cohesity_config["domain"]
+    global cohesity_client
+    cohesity_client = CohesityClient(
+        cluster_vip=cluster_vip,
+        username=c_username,
+        password=c_password,
+        domain=c_domain,
+    )
 
 
 def __virtual__():
@@ -472,3 +482,7 @@ def restore_vms(
         return "Successfully created restore task {} ".format(task_name)
     except APIException as err:
         return str(err)
+
+
+if __name__ == "main":
+    load_config()
