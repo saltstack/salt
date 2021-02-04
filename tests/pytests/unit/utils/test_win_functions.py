@@ -29,6 +29,7 @@ try:
 except ImportError:
     HAS_PYWIN = False
 
+
 # Test cases for salt.utils.win_functions.
 
 
