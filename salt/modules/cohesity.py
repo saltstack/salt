@@ -1,8 +1,8 @@
 """
 This module have been tested on Cohesity API v1.
 :depends: cohesity-management-sdk,
-    https://github.com/cohesity/management-sdk-python
-    sdk can be installed using `pip install cohesity-management-sdk`
+https://github.com/cohesity/management-sdk-python
+sdk can be installed using `pip install cohesity-management-sdk`
 
 :configuration: The following configuration defaults can be
     defined (config file "/etc/salt/master.d/cohesity.conf"):
