@@ -166,7 +166,9 @@ def find_user(name, api_key=None):
     return False
 
 
-def post_message(channel, message, from_name, api_key=None, icon=None):
+def post_message(
+    channel, message, from_name, api_key=None, icon=None, attachments=None, blocks=None,
+):
     """
     Send a message to a Slack channel.
 
@@ -175,6 +177,8 @@ def post_message(channel, message, from_name, api_key=None, icon=None):
     :param from_name:   Specify who the message is from.
     :param api_key:     The Slack api key, if not specified in the configuration.
     :param icon:        URL to an image to use as the icon for this message
+    :param attachments: Any attachments to be sent with the message.
+    :param blocks:      Any blocks to be sent with the message.
     :return:            Boolean if message was sent successfully.
 
     CLI Example:
@@ -210,7 +214,13 @@ def post_message(channel, message, from_name, api_key=None, icon=None):
     if not from_name:
         log.error("from_name is a required option.")
 
-    parameters = {"channel": channel, "username": from_name, "text": message}
+    parameters = {
+        "channel": channel,
+        "username": from_name,
+        "text": message,
+        "attachments": attachments or [],
+        "blocks": blocks or [],
+    }
 
     if icon is not None:
         parameters["icon_url"] = icon
