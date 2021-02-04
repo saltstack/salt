@@ -25,7 +25,10 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         if salt.utils.platform.is_windows():
             cls.pkg = "putty"
         elif grains["os_family"] == "RedHat":
-            cls.pkg = "units"
+            if grains["os"] == "VMware Photon OS":
+                cls.pkg = "snoopy"
+            else:
+                cls.pkg = "units"
 
     @pytest.mark.skip_if_not_root
     @pytest.mark.requires_salt_modules("pkg.refresh_db")
@@ -142,7 +145,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         os_grain = self.run_function("grains.item", ["os"])["os"]
         repo = None
         try:
-            if os_grain in ["CentOS", "RedHat"]:
+            if os_grain in ["CentOS", "RedHat", "VMware Photon OS"]:
                 my_baseurl = (
                     "http://my.fake.repo/foo/bar/\n http://my.fake.repo.alt/foo/bar/"
                 )
@@ -234,6 +237,10 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
             test_remove()
 
     @pytest.mark.destructive_test
+    @pytest.mark.skipif(
+        salt.utils.platform.is_photonos(),
+        reason="package hold/unhold unsupported on Photon OS",
+    )
     @pytest.mark.requires_salt_modules(
         "pkg.hold",
         "pkg.unhold",
