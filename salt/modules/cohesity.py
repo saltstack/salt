@@ -75,10 +75,7 @@ c_username = cohesity_config.get("username", "")
 c_password = cohesity_config.get("password", "")
 c_domain = cohesity_config.get("domain", "")
 cohesity_client = CohesityClient(
-    cluster_vip=cluster_vip,
-    username=c_username,
-    password=c_password,
-    domain=c_domain,
+    cluster_vip=cluster_vip, username=c_username, password=c_password, domain=c_domain,
 )
 
 
