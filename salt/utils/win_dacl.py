@@ -2181,6 +2181,7 @@ def _check_perms(obj_name, obj_type, new_perms, access_mode, ret):
         ret["changes"].setdefault(perms_label, {})
         for user in changes:
             user_name = get_name(principal=user)
+            cur_perm = cur_perms["Not Inherited"].get(user_name, {})
 
             if __opts__["test"] is True:
                 ret["changes"][perms_label].setdefault(user, {})
@@ -2190,25 +2191,12 @@ def _check_perms(obj_name, obj_type, new_perms, access_mode, ret):
                 applies_to = None
                 if "applies_to" not in changes[user]:
                     # Get current "applies to" settings from the file
-                    if (
-                        user_name in cur_perms["Not Inherited"]
-                        and access_mode in cur_perms["Not Inherited"][user_name]
-                    ):
+                    if access_mode in cur_perm:
                         for flag in flags().ace_prop[obj_type]:
-                            if (
-                                flags().ace_prop[obj_type][flag]
-                                == cur_perms["Not Inherited"][user_name][access_mode][
-                                    "applies to"
-                                ]
-                            ):
+                            if flags().ace_prop[obj_type][flag] == cur_perm[access_mode]["applies to"]:
                                 at_flag = flag
                                 for flag1 in flags().ace_prop[obj_type]:
-                                    if (
-                                        salt.utils.win_dacl.flags().ace_prop[obj_type][
-                                            flag1
-                                        ]
-                                        == at_flag
-                                    ):
+                                    if flags().ace_prop[obj_type][flag1] == at_flag:
                                         applies_to = flag1
                     if not applies_to:
                         if obj_type.lower() in ["registry", "registry32"]:
@@ -2222,21 +2210,21 @@ def _check_perms(obj_name, obj_type, new_perms, access_mode, ret):
                 if perms_label not in changes[user]:
                     # Get current perms
                     # Check for basic perms
-                    for perm in cur_perms["Not Inherited"].get(user_name, {}).get(access_mode, {}).get("permissions", ""):
-                        for flag in flags().ace_perms[obj_type]["basic"]:
-                            if flags().ace_perms[obj_type]["basic"][flag] == perm:
-                                perm_flag = flag
-                                for flag1 in flags().ace_perms[obj_type]["basic"]:
-                                    if (flags().ace_perms[obj_type]["basic"][flag1] == perm_flag):
-                                        perms = flag1
+                    perm = cur_perms["Not Inherited"].get(user_name, {}).get(access_mode, {}).get("permissions", "")
+                    for flag in flags().ace_perms[obj_type]["basic"]:
+                        if flags().ace_perms[obj_type]["basic"][flag] == perm:
+                            perm_flag = flag
+                            for flag1 in flags().ace_perms[obj_type]["basic"]:
+                                if flags().ace_perms[obj_type]["basic"][flag1] == perm_flag:
+                                    perms = flag1
                     # Make a list of advanced perms
                     if not perms:
                         for perm in cur_perms["Not Inherited"].get(user_name, {}).get(access_mode, {}).get("permissions", []):
                             for flag in flags().ace_perms[obj_type]["advanced"]:
-                                if (flags().ace_perms[obj_type]["advanced"][flag] == perm):
+                                if flags().ace_perms[obj_type]["advanced"][flag] == perm:
                                     perm_flag = flag
                                     for flag1 in flags().ace_perms[obj_type]["advanced"]:
-                                        if (flags().ace_perms[obj_type]["advanced"][flag1] == perm_flag):
+                                        if flags().ace_perms[obj_type]["advanced"][flag1] == perm_flag:
                                             perms.append(flag1)
                 else:
                     perms = changes[user][perms_label]
@@ -2405,11 +2393,9 @@ def check_perms(
     if reset:
         log.debug("Resetting permissions for %s", obj_name)
         cur_perms = get_permissions(obj_name=obj_name, obj_type=obj_type)
-        grant_perms_reset = grant_perms or {}
-        deny_perms_reset = deny_perms or {}
         for user_name in cur_perms["Not Inherited"]:
             # case insensitive dictionary search
-            if user_name not in {salt.utils.win_dacl.get_name(k) for k in grant_perms_reset}:
+            if user_name not in {get_name(k) for k in (grant_perms or {})}:
                 if "grant" in cur_perms["Not Inherited"][user_name]:
                     ret["changes"].setdefault("remove_perms", {})
                     if __opts__["test"] is True:
@@ -2427,7 +2413,7 @@ def check_perms(
                             {user_name: cur_perms["Not Inherited"][user_name]}
                         )
             # case insensitive dictionary search
-            if user_name not in {salt.utils.win_dacl.get_name(k) for k in deny_perms_reset}:
+            if user_name not in {get_name(k) for k in (deny_perms or {})}:
                 if "deny" in cur_perms["Not Inherited"][user_name]:
                     ret["changes"].setdefault("remove_perms", {})
                     if __opts__["test"] is True:
@@ -2478,7 +2464,7 @@ def check_perms(
         cur_perms = get_permissions(obj_name=obj_name, obj_type=obj_type)
         for user_name in cur_perms["Not Inherited"]:
             # case insensitive dictionary search
-            if user_name not in {salt.utils.win_dacl.get_name(k) for k in (grant_perms or {})}:
+            if user_name not in {get_name(k) for k in (grant_perms or {})}:
                 if "grant" in cur_perms["Not Inherited"][user_name]:
                     rm_permissions(
                         obj_name=obj_name,
@@ -2487,7 +2473,7 @@ def check_perms(
                         obj_type=obj_type,
                     )
             # case insensitive dictionary search
-            if user_name not in {salt.utils.win_dacl.get_name(k) for k in (deny_perms or {})}:
+            if user_name not in {get_name(k) for k in (deny_perms or {})}:
                 if "deny" in cur_perms["Not Inherited"][user_name]:
                     rm_permissions(
                         obj_name=obj_name,
