@@ -69,29 +69,26 @@ logger = logging.getLogger(__name__)
 ERROR_LIST = []
 __virtualname__ = "cohesity"
 
+config_path = "/etc/salt/master.d/cohesity.conf"
+cohesity_config = {}
+if os.path.isfile(config_path):
+    with salt.utils.files.fopen(config_path, "rb") as file_obj:
+        config = json.loads(file_obj)
+        cohesity_config = config.get("cohesity_config", {})
+    if not cohesity_config:
+        logger.error("Please update {} file".format(config_path))
+        exit()
 
-def load_config():
-    config_path = "/etc/salt/master.d/cohesity.conf"
-    cohesity_config = {}
-    if os.path.isfile(config_path):
-        with salt.utils.files.fopen(config_path, "rb") as file_obj:
-            config = json.loads(file_obj)
-            cohesity_config = config.get("cohesity_config", {})
-        if not cohesity_config:
-            logger.error("Please update {} file".format(config_path))
-            exit()
-
-    cluster_vip = cohesity_config["cluster_vip"]
-    c_username = cohesity_config["username"]
-    c_password = cohesity_config["password"]
-    c_domain = cohesity_config["domain"]
-    cohesity_client = CohesityClient(
-        cluster_vip=cluster_vip,
-        username=c_username,
-        password=c_password,
-        domain=c_domain,
-    )
-    return cohesity_client
+cluster_vip = cohesity_config["cluster_vip"]
+c_username = cohesity_config["username"]
+c_password = cohesity_config["password"]
+c_domain = cohesity_config["domain"]
+cohesity_client = CohesityClient(
+    cluster_vip=cluster_vip,
+    username=c_username,
+    password=c_password,
+    domain=c_domain,
+)
 
 
 def __virtual__():
@@ -483,8 +480,3 @@ def restore_vms(
         return "Successfully created restore task {} ".format(task_name)
     except APIException as err:
         return str(err)
-
-
-if __name__ == "main":
-    global cohesity_client
-    cohesity_client = load_config()
