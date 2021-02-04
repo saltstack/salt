@@ -1,10 +1,7 @@
-# -*- coding: utf-8 -*-
 """
-Functions for manipulating or otherwise processing strings
+Functions for manipulating or otherwise processing strings.
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import base64
 import difflib
@@ -17,11 +14,8 @@ import shlex
 import time
 import unicodedata
 
-# Import 3rd-party libs
 from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
-
-# Import Salt libs
 from salt.utils.decorators.jinja import jinja_filter
 
 log = logging.getLogger(__name__)
@@ -43,25 +37,22 @@ def to_bytes(s, encoding=None, errors="strict"):
         raise ValueError("encoding cannot be empty")
 
     exc = None
-    if six.PY3:
-        if isinstance(s, bytes):
-            return s
-        if isinstance(s, bytearray):
-            return bytes(s)
-        if isinstance(s, six.string_types):
-            for enc in encoding:
-                try:
-                    return s.encode(enc, errors)
-                except UnicodeEncodeError as err:
-                    exc = err
-                    continue
-            # The only way we get this far is if a UnicodeEncodeError was
-            # raised, otherwise we would have already returned (or raised some
-            # other exception).
-            raise exc  # pylint: disable=raising-bad-type
-        raise TypeError("expected str, bytes, or bytearray not {}".format(type(s)))
-    else:
-        return to_str(s, encoding, errors)
+    if isinstance(s, bytes):
+        return s
+    if isinstance(s, bytearray):
+        return bytes(s)
+    if isinstance(s, str):
+        for enc in encoding:
+            try:
+                return s.encode(enc, errors)
+            except UnicodeEncodeError as err:
+                exc = err
+                continue
+        # The only way we get this far is if a UnicodeEncodeError was
+        # raised, otherwise we would have already returned (or raised some
+        # other exception).
+        raise exc  # pylint: disable=raising-bad-type
+    raise TypeError("expected str, bytes, or bytearray not {}".format(type(s)))
 
 
 def to_str(s, encoding=None, errors="strict", normalize=False):
@@ -190,7 +181,7 @@ def to_none(text):
     """
     Convert a string to None if the string is empty or contains only spaces.
     """
-    if six.text_type(text).strip():
+    if str(text).strip():
         return text
     return None
 
@@ -202,7 +193,7 @@ def is_quoted(value):
     """
     ret = ""
     if (
-        isinstance(value, six.string_types)
+        isinstance(value, str)
         and value[0] == value[-1]
         and value.startswith(("'", '"'))
     ):
@@ -235,20 +226,20 @@ def is_binary(data):
     """
     Detects if the passed string of data is binary or text
     """
-    if not data or not isinstance(data, (six.string_types, six.binary_type)):
+    if not data or not isinstance(data, ((str,), bytes)):
         return False
 
-    if isinstance(data, six.binary_type):
+    if isinstance(data, bytes):
         if b"\0" in data:
             return True
-    elif str("\0") in data:
+    elif "\0" in data:
         return True
 
     text_characters = "".join([chr(x) for x in range(32, 127)] + list("\n\r\t\b"))
     # Get the non-text characters (map each character to itself then use the
     # 'remove' option to get rid of the text characters.)
     if six.PY3:
-        if isinstance(data, six.binary_type):
+        if isinstance(data, bytes):
             import salt.utils.data
 
             nontext = data.translate(None, salt.utils.data.encode(text_characters))
@@ -256,7 +247,7 @@ def is_binary(data):
             trans = "".maketrans("", "", text_characters)
             nontext = data.translate(trans)
     else:
-        if isinstance(data, six.text_type):
+        if isinstance(data, str):
             trans_args = ({ord(x): None for x in text_characters},)
         else:
             trans_args = (
@@ -358,8 +349,8 @@ def build_whitespace_split_regex(text):
     regex = r""
     for line in text.splitlines():
         parts = [re.escape(s) for s in __build_parts(line)]
-        regex += r"(?:[\s]+)?{0}(?:[\s]+)?".format(r"(?:[\s]+)?".join(parts))
-    return r"(?m)^{0}$".format(regex)
+        regex += r"(?:[\s]+)?{}(?:[\s]+)?".format(r"(?:[\s]+)?".join(parts))
+    return r"(?m)^{}$".format(regex)
 
 
 def expr_match(line, expr):
@@ -381,7 +372,7 @@ def expr_match(line, expr):
         if fnmatch.fnmatch(line, expr):
             return True
         try:
-            if re.match(r"\A{0}\Z".format(expr), line):
+            if re.match(r"\A{}\Z".format(expr), line):
                 return True
         except re.error:
             pass
@@ -415,11 +406,11 @@ def check_whitelist_blacklist(value, whitelist=None, blacklist=None):
     """
     # Normalize the input so that we have a list
     if blacklist:
-        if isinstance(blacklist, six.string_types):
+        if isinstance(blacklist, str):
             blacklist = [blacklist]
         if not hasattr(blacklist, "__iter__"):
             raise TypeError(
-                "Expecting iterable blacklist, but got {0} ({1})".format(
+                "Expecting iterable blacklist, but got {} ({})".format(
                     type(blacklist).__name__, blacklist
                 )
             )
@@ -427,11 +418,11 @@ def check_whitelist_blacklist(value, whitelist=None, blacklist=None):
         blacklist = []
 
     if whitelist:
-        if isinstance(whitelist, six.string_types):
+        if isinstance(whitelist, str):
             whitelist = [whitelist]
         if not hasattr(whitelist, "__iter__"):
             raise TypeError(
-                "Expecting iterable whitelist, but got {0} ({1})".format(
+                "Expecting iterable whitelist, but got {} ({})".format(
                     type(whitelist).__name__, whitelist
                 )
             )
@@ -517,8 +508,8 @@ def print_cli(msg, retries=10, step=0.01):
                 print(msg)
             except UnicodeEncodeError:
                 print(msg.encode("utf-8"))
-        except IOError as exc:
-            err = "{0}".format(exc)
+        except OSError as exc:
+            err = "{}".format(exc)
             if exc.errno != errno.EPIPE:
                 if (
                     "temporarily unavailable" in err or exc.errno in (errno.EAGAIN,)
@@ -563,7 +554,7 @@ def get_context(template, line, num_lines=5, marker=None):
     if marker:
         buf[error_line_in_context] += marker
 
-    return "---\n{0}\n---".format("\n".join(buf))
+    return "---\n{}\n---".format("\n".join(buf))
 
 
 def get_diff(a, b, *args, **kwargs):
