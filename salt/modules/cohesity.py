@@ -85,14 +85,13 @@ def load_config():
     c_username = cohesity_config["username"]
     c_password = cohesity_config["password"]
     c_domain = cohesity_config["domain"]
-    global cohesity_client
     cohesity_client = CohesityClient(
         cluster_vip=cluster_vip,
         username=c_username,
         password=c_password,
         domain=c_domain,
     )
-    cohesity_client.groups.get_groups()
+    return cohesity_client
 
 
 def __virtual__():
@@ -487,4 +486,5 @@ def restore_vms(
 
 
 if __name__ == "main":
-    load_config()
+    global cohesity_client
+    cohesity_client = load_config()
