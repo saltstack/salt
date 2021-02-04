@@ -818,145 +818,155 @@ def _check_directory_win(
     """
     Check what changes need to be made on a directory
     """
-    changes = {}
-
     if not os.path.isdir(name):
         changes = {name: {"directory": "new"}}
     else:
-        # Check owner by SID
-        if win_owner is not None:
-            current_owner = salt.utils.win_dacl.get_owner(name)
-            new_owner = salt.utils.win_dacl.get_name(win_owner)
-            if not current_owner == new_owner:
-                changes["owner"] = win_owner
-
-        # Check perms
-        perms = salt.utils.win_dacl.get_permissions(name)
-
-        # Verify Permissions
-        for user in (win_perms or {}):
-            # Check that user exists:
-            try:
-                salt.utils.win_dacl.get_name(user)
-            except CommandExecutionError:
-                continue
-
-            grant_perms = []
-            # Check for permissions
-            if isinstance(win_perms[user]["perms"], str):
-                if not salt.utils.win_dacl.has_permission(
-                    obj_name=name,
-                    principal=user,
-                    permission=win_perms[user]["perms"]
-                ):
-                    grant_perms = win_perms[user]["perms"]
-            else:
-                for perm in win_perms[user]["perms"]:
-                    if not salt.utils.win_dacl.has_permission(
-                        obj_name=name,
-                        principal=user,
-                        permission=perm,
-                        exact=False
-                    ):
-                        grant_perms.append(perm)
-            if grant_perms:
-                changes.setdefault("grant_perms", {}).setdefault(user, {})
-                changes["grant_perms"][user]["perms"] = grant_perms
-
-            # Check Applies to
-            if "applies_to" not in win_perms[user]:
-                applies_to = "this_folder_subfolders_files"
-            else:
-                applies_to = win_perms[user]["applies_to"]
-
-            if salt.utils.win_dacl.get_name(user) in perms:
-                user = salt.utils.win_dacl.get_name(user)
-
-                # Get the proper applies_to text
-                at_flag = salt.utils.win_dacl.flags().ace_prop["file"][applies_to]
-                applies_to_text = salt.utils.win_dacl.flags().ace_prop["file"][
-                    at_flag
-                ]
-
-                if "grant" in perms[user]:
-                    if not perms[user]["grant"]["applies to"] == applies_to_text:
-                        changes.setdefault("grant_perms", {}).setdefault(user, {})
-                        changes["grant_perms"][user]["applies_to"] = applies_to
-            else:
-                if user in changes.get("grant_perms", {}):
-                    changes["grant_perms"][user]["applies_to"] = applies_to
-
-        # Verify Deny Permissions
-        for user in (win_deny_perms or {}):
-            # Check that user exists:
-            try:
-                salt.utils.win_dacl.get_name(user)
-            except CommandExecutionError:
-                continue
-
-            deny_perms = []
-            # Check for permissions
-            if isinstance(win_deny_perms[user]["perms"], str):
-                if not salt.utils.win_dacl.has_permission(
-                    obj_name=name,
-                    principal=user,
-                    permission=win_deny_perms[user]["perms"],
-                    access_mode="deny"
-                ):
-                    deny_perms = win_deny_perms[user]["perms"]
-            else:
-                for perm in win_deny_perms[user]["perms"]:
-                    if not salt.utils.win_dacl.has_permission(
-                        obj_name=name,
-                        principal=user,
-                        permission=perm,
-                        access_mode="deny",
-                        exact=False
-                    ):
-                        deny_perms.append(perm)
-            if deny_perms:
-                changes.setdefault("deny_perms", {}).setdefault(user, {})
-                changes["deny_perms"][user]["perms"] = deny_perms
-
-            # Check Applies to
-            if "applies_to" not in win_deny_perms[user]:
-                applies_to = "this_folder_subfolders_files"
-            else:
-                applies_to = win_deny_perms[user]["applies_to"]
-
-            if salt.utils.win_dacl.get_name(user) in perms:
-                user = salt.utils.win_dacl.get_name(user)
-
-                # Get the proper applies_to text
-                at_flag = salt.utils.win_dacl.flags().ace_prop["file"][applies_to]
-                applies_to_text = salt.utils.win_dacl.flags().ace_prop["file"][
-                    at_flag
-                ]
-
-                if "deny" in perms[user]:
-                    if not perms[user]["deny"]["applies to"] == applies_to_text:
-                        changes.setdefault("deny_perms", {}).setdefault(user, {})
-                        changes["deny_perms"][user]["applies_to"] = applies_to
-            else:
-                if user in changes.get("deny_perms", {}):
-                    changes["deny_perms"][user]["applies_to"] = applies_to
-
-        # Check inheritance
-        if win_inheritance is not None:
-            if not win_inheritance == salt.utils.win_dacl.get_inheritance(name):
-                changes["inheritance"] = win_inheritance
-
-        # Check reset
-        if win_perms_reset:
-            for user_name in perms["Not Inherited"]:
-                if user_name not in {salt.utils.win_dacl.get_name(k) for k in (win_perms or {})}:
-                    if "grant" in perms["Not Inherited"][user_name]:
-                        changes.setdefault("remove_perms", {})
-                        changes["remove_perms"].update({user_name: perms["Not Inherited"][user_name]})
-                if user_name not in {salt.utils.win_dacl.get_name(k) for k in (win_deny_perms or {})}:
-                    if "deny" in perms["Not Inherited"][user_name]:
-                        changes.setdefault("remove_perms", {})
-                        changes["remove_perms"].update({user_name: perms["Not Inherited"][user_name]})
+        changes = salt.utils.win_dacl.check_perms(
+            obj_name=name,
+            obj_type="file",
+            ret={},
+            owner=win_owner,
+            grant_perms=win_perms,
+            deny_perms=win_deny_perms,
+            inheritance=win_inheritance,
+            reset=win_perms_reset,
+            test_mode=True,
+        )["changes"]
+        # # Check owner by SID
+        # if win_owner is not None:
+        #     current_owner = salt.utils.win_dacl.get_owner(name)
+        #     new_owner = salt.utils.win_dacl.get_name(win_owner)
+        #     if not current_owner == new_owner:
+        #         changes["owner"] = win_owner
+        #
+        # # Check perms
+        # perms = salt.utils.win_dacl.get_permissions(name)
+        #
+        # # Verify Permissions
+        # for user in (win_perms or {}):
+        #     # Check that user exists:
+        #     try:
+        #         salt.utils.win_dacl.get_name(user)
+        #     except CommandExecutionError:
+        #         continue
+        #
+        #     grant_perms = []
+        #     # Check for permissions
+        #     if isinstance(win_perms[user]["perms"], str):
+        #         if not salt.utils.win_dacl.has_permission(
+        #             obj_name=name,
+        #             principal=user,
+        #             permission=win_perms[user]["perms"],
+        #             exact=True
+        #         ):
+        #             grant_perms = win_perms[user]["perms"]
+        #     else:
+        #         for perm in win_perms[user]["perms"]:
+        #             if not salt.utils.win_dacl.has_permission(
+        #                 obj_name=name,
+        #                 principal=user,
+        #                 permission=perm,
+        #                 exact=False
+        #             ):
+        #                 grant_perms.append(perm)
+        #     if grant_perms:
+        #         changes.setdefault("grant_perms", {}).setdefault(user, {})
+        #         changes["grant_perms"][user]["perms"] = grant_perms
+        #
+        #     # Check Applies to
+        #     if "applies_to" not in win_perms[user]:
+        #         applies_to = "this_folder_subfolders_files"
+        #     else:
+        #         applies_to = win_perms[user]["applies_to"]
+        #
+        #     if salt.utils.win_dacl.get_name(user) in perms:
+        #         user = salt.utils.win_dacl.get_name(user)
+        #
+        #         # Get the proper applies_to text
+        #         at_flag = salt.utils.win_dacl.flags().ace_prop["file"][applies_to]
+        #         applies_to_text = salt.utils.win_dacl.flags().ace_prop["file"][
+        #             at_flag
+        #         ]
+        #
+        #         if "grant" in perms[user]:
+        #             if not perms[user]["grant"]["applies to"] == applies_to_text:
+        #                 changes.setdefault("grant_perms", {}).setdefault(user, {})
+        #                 changes["grant_perms"][user]["applies_to"] = applies_to
+        #     else:
+        #         if user in changes.get("grant_perms", {}):
+        #             changes["grant_perms"][user]["applies_to"] = applies_to
+        #
+        # # Verify Deny Permissions
+        # for user in (win_deny_perms or {}):
+        #     # Check that user exists:
+        #     try:
+        #         salt.utils.win_dacl.get_name(user)
+        #     except CommandExecutionError:
+        #         continue
+        #
+        #     deny_perms = []
+        #     # Check for permissions
+        #     if isinstance(win_deny_perms[user]["perms"], str):
+        #         if not salt.utils.win_dacl.has_permission(
+        #             obj_name=name,
+        #             principal=user,
+        #             permission=win_deny_perms[user]["perms"],
+        #             access_mode="deny"
+        #         ):
+        #             deny_perms = win_deny_perms[user]["perms"]
+        #     else:
+        #         for perm in win_deny_perms[user]["perms"]:
+        #             if not salt.utils.win_dacl.has_permission(
+        #                 obj_name=name,
+        #                 principal=user,
+        #                 permission=perm,
+        #                 access_mode="deny",
+        #                 exact=False
+        #             ):
+        #                 deny_perms.append(perm)
+        #     if deny_perms:
+        #         changes.setdefault("deny_perms", {}).setdefault(user, {})
+        #         changes["deny_perms"][user]["perms"] = deny_perms
+        #
+        #     # Check Applies to
+        #     if "applies_to" not in win_deny_perms[user]:
+        #         applies_to = "this_folder_subfolders_files"
+        #     else:
+        #         applies_to = win_deny_perms[user]["applies_to"]
+        #
+        #     if salt.utils.win_dacl.get_name(user) in perms:
+        #         user = salt.utils.win_dacl.get_name(user)
+        #
+        #         # Get the proper applies_to text
+        #         at_flag = salt.utils.win_dacl.flags().ace_prop["file"][applies_to]
+        #         applies_to_text = salt.utils.win_dacl.flags().ace_prop["file"][
+        #             at_flag
+        #         ]
+        #
+        #         if "deny" in perms[user]:
+        #             if not perms[user]["deny"]["applies to"] == applies_to_text:
+        #                 changes.setdefault("deny_perms", {}).setdefault(user, {})
+        #                 changes["deny_perms"][user]["applies_to"] = applies_to
+        #     else:
+        #         if user in changes.get("deny_perms", {}):
+        #             changes["deny_perms"][user]["applies_to"] = applies_to
+        #
+        # # Check inheritance
+        # if win_inheritance is not None:
+        #     if not win_inheritance == salt.utils.win_dacl.get_inheritance(name):
+        #         changes["inheritance"] = win_inheritance
+        #
+        # # Check reset
+        # if win_perms_reset:
+        #     for user_name in perms["Not Inherited"]:
+        #         if user_name not in {salt.utils.win_dacl.get_name(k) for k in (win_perms or {})}:
+        #             if "grant" in perms["Not Inherited"][user_name]:
+        #                 changes.setdefault("remove_perms", {})
+        #                 changes["remove_perms"].update({user_name: perms["Not Inherited"][user_name]})
+        #         if user_name not in {salt.utils.win_dacl.get_name(k) for k in (win_deny_perms or {})}:
+        #             if "deny" in perms["Not Inherited"][user_name]:
+        #                 changes.setdefault("remove_perms", {})
+        #                 changes["remove_perms"].update({user_name: perms["Not Inherited"][user_name]})
 
     if changes:
         return None, 'The directory "{}" will be changed'.format(name), changes

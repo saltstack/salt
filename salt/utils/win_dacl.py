@@ -1821,6 +1821,109 @@ def has_permission(
     return cur_flag & chk_flag == chk_flag
 
 
+def has_permissions(
+    obj_name, principal, permissions, access_mode="grant", obj_type="file", exact=True
+):
+    r"""
+    Check if the object has a permissions
+
+    Args:
+
+        obj_name (str):
+            The name of or path to the object.
+
+        principal (str):
+            The name of the user or group for which to get permissions. Can also
+            pass a SID.
+
+        permissions (list):
+            The list of permissions to verify
+
+        access_mode (Optional[str]):
+            The access mode to check. Is the user granted or denied the
+            permission. Default is 'grant'. Valid options are:
+
+            - grant
+            - deny
+
+        obj_type (Optional[str]):
+            The type of object for which to check permissions. Default is 'file'
+
+        exact (Optional[bool]):
+            ``True`` checks if the permissions are exactly those passed in
+            permissions. ``False`` checks to see if the permissions are included
+            in the ACE. Default is ``True``
+
+    Returns:
+        bool: True if the object has the permission, otherwise False
+
+    Usage:
+
+    .. code-block:: python
+
+        # Does Joe have read permissions to C:\Temp
+        salt.utils.win_dacl.has_permission(
+            'C:\\Temp', 'joe', 'read', 'grant', False)
+
+        # Does Joe have Full Control of C:\Temp
+        salt.utils.win_dacl.has_permission(
+            'C:\\Temp', 'joe', 'full_control', 'grant')
+    """
+    # If this is a single permission, use has_permission function
+    if isinstance(permissions, str):
+        return has_permission(
+            obj_name=obj_name,
+            obj_type=obj_type,
+            permission=permissions,
+            access_mode=access_mode,
+            principal=principal,
+            exact=exact
+        )
+
+    # Validate access_mode
+    if access_mode.lower() not in ["grant", "deny"]:
+        raise SaltInvocationError(
+            'Invalid "access_mode" passed: {}'.format(access_mode)
+        )
+    access_mode = access_mode.lower()
+
+    # Get the DACL
+    obj_dacl = dacl(obj_name, obj_type)
+
+    obj_type = obj_type.lower()
+
+    # Get a PySID object
+    sid = get_sid(principal)
+
+    # Get the passed permission flag, check basic first
+    chk_flag = 0x0
+    for permission in permissions:
+        chk_flag |= obj_dacl.ace_perms[obj_type]["basic"].get(
+            permission.lower(),
+            obj_dacl.ace_perms[obj_type]["advanced"].get(permission.lower(), False),
+        )
+        if not chk_flag:
+            raise SaltInvocationError('Invalid "permission" passed: {}'.format(permission))
+
+    # Check each ace for sid and type
+    cur_flag = None
+    for i in range(0, obj_dacl.dacl.GetAceCount()):
+        ace = obj_dacl.dacl.GetAce(i)
+        if ace[2] == sid and obj_dacl.ace_type[ace[0][0]] == access_mode:
+            cur_flag = ace[1]
+
+    # If the ace is empty, return false
+    if not cur_flag:
+        return False
+
+    # Check if the ACE contains the exact flag
+    if exact:
+        return cur_flag == chk_flag
+
+    # Check if the ACE contains the permission
+    return cur_flag & chk_flag == chk_flag
+
+
 def set_inheritance(obj_name, enabled, obj_type="file", clear=False):
     """
     Enable or disable an objects inheritance.
@@ -2079,7 +2182,7 @@ def copy_security(
     return True
 
 
-def _check_perms(obj_name, obj_type, new_perms, access_mode, ret):
+def _check_perms(obj_name, obj_type, new_perms, access_mode, ret, test_mode=False):
     """
     Helper function used by ``check_perms`` for checking and setting Grant and
     Deny permissions.
@@ -2102,6 +2205,11 @@ def _check_perms(obj_name, obj_type, new_perms, access_mode, ret):
         ret (dict):
             A dictionary to append changes to and return. If not passed, will
             create a new dictionary to return.
+
+        test_mode (bool):
+            ``True`` will only return the changes that would be made. ``False``
+            will make the changes as well as return the changes that would be
+            made.
 
     Returns:
         dict: A dictionary of return data as expected by the state system
@@ -2133,35 +2241,21 @@ def _check_perms(obj_name, obj_type, new_perms, access_mode, ret):
 
         if user_name not in cur_perms["Not Inherited"]:
             changes.setdefault(user, {})
-            changes[user][perms_label] = new_perms[user]["perms"]
+            changes[user]["permissions"] = new_perms[user]["perms"]
             if applies_to:
                 changes[user]["applies_to"] = applies_to
         else:
-            # Check Perms for basic perms
-            if isinstance(new_perms[user]["perms"], str):
-                if not has_permission(
-                    obj_name=obj_name,
-                    principal=user_name,
-                    permission=new_perms[user]["perms"],
-                    access_mode=access_mode,
-                    obj_type=obj_type,
-                    exact=False,
-                ):
-                    changes.setdefault(user, {})
-                    changes[user][perms_label] = new_perms[user]["perms"]
-            # Check Perms for advanced perms
-            else:
-                for perm in new_perms[user]["perms"]:
-                    if not has_permission(
-                        obj_name=obj_name,
-                        principal=user_name,
-                        permission=perm,
-                        access_mode=access_mode,
-                        obj_type=obj_type,
-                        exact=False,
-                    ):
-                        changes.setdefault(user, {perms_label: []})
-                        changes[user][perms_label].append(perm)
+            # Check Permissions
+            if not has_permissions(
+                obj_name=obj_name,
+                principal=user_name,
+                permissions=new_perms[user]["perms"],
+                access_mode=access_mode,
+                obj_type=obj_type,
+                exact=True,
+            ):
+                changes.setdefault(user, {})
+                changes[user]["permissions"] = new_perms[user]["perms"]
 
             # Check if applies_to was passed
             if applies_to:
@@ -2183,9 +2277,9 @@ def _check_perms(obj_name, obj_type, new_perms, access_mode, ret):
             user_name = get_name(principal=user)
             cur_perm = cur_perms["Not Inherited"].get(user_name, {})
 
-            if __opts__["test"] is True:
+            if test_mode is True:
                 ret["changes"][perms_label].setdefault(user, {})
-                ret["changes"][perms_label][user] = changes[user][perms_label]
+                ret["changes"][perms_label][user] = changes[user]
             else:
                 # Get applies_to
                 applies_to = None
@@ -2206,48 +2300,26 @@ def _check_perms(obj_name, obj_type, new_perms, access_mode, ret):
                 else:
                     applies_to = changes[user]["applies_to"]
 
-                perms = []
-                if perms_label not in changes[user]:
-                    # Get current perms
-                    # Check for basic perms
-                    perm = cur_perms["Not Inherited"].get(user_name, {}).get(access_mode, {}).get("permissions", "")
-                    for flag in flags().ace_perms[obj_type]["basic"]:
-                        if flags().ace_perms[obj_type]["basic"][flag] == perm:
-                            perm_flag = flag
-                            for flag1 in flags().ace_perms[obj_type]["basic"]:
-                                if flags().ace_perms[obj_type]["basic"][flag1] == perm_flag:
-                                    perms = flag1
-                    # Make a list of advanced perms
-                    if not perms:
-                        for perm in cur_perms["Not Inherited"].get(user_name, {}).get(access_mode, {}).get("permissions", []):
-                            for flag in flags().ace_perms[obj_type]["advanced"]:
-                                if flags().ace_perms[obj_type]["advanced"][flag] == perm:
-                                    perm_flag = flag
-                                    for flag1 in flags().ace_perms[obj_type]["advanced"]:
-                                        if flags().ace_perms[obj_type]["advanced"][flag1] == perm_flag:
-                                            perms.append(flag1)
-                else:
-                    perms = changes[user][perms_label]
-
-                try:
-                    set_permissions(
-                        obj_name=obj_name,
-                        principal=user_name,
-                        permissions=perms,
-                        access_mode=access_mode,
-                        applies_to=applies_to,
-                        obj_type=obj_type,
-                    )
-                    ret["changes"].setdefault(perms_label, {}).setdefault(user, {})
-                    ret["changes"][perms_label][user] = changes[user][perms_label]
-                except CommandExecutionError as exc:
-                    ret["result"] = False
-                    ret["comment"].append(
-                        'Failed to change {} permissions for "{}" to {}\n'
-                        "Error: {}".format(
-                            access_mode, user, changes[user], exc.strerror
+                if not test_mode:
+                    try:
+                        set_permissions(
+                            obj_name=obj_name,
+                            principal=user_name,
+                            permissions=changes[user]["permissions"],
+                            access_mode=access_mode,
+                            applies_to=applies_to,
+                            obj_type=obj_type,
                         )
-                    )
+                        ret["changes"].setdefault(perms_label, {}).setdefault(user, {})
+                        ret["changes"][perms_label][user] = changes[user]
+                    except CommandExecutionError as exc:
+                        ret["result"] = False
+                        ret["comment"].append(
+                            'Failed to change {} permissions for "{}" to {}\n'
+                            "Error: {}".format(
+                                access_mode, user, changes[user], exc.strerror
+                            )
+                        )
 
     return ret
 
@@ -2261,6 +2333,7 @@ def check_perms(
     deny_perms=None,
     inheritance=True,
     reset=False,
+    test_mode=False,
 ):
     """
     Check owner and permissions for the passed directory. This function checks
@@ -2301,6 +2374,11 @@ def check_perms(
              in ``grant_perms`` and ``deny_perms``. ``False`` append permissions
              to the existing DACL. Default is ``False``. This does NOT affect
             inherited permissions.
+
+        test_mode (bool):
+            ``True`` will only return the changes that would be made. ``False``
+            will make the changes as well as return the changes that would be
+            made.
 
     Returns:
         dict: A dictionary of changes that have been made
@@ -2353,7 +2431,7 @@ def check_perms(
         owner = get_name(principal=owner)
         current_owner = get_owner(obj_name=obj_name, obj_type=obj_type)
         if owner != current_owner:
-            if __opts__["test"] is True:
+            if test_mode is True:
                 ret["changes"]["owner"] = owner
             else:
                 try:
@@ -2370,7 +2448,7 @@ def check_perms(
     # Check inheritance
     if inheritance is not None:
         if not inheritance == get_inheritance(obj_name=obj_name, obj_type=obj_type):
-            if __opts__["test"] is True:
+            if test_mode is True:
                 ret["changes"]["inheritance"] = inheritance
             else:
                 try:
@@ -2398,7 +2476,7 @@ def check_perms(
             if user_name not in {get_name(k) for k in (grant_perms or {})}:
                 if "grant" in cur_perms["Not Inherited"][user_name]:
                     ret["changes"].setdefault("remove_perms", {})
-                    if __opts__["test"] is True:
+                    if test_mode is True:
                         ret["changes"]["remove_perms"].update(
                             {user_name: cur_perms["Not Inherited"][user_name]}
                         )
@@ -2416,7 +2494,7 @@ def check_perms(
             if user_name not in {get_name(k) for k in (deny_perms or {})}:
                 if "deny" in cur_perms["Not Inherited"][user_name]:
                     ret["changes"].setdefault("remove_perms", {})
-                    if __opts__["test"] is True:
+                    if test_mode is True:
                         ret["changes"]["remove_perms"].update(
                             {user_name: cur_perms["Not Inherited"][user_name]}
                         )
@@ -2442,8 +2520,8 @@ def check_perms(
             new_perms=deny_perms,
             access_mode="deny",
             ret=ret,
+            test_mode=test_mode,
         )
-        reset = False
 
     # Verify Grant Permissions
     if grant_perms is not None:
@@ -2453,13 +2531,14 @@ def check_perms(
             new_perms=grant_perms,
             access_mode="grant",
             ret=ret,
+            test_mode=test_mode,
         )
 
     # Clean up after itself if reset is True
     # This is needed because currently adding a permission will also add all
     # Inherited Permissions as Not Inherited permissions. These will not be
     # added to the Changes dict, as that is handled above
-    if reset:
+    if reset and not test_mode:
         log.debug("Resetting permissions for %s", obj_name)
         cur_perms = get_permissions(obj_name=obj_name, obj_type=obj_type)
         for user_name in cur_perms["Not Inherited"]:
@@ -2493,7 +2572,7 @@ def check_perms(
     ret["comment"] = "\n".join(ret["comment"])
 
     # Set result for test = True
-    if __opts__["test"] and ret["changes"]:
+    if test_mode and ret["changes"]:
         ret["result"] = None
 
     return ret
