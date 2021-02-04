@@ -20,9 +20,9 @@ import json
 import logging
 import os
 
-import salt.utils.files
-
 try:
+    #import salt.utils.files
+
     from cohesity_management_sdk.cohesity_client import CohesityClient
     from cohesity_management_sdk.exceptions.api_exception import APIException
     from cohesity_management_sdk.models.cancel_protection_job_run_param import (
@@ -71,18 +71,18 @@ __virtualname__ = "cohesity"
 
 config_path = "/etc/salt/master.d/cohesity.conf"
 cohesity_config = {}
-if os.path.isfile(config_path):
-    with salt.utils.files.fopen(config_path, "rb") as file_obj:
-        config = json.loads(file_obj)
-        cohesity_config = config.get("cohesity_config", {})
-    if not cohesity_config:
-        logger.error("Please update {} file".format(config_path))
-        exit()
+#if os.path.isfile(config_path):
+#    with salt.utils.files.fopen(config_path, "rb") as file_obj:
+#        config = json.loads(file_obj)
+#        cohesity_config = config.get("cohesity_config", {})
+#    if not cohesity_config:
+#        logger.error("Please update {} file".format(config_path))
+#        exit()
 
-cluster_vip = cohesity_config["cluster_vip"]
-c_username = cohesity_config["username"]
-c_password = cohesity_config["password"]
-c_domain = cohesity_config["domain"]
+cluster_vip = cohesity_config.get("cluster_vip", "")
+c_username = cohesity_config("username", "")
+c_password = cohesity_config("password", "")
+c_domain = cohesity_config("domain", "")
 cohesity_client = CohesityClient(
     cluster_vip=cluster_vip,
     username=c_username,
