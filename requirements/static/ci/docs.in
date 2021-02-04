@@ -1,1 +1,2 @@
 sphinx>=3.0.1,!=3.0.2
+cohesity_management_sdk==1.5.2
