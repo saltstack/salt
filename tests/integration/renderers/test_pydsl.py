@@ -1,7 +1,3 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import os
 import shutil
 import textwrap
@@ -11,7 +7,6 @@ import salt.utils.files
 import salt.utils.platform
 import salt.utils.stringutils
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, slowTest
 
 
 @pytest.mark.windows_whitelisted
@@ -28,8 +23,8 @@ class PyDSLRendererIncludeTestCase(ModuleCase):
             if self.directory_created:
                 shutil.rmtree("\\tmp")
 
-    @destructiveTest
-    @slowTest
+    @pytest.mark.destructive_test
+    @pytest.mark.slow_test
     def test_rendering_includes(self):
         """
         This test is currently hard-coded to /tmp to work-around a seeming
