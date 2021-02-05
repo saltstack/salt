@@ -7,6 +7,15 @@ Versions are `MAJOR.PATCH`.
 
 # Changelog
 
+Salt 3002.4 (2021-02-05)
+========================
+
+Fixed
+-----
+
+- Fix runners that broke when patching for CVE-2021-25281
+
+
 Salt 3002.3 (2021-01-25)
 ========================
 
@@ -299,6 +308,14 @@ Added
   `enable_slsvars_fixes` to enable fixes to tpldir, tplfile and sls_path.
   This flag will be deprecated in the Phosphorus release when this functionality
   becomes the default. (#58652)
+
+Salt 3001.6 (2021-02-05)
+========================
+
+Fixed
+-----
+
+- Fix runners that broke when patching for CVE-2021-25281
 
 Salt 3001.5
 ===========
@@ -781,6 +798,14 @@ Added
 - Added `efi` parameter to virt module, so `uefi` firmware can be auto selected. (#57397)
 - [#56637](https://github.com/saltstack/salt/pull/56637) - Add ``win_wua.installed`` to the ``win_wua`` execution module
 - Clarify how to get the master fingerprint (#54699)
+
+Salt 3000.8 (2021-02-05)
+========================
+
+Fixed
+-----
+
+- Fix runners that broke when patching for CVE-2021-25281
 
 Salt 3000.7
 ===========
