@@ -49,18 +49,8 @@ def test__check_directory_win_grant_perms_basic_existing_user(tmp_path):
         permissions=["write_data", "write_attributes"],
         access_mode="grant",
     )
-    perms = {
-        "Guest": {
-            "perms": "full_control",
-        }
-    }
-    expected = {
-        "grant_perms": {
-            "Guest": {
-                "permissions": "full_control",
-            }
-        }
-    }
+    perms = {"Guest": {"perms": "full_control"}}
+    expected = {"grant_perms": {"Guest": {"permissions": "full_control"}}}
     _, comment, changes = file._check_directory_win(name=path, win_perms=perms)
     assert path in comment
     assert changes == expected
@@ -103,9 +93,7 @@ def test__check_directory_win_grant_perms_advanced_existing_user(tmp_path):
     }
     expected = {
         "grant_perms": {
-            "Guest": {
-                "permissions": ["read_data", "write_data", "create_files"],
-            }
+            "Guest": {"permissions": ["read_data", "write_data", "create_files"]}
         }
     }
     _, comment, changes = file._check_directory_win(name=path, win_perms=perms)
@@ -120,13 +108,7 @@ def test__check_directory_win_grant_perms_basic_no_applies_to(tmp_path):
             "perms": "full_control",
         }
     }
-    expected = {
-        "grant_perms": {
-            "Guest": {
-                "permissions": "full_control",
-            }
-        }
-    }
+    expected = {"grant_perms": {"Guest": {"permissions": "full_control"}}}
     _, comment, changes = file._check_directory_win(name=path, win_perms=perms)
     assert path in comment
     assert changes == expected
@@ -161,18 +143,8 @@ def test__check_directory_win_deny_perms_basic_existing_user(tmp_path):
         permissions=["write_data", "write_attributes"],
         access_mode="deny",
     )
-    perms = {
-        "Guest": {
-            "perms": "full_control",
-        }
-    }
-    expected = {
-        "deny_perms": {
-            "Guest": {
-                "permissions": "full_control",
-            }
-        }
-    }
+    perms = {"Guest": {"perms": "full_control"}}
+    expected = {"deny_perms": {"Guest": {"permissions": "full_control"}}}
     _, comment, changes = file._check_directory_win(name=path, win_deny_perms=perms)
     assert path in comment
     assert changes == expected
@@ -227,18 +199,8 @@ def test__check_directory_win_deny_perms_advanced_existing_user(tmp_path):
 
 def test__check_directory_win_deny_perms_basic_no_applies_to(tmp_path):
     path = str(tmp_path)
-    perms = {
-        "Guest": {
-            "perms": "full_control",
-        }
-    }
-    expected = {
-        "deny_perms": {
-            "Guest": {
-                "permissions": "full_control",
-            }
-        }
-    }
+    perms = {"Guest": {"perms": "full_control"}}
+    expected = {"deny_perms": {"Guest": {"permissions": "full_control"}}}
     _, comment, changes = file._check_directory_win(name=path, win_deny_perms=perms)
     assert path in comment
     assert changes == expected
