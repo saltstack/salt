@@ -1,5 +1,5 @@
 """
-Functions for manipulating or otherwise processing strings.
+Functions for manipulating or otherwise processing strings
 """
 
 
