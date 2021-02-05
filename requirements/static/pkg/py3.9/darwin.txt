@@ -4,7 +4,7 @@
 #
 #    pip-compile -o requirements/static/pkg/py3.9/darwin.txt -v requirements/darwin.txt requirements/static/pkg/darwin.in
 #
-apache-libcloud==2.4.0
+apache-libcloud==2.5.0
 certifi==2020.6.20        # via requests
 cffi==1.14.4              # via cryptography
 chardet==3.0.4            # via requests
