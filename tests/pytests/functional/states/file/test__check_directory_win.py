@@ -1,4 +1,3 @@
-import os
 import pytest
 import salt.states.file as file
 import salt.utils.win_dacl as win_dacl
