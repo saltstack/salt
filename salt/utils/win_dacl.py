@@ -1890,7 +1890,7 @@ def has_permissions(
             permission=permissions,
             access_mode=access_mode,
             principal=principal,
-            exact=exact
+            exact=exact,
         )
 
     # Validate access_mode
@@ -1916,7 +1916,9 @@ def has_permissions(
             obj_dacl.ace_perms[obj_type]["advanced"].get(permission.lower(), False),
         )
         if not chk_flag:
-            raise SaltInvocationError('Invalid "permission" passed: {}'.format(permission))
+            raise SaltInvocationError(
+                'Invalid "permission" passed: {}'.format(permission)
+            )
 
     # Check each ace for sid and type
     cur_flag = None
