@@ -119,37 +119,9 @@ def test_directory_new_no_inherit(tmp_path):
     )
     expected = {path: "New Dir"}
     assert ret["changes"] == expected
+    assert not win_dacl.get_inheritance(path)
     permissions = win_dacl.get_permissions(path)
-    expected = {
-        "Inherited": {},
-        "Not Inherited": {
-            "Administrators": {
-                "grant": {
-                    "applies to": "This folder, subfolders and files",
-                    "permissions": "Full control",
-                }
-            },
-            "SYSTEM": {
-                "grant": {
-                    "applies to": "This folder, subfolders and files",
-                    "permissions": "Full control",
-                }
-            },
-            CURRENT_USER: {
-                "grant": {
-                    "applies to": "This folder, subfolders and files",
-                    "permissions": "Full control",
-                }
-            },
-            "Guest": {
-                "deny": {
-                    "applies to": "This folder, subfolders and files",
-                    "permissions": "Full control",
-                }
-            }
-        }
-    }
-    assert permissions == expected
+    assert permissions["Inherited"] == {}
 
 
 def test_directory_new_reset(tmp_path):
@@ -254,9 +226,12 @@ def test_directory_existing(tmp_path):
     )
     expected = {
         "deny_perms": {"Guest": {"permissions": ["write_data", "write_attributes"]}},
-        "grant_perms": {"Everyone": {"permissions": "full_control"}}
+        "grant_perms": {"Everyone": {"permissions": "full_control"}},
     }
-    assert ret["changes"] == expected
+    # We are checking these individually because sometimes it will return an
+    # owner if it is running under the Administrator account
+    assert ret["changes"]["deny_perms"] == expected["deny_perms"]
+    assert ret["changes"]["grant_perms"] == expected["grant_perms"]
     permissions = win_dacl.get_permissions(path)
     expected = {
         "Inherited": {
@@ -330,9 +305,14 @@ def test_directory_existing_existing_user(tmp_path):
         win_perms={"Everyone": {"perms": "full_control"}},
         win_deny_perms={"Guest": {"perms": ["write_data", "write_attributes"]}},
     )
-    expected = {"deny_perms": {"Guest": {"permissions": ["write_data", "write_attributes"]}},
-                "grant_perms": {"Everyone": {"permissions": "full_control"}}}
-    assert ret["changes"] == expected
+    expected = {
+        "deny_perms": {"Guest": {"permissions": ["write_data", "write_attributes"]}},
+        "grant_perms": {"Everyone": {"permissions": "full_control"}},
+    }
+    # We are checking these individually because sometimes it will return an
+    # owner if it is running under the Administrator account
+    assert ret["changes"]["deny_perms"] == expected["deny_perms"]
+    assert ret["changes"]["grant_perms"] == expected["grant_perms"]
     permissions = win_dacl.get_permissions(path)
     expected = {
         "Inherited": {
@@ -400,47 +380,19 @@ def test_directory_existing_no_inherit(tmp_path):
         win_deny_perms={"Guest": {"perms": ["write_data", "write_attributes"]}},
         win_inheritance=False,
     )
-    expected = {"deny_perms": {"Guest": {"permissions": ["write_data", "write_attributes"]}},
-                "grant_perms": {"Everyone": {"permissions": "full_control"}},
-                "inheritance": False}
-    assert ret["changes"] == expected
-    permissions = win_dacl.get_permissions(path)
     expected = {
-        "Inherited": {},
-        "Not Inherited": {
-            "Administrators": {
-                "grant": {
-                    "applies to": "This folder, subfolders and files",
-                    "permissions": "Full control",
-                }
-            },
-            "SYSTEM": {
-                "grant": {
-                    "applies to": "This folder, subfolders and files",
-                    "permissions": "Full control",
-                }
-            },
-            CURRENT_USER: {
-                "grant": {
-                    "applies to": "This folder, subfolders and files",
-                    "permissions": "Full control",
-                }
-            },
-            "Everyone": {
-                "grant": {
-                    "applies to": "This folder, subfolders and files",
-                    "permissions": "Full control",
-                }
-            },
-            "Guest": {
-                "deny": {
-                    "applies to": "This folder, subfolders and files",
-                    "permissions": ["Create files / write data", "Write attributes"],
-                }
-            }
-        }
+        "deny_perms": {"Guest": {"permissions": ["write_data", "write_attributes"]}},
+        "grant_perms": {"Everyone": {"permissions": "full_control"}},
+        "inheritance": False,
     }
-    assert permissions == expected
+    # We are checking these individually because sometimes it will return an
+    # owner if it is running under the Administrator account
+    assert ret["changes"]["deny_perms"] == expected["deny_perms"]
+    assert ret["changes"]["grant_perms"] == expected["grant_perms"]
+    assert ret["changes"]["inheritance"] ==  expected["inheritance"]
+    assert not win_dacl.get_inheritance(path)
+    permissions = win_dacl.get_permissions(path)
+    assert permissions["Inherited"] == {}
 
 
 def test_directory_existing_reset(tmp_path):
@@ -467,9 +419,12 @@ def test_directory_existing_reset(tmp_path):
                     "permissions": ["Create files / write data", "Write attributes"]
                 }
             }
-        }
+        },
     }
-    assert ret["changes"] == expected
+    # We are checking these individually because sometimes it will return an
+    # owner if it is running under the Administrator account
+    assert ret["changes"]["grant_perms"] == expected["grant_perms"]
+    assert ret["changes"]["remove_perms"] == expected["remove_perms"]
     permissions = win_dacl.get_permissions(path)
     expected = {
         "Inherited": {
@@ -540,7 +495,12 @@ def test_directory_existing_reset_no_inherit(tmp_path):
             }
         }
     }
-    assert ret["changes"] == expected
+    # We are checking these individually because sometimes it will return an
+    # owner if it is running under the Administrator account
+    assert ret["changes"]["deny_perms"] == expected["deny_perms"]
+    assert ret["changes"]["grant_perms"] == expected["grant_perms"]
+    assert ret["changes"]["inheritance"] == expected["inheritance"]
+    assert ret["changes"]["remove_perms"] == expected["remove_perms"]
     permissions = win_dacl.get_permissions(path)
     expected = {
         "Inherited": {},

@@ -22,10 +22,10 @@ def test__check_directory_win_owner(tmp_path):
     path = str(tmp_path)
     _, comment, changes = file._check_directory_win(
         name=path,
-        win_owner="Administrators",
+        win_owner="Everyone",
     )
     assert path in comment
-    assert changes == {"owner": "Administrators"}
+    assert changes == {"owner": "Everyone"}
 
 
 def test__check_directory_win_grant_perms_basic(tmp_path):
