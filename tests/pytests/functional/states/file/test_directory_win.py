@@ -7,10 +7,7 @@ import salt.utils.win_functions as win_functions
 
 CURRENT_USER = win_functions.get_current_user(with_domain=False)
 
-pytestmark = [
-    pytest.mark.windows_whitelisted,
-    pytest.mark.skip_unless_on_windows
-]
+pytestmark = [pytest.mark.windows_whitelisted, pytest.mark.skip_unless_on_windows]
 
 
 @pytest.fixture
@@ -98,8 +95,8 @@ def test_directory_new(tmp_path):
                     "applies to": "This folder, subfolders and files",
                     "permissions": "Full control",
                 }
-            }
-        }
+            },
+        },
     }
     assert permissions == expected
 
@@ -168,13 +165,13 @@ def test_directory_new_reset(tmp_path):
                     "permissions": "Full control",
                 }
             },
-           "Guest": {
+            "Guest": {
                 "deny": {
                     "applies to": "This folder, subfolders and files",
                     "permissions": "Full control",
                 }
-            }
-        }
+            },
+        },
     }
     assert permissions == expected
 
@@ -210,8 +207,8 @@ def test_directory_new_reset_no_inherit(tmp_path):
                     "applies to": "This folder, subfolders and files",
                     "permissions": "Full control",
                 }
-            }
-        }
+            },
+        },
     }
     assert permissions == expected
 
@@ -284,8 +281,8 @@ def test_directory_existing(tmp_path):
                     "applies to": "This folder, subfolders and files",
                     "permissions": ["Create files / write data", "Write attributes"],
                 }
-            }
-        }
+            },
+        },
     }
     assert permissions == expected
 
@@ -365,8 +362,8 @@ def test_directory_existing_existing_user(tmp_path):
                     "applies to": "This folder, subfolders and files",
                     "permissions": ["Create files / write data", "Write attributes"],
                 }
-            }
-        }
+            },
+        },
     }
     assert permissions == expected
 
@@ -389,7 +386,7 @@ def test_directory_existing_no_inherit(tmp_path):
     # owner if it is running under the Administrator account
     assert ret["changes"]["deny_perms"] == expected["deny_perms"]
     assert ret["changes"]["grant_perms"] == expected["grant_perms"]
-    assert ret["changes"]["inheritance"] ==  expected["inheritance"]
+    assert ret["changes"]["inheritance"] == expected["inheritance"]
     assert not win_dacl.get_inheritance(path)
     permissions = win_dacl.get_permissions(path)
     assert permissions["Inherited"] == {}
@@ -416,7 +413,7 @@ def test_directory_existing_reset(tmp_path):
             "Guest": {
                 "deny": {
                     "applies to": "This folder, subfolders and files",
-                    "permissions": ["Create files / write data", "Write attributes"]
+                    "permissions": ["Create files / write data", "Write attributes"],
                 }
             }
         },
@@ -454,7 +451,7 @@ def test_directory_existing_reset(tmp_path):
                     "permissions": "Full control",
                 }
             },
-        }
+        },
     }
     assert permissions == expected
 
@@ -492,8 +489,8 @@ def test_directory_existing_reset_no_inherit(tmp_path):
                     "applies to": "This folder, subfolders and files",
                     "permissions": "Full control",
                 },
-            }
-        }
+            },
+        },
     }
     # We are checking these individually because sometimes it will return an
     # owner if it is running under the Administrator account
@@ -516,7 +513,7 @@ def test_directory_existing_reset_no_inherit(tmp_path):
                     "applies to": "This folder, subfolders and files",
                     "permissions": ["Create files / write data", "Write attributes"],
                 }
-            }
-        }
+            },
+        },
     }
     assert permissions == expected

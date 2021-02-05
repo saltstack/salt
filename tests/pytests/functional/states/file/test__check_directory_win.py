@@ -3,10 +3,7 @@ import pytest
 import salt.states.file as file
 import salt.utils.win_dacl as win_dacl
 
-pytestmark = [
-    pytest.mark.windows_whitelisted,
-    pytest.mark.skip_unless_on_windows
-]
+pytestmark = [pytest.mark.windows_whitelisted, pytest.mark.skip_unless_on_windows]
 
 
 @pytest.fixture
@@ -322,14 +319,14 @@ def test__check_directory_reset_non_inherited_users_grant(tmp_path):
         principal="Guest",
         permissions="full_control",
         access_mode="grant",
-        reset_perms=True
+        reset_perms=True,
     )
     expected = {
         "remove_perms": {
             "Guest": {
                 "grant": {
                     "applies to": "This folder, subfolders and files",
-                    "permissions": "Full control"
+                    "permissions": "Full control",
                 }
             }
         }
@@ -349,14 +346,14 @@ def test__check_directory_reset_non_inherited_users_deny(tmp_path):
         principal="Guest",
         permissions="full_control",
         access_mode="deny",
-        reset_perms=True
+        reset_perms=True,
     )
     expected = {
         "remove_perms": {
             "Guest": {
                 "deny": {
                     "applies to": "This folder, subfolders and files",
-                    "permissions": "Full control"
+                    "permissions": "Full control",
                 }
             }
         }
