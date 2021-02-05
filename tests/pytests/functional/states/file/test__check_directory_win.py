@@ -103,11 +103,7 @@ def test__check_directory_win_grant_perms_advanced_existing_user(tmp_path):
 
 def test__check_directory_win_grant_perms_basic_no_applies_to(tmp_path):
     path = str(tmp_path)
-    perms = {
-        "Guest": {
-            "perms": "full_control",
-        }
-    }
+    perms = {"Guest": {"perms": "full_control"}}
     expected = {"grant_perms": {"Guest": {"permissions": "full_control"}}}
     _, comment, changes = file._check_directory_win(name=path, win_perms=perms)
     assert path in comment
@@ -187,9 +183,7 @@ def test__check_directory_win_deny_perms_advanced_existing_user(tmp_path):
     }
     expected = {
         "deny_perms": {
-            "Guest": {
-                "permissions": ["read_data", "write_data", "create_files"],
-            }
+            "Guest": {"permissions": ["read_data", "write_data", "create_files"]}
         }
     }
     _, comment, changes = file._check_directory_win(name=path, win_deny_perms=perms)
@@ -209,10 +203,7 @@ def test__check_directory_win_deny_perms_basic_no_applies_to(tmp_path):
 def test__check_directory_win_inheritance(tmp_path):
     path = str(tmp_path)
     expected = {}
-    _, comment, changes = file._check_directory_win(
-        name=path,
-        win_inheritance=True,
-    )
+    _, comment, changes = file._check_directory_win(name=path, win_inheritance=True)
     assert path in comment
     assert changes == expected
 
