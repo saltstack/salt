@@ -1,6 +1,6 @@
+import re
 import contextlib
 import logging
-import re
 
 import pytest
 import salt.utils.platform
