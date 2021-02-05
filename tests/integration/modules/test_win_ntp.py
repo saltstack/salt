@@ -1,7 +1,7 @@
 import pytest
 import salt.utils.platform
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, flaky, slowTest
+from tests.support.helpers import flaky
 from tests.support.unit import skipIf
 
 
@@ -13,8 +13,8 @@ class NTPTest(ModuleCase):
     Validate windows ntp module
     """
 
-    @destructiveTest
-    @slowTest
+    @pytest.mark.destructive_test
+    @pytest.mark.slow_test
     def test_ntp_set_servers(self):
         """
         test ntp get and set servers
