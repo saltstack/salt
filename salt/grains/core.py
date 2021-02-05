@@ -1582,6 +1582,7 @@ _OS_FAMILY_MAP = {
     "XenServer": "RedHat",
     "RES": "RedHat",
     "Sangoma": "RedHat",
+    "VMware Photon OS": "RedHat",
     "Mandrake": "Mandriva",
     "ESXi": "VMware",
     "Mint": "Debian",
