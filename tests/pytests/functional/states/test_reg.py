@@ -13,10 +13,7 @@ NAME = HIVE + "\\" + KEY
 VNAME = "version"
 VDATA = "0.15.3"
 
-pytestmark = [
-    pytest.mark.windows_whitelisted,
-    pytest.mark.skip_unless_on_windows
-]
+pytestmark = [pytest.mark.windows_whitelisted, pytest.mark.skip_unless_on_windows]
 
 
 @pytest.fixture
@@ -31,7 +28,7 @@ def configure_loader_modules():
                 "reg.read_value": reg_util.read_value,
                 "reg.set_value": reg_util.set_value,
                 "dacl.check_perms": win_dacl.check_perms,
-            }
+            },
         },
         win_dacl: {"__opts__": {"test": False}},
     }
@@ -109,17 +106,11 @@ def test_present_perms(clean):
     )
     permissions = win_dacl.get_permissions(obj_name=NAME, obj_type="registry")
     expected = {
-        "deny": {
-            "permissions": "Full Control",
-            "applies to": "This key and subkeys"
-        }
+        "deny": {"permissions": "Full Control", "applies to": "This key and subkeys"}
     }
     assert permissions["Not Inherited"].get("Guest") == expected
     expected = {
-        "grant": {
-            "permissions": "Full Control",
-            "applies to": "This key and subkeys"
-        }
+        "grant": {"permissions": "Full Control", "applies to": "This key and subkeys"}
     }
     assert permissions["Not Inherited"].get("Backup Operators") == expected
 
@@ -132,16 +123,22 @@ def test_present_perms_reset(clean):
         vdata=VDATA,
         win_perms={"Everyone": {"perms": "full_control"}},
         win_deny_perms={"Guest": {"perms": "full_control"}},
-        win_perms_reset=True
+        win_perms_reset=True,
     )
     permissions = win_dacl.get_permissions(obj_name=NAME, obj_type="registry")
     expected = {
-        "Guest": {"deny": {"permissions": "Full Control",
-                           "applies to": "This key and subkeys"}
-                  },
-        "Everyone": {"grant": {"permissions": "Full Control",
-                               "applies to": "This key and subkeys"}
-                     }
+        "Guest": {
+            "deny": {
+                "permissions": "Full Control",
+                "applies to": "This key and subkeys",
+            }
+        },
+        "Everyone": {
+            "grant": {
+                "permissions": "Full Control",
+                "applies to": "This key and subkeys",
+            }
+        },
     }
     assert permissions["Not Inherited"] == expected
 
@@ -155,16 +152,22 @@ def test_present_perms_reset_no_inherit(clean):
         win_perms={"Everyone": {"perms": "full_control"}},
         win_deny_perms={"Guest": {"perms": "full_control"}},
         win_perms_reset=True,
-        win_inheritance=False
+        win_inheritance=False,
     )
     permissions = win_dacl.get_permissions(obj_name=NAME, obj_type="registry")
     expected = {
-        "Guest": {"deny": {"permissions": "Full Control",
-                           "applies to": "This key and subkeys"}
-                  },
-        "Everyone": {"grant": {"permissions": "Full Control",
-                               "applies to": "This key and subkeys"}
-                     }
+        "Guest": {
+            "deny": {
+                "permissions": "Full Control",
+                "applies to": "This key and subkeys",
+            }
+        },
+        "Everyone": {
+            "grant": {
+                "permissions": "Full Control",
+                "applies to": "This key and subkeys",
+            }
+        },
     }
     assert permissions["Not Inherited"] == expected
     assert not win_dacl.get_inheritance(obj_name=NAME, obj_type="registry")
@@ -293,13 +296,12 @@ def test_absent(reset):
     }
     assert reg.absent(NAME, VNAME) == expected
 
+
 @pytest.mark.destructive_test
 def test_absent_test_true(reset):
     expected = {
         "comment": "",
-        "changes": {
-            "reg": {"Will remove": {"Entry": VNAME, "Key": NAME}}
-        },
+        "changes": {"reg": {"Will remove": {"Entry": VNAME, "Key": NAME}}},
         "name": NAME,
         "result": None,
     }
