@@ -4,9 +4,9 @@
 #
 #    pip-compile -o requirements/static/py3.6/linux.txt -v requirements/base.txt requirements/zeromq.txt requirements/pytest.txt requirements/static/linux.in requirements/static/git-sources.txt
 #
---extra-index-url https://cdn.githubraw.com/vmware/vsphere-automation-sdk-python/master/lib/
+--extra-index-url https://cdn.githubraw.com/vmware/vsphere-automation-sdk-python/9f62581527f4960e35d4d52da7d013b1a0ebbf11/lib/
 
--e git+https://github.com/vmware/vsphere-automation-sdk-python.git#egg=vSphere-Automation-SDK
+-e git+https://github.com/vmware/vsphere-automation-sdk-python.git@9f62581527f4960e35d4d52da7d013b1a0ebbf11#egg=vSphere-Automation-SDK
 adal==1.2.3               # via azure-datalake-store, msrestazure
 apache-libcloud==2.0.0
 appdirs==1.4.4            # via virtualenv
