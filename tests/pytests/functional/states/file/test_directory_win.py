@@ -1,7 +1,7 @@
 import os
 import pytest
-import salt.states.file as file
 import salt.modules.win_file as win_file
+import salt.states.file as file
 import salt.utils.win_dacl as win_dacl
 import salt.utils.win_functions as win_functions
 
@@ -14,24 +14,14 @@ pytestmark = [pytest.mark.windows_whitelisted, pytest.mark.skip_unless_on_window
 def configure_loader_modules():
     return {
         file: {
-            "__opts__": {
-                "test": False,
-            },
+            "__opts__": {"test": False},
             "__salt__": {
                 "file.mkdir": win_file.mkdir,
                 "file.check_perms": win_file.check_perms,
             },
         },
-        win_file: {
-            "__utils__": {
-                "dacl.check_perms": win_dacl.check_perms,
-            },
-        },
-        win_dacl: {
-            "__opts__": {
-                "test": False,
-            },
-        },
+        win_file: {"__utils__": {"dacl.check_perms": win_dacl.check_perms}},
+        win_dacl: {"__opts__": {"test": False}},
     }
 
 

@@ -9,18 +9,13 @@ pytestmark = [pytest.mark.windows_whitelisted, pytest.mark.skip_unless_on_window
 @pytest.fixture
 def configure_loader_modules():
     return {
-        file: {
-            "__opts__": {"test": False},
-        },
+        file: {"__opts__": {"test": False}},
     }
 
 
 def test__check_directory_win_owner(tmp_path):
     path = str(tmp_path)
-    _, comment, changes = file._check_directory_win(
-        name=path,
-        win_owner="Everyone",
-    )
+    _, comment, changes = file._check_directory_win(name=path, win_owner="Everyone")
     assert path in comment
     assert changes == {"owner": "Everyone"}
 
@@ -41,10 +36,7 @@ def test__check_directory_win_grant_perms_basic(tmp_path):
             }
         }
     }
-    _, comment, changes = file._check_directory_win(
-        name=path,
-        win_perms=perms,
-    )
+    _, comment, changes = file._check_directory_win(name=path, win_perms=perms)
     assert path in comment
     assert changes == expected
 
@@ -69,10 +61,7 @@ def test__check_directory_win_grant_perms_basic_existing_user(tmp_path):
             }
         }
     }
-    _, comment, changes = file._check_directory_win(
-        name=path,
-        win_perms=perms,
-    )
+    _, comment, changes = file._check_directory_win(name=path, win_perms=perms)
     assert path in comment
     assert changes == expected
 
@@ -93,10 +82,7 @@ def test__check_directory_win_grant_perms_advanced(tmp_path):
             }
         }
     }
-    _, comment, changes = file._check_directory_win(
-        name=path,
-        win_perms=perms,
-    )
+    _, comment, changes = file._check_directory_win(name=path, win_perms=perms)
     assert path in comment
     assert changes == expected
 
@@ -122,10 +108,7 @@ def test__check_directory_win_grant_perms_advanced_existing_user(tmp_path):
             }
         }
     }
-    _, comment, changes = file._check_directory_win(
-        name=path,
-        win_perms=perms,
-    )
+    _, comment, changes = file._check_directory_win(name=path, win_perms=perms)
     assert path in comment
     assert changes == expected
 
@@ -144,10 +127,7 @@ def test__check_directory_win_grant_perms_basic_no_applies_to(tmp_path):
             }
         }
     }
-    _, comment, changes = file._check_directory_win(
-        name=path,
-        win_perms=perms,
-    )
+    _, comment, changes = file._check_directory_win(name=path, win_perms=perms)
     assert path in comment
     assert changes == expected
 
@@ -168,10 +148,7 @@ def test__check_directory_win_deny_perms_basic(tmp_path):
             }
         }
     }
-    _, comment, changes = file._check_directory_win(
-        name=path,
-        win_deny_perms=perms,
-    )
+    _, comment, changes = file._check_directory_win(name=path, win_deny_perms=perms)
     assert path in comment
     assert changes == expected
 
@@ -196,10 +173,7 @@ def test__check_directory_win_deny_perms_basic_existing_user(tmp_path):
             }
         }
     }
-    _, comment, changes = file._check_directory_win(
-        name=path,
-        win_deny_perms=perms,
-    )
+    _, comment, changes = file._check_directory_win(name=path, win_deny_perms=perms)
     assert path in comment
     assert changes == expected
 
@@ -220,10 +194,7 @@ def test__check_directory_win_deny_perms_advanced(tmp_path):
             }
         }
     }
-    _, comment, changes = file._check_directory_win(
-        name=path,
-        win_deny_perms=perms,
-    )
+    _, comment, changes = file._check_directory_win(name=path, win_deny_perms=perms)
     assert path in comment
     assert changes == expected
 
@@ -249,10 +220,7 @@ def test__check_directory_win_deny_perms_advanced_existing_user(tmp_path):
             }
         }
     }
-    _, comment, changes = file._check_directory_win(
-        name=path,
-        win_deny_perms=perms,
-    )
+    _, comment, changes = file._check_directory_win(name=path, win_deny_perms=perms)
     assert path in comment
     assert changes == expected
 
@@ -271,10 +239,7 @@ def test__check_directory_win_deny_perms_basic_no_applies_to(tmp_path):
             }
         }
     }
-    _, comment, changes = file._check_directory_win(
-        name=path,
-        win_deny_perms=perms,
-    )
+    _, comment, changes = file._check_directory_win(name=path, win_deny_perms=perms)
     assert path in comment
     assert changes == expected
 
@@ -293,10 +258,7 @@ def test__check_directory_win_inheritance(tmp_path):
 def test__check_directory_win_inheritance_false(tmp_path):
     path = str(tmp_path)
     expected = {"inheritance": False}
-    _, comment, changes = file._check_directory_win(
-        name=path,
-        win_inheritance=False,
-    )
+    _, comment, changes = file._check_directory_win(name=path, win_inheritance=False)
     assert path in comment
     assert changes == expected
 
@@ -304,10 +266,7 @@ def test__check_directory_win_inheritance_false(tmp_path):
 def test__check_directory_reset_no_non_inherited_users(tmp_path):
     path = str(tmp_path)
     expected = {}
-    _, comment, changes = file._check_directory_win(
-        name=path,
-        win_perms_reset=True,
-    )
+    _, comment, changes = file._check_directory_win(name=path, win_perms_reset=True)
     assert path in comment
     assert changes == expected
 
@@ -331,10 +290,7 @@ def test__check_directory_reset_non_inherited_users_grant(tmp_path):
             }
         }
     }
-    _, comment, changes = file._check_directory_win(
-        name=path,
-        win_perms_reset=True,
-    )
+    _, comment, changes = file._check_directory_win(name=path, win_perms_reset=True)
     assert path in comment
     assert changes == expected
 
@@ -358,9 +314,6 @@ def test__check_directory_reset_non_inherited_users_deny(tmp_path):
             }
         }
     }
-    _, comment, changes = file._check_directory_win(
-        name=path,
-        win_perms_reset=True,
-    )
+    _, comment, changes = file._check_directory_win(name=path, win_perms_reset=True)
     assert path in comment
     assert changes == expected
