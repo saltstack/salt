@@ -4,7 +4,7 @@
 Salt 3000.8 Release Notes
 =========================
 
-Version 3000.8 is a big fix release for :ref:`3000 <release-3000>`.
+Version 3000.8 is a bug fix release for :ref:`3000 <release-3000>`.
 
 Fixed
 -----
