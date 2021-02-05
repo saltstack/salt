@@ -3,7 +3,7 @@ import salt.states.reg as reg
 import salt.utils.win_dacl as win_dacl
 import salt.utils.win_functions as win_functions
 import salt.utils.win_reg as reg_util
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import patch
 
 CURRENT_USER = win_functions.get_current_user(with_domain=False)
 HIVE = "HKEY_CURRENT_USER"
