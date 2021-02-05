@@ -1802,12 +1802,17 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             except Exception:  # pylint: disable=broad-except
                 pass
             else:
-                tgt_fn = os.path.join("salt", "utils", "process.py")
-                if fn_.endswith(tgt_fn) and "_handle_signals" in caller:
-                    # Race conditon, SIGTERM or SIGINT received while loader
-                    # was in process of loading a module. Call sys.exit to
-                    # ensure that the process is killed.
-                    sys.exit(salt.defaults.exitcodes.EX_OK)
+                tgt_fns = [
+                    os.path.join("salt", "utils", "process.py"),
+                    os.path.join("salt", "cli", "daemons.py"),
+                    os.path.join("salt", "cli", "api.py"),
+                ]
+                for tgt_fn in tgt_fns:
+                    if fn_.endswith(tgt_fn) and "_handle_signals" in caller:
+                        # Race conditon, SIGTERM or SIGINT received while loader
+                        # was in process of loading a module. Call sys.exit to
+                        # ensure that the process is killed.
+                        sys.exit(salt.defaults.exitcodes.EX_OK)
             log.error(
                 "Failed to import %s %s as the module called exit()\n",
                 self.tag,
