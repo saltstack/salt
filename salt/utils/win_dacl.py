@@ -369,7 +369,6 @@ def flags(instantiated=True):
                 0x0009: "Files only",
                 0x000A: "Subfolders only",
                 0x000B: "Subfolders and files only",
-                0x0010: "Inherited (file)",
                 # for setting
                 "this_folder_only": 0x0006,
                 "this_folder_subfolders_files": 0x0003,
@@ -380,22 +379,18 @@ def flags(instantiated=True):
                 "files_only": 0x0009,
             },
             "registry": {
-                0x0000: "Not Inherited",
+                0x0000: "This key only",
                 0x0002: "This key and subkeys",
-                0x0006: "This key only",
                 0x000A: "Subkeys only",
-                0x0010: "Inherited",
-                "this_key_only": 0x0006,
+                "this_key_only": 0x0000,
                 "this_key_subkeys": 0x0002,
                 "subkeys_only": 0x000A,
             },
             "registry32": {
-                0x0000: "Not Inherited",
+                0x0000: "This key only",
                 0x0002: "This key and subkeys",
-                0x0006: "This key only",
                 0x000A: "Subkeys only",
-                0x0010: "Inherited",
-                "this_key_only": 0x0006,
+                "this_key_only": 0x0000,
                 "this_key_subkeys": 0x0002,
                 "subkeys_only": 0x000A,
             },
@@ -619,6 +614,11 @@ def dacl(obj_name=None, obj_type="file"):
             """
             sid = get_sid(principal)
 
+            if applies_to not in self.ace_prop[self.dacl_type]:
+                raise SaltInvocationError(
+                    "Invalid 'applies_to' for type {}".format(self.dacl_type)
+                )
+
             if self.dacl is None:
                 raise SaltInvocationError("You must load the DACL before adding an ACE")
 
@@ -645,6 +645,12 @@ def dacl(obj_name=None, obj_type="file"):
 
             # Add ACE to the DACL
             # Grant or Deny
+            # There's some strange behavior here with the registry when you give
+            # grant permissions to the Administrator account... it adds bit 1 to
+            # the propagation flag... so 0x2 becomes 0x3 and results in an
+            # Unknown propagation in get_permissions. It displays correctly in
+            # the GUI, but after you modify in the GUI they change back to 0x2.
+            # Other users work correctly
             try:
                 if access_mode.lower() == "grant":
                     self.dacl.AddAccessAllowedAceEx(
@@ -878,6 +884,10 @@ def dacl(obj_name=None, obj_type="file"):
             # Is the inherited ace flag present
             inherited = ace[0][1] & win32security.INHERITED_ACE == 16
 
+            # If "Only apply these permissions to objects and/or containers
+            # within this container" is checked, there is a 0x4 flag set
+            container_only = ace[0][1] & win32security.NO_PROPAGATE_INHERIT_ACE == 4
+
             # Ace Propagation
             ace_prop = "NA"
 
@@ -889,6 +899,9 @@ def dacl(obj_name=None, obj_type="file"):
                 # Remove the inherited ace flag and get propagation
                 if inherited:
                     ace_prop = ace[0][1] ^ win32security.INHERITED_ACE
+
+                if container_only:
+                    ace_prop = ace[0][1] ^ win32security.NO_PROPAGATE_INHERIT_ACE
 
                 # Lookup the propagation
                 try:
@@ -1724,7 +1737,7 @@ def get_permissions(obj_name, principal=None, obj_type="file"):
 
         salt.utils.win_dacl.get_permissions('C:\\Temp')
     """
-    obj_dacl = dacl(obj_name, obj_type)
+    obj_dacl = dacl(obj_name=obj_name, obj_type=obj_type)
 
     if principal is None:
         return obj_dacl.list_aces()
@@ -2231,21 +2244,13 @@ def _check_perms(obj_name, obj_type, new_perms, access_mode, ret, test_mode=Fals
             continue
 
         # Get the proper applies_to text
-        if "applies_to" in new_perms[user]:
-            applies_to = new_perms[user]["applies_to"]
-            at_flag = flags().ace_prop["file"][applies_to]
-            applies_to_text = flags().ace_prop["file"][at_flag]
-
-        else:
-            applies_to = None
-
         if user_name not in cur_perms["Not Inherited"]:
             changes.setdefault(user, {})
             changes[user]["permissions"] = new_perms[user]["perms"]
-            if applies_to:
-                changes[user]["applies_to"] = applies_to
+            if "applies_to" in new_perms[user]:
+                changes[user]["applies_to"] = new_perms[user]["applies_to"]
         else:
-            # Check Permissions
+            # Check existing permissions
             if not has_permissions(
                 obj_name=obj_name,
                 principal=user_name,
@@ -2257,49 +2262,33 @@ def _check_perms(obj_name, obj_type, new_perms, access_mode, ret, test_mode=Fals
                 changes.setdefault(user, {})
                 changes[user]["permissions"] = new_perms[user]["perms"]
 
-            # Check if applies_to was passed
-            if applies_to:
-                # Is there a deny/grant permission set
-                if access_mode in cur_perms["Not Inherited"][user_name]:
-                    # If the applies to settings are different, use the new one
-                    if (
-                        not cur_perms["Not Inherited"][user_name][access_mode][
-                            "applies to"
-                        ]
-                        == applies_to_text
-                    ):
-                        changes.setdefault(user, {})
-                        changes[user]["applies_to"] = applies_to
+                # Check existing propagation
+                if "applies_to" in new_perms[user]:
+                    applies_to = new_perms[user]["applies_to"]
+                    at_flag = flags().ace_prop[obj_type][applies_to]
+                    applies_to_text = flags().ace_prop[obj_type][at_flag]
+
+                    # Is there a deny/grant permission set
+                    if access_mode in cur_perms["Not Inherited"][user_name]:
+                        # If the applies to settings are different, use the new one
+                        if (
+                            not cur_perms["Not Inherited"][user_name][access_mode][
+                                "applies to"
+                            ]
+                            == applies_to_text
+                        ):
+                            changes.setdefault(user, {})
+                            changes[user]["applies_to"] = applies_to
 
     if changes:
         ret["changes"].setdefault(perms_label, {})
         for user in changes:
             user_name = get_name(principal=user)
-            cur_perm = cur_perms["Not Inherited"].get(user_name, {})
 
             if test_mode is True:
                 ret["changes"][perms_label].setdefault(user, {})
                 ret["changes"][perms_label][user] = changes[user]
             else:
-                # Get applies_to
-                applies_to = None
-                if "applies_to" not in changes[user]:
-                    # Get current "applies to" settings from the file
-                    if access_mode in cur_perm:
-                        for flag in flags().ace_prop[obj_type]:
-                            if flags().ace_prop[obj_type][flag] == cur_perm[access_mode]["applies to"]:
-                                at_flag = flag
-                                for flag1 in flags().ace_prop[obj_type]:
-                                    if flags().ace_prop[obj_type][flag1] == at_flag:
-                                        applies_to = flag1
-                    if not applies_to:
-                        if obj_type.lower() in ["registry", "registry32"]:
-                            applies_to = "this_key_subkeys"
-                        else:
-                            applies_to = "this_folder_subfolders_files"
-                else:
-                    applies_to = changes[user]["applies_to"]
-
                 if not test_mode:
                     try:
                         set_permissions(
@@ -2307,7 +2296,7 @@ def _check_perms(obj_name, obj_type, new_perms, access_mode, ret, test_mode=Fals
                             principal=user_name,
                             permissions=changes[user]["permissions"],
                             access_mode=access_mode,
-                            applies_to=applies_to,
+                            applies_to=changes[user].get("applies_to"),
                             obj_type=obj_type,
                         )
                         ret["changes"].setdefault(perms_label, {}).setdefault(user, {})
@@ -2333,7 +2322,7 @@ def check_perms(
     deny_perms=None,
     inheritance=True,
     reset=False,
-    test_mode=False,
+    test_mode=None,
 ):
     """
     Check owner and permissions for the passed directory. This function checks
@@ -2413,6 +2402,9 @@ def check_perms(
                                           }
                                       })
     """
+    if test_mode is None:
+        test_mode = __opts__["test"]
+
     # Validate obj_type
     if obj_type.lower() not in flags().obj_type:
         raise SaltInvocationError('Invalid "obj_type" passed: {}'.format(obj_type))
