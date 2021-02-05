@@ -198,7 +198,7 @@ def test_everything(tmp_path):
     path = str(tmp_path / "cachedir")
 
     # test instantiation
-    cd = cache.CacheDisk(0.1, path)
+    cd = cache.CacheDisk(0.3, path)
     assert isinstance(cd, cache.CacheDisk)
 
     # test to make sure it looks like a dict
@@ -211,11 +211,11 @@ def test_everything(tmp_path):
 
     # test persistence
     cd["foo"] = "bar"
-    cd2 = cache.CacheDisk(0.1, path)
+    cd2 = cache.CacheDisk(0.3, path)
     assert "foo" in cd2
     assert cd2["foo"] == "bar"
 
     # test ttl
-    time.sleep(0.2)
+    time.sleep(0.5)
     assert "foo" not in cd
     assert "foo" not in cd2
