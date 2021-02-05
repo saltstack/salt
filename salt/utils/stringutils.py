@@ -14,7 +14,6 @@ import shlex
 import time
 import unicodedata
 
-from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 from salt.utils.decorators.jinja import jinja_filter
 
@@ -81,36 +80,18 @@ def to_str(s, encoding=None, errors="strict", normalize=False):
         return _normalize(s)
 
     exc = None
-    if six.PY3:
-        if isinstance(s, (bytes, bytearray)):
-            for enc in encoding:
-                try:
-                    return _normalize(s.decode(enc, errors))
-                except UnicodeDecodeError as err:
-                    exc = err
-                    continue
-            # The only way we get this far is if a UnicodeDecodeError was
-            # raised, otherwise we would have already returned (or raised some
-            # other exception).
-            raise exc  # pylint: disable=raising-bad-type
-        raise TypeError("expected str, bytes, or bytearray not {}".format(type(s)))
-    else:
-        if isinstance(s, bytearray):
-            return str(s)  # future lint: disable=blacklisted-function
-        # pylint: disable=incompatible-py3-code,undefined-variable
-        if isinstance(s, unicode):
-            for enc in encoding:
-                try:
-                    return _normalize(s).encode(enc, errors)
-                except UnicodeEncodeError as err:
-                    exc = err
-                    continue
-            # The only way we get this far is if a UnicodeDecodeError was
-            # raised, otherwise we would have already returned (or raised some
-            # other exception).
-            raise exc  # pylint: disable=raising-bad-type
-        # pylint: enable=incompatible-py3-code,undefined-variable
-        raise TypeError("expected str, bytes, or bytearray not {}".format(type(s)))
+    if isinstance(s, (bytes, bytearray)):
+        for enc in encoding:
+            try:
+                return _normalize(s.decode(enc, errors))
+            except UnicodeDecodeError as err:
+                exc = err
+                continue
+        # The only way we get this far is if a UnicodeDecodeError was
+        # raised, otherwise we would have already returned (or raised some
+        # other exception).
+        raise exc  # pylint: disable=raising-bad-type
+    raise TypeError("expected str, bytes, or bytearray not {}".format(type(s)))
 
 
 def to_unicode(s, encoding=None, errors="strict", normalize=False):
@@ -130,33 +111,11 @@ def to_unicode(s, encoding=None, errors="strict", normalize=False):
     if not encoding:
         raise ValueError("encoding cannot be empty")
 
-    exc = None
-    if six.PY3:
-        if isinstance(s, str):
-            return _normalize(s)
-        elif isinstance(s, (bytes, bytearray)):
-            return _normalize(to_str(s, encoding, errors))
-        raise TypeError("expected str, bytes, or bytearray not {}".format(type(s)))
-    else:
-        # This needs to be str and not six.string_types, since if the string is
-        # already a unicode type, it does not need to be decoded (and doing so
-        # will raise an exception).
-        # pylint: disable=incompatible-py3-code
-        if isinstance(s, unicode):  # pylint: disable=E0602
-            return _normalize(s)
-        elif isinstance(s, (str, bytearray)):
-            for enc in encoding:
-                try:
-                    return _normalize(s.decode(enc, errors))
-                except UnicodeDecodeError as err:
-                    exc = err
-                    continue
-            # The only way we get this far is if a UnicodeDecodeError was
-            # raised, otherwise we would have already returned (or raised some
-            # other exception).
-            raise exc  # pylint: disable=raising-bad-type
-        # pylint: enable=incompatible-py3-code
-        raise TypeError("expected str, bytes, or bytearray not {}".format(type(s)))
+    if isinstance(s, str):
+        return _normalize(s)
+    elif isinstance(s, (bytes, bytearray)):
+        return _normalize(to_str(s, encoding, errors))
+    raise TypeError("expected str, bytes, or bytearray not {}".format(type(s)))
 
 
 @jinja_filter("str_to_num")
@@ -238,23 +197,13 @@ def is_binary(data):
     text_characters = "".join([chr(x) for x in range(32, 127)] + list("\n\r\t\b"))
     # Get the non-text characters (map each character to itself then use the
     # 'remove' option to get rid of the text characters.)
-    if six.PY3:
-        if isinstance(data, bytes):
-            import salt.utils.data
+    if isinstance(data, bytes):
+        import salt.utils.data
 
-            nontext = data.translate(None, salt.utils.data.encode(text_characters))
-        else:
-            trans = "".maketrans("", "", text_characters)
-            nontext = data.translate(trans)
+        nontext = data.translate(None, salt.utils.data.encode(text_characters))
     else:
-        if isinstance(data, str):
-            trans_args = ({ord(x): None for x in text_characters},)
-        else:
-            trans_args = (
-                None,
-                str(text_characters),
-            )  # future lint: blacklisted-function
-        nontext = data.translate(*trans_args)
+        trans = "".maketrans("", "", text_characters)
+        nontext = data.translate(trans)
 
     # If more than 30% non-text characters, then
     # this is considered binary data
