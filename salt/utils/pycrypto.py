@@ -51,15 +51,24 @@ def secure_password(length=20, use_random=True):
             if HAS_RANDOM and use_random:
                 while True:
                     try:
-                        char = salt.utils.stringutils.to_str(get_random_bytes(1), encoding='UTF-8')
+                        if salt.utils.platform.is_windows():
+                            char = salt.utils.stringutils.to_str(get_random_bytes(1), encoding='UTF-8')
+                        else:
+                            char = salt.utils.stringutils.to_str(get_random_bytes(1))
                         break
                     except UnicodeDecodeError:
                         continue
-                pw += re.sub(
-                    salt.utils.stringutils.to_str(r"[\W_]", encoding='UTF-8'),
-                    "",
-                    char,
-                )
+                if salt.utils.platform.is_windows():
+                    pw += re.sub(salt.utils.stringutils.to_str(r"[\W_]", encoding='UTF-8'),
+                                 "",
+                                 char,
+                                 )
+                else:
+                    pw += re.sub(
+                        salt.utils.stringutils.to_str(r"[\W_]"),
+                        "",  # future lint: disable=blacklisted-function
+                        char,
+                    )
             else:
                 pw += random.SystemRandom().choice(string.ascii_letters + string.digits)
         return pw
