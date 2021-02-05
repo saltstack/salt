@@ -6,7 +6,11 @@ import salt.states.file as file
 import salt.utils.win_dacl as win_dacl
 import salt.utils.win_functions as win_functions
 
-CURRENT_USER = win_functions.get_current_user(with_domain=False)
+try:
+    CURRENT_USER = win_functions.get_current_user(with_domain=False)
+except NameError:
+    # Not a Windows Machine
+    pass
 
 pytestmark = [pytest.mark.windows_whitelisted, pytest.mark.skip_unless_on_windows]
 
