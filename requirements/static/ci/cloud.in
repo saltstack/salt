@@ -1,5 +1,5 @@
 # Cloud tests requirements
-apache-libcloud>=1.5.0
+apache-libcloud>=2.5.0
 netaddr
 profitbricks
 pypsexec

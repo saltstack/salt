@@ -4,7 +4,7 @@
 #
 #    pip-compile -o requirements/static/ci/py3.8/cloud.txt -v requirements/static/ci/cloud.in
 #
-apache-libcloud==2.4.0
+apache-libcloud==2.5.0
 certifi==2019.3.9         # via requests
 cffi==1.12.2              # via cryptography
 chardet==3.0.4            # via requests
