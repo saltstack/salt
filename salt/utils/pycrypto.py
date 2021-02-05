@@ -1,5 +1,5 @@
 """
-Use pycrypto to generate random passwords on the fly.
+Use pycrypto to generate random passwords on the fly
 """
 import logging
 import random
@@ -9,7 +9,6 @@ import string
 import salt.utils.platform
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-
 
 try:
     try:
