@@ -148,3 +148,5 @@ sdbetcd:
   etcd.port: 2379
 venafi:
   fake: "true"
+
+enable_fqdns_grains: False

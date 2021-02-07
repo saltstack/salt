@@ -126,3 +126,5 @@ sdbetcd:
   driver: etcd
   etcd.host: 127.0.0.1
   etcd.port: 2379
+
+enable_fqdns_grains: False
