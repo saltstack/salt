@@ -1,27 +1,28 @@
-# -*- coding: utf-8 -*-
-'''
+"""
 Create, modify and delete PowerDNS zone
-'''
+"""
 
-# Import Python libs
 import logging
-import requests
 
-# Import salt libs
-from salt.exceptions import CommandExecutionError, SaltInvocationError
+from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
 
 
-def manage_zone(
+def __virtual__():
+    return "powerdns.manage_zone" in __salt__ and "powerdns.delete_zone" in __salt__
+
+
+def managed_zone(
     name,
     key,
     server,
-    records=[],
-    nameservers=[],
+    records=None,
+    nameservers=None,
     remove_existing_records=False,
-    dnssec=False):
-    '''
+    dnssec=False,
+):
+    """
     Ensure that the PowerDNS zone is created and has correct DNS records.
 
     :param str name:
@@ -39,8 +40,9 @@ def manage_zone(
         Default NS records TTL is 3600 seconds.
 
         .. code-block:: yaml
+
             example.com:
-              power_dns.manage_zone:
+              powerdns.manage_zone:
                 - records:
                   - name: example.com
                     type: "A"
@@ -66,26 +68,21 @@ def manage_zone(
           Whether or not this zone is DNSSEC signed.
           Default value is True.
 
-    '''
+    """
 
-    result = {
-        "name": name,
-        "result": True,
-        "changes": {},
-        "comment": ""
-    }
+    result = {"name": name, "result": True, "changes": {}, "comment": ""}
 
     if not key or not server:
-        raise SaltInvocationError(
-            'Arguments "key" and "server" must be specified')
+        raise SaltInvocationError('Arguments "key" and "server" must be specified')
 
     if not name:
         result["comment"] = "No name of zone provided"
         result["result"] = False
         return result
 
-    state = __salt__["power_dns.manage_zone"](
-        name, key, server, records, nameservers, remove_existing_records, dnssec)
+    state = __salt__["powerdns.manage_zone"](
+        name, key, server, records, nameservers, remove_existing_records, dnssec
+    )
 
     if state["changes"]:
         result["changes"] = state["changes"]
@@ -93,8 +90,8 @@ def manage_zone(
     return result
 
 
-def delete_zone(name, key, server):
-    '''
+def absent_zone(name, key, server):
+    """
     Ensure that the PowerDNS zone is created and has correct DNS records.
 
     :param str name:
@@ -105,25 +102,19 @@ def delete_zone(name, key, server):
 
     :param str server:
         PowerDNS server URL.
-    '''
+    """
 
-    result = {
-        "name": name,
-        "result": True,
-        "changes": {},
-        "comment": ""
-    }
+    result = {"name": name, "result": True, "changes": {}, "comment": ""}
 
     if not key or not server:
-        raise SaltInvocationError(
-            'Arguments "key" and "server" must be specified')
+        raise SaltInvocationError('Arguments "key" and "server" must be specified')
 
     if not name:
         result["comment"] = "No name of zone provided"
         result["result"] = False
         return result
 
-    state = __salt__["power_dns.delete_zone"](name, key, server)
+    state = __salt__["powerdns.delete_zone"](name, key, server)
 
     if state["changes"]:
         result["changes"] = state["changes"]

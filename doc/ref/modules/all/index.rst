@@ -372,7 +372,7 @@ execution modules
     postfix
     postgres
     poudriere
-    power_dns
+    powerdns
     powerpath
     proxy
     ps
