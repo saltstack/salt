@@ -348,10 +348,7 @@ def _info(*pkgs):
         return {}
     output = salt.utils.json.loads(brew_result["stdout"])
 
-    meta_info = {
-        "formulae": ["name", "full_name"],
-        "casks": ["token", "full_token"]
-    }
+    meta_info = {"formulae": ["name", "full_name"], "casks": ["token", "full_token"]}
 
     pkgs_info = dict()
     for tap, keys in meta_info.items():
