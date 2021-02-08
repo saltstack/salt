@@ -42,7 +42,7 @@ def test_directory_new(tmp_path):
         win_perms={"Administrators": {"perms": "full_control"}},
         win_deny_perms={"Guest": {"perms": "full_control"}},
     )
-    expected = {path: "New Dir"}
+    expected = {path: "directory: new"}
     assert ret["changes"] == expected
     permissions = win_dacl.get_permissions(path)
     expected = {
@@ -109,7 +109,7 @@ def test_directory_new_no_inherit(tmp_path):
         win_deny_perms={"Guest": {"perms": "full_control"}},
         win_inheritance=False,
     )
-    expected = {path: "New Dir"}
+    expected = {path: "directory: new"}
     assert ret["changes"] == expected
     assert not win_dacl.get_inheritance(path)
     permissions = win_dacl.get_permissions(path)
@@ -129,7 +129,7 @@ def test_directory_new_reset(tmp_path):
         win_deny_perms={"Guest": {"perms": "full_control"}},
         win_perms_reset=True,
     )
-    expected = {path: "New Dir"}
+    expected = {path: "directory: new"}
     assert ret["changes"] == expected
     permissions = win_dacl.get_permissions(path)
     expected = {
@@ -185,7 +185,7 @@ def test_directory_new_reset_no_inherit(tmp_path):
         win_inheritance=False,
         win_perms_reset=True,
     )
-    expected = {path: "New Dir"}
+    expected = {path: "directory: new"}
     assert ret["changes"] == expected
     permissions = win_dacl.get_permissions(path)
     expected = {
