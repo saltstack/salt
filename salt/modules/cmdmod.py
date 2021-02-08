@@ -3790,7 +3790,7 @@ def powershell(
         # Convert the cmd to UTF-16LE without a BOM and base64 encode.
         # Just base64 encoding UTF-8 or including a BOM is not valid.
         log.debug("Encoding PowerShell command '%s'", cmd)
-        cmd = f"$ProgressPreference='SilentlyContinue'; {cmd}"
+        cmd = "$ProgressPreference='SilentlyContinue'; {}".format(cmd)
         cmd_utf16 = cmd.encode("utf-16-le")
         cmd = base64.standard_b64encode(cmd_utf16)
         cmd = salt.utils.stringutils.to_str(cmd)
@@ -4124,7 +4124,7 @@ def powershell_all(
         # Convert the cmd to UTF-16LE without a BOM and base64 encode.
         # Just base64 encoding UTF-8 or including a BOM is not valid.
         log.debug("Encoding PowerShell command '%s'", cmd)
-        cmd = f"$ProgressPreference='SilentlyContinue'; {cmd}"
+        cmd = "$ProgressPreference='SilentlyContinue'; {}".format(cmd)
         cmd_utf16 = cmd.encode("utf-16-le")
         cmd = base64.standard_b64encode(cmd_utf16)
         cmd = salt.utils.stringutils.to_str(cmd)
