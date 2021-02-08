@@ -707,6 +707,35 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         }
         self._run_os_grains_tests(None, _os_release_map, expectation)
 
+    @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
+    def test_almalinux_8_os_grains(self):
+        """
+        Test if OS grains are parsed correctly in AlmaLinux 8
+        """
+        _os_release_map = {
+            "os_release_file": {
+                "NAME": "AlmaLinux",
+                "VERSION_ID": "8.3",
+                "PRETTY_NAME": "AlmaLinux 8",
+                "ID": "almalinux",
+                "ANSI_COLOR": "0;31",
+                "CPE_NAME": "cpe:/o:almalinux:almalinux:8.3",
+            },
+            "_linux_distribution": ("almaLinux", "8.3", ""),
+        }
+
+        expectation = {
+            "os": "AlmaLinux",
+            "os_family": "RedHat",
+            "oscodename": "AlmaLinux 8",
+            "osfullname": "AlmaLinux",
+            "osrelease": "8.3",
+            "osrelease_info": (8, 3,),
+            "osmajorrelease": 8,
+            "osfinger": "AlmaLinux-8",
+        }
+        self._run_os_grains_tests(None, _os_release_map, expectation)
+
     def test_unicode_error(self):
         raise_unicode_mock = MagicMock(
             name="raise_unicode_error", side_effect=UnicodeError

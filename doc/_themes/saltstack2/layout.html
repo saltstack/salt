@@ -33,13 +33,7 @@
 
         {%- for rellink in rellinks|reverse %}
         <li>
-            {%- if rellink[3] == "Table of Contents" and pathto(rellink[0]) != '#' %}
-            <a href="{{ pathto(rellink[0]) }}#table-of-contents" title="{{ rellink[1]|striptags|e }}">{{ rellink[3] }}</a>
-            {%- elif rellink[3] == "Table of Contents" and pathto(rellink[0]) == '#' %}
-            <a href="{{ pathto(rellink[0]) }}table-of-contents" title="{{ rellink[1]|striptags|e }}">{{ rellink[3] }}</a>
-            {%- else %}
             <a href="{{ pathto(rellink[0]) }}" title="{{ rellink[1]|striptags|e }}">{{ rellink[3] }}</a>
-            {% endif %}
             {#
             {%- if not loop.last %}{{ reldelim2 }}{% endif %}
             #}
