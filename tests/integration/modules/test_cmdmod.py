@@ -578,7 +578,9 @@ class CMDModuleTest(ModuleCase):
         core
         """
         val = "i like cheese"
-        args = '-SecureString (ConvertTo-SecureString -String "{}" -AsPlainText -Force) -ErrorAction Stop'.format(val)
+        args = '-SecureString (ConvertTo-SecureString -String "{}" -AsPlainText -Force) -ErrorAction Stop'.format(
+            val
+        )
         script = "salt://issue-56195/test.ps1"
         ret = self.run_function("cmd.script", [script], args=args, shell="pwsh")
         self.assertEqual(ret["stdout"], val)
