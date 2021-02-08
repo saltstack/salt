@@ -372,7 +372,7 @@ class WinDaclRegTestCase(TestCase, LoaderModuleMockMixin):
                             "delete",
                             "set_value",
                             "write_dac",
-                            "write_owner"
+                            "write_owner",
                         ]
                     },
                 },
@@ -467,7 +467,7 @@ class WinDaclRegTestCase(TestCase, LoaderModuleMockMixin):
                             "delete",
                             "set_value",
                             "write_dac",
-                            "write_owner"
+                            "write_owner",
                         ]
                     },
                 },
@@ -880,7 +880,7 @@ class WinDaclFileTestCase(TestCase, LoaderModuleMockMixin):
                             "delete",
                             "set_value",
                             "write_dac",
-                            "write_owner"
+                            "write_owner",
                         ]
                     },
                 },
