@@ -3677,7 +3677,6 @@ def directory(
         if not os.path.isdir(name):
             return _error(ret, "Failed to create directory {}".format(name))
 
-        # We don't care about the rest of this on Windows
         ret["changes"][name] = "directory: new"
         return ret
 
