@@ -67,11 +67,11 @@ def beacon(config):
     .. code-block:: yaml
 
         beacons:
-            log:
-              - file: <path>
-              - tags:
-                  <tag>:
-                    regex: <pattern>
+          log:
+            - file: <path>
+            - tags:
+                <tag>:
+                  regex: <pattern>
 
     .. note::
 
@@ -83,12 +83,13 @@ def beacon(config):
     This is not the tag in the log.
 
     .. code-block:: yaml
+
         beacons:
-            log:
-              - file: /var/log/messages #path to log.
-              - tags:
-                  goodbye/world: # tag added to beacon event tag.
-                    regex: .*good-bye.* # match good-bye string anywhere in the log entry.
+          log:
+            - file: /var/log/messages #path to log.
+            - tags:
+                goodbye/world: # tag added to beacon event tag.
+                  regex: .*good-bye.* # match good-bye string anywhere in the log entry.
     """
     _config = {}
     list(map(_config.update, config))

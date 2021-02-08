@@ -165,8 +165,6 @@ import salt.utils.json
 import salt.utils.slack
 import salt.utils.yaml
 
-log = logging.getLogger(__name__)
-
 try:
     import slackclient
 
@@ -174,6 +172,7 @@ try:
 except ImportError:
     HAS_SLACKCLIENT = False
 
+log = logging.getLogger(__name__)
 
 __virtualname__ = "slack"
 

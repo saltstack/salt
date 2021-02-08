@@ -1241,7 +1241,7 @@ when trying to authenticate to the master.
 
 .. versionadded:: 2014.7.0
 
-Default: ``60``
+Default: ``5``
 
 When waiting for a master to accept the minion's public key, salt will
 continuously attempt to reconnect until successful. This is the timeout value,
@@ -1250,9 +1250,12 @@ will wait for :conf_minion:`acceptance_wait_time` seconds before trying again.
 Unless your master is under unusually heavy load, this should be left at the
 default.
 
+.. note::
+    For high latency networks try increasing this value
+
 .. code-block:: yaml
 
-    auth_timeout: 60
+    auth_timeout: 5
 
 .. conf_minion:: auth_safemode
 
@@ -2990,7 +2993,7 @@ Default: ``None``
 TLS/SSL connection options. This could be set to a dictionary containing
 arguments corresponding to python ``ssl.wrap_socket`` method. For details see
 `Tornado <http://www.tornadoweb.org/en/stable/tcpserver.html#tornado.tcpserver.TCPServer>`_
-and `Python <https://docs.python.org/2/library/ssl.html#ssl.wrap_socket>`_
+and `Python <https://docs.python.org/3/library/ssl.html#ssl.wrap_socket>`_
 documentation.
 
 Note: to set enum arguments values like ``cert_reqs`` and ``ssl_version`` use

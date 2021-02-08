@@ -166,8 +166,8 @@ def test_gen_xml_dns():
             <hostname>mirror.acme.lab</hostname>
             <hostname>test.acme.lab</hostname>
           </host>
-          <srv name='srv1' protocol='tcp' port='1024' target='.' priority='10' weight='10' domain='test-domain-name'/>
-          <srv name='srv2' protocol='udp'/>
+          <srv service='srv1' protocol='tcp' port='1024' target='.' priority='10' weight='10' domain='test-domain-name'/>
+          <srv service='srv2' protocol='udp'/>
         </dns>
         """
     )

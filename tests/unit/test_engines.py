@@ -1,16 +1,13 @@
-# -*- coding: utf-8 -*-
 """
 unit tests for the Salt engines
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
+import pytest
 import salt.config
 import salt.engines as engines
 import salt.utils.process
-from salt.ext import six
-from tests.support.helpers import slowTest
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch
 from tests.support.unit import TestCase
@@ -26,7 +23,7 @@ class EngineTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {engines: {}}
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_engine_module(self):
         """
         Test
@@ -43,7 +40,7 @@ class EngineTestCase(TestCase, LoaderModuleMockMixin):
             salt.engines.start_engines(mock_opts, process_manager)
             process_map = process_manager._process_map
             count = 0
-            for proc in six.iterkeys(process_map):
+            for proc in process_map:
                 count += 1
                 fun = process_map[proc]["Process"].fun
 
