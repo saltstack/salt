@@ -185,7 +185,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
         # The following name is appended to maintain backward compatibility
         # with old salt formulas. Since full_token and token are the same
         # for official taps (homebrew/*).
-        names += [f"{package['tap']}/{package['token']}"]
+        names.append("/".join([package["tap"], package["token"]]))
         for name in names:
             __salt__["pkg_resource.add_pkg"](ret, name, version)
 
@@ -347,7 +347,24 @@ def _info(*pkgs):
         log.error("Failed to get info about packages: %s", " ".join(pkgs))
         return {}
     output = salt.utils.json.loads(brew_result["stdout"])
-    return dict(zip(pkgs, output["formulae"]))
+
+    meta_info = {
+        "formulae": ["name", "full_name"],
+        "casks": ["token", "full_token"]
+    }
+
+    pkgs_info = dict()
+    for tap, keys in meta_info.items():
+        data = output[tap]
+        if len(data) == 0:
+            continue
+
+        for _pkg in data:
+            for key in keys:
+                if _pkg[key] in pkgs:
+                    pkgs_info[_pkg[key]] = _pkg
+
+    return pkgs_info
 
 
 def install(name=None, pkgs=None, taps=None, options=None, **kwargs):
