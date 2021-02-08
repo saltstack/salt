@@ -556,7 +556,7 @@ class CMDModuleTest(ModuleCase):
         self.assertIn("abc=123", out)
         self.assertIn("ABC=456", out)
 
-    @slowTest
+    @pytest.mark.slow_test
     @skipIf(not salt.utils.platform.is_windows(), "minion is not windows")
     def test_windows_powershell_script_args(self):
         """
