@@ -153,7 +153,7 @@ class BrewTestCase(TestCase, LoaderModuleMockMixin):
                               "outdated": false,
                               "sha256": "4963f503c1e47bfa0f8bdbbbe5694d6a7242d298fb44ff68af80d42f1eaebaf9",
                               "token": "day-o",
-                              "full_token": "homebrew/cask/day-o",
+                              "full_token": "day-o",
                               "tap": "homebrew/cask",
                               "url": "https://shauninman.com/assets/downloads/Day-3.0.zip",
                               "version": "3.0.1"
@@ -200,8 +200,8 @@ class BrewTestCase(TestCase, LoaderModuleMockMixin):
                               "outdated": false,
                               "sha256": "9ed73844838bddf797eadf37e5f7da3771308c3f74d38cd422c18eebaaa8f6b9",
                               "token": "iterm2",
-                              "full_token": "homebrew/cask/iterm2",
-                              "tap": "homebrew/cask",
+                              "full_token": "custom/homebrew-tap/iterm2",
+                              "tap": "custom/homebrew-tap",
                               "url": "https://iterm2.com/downloads/stable/iTerm2-3_4_3.zip",
                               "version": "3.4.3"
                             }
@@ -405,7 +405,7 @@ class BrewTestCase(TestCase, LoaderModuleMockMixin):
         expected_pkgs = {
             "homebrew/cask/day-o": "3.0.1",
             "day-o": "3.0.1",
-            "homebrew/cask/iterm2": "3.4.3",
+            "custom/homebrew-tap/iterm2": "3.4.3",
             "iterm2": "3.4.3",
             "jq": "1.6",
             "xz": "5.2.5",
