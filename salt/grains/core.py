@@ -1556,6 +1556,7 @@ _OS_NAME_MAP = {
     "slesexpand": "RES",
     "linuxmint": "Mint",
     "neon": "KDE neon",
+    "pop": "Pop",
 }
 
 # Map the 'os' grain to the 'os_family' grain
@@ -1581,6 +1582,7 @@ _OS_FAMILY_MAP = {
     "XenServer": "RedHat",
     "RES": "RedHat",
     "Sangoma": "RedHat",
+    "VMware Photon OS": "RedHat",
     "Mandrake": "Mandriva",
     "ESXi": "VMware",
     "Mint": "Debian",
@@ -1629,6 +1631,7 @@ _OS_FAMILY_MAP = {
     "Funtoo": "Gentoo",
     "AIX": "AIX",
     "TurnKey": "Debian",
+    "Pop": "Debian",
 }
 
 # Matches any possible format:

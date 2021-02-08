@@ -1,15 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 Initialize the engines system. This plugin system allows for
 complex services to be encapsulated within the salt plugin environment
 """
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
-import multiprocessing
 
-# Import salt libs
 import salt
 import salt.loader
 import salt.utils.platform
@@ -49,19 +44,19 @@ def start_engines(opts, proc_mgr, proxy=None):
             engine_opts = None
         engine_name = None
         if engine_opts is not None and "engine_module" in engine_opts:
-            fun = "{0}.start".format(engine_opts["engine_module"])
+            fun = "{}.start".format(engine_opts["engine_module"])
             engine_name = engine
             del engine_opts["engine_module"]
         else:
-            fun = "{0}.start".format(engine)
+            fun = "{}.start".format(engine)
         if fun in engines:
             start_func = engines[fun]
             if engine_name:
-                name = "{0}.Engine({1}-{2})".format(
+                name = "{}.Engine({}-{})".format(
                     __name__, start_func.__module__, engine_name
                 )
             else:
-                name = "{0}.Engine({1})".format(__name__, start_func.__module__)
+                name = "{}.Engine({})".format(__name__, start_func.__module__)
             log.info("Starting Engine %s", name)
             proc_mgr.add_process(
                 Engine, args=(opts, fun, engine_opts, funcs, runners, proxy), name=name
@@ -77,7 +72,7 @@ class Engine(SignalHandlingProcess):
         """
         Set up the process executor
         """
-        super(Engine, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.opts = opts
         self.config = config
         self.fun = fun

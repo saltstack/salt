@@ -5,6 +5,7 @@ import copy
 import glob
 import os
 
+import pytest
 import salt.config
 import salt.loader
 import salt.modules.win_lgpo as win_lgpo
@@ -12,7 +13,6 @@ import salt.states.win_lgpo
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.stringutils
-from tests.support.helpers import destructiveTest, slowTest
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, patch
 from tests.support.unit import TestCase, skipIf
@@ -376,7 +376,7 @@ class WinLGPOGetPolicyADMXTestCase(TestCase, LoaderModuleMockMixin):
         }
         self.assertDictEqual(result, expected)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test__load_policy_definitions(self):
         """
         Test that unexpected files in the PolicyDefinitions directory won't
@@ -637,7 +637,7 @@ class WinLGPOPolicyInfoMechanismsTestCase(TestCase, LoaderModuleMockMixin):
         expected = "Not configured"
         self.assertEqual(result, expected)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_adv_audit_mechanism(self):
         """
         Test getting the policy value using the AdvAudit mechanism
@@ -691,8 +691,8 @@ class WinLGPOPolicyInfoMechanismsTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(result, expected)
 
 
-@destructiveTest
 @skipIf(not salt.utils.platform.is_windows(), "System is not Windows")
+@pytest.mark.destructive_test
 class WinLGPOGetPointAndPrintNCTestCase(TestCase, LoaderModuleMockMixin):
     """
     Test variations of the Point and Print Restrictions policy when Not
@@ -799,8 +799,8 @@ class WinLGPOGetPointAndPrintNCTestCase(TestCase, LoaderModuleMockMixin):
         self.assertDictEqual(result, expected)
 
 
-@destructiveTest
 @skipIf(not salt.utils.platform.is_windows(), "System is not Windows")
+@pytest.mark.destructive_test
 class WinLGPOGetPointAndPrintENTestCase(TestCase, LoaderModuleMockMixin):
     """
     Test variations of the Point and Print Restrictions policy when Enabled (EN)
@@ -864,7 +864,7 @@ class WinLGPOGetPointAndPrintENTestCase(TestCase, LoaderModuleMockMixin):
             return results
         return "Policy Not Found"
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_point_and_print_enabled(self):
         result = self._get_policy_adm_setting(
             policy_name="Point and Print Restrictions",
@@ -925,7 +925,7 @@ class WinLGPOGetPointAndPrintENTestCase(TestCase, LoaderModuleMockMixin):
         }
         self.assertDictEqual(result, expected)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_point_and_print_enabled_full_names_hierarchical(self):
         result = self._get_policy_adm_setting(
             policy_name="Point and Print Restrictions",

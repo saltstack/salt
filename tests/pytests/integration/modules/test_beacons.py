@@ -2,6 +2,7 @@
     :codeauthor: Justin Anderson <janderson@saltstack.com>
 """
 import pathlib
+import shutil
 
 import attr
 import pytest
@@ -61,6 +62,57 @@ def cleanup_beacons_config(cleanup_beacons_config_module, salt_call_cli):
         assert ret.exitcode == 0
         assert ret.json
         assert ret.json["result"] is True
+
+
+@pytest.fixture(scope="module")
+def inotify_file_path(tmp_path_factory):
+    inotify_directory = tmp_path_factory.mktemp("important-files")
+    try:
+        yield inotify_directory / "really-important"
+    finally:
+        shutil.rmtree(str(inotify_directory), ignore_errors=True)
+
+
+@pytest.fixture(scope="module")
+def pillar_tree(
+    base_env_pillar_tree_root_dir, salt_minion, salt_call_cli, inotify_file_path
+):
+    top_file = """
+    base:
+      '{}':
+        - beacons
+    """.format(
+        salt_minion.id
+    )
+    beacon_pillar_file = """
+    beacons:
+      inotify:
+        - files:
+            {}:
+              mask:
+                - open
+                - create
+                - close_write
+    """.format(
+        inotify_file_path
+    )
+    top_tempfile = pytest.helpers.temp_file(
+        "top.sls", top_file, base_env_pillar_tree_root_dir
+    )
+    beacon_tempfile = pytest.helpers.temp_file(
+        "beacons.sls", beacon_pillar_file, base_env_pillar_tree_root_dir
+    )
+    try:
+        with top_tempfile, beacon_tempfile:
+            ret = salt_call_cli.run("saltutil.refresh_pillar", wait=True)
+            assert ret.exitcode == 0
+            assert ret.json is True
+            yield
+    finally:
+        # Refresh pillar again to cleaup the temp pillar
+        ret = salt_call_cli.run("saltutil.refresh_pillar", wait=True)
+        assert ret.exitcode == 0
+        assert ret.json is True
 
 
 @attr.s(frozen=True, slots=True)
@@ -224,7 +276,8 @@ def test_enabled_beacons(salt_call_cli, beacon):
         pytest.fail("Did not find the beacon data with the 'enabled' key")
 
 
-def test_list(salt_call_cli, beacon):
+@pytest.mark.usefixtures("pillar_tree")
+def test_list(salt_call_cli, beacon, inotify_file_path):
     """
     Test listing the beacons
     """
@@ -232,7 +285,59 @@ def test_list(salt_call_cli, beacon):
     ret = salt_call_cli.run("beacons.list", return_yaml=False)
     assert ret.exitcode == 0
     assert ret.json
+    assert ret.json == {
+        beacon.name: beacon.data,
+        "inotify": [
+            {
+                "files": {
+                    str(inotify_file_path): {"mask": ["open", "create", "close_write"]}
+                }
+            }
+        ],
+    }
+
+
+@pytest.mark.usefixtures("pillar_tree")
+def test_list_only_include_opts(salt_call_cli, beacon):
+    """
+    Test listing the beacons which only exist in opts
+
+    When beacon.save is used to save the running beacons to
+    a file, it uses beacons.list to get that list and should
+    only return those from opts and not pillar.
+
+    In this test, we're making sure we get only get back the
+    beacons that are in opts and not those in pillar.
+    """
+    # list beacons
+    ret = salt_call_cli.run(
+        "beacons.list", return_yaml=False, include_opts=True, include_pillar=False
+    )
+    assert ret.exitcode == 0
+    assert ret.json
     assert ret.json == {beacon.name: beacon.data}
+
+
+@pytest.mark.usefixtures("pillar_tree", "beacon")
+def test_list_only_include_pillar(salt_call_cli, inotify_file_path):
+    """
+    Test listing the beacons which only exist in pillar
+    """
+    # list beacons
+    ret = salt_call_cli.run(
+        "beacons.list", return_yaml=False, include_opts=False, include_pillar=True
+    )
+    assert ret.exitcode == 0
+    assert ret.json
+    assert ret.json == {
+        "inotify": [
+            {
+                "files": {
+                    str(inotify_file_path): {"mask": ["open", "create", "close_write"]}
+                }
+            }
+        ]
+    }
 
 
 def test_list_available(salt_call_cli):
