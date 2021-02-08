@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Test cases for the ``ldap`` state module
 
 This code is gross.  I started out trying to remove some of the
@@ -8,13 +7,9 @@ was an ugly second implementation.
 I'm leaving it for now, but this should really be gutted and replaced
 with something sensible.
 """
-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import copy
 
 import salt.states.ldap
-from salt.ext import six
 from salt.utils.oset import OrderedSet
 from salt.utils.stringutils import to_bytes
 from tests.support.mixins import LoaderModuleMockMixin
@@ -45,7 +40,7 @@ def _complex_db():
     }
 
 
-class _dummy_ctx(object):
+class _dummy_ctx:
     def __init__(self):
         pass
 
@@ -64,9 +59,7 @@ def _dummy_search(connect_spec, base, scope):
     if base not in db:
         return {}
     return {
-        base: dict(
-            ((attr, list(db[base][attr])) for attr in db[base] if len(db[base][attr]))
-        )
+        base: {attr: list(db[base][attr]) for attr in db[base] if len(db[base][attr])}
     }
 
 
@@ -74,7 +67,7 @@ def _dummy_add(connect_spec, dn, attributes):
     assert dn not in db
     assert attributes
     db[dn] = {}
-    for attr, vals in six.iteritems(attributes):
+    for attr, vals in attributes.items():
         assert vals
         db[dn][attr] = OrderedSet(vals)
     return True
@@ -151,7 +144,7 @@ def _dummy_modify(connect_spec, dn, directives):
 def _dump_db(d=None):
     if d is None:
         d = db
-    return dict(((dn, dict(((attr, list(d[dn][attr])) for attr in d[dn]))) for dn in d))
+    return {dn: {attr: list(d[dn][attr]) for attr in d[dn]} for dn in d}
 
 
 class LDAPTestCase(TestCase, LoaderModuleMockMixin):
@@ -168,8 +161,8 @@ class LDAPTestCase(TestCase, LoaderModuleMockMixin):
         old = _dump_db()
         new = _dump_db()
         expected_db = copy.deepcopy(init_db)
-        for dn, attrs in six.iteritems(replace):
-            for attr, vals in six.iteritems(attrs):
+        for dn, attrs in replace.items():
+            for attr, vals in attrs.items():
                 vals = [to_bytes(val) for val in vals]
                 if vals:
                     new.setdefault(dn, {})[attr] = list(OrderedSet(vals))
@@ -182,10 +175,10 @@ class LDAPTestCase(TestCase, LoaderModuleMockMixin):
                 expected_db.pop(dn, None)
         if delete_others:
             dn_to_delete = OrderedSet()
-            for dn, attrs in six.iteritems(expected_db):
+            for dn, attrs in expected_db.items():
                 if dn in replace:
                     to_delete = OrderedSet()
-                    for attr, vals in six.iteritems(attrs):
+                    for attr, vals in attrs.items():
                         if attr not in replace[dn]:
                             to_delete.add(attr)
                     for attr in to_delete:
@@ -202,35 +195,30 @@ class LDAPTestCase(TestCase, LoaderModuleMockMixin):
         expected_ret.setdefault("comment", "Successfully updated LDAP entries")
         expected_ret.setdefault(
             "changes",
-            dict(
-                (
-                    (
-                        dn,
-                        {
-                            "old": dict(
-                                (attr, vals)
-                                for attr, vals in six.iteritems(old[dn])
-                                if vals != new.get(dn, {}).get(attr, ())
-                            )
-                            if dn in old
-                            else None,
-                            "new": dict(
-                                (attr, vals)
-                                for attr, vals in six.iteritems(new[dn])
-                                if vals != old.get(dn, {}).get(attr, ())
-                            )
-                            if dn in new
-                            else None,
-                        },
-                    )
-                    for dn in replace
-                    if old.get(dn, {}) != new.get(dn, {})
-                )
-            ),
+            {
+                dn: {
+                    "old": {
+                        attr: vals
+                        for attr, vals in old[dn].items()
+                        if vals != new.get(dn, {}).get(attr, ())
+                    }
+                    if dn in old
+                    else None,
+                    "new": {
+                        attr: vals
+                        for attr, vals in new[dn].items()
+                        if vals != old.get(dn, {}).get(attr, ())
+                    }
+                    if dn in new
+                    else None,
+                }
+                for dn in replace
+                if old.get(dn, {}) != new.get(dn, {})
+            },
         )
         entries = [
             {dn: [{"replace": attrs}, {"delete_others": delete_others}]}
-            for dn, attrs in six.iteritems(replace)
+            for dn, attrs in replace.items()
         ]
         actual = salt.states.ldap.managed(name, entries)
         self.assertDictEqual(expected_ret, actual)
