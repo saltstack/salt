@@ -704,29 +704,34 @@ class BrewTestCase(TestCase, LoaderModuleMockMixin):
         mock_user = MagicMock(return_value="foo")
         mock_cmd = MagicMock(return_value="")
         mock_cmd_all = MagicMock(
-            return_value={"pid": 12345, "retcode": 0, "stderr": "", "stdout": """\
+            return_value={
+                "pid": 12345,
+                "retcode": 0,
+                "stderr": "",
+                "stdout": """\
                 {"formulae":[{"name":"salt","full_name":"cdalvaro/tap/salt","tap":"cdalvaro/tap","aliases":[]},{"name":"vim","full_name":"vim","tap":"homebrew/core","aliases":[]}],"casks":[{"token":"visual-studio-code","full_token":"visual-studio-code","tap":"homebrew/cask","name":["MicrosoftVisualStudioCode","VSCode"]}]}
-                """}
+                """,
+            }
         )
         _expected = {
             "cdalvaro/tap/salt": {
                 "name": "salt",
                 "full_name": "cdalvaro/tap/salt",
                 "tap": "cdalvaro/tap",
-                "aliases": []
+                "aliases": [],
             },
             "vim": {
                 "name": "vim",
                 "full_name": "vim",
                 "tap": "homebrew/core",
-                "aliases": []
+                "aliases": [],
             },
             "visual-studio-code": {
                 "token": "visual-studio-code",
                 "full_token": "visual-studio-code",
                 "tap": "homebrew/cask",
-                "name": ["MicrosoftVisualStudioCode", "VSCode"]
-            }
+                "name": ["MicrosoftVisualStudioCode", "VSCode"],
+            },
         }
 
         with patch("salt.modules.mac_brew_pkg.list_pkgs", return_value={}), patch(
@@ -739,7 +744,12 @@ class BrewTestCase(TestCase, LoaderModuleMockMixin):
                 "cmd.run": mock_cmd,
             },
         ):
-            self.assertEqual(mac_brew.info_installed("cdalvaro/tap/salt", "vim", "visual-studio-code"), _expected)
+            self.assertEqual(
+                mac_brew.info_installed(
+                    "cdalvaro/tap/salt", "vim", "visual-studio-code"
+                ),
+                _expected,
+            )
 
     def test_list_upgrades(self):
         """
@@ -748,14 +758,19 @@ class BrewTestCase(TestCase, LoaderModuleMockMixin):
         mock_user = MagicMock(return_value="foo")
         mock_cmd = MagicMock(return_value="")
         mock_cmd_all = MagicMock(
-            return_value={"pid": 12345, "retcode": 0, "stderr": "", "stdout": """\
+            return_value={
+                "pid": 12345,
+                "retcode": 0,
+                "stderr": "",
+                "stdout": """\
                 {"formulae":[{"name":"cmake","installed_versions":["3.19.3"],"current_version":"3.19.4","pinned":false,"pinned_version":null},{"name":"fzf","installed_versions":["0.25.0"],"current_version":"0.25.1","pinned":false,"pinned_version":null}],"casks":[{"name":"ksdiff","installed_versions":"2.2.0,122","current_version":"2.3.6,123-jan-18-2021"}]}
-                """}
+                """,
+            }
         )
         _expected = {
             "cmake": "3.19.4",
             "fzf": "0.25.1",
-            "ksdiff": "2.3.6,123-jan-18-2021"
+            "ksdiff": "2.3.6,123-jan-18-2021",
         }
 
         with patch("salt.modules.mac_brew_pkg.list_pkgs", return_value={}), patch(
@@ -768,4 +783,6 @@ class BrewTestCase(TestCase, LoaderModuleMockMixin):
                 "cmd.run": mock_cmd,
             },
         ):
-            self.assertEqual(mac_brew.list_upgrades(refresh=False, include_casks=True), _expected)
+            self.assertEqual(
+                mac_brew.list_upgrades(refresh=False, include_casks=True), _expected
+            )
