@@ -1,16 +1,16 @@
-import pytest
+"""
+Tests for stringutils utility file.
+"""
+
 import re
 import sys
 import textwrap
 
+import pytest
 import salt.utils.stringutils
-
-# Import 3rd-party libs
 from salt.ext.six.moves import builtins, range  # pylint: disable=redefined-builtin
-
-# Import Salt libs
 from tests.support.mock import patch
-from tests.support.unit import LOREM_IPSUM, TestCase
+from tests.support.unit import LOREM_IPSUM
 
 UNICODE = "中国語 (繁体)"
 STR = BYTES = UNICODE.encode("utf-8")
@@ -102,7 +102,9 @@ def test_single_and_double_quotes():
 
 
 def test_issue_2227():
-    regex = salt.utils.stringutils.build_whitespace_split_regex(SINGLE_DOUBLE_SAME_LINE_TXT)
+    regex = salt.utils.stringutils.build_whitespace_split_regex(
+        SINGLE_DOUBLE_SAME_LINE_TXT
+    )
     assert re.search(regex, MATCH)
 
 
@@ -111,7 +113,9 @@ def test_contains_whitespace():
     does_not_contain_whitespace = "Abrownfoxjumpedovertheredhen."
 
     assert salt.utils.stringutils.contains_whitespace(does_contain_whitespace) is True
-    assert salt.utils.stringutils.contains_whitespace(does_not_contain_whitespace) is False
+    assert (
+        salt.utils.stringutils.contains_whitespace(does_not_contain_whitespace) is False
+    )
 
 
 def test_to_num():
@@ -134,28 +138,44 @@ def test_to_none():
 def test_is_binary():
     assert salt.utils.stringutils.is_binary(LOREM_IPSUM) is False
     # Also test bytestring
-    assert salt.utils.stringutils.is_binary(salt.utils.stringutils.is_binary(LOREM_IPSUM)) is False
+    assert (
+        salt.utils.stringutils.is_binary(salt.utils.stringutils.is_binary(LOREM_IPSUM))
+        is False
+    )
 
-    zero_str = "{0}{1}".format(LOREM_IPSUM, "\0")
+    zero_str = "{}{}".format(LOREM_IPSUM, "\0")
     assert salt.utils.stringutils.is_binary(zero_str) is True
     # Also test bytestring
-    assert salt.utils.stringutils.is_binary(salt.utils.stringutils.to_bytes(zero_str)) is True
+    assert (
+        salt.utils.stringutils.is_binary(salt.utils.stringutils.to_bytes(zero_str))
+        is True
+    )
 
     # To to ensure safe exit if str passed doesn't evaluate to True
     assert salt.utils.stringutils.is_binary("") is False
     assert salt.utils.stringutils.is_binary(b"") is False
 
-    nontext = 3 * ("".join([chr(x) for x in range(1, 32) if x not in (8, 9, 10, 12, 13)]))
-    almost_bin_str = "{0}{1}".format(LOREM_IPSUM[:100], nontext[:42])
+    nontext = 3 * (
+        "".join([chr(x) for x in range(1, 32) if x not in (8, 9, 10, 12, 13)])
+    )
+    almost_bin_str = "{}{}".format(LOREM_IPSUM[:100], nontext[:42])
 
     assert salt.utils.stringutils.is_binary(almost_bin_str) is False
     # Also test bytestring
-    assert salt.utils.stringutils.is_binary(salt.utils.stringutils.to_bytes(almost_bin_str)) is False
+    assert (
+        salt.utils.stringutils.is_binary(
+            salt.utils.stringutils.to_bytes(almost_bin_str)
+        )
+        is False
+    )
 
     bin_str = almost_bin_str + "\x01"
     assert salt.utils.stringutils.is_binary(bin_str) is True
     # Also test bytestring
-    assert salt.utils.stringutils.is_binary(salt.utils.stringutils.to_bytes(bin_str)) is True
+    assert (
+        salt.utils.stringutils.is_binary(salt.utils.stringutils.to_bytes(bin_str))
+        is True
+    )
 
 
 def test_to_str():
@@ -167,9 +187,13 @@ def test_to_str():
     assert salt.utils.stringutils.to_str(bytearray(BYTES), "utf-8") == UNICODE
     # Test situation when a minion returns incorrect utf-8 string because of... million reasons
     ut2 = b"\x9c"
-    assert pytest.raises(UnicodeDecodeError, salt.utils.stringutils.to_str, ut2, "utf-8")
+    assert pytest.raises(
+        UnicodeDecodeError, salt.utils.stringutils.to_str, ut2, "utf-8"
+    )
     assert salt.utils.stringutils.to_str(ut2, "utf-8", "replace") == "\ufffd"
-    assert pytest.raises(UnicodeDecodeError,salt.utils.stringutils.to_str, bytearray(ut2),"utf-8",)
+    assert pytest.raises(
+        UnicodeDecodeError, salt.utils.stringutils.to_str, bytearray(ut2), "utf-8",
+    )
     assert salt.utils.stringutils.to_str(bytearray(ut2), "utf-8", "replace") == "\ufffd"
 
 
@@ -190,7 +214,10 @@ def test_to_bytes():
 def test_to_unicode():
     assert salt.utils.stringutils.to_unicode(EGGS, normalize=True) == "яйца"
     assert salt.utils.stringutils.to_unicode(EGGS, normalize=False) != "яйца"
-    assert salt.utils.stringutils.to_unicode(LATIN1_BYTES, encoding="latin-1") == LATIN1_UNICODE
+    assert (
+        salt.utils.stringutils.to_unicode(LATIN1_BYTES, encoding="latin-1")
+        == LATIN1_UNICODE
+    )
     assert salt.utils.stringutils.to_unicode("plugh") == "plugh"
     assert salt.utils.stringutils.to_unicode("áéíóúý") == "áéíóúý"
     assert salt.utils.stringutils.to_unicode(BYTES, "utf-8") == UNICODE
@@ -198,7 +225,10 @@ def test_to_unicode():
 
 
 def test_to_unicode_multi_encoding():
-    assert salt.utils.stringutils.to_unicode(LATIN1_BYTES, encoding=("utf-8", "latin1")) == LATIN1_UNICODE
+    assert (
+        salt.utils.stringutils.to_unicode(LATIN1_BYTES, encoding=("utf-8", "latin1"))
+        == LATIN1_UNICODE
+    )
 
 
 def test_build_whitespace_split_regex():
@@ -215,7 +245,12 @@ def test_build_whitespace_split_regex():
             "(?m)^(?:[\\s]+)?Lorem(?:[\\s]+)?ipsum(?:[\\s]+)?dolor(?:[\\s]+)?sit(?:[\\s]+)?amet\\,"
             "(?:[\\s]+)?$"
         )
-    assert salt.utils.stringutils.build_whitespace_split_regex(" ".join(LOREM_IPSUM.split()[:5])) == expected_regex
+    assert (
+        salt.utils.stringutils.build_whitespace_split_regex(
+            " ".join(LOREM_IPSUM.split()[:5])
+        )
+        == expected_regex
+    )
 
 
 def test_get_context():
@@ -227,7 +262,10 @@ def test_get_context():
         [...]
         ---"""
     )
-    assert salt.utils.stringutils.get_context(LOREM_IPSUM, 1, num_lines=1) == expected_context
+    assert (
+        salt.utils.stringutils.get_context(LOREM_IPSUM, 1, num_lines=1)
+        == expected_context
+    )
 
 
 def test_get_context_has_enough_context():
@@ -260,7 +298,9 @@ def test_get_context_2_context_lines():
 
 def test_get_context_with_marker():
     template = "1\n2\n3\n4\n5\n6\n7\n8\n9\na\nb\nc\nd\ne\nf"
-    context = salt.utils.stringutils.get_context(template, 8, num_lines=2, marker=" <---")
+    context = salt.utils.stringutils.get_context(
+        template, 8, num_lines=2, marker=" <---"
+    )
     expected = "---\n[...]\n6\n7\n8 <---\n9\na\n[...]\n---"
     assert expected == context
 
@@ -287,126 +327,213 @@ def test_check_whitelist_blacklist():
     blacklist = ["four/five/six", r"web[5-9]"]
 
     # Tests with string whitelist/blacklist
-    assert salt.utils.stringutils.check_whitelist_blacklist(
+    assert (
+        salt.utils.stringutils.check_whitelist_blacklist(
             "web_one", whitelist=whitelist[1], blacklist=None,
-        ) is False
+        )
+        is False
+    )
 
-    assert salt.utils.stringutils.check_whitelist_blacklist(
+    assert (
+        salt.utils.stringutils.check_whitelist_blacklist(
             "web_one", whitelist=whitelist[1], blacklist=[],
-        ) is False
+        )
+        is False
+    )
 
-    assert salt.utils.stringutils.check_whitelist_blacklist(
+    assert (
+        salt.utils.stringutils.check_whitelist_blacklist(
             "web1", whitelist=whitelist[1], blacklist=None,
-        ) is True
-    assert salt.utils.stringutils.check_whitelist_blacklist(
+        )
+        is True
+    )
+    assert (
+        salt.utils.stringutils.check_whitelist_blacklist(
             "web1", whitelist=whitelist[1], blacklist=[],
-        ) is True
+        )
+        is True
+    )
 
-    assert salt.utils.stringutils.check_whitelist_blacklist(
+    assert (
+        salt.utils.stringutils.check_whitelist_blacklist(
             "web5", whitelist=None, blacklist=blacklist[1],
-        ) is False
+        )
+        is False
+    )
 
-    assert salt.utils.stringutils.check_whitelist_blacklist(
+    assert (
+        salt.utils.stringutils.check_whitelist_blacklist(
             "web5", whitelist=[], blacklist=blacklist[1],
-        ) is False
+        )
+        is False
+    )
 
-    assert salt.utils.stringutils.check_whitelist_blacklist(
+    assert (
+        salt.utils.stringutils.check_whitelist_blacklist(
             "web_five", whitelist=None, blacklist=blacklist[1],
-        ) is True
+        )
+        is True
+    )
 
-    assert salt.utils.stringutils.check_whitelist_blacklist(
+    assert (
+        salt.utils.stringutils.check_whitelist_blacklist(
             "web_five", whitelist=[], blacklist=blacklist[1],
-        ) is True
+        )
+        is True
+    )
 
-    assert salt.utils.stringutils.check_whitelist_blacklist(
+    assert (
+        salt.utils.stringutils.check_whitelist_blacklist(
             "web5", whitelist=whitelist[1], blacklist=blacklist[1],
-        ) is False
+        )
+        is False
+    )
 
-    assert salt.utils.stringutils.check_whitelist_blacklist(
+    assert (
+        salt.utils.stringutils.check_whitelist_blacklist(
             "web4", whitelist=whitelist[1], blacklist=blacklist[1],
-        ) is True
+        )
+        is True
+    )
 
     # Tests with list whitelist/blacklist
-    assert salt.utils.stringutils.check_whitelist_blacklist(
+    assert (
+        salt.utils.stringutils.check_whitelist_blacklist(
             "web_one", whitelist=whitelist, blacklist=None,
-        ) is False
-
-    assert salt.utils.stringutils.check_whitelist_blacklist(
-            "web_one", whitelist=whitelist, blacklist=[],
-        ) is False
-
-    assert salt.utils.stringutils.check_whitelist_blacklist(
-            "web1", whitelist=whitelist, blacklist=None,
-        ) is True
-
-    assert salt.utils.stringutils.check_whitelist_blacklist(
-            "web1", whitelist=whitelist, blacklist=[],
         )
+        is False
+    )
+
+    assert (
+        salt.utils.stringutils.check_whitelist_blacklist(
+            "web_one", whitelist=whitelist, blacklist=[],
+        )
+        is False
+    )
+
+    assert (
+        salt.utils.stringutils.check_whitelist_blacklist(
+            "web1", whitelist=whitelist, blacklist=None,
+        )
+        is True
+    )
 
     assert salt.utils.stringutils.check_whitelist_blacklist(
+        "web1", whitelist=whitelist, blacklist=[],
+    )
+
+    assert (
+        salt.utils.stringutils.check_whitelist_blacklist(
             "web5", whitelist=None, blacklist=blacklist,
-        ) is False
+        )
+        is False
+    )
 
-    assert salt.utils.stringutils.check_whitelist_blacklist(
+    assert (
+        salt.utils.stringutils.check_whitelist_blacklist(
             "web5", whitelist=[], blacklist=blacklist,
-        ) is False
+        )
+        is False
+    )
 
-    assert salt.utils.stringutils.check_whitelist_blacklist(
+    assert (
+        salt.utils.stringutils.check_whitelist_blacklist(
             "web_five", whitelist=None, blacklist=blacklist,
-        ) is True
+        )
+        is True
+    )
 
-    assert salt.utils.stringutils.check_whitelist_blacklist(
+    assert (
+        salt.utils.stringutils.check_whitelist_blacklist(
             "web_five", whitelist=[], blacklist=blacklist,
-        ) is True
+        )
+        is True
+    )
 
-    assert salt.utils.stringutils.check_whitelist_blacklist(
+    assert (
+        salt.utils.stringutils.check_whitelist_blacklist(
             "web5", whitelist=whitelist, blacklist=blacklist,
-        ) is False
+        )
+        is False
+    )
 
-    assert salt.utils.stringutils.check_whitelist_blacklist(
+    assert (
+        salt.utils.stringutils.check_whitelist_blacklist(
             "web4", whitelist=whitelist, blacklist=blacklist,
-        ) is True
+        )
+        is True
+    )
 
     # Tests with set whitelist/blacklist
-    assert salt.utils.stringutils.check_whitelist_blacklist(
+    assert (
+        salt.utils.stringutils.check_whitelist_blacklist(
             "web_one", whitelist=set(whitelist), blacklist=None,
-        ) is False
+        )
+        is False
+    )
 
-    assert salt.utils.stringutils.check_whitelist_blacklist(
+    assert (
+        salt.utils.stringutils.check_whitelist_blacklist(
             "web_one", whitelist=set(whitelist), blacklist=set(),
-        ) is False
+        )
+        is False
+    )
 
-    assert salt.utils.stringutils.check_whitelist_blacklist(
+    assert (
+        salt.utils.stringutils.check_whitelist_blacklist(
             "web1", whitelist=set(whitelist), blacklist=None,
-        ) is True
+        )
+        is True
+    )
 
-    assert salt.utils.stringutils.check_whitelist_blacklist(
+    assert (
+        salt.utils.stringutils.check_whitelist_blacklist(
             "web1", whitelist=set(whitelist), blacklist=set(),
-        ) is True
+        )
+        is True
+    )
 
-    assert salt.utils.stringutils.check_whitelist_blacklist(
+    assert (
+        salt.utils.stringutils.check_whitelist_blacklist(
             "web5", whitelist=None, blacklist=set(blacklist),
-        ) is False
+        )
+        is False
+    )
 
-    assert salt.utils.stringutils.check_whitelist_blacklist(
+    assert (
+        salt.utils.stringutils.check_whitelist_blacklist(
             "web5", whitelist=set(), blacklist=set(blacklist),
-        ) is False
+        )
+        is False
+    )
 
-    assert salt.utils.stringutils.check_whitelist_blacklist(
+    assert (
+        salt.utils.stringutils.check_whitelist_blacklist(
             "web_five", whitelist=None, blacklist=set(blacklist),
-        ) is True
+        )
+        is True
+    )
 
-    assert salt.utils.stringutils.check_whitelist_blacklist(
+    assert (
+        salt.utils.stringutils.check_whitelist_blacklist(
             "web_five", whitelist=set(), blacklist=set(blacklist),
-        ) is True
+        )
+        is True
+    )
 
-    assert salt.utils.stringutils.check_whitelist_blacklist(
+    assert (
+        salt.utils.stringutils.check_whitelist_blacklist(
             "web5", whitelist=set(whitelist), blacklist=set(blacklist),
-        ) is False
+        )
+        is False
+    )
 
-    assert salt.utils.stringutils.check_whitelist_blacklist(
+    assert (
+        salt.utils.stringutils.check_whitelist_blacklist(
             "web4", whitelist=set(whitelist), blacklist=set(blacklist),
-        ) is True
+        )
+        is True
+    )
 
     # Test with invalid type for whitelist/blacklist
     assert pytest.raises(
@@ -428,16 +555,30 @@ def test_check_include_exclude_empty():
 
 
 def test_check_include_exclude_exclude():
-    assert salt.utils.stringutils.check_include_exclude("/some/test", None, "*test*") is False
+    assert (
+        salt.utils.stringutils.check_include_exclude("/some/test", None, "*test*")
+        is False
+    )
 
 
 def test_check_include_exclude_exclude_list():
-    assert salt.utils.stringutils.check_include_exclude("/some/test", None, ["*test"]) is False
+    assert (
+        salt.utils.stringutils.check_include_exclude("/some/test", None, ["*test"])
+        is False
+    )
 
 
 def test_check_include_exclude_exclude_include():
-    assert salt.utils.stringutils.check_include_exclude("/some/test", "*test*", "/some/") is True
+    assert (
+        salt.utils.stringutils.check_include_exclude("/some/test", "*test*", "/some/")
+        is True
+    )
 
 
 def test_check_include_exclude_regex():
-    assert salt.utils.stringutils.check_include_exclude("/some/test", None, "E@/some/(test|other)") is False
+    assert (
+        salt.utils.stringutils.check_include_exclude(
+            "/some/test", None, "E@/some/(test|other)"
+        )
+        is False
+    )
