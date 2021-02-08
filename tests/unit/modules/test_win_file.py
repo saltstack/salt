@@ -11,8 +11,6 @@ import salt.utils.platform
 import salt.utils.win_dacl as win_dacl
 import salt.utils.win_functions
 from salt.exceptions import CommandExecutionError
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
@@ -24,7 +22,7 @@ except AttributeError:
     WIN_VER = 0
 
 
-class DummyStat(object):
+class DummyStat:
     st_mode = 33188
     st_ino = 115331251
     st_dev = 44
