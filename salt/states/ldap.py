@@ -342,7 +342,10 @@ def managed(name, entries, connect_spec=None):
             if errs:
                 ret["result"] = False
                 ret["comment"] = "failed to " + ", ".join(
-                    (op + " entry " + dn + "(" + err.items() + ")" for op, dn, err in errs)
+                    (
+                        op + " entry " + dn + "(" + err.items() + ")"
+                        for op, dn, err in errs
+                    )
                 )
 
     # set ret['changes'].  filter out any unchanged attributes, and
@@ -523,6 +526,6 @@ def _toset(thing):
     # convert numbers to strings so that equality checks work
     # (LDAP stores numbers as strings)
     try:
-        return OrderedSet((str(x) for x in thing))
+        return OrderedSet(str(x) for x in thing)
     except TypeError:
-        return OrderedSet((str(thing),))
+        return OrderedSet(str(thing),)
