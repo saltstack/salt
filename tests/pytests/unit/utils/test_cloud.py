@@ -5,15 +5,15 @@
     tests.unit.utils.cloud_test
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    Test the salt-cloud utilities module
+    Test the salt-cloud utilities module.
 """
 
 
-import pytest
 import os
 import shutil
 import tempfile
 
+import pytest
 import salt.utils.cloud as cloud
 import salt.utils.platform
 from tests.support.mock import MagicMock, patch
@@ -21,7 +21,7 @@ from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import SkipTest, skipIf
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope="session")
 def create_class():
     old_cwd = os.getcwd()
     gpg_keydir = os.path.join(RUNTIME_VARS.TMP, "gpg-keydir")
@@ -48,15 +48,19 @@ def create_class():
                 return 0
 
             def set_password(
-                self, servicename, username, password):  # pylint: disable=arguments-differ
+                self, servicename, username, password
+            ):  # pylint: disable=arguments-differ
                 self.__storage.setdefault(servicename, {}).update({username: password})
                 return 0
 
             def get_password(
-                self, servicename, username):  # pylint: disable=arguments-differ
+                self, servicename, username
+            ):  # pylint: disable=arguments-differ
                 return self.__storage.setdefault(servicename, {}).get(username, None)
 
-            def delete_password(self, servicename, username):  # pylint: disable=arguments-differ
+            def delete_password(
+                self, servicename, username
+            ):  # pylint: disable=arguments-differ
                 self.__storage.setdefault(servicename, {}).pop(username, None)
                 return 0
 
