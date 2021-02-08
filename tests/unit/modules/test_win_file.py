@@ -1,16 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 :codeauthor: Shane Lee <slee@saltstack.com>
 """
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import os
 import sys
 
 import salt.modules.cmdmod as cmdmod
-
-# Import Salt Libs
 import salt.modules.temp as temp
 import salt.modules.win_file as win_file
 import salt.utils.platform
@@ -150,7 +144,7 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
             ret = win_file.check_perms(
                 path=self.temp_file, owner="Administrators", inheritance=None
             )
-            self.assertDictEqual(expected, ret)
+            self.assertDictEqual(ret, expected)
 
     def test_check_perms_set_owner(self):
         """
@@ -165,7 +159,7 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
         ret = win_file.check_perms(
             path=self.temp_file, owner="Administrators", inheritance=None
         )
-        self.assertDictEqual(expected, ret)
+        self.assertDictEqual(ret, expected)
 
     def test_check_perms_deny_test_true(self):
         """
@@ -173,7 +167,7 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
         """
         expected = {
             "comment": "",
-            "changes": {"perms": {"Users": {"deny": "read_execute"}}},
+            "changes": {"deny_perms": {"Users": {"permissions": "read_execute"}}},
             "name": self.temp_file,
             "result": None,
         }
@@ -183,7 +177,7 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
                 deny_perms={"Users": {"perms": "read_execute"}},
                 inheritance=None,
             )
-            self.assertDictEqual(expected, ret)
+            self.assertDictEqual(ret, expected)
 
     def test_check_perms_deny(self):
         """
@@ -191,7 +185,7 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
         """
         expected = {
             "comment": "",
-            "changes": {"perms": {"Users": {"deny": "read_execute"}}},
+            "changes": {"deny_perms": {"Users": {"permissions": "read_execute"}}},
             "name": self.temp_file,
             "result": True,
         }
@@ -200,7 +194,7 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
             deny_perms={"Users": {"perms": "read_execute"}},
             inheritance=None,
         )
-        self.assertDictEqual(expected, ret)
+        self.assertDictEqual(ret, expected)
 
     def test_check_perms_grant_test_true(self):
         """
@@ -208,7 +202,7 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
         """
         expected = {
             "comment": "",
-            "changes": {"perms": {"Users": {"grant": "read_execute"}}},
+            "changes": {"grant_perms": {"Users": {"permissions": "read_execute"}}},
             "name": self.temp_file,
             "result": None,
         }
@@ -218,7 +212,7 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
                 grant_perms={"Users": {"perms": "read_execute"}},
                 inheritance=None,
             )
-            self.assertDictEqual(expected, ret)
+            self.assertDictEqual(ret, expected)
 
     def test_check_perms_grant(self):
         """
@@ -226,7 +220,7 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
         """
         expected = {
             "comment": "",
-            "changes": {"perms": {"Users": {"grant": "read_execute"}}},
+            "changes": {"grant_perms": {"Users": {"permissions": "read_execute"}}},
             "name": self.temp_file,
             "result": True,
         }
@@ -235,7 +229,7 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
             grant_perms={"Users": {"perms": "read_execute"}},
             inheritance=None,
         )
-        self.assertDictEqual(expected, ret)
+        self.assertDictEqual(ret, expected)
 
     def test_check_perms_inheritance_false_test_true(self):
         """
@@ -249,7 +243,7 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
         }
         with patch.dict(win_dacl.__opts__, {"test": True}):
             ret = win_file.check_perms(path=self.temp_file, inheritance=False)
-            self.assertDictEqual(expected, ret)
+            self.assertDictEqual(ret, expected)
 
     def test_check_perms_inheritance_false(self):
         """
@@ -262,7 +256,7 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
             "result": True,
         }
         ret = win_file.check_perms(path=self.temp_file, inheritance=False)
-        self.assertDictEqual(expected, ret)
+        self.assertDictEqual(ret, expected)
 
     def test_check_perms_inheritance_true(self):
         """
@@ -275,7 +269,7 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
             "result": True,
         }
         ret = win_file.check_perms(path=self.temp_file, inheritance=True)
-        self.assertDictEqual(expected, ret)
+        self.assertDictEqual(ret, expected)
 
     def test_check_perms_reset_test_true(self):
         """
@@ -292,9 +286,9 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
         expected = {
             "comment": "",
             "changes": {
-                "perms": {
-                    "Administrators": {"grant": "full_control"},
-                    "Users": {"grant": "read_execute"},
+                "grant_perms": {
+                    "Administrators": {"permissions": "full_control"},
+                    "Users": {"permissions": "read_execute"},
                 },
                 "remove_perms": {
                     "Administrator": {
@@ -318,7 +312,7 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
                 inheritance=False,
                 reset=True,
             )
-            self.assertDictEqual(expected, ret)
+            self.assertDictEqual(ret, expected)
 
     def test_check_perms_reset(self):
         """
@@ -335,9 +329,9 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
         expected = {
             "comment": "",
             "changes": {
-                "perms": {
-                    "Administrators": {"grant": "full_control"},
-                    "Users": {"grant": "read_execute"},
+                "grant_perms": {
+                    "Administrators": {"permissions": "full_control"},
+                    "Users": {"permissions": "read_execute"},
                 },
                 "remove_perms": {
                     "Administrator": {
@@ -360,7 +354,7 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
             inheritance=False,
             reset=True,
         )
-        self.assertDictEqual(expected, ret)
+        self.assertDictEqual(ret, expected)
 
     def test_stat(self):
         with patch("os.path.exists", MagicMock(return_value=True)), patch(
