@@ -3677,7 +3677,7 @@ def directory(
         if not os.path.isdir(name):
             return _error(ret, "Failed to create directory {}".format(name))
 
-        ret["changes"][name] = "directory: new"
+        ret["changes"][name] = {"directory": "new"}
         return ret
 
     # issue 32707: skip this __salt__['file.check_perms'] call if children_only == True
