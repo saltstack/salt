@@ -364,14 +364,17 @@ class WinDaclRegTestCase(TestCase, LoaderModuleMockMixin):
         expected = {
             "changes": {
                 "owner": "Users",
-                "grant_perms": {
-                    "Backup Operators": {"permissions": "read"},
-                    },
+                "grant_perms": {"Backup Operators": {"permissions": "read"}},
                 "deny_perms": {
                     "Backup Operators": {"permissions": ["delete"]},
                     "NETWORK SERVICE": {
-                        "permissions": ["delete", "set_value", "write_dac", "write_owner"]
-                    }
+                        "permissions": [
+                            "delete",
+                            "set_value",
+                            "write_dac",
+                            "write_owner"
+                        ]
+                    },
                 },
             },
             "comment": "",
@@ -456,15 +459,18 @@ class WinDaclRegTestCase(TestCase, LoaderModuleMockMixin):
         expected = {
             "changes": {
                 "owner": "Users",
-                "grant_perms": {
-                    "Backup Operators": {"permissions": "read"},
-                },
+                "grant_perms": {"Backup Operators": {"permissions": "read"}},
                 "deny_perms": {
                     "Backup Operators": {"permissions": ["delete"]},
                     "NETWORK SERVICE": {
-                        "permissions": ["delete", "set_value", "write_dac", "write_owner"]
+                        "permissions": [
+                            "delete",
+                            "set_value",
+                            "write_dac",
+                            "write_owner"
+                        ]
                     },
-                }
+                },
             },
             "comment": "",
             "name": self.obj_name,
@@ -771,9 +777,7 @@ class WinDaclFileTestCase(TestCase, LoaderModuleMockMixin):
         expected = {
             "changes": {
                 "owner": "Users",
-                "grant_perms": {
-                    "Backup Operators": {"permissions": "read"},
-                },
+                "grant_perms": {"Backup Operators": {"permissions": "read"}},
                 "deny_perms": {
                     "Backup Operators": {"permissions": ["delete"]},
                     "NETWORK SERVICE": {
@@ -784,7 +788,7 @@ class WinDaclFileTestCase(TestCase, LoaderModuleMockMixin):
                             "write_data",
                         ]
                     },
-                }
+                },
             },
             "comment": "",
             "name": self.obj_name,
@@ -868,15 +872,18 @@ class WinDaclFileTestCase(TestCase, LoaderModuleMockMixin):
         expected = {
             "changes": {
                 "owner": "Users",
-                "grant_perms": {
-                    "Backup Operators": {"permissions": "read"},
-                },
+                "grant_perms": {"Backup Operators": {"permissions": "read"}},
                 "deny_perms": {
                     "Backup Operators": {"permissions": ["delete"]},
                     "NETWORK SERVICE": {
-                        "permissions": ["delete", "set_value", "write_dac", "write_owner"]
+                        "permissions": [
+                            "delete",
+                            "set_value",
+                            "write_dac",
+                            "write_owner"
+                        ]
                     },
-                }
+                },
             },
             "comment": "",
             "name": self.obj_name,
