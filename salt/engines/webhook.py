@@ -1,14 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 Send events from webhook api
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.ext.tornado.httpserver
 import salt.ext.tornado.ioloop
 import salt.ext.tornado.web
-
-# import salt libs
 import salt.utils.event
 
 

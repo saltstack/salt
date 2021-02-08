@@ -5,6 +5,7 @@ and data structures.
 
 
 import copy
+import datetime
 import fnmatch
 import functools
 import logging
@@ -286,6 +287,8 @@ def decode(
                 to_str,
             )
         )
+    if isinstance(data, datetime.datetime):
+        return data.isoformat()
     try:
         data = _decode_func(data, encoding, errors, normalize)
     except TypeError:
@@ -316,11 +319,6 @@ def decode_dict(
     # Clean data object before decoding to avoid circular references
     data = _remove_circular_refs(data)
 
-    _decode_func = (
-        salt.utils.stringutils.to_unicode
-        if not to_str
-        else salt.utils.stringutils.to_str
-    )
     # Make sure we preserve OrderedDicts
     ret = data.__class__() if preserve_dict_class else {}
     for key, value in data.items():
@@ -343,7 +341,17 @@ def decode_dict(
             )
         else:
             try:
-                key = _decode_func(key, encoding, errors, normalize)
+                key = decode(
+                    key,
+                    encoding,
+                    errors,
+                    keep,
+                    normalize,
+                    preserve_dict_class,
+                    preserve_tuples,
+                    to_str,
+                )
+
             except TypeError:
                 # to_unicode raises a TypeError when input is not a
                 # string/bytestring/bytearray. This is expected and simply
@@ -400,8 +408,17 @@ def decode_dict(
             )
         else:
             try:
-                value = _decode_func(value, encoding, errors, normalize)
-            except TypeError:
+                value = decode(
+                    value,
+                    encoding,
+                    errors,
+                    keep,
+                    normalize,
+                    preserve_dict_class,
+                    preserve_tuples,
+                    to_str,
+                )
+            except TypeError as e:
                 # to_unicode raises a TypeError when input is not a
                 # string/bytestring/bytearray. This is expected and simply
                 # means we are going to leave the value as-is.
@@ -431,11 +448,6 @@ def decode_list(
     # Clean data object before decoding to avoid circular references
     data = _remove_circular_refs(data)
 
-    _decode_func = (
-        salt.utils.stringutils.to_unicode
-        if not to_str
-        else salt.utils.stringutils.to_str
-    )
     ret = []
     for item in data:
         if isinstance(item, list):
@@ -479,7 +491,17 @@ def decode_list(
             )
         else:
             try:
-                item = _decode_func(item, encoding, errors, normalize)
+                item = decode(
+                    item,
+                    encoding,
+                    errors,
+                    keep,
+                    normalize,
+                    preserve_dict_class,
+                    preserve_tuples,
+                    to_str,
+                )
+
             except TypeError:
                 # to_unicode raises a TypeError when input is not a
                 # string/bytestring/bytearray. This is expected and simply

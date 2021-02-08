@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Junos Syslog Engine
 ==========================
@@ -85,17 +84,12 @@ Below is a sample syslog event which is received from the junos device:
 The source for parsing the syslog messages is taken from:
 https://gist.github.com/leandrosilva/3651640#file-xlog-py
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import re
 import time
 
 import salt.utils.event as event
-
-# Import 3rd-party libs
-from salt.ext import six
-from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 
 try:
     from twisted.internet.protocol import DatagramProtocol
@@ -119,7 +113,7 @@ except ImportError:
     HAS_TWISTED_AND_PYPARSING = False
 
     # Fallback class
-    class DatagramProtocol(object):
+    class DatagramProtocol:
         pass
 
 
@@ -142,7 +136,7 @@ def __virtual__():
     return True
 
 
-class _Parser(object):
+class _Parser:
     def __init__(self):
         ints = Word(nums)
         EOL = LineEnd().suppress()
@@ -328,13 +322,13 @@ class _SyslogServerFactory(DatagramProtocol):
         send_this_event = True
         for key in options:
             if key in data:
-                if isinstance(options[key], (six.string_types, int)):
-                    if six.text_type(options[key]) != six.text_type(data[key]):
+                if isinstance(options[key], (str, int)):
+                    if str(options[key]) != str(data[key]):
                         send_this_event = False
                         break
                 elif isinstance(options[key], list):
                     for opt in options[key]:
-                        if six.text_type(opt) == six.text_type(data[key]):
+                        if str(opt) == str(data[key]):
                             break
                     else:
                         send_this_event = False
@@ -352,7 +346,7 @@ class _SyslogServerFactory(DatagramProtocol):
                 topic = "jnpr/syslog"
 
                 for i in range(2, len(self.title)):
-                    topic += "/" + six.text_type(data[self.title[i]])
+                    topic += "/" + str(data[self.title[i]])
                     log.debug(
                         "Junos Syslog - sending this event on the bus: %s from %s",
                         data,

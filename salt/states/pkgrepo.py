@@ -92,7 +92,6 @@ package managers are APT, DNF, YUM and Zypper. Here is some example SLS:
 
 """
 
-# Import Python libs
 
 import sys
 
@@ -101,11 +100,7 @@ import salt.utils.files
 import salt.utils.pkg.deb
 import salt.utils.pkg.rpm
 import salt.utils.versions
-
-# Import salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-
-# Import 3rd-party libs
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 
 
