@@ -52,11 +52,12 @@ def secure_password(length=20, use_random=True):
                 while True:
                     try:
                         if salt.utils.platform.is_windows():
-                            char = salt.utils.stringutils.to_str(
-                                get_random_bytes(1), encoding="UTF-8"
-                            )
+                            encoding = "UTF-8"
                         else:
-                            char = salt.utils.stringutils.to_str(get_random_bytes(1))
+                            encoding = None
+                        char = salt.utils.stringutils.to_str(
+                            get_random_bytes(1), encoding=encoding
+                        )
                         break
                     except UnicodeDecodeError:
                         continue
