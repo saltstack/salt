@@ -476,7 +476,7 @@ def install(name=None, pkgs=None, taps=None, options=None, **kwargs):
     return ret
 
 
-def list_upgrades(refresh=True, **kwargs):  # pylint: disable=W0613
+def list_upgrades(refresh=True, include_casks=False, **kwargs):  # pylint: disable=W0613
     """
     Check whether or not an upgrade is available for all packages
 
@@ -493,15 +493,21 @@ def list_upgrades(refresh=True, **kwargs):  # pylint: disable=W0613
     ret = {}
 
     try:
-        data = salt.utils.json.loads(res["stdout"])["formulae"]
+        data = salt.utils.json.loads(res["stdout"])
     except ValueError as err:
         msg = 'unable to interpret output from "brew outdated": {}'.format(err)
         log.error(msg)
         raise CommandExecutionError(msg)
 
-    for pkg in data:
+    for pkg in data["formulae"]:
         # current means latest available to brew
         ret[pkg["name"]] = pkg["current_version"]
+
+    if include_casks:
+        for pkg in data["casks"]:
+            # current means latest available to brew
+            ret[pkg["name"]] = pkg["current_version"]
+
     return ret
 
 
@@ -515,7 +521,7 @@ def upgrade_available(pkg, **kwargs):
 
         salt '*' pkg.upgrade_available <package name>
     """
-    return pkg in list_upgrades()
+    return pkg in list_upgrades(**kwargs)
 
 
 def upgrade(refresh=True, **kwargs):
