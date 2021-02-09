@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Package support for AIX
 
@@ -8,14 +7,11 @@ Package support for AIX
     error similar to *'pkg.install' is not available*), see :ref:`here
     <module-provider-override>`.
 """
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 import logging
 import os
 
-# Import salt libs
 import salt.utils.data
 import salt.utils.functools
 import salt.utils.path
@@ -80,6 +76,18 @@ def _is_installed_rpm(name):
     return __salt__["cmd.retcode"](cmd) == 0
 
 
+def _list_pkgs_from_context(versions_as_list):
+    """
+    Use pkg list from __context__
+    """
+    if versions_as_list:
+        return __context__["pkg.list_pkgs"]
+    else:
+        ret = copy.deepcopy(__context__["pkg.list_pkgs"])
+        __salt__["pkg_resource.stringify"](ret)
+        return ret
+
+
 def list_pkgs(versions_as_list=False, **kwargs):
     """
     List the filesets/rpm packages currently installed as a dict:
@@ -102,13 +110,8 @@ def list_pkgs(versions_as_list=False, **kwargs):
     ):
         return ret
 
-    if "pkg.list_pkgs" in __context__:
-        if versions_as_list:
-            return __context__["pkg.list_pkgs"]
-        else:
-            ret = copy.deepcopy(__context__["pkg.list_pkgs"])
-            __salt__["pkg_resource.stringify"](ret)
-            return ret
+    if "pkg.list_pkgs" in __context__ and kwargs.get("use_context", True):
+        return _list_pkgs_from_context(versions_as_list)
 
     # cmd returns information colon delimited in a single linei, format
     #   Package Name:Fileset:Level:State:PTF Id:Fix State:Type:Description:

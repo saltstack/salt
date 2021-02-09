@@ -8,13 +8,11 @@ Package support for pkgin based systems, inspired from freebsdpkg module
     <module-provider-override>`.
 """
 
-# Import python libs
 import copy
 import logging
 import os
 import re
 
-# Import salt libs
 import salt.utils.data
 import salt.utils.decorators as decorators
 import salt.utils.functools
@@ -257,6 +255,18 @@ def refresh_db(force=False, **kwargs):
     return True
 
 
+def _list_pkgs_from_context(versions_as_list):
+    """
+    Use pkg list from __context__
+    """
+    if versions_as_list:
+        return __context__["pkg.list_pkgs"]
+    else:
+        ret = copy.deepcopy(__context__["pkg.list_pkgs"])
+        __salt__["pkg_resource.stringify"](ret)
+        return ret
+
+
 def list_pkgs(versions_as_list=False, **kwargs):
     """
     .. versionchanged: 2016.3.0
@@ -278,13 +288,8 @@ def list_pkgs(versions_as_list=False, **kwargs):
     ):
         return {}
 
-    if "pkg.list_pkgs" in __context__:
-        if versions_as_list:
-            return __context__["pkg.list_pkgs"]
-        else:
-            ret = copy.deepcopy(__context__["pkg.list_pkgs"])
-            __salt__["pkg_resource.stringify"](ret)
-            return ret
+    if "pkg.list_pkgs" in __context__ and kwargs.get("use_context", True):
+        return _list_pkgs_from_context(versions_as_list)
 
     pkgin = _check_pkgin()
     ret = {}
