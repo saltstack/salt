@@ -287,7 +287,7 @@ class Runner(RunnerClient):
                         outputter = None
                     display_output(ret, outputter, self.opts)
                 else:
-                    ret = self._proc_function_local(
+                    ret = self._proc_function(
                         self.opts["fun"],
                         low,
                         user,

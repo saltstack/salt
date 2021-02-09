@@ -485,7 +485,7 @@ class AsyncClientMixin(object):
     client = None
     tag_prefix = None
 
-    def _proc_function(self, fun, low, user, tag, jid, daemonize=True):
+    def _proc_function_remote(self, fun, low, user, tag, jid, daemonize=True):
         """
         Run this method in a multiprocess target to execute the function on the
         master and fire the return data on the event bus
@@ -509,7 +509,7 @@ class AsyncClientMixin(object):
         except salt.exceptions.EauthAuthenticationError as exc:
             log.error(exc)
 
-    def _proc_function_local(self, fun, low, user, tag, jid, daemonize=True):
+    def _proc_function(self, fun, low, user, tag, jid, daemonize=True):
         """
         Run this method in a multiprocess target to execute the function
         locally and fire the return data on the event bus
@@ -556,15 +556,15 @@ class AsyncClientMixin(object):
         tag = salt.utils.event.tagify(jid, prefix=self.tag_prefix)
         return {"tag": tag, "jid": jid}
 
-    def asynchronous(self, fun, low, user="UNKNOWN", pub=None, local=False):
+    def asynchronous(self, fun, low, user="UNKNOWN", pub=None, local=True):
         """
         Execute the function in a multiprocess and return the event tag to use
         to watch for the return
         """
         if local:
-            proc_func = self._proc_function_local
-        else:
             proc_func = self._proc_function
+        else:
+            proc_func = self._proc_function_remote
         async_pub = pub if pub is not None else self._gen_async_pub()
         proc = salt.utils.process.SignalHandlingProcess(
             target=proc_func,
