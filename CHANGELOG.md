@@ -7,14 +7,14 @@ Versions are `MAJOR.PATCH`.
 
 # Changelog
 
-Salt 3001.6 (2021-02-05)
+Salt 3001.6 (2021-02-09)
 ========================
 
 Fixed
 -----
 
 - Fix runners that broke when patching for CVE-2021-25281
-
+- Fix Runners in SSE
 
 Salt 3001.5 (2021-01-25)
 ========================
@@ -491,13 +491,14 @@ Added
 - Added `efi` parameter to virt module, so `uefi` firmware can be auto selected. (#57397)
 - [#56637](https://github.com/saltstack/salt/pull/56637) - Add ``win_wua.installed`` to the ``win_wua`` execution module
 
-Salt 3000.8 (2021-02-05)
+Salt 3000.8 (2021-02-09)
 ========================
 
 Fixed
 -----
 
 - Fix runners that broke when patching for CVE-2021-25281
+- Fix Runners in SSE
 
 Salt 3000.7
 ===========
