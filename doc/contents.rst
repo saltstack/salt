@@ -4,6 +4,8 @@
 Salt Table of Contents
 ======================
 
+This is to trigger the man pages GitHub Actions test.
+
 .. toctree::
     :maxdepth: 2
 
