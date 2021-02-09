@@ -13,6 +13,7 @@ Fixed
 -----
 
 - Fix runners that broke when patching for CVE-2021-25281
+- Fix issue with runners in SSE
 
 Salt 3000.7 (2021-01-28)
 ========================

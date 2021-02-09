@@ -123,8 +123,8 @@ class WheelClient(salt.client.mixins.SyncClientMixin,
             })
             {'jid': '20131219224744416681', 'tag': 'salt/wheel/20131219224744416681'}
         '''
-        fun = low.get('fun')
-        return self.asynchronous(fun, low)
+        fun = low.get("fun")
+        return self.asynchronous(fun, low, local=False)
 
     def cmd(self, fun, arg=None, pub_data=None, kwarg=None, print_event=True, full_return=False):  # pylint: disable=useless-super-delegation
         '''
