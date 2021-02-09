@@ -4,6 +4,7 @@
     Validate evaluation of salt-cloud map configuration
 """
 
+import logging
 import os
 
 import pytest
@@ -232,3 +233,30 @@ def test_cloud_map_merge_conf(salt_cloud_config_file):
         # ie, the provider->profile->map inheritance works as expected
         map_data = cloud_map.map_data()
         assert map_data == merged_profile
+
+
+def test_cloud_map_delete_non_existing_profile(salt_cloud_config_file, caplog):
+    """
+    Ensure proper behavior when deleting instances from a cloud map when the profile does not exist
+    """
+    bad_map = {"nyc-vm-bad": EXAMPLE_MAP["nyc-vm"].copy()}
+    with patch(
+        "salt.config.check_driver_dependencies", MagicMock(return_value=True)
+    ), patch("salt.cloud.Map.read", MagicMock(return_value=bad_map)):
+        opts = salt.config.cloud_config(salt_cloud_config_file)
+        opts.update(
+            {
+                "optimization_order": [0, 1, 2],
+                "providers": EXAMPLE_PROVIDERS,
+                "profiles": EXAMPLE_PROFILES,
+            }
+        )
+        cloud_map = salt.cloud.Map(opts)
+        with caplog.at_level(logging.INFO):
+            try:
+                cloud_map.delete_map()
+            except AttributeError:
+                pytest.fail("Deleting map raised AttributeError")
+        assert (
+            "No provider for the mapped 'nyc-vm-bad' profile was found" in caplog.text
+        )
