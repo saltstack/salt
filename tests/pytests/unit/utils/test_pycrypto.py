@@ -1,3 +1,5 @@
+import contextlib
+import logging
 import re
 
 import pytest
@@ -33,36 +35,43 @@ expecteds = {
 }
 
 
-# Begin tests
-
-
 @pytest.mark.skipif(not salt.utils.pycrypto.HAS_CRYPT, reason="crypt not available")
-def test_gen_hash_crypt():
+@pytest.mark.parametrize(
+    "algorithm,expected",
+    [
+        ("sha512", expecteds["sha512"]),
+        ("sha256", expecteds["sha256"]),
+        ("blowfish", expecteds["blowfish"]),
+        ("md5", expecteds["md5"]),
+        ("crypt", expecteds["crypt"]),
+    ],
+)
+def test_gen_hash_crypt(algorithm, expected):
     """
     Test gen_hash with crypt library
     """
-    methods = salt.utils.pycrypto.methods
+    ret = salt.utils.pycrypto.gen_hash(
+        crypt_salt=expected["salt"], password=passwd, algorithm=algorithm
+    )
+    assert ret == expected["hashed"]
 
-    for algorithm in methods:
-        expected = expecteds[algorithm]
-        ret = salt.utils.pycrypto.gen_hash(
-            crypt_salt=expected["salt"], password=passwd, algorithm=algorithm
-        )
-        assert ret == expected["hashed"]
+    ret = salt.utils.pycrypto.gen_hash(
+        crypt_salt=expected["badsalt"], password=passwd, algorithm=algorithm
+    )
+    assert ret != expected["hashed"]
 
-        ret = salt.utils.pycrypto.gen_hash(
-            crypt_salt=expected["badsalt"], password=passwd, algorithm=algorithm
-        )
-        assert ret != expected["hashed"]
+    ret = salt.utils.pycrypto.gen_hash(
+        crypt_salt=None, password=passwd, algorithm=algorithm
+    )
+    assert ret != expected["hashed"]
 
-        ret = salt.utils.pycrypto.gen_hash(
-            crypt_salt=None, password=passwd, algorithm=algorithm
-        )
-        assert ret != expected["hashed"]
 
+def test_gen_hash_crypt_no_arguments():
     # Assert it works without arguments passed
     assert salt.utils.pycrypto.gen_hash() is not None
 
+
+def test_gen_hash_crypt_default_algorithm():
     # Assert it works without algorithm passed
     default_algorithm = salt.utils.pycrypto.crypt.methods[0].name.lower()
     expected = expecteds[default_algorithm]
@@ -73,32 +82,42 @@ def test_gen_hash_crypt():
 @pytest.mark.skipif(not salt.utils.pycrypto.HAS_PASSLIB, reason="passlib not available")
 @patch("salt.utils.pycrypto.methods", {})
 @patch("salt.utils.pycrypto.HAS_CRYPT", False)
-def test_gen_hash_passlib():
+@pytest.mark.parametrize(
+    "algorithm,expected",
+    [
+        ("sha512", expecteds["sha512"]),
+        ("sha256", expecteds["sha256"]),
+        ("blowfish", expecteds["blowfish"]),
+        ("md5", expecteds["md5"]),
+        ("crypt", expecteds["crypt"]),
+    ],
+)
+def test_gen_hash_passlib(algorithm, expected):
     """
     Test gen_hash with passlib
     """
-    methods = salt.utils.pycrypto.known_methods
+    ret = salt.utils.pycrypto.gen_hash(
+        crypt_salt=expected["salt"], password=passwd, algorithm=algorithm
+    )
+    assert ret == expected["hashed"]
 
-    for algorithm in methods:
-        expected = expecteds[algorithm]
-        ret = salt.utils.pycrypto.gen_hash(
-            crypt_salt=expected["salt"], password=passwd, algorithm=algorithm
-        )
-        assert ret == expected["hashed"]
+    ret = salt.utils.pycrypto.gen_hash(
+        crypt_salt=expected["badsalt"], password=passwd, algorithm=algorithm
+    )
+    assert ret != expected["hashed"]
 
-        ret = salt.utils.pycrypto.gen_hash(
-            crypt_salt=expected["badsalt"], password=passwd, algorithm=algorithm
-        )
-        assert ret != expected["hashed"]
+    ret = salt.utils.pycrypto.gen_hash(
+        crypt_salt=None, password=passwd, algorithm=algorithm
+    )
+    assert ret != expected["hashed"]
 
-        ret = salt.utils.pycrypto.gen_hash(
-            crypt_salt=None, password=passwd, algorithm=algorithm
-        )
-        assert ret != expected["hashed"]
 
+def test_gen_hash_passlib_no_arguments():
     # Assert it works without arguments passed
     assert salt.utils.pycrypto.gen_hash() is not None
 
+
+def test_gen_hash_passlib_default_algorithm():
     # Assert it works without algorithm passed
     default_algorithm = salt.utils.pycrypto.known_methods[0]
     expected = expecteds[default_algorithm]
@@ -141,18 +160,16 @@ def test_gen_hash_selection():
             gh_passlib.assert_called_once()
 
 
-def test_gen_hash_crypt_warning():
+def test_gen_hash_crypt_warning(caplog):
     """
     Verify that a bad crypt salt triggers a warning
     """
-    with patch("salt.utils.pycrypto.log", autospec=True) as log:
-        try:
+    with caplog.at_level(logging.WARNING):
+        with contextlib.suppress(Exception):
             salt.utils.pycrypto.gen_hash(
                 crypt_salt="toolong", password=passwd, algorithm="crypt"
             )
-        except Exception:  # pylint: disable=broad-except
-            pass
-    log.warning.assert_called_with("Hash salt is too long for 'crypt' hash.")
+    assert "Hash salt is too long for 'crypt' hash." in caplog.text
 
 
 def test_secure_password():
@@ -162,4 +179,4 @@ def test_secure_password():
     ret = salt.utils.pycrypto.secure_password()
     check = re.compile(r"[!@#$%^&*()_=+]")
     assert check.search(ret) is None
-    assert type(ret) is str
+    assert isinstance(ret, str)
