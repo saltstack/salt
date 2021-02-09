@@ -479,7 +479,7 @@ class AsyncClientMixin:
     client = None
     tag_prefix = None
 
-    def _proc_function(self, fun, low, user, tag, jid, daemonize=True):
+    def _proc_function_remote(self, fun, low, user, tag, jid, daemonize=True):
         """
         Run this method in a multiprocess target to execute the function on the
         master and fire the return data on the event bus
@@ -498,7 +498,31 @@ class AsyncClientMixin:
         low["__user__"] = user
         low["__tag__"] = tag
 
-        return self.low(fun, low, full_return=False)
+        try:
+            return self.cmd_sync(low)
+        except salt.exceptions.EauthAuthenticationError as exc:
+            log.error(exc)
+
+    def _proc_function(self, fun, low, user, tag, jid, daemonize=True):
+        """
+        Run this method in a multiprocess target to execute the function
+        locally and fire the return data on the event bus
+        """
+        if daemonize and not salt.utils.platform.is_windows():
+            # Shutdown the multiprocessing before daemonizing
+            salt.log.setup.shutdown_multiprocessing_logging()
+
+            salt.utils.process.daemonize()
+
+            # Reconfigure multiprocessing logging after daemonizing
+            salt.log.setup.setup_multiprocessing_logging()
+
+        # pack a few things into low
+        low["__jid__"] = jid
+        low["__user__"] = user
+        low["__tag__"] = tag
+
+        return self.low(fun, low)
 
     def _proc_function_local(self, fun, low, user, tag, jid, daemonize=True):
         """
@@ -547,15 +571,15 @@ class AsyncClientMixin:
         tag = salt.utils.event.tagify(jid, prefix=self.tag_prefix)
         return {"tag": tag, "jid": jid}
 
-    def asynchronous(self, fun, low, user="UNKNOWN", pub=None, local=False):
+    def asynchronous(self, fun, low, user="UNKNOWN", pub=None, local=True):
         """
         Execute the function in a multiprocess and return the event tag to use
         to watch for the return
         """
         if local:
-            proc_func = self._proc_function_local
-        else:
             proc_func = self._proc_function
+        else:
+            proc_func = self._proc_function_remote
         async_pub = pub if pub is not None else self._gen_async_pub()
         proc = salt.utils.process.SignalHandlingProcess(
             target=proc_func,
