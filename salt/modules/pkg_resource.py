@@ -199,13 +199,9 @@ def version(*names, **kwargs):
     # return dict
     if len(ret) == 1 and not pkg_glob:
         try:
-            log.debug(
-                "=== returning in the try - pkg_resource.version - ret %s ===", ret
-            )
             return next(iter(ret.values()))
         except StopIteration:
             return ""
-    log.debug("=== pkg_resource.version - ret %s ===", ret)
     return ret
 
 
