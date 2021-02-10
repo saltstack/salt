@@ -510,7 +510,7 @@ def _function_code_present(
             sha = hashlib.sha256()
             with salt.utils.files.fopen(ZipFile, "rb") as f:
                 sha.update(f.read())
-            hashed = sha.digest().encode("base64").strip()
+            hashed = sha.digest().strip()
             if hashed != func["CodeSha256"]:
                 update = True
         else:
