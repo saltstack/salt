@@ -9,7 +9,6 @@ import time
 
 import salt.utils.files
 from salt import fileserver
-
 from tests.support.helpers import with_tempdir
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase
