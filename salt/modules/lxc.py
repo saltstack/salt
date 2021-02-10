@@ -3299,7 +3299,6 @@ def test_sd_started_state(name, path=None):
 
     CLI Example:
 
-
     .. code-block:: bash
 
         salt myminion lxc.test_sd_started_state ubuntu

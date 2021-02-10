@@ -187,6 +187,7 @@ def list_(profile="splunk"):
     List splunk searches (names only)
 
     CLI Example:
+
         splunk_search.list
     """
     client = _get_splunk(profile)

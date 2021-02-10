@@ -575,6 +575,8 @@ def owner(*paths, **kwargs):
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt '*' pkg.owns /usr/bin/apachectl
         salt '*' pkg.owns /usr/bin/apachectl /usr/bin/basename
     """

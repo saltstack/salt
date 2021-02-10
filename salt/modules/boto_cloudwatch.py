@@ -43,15 +43,12 @@ Connection module for Amazon CloudWatch
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
 
-
 import logging
 
 import salt.utils.json
 import salt.utils.odict as odict
 import salt.utils.versions
 import yaml  # pylint: disable=blacklisted-import
-
-log = logging.getLogger(__name__)
 
 try:
     import boto
@@ -63,6 +60,8 @@ try:
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
+
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -221,6 +220,8 @@ def create_or_update_alarm(
     reference the scaling_policy.
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_cloudwatch.create_alarm name=myalarm ... region=us-east-1
     """

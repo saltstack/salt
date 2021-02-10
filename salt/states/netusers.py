@@ -202,6 +202,8 @@ def managed(name, users=None, defaults=None):
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt 'edge01.kix01' state.sls router.users
 
     Output example (raw python - can be reused in other modules):

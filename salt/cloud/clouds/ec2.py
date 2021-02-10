@@ -3858,6 +3858,7 @@ def disable_detailed_monitoring(name, call=None):
     Enable/disable detailed monitoring on a node
 
     CLI Example:
+
     """
     if call != "action":
         raise SaltCloudSystemExit(

@@ -43,16 +43,12 @@ Connection module for Amazon ELB
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
 
-
 import logging
 import time
 
 import salt.utils.json
 import salt.utils.odict as odict
 import salt.utils.versions
-
-log = logging.getLogger(__name__)
-
 
 try:
     import boto
@@ -67,6 +63,8 @@ try:
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
+
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -1012,6 +1010,8 @@ def set_backend_policy(
     Set the policies of an ELB backend server.
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_elb.set_backend_policy myelb 443 "[policy1,policy2]"
     """

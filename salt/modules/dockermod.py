@@ -490,7 +490,7 @@ def _change_state(name, action, expected, *args, **kwargs):
         return {
             "result": False,
             "state": {"old": expected, "new": expected},
-            "comment": ("Container '{}' already {}".format(name, expected)),
+            "comment": "Container '{}' already {}".format(name, expected),
         }
     _client_wrapper(action, name, *args, **kwargs)
     _clear_context()
@@ -2477,7 +2477,6 @@ def top(name):
         Container name or ID
 
     CLI Example:
-
 
     **RETURN DATA**
 
@@ -5687,7 +5686,7 @@ def pause(name):
         return {
             "result": False,
             "state": {"old": orig_state, "new": orig_state},
-            "comment": ("Container '{}' is stopped, cannot pause".format(name)),
+            "comment": "Container '{}' is stopped, cannot pause".format(name),
         }
     return _change_state(name, "pause", "paused")
 
@@ -5788,7 +5787,7 @@ def start_(name):
         return {
             "result": False,
             "state": {"old": orig_state, "new": orig_state},
-            "comment": ("Container '{}' is paused, cannot start".format(name)),
+            "comment": "Container '{}' is paused, cannot start".format(name),
         }
 
     return _change_state(name, "start", "running")
@@ -5895,7 +5894,7 @@ def unpause(name):
         return {
             "result": False,
             "state": {"old": orig_state, "new": orig_state},
-            "comment": ("Container '{}' is stopped, cannot unpause".format(name)),
+            "comment": "Container '{}' is stopped, cannot unpause".format(name),
         }
     return _change_state(name, "unpause", "running")
 
@@ -6771,7 +6770,8 @@ def call(name, function, *args, **kwargs):
     untar_cmd = [
         "python",
         "-c",
-        ("import tarfile; " 'tarfile.open("{0}/{1}").extractall(path="{0}")').format(
+        "import tarfile; "
+        'tarfile.open("{0}/{1}").extractall(path="{0}")'.format(
             thin_dest_path, os.path.basename(thin_path)
         ),
     ]

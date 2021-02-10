@@ -2,7 +2,6 @@
 Support for rpm
 """
 
-
 import datetime
 import logging
 import os
@@ -262,7 +261,7 @@ def modified(*packages, **flags):
     root
         use root as top level directory (default: "/")
 
-    CLI examples:
+    CLI Examples:
 
     .. code-block:: bash
 

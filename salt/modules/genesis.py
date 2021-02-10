@@ -673,6 +673,8 @@ def ldd_deps(filename, ret=None):
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt myminion genesis.ldd_deps bash
         salt myminion genesis.ldd_deps /bin/bash
     """
@@ -714,6 +716,8 @@ def mksls(fmt, src, dst=None):
     ``kickstart``, ``preseed``, and ``autoyast``.
 
     CLI Examples:
+
+    .. code-block:: bash
 
         salt <minion> genesis.mksls kickstart /path/to/kickstart.cfg
         salt <minion> genesis.mksls kickstart /path/to/kickstart.cfg /path/to/dest.sls
