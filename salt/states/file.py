@@ -1678,7 +1678,7 @@ def symlink(
         will be deleted to make room for the symlink, unless
         backupname is set, when it will be renamed
 
-        .. versionchanged:: Neon
+        .. versionchanged:: 3000
             Force will now remove all types of existing file system entries,
             not just files, directories and symlinks.
 
@@ -2771,7 +2771,7 @@ def managed(
                     setype: system_conf_t
                     seranage: s0
 
-        .. versionadded:: Neon
+        .. versionadded:: 3000
 
     win_owner : None
         The owner of the directory. If this is not passed, user will be used. If

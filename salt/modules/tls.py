@@ -537,7 +537,7 @@ def _read_cert(cert):
 
 def validate(cert, ca_name, crl_file):
     """
-    .. versionadded:: Neon
+    .. versionadded:: 3000
 
     Validate a certificate against a given CA/CRL.
 
