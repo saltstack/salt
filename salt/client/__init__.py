@@ -1030,7 +1030,7 @@ class LocalClient:
                 raise StopIteration()
 
     # TODO: tests!!
-    def get_returns_no_block(self, tag, match_type=None):
+    def get_returns_raw(self, tag, match_type=None):
         """
         Raw function to just return events of jid excluding timeout logic
 
@@ -1043,11 +1043,9 @@ class LocalClient:
 
         while True:
             raw = self.event.get_event(
-                wait=0.01,
                 tag=tag,
                 match_type=match_type,
                 full=True,
-                no_block=True,
                 auto_reconnect=self.auto_reconnect,
             )
             yield raw
@@ -1105,11 +1103,11 @@ class LocalClient:
         # iterator for this job's return
         if self.opts["order_masters"]:
             # If we are a MoM, we need to gather expected minions from downstreams masters.
-            ret_iter = self.get_returns_no_block(
+            ret_iter = self.get_returns_raw(
                 "(salt/job|syndic/.*)/{}".format(jid), "regex"
             )
         else:
-            ret_iter = self.get_returns_no_block("salt/job/{}".format(jid))
+            ret_iter = self.get_returns_raw("salt/job/{}".format(jid))
         # iterator for the info of this job
         jinfo_iter = []
         # open event jids that need to be un-subscribed from later
@@ -1201,7 +1199,7 @@ class LocalClient:
                 if "jid" not in jinfo:
                     jinfo_iter = []
                 else:
-                    jinfo_iter = self.get_returns_no_block(
+                    jinfo_iter = self.get_returns_raw(
                         "salt/job/{}".format(jinfo["jid"])
                     )
                 timeout_at = time.time() + gather_job_timeout
