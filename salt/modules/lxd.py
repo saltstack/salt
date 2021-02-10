@@ -2502,7 +2502,7 @@ def image_get(
 
         .. code-block:: bash
 
-            $ salt '*' lxd.image_get <fingerprint>
+            salt '*' lxd.image_get <fingerprint>
     """
     client = pylxd_client_get(remote_addr, cert, key, verify_cert)
 
