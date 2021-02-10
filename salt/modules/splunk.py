@@ -150,6 +150,8 @@ def list_users(profile="splunk"):
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt myminion splunk.list_users
     """
 
@@ -167,6 +169,8 @@ def get_user(email, profile="splunk", **kwargs):
     Get a splunk user by name/email
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt myminion splunk.get_user 'user@example.com' user_details=false
         salt myminion splunk.get_user 'user@example.com' user_details=true
@@ -199,6 +203,8 @@ def create_user(email, profile="splunk", **kwargs):
     create a splunk user by name/email
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt myminion splunk.create_user user@example.com roles=['user'] realname="Test User" name=testuser
     """
@@ -254,6 +260,8 @@ def update_user(email, profile="splunk", **kwargs):
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt myminion splunk.update_user example@domain.com roles=['user'] realname="Test User"
     """
 
@@ -308,6 +316,8 @@ def delete_user(email, profile="splunk"):
     Delete a splunk user by email
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt myminion splunk_user.delete 'user@example.com'
     """

@@ -43,7 +43,6 @@ provided `kubeconfig` entry is preferred.
 
 """
 
-
 import base64
 import errno
 import logging
@@ -51,8 +50,8 @@ import os.path
 import signal
 import sys
 import tempfile
+import time
 from contextlib import contextmanager
-from time import sleep
 
 import salt.utils.files
 import salt.utils.platform
@@ -269,6 +268,9 @@ def ping(**kwargs):
     Returns True if the connection can be established, False otherwise.
 
     CLI Example:
+
+    .. code-block:: bash
+
         salt '*' kubernetes.ping
     """
     status = True
@@ -792,7 +794,7 @@ def delete_deployment(name, namespace="default", **kwargs):
             try:
                 with _time_limit(POLLING_TIME_LIMIT):
                     while show_deployment(name, namespace) is not None:
-                        sleep(1)
+                        time.sleep(1)
                     else:  # pylint: disable=useless-else-on-loop
                         mutable_api_response["code"] = 200
             except TimeoutError:
@@ -805,7 +807,7 @@ def delete_deployment(name, namespace="default", **kwargs):
                     mutable_api_response["code"] = 200
                     break
                 else:
-                    sleep(1)
+                    time.sleep(1)
         if mutable_api_response["code"] != 200:
             log.warning(
                 "Reached polling time limit. Deployment is not yet "
@@ -1197,6 +1199,9 @@ def create_namespace(name, **kwargs):
     Creates a namespace with the specified name.
 
     CLI Example:
+
+    .. code-block:: bash
+
         salt '*' kubernetes.create_namespace salt
         salt '*' kubernetes.create_namespace name=salt
     """

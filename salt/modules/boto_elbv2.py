@@ -44,9 +44,6 @@ import logging
 import salt.utils.boto3mod
 import salt.utils.versions
 
-log = logging.getLogger(__name__)
-
-
 try:
     # pylint: disable=unused-import
     import boto3
@@ -61,6 +58,8 @@ try:
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
+
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -129,6 +128,7 @@ def create_target_group(
         (bool) - True on success, False on failure.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt myminion boto_elbv2.create_target_group learn1give1 protocol=HTTP port=54006 vpc_id=vpc-deadbeef

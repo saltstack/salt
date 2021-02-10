@@ -33,7 +33,6 @@ passed in as a dict, or as a string to pull from pillars or minion config:
         region: us-east-1
 """
 
-
 import copy
 import logging
 
@@ -109,6 +108,7 @@ def create_target_group(
         (bool) - True on success, False on failure.
 
     CLI Example:
+
     .. code-block:: yaml
 
         create-target:

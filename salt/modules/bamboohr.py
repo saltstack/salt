@@ -46,6 +46,8 @@ def list_employees(order_by="id"):
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt myminion bamboohr.list_employees
 
     By default, the return data will be keyed by ID. However, it can be ordered
@@ -56,6 +58,8 @@ def list_employees(order_by="id"):
     unique.
 
     CLI Examples:
+
+    .. code-block:: bash
 
         salt myminion bamboohr.list_employees order_by=id
         salt myminion bamboohr.list_employees order_by=displayName
@@ -82,6 +86,8 @@ def show_employee(emp_id, fields=None):
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt myminion bamboohr.show_employee 1138
 
     By default, the fields normally returned from bamboohr.list_employees are
@@ -106,6 +112,8 @@ def show_employee(emp_id, fields=None):
     If needed, a different set of fields may be specified, separated by commas:
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt myminion bamboohr.show_employee 1138 displayName,dateOfBirth
 
@@ -151,6 +159,8 @@ def update_employee(emp_id, key=None, value=None, items=None):
 
     CLI Examples:
 
+    .. code-block:: bash
+
         salt myminion bamboohr.update_employee 1138 nickname Curly
         salt myminion bamboohr.update_employee 1138 nickname ''
         salt myminion bamboohr.update_employee 1138 items='{"nickname": "Curly"}
@@ -181,6 +191,8 @@ def list_users(order_by="id"):
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt myminion bamboohr.list_users
 
     By default, the return data will be keyed by ID. However, it can be ordered
@@ -191,6 +203,8 @@ def list_users(order_by="id"):
     unique.
 
     CLI Examples:
+
+    .. code-block:: bash
 
         salt myminion bamboohr.list_users order_by=id
         salt myminion bamboohr.list_users order_by=email
@@ -216,6 +230,8 @@ def list_meta_fields():
     Show all meta data fields for this company.
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt myminion bamboohr.list_meta_fields
     """
