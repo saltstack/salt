@@ -206,7 +206,11 @@ def _convert_version_names_to_numbers(docstring):
             try:
                 vs = SaltStackVersion.from_name(vs).string
             except ValueError:
-                pass
+                if vs.startswith("v"):
+                    try:
+                        vs = SaltStackVersion.parse(vs[1:]).string
+                    except ValueError:
+                        pass
             parsed_versions.append(vs)
         replace_contents = ".. {}:: {}".format(vtype, ", ".join(parsed_versions))
         docstring = docstring.replace(match.group(0), replace_contents)
