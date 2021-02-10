@@ -3,6 +3,7 @@
     tests.unit.utils.cloud_test
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~
     Test the salt-cloud utilities module.
+
 """
 
 
