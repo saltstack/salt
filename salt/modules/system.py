@@ -14,11 +14,8 @@ Support for reboot, shutdown, etc on POSIX-like systems.
 
 import os.path
 import re
-
-# Import Python libs
 from datetime import datetime, timedelta, tzinfo
 
-# Import Salt libs
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform

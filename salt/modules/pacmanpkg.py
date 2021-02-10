@@ -8,8 +8,6 @@ A module to wrap pacman calls, since Arch is the best
     *'pkg.install' is not available*), see :ref:`here
     <module-provider-override>`.
 """
-
-
 import copy
 import fnmatch
 import logging
