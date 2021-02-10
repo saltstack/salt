@@ -1329,6 +1329,7 @@ def get_key(key_name, region=None, key=None, keyid=None, profile=None):
     """
     Check to see if a key exists. Returns fingerprint and name if
     it does and False if it doesn't
+
     CLI Example:
 
     .. code-block:: bash

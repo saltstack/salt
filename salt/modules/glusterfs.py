@@ -824,6 +824,7 @@ def get_version():
     .. versionadded:: 2019.2.0
 
     Returns the version of glusterfs.
+
     CLI Example:
 
     .. code-block:: bash

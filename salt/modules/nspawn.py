@@ -464,7 +464,6 @@ def run_stdout(
         environment variable names can be passed, and those environment
         variables will be kept.
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -531,7 +530,6 @@ def run_stderr(
         environment variable names can be passed, and those environment
         variables will be kept.
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -597,7 +595,6 @@ def retcode(
         will be kept. Otherwise, a comma-separated list (or Python list) of
         environment variable names can be passed, and those environment
         variables will be kept.
-
 
     CLI Example:
 
@@ -670,7 +667,6 @@ def run_all(
         will be kept. Otherwise, a comma-separated list (or Python list) of
         environment variable names can be passed, and those environment
         variables will be kept.
-
 
     CLI Example:
 

@@ -549,7 +549,7 @@ def install(
     **kwargs
 ):
     """
-    .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
+    .. versionchanged:: 2015.8.12, 2016.3.3, 2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
         isolate commands which modify installed packages from the
         ``salt-minion`` daemon's control group. This is done to keep systemd
@@ -796,7 +796,7 @@ def install(
 
 def update(pkg, slot=None, fromrepo=None, refresh=False, binhost=None, **kwargs):
     """
-    .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
+    .. versionchanged:: 2015.8.12, 2016.3.3, 2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
         isolate commands which modify installed packages from the
         ``salt-minion`` daemon's control group. This is done to keep systemd
@@ -883,7 +883,7 @@ def update(pkg, slot=None, fromrepo=None, refresh=False, binhost=None, **kwargs)
 
 def upgrade(refresh=True, binhost=None, backtrack=3, **kwargs):
     """
-    .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
+    .. versionchanged:: 2015.8.12, 2016.3.3, 2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
         isolate commands which modify installed packages from the
         ``salt-minion`` daemon's control group. This is done to keep systemd
@@ -917,7 +917,6 @@ def upgrade(refresh=True, binhost=None, backtrack=3, **kwargs):
 
         {'<package>':  {'old': '<old-version>',
                         'new': '<new-version>'}}
-
 
     CLI Example:
 
@@ -976,7 +975,7 @@ def upgrade(refresh=True, binhost=None, backtrack=3, **kwargs):
 
 def remove(name=None, slot=None, fromrepo=None, pkgs=None, **kwargs):
     """
-    .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
+    .. versionchanged:: 2015.8.12, 2016.3.3, 2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
         isolate commands which modify installed packages from the
         ``salt-minion`` daemon's control group. This is done to keep systemd
@@ -1073,7 +1072,7 @@ def remove(name=None, slot=None, fromrepo=None, pkgs=None, **kwargs):
 
 def purge(name=None, slot=None, fromrepo=None, pkgs=None, **kwargs):
     """
-    .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
+    .. versionchanged:: 2015.8.12, 2016.3.3, 2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
         isolate commands which modify installed packages from the
         ``salt-minion`` daemon's control group. This is done to keep systemd
