@@ -479,7 +479,6 @@ def service_enable(s_name, **connection_args):
     """
     Enable a service
 
-
     CLI Example:
 
     .. code-block:: bash

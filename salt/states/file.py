@@ -5605,7 +5605,7 @@ def blockreplace(
     Maintain an edit in a file in a zone delimited by two line markers
 
     .. versionadded:: 2014.1.0
-    .. versionchanged:: 2017.7.5,2018.3.1
+    .. versionchanged:: 2017.7.5, 2018.3.1
         ``append_newline`` argument added. Additionally, to improve
         idempotence, if the string represented by ``marker_end`` is found in
         the middle of the line, the content preceding the marker will be
@@ -5760,7 +5760,7 @@ def blockreplace(
         only be added to the content block if it does not already end in a
         newline.
 
-        .. versionadded:: 2017.7.5,2018.3.1
+        .. versionadded:: 2017.7.5, 2018.3.1
 
     Example of usage with an accumulator and with a variable:
 

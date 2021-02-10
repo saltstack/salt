@@ -72,8 +72,6 @@ def inspect(mode="all", priority=19, **kwargs):
 
     * **priority**: (advanced) Set priority of the inspection. Default is low priority.
 
-
-
     CLI Example:
 
     .. code-block:: bash

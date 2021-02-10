@@ -417,7 +417,7 @@ def flush():
 
 def get_docker(interfaces=None, cidrs=None, with_container_id=False):
     """
-    .. versionchanged:: 2017.7.8,2018.3.3
+    .. versionchanged:: 2017.7.8, 2018.3.3
         When :conf_minion:`docker.update_mine` is set to ``False`` for a given
         minion, no mine data will be populated for that minion, and thus none
         will be returned for it.
@@ -434,7 +434,6 @@ def get_docker(interfaces=None, cidrs=None, with_container_id=False):
         Boolean, to expose container_id in the list of results
 
         .. versionadded:: 2015.8.2
-
 
     CLI Example:
 

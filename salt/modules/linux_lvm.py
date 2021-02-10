@@ -76,7 +76,6 @@ def pvdisplay(pvname="", real=False, quiet=False):
     quiet
         if the physical volume is not present, do not show any error
 
-
     CLI Examples:
 
     .. code-block:: bash

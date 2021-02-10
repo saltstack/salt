@@ -228,7 +228,6 @@ def refresh_db(force=False, **kwargs):
 
         .. versionadded:: 2018.3.0
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -474,7 +473,6 @@ def upgrade(refresh=True, pkgs=None, **kwargs):
 
         {'<package>':  {'old': '<old-version>',
                         'new': '<new-version>'}}
-
 
     CLI Example:
 

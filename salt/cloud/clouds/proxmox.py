@@ -297,6 +297,7 @@ def _lookup_proxmox_task(upid):
 def get_resources_nodes(call=None, resFilter=None):
     """
     Retrieve all hypervisors (nodes) available on this environment
+
     CLI Example:
 
     .. code-block:: bash

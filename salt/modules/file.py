@@ -261,7 +261,6 @@ def get_gid(path, follow_symlinks=True):
     follow_symlinks
         indicated if symlinks should be followed
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -1482,7 +1481,6 @@ def comment_line(path, regex, char="#", cmnt=True, backup=".bak"):
     .. code-block:: bash
 
         salt '*' file.comment_line '/etc/modules' '^pcspkr'
-
 
     CLI Example:
 

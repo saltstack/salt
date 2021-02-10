@@ -786,7 +786,7 @@ def apply_(mods=None, **kwargs):
             :ref:`highstate <running-highstate>` automatically syncs all custom
             module types.
 
-        .. versionadded:: 2017.7.8,2018.3.3,2019.2.0
+        .. versionadded:: 2017.7.8, 2018.3.3, 2019.2.0
     """
     if mods:
         return sls(mods, **kwargs)
@@ -1238,7 +1238,7 @@ def sls(mods, test=None, exclude=None, queue=False, sync_mods=None, **kwargs):
             salt '*' state.sls stuff sync_mods=states,modules
             salt '*' state.sls stuff sync_mods=all
 
-        .. versionadded:: 2017.7.8,2018.3.3,2019.2.0
+        .. versionadded:: 2017.7.8, 2018.3.3, 2019.2.0
 
     CLI Example:
 

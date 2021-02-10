@@ -156,7 +156,6 @@ def rand_int(start=1, end=10, seed=None):
     .. versionchanged:: 2019.2.0
         Added seed argument. Will return the same result when run with the same seed.
 
-
     CLI Example:
 
     .. code-block:: bash

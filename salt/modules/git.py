@@ -1852,7 +1852,7 @@ def diff(
     output_encoding=None,
 ):
     """
-    .. versionadded:: 2015.8.12,2016.3.3,2016.11.0
+    .. versionadded:: 2015.8.12, 2016.3.3, 2016.11.0
 
     Interface to `git-diff(1)`_
 
@@ -2338,7 +2338,6 @@ def init(
 
     .. _`git-init(1)`: http://git-scm.com/docs/git-init
     .. _`template directory`: http://git-scm.com/docs/git-init#_template_directory
-
 
     CLI Examples:
 
@@ -3138,7 +3137,7 @@ def merge(
 
             .. _`sshd(8)`: http://www.man7.org/linux/man-pages/man8/sshd.8.html#AUTHORIZED_KEYS_FILE_FORMAT
 
-        .. versionadded:: 2018.3.5,2019.2.1,3000
+        .. versionadded:: 2018.3.5, 2019.2.1, 3000
 
     ignore_retcode : False
         If ``True``, do not log an error to the minion log if the git command
@@ -3824,7 +3823,6 @@ def rebase(
 
     .. _`git-rebase(1)`: http://git-scm.com/docs/git-rebase
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -4380,7 +4378,7 @@ def reset(
 
             .. _`sshd(8)`: http://www.man7.org/linux/man-pages/man8/sshd.8.html#AUTHORIZED_KEYS_FILE_FORMAT
 
-        .. versionadded:: 2018.3.5,2019.2.1,3000
+        .. versionadded:: 2018.3.5, 2019.2.1, 3000
 
     ignore_retcode : False
         If ``True``, do not log an error to the minion log if the git command

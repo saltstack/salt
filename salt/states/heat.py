@@ -32,7 +32,7 @@ mysql:
       image: Debian 7
     - rollback: True
 
-.. versionadded:: 2017.7.5,2018.3.1
+.. versionadded:: 2017.7.5, 2018.3.1
 
     The spelling mistake in parameter `enviroment` was corrected to `environment`.
     The `enviroment` spelling mistake has been removed in Salt 3000.
@@ -137,7 +137,7 @@ def deployed(
     profile
         Profile to use
 
-    .. versionadded:: 2017.7.5,2018.3.1
+    .. versionadded:: 2017.7.5, 2018.3.1
 
         The spelling mistake in parameter `enviroment` was corrected to `environment`.
         The `enviroment` spelling mistake has been removed in Salt 3000.

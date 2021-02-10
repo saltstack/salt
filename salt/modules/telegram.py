@@ -76,7 +76,6 @@ def post_message(message, chat_id=None, token=None):
     :param token:   (optional) The Telegram API token.
     :return:        Boolean if message was sent successfully.
 
-
     CLI Example:
 
     .. code-block:: bash

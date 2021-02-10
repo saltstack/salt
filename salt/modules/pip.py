@@ -1500,7 +1500,6 @@ def upgrade(bin_env=None, user=None, cwd=None, use_vt=False):
         {'<package>':  {'old': '<old-version>',
                         'new': '<new-version>'}}
 
-
     CLI Example:
 
     .. code-block:: bash

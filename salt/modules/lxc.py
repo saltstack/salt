@@ -2085,7 +2085,6 @@ def clone(name, orig, profile=None, network_profile=None, nic_opts=None, **kwarg
 
         .. versionadded:: 2015.8.0
 
-
     CLI Examples:
 
     .. code-block:: bash
@@ -2648,7 +2647,6 @@ def exists(name, path=None):
         path to the container parent directory (default: /var/lib/lxc)
 
         .. versionadded:: 2015.8.0
-
 
     CLI Example:
 
@@ -3296,7 +3294,6 @@ def test_sd_started_state(name, path=None):
 
         .. versionadded:: 2015.8.0
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -3323,7 +3320,6 @@ def test_bare_started_state(name, path=None):
         default: /var/lib/lxc (system default)
 
         .. versionadded:: 2015.8.0
-
 
     CLI Example:
 
@@ -3816,7 +3812,6 @@ def run(
     keep_env : http_proxy,https_proxy,no_proxy
         A list of env vars to preserve. May be passed as commma-delimited list.
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -3909,7 +3904,6 @@ def run_stdout(
         if the container is not running, try to run the command using chroot
         default: false
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -3999,7 +3993,6 @@ def run_stderr(
     chroot_fallback
         if the container is not running, try to run the command using chroot
         default: false
-
 
     CLI Example:
 
@@ -4092,7 +4085,6 @@ def retcode(
     chroot_fallback
         if the container is not running, try to run the command using chroot
         default: false
-
 
     CLI Example:
 
@@ -4189,7 +4181,6 @@ def run_all(
     chroot_fallback
         if the container is not running, try to run the command using chroot
         default: false
-
 
     CLI Example:
 
