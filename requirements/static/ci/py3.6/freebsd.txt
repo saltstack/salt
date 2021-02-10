@@ -116,7 +116,7 @@ clustershell==1.8.3
 contextlib2==0.5.5
 contextvars==2.4 ; python_version < "3.7"
 croniter==0.3.29 ; sys_platform != "win32"
-cryptography==3.2
+cryptography==3.3.2
 decorator==4.4.2          # via networkx
 distlib==0.3.0            # via virtualenv
 distro==1.5.0
