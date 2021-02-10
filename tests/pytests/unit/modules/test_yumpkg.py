@@ -1278,7 +1278,7 @@ def test_pkg_hold_yum():
         )
 
 
-def test_pkg_hold_tdnf(self):
+def test_pkg_hold_tdnf():
     """
     Tests that we raise a SaltInvocationError if we try to use
     hold-related functions on Photon OS.
