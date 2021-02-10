@@ -82,6 +82,7 @@ try:
 
     # Verify WinRM 0.3.0 or greater
     import pkg_resources  # pylint: disable=3rd-party-module-not-gated
+
     winrm_pkg = pkg_resources.get_distribution("pywinrm")
     if not salt.utils.versions.compare(winrm_pkg.version, ">=", WINRM_MIN_VER):
         HAS_WINRM = False
@@ -1217,8 +1218,10 @@ def deploy_windows(
         opts = {}
 
     if use_winrm and not HAS_WINRM:
-        log.error("WinRM requested but module winrm could not be imported. "
-                  "Ensure you are using version {} or higher.".format(WINRM_MIN_VER))
+        log.error(
+            "WinRM requested but module winrm could not be imported."
+            "Ensure you are using version {} or higher.".format(WINRM_MIN_VER)
+        )
         return False
 
     starttime = time.mktime(time.localtime())
