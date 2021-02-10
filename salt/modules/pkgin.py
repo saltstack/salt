@@ -8,13 +8,11 @@ Package support for pkgin based systems, inspired from freebsdpkg module
     <module-provider-override>`.
 """
 
-# Import python libs
 import copy
 import logging
 import os
 import re
 
-# Import salt libs
 import salt.utils.data
 import salt.utils.decorators as decorators
 import salt.utils.functools
