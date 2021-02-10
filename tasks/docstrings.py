@@ -53,6 +53,7 @@ def check(ctx, files, check_proper_formatting=False):
                 new_module_docstring = _autofix_docstring(module_docstring)
                 if module_docstring != new_module_docstring:
                     contents = contents.replace(module_docstring, new_module_docstring)
+                    module_docstring = new_module_docstring
                 error = _check_valid_versions_on_docstrings(module_docstring)
                 if error:
                     errors += 1
@@ -71,7 +72,8 @@ def check(ctx, files, check_proper_formatting=False):
                     new_docstring = _autofix_docstring(docstring)
                     if docstring != new_docstring:
                         contents = contents.replace(docstring, new_docstring)
-                    error = _check_valid_versions_on_docstrings(new_docstring)
+                        docstring = new_docstring
+                    error = _check_valid_versions_on_docstrings(docstring)
                     if error:
                         errors += 1
                         exitcode = 1
@@ -182,9 +184,17 @@ def _check_cli_example_proper_formatting(docstring):
 
 
 def _autofix_docstring(docstring):
-    docstring = _fix_directives_formatting(docstring)
-    docstring = _fix_codeblocks(docstring)
-    return docstring
+    return _fix_codeblocks(
+        _fix_directives_formatting(_fix_simple_cli_example_spacing_issues(docstring))
+    )
+
+
+def _fix_simple_cli_example_spacing_issues(docstring):
+    cli_example_regex = re.compile(
+        r"CLI Example(?P<plural>s)?(?:[\s]+)?:(?:[^\n]+)?(?:[\n]+)",
+        flags=re.I | re.MULTILINE,
+    )
+    return cli_example_regex.sub(r"CLI Example\1:\n\n", docstring)
 
 
 def _fix_directives_formatting(docstring):
