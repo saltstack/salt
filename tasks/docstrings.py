@@ -219,7 +219,7 @@ def _convert_version_names_to_numbers(docstring):
 
 def _fix_simple_cli_example_spacing_issues(docstring):
     case_and_spacing_regex = re.compile(
-        r"CLI Example(?P<plural>s)?(?:[\s]+)?:(?:[^\n]+)?(?:[\n]+)",
+        r"(?:[\n]+)([ ]+)CLI Example(?P<plural>s)?(?:[\s]+)?:(?:[^\n]+)?(?:[\n]+)",
         flags=re.I | re.MULTILINE,
     )
     missing_code_block_regex = re.compile(
@@ -227,7 +227,7 @@ def _fix_simple_cli_example_spacing_issues(docstring):
     )
     return missing_code_block_regex.sub(
         r"\n\1CLI Example\2:\n\n\1..code-block:: bash\n\n\3salt ",
-        case_and_spacing_regex.sub(r"CLI Example\1:\n\n", docstring),
+        case_and_spacing_regex.sub(r"\n\n\1CLI Example\2:\n\n", docstring),
     )
 
 
