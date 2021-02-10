@@ -510,7 +510,7 @@ def cache_file(path, saltenv="base", source_hash=None, verify_ssl=True):
 
 def cache_dest(url, saltenv="base"):
     """
-    .. versionadded:: Neon
+    .. versionadded:: 3000
 
     Returns the expected cache path for the file, if cached using
     :py:func:`cp.cache_file <salt.modules.cp.cache_file>`.
