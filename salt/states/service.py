@@ -57,6 +57,7 @@ set the reload value to True:
 
 """
 
+import logging
 import time
 
 import salt.utils.data
@@ -66,6 +67,8 @@ from salt.utils.args import get_function_argspec as _argspec
 from salt.utils.systemd import booted
 
 SYSTEMD_ONLY = ("no_block", "unmask", "unmask_runtime")
+
+log = logging.getLogger(__name__)
 
 __virtualname__ = "service"
 
@@ -1036,3 +1039,39 @@ def mod_watch(
         else "Failed to {} the service".format(verb)
     )
     return ret
+
+
+def mod_beacon(name, **kwargs):
+    """
+    name
+    """
+    ret = {"name": name, "changes": {}, "result": True, "comment": ""}
+
+    sfun = kwargs.pop("sfun", None)
+    supported_funcs = ["running", "dead"]
+
+    if sfun in supported_funcs:
+        beacon_module = "service"
+
+        data = {name: {"onchangeonly": True, "emitatstartup": False}}
+
+        beacon_name = "beacon_{}_{}".format(beacon_module, name)
+
+        beacon_kwargs = {
+            "name": beacon_name,
+            "services": data,
+            "beacon_module": beacon_module,
+        }
+
+        ret = __states__["beacon.present"](**beacon_kwargs)
+        return ret
+
+    else:
+        return {
+            "name": name,
+            "changes": {},
+            "comment": "pkg.{} does not work with the beacon state function".format(
+                sfun
+            ),
+            "result": False,
+        }

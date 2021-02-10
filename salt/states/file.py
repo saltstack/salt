@@ -8848,3 +8848,40 @@ def not_cached(name, saltenv="base"):
         ret["result"] = True
         ret["comment"] = "{} is not cached".format(name)
     return ret
+
+
+def mod_beacon(name, **kwargs):
+    """
+    name
+    """
+    sfun = kwargs.pop("sfun", None)
+    supported_funcs = ["managed", "directory"]
+
+    if sfun in supported_funcs:
+        beacon_module = "inotify"
+
+        data = {"mask": ["create", "delete", "modify"], "interval": 60}
+        if sfun == "directory":
+            data.update({"auto_add": True, "recurse": True})
+
+        beacon_name = "beacon_{}_{}".format(
+            beacon_module, re.sub(os.path.sep, "_", name)
+        )
+        beacon_kwargs = {
+            "name": beacon_name,
+            "files": {name: data},
+            "beacon_module": beacon_module,
+        }
+
+        ret = __states__["beacon.present"](**beacon_kwargs)
+        return ret
+
+    else:
+        return {
+            "name": name,
+            "changes": {},
+            "comment": "file.{} does not work with the beacon state function".format(
+                sfun
+            ),
+            "result": False,
+        }
