@@ -190,11 +190,17 @@ def _autofix_docstring(docstring):
 
 
 def _fix_simple_cli_example_spacing_issues(docstring):
-    cli_example_regex = re.compile(
+    case_and_spacing_regex = re.compile(
         r"CLI Example(?P<plural>s)?(?:[\s]+)?:(?:[^\n]+)?(?:[\n]+)",
         flags=re.I | re.MULTILINE,
     )
-    return cli_example_regex.sub(r"CLI Example\1:\n\n", docstring)
+    missing_code_block_regex = re.compile(
+        r"\n([ ]+)CLI Example(?P<plural>s)?:\n\n([\s]+)salt ", flags=re.I | re.MULTILINE
+    )
+    return missing_code_block_regex.sub(
+        r"\n\1CLI Example\2:\n\n\1..code-block:: bash\n\n\3salt ",
+        case_and_spacing_regex.sub(r"CLI Example\1:\n\n", docstring),
+    )
 
 
 def _fix_directives_formatting(docstring):
