@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2017 Damon Atkins
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,21 +18,16 @@ Collect information about software installed on Windows OS
 :maintainer: Salt Stack <https://github.com/saltstack>
 :codeauthor: Damon Atkins <https://github.com/damon-atkins>
 :maturity: new
-:depends: pywin32, six
+:depends: pywin32
 :platform: windows
 
 Known Issue: install_date may not match Control Panel\Programs\Programs and Features
 """
 
-
 # Note although this code will work with Python 2.7, win32api does not
 # support Unicode. i.e non ASCII characters may be returned with unexpected
 # results e.g. a '?' instead of the correct character
 # Python 3.6 or newer is recommended.
-
-# Import _future_ python libs first & before any other code
-# pylint: disable=incompatible-py3-code
-from __future__ import absolute_import, print_function, unicode_literals
 
 import collections
 import datetime
@@ -42,19 +36,11 @@ import logging
 import os.path
 import platform
 import re
-
-# Import Standard libs
 import sys
 import time
 from functools import cmp_to_key
 
 __version__ = "0.1"
-
-# Import third party libs
-try:
-    from salt.ext import six
-except ImportError:
-    import six  # pylint: disable=blacklisted-external-import
 
 try:
     import win32api
@@ -95,7 +81,7 @@ except ImportError:
 # pylint: disable=too-many-instance-attributes
 
 
-class RegSoftwareInfo(object):
+class RegSoftwareInfo:
     """
     Retrieve Registry data on a single installed software item or component.
 
@@ -171,28 +157,28 @@ class RegSoftwareInfo(object):
                 0  # HKEY_USERS does not have a 32bit and 64bit view
             )
             self.__reg_uninstall_path = (
-                "{0}\\Software\\Microsoft\\Windows\\" "CurrentVersion\\Uninstall\\{1}"
+                "{}\\Software\\Microsoft\\Windows\\" "CurrentVersion\\Uninstall\\{}"
             ).format(sid, key_guid)
             if self.__squid:
-                self.__reg_products_path = "{0}\\Software\\Classes\\Installer\\Products\\{1}".format(
+                self.__reg_products_path = "{}\\Software\\Classes\\Installer\\Products\\{}".format(
                     sid, self.__squid
                 )
-                self.__reg_upgradecode_path = "{0}\\Software\\Microsoft\\Installer\\UpgradeCodes".format(
+                self.__reg_upgradecode_path = "{}\\Software\\Microsoft\\Installer\\UpgradeCodes".format(
                     sid
                 )
                 self.__reg_patches_path = (
                     "Software\\Microsoft\\Windows\\CurrentVersion\\Installer\\UserData\\"
-                    "{0}\\Products\\{1}\\Patches"
+                    "{}\\Products\\{}\\Patches"
                 ).format(sid, self.__squid)
         else:
             self.__reg_hive = "HKEY_LOCAL_MACHINE"
             self.__reg_32bit = use_32bit
             self.__reg_32bit_access = self.__use_32bit_lookup[use_32bit]
-            self.__reg_uninstall_path = "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{0}".format(
+            self.__reg_uninstall_path = "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{}".format(
                 key_guid
             )
             if self.__squid:
-                self.__reg_products_path = "Software\\Classes\\Installer\\Products\\{0}".format(
+                self.__reg_products_path = "Software\\Classes\\Installer\\Products\\{}".format(
                     self.__squid
                 )
                 self.__reg_upgradecode_path = (
@@ -200,7 +186,7 @@ class RegSoftwareInfo(object):
                 )
                 self.__reg_patches_path = (
                     "Software\\Microsoft\\Windows\\CurrentVersion\\Installer\\UserData\\"
-                    "S-1-5-18\\Products\\{0}\\Patches"
+                    "S-1-5-18\\Products\\{}\\Patches"
                 ).format(self.__squid)
 
         # OpenKey is expensive, open in advance and keep it open.
@@ -306,12 +292,12 @@ class RegSoftwareInfo(object):
         Returns:
             bool: ``True`` if 1 otherwise ``False``.
         """
-        if isinstance(value, six.integer_types) and value == 1:
+        if isinstance(value, int) and value == 1:
             return True
         elif (
-            isinstance(value, six.string_types)
+            isinstance(value, str)
             and re.match(r"\d+", value, flags=re.IGNORECASE + re.UNICODE) is not None
-            and six.text_type(value) == "1"
+            and str(value) == "1"
         ):
             return True
         return False
@@ -335,15 +321,6 @@ class RegSoftwareInfo(object):
         item_value, item_type = win32api.RegQueryValueEx(
             handle, value_name
         )  # pylint: disable=no-member
-        if (
-            six.PY2
-            and isinstance(item_value, six.string_types)
-            and not isinstance(item_value, six.text_type)
-        ):
-            try:
-                item_value = six.text_type(item_value, encoding="mbcs")
-            except UnicodeError:
-                pass
         if item_type == win32con.REG_EXPAND_SZ:
             # expects Unicode input
             win32api.ExpandEnvironmentStrings(item_value)  # pylint: disable=no-member
@@ -484,7 +461,7 @@ class RegSoftwareInfo(object):
 
         # GUID/SQUID are unique, so it does not matter if they are 32bit or
         # 64bit or user install so all items are cached into a single dict
-        have_scan_key = "{0}\\{1}\\{2}".format(
+        have_scan_key = "{}\\{}\\{}".format(
             self.__reg_hive, self.__reg_upgradecode_path, self.__reg_32bit
         )
         if not self.__upgrade_codes or self.__reg_key_guid not in self.__upgrade_codes:
@@ -615,7 +592,7 @@ class RegSoftwareInfo(object):
                     )
                     if (
                         patch_state_type != win32con.REG_DWORD
-                        or not isinstance(patch_state_type, six.integer_types)
+                        or not isinstance(patch_state_type, int)
                         or patch_state != 1
                         or patch_display_name_type  # 1 is Active, 2 is Superseded/Obsolute
                         != win32con.REG_SZ
@@ -641,7 +618,7 @@ class RegSoftwareInfo(object):
         Returns:
             str: <hive>\\<uninstall registry entry>
         """
-        return "{0}\\{1}".format(self.__reg_hive, self.__reg_uninstall_path)
+        return "{}\\{}".format(self.__reg_hive, self.__reg_uninstall_path)
 
     @property
     def registry_path(self):
@@ -710,11 +687,11 @@ class RegSoftwareInfo(object):
         version_src = ""
         if item_value:
             if item_type == win32con.REG_DWORD:
-                if isinstance(item_value, six.integer_types):
+                if isinstance(item_value, int):
                     version_binary_raw = item_value
                 if version_binary_raw:
                     # Major.Minor.Build
-                    version_binary_text = "{0}.{1}.{2}".format(
+                    version_binary_text = "{}.{}.{}".format(
                         version_binary_raw >> 24 & 0xFF,
                         version_binary_raw >> 16 & 0xFF,
                         version_binary_raw & 0xFFFF,
@@ -723,7 +700,7 @@ class RegSoftwareInfo(object):
 
             elif (
                 item_type == win32con.REG_SZ
-                and isinstance(item_value, six.string_types)
+                and isinstance(item_value, str)
                 and self.__version_pattern.match(item_value) is not None
             ):
                 # Hey, version should be a int/REG_DWORD, an installer has set
@@ -734,7 +711,7 @@ class RegSoftwareInfo(object):
         return (version_binary_text, version_src)
 
 
-class WinSoftware(object):
+class WinSoftware:
     """
     Point in time snapshot of the software and components installed on
     a system.
@@ -959,7 +936,7 @@ class WinSoftware(object):
             sid_bin = win32security.GetBinarySid(sid)  # pylint: disable=no-member
         except pywintypes.error as exc:  # pylint: disable=no-member
             raise ValueError(
-                "pkg: Software owned by {0} is not valid: [{1}] {2}".format(
+                "pkg: Software owned by {} is not valid: [{}] {}".format(
                     sid, exc.winerror, exc.strerror
                 )
             )
@@ -967,7 +944,7 @@ class WinSoftware(object):
             name, domain, _account_type = win32security.LookupAccountSid(
                 None, sid_bin
             )  # pylint: disable=no-member
-            user_name = "{0}\\{1}".format(domain, name)
+            user_name = "{}\\{}".format(domain, name)
         except pywintypes.error as exc:  # pylint: disable=no-member
             # if user does not exist...
             # winerror.ERROR_NONE_MAPPED = No mapping between account names and
@@ -978,7 +955,7 @@ class WinSoftware(object):
                 return sid
             else:
                 raise ValueError(
-                    "Failed looking up sid '{0}' username: [{1}] {2}".format(
+                    "Failed looking up sid '{}' username: [{}] {}".format(
                         sid, exc.winerror, exc.strerror
                     )
                 )
@@ -999,7 +976,7 @@ class WinSoftware(object):
                 winerror.ERROR_INVALID_DOMAINNAME,
                 winerror.ERROR_NONE_MAPPED,
             ):
-                return "{0}@{1}".format(name.lower(), domain.lower())
+                return "{}@{}".format(name.lower(), domain.lower())
             else:
                 raise
         return user_principal
@@ -1077,14 +1054,10 @@ class WinSoftware(object):
                 return version_str, src, version_user_str
             elif src != "use-default":
                 raise ValueError(
-                    "version capture within object '{0}' failed "
-                    "for pkg id: '{1}' it returned '{2}' '{3}' "
-                    "'{4}'".format(
-                        six.text_type(self.__pkg_obj),
-                        pkg_id,
-                        version_str,
-                        src,
-                        version_user_str,
+                    "version capture within object '{}' failed "
+                    "for pkg id: '{}' it returned '{}' '{}' "
+                    "'{}'".format(
+                        str(self.__pkg_obj), pkg_id, version_str, src, version_user_str,
                     )
                 )
 
@@ -1330,7 +1303,7 @@ class WinSoftware(object):
         # Do not add fields which are blank.
         language_number = reg_soft_info.get_install_value("Language")
         if (
-            isinstance(language_number, six.integer_types)
+            isinstance(language_number, int)
             and language_number in locale.windows_locale
         ):
             version_data.update(
@@ -1444,7 +1417,7 @@ class WinSoftware(object):
             if (
                 self.__sid_pattern.match(sid) is not None
             ):  # S-1-5-18 needs to be ignored?
-                user_uninstall_path = "{0}\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall".format(
+                user_uninstall_path = "{}\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall".format(
                     sid
                 )
                 try:
@@ -1480,14 +1453,14 @@ def __main():
     """
     if len(sys.argv) < 3:
         sys.stderr.write(
-            "usage: {0} <detail|list> <system|system+user>\n".format(sys.argv[0])
+            "usage: {} <detail|list> <system|system+user>\n".format(sys.argv[0])
         )
         sys.exit(64)
     user_pkgs = False
     version_only = False
-    if six.text_type(sys.argv[1]) == "list":
+    if str(sys.argv[1]) == "list":
         version_only = True
-    if six.text_type(sys.argv[2]) == "system+user":
+    if str(sys.argv[2]) == "system+user":
         user_pkgs = True
     import salt.utils.json
     import timeit
