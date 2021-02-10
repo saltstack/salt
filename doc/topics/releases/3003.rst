@@ -17,3 +17,21 @@ Support for SCRAM-SHA-256 password hashes has been added to the
 and :py:func:`postgres_group.present <salt.states.postgres_group.present>`
 states. This allows migration away from the insecure and deprecated
 previous storage methods.
+
+Execution Module Changes
+========================
+
+Changed
+-------
+
+- The :py:mod:`pkg <salt.modules.yumpkg>` module now supports ``tdnf`` used by
+  VMWare Photon OS.  As part of this change, ``VMWare Photon OS``'s
+  ``os_family`` grain will now resolve as ``RedHat``.  This may require changes
+  to existing uses of :py:func:`grains.filter_by
+  <salt.modules.grains.filter_by>`
+
+
+Added
+-----
+
+- Firewall groups support to Vultr Salt Cloud provider

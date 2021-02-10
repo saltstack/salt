@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 A route is a rule that specifies how certain packets should be handled by the
 virtual network. Routes are associated with virtual machine instances by tag,
@@ -18,15 +17,7 @@ through your gateway instance.
 
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
-
-# Import salt libs
-from salt.ext import six
-
-log = logging.getLogger(__name__)
 
 try:
     import googleapiclient.discovery
@@ -35,6 +26,8 @@ try:
     HAS_LIB = True
 except ImportError:
     HAS_LIB = False
+
+log = logging.getLogger(__name__)
 
 __virtualname__ = "gcp"
 
@@ -129,11 +122,9 @@ def route_create(
     routes = service.routes()
 
     routes_config = {
-        "name": six.text_type(name),
-        "network": _get_network(project_id, six.text_type(network), service=service)[
-            "selfLink"
-        ],
-        "destRange": six.text_type(dest_range),
+        "name": str(name),
+        "network": _get_network(project_id, str(network), service=service)["selfLink"],
+        "destRange": str(dest_range),
         "nextHopInstance": _get_instance(
             project_id, instance_zone, next_hop_instance, service=service
         )["selfLink"],

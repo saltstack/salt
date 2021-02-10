@@ -1,16 +1,14 @@
-# -*- coding: utf-8 -*-
-
 import os
 import sys
 
+import pytest
 from salt.cli.api import SaltAPI
-from tests.support.helpers import slowTest
 from tests.support.mock import patch
 from tests.support.unit import TestCase
 
 
 class SaltAPITestCase(TestCase):
-    @slowTest
+    @pytest.mark.slow_test
     def test_start_shutdown(self):
         api = SaltAPI()
         try:
