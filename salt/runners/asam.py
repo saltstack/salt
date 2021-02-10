@@ -2,7 +2,7 @@
 Novell ASAM Runner
 ==================
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.8.0
 
 Runner to interact with Novell ASAM Fan-Out Driver
 

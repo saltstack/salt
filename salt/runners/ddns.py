@@ -2,7 +2,7 @@
 Dynamic DNS Runner
 ==================
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.8.0
 
 Runner to interact with DNS server and create/delete/update DNS records
 

@@ -417,7 +417,7 @@ def defined(
                         0: 60
                iothreads: 4
 
-        .. versionadded:: Aluminium
+        .. versionadded:: 3003
 
     :param mem: Amount of memory to allocate to the virtual machine in MiB. Since 3002, a dictionary can be used to
         contain detailed configuration which support memory allocation or tuning. Supported parameters are ``boot``,
@@ -512,7 +512,7 @@ def defined(
         on a NUMA host. ``memnode`` elements can specify memory allocation policies per each guest NUMA node. The definition
         used in the dictionary can be found at :ref:`init-cpu-def`.
 
-        .. versionadded:: Aluminium
+        .. versionadded:: 3003
 
         .. code-block:: python
 
@@ -524,7 +524,7 @@ def defined(
     :param hypervisor_features:
         Enable or disable hypervisor-specific features on the virtual machine.
 
-        .. versionadded:: Aluminium
+        .. versionadded:: 3003
 
         .. code-block:: yaml
 
@@ -550,7 +550,7 @@ def defined(
             ``catchup``, ``frequency``, ``mode``, ``present``, ``slew``, ``threshold`` and ``limit``.
             See `libvirt time keeping documentation <https://libvirt.org/formatdomain.html#time-keeping>`_ for the possible values.
 
-        .. versionadded:: Aluminium
+        .. versionadded:: 3003
 
         Set the clock to local time using an offset in seconds
         .. code-block:: yaml
@@ -570,12 +570,12 @@ def defined(
         Dictionary providing details on the serials connection to create. (Default: ``None``)
         See :ref:`init-chardevs-def` for more details on the possible values.
 
-        .. versionadded:: Aluminium
+        .. versionadded:: 3003
     :param consoles:
         Dictionary providing details on the consoles device to create. (Default: ``None``)
         See :ref:`init-chardevs-def` for more details on the possible values.
 
-        .. versionadded:: Aluminium
+        .. versionadded:: 3003
 
     :param stop_on_reboot:
         If set to ``True`` the guest will stop instead of rebooting.
@@ -583,20 +583,20 @@ def defined(
         an autoinstallation needing a special first boot configuration.
         Defaults to ``False``
 
-        .. versionadded:: Aluminium
+        .. versionadded:: 3003
 
     :param live:
         If set to ``False`` the changes will not be applied live to the running instance, but will
         only apply at the next start. Note that reboot will not take those changes.
 
-        .. versionadded:: Aluminium
+        .. versionadded:: 3003
 
     :param host_devices:
         List of host devices to passthrough to the guest.
         The value is a list of device names as provided by the :py:func:`~salt.modules.virt.node_devices` function.
         (Default: ``None``)
 
-        .. versionadded:: Aluminium
+        .. versionadded:: 3003
 
     .. rubric:: Example States
 
@@ -864,12 +864,12 @@ def running(
         Dictionary providing details on the serials connection to create. (Default: ``None``)
         See :ref:`init-chardevs-def` for more details on the possible values.
 
-        .. versionadded:: Aluminium
+        .. versionadded:: 3003
     :param consoles:
         Dictionary providing details on the consoles device to create. (Default: ``None``)
         See :ref:`init-chardevs-def` for more details on the possible values.
 
-        .. versionadded:: Aluminium
+        .. versionadded:: 3003
 
     :param boot_dev:
         Space separated list of devices to boot from sorted by decreasing priority.
@@ -889,7 +889,7 @@ def running(
         for instance: 'numatune': ``None``. Please note that ``None`` is mapped to ``null`` in sls file, pass ``null`` in
         sls file instead.
 
-        .. versionadded:: Aluminium
+        .. versionadded:: 3003
 
     :param stop_on_reboot:
         If set to ``True`` the guest will stop instead of rebooting.
@@ -897,12 +897,12 @@ def running(
         an autoinstallation needing a special first boot configuration.
         Defaults to ``False``
 
-        .. versionadded:: Aluminium
+        .. versionadded:: 3003
 
     :param hypervisor_features:
         Enable or disable hypervisor-specific features on the virtual machine.
 
-        .. versionadded:: Aluminium
+        .. versionadded:: 3003
 
         .. code-block:: yaml
 
@@ -928,7 +928,7 @@ def running(
             ``catchup``, ``frequency``, ``mode``, ``present``, ``slew``, ``threshold`` and ``limit``.
             See `libvirt time keeping documentation <https://libvirt.org/formatdomain.html#time-keeping>`_ for the possible values.
 
-        .. versionadded:: Aluminium
+        .. versionadded:: 3003
 
         Set the clock to local time using an offset in seconds
         .. code-block:: yaml
@@ -949,7 +949,7 @@ def running(
         The value is a list of device names as provided by the :py:func:`~salt.modules.virt.node_devices` function.
         (Default: ``None``)
 
-        .. versionadded:: Aluminium
+        .. versionadded:: 3003
 
     .. rubric:: Example States
 
@@ -1262,7 +1262,7 @@ def network_defined(
     :param bridge: Bridge name
     :param forward: Forward mode(bridge, router, nat)
 
-        .. versionchanged:: Aluminium
+        .. versionchanged:: 3003
            a ``None`` value creates an isolated network with no forwarding at all
 
     :param vport: Virtualport type (Default: ``'None'``)
@@ -1276,7 +1276,7 @@ def network_defined(
               parameters:
                 interfaceid: 09b11c53-8b5c-4eeb-8f00-d84eaa0aaa4f
 
-        .. versionchanged:: Aluminium
+        .. versionchanged:: 3003
            possible dictionary value
 
     :param tag: Vlan tag (Default: ``'None'``)
@@ -1294,7 +1294,7 @@ def network_defined(
                   nativeMode: untagged
                 - id: 47
 
-        .. versionchanged:: Aluminium
+        .. versionchanged:: 3003
            possible dictionary value
 
     :param ipv4_config:
@@ -1315,7 +1315,7 @@ def network_defined(
     :param mtu: size of the Maximum Transmission Unit (MTU) of the network.
         (default ``None``)
 
-        .. versionadded:: Aluminium
+        .. versionadded:: 3003
 
     :param domain: DNS domain name of the DHCP server.
         The value is a dictionary with a mandatory ``name`` property and an optional ``localOnly`` boolean one.
@@ -1327,7 +1327,7 @@ def network_defined(
               name: lab.acme.org
               localOnly: True
 
-        .. versionadded:: Aluminium
+        .. versionadded:: 3003
 
     :param nat: addresses and ports to route in NAT forward mode.
         The value is a dictionary with optional keys ``address`` and ``port``.
@@ -1345,7 +1345,7 @@ def network_defined(
                 start: 500
                 end: 1000
 
-        .. versionadded:: Aluminium
+        .. versionadded:: 3003
 
     :param interfaces: whitespace separated list of network interfaces devices that can be used for this network.
         (default ``None``)
@@ -1355,7 +1355,7 @@ def network_defined(
           - forward: passthrough
           - interfaces: "eth10 eth11 eth12"
 
-        .. versionadded:: Aluminium
+        .. versionadded:: 3003
 
     :param addresses: whitespace separated list of addreses of PCI devices that can be used for this network in `hostdev` forward mode.
         (default ``None``)
@@ -1365,7 +1365,7 @@ def network_defined(
           - forward: hostdev
           - interfaces: "0000:04:00.1 0000:e3:01.2"
 
-        .. versionadded:: Aluminium
+        .. versionadded:: 3003
 
     :param physical_function: device name of the physical interface to use in ``hostdev`` forward mode.
         (default ``None``)
@@ -1375,7 +1375,7 @@ def network_defined(
           - forward: hostdev
           - physical_function: "eth0"
 
-        .. versionadded:: Aluminium
+        .. versionadded:: 3003
 
     :param dns: virtual network DNS configuration
         The value is a dictionary described in :ref:`net-define-dns`.
@@ -1405,7 +1405,7 @@ def network_defined(
                   priority: 1
                   weight: 10
 
-        .. versionadded:: Aluminium
+        .. versionadded:: 3003
 
     .. versionadded:: 3001
 
@@ -1580,7 +1580,7 @@ def network_running(
     :param bridge: Bridge name
     :param forward: Forward mode(bridge, router, nat)
 
-        .. versionchanged:: Aluminium
+        .. versionchanged:: 3003
            a ``None`` value creates an isolated network with no forwarding at all
 
     :param vport: Virtualport type (Default: ``'None'``)
@@ -1594,7 +1594,7 @@ def network_running(
               parameters:
                 interfaceid: 09b11c53-8b5c-4eeb-8f00-d84eaa0aaa4f
 
-        .. versionchanged:: Aluminium
+        .. versionchanged:: 3003
            possible dictionary value
 
     :param tag: Vlan tag (Default: ``'None'``)
@@ -1612,7 +1612,7 @@ def network_running(
                   nativeMode: untagged
                 - id: 47
 
-        .. versionchanged:: Aluminium
+        .. versionchanged:: 3003
            possible dictionary value
 
     :param ipv4_config:
@@ -1642,7 +1642,7 @@ def network_running(
     :param mtu: size of the Maximum Transmission Unit (MTU) of the network.
         (default ``None``)
 
-        .. versionadded:: Aluminium
+        .. versionadded:: 3003
 
     :param domain: DNS domain name of the DHCP server.
         The value is a dictionary with a mandatory ``name`` property and an optional ``localOnly`` boolean one.
@@ -1654,7 +1654,7 @@ def network_running(
               name: lab.acme.org
               localOnly: True
 
-        .. versionadded:: Aluminium
+        .. versionadded:: 3003
 
     :param nat: addresses and ports to route in NAT forward mode.
         The value is a dictionary with optional keys ``address`` and ``port``.
@@ -1672,7 +1672,7 @@ def network_running(
                 start: 500
                 end: 1000
 
-        .. versionadded:: Aluminium
+        .. versionadded:: 3003
 
     :param interfaces: whitespace separated list of network interfaces devices that can be used for this network.
         (default ``None``)
@@ -1682,7 +1682,7 @@ def network_running(
           - forward: passthrough
           - interfaces: "eth10 eth11 eth12"
 
-        .. versionadded:: Aluminium
+        .. versionadded:: 3003
 
     :param addresses: whitespace separated list of addreses of PCI devices that can be used for this network in `hostdev` forward mode.
         (default ``None``)
@@ -1692,7 +1692,7 @@ def network_running(
           - forward: hostdev
           - interfaces: "0000:04:00.1 0000:e3:01.2"
 
-        .. versionadded:: Aluminium
+        .. versionadded:: 3003
 
     :param physical_function: device name of the physical interface to use in ``hostdev`` forward mode.
         (default ``None``)
@@ -1702,7 +1702,7 @@ def network_running(
           - forward: hostdev
           - physical_function: "eth0"
 
-        .. versionadded:: Aluminium
+        .. versionadded:: 3003
 
     :param dns: virtual network DNS configuration
         The value is a dictionary described in :ref:`net-define-dns`.
@@ -1732,7 +1732,7 @@ def network_running(
                   priority: 1
                   weight: 10
 
-        .. versionadded:: Aluminium
+        .. versionadded:: 3003
 
     .. code-block:: yaml
 
