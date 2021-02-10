@@ -24,7 +24,7 @@ log = logging.getLogger(__name__)
 __salt__ = None
 
 
-def __virtual__():  # pylint: disable=expected-2-blank-lines-found-0
+def __virtual__():
     try:
         global __salt__  # pylint: disable=global-statement
         if not __salt__:
@@ -401,6 +401,7 @@ def is_v2(path):
     """
     Determines if a given secret path is kv version 1 or 2
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' vault.is_v2 "secret/my/secret"
@@ -429,6 +430,7 @@ def _v2_the_path(path, pfilter, ptype="data"):
     """
     Given a path, a filter, and a path type, properly inject 'data' or 'metadata' into the path
     CLI Example:
+
     .. code-block:: python
 
         _v2_the_path('dev/secrets/fu/bar', 'dev/secrets', 'data') => 'dev/secrets/data/fu/bar'
@@ -465,6 +467,7 @@ def _get_secret_path_metadata(path):
     """
     Given a path, query vault to determine mount point, type, and version
     CLI Example:
+
     .. code-block:: python
 
         _get_secret_path_metadata('dev/secrets/fu/bar')

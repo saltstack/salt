@@ -211,6 +211,7 @@ def orchestrate_show_sls(
     .. seealso:: The state.show_sls module function
 
     CLI Example:
+
     .. code-block:: bash
 
         salt-run state.orch_show_sls my-orch-formula.my-orch-state 'pillar={ nodegroup: ng1 }'

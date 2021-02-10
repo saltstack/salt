@@ -1340,6 +1340,8 @@ def show(name, root=None):
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt '*' service.show <service name>
     """
     ret = {}
@@ -1375,6 +1377,8 @@ def execs(root=None):
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt '*' service.execs
     """
     ret = {}
@@ -1396,7 +1400,7 @@ def firstboot(
     root=None,
 ):
     """
-    .. versionadded:: TBD
+    .. versionadded:: 3001
 
     Call systemd-firstboot to configure basic settings of the system
 
@@ -1422,6 +1426,8 @@ def firstboot(
         Operate on an alternative filesystem root
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.firstboot keymap=jp locale=en_US.UTF-8
 

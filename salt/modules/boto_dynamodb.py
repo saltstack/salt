@@ -43,16 +43,11 @@ Connection module for Amazon DynamoDB
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
 
-
 import logging
 import time
 
 import salt.utils.versions
 from salt.exceptions import SaltInvocationError
-
-logger = logging.getLogger(__name__)
-logging.getLogger("boto").setLevel(logging.INFO)
-
 
 try:
     # pylint: disable=unused-import
@@ -70,9 +65,13 @@ try:
     from boto.dynamodb2.table import Table
     from boto.exception import JSONResponseError
 
+    logging.getLogger("boto").setLevel(logging.INFO)
+
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
+
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -240,6 +239,7 @@ def create_global_secondary_index(
     Creates a single global secondary index on a DynamoDB table.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt myminion boto_dynamodb.create_global_secondary_index table_name /
@@ -257,6 +257,7 @@ def update_global_secondary_index(
     Updates the throughput of the given global secondary indexes.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt myminion boto_dynamodb.update_global_secondary_index table_name /
@@ -288,6 +289,9 @@ def extract_index(index_data, global_index=False):
     configuration
 
     CLI Example:
+
+    .. code-block:: bash
+
         salt myminion boto_dynamodb.extract_index index
     """
     parsed_data = {}
