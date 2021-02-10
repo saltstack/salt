@@ -2730,13 +2730,13 @@ def init(
         I/O control policy. String value amongst ``native``, ``threads`` and ``io_uring``.
         (Default: ``native``)
 
-        ..versionadded:: Aluminium
+        .. versionadded:: Aluminium
 
     iothread_id
         I/O thread id to assign the disk to.
         (Default: none assigned)
 
-        ..versionadded:: Aluminium
+        .. versionadded:: Aluminium
 
     .. _init-graphics-def:
 
