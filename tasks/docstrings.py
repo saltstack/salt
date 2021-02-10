@@ -185,8 +185,32 @@ def _check_cli_example_proper_formatting(docstring):
 
 def _autofix_docstring(docstring):
     return _fix_codeblocks(
-        _fix_directives_formatting(_fix_simple_cli_example_spacing_issues(docstring))
+        _convert_version_names_to_numbers(
+            _fix_directives_formatting(
+                _fix_simple_cli_example_spacing_issues(docstring)
+            )
+        )
     )
+
+
+def _convert_version_names_to_numbers(docstring):
+    directive_regex = re.compile(
+        ".. ((?P<vtype>(versionadded|versionchanged|deprecated)):: (?P<version>.*))"
+    )
+    for match in directive_regex.finditer(docstring):
+        vtype = match.group("vtype")
+        version = match.group("version")
+        versions = [vs.strip() for vs in version.split(",")]
+        parsed_versions = []
+        for vs in versions:
+            try:
+                vs = SaltStackVersion.from_name(vs).string
+            except ValueError:
+                pass
+            parsed_versions.append(vs)
+        replace_contents = ".. {}:: {}".format(vtype, ", ".join(parsed_versions))
+        docstring = docstring.replace(match.group(0), replace_contents)
+    return docstring
 
 
 def _fix_simple_cli_example_spacing_issues(docstring):
