@@ -444,7 +444,7 @@ def lvcreate(
         salt '*' lvm.lvcreate new_volume_name     vg_name extents=100 pv=/dev/sdb
         salt '*' lvm.lvcreate new_snapshot        vg_name snapshot=volume_name size=3G
 
-    .. versionadded:: to_complete
+    .. versionadded:: 0.12.0
 
     Support for thin pools and thin volumes
 
