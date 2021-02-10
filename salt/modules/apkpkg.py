@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Support for apk
 
@@ -11,13 +10,10 @@ Support for apk
 .. versionadded: 2017.7.0
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import copy
 import logging
 
-# Import salt libs
 import salt.utils.data
 import salt.utils.itertools
 from salt.exceptions import CommandExecutionError
@@ -592,6 +588,6 @@ def owner(*paths, **kwargs):
             else:
                 ret[path] = output.split("by ")[1].strip()
         else:
-            ret[path] = "Error running {0}".format(cmd)
+            ret[path] = "Error running {}".format(cmd)
 
     return ret
