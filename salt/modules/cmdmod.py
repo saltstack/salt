@@ -1145,7 +1145,6 @@ def run(
 
       .. versionadded:: 3002
 
-
     CLI Example:
 
     .. code-block:: bash

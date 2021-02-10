@@ -322,7 +322,6 @@ def maybe_fix_ssl_version(ca_name, cacert_path=None, ca_filename=None):
 
         .. versionadded:: 2015.5.3
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -382,7 +381,6 @@ def ca_exists(ca_name, cacert_path=None, ca_filename=None):
         alternative filename for the CA
 
         .. versionadded:: 2015.5.3
-
 
     CLI Example:
 
@@ -451,7 +449,6 @@ def get_ca_signed_cert(
         alternative filename for the certificate, useful when using special characters in the CN
 
         .. versionadded:: 2015.5.3
-
 
     CLI Example:
 

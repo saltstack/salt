@@ -491,7 +491,7 @@ def extracted(
         ``tar``/``unzip`` implementation on the minion's OS.
 
         .. versionadded:: 2016.11.0
-        .. versionchanged:: 2015.8.11,2016.3.2
+        .. versionchanged:: 2015.8.11, 2016.3.2
             XZ-compressed tar archives no longer require ``J`` to manually be
             set in the ``options``, they are now detected automatically and
             decompressed using the xz_ CLI command and extracted using ``tar

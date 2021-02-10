@@ -752,7 +752,6 @@ def upgrade(refresh=True, **kwargs):  # pylint: disable=unused-argument
         {'<package>':  {'old': '<old-version>',
                         'new': '<new-version>'}}
 
-
     CLI Example:
 
     .. code-block:: bash

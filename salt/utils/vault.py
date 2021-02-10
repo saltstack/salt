@@ -400,6 +400,7 @@ def _wrapped_token_valid():
 def is_v2(path):
     """
     Determines if a given secret path is kv version 1 or 2
+
     CLI Example:
 
     .. code-block:: bash
@@ -429,6 +430,7 @@ def is_v2(path):
 def _v2_the_path(path, pfilter, ptype="data"):
     """
     Given a path, a filter, and a path type, properly inject 'data' or 'metadata' into the path
+
     CLI Example:
 
     .. code-block:: python
@@ -466,6 +468,7 @@ def _v2_the_path(path, pfilter, ptype="data"):
 def _get_secret_path_metadata(path):
     """
     Given a path, query vault to determine mount point, type, and version
+
     CLI Example:
 
     .. code-block:: python

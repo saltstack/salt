@@ -232,7 +232,7 @@ def sync_beacons(
 
 def sync_sdb(saltenv=None, extmod_whitelist=None, extmod_blacklist=None):
     """
-    .. versionadded:: 2015.5.8,2015.8.3
+    .. versionadded:: 2015.5.8, 2015.8.3
 
     Sync sdb modules from ``salt://_sdb`` to the minion
 
@@ -367,7 +367,7 @@ def sync_states(
 
 def refresh_grains(**kwargs):
     """
-    .. versionadded:: 2016.3.6,2016.11.4,2017.7.0
+    .. versionadded:: 2016.3.6, 2016.11.4, 2017.7.0
 
     Refresh the minion's grains without syncing custom grains modules from
     ``salt://_grains``.
@@ -916,7 +916,7 @@ def sync_pillar(
     saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist=None
 ):
     """
-    .. versionadded:: 2015.8.11,2016.3.2
+    .. versionadded:: 2015.8.11, 2016.3.2
 
     Sync pillar modules from the ``salt://_pillar`` directory on the Salt
     fileserver. This function is environment-aware, pass the desired
@@ -998,7 +998,7 @@ def sync_executors(
 
 def sync_all(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist=None):
     """
-    .. versionchanged:: 2015.8.11,2016.3.2
+    .. versionchanged:: 2015.8.11, 2016.3.2
         On masterless minions, pillar modules are now synced, and refreshed
         when ``refresh`` is set to ``True``.
 

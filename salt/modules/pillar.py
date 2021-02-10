@@ -69,7 +69,7 @@ def get(
         dictionaries, the dictionaries will be recursively merged.
 
         .. versionadded:: 2014.7.0
-        .. versionchanged:: 2016.3.7,2016.11.4,2017.7.0
+        .. versionchanged:: 2016.3.7, 2016.11.4, 2017.7.0
             If the default and the retrieved value are not of the same type,
             then merging will be skipped and the retrieved value will be
             returned. Earlier releases raised an error in these cases.
@@ -382,13 +382,13 @@ def item(*args, **kwargs):
         data. This tradeoff in performance however allows for the use case
         where pillar data is desired only from a single environment.
 
-        .. versionadded:: 2017.7.6,2018.3.1
+        .. versionadded:: 2017.7.6, 2018.3.1
 
     saltenv
         Included only for compatibility with
         :conf_minion:`pillarenv_from_saltenv`, and is otherwise ignored.
 
-        .. versionadded:: 2017.7.6,2018.3.1
+        .. versionadded:: 2017.7.6, 2018.3.1
 
     CLI Examples:
 
@@ -449,7 +449,7 @@ def raw(key=None):
 
 def ext(external, pillar=None):
     '''
-    .. versionchanged:: 2016.3.6,2016.11.3,2017.7.0
+    .. versionchanged:: 2016.3.6, 2016.11.3, 2017.7.0
         The supported ext_pillar types are now tunable using the
         :conf_master:`on_demand_ext_pillar` config option. Earlier releases
         used a hard-coded default.

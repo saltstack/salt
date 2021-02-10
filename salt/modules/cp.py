@@ -596,7 +596,6 @@ def cache_dir(
 
         .. versionadded:: 2014.7.0
 
-
     CLI Examples:
 
     .. code-block:: bash
