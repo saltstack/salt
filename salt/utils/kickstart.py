@@ -1,17 +1,14 @@
-# -*- coding: utf-8 -*-
 """
 Utilities for managing kickstart
 
 .. versionadded:: Beryllium
 """
-from __future__ import absolute_import, unicode_literals
 
-import argparse  # pylint: disable=minimum-python-version
+import argparse
 import shlex
 
 import salt.utils.files
 import salt.utils.yaml
-from salt.ext.six.moves import range
 
 
 def clean_args(args):
@@ -67,7 +64,7 @@ def parse_auth(rule):
         "disablewins",
     )
     for arg in noargs:
-        parser.add_argument("--{0}".format(arg), dest=arg, action="store_true")
+        parser.add_argument("--{}".format(arg), dest=arg, action="store_true")
 
     parser.add_argument("--enablenis", dest="enablenis", action="store")
     parser.add_argument("--hesiodrhs", dest="hesiodrhs", action="store")
@@ -598,15 +595,15 @@ def parse_raid(rule):
 
     partitions = []
     newrules = []
-    for count in range(0, len(rules)):
+    for count, rule in enumerate(rules):
         if count == 0:
-            newrules.append(rules[count])
+            newrules.append(rule)
             continue
-        elif rules[count].startswith("--"):
-            newrules.append(rules[count])
+        elif rule.startswith("--"):
+            newrules.append(rule)
             continue
         else:
-            partitions.append(rules[count])
+            partitions.append(rule)
     rules = newrules
 
     parser.add_argument("mntpoint")
@@ -854,15 +851,15 @@ def parse_volgroup(rule):
 
     partitions = []
     newrules = []
-    for count in range(0, len(rules)):
+    for count, rule in enumerate(rules):
         if count == 0:
-            newrules.append(rules[count])
+            newrules.append(rule)
             continue
-        elif rules[count].startswith("--"):
-            newrules.append(rules[count])
+        elif rule.startswith("--"):
+            newrules.append(rule)
             continue
         else:
-            partitions.append(rules[count])
+            partitions.append(rule)
     rules = newrules
 
     parser.add_argument("name")
