@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 IPS pkg support for Solaris
 
@@ -35,20 +34,15 @@ Or you can override it globally by setting the :conf_minion:`providers` paramete
       pkg: pkgutil
 
 """
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 import logging
 
-# Import salt libs
 import salt.utils.data
 import salt.utils.functools
 import salt.utils.path
 import salt.utils.pkg
 from salt.exceptions import CommandExecutionError
-from salt.ext import six
-from salt.ext.six import string_types
 
 # Define the module's virtual name
 __virtualname__ = "pkg"
@@ -323,7 +317,7 @@ def version(*names, **kwargs):
     # Return a string if only one package name passed
     if len(names) == 1:
         try:
-            return next(six.itervalues(ret))
+            return next(iter(ret.values()))
         except StopIteration:
             return ""
 
@@ -383,7 +377,7 @@ def latest_version(*names, **kwargs):
     # Return a string if only one package name passed
     if len(names) == 1:
         try:
-            return next(six.itervalues(ret))
+            return next(iter(ret.values()))
         except StopIteration:
             return ""
 
@@ -538,21 +532,19 @@ def install(name=None, refresh=False, pkgs=None, version=None, test=False, **kwa
             if getattr(pkg, "items", False):
                 if list(pkg.items())[0][1]:  # version specified
                     pkg2inst.append(
-                        "{0}@{1}".format(
-                            list(pkg.items())[0][0], list(pkg.items())[0][1]
-                        )
+                        "{}@{}".format(list(pkg.items())[0][0], list(pkg.items())[0][1])
                     )
                 else:
                     pkg2inst.append(list(pkg.items())[0][0])
             else:
-                pkg2inst.append("{0}".format(pkg))
+                pkg2inst.append("{}".format(pkg))
         log.debug("Installing these packages instead of %s: %s", name, pkg2inst)
 
     else:  # install single package
         if version:
-            pkg2inst = "{0}@{1}".format(name, version)
+            pkg2inst = "{}@{}".format(name, version)
         else:
-            pkg2inst = "{0}".format(name)
+            pkg2inst = "{}".format(name)
 
     cmd = ["pkg", "install", "-v", "--accept"]
     if test:
@@ -564,7 +556,7 @@ def install(name=None, refresh=False, pkgs=None, version=None, test=False, **kwa
 
     # Install or upgrade the package
     # If package is already installed
-    if isinstance(pkg2inst, string_types):
+    if isinstance(pkg2inst, str):
         cmd.append(pkg2inst)
     elif isinstance(pkg2inst, list):
         cmd = cmd + pkg2inst
