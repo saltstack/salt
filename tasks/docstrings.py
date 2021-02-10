@@ -46,7 +46,6 @@ def check(ctx, files, check_proper_formatting=False):
     exitcode = 0
     for path in _files:
         contents = path.read_text()
-        initial_contents = contents
         try:
             module = ast.parse(path.read_text(), filename=str(path))
             module_docstring = ast.get_docstring(module, clean=False)
@@ -162,7 +161,7 @@ def _check_valid_versions_on_docstrings(docstring):
         bad_versions = []
         for vs in versions:
             try:
-                parsed = SaltStackVersion.parse(vs)
+                SaltStackVersion.parse(vs)
             except ValueError:
                 bad_versions.append(vs)
         if bad_versions:
