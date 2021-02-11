@@ -5,7 +5,7 @@ import salt.modules.virt as virt
 import salt.syspaths
 import salt.utils.xmlutil as xmlutil
 from salt._compat import ElementTree as ET
-from salt.exceptions import SaltInvocationError
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 from tests.support.mock import MagicMock, patch
 
 from .conftest import loader_modules_config
@@ -17,7 +17,15 @@ def configure_loader_modules():
     return loader_modules_config()
 
 
-def test_gen_xml_for_xen_default_profile():
+@pytest.mark.parametrize(
+    "loader",
+    [
+        "/usr/lib/grub2/x86_64-xen/grub.xen",
+        "/usr/share/grub2/x86_64-xen/grub.xen",
+        None,
+    ],
+)
+def test_gen_xml_for_xen_default_profile(loader):
     """
     Test virt._gen_xml(), XEN PV default profile case
     """
@@ -31,47 +39,62 @@ def test_gen_xml_for_xen_default_profile():
         os_mock = MagicMock(spec=virt.os)
 
         def fake_exists(path):
-            return path == "/usr/lib/grub2/x86_64-xen/grub.xen"
+            return loader and path == loader
 
         os_mock.path.exists = MagicMock(side_effect=fake_exists)
 
         with patch.dict(virt.__dict__, {"os": os_mock}):
-            xml_data = virt._gen_xml(
-                virt.libvirt.openAuth.return_value,
-                "hello",
-                1,
-                512,
-                diskp,
-                nicp,
-                "xen",
-                "xen",
-                "x86_64",
-                boot=None,
-            )
-            root = ET.fromstring(xml_data)
-            assert root.attrib["type"] == "xen"
-            assert root.find("vcpu").text == "1"
-            assert root.find("memory").text == str(512 * 1024)
-            assert root.find("memory").attrib["unit"] == "KiB"
-            assert root.find(".//kernel").text == "/usr/lib/grub2/x86_64-xen/grub.xen"
+            if loader:
+                xml_data = virt._gen_xml(
+                    virt.libvirt.openAuth.return_value,
+                    "hello",
+                    1,
+                    512,
+                    diskp,
+                    nicp,
+                    "xen",
+                    "xen",
+                    "x86_64",
+                    boot=None,
+                )
+                root = ET.fromstring(xml_data)
+                assert root.attrib["type"] == "xen"
+                assert root.find("vcpu").text == "1"
+                assert root.find("memory").text == str(512 * 1024)
+                assert root.find("memory").attrib["unit"] == "KiB"
+                assert root.find(".//kernel").text == loader
 
-            disks = root.findall(".//disk")
-            assert len(disks) == 1
-            disk = disks[0]
-            root_dir = salt.config.DEFAULT_MINION_OPTS.get("root_dir")
-            assert disk.find("source").attrib["file"].startswith(root_dir)
-            assert "hello_system" in disk.find("source").attrib["file"]
-            assert disk.find("target").attrib["dev"] == "xvda"
-            assert disk.find("target").attrib["bus"] == "xen"
-            assert disk.find("driver").attrib["name"] == "qemu"
-            assert disk.find("driver").attrib["type"] == "qcow2"
+                disks = root.findall(".//disk")
+                assert len(disks) == 1
+                disk = disks[0]
+                root_dir = salt.config.DEFAULT_MINION_OPTS.get("root_dir")
+                assert disk.find("source").attrib["file"].startswith(root_dir)
+                assert "hello_system" in disk.find("source").attrib["file"]
+                assert disk.find("target").attrib["dev"] == "xvda"
+                assert disk.find("target").attrib["bus"] == "xen"
+                assert disk.find("driver").attrib["name"] == "qemu"
+                assert disk.find("driver").attrib["type"] == "qcow2"
 
-            interfaces = root.findall(".//interface")
-            assert len(interfaces) == 1
-            iface = interfaces[0]
-            assert iface.attrib["type"] == "bridge"
-            assert iface.find("source").attrib["bridge"] == "br0"
-            assert iface.find("model") is None
+                interfaces = root.findall(".//interface")
+                assert len(interfaces) == 1
+                iface = interfaces[0]
+                assert iface.attrib["type"] == "bridge"
+                assert iface.find("source").attrib["bridge"] == "br0"
+                assert iface.find("model") is None
+            else:
+                with pytest.raises(CommandExecutionError):
+                    xml_data = virt._gen_xml(
+                        virt.libvirt.openAuth.return_value,
+                        "hello",
+                        1,
+                        512,
+                        diskp,
+                        nicp,
+                        "xen",
+                        "xen",
+                        "x86_64",
+                        boot=None,
+                    )
 
 
 def test_update_xen_disk_volumes(make_mock_vm, make_mock_storage_pool):
