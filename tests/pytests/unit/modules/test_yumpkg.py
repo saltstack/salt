@@ -16,38 +16,42 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
-LIST_REPOS = {
-    "base": {
-        "file": "/etc/yum.repos.d/CentOS-Base.repo",
-        "gpgcheck": "1",
-        "gpgkey": "file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7",
-        "mirrorlist": "http://mirrorlist.centos.org/?release=$releasever&arch=$basearch&repo=os&infra=$infra",
-        "name": "CentOS-$releasever - Base",
-    },
-    "base-source": {
-        "baseurl": "http://vault.centos.org/centos/$releasever/os/Source/",
-        "enabled": "0",
-        "file": "/etc/yum.repos.d/CentOS-Sources.repo",
-        "gpgcheck": "1",
-        "gpgkey": "file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7",
-        "name": "CentOS-$releasever - Base Sources",
-    },
-    "updates": {
-        "file": "/etc/yum.repos.d/CentOS-Base.repo",
-        "gpgcheck": "1",
-        "gpgkey": "file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7",
-        "mirrorlist": "http://mirrorlist.centos.org/?release=$releasever&arch=$basearch&repo=updates&infra=$infra",
-        "name": "CentOS-$releasever - Updates",
-    },
-    "updates-source": {
-        "baseurl": "http://vault.centos.org/centos/$releasever/updates/Source/",
-        "enabled": "0",
-        "file": "/etc/yum.repos.d/CentOS-Sources.repo",
-        "gpgcheck": "1",
-        "gpgkey": "file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7",
-        "name": "CentOS-$releasever - Updates Sources",
-    },
-}
+
+@pytest.fixture(scope="module")
+def list_repos_var():
+
+    return {
+        "base": {
+            "file": "/etc/yum.repos.d/CentOS-Base.repo",
+            "gpgcheck": "1",
+            "gpgkey": "file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7",
+            "mirrorlist": "http://mirrorlist.centos.org/?release=$releasever&arch=$basearch&repo=os&infra=$infra",
+            "name": "CentOS-$releasever - Base",
+        },
+        "base-source": {
+            "baseurl": "http://vault.centos.org/centos/$releasever/os/Source/",
+            "enabled": "0",
+            "file": "/etc/yum.repos.d/CentOS-Sources.repo",
+            "gpgcheck": "1",
+            "gpgkey": "file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7",
+            "name": "CentOS-$releasever - Base Sources",
+        },
+        "updates": {
+            "file": "/etc/yum.repos.d/CentOS-Base.repo",
+            "gpgcheck": "1",
+            "gpgkey": "file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7",
+            "mirrorlist": "http://mirrorlist.centos.org/?release=$releasever&arch=$basearch&repo=updates&infra=$infra",
+            "name": "CentOS-$releasever - Updates",
+        },
+        "updates-source": {
+            "baseurl": "http://vault.centos.org/centos/$releasever/updates/Source/",
+            "enabled": "0",
+            "file": "/etc/yum.repos.d/CentOS-Sources.repo",
+            "gpgcheck": "1",
+            "gpgkey": "file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7",
+            "name": "CentOS-$releasever - Updates Sources",
+        },
+    }
 
 
 @pytest.fixture
@@ -507,7 +511,7 @@ def test_latest_version_with_options():
                 )
 
 
-def test_list_repo_pkgs_with_options():
+def test_list_repo_pkgs_with_options(list_repos_var):
     """
     Test list_repo_pkgs with and without fromrepo
 
@@ -517,7 +521,7 @@ def test_list_repo_pkgs_with_options():
     really_old_yum = MagicMock(return_value="3.2.0")
     older_yum = MagicMock(return_value="3.4.0")
     newer_yum = MagicMock(return_value="3.4.5")
-    list_repos_mock = MagicMock(return_value=LIST_REPOS)
+    list_repos_mock = MagicMock(return_value=list_repos_var)
     kwargs = {
         "output_loglevel": "trace",
         "ignore_retcode": True,
@@ -1616,7 +1620,7 @@ def test_group_info():
         assert info == expected
 
 
-def test_get_repo_with_existent_repo():
+def test_get_repo_with_existent_repo(list_repos_var):
     """
     Test get_repo with an existent repository
     Expected return is a populated dictionary
@@ -1646,7 +1650,7 @@ def test_get_repo_with_existent_repo():
         "enabled": "1",
     }
     patch_list_repos = patch.object(
-        yumpkg, "list_repos", autospec=True, return_value=LIST_REPOS
+        yumpkg, "list_repos", autospec=True, return_value=list_repos_var
     )
     patch_parse_repo_file = patch.object(
         yumpkg, "_parse_repo_file", autospec=True, return_value=parse_repo_file_return,
@@ -1657,7 +1661,7 @@ def test_get_repo_with_existent_repo():
     assert ret == expected, ret
 
 
-def test_get_repo_with_non_existent_repo():
+def test_get_repo_with_non_existent_repo(list_repos_var):
     """
     Test get_repo with an non existent repository
     Expected return is an empty dictionary
@@ -1671,7 +1675,7 @@ def test_get_repo_with_non_existent_repo():
     }
     expected = {}
     patch_list_repos = patch.object(
-        yumpkg, "list_repos", autospec=True, return_value=LIST_REPOS
+        yumpkg, "list_repos", autospec=True, return_value=list_repos_var
     )
 
     with patch_list_repos:

@@ -27,129 +27,153 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
-APT_KEY_LIST = r"""
-pub:-:1024:17:46181433FBB75451:1104433784:::-:::scSC:
-fpr:::::::::C5986B4F1257FFA86632CBA746181433FBB75451:
-uid:-::::1104433784::B4D41942D4B35FF44182C7F9D00C99AF27B93AD0::Ubuntu CD Image Automatic Signing Key <cdimage@ubuntu.com>:
-"""
-
-REPO_KEYS = {
-    "46181433FBB75451": {
-        "algorithm": 17,
-        "bits": 1024,
-        "capability": "scSC",
-        "date_creation": 1104433784,
-        "date_expiration": None,
-        "fingerprint": "C5986B4F1257FFA86632CBA746181433FBB75451",
-        "keyid": "46181433FBB75451",
-        "uid": "Ubuntu CD Image Automatic Signing Key <cdimage@ubuntu.com>",
-        "uid_hash": "B4D41942D4B35FF44182C7F9D00C99AF27B93AD0",
-        "validity": "-",
+@pytest.fixture(scope="module")
+def repo_keys_var():
+    return {
+        "46181433FBB75451": {
+            "algorithm": 17,
+            "bits": 1024,
+            "capability": "scSC",
+            "date_creation": 1104433784,
+            "date_expiration": None,
+            "fingerprint": "C5986B4F1257FFA86632CBA746181433FBB75451",
+            "keyid": "46181433FBB75451",
+            "uid": "Ubuntu CD Image Automatic Signing Key <cdimage@ubuntu.com>",
+            "uid_hash": "B4D41942D4B35FF44182C7F9D00C99AF27B93AD0",
+            "validity": "-",
+        }
     }
-}
 
-PACKAGES = {"wget": "1.15-1ubuntu1.14.04.2"}
 
-LOWPKG_FILES = {
-    "errors": {},
-    "packages": {
-        "wget": [
-            "/.",
-            "/etc",
-            "/etc/wgetrc",
-            "/usr",
-            "/usr/bin",
-            "/usr/bin/wget",
-            "/usr/share",
-            "/usr/share/info",
-            "/usr/share/info/wget.info.gz",
-            "/usr/share/doc",
-            "/usr/share/doc/wget",
-            "/usr/share/doc/wget/MAILING-LIST",
-            "/usr/share/doc/wget/NEWS.gz",
-            "/usr/share/doc/wget/AUTHORS",
-            "/usr/share/doc/wget/copyright",
-            "/usr/share/doc/wget/changelog.Debian.gz",
-            "/usr/share/doc/wget/README",
-            "/usr/share/man",
-            "/usr/share/man/man1",
-            "/usr/share/man/man1/wget.1.gz",
-        ]
-    },
-}
+@pytest.fixture(scope="module")
+def packages_var():
+    return {"wget": "1.15-1ubuntu1.14.04.2"}
 
-LOWPKG_INFO = {
-    "wget": {
-        "architecture": "amd64",
-        "description": "retrieves files from the web",
-        "homepage": "http://www.gnu.org/software/wget/",
-        "install_date": "2016-08-30T22:20:15Z",
-        "maintainer": "Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>",
-        "name": "wget",
-        "section": "web",
-        "source": "wget",
-        "version": "1.15-1ubuntu1.14.04.2",
-        "status": "ii",
-    },
-    "apache2": {
-        "architecture": "amd64",
-        "description": """Apache HTTP Server
- The Apache HTTP Server Project's goal is to build a secure, efficient and
- extensible HTTP server as standards-compliant open source software. The
- result has long been the number one web server on the Internet.
- .
- Installing this package results in a full installation, including the
- configuration files, init scripts and support scripts.""",
-        "homepage": "http://httpd.apache.org/",
-        "install_date": "2016-08-30T22:20:15Z",
-        "maintainer": "Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>",
-        "name": "apache2",
-        "section": "httpd",
-        "source": "apache2",
-        "version": "2.4.18-2ubuntu3.9",
-        "status": "rc",
-    },
-}
 
-APT_Q_UPDATE = """
-Get:1 http://security.ubuntu.com trusty-security InRelease [65 kB]
-Get:2 http://security.ubuntu.com trusty-security/main Sources [120 kB]
-Get:3 http://security.ubuntu.com trusty-security/main amd64 Packages [548 kB]
-Get:4 http://security.ubuntu.com trusty-security/main i386 Packages [507 kB]
-Hit http://security.ubuntu.com trusty-security/main Translation-en
-Fetched 1240 kB in 10s (124 kB/s)
-Reading package lists...
-"""
+@pytest.fixture(scope="module")
+def lowpkg_files_var():
+    return {
+        "errors": {},
+        "packages": {
+            "wget": [
+                "/.",
+                "/etc",
+                "/etc/wgetrc",
+                "/usr",
+                "/usr/bin",
+                "/usr/bin/wget",
+                "/usr/share",
+                "/usr/share/info",
+                "/usr/share/info/wget.info.gz",
+                "/usr/share/doc",
+                "/usr/share/doc/wget",
+                "/usr/share/doc/wget/MAILING-LIST",
+                "/usr/share/doc/wget/NEWS.gz",
+                "/usr/share/doc/wget/AUTHORS",
+                "/usr/share/doc/wget/copyright",
+                "/usr/share/doc/wget/changelog.Debian.gz",
+                "/usr/share/doc/wget/README",
+                "/usr/share/man",
+                "/usr/share/man/man1",
+                "/usr/share/man/man1/wget.1.gz",
+            ]
+        },
+    }
 
-APT_Q_UPDATE_ERROR = """
-Err http://security.ubuntu.com trusty InRelease
 
-Err http://security.ubuntu.com trusty Release.gpg
-Unable to connect to security.ubuntu.com:http:
-Reading package lists...
-W: Failed to fetch http://security.ubuntu.com/ubuntu/dists/trusty/InRelease
+@pytest.fixture(scope="module")
+def lowpkg_info_var():
+    return {
+        "wget": {
+            "architecture": "amd64",
+            "description": "retrieves files from the web",
+            "homepage": "http://www.gnu.org/software/wget/",
+            "install_date": "2016-08-30T22:20:15Z",
+            "maintainer": "Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>",
+            "name": "wget",
+            "section": "web",
+            "source": "wget",
+            "version": "1.15-1ubuntu1.14.04.2",
+            "status": "ii",
+        },
+        "apache2": {
+            "architecture": "amd64",
+            "description": """Apache HTTP Server
+     The Apache HTTP Server Project's goal is to build a secure, efficient and
+     extensible HTTP server as standards-compliant open source software. The
+     result has long been the number one web server on the Internet.
+     .
+     Installing this package results in a full installation, including the
+     configuration files, init scripts and support scripts.""",
+            "homepage": "http://httpd.apache.org/",
+            "install_date": "2016-08-30T22:20:15Z",
+            "maintainer": "Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>",
+            "name": "apache2",
+            "section": "httpd",
+            "source": "apache2",
+            "version": "2.4.18-2ubuntu3.9",
+            "status": "rc",
+        },
+    }
 
-W: Failed to fetch http://security.ubuntu.com/ubuntu/dists/trusty/Release.gpg  Unable to connect to security.ubuntu.com:http:
 
-W: Some index files failed to download. They have been ignored, or old ones used instead.
-"""
+@pytest.fixture(scope="module")
+def apt_q_update_var():
+    return """
+    Get:1 http://security.ubuntu.com trusty-security InRelease [65 kB]
+    Get:2 http://security.ubuntu.com trusty-security/main Sources [120 kB]
+    Get:3 http://security.ubuntu.com trusty-security/main amd64 Packages [548 kB]
+    Get:4 http://security.ubuntu.com trusty-security/main i386 Packages [507 kB]
+    Hit http://security.ubuntu.com trusty-security/main Translation-en
+    Fetched 1240 kB in 10s (124 kB/s)
+    Reading package lists...
+    """
 
-AUTOREMOVE = """
-Reading package lists... Done
-Building dependency tree
-Reading state information... Done
-0 upgraded, 0 newly installed, 0 to remove and 0 not upgraded.
-"""
 
-UPGRADE = """
-Reading package lists...
-Building dependency tree...
-Reading state information...
-0 upgraded, 0 newly installed, 0 to remove and 0 not upgraded.
-"""
+@pytest.fixture(scope="module")
+def apt_q_update_error_var():
+    return """
+    Err http://security.ubuntu.com trusty InRelease
 
-UNINSTALL = {"tmux": {"new": "", "old": "1.8-5"}}
-INSTALL = {"tmux": {"new": "1.8-5", "old": ""}}
+    Err http://security.ubuntu.com trusty Release.gpg
+    Unable to connect to security.ubuntu.com:http:
+    Reading package lists...
+    W: Failed to fetch http://security.ubuntu.com/ubuntu/dists/trusty/InRelease
+
+    W: Failed to fetch http://security.ubuntu.com/ubuntu/dists/trusty/Release.gpg  Unable to connect to security.ubuntu.com:http:
+
+    W: Some index files failed to download. They have been ignored, or old ones used instead.
+    """
+
+
+@pytest.fixture(scope="module")
+def autoremove_var():
+    return """
+    Reading package lists... Done
+    Building dependency tree
+    Reading state information... Done
+    0 upgraded, 0 newly installed, 0 to remove and 0 not upgraded.
+    """
+
+
+@pytest.fixture(scope="module")
+def upgrade_var():
+    return """
+    Reading package lists...
+    Building dependency tree...
+    Reading state information...
+    0 upgraded, 0 newly installed, 0 to remove and 0 not upgraded.
+    """
+
+
+@pytest.fixture(scope="module")
+def uninstall_var():
+    return {"tmux": {"new": "", "old": "1.8-5"}}
+
+
+@pytest.fixture(scope="module")
+def install_var():
+    return {"tmux": {"new": "1.8-5", "old": ""}}
 
 
 def _get_uri(repo):
@@ -186,12 +210,12 @@ def configure_loader_modules():
     return {aptpkg: {"__grains__": {}}}
 
 
-def test_version():
+def test_version(lowpkg_info_var):
     """
     Test - Returns a string representing the package version or an empty string if
     not installed.
     """
-    version = LOWPKG_INFO["wget"]["version"]
+    version = lowpkg_info_var["wget"]["version"]
     mock = MagicMock(return_value=version)
     with patch.dict(aptpkg.__salt__, {"pkg_resource.version": mock}):
         assert aptpkg.version(*["wget"]) == version
@@ -205,11 +229,13 @@ def test_upgrade_available():
         assert aptpkg.upgrade_available("wget") is False
 
 
-def test_add_repo_key():
+def test_add_repo_key(repo_keys_var):
     """
     Test - Add a repo key.
     """
-    with patch("salt.modules.aptpkg.get_repo_keys", MagicMock(return_value=REPO_KEYS)):
+    with patch(
+        "salt.modules.aptpkg.get_repo_keys", MagicMock(return_value=repo_keys_var)
+    ):
         mock = MagicMock(return_value={"retcode": 0, "stdout": "OK"})
         with patch.dict(aptpkg.__salt__, {"cmd.run_all": mock}):
             assert (
@@ -218,11 +244,13 @@ def test_add_repo_key():
             )
 
 
-def test_add_repo_key_failed():
+def test_add_repo_key_failed(repo_keys_var):
     """
     Test - Add a repo key using incomplete input data.
     """
-    with patch("salt.modules.aptpkg.get_repo_keys", MagicMock(return_value=REPO_KEYS)):
+    with patch(
+        "salt.modules.aptpkg.get_repo_keys", MagicMock(return_value=repo_keys_var)
+    ):
         kwargs = {"keyserver": "keyserver.ubuntu.com"}
         mock = MagicMock(return_value={"retcode": 0, "stdout": "OK"})
         with patch.dict(aptpkg.__salt__, {"cmd.run_all": mock}):
@@ -230,31 +258,37 @@ def test_add_repo_key_failed():
                 aptpkg.add_repo_key(**kwargs)
 
 
-def test_get_repo_keys():
+def test_get_repo_keys(repo_keys_var):
     """
     Test - List known repo key details.
     """
+    APT_KEY_LIST = r"""
+    pub:-:1024:17:46181433FBB75451:1104433784:::-:::scSC:
+    fpr:::::::::C5986B4F1257FFA86632CBA746181433FBB75451:
+    uid:-::::1104433784::B4D41942D4B35FF44182C7F9D00C99AF27B93AD0::Ubuntu CD Image Automatic Signing Key <cdimage@ubuntu.com>:
+    """
+
     mock = MagicMock(return_value={"retcode": 0, "stdout": APT_KEY_LIST})
     with patch.dict(aptpkg.__salt__, {"cmd.run_all": mock}):
-        assert aptpkg.get_repo_keys() == REPO_KEYS
+        assert aptpkg.get_repo_keys() == repo_keys_var
 
 
-def test_file_dict():
+def test_file_dict(lowpkg_files_var):
     """
     Test - List the files that belong to a package, grouped by package.
     """
-    mock = MagicMock(return_value=LOWPKG_FILES)
+    mock = MagicMock(return_value=lowpkg_files_var)
     with patch.dict(aptpkg.__salt__, {"lowpkg.file_dict": mock}):
-        assert aptpkg.file_dict("wget") == LOWPKG_FILES
+        assert aptpkg.file_dict("wget") == lowpkg_files_var
 
 
-def test_file_list():
+def test_file_list(lowpkg_files_var):
     """
     Test - List the files that belong to a package.
     """
     files = {
-        "errors": LOWPKG_FILES["errors"],
-        "files": LOWPKG_FILES["packages"]["wget"],
+        "errors": lowpkg_files_var["errors"],
+        "files": lowpkg_files_var["packages"]["wget"],
     }
     mock = MagicMock(return_value=files)
     with patch.dict(aptpkg.__salt__, {"lowpkg.file_list": mock}):
@@ -271,18 +305,18 @@ def test_get_selections():
         assert aptpkg.get_selections("wget") == selections
 
 
-def test_info_installed():
+def test_info_installed(lowpkg_info_var):
     """
     Test - Return the information of the named package(s) installed on the system.
     """
     names = {"group": "section", "packager": "maintainer", "url": "homepage"}
 
-    installed = copy.deepcopy({"wget": LOWPKG_INFO["wget"]})
+    installed = copy.deepcopy({"wget": lowpkg_info_var["wget"]})
     for name in names:
         if installed["wget"].get(names[name], False):
             installed["wget"][name] = installed["wget"].pop(names[name])
 
-    mock = MagicMock(return_value=LOWPKG_INFO)
+    mock = MagicMock(return_value=lowpkg_info_var)
     with patch.dict(aptpkg.__salt__, {"lowpkg.info": mock}):
         del installed["wget"]["status"]
         assert aptpkg.info_installed("wget") == installed
@@ -299,7 +333,7 @@ def test_owner():
         assert aptpkg.owner(*paths) == "wget"
 
 
-def test_refresh_db():
+def test_refresh_db(apt_q_update_var):
     """
     Test - Updates the APT database to latest packages based upon repositories.
     """
@@ -310,7 +344,7 @@ def test_refresh_db():
         "http://security.ubuntu.com trusty-security/main amd64 Packages": True,
         "http://security.ubuntu.com trusty-security/main i386 Packages": True,
     }
-    mock = MagicMock(return_value={"retcode": 0, "stdout": APT_Q_UPDATE})
+    mock = MagicMock(return_value={"retcode": 0, "stdout": apt_q_update_var})
     with patch("salt.utils.pkg.clear_rtag", MagicMock()):
         with patch.dict(
             aptpkg.__salt__,
@@ -319,12 +353,12 @@ def test_refresh_db():
             assert aptpkg.refresh_db() == refresh_db
 
 
-def test_refresh_db_failed():
+def test_refresh_db_failed(apt_q_update_error_var):
     """
     Test - Update the APT database using unreachable repositories.
     """
     kwargs = {"failhard": True}
-    mock = MagicMock(return_value={"retcode": 0, "stdout": APT_Q_UPDATE_ERROR})
+    mock = MagicMock(return_value={"retcode": 0, "stdout": apt_q_update_error_var})
     with patch("salt.utils.pkg.clear_rtag", MagicMock()):
         with patch.dict(
             aptpkg.__salt__,
@@ -334,16 +368,16 @@ def test_refresh_db_failed():
                 aptpkg.refresh_db(**kwargs)
 
 
-def test_autoremove():
+def test_autoremove(packages_var, autoremove_var):
     """
     Test - Remove packages not required by another package.
     """
-    with patch("salt.modules.aptpkg.list_pkgs", MagicMock(return_value=PACKAGES)):
+    with patch("salt.modules.aptpkg.list_pkgs", MagicMock(return_value=packages_var)):
         patch_kwargs = {
             "__salt__": {
                 "config.get": MagicMock(return_value=True),
                 "cmd.run_all": MagicMock(
-                    return_value=MagicMock(return_value=AUTOREMOVE)
+                    return_value=MagicMock(return_value=autoremove_var)
                 ),
             }
         }
@@ -354,39 +388,41 @@ def test_autoremove():
             assert aptpkg.autoremove(list_only=True, purge=True) == []
 
 
-def test_install():
+def test_install(install_var):
     """
     Test - Install packages.
     """
-    with patch("salt.modules.aptpkg.install", MagicMock(return_value=INSTALL)):
-        assert aptpkg.install(name="tmux") == INSTALL
+    with patch("salt.modules.aptpkg.install", MagicMock(return_value=install_var)):
+        assert aptpkg.install(name="tmux") == install_var
         kwargs = {"force_conf_new": True}
-        assert aptpkg.install(name="tmux", **kwargs) == INSTALL
+        assert aptpkg.install(name="tmux", **kwargs) == install_var
 
 
-def test_remove():
+def test_remove(uninstall_var):
     """
     Test - Remove packages.
     """
-    with patch("salt.modules.aptpkg._uninstall", MagicMock(return_value=UNINSTALL)):
-        assert aptpkg.remove(name="tmux") == UNINSTALL
+    with patch("salt.modules.aptpkg._uninstall", MagicMock(return_value=uninstall_var)):
+        assert aptpkg.remove(name="tmux") == uninstall_var
 
 
-def test_purge():
+def test_purge(uninstall_var):
     """
     Test - Remove packages along with all configuration files.
     """
-    with patch("salt.modules.aptpkg._uninstall", MagicMock(return_value=UNINSTALL)):
-        assert aptpkg.purge(name="tmux") == UNINSTALL
+    with patch("salt.modules.aptpkg._uninstall", MagicMock(return_value=uninstall_var)):
+        assert aptpkg.purge(name="tmux") == uninstall_var
 
 
-def test_upgrade():
+def test_upgrade(uninstall_var, upgrade_var):
     """
     Test - Upgrades all packages.
     """
     with patch("salt.utils.pkg.clear_rtag", MagicMock()):
-        with patch("salt.modules.aptpkg.list_pkgs", MagicMock(return_value=UNINSTALL)):
-            mock_cmd = MagicMock(return_value={"retcode": 0, "stdout": UPGRADE})
+        with patch(
+            "salt.modules.aptpkg.list_pkgs", MagicMock(return_value=uninstall_var)
+        ):
+            mock_cmd = MagicMock(return_value={"retcode": 0, "stdout": upgrade_var})
             patch_kwargs = {
                 "__salt__": {
                     "config.get": MagicMock(return_value=True),
@@ -399,13 +435,15 @@ def test_upgrade():
                 assert aptpkg.upgrade(**kwargs) == dict()
 
 
-def test_upgrade_downloadonly():
+def test_upgrade_downloadonly(uninstall_var, upgrade_var):
     """
     Tests the download-only options for upgrade.
     """
     with patch("salt.utils.pkg.clear_rtag", MagicMock()):
-        with patch("salt.modules.aptpkg.list_pkgs", MagicMock(return_value=UNINSTALL)):
-            mock_cmd = MagicMock(return_value={"retcode": 0, "stdout": UPGRADE})
+        with patch(
+            "salt.modules.aptpkg.list_pkgs", MagicMock(return_value=uninstall_var)
+        ):
+            mock_cmd = MagicMock(return_value={"retcode": 0, "stdout": upgrade_var})
             patch_kwargs = {
                 "__salt__": {
                     "config.get": MagicMock(return_value=True),
