@@ -9,7 +9,6 @@ Tests for salt.modules.zpool
 """
 
 import pytest
-
 import salt.loader
 import salt.modules.zpool as zpool
 import salt.utils.decorators
