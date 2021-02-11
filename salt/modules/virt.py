@@ -1024,7 +1024,14 @@ def _gen_xml(
         # Compute the Xen PV boot method
         if __grains__["os_family"] == "Suse":
             if not boot or not boot.get("kernel", None):
-                context["boot"]["kernel"] = "/usr/lib/grub2/x86_64-xen/grub.xen"
+                paths = [
+                    path
+                    for path in ["/usr/share", "/usr/lib"]
+                    if os.path.exists(path + "/grub2/x86_64-xen/grub.xen")
+                ]
+                if not paths:
+                    raise CommandExecutionError("grub-x86_64-xen needs to be installed")
+                context["boot"]["kernel"] = paths[0] + "/grub2/x86_64-xen/grub.xen"
                 context["boot_dev"] = []
 
     default_port = 23023
