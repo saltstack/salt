@@ -238,10 +238,7 @@ def present(host, groups, interfaces, **kwargs):
                 ret["comment"] = "Invalid proxy_host {}".format(proxy_host)
                 return ret
 
-    if "inventory" not in kwargs:
-        inventory = {}
-    else:
-        inventory = kwargs.pop("inventory")
+    inventory = kwargs.pop("inventory", None)
     if inventory is None:
         inventory = {}
     # Create dict of requested inventory items
@@ -250,10 +247,7 @@ def present(host, groups, interfaces, **kwargs):
         for k, v in inv_item.items():
             new_inventory[k] = str(v)
 
-    if "visible_name" not in kwargs:
-        visible_name = None
-    else:
-        visible_name = kwargs.pop("visible_name")
+    visible_name = kwargs.pop("visible_name", None)
 
     host_extra_properties = {}
     if kwargs:
