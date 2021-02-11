@@ -195,6 +195,6 @@ def show_pillar_cache(minion="*", **kwargs):
             _pillar_cache = pillar.cache._dict
 
         if tgt in _pillar_cache and _pillar_cache[tgt]:
-            pillar_cache[tgt] = _pillar_cache.get(tgt).get(pillarenv)
+            pillar_cache[tgt] = _pillar_cache[tgt].get(pillarenv)
 
     return pillar_cache
