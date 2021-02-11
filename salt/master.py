@@ -3,8 +3,6 @@ This module contains all of the routines needed to set up a master server, this
 involves preparing the three listeners and the workers needed by the master.
 """
 
-# Import python libs
-
 import collections
 import copy
 import ctypes
@@ -23,14 +21,12 @@ import salt.acl
 import salt.auth
 import salt.client
 import salt.client.ssh.client
-
-# Import salt libs
 import salt.crypt
 import salt.daemons.masterapi
 import salt.defaults.exitcodes
 import salt.engines
 import salt.exceptions
-import salt.ext.tornado.gen  # pylint: disable=F0401
+import salt.ext.tornado.gen
 import salt.key
 import salt.log.setup
 import salt.minion
@@ -62,10 +58,6 @@ import salt.utils.zeromq
 import salt.wheel
 from salt.config import DEFAULT_INTERVAL
 from salt.defaults import DEFAULT_TARGET_DELIM
-
-# pylint: disable=import-error,no-name-in-module,redefined-builtin
-from salt.ext import six
-from salt.ext.six.moves import range
 from salt.ext.tornado.stack_context import StackContext
 from salt.transport import iter_transport_opts
 from salt.utils.ctx import RequestContext
@@ -78,9 +70,6 @@ from salt.utils.event import tagify
 from salt.utils.odict import OrderedDict
 from salt.utils.zeromq import ZMQ_VERSION_INFO, ZMQDefaultLoop, install_zmq, zmq
 
-# pylint: enable=import-error,no-name-in-module,redefined-builtin
-
-
 try:
     import resource
 
@@ -88,15 +77,6 @@ try:
 except ImportError:
     # resource is not available on windows
     HAS_RESOURCE = False
-
-# Import halite libs
-try:
-    import halite  # pylint: disable=import-error
-
-    HAS_HALITE = True
-except ImportError:
-    HAS_HALITE = False
-
 
 log = logging.getLogger(__name__)
 
@@ -772,10 +752,6 @@ class Master(SMaster):
                 except Exception:  # pylint: disable=broad-except
                     log.error("Error creating ext_processes process: %s", proc)
 
-            if HAS_HALITE and "halite" in self.opts:
-                log.info("Creating master halite process")
-                self.process_manager.add_process(Halite, args=(self.opts["halite"],))
-
             # TODO: remove, or at least push into the transport stuff (pre-fork probably makes sense there)
             if self.opts["con_cache"]:
                 log.info("Creating master concache process")
@@ -842,45 +818,6 @@ class Master(SMaster):
         self.process_manager.kill_children()
         time.sleep(1)
         sys.exit(0)
-
-
-class Halite(salt.utils.process.SignalHandlingProcess):
-    """
-    Manage the Halite server
-    """
-
-    def __init__(self, hopts, **kwargs):
-        """
-        Create a halite instance
-
-        :param dict hopts: The halite options
-        """
-        super().__init__(**kwargs)
-        self.hopts = hopts
-
-    # __setstate__ and __getstate__ are only used on Windows.
-    # We do this so that __init__ will be invoked on Windows in the child
-    # process so that a register_after_fork() equivalent will work on Windows.
-    def __setstate__(self, state):
-        self.__init__(
-            state["hopts"],
-            log_queue=state["log_queue"],
-            log_queue_level=state["log_queue_level"],
-        )
-
-    def __getstate__(self):
-        return {
-            "hopts": self.hopts,
-            "log_queue": self.log_queue,
-            "log_queue_level": self.log_queue_level,
-        }
-
-    def run(self):
-        """
-        Fire up halite!
-        """
-        salt.utils.process.appendproctitle(self.__class__.__name__)
-        halite.start(self.hopts)
 
 
 class ReqServer(salt.utils.process.SignalHandlingProcess):
@@ -974,15 +911,6 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
         if salt.utils.platform.is_windows():
             kwargs["log_queue"] = self.log_queue
             kwargs["log_queue_level"] = self.log_queue_level
-            # Use one worker thread if only the TCP transport is set up on
-            # Windows and we are using Python 2. There is load balancer
-            # support on Windows for the TCP transport when using Python 3.
-            if tcp_only and six.PY2 and int(self.opts["worker_threads"]) != 1:
-                log.warning(
-                    "TCP transport supports only 1 worker on Windows "
-                    "when using Python 2."
-                )
-                self.opts["worker_threads"] = 1
 
         if self.opts["req_server_niceness"] and not salt.utils.platform.is_windows():
             log.info(
@@ -1084,6 +1012,7 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
     def _handle_signals(self, signum, sigframe):
         for channel in getattr(self, "req_channels", ()):
             channel.close()
+        self.clear_funcs.destroy()
         super()._handle_signals(signum, sigframe)
 
     def __bind(self):
@@ -2033,6 +1962,12 @@ class AESFuncs(TransportMethods):
         # Encrypt the return
         return ret, {"fun": "send"}
 
+    def destroy(self):
+        self.masterapi.destroy()
+        if self.local is not None:
+            self.local.destroy()
+            self.local = None
+
 
 class ClearFuncs(TransportMethods):
     """
@@ -2573,3 +2508,11 @@ class ClearFuncs(TransportMethods):
         Send the load back to the sender.
         """
         return clear_load
+
+    def destroy(self):
+        if self.masterapi is not None:
+            self.masterapi.destroy()
+            self.masterapi = None
+        if self.local is not None:
+            self.local.destroy()
+            self.local = None

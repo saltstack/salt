@@ -2553,6 +2553,15 @@ def expand_repo_def(**kwargs):
         if kwarg in kwargs:
             setattr(source_entry, kwarg, kwargs[kwarg])
 
+    source_list = sourceslist.SourcesList()
+    source_entry = source_list.add(
+        type=source_entry.type,
+        uri=source_entry.uri,
+        dist=source_entry.dist,
+        orig_comps=getattr(source_entry, "comps", []),
+        architectures=getattr(source_entry, "architectures", []),
+    )
+
     sanitized["file"] = source_entry.file
     sanitized["comps"] = getattr(source_entry, "comps", [])
     sanitized["disabled"] = source_entry.disabled

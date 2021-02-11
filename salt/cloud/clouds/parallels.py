@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Parallels Cloud Module
 ======================
@@ -20,19 +19,19 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
 
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import pprint
 import time
+import urllib.parse
+from urllib.error import URLError
+from urllib.request import HTTPBasicAuthHandler as _HTTPBasicAuthHandler
+from urllib.request import Request as _Request
+from urllib.request import build_opener as _build_opener
+from urllib.request import install_opener as _install_opener
+from urllib.request import urlopen as _urlopen
 
 import salt.config as config
-
-# Import salt cloud libs
 import salt.utils.cloud
-
-# Import Salt libs
 from salt._compat import ElementTree as ET
 from salt.exceptions import (
     SaltCloudExecutionFailure,
@@ -40,23 +39,6 @@ from salt.exceptions import (
     SaltCloudNotFound,
     SaltCloudSystemExit,
 )
-
-# Import 3rd-party libs
-from salt.ext import six
-
-# pylint: disable=import-error,no-name-in-module
-from salt.ext.six.moves.urllib.error import URLError
-from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
-from salt.ext.six.moves.urllib.request import (
-    HTTPBasicAuthHandler as _HTTPBasicAuthHandler,
-)
-from salt.ext.six.moves.urllib.request import Request as _Request
-from salt.ext.six.moves.urllib.request import build_opener as _build_opener
-from salt.ext.six.moves.urllib.request import install_opener as _install_opener
-from salt.ext.six.moves.urllib.request import urlopen as _urlopen
-
-# pylint: enable=import-error,no-name-in-module
-
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -177,7 +159,7 @@ def get_image(vm_):
         "image", vm_, __opts__, search_global=False
     )
     for image in images:
-        if six.text_type(vm_image) in (images[image]["name"], images[image]["id"]):
+        if str(vm_image) in (images[image]["name"], images[image]["id"]):
             return images[image]["id"]
     raise SaltCloudNotFound("The specified image could not be found.")
 
@@ -259,7 +241,7 @@ def create_node(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "requesting instance",
-        "salt/cloud/{0}/requesting".format(vm_["name"]),
+        "salt/cloud/{}/requesting".format(vm_["name"]),
         args={
             "kwargs": __utils__["cloud.filter_event"]("requesting", data, list(data)),
         },
@@ -294,7 +276,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "starting create",
-        "salt/cloud/{0}/creating".format(vm_["name"]),
+        "salt/cloud/{}/creating".format(vm_["name"]),
         args=__utils__["cloud.filter_event"](
             "creating", vm_, ["name", "profile", "provider", "driver"]
         ),
@@ -320,11 +302,11 @@ def create(vm_):
 
     name = vm_["name"]
     if not wait_until(name, "CREATED"):
-        return {"Error": "Unable to start {0}, command timed out".format(name)}
+        return {"Error": "Unable to start {}, command timed out".format(name)}
     start(vm_["name"], call="action")
 
     if not wait_until(name, "STARTED"):
-        return {"Error": "Unable to start {0}, command timed out".format(name)}
+        return {"Error": "Unable to start {}, command timed out".format(name)}
 
     def __query_node_data(vm_name):
         data = show_instance(vm_name, call="action")
@@ -351,7 +333,7 @@ def create(vm_):
         except SaltCloudSystemExit:
             pass
         finally:
-            raise SaltCloudSystemExit(six.text_type(exc))
+            raise SaltCloudSystemExit(str(exc))
 
     comps = data["network"]["public-ip"]["address"].split("/")
     public_ip = comps[0]
@@ -365,7 +347,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "created instance",
-        "salt/cloud/{0}/created".format(vm_["name"]),
+        "salt/cloud/{}/created".format(vm_["name"]),
         args=__utils__["cloud.filter_event"](
             "created", vm_, ["name", "profile", "provider", "driver"]
         ),
@@ -401,20 +383,20 @@ def query(action=None, command=None, args=None, method="GET", data=None):
         path += action
 
     if command:
-        path += "/{0}".format(command)
+        path += "/{}".format(command)
 
     if not type(args, dict):
         args = {}
 
     kwargs = {"data": data}
-    if isinstance(data, six.string_types) and "<?xml" in data:
+    if isinstance(data, str) and "<?xml" in data:
         kwargs["headers"] = {
             "Content-type": "application/xml",
         }
 
     if args:
-        params = _urlencode(args)
-        req = _Request(url="{0}?{1}".format(path, params), **kwargs)
+        params = urllib.parse.urlencode(args)
+        req = _Request(url="{}?{}".format(path, params), **kwargs)
     else:
         req = _Request(url=path, **kwargs)
 
@@ -537,7 +519,7 @@ def destroy(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroying instance",
-        "salt/cloud/{0}/destroying".format(name),
+        "salt/cloud/{}/destroying".format(name),
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -547,7 +529,7 @@ def destroy(name, call=None):
     if node["state"] == "STARTED":
         stop(name, call="action")
         if not wait_until(name, "STOPPED"):
-            return {"Error": "Unable to destroy {0}, command timed out".format(name)}
+            return {"Error": "Unable to destroy {}, command timed out".format(name)}
 
     data = query(action="ve", command=name, method="DELETE")
 
@@ -557,7 +539,7 @@ def destroy(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroyed instance",
-        "salt/cloud/{0}/destroyed".format(name),
+        "salt/cloud/{}/destroyed".format(name),
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -568,7 +550,7 @@ def destroy(name, call=None):
             name, __active_provider_name__.split(":")[0], __opts__
         )
 
-    return {"Destroyed": "{0} was destroyed.".format(name)}
+    return {"Destroyed": "{} was destroyed.".format(name)}
 
 
 def start(name, call=None):
@@ -586,12 +568,12 @@ def start(name, call=None):
             "The show_instance action must be called with -a or --action."
         )
 
-    data = query(action="ve", command="{0}/start".format(name), method="PUT")
+    data = query(action="ve", command="{}/start".format(name), method="PUT")
 
     if "error" in data:
         return data["error"]
 
-    return {"Started": "{0} was started.".format(name)}
+    return {"Started": "{} was started.".format(name)}
 
 
 def stop(name, call=None):
@@ -609,9 +591,9 @@ def stop(name, call=None):
             "The show_instance action must be called with -a or --action."
         )
 
-    data = query(action="ve", command="{0}/stop".format(name), method="PUT")
+    data = query(action="ve", command="{}/stop".format(name), method="PUT")
 
     if "error" in data:
         return data["error"]
 
-    return {"Stopped": "{0} was stopped.".format(name)}
+    return {"Stopped": "{} was stopped.".format(name)}

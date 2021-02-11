@@ -1941,7 +1941,7 @@ Default: ``None``
 TLS/SSL connection options. This could be set to a dictionary containing
 arguments corresponding to python ``ssl.wrap_socket`` method. For details see
 `Tornado <http://www.tornadoweb.org/en/stable/tcpserver.html#tornado.tcpserver.TCPServer>`_
-and `Python <https://docs.python.org/2/library/ssl.html#ssl.wrap_socket>`_
+and `Python <https://docs.python.org/3/library/ssl.html#ssl.wrap_socket>`_
 documentation.
 
 Note: to set enum arguments values like ``cert_reqs`` and ``ssl_version`` use
@@ -2525,18 +2525,20 @@ states is cluttering the logs. Set it to True to ignore them.
 
 Default: ``False``
 
-Automatically aggregate all states that have support for mod_aggregate by
-setting to ``True``. Or pass a list of state module names to automatically
+Automatically aggregate all states that have support for ``mod_aggregate`` by
+setting to ``True``.
+
+.. code-block:: yaml
+
+    state_aggregate: True
+
+Or pass a list of state module names to automatically
 aggregate just those types.
 
 .. code-block:: yaml
 
     state_aggregate:
       - pkg
-
-.. code-block:: yaml
-
-    state_aggregate: True
 
 .. conf_master:: state_events
 
@@ -4659,7 +4661,6 @@ strategy between different sources. It accepts 5 values:
 
   .. code-block:: yaml
 
-      #!yamlex
       foo: 42
       bar: !aggregate {
         element1: True
@@ -4668,7 +4669,6 @@ strategy between different sources. It accepts 5 values:
 
   .. code-block:: yaml
 
-      #!yamlex
       bar: !aggregate {
         element2: True
       }
@@ -4685,6 +4685,11 @@ strategy between different sources. It accepts 5 values:
       baz:
         - quux
         - quux2
+
+  .. note::
+      This requires that the :ref:`render pipeline <renderers-composing>`
+      defined in the :conf_master:`renderer` master configuration ends in
+      ``yamlex``.
 
 * ``overwrite``:
 

@@ -1,16 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 The function cache system allows for data to be stored on the master so it can be easily read by other minions
 """
-
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import time
 import traceback
 
-# Import salt libs
 import salt.crypt
 import salt.payload
 import salt.transport.client
@@ -22,9 +17,6 @@ import salt.utils.mine
 import salt.utils.minions
 import salt.utils.network
 from salt.exceptions import SaltClientError
-
-# Import 3rd-party libs
-from salt.ext import six
 
 MINE_INTERNAL_KEYWORDS = frozenset(
     [
@@ -175,14 +167,14 @@ def update(clear=False, mine_functions=None):
         if not mine_functions:
             return
     elif isinstance(mine_functions, list):
-        mine_functions = dict((fun, {}) for fun in mine_functions)
+        mine_functions = {fun: {} for fun in mine_functions}
     elif isinstance(mine_functions, dict):
         pass
     else:
         return
 
     mine_data = {}
-    for function_alias, function_data in six.iteritems(mine_functions):
+    for function_alias, function_data in mine_functions.items():
         (
             function_name,
             function_args,
@@ -336,7 +328,7 @@ def get(tgt, fun, tgt_type="glob", exclude_minion=False):
         if not isinstance(data, dict):
             return ret
 
-        if isinstance(fun, six.string_types):
+        if isinstance(fun, str):
             functions = list(set(fun.split(",")))
             _ret_dict = len(functions) > 1
         elif isinstance(fun, list):
@@ -472,13 +464,13 @@ def get_docker(interfaces=None, cidrs=None, with_container_id=False):
     proxy_lists = {}
 
     # Process docker info
-    for containers in six.itervalues(docker_hosts):
+    for containers in docker_hosts.values():
         host = containers.pop("host")
         host_ips = []
 
         # Prepare host_ips list
         if not interfaces:
-            for info in six.itervalues(host["interfaces"]):
+            for info in host["interfaces"].values():
                 if "inet" in info:
                     for ip_ in info["inet"]:
                         host_ips.append(ip_["address"])
@@ -500,7 +492,7 @@ def get_docker(interfaces=None, cidrs=None, with_container_id=False):
             host_ips = list(set(good_ips))
 
         # Process each container
-        for container in six.itervalues(containers):
+        for container in containers.values():
             container_id = container["Info"]["Id"]
             if container["Image"] not in proxy_lists:
                 proxy_lists[container["Image"]] = {}
@@ -515,7 +507,7 @@ def get_docker(interfaces=None, cidrs=None, with_container_id=False):
                             .setdefault("ipv4", {})
                             .setdefault(dock_port["PrivatePort"], [])
                         )
-                        container_network_footprint = "{0}:{1}".format(
+                        container_network_footprint = "{}:{}".format(
                             ip_, dock_port["PublicPort"]
                         )
                         if with_container_id:
@@ -530,7 +522,7 @@ def get_docker(interfaces=None, cidrs=None, with_container_id=False):
                         .setdefault("ipv4", {})
                         .setdefault(dock_port["PrivatePort"], [])
                     )
-                    container_network_footprint = "{0}:{1}".format(
+                    container_network_footprint = "{}:{}".format(
                         dock_port["IP"], dock_port["PublicPort"]
                     )
                     if with_container_id:
@@ -559,7 +551,7 @@ def valid():
         return
 
     mine_data = {}
-    for function_alias, function_data in six.iteritems(mine_functions):
+    for function_alias, function_data in mine_functions.items():
         (
             function_name,
             function_args,
@@ -571,7 +563,7 @@ def valid():
         if function_name:
             mine_data[function_alias] = {
                 function_name: function_args
-                + [{key: value} for key, value in six.iteritems(function_kwargs)]
+                + [{key: value} for key, value in function_kwargs.items()]
             }
         else:
             mine_data[function_alias] = function_data

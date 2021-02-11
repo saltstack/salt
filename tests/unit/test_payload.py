@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
@@ -6,7 +5,6 @@
     tests.unit.payload_test
     ~~~~~~~~~~~~~~~~~~~~~~~
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 import datetime
@@ -15,13 +13,12 @@ import logging
 import threading
 import time
 
+import pytest
 import salt.exceptions
 import salt.payload
 import zmq
-from salt.ext import six
 from salt.utils import immutabletypes
 from salt.utils.odict import OrderedDict
-from tests.support.helpers import slowTest
 from tests.support.unit import TestCase, skipIf
 
 log = logging.getLogger(__name__)
@@ -32,7 +29,7 @@ class PayloadTestCase(TestCase):
         if isinstance(data, OrderedDict):
             raise AssertionError("Found an ordered dictionary")
         if isinstance(data, dict):
-            for value in six.itervalues(data):
+            for value in data.values():
                 self.assertNoOrderedDict(value)
         elif isinstance(data, (list, tuple)):
             for chunk in data:
@@ -68,7 +65,7 @@ class PayloadTestCase(TestCase):
         idata = {"jid": 20180227140750302662}
         sdata = payload.dumps(idata.copy())
         odata = payload.loads(sdata)
-        idata["jid"] = "{0}".format(idata["jid"])
+        idata["jid"] = "{}".format(idata["jid"])
         self.assertEqual(idata, odata)
 
     def test_immutable_dict_dump_load(self):
@@ -209,7 +206,7 @@ class SREQTestCase(TestCase):
             """
             context = zmq.Context()
             socket = context.socket(zmq.REP)
-            socket.bind("tcp://*:{0}".format(SREQTestCase.port))
+            socket.bind("tcp://*:{}".format(SREQTestCase.port))
             payload = salt.payload.Serial("msgpack")
 
             while SREQTestCase.thread_running.is_set():
@@ -247,9 +244,9 @@ class SREQTestCase(TestCase):
         SREQTestCase.echo_server.join()
 
     def get_sreq(self):
-        return salt.payload.SREQ("tcp://127.0.0.1:{0}".format(SREQTestCase.port))
+        return salt.payload.SREQ("tcp://127.0.0.1:{}".format(SREQTestCase.port))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_send_auto(self):
         """
         Test creation, send/rect
@@ -320,7 +317,7 @@ class SREQTestCase(TestCase):
         idata = {dtvalue: "strval"}
         sdata = payload.dumps(idata.copy())
         odata = payload.loads(sdata, encoding=None)
-        assert isinstance(odata[dtvalue], six.string_types)
+        assert isinstance(odata[dtvalue], str)
 
     def test_raw_vs_encoding_utf8(self):
         """
@@ -332,4 +329,4 @@ class SREQTestCase(TestCase):
         idata = {dtvalue: "strval"}
         sdata = payload.dumps(idata.copy())
         odata = payload.loads(sdata, encoding="utf-8")
-        assert isinstance(odata[dtvalue], six.text_type)
+        assert isinstance(odata[dtvalue], str)

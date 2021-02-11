@@ -30,6 +30,7 @@ import salt.utils.powershell
 import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.timed_subprocess
+import salt.utils.url
 import salt.utils.user
 import salt.utils.versions
 import salt.utils.vt
@@ -1039,6 +1040,11 @@ def run(
 
                 salt myminion cmd.run 'some command' env='{"FOO": "bar"}'
 
+        .. note::
+            When using environment variables on Window's, case-sensitivity
+            matters, i.e. Window's uses `Path` as opposed to `PATH` for other
+            systems.
+
     :param bool clean_env: Attempt to clean out all other shell environment
         variables and set only those provided in the 'env' argument to this
         function.
@@ -1308,6 +1314,11 @@ def shell(
 
                 salt myminion cmd.shell 'some command' env='{"FOO": "bar"}'
 
+        .. note::
+            When using environment variables on Window's, case-sensitivity
+            matters, i.e. Window's uses `Path` as opposed to `PATH` for other
+            systems.
+
     :param bool clean_env: Attempt to clean out all other shell environment
         variables and set only those provided in the 'env' argument to this
         function.
@@ -1543,6 +1554,11 @@ def run_stdout(
 
                 salt myminion cmd.run_stdout 'some command' env='{"FOO": "bar"}'
 
+        .. note::
+            When using environment variables on Window's, case-sensitivity
+            matters, i.e. Window's uses `Path` as opposed to `PATH` for other
+            systems.
+
     :param bool clean_env: Attempt to clean out all other shell environment
         variables and set only those provided in the 'env' argument to this
         function.
@@ -1753,6 +1769,11 @@ def run_stderr(
             .. code-block:: bash
 
                 salt myminion cmd.run_stderr 'some command' env='{"FOO": "bar"}'
+
+        .. note::
+            When using environment variables on Window's, case-sensitivity
+            matters, i.e. Window's uses `Path` as opposed to `PATH` for other
+            systems.
 
     :param bool clean_env: Attempt to clean out all other shell environment
         variables and set only those provided in the 'env' argument to this
@@ -1966,6 +1987,11 @@ def run_all(
             .. code-block:: bash
 
                 salt myminion cmd.run_all 'some command' env='{"FOO": "bar"}'
+
+        .. note::
+            When using environment variables on Window's, case-sensitivity
+            matters, i.e. Window's uses `Path` as opposed to `PATH` for other
+            systems.
 
     :param bool clean_env: Attempt to clean out all other shell environment
         variables and set only those provided in the 'env' argument to this
@@ -2201,6 +2227,11 @@ def retcode(
             .. code-block:: bash
 
                 salt myminion cmd.retcode 'some command' env='{"FOO": "bar"}'
+
+        .. note::
+            When using environment variables on Window's, case-sensitivity
+            matters, i.e. Window's uses `Path` as opposed to `PATH` for other
+            systems.
 
     :param bool clean_env: Attempt to clean out all other shell environment
         variables and set only those provided in the 'env' argument to this
@@ -2474,6 +2505,11 @@ def script(
 
                 salt myminion cmd.script 'some command' env='{"FOO": "bar"}'
 
+        .. note::
+            When using environment variables on Window's, case-sensitivity
+            matters, i.e. Window's uses `Path` as opposed to `PATH` for other
+            systems.
+
     :param str template: If this setting is applied then the named templating
         engine will be used to render the downloaded file. Currently jinja,
         mako, and wempy are supported.
@@ -2578,7 +2614,9 @@ def script(
             obj_name=cwd, principal=runas, permissions="full_control"
         )
 
-    path = salt.utils.files.mkstemp(dir=cwd, suffix=os.path.splitext(source)[1])
+    path = salt.utils.files.mkstemp(
+        dir=cwd, suffix=os.path.splitext(salt.utils.url.split_env(source)[0])[1]
+    )
 
     if template:
         if "pillarenv" in kwargs or "pillar" in kwargs:
@@ -2734,6 +2772,11 @@ def script_retcode(
             .. code-block:: bash
 
                 salt myminion cmd.script_retcode 'some command' env='{"FOO": "bar"}'
+
+        .. note::
+            When using environment variables on Window's, case-sensitivity
+            matters, i.e. Window's uses `Path` as opposed to `PATH` for other
+            systems.
 
     :param str template: If this setting is applied then the named templating
         engine will be used to render the downloaded file. Currently jinja,
@@ -3043,6 +3086,11 @@ def run_chroot(
             .. code-block:: bash
 
                 salt myminion cmd.run_chroot 'some command' env='{"FOO": "bar"}'
+
+        .. note::
+            When using environment variables on Window's, case-sensitivity
+            matters, i.e. Window's uses `Path` as opposed to `PATH` for other
+            systems.
 
     :param dict clean_env: Attempt to clean out all other shell environment
         variables and set only those provided in the 'env' argument to this
@@ -3570,6 +3618,11 @@ def powershell(
 
                 salt myminion cmd.powershell 'some command' env='{"FOO": "bar"}'
 
+        .. note::
+            When using environment variables on Window's, case-sensitivity
+            matters, i.e. Window's uses `Path` as opposed to `PATH` for other
+            systems.
+
     :param bool clean_env: Attempt to clean out all other shell environment
         variables and set only those provided in the 'env' argument to this
         function.
@@ -3878,6 +3931,11 @@ def powershell_all(
             .. code-block:: bash
 
                 salt myminion cmd.powershell_all 'some command' env='{"FOO": "bar"}'
+
+        .. note::
+            When using environment variables on Window's, case-sensitivity
+            matters, i.e. Window's uses `Path` as opposed to `PATH` for other
+            systems.
 
     :param bool clean_env: Attempt to clean out all other shell environment
         variables and set only those provided in the 'env' argument to this
@@ -4188,6 +4246,11 @@ def run_bg(
             .. code-block:: bash
 
                 salt myminion cmd.run_bg 'some command' env='{"FOO": "bar"}'
+
+        .. note::
+            When using environment variables on Window's, case-sensitivity
+            matters, i.e. Window's uses `Path` as opposed to `PATH` for other
+            systems.
 
     :param bool clean_env: Attempt to clean out all other shell environment
         variables and set only those provided in the 'env' argument to this
