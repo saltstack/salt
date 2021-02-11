@@ -113,7 +113,6 @@ To test the connection for ``my-vmware-config`` specified in the cloud
 configuration, run :py:func:`test_vcenter_connection`
 """
 
-
 import logging
 import os.path
 import pprint
