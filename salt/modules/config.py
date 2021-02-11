@@ -1,19 +1,14 @@
-# -*- coding: utf-8 -*-
 """
 Return config information
 """
-
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 import fnmatch
 import logging
 import os
+import urllib.parse
 
 import salt._compat
-
-# Import salt libs
 import salt.config
 import salt.syspaths as syspaths
 import salt.utils.data
@@ -21,9 +16,6 @@ import salt.utils.dictupdate
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.sdb as sdb
-
-# Import 3rd-party libs
-from salt.ext import six
 
 try:
     # Gated for salt-ssh (salt.utils.cloud imports msgpack)
@@ -139,7 +131,7 @@ def valid_fileproto(uri):
 
         salt '*' config.valid_fileproto salt://path/to/file
     """
-    return six.moves.urllib.parse.urlparse(uri).scheme in salt.utils.files.VALID_PROTOS
+    return urllib.parse.urlparse(uri).scheme in salt.utils.files.VALID_PROTOS
 
 
 def option(
@@ -267,14 +259,14 @@ def merge(value, default="", omit_opts=False, omit_master=False, omit_pillar=Fal
     if not omit_opts:
         if value in __opts__:
             ret = __opts__[value]
-            if isinstance(ret, six.string_types):
+            if isinstance(ret, str):
                 return ret
     if not omit_master:
         if value in __pillar__.get("master", {}):
             tmp = __pillar__["master"][value]
             if ret is None:
                 ret = tmp
-                if isinstance(ret, six.string_types):
+                if isinstance(ret, str):
                     return ret
             elif isinstance(ret, dict) and isinstance(tmp, dict):
                 tmp.update(ret)
@@ -286,7 +278,7 @@ def merge(value, default="", omit_opts=False, omit_master=False, omit_pillar=Fal
             tmp = __pillar__[value]
             if ret is None:
                 ret = tmp
-                if isinstance(ret, six.string_types):
+                if isinstance(ret, str):
                     return ret
             elif isinstance(ret, dict) and isinstance(tmp, dict):
                 tmp.update(ret)
@@ -527,11 +519,11 @@ def dot_vals(value):
         salt '*' config.dot_vals host
     """
     ret = {}
-    for key, val in six.iteritems(__pillar__.get("master", {})):
-        if key.startswith("{0}.".format(value)):
+    for key, val in __pillar__.get("master", {}).items():
+        if key.startswith("{}.".format(value)):
             ret[key] = val
-    for key, val in six.iteritems(__opts__):
-        if key.startswith("{0}.".format(value)):
+    for key, val in __opts__.items():
+        if key.startswith("{}.".format(value)):
             ret[key] = val
     return ret
 

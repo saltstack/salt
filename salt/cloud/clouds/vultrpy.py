@@ -76,14 +76,13 @@ You can list SSH keys available on your account using
 
 """
 
-
 import logging
 import pprint
 import time
+import urllib.parse
 
 import salt.config as config
 from salt.exceptions import SaltCloudConfigError, SaltCloudSystemExit
-from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -269,7 +268,10 @@ def destroy(name):
     node = show_instance(name, call="action")
     params = {"SUBID": node["SUBID"]}
     result = _query(
-        "server/destroy", method="POST", decode=False, data=_urlencode(params)
+        "server/destroy",
+        method="POST",
+        decode=False,
+        data=urllib.parse.urlencode(params),
     )
 
     # The return of a destroy call is empty in the case of a success.
@@ -438,7 +440,9 @@ def create(vm_):
     )
 
     try:
-        data = _query("server/create", method="POST", data=_urlencode(kwargs))
+        data = _query(
+            "server/create", method="POST", data=urllib.parse.urlencode(kwargs)
+        )
         if int(data.get("status", "200")) >= 300:
             log.error(
                 "Error creating %s on Vultr\n\n" "Vultr API returned %s\n",

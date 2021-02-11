@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 QingCloud Cloud Module
 ======================
@@ -26,14 +25,12 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
 :depends: requests
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import base64
 import hmac
 import logging
 import pprint
 import time
+import urllib.parse
 from hashlib import sha256
 
 import salt.config as config
@@ -47,12 +44,6 @@ from salt.exceptions import (
     SaltCloudSystemExit,
 )
 
-# Import Salt Libs
-from salt.ext import six
-from salt.ext.six.moves import range
-from salt.ext.six.moves.urllib.parse import quote as _quote
-
-# Import Third Party Libs
 try:
     import requests
 
@@ -110,13 +101,15 @@ def _compute_signature(parameters, access_key_secret, method, path):
     """
     parameters["signature_method"] = "HmacSHA256"
 
-    string_to_sign = "{0}\n{1}\n".format(method.upper(), path)
+    string_to_sign = "{}\n{}\n".format(method.upper(), path)
 
     keys = sorted(parameters.keys())
     pairs = []
     for key in keys:
-        val = six.text_type(parameters[key]).encode("utf-8")
-        pairs.append(_quote(key, safe="") + "=" + _quote(val, safe="-_~"))
+        val = str(parameters[key]).encode("utf-8")
+        pairs.append(
+            urllib.parse.quote(key, safe="") + "=" + urllib.parse.quote(val, safe="-_~")
+        )
     qs = "&".join(pairs)
     string_to_sign += qs
 
@@ -158,9 +151,9 @@ def query(params=None):
                         for sk, sv in value[i - 1].items():
                             if isinstance(sv, dict) or isinstance(sv, list):
                                 sv = salt.utils.json.dumps(sv, separators=(",", ":"))
-                            real_parameters["{0}.{1}.{2}".format(key, i, sk)] = sv
+                            real_parameters["{}.{}.{}".format(key, i, sk)] = sv
                     else:
-                        real_parameters["{0}.{1}".format(key, i)] = value[i - 1]
+                        real_parameters["{}.{}".format(key, i)] = value[i - 1]
             else:
                 real_parameters[key] = value
 
@@ -178,8 +171,8 @@ def query(params=None):
 
     if request.status_code != 200:
         raise SaltCloudSystemExit(
-            "An error occurred while querying QingCloud. HTTP Code: {0}  "
-            "Error: '{1}'".format(request.status_code, request.text)
+            "An error occurred while querying QingCloud. HTTP Code: {}  "
+            "Error: '{}'".format(request.status_code, request.text)
         )
 
     log.debug(request.url)
@@ -222,7 +215,7 @@ def avail_locations(call=None):
     for region in items["zone_set"]:
         result[region["zone_id"]] = {}
         for key in region:
-            result[region["zone_id"]][key] = six.text_type(region[key])
+            result[region["zone_id"]][key] = str(region[key])
 
     return result
 
@@ -233,7 +226,7 @@ def _get_location(vm_=None):
     """
     locations = avail_locations()
 
-    vm_location = six.text_type(
+    vm_location = str(
         config.get_cloud_config_value("zone", vm_, __opts__, search_global=False)
     )
 
@@ -244,7 +237,7 @@ def _get_location(vm_=None):
         return vm_location
 
     raise SaltCloudNotFound(
-        "The specified location, '{0}', could not be found.".format(vm_location)
+        "The specified location, '{}', could not be found.".format(vm_location)
     )
 
 
@@ -302,7 +295,7 @@ def _get_image(vm_):
     Return the VM's image. Used by create().
     """
     images = avail_images()
-    vm_image = six.text_type(
+    vm_image = str(
         config.get_cloud_config_value("image", vm_, __opts__, search_global=False)
     )
 
@@ -313,7 +306,7 @@ def _get_image(vm_):
         return vm_image
 
     raise SaltCloudNotFound(
-        "The specified image, '{0}', could not be found.".format(vm_image)
+        "The specified image, '{}', could not be found.".format(vm_image)
     )
 
 
@@ -424,7 +417,7 @@ def _get_size(vm_):
     """
     sizes = avail_sizes()
 
-    vm_size = six.text_type(
+    vm_size = str(
         config.get_cloud_config_value("size", vm_, __opts__, search_global=False)
     )
 
@@ -435,7 +428,7 @@ def _get_size(vm_):
         return vm_size
 
     raise SaltCloudNotFound(
-        "The specified size, '{0}', could not be found.".format(vm_size)
+        "The specified size, '{}', could not be found.".format(vm_size)
     )
 
 
@@ -616,7 +609,7 @@ def show_instance(instance_id, call=None, kwargs=None):
 
     if items["total_count"] == 0:
         raise SaltCloudNotFound(
-            "The specified instance, '{0}', could not be found.".format(instance_id)
+            "The specified instance, '{}', could not be found.".format(instance_id)
         )
 
     full_node = items["instance_set"][0]
@@ -668,7 +661,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "starting create",
-        "salt/cloud/{0}/creating".format(vm_["name"]),
+        "salt/cloud/{}/creating".format(vm_["name"]),
         args=__utils__["cloud.filter_event"](
             "creating", vm_, ["name", "profile", "provider", "driver"]
         ),
@@ -693,7 +686,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "requesting instance",
-        "salt/cloud/{0}/requesting".format(vm_["name"]),
+        "salt/cloud/{}/requesting".format(vm_["name"]),
         args={
             "kwargs": __utils__["cloud.filter_event"](
                 "requesting", params, list(params)
@@ -724,7 +717,7 @@ def create(vm_):
         except SaltCloudSystemExit:
             pass
         finally:
-            raise SaltCloudSystemExit(six.text_type(exc))
+            raise SaltCloudSystemExit(str(exc))
 
     private_ip = data["private_ips"][0]
 
@@ -742,7 +735,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "created instance",
-        "salt/cloud/{0}/created".format(vm_["name"]),
+        "salt/cloud/{}/created".format(vm_["name"]),
         args=__utils__["cloud.filter_event"](
             "created", vm_, ["name", "profile", "provider", "driver"]
         ),
@@ -868,7 +861,7 @@ def destroy(instance_id, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroying instance",
-        "salt/cloud/{0}/destroying".format(name),
+        "salt/cloud/{}/destroying".format(name),
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -884,7 +877,7 @@ def destroy(instance_id, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroyed instance",
-        "salt/cloud/{0}/destroyed".format(name),
+        "salt/cloud/{}/destroyed".format(name),
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
