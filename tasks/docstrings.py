@@ -195,7 +195,7 @@ def _autofix_docstring(docstring):
 
 def _convert_version_names_to_numbers(docstring):
     directive_regex = re.compile(
-        ".. ((?P<vtype>(versionadded|versionchanged|deprecated)):: (?P<version>.*))"
+        ".. ((?P<vtype>(versionadded|versionchanged|deprecated))(?:[:]+)(?:[ ]+)?(?P<version>.*))"
     )
     for match in directive_regex.finditer(docstring):
         vtype = match.group("vtype")
@@ -213,7 +213,7 @@ def _convert_version_names_to_numbers(docstring):
                         pass
             parsed_versions.append(vs)
         replace_contents = ".. {}:: {}".format(vtype, ", ".join(parsed_versions))
-        docstring = docstring.replace(match.group(0), replace_contents)
+        docstring = docstring.replace(match.group(0), replace_contents.rstrip())
     return docstring
 
 
@@ -233,20 +233,19 @@ def _fix_simple_cli_example_spacing_issues(docstring):
 
 def _fix_directives_formatting(docstring):
     directive_regex = re.compile(
-        r"^(?P<spc1>[ ]+)?((?P<dots>[.]{2,})(?P<spc2>[ ]+)?(?P<directive>([^ ]{1}).*))::(?P<remaining>.*)\n$"
+        r"(\n(?P<spc1>[ ]+)?((?P<dots>[.]{2,})(?P<spc2>[ ]+)?(?P<directive>(?:[^ :]+)))(?:[:]{2})(?P<spc3>[ ]+)?(?P<remaining>[^\n]+)?\n)"
     )
-    output = []
-    for line in docstring.splitlines(True):
-        match = directive_regex.match(line)
-        if match:
-            line = "{}.. {}:: {}".format(
+    for match in directive_regex.finditer(docstring):
+        replacement = (
+            "\n{}.. {}:: {}".format(
                 match.group("spc1") or "",
                 match.group("directive"),
-                match.group("remaining").strip(),
+                match.group("remaining") or "",
             ).rstrip()
-            line += "\n"
-        output.append(line)
-    return "".join(output)
+            + "\n"
+        )
+        docstring = docstring.replace(match.group(0), replacement)
+    return docstring
 
 
 def _fix_codeblocks(docstring):
