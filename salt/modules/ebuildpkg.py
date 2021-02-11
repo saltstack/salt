@@ -355,7 +355,7 @@ def list_upgrades(refresh=True, backtrack=3, **kwargs):  # pylint: disable=W0613
         calculation fails due to a conflict or an unsatisfied dependency
         (default: ´3´).
 
-        .. versionadded: 2015.8.0
+        .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -909,7 +909,7 @@ def upgrade(refresh=True, binhost=None, backtrack=3, **kwargs):
         calculation fails due to a conflict or an unsatisfied dependency
         (default: ´3´).
 
-        .. versionadded: 2015.8.0
+        .. versionadded:: 2015.8.0
 
     Returns a dictionary containing the changes:
 

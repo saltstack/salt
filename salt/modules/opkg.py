@@ -7,7 +7,7 @@ Support for Opkg
     *'pkg.install' is not available*), see :ref:`here
     <module-provider-override>`.
 
-.. versionadded: 2016.3.0
+.. versionadded:: 2016.3.0
 
 .. note::
 

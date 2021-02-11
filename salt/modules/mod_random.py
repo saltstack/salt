@@ -142,7 +142,7 @@ def rand_int(start=1, end=10, seed=None):
     """
     Returns a random integer number between the start and end number.
 
-    .. versionadded: 2015.5.3
+    .. versionadded:: 2015.5.3
 
     start : 1
         Any valid integer number
@@ -172,7 +172,7 @@ def seed(range=10, hash=None):
     Returns a random number within a range. Optional hash argument can
     be any hashable object. If hash is omitted or None, the id of the minion is used.
 
-    .. versionadded: 2015.8.0
+    .. versionadded:: 2015.8.0
 
     hash: None
         Any hashable object.
