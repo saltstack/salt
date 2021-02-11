@@ -153,15 +153,15 @@ def clear_pillar_cache(minion="*", **kwargs):
 
 def show_pillar_cache(minion="*", **kwargs):
     """
-    Clears the cached values when using pillar_cache
+    Shows the cached values in pillar_cache
 
     CLI Example:
 
-    Clears the pillar cache for a specific minion:
+    Shows the pillar cache for a specific minion:
 
     .. code-block:: bash
 
-        salt-run pillar.clear_pillar_cache 'minion'
+        salt-run pillar.show_pillar_cache 'minion'
 
     """
 
@@ -177,7 +177,6 @@ def show_pillar_cache(minion="*", **kwargs):
 
     pillar_cache = {}
     for tgt in ret.get("minions", []):
-        saltenv = "base"
         id_, grains, _ = salt.utils.minions.get_minion_data(tgt, __opts__)
 
         for key in kwargs:
