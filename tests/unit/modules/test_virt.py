@@ -1185,54 +1185,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(iface.find("source").attrib["bridge"], "DEFAULT")
         self.assertEqual(iface.find("model").attrib["type"], "e1000")
 
-    def test_gen_xml_for_xen_default_profile(self):
-        """
-        Test virt._gen_xml(), XEN PV default profile case
-        """
-        diskp = virt._disk_profile(self.mock_conn, "default", "xen", [], "hello")
-        nicp = virt._nic_profile("default", "xen")
-        with patch.dict(
-            virt.__grains__, {"os_family": "Suse"}  # pylint: disable=no-member
-        ):
-            xml_data = virt._gen_xml(
-                self.mock_conn,
-                "hello",
-                1,
-                512,
-                diskp,
-                nicp,
-                "xen",
-                "xen",
-                "x86_64",
-                boot=None,
-            )
-            root = ET.fromstring(xml_data)
-            self.assertEqual(root.attrib["type"], "xen")
-            self.assertEqual(root.find("vcpu").text, "1")
-            self.assertEqual(root.find("memory").text, str(512 * 1024))
-            self.assertEqual(root.find("memory").attrib["unit"], "KiB")
-            self.assertEqual(
-                root.find(".//kernel").text, "/usr/lib/grub2/x86_64-xen/grub.xen"
-            )
-
-            disks = root.findall(".//disk")
-            self.assertEqual(len(disks), 1)
-            disk = disks[0]
-            root_dir = salt.config.DEFAULT_MINION_OPTS.get("root_dir")
-            self.assertTrue(disk.find("source").attrib["file"].startswith(root_dir))
-            self.assertTrue("hello_system" in disk.find("source").attrib["file"])
-            self.assertEqual(disk.find("target").attrib["dev"], "xvda")
-            self.assertEqual(disk.find("target").attrib["bus"], "xen")
-            self.assertEqual(disk.find("driver").attrib["name"], "qemu")
-            self.assertEqual(disk.find("driver").attrib["type"], "qcow2")
-
-            interfaces = root.findall(".//interface")
-            self.assertEqual(len(interfaces), 1)
-            iface = interfaces[0]
-            self.assertEqual(iface.attrib["type"], "bridge")
-            self.assertEqual(iface.find("source").attrib["bridge"], "br0")
-            self.assertIsNone(iface.find("model"))
-
     def test_gen_xml_for_esxi_custom_profile(self):
         """
         Test virt._gen_xml(), ESXi/vmware custom profile case
