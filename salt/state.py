@@ -1033,7 +1033,7 @@ class State:
                 except CommandExecutionError:
                     # Command failed, so notify unless to skip the item
                     cmd = 0
-                if not _check_cmd(cmd):
+                if _check_cmd(cmd):
                     return ret
             elif isinstance(entry, dict):
                 if "fun" not in entry:
@@ -1046,7 +1046,7 @@ class State:
                 if get_return:
                     result = salt.utils.data.traverse_dict_and_list(result, get_return)
                 if self.state_con.get("retcode", 0):
-                    if not _check_cmd(self.state_con["retcode"]):
+                    if _check_cmd(self.state_con["retcode"]):
                         return ret
                 elif result:
                     ret.update(
