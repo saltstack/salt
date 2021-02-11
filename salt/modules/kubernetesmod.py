@@ -22,7 +22,7 @@ provided `kubeconfig` entry is preferred.
 
     salt '*' kubernetes.nodes kubeconfig=/etc/salt/k8s/kubeconfig context=minikube
 
-.. versionadded: 2017.7.0
+.. versionadded:: 2017.7.0
 .. versionchanged:: 2019.2.0
 
 .. warning::

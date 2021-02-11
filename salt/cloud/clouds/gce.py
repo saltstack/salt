@@ -2283,7 +2283,7 @@ def request_instance(vm_):
     """
     Request a single GCE instance from a data dict.
 
-    .. versionchanged: 2017.7.0
+    .. versionchanged:: 2017.7.0
     """
     if not GCE_VM_NAME_REGEX.match(vm_["name"]):
         raise SaltCloudSystemExit(

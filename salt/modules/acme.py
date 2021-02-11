@@ -2,7 +2,7 @@
 ACME / Let's Encrypt module
 ===========================
 
-.. versionadded: 2016.3
+.. versionadded:: 2016.3
 
 This module currently looks for certbot script in the $PATH as
 - certbot,
