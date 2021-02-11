@@ -12,30 +12,52 @@ from salt.ext.six.moves import builtins, range  # pylint: disable=redefined-buil
 from tests.support.mock import patch
 from tests.support.unit import LOREM_IPSUM
 
-UNICODE = "中国語 (繁体)"
-STR = BYTES = UNICODE.encode("utf-8")
-# This is an example of a unicode string with й constructed using two separate
-# code points. Do not modify it.
-EGGS = "\u044f\u0438\u0306\u0446\u0430"
 
-LATIN1_UNICODE = "räksmörgås"
-LATIN1_BYTES = LATIN1_UNICODE.encode("latin-1")
+@pytest.fixture(scope="function")
+def unicode():
+    UNICODE = "中国語 (繁体)"
+    STR = BYTES = UNICODE.encode("utf-8")
+    return UNICODE, STR, BYTES
 
-DOUBLE_TXT = """\
+
+@pytest.fixture(scope="function")
+def eggs():
+    # This is an example of a unicode string with й constructed using two separate
+    # code points. Do not modify it.
+    eggs = "\u044f\u0438\u0306\u0446\u0430"
+    return eggs
+
+
+@pytest.fixture(scope="function")
+def latin1_unicode():
+    LATIN1_UNICODE = "räksmörgås"
+    LATIN1_BYTES = LATIN1_UNICODE.encode("latin-1")
+    return LATIN1_UNICODE, LATIN1_BYTES
+
+
+@pytest.fixture()
+def single_txt():
+    return """
+# set variable identifying the chroot you work in (used in the prompt below)
+if [ -z '$debian_chroot' ] && [ -r /etc/debian_chroot ]; then
+    debian_chroot=$(cat /etc/debian_chroot)
+fi
+"""
+
+
+@pytest.fixture()
+def double_txt():
+    return """
 # set variable identifying the chroot you work in (used in the prompt below)
 if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
     debian_chroot=$(cat /etc/debian_chroot)
 fi
 """
 
-SINGLE_TXT = """\
-# set variable identifying the chroot you work in (used in the prompt below)
-if [ -z '$debian_chroot' ] && [ -r /etc/debian_chroot ]; then
-    debian_chroot=$(cat /etc/debian_chroot)
-fi
-"""
 
-SINGLE_DOUBLE_TXT = """\
+@pytest.fixture()
+def single_double_txt():
+    return """
 # set variable identifying the chroot you work in (used in the prompt below)
 if [ -z '$debian_chroot' ] && [ -r /etc/debian_chroot ]; then
     debian_chroot=$(cat /etc/debian_chroot)
@@ -47,38 +69,10 @@ if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
 fi
 """
 
-SINGLE_DOUBLE_SAME_LINE_TXT = """\
-# set variable identifying the chroot you work in (used in the prompt below)
-if [ -z '$debian_chroot' ] && [ -r "/etc/debian_chroot" ]; then
-    debian_chroot=$(cat /etc/debian_chroot)
-fi
-"""
 
-MATCH = """\
-# set variable identifying the chroot you work in (used in the prompt below)
-if [ -z '$debian_chroot' ] && [ -r /etc/debian_chroot ]; then
-    debian_chroot=$(cat /etc/debian_chroot)
-fi
-
-
-# set variable identifying the chroot you work in (used in the prompt below)
-if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
-    debian_chroot=$(cat /etc/debian_chroot)
-fi
-
-
-# set variable identifying the chroot you work in (used in the prompt below)
-if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
-    debian_chroot=$(cat /etc/debian_chroot)
-fi
-
-
-# set variable identifying the chroot you work in (used in the prompt below)
-if [ -z '$debian_chroot' ] && [ -r /etc/debian_chroot ]; then
-    debian_chroot=$(cat /etc/debian_chroot)
-fi
-
-
+@pytest.fixture()
+def single_double_same_line_txt():
+    return """
 # set variable identifying the chroot you work in (used in the prompt below)
 if [ -z '$debian_chroot' ] && [ -r "/etc/debian_chroot" ]; then
     debian_chroot=$(cat /etc/debian_chroot)
@@ -86,26 +80,60 @@ fi
 """
 
 
-def test_single_quotes():
-    regex = salt.utils.stringutils.build_whitespace_split_regex(SINGLE_TXT)
-    assert re.search(regex, MATCH)
+@pytest.fixture()
+def match():
+    return """
+# set variable identifying the chroot you work in (used in the prompt below)
+if [ -z '$debian_chroot' ] && [ -r /etc/debian_chroot ]; then
+    debian_chroot=$(cat /etc/debian_chroot)
+fi
 
 
-def test_double_quotes():
-    regex = salt.utils.stringutils.build_whitespace_split_regex(DOUBLE_TXT)
-    assert re.search(regex, MATCH)
+# set variable identifying the chroot you work in (used in the prompt below)
+if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
+    debian_chroot=$(cat /etc/debian_chroot)
+fi
 
 
-def test_single_and_double_quotes():
-    regex = salt.utils.stringutils.build_whitespace_split_regex(SINGLE_DOUBLE_TXT)
-    assert re.search(regex, MATCH)
+# set variable identifying the chroot you work in (used in the prompt below)
+if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
+    debian_chroot=$(cat /etc/debian_chroot)
+fi
 
 
-def test_issue_2227():
+# set variable identifying the chroot you work in (used in the prompt below)
+if [ -z '$debian_chroot' ] && [ -r /etc/debian_chroot ]; then
+    debian_chroot=$(cat /etc/debian_chroot)
+fi
+
+
+# set variable identifying the chroot you work in (used in the prompt below)
+if [ -z '$debian_chroot' ] && [ -r "/etc/debian_chroot" ]; then
+    debian_chroot=$(cat /etc/debian_chroot)
+fi
+"""
+
+
+def test_single_quotes(single_txt, match):
+    regex = salt.utils.stringutils.build_whitespace_split_regex(single_txt)
+    assert re.search(regex, match)
+
+
+def test_double_quotes(double_txt, match):
+    regex = salt.utils.stringutils.build_whitespace_split_regex(double_txt)
+    assert re.search(regex, match)
+
+
+def test_single_and_double_quotes(single_double_txt, match):
+    regex = salt.utils.stringutils.build_whitespace_split_regex(single_double_txt)
+    assert re.search(regex, match)
+
+
+def test_issue_2227(single_double_same_line_txt, match):
     regex = salt.utils.stringutils.build_whitespace_split_regex(
-        SINGLE_DOUBLE_SAME_LINE_TXT
+        single_double_same_line_txt
     )
-    assert re.search(regex, MATCH)
+    assert re.search(regex, match)
 
 
 def test_contains_whitespace():
@@ -178,7 +206,10 @@ def test_is_binary():
     )
 
 
-def test_to_str():
+def test_to_str(unicode):
+    UNICODE = unicode[0]
+    BYTES = unicode[2]
+
     for x in (123, (1, 2, 3), [1, 2, 3], {1: 23}, None):
         assert pytest.raises(TypeError, salt.utils.stringutils.to_str, x)
     assert salt.utils.stringutils.to_str("plugh") == "plugh"
@@ -197,7 +228,10 @@ def test_to_str():
     assert salt.utils.stringutils.to_str(bytearray(ut2), "utf-8", "replace") == "\ufffd"
 
 
-def test_to_bytes():
+def test_to_bytes(unicode):
+    UNICODE = unicode[0]
+    BYTES = unicode[2]
+
     for x in (123, (1, 2, 3), [1, 2, 3], {1: 23}, None):
         assert pytest.raises(TypeError, salt.utils.stringutils.to_bytes, x)
 
@@ -211,9 +245,14 @@ def test_to_bytes():
         assert salt.utils.stringutils.to_bytes("Ψ") == b"\xce\xa8"
 
 
-def test_to_unicode():
-    assert salt.utils.stringutils.to_unicode(EGGS, normalize=True) == "яйца"
-    assert salt.utils.stringutils.to_unicode(EGGS, normalize=False) != "яйца"
+def test_to_unicode(eggs, unicode, latin1_unicode):
+    UNICODE = unicode[0]
+    BYTES = unicode[2]
+    LATIN1_UNICODE = latin1_unicode[0]
+    LATIN1_BYTES = latin1_unicode[1]
+
+    assert salt.utils.stringutils.to_unicode(eggs, normalize=True) == "яйца"
+    assert salt.utils.stringutils.to_unicode(eggs, normalize=False) != "яйца"
     assert (
         salt.utils.stringutils.to_unicode(LATIN1_BYTES, encoding="latin-1")
         == LATIN1_UNICODE
@@ -224,7 +263,9 @@ def test_to_unicode():
     assert salt.utils.stringutils.to_unicode(bytearray(BYTES), "utf-8") == UNICODE
 
 
-def test_to_unicode_multi_encoding():
+def test_to_unicode_multi_encoding(latin1_unicode):
+    LATIN1_UNICODE = latin1_unicode[0]
+    LATIN1_BYTES = latin1_unicode[1]
     assert (
         salt.utils.stringutils.to_unicode(LATIN1_BYTES, encoding=("utf-8", "latin1"))
         == LATIN1_UNICODE
