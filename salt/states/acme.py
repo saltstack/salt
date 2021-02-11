@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 ACME / Let's Encrypt certificate management state
 =================================================
@@ -25,12 +24,9 @@ See also the module documentation
           - cmd: reload-gitlab
 
 """
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import salt libs
 import salt.utils.dictdiffer
 
 log = logging.getLogger(__name__)
