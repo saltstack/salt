@@ -86,7 +86,7 @@ def get_path():
     ).split(";")
 
     # Trim ending backslash
-    return list(map(_normalize_dir, ret))
+    return ret
 
 
 def exists(path):
@@ -255,7 +255,6 @@ def add(path, index=None, **kwargs):
                 # Insert the path at the desired index.
                 dirs.insert(pos, path)
                 return True
-        return False
 
     if _check_path(local_path, path_str, index):
         _update_local_path(local_path)
