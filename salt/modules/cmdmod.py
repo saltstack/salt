@@ -4155,7 +4155,7 @@ def run_bg(
     **kwargs
 ):
     r"""
-    .. versionadded: 2016.3.0
+    .. versionadded:: 2016.3.0
 
     Execute the passed command in the background and return its PID
 

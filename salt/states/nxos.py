@@ -1,7 +1,7 @@
 """
 State module for Cisco NX-OS Switch Proxy and Native minions
 
-.. versionadded: 2016.11.0
+.. versionadded:: 2016.11.0
 
 For documentation on setting up the nxos proxy minion look in the documentation
 for :mod:`salt.proxy.nxos<salt.proxy.nxos>`.

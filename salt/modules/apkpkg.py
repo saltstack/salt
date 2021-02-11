@@ -7,7 +7,7 @@ Support for apk
     *'pkg.install' is not available*), see :ref:`here
     <module-provider-override>`.
 
-.. versionadded: 2017.7.0
+.. versionadded:: 2017.7.0
 
 """
 
