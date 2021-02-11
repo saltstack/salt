@@ -152,11 +152,13 @@ def check(ctx, files, check_proper_formatting=False):
     utils.exit_invoke(exitcode)
 
 
+CHECK_VALID_VERSION_RE = re.compile(
+    "(?P<vtype>(versionadded|versionchanged|deprecated))::(?P<version>.*)"
+)
+
+
 def _check_valid_versions_on_docstrings(docstring):
-    directive_regex = re.compile(
-        "(?P<vtype>(versionadded|versionchanged|deprecated))::(?P<version>.*)"
-    )
-    for match in directive_regex.finditer(docstring):
+    for match in CHECK_VALID_VERSION_RE.finditer(docstring):
         vtype = match.group("vtype")
         version = match.group("version")
         versions = [vs.strip() for vs in version.split(",")]
@@ -171,16 +173,20 @@ def _check_valid_versions_on_docstrings(docstring):
     return False
 
 
+CLI_EXAMPLE_PRESENT_RE = re.compile(r"CLI Example(?:s)?:")
+
+
 def _check_cli_example_present(docstring):
-    cli_example_regex = re.compile(r"CLI Example(?:s)?:")
-    return cli_example_regex.search(docstring) is not None
+    return CLI_EXAMPLE_PRESENT_RE.search(docstring) is not None
+
+
+CLI_EXAMPLE_PROPER_FORMATTING_RE = re.compile(
+    r"CLI Example(?:s)?:\n\n.. code-block:: bash\n\n    salt (.*) '*'", re.MULTILINE
+)
 
 
 def _check_cli_example_proper_formatting(docstring):
-    good_cli_example_regex = re.compile(
-        r"CLI Example(?:s)?:\n\n.. code-block:: bash\n\n    salt (.*) '*'", re.MULTILINE
-    )
-    return good_cli_example_regex.search(docstring) is not None
+    return CLI_EXAMPLE_PROPER_FORMATTING_RE.search(docstring) is not None
 
 
 def _autofix_docstring(docstring):
@@ -193,11 +199,13 @@ def _autofix_docstring(docstring):
     )
 
 
+CONVERT_VERSION_NAMES_TO_NUMBERS_RE = re.compile(
+    ".. ((?P<vtype>(versionadded|versionchanged|deprecated))(?:[:]+)(?:[ ]+)?(?P<version>.*))"
+)
+
+
 def _convert_version_names_to_numbers(docstring):
-    directive_regex = re.compile(
-        ".. ((?P<vtype>(versionadded|versionchanged|deprecated))(?:[:]+)(?:[ ]+)?(?P<version>.*))"
-    )
-    for match in directive_regex.finditer(docstring):
+    for match in CONVERT_VERSION_NAMES_TO_NUMBERS_RE.finditer(docstring):
         vtype = match.group("vtype")
         version = match.group("version")
         versions = [vs.strip() for vs in version.split(",")]
@@ -217,25 +225,29 @@ def _convert_version_names_to_numbers(docstring):
     return docstring
 
 
+CLI_EXAMPLE_CASE_AND_SPACING_RE = re.compile(
+    r"(?:[\n]+)([ ]+)CLI Example(?P<plural>s)?(?:[\s]+)?:(?:[^\n]+)?(?:[\n]+)",
+    flags=re.I | re.MULTILINE,
+)
+CLI_EXAMPLE_MISSING_CODE_BLOCK_RE = re.compile(
+    r"\n([ ]+)CLI Example(?P<plural>s)?:\n\n([\s]+)salt ", flags=re.I | re.MULTILINE
+)
+
+
 def _fix_simple_cli_example_spacing_issues(docstring):
-    case_and_spacing_regex = re.compile(
-        r"(?:[\n]+)([ ]+)CLI Example(?P<plural>s)?(?:[\s]+)?:(?:[^\n]+)?(?:[\n]+)",
-        flags=re.I | re.MULTILINE,
-    )
-    missing_code_block_regex = re.compile(
-        r"\n([ ]+)CLI Example(?P<plural>s)?:\n\n([\s]+)salt ", flags=re.I | re.MULTILINE
-    )
-    return missing_code_block_regex.sub(
+    return CLI_EXAMPLE_MISSING_CODE_BLOCK_RE.sub(
         r"\n\1CLI Example\2:\n\n\1..code-block:: bash\n\n\3salt ",
-        case_and_spacing_regex.sub(r"\n\n\1CLI Example\2:\n\n", docstring),
+        CLI_EXAMPLE_CASE_AND_SPACING_RE.sub(r"\n\n\1CLI Example\2:\n\n", docstring),
     )
+
+
+DIRECTIVES_FORMATTING_RE = re.compile(
+    r"(\n(?P<spc1>[ ]+)?((?P<dots>[.]{2,})(?P<spc2>[ ]+)?(?P<directive>(?:[^ :]+)))(?:[:]{2})(?P<spc3>[ ]+)?(?P<remaining>[^\n]+)?\n)"
+)
 
 
 def _fix_directives_formatting(docstring):
-    directive_regex = re.compile(
-        r"(\n(?P<spc1>[ ]+)?((?P<dots>[.]{2,})(?P<spc2>[ ]+)?(?P<directive>(?:[^ :]+)))(?:[:]{2})(?P<spc3>[ ]+)?(?P<remaining>[^\n]+)?\n)"
-    )
-    for match in directive_regex.finditer(docstring):
+    for match in DIRECTIVES_FORMATTING_RE.finditer(docstring):
         replacement = (
             "\n{}.. {}:: {}".format(
                 match.group("spc1") or "",
@@ -248,14 +260,16 @@ def _fix_directives_formatting(docstring):
     return docstring
 
 
+FIX_CODE_BLOCKS_RE = re.compile(
+    r"^(?P<spc1>[ ]+)?(?P<dots>[.]{2}) (?P<directive>code-block)::(?P<lang>.*)\n$"
+)
+
+
 def _fix_codeblocks(docstring):
-    directive_regex = re.compile(
-        r"^(?P<spc1>[ ]+)?(?P<dots>[.]{2}) (?P<directive>code-block)::(?P<lang>.*)\n$"
-    )
     output = []
     found_codeblock = False
     for line in docstring.splitlines(True):
-        match = directive_regex.match(line)
+        match = FIX_CODE_BLOCKS_RE.match(line)
         if found_codeblock:
             if line.strip() and line.strip().startswith(":"):
                 output.append(line)
