@@ -8860,7 +8860,7 @@ def mod_beacon(name, **kwargs):
     if sfun in supported_funcs:
         beacon_module = "inotify"
 
-        data = {"mask": ["create", "delete", "modify"], "interval": 60}
+        data = {"mask": ["create", "delete", "modify"]}
         if sfun == "directory":
             data.update({"auto_add": True, "recurse": True})
 
@@ -8870,6 +8870,7 @@ def mod_beacon(name, **kwargs):
         beacon_kwargs = {
             "name": beacon_name,
             "files": {name: data},
+            "interval": 60,
             "beacon_module": beacon_module,
         }
 
