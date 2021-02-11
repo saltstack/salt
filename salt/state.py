@@ -950,9 +950,9 @@ class State:
                     }
                 )
                 return False
-            else:
+            elif cmd == 0:
                 ret.update({"comment": "onlyif condition is true", "result": False})
-                return True
+            return True
 
         for entry in low_data_onlyif:
             if isinstance(entry, str):
