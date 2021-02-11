@@ -3558,7 +3558,7 @@ def mod_beacon(name, **kwargs):
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
     sfun = kwargs.pop("sfun", None)
-    supported_funcs = ["installed"]
+    supported_funcs = ["installed", "removed"]
 
     if sfun in supported_funcs:
         beacon_module = "pkg"
@@ -3568,7 +3568,7 @@ def mod_beacon(name, **kwargs):
         beacon_kwargs = {
             "name": beacon_name,
             "pkgs": kwargs.get("pkgs", [name]),
-            "interval": 20,
+            "interval": 60,
             "beacon_module": beacon_module,
         }
 
@@ -3579,7 +3579,7 @@ def mod_beacon(name, **kwargs):
         return {
             "name": name,
             "changes": {},
-            "comment": "pkg.{} does not work with the beacon state function".format(
+            "comment": "pkg.{} does not work with the mod_beacon state function".format(
                 sfun
             ),
             "result": False,

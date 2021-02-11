@@ -1060,6 +1060,7 @@ def mod_beacon(name, **kwargs):
         beacon_kwargs = {
             "name": beacon_name,
             "services": data,
+            "interval": 60,
             "beacon_module": beacon_module,
         }
 
@@ -1070,7 +1071,7 @@ def mod_beacon(name, **kwargs):
         return {
             "name": name,
             "changes": {},
-            "comment": "pkg.{} does not work with the beacon state function".format(
+            "comment": "service.{} does not work with the beacon state function".format(
                 sfun
             ),
             "result": False,
