@@ -369,9 +369,7 @@ def _list_pkgs_from_context(
         __salt__["pkg_resource.stringify"](ret)
     if salt.utils.data.is_true(with_origin):
         origins = __context__.get(contextkey_origins, {})
-        return {
-            x: {"origin": origins.get(x, ""), "version": y} for x, y in ret.items()
-        }
+        return {x: {"origin": origins.get(x, ""), "version": y} for x, y in ret.items()}
     return ret
 
 
