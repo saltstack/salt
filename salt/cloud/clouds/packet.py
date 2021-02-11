@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Packet Cloud Module Using Packet's Python API Client
 ====================================================
@@ -49,24 +48,16 @@ This driver requires Packet's client library: https://pypi.python.org/pypi/packe
         storage_snapshot_frequency: 15min
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import pprint
 import time
 
-# Import Salt Libs
 import salt.config as config
-
-# Import Salt-Cloud Libs
 import salt.utils.cloud
 from salt.cloud.libcloudfuncs import get_image, get_size, script, show_instance
 from salt.exceptions import SaltCloudException, SaltCloudSystemExit
-from salt.ext.six.moves import range
 from salt.utils.functools import namespaced_function
 
-# Import 3rd-party libs
 try:
     import packet
 
@@ -342,7 +333,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "starting create",
-        "salt/cloud/{0}/creating".format(name),
+        "salt/cloud/{}/creating".format(name),
         args=__utils__["cloud.filter_event"](
             "creating", vm_, ["name", "profile", "provider", "driver"]
         ),
@@ -357,7 +348,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "requesting instance",
-        "salt/cloud/{0}/requesting".format(vm_["name"]),
+        "salt/cloud/{}/requesting".format(vm_["name"]),
         args=__utils__["cloud.filter_event"](
             "requesting", vm_, ["name", "profile", "provider", "driver"]
         ),
@@ -415,7 +406,7 @@ def create(vm_):
 
         volume = manager.create_volume(
             vm_["project_id"],
-            "{0}_storage".format(name),
+            "{}_storage".format(name),
             vm_.get("storage_tier"),
             vm_.get("storage_size"),
             vm_.get("location"),
@@ -444,7 +435,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "created instance",
-        "salt/cloud/{0}/created".format(name),
+        "salt/cloud/{}/created".format(name),
         args=__utils__["cloud.filter_event"](
             "created", vm_, ["name", "profile", "provider", "driver"]
         ),
@@ -580,7 +571,7 @@ def destroy(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroying instance",
-        "salt/cloud/{0}/destroying".format(name),
+        "salt/cloud/{}/destroying".format(name),
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -606,7 +597,7 @@ def destroy(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroyed instance",
-        "salt/cloud/{0}/destroyed".format(name),
+        "salt/cloud/{}/destroyed".format(name),
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
