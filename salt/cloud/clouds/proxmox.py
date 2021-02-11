@@ -26,17 +26,12 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
 :depends: IPy >= 0.81
 """
 
-# Import python libs
-
 import logging
 import pprint
 import re
 import time
 
-# Import salt cloud libs
 import salt.config as config
-
-# Import salt libs
 import salt.utils.cloud
 import salt.utils.json
 from salt.exceptions import (
@@ -44,9 +39,6 @@ from salt.exceptions import (
     SaltCloudExecutionTimeout,
     SaltCloudSystemExit,
 )
-
-# Import 3rd-party Libs
-from salt.ext.six.moves import range
 
 try:
     import requests

@@ -1,22 +1,14 @@
-# -*- coding: utf-8 -*-
 """
 Support for Alternatives system
 
 :codeauthor: Radek Rada <radek.rada@gmail.com>
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
-
-# Import python libs
 import os
 
-# Import Salt libs
 import salt.utils.files
 import salt.utils.path
-
-# Import 3rd-party libs
-from salt.ext import six
 
 __outputter__ = {
     "display": "txt",
@@ -85,7 +77,7 @@ def show_link(name):
     else:
         path = "/var/lib/dpkg/"
 
-    path += "alternatives/{0}".format(name)
+    path += "alternatives/{}".format(name)
 
     try:
         with salt.utils.files.fopen(path, "rb") as r_file:
@@ -93,7 +85,7 @@ def show_link(name):
             return contents.splitlines(True)[1].rstrip("\n")
     except OSError:
         log.error("alternatives: %s does not exist", name)
-    except (IOError, IndexError) as exc:  # pylint: disable=duplicate-except
+    except (OSError, IndexError) as exc:  # pylint: disable=duplicate-except
         log.error(
             "alternatives: unable to get master link for %s. " "Exception: %s",
             name,
@@ -139,7 +131,7 @@ def check_exists(name, path):
     if out["retcode"] > 0 and out["stderr"] != "":
         return False
 
-    return any((line.startswith(path) for line in out["stdout"].splitlines()))
+    return any(line.startswith(path) for line in out["stdout"].splitlines())
 
 
 def check_installed(name, path):
@@ -169,7 +161,7 @@ def install(name, link, path, priority):
 
         salt '*' alternatives.install editor /usr/bin/editor /usr/bin/emacs23 50
     """
-    cmd = [_get_cmd(), "--install", link, name, path, six.text_type(priority)]
+    cmd = [_get_cmd(), "--install", link, name, path, str(priority)]
     out = __salt__["cmd.run_all"](cmd, python_shell=False)
     if out["retcode"] > 0 and out["stderr"] != "":
         return out["stderr"]
@@ -234,5 +226,5 @@ def _read_link(name):
 
     Throws an OSError if the link does not exist
     """
-    alt_link_path = "/etc/alternatives/{0}".format(name)
+    alt_link_path = "/etc/alternatives/{}".format(name)
     return salt.utils.path.readlink(alt_link_path)
