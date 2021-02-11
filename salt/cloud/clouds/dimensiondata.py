@@ -21,7 +21,6 @@ using the existing Libcloud driver for Dimension Data.
 :depends: libcloud >= 1.2.1
 """
 
-
 import logging
 import pprint
 import socket

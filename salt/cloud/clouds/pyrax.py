@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Pyrax Cloud Module
 ==================
@@ -9,12 +8,7 @@ you are actively developing code in this module, you should use the OpenStack
 module instead.
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import salt.config as config
-
-# Import salt libs
 import salt.utils.data
 
 # Import pyrax libraries

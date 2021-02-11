@@ -1,15 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 Provide the service module for the proxy-minion REST sample
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import fnmatch
 import logging
 import re
 
-# Import Salt libs
 import salt.utils.platform
 
 log = logging.getLogger(__name__)
