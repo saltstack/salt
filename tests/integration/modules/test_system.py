@@ -12,13 +12,12 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 from tests.support.case import ModuleCase
-from tests.support.helpers import flaky, runs_on
 from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
 
 
-@runs_on(kernel="Linux")
+@pytest.mark.skip_unless_on_linux
 class SystemModuleTest(ModuleCase):
     """
     Validate the date/time functions in the system module
@@ -269,7 +268,7 @@ class SystemModuleTest(ModuleCase):
         self.assertTrue(self._same_times(time_now, cmp_time), msg=msg)
         self._test_hwclock_sync()
 
-    @flaky
+    @pytest.mark.flaky(max_runs=4)
     @pytest.mark.destructive_test
     @pytest.mark.skip_if_not_root
     @pytest.mark.slow_test
@@ -385,7 +384,7 @@ class SystemModuleTest(ModuleCase):
             self.assertTrue(self._hwclock_has_compare())
 
 
-@runs_on(kernel="Windows")
+@pytest.mark.skip_unless_on_windows
 @pytest.mark.windows_whitelisted
 class WinSystemModuleTest(ModuleCase):
     """
@@ -456,7 +455,7 @@ class WinSystemModuleTest(ModuleCase):
         self.assertEqual(date, ret)
 
 
-@runs_on(kernel="Windows")
+@pytest.mark.skip_unless_on_windows
 @pytest.mark.windows_whitelisted
 class WinSystemModuleTimeSettingTest(ModuleCase):
     """
