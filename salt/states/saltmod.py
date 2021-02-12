@@ -763,7 +763,7 @@ def parallel_runners(name, runners, **kwargs):  # pylint: disable=unused-argumen
     """
     Executes multiple runner modules on the master in parallel.
 
-    .. versionadded:: 2017.x.0 (Nitrogen)
+    .. versionadded:: 2018.3.0
 
     A separate thread is spawned for each runner. This state is intended to be
     used with the orchestrate runner in place of the ``saltmod.runner`` state
