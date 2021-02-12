@@ -2792,7 +2792,7 @@ class App:
         This is useful in combination with a browser-based app using the HTML5
         history API.
 
-        .. http::get:: /app
+        .. http:get:: /app
 
             :reqheader X-Auth-Token: |req_token|
 

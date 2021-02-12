@@ -429,7 +429,7 @@ def authenticate(remote_addr, password, cert, key, verify_cert=True):
 
     .. code-block:: bash
 
-        $ salt '*' lxd.authenticate https://srv01:8443 <yourpass> ~/.config/lxc/client.crt ~/.config/lxc/client.key false
+        salt '*' lxd.authenticate https://srv01:8443 <yourpass> ~/.config/lxc/client.crt ~/.config/lxc/client.key false
 
     See the `requests-docs`_ for the SSL stuff.
 
@@ -1982,8 +1982,8 @@ def profile_create(
 
         .. code-block:: bash
 
-            $ salt '*' lxd.profile_create autostart config="{boot.autostart: 1, boot.autostart.delay: 2, boot.autostart.priority: 1}"
-            $ salt '*' lxd.profile_create shared_mounts devices="{shared_mount: {type: 'disk', source: '/home/shared', path: '/home/shared'}}"
+            salt '*' lxd.profile_create autostart config="{boot.autostart: 1, boot.autostart.delay: 2, boot.autostart.priority: 1}"
+            salt '*' lxd.profile_create shared_mounts devices="{shared_mount: {type: 'disk', source: '/home/shared', path: '/home/shared'}}"
 
         See the `lxd-docs`_ for the details about the config and devices dicts.
 
@@ -2045,7 +2045,7 @@ def profile_get(
 
         .. code-block:: bash
 
-            $ salt '*' lxd.profile_get autostart
+            salt '*' lxd.profile_get autostart
     """
     client = pylxd_client_get(remote_addr, cert, key, verify_cert)
 
@@ -2096,7 +2096,7 @@ def profile_delete(name, remote_addr=None, cert=None, key=None, verify_cert=True
 
         .. code-block:: bash
 
-            $ salt '*' lxd.profile_delete shared_mounts
+            salt '*' lxd.profile_delete shared_mounts
     """
     profile = profile_get(name, remote_addr, cert, key, verify_cert, _raw=True)
 
@@ -2144,7 +2144,7 @@ def profile_config_get(
 
         .. code-block:: bash
 
-            $ salt '*' lxd.profile_config_get autostart boot.autostart
+            salt '*' lxd.profile_config_get autostart boot.autostart
     """
     profile = profile_get(name, remote_addr, cert, key, verify_cert, _raw=True)
 
@@ -2200,7 +2200,7 @@ def profile_config_set(
 
         .. code-block:: bash
 
-            $ salt '*' lxd.profile_config_set autostart boot.autostart 0
+            salt '*' lxd.profile_config_set autostart boot.autostart 0
     """
     profile = profile_get(name, remote_addr, cert, key, verify_cert, _raw=True)
 
@@ -2247,7 +2247,7 @@ def profile_config_delete(
 
         .. code-block:: bash
 
-            $ salt '*' lxd.profile_config_delete autostart boot.autostart.delay
+            salt '*' lxd.profile_config_delete autostart boot.autostart.delay
     """
     profile = profile_get(name, remote_addr, cert, key, verify_cert, _raw=True)
 
@@ -2294,7 +2294,7 @@ def profile_device_get(
 
         .. code-block:: bash
 
-            $ salt '*' lxd.profile_device_get default eth0
+            salt '*' lxd.profile_device_get default eth0
     """
     profile = profile_get(name, remote_addr, cert, key, verify_cert, _raw=True)
 
@@ -2348,7 +2348,7 @@ def profile_device_set(
 
         .. code-block:: bash
 
-            $ salt '*' lxd.profile_device_set autostart eth1 nic nictype=bridged parent=lxdbr0
+            salt '*' lxd.profile_device_set autostart eth1 nic nictype=bridged parent=lxdbr0
     """
     profile = profile_get(name, remote_addr, cert, key, verify_cert, _raw=True)
 
@@ -2400,7 +2400,7 @@ def profile_device_delete(
 
         .. code-block:: bash
 
-            $ salt '*' lxd.profile_device_delete autostart eth1
+            salt '*' lxd.profile_device_delete autostart eth1
 
     """
     profile = profile_get(name, remote_addr, cert, key, verify_cert, _raw=True)
@@ -2450,8 +2450,8 @@ def image_list(
 
         .. code-block:: bash
 
-            $ salt '*' lxd.image_list true --out=json
-            $ salt '*' lxd.image_list --out=json
+            salt '*' lxd.image_list true --out=json
+            salt '*' lxd.image_list --out=json
     """
     client = pylxd_client_get(remote_addr, cert, key, verify_cert)
 
@@ -2560,7 +2560,7 @@ def image_get_by_alias(
 
         .. code-block:: bash
 
-            $ salt '*' lxd.image_get_by_alias xenial/amd64
+            salt '*' lxd.image_get_by_alias xenial/amd64
     """
     client = pylxd_client_get(remote_addr, cert, key, verify_cert)
 
@@ -2612,7 +2612,7 @@ def image_delete(image, remote_addr=None, cert=None, key=None, verify_cert=True)
 
         .. code-block:: bash
 
-            $ salt '*' lxd.image_delete xenial/amd64
+            salt '*' lxd.image_delete xenial/amd64
     """
 
     image = _verify_image(image, remote_addr, cert, key, verify_cert)
@@ -2682,7 +2682,7 @@ def image_from_simplestreams(
 
         .. code-block:: bash
 
-            $ salt '*' lxd.image_from_simplestreams "https://cloud-images.ubuntu.com/releases" "trusty/amd64" aliases='["t", "trusty/amd64"]' auto_update=True
+            salt '*' lxd.image_from_simplestreams "https://cloud-images.ubuntu.com/releases" "trusty/amd64" aliases='["t", "trusty/amd64"]' auto_update=True
     """
     if aliases is None:
         aliases = []
@@ -2763,7 +2763,7 @@ def image_from_url(
 
         .. code-block:: bash
 
-            $ salt '*' lxd.image_from_url https://dl.stgraber.org/lxd aliases='["busybox-amd64"]'
+            salt '*' lxd.image_from_url https://dl.stgraber.org/lxd aliases='["busybox-amd64"]'
     """
     if aliases is None:
         aliases = []
@@ -2844,7 +2844,7 @@ def image_from_file(
 
         .. code-block:: bash
 
-            $ salt '*' lxd.image_from_file salt://lxd/files/busybox.tar.xz aliases=["busybox-amd64"]
+            salt '*' lxd.image_from_file salt://lxd/files/busybox.tar.xz aliases=["busybox-amd64"]
     """
     if aliases is None:
         aliases = []
@@ -2953,7 +2953,7 @@ def image_copy_lxd(
 
     .. code-block:: bash
 
-        $ salt '*' lxd.image_copy_lxd xenial/amd64 https://srv01:8443 ~/.config/lxc/client.crt ~/.config/lxc/client.key false https://srv02:8443 ~/.config/lxc/client.crt ~/.config/lxc/client.key false aliases="['xenial/amd64']"
+        salt '*' lxd.image_copy_lxd xenial/amd64 https://srv01:8443 ~/.config/lxc/client.crt ~/.config/lxc/client.key false https://srv02:8443 ~/.config/lxc/client.crt ~/.config/lxc/client.key false aliases="['xenial/amd64']"
     """
     if aliases is None:
         aliases = []
@@ -3044,7 +3044,7 @@ def image_alias_add(
 
         .. code-block:: bash
 
-            $ salt '*' lxd.image_alias_add xenial/amd64 x "Short version of xenial/amd64"
+            salt '*' lxd.image_alias_add xenial/amd64 x "Short version of xenial/amd64"
     """
     image = _verify_image(image, remote_addr, cert, key, verify_cert)
 
@@ -3096,7 +3096,7 @@ def image_alias_delete(
 
         .. code-block:: bash
 
-            $ salt '*' lxd.image_alias_add xenial/amd64 x "Short version of xenial/amd64"
+            salt '*' lxd.image_alias_add xenial/amd64 x "Short version of xenial/amd64"
     """
     image = _verify_image(image, remote_addr, cert, key, verify_cert)
 
@@ -3147,7 +3147,7 @@ def snapshots_all(container, remote_addr=None, cert=None, key=None, verify_cert=
 
     .. code-block:: bash
 
-        $ salt '*' lxd.snapshots_all test-container
+        salt '*' lxd.snapshots_all test-container
     """
     containers = container_get(
         container, remote_addr, cert, key, verify_cert, _raw=True
@@ -3200,7 +3200,7 @@ def snapshots_create(
 
     .. code-block:: bash
 
-        $ salt '*' lxd.snapshots_create test-container test-snapshot
+        salt '*' lxd.snapshots_create test-container test-snapshot
     """
     cont = container_get(container, remote_addr, cert, key, verify_cert, _raw=True)
     if not name:
@@ -3254,7 +3254,7 @@ def snapshots_delete(
 
     .. code-block:: bash
 
-        $ salt '*' lxd.snapshots_delete test-container test-snapshot
+        salt '*' lxd.snapshots_delete test-container test-snapshot
     """
     cont = container_get(container, remote_addr, cert, key, verify_cert, _raw=True)
 
@@ -3308,7 +3308,7 @@ def snapshots_get(
 
     .. code-block:: bash
 
-        $ salt '*' lxd.snapshots_get test-container test-snapshot
+        salt '*' lxd.snapshots_get test-container test-snapshot
     """
     container = container_get(container, remote_addr, cert, key, verify_cert, _raw=True)
     return container.snapshots.get(name)

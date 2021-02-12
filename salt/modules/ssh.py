@@ -246,7 +246,9 @@ def _fingerprint(public_key, fingerprint_hash_type):
         was originally hashed with. This defaults to ``sha256`` if not specified.
 
         .. versionadded:: 2016.11.4
-        .. versionchanged:: 2017.7.0: default changed from ``md5`` to ``sha256``
+        .. versionchanged:: 2017.7.0
+
+            default changed from ``md5`` to ``sha256``
 
     """
     if fingerprint_hash_type:
@@ -879,7 +881,9 @@ def recv_known_host_entries(
         originally hashed with. This defaults to ``sha256`` if not specified.
 
         .. versionadded:: 2016.11.4
-        .. versionchanged:: 2017.7.0: default changed from ``md5`` to ``sha256``
+        .. versionchanged:: 2017.7.0
+
+            default changed from ``md5`` to ``sha256``
 
     CLI Example:
 
@@ -1068,7 +1072,9 @@ def set_known_host(
         was originally hashed with. This defaults to ``sha256`` if not specified.
 
         .. versionadded:: 2016.11.4
-        .. versionchanged:: 2017.7.0: default changed from ``md5`` to ``sha256``
+        .. versionchanged:: 2017.7.0
+
+            default changed from ``md5`` to ``sha256``
 
     CLI Example:
 
