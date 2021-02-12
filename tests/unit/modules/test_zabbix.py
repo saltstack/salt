@@ -2,12 +2,8 @@
     :codeauthor: :email:`Christian McHugh <christian.mchugh@gmail.com>`
 """
 
-# Import Python Libs
-
 import salt.modules.zabbix as zabbix
 from salt.exceptions import SaltException
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -219,7 +215,7 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
             SaltException, zabbix.compare_params, {"dict": "val"}, {"dict": ["list"]}
         )
 
-    def test_apiiinfo_version(self):
+    def test_apiinfo_version(self):
         """
         Test apiinfo_version
         """
@@ -229,6 +225,43 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(zabbix, "_query", return_value=query_return):
             with patch.object(zabbix, "_login", return_value=CONN_ARGS):
                 self.assertEqual(zabbix.apiinfo_version(**CONN_ARGS), module_return)
+
+    def test__login_getting_parameters_from_config(self):
+        """
+        Test get the connection data from pillar
+        """
+        query_return = {"jsonrpc": "2.0", "result": "3.4.5", "id": 1}
+        config_get_return = [
+            "testuser",
+            "password",
+            "http://fake_url/zabbix/api_jsonrpc.php",
+        ]
+        login_return = {
+            "url": "http://fake_url/zabbix/api_jsonrpc.php",
+            "auth": "3.4.5",
+        }
+        mock_config_get_return = MagicMock(side_effect=config_get_return)
+
+        with patch.object(zabbix, "_query", return_value=query_return):
+            with patch.dict(zabbix.__salt__, {"config.get": mock_config_get_return}):
+                self.assertEqual(zabbix._login(), login_return)
+
+    def test__login_getting_empty_parameters_from_config(self):
+        """
+        Test get the connection data from pillar with an empty response
+        """
+        query_return = {"jsonrpc": "2.0", "result": "3.4.5", "id": 1}
+        config_get_return = [None, None, None]
+        mock_config_get_return = MagicMock(side_effect=config_get_return)
+
+        with patch.object(zabbix, "_query", return_value=query_return):
+            with patch.dict(zabbix.__salt__, {"config.get": mock_config_get_return}):
+                with self.assertRaises(SaltException) as login_exception:
+                    ret = zabbix._login()
+                    self.assertEqual(
+                        login_exception.strerror,
+                        "URL is probably not correct! ('user')",
+                    )
 
     def test_get_mediatype(self):
         """
