@@ -50,10 +50,6 @@ def check(ctx, files, check_proper_formatting=False):
             module = ast.parse(path.read_text(), filename=str(path))
             module_docstring = ast.get_docstring(module, clean=False)
             if module_docstring:
-                new_module_docstring = _autofix_docstring(module_docstring)
-                if module_docstring != new_module_docstring:
-                    contents = contents.replace(module_docstring, new_module_docstring)
-                    module_docstring = new_module_docstring
                 error = _check_valid_versions_on_docstrings(module_docstring)
                 if error:
                     errors += 1
@@ -69,10 +65,6 @@ def check(ctx, files, check_proper_formatting=False):
             ]:
                 docstring = ast.get_docstring(funcdef, clean=False)
                 if docstring:
-                    new_docstring = _autofix_docstring(docstring)
-                    if docstring != new_docstring:
-                        contents = contents.replace(docstring, new_docstring)
-                        docstring = new_docstring
                     error = _check_valid_versions_on_docstrings(docstring)
                     if error:
                         errors += 1
@@ -187,98 +179,3 @@ CLI_EXAMPLE_PROPER_FORMATTING_RE = re.compile(
 
 def _check_cli_example_proper_formatting(docstring):
     return CLI_EXAMPLE_PROPER_FORMATTING_RE.search(docstring) is not None
-
-
-def _autofix_docstring(docstring):
-    return _fix_codeblocks(
-        _convert_version_names_to_numbers(
-            _fix_directives_formatting(
-                _fix_simple_cli_example_spacing_issues(docstring)
-            )
-        )
-    )
-
-
-CONVERT_VERSION_NAMES_TO_NUMBERS_RE = re.compile(
-    ".. ((?P<vtype>(versionadded|versionchanged|deprecated))(?:[:]+)(?:[ ]+)?(?P<version>.*))"
-)
-
-
-def _convert_version_names_to_numbers(docstring):
-    for match in CONVERT_VERSION_NAMES_TO_NUMBERS_RE.finditer(docstring):
-        vtype = match.group("vtype")
-        version = match.group("version")
-        versions = [vs.strip() for vs in version.split(",")]
-        parsed_versions = []
-        for vs in versions:
-            try:
-                vs = SaltStackVersion.from_name(vs).string
-            except ValueError:
-                if vs.startswith("v"):
-                    try:
-                        vs = SaltStackVersion.parse(vs[1:]).string
-                    except ValueError:
-                        pass
-            parsed_versions.append(vs)
-        replace_contents = ".. {}:: {}".format(vtype, ", ".join(parsed_versions))
-        docstring = docstring.replace(match.group(0), replace_contents.rstrip())
-    return docstring
-
-
-CLI_EXAMPLE_CASE_AND_SPACING_RE = re.compile(
-    r"(?:[\n]+)([ ]+)CLI Example(?P<plural>s)?(?:[\s]+)?:(?:[^\n]+)?(?:[\n]+)",
-    flags=re.I | re.MULTILINE,
-)
-CLI_EXAMPLE_MISSING_CODE_BLOCK_RE = re.compile(
-    r"\n([ ]+)CLI Example(?P<plural>s)?:\n\n([\s]+)salt ", flags=re.I | re.MULTILINE
-)
-
-
-def _fix_simple_cli_example_spacing_issues(docstring):
-    return CLI_EXAMPLE_MISSING_CODE_BLOCK_RE.sub(
-        r"\n\1CLI Example\2:\n\n\1..code-block:: bash\n\n\3salt ",
-        CLI_EXAMPLE_CASE_AND_SPACING_RE.sub(r"\n\n\1CLI Example\2:\n\n", docstring),
-    )
-
-
-DIRECTIVES_FORMATTING_RE = re.compile(
-    r"(\n(?P<spc1>[ ]+)?((?P<dots>[.]{2,})(?P<spc2>[ ]+)?(?P<directive>(?:[^ :]+)))(?:[:]{2})(?P<spc3>[ ]+)?(?P<remaining>[^\n]+)?\n)"
-)
-
-
-def _fix_directives_formatting(docstring):
-    for match in DIRECTIVES_FORMATTING_RE.finditer(docstring):
-        replacement = (
-            "\n{}.. {}:: {}".format(
-                match.group("spc1") or "",
-                match.group("directive"),
-                match.group("remaining") or "",
-            ).rstrip()
-            + "\n"
-        )
-        docstring = docstring.replace(match.group(0), replacement)
-    return docstring
-
-
-FIX_CODE_BLOCKS_RE = re.compile(
-    r"^(?P<spc1>[ ]+)?(?P<dots>[.]{2}) (?P<directive>code-block)::(?P<lang>.*)\n$"
-)
-
-
-def _fix_codeblocks(docstring):
-    output = []
-    found_codeblock = False
-    for line in docstring.splitlines(True):
-        match = FIX_CODE_BLOCKS_RE.match(line)
-        if found_codeblock:
-            if line.strip() and line.strip().startswith(":"):
-                output.append(line)
-                continue
-            if line.strip():
-                # We need an empty line after the code-block
-                output.append("\n")
-            found_codeblock = False
-        if match:
-            found_codeblock = True
-        output.append(line)
-    return "".join(output)
