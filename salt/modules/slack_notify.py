@@ -172,6 +172,9 @@ def post_message(
     """
     Send a message to a Slack channel.
 
+    .. versionchanged:: 3002.2
+        Added `attachments` and `blocks` kwargs
+
     :param channel:     The channel name, either will work.
     :param message:     The message to send to the Slack channel.
     :param from_name:   Specify who the message is from.

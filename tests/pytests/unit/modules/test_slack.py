@@ -2,15 +2,17 @@
 Tests for salt.modules.slack module
 """
 
+import urllib.parse
+
 import pytest
-import salt.modules.slack_notify as slack
-from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
+
+import salt.modules.slack_notify as slack_notify
 from tests.support.mock import MagicMock, patch
 
 
 @pytest.fixture
 def configure_loader_modules():
-    return {slack: {}}
+    return {slack_notify: {}}
 
 
 def test_post_message():
@@ -27,13 +29,13 @@ def test_post_message():
             "message": "test message",
             "api_key": "xxx-xx-xxx",
         }
-        assert slack.post_message(**message_params)
+        assert slack_notify.post_message(**message_params)
         slack_query.assert_called_with(
             function="message",
             api_key="xxx-xx-xxx",
             method="POST",
             header_dict={"Content-Type": "application/x-www-form-urlencoded"},
-            data=_urlencode(
+            data=urllib.parse.urlencode(
                 {
                     "channel": "#fake_channel",
                     "username": "salt server",
@@ -42,7 +44,7 @@ def test_post_message():
                     "blocks": [],
                 }
             ),
-            opts=slack.__opts__,
+            opts=slack_notify.__opts__,
         )
 
     # send `blocks` and `attachments` params
@@ -60,13 +62,13 @@ def test_post_message():
                 }
             ],
         }
-        assert slack.post_message(**message_params)
+        assert slack_notify.post_message(**message_params)
         slack_query.assert_called_with(
             function="message",
             api_key="xxx-xx-xxx",
             method="POST",
             header_dict={"Content-Type": "application/x-www-form-urlencoded"},
-            data=_urlencode(
+            data=urllib.parse.urlencode(
                 {
                     "channel": "#fake_channel",
                     "username": "salt server",
@@ -80,5 +82,5 @@ def test_post_message():
                     ],
                 }
             ),
-            opts=slack.__opts__,
+            opts=slack_notify.__opts__,
         )
