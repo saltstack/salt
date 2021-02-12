@@ -1113,11 +1113,27 @@ repos:
 
   - repo: https://github.com/s0undt3ch/salt-rewrite
     # Automatically rewrite code with known rules
-    rev: 1.0.0
+    rev: 1.3.2
     hooks:
       - id: salt-rewrite
+        alias: rewrite-docstrings
+        name: Salt docstrings auto-fixes
+        files: ^salt/.*\.py$
+        args: [--silent, -F, fix_docstrings]
+        exclude: >
+            (?x)^(
+                salt/ext/.*
+            )$
+
+  - repo: https://github.com/s0undt3ch/salt-rewrite
+    # Automatically rewrite code with known rules
+    rev: 1.3.2
+    hooks:
+      - id: salt-rewrite
+        alias: rewrite-tests
+        name: Rewrite Salt's Test Suite
         files: ^tests/.*\.py$
-        args: [-E, fix_asserts]
+        args: [--silent, -E, fix_asserts, -E, fix_docstrings]
 
   - repo: https://github.com/timothycrosley/isort
     rev: "1e78a9acf3110e1f9721feb591f89a451fc9876a"
