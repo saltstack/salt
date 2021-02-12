@@ -1,23 +1,15 @@
-# -*- coding: utf-8 -*-
 """
-watchdog beacon
+Watch files and translate the changes into salt events.
 
 .. versionadded:: 2019.2.0
-
-Watch files and translate the changes into salt events
 
 :depends:   - watchdog Python module >= 0.8.3
 
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import collections
 import logging
 
-from salt.ext.six.moves import map
-
-# Import third party libs
 try:
     from watchdog.observers import Observer
     from watchdog.events import FileSystemEventHandler
@@ -26,7 +18,7 @@ try:
 except ImportError:
     HAS_WATCHDOG = False
 
-    class FileSystemEventHandler(object):
+    class FileSystemEventHandler:
         """ A dummy class to make the import work """
 
         def __init__(self):
@@ -47,7 +39,7 @@ DEFAULT_MASK = [
 
 class Handler(FileSystemEventHandler):
     def __init__(self, queue, masks=None):
-        super(Handler, self).__init__()
+        super().__init__()
         self.masks = masks or DEFAULT_MASK
         self.queue = queue
 

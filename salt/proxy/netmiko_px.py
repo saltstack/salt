@@ -298,7 +298,6 @@ def make_con(connection_timeout=DEFAULT_CONNECTION_TIMEOUT):
         except Exception as exc:  # pylint: disable=broad-except
             log.warn("Got exception %r", exc)
             found_exception = exc
-            break
         else:
             break
         if time.time() - start >= connection_timeout:

@@ -9,11 +9,11 @@ import logging
 import pytest
 import salt.utils.platform
 import salt.utils.pycrypto
-from tests.support.helpers import slowTest
 
 log = logging.getLogger(__name__)
 
 pytestmark = [
+    pytest.mark.slow_test,
     pytest.mark.skip_if_not_root,
     pytest.mark.destructive_test,
     pytest.mark.skip_on_windows,
@@ -74,7 +74,6 @@ def saltadm_account(sminion, saltops_group):
         sminion.functions.user.delete(USERB, remove=True)
 
 
-@slowTest
 def test_pam_auth_valid_user(salt_minion, salt_cli, saltdev_account):
     """
     test that pam auth mechanism works with a valid user
@@ -94,7 +93,6 @@ def test_pam_auth_valid_user(salt_minion, salt_cli, saltdev_account):
     assert ret.json is True
 
 
-@slowTest
 def test_pam_auth_invalid_user(salt_minion, salt_cli, saltdev_account):
     """
     test pam auth mechanism errors for an invalid user
@@ -112,7 +110,6 @@ def test_pam_auth_invalid_user(salt_minion, salt_cli, saltdev_account):
     assert ret.stdout == "Authentication error occurred."
 
 
-@slowTest
 def test_pam_auth_valid_group(salt_minion, salt_cli, saltadm_account):
     """
     test that pam auth mechanism works for a valid group

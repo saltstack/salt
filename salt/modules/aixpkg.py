@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Package support for AIX
 
@@ -8,14 +7,11 @@ Package support for AIX
     error similar to *'pkg.install' is not available*), see :ref:`here
     <module-provider-override>`.
 """
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 import logging
 import os
 
-# Import salt libs
 import salt.utils.data
 import salt.utils.functools
 import salt.utils.path

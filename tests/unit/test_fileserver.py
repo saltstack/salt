@@ -1,14 +1,9 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Joao Mesquita <jmesquita@sangoma.com>
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 from salt import fileserver
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase
 
@@ -37,16 +32,10 @@ class VCSBackendWhitelistCase(TestCase, LoaderModuleMockMixin):
 
     def test_whitelist(self):
         opts = {
-            "fileserver_backend": ["roots", "git", "hgfs", "svn"],
+            "fileserver_backend": ["roots", "git", "s3fs", "hgfs", "svn"],
             "extension_modules": "",
         }
         fs = fileserver.Fileserver(opts)
-        assert fs.servers.whitelist == [
-            "git",
-            "gitfs",
-            "hg",
-            "hgfs",
-            "svn",
-            "svnfs",
-            "roots",
-        ], fs.servers.whitelist
+        assert sorted(fs.servers.whitelist) == sorted(
+            ["git", "gitfs", "hg", "hgfs", "svn", "svnfs", "roots", "s3fs"]
+        ), fs.servers.whitelist

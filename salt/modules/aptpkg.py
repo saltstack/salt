@@ -10,7 +10,6 @@ Support for APT (Advanced Packaging Tool)
     For repository management, the ``python-apt`` package must be installed.
 """
 
-
 import copy
 import datetime
 import fnmatch
@@ -2553,6 +2552,15 @@ def expand_repo_def(**kwargs):
     for kwarg in _MODIFY_OK:
         if kwarg in kwargs:
             setattr(source_entry, kwarg, kwargs[kwarg])
+
+    source_list = sourceslist.SourcesList()
+    source_entry = source_list.add(
+        type=source_entry.type,
+        uri=source_entry.uri,
+        dist=source_entry.dist,
+        orig_comps=getattr(source_entry, "comps", []),
+        architectures=getattr(source_entry, "architectures", []),
+    )
 
     sanitized["file"] = source_entry.file
     sanitized["comps"] = getattr(source_entry, "comps", [])

@@ -134,9 +134,7 @@ SALT_LINUX_LOCKED_REQS = [
     )
 ]
 SALT_OSX_REQS = SALT_BASE_REQUIREMENTS + [
-    os.path.abspath(SETUP_DIRNAME),
-    "requirements",
-    "darwin.txt",
+    os.path.join(os.path.abspath(SETUP_DIRNAME), "requirements", "darwin.txt")
 ]
 SALT_OSX_LOCKED_REQS = [
     # OSX packages already defined locked requirements
@@ -150,9 +148,7 @@ SALT_OSX_LOCKED_REQS = [
     )
 ]
 SALT_WINDOWS_REQS = SALT_BASE_REQUIREMENTS + [
-    os.path.abspath(SETUP_DIRNAME),
-    "requirements",
-    "windows.txt",
+    os.path.join(os.path.abspath(SETUP_DIRNAME), "requirements", "windows.txt")
 ]
 SALT_WINDOWS_LOCKED_REQS = [
     # Windows packages already defined locked requirements
