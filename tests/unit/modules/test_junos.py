@@ -4,7 +4,6 @@
 
 import os
 
-# Import salt modules
 import salt.modules.junos as junos
 from tests.support.mixins import LoaderModuleMockMixin, XMLEqualityMixin
 from tests.support.mock import ANY, MagicMock, PropertyMock, call, mock_open, patch
@@ -166,7 +165,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
         }
         return facts
 
-    def test_timeout_decorator(self):
+    def test__timeout_decorator(self):
         with patch(
             "jnpr.junos.Device.timeout", new_callable=PropertyMock
         ) as mock_timeout:
@@ -175,12 +174,12 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             def function(x):
                 return x
 
-            decorator = junos.timeoutDecorator(function)
+            decorator = junos._timeout_decorator(function)
             decorator("Test Mock", dev_timeout=10)
             calls = [call(), call(10), call(30)]
             mock_timeout.assert_has_calls(calls)
 
-    def test_timeout_cleankwargs_decorator(self):
+    def test__timeout_cleankwargs_decorator(self):
         with patch(
             "jnpr.junos.Device.timeout", new_callable=PropertyMock
         ) as mock_timeout:
@@ -189,7 +188,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             def function(x):
                 return x
 
-            decorator = junos.timeoutDecorator_cleankwargs(function)
+            decorator = junos._timeout_decorator_cleankwargs(function)
             decorator("Test Mock", dev_timeout=10, __pub_args="abc")
             calls = [call(), call(10), call(30)]
             mock_timeout.assert_has_calls(calls)

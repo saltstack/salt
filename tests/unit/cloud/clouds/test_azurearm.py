@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import types
 
 from salt.cloud.clouds import azurearm as azure
@@ -57,7 +56,7 @@ class AzureTestCase(TestCase, LoaderModuleMockMixin):
     @skipIf(not azure.HAS_LIBS, "azure not available")
     def test_function_signatures(self):
         mock_azure = mock_module(
-            azure, sut=["request_instance", "six", "__opts__", "__utils__"]
+            azure, sut=["request_instance", "__opts__", "__utils__"]
         )
         mock_azure.create_network_interface.return_value = [
             MagicMock(),
@@ -91,7 +90,7 @@ class AzureTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_get_configured_provider(self):
         mock_azure = mock_module(
-            azure, sut=["get_configured_provider", "six", "__opts__", "__utils__"]
+            azure, sut=["get_configured_provider", "__opts__", "__utils__"]
         )
 
         good_combos = [
@@ -123,9 +122,7 @@ class AzureTestCase(TestCase, LoaderModuleMockMixin):
             self.assertFalse(azure.get_configured_provider())
 
     def test_get_conn(self):
-        mock_azure = mock_module(
-            azure, sut=["get_conn", "six", "__opts__", "__utils__"]
-        )
+        mock_azure = mock_module(azure, sut=["get_conn", "__opts__", "__utils__"])
         mock_azure.__utils__["azurearm.get_client"] = lambda client_type, **kw: kw
 
         mock_azure.__opts__["providers"] = {
