@@ -7,7 +7,6 @@ import time
 
 import pytest
 from tests.support.case import SSHCase
-from tests.support.helpers import flaky
 from tests.support.pytest.helpers import temp_state_file
 from tests.support.runtests import RUNTIME_VARS
 
@@ -282,7 +281,7 @@ class SSHStateTest(SSHCase):
         check_file = self.run_function("file.file_exists", [SSH_SLS_FILE], wipe=False)
         self.assertTrue(check_file)
 
-    @flaky
+    @pytest.mark.flaky(max_runs=4)
     @pytest.mark.slow_test
     def test_state_running(self):
         """

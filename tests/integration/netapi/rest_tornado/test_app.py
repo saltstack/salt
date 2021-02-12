@@ -7,7 +7,7 @@ import salt.utils.json
 import salt.utils.stringutils
 from salt.netapi.rest_tornado import saltnado
 from salt.utils.zeromq import ZMQDefaultLoop as ZMQIOLoop
-from tests.support.helpers import TstSuiteLoggingHandler, flaky
+from tests.support.helpers import TstSuiteLoggingHandler
 from tests.support.unit import skipIf
 from tests.unit.netapi.test_rest_tornado import SaltnadoTestsBase
 
@@ -425,7 +425,7 @@ class TestSaltAPIHandler(SaltnadoIntegrationTestsBase):
         self.assertIn("tag", response_obj["return"][0])
 
 
-@flaky
+@pytest.mark.flaky(max_runs=4)
 class TestMinionSaltAPIHandler(SaltnadoIntegrationTestsBase):
     def get_app(self):
         urls = [
