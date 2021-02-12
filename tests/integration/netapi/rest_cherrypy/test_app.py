@@ -5,7 +5,6 @@ import pytest
 import salt.utils.json
 import salt.utils.stringutils
 import tests.support.cherrypy_testclasses as cptc
-from tests.support.helpers import flaky
 
 
 class TestAuth(cptc.BaseRestCherryPyTest):
@@ -335,7 +334,7 @@ class TestJobs(cptc.BaseRestCherryPyTest):
         )
         self.assertEqual(response.status, "200 OK")
 
-    @flaky
+    @pytest.mark.flaky(max_runs=4)
     @pytest.mark.slow_test
     def test_all_jobs(self):
         """

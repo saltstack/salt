@@ -22,15 +22,13 @@ import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.yaml
 from tests.support.case import ShellCase
-from tests.support.helpers import flaky
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
 
 
-@flaky
+@pytest.mark.flaky(max_runs=4)
 class StateRunnerTest(ShellCase):
     """
     Test the state runner.
@@ -343,8 +341,8 @@ class StateRunnerTest(ShellCase):
         self.assertEqual(func_ret, {"out": "highstate", "ret": {"minion": False}})
 
 
-@skipIf(salt.utils.platform.is_windows(), "*NIX-only test")
-@flaky
+@pytest.mark.flaky(max_runs=4)
+@pytest.mark.skip_on_windows
 class OrchEventTest(ShellCase):
     """
     Tests for orchestration events

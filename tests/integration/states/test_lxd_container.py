@@ -2,11 +2,11 @@
 Integration tests for the lxd states
 """
 
+import pytest
 import tests.integration.states.test_lxd
-from tests.support.helpers import flaky
 
 
-@flaky
+@pytest.mark.flaky(max_runs=4)
 class LxdContainerTestCase(tests.integration.states.test_lxd.LxdTestCase):
     def setUp(self):
         self.run_state(
