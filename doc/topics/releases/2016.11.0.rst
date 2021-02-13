@@ -240,7 +240,7 @@ Grains Changes
 
   New behavior:
 
-  .. code-block:: bash
+  .. code-block:: console
 
       root@master:~# salt 'testwin200' grains.item cpu_model
       testwin200:

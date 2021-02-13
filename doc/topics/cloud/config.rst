@@ -652,36 +652,38 @@ data:
 
 .. code-block:: python
 
-    "providers": {
-        "my-develop-envs": [
-            {
-                "availability_zone": "ap-southeast-1b",
-                "id": "HJGRYCILJLKJYG",
-                "key": "kdjgfsgm;woormgl/aserigjksjdhasdfgn",
-                "keyname": "test",
-                "location": "ap-southeast-1",
-                "private_key": "/root/test.pem",
-                "driver": "aws",
-                "securitygroup": "quick-start",
-            },
-            {
-                "location": "Raleigh",
-                "password": "mypass",
-                "driver": "ibmsce",
-                "ssh_key_file": "/etc/salt/ibm/mykey.pem",
-                "ssh_key_name": "mykey",
-                "user": "myuser@mycorp.com",
-            },
-        ],
-        "my-productions-envs": [
-            {
-                "availability_zone": "us-east-1",
-                "location": "us-east-1",
-                "password": "mypass",
-                "driver": "ibmsce",
-                "ssh_key_file": "/etc/salt/ibm/mykey.pem",
-                "ssh_key_name": "mykey",
-                "user": "my-production-user@mycorp.com",
-            }
-        ],
+    {
+        "providers": {
+            "my-develop-envs": [
+                {
+                    "availability_zone": "ap-southeast-1b",
+                    "id": "HJGRYCILJLKJYG",
+                    "key": "kdjgfsgm;woormgl/aserigjksjdhasdfgn",
+                    "keyname": "test",
+                    "location": "ap-southeast-1",
+                    "private_key": "/root/test.pem",
+                    "driver": "aws",
+                    "securitygroup": "quick-start",
+                },
+                {
+                    "location": "Raleigh",
+                    "password": "mypass",
+                    "driver": "ibmsce",
+                    "ssh_key_file": "/etc/salt/ibm/mykey.pem",
+                    "ssh_key_name": "mykey",
+                    "user": "myuser@mycorp.com",
+                },
+            ],
+            "my-productions-envs": [
+                {
+                    "availability_zone": "us-east-1",
+                    "location": "us-east-1",
+                    "password": "mypass",
+                    "driver": "ibmsce",
+                    "ssh_key_file": "/etc/salt/ibm/mykey.pem",
+                    "ssh_key_name": "mykey",
+                    "user": "my-production-user@mycorp.com",
+                }
+            ],
+        }
     }

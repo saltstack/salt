@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Setup Reactor
 
@@ -17,10 +16,7 @@ Example Config in Master or Minion config
         - /srv/reactor/destroy/*.sls
 
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import salt libs
 import salt.utils.reactor
 
 

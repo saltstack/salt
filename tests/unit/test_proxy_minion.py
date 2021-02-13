@@ -4,17 +4,19 @@
 
 import copy
 import logging
-import os
+import pathlib
 import shutil
+import tempfile
 import textwrap
 
+import pytest
 import salt.config
 import salt.ext.tornado
 import salt.ext.tornado.testing
 import salt.metaproxy.proxy
 import salt.minion
 import salt.syspaths
-from tests.support.helpers import slowTest
+from saltfactories.utils import random_string
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
@@ -23,37 +25,7 @@ log = logging.getLogger(__name__)
 
 
 class ProxyMinionTestCase(TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.proxy_conf_d = os.path.join(RUNTIME_VARS.TMP_PROXY_CONF_DIR, "proxy.d")
-        proxytest_conf_d = os.path.join(cls.proxy_conf_d, "proxytest")
-        if not os.path.exists(proxytest_conf_d):
-            os.makedirs(proxytest_conf_d)
-        with salt.utils.files.fopen(
-            os.path.join(proxytest_conf_d, "_schedule.conf"), "w"
-        ) as wfh:
-            wfh.write(
-                textwrap.dedent(
-                    """\
-                    schedule:
-                      test_job:
-                        args: [arg1, arg2]
-                        enabled: true
-                        function: test.arg
-                        jid_include: true
-                        kwargs: {key1: value1, key2: value2}
-                        maxrunning: 1
-                        name: test_job
-                        return_job: false
-                    """
-                )
-            )
-
-    @classmethod
-    def tearDownClass(cls):
-        shutil.rmtree(cls.proxy_conf_d)
-
-    @slowTest
+    @pytest.mark.slow_test
     def test_post_master_init_metaproxy_called(self):
         """
         Tests that when the _post_master_ini function is called, _metaproxy_call is also called.
@@ -79,7 +51,7 @@ class ProxyMinionTestCase(TestCase):
             finally:
                 proxy_minion.destroy()
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_handle_decoded_payload_metaproxy_called(self):
         """
         Tests that when the _handle_decoded_payload function is called, _metaproxy_call is also called.
@@ -107,7 +79,7 @@ class ProxyMinionTestCase(TestCase):
             finally:
                 proxy_minion.destroy()
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_handle_payload_metaproxy_called(self):
         """
         Tests that when the _handle_payload function is called, _metaproxy_call is also called.
@@ -138,11 +110,53 @@ class ProxyMinionTestCase(TestCase):
     def test_proxy_config_default_include(self):
         """
         Tests that when the proxy_config function is called,
-        for the proxy minion, eg. /etc/salt/proxy.d/dummy/*.conf
+        for the proxy minion, eg. /etc/salt/proxy.d/<The-Proxy-ID>/*.conf
         """
+        proxyid = random_string("proxy-")
+        root_dir = pathlib.Path(tempfile.mkdtemp(dir=RUNTIME_VARS.TMP))
+        self.addCleanup(shutil.rmtree, str(root_dir), ignore_errors=True)
+        conf_dir = root_dir / "conf"
+        conf_file = conf_dir / "proxy"
+        conf_d_dir = conf_dir / "proxy.d"
+        proxy_conf_d = conf_d_dir / proxyid
+        proxy_conf_d.mkdir(parents=True)
+
+        with salt.utils.files.fopen(str(conf_file), "w") as wfh:
+            wfh.write(
+                textwrap.dedent(
+                    """\
+                    id: {id}
+                    root_dir: {root_dir}
+                    pidfile: run/proxy.pid
+                    pki_dir: pki
+                    cachedir: cache
+                    sock_dir: run/proxy
+                    log_file: logs/proxy.log
+                    """.format(
+                        id=proxyid, root_dir=root_dir
+                    )
+                )
+            )
+
+        with salt.utils.files.fopen(str(proxy_conf_d / "_schedule.conf"), "w") as wfh:
+            wfh.write(
+                textwrap.dedent(
+                    """\
+                    schedule:
+                      test_job:
+                        args: [arg1, arg2]
+                        enabled: true
+                        function: test.arg
+                        jid_include: true
+                        kwargs: {key1: value1, key2: value2}
+                        maxrunning: 1
+                        name: test_job
+                        return_job: false
+                    """
+                )
+            )
         opts = salt.config.proxy_config(
-            os.path.join(RUNTIME_VARS.TMP_PROXY_CONF_DIR, "proxy"),
-            minion_id="proxytest",
+            str(conf_file), minion_id=proxyid, cache_minion_id=False,
         )
         self.assertIn("schedule", opts)
         self.assertIn("test_job", opts["schedule"])

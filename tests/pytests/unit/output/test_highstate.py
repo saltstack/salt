@@ -2,11 +2,9 @@ import pytest
 import salt.output.highstate as highstate
 
 
-@pytest.fixture(autouse=True)
-def setup_loader(request):
-    setup_loader_modules = {highstate: {"__opts__": {"strip_colors": True}}}
-    with pytest.helpers.loader_mock(request, setup_loader_modules) as loader_mock:
-        yield loader_mock
+@pytest.fixture
+def configure_loader_modules():
+    return {highstate: {"__opts__": {"strip_colors": True}}}
 
 
 @pytest.mark.parametrize("data", [None, {"return": None}, {"return": {"data": None}}])

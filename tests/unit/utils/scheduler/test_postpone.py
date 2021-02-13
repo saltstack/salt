@@ -1,11 +1,7 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import
-
 import datetime
 import logging
 
-from tests.support.helpers import slowTest
+import pytest
 from tests.support.unit import skipIf
 from tests.unit.utils.scheduler.base import SchedulerTestsBase
 
@@ -28,14 +24,14 @@ class SchedulerPostponeTest(SchedulerTestsBase):
     """
 
     def setUp(self):
-        super(SchedulerPostponeTest, self).setUp()
+        super().setUp()
         self.schedule.opts["loop_interval"] = 1
 
     def tearDown(self):
         self.schedule.reset()
-        super(SchedulerPostponeTest, self).tearDown()
+        super().tearDown()
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_postpone(self):
         """
         verify that scheduled job is postponed until the specified time.

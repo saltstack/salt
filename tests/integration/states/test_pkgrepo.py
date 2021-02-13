@@ -2,46 +2,31 @@
 tests for pkgrepo states
 """
 
-# Import Python libs
-
 import os
 
+import pytest
 import salt.utils.files
-
-# Import Salt libs
 import salt.utils.platform
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import (
-    destructiveTest,
-    requires_salt_modules,
-    requires_salt_states,
-    requires_system_grains,
-    slowTest,
-)
+from tests.support.helpers import requires_system_grains, runs_on
 from tests.support.mixins import SaltReturnAssertsMixin
+from tests.support.pytest.helpers import temp_state_file
 from tests.support.unit import skipIf
 
 
-@destructiveTest
 @skipIf(salt.utils.platform.is_windows(), "minion is windows")
+@pytest.mark.destructive_test
 class PkgrepoTest(ModuleCase, SaltReturnAssertsMixin):
     """
     pkgrepo state tests
     """
 
-    @requires_salt_modules("pkgrepo.managed")
+    @pytest.mark.requires_salt_states("pkgrepo.managed")
     @requires_system_grains
     def test_pkgrepo_01_managed(self, grains):
         """
         Test adding a repo
         """
-        if grains["os"] == "Ubuntu" and grains["osrelease_info"] >= (15, 10):
-            self.skipTest(
-                "The PPA used for this test does not exist for Ubuntu Wily"
-                " (15.10) and later."
-            )
 
         if grains["os_family"] == "Debian":
             try:
@@ -56,17 +41,12 @@ class PkgrepoTest(ModuleCase, SaltReturnAssertsMixin):
         for state_id, state_result in ret.items():
             self.assertSaltTrueReturn(dict([(state_id, state_result)]))
 
-    @requires_salt_modules("pkgrepo.absent")
+    @pytest.mark.requires_salt_states("pkgrepo.absent")
     @requires_system_grains
     def test_pkgrepo_02_absent(self, grains):
         """
         Test removing the repo from the above test
         """
-        if grains["os"] == "Ubuntu" and grains["osrelease_info"] >= (15, 10):
-            self.skipTest(
-                "The PPA used for this test does not exist for Ubuntu Wily"
-                " (15.10) and later."
-            )
 
         ret = self.run_function("state.sls", mods="pkgrepo.absent", timeout=120)
         # If the below assert fails then no states were run, and the SLS in
@@ -76,9 +56,9 @@ class PkgrepoTest(ModuleCase, SaltReturnAssertsMixin):
         for state_id, state_result in ret.items():
             self.assertSaltTrueReturn(dict([(state_id, state_result)]))
 
-    @requires_salt_states("pkgrepo.absent", "pkgrepo.managed")
+    @pytest.mark.requires_salt_states("pkgrepo.absent", "pkgrepo.managed")
     @requires_system_grains
-    @slowTest
+    @pytest.mark.slow_test
     def test_pkgrepo_03_with_comments(self, grains):
         """
         Test adding a repo with comments
@@ -129,9 +109,9 @@ class PkgrepoTest(ModuleCase, SaltReturnAssertsMixin):
             # Clean up
             self.run_state("pkgrepo.absent", name=kwargs["name"])
 
-    @requires_salt_states("pkgrepo.managed")
+    @pytest.mark.requires_salt_states("pkgrepo.managed")
     @requires_system_grains
-    @slowTest
+    @pytest.mark.slow_test
     def test_pkgrepo_04_apt_with_architectures(self, grains):
         """
         Test managing a repo with architectures specified
@@ -262,9 +242,9 @@ class PkgrepoTest(ModuleCase, SaltReturnAssertsMixin):
             except OSError:
                 pass
 
-    @requires_salt_states("pkgrepo.absent", "pkgrepo.managed")
+    @pytest.mark.requires_salt_states("pkgrepo.absent", "pkgrepo.managed")
     @requires_system_grains
-    @slowTest
+    @pytest.mark.slow_test
     def test_pkgrepo_05_copr_with_comments(self, grains):
         """
         Test copr
@@ -319,3 +299,49 @@ class PkgrepoTest(ModuleCase, SaltReturnAssertsMixin):
         finally:
             # Clean up
             self.run_state("pkgrepo.absent", copr=kwargs["copr"])
+
+    @runs_on(kernel="linux", os="Ubuntu")
+    def test_managed_multiple_comps(self):
+        state_file = """
+        ubuntu-backports:
+          pkgrepo.managed:
+            - name: 'deb http://fi.archive.ubuntu.com/ubuntu focal-backports'
+            - comps: main, restricted, universe, multiverse
+            - refresh: false
+            - disabled: false
+            - clean_file: true
+            - file: /etc/apt/sources.list.d/99-salt-archive-ubuntu-focal-backports.list
+            - require_in:
+              - pkgrepo: canonical-ubuntu
+
+        canonical-ubuntu:
+          pkgrepo.managed:
+            - name: 'deb http://archive.canonical.com/ubuntu {{ salt['grains.get']('oscodename') }}'
+            - comps: partner
+            - refresh: false
+            - disabled: false
+            - clean_file: true
+            - file: /etc/apt/sources.list.d/99-salt-canonical-ubuntu.list
+        """
+
+        def remove_apt_list_file(path):
+            if os.path.exists(path):
+                os.unlink(path)
+
+        self.addCleanup(
+            remove_apt_list_file,
+            "/etc/apt/sources.list.d/99-salt-canonical-ubuntu.list",
+        )
+        self.addCleanup(
+            remove_apt_list_file,
+            "/etc/apt/sources.list.d/99-salt-archive-ubuntu-focal-backports.list",
+        )
+        with temp_state_file("multiple-comps-repos.sls", state_file):
+            ret = self.run_function("state.sls", ["multiple-comps-repos"])
+            for state_run in ret.values():
+                # On the first run, we must have changes
+                assert state_run["changes"]
+            ret = self.run_function("state.sls", ["multiple-comps-repos"])
+            for state_run in ret.values():
+                # On the second run though, we shouldn't have changes made
+                assert not state_run["changes"]

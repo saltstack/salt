@@ -1,1 +1,0 @@
-zfs.mount Passing '-a' as name is deprecated please just pass 'None'

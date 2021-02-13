@@ -1348,7 +1348,7 @@ Example:
 
 Returns:
 
-.. code-block:: python
+.. code-block:: pycon
 
   {
     'body': '{
@@ -2205,7 +2205,7 @@ log at the ``profile`` level along with the render time of the block.
 The ``profile`` block in the ``example.sls`` state will emit the following log
 statement:
 
-.. code-block:: bash
+.. code-block:: console
 
     # salt-call --local -l profile state.apply example
     [...]
@@ -2241,7 +2241,7 @@ Using the same logic as the ``profile`` block, the ``import_yaml``,
 
 For ``import_*`` blocks, the ``profile`` log statement has the following form:
 
-.. code-block:: bash
+.. code-block:: console
 
     # salt-call --local -l profile state.apply example
     [...]
@@ -2263,7 +2263,7 @@ variable type. Here is the python documentation for `string methods`_.
 
   {% set strings = grains.id.split('-') %}{{ strings[0] }}
 
-.. _`string methods`: https://docs.python.org/2/library/stdtypes.html#string-methods
+.. _`string methods`: https://docs.python.org/3/library/stdtypes.html#string-methods
 
 Custom Execution Modules
 ========================

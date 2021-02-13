@@ -90,6 +90,7 @@ import re
 import stat
 import sys
 import time
+import urllib.parse
 import uuid
 from functools import cmp_to_key
 
@@ -113,8 +114,6 @@ from salt.exceptions import (
     SaltCloudExecutionTimeout,
     SaltCloudSystemExit,
 )
-from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
-from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
 
 try:
     import requests
@@ -306,11 +305,11 @@ def query(
             )
 
             requesturl = "https://{}/".format(endpoint)
-            endpoint = _urlparse(requesturl).netloc
-            endpoint_path = _urlparse(requesturl).path
+            endpoint = urllib.parse.urlparse(requesturl).netloc
+            endpoint_path = urllib.parse.urlparse(requesturl).path
         else:
-            endpoint = _urlparse(requesturl).netloc
-            endpoint_path = _urlparse(requesturl).path
+            endpoint = urllib.parse.urlparse(requesturl).netloc
+            endpoint_path = urllib.parse.urlparse(requesturl).path
             if endpoint == "":
                 endpoint_err = (
                     "Could not find a valid endpoint in the "
@@ -328,7 +327,7 @@ def query(
         method = "GET"
         region = location
         service = "ec2"
-        canonical_uri = _urlparse(requesturl).path
+        canonical_uri = urllib.parse.urlparse(requesturl).path
         host = endpoint.strip()
 
         # Create a date for headers and the credential string
@@ -347,7 +346,7 @@ def query(
 
         keys = sorted(list(params_with_headers))
         values = map(params_with_headers.get, keys)
-        querystring = _urlencode(list(zip(keys, values)))
+        querystring = urllib.parse.urlencode(list(zip(keys, values)))
         querystring = querystring.replace("+", "%20")
 
         canonical_request = (
@@ -1158,7 +1157,7 @@ def get_availability_zone(vm_):
     if avz is None:
         return None
 
-    zones = _list_availability_zones(vm_)
+    zones = list_availability_zones(vm_)
 
     # Validate user-specified AZ
     if avz not in zones:
@@ -1354,7 +1353,7 @@ def get_provider(vm_=None):
     return provider
 
 
-def _list_availability_zones(vm_=None):
+def list_availability_zones(vm_=None):
     """
     List all availability zones in the current region
     """
