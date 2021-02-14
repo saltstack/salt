@@ -563,7 +563,14 @@ def _reconfigure_clone(vm_, vmid):
     # Modify the settings for the VM one at a time so we can see any problems with the values
     # as quickly as possible
     for setting in vm_:
-        if re.match(r"^(ide|sata|scsi)(\d+)$", setting):
+
+        if setting == "name":
+            postParams = {setting: vm_[setting]}
+            query(
+                "post", "nodes/{}/qemu/{}/config".format(vm_["host"], vmid), postParams,
+            )
+
+        elif re.match(r"^(ide|sata|scsi)(\d+)$", setting):
             postParams = {setting: vm_[setting]}
             query(
                 "post", "nodes/{}/qemu/{}/config".format(vm_["host"], vmid), postParams,
