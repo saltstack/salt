@@ -18,6 +18,7 @@ import salt.utils.platform
 import salt.utils.process
 import salt.utils.stringutils
 import zmq.eventloop.ioloop
+from saltfactories.utils.processes import terminate_process
 from tests.support.mock import MagicMock, patch
 
 log = logging.getLogger(__name__)
@@ -161,6 +162,9 @@ class PubServerChannelProcess(salt.utils.process.SignalHandlingProcess):
         self.process_manager.send_signal_to_processes(signal.SIGTERM)
         self.pub_server_channel.pub_close()
         self.process_manager.kill_children()
+        # Really terminate any process still left behind
+        for pid in self.process_manager._process_map:
+            terminate_process(pid=pid, kill_children=True, slow_stop=False)
         self.process_manager = None
 
     def publish(self, payload):
