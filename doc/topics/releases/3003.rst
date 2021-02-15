@@ -23,3 +23,4 @@ Added
 -----
 
 - Firewall groups support to Vultr Salt Cloud provider
+- The ``salt-run`` CLI now accepts ``--jid`` which allows scripting against it.
