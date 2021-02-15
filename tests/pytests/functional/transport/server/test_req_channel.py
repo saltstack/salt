@@ -11,6 +11,7 @@ import salt.transport.server
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.stringutils
+from saltfactories.utils.processes import terminate_process
 
 log = logging.getLogger(__name__)
 
@@ -52,6 +53,7 @@ class ReqServerChannelProcess(salt.utils.process.SignalHandlingProcess):
         return self
 
     def __exit__(self, *args):
+        self.close()
         self.terminate()
 
     def close(self):
@@ -63,6 +65,10 @@ class ReqServerChannelProcess(salt.utils.process.SignalHandlingProcess):
         self.process_manager.stop_restarting()
         self.process_manager.send_signal_to_processes(signal.SIGTERM)
         self.process_manager.kill_children()
+        # Really terminate any process still left behind
+        for pid in self.process_manager._process_map:
+            terminate_process(pid=pid, kill_children=True, slow_stop=False)
+        self.process_manager = None
 
     @salt.ext.tornado.gen.coroutine
     def _handle_payload(self, payload):
