@@ -10,6 +10,7 @@
 """
 
 import base64
+import builtins
 import errno
 import fnmatch
 import functools
@@ -37,8 +38,6 @@ import salt.utils.platform
 import salt.utils.pycrypto
 import salt.utils.stringutils
 import salt.utils.versions
-from salt.ext import six
-from salt.ext.six.moves import builtins
 from saltfactories.exceptions import FactoryFailure as ProcessFailed
 from saltfactories.utils.ports import get_unused_localhost_port
 from saltfactories.utils.processes import ProcessResult
@@ -101,6 +100,12 @@ def destructiveTest(caller):
             def test_create_user(self):
                 pass
     """
+    salt.utils.versions.warn_until_date(
+        "20220101",
+        "Please stop using `@destructiveTest`, it will be removed in {date}, and instead use "
+        "`@pytest.mark.destructive_test`.",
+        stacklevel=3,
+    )
     setattr(caller, "__destructive_test__", True)
 
     if os.environ.get("DESTRUCTIVE_TESTS", "False").lower() == "false":
@@ -133,6 +138,12 @@ def expensiveTest(caller):
             def test_create_user(self):
                 pass
     """
+    salt.utils.versions.warn_until_date(
+        "20220101",
+        "Please stop using `@expensiveTest`, it will be removed in {date}, and instead use "
+        "`@pytest.mark.expensive_test`.",
+        stacklevel=3,
+    )
     setattr(caller, "__expensive_test__", True)
 
     if os.environ.get("EXPENSIVE_TESTS", "False").lower() == "false":
@@ -161,6 +172,12 @@ def slowTest(caller):
             def test_that_takes_much_time(self):
                 pass
     """
+    salt.utils.versions.warn_until_date(
+        "20220101",
+        "Please stop using `@slowTest`, it will be removed in {date}, and instead use "
+        "`@pytest.mark.slow_test`.",
+        stacklevel=3,
+    )
     setattr(caller, "__slow_test__", True)
     return caller
 
@@ -179,6 +196,13 @@ def flaky(caller=None, condition=True, attempts=4):
         def test_sometimes_works(self):
             pass
     """
+    salt.utils.versions.warn_until_date(
+        "20220101",
+        "Please stop using `@flaky`, it will be removed in {date}, and instead use "
+        "`@pytest.mark.flaky`. See https://pypi.org/project/flaky for information on "
+        "how to use it.",
+        stacklevel=3,
+    )
     if caller is None:
         return functools.partial(flaky, condition=condition, attempts=attempts)
 
@@ -224,7 +248,7 @@ def flaky(caller=None, condition=True, attempts=4):
             except Exception as exc:  # pylint: disable=broad-except
                 exc_info = sys.exc_info()
                 if isinstance(exc, SkipTest):
-                    six.reraise(*exc_info)
+                    raise exc_info[0].with_traceback(exc_info[1], exc_info[2])
                 if not isinstance(exc, AssertionError) and log.isEnabledFor(
                     logging.DEBUG
                 ):
@@ -232,7 +256,7 @@ def flaky(caller=None, condition=True, attempts=4):
                 if attempt >= attempts - 1:
                     # We won't try to run tearDown once the attempts are exhausted
                     # because the regular test runner will do that for us
-                    six.reraise(*exc_info)
+                    raise exc_info[0].with_traceback(exc_info[1], exc_info[2])
                 # Run through tearDown again
                 teardown = getattr(cls, "tearDown", None)
                 if callable(teardown):
@@ -479,12 +503,6 @@ class ForceImportErrorOn:
     def __fake_import__(
         self, name, globals_=None, locals_=None, fromlist=None, level=None
     ):
-        if six.PY2:
-            if globals_ is None:
-                globals_ = {}
-            if locals_ is None:
-                locals_ = {}
-
         if level is None:
             level = 0
         if fromlist is None:
@@ -559,6 +577,12 @@ def requires_network(only_local_network=False):
     Simple decorator which is supposed to skip a test case in case there's no
     network connection to the internet.
     """
+    salt.utils.versions.warn_until_date(
+        "20220101",
+        "Please stop using `@requires_network`, it will be removed in {date}, and instead use "
+        "`@pytest.mark.requires_network`.",
+        stacklevel=3,
+    )
 
     def decorator(func):
         @functools.wraps(func)
@@ -1151,6 +1175,12 @@ def requires_salt_states(*names):
 
     .. versionadded:: 3000
     """
+    salt.utils.versions.warn_until_date(
+        "20220101",
+        "Please stop using `@requires_salt_states`, it will be removed in {date}, and instead use "
+        "`@pytest.mark.requires_salt_states`.",
+        stacklevel=3,
+    )
     not_available = _check_required_sminion_attributes("states", *names)
     if not_available:
         return skip("Unavailable salt states: {}".format(*not_available))
@@ -1163,6 +1193,12 @@ def requires_salt_modules(*names):
 
     .. versionadded:: 0.5.2
     """
+    salt.utils.versions.warn_until_date(
+        "20220101",
+        "Please stop using `@requires_salt_modules`, it will be removed in {date}, and instead use "
+        "`@pytest.mark.requires_salt_modules`.",
+        stacklevel=3,
+    )
     not_available = _check_required_sminion_attributes("functions", *names)
     if not_available:
         return skip("Unavailable salt modules: {}".format(*not_available))
@@ -1170,6 +1206,12 @@ def requires_salt_modules(*names):
 
 
 def skip_if_binaries_missing(*binaries, **kwargs):
+    salt.utils.versions.warn_until_date(
+        "20220101",
+        "Please stop using `@skip_if_binaries_missing`, it will be removed in {date}, and instead use "
+        "`@pytest.mark.skip_if_binaries_missing`.",
+        stacklevel=3,
+    )
     import salt.utils.path
 
     if len(binaries) == 1:
@@ -1200,6 +1242,12 @@ def skip_if_binaries_missing(*binaries, **kwargs):
 
 
 def skip_if_not_root(func):
+    salt.utils.versions.warn_until_date(
+        "20220101",
+        "Please stop using `@skip_if_not_root`, it will be removed in {date}, and instead use "
+        "`@pytest.mark.skip_if_not_root`.",
+        stacklevel=3,
+    )
     setattr(func, "__skip_if_not_root__", True)
 
     if not sys.platform.startswith("win"):
@@ -1339,6 +1387,7 @@ def generate_random_name(prefix, size=6):
         "20220101",
         "Please replace your call 'generate_random_name({0})' with 'random_string({0}, lowercase=False)' as "
         "'generate_random_name' will be removed after {{date}}".format(prefix),
+        stacklevel=3,
     )
     return random_string(prefix, size=size, lowercase=False)
 

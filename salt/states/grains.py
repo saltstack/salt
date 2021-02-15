@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage grains on the minion
 ===========================
@@ -12,12 +11,8 @@ file on the minions, By default, this file is located at: ``/etc/salt/grains``
    This does **NOT** override any grains set in the minion config file.
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import re
 
-# Import Salt libs
 from salt.defaults import DEFAULT_TARGET_DELIM
 
 
@@ -130,15 +125,15 @@ def present(name, value, delimiter=DEFAULT_TARGET_DELIM, force=False):
     if __opts__["test"]:
         ret["result"] = None
         if existing is _non_existent:
-            ret["comment"] = "Grain {0} is set to be added".format(name)
+            ret["comment"] = "Grain {} is set to be added".format(name)
             ret["changes"] = {"new": name}
         else:
-            ret["comment"] = "Grain {0} is set to be changed".format(name)
+            ret["comment"] = "Grain {} is set to be changed".format(name)
             ret["changes"] = {"changed": {name: value}}
         return ret
     ret = __salt__["grains.set"](name, value, force=force)
     if ret["result"] is True and ret["changes"] != {}:
-        ret["comment"] = "Set grain {0} to {1}".format(name, value)
+        ret["comment"] = "Set grain {} to {}".format(name, value)
     ret["name"] = name
     return ret
 
@@ -187,7 +182,7 @@ def list_present(name, value, delimiter=DEFAULT_TARGET_DELIM):
         # check whether grain is a list
         if not isinstance(grain, list):
             ret["result"] = False
-            ret["comment"] = "Grain {0} is not a valid list".format(name)
+            ret["comment"] = "Grain {} is not a valid list".format(name)
             return ret
         if isinstance(value, list):
             if make_hashable(value).issubset(
@@ -206,7 +201,7 @@ def list_present(name, value, delimiter=DEFAULT_TARGET_DELIM):
                     )
                     ret[
                         "comment"
-                    ] = 'Removed value {0} from update due to context found in "{1}".\n'.format(
+                    ] = 'Removed value {} from update due to context found in "{}".\n'.format(
                         value, name
                     )
             if "pending_grains" not in __context__:
@@ -228,7 +223,7 @@ def list_present(name, value, delimiter=DEFAULT_TARGET_DELIM):
 
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "Grain {0} is set to be added".format(name)
+        ret["comment"] = "Grain {} is set to be added".format(name)
         ret["changes"] = {"new": grain}
         return ret
     new_grains = __salt__["grains.append"](name, value)
@@ -317,9 +312,9 @@ def list_absent(name, value, delimiter=DEFAULT_TARGET_DELIM):
             return ret
         else:
             ret["result"] = False
-            ret["comment"] = "Grain {0} is not a valid list".format(name)
+            ret["comment"] = "Grain {} is not a valid list".format(name)
     else:
-        ret["comment"] = "Grain {0} does not exist".format(name)
+        ret["comment"] = "Grain {} does not exist".format(name)
     return ret
 
 
@@ -368,38 +363,38 @@ def absent(name, destructive=False, delimiter=DEFAULT_TARGET_DELIM, force=False)
         if __opts__["test"]:
             ret["result"] = None
             if destructive is True:
-                ret["comment"] = "Grain {0} is set to be deleted".format(name)
+                ret["comment"] = "Grain {} is set to be deleted".format(name)
                 ret["changes"] = {"deleted": name}
             return ret
         ret = __salt__["grains.set"](name, None, destructive=destructive, force=force)
         if ret["result"]:
             if destructive is True:
-                ret["comment"] = "Grain {0} was deleted".format(name)
+                ret["comment"] = "Grain {} was deleted".format(name)
                 ret["changes"] = {"deleted": name}
         ret["name"] = name
     elif grain is not _non_existent:
         if __opts__["test"]:
             ret["result"] = None
             if destructive is True:
-                ret["comment"] = "Grain {0} is set to be deleted".format(name)
+                ret["comment"] = "Grain {} is set to be deleted".format(name)
                 ret["changes"] = {"deleted": name}
             else:
                 ret[
                     "comment"
-                ] = "Value for grain {0} is set to be " "deleted (None)".format(name)
+                ] = "Value for grain {} is set to be " "deleted (None)".format(name)
                 ret["changes"] = {"grain": name, "value": None}
             return ret
         ret = __salt__["grains.set"](name, None, destructive=destructive, force=force)
         if ret["result"]:
             if destructive is True:
-                ret["comment"] = "Grain {0} was deleted".format(name)
+                ret["comment"] = "Grain {} was deleted".format(name)
                 ret["changes"] = {"deleted": name}
             else:
-                ret["comment"] = "Value for grain {0} was set to None".format(name)
+                ret["comment"] = "Value for grain {} was set to None".format(name)
                 ret["changes"] = {"grain": name, "value": None}
         ret["name"] = name
     else:
-        ret["comment"] = "Grain {0} does not exist".format(name)
+        ret["comment"] = "Grain {} does not exist".format(name)
     return ret
 
 
@@ -462,8 +457,8 @@ def append(name, value, convert=False, delimiter=DEFAULT_TARGET_DELIM):
                 if __opts__["test"]:
                     ret["result"] = None
                     ret["comment"] = (
-                        "Grain {0} is set to be converted "
-                        "to list and value {1} will be "
+                        "Grain {} is set to be converted "
+                        "to list and value {} will be "
                         "added".format(name, value)
                     )
                     ret["changes"] = {"added": value}
@@ -475,8 +470,8 @@ def append(name, value, convert=False, delimiter=DEFAULT_TARGET_DELIM):
                 ret["changes"] = {"added": value}
             else:
                 ret["result"] = False
-                ret["comment"] = "Grain {0} is not a valid list".format(name)
+                ret["comment"] = "Grain {} is not a valid list".format(name)
     else:
         ret["result"] = False
-        ret["comment"] = "Grain {0} does not exist".format(name)
+        ret["comment"] = "Grain {} does not exist".format(name)
     return ret

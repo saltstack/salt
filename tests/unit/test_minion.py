@@ -6,6 +6,7 @@ import copy
 import logging
 import os
 
+import pytest
 import salt.ext.tornado
 import salt.ext.tornado.testing
 import salt.minion
@@ -16,8 +17,6 @@ import salt.utils.platform
 import salt.utils.process
 from salt._compat import ipaddress
 from salt.exceptions import SaltClientError, SaltMasterUnresolvableError, SaltSystemExit
-from salt.ext.six.moves import range
-from tests.support.helpers import skip_if_not_root, slowTest
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
@@ -81,7 +80,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 "master_uri": "tcp://127.0.0.1:4555",
             }
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_source_int_name_remote(self):
         """
         test when file_client remote and
@@ -121,7 +120,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 "master_uri": "tcp://127.0.0.1:4555",
             }
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_source_address(self):
         """
         test when source_address is set
@@ -163,7 +162,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
     # Tests for _handle_decoded_payload in the salt.minion.Minion() class: 3
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_handle_decoded_payload_jid_match_in_jid_queue(self):
         """
         Tests that the _handle_decoded_payload function returns when a jid is given that is already present
@@ -189,7 +188,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         finally:
             minion.destroy()
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_handle_decoded_payload_jid_queue_addition(self):
         """
         Tests that the _handle_decoded_payload function adds a jid to the minion's jid_queue when the new
@@ -226,7 +225,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             finally:
                 minion.destroy()
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_handle_decoded_payload_jid_queue_reduced_minion_jid_queue_hwm(self):
         """
         Tests that the _handle_decoded_payload function removes a jid from the minion's jid_queue when the
@@ -262,7 +261,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             finally:
                 minion.destroy()
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_process_count_max(self):
         """
         Tests that the _handle_decoded_payload function does not spawn more than the configured amount of processes,
@@ -327,7 +326,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             finally:
                 minion.destroy()
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_beacons_before_connect(self):
         """
         Tests that the 'beacons_before_connect' option causes the beacons to be initialized before connect.
@@ -360,7 +359,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             finally:
                 minion.destroy()
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_scheduler_before_connect(self):
         """
         Tests that the 'scheduler_before_connect' option causes the scheduler to be initialized before connect.
@@ -392,7 +391,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             finally:
                 minion.destroy()
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_when_ping_interval_is_set_the_callback_should_be_added_to_periodic_callbacks(
         self,
     ):
@@ -424,7 +423,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             finally:
                 minion.destroy()
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_when_passed_start_event_grains(self):
         mock_opts = self.get_config("minion", from_scratch=True)
         # provide mock opts an os grain since we'll look for it later.
@@ -446,7 +445,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         finally:
             minion.destroy()
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_when_not_passed_start_event_grains(self):
         mock_opts = self.get_config("minion", from_scratch=True)
         io_loop = salt.ext.tornado.ioloop.IOLoop()
@@ -462,7 +461,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         finally:
             minion.destroy()
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_when_other_events_fired_and_start_event_grains_are_set(self):
         mock_opts = self.get_config("minion", from_scratch=True)
         mock_opts["start_event_grains"] = ["os"]
@@ -479,7 +478,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         finally:
             minion.destroy()
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_minion_retry_dns_count(self):
         """
         Tests that the resolve_dns will retry dns look ups for a maximum of
@@ -499,7 +498,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 SaltMasterUnresolvableError, salt.minion.resolve_dns, self.opts
             )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_gen_modules_executors(self):
         """
         Ensure gen_modules is called with the correct arguments #54429
@@ -522,7 +521,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             minion.destroy()
 
     @patch("salt.utils.process.default_signals")
-    @slowTest
+    @pytest.mark.slow_test
     def test_reinit_crypto_on_fork(self, def_mock):
         """
         Ensure salt.utils.crypt.reinit_crypto() is executed when forking for new job
@@ -669,7 +668,7 @@ class MinionAsyncTestCase(
         self.opts = {}
         self.addCleanup(delattr, self, "opts")
 
-    @skip_if_not_root
+    @pytest.mark.skip_if_not_root
     def test_sock_path_len(self):
         """
         This tests whether or not a larger hash causes the sock path to exceed

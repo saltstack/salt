@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module to provide Citrix Netscaler compatibility to Salt (compatible with netscaler 9.2+)
 
@@ -43,12 +42,9 @@ Module to provide Citrix Netscaler compatibility to Salt (compatible with netsca
         salt-call netscaler.server_up server_name3 netscaler_host=1.2.3.6 netscaler_useSSL=False
 
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import Salt libs
 import salt.utils.platform
 
 try:
@@ -120,7 +116,7 @@ def _connect(**kwargs):
                     name = name[len(prefix) :]
                 except IndexError:
                     return
-            val = __salt__["config.option"]("netscaler.{0}".format(name), None)
+            val = __salt__["config.option"]("netscaler.{}".format(name), None)
             if val is not None:
                 connargs[key] = val
             elif default is not None:

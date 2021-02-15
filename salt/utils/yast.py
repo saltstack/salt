@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 Utilities for managing YAST
 
 .. versionadded:: Beryllium
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.utils.files
 import salt.utils.xmlutil as xml

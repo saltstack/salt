@@ -41,6 +41,7 @@ import salt.utils.args
 import salt.utils.context
 import salt.utils.crypt
 import salt.utils.data
+import salt.utils.dictdiffer
 import salt.utils.dictupdate
 import salt.utils.error
 import salt.utils.event
@@ -2419,6 +2420,38 @@ class Minion(MinionBase):
         log.debug("Refreshing matchers.")
         self.matchers = salt.loader.matchers(self.opts)
 
+    def pillar_schedule_refresh(self, current, new):
+        """
+        Refresh the schedule in pillar
+        """
+        # delete any pillar schedule items not
+        # in the updated pillar values.
+        for item in list(current):
+            if item not in new:
+                del current[item]
+
+        # Update any entries that have changed
+        pillar_schedule = {}
+        for item in current:
+            schedule_item = current[item]
+            # ignore any of the internal keys
+            ignore = [item for item in schedule_item if item.startswith("_")]
+            if item in new:
+                diff = salt.utils.dictdiffer.deep_diff(
+                    schedule_item, new[item], ignore=ignore
+                )
+                if diff.get("new"):
+                    pillar_schedule[item] = new[item]
+                else:
+                    pillar_schedule[item] = schedule_item
+
+        # Add any new entries
+        for item in new:
+            if item not in pillar_schedule:
+                pillar_schedule[item] = new[item]
+
+        return pillar_schedule
+
     # TODO: only allow one future in flight at a time?
     @salt.ext.tornado.gen.coroutine
     def pillar_refresh(self, force_refresh=False):
@@ -2437,13 +2470,20 @@ class Minion(MinionBase):
                 pillarenv=self.opts.get("pillarenv"),
             )
             try:
-                self.opts["pillar"] = yield async_pillar.compile_pillar()
+                new_pillar = yield async_pillar.compile_pillar()
             except SaltClientError:
                 # Do not exit if a pillar refresh fails.
                 log.error(
                     "Pillar data could not be refreshed. "
                     "One or more masters may be down!"
                 )
+            else:
+                current_schedule = self.opts["pillar"].get("schedule", {})
+                new_schedule = new_pillar.get("schedule", {})
+                new_pillar["schedule"] = self.pillar_schedule_refresh(
+                    current_schedule, new_schedule
+                )
+                self.opts["pillar"] = new_pillar
             finally:
                 async_pillar.destroy()
         self.matchers_refresh()
@@ -2463,6 +2503,7 @@ class Minion(MinionBase):
         schedule = data.get("schedule", None)
         where = data.get("where", None)
         persist = data.get("persist", None)
+        fire_event = data.get("fire_event", None)
 
         funcs = {
             "delete": ("delete_job", (name, persist)),
@@ -2479,6 +2520,7 @@ class Minion(MinionBase):
             "list": ("list", (where,)),
             "save_schedule": ("save_schedule", ()),
             "get_next_fire_time": ("get_next_fire_time", (name,)),
+            "job_status": ("job_status", (name, fire_event)),
         }
 
         # Call the appropriate schedule function
@@ -2502,23 +2544,29 @@ class Minion(MinionBase):
         include_opts = data.get("include_opts", None)
 
         funcs = {
-            "add": ("add_beacon", (name, beacon_data)),
-            "modify": ("modify_beacon", (name, beacon_data)),
-            "delete": ("delete_beacon", (name,)),
-            "enable": ("enable_beacons", ()),
-            "disable": ("disable_beacons", ()),
-            "enable_beacon": ("enable_beacon", (name,)),
-            "disable_beacon": ("disable_beacon", (name,)),
-            "list": ("list_beacons", (include_opts, include_pillar)),
-            "list_available": ("list_available_beacons", ()),
-            "validate_beacon": ("validate_beacon", (name, beacon_data)),
-            "reset": ("reset", ()),
+            "add": ("add_beacon", {"name": name, "beacon_data": beacon_data}),
+            "modify": ("modify_beacon", {"name": name, "beacon_data": beacon_data}),
+            "delete": ("delete_beacon", {"name": name}),
+            "enable": ("enable_beacons", {}),
+            "disable": ("disable_beacons", {}),
+            "enable_beacon": ("enable_beacon", {"name": name}),
+            "disable_beacon": ("disable_beacon", {"name": name}),
+            "list": (
+                "list_beacons",
+                {"include_opts": include_opts, "include_pillar": include_pillar},
+            ),
+            "list_available": ("list_available_beacons", {}),
+            "validate_beacon": (
+                "validate_beacon",
+                {"name": name, "beacon_data": beacon_data},
+            ),
+            "reset": ("reset", {}),
         }
 
         # Call the appropriate beacon function
         try:
             alias, params = funcs.get(func)
-            getattr(self.beacons, alias)(*params)
+            getattr(self.beacons, alias)(**params)
         except TypeError:
             log.error('Function "%s" is unavailable in salt.utils.beacons', func)
 
