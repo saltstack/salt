@@ -97,7 +97,8 @@ def req_channel(req_server_channel, salt_minion, req_channel_crypt):
         try:
             yield _req_channel
         finally:
-            _req_channel.force_close_all_instances()
+            # Force termination of singleton
+            _req_channel.obj._refcount = 0
 
 
 def test_basic(req_channel):
