@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Cassandra Database Module
 
@@ -80,21 +79,13 @@ queries based on the internal schema of said version.
 
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import re
 import ssl
 
-# Import Salt Libs
 import salt.utils.json
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError
-
-# Import 3rd-party libs
-from salt.ext import six
-from salt.ext.six.moves import range
 
 SSL_VERSION = "ssl_version"
 
@@ -173,7 +164,7 @@ def _load_properties(property_name, config_option, set_default=False, default=No
                     config_option,
                 )
                 raise CommandExecutionError(
-                    "ERROR: Cassandra {0} cannot be empty.".format(config_option)
+                    "ERROR: Cassandra {} cannot be empty.".format(config_option)
                 )
         return loaded_property
     return property_name
@@ -195,14 +186,9 @@ def _get_ssl_opts():
                     [x for x in dir(ssl) if x.startswith("PROTOCOL_")]
                 )
                 raise CommandExecutionError(
-                    "Invalid protocol_version "
-                    "specified! "
-                    "Please make sure "
-                    "that the ssl protocol"
-                    "version is one from the SSL"
-                    "module. "
-                    "Valid options are "
-                    "{0}".format(valid_opts)
+                    "Invalid protocol_version specified! Please make sure "
+                    "that the ssl protocol version is one from the SSL "
+                    "module. Valid options are {}".format(valid_opts)
                 )
             else:
                 ssl_opts[SSL_VERSION] = getattr(ssl, sslopts[SSL_VERSION])
@@ -401,19 +387,19 @@ def cql_query(query, contact_points=None, port=None, cql_user=None, cql_pass=Non
         results = session.execute(query)
     except BaseException as e:
         log.error("Failed to execute query: %s\n reason: %s", query, e)
-        msg = "ERROR: Cassandra query failed: {0} reason: {1}".format(query, e)
+        msg = "ERROR: Cassandra query failed: {} reason: {}".format(query, e)
         raise CommandExecutionError(msg)
 
     if results:
         for result in results:
             values = {}
-            for key, value in six.iteritems(result):
+            for key, value in result.items():
                 # Salt won't return dictionaries with odd types like uuid.UUID
-                if not isinstance(value, six.text_type):
+                if not isinstance(value, str):
                     # Must support Cassandra collection types.
                     # Namely, Cassandras set, list, and map collections.
                     if not isinstance(value, (set, list, dict)):
-                        value = six.text_type(value)
+                        value = str(value)
                 values[key] = value
             ret.append(values)
 
@@ -518,19 +504,19 @@ def cql_query_with_prepare(
             results = session.execute(bound_statement.bind(statement_arguments))
     except BaseException as e:
         log.error("Failed to execute query: %s\n reason: %s", query, e)
-        msg = "ERROR: Cassandra query failed: {0} reason: {1}".format(query, e)
+        msg = "ERROR: Cassandra query failed: {} reason: {}".format(query, e)
         raise CommandExecutionError(msg)
 
     if not asynchronous and results:
         for result in results:
             values = {}
-            for key, value in six.iteritems(result):
+            for key, value in result.items():
                 # Salt won't return dictionaries with odd types like uuid.UUID
-                if not isinstance(value, six.text_type):
+                if not isinstance(value, str):
                     # Must support Cassandra collection types.
                     # Namely, Cassandras set, list, and map collections.
                     if not isinstance(value, (set, list, dict)):
-                        value = six.text_type(value)
+                        value = str(value)
                 values[key] = value
             ret.append(values)
 
@@ -563,9 +549,7 @@ def version(contact_points=None, port=None, cql_user=None, cql_pass=None):
 
         salt 'minion1' cassandra_cql.version contact_points=minion1
     """
-    query = """select release_version
-                 from system.local
-                limit 1;"""
+    query = "select release_version from system.local limit 1;"
 
     try:
         ret = cql_query(query, contact_points, port, cql_user, cql_pass)
@@ -700,17 +684,13 @@ def list_column_families(
 
         salt 'minion1' cassandra_cql.list_column_families keyspace=system
     """
-    where_clause = "where keyspace_name = '{0}'".format(keyspace) if keyspace else ""
+    where_clause = "where keyspace_name = '{}'".format(keyspace) if keyspace else ""
 
     query = {
-        "2": """select columnfamily_name from system.schema_columnfamilies
-                {0};""".format(
+        "2": "select columnfamily_name from system.schema_columnfamilies {};".format(
             where_clause
         ),
-        "3": """select column_name from system_schema.columns
-                {0};""".format(
-            where_clause
-        ),
+        "3": "select column_name from system_schema.columns {};".format(where_clause),
     }
 
     ret = {}
@@ -753,12 +733,10 @@ def keyspace_exists(
         salt 'minion1' cassandra_cql.keyspace_exists keyspace=system
     """
     query = {
-        "2": """select keyspace_name from system.schema_keyspaces
-                where keyspace_name = '{0}';""".format(
+        "2": "select keyspace_name from system.schema_keyspaces where keyspace_name = '{}';".format(
             keyspace
         ),
-        "3": """select keyspace_name from system_schema.keyspaces
-                where keyspace_name = '{0}';""".format(
+        "3": "select keyspace_name from system_schema.keyspaces where keyspace_name = '{}';".format(
             keyspace
         ),
     }
@@ -824,7 +802,7 @@ def create_keyspace(
         replication_map = {"class": replication_strategy}
 
         if replication_datacenters:
-            if isinstance(replication_datacenters, six.string_types):
+            if isinstance(replication_datacenters, str):
                 try:
                     replication_datacenter_map = salt.utils.json.loads(
                         replication_datacenters
@@ -838,9 +816,7 @@ def create_keyspace(
         else:
             replication_map["replication_factor"] = replication_factor
 
-        query = """create keyspace {0}
-                     with replication = {1}
-                      and durable_writes = true;""".format(
+        query = """create keyspace {} with replication = {} and durable_writes = true;""".format(
             keyspace, replication_map
         )
 
@@ -883,7 +859,7 @@ def drop_keyspace(
     """
     existing_keyspace = keyspace_exists(keyspace, contact_points, port)
     if existing_keyspace:
-        query = """drop keyspace {0};""".format(keyspace)
+        query = """drop keyspace {};""".format(keyspace)
         try:
             cql_query(query, contact_points, port, cql_user, cql_pass)
         except CommandExecutionError:
@@ -975,7 +951,7 @@ def create_user(
         salt 'minion1' cassandra_cql.create_user username=joe password=secret superuser=True contact_points=minion1
     """
     superuser_cql = "superuser" if superuser else "nosuperuser"
-    query = """create user if not exists {0} with password '{1}' {2};""".format(
+    query = """create user if not exists {} with password '{}' {};""".format(
         username, password, superuser_cql
     )
     log.debug(
@@ -1042,15 +1018,15 @@ def list_permissions(
           permission=select contact_points=minion1
     """
     keyspace_cql = (
-        "{0} {1}".format(resource_type, resource) if resource else "all keyspaces"
+        "{} {}".format(resource_type, resource) if resource else "all keyspaces"
     )
     permission_cql = (
-        "{0} permission".format(permission) if permission else "all permissions"
+        "{} permission".format(permission) if permission else "all permissions"
     )
-    query = "list {0} on {1}".format(permission_cql, keyspace_cql)
+    query = "list {} on {}".format(permission_cql, keyspace_cql)
 
     if username:
-        query = "{0} of {1}".format(query, username)
+        query = "{} of {}".format(query, username)
 
     log.debug("Attempting to list permissions with query '%s'", query)
 
@@ -1112,12 +1088,12 @@ def grant_permission(
         permission=select contact_points=minion1
     """
     permission_cql = (
-        "grant {0}".format(permission) if permission else "grant all permissions"
+        "grant {}".format(permission) if permission else "grant all permissions"
     )
     resource_cql = (
-        "on {0} {1}".format(resource_type, resource) if resource else "on all keyspaces"
+        "on {} {}".format(resource_type, resource) if resource else "on all keyspaces"
     )
-    query = "{0} {1} to {2}".format(permission_cql, resource_cql, username)
+    query = "{} {} to {}".format(permission_cql, resource_cql, username)
     log.debug("Attempting to grant permissions with query '%s'", query)
 
     try:

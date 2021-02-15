@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Support for Advanced Policy Firewall (APF)
 ==========================================
@@ -8,10 +7,6 @@ Support for Advanced Policy Firewall (APF)
 :platform: Linux
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Salt Libs
 import salt.utils.path
 from salt.exceptions import CommandExecutionError
 
@@ -42,7 +37,7 @@ def __apf_cmd(cmd):
     """
     Return the apf location
     """
-    apf_cmd = "{0} {1}".format(salt.utils.path.which("apf"), cmd)
+    apf_cmd = "{} {}".format(salt.utils.path.which("apf"), cmd)
     out = __salt__["cmd.run_all"](apf_cmd)
 
     if out["retcode"] != 0:
@@ -50,7 +45,7 @@ def __apf_cmd(cmd):
             msg = out["stdout"]
         else:
             msg = out["stderr"]
-        raise CommandExecutionError("apf failed: {0}".format(msg))
+        raise CommandExecutionError("apf failed: {}".format(msg))
     return out["stdout"]
 
 
@@ -139,7 +134,7 @@ def allow(ip, port=None):
         salt '*' apf.allow 127.0.0.1
     """
     if port is None:
-        return __apf_cmd("-a {0}".format(ip))
+        return __apf_cmd("-a {}".format(ip))
 
 
 def deny(ip):
@@ -151,7 +146,7 @@ def deny(ip):
 
         salt '*' apf.deny 1.2.3.4
     """
-    return __apf_cmd("-d {0}".format(ip))
+    return __apf_cmd("-d {}".format(ip))
 
 
 def remove(ip):
@@ -163,4 +158,4 @@ def remove(ip):
 
         salt '*' apf.remove 1.2.3.4
     """
-    return __apf_cmd("-u {0}".format(ip))
+    return __apf_cmd("-u {}".format(ip))

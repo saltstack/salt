@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Event constants used by listeners and servers, to be imported elsewhere in Salt code.
 

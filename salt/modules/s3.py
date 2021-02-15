@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Connection module for Amazon S3
 
@@ -71,9 +70,7 @@ Connection module for Amazon S3
 
 :depends: requests
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import logging
 
 log = logging.getLogger(__name__)

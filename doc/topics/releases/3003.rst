@@ -17,3 +17,9 @@ Changed
   ``os_family`` grain will now resolve as ``RedHat``.  This may require changes
   to existing uses of :py:func:`grains.filter_by
   <salt.modules.grains.filter_by>`
+
+
+Added
+-----
+
+- Firewall groups support to Vultr Salt Cloud provider

@@ -6,7 +6,7 @@ import logging
 
 import pytest
 from tests.support.case import ModuleCase
-from tests.support.helpers import flaky, random_string, runs_on
+from tests.support.helpers import random_string
 from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
@@ -16,8 +16,8 @@ SET_COMPUTER_NAME = random_string("RS-", lowercase=False)
 SET_SUBNET_NAME = random_string("RS-", lowercase=False)
 
 
-@flaky(attempts=10)
-@runs_on(kernel="Darwin")
+@pytest.mark.flaky(max_runs=10)
+@pytest.mark.skip_unless_on_darwin
 @pytest.mark.usefixtures("salt_sub_minion")
 @pytest.mark.skip_if_not_root
 @pytest.mark.skip_if_binaries_missing("systemsetup")
@@ -230,7 +230,7 @@ class MacSystemModuleTest(ModuleCase):
         )
 
 
-@runs_on(kernel="Darwin")
+@pytest.mark.skip_unless_on_darwin
 @pytest.mark.skip_if_not_root
 class MacSystemComputerNameTest(ModuleCase):
     def setUp(self):
