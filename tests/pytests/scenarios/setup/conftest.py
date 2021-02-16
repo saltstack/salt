@@ -23,10 +23,10 @@ def setup_tests_path(tmp_path_factory):
 
 
 @pytest.fixture
-def virtualenv(setup_tests_path):
+def virtualenv(setup_tests_path, pip_temp_dir):
     venv_dir = str(setup_tests_path / ".venv")
     try:
-        return VirtualEnv(venv_dir=venv_dir)
+        yield VirtualEnv(venv_dir=venv_dir, env={"TMPDIR": str(pip_temp_dir)})
     finally:
         shutil.rmtree(venv_dir, ignore_errors=True)
 
@@ -39,6 +39,13 @@ def cache_dir(setup_tests_path):
         yield _cache_dir
     finally:
         shutil.rmtree(str(_cache_dir), ignore_errors=True)
+
+
+@pytest.fixture(scope="package")
+def pip_temp_dir(setup_tests_path):
+    temp_dir_path = setup_tests_path / "temp-dir"
+    temp_dir_path.mkdir()
+    return temp_dir_path
 
 
 @pytest.fixture(scope="package")
