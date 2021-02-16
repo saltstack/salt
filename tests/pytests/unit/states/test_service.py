@@ -78,7 +78,12 @@ def test_mod_beacon():
                 "beacon_service_sshd": [
                     {
                         "services": {
-                            "sshd": {"onchangeonly": True, "emitatstartup": False},
+                            "sshd": {
+                                "onchangeonly": True,
+                                "delay": 0,
+                                "uncleanshutdown": None,
+                                "emitatstartup": False,
+                            },
                         }
                     },
                     {"interval": 60},
@@ -110,7 +115,9 @@ def test_mod_beacon():
                         with patch.object(
                             SaltEvent, "get_event", side_effect=event_returns
                         ):
-                            ret = servicestate.mod_beacon(name, sfun="running")
+                            ret = servicestate.mod_beacon(
+                                name, sfun="running", beacon="True"
+                            )
                             expected = {
                                 "name": "beacon_service_sshd",
                                 "changes": {},
