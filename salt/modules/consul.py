@@ -269,8 +269,8 @@ def put(consul_url=None, token=None, key=None, value=None, **kwargs):
 
     query_params = {}
 
-    available_sessions = session_list(consul_url=consul_url, return_list=True)
-    _current = get(consul_url=consul_url, key=key)
+    available_sessions = session_list(consul_url=consul_url, token=token, return_list=True)
+    _current = get(consul_url=consul_url, token=token, key=key)
 
     if "flags" in kwargs:
         if kwargs["flags"] >= 0 and kwargs["flags"] <= 2 ** 64:
@@ -283,7 +283,7 @@ def put(consul_url=None, token=None, key=None, value=None, **kwargs):
                 ret["res"] = False
                 return ret
 
-            if kwargs["cas"] != _current["data"]["ModifyIndex"]:
+            if kwargs["cas"] != _current["data"][0]["ModifyIndex"]:
                 ret["message"] = "Key {} exists, but indexes " "do not match.".format(
                     key
                 )
@@ -307,8 +307,9 @@ def put(consul_url=None, token=None, key=None, value=None, **kwargs):
 
     if "release" in kwargs:
         if _current["res"]:
-            if "Session" in _current["data"]:
-                if _current["data"]["Session"] == kwargs["release"]:
+            _current_data = _current["data"][0]
+            if "Session" in _current_data:
+                if _current_data["Session"] == kwargs["release"]:
                     query_params["release"] = kwargs["release"]
                 else:
                     ret["message"] = "{} locked by another session.".format(key)
@@ -333,7 +334,7 @@ def put(consul_url=None, token=None, key=None, value=None, **kwargs):
         query_params=query_params,
     )
 
-    if ret["res"]:
+    if ret["res"] and ret["data"]::
         ret["res"] = True
         ret["data"] = "Added key {} with value {}.".format(key, value)
     else:
