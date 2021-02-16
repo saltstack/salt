@@ -1,4 +1,5 @@
 import os
+import pathlib
 import shutil
 
 import pytest
@@ -6,25 +7,27 @@ from tests.support.helpers import VirtualEnv
 
 
 @pytest.fixture
-def virtualenv(tmp_path):
-    return VirtualEnv(venv_dir=str(tmp_path / ".venv"))
+def setup_tests_path(tmp_path):
+    if os.environ.get("CI_RUN", "0") == "0":
+        directory = tmp_path / "setup-tests"
+    else:
+        # Under CI, on some platforms, Arch, Fedora 33, FreeBSD 12, we run out of disk space on /tmp
+        # Use a subdirectory in the current user's home directory
+        directory = pathlib.Path.home() / "setup-tests"
+    directory.mkdir(parents=True, exist_ok=True)
+    try:
+        yield directory
+    finally:
+        shutil.rmtree(str(directory), ignore_errors=True)
 
 
 @pytest.fixture
-def cache_dir(tmp_path, grains):
-    if os.environ.get("CI_RUN", "0") == "1" and (
-        grains["os"] == "Arch"
-        or (grains["os"] == "Fedora" and grains["osmajorrelease"] == 33)
-    ):
-        # Some of our golden images, at least, Arch Linux and Fedora 33, mount /tmp as a tmpfs.
-        # These setup tests will currently consume all of the freespace on /tmp in these distributions,
-        # and fail. Just skip these tests on these platforms, at least, for now.
-        # to run these tests.
-        pytest.skip("Skipped on CI runs as tests would consume all of /tmp and fail")
+def virtualenv(setup_tests_path):
+    return VirtualEnv(venv_dir=str(setup_tests_path / ".venv"))
 
-    _cache_dir = tmp_path / ".cache"
+
+@pytest.fixture
+def cache_dir(setup_tests_path):
+    _cache_dir = setup_tests_path / ".cache"
     _cache_dir.mkdir(parents=True, exist_ok=True)
-    try:
-        yield _cache_dir
-    finally:
-        shutil.rmtree(str(_cache_dir), ignore_errors=True)
+    return _cache_dir
