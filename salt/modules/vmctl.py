@@ -11,6 +11,7 @@ Manage vms running on the OpenBSD VMM hypervisor using vmctl(8).
     target machine.
 """
 
+
 import logging
 import re
 
@@ -310,7 +311,7 @@ def status(name=None, id=None):
 
     # Grab the header and save it with the lowercase names.
     header = result["stdout"].splitlines()[0].split()
-    header = list([x.lower() for x in header])
+    header = [x.lower() for x in header]
 
     # A VM can be in one of the following states (from vmm.c:vcpu_state_decode())
     # - stopped
