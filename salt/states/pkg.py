@@ -3561,19 +3561,27 @@ def mod_beacon(name, **kwargs):
     supported_funcs = ["installed", "removed"]
 
     if sfun in supported_funcs:
-        beacon_module = "pkg"
+        if kwargs.get("beacon"):
+            beacon_module = "pkg"
 
-        beacon_name = "beacon_{}_{}".format(beacon_module, name)
+            beacon_name = "beacon_{}_{}".format(beacon_module, name)
 
-        beacon_kwargs = {
-            "name": beacon_name,
-            "pkgs": kwargs.get("pkgs", [name]),
-            "interval": 60,
-            "beacon_module": beacon_module,
-        }
+            beacon_kwargs = {
+                "name": beacon_name,
+                "pkgs": kwargs.get("pkgs", [name]),
+                "interval": 60,
+                "beacon_module": beacon_module,
+            }
 
-        ret = __states__["beacon.present"](**beacon_kwargs)
-        return ret
+            ret = __states__["beacon.present"](**beacon_kwargs)
+            return ret
+        else:
+            return {
+                "name": name,
+                "changes": {},
+                "comment": "Not adding beacon.",
+                "result": True,
+            }
 
     else:
         return {
