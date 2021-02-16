@@ -16,7 +16,7 @@ import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
 
 try:
-    from salt._compat import ElementTree as ET
+    import xml.etree.ElementTree as ET
 
     HAS_ELEMENT_TREE = True
 except ImportError:

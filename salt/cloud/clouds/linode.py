@@ -106,7 +106,6 @@ There are a few changes to note:
 
 import abc
 import datetime
-import ipaddress
 import json
 import logging
 import pprint
@@ -115,6 +114,7 @@ import time
 from pathlib import Path
 
 import salt.config as config
+from salt._compat import ipaddress
 from salt.exceptions import (
     SaltCloudConfigError,
     SaltCloudException,
