@@ -12,9 +12,9 @@ from tests.support.mock import MagicMock, patch
 @pytest.fixture
 def message_client_pool():
     sock_pool_size = 5
-    opts = {"sock_pool_size": sock_pool_size}
+    opts = {"sock_pool_size": sock_pool_size, "transport": "tcp"}
     message_client_args = (
-        {},  # opts,
+        opts.copy(),  # opts,
         "",  # host
         0,  # port
     )
@@ -120,7 +120,7 @@ def test_message_client_cleanup_on_close(client_socket, temp_salt_master):
     orig_loop = ioloop.IOLoop()
     orig_loop.make_current()
 
-    opts = temp_salt_master.config.copy()
+    opts = dict(temp_salt_master.config.copy(), transport="tcp")
     client = salt.transport.tcp.SaltMessageClient(
         opts, client_socket.listen_on, client_socket.port
     )
@@ -169,6 +169,9 @@ async def test_async_tcp_pub_channel_connect_publish_port(
         master_uri="",
         master_ip="127.0.0.1",
         publish_port=1234,
+        transport="tcp",
+        acceptance_wait_time=5,
+        acceptance_wait_time_max=5,
     )
     channel = salt.transport.tcp.AsyncTCPPubChannel(opts)
     patch_auth = MagicMock(return_value=True)
@@ -185,7 +188,13 @@ async def test_async_tcp_pub_channel_connect_publish_port(
 
 
 def test_tcp_pub_server_channel_publish_filtering(temp_salt_master):
-    opts = dict(temp_salt_master.config.copy(), sign_pub_messages=False)
+    opts = dict(
+        temp_salt_master.config.copy(),
+        sign_pub_messages=False,
+        transport="tcp",
+        acceptance_wait_time=5,
+        acceptance_wait_time_max=5,
+    )
     with patch("salt.master.SMaster.secrets") as secrets, patch(
         "salt.crypt.Crypticle"
     ) as crypticle, patch("salt.utils.asynchronous.SyncWrapper") as SyncWrapper:
@@ -223,7 +232,13 @@ def test_tcp_pub_server_channel_publish_filtering(temp_salt_master):
 
 
 def test_tcp_pub_server_channel_publish_filtering_str_list(temp_salt_master):
-    opts = dict(temp_salt_master.config.copy(), sign_pub_messages=False)
+    opts = dict(
+        temp_salt_master.config.copy(),
+        transport="tcp",
+        sign_pub_messages=False,
+        acceptance_wait_time=5,
+        acceptance_wait_time_max=5,
+    )
     with patch("salt.master.SMaster.secrets") as secrets, patch(
         "salt.crypt.Crypticle"
     ) as crypticle, patch("salt.utils.asynchronous.SyncWrapper") as SyncWrapper, patch(
