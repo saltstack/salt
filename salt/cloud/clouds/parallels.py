@@ -24,11 +24,11 @@ import pprint
 import time
 import urllib.parse
 import urllib.request
+import xml.etree.ElementTree as ET
 from urllib.error import URLError
 
 import salt.config as config
 import salt.utils.cloud
-from salt._compat import ElementTree as ET
 from salt.exceptions import (
     SaltCloudExecutionFailure,
     SaltCloudExecutionTimeout,

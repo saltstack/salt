@@ -92,6 +92,7 @@ import sys
 import time
 import urllib.parse
 import uuid
+import xml.etree.ElementTree as ET
 from functools import cmp_to_key
 
 import salt.config as config
@@ -106,7 +107,6 @@ import salt.utils.json
 import salt.utils.msgpack
 import salt.utils.stringutils
 import salt.utils.yaml
-from salt._compat import ElementTree as ET
 from salt.exceptions import (
     SaltCloudConfigError,
     SaltCloudException,

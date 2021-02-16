@@ -136,7 +136,7 @@ immutables==0.14
 importlib-metadata==0.23  # via importlib-resources, jsonschema, pluggy, pytest, virtualenv
 importlib-resources==1.5.0  # via cfn-lint, virtualenv
 iniconfig==1.0.1          # via pytest
-ipaddress==1.0.22
+ipaddress==1.0.22         # via kubernetes
 isodate==0.6.0            # via msrest
 jaraco.functools==2.0
 jinja2==2.10.1

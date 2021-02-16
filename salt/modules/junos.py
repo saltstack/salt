@@ -32,7 +32,7 @@ import yaml
 try:
     from lxml import etree
 except ImportError:
-    from salt._compat import ElementTree as etree
+    import xml.etree.ElementTree as etree
 
 
 # Juniper interface libraries
