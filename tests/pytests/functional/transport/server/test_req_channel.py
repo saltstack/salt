@@ -1,4 +1,5 @@
 import logging
+import multiprocessing
 import signal
 
 import pytest
@@ -30,19 +31,17 @@ class ReqServerChannelProcess(salt.utils.process.SignalHandlingProcess):
         )
         self.req_server_channel.pre_fork(self.process_manager)
         self.io_loop = None
+        self.running = multiprocessing.Event()
 
     def run(self):
         self.io_loop = salt.ext.tornado.ioloop.IOLoop()
         self.io_loop.make_current()
         self.req_server_channel.post_fork(self._handle_payload, io_loop=self.io_loop)
+        self.io_loop.add_callback(self.running.set)
         try:
             self.io_loop.start()
         except KeyboardInterrupt:
             pass
-        finally:
-            self.req_server_channel.close()
-            self.io_loop.clear_current()
-            self.io_loop.close(all_fds=True)
 
     def _handle_signals(self, signum, sigframe):
         self.close()
@@ -50,6 +49,7 @@ class ReqServerChannelProcess(salt.utils.process.SignalHandlingProcess):
 
     def __enter__(self):
         self.start()
+        self.running.wait()
         return self
 
     def __exit__(self, *args):
@@ -60,15 +60,17 @@ class ReqServerChannelProcess(salt.utils.process.SignalHandlingProcess):
         if self._closing:
             return
         self._closing = True
-        if self.process_manager is None:
-            return
-        self.process_manager.stop_restarting()
-        self.process_manager.send_signal_to_processes(signal.SIGTERM)
-        self.process_manager.kill_children()
-        # Really terminate any process still left behind
-        for pid in self.process_manager._process_map:
-            terminate_process(pid=pid, kill_children=True, slow_stop=False)
-        self.process_manager = None
+        if self.req_server_channel is not None:
+            self.req_server_channel.close()
+            self.req_server_channel = None
+        if self.process_manager is not None:
+            self.process_manager.stop_restarting()
+            self.process_manager.send_signal_to_processes(signal.SIGTERM)
+            self.process_manager.kill_children()
+            # Really terminate any process still left behind
+            for pid in self.process_manager._process_map:
+                terminate_process(pid=pid, kill_children=True, slow_stop=False)
+            self.process_manager = None
 
     @salt.ext.tornado.gen.coroutine
     def _handle_payload(self, payload):
@@ -82,8 +84,13 @@ def req_server_channel(salt_master, req_channel_crypt):
     req_server_channel_process = ReqServerChannelProcess(
         salt_master.config.copy(), req_channel_crypt
     )
-    with req_server_channel_process:
-        yield
+    try:
+        with req_server_channel_process:
+            yield
+    finally:
+        terminate_process(
+            pid=req_server_channel_process.pid, kill_children=True, slow_stop=False
+        )
 
 
 def req_channel_crypt_ids(value):
