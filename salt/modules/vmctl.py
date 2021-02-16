@@ -18,7 +18,6 @@ import re
 # Imoprt salt libs:
 import salt.utils.path
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.ext.six.moves import zip
 
 log = logging.getLogger(__name__)
 
