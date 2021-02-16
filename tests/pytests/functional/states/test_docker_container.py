@@ -874,8 +874,15 @@ def test_run_with_onlyif(docker_container, container_name, image, modules):
     (and the state should return a True result) if the onlyif has a nonzero
     return code, but if the onlyif has a zero return code the container
     should run.
+    If all items are True, the state should run
     """
-    for cmd in ("/bin/false", ["/bin/true", "/bin/false"]):
+    # Order should not matter
+    test_cmds = (
+        "/bin/false",  # single false
+        ["/bin/true", "/bin/false"],  # false is last
+        ["/bin/false", "/bin/true"],  # false is first
+    )
+    for cmd in test_cmds:
         log.debug("Trying %s", cmd)
         ret = docker_container.run(
             name=container_name, image=image, command="whoami", onlyif=cmd,
@@ -905,8 +912,10 @@ def test_run_with_unless(docker_container, container_name, image, modules):
     (and the state should return a True result) if the unless has a zero
     return code, but if the unless has a nonzero return code the container
     should run.
+    If any item is False, the state should run
     """
-    for cmd in ("/bin/true", ["/bin/false", "/bin/true"]):
+    # Test a single item and a list
+    for cmd in ("/bin/true", ["/bin/true", "/bin/true"]):
         log.debug("Trying %s", cmd)
         ret = docker_container.run(
             name=container_name, image=image, command="whoami", unless=cmd,
@@ -919,7 +928,13 @@ def test_run_with_unless(docker_container, container_name, image, modules):
             modules.docker.rm(container_name, force=True)
             raise
 
-    for cmd in ("/bin/false", ["/bin/false", "ls /paththatdoesnotexist"]):
+    # Order should not matter
+    test_cmds = (
+        "/bin/false",  # single false
+        ["/bin/true", "/bin/false"],  # false is last
+        ["/bin/false", "/bin/true"],  # false is first
+    )
+    for cmd in test_cmds:
         log.debug("Trying %s", cmd)
         ret = docker_container.run(
             name=container_name, image=image, command="whoami", unless=cmd,
