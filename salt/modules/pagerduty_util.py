@@ -138,6 +138,9 @@ def _query(
     if params is None:
         params = {}
 
+    # Ask for the total parameter to be returned, so the pagination logic below will work properly.
+    params["total"] = "true"
+
     if data is None:
         data = {}
 
