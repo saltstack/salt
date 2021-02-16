@@ -277,6 +277,16 @@ def test_mod_beacon():
 
             assert ret == expected
 
+            ret = pkg.mod_beacon(name, sfun="installed")
+            expected = {
+                "name": name,
+                "changes": {},
+                "result": True,
+                "comment": "Not adding beacon.",
+            }
+
+            assert ret == expected
+
     event_returns = [
         {
             "complete": True,
@@ -331,7 +341,7 @@ def test_mod_beacon():
                         with patch.object(
                             SaltEvent, "get_event", side_effect=event_returns
                         ):
-                            ret = pkg.mod_beacon(name, sfun="installed")
+                            ret = pkg.mod_beacon(name, sfun="installed", beacon=True)
                             expected = {
                                 "name": "beacon_pkg_vim",
                                 "changes": {},

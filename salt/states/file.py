@@ -8858,25 +8858,40 @@ def mod_beacon(name, **kwargs):
     supported_funcs = ["managed", "directory"]
 
     if sfun in supported_funcs:
-        beacon_module = "inotify"
+        if kwargs.get("beacon"):
+            beacon_module = "inotify"
 
-        data = {"mask": ["create", "delete", "modify"]}
-        if sfun == "directory":
-            data.update({"auto_add": True, "recurse": True})
+            data = {}
+            _beacon_data = kwargs.get("beacon_data", {})
 
-        beacon_name = "beacon_{}_{}".format(
-            beacon_module, re.sub(os.path.sep, "_", name)
-        )
-        beacon_kwargs = {
-            "name": beacon_name,
-            "files": {name: data},
-            "interval": 60,
-            "beacon_module": beacon_module,
-        }
+            default_mask = ["create", "delete", "modify"]
+            data["mask"] = _beacon_data.get("mask", default_mask)
 
-        ret = __states__["beacon.present"](**beacon_kwargs)
-        return ret
+            if sfun == "directory":
+                data["auto_add"] = _beacon_data.get("auto_add", True)
+                data["recurse"] = _beacon_data.get("recurse", True)
+                data["exclude"] = _beacon_data.get("exclude", [])
 
+            beacon_name = "beacon_{}_{}".format(
+                beacon_module, re.sub(os.path.sep, "_", name)
+            )
+            beacon_kwargs = {
+                "name": beacon_name,
+                "files": {name: data},
+                "interval": _beacon_data.get("interval", 60),
+                "coalesce": _beacon_data.get("coalesce", False),
+                "beacon_module": beacon_module,
+            }
+
+            ret = __states__["beacon.present"](**beacon_kwargs)
+            return ret
+        else:
+            return {
+                "name": name,
+                "changes": {},
+                "comment": "Not adding beacon.",
+                "result": True,
+            }
     else:
         return {
             "name": name,

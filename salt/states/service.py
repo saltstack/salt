@@ -1051,22 +1051,35 @@ def mod_beacon(name, **kwargs):
     supported_funcs = ["running", "dead"]
 
     if sfun in supported_funcs:
-        beacon_module = "service"
+        if kwargs.get("beacon"):
+            beacon_module = "service"
 
-        data = {name: {"onchangeonly": True, "emitatstartup": False}}
+            data = {}
+            _beacon_data = kwargs.get("beacon_data", {})
 
-        beacon_name = "beacon_{}_{}".format(beacon_module, name)
+            data["onchangeonly"] = _beacon_data.get("onchangeonly", True)
+            data["delay"] = _beacon_data.get("delay", 0)
+            data["emitatstartup"] = _beacon_data.get("emitatstartup", False)
+            data["uncleanshutdown"] = _beacon_data.get("emitatstartup", None)
 
-        beacon_kwargs = {
-            "name": beacon_name,
-            "services": data,
-            "interval": 60,
-            "beacon_module": beacon_module,
-        }
+            beacon_name = "beacon_{}_{}".format(beacon_module, name)
 
-        ret = __states__["beacon.present"](**beacon_kwargs)
-        return ret
+            beacon_kwargs = {
+                "name": beacon_name,
+                "services": {name: data},
+                "interval": _beacon_data.get("interval", 60),
+                "beacon_module": beacon_module,
+            }
 
+            ret = __states__["beacon.present"](**beacon_kwargs)
+            return ret
+        else:
+            return {
+                "name": name,
+                "changes": {},
+                "comment": "Not adding beacon.",
+                "result": True,
+            }
     else:
         return {
             "name": name,
