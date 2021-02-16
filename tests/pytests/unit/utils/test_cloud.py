@@ -25,7 +25,7 @@ def configure_loader_modules():
     }
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def create_class():
     old_cwd = os.getcwd()
     gpg_keydir = os.path.join(RUNTIME_VARS.TMP, "gpg-keydir")
