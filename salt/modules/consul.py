@@ -269,7 +269,9 @@ def put(consul_url=None, token=None, key=None, value=None, **kwargs):
 
     query_params = {}
 
-    available_sessions = session_list(consul_url=consul_url, token=token, return_list=True)
+    available_sessions = session_list(
+        consul_url=consul_url, token=token, return_list=True
+    )
     _current = get(consul_url=consul_url, token=token, key=key)
 
     if "flags" in kwargs:
