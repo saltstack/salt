@@ -287,6 +287,26 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(aptpkg.info_installed("wget"), installed)
             self.assertEqual(len(aptpkg.info_installed()), 1)
 
+    def test_info_installed_attr_without_status(self):
+        """
+        Test info_installed 'attr' for inclusion of 'status' attribute.
+
+        Since info_installed should only return installed packages, we need to
+        call __salt__["lowpkg.info"] with the 'status' attribute even if the user
+        is not asking for it in 'attr'. Otherwise info_installed would not be able
+        to check if the package is installed and would return everything.
+
+        :return:
+        """
+        with patch(
+            "salt.modules.aptpkg.__salt__",
+            {"lowpkg.info": MagicMock(return_value=LOWPKG_INFO)},
+        ) as wget_lowpkg:
+            ret = aptpkg.info_installed("wget", attr="version")
+            calls = wget_lowpkg["lowpkg.info"].call_args_list.pop()
+            self.assertIn("status", calls.kwargs["attr"])
+            self.assertIn("version", calls.kwargs["attr"])
+
     def test_owner(self):
         """
         Test - Return the name of the package that owns the file.
