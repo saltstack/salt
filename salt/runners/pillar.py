@@ -122,11 +122,10 @@ def clear_pillar_cache(minion="*", **kwargs):
     ret = ckminions.check_minions(minion)
 
     pillarenv = kwargs.pop("pillarenv", None)
-    saltenv = kwargs.pop("saltenv", None)
+    saltenv = kwargs.pop("saltenv", "base")
 
     pillar_cache = {}
     for tgt in ret.get("minions", []):
-        saltenv = "base"
         id_, grains, _ = salt.utils.minions.get_minion_data(tgt, __opts__)
 
         for key in kwargs:
