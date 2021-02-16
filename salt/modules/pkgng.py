@@ -358,6 +358,21 @@ available_version = salt.utils.functools.alias_function(
 )
 
 
+def _list_pkgs_from_context(
+    versions_as_list, contextkey_pkg, contextkey_origins, with_origin
+):
+    """
+    Use pkg list from __context__
+    """
+    ret = copy.deepcopy(__context__[contextkey_pkg])
+    if not versions_as_list:
+        __salt__["pkg_resource.stringify"](ret)
+    if salt.utils.data.is_true(with_origin):
+        origins = __context__.get(contextkey_origins, {})
+        return {x: {"origin": origins.get(x, ""), "version": y} for x, y in ret.items()}
+    return ret
+
+
 def list_pkgs(
     versions_as_list=False,
     jail=None,
@@ -406,16 +421,10 @@ def list_pkgs(
     contextkey_pkg = _contextkey(jail, chroot, root)
     contextkey_origins = _contextkey(jail, chroot, root, prefix="pkg.origin")
 
-    if contextkey_pkg in __context__:
-        ret = copy.deepcopy(__context__[contextkey_pkg])
-        if not versions_as_list:
-            __salt__["pkg_resource.stringify"](ret)
-        if salt.utils.data.is_true(with_origin):
-            origins = __context__.get(contextkey_origins, {})
-            return {
-                x: {"origin": origins.get(x, ""), "version": y} for x, y in ret.items()
-            }
-        return ret
+    if contextkey_pkg in __context__ and kwargs.get("use_context", True):
+        return _list_pkgs_from_context(
+            versions_as_list, contextkey_pkg, contextkey_origins, with_origin
+        )
 
     ret = {}
     origins = {}
