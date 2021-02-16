@@ -1275,6 +1275,21 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
     return ret
 
 
+def _list_pkgs_from_context(versions_as_list, removed, purge_desired):
+    """
+    Use pkg list from __context__
+    """
+    if removed:
+        ret = copy.deepcopy(__context__["pkg.list_pkgs"]["removed"])
+    else:
+        ret = copy.deepcopy(__context__["pkg.list_pkgs"]["purge_desired"])
+        if not purge_desired:
+            ret.update(__context__["pkg.list_pkgs"]["installed"])
+    if not versions_as_list:
+        __salt__["pkg_resource.stringify"](ret)
+    return ret
+
+
 def list_pkgs(
     versions_as_list=False, removed=False, purge_desired=False, **kwargs
 ):  # pylint: disable=W0613
@@ -1310,16 +1325,8 @@ def list_pkgs(
     removed = salt.utils.data.is_true(removed)
     purge_desired = salt.utils.data.is_true(purge_desired)
 
-    if "pkg.list_pkgs" in __context__:
-        if removed:
-            ret = copy.deepcopy(__context__["pkg.list_pkgs"]["removed"])
-        else:
-            ret = copy.deepcopy(__context__["pkg.list_pkgs"]["purge_desired"])
-            if not purge_desired:
-                ret.update(__context__["pkg.list_pkgs"]["installed"])
-        if not versions_as_list:
-            __salt__["pkg_resource.stringify"](ret)
-        return ret
+    if "pkg.list_pkgs" in __context__ and kwargs.get("use_context", True):
+        return _list_pkgs_from_context(versions_as_list, removed, purge_desired)
 
     ret = {"installed": {}, "removed": {}, "purge_desired": {}}
     cmd = [

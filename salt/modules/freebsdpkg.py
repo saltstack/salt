@@ -260,6 +260,19 @@ def refresh_db(**kwargs):
     return True
 
 
+def _list_pkgs_from_context(versions_as_list, with_origin):
+    """
+    Use pkg list from __context__
+    """
+    ret = copy.deepcopy(__context__["pkg.list_pkgs"])
+    if not versions_as_list:
+        __salt__["pkg_resource.stringify"](ret)
+    if salt.utils.data.is_true(with_origin):
+        origins = __context__.get("pkg.origin", {})
+        return {x: {"origin": origins.get(x, ""), "version": y} for x, y in ret.items()}
+    return ret
+
+
 def list_pkgs(versions_as_list=False, with_origin=False, **kwargs):
     """
     List the packages currently installed as a dict::
@@ -285,16 +298,8 @@ def list_pkgs(versions_as_list=False, with_origin=False, **kwargs):
     ):
         return {}
 
-    if "pkg.list_pkgs" in __context__:
-        ret = copy.deepcopy(__context__["pkg.list_pkgs"])
-        if not versions_as_list:
-            __salt__["pkg_resource.stringify"](ret)
-        if salt.utils.data.is_true(with_origin):
-            origins = __context__.get("pkg.origin", {})
-            return {
-                x: {"origin": origins.get(x, ""), "version": y} for x, y in ret.items()
-            }
-        return ret
+    if "pkg.list_pkgs" in __context__ and kwargs.get("use_context", True):
+        return _list_pkgs_from_context(versions_as_list, with_origin)
 
     ret = {}
     origins = {}

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 A module that adds data to the Pillar structure from a NetBox API.
 
@@ -66,11 +65,8 @@ Note that enabling retrieval of interface and IP address information can
 have a detrimental impact on pillar performance, so use with caution.
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 
-# Import Salt libs
 import salt.utils.http
 from salt._compat import ipaddress
 

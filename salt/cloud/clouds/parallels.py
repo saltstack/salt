@@ -23,12 +23,8 @@ import logging
 import pprint
 import time
 import urllib.parse
+import urllib.request
 from urllib.error import URLError
-from urllib.request import HTTPBasicAuthHandler as _HTTPBasicAuthHandler
-from urllib.request import Request as _Request
-from urllib.request import build_opener as _build_opener
-from urllib.request import install_opener as _install_opener
-from urllib.request import urlopen as _urlopen
 
 import salt.config as config
 import salt.utils.cloud
@@ -40,7 +36,6 @@ from salt.exceptions import (
     SaltCloudSystemExit,
 )
 
-# Get logging started
 log = logging.getLogger(__name__)
 
 __virtualname__ = "parallels"
@@ -365,7 +360,7 @@ def query(action=None, command=None, args=None, method="GET", data=None):
     path = config.get_cloud_config_value(
         "url", get_configured_provider(), __opts__, search_global=False
     )
-    auth_handler = _HTTPBasicAuthHandler()
+    auth_handler = urllib.request.HTTPBasicAuthHandler()
     auth_handler.add_password(
         realm="Parallels Instance Manager",
         uri=path,
@@ -376,8 +371,8 @@ def query(action=None, command=None, args=None, method="GET", data=None):
             "password", get_configured_provider(), __opts__, search_global=False
         ),
     )
-    opener = _build_opener(auth_handler)
-    _install_opener(opener)
+    opener = urllib.request.build_opener(auth_handler)
+    urllib.request.install_opener(opener)
 
     if action:
         path += action
@@ -396,9 +391,9 @@ def query(action=None, command=None, args=None, method="GET", data=None):
 
     if args:
         params = urllib.parse.urlencode(args)
-        req = _Request(url="{}?{}".format(path, params), **kwargs)
+        req = urllib.request.Request(url="{}?{}".format(path, params), **kwargs)
     else:
-        req = _Request(url=path, **kwargs)
+        req = urllib.request.Request(url=path, **kwargs)
 
     req.get_method = lambda: method
 
@@ -407,7 +402,7 @@ def query(action=None, command=None, args=None, method="GET", data=None):
         log.debug(data)
 
     try:
-        result = _urlopen(req)
+        result = urllib.request.urlopen(req)
         log.debug("PARALLELS Response Status Code: %s", result.getcode())
 
         if "content-length" in result.headers:
@@ -418,9 +413,8 @@ def query(action=None, command=None, args=None, method="GET", data=None):
 
         return {}
     except URLError as exc:
-        log.error("PARALLELS Response Status Code: %s %s", exc.code, exc.msg)
         root = ET.fromstring(exc.read())
-        log.error(root)
+        log.error("PARALLELS Response Status Code: %s %s\n%s", exc.code, exc.msg, root)
         return {"error": root}
 
 
