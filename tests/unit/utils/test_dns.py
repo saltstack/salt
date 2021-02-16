@@ -1,8 +1,3 @@
-"""
-
-"""
-
-# Python
 import logging
 import socket
 import textwrap
@@ -10,10 +5,7 @@ import textwrap
 import pytest
 import salt.modules.cmdmod
 import salt.utils.dns
-
-# Salt
 from salt._compat import ipaddress
-from salt.ext.six.moves import zip  # pylint: disable=redefined-builtin
 from salt.utils.dns import (
     _data2rec,
     _data2rec_group,
