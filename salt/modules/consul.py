@@ -334,7 +334,7 @@ def put(consul_url=None, token=None, key=None, value=None, **kwargs):
         query_params=query_params,
     )
 
-    if ret["res"] and ret["data"]::
+    if ret["res"] and ret["data"]:
         ret["res"] = True
         ret["data"] = "Added key {} with value {}.".format(key, value)
     else:
