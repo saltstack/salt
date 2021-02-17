@@ -408,8 +408,8 @@ def cpustats():
                 ret["mpstat"].append({})
                 ret["mpstat"][procn]["system"] = {}
                 cpu_comps = comps[1].split()
-                for i in range(0, len(cpu_comps)):
-                    cpu_vals = cpu_comps[i].split("=")
+                for comp in cpu_comps:
+                    cpu_vals = comp.split("=")
                     ret["mpstat"][procn]["system"][cpu_vals[0]] = cpu_vals[1]
 
             if line.startswith("cpu"):
@@ -550,9 +550,9 @@ def meminfo():
                 ret["svmon"].append({})
                 comps = line.split()
                 ret["svmon"][procn][comps[0]] = {}
-                for i in range(0, len(fields)):
-                    if len(comps) > i + 1:
-                        ret["svmon"][procn][comps[0]][fields[i]] = comps[i + 1]
+                for idx, field in enumerate(fields):
+                    if len(comps) > idx + 1:
+                        ret["svmon"][procn][comps[0]][field] = comps[idx + 1]
                 continue
 
             if line.startswith("pg space") or line.startswith("in use"):
@@ -561,9 +561,9 @@ def meminfo():
                 comps = line.split()
                 pg_space = "{} {}".format(comps[0], comps[1])
                 ret["svmon"][procn][pg_space] = {}
-                for i in range(0, len(fields)):
-                    if len(comps) > i + 2:
-                        ret["svmon"][procn][pg_space][fields[i]] = comps[i + 2]
+                for idx, field in enumerate(fields):
+                    if len(comps) > idx + 2:
+                        ret["svmon"][procn][pg_space][field] = comps[idx + 2]
                 continue
 
             if line.startswith("PageSize"):
@@ -576,9 +576,9 @@ def meminfo():
                 ret["svmon"].append({})
                 comps = line.split()
                 ret["svmon"][procn][comps[0]] = {}
-                for i in range(0, len(fields)):
-                    if len(comps) > i:
-                        ret["svmon"][procn][comps[0]][fields[i]] = comps[i]
+                for idx, field in enumerate(fields):
+                    if len(comps) > idx:
+                        ret["svmon"][procn][comps[0]][field] = comps[idx]
                 continue
 
         for line in __salt__["cmd.run"]("vmstat -v").splitlines():
@@ -955,9 +955,9 @@ def diskstats():
                 ret[disk_name][procn][disk_mode] = {}
             else:
                 comps = line.split()
-                for i in range(0, len(fields)):
-                    if len(comps) > i:
-                        ret[disk_name][procn][disk_mode][fields[i]] = comps[i]
+                for idx, field in enumerate(fields):
+                    if len(comps) > idx:
+                        ret[disk_name][procn][disk_mode][field] = comps[idx]
 
         return ret
 

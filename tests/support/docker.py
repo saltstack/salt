@@ -1,20 +1,13 @@
-# -*- coding: utf-8 -*-
 """
 Common code used in Docker integration tests
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import functools
 import random
 import string
 
-# Import 3rd-party libs
 from salt._compat import ipaddress
-
-# Import Salt libs
 from salt.exceptions import CommandExecutionError
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 
 def random_name(prefix=""):
@@ -24,7 +17,7 @@ def random_name(prefix=""):
     return ret
 
 
-class Network(object):
+class Network:
     def __init__(self, name, **kwargs):
         self.kwargs = kwargs
         self.name = name
@@ -33,7 +26,7 @@ class Network(object):
             self._rand_indexes = random.sample(
                 range(2, self.net.num_addresses - 1), self.net.num_addresses - 3
             )
-            self.ip_arg = "ipv{0}_address".format(self.net.version)
+            self.ip_arg = "ipv{}_address".format(self.net.version)
         except KeyError:
             # No explicit subnet passed
             self.net = self.ip_arg = None
@@ -72,7 +65,7 @@ class Network(object):
                 return None
 
 
-class with_network(object):
+class with_network:
     """
     Generate a network for the test. Information about the network will be
     passed to the wrapped function.
