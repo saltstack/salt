@@ -104,6 +104,8 @@ def clear_pillar_cache(minion="*", **kwargs):
     """
     Clears the cached values when using pillar_cache
 
+    .. versionadded:: 3003.3
+
     CLI Example:
 
     Clears the pillar cache for a specific minion:
@@ -153,6 +155,8 @@ def clear_pillar_cache(minion="*", **kwargs):
 def show_pillar_cache(minion="*", **kwargs):
     """
     Shows the cached values in pillar_cache
+
+    .. versionadded:: 3003.3
 
     CLI Example:
 
