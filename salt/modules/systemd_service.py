@@ -483,7 +483,7 @@ def get_enabled(root=None):
     )
     for line in salt.utils.itertools.split(out, "\n"):
         try:
-            fullname, unit_state = line.strip().split(None, 1)
+            fullname, unit_state = line.strip().split()[:2]
         except ValueError:
             continue
         else:
@@ -525,7 +525,7 @@ def get_disabled(root=None):
     )
     for line in salt.utils.itertools.split(out, "\n"):
         try:
-            fullname, unit_state = line.strip().split(None, 1)
+            fullname, unit_state = line.strip().split()[:2]
         except ValueError:
             continue
         else:
@@ -569,7 +569,7 @@ def get_static(root=None):
     )
     for line in salt.utils.itertools.split(out, "\n"):
         try:
-            fullname, unit_state = line.strip().split(None, 1)
+            fullname, unit_state = line.strip().split()[:2]
         except ValueError:
             continue
         else:
