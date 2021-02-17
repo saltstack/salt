@@ -73,14 +73,14 @@ except ImportError:
 
 
 # Set the minimum version of PyWinrm.
-WINRM_MIN_VER = "0.3.0"
+WINRM_MIN_VER = "0.4.1"
 
 
 try:
     import winrm
     from winrm.exceptions import WinRMTransportError
 
-    # Verify WinRM 0.3.0 or greater
+    # Verify WinRM 0.4.1 or greater
     import pkg_resources  # pylint: disable=3rd-party-module-not-gated
 
     winrm_pkg = pkg_resources.get_distribution("pywinrm")

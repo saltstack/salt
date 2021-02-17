@@ -226,5 +226,5 @@ def test_winrm_pinnned_version():
         else:
             import pkg_resources
             winrm_pkg = pkg_resources.get_distribution("pywinrm")
-            assert winrm_pkg.version >= '0.3.0'
+            assert winrm_pkg.version >= '0.4.1'
     # fmt: on
