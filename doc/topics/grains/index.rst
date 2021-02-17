@@ -217,7 +217,7 @@ grain data structure. For example, consider this custom grain file:
 
 The output of this example renders like so:
 
-.. code-block:: bash
+.. code-block:: console
 
     # salt-call --local grains.items
     local:
@@ -235,7 +235,7 @@ the function will be rendered twice by Salt in the items output: once for the
 ``my_custom_grain`` call itself, and again when it is called in the ``main``
 function:
 
-.. code-block:: bash
+.. code-block:: console
 
     # salt-call --local grains.items
     local:

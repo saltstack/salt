@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Return salt data via slack
 
@@ -77,24 +76,14 @@ To override individual configuration items, append --return_kwargs '{"key:": "va
     salt '*' test.ping --return slack --return_kwargs '{"channel": "#random"}'
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
-
-# Import Python libs
 import pprint
+import urllib.parse
 
-# pylint: disable=import-error,no-name-in-module,redefined-builtin
-import salt.ext.six.moves.http_client
-
-# Import Salt Libs
 import salt.returners
 import salt.utils.slack
 import salt.utils.yaml
-from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
-
-# pylint: enable=import-error,no-name-in-module,redefined-builtin
-
 
 log = logging.getLogger(__name__)
 
@@ -173,7 +162,7 @@ def _post_message(channel, message, username, as_user, api_key=None):
         api_key=api_key,
         method="POST",
         header_dict={"Content-Type": "application/x-www-form-urlencoded"},
-        data=_urlencode(parameters),
+        data=urllib.parse.urlencode(parameters),
     )
 
     log.debug("Slack message post result: %s", result)
@@ -241,11 +230,11 @@ def returner(ret):
         returns = pprint.pformat(returns)
 
     message = (
-        "id: {0}\r\n"
-        "function: {1}\r\n"
-        "function args: {2}\r\n"
-        "jid: {3}\r\n"
-        "return: {4}\r\n"
+        "id: {}\r\n"
+        "function: {}\r\n"
+        "function args: {}\r\n"
+        "jid: {}\r\n"
+        "return: {}\r\n"
     ).format(
         ret.get("id"), ret.get("fun"), ret.get("fun_args"), ret.get("jid"), returns
     )

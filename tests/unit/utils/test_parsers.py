@@ -1145,3 +1145,82 @@ class SaltAPIParserTestCase(ParserBase, TestCase):
             os.unlink(self.log_file)
         if os.path.exists(self.api_logfile):
             os.unlink(self.api_logfile)
+
+
+class DaemonMixInTestCase(TestCase):
+    """
+    Tests the PIDfile deletion in the DaemonMixIn.
+    """
+
+    def setUp(self):
+        """
+        Setting up
+        """
+        # Setup mixin
+        self.daemon_mixin = salt.utils.parsers.DaemonMixIn()
+        self.daemon_mixin.config = {}
+        self.daemon_mixin.config["pidfile"] = "/some/fake.pid"
+
+    def tearDown(self):
+        """
+        Tear down test
+        :return:
+        """
+        del self.daemon_mixin
+
+    @patch("os.unlink", MagicMock())
+    @patch("os.path.isfile", MagicMock(return_value=True))
+    @patch("salt.utils.parsers.logger", MagicMock())
+    def test_pid_file_deletion(self):
+        """
+        PIDfile deletion without exception.
+        """
+        self.daemon_mixin._mixin_before_exit()
+        assert salt.utils.parsers.os.unlink.call_count == 1
+        salt.utils.parsers.logger.info.assert_not_called()
+        salt.utils.parsers.logger.debug.assert_not_called()
+
+    @patch("os.unlink", MagicMock(side_effect=OSError()))
+    @patch("os.path.isfile", MagicMock(return_value=True))
+    @patch("salt.utils.parsers.logger", MagicMock())
+    def test_pid_deleted_oserror_as_root(self):
+        """
+        PIDfile deletion with exception, running as root.
+        """
+        if salt.utils.platform.is_windows():
+            patch_args = (
+                "salt.utils.win_functions.is_admin",
+                MagicMock(return_value=True),
+            )
+        else:
+            patch_args = ("os.getuid", MagicMock(return_value=0))
+
+        with patch(*patch_args):
+            self.daemon_mixin._mixin_before_exit()
+            assert salt.utils.parsers.os.unlink.call_count == 1
+            salt.utils.parsers.logger.info.assert_called_with(
+                "PIDfile could not be deleted: %s",
+                format(self.daemon_mixin.config["pidfile"]),
+            )
+            salt.utils.parsers.logger.debug.assert_called()
+
+    @patch("os.unlink", MagicMock(side_effect=OSError()))
+    @patch("os.path.isfile", MagicMock(return_value=True))
+    @patch("salt.utils.parsers.logger", MagicMock())
+    def test_pid_deleted_oserror_as_non_root(self):
+        """
+        PIDfile deletion with exception, running as non-root.
+        """
+        if salt.utils.platform.is_windows():
+            patch_args = (
+                "salt.utils.win_functions.is_admin",
+                MagicMock(return_value=False),
+            )
+        else:
+            patch_args = ("os.getuid", MagicMock(return_value=1000))
+
+        with patch(*patch_args):
+            self.daemon_mixin._mixin_before_exit()
+            assert salt.utils.parsers.os.unlink.call_count == 1
+            salt.utils.parsers.logger.info.assert_not_called()
+            salt.utils.parsers.logger.debug.assert_not_called()

@@ -1,21 +1,15 @@
-# -*- coding: utf-8 -*-
 """
 Unit tests for salt.utils.templates.py
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import os
 import sys
+from pathlib import PurePath, PurePosixPath
 
 import salt.utils.files
-
-# Import Salt libs
 import salt.utils.templates
-
-# Import Salt Testing Libs
+from tests.support import mock
 from tests.support.helpers import with_tempdir
 from tests.support.unit import TestCase, skipIf
 
@@ -29,7 +23,6 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
-### Here we go!
 class RenderTestCase(TestCase):
     def setUp(self):
         # Default context for salt.utils.templates.render_*_tmpl to work
@@ -209,7 +202,7 @@ class RenderTestCase(TestCase):
         self.assertEqual(res.strip(), "OK")
 
 
-class MockRender(object):
+class MockRender:
     def __call__(self, tplstr, context, tmplpath=None):
         self.tplstr = tplstr
         self.context = context
@@ -218,26 +211,226 @@ class MockRender(object):
 
 
 class WrapRenderTestCase(TestCase):
-    @with_tempdir()
-    def test_wrap_issue_56119_a(self, tempdir):
-        slsfile = os.path.join(tempdir, "foo")
-        with salt.utils.files.fopen(slsfile, "w") as fp:
-            fp.write("{{ slspath }}")
-        context = {"opts": {}, "saltenv": "base", "sls": "foo.bar"}
-        render = MockRender()
-        wrapped = salt.utils.templates.wrap_tmpl_func(render)
-        res = wrapped(slsfile, context=context, tmplpath="/tmp/foo/bar/init.sls")
-        assert render.context["slspath"] == "foo/bar", render.context["slspath"]
-        assert render.context["tpldir"] == "foo/bar", render.context["tpldir"]
+    def assertDictContainsAll(self, actual, **expected):
+        """ Make sure dictionary contains at least all expected values"""
+        actual = {key: actual[key] for key in expected if key in actual}
+        self.assertEqual(expected, actual)
 
+    def _test_generated_sls_context(self, tmplpath, sls, **expected):
+        """ Generic SLS Context Test"""
+        # DeNormalize tmplpath
+        tmplpath = str(PurePath(PurePosixPath(tmplpath)))
+        if tmplpath.startswith("\\"):
+            tmplpath = "C:{}".format(tmplpath)
+        expected["tplpath"] = tmplpath
+        actual = salt.utils.templates._generate_sls_context(tmplpath, sls)
+        self.assertDictContainsAll(actual, **expected)
+
+    @mock.patch("salt.utils.templates.generate_sls_context")
     @with_tempdir()
-    def test_wrap_issue_56119_b(self, tempdir):
+    def test_sls_context_call(self, tempdir, generate_sls_context):
+        """ Check that generate_sls_context is called with proper parameters"""
+        sls = "foo.bar"
+        tmplpath = "/tmp/foo/bar.sls"
+
         slsfile = os.path.join(tempdir, "foo")
         with salt.utils.files.fopen(slsfile, "w") as fp:
             fp.write("{{ slspath }}")
-        context = {"opts": {}, "saltenv": "base", "sls": "foo.bar.bang"}
+        context = {"opts": {}, "saltenv": "base", "sls": sls}
         render = MockRender()
         wrapped = salt.utils.templates.wrap_tmpl_func(render)
-        res = wrapped(slsfile, context=context, tmplpath="/tmp/foo/bar/bang.sls")
-        assert render.context["slspath"] == "foo/bar", render.context["slspath"]
-        assert render.context["tpldir"] == "foo/bar", render.context["tpldir"]
+        res = wrapped(slsfile, context=context, tmplpath=tmplpath)
+        generate_sls_context.assert_called_with(tmplpath, sls)
+
+    @mock.patch("salt.utils.templates.generate_sls_context")
+    @with_tempdir()
+    def test_sls_context_no_call(self, tempdir, generate_sls_context):
+        """ Check that generate_sls_context is not called if sls is not set"""
+        sls = "foo.bar"
+        tmplpath = "/tmp/foo/bar.sls"
+
+        slsfile = os.path.join(tempdir, "foo")
+        with salt.utils.files.fopen(slsfile, "w") as fp:
+            fp.write("{{ slspath }}")
+        context = {"opts": {}, "saltenv": "base"}
+        render = MockRender()
+        wrapped = salt.utils.templates.wrap_tmpl_func(render)
+        res = wrapped(slsfile, context=context, tmplpath=tmplpath)
+        generate_sls_context.assert_not_called()
+
+    def test_generate_sls_context__top_level(self):
+        """ generate_sls_context - top_level Use case"""
+        self._test_generated_sls_context(
+            "/tmp/boo.sls",
+            "boo",
+            tplfile="boo.sls",
+            tpldir=".",
+            tpldot="",
+            slsdotpath="",
+            slscolonpath="",
+            sls_path="",
+            slspath="",
+        )
+
+    def test_generate_sls_context__one_level_init_implicit(self):
+        """ generate_sls_context - Basic one level with implicit init.sls """
+        self._test_generated_sls_context(
+            "/tmp/foo/init.sls",
+            "foo",
+            tplfile="foo/init.sls",
+            tpldir="foo",
+            tpldot="foo",
+            slsdotpath="foo",
+            slscolonpath="foo",
+            sls_path="foo",
+            slspath="foo",
+        )
+
+    def test_generate_sls_context__one_level_init_explicit(self):
+        """ generate_sls_context - Basic one level with explicit init.sls """
+        self._test_generated_sls_context(
+            "/tmp/foo/init.sls",
+            "foo.init",
+            tplfile="foo/init.sls",
+            tpldir="foo",
+            tpldot="foo",
+            slsdotpath="foo",
+            slscolonpath="foo",
+            sls_path="foo",
+            slspath="foo",
+        )
+
+    def test_generate_sls_context__one_level(self):
+        """ generate_sls_context - Basic one level with name"""
+        self._test_generated_sls_context(
+            "/tmp/foo/boo.sls",
+            "foo.boo",
+            tplfile="foo/boo.sls",
+            tpldir="foo",
+            tpldot="foo",
+            slsdotpath="foo",
+            slscolonpath="foo",
+            sls_path="foo",
+            slspath="foo",
+        )
+
+    def test_generate_sls_context__one_level_repeating(self):
+        """ generate_sls_context - Basic one level with name same as dir
+
+        (Issue #56410)
+        """
+        self._test_generated_sls_context(
+            "/tmp/foo/foo.sls",
+            "foo.foo",
+            tplfile="foo/foo.sls",
+            tpldir="foo",
+            tpldot="foo",
+            slsdotpath="foo",
+            slscolonpath="foo",
+            sls_path="foo",
+            slspath="foo",
+        )
+
+    def test_generate_sls_context__two_level_init_implicit(self):
+        """ generate_sls_context - Basic two level with implicit init.sls """
+        self._test_generated_sls_context(
+            "/tmp/foo/bar/init.sls",
+            "foo.bar",
+            tplfile="foo/bar/init.sls",
+            tpldir="foo/bar",
+            tpldot="foo.bar",
+            slsdotpath="foo.bar",
+            slscolonpath="foo:bar",
+            sls_path="foo_bar",
+            slspath="foo/bar",
+        )
+
+    def test_generate_sls_context__two_level_init_explicit(self):
+        """ generate_sls_context - Basic two level with explicit init.sls """
+        self._test_generated_sls_context(
+            "/tmp/foo/bar/init.sls",
+            "foo.bar.init",
+            tplfile="foo/bar/init.sls",
+            tpldir="foo/bar",
+            tpldot="foo.bar",
+            slsdotpath="foo.bar",
+            slscolonpath="foo:bar",
+            sls_path="foo_bar",
+            slspath="foo/bar",
+        )
+
+    def test_generate_sls_context__two_level(self):
+        """ generate_sls_context - Basic two level with name"""
+        self._test_generated_sls_context(
+            "/tmp/foo/bar/boo.sls",
+            "foo.bar.boo",
+            tplfile="foo/bar/boo.sls",
+            tpldir="foo/bar",
+            tpldot="foo.bar",
+            slsdotpath="foo.bar",
+            slscolonpath="foo:bar",
+            sls_path="foo_bar",
+            slspath="foo/bar",
+        )
+
+    def test_generate_sls_context__two_level_repeating(self):
+        """ generate_sls_context - Basic two level with name same as dir
+
+        (Issue #56410)
+        """
+        self._test_generated_sls_context(
+            "/tmp/foo/foo/foo.sls",
+            "foo.foo.foo",
+            tplfile="foo/foo/foo.sls",
+            tpldir="foo/foo",
+            tpldot="foo.foo",
+            slsdotpath="foo.foo",
+            slscolonpath="foo:foo",
+            sls_path="foo_foo",
+            slspath="foo/foo",
+        )
+
+    @mock.patch(
+        "salt.utils.templates._generate_sls_context_legacy", return_value="legacy"
+    )
+    @mock.patch("salt.utils.templates._generate_sls_context", return_value="new")
+    @mock.patch("salt.utils.templates.features.get", return_value=True)
+    def test_feature_flag_on(self, feature_get, new_impl, legacy_impl):
+        """ Test feature flag selection with FF on"""
+        tplpath = "tplpath"
+        sls = "sls"
+        self.assertEqual("new", salt.utils.templates.generate_sls_context(tplpath, sls))
+        new_impl.assert_called_with(tplpath, sls)
+        legacy_impl.assert_not_called()
+
+    @mock.patch(
+        "salt.utils.templates._generate_sls_context_legacy", return_value="legacy"
+    )
+    @mock.patch("salt.utils.templates._generate_sls_context", return_value="new")
+    @mock.patch("salt.utils.templates.features.get", return_value=False)
+    def test_feature_flag_off(self, feature_get, new_impl, legacy_impl):
+        """ Test feature flag selection with FF on"""
+        tplpath = "tplpath"
+        sls = "sls"
+        self.assertEqual(
+            "legacy", salt.utils.templates.generate_sls_context(tplpath, sls)
+        )
+
+        new_impl.assert_not_called()
+        legacy_impl.assert_called_with(tplpath, sls)
+
+    @skipIf(sys.platform == "win32", "Backslash not possible under windows")
+    def test_generate_sls_context__backslash_in_path(self):
+        """ generate_sls_context - Handle backslash in path on non-windows
+        """
+        self._test_generated_sls_context(
+            "/tmp/foo/foo\\foo.sls",
+            "foo.foo\\foo",
+            tplfile="foo/foo\\foo.sls",
+            tpldir="foo",
+            tpldot="foo",
+            slsdotpath="foo",
+            slscolonpath="foo",
+            sls_path="foo",
+            slspath="foo",
+        )

@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Mike Place <mp@saltstack.com>
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 import os
@@ -29,21 +27,30 @@ UNICODE_DIRNAME = UNICODE_ENVNAME = "соль"
 
 class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMixin):
     def setup_loader_modules(self):
-        self.opts = self.get_temp_config("master")
-        empty_dir = os.path.join(RUNTIME_VARS.TMP_STATE_TREE, "empty_dir")
-        if not os.path.isdir(empty_dir):
-            os.makedirs(empty_dir)
+        config_overrides = {"file_roots": {"base": [str(self.tmp_state_tree)]}}
+        self.opts = self.get_temp_config("master", **config_overrides)
         return {roots: {"__opts__": self.opts}}
 
     @classmethod
     def setUpClass(cls):
-        cls.tmp_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
+        cls.tmp_dir = pathlib.Path(tempfile.mkdtemp(dir=RUNTIME_VARS.TMP))
+        cls.tmp_state_tree = pathlib.Path(tempfile.mkdtemp(dir=RUNTIME_VARS.TMP))
         full_path_to_file = os.path.join(RUNTIME_VARS.BASE_FILES, "testfile")
-        shutil.copyfile(full_path_to_file, os.path.join(cls.tmp_dir, "testfile"))
+        shutil.copyfile(full_path_to_file, str(cls.tmp_dir / "testfile"))
+        shutil.copyfile(full_path_to_file, str(cls.tmp_state_tree / "testfile"))
+        shutil.copyfile(
+            os.path.join(RUNTIME_VARS.BASE_FILES, UNICODE_FILENAME),
+            str(cls.tmp_state_tree / UNICODE_FILENAME),
+        )
+        shutil.copytree(
+            os.path.join(RUNTIME_VARS.BASE_FILES, UNICODE_DIRNAME),
+            str(cls.tmp_state_tree / UNICODE_DIRNAME),
+        )
 
     @classmethod
     def tearDownClass(cls):
-        salt.utils.files.rm_rf(cls.tmp_dir)
+        salt.utils.files.rm_rf(str(cls.tmp_dir))
+        salt.utils.files.rm_rf(str(cls.tmp_state_tree))
 
     def tearDown(self):
         del self.opts
@@ -57,17 +64,17 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
         ret = roots.find_file("testfile")
         self.assertEqual("testfile", ret["rel"])
 
-        full_path_to_file = os.path.join(RUNTIME_VARS.BASE_FILES, "testfile")
+        full_path_to_file = str(self.tmp_state_tree / "testfile")
         self.assertEqual(full_path_to_file, ret["path"])
 
     def test_serve_file(self):
         with patch.dict(roots.__opts__, {"file_buffer_size": 262144}):
             load = {
                 "saltenv": "base",
-                "path": os.path.join(self.tmp_dir, "testfile"),
+                "path": str(self.tmp_dir / "testfile"),
                 "loc": 0,
             }
-            fnd = {"path": os.path.join(self.tmp_dir, "testfile"), "rel": "testfile"}
+            fnd = {"path": str(self.tmp_dir / "testfile"), "rel": "testfile"}
             ret = roots.serve_file(load, fnd)
 
             with salt.utils.files.fopen(
@@ -88,9 +95,9 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
     def test_file_hash(self):
         load = {
             "saltenv": "base",
-            "path": os.path.join(self.tmp_dir, "testfile"),
+            "path": str(self.tmp_dir / "testfile"),
         }
-        fnd = {"path": os.path.join(self.tmp_dir, "testfile"), "rel": "testfile"}
+        fnd = {"path": str(self.tmp_dir / "testfile"), "rel": "testfile"}
         ret = roots.file_hash(load, fnd)
 
         # Hashes are different in Windows. May be how git translates line
@@ -103,6 +110,10 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
         self.assertDictEqual(ret, {"hsum": hsum, "hash_type": "sha256"})
 
     def test_file_list_emptydirs(self):
+        empty_dir = self.tmp_state_tree / "empty_dir"
+        if not empty_dir.is_dir():
+            empty_dir.mkdir()
+        self.addCleanup(salt.utils.files.rm_rf, str(empty_dir))
         ret = roots.file_list_emptydirs({"saltenv": "base"})
         self.assertIn("empty_dir", ret)
 
@@ -118,14 +129,18 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
         self.assertIn(UNICODE_FILENAME, ret)
 
     def test_dir_list(self):
+        empty_dir = self.tmp_state_tree / "empty_dir"
+        if not empty_dir.is_dir():
+            empty_dir.mkdir()
+        self.addCleanup(salt.utils.files.rm_rf, str(empty_dir))
         ret = roots.dir_list({"saltenv": "base"})
         self.assertIn("empty_dir", ret)
         self.assertIn(UNICODE_DIRNAME, ret)
 
     def test_symlink_list(self):
-        source_sym = pathlib.Path(RUNTIME_VARS.TMP_BASEENV_STATE_TREE) / "source_sym"
+        source_sym = self.tmp_state_tree / "source_sym"
         source_sym.write_text("")
-        dest_sym = pathlib.Path(RUNTIME_VARS.TMP_BASEENV_STATE_TREE) / "dest_sym"
+        dest_sym = self.tmp_state_tree / "dest_sym"
         dest_sym.symlink_to(str(source_sym))
         self.addCleanup(dest_sym.unlink)
         self.addCleanup(source_sym.unlink)

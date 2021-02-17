@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module for sending messages to Slack
 
@@ -16,20 +15,15 @@ Module for sending messages to Slack
           api_key: peWcBiMOS9HrZG15peWcBiMOS9HrZG15
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
 import salt.ext.six.moves.http_client
-
-# Import Salt libs
 import salt.utils.json
 import salt.utils.slack
 from salt.exceptions import SaltInvocationError
 from salt.ext.six.moves import range
 
-# Import 3rd-party libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
 from salt.ext.six.moves.urllib.parse import urljoin as _urljoin
@@ -205,7 +199,7 @@ def post_message(channel, message, from_name, api_key=None, icon=None):
             channel,
             channel,
         )
-        channel = "#{0}".format(channel)
+        channel = "#{}".format(channel)
 
     if not from_name:
         log.error("from_name is a required option.")
@@ -251,7 +245,7 @@ def call_hook(
     Send message to Slack incoming webhook.
 
     :param message:     The topic of message.
-    :param attachment:  The message to send to the Slacke WebHook.
+    :param attachment:  The message to send to the Slack WebHook.
     :param color:       The color of border of left side
     :param short:       An optional flag indicating whether the value is short
                         enough to be displayed side-by-side with other values.

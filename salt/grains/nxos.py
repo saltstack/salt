@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Grains for Cisco NX-OS minions
 
@@ -7,12 +6,9 @@ Grains for Cisco NX-OS minions
 For documentation on setting up the nxos proxy minion look in the documentation
 for :mod:`salt.proxy.nxos<salt.proxy.nxos>`.
 """
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import Salt Libs
 import salt.utils.nxos
 import salt.utils.platform
 from salt.exceptions import NxosClientError

@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 Module for running arbitrary tests
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
+import builtins
 import logging
 import os
 import random
@@ -12,7 +10,6 @@ import sys
 import time
 import traceback
 
-# Import Salt libs
 import salt.exceptions
 import salt.loader
 import salt.utils.args
@@ -20,8 +17,6 @@ import salt.utils.functools
 import salt.utils.hashutils
 import salt.utils.platform
 import salt.version
-from salt.ext import six
-from salt.ext.six.moves import builtins
 from salt.utils.decorators import depends
 
 __proxyenabled__ = ["*"]
@@ -82,7 +77,7 @@ def module_report():
             if hasattr(__salt__, ref):
                 ret["module_attrs"].append(ref)
             for func in __salt__[ref]:
-                full = "{0}.{1}".format(ref, func)
+                full = "{}.{}".format(ref, func)
                 if hasattr(getattr(__salt__, ref), func):
                     ret["function_attrs"].append(full)
                 if func in __salt__[ref]:
@@ -293,11 +288,11 @@ def arg_type(*args, **kwargs):
     ret = {"args": [], "kwargs": {}}
     # all the args
     for argument in args:
-        ret["args"].append(six.text_type(type(argument)))
+        ret["args"].append(str(type(argument)))
 
     # all the kwargs
-    for key, val in six.iteritems(kwargs):
-        ret["kwargs"][key] = six.text_type(type(val))
+    for key, val in kwargs.items():
+        ret["kwargs"][key] = str(type(val))
 
     return ret
 
@@ -424,7 +419,7 @@ def provider(module):
     """
     func = ""
     for key in __salt__:
-        if not key.startswith("{0}.".format(module)):
+        if not key.startswith("{}.".format(module)):
             continue
         func = key
         break
@@ -493,7 +488,7 @@ def opts_pkg():
     """
     ret = {}
     ret.update(__opts__)
-    ret["grains"] = __grains__
+    ret["grains"] = __grains__.value()
     return ret
 
 

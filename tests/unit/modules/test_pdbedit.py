@@ -1,15 +1,8 @@
-# -*- coding: utf-8 -*-
-
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Salt Libs
 import salt.modules.pdbedit as pdbedit
-
-# Import Salt Testing Libs
+import salt.utils.platform
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class PdbeditTestCase(TestCase, LoaderModuleMockMixin):
@@ -74,6 +67,9 @@ class PdbeditTestCase(TestCase, LoaderModuleMockMixin):
             ret = pdbedit.__virtual__()
             self.assertEqual(ret, "pdbedit")
 
+    @skipIf(
+        salt.utils.platform.is_photonos(), "Hash type md4 is unsupported on Photon OS"
+    )
     def test_generate_nt_hash(self):
         """
         Test salt.modules.pdbedit.generate_nt_hash

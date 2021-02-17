@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Connection module for Amazon Lambda
 
@@ -78,8 +77,6 @@ as a passed in dict, or as a string to pull from pillars or minion config:
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import random
@@ -90,14 +87,10 @@ import salt.utils.files
 import salt.utils.json
 import salt.utils.versions
 from salt.exceptions import SaltInvocationError
-
-# Import Salt libs
-from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error
 
 log = logging.getLogger(__name__)
 
-# Import third party libs
 
 # pylint: disable=import-error
 try:
@@ -132,7 +125,6 @@ def __virtual__():
 
 
 def __init__(opts):
-    salt.utils.compat.pack_dunder(__name__)
     if HAS_BOTO:
         __utils__["boto3.assign_funcs"](__name__, "lambda")
 
@@ -185,7 +177,7 @@ def _get_role_arn(name, region=None, key=None, keyid=None, profile=None):
         region = profile["region"]
     if region is None:
         region = "us-east-1"
-    return "arn:aws:iam::{0}:role/{1}".format(account_id, name)
+    return "arn:aws:iam::{}:role/{}".format(account_id, name)
 
 
 def _filedata(infile):
@@ -194,7 +186,7 @@ def _filedata(infile):
 
 
 def _resolve_vpcconfig(conf, region=None, key=None, keyid=None, profile=None):
-    if isinstance(conf, six.string_types):
+    if isinstance(conf, str):
         conf = salt.utils.json.loads(conf)
     if not conf:
         return None
@@ -281,7 +273,7 @@ def create_function(
                 dlZipFile = __salt__["cp.cache_file"](path=ZipFile)
                 if dlZipFile is False:
                     ret["result"] = False
-                    ret["comment"] = "Failed to cache ZipFile `{0}`.".format(ZipFile)
+                    ret["comment"] = "Failed to cache ZipFile `{}`.".format(ZipFile)
                     return ret
                 ZipFile = dlZipFile
             code = {
@@ -415,7 +407,7 @@ def describe_function(FunctionName, region=None, key=None, keyid=None, profile=N
                 "VpcConfig",
                 "Environment",
             )
-            return {"function": dict([(k, func.get(k)) for k in keys])}
+            return {"function": {k: func.get(k) for k in keys}}
         else:
             return {"function": None}
     except ClientError as e:
@@ -477,7 +469,7 @@ def update_function_config(
     }
 
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-    for val, var in six.iteritems(options):
+    for val, var in options.items():
         if var:
             args[val] = var
     if Role:
@@ -528,7 +520,7 @@ def update_function_config(
                 "VpcConfig",
                 "Environment",
             )
-            return {"updated": True, "function": dict([(k, r.get(k)) for k in keys])}
+            return {"updated": True, "function": {k: r.get(k) for k in keys}}
         else:
             log.warning("Function was not updated")
             return {"updated": False}
@@ -604,7 +596,7 @@ def update_function_code(
                 "VpcConfig",
                 "Environment",
             )
-            return {"updated": True, "function": dict([(k, r.get(k)) for k in keys])}
+            return {"updated": True, "function": {k: r.get(k) for k in keys}}
         else:
             log.warning("Function was not updated")
             return {"updated": False}
@@ -723,7 +715,7 @@ def get_permissions(
         # massage it until it is, for better ease of use.
         policy = conn.get_policy(FunctionName=FunctionName, **kwargs)
         policy = policy.get("Policy", {})
-        if isinstance(policy, six.string_types):
+        if isinstance(policy, str):
             policy = salt.utils.json.loads(policy)
         if policy is None:
             policy = {}
@@ -938,7 +930,7 @@ def describe_alias(FunctionName, Name, region=None, key=None, keyid=None, profil
         )
         if alias:
             keys = ("AliasArn", "Name", "FunctionVersion", "Description")
-            return {"alias": dict([(k, alias.get(k)) for k in keys])}
+            return {"alias": {k: alias.get(k) for k in keys}}
         else:
             return {"alias": None}
     except ClientError as e:
@@ -979,7 +971,7 @@ def update_alias(
         r = conn.update_alias(FunctionName=FunctionName, Name=Name, **args)
         if r:
             keys = ("Name", "FunctionVersion", "Description")
-            return {"updated": True, "alias": dict([(k, r.get(k)) for k in keys])}
+            return {"updated": True, "alias": {k: r.get(k) for k in keys}}
         else:
             log.warning("Alias was not updated")
             return {"updated": False}
@@ -1207,7 +1199,7 @@ def describe_event_source_mapping(
                 "State",
                 "StateTransitionReason",
             )
-            return {"event_source_mapping": dict([(k, desc.get(k)) for k in keys])}
+            return {"event_source_mapping": {k: desc.get(k) for k in keys}}
         else:
             return {"event_source_mapping": None}
     except ClientError as e:
@@ -1261,7 +1253,7 @@ def update_event_source_mapping(
             )
             return {
                 "updated": True,
-                "event_source_mapping": dict([(k, r.get(k)) for k in keys]),
+                "event_source_mapping": {k: r.get(k) for k in keys},
             }
         else:
             log.warning("Mapping was not updated")

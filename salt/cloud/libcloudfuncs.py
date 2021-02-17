@@ -1,30 +1,19 @@
-# -*- coding: utf-8 -*-
 """
 The generic libcloud template used to create the connections and deploy the
 cloud virtual machines
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
-
-# Import python libs
 import os
 
 import salt.client
 import salt.config as config
-
-# Import salt cloud libs
 import salt.utils.cloud
 import salt.utils.data
-
-# Import salt libs
 import salt.utils.event
 from salt.exceptions import SaltCloudNotFound, SaltCloudSystemExit
-from salt.ext import six
-from salt.ext.six.moves import zip
 
 # pylint: disable=W0611
-# Import libcloud
 try:
     import libcloud
     import re
@@ -84,7 +73,7 @@ def node_state(id_):
         "paused": "PAUSED",
         "reconfiguring": "RECONFIGURING",
     }
-    return states_str[id_] if isinstance(id_, six.string_types) else states_int[id_]
+    return states_str[id_] if isinstance(id_, str) else states_int[id_]
 
 
 def check_libcloud_version(reqver=LIBCLOUD_MINIMAL_VERSION, why=None):
@@ -102,20 +91,20 @@ def check_libcloud_version(reqver=LIBCLOUD_MINIMAL_VERSION, why=None):
         import libcloud  # pylint: disable=redefined-outer-name
     except ImportError:
         raise ImportError(
-            "salt-cloud requires >= libcloud {0} which is not installed".format(
-                ".".join([six.text_type(num) for num in reqver])
+            "salt-cloud requires >= libcloud {} which is not installed".format(
+                ".".join([str(num) for num in reqver])
             )
         )
 
     if LIBCLOUD_VERSION_INFO >= reqver:
         return libcloud.__version__
 
-    errormsg = "Your version of libcloud is {0}. ".format(libcloud.__version__)
-    errormsg += "salt-cloud requires >= libcloud {0}".format(
-        ".".join([six.text_type(num) for num in reqver])
+    errormsg = "Your version of libcloud is {}. ".format(libcloud.__version__)
+    errormsg += "salt-cloud requires >= libcloud {}".format(
+        ".".join([str(num) for num in reqver])
     )
     if why:
-        errormsg += " for {0}".format(why)
+        errormsg += " for {}".format(why)
     errormsg += ". Please upgrade."
     raise ImportError(errormsg)
 
@@ -152,10 +141,7 @@ def avail_locations(conn=None, call=None):
     locations = conn.list_locations()
     ret = {}
     for img in locations:
-        if isinstance(img.name, six.string_types) and not six.PY3:
-            img_name = img.name.encode("ascii", "salt-cloud-force-ascii")
-        else:
-            img_name = str(img.name)  # future lint: disable=blacklisted-function
+        img_name = str(img.name)
 
         ret[img_name] = {}
         for attr in dir(img):
@@ -163,8 +149,6 @@ def avail_locations(conn=None, call=None):
                 continue
 
             attr_value = getattr(img, attr)
-            if isinstance(attr_value, six.string_types) and not six.PY3:
-                attr_value = attr_value.encode("ascii", "salt-cloud-force-ascii")
             ret[img_name][attr] = attr_value
 
     return ret
@@ -187,18 +171,13 @@ def avail_images(conn=None, call=None):
     images = conn.list_images()
     ret = {}
     for img in images:
-        if isinstance(img.name, six.string_types) and not six.PY3:
-            img_name = img.name.encode("ascii", "salt-cloud-force-ascii")
-        else:
-            img_name = str(img.name)  # future lint: disable=blacklisted-function
+        img_name = str(img.name)
 
         ret[img_name] = {}
         for attr in dir(img):
             if attr.startswith("_") or attr in ("driver", "get_uuid"):
                 continue
             attr_value = getattr(img, attr)
-            if isinstance(attr_value, six.string_types) and not six.PY3:
-                attr_value = attr_value.encode("ascii", "salt-cloud-force-ascii")
             ret[img_name][attr] = attr_value
     return ret
 
@@ -220,10 +199,7 @@ def avail_sizes(conn=None, call=None):
     sizes = conn.list_sizes()
     ret = {}
     for size in sizes:
-        if isinstance(size.name, six.string_types) and not six.PY3:
-            size_name = size.name.encode("ascii", "salt-cloud-force-ascii")
-        else:
-            size_name = str(size.name)  # future lint: disable=blacklisted-function
+        size_name = str(size.name)
 
         ret[size_name] = {}
         for attr in dir(size):
@@ -235,8 +211,6 @@ def avail_sizes(conn=None, call=None):
             except Exception:  # pylint: disable=broad-except
                 pass
 
-            if isinstance(attr_value, six.string_types) and not six.PY3:
-                attr_value = attr_value.encode("ascii", "salt-cloud-force-ascii")
             ret[size_name][attr] = attr_value
     return ret
 
@@ -247,25 +221,15 @@ def get_location(conn, vm_):
     """
     locations = conn.list_locations()
     vm_location = config.get_cloud_config_value("location", vm_, __opts__)
-    if not six.PY3:
-        vm_location = vm_location.encode("ascii", "salt-cloud-force-ascii")
-
     for img in locations:
-        if isinstance(img.id, six.string_types) and not six.PY3:
-            img_id = img.id.encode("ascii", "salt-cloud-force-ascii")
-        else:
-            img_id = str(img.id)  # future lint: disable=blacklisted-function
-
-        if isinstance(img.name, six.string_types) and not six.PY3:
-            img_name = img.name.encode("ascii", "salt-cloud-force-ascii")
-        else:
-            img_name = str(img.name)  # future lint: disable=blacklisted-function
+        img_id = str(img.id)
+        img_name = str(img.name)
 
         if vm_location and vm_location in (img_id, img_name):
             return img
 
     raise SaltCloudNotFound(
-        "The specified location, '{0}', could not be found.".format(vm_location)
+        "The specified location, '{}', could not be found.".format(vm_location)
     )
 
 
@@ -276,25 +240,15 @@ def get_image(conn, vm_):
     images = conn.list_images()
     vm_image = config.get_cloud_config_value("image", vm_, __opts__)
 
-    if not six.PY3:
-        vm_image = vm_image.encode("ascii", "salt-cloud-force-ascii")
-
     for img in images:
-        if isinstance(img.id, six.string_types) and not six.PY3:
-            img_id = img.id.encode("ascii", "salt-cloud-force-ascii")
-        else:
-            img_id = str(img.id)  # future lint: disable=blacklisted-function
-
-        if isinstance(img.name, six.string_types) and not six.PY3:
-            img_name = img.name.encode("ascii", "salt-cloud-force-ascii")
-        else:
-            img_name = str(img.name)  # future lint: disable=blacklisted-function
+        img_id = str(img.id)
+        img_name = str(img.name)
 
         if vm_image and vm_image in (img_id, img_name):
             return img
 
     raise SaltCloudNotFound(
-        "The specified image, '{0}', could not be found.".format(vm_image)
+        "The specified image, '{}', could not be found.".format(vm_image)
     )
 
 
@@ -308,13 +262,10 @@ def get_size(conn, vm_):
         return sizes[0]
 
     for size in sizes:
-        if vm_size and str(vm_size) in (
-            str(size.id),
-            str(size.name),
-        ):  # pylint: disable=blacklisted-function
+        if vm_size and str(vm_size) in (str(size.id), str(size.name),):
             return size
     raise SaltCloudNotFound(
-        "The specified size, '{0}', could not be found.".format(vm_size)
+        "The specified size, '{}', could not be found.".format(vm_size)
     )
 
 
@@ -346,7 +297,7 @@ def destroy(name, conn=None, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroying instance",
-        "salt/cloud/{0}/destroying".format(name),
+        "salt/cloud/{}/destroying".format(name),
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -373,8 +324,8 @@ def destroy(name, conn=None, call=None):
         mopts_ = salt.config.DEFAULT_MINION_OPTS
         conf_path = "/".join(__opts__["conf_file"].split("/")[:-1])
         mopts_.update(salt.config.minion_config(os.path.join(conf_path, "minion")))
-        client = salt.client.get_local_client(mopts_)
-        minions = client.cmd(name, "mine.flush")
+        with salt.client.get_local_client(mopts=mopts_) as client:
+            minions = client.cmd(name, "mine.flush")
 
     log.info("Clearing Salt Mine: %s, %s", name, flush_mine_on_destroy)
     log.info("Destroying VM: %s", name)
@@ -385,7 +336,7 @@ def destroy(name, conn=None, call=None):
         __utils__["cloud.fire_event"](
             "event",
             "destroyed instance",
-            "salt/cloud/{0}/destroyed".format(name),
+            "salt/cloud/{}/destroyed".format(name),
             args={"name": name},
             sock_dir=__opts__["sock_dir"],
             transport=__opts__["transport"],
@@ -427,8 +378,8 @@ def reboot(name, conn=None):
         # Fire reboot action
         __utils__["cloud.fire_event"](
             "event",
-            "{0} has been rebooted".format(name),
-            "salt-cloud" "salt/cloud/{0}/rebooting".format(name),
+            "{} has been rebooted".format(name),
+            "salt-cloud" "salt/cloud/{}/rebooting".format(name),
             args={"name": name},
             sock_dir=__opts__["sock_dir"],
             transport=__opts__["transport"],
@@ -482,7 +433,7 @@ def list_nodes_full(conn=None, call=None):
     ret = {}
     for node in nodes:
         pairs = {}
-        for key, value in zip(node.__dict__, six.itervalues(node.__dict__)):
+        for key, value in zip(node.__dict__, node.__dict__.values()):
             pairs[key] = value
         ret[node.name] = pairs
         del ret[node.name]["driver"]

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Connection module for Amazon CloudWatch
 
@@ -44,9 +43,7 @@ Connection module for Amazon CloudWatch
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
 
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import logging
 
 import salt.utils.json
@@ -54,12 +51,8 @@ import salt.utils.odict as odict
 import salt.utils.versions
 import yaml  # pylint: disable=blacklisted-import
 
-# Import Salt libs
-from salt.ext import six
-
 log = logging.getLogger(__name__)
 
-# Import third party libs
 try:
     import boto
     import boto.ec2.cloudwatch
@@ -234,7 +227,7 @@ def create_or_update_alarm(
         period = int(period)
     if evaluation_periods:
         evaluation_periods = int(evaluation_periods)
-    if isinstance(dimensions, six.string_types):
+    if isinstance(dimensions, str):
         dimensions = salt.utils.json.loads(dimensions)
         if not isinstance(dimensions, dict):
             log.error(
@@ -242,11 +235,11 @@ def create_or_update_alarm(
                 dimensions,
             )
             return False
-    if isinstance(alarm_actions, six.string_types):
+    if isinstance(alarm_actions, str):
         alarm_actions = alarm_actions.split(",")
-    if isinstance(insufficient_data_actions, six.string_types):
+    if isinstance(insufficient_data_actions, str):
         insufficient_data_actions = insufficient_data_actions.split(",")
-    if isinstance(ok_actions, six.string_types):
+    if isinstance(ok_actions, str):
         ok_actions = ok_actions.split(",")
 
     # convert provided action names into ARN's

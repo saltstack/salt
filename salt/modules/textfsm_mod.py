@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 TextFSM
 =======
@@ -14,14 +13,12 @@ inside the renderer (Jinja, Mako, Genshi, etc.).
 
 .. note::
 
-    For Python 2/3 compatibility, it is more recommended to
-    install the ``jtextfsm`` library: ``pip install jtextfsm``.
+    Install  ``textfsm`` library: ``pip install textfsm``.
 """
-from __future__ import absolute_import
 
 import logging
 
-# Import python libs
+# Import python lib
 import os
 
 from salt.utils.files import fopen
@@ -35,7 +32,7 @@ except ImportError:
     HAS_TEXTFSM = False
 
 try:
-    import clitable
+    from textfsm import clitable
 
     HAS_CLITABLE = True
 except ImportError:
@@ -103,7 +100,7 @@ def extract(template_path, raw_text=None, raw_text_file=None, saltenv="base"):
         Supports the same URL schemes as the ``template_path`` argument.
 
     saltenv: ``base``
-        Salt fileserver envrionment from which to retrieve the file.
+        Salt fileserver environment from which to retrieve the file.
         Ignored if ``template_path`` is not a ``salt://`` URL.
 
     CLI Example:
@@ -326,7 +323,7 @@ def index(
             file or pillar as ``textfsm_index_file``.
 
     saltenv: ``base``
-        Salt fileserver envrionment from which to retrieve the file.
+        Salt fileserver environment from which to retrieve the file.
         Ignored if ``textfsm_path`` is not a ``salt://`` URL.
 
     include_empty: ``False``

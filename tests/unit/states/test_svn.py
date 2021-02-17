@@ -1,16 +1,10 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Rahul Handay <rahulha@saltstack.com>
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
-# Import Salt Libs
 import salt.states.svn as svn
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -72,6 +66,36 @@ class SvnTestCase(TestCase, LoaderModuleMockMixin):
                                 "result": True,
                             },
                         )
+
+    def test_latest_trust_failures(self):
+        """
+            Test that checks that the trust_failures option is handled
+            correctly when running svn.latest in test mode. This tests for the
+            bug reported as #59069.
+        """
+        os_path_exists_mock = MagicMock(side_effect=[False, True])
+        svn_info_mock = MagicMock(return_value=[{"Revision": "42"}])
+        svn_diff_mock = MagicMock()
+        svn_neutral_test_mock = MagicMock()
+        with patch.object(os.path, "exists", os_path_exists_mock), patch.dict(
+            svn.__opts__, {"test": True}
+        ), patch.dict(
+            svn.__salt__, {"svn.diff": svn_diff_mock, "svn.info": svn_info_mock}
+        ), patch.object(
+            svn, "_neutral_test", svn_neutral_test_mock
+        ):
+            svn.latest("salt", "/my/test/dir", trust_failures="unknown-ca")
+            svn_diff_mock.assert_called_with(
+                "/my/test",
+                "/my/test/dir",
+                None,
+                None,
+                None,
+                "-r",
+                "42:HEAD",
+                "--trust-server-cert-failures",
+                "unknown-ca",
+            )
 
     def test_export(self):
         """

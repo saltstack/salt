@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Connection module for Amazon Kinesis
 
@@ -45,20 +44,13 @@ Connection module for Amazon Kinesis
 # keep lint from choking on _get_conn
 # pylint: disable=E0602
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import random
-import sys
 import time
 
 import salt.utils.versions
 
-# Import Salt libs
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
-
-# Import third party libs
 # pylint: disable=unused-import
 try:
     import boto3
@@ -355,10 +347,7 @@ def long_int(hash_key):
 
     :return: long object if python 2.X, int object if python 3.X
     """
-    if sys.version_info < (3,):
-        return long(hash_key)  # pylint: disable=incompatible-py3-code
-    else:
-        return int(hash_key)
+    return int(hash_key)
 
 
 def reshard(
@@ -476,7 +465,7 @@ def reshard(
             # merge
             next_shard_id = _get_next_open_shard(stream_details, shard_id)
             if not next_shard_id:
-                r["error"] = "failed to find next shard after {0}".format(shard_id)
+                r["error"] = "failed to find next shard after {}".format(shard_id)
                 return r
             if force:
                 log.debug(
@@ -607,7 +596,7 @@ def _execute_with_retries(conn, function, **kwargs):
                 r["result"] = None
                 return r
 
-    r["error"] = "Tried to execute function {0} {1} times, but was unable".format(
+    r["error"] = "Tried to execute function {} {} times, but was unable".format(
         function, max_attempts
     )
     log.error(r["error"])

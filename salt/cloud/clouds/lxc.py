@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Install Salt on an LXC Container
 ================================
@@ -7,9 +6,6 @@ Install Salt on an LXC Container
 
 Please read :ref:`core config documentation <config_lxc>`.
 """
-
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 import logging
@@ -20,16 +16,10 @@ import time
 import salt.client
 import salt.config as config
 import salt.runner
-
-# Import salt cloud libs
 import salt.utils.cloud
 import salt.utils.json
 from salt.exceptions import SaltCloudSystemExit
 
-# Import 3rd-party libs
-from salt.ext import six
-
-# Get logging started
 log = logging.getLogger(__name__)
 
 __FUN_TIMEOUT = {
@@ -58,7 +48,7 @@ def _get_grain_id(id_):
     if not get_configured_provider():
         return
     infos = get_configured_provider()
-    return "salt.cloud.lxc.{0}.{1}".format(infos["target"], id_)
+    return "salt.cloud.lxc.{}.{}".format(infos["target"], id_)
 
 
 def _minion_opts(cfg="minion"):
@@ -147,95 +137,95 @@ def _salt(fun, *args, **kw):
         skwargs = ""
     cache_key = (laps, target, fun, sargs, skw, skwargs)
     if not cache or (cache and (cache_key not in __CACHED_CALLS)):
-        conn = _client()
-        runner = _runner()
-        rkwargs = kwargs.copy()
-        rkwargs["timeout"] = timeout
-        rkwargs.setdefault("tgt_type", "list")
-        kwargs.setdefault("tgt_type", "list")
-        ping_retries = 0
-        # the target(s) have environ one minute to respond
-        # we call 60 ping request, this prevent us
-        # from blindly send commands to unmatched minions
-        ping_max_retries = 60
-        ping = True
-        # do not check ping... if we are pinguing
-        if fun == "test.ping":
-            ping_retries = ping_max_retries + 1
-        # be sure that the executors are alive
-        while ping_retries <= ping_max_retries:
-            try:
-                if ping_retries > 0:
-                    time.sleep(1)
-                pings = conn.cmd(tgt=target, timeout=10, fun="test.ping")
-                values = list(pings.values())
-                if not values:
-                    ping = False
-                for v in values:
-                    if v is not True:
+        with _client() as conn:
+            runner = _runner()
+            rkwargs = kwargs.copy()
+            rkwargs["timeout"] = timeout
+            rkwargs.setdefault("tgt_type", "list")
+            kwargs.setdefault("tgt_type", "list")
+            ping_retries = 0
+            # the target(s) have environ one minute to respond
+            # we call 60 ping request, this prevent us
+            # from blindly send commands to unmatched minions
+            ping_max_retries = 60
+            ping = True
+            # do not check ping... if we are pinguing
+            if fun == "test.ping":
+                ping_retries = ping_max_retries + 1
+            # be sure that the executors are alive
+            while ping_retries <= ping_max_retries:
+                try:
+                    if ping_retries > 0:
+                        time.sleep(1)
+                    pings = conn.cmd(tgt=target, timeout=10, fun="test.ping")
+                    values = list(pings.values())
+                    if not values:
                         ping = False
-                if not ping:
-                    raise ValueError("Unreachable")
-                break
-            except Exception:  # pylint: disable=broad-except
-                ping = False
-                ping_retries += 1
-                log.error("%s unreachable, retrying", target)
-        if not ping:
-            raise SaltCloudSystemExit("Target {0} unreachable".format(target))
-        jid = conn.cmd_async(tgt=target, fun=fun, arg=args, kwarg=kw, **rkwargs)
-        cret = conn.cmd(
-            tgt=target, fun="saltutil.find_job", arg=[jid], timeout=10, **kwargs
-        )
-        running = bool(cret.get(target, False))
-        endto = time.time() + timeout
-        while running:
-            rkwargs = {
-                "tgt": target,
-                "fun": "saltutil.find_job",
-                "arg": [jid],
-                "timeout": 10,
-            }
-            cret = conn.cmd(**rkwargs)
+                    for v in values:
+                        if v is not True:
+                            ping = False
+                    if not ping:
+                        raise ValueError("Unreachable")
+                    break
+                except Exception:  # pylint: disable=broad-except
+                    ping = False
+                    ping_retries += 1
+                    log.error("%s unreachable, retrying", target)
+            if not ping:
+                raise SaltCloudSystemExit("Target {} unreachable".format(target))
+            jid = conn.cmd_async(tgt=target, fun=fun, arg=args, kwarg=kw, **rkwargs)
+            cret = conn.cmd(
+                tgt=target, fun="saltutil.find_job", arg=[jid], timeout=10, **kwargs
+            )
             running = bool(cret.get(target, False))
-            if not running:
-                break
-            if running and (time.time() > endto):
-                raise Exception(
-                    "Timeout {0}s for {1} is elapsed".format(
-                        timeout, pprint.pformat(rkwargs)
+            endto = time.time() + timeout
+            while running:
+                rkwargs = {
+                    "tgt": target,
+                    "fun": "saltutil.find_job",
+                    "arg": [jid],
+                    "timeout": 10,
+                }
+                cret = conn.cmd(**rkwargs)
+                running = bool(cret.get(target, False))
+                if not running:
+                    break
+                if running and (time.time() > endto):
+                    raise Exception(
+                        "Timeout {}s for {} is elapsed".format(
+                            timeout, pprint.pformat(rkwargs)
+                        )
                     )
-                )
-            time.sleep(poll)
-        # timeout for the master to return data about a specific job
-        wait_for_res = float({"test.ping": "5"}.get(fun, "120"))
-        while wait_for_res:
-            wait_for_res -= 0.5
-            cret = runner.cmd("jobs.lookup_jid", [jid, {"__kwarg__": True}])
-            if target in cret:
-                ret = cret[target]
-                break
-            # recent changes
-            elif "data" in cret and "outputter" in cret:
-                ret = cret["data"]
-                break
-            # special case, some answers may be crafted
-            # to handle the unresponsivness of a specific command
-            # which is also meaningful, e.g. a minion not yet provisioned
-            if fun in ["test.ping"] and not wait_for_res:
-                ret = {"test.ping": False}.get(fun, False)
-            time.sleep(0.5)
-        try:
-            if "is not available." in ret:
-                raise SaltCloudSystemExit(
-                    "module/function {0} is not available".format(fun)
-                )
-        except SaltCloudSystemExit:  # pylint: disable=try-except-raise
-            raise
-        except TypeError:
-            pass
-        if cache:
-            __CACHED_CALLS[cache_key] = ret
+                time.sleep(poll)
+            # timeout for the master to return data about a specific job
+            wait_for_res = float({"test.ping": "5"}.get(fun, "120"))
+            while wait_for_res:
+                wait_for_res -= 0.5
+                cret = runner.cmd("jobs.lookup_jid", [jid, {"__kwarg__": True}])
+                if target in cret:
+                    ret = cret[target]
+                    break
+                # recent changes
+                elif "data" in cret and "outputter" in cret:
+                    ret = cret["data"]
+                    break
+                # special case, some answers may be crafted
+                # to handle the unresponsivness of a specific command
+                # which is also meaningful, e.g. a minion not yet provisioned
+                if fun in ["test.ping"] and not wait_for_res:
+                    ret = {"test.ping": False}.get(fun, False)
+                time.sleep(0.5)
+            try:
+                if "is not available." in ret:
+                    raise SaltCloudSystemExit(
+                        "module/function {} is not available".format(fun)
+                    )
+            except SaltCloudSystemExit:  # pylint: disable=try-except-raise
+                raise
+            except TypeError:
+                pass
+            if cache:
+                __CACHED_CALLS[cache_key] = ret
     elif cache and cache_key in __CACHED_CALLS:
         ret = __CACHED_CALLS[cache_key]
     return ret
@@ -269,8 +259,8 @@ def list_nodes(conn=None, call=None):
         path = profiles[profile].get("path", None)
     lxclist = _salt("lxc.list", extra=True, path=path)
     nodes = {}
-    for state, lxcs in six.iteritems(lxclist):
-        for lxcc, linfos in six.iteritems(lxcs):
+    for state, lxcs in lxclist.items():
+        for lxcc, linfos in lxcs.items():
             info = {
                 "id": lxcc,
                 "name": lxcc,  # required for cloud cache
@@ -346,7 +336,7 @@ last message: {comment}""".format(
     keys = list(ret["changes"].items())
     keys.sort()
     for ch, comment in keys:
-        sret += ("\n" "    {0}:\n" "      {1}").format(
+        sret += ("\n" "    {}:\n" "      {}").format(
             ch, comment.replace("\n", "\n" "      ")
         )
     if not ret["result"]:
@@ -372,12 +362,12 @@ def destroy(vm_, call=None):
         )
     if not get_configured_provider():
         return
-    ret = {"comment": "{0} was not found".format(vm_), "result": False}
+    ret = {"comment": "{} was not found".format(vm_), "result": False}
     if _salt("lxc.info", vm_, path=path):
         __utils__["cloud.fire_event"](
             "event",
             "destroying instance",
-            "salt/cloud/{0}/destroying".format(vm_),
+            "salt/cloud/{}/destroying".format(vm_),
             args={"name": vm_, "instance_id": vm_},
             sock_dir=__opts__["sock_dir"],
             transport=__opts__["transport"],
@@ -385,11 +375,11 @@ def destroy(vm_, call=None):
         cret = _salt("lxc.destroy", vm_, stop=True, path=path)
         ret["result"] = cret["result"]
         if ret["result"]:
-            ret["comment"] = "{0} was destroyed".format(vm_)
+            ret["comment"] = "{} was destroyed".format(vm_)
             __utils__["cloud.fire_event"](
                 "event",
                 "destroyed instance",
-                "salt/cloud/{0}/destroyed".format(vm_),
+                "salt/cloud/{}/destroyed".format(vm_),
                 args={"name": vm_, "instance_id": vm_},
                 sock_dir=__opts__["sock_dir"],
                 transport=__opts__["transport"],
@@ -422,7 +412,7 @@ def create(vm_, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "starting create",
-        "salt/cloud/{0}/creating".format(vm_["name"]),
+        "salt/cloud/{}/creating".format(vm_["name"]),
         args=__utils__["cloud.filter_event"](
             "creating", event_data, ["name", "profile", "provider", "driver"]
         ),
@@ -444,7 +434,7 @@ def create(vm_, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "requesting instance",
-        "salt/cloud/{0}/requesting".format(vm_["name"]),
+        "salt/cloud/{}/requesting".format(vm_["name"]),
         args=__utils__["cloud.filter_event"](
             "requesting", vm_, ["name", "profile", "provider", "driver"]
         ),
@@ -456,7 +446,7 @@ def create(vm_, call=None):
     ret["runner_return"] = cret
     ret["result"] = cret["result"]
     if not ret["result"]:
-        ret["Error"] = "Error while creating {0},".format(vm_["name"])
+        ret["Error"] = "Error while creating {},".format(vm_["name"])
     else:
         ret["changes"]["created"] = "created"
 
@@ -474,7 +464,7 @@ def create(vm_, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "created instance",
-        "salt/cloud/{0}/created".format(vm_["name"]),
+        "salt/cloud/{}/created".format(vm_["name"]),
         args=__utils__["cloud.filter_event"](
             "created", vm_, ["name", "profile", "provider", "driver"]
         ),
@@ -511,14 +501,14 @@ def get_configured_provider(vm_=None):
     matched = False
     # --list-images level
     if img_provider:
-        tgt = "provider: {0}".format(img_provider)
+        tgt = "provider: {}".format(img_provider)
         if dalias == img_provider:
             data = get_provider(img_provider)
             matched = True
     # providers are set in configuration
     if not data and "profile" not in __opts__ and arg_providers:
         for name in arg_providers:
-            tgt = "provider: {0}".format(name)
+            tgt = "provider: {}".format(name)
             if dalias == name:
                 data = get_provider(name)
             if data:
@@ -528,10 +518,10 @@ def get_configured_provider(vm_=None):
     elif "profile" in __opts__:
         curprof = __opts__["profile"]
         profs = __opts__["profiles"]
-        tgt = "profile: {0}".format(curprof)
+        tgt = "profile: {}".format(curprof)
         if curprof in profs and profs[curprof]["provider"] == __active_provider_name__:
             prov, cdriver = profs[curprof]["provider"].split(":")
-            tgt += " provider: {0}".format(prov)
+            tgt += " provider: {}".format(prov)
             data = get_provider(prov)
             matched = True
     # fallback if we have only __active_provider_name__

@@ -1,7 +1,4 @@
-# coding: utf-8
-
 # Python libs
-from __future__ import absolute_import
 
 import logging
 import os
@@ -68,7 +65,7 @@ class INotifyBeaconTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret, _expected)
 
     def test_files_list_config(self):
-        config = [{"files": [{u"/importantfile": {u"mask": [u"modify"]}}]}]
+        config = [{"files": [{"/importantfile": {"mask": ["modify"]}}]}]
         ret = inotify.validate(config)
         _expected = (
             False,
@@ -76,6 +73,10 @@ class INotifyBeaconTestCase(TestCase, LoaderModuleMockMixin):
         )
         self.assertEqual(ret, _expected)
 
+    @skipIf(
+        salt.utils.platform.is_freebsd(),
+        "Skip on FreeBSD - does not yet have full inotify/watchdog support",
+    )
     def test_file_open(self):
         path = os.path.realpath(__file__)
         config = [{"files": {path: {"mask": ["open"]}}}]
@@ -92,6 +93,10 @@ class INotifyBeaconTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret[0]["path"], path)
         self.assertEqual(ret[0]["change"], "IN_OPEN")
 
+    @skipIf(
+        salt.utils.platform.is_freebsd(),
+        "Skip on FreeBSD - does not yet have full inotify/watchdog support",
+    )
     def test_dir_no_auto_add(self):
         config = [{"files": {self.tmpdir: {"mask": ["create"]}}}]
         ret = inotify.validate(config)
@@ -111,6 +116,10 @@ class INotifyBeaconTestCase(TestCase, LoaderModuleMockMixin):
         ret = inotify.beacon(config)
         self.assertEqual(ret, [])
 
+    @skipIf(
+        salt.utils.platform.is_freebsd(),
+        "Skip on FreeBSD - does not yet have full inotify/watchdog support",
+    )
     def test_dir_auto_add(self):
         config = [
             {"files": {self.tmpdir: {"mask": ["create", "open"], "auto_add": True}}}
@@ -136,6 +145,10 @@ class INotifyBeaconTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret[0]["path"], fp)
         self.assertEqual(ret[0]["change"], "IN_OPEN")
 
+    @skipIf(
+        salt.utils.platform.is_freebsd(),
+        "Skip on FreeBSD - does not yet have full inotify/watchdog support",
+    )
     def test_dir_recurse(self):
         dp1 = os.path.join(self.tmpdir, "subdir1")
         os.mkdir(dp1)
@@ -161,6 +174,10 @@ class INotifyBeaconTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret[2]["path"], fp)
         self.assertEqual(ret[2]["change"], "IN_OPEN")
 
+    @skipIf(
+        salt.utils.platform.is_freebsd(),
+        "Skip on FreeBSD - does not yet have full inotify/watchdog support",
+    )
     def test_dir_recurse_auto_add(self):
         dp1 = os.path.join(self.tmpdir, "subdir1")
         os.mkdir(dp1)
@@ -199,13 +216,17 @@ class INotifyBeaconTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret[0]["path"], fp)
         self.assertEqual(ret[0]["change"], "IN_DELETE")
 
+    @skipIf(
+        salt.utils.platform.is_freebsd(),
+        "Skip on FreeBSD - does not yet have full inotify/watchdog support",
+    )
     def test_multi_files_exclude(self):
         dp1 = os.path.join(self.tmpdir, "subdir1")
         dp2 = os.path.join(self.tmpdir, "subdir2")
         os.mkdir(dp1)
         os.mkdir(dp2)
-        _exclude1 = "{0}/subdir1/*tmpfile*$".format(self.tmpdir)
-        _exclude2 = "{0}/subdir2/*filetmp*$".format(self.tmpdir)
+        _exclude1 = "{}/subdir1/*tmpfile*$".format(self.tmpdir)
+        _exclude2 = "{}/subdir2/*filetmp*$".format(self.tmpdir)
         config = [
             {
                 "files": {
@@ -252,3 +273,42 @@ class INotifyBeaconTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(len(ret), 1)
         self.assertEqual(ret[0]["path"], fp)
         self.assertEqual(ret[0]["change"], "IN_DELETE")
+
+    # Check __get_notifier and ensure that the right bits are in __context__
+    # including a beacon_name specific notifier is found.
+    def test__get_notifier(self):
+        config = {
+            "files": {
+                "/tmp/httpd/vhost.d": {
+                    "mask": ["delete", "modify"],
+                    "recurse": True,
+                    "auto_add": True,
+                    "exclude": [
+                        {"/tmp/httpd/vhost.d/.+?\\.sw[px]*$|4913|~$": {"regex": True}}
+                    ],
+                },
+                "/tmp/httpd/conf.d": {
+                    "mask": ["delete", "modify"],
+                    "recurse": True,
+                    "auto_add": True,
+                    "exclude": [
+                        {"/tmp/httpd/vhost.d/.+?\\.sw[px]*$|4913|~$": {"regex": True}}
+                    ],
+                },
+                "/tmp/httpd/conf": {
+                    "mask": ["delete", "modify"],
+                    "recurse": True,
+                    "auto_add": True,
+                    "exclude": [
+                        {"/tmp/httpd/vhost.d/.+?\\.sw[px]*$|4913|~$": {"regex": True}}
+                    ],
+                },
+            },
+            "coalesce": True,
+            "beacon_module": "inotify",
+            "_beacon_name": "httpd.inotify",
+        }
+
+        ret = inotify._get_notifier(config)
+        self.assertIn("inotify.queue", inotify.__context__)
+        self.assertIn("httpd.inotify.notifier", inotify.__context__)

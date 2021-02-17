@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage Elasticsearch Service
 ============================
@@ -44,16 +43,11 @@ Manage Elasticsearch Service
 :depends: boto3
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import Salt libs
 import salt.utils.json
 from salt.utils.versions import LooseVersion
-
-# Import 3rd-party libs
 
 log = logging.getLogger(__name__)
 __virtualname__ = "boto3_elasticsearch"

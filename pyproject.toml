@@ -18,7 +18,6 @@ skip="salt/ext,tests/kitchen,templates"
 
 [tool.towncrier]
     package = "salt"
-    package_dir = "salt"
     filename = "CHANGELOG.md"
     directory = "changelog/"
     start_string = "# Changelog\n"

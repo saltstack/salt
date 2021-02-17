@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 ##
 # Copyright 2018 Pure Storage Inc
 #
@@ -51,18 +49,12 @@ Installation Prerequisites
 
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 from datetime import datetime
 
 from salt.exceptions import CommandExecutionError
 
-# Import Salt libs
-from salt.ext import six
-
-# Import 3rd party modules
 try:
     from purity_fb import PurityFb, FileSystem, FileSystemSnapshot, SnapshotSuffix
     from purity_fb import rest, NfsRule, ProtocolRule
@@ -195,7 +187,7 @@ def snap_create(name, suffix=None):
     """
     blade = _get_blade()
     if suffix is None:
-        suffix = "snap-" + six.text_type(
+        suffix = "snap-" + str(
             (datetime.utcnow() - datetime(1970, 1, 1, 0, 0, 0, 0)).total_seconds()
         )
         suffix = suffix.replace(".", "")

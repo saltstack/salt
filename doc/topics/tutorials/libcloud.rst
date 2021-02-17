@@ -18,17 +18,17 @@ you to manage different cloud resources through a unified and easy to use API. A
 Execution and state modules are available for Compute, DNS, Storage and Load Balancer drivers from Apache Libcloud in
  SaltStack.
 
-* :mod:`libcloud_compute <salt.modules.libcloud_compute>` - Compute - 
+* :mod:`libcloud_compute <salt.modules.libcloud_compute>` - Compute -
     services such as OpenStack Nova, Amazon EC2, Microsoft Azure VMs
-* :mod:`libcloud_dns <salt.modules.libcloud_dns>` - DNS as a Service - 
+* :mod:`libcloud_dns <salt.modules.libcloud_dns>` - DNS as a Service -
     services such as Amazon Route 53 and Zerigo
-* :mod:`libcloud_loadbalancer <salt.modules.libcloud_loadbalancer>` - Load Balancers as a Service - 
+* :mod:`libcloud_loadbalancer <salt.modules.libcloud_loadbalancer>` - Load Balancers as a Service -
     services such as Amazon Elastic Load Balancer and GoGrid LoadBalancers
-* :mod:`libcloud_storage <salt.modules.libcloud_storage>` - Cloud Object Storage and CDN - 
+* :mod:`libcloud_storage <salt.modules.libcloud_storage>` - Cloud Object Storage and CDN -
     services such as Amazon S3 and Rackspace CloudFiles, OpenStack Swift
 
 
-These modules are designed as a way of having a multi-cloud deployment and abstracting simple differences 
+These modules are designed as a way of having a multi-cloud deployment and abstracting simple differences
 between platform to design a high-availability architecture.
 
 The Apache Libcloud functionality is available through both execution modules and Salt states.
@@ -39,11 +39,11 @@ Configuring Drivers
 Drivers can be configured in the Salt Configuration/Minion settings. All libcloud modules expect a list of "profiles" to
 be configured with authentication details for each driver.
 
-Each driver will have a string identifier, these can be found in the libcloud.<api>.types.Provider class 
+Each driver will have a string identifier, these can be found in the libcloud.<api>.types.Provider class
 for each API, https://libcloud.readthedocs.io/en/latest/supported_providers.html
 
 Some drivers require additional parameters, which are documented in the Apache Libcloud documentation. For example,
-GoDaddy DNS expects "`shopper_id`", which is the customer ID. These additional parameters can be added to the profile settings 
+GoDaddy DNS expects "`shopper_id`", which is the customer ID. These additional parameters can be added to the profile settings
 and will be passed directly to the driver instantiation method.
 
 .. code-block:: yaml
@@ -80,25 +80,25 @@ administrators distinguish their purpose.
 Using the execution modules
 ===========================
 
-Amongst over 60 clouds that Apache Libcloud supports, you can add profiles to your Salt configuration to access and control these clouds. 
-Each of the libcloud execution modules exposes the common API methods for controlling Compute, DNS, Load Balancers and Object Storage. 
-To see which functions are supported across specific clouds, see the Libcloud `supported methods 
+Amongst over 60 clouds that Apache Libcloud supports, you can add profiles to your Salt configuration to access and control these clouds.
+Each of the libcloud execution modules exposes the common API methods for controlling Compute, DNS, Load Balancers and Object Storage.
+To see which functions are supported across specific clouds, see the Libcloud `supported methods
 <https://libcloud.readthedocs.io/en/latest/supported_providers.html#supported-methods-block-storage>`_ documentation.
 
 The module documentation explains each of the API methods and how to leverage them.
 
-* :mod:`libcloud_compute <salt.modules.libcloud_compute>` - Compute - 
+* :mod:`libcloud_compute <salt.modules.libcloud_compute>` - Compute -
     services such as OpenStack Nova, Amazon EC2, Microsoft Azure VMs
-* :mod:`libcloud_dns <salt.modules.libcloud_dns>` - DNS as a Service - 
+* :mod:`libcloud_dns <salt.modules.libcloud_dns>` - DNS as a Service -
     services such as Amazon Route 53 and Zerigo
-* :mod:`libcloud_loadbalancer <salt.modules.libcloud_loadbalancer>` - Load Balancers as a Service - 
+* :mod:`libcloud_loadbalancer <salt.modules.libcloud_loadbalancer>` - Load Balancers as a Service -
     services such as Amazon Elastic Load Balancer and GoGrid LoadBalancers
-* :mod:`libcloud_storage <salt.modules.libcloud_storage>` - Cloud Object Storage and CDN - 
+* :mod:`libcloud_storage <salt.modules.libcloud_storage>` - Cloud Object Storage and CDN -
     services such as Amazon S3 and Rackspace CloudFiles, OpenStack Swift
 
-For example, listing buckets in the Google Storage platform: 
+For example, listing buckets in the Google Storage platform:
 
-.. code-block:: bash
+.. code-block:: console
 
     $ salt-call libcloud_storage.list_containers google
 
@@ -123,16 +123,16 @@ such as Google Storage, S3 and OpenStack Swift
 Using the state modules
 =======================
 
-For each configured profile, the assets available in the API (e.g. storage objects, containers, 
+For each configured profile, the assets available in the API (e.g. storage objects, containers,
 DNS records and load balancers) can be deployed via Salt's state system.
 
 The state module documentation explains the specific states that each module supports
 
-* :mod:`libcloud_storage <salt.states.libcloud_storage>` - Cloud Object Storage and CDN 
+* :mod:`libcloud_storage <salt.states.libcloud_storage>` - Cloud Object Storage and CDN
     - services such as Amazon S3 and Rackspace CloudFiles, OpenStack Swift
-* :mod:`libcloud_loadbalancer <salt.states.libcloud_loadbalancer>` - Load Balancers as a Service 
+* :mod:`libcloud_loadbalancer <salt.states.libcloud_loadbalancer>` - Load Balancers as a Service
     - services such as Amazon Elastic Load Balancer and GoGrid LoadBalancers
-* :mod:`libcloud_dns <salt.states.libcloud_dns>` - DNS as a Service 
+* :mod:`libcloud_dns <salt.states.libcloud_dns>` - DNS as a Service
     - services such as Amazon Route 53 and Zerigo
 
 For DNS, the state modules can be used to provide DNS resilience for multiple nameservers, for example:
@@ -223,7 +223,7 @@ Accessing custom arguments in execution modules
 Some cloud providers have additional functionality that can be accessed on top of the base API, for example
 the Google Cloud Engine load balancer service offers the ability to provision load balancers into a specific region.
 
-Looking at the `API documentation <https://libcloud.readthedocs.io/en/latest/loadbalancer/drivers/gce.html#libcloud.loadbalancer.drivers.gce.GCELBDriver.create_balancer>`_, 
+Looking at the `API documentation <https://libcloud.readthedocs.io/en/latest/loadbalancer/drivers/gce.html#libcloud.loadbalancer.drivers.gce.GCELBDriver.create_balancer>`_,
 we can see that it expects an `ex_region` in the `create_balancer` method, so when we execute the salt command, we can add this additional parameter like this:
 
 .. code-block:: bash
@@ -234,11 +234,11 @@ we can see that it expects an `ex_region` in the `create_balancer` method, so wh
 Accessing custom methods in Libcloud drivers
 ============================================
 
-Some cloud APIs have additional methods that are prefixed with `ex_` in Apache Libcloud, these methods 
+Some cloud APIs have additional methods that are prefixed with `ex_` in Apache Libcloud, these methods
 are part of the non-standard API but can still
-be accessed from the Salt modules for `libcloud_storage`, `libcloud_loadbalancer` and `libcloud_dns`. 
-The extra methods are available via the `extra` command, which expects the name of the method as the 
-first argument, the profile as the second and then 
+be accessed from the Salt modules for `libcloud_storage`, `libcloud_loadbalancer` and `libcloud_dns`.
+The extra methods are available via the `extra` command, which expects the name of the method as the
+first argument, the profile as the second and then
 accepts a list of keyword arguments to pass onto the driver method, for example, accessing permissions in Google Storage objects:
 
 .. code-block:: bash

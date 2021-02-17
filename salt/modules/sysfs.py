@@ -1,24 +1,17 @@
-# -*- coding: utf-8 -*-
 """
 Module for interfacing with SysFS
 
 .. seealso:: https://www.kernel.org/doc/Documentation/filesystems/sysfs.txt
 .. versionadded:: 2016.3.0
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
 import stat
 
-# Import Salt libs
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
-
-# Import 3rd-party libs
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -67,7 +60,7 @@ def write(key, value):
         key = target(key)
         log.trace("Writing %s to %s", value, key)
         with salt.utils.files.fopen(key, "w") as twriter:
-            twriter.write(salt.utils.stringutils.to_str("{0}\n".format(value)))
+            twriter.write(salt.utils.stringutils.to_str("{}\n".format(value)))
             return True
     except Exception:  # pylint: disable=broad-except
         return False
@@ -87,7 +80,7 @@ def read(key, root=""):
         salt '*' sysfs.read class/net/em1/statistics
     """
 
-    if not isinstance(key, six.string_types):
+    if not isinstance(key, str):
         res = {}
         for akey in key:
             ares = read(os.path.join(root, akey))

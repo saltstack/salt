@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: `Tyler Johnson <tjohnson@saltstack.com>`
 
@@ -6,7 +5,6 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 from salt.cloud.clouds import openstack
 from salt.utils import dictupdate
@@ -17,12 +15,12 @@ from tests.support.unit import TestCase
 # pylint: disable=confusing-with-statement
 
 
-class MockImage(object):
+class MockImage:
     name = "image name"
     id = "image id"
 
 
-class MockNode(object):
+class MockNode:
     name = "node name"
     id = "node id"
     flavor = MockImage()
@@ -35,7 +33,7 @@ class MockNode(object):
         return iter(())
 
 
-class MockConn(object):
+class MockConn:
     def __init__(self, image):
         self.node = MockNode(image)
 
@@ -192,8 +190,8 @@ class OpenstackTestCase(TestCase, LoaderModuleMockMixin):
         with patch_utils:
             openstack.request_instance(vm_=vm_, conn=fake_conn)
 
-            call = fake_conn.create_server.mock_calls[0]
-            self.assertDictEqual(call.kwargs["network"], expected_network)
+            call_kwargs = fake_conn.create_server.mock_calls[0][-1]
+            self.assertDictEqual(call_kwargs["network"], expected_network)
 
     # Here we're testing the list of dictionaries
     def test_request_instance_should_be_able_to_provide_a_list_of_dictionaries_for_network(
@@ -209,8 +207,8 @@ class OpenstackTestCase(TestCase, LoaderModuleMockMixin):
         with patch_utils:
             openstack.request_instance(vm_=vm_, conn=fake_conn)
 
-            call = fake_conn.create_server.mock_calls[0]
-            assert call.kwargs["network"] == expected_network
+            call_kwargs = fake_conn.create_server.mock_calls[0][-1]
+            assert call_kwargs["network"] == expected_network
 
     # Here we're testing for names/IDs
     def test_request_instance_should_be_able_to_provide_a_list_of_single_ids_or_names_for_network(
@@ -226,5 +224,50 @@ class OpenstackTestCase(TestCase, LoaderModuleMockMixin):
         with patch_utils:
             openstack.request_instance(vm_=vm_, conn=fake_conn)
 
-            call = fake_conn.create_server.mock_calls[0]
-            assert call.kwargs["network"] == expected_network
+            call_kwargs = fake_conn.create_server.mock_calls[0][-1]
+            assert call_kwargs["network"] == expected_network
+
+    # Testing that we get a dict that we expect for create_server
+    def test__clean_create_kwargs(self):
+        params = {
+            "name": "elmer",
+            "image": "mirrormirror",
+            "flavor": "chocolate",
+            "auto_ip": True,
+            "ips": ["hihicats"],
+            "ip_pool": "olympic",
+            "root_volume": "iamgroot",
+            "boot_volume": "pussnboots",
+            "terminate_volume": False,
+            "volumes": ["lots", "of", "books"],
+            "meta": {"full": "meta"},
+            "files": {"shred": "this"},
+            "reservation_id": "licenseandregistration",
+            "security_groups": ["wanna", "play", "repeat"],
+            "key_name": "clortho",
+            "availability_zone": "callmemaybe",
+            "block_device_mapping": [{"listof": "dicts"}],
+            "block_device_mapping_v2": [{"listof": "dicts"}],
+            "nics": ["thats", "me"],
+            "scheduler_hints": {"so": "many"},
+            "config_drive": True,
+            "disk_config": "donkey",
+            "admin_pass": "password",
+            "wait": False,
+            "timeout": 30,
+            "reuse_ips": True,
+            "network": ["also", "a", "dict"],
+            "boot_from_volume": True,
+            "volume_size": 30,
+            "nat_destination": "albuquerque",
+            "group": "ledzeppelin",
+            "userdata": "needmoreinput",
+            "thisgetsdropped": "yup",
+        }
+        patch_utils = patch.dict(
+            openstack.__utils__, {"dictupdate.update": dictupdate.update},
+        )
+        with patch_utils:
+            ret = openstack._clean_create_kwargs(**params)
+            params.pop("thisgetsdropped")
+            self.assertDictEqual(params, ret)

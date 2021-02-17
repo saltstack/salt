@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Vagrant Cloud Driver
 ====================
@@ -15,22 +14,16 @@ files as described in the
 
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import os
 import tempfile
 
 import salt.client
 import salt.config as config
-
-# Import salt libs
 import salt.utils.cloud
 from salt._compat import ipaddress
 from salt.exceptions import SaltCloudException, SaltCloudSystemExit, SaltInvocationError
 
-# Get logging started
 log = logging.getLogger(__name__)
 
 
@@ -163,9 +156,10 @@ def _list_nodes(call=None):
     """
     List the nodes, ask all 'vagrant' minions, return dict of grains.
     """
-    local = salt.client.LocalClient()
-    ret = local.cmd("salt-cloud:driver:vagrant", "grains.items", "", tgt_type="grain")
-    return ret
+    with salt.client.LocalClient() as local:
+        return local.cmd(
+            "salt-cloud:driver:vagrant", "grains.items", "", tgt_type="grain"
+        )
 
 
 def list_nodes_select(call=None):
@@ -182,16 +176,16 @@ def show_instance(name, call=None):
     """
     List the a single node, return dict of grains.
     """
-    local = salt.client.LocalClient()
-    ret = local.cmd(name, "grains.items", "")
-    reqs = _build_required_items(ret)
-    ret[name].update(reqs[name])
-    return ret
+    with salt.client.LocalClient() as local:
+        ret = local.cmd(name, "grains.items", "")
+        reqs = _build_required_items(ret)
+        ret[name].update(reqs[name])
+        return ret
 
 
 def _get_my_info(name):
-    local = salt.client.LocalClient()
-    return local.cmd(name, "grains.get", ["salt-cloud"])
+    with salt.client.LocalClient() as local:
+        return local.cmd(name, "grains.get", ["salt-cloud"])
 
 
 def create(vm_):
@@ -223,20 +217,20 @@ def create(vm_):
 
     log.info("sending 'vagrant.init %s machine=%s' command to %s", name, machine, host)
 
-    local = salt.client.LocalClient()
-    ret = local.cmd(host, "vagrant.init", [name], kwarg={"vm": vm_, "start": True})
-    log.info("response ==> %s", ret[host])
+    with salt.client.LocalClient() as local:
+        ret = local.cmd(host, "vagrant.init", [name], kwarg={"vm": vm_, "start": True})
+        log.info("response ==> %s", ret[host])
 
-    network_mask = config.get_cloud_config_value(
-        "network_mask", vm_, __opts__, default=""
-    )
-    if "ssh_host" not in vm_:
-        ret = local.cmd(
-            host,
-            "vagrant.get_ssh_config",
-            [name],
-            kwarg={"network_mask": network_mask, "get_private_key": True},
-        )[host]
+        network_mask = config.get_cloud_config_value(
+            "network_mask", vm_, __opts__, default=""
+        )
+        if "ssh_host" not in vm_:
+            ret = local.cmd(
+                host,
+                "vagrant.get_ssh_config",
+                [name],
+                kwarg={"network_mask": network_mask, "get_private_key": True},
+            )[host]
     with tempfile.NamedTemporaryFile() as pks:
         if "private_key" not in vm_ and ret and ret.get("private_key", False):
             pks.write(ret["private_key"])
@@ -297,7 +291,7 @@ def destroy(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroying instance",
-        "salt/cloud/{0}/destroying".format(name),
+        "salt/cloud/{}/destroying".format(name),
         args={"name": name},
         sock_dir=opts["sock_dir"],
         transport=opts["transport"],
@@ -307,14 +301,14 @@ def destroy(name, call=None):
         profile_name = my_info[name]["profile"]
         profile = opts["profiles"][profile_name]
         host = profile["host"]
-        local = salt.client.LocalClient()
-        ret = local.cmd(host, "vagrant.destroy", [name])
+        with salt.client.LocalClient() as local:
+            ret = local.cmd(host, "vagrant.destroy", [name])
 
         if ret[host]:
             __utils__["cloud.fire_event"](
                 "event",
                 "destroyed instance",
-                "salt/cloud/{0}/destroyed".format(name),
+                "salt/cloud/{}/destroyed".format(name),
                 args={"name": name},
                 sock_dir=opts["sock_dir"],
                 transport=opts["transport"],
@@ -325,7 +319,7 @@ def destroy(name, call=None):
                     name, __active_provider_name__.split(":")[0], opts
                 )
 
-            return {"Destroyed": "{0} was destroyed.".format(name)}
+            return {"Destroyed": "{} was destroyed.".format(name)}
         else:
             return {"Error": "Error destroying {}".format(name)}
     else:
@@ -354,5 +348,5 @@ def reboot(name, call=None):
     profile_name = my_info[name]["profile"]
     profile = __opts__["profiles"][profile_name]
     host = profile["host"]
-    local = salt.client.LocalClient()
-    return local.cmd(host, "vagrant.reboot", [name])
+    with salt.client.LocalClient() as local:
+        return local.cmd(host, "vagrant.reboot", [name])

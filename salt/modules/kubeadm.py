@@ -1,12 +1,9 @@
-# -*- coding: utf-8 -*-
-
 """
 :maintainer:    Alberto Planas <aplanas@suse.com>
 :maturity:      new
 :depends:       None
 :platform:      Linux
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import json
 import logging
@@ -14,7 +11,6 @@ import re
 
 import salt.utils.files
 from salt.exceptions import CommandExecutionError
-from salt.ext.six.moves import zip
 
 ADMIN_CFG = "/etc/kubernetes/admin.conf"
 
@@ -184,7 +180,7 @@ def token_create(
        A human friendly description of how this token is used
 
     groups
-       List of extra groups that this token will authenticate, defaut
+       List of extra groups that this token will authenticate, default
        to ['system:bootstrappers:kubeadm:default-node-token']
 
     ttl
@@ -193,7 +189,7 @@ def token_create(
        is 24h0m0s
 
     usages
-       Describes the ways in wich this token can be used. The default
+       Describes the ways in which this token can be used. The default
        value is ['signing', 'authentication']
 
     kubeconfig
@@ -332,20 +328,21 @@ def token_list(kubeconfig=None, rootfs=None):
 
     lines = _cmd(cmd).splitlines()
 
-    # Find the header and parse it.  We do not need to validate the
-    # content, as the regex will take care of future changes.
-    header = lines.pop(0)
-    header = [i.lower() for i in re.findall(r"(\w+(?:\s\w+)*)", header)]
-
     tokens = []
-    for line in lines:
-        # TODO(aplanas): descriptions with multiple spaces can break
-        # the parser.
-        values = re.findall(r"(\S+(?:\s\S+)*)", line)
-        if len(header) != len(values):
-            log.error("Error parsing line: {}".format(line))
-            continue
-        tokens.append({key: value for key, value in zip(header, values)})
+    if lines:
+        # Find the header and parse it.  We do not need to validate
+        # the content, as the regex will take care of future changes.
+        header = lines.pop(0)
+        header = [i.lower() for i in re.findall(r"(\w+(?:\s\w+)*)", header)]
+
+        for line in lines:
+            # TODO(aplanas): descriptions with multiple spaces can
+            # break the parser.
+            values = re.findall(r"(\S+(?:\s\S+)*)", line)
+            if len(header) != len(values):
+                log.error("Error parsing line: {}".format(line))
+                continue
+            tokens.append({key: value for key, value in zip(header, values)})
     return tokens
 
 
