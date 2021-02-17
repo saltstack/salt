@@ -498,18 +498,19 @@ def fileserver(opts, backends):
     if backends is not None:
         if not isinstance(backends, list):
             backends = [backends]
-        # Make sure that the VCS backends work either with git or gitfs, hg or
-        # hgfs, etc.
-        vcs_re = re.compile("^(git|svn|hg)")
-        fs_re = re.compile("fs$")
-        vcs = []
-        non_vcs = []
-        for back in [fs_re.sub("", x) for x in backends]:
-            if vcs_re.match(back):
-                vcs.extend((back, back + "fs"))
+
+        # If backend is a VCS, add both the '-fs' and non '-fs' versions to the list.
+        # Use a set to keep them unique
+        backend_set = set()
+        vcs_re = re.compile("^(git|svn|hg)(?:fs)?$")
+        for backend in backends:
+            match = vcs_re.match(backend)
+            if match:
+                backend_set.add(match.group(1))
+                backend_set.add(match.group(1) + "fs")
             else:
-                non_vcs.append(back)
-        backends = vcs + non_vcs
+                backend_set.add(backend)
+        backends = list(backend_set)
 
     return LazyLoader(
         _module_dirs(opts, "fileserver"),

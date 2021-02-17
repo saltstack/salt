@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module for interop with the Splunk API
 
@@ -20,17 +19,11 @@ Module for interop with the Splunk API
             host: example.splunkcloud.com
             port: 8080
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import base64
 import hmac
-
-# Import python libs
 import logging
 import subprocess
-
-# Import 3rd-party libs
-from salt.ext import six
 
 HAS_LIBS = False
 try:
@@ -80,8 +73,7 @@ def _get_secret_key(profile):
 
 def _generate_password(email):
     m = hmac.new(
-        base64.b64decode(_get_secret_key("splunk")),
-        six.text_type([email, SERVICE_NAME]),
+        base64.b64decode(_get_secret_key("splunk")), str([email, SERVICE_NAME]),
     )
     return base64.urlsafe_b64encode(m.digest()).strip().replace("=", "")
 
@@ -112,7 +104,7 @@ def _send_email(name, email):
 def _populate_cache(profile="splunk"):
     config = __salt__["config.option"](profile)
 
-    key = "splunk.users.{0}".format(config.get("host"))
+    key = "splunk.users.{}".format(config.get("host"))
 
     if key not in __context__:
         client = _get_splunk(profile)
@@ -134,7 +126,7 @@ def _get_splunk(profile):
     """
     config = __salt__["config.option"](profile)
 
-    key = "splunk.{0}:{1}:{2}:{3}".format(
+    key = "splunk.{}:{}:{}:{}".format(
         config.get("host"),
         config.get("port"),
         config.get("username"),
@@ -162,7 +154,7 @@ def list_users(profile="splunk"):
     """
 
     config = __salt__["config.option"](profile)
-    key = "splunk.users.{0}".format(config.get("host"))
+    key = "splunk.users.{}".format(config.get("host"))
 
     if key not in __context__:
         _populate_cache(profile)
@@ -233,7 +225,7 @@ def create_user(email, profile="splunk", **kwargs):
             if not property_map.get(req_field):
                 log.error(
                     "Missing required params %s",
-                    ", ".join([six.text_type(k) for k in REQUIRED_FIELDS_FOR_CREATE]),
+                    ", ".join([str(k) for k in REQUIRED_FIELDS_FOR_CREATE]),
                 )
                 return False
 
@@ -272,7 +264,7 @@ def update_user(email, profile="splunk", **kwargs):
     user = list_users(profile).get(email)
 
     if not user:
-        log.error("Failed to retrieve user {0}".format(email))
+        log.error("Failed to retrieve user {}".format(email))
         return False
 
     property_map = {}
@@ -292,7 +284,7 @@ def update_user(email, profile="splunk", **kwargs):
             if k.lower() == "name":
                 continue
             if k.lower() == "roles":
-                if isinstance(v, six.string_types):
+                if isinstance(v, str):
                     v = v.split(",")
                 if set(roles) != set(v):
                     kwargs["roles"] = list(set(v))

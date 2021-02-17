@@ -7,19 +7,14 @@ dictionaries and lists of the function names and their arguments.
 """
 
 import ast
-
-# Import python libs
+import itertools
 import logging
 import os
 from typing import Dict, List
 
-# Import salt libs
+import salt.utils.doc
 import salt.utils.files
 from salt.exceptions import ArgumentValueError
-from salt.ext.six.moves import zip_longest
-from salt.utils.doc import strip_rst as _strip_rst
-
-# Import 3rd-party libs
 from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
@@ -50,7 +45,9 @@ def _get_func_aliases(tree) -> Dict:
     for assign in assignments:
         try:
             if assign.targets[0].id == "__func_alias__":
-                for key, value in zip_longest(assign.value.keys, assign.value.values):
+                for key, value in itertools.zip_longest(
+                    assign.value.keys, assign.value.values
+                ):
                     fun_aliases.update({key.s: value.s})
         except AttributeError:
             pass
@@ -83,7 +80,7 @@ def _get_args(function: str) -> Dict:
 
     # Since only some args may have default values, need to zip in reverse order
     backwards_args = OrderedDict(
-        zip_longest(reversed(arg_strings), reversed(arg_default_strings))
+        itertools.zip_longest(reversed(arg_strings), reversed(arg_default_strings))
     )
     ordered_args = OrderedDict(reversed(list(backwards_args.items())))
 
@@ -128,7 +125,7 @@ def _parse_module_docs(module_path, mod_name=None):
                         ret["{}.{}".format(module_name, function_name)] = doc_string
                 else:
                     ret["{}.{}".format(module_name, function_name)] = doc_string
-    return _strip_rst(ret)
+    return salt.utils.doc.strip_rst(ret)
 
 
 def _parse_module_functions(module_py: str, return_type: str) -> Dict:

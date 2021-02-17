@@ -1,11 +1,12 @@
 import pathlib
 import textwrap
+import time
 
 import attr
 import pytest
-from tests.support.helpers import slowTest
 
 pytestmark = [
+    pytest.mark.slow_test,
     pytest.mark.windows_whitelisted,
 ]
 
@@ -53,7 +54,7 @@ def pillar_tree(base_env_pillar_tree_root_dir, salt_minion, salt_call_cli):
         assert ret.json is True
 
 
-@slowTest
+@pytest.mark.slow_test
 def test_data(salt_call_cli, pillar_tree):
     """
     pillar.data
@@ -74,7 +75,7 @@ def test_data(salt_call_cli, pillar_tree):
         assert pillar["class"] == "other"
 
 
-@slowTest
+@pytest.mark.slow_test
 def test_issue_5449_report_actual_file_roots_in_pillar(
     salt_call_cli, pillar_tree, base_env_state_tree_root_dir
 ):
@@ -93,7 +94,7 @@ def test_issue_5449_report_actual_file_roots_in_pillar(
     ]
 
 
-@slowTest
+@pytest.mark.slow_test
 def test_ext_cmd_yaml(salt_call_cli, pillar_tree):
     """
     pillar.data for ext_pillar cmd.yaml
@@ -105,7 +106,7 @@ def test_ext_cmd_yaml(salt_call_cli, pillar_tree):
     assert pillar["ext_spam"] == "eggs"
 
 
-@slowTest
+@pytest.mark.slow_test
 def test_issue_5951_actual_file_roots_in_opts(
     salt_call_cli, pillar_tree, base_env_state_tree_root_dir
 ):
@@ -119,7 +120,7 @@ def test_issue_5951_actual_file_roots_in_opts(
     ]
 
 
-@slowTest
+@pytest.mark.slow_test
 def test_pillar_items(salt_call_cli, pillar_tree):
     """
     Test to ensure we get expected output
@@ -135,7 +136,7 @@ def test_pillar_items(salt_call_cli, pillar_tree):
     assert pillar_items["knights"] == ["Lancelot", "Galahad", "Bedevere", "Robin"]
 
 
-@slowTest
+@pytest.mark.slow_test
 def test_pillar_command_line(salt_call_cli, pillar_tree):
     """
     Test to ensure when using pillar override
@@ -209,7 +210,7 @@ def key_pillar(salt_minion, salt_cli, base_env_pillar_tree_root_dir):
     )
 
 
-@slowTest
+@pytest.mark.slow_test
 def test_pillar_refresh_pillar_raw(salt_cli, salt_minion, key_pillar):
     """
     Validate the minion's pillar.raw call behavior for new pillars
@@ -239,7 +240,7 @@ def test_pillar_refresh_pillar_raw(salt_cli, salt_minion, key_pillar):
         assert val is True, repr(val)
 
 
-@slowTest
+@pytest.mark.slow_test
 def test_pillar_refresh_pillar_get(salt_cli, salt_minion, key_pillar):
     """
     Validate the minion's pillar.get call behavior for new pillars
@@ -270,7 +271,7 @@ def test_pillar_refresh_pillar_get(salt_cli, salt_minion, key_pillar):
         assert val is True, repr(val)
 
 
-@slowTest
+@pytest.mark.slow_test
 def test_pillar_refresh_pillar_item(salt_cli, salt_minion, key_pillar):
     """
     Validate the minion's pillar.item call behavior for new pillars
@@ -304,7 +305,7 @@ def test_pillar_refresh_pillar_item(salt_cli, salt_minion, key_pillar):
         assert val[key] is True
 
 
-@slowTest
+@pytest.mark.slow_test
 def test_pillar_refresh_pillar_items(salt_cli, salt_minion, key_pillar):
     """
     Validate the minion's pillar.item call behavior for new pillars
@@ -327,7 +328,7 @@ def test_pillar_refresh_pillar_items(salt_cli, salt_minion, key_pillar):
         assert val[key] is True
 
 
-@slowTest
+@pytest.mark.slow_test
 def test_pillar_refresh_pillar_ping(salt_cli, salt_minion, key_pillar):
     """
     Validate the minion's test.ping does not update pillars
@@ -366,3 +367,90 @@ def test_pillar_refresh_pillar_ping(salt_cli, salt_minion, key_pillar):
         val = ret.json
         assert key in val
         assert val[key] is True
+
+
+@pytest.mark.slow_test
+def test_pillar_refresh_pillar_scheduler(salt_cli, salt_minion):
+    """
+    Ensure schedule jobs in pillar are only updated when values change.
+    """
+
+    top_sls = """
+        base:
+          '{}':
+            - test_schedule
+        """.format(
+        salt_minion.id
+    )
+
+    test_schedule_sls = """
+        schedule:
+          first_test_ping:
+            function: test.ping
+            run_on_start: True
+            seconds: 3600
+        """
+
+    test_schedule_sls2 = """
+        schedule:
+          first_test_ping:
+            function: test.ping
+            run_on_start: True
+            seconds: 7200
+        """
+
+    with pytest.helpers.temp_pillar_file("top.sls", top_sls):
+        with pytest.helpers.temp_pillar_file("test_schedule.sls", test_schedule_sls):
+            # Calling refresh_pillar to update in-memory pillars
+            salt_cli.run(
+                "saltutil.refresh_pillar", wait=True, minion_tgt=salt_minion.id
+            )
+
+            # Give the schedule a chance to run the job
+            time.sleep(5)
+
+            # Get the status of the job
+            ret = salt_cli.run(
+                "schedule.job_status", name="first_test_ping", minion_tgt=salt_minion.id
+            )
+            assert "_next_fire_time" in ret.json
+            _next_fire_time = ret.json["_next_fire_time"]
+
+            # Refresh pillar
+            salt_cli.run(
+                "saltutil.refresh_pillar", wait=True, minion_tgt=salt_minion.id
+            )
+
+            # Ensure next_fire_time is the same, job was not replaced
+            ret = salt_cli.run(
+                "schedule.job_status", name="first_test_ping", minion_tgt=salt_minion.id
+            )
+            assert ret.json["_next_fire_time"] == _next_fire_time
+
+        # Ensure job was replaced when seconds changes
+        with pytest.helpers.temp_pillar_file("test_schedule.sls", test_schedule_sls2):
+            # Calling refresh_pillar to update in-memory pillars
+            salt_cli.run(
+                "saltutil.refresh_pillar", wait=True, minion_tgt=salt_minion.id
+            )
+
+            # Give the schedule a chance to run the job
+            time.sleep(5)
+
+            ret = salt_cli.run(
+                "schedule.job_status", name="first_test_ping", minion_tgt=salt_minion.id
+            )
+            assert "_next_fire_time" in ret.json
+            _next_fire_time = ret.json["_next_fire_time"]
+
+            salt_cli.run(
+                "saltutil.refresh_pillar", wait=True, minion_tgt=salt_minion.id
+            )
+
+            ret = salt_cli.run(
+                "schedule.job_status", name="first_test_ping", minion_tgt=salt_minion.id
+            )
+            assert ret.json["_next_fire_time"] == _next_fire_time
+
+    # Refresh pillar once we're done
+    salt_cli.run("saltutil.refresh_pillar", wait=True, minion_tgt=salt_minion.id)

@@ -19,6 +19,27 @@ def check_changelog_entries(files):
     exitcode = 0
     for entry in files:
         path = pathlib.Path(entry).resolve()
+        # Is it under changelog/
+        try:
+            path.relative_to(CHANGELOG_ENTRIES_PATH)
+            if path.name == ".keep":
+                # This is the file we use so git doesn't delete the changelog/ directory
+                continue
+            # Is it named properly
+            if not CHANGELOG_ENTRY_RE.match(path.name):
+                print(
+                    "The changelog entry '{}' should have one of the following extensions: {}.".format(
+                        path.relative_to(CODE_ROOT),
+                        ", ".join(repr(ext) for ext in CHANGELOG_EXTENSIONS),
+                    ),
+                    file=sys.stderr,
+                    flush=True,
+                )
+                exitcode = 1
+                continue
+        except ValueError:
+            # No, carry on
+            pass
         # Does it look like a changelog entry
         if CHANGELOG_LIKE_RE.match(path.name) and not CHANGELOG_ENTRY_RE.match(
             path.name

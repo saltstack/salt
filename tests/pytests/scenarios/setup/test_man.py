@@ -8,17 +8,16 @@ import pprint
 import pytest
 import salt.utils.platform
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
-from tests.support.helpers import slowTest
 from tests.support.runtests import RUNTIME_VARS
 
 pytestmark = [
+    pytest.mark.slow_test,
     pytest.mark.skip_on_windows,
     pytest.mark.skip_on_aix,
     pytest.mark.skip_if_binaries_missing(*KNOWN_BINARY_NAMES, check_all=False),
 ]
 
 
-@slowTest
 def test_man_pages(virtualenv):
     """
     Make sure that man pages are installed

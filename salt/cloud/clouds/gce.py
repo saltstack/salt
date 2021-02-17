@@ -43,8 +43,7 @@ Example Provider Configuration
 :maintainer: Russell Tolle <russ.tolle@gmail.com>
 :depends: libcloud >= 1.0.0
 """
-# pylint: disable=invalid-name,function-redefined
-
+# pylint: disable=function-redefined
 
 import logging
 import os

@@ -148,21 +148,20 @@ def execute(
                 days: 1
                 returner: redis
     """
-    client = salt.client.get_local_client(__opts__["conf_file"])
-    try:
-        ret = client.cmd(
-            tgt,
-            fun,
-            arg=arg,
-            timeout=timeout or __opts__["timeout"],
-            tgt_type=tgt_type,  # no warn_until, as this is introduced only in 2017.7.0
-            ret=ret,
-            jid=jid,
-            kwarg=kwarg,
-            **kwargs
-        )
-    except SaltClientError as client_error:
-        log.error("Error while executing %s on %s (%s)", fun, tgt, tgt_type)
-        log.error(client_error)
-        return {}
-    return ret
+    with salt.client.get_local_client(__opts__["conf_file"]) as client:
+        try:
+            return client.cmd(
+                tgt,
+                fun,
+                arg=arg,
+                timeout=timeout or __opts__["timeout"],
+                tgt_type=tgt_type,  # no warn_until, as this is introduced only in 2017.7.0
+                ret=ret,
+                jid=jid,
+                kwarg=kwarg,
+                **kwargs
+            )
+        except SaltClientError as client_error:
+            log.error("Error while executing %s on %s (%s)", fun, tgt, tgt_type)
+            log.error(client_error)
+            return {}

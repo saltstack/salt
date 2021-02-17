@@ -1,20 +1,16 @@
-# -*- coding: utf-8 -*-
 """
 Execute orchestration functions
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import salt libs
 import salt.loader
 import salt.utils.event
 import salt.utils.functools
 import salt.utils.jid
 from salt.exceptions import SaltInvocationError
 
-LOGGER = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 
 def pause(jid, state_id=None, duration=None):

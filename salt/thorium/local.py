@@ -33,9 +33,9 @@ def cmd(name, tgt, func, arg=(), tgt_type="glob", ret="", kwarg=None, **kwargs):
               length: 30
     """
     ret = {"name": name, "changes": {}, "comment": "", "result": True}
-    local = salt.client.get_local_client(mopts=__opts__)
-    jid = local.cmd_async(
-        tgt, func, arg, tgt_type=tgt_type, ret=ret, kwarg=kwarg, **kwargs
-    )
-    ret["changes"]["jid"] = jid
+    with salt.client.get_local_client(mopts=__opts__) as client:
+        jid = client.cmd_async(
+            tgt, func, arg, tgt_type=tgt_type, ret=ret, kwarg=kwarg, **kwargs
+        )
+        ret["changes"]["jid"] = jid
     return ret

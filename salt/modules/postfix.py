@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Support for Postfix
 
@@ -11,20 +10,13 @@ The design of this module is such that when files are edited, a minimum of
 changes are made to them. Each file should look as if it has been edited by
 hand; order, comments and whitespace are all preserved.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
-
-# Import python libs
 import re
 
-# Import salt libs
 import salt.utils.files
 import salt.utils.path
 import salt.utils.stringutils
-
-# Import 3rd-party libs
-from salt.ext import six
 
 SWWS = re.compile(r"^\s")
 
@@ -78,7 +70,7 @@ def _parse_master(path=MASTER_CF):
             "maxproc": comps[6],
             "command": " ".join(comps[7:]),
         }
-        dict_key = "{0} {1}".format(comps[0], comps[1])
+        dict_key = "{} {}".format(comps[0], comps[1])
         conf_list.append(conf_line)
         conf_dict[dict_key] = conf_line
 
@@ -139,7 +131,7 @@ def set_master(
     conf_dict, conf_list = _parse_master(path)
 
     new_conf = []
-    dict_key = "{0} {1}".format(service, conn_type)
+    dict_key = "{} {}".format(service, conn_type)
     new_line = _format_master(
         service, conn_type, private, unpriv, chroot, wakeup, maxproc, command,
     )
@@ -189,11 +181,11 @@ def _format_master(
     if wakeup == "n":
         wakeup = "-"
 
-    maxproc = six.text_type(maxproc)
+    maxproc = str(maxproc)
     if maxproc == "100":
         maxproc = "-"
 
-    conf_line = "{0:9s} {1:5s} {2:7s} {3:7s} {4:7s} {5:7s} {6:7s} {7}".format(
+    conf_line = "{:9s} {:5s} {:7s} {:7s} {:7s} {:7s} {:7s} {}".format(
         service, conn_type, private, unpriv, chroot, wakeup, maxproc, command,
     )
     # print(conf_line)
@@ -227,7 +219,7 @@ def _parse_main(path=MAIN_CF):
                 # This should only happen at the top of the file
                 conf_list.append(line)
                 continue
-            if not isinstance(conf_list[-1], six.string_types):
+            if not isinstance(conf_list[-1], str):
                 conf_list[-1] = ""
             # This line is a continuation of the previous line
             conf_list[-1] = "\n".join([conf_list[-1], line])
@@ -277,15 +269,15 @@ def set_main(key, value, path=MAIN_CF):
     pairs, conf_list = _parse_main(path)
 
     new_conf = []
-    key_line_match = re.compile("^{0}([\\s=]|$)".format(re.escape(key)))
+    key_line_match = re.compile("^{}([\\s=]|$)".format(re.escape(key)))
     if key in pairs:
         for line in conf_list:
             if re.match(key_line_match, line):
-                new_conf.append("{0} = {1}".format(key, value))
+                new_conf.append("{} = {}".format(key, value))
             else:
                 new_conf.append(line)
     else:
-        conf_list.append("{0} = {1}".format(key, value))
+        conf_list.append("{} = {}".format(key, value))
         new_conf = conf_list
 
     _write_conf(new_conf, path)
@@ -380,25 +372,25 @@ def delete(queue_id):
                 _message = item
 
         if not _message:
-            ret["message"] = "No message in queue with ID {0}".format(queue_id)
+            ret["message"] = "No message in queue with ID {}".format(queue_id)
             ret["result"] = False
             return ret
 
-    cmd = "postsuper -d {0}".format(queue_id)
+    cmd = "postsuper -d {}".format(queue_id)
     result = __salt__["cmd.run_all"](cmd)
 
     if result["retcode"] == 0:
         if queue_id == "ALL":
             ret["message"] = "Successfully removed all messages"
         else:
-            ret["message"] = "Successfully removed message with queue id {0}".format(
+            ret["message"] = "Successfully removed message with queue id {}".format(
                 queue_id
             )
     else:
         if queue_id == "ALL":
             ret["message"] = "Unable to removed all messages"
         else:
-            ret["message"] = "Unable to remove message with queue id {0}: {1}".format(
+            ret["message"] = "Unable to remove message with queue id {}: {}".format(
                 queue_id, result["stderr"]
             )
     return ret
@@ -431,11 +423,11 @@ def hold(queue_id):
                 _message = item
 
         if not _message:
-            ret["message"] = "No message in queue with ID {0}".format(queue_id)
+            ret["message"] = "No message in queue with ID {}".format(queue_id)
             ret["result"] = False
             return ret
 
-    cmd = "postsuper -h {0}".format(queue_id)
+    cmd = "postsuper -h {}".format(queue_id)
     result = __salt__["cmd.run_all"](cmd)
 
     if result["retcode"] == 0:
@@ -444,14 +436,14 @@ def hold(queue_id):
         else:
             ret[
                 "message"
-            ] = "Successfully placed message on hold with queue id {0}".format(queue_id)
+            ] = "Successfully placed message on hold with queue id {}".format(queue_id)
     else:
         if queue_id == "ALL":
             ret["message"] = "Unable to place all messages on hold"
         else:
             ret[
                 "message"
-            ] = "Unable to place message on hold with queue id {0}: {1}".format(
+            ] = "Unable to place message on hold with queue id {}: {}".format(
                 queue_id, result["stderr"]
             )
     return ret
@@ -484,11 +476,11 @@ def unhold(queue_id):
                 _message = item
 
         if not _message:
-            ret["message"] = "No message in queue with ID {0}".format(queue_id)
+            ret["message"] = "No message in queue with ID {}".format(queue_id)
             ret["result"] = False
             return ret
 
-    cmd = "postsuper -H {0}".format(queue_id)
+    cmd = "postsuper -H {}".format(queue_id)
     result = __salt__["cmd.run_all"](cmd)
 
     if result["retcode"] == 0:
@@ -497,14 +489,14 @@ def unhold(queue_id):
         else:
             ret[
                 "message"
-            ] = "Successfully set message as unheld with queue id {0}".format(queue_id)
+            ] = "Successfully set message as unheld with queue id {}".format(queue_id)
     else:
         if queue_id == "ALL":
             ret["message"] = "Unable to set all message as unheld."
         else:
             ret[
                 "message"
-            ] = "Unable to set message as unheld with queue id {0}: {1}".format(
+            ] = "Unable to set message as unheld with queue id {}: {}".format(
                 queue_id, result["stderr"]
             )
     return ret
@@ -537,25 +529,25 @@ def requeue(queue_id):
                 _message = item
 
         if not _message:
-            ret["message"] = "No message in queue with ID {0}".format(queue_id)
+            ret["message"] = "No message in queue with ID {}".format(queue_id)
             ret["result"] = False
             return ret
 
-    cmd = "postsuper -r {0}".format(queue_id)
+    cmd = "postsuper -r {}".format(queue_id)
     result = __salt__["cmd.run_all"](cmd)
 
     if result["retcode"] == 0:
         if queue_id == "ALL":
             ret["message"] = "Successfully requeued all messages"
         else:
-            ret["message"] = "Successfully requeued message with queue id {0}".format(
+            ret["message"] = "Successfully requeued message with queue id {}".format(
                 queue_id
             )
     else:
         if queue_id == "ALL":
             ret["message"] = "Unable to requeue all messages"
         else:
-            ret["message"] = "Unable to requeue message with queue id {0}: {1}".format(
+            ret["message"] = "Unable to requeue message with queue id {}: {}".format(
                 queue_id, result["stderr"]
             )
     return ret

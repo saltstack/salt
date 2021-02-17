@@ -137,95 +137,95 @@ def _salt(fun, *args, **kw):
         skwargs = ""
     cache_key = (laps, target, fun, sargs, skw, skwargs)
     if not cache or (cache and (cache_key not in __CACHED_CALLS)):
-        conn = _client()
-        runner = _runner()
-        rkwargs = kwargs.copy()
-        rkwargs["timeout"] = timeout
-        rkwargs.setdefault("tgt_type", "list")
-        kwargs.setdefault("tgt_type", "list")
-        ping_retries = 0
-        # the target(s) have environ one minute to respond
-        # we call 60 ping request, this prevent us
-        # from blindly send commands to unmatched minions
-        ping_max_retries = 60
-        ping = True
-        # do not check ping... if we are pinguing
-        if fun == "test.ping":
-            ping_retries = ping_max_retries + 1
-        # be sure that the executors are alive
-        while ping_retries <= ping_max_retries:
-            try:
-                if ping_retries > 0:
-                    time.sleep(1)
-                pings = conn.cmd(tgt=target, timeout=10, fun="test.ping")
-                values = list(pings.values())
-                if not values:
-                    ping = False
-                for v in values:
-                    if v is not True:
+        with _client() as conn:
+            runner = _runner()
+            rkwargs = kwargs.copy()
+            rkwargs["timeout"] = timeout
+            rkwargs.setdefault("tgt_type", "list")
+            kwargs.setdefault("tgt_type", "list")
+            ping_retries = 0
+            # the target(s) have environ one minute to respond
+            # we call 60 ping request, this prevent us
+            # from blindly send commands to unmatched minions
+            ping_max_retries = 60
+            ping = True
+            # do not check ping... if we are pinguing
+            if fun == "test.ping":
+                ping_retries = ping_max_retries + 1
+            # be sure that the executors are alive
+            while ping_retries <= ping_max_retries:
+                try:
+                    if ping_retries > 0:
+                        time.sleep(1)
+                    pings = conn.cmd(tgt=target, timeout=10, fun="test.ping")
+                    values = list(pings.values())
+                    if not values:
                         ping = False
-                if not ping:
-                    raise ValueError("Unreachable")
-                break
-            except Exception:  # pylint: disable=broad-except
-                ping = False
-                ping_retries += 1
-                log.error("%s unreachable, retrying", target)
-        if not ping:
-            raise SaltCloudSystemExit("Target {} unreachable".format(target))
-        jid = conn.cmd_async(tgt=target, fun=fun, arg=args, kwarg=kw, **rkwargs)
-        cret = conn.cmd(
-            tgt=target, fun="saltutil.find_job", arg=[jid], timeout=10, **kwargs
-        )
-        running = bool(cret.get(target, False))
-        endto = time.time() + timeout
-        while running:
-            rkwargs = {
-                "tgt": target,
-                "fun": "saltutil.find_job",
-                "arg": [jid],
-                "timeout": 10,
-            }
-            cret = conn.cmd(**rkwargs)
+                    for v in values:
+                        if v is not True:
+                            ping = False
+                    if not ping:
+                        raise ValueError("Unreachable")
+                    break
+                except Exception:  # pylint: disable=broad-except
+                    ping = False
+                    ping_retries += 1
+                    log.error("%s unreachable, retrying", target)
+            if not ping:
+                raise SaltCloudSystemExit("Target {} unreachable".format(target))
+            jid = conn.cmd_async(tgt=target, fun=fun, arg=args, kwarg=kw, **rkwargs)
+            cret = conn.cmd(
+                tgt=target, fun="saltutil.find_job", arg=[jid], timeout=10, **kwargs
+            )
             running = bool(cret.get(target, False))
-            if not running:
-                break
-            if running and (time.time() > endto):
-                raise Exception(
-                    "Timeout {}s for {} is elapsed".format(
-                        timeout, pprint.pformat(rkwargs)
+            endto = time.time() + timeout
+            while running:
+                rkwargs = {
+                    "tgt": target,
+                    "fun": "saltutil.find_job",
+                    "arg": [jid],
+                    "timeout": 10,
+                }
+                cret = conn.cmd(**rkwargs)
+                running = bool(cret.get(target, False))
+                if not running:
+                    break
+                if running and (time.time() > endto):
+                    raise Exception(
+                        "Timeout {}s for {} is elapsed".format(
+                            timeout, pprint.pformat(rkwargs)
+                        )
                     )
-                )
-            time.sleep(poll)
-        # timeout for the master to return data about a specific job
-        wait_for_res = float({"test.ping": "5"}.get(fun, "120"))
-        while wait_for_res:
-            wait_for_res -= 0.5
-            cret = runner.cmd("jobs.lookup_jid", [jid, {"__kwarg__": True}])
-            if target in cret:
-                ret = cret[target]
-                break
-            # recent changes
-            elif "data" in cret and "outputter" in cret:
-                ret = cret["data"]
-                break
-            # special case, some answers may be crafted
-            # to handle the unresponsivness of a specific command
-            # which is also meaningful, e.g. a minion not yet provisioned
-            if fun in ["test.ping"] and not wait_for_res:
-                ret = {"test.ping": False}.get(fun, False)
-            time.sleep(0.5)
-        try:
-            if "is not available." in ret:
-                raise SaltCloudSystemExit(
-                    "module/function {} is not available".format(fun)
-                )
-        except SaltCloudSystemExit:  # pylint: disable=try-except-raise
-            raise
-        except TypeError:
-            pass
-        if cache:
-            __CACHED_CALLS[cache_key] = ret
+                time.sleep(poll)
+            # timeout for the master to return data about a specific job
+            wait_for_res = float({"test.ping": "5"}.get(fun, "120"))
+            while wait_for_res:
+                wait_for_res -= 0.5
+                cret = runner.cmd("jobs.lookup_jid", [jid, {"__kwarg__": True}])
+                if target in cret:
+                    ret = cret[target]
+                    break
+                # recent changes
+                elif "data" in cret and "outputter" in cret:
+                    ret = cret["data"]
+                    break
+                # special case, some answers may be crafted
+                # to handle the unresponsivness of a specific command
+                # which is also meaningful, e.g. a minion not yet provisioned
+                if fun in ["test.ping"] and not wait_for_res:
+                    ret = {"test.ping": False}.get(fun, False)
+                time.sleep(0.5)
+            try:
+                if "is not available." in ret:
+                    raise SaltCloudSystemExit(
+                        "module/function {} is not available".format(fun)
+                    )
+            except SaltCloudSystemExit:  # pylint: disable=try-except-raise
+                raise
+            except TypeError:
+                pass
+            if cache:
+                __CACHED_CALLS[cache_key] = ret
     elif cache and cache_key in __CACHED_CALLS:
         ret = __CACHED_CALLS[cache_key]
     return ret

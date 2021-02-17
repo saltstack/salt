@@ -1,8 +1,8 @@
 import time
 
+import pytest
 import salt.config
 import salt.master
-from tests.support.helpers import slowTest
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -29,6 +29,7 @@ class TransportMethodsTest(TestCase):
         """
         opts = salt.config.master_config(None)
         aes_funcs = salt.master.AESFuncs(opts)
+        self.addCleanup(aes_funcs.destroy)
         for name in aes_funcs.expose_methods:
             func = getattr(aes_funcs, name, None)
             assert callable(func)
@@ -39,6 +40,7 @@ class TransportMethodsTest(TestCase):
         """
         opts = salt.config.master_config(None)
         aes_funcs = salt.master.AESFuncs(opts)
+        self.addCleanup(aes_funcs.destroy)
         # Any callable that should not explicitly be allowed should be added
         # here.
         blacklist_methods = [
@@ -70,6 +72,7 @@ class TransportMethodsTest(TestCase):
             "__subclasshook__",
             "get_method",
             "run_func",
+            "destroy",
         ]
         for name in dir(aes_funcs):
             if name in aes_funcs.expose_methods:
@@ -84,6 +87,7 @@ class TransportMethodsTest(TestCase):
         """
         opts = salt.config.master_config(None)
         clear_funcs = salt.master.ClearFuncs(opts, {})
+        self.addCleanup(clear_funcs.destroy)
         for name in clear_funcs.expose_methods:
             func = getattr(clear_funcs, name, None)
             assert callable(func)
@@ -94,6 +98,7 @@ class TransportMethodsTest(TestCase):
         """
         opts = salt.config.master_config(None)
         clear_funcs = salt.master.ClearFuncs(opts, {})
+        self.addCleanup(clear_funcs.destroy)
         blacklist_methods = [
             "__class__",
             "__delattr__",
@@ -123,6 +128,7 @@ class TransportMethodsTest(TestCase):
             "_send_pub",
             "_send_ssh_pub",
             "get_method",
+            "destroy",
         ]
         for name in dir(clear_funcs):
             if name in clear_funcs.expose_methods:
@@ -144,6 +150,7 @@ class ClearFuncsTestCase(TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        cls.clear_funcs.destroy()
         del cls.clear_funcs
 
     def test_get_method(self):
@@ -152,7 +159,7 @@ class ClearFuncsTestCase(TestCase):
 
     # runner tests
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_runner_token_not_authenticated(self):
         """
         Asserts that a TokenAuthenticationError is returned when the token can't authenticate.
@@ -166,7 +173,7 @@ class ClearFuncsTestCase(TestCase):
         ret = self.clear_funcs.runner({"token": "asdfasdfasdfasdf"})
         self.assertDictEqual(mock_ret, ret)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_runner_token_authorization_error(self):
         """
         Asserts that a TokenAuthenticationError is returned when the token authenticates, but is
@@ -190,7 +197,7 @@ class ClearFuncsTestCase(TestCase):
 
         self.assertDictEqual(mock_ret, ret)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_runner_token_salt_invocation_error(self):
         """
         Asserts that a SaltInvocationError is returned when the token authenticates, but the
@@ -215,7 +222,7 @@ class ClearFuncsTestCase(TestCase):
 
         self.assertDictEqual(mock_ret, ret)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_runner_eauth_not_authenticated(self):
         """
         Asserts that an EauthAuthenticationError is returned when the user can't authenticate.
@@ -230,7 +237,7 @@ class ClearFuncsTestCase(TestCase):
         ret = self.clear_funcs.runner({"eauth": "foo"})
         self.assertDictEqual(mock_ret, ret)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_runner_eauth_authorization_error(self):
         """
         Asserts that an EauthAuthenticationError is returned when the user authenticates, but is
@@ -251,7 +258,7 @@ class ClearFuncsTestCase(TestCase):
 
         self.assertDictEqual(mock_ret, ret)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_runner_eauth_salt_invocation_error(self):
         """
         Asserts that an EauthAuthenticationError is returned when the user authenticates, but the
@@ -273,7 +280,7 @@ class ClearFuncsTestCase(TestCase):
 
         self.assertDictEqual(mock_ret, ret)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_runner_user_not_authenticated(self):
         """
         Asserts that an UserAuthenticationError is returned when the user can't authenticate.
@@ -289,7 +296,7 @@ class ClearFuncsTestCase(TestCase):
 
     # wheel tests
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_wheel_token_not_authenticated(self):
         """
         Asserts that a TokenAuthenticationError is returned when the token can't authenticate.
@@ -303,7 +310,7 @@ class ClearFuncsTestCase(TestCase):
         ret = self.clear_funcs.wheel({"token": "asdfasdfasdfasdf"})
         self.assertDictEqual(mock_ret, ret)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_wheel_token_authorization_error(self):
         """
         Asserts that a TokenAuthenticationError is returned when the token authenticates, but is
@@ -327,7 +334,7 @@ class ClearFuncsTestCase(TestCase):
 
         self.assertDictEqual(mock_ret, ret)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_wheel_token_salt_invocation_error(self):
         """
         Asserts that a SaltInvocationError is returned when the token authenticates, but the
@@ -352,7 +359,7 @@ class ClearFuncsTestCase(TestCase):
 
         self.assertDictEqual(mock_ret, ret)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_wheel_eauth_not_authenticated(self):
         """
         Asserts that an EauthAuthenticationError is returned when the user can't authenticate.
@@ -367,7 +374,7 @@ class ClearFuncsTestCase(TestCase):
         ret = self.clear_funcs.wheel({"eauth": "foo"})
         self.assertDictEqual(mock_ret, ret)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_wheel_eauth_authorization_error(self):
         """
         Asserts that an EauthAuthenticationError is returned when the user authenticates, but is
@@ -388,7 +395,7 @@ class ClearFuncsTestCase(TestCase):
 
         self.assertDictEqual(mock_ret, ret)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_wheel_eauth_salt_invocation_error(self):
         """
         Asserts that an EauthAuthenticationError is returned when the user authenticates, but the
@@ -410,7 +417,7 @@ class ClearFuncsTestCase(TestCase):
 
         self.assertDictEqual(mock_ret, ret)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_wheel_user_not_authenticated(self):
         """
         Asserts that an UserAuthenticationError is returned when the user can't authenticate.
@@ -426,7 +433,7 @@ class ClearFuncsTestCase(TestCase):
 
     # publish tests
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_publish_user_is_blacklisted(self):
         """
         Asserts that an AuthorizationError is returned when the user has been blacklisted.
@@ -444,7 +451,7 @@ class ClearFuncsTestCase(TestCase):
                 mock_ret, self.clear_funcs.publish({"user": "foo", "fun": "test.arg"})
             )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_publish_cmd_blacklisted(self):
         """
         Asserts that an AuthorizationError is returned when the command has been blacklisted.
@@ -464,7 +471,7 @@ class ClearFuncsTestCase(TestCase):
                 mock_ret, self.clear_funcs.publish({"user": "foo", "fun": "test.arg"})
             )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_publish_token_not_authenticated(self):
         """
         Asserts that an AuthenticationError is returned when the token can't authenticate.
@@ -488,7 +495,7 @@ class ClearFuncsTestCase(TestCase):
         ):
             self.assertEqual(mock_ret, self.clear_funcs.publish(load))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_publish_token_authorization_error(self):
         """
         Asserts that an AuthorizationError is returned when the token authenticates, but is not
@@ -521,7 +528,7 @@ class ClearFuncsTestCase(TestCase):
         ):
             self.assertEqual(mock_ret, self.clear_funcs.publish(load))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_publish_eauth_not_authenticated(self):
         """
         Asserts that an AuthenticationError is returned when the user can't authenticate.
@@ -545,7 +552,7 @@ class ClearFuncsTestCase(TestCase):
         ):
             self.assertEqual(mock_ret, self.clear_funcs.publish(load))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_publish_eauth_authorization_error(self):
         """
         Asserts that an AuthorizationError is returned when the user authenticates, but is not
@@ -575,7 +582,7 @@ class ClearFuncsTestCase(TestCase):
         ):
             self.assertEqual(mock_ret, self.clear_funcs.publish(load))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_publish_user_not_authenticated(self):
         """
         Asserts that an AuthenticationError is returned when the user can't authenticate.
@@ -594,7 +601,7 @@ class ClearFuncsTestCase(TestCase):
         ):
             self.assertEqual(mock_ret, self.clear_funcs.publish(load))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_publish_user_authenticated_missing_auth_list(self):
         """
         Asserts that an AuthenticationError is returned when the user has an effective user id and is
@@ -625,7 +632,7 @@ class ClearFuncsTestCase(TestCase):
         ):
             self.assertEqual(mock_ret, self.clear_funcs.publish(load))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_publish_user_authorization_error(self):
         """
         Asserts that an AuthorizationError is returned when the user authenticates, but is not

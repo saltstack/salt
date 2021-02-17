@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Configuration of network interfaces
 ===================================
@@ -431,15 +430,11 @@ are a couple examples:
           - 8.8.8.8
           - 8.8.4.4
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import difflib
 import logging
 
 import salt.loader
-
-# Import Salt libs
 import salt.utils.network
 import salt.utils.platform
 
@@ -482,7 +477,7 @@ def managed(name, enabled=True, **kwargs):
         "name": name,
         "changes": {},
         "result": True,
-        "comment": "Interface {0} is up to date.".format(name),
+        "comment": "Interface {} is up to date.".format(name),
     }
     if "test" not in kwargs:
         kwargs["test"] = __opts__.get("test", False)
@@ -513,21 +508,21 @@ def managed(name, enabled=True, **kwargs):
                 pass
             if not old and new:
                 ret["result"] = None
-                ret["comment"] = "Interface {0} is set to be added.".format(name)
+                ret["comment"] = "Interface {} is set to be added.".format(name)
             elif old != new:
                 diff = difflib.unified_diff(old, new, lineterm="")
                 ret["result"] = None
-                ret["comment"] = "Interface {0} is set to be updated:\n{1}".format(
+                ret["comment"] = "Interface {} is set to be updated:\n{}".format(
                     name, "\n".join(diff)
                 )
         else:
             if not old and new:
-                ret["comment"] = "Interface {0} added.".format(name)
+                ret["comment"] = "Interface {} added.".format(name)
                 ret["changes"]["interface"] = "Added network interface."
                 apply_ranged_setting = True
             elif old != new:
                 diff = difflib.unified_diff(old, new, lineterm="")
-                ret["comment"] = "Interface {0} updated.".format(name)
+                ret["comment"] = "Interface {} updated.".format(name)
                 ret["changes"]["interface"] = "\n".join(diff)
                 apply_ranged_setting = True
     except AttributeError as error:
@@ -548,24 +543,24 @@ def managed(name, enabled=True, **kwargs):
             if kwargs["test"]:
                 if not old and new:
                     ret["result"] = None
-                    ret["comment"] = "Bond interface {0} is set to be added.".format(
+                    ret["comment"] = "Bond interface {} is set to be added.".format(
                         name
                     )
                 elif old != new:
                     diff = difflib.unified_diff(old, new, lineterm="")
                     ret["result"] = None
                     ret["comment"] = (
-                        "Bond interface {0} is set to be "
-                        "updated:\n{1}".format(name, "\n".join(diff))
+                        "Bond interface {} is set to be "
+                        "updated:\n{}".format(name, "\n".join(diff))
                     )
             else:
                 if not old and new:
-                    ret["comment"] = "Bond interface {0} added.".format(name)
-                    ret["changes"]["bond"] = "Added bond {0}.".format(name)
+                    ret["comment"] = "Bond interface {} added.".format(name)
+                    ret["changes"]["bond"] = "Added bond {}.".format(name)
                     apply_ranged_setting = True
                 elif old != new:
                     diff = difflib.unified_diff(old, new, lineterm="")
-                    ret["comment"] = "Bond interface {0} updated.".format(name)
+                    ret["comment"] = "Bond interface {} updated.".format(name)
                     ret["changes"]["bond"] = "\n".join(diff)
                     apply_ranged_setting = True
         except AttributeError as error:
@@ -627,15 +622,15 @@ def managed(name, enabled=True, **kwargs):
                         __salt__["ip.up"](name, iface_type)
                         ret["changes"][
                             "status"
-                        ] = "Interface {0} restart to validate".format(name)
+                        ] = "Interface {} restart to validate".format(name)
                 else:
                     __salt__["ip.up"](name, iface_type)
-                    ret["changes"]["status"] = "Interface {0} is up".format(name)
+                    ret["changes"]["status"] = "Interface {} is up".format(name)
         else:
             if "noifupdown" not in kwargs:
                 if interface_status:
                     __salt__["ip.down"](name, iface_type)
-                    ret["changes"]["status"] = "Interface {0} down".format(name)
+                    ret["changes"]["status"] = "Interface {} down".format(name)
     except Exception as error:  # pylint: disable=broad-except
         ret["result"] = False
         ret["comment"] = str(error)
@@ -647,7 +642,7 @@ def managed(name, enabled=True, **kwargs):
         if "slaves" in kwargs and kwargs["slaves"]:
             # Check that there are new slaves for this master
             present_slaves = __salt__["cmd.run"](
-                ["cat", "/sys/class/net/{0}/bonding/slaves".format(name)]
+                ["cat", "/sys/class/net/{}/bonding/slaves".format(name)]
             ).split()
             desired_slaves = kwargs["slaves"].split()
             missing_slaves = set(desired_slaves) - set(present_slaves)
@@ -665,7 +660,7 @@ def managed(name, enabled=True, **kwargs):
                     __salt__["cmd.run"](cmd, python_shell=False)
                 else:
                     log.error("Command 'ifenslave' not found")
-                ret["changes"]["enslave"] = "Added slaves '{0}' to master '{1}'".format(
+                ret["changes"]["enslave"] = "Added slaves '{}' to master '{}'".format(
                     " ".join(missing_slaves), name
                 )
             else:
@@ -699,7 +694,7 @@ def routes(name, **kwargs):
         "name": name,
         "changes": {},
         "result": True,
-        "comment": "Interface {0} routes are up to date.".format(name),
+        "comment": "Interface {} routes are up to date.".format(name),
     }
     apply_routes = False
     if "test" not in kwargs:
@@ -714,28 +709,24 @@ def routes(name, **kwargs):
                 return ret
             if not old and new:
                 ret["result"] = None
-                ret["comment"] = "Interface {0} routes are set to be added.".format(
-                    name
-                )
+                ret["comment"] = "Interface {} routes are set to be added.".format(name)
                 return ret
             elif old != new:
                 diff = difflib.unified_diff(old, new, lineterm="")
                 ret["result"] = None
                 ret["comment"] = (
-                    "Interface {0} routes are set to be "
-                    "updated:\n{1}".format(name, "\n".join(diff))
+                    "Interface {} routes are set to be "
+                    "updated:\n{}".format(name, "\n".join(diff))
                 )
                 return ret
         if not old and new:
             apply_routes = True
-            ret["comment"] = "Interface {0} routes added.".format(name)
-            ret["changes"]["network_routes"] = "Added interface {0} routes.".format(
-                name
-            )
+            ret["comment"] = "Interface {} routes added.".format(name)
+            ret["changes"]["network_routes"] = "Added interface {} routes.".format(name)
         elif old != new:
             diff = difflib.unified_diff(old, new, lineterm="")
             apply_routes = True
-            ret["comment"] = "Interface {0} routes updated.".format(name)
+            ret["comment"] = "Interface {} routes updated.".format(name)
             ret["changes"]["network_routes"] = "\n".join(diff)
     except AttributeError as error:
         ret["result"] = False
@@ -789,7 +780,7 @@ def system(name, **kwargs):
                 ret["result"] = None
                 ret["comment"] = (
                     "Global network settings are set to be "
-                    "updated:\n{0}".format("\n".join(diff))
+                    "updated:\n{}".format("\n".join(diff))
                 )
                 return ret
         if not old and new:

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 OpenNebula Cloud Module
 =======================
@@ -60,15 +59,11 @@ to find the IP of the new VM.
 
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import os
 import pprint
 import time
 
-# Import Salt Libs
 import salt.config as config
 import salt.utils.data
 import salt.utils.files
@@ -80,11 +75,8 @@ from salt.exceptions import (
     SaltCloudSystemExit,
 )
 
-# Import Third Party Libs
-from salt.ext import six
-
 try:
-    import salt.ext.six.moves.xmlrpc_client  # pylint: disable=E0611
+    import xmlrpc.client
     from lxml import etree
 
     HAS_XML_LIBS = True
@@ -556,7 +548,7 @@ def get_cluster_id(kwargs=None, call=None):
     try:
         ret = list_clusters()[name]["id"]
     except KeyError:
-        raise SaltCloudSystemExit("The cluster '{0}' could not be found".format(name))
+        raise SaltCloudSystemExit("The cluster '{}' could not be found".format(name))
 
     return ret
 
@@ -588,9 +580,7 @@ def get_datastore_id(kwargs=None, call=None):
     try:
         ret = list_datastores()[name]["id"]
     except KeyError:
-        raise SaltCloudSystemExit(
-            "The datastore '{0}' could not be found.".format(name)
-        )
+        raise SaltCloudSystemExit("The datastore '{}' could not be found.".format(name))
 
     return ret
 
@@ -622,7 +612,7 @@ def get_host_id(kwargs=None, call=None):
     try:
         ret = avail_locations()[name]["id"]
     except KeyError:
-        raise SaltCloudSystemExit("The host '{0}' could not be found".format(name))
+        raise SaltCloudSystemExit("The host '{}' could not be found".format(name))
 
     return ret
 
@@ -635,14 +625,14 @@ def get_image(vm_):
         The VM dictionary for which to obtain an image.
     """
     images = avail_images()
-    vm_image = six.text_type(
+    vm_image = str(
         config.get_cloud_config_value("image", vm_, __opts__, search_global=False)
     )
     for image in images:
         if vm_image in (images[image]["name"], images[image]["id"]):
             return images[image]["id"]
     raise SaltCloudNotFound(
-        "The specified image, '{0}', could not be found.".format(vm_image)
+        "The specified image, '{}', could not be found.".format(vm_image)
     )
 
 
@@ -673,7 +663,7 @@ def get_image_id(kwargs=None, call=None):
     try:
         ret = avail_images()[name]["id"]
     except KeyError:
-        raise SaltCloudSystemExit("The image '{0}' could not be found".format(name))
+        raise SaltCloudSystemExit("The image '{}' could not be found".format(name))
 
     return ret
 
@@ -686,7 +676,7 @@ def get_location(vm_):
         The VM dictionary for which to obtain a location.
     """
     locations = avail_locations()
-    vm_location = six.text_type(
+    vm_location = str(
         config.get_cloud_config_value("location", vm_, __opts__, search_global=False)
     )
 
@@ -697,7 +687,7 @@ def get_location(vm_):
         if vm_location in (locations[location]["name"], locations[location]["id"]):
             return locations[location]["id"]
     raise SaltCloudNotFound(
-        "The specified location, '{0}', could not be found.".format(vm_location)
+        "The specified location, '{}', could not be found.".format(vm_location)
     )
 
 
@@ -729,7 +719,7 @@ def get_secgroup_id(kwargs=None, call=None):
         ret = list_security_groups()[name]["id"]
     except KeyError:
         raise SaltCloudSystemExit(
-            "The security group '{0}' could not be found.".format(name)
+            "The security group '{}' could not be found.".format(name)
         )
 
     return ret
@@ -761,7 +751,7 @@ def get_template_image(kwargs=None, call=None):
         ret = list_templates()[name]["template"]["disk"]["image"]
     except KeyError:
         raise SaltCloudSystemExit(
-            "The image for template '{0}' could not be found.".format(name)
+            "The image for template '{}' could not be found.".format(name)
         )
 
     return ret
@@ -794,7 +784,7 @@ def get_template_id(kwargs=None, call=None):
     try:
         ret = list_templates()[name]["id"]
     except KeyError:
-        raise SaltCloudSystemExit("The template '{0}' could not be found.".format(name))
+        raise SaltCloudSystemExit("The template '{}' could not be found.".format(name))
 
     return ret
 
@@ -809,14 +799,14 @@ def get_template(vm_):
         The VM dictionary for which to obtain a template.
     """
 
-    vm_template = six.text_type(
+    vm_template = str(
         config.get_cloud_config_value("template", vm_, __opts__, search_global=False)
     )
     try:
         return list_templates()[vm_template]["id"]
     except KeyError:
         raise SaltCloudNotFound(
-            "The specified template, '{0}', could not be found.".format(vm_template)
+            "The specified template, '{}', could not be found.".format(vm_template)
         )
 
 
@@ -847,7 +837,7 @@ def get_vm_id(kwargs=None, call=None):
     try:
         ret = list_nodes()[name]["id"]
     except KeyError:
-        raise SaltCloudSystemExit("The VM '{0}' could not be found.".format(name))
+        raise SaltCloudSystemExit("The VM '{}' could not be found.".format(name))
 
     return ret
 
@@ -879,7 +869,7 @@ def get_vn_id(kwargs=None, call=None):
     try:
         ret = list_vns()[name]["id"]
     except KeyError:
-        raise SaltCloudSystemExit("The VN '{0}' could not be found.".format(name))
+        raise SaltCloudSystemExit("The VN '{}' could not be found.".format(name))
 
     return ret
 
@@ -896,7 +886,7 @@ def _get_device_template(disk, disk_info, template=None):
         for arg in args:
             if arg not in disk_info:
                 raise SaltCloudSystemExit(
-                    "The disk {0} requires a {1}\
+                    "The disk {} requires a {}\
                     argument".format(
                         disk, arg
                     )
@@ -914,8 +904,8 @@ def _get_device_template(disk, disk_info, template=None):
             clone_image = get_template_image(kwargs={"name": template})
 
         clone_image_id = get_image_id(kwargs={"name": clone_image})
-        temp = "DISK=[IMAGE={0}, IMAGE_ID={1}, CLONE=YES,\
-                        SIZE={2}]".format(
+        temp = "DISK=[IMAGE={}, IMAGE_ID={}, CLONE=YES,\
+                        SIZE={}]".format(
             clone_image, clone_image_id, size
         )
         return temp
@@ -923,12 +913,12 @@ def _get_device_template(disk, disk_info, template=None):
     if disk_type == "volatile":
         _require_disk_opts("type")
         v_type = disk_info["type"]
-        temp = "DISK=[TYPE={0}, SIZE={1}]".format(v_type, size)
+        temp = "DISK=[TYPE={}, SIZE={}]".format(v_type, size)
 
         if v_type == "fs":
             _require_disk_opts("format")
             format = disk_info["format"]
-            temp = "DISK=[TYPE={0}, SIZE={1}, FORMAT={2}]".format(v_type, size, format)
+            temp = "DISK=[TYPE={}, SIZE={}, FORMAT={}]".format(v_type, size, format)
         return temp
     # TODO add persistant disk_type
 
@@ -979,7 +969,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "starting create",
-        "salt/cloud/{0}/creating".format(vm_["name"]),
+        "salt/cloud/{}/creating".format(vm_["name"]),
         args=__utils__["cloud.filter_event"](
             "creating", vm_, ["name", "profile", "provider", "driver"]
         ),
@@ -1004,7 +994,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "requesting instance",
-        "salt/cloud/{0}/requesting".format(vm_["name"]),
+        "salt/cloud/{}/requesting".format(vm_["name"]),
         args={
             "kwargs": __utils__["cloud.filter_event"](
                 "requesting", kwargs, list(kwargs)
@@ -1015,13 +1005,13 @@ def create(vm_):
 
     template = []
     if kwargs.get("region_id"):
-        template.append('SCHED_REQUIREMENTS="ID={0}"'.format(kwargs.get("region_id")))
+        template.append('SCHED_REQUIREMENTS="ID={}"'.format(kwargs.get("region_id")))
     if vm_.get("memory"):
-        template.append("MEMORY={0}".format(vm_.get("memory")))
+        template.append("MEMORY={}".format(vm_.get("memory")))
     if vm_.get("cpu"):
-        template.append("CPU={0}".format(vm_.get("cpu")))
+        template.append("CPU={}".format(vm_.get("cpu")))
     if vm_.get("vcpu"):
-        template.append("VCPU={0}".format(vm_.get("vcpu")))
+        template.append("VCPU={}".format(vm_.get("vcpu")))
     if vm_.get("disk"):
         get_disks = vm_.get("disk")
         template_name = vm_["image"]
@@ -1029,7 +1019,7 @@ def create(vm_):
             template.append(
                 _get_device_template(disk, get_disks[disk], template=template_name)
             )
-        if "CLONE" not in six.text_type(template):
+        if "CLONE" not in str(template):
             raise SaltCloudSystemExit(
                 "Missing an image disk to clone. Must define a clone disk alongside all other disk definitions."
             )
@@ -1067,7 +1057,7 @@ def create(vm_):
 
     fqdn = vm_.get("fqdn_base")
     if fqdn is not None:
-        fqdn = "{0}.{1}".format(vm_["name"], fqdn)
+        fqdn = "{}.{}".format(vm_["name"], fqdn)
 
     def __query_node_data(vm_name):
         node_data = show_instance(vm_name, call="action")
@@ -1097,14 +1087,14 @@ def create(vm_):
         except SaltCloudSystemExit:
             pass
         finally:
-            raise SaltCloudSystemExit(six.text_type(exc))
+            raise SaltCloudSystemExit(str(exc))
 
     key_filename = config.get_cloud_config_value(
         "private_key", vm_, __opts__, search_global=False, default=None
     )
     if key_filename is not None and not os.path.isfile(key_filename):
         raise SaltCloudConfigError(
-            "The defined key_filename '{0}' does not exist".format(key_filename)
+            "The defined key_filename '{}' does not exist".format(key_filename)
         )
 
     if fqdn:
@@ -1146,7 +1136,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "created instance",
-        "salt/cloud/{0}/created".format(vm_["name"]),
+        "salt/cloud/{}/created".format(vm_["name"]),
         args=__utils__["cloud.filter_event"](
             "created", vm_, ["name", "profile", "provider", "driver"]
         ),
@@ -1181,7 +1171,7 @@ def destroy(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroying instance",
-        "salt/cloud/{0}/destroying".format(name),
+        "salt/cloud/{}/destroying".format(name),
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
     )
@@ -1195,7 +1185,7 @@ def destroy(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroyed instance",
-        "salt/cloud/{0}/destroyed".format(name),
+        "salt/cloud/{}/destroyed".format(name),
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
     )
@@ -1822,7 +1812,7 @@ def image_update(call=None, kwargs=None):
         update_number = 1
     else:
         raise SaltCloudSystemExit(
-            "The update_type argument must be either {0} or {1}.".format(
+            "The update_type argument must be either {} or {}.".format(
                 update_args[0], update_args[1]
             )
         )
@@ -2214,7 +2204,7 @@ def secgroup_update(call=None, kwargs=None):
         update_number = 1
     else:
         raise SaltCloudSystemExit(
-            "The update_type argument must be either {0} or {1}.".format(
+            "The update_type argument must be either {} or {}.".format(
                 update_args[0], update_args[1]
             )
         )
@@ -2600,7 +2590,7 @@ def template_update(call=None, kwargs=None):
         update_number = 1
     else:
         raise SaltCloudSystemExit(
-            "The update_type argument must be either {0} or {1}.".format(
+            "The update_type argument must be either {} or {}.".format(
                 update_args[0], update_args[1]
             )
         )
@@ -2706,7 +2696,7 @@ def vm_action(name, kwargs=None, call=None):
     response = server.one.vm.action(auth, action, vm_id)
 
     data = {
-        "action": "vm.action." + six.text_type(action),
+        "action": "vm.action." + str(action),
         "actioned": response[0],
         "vm_id": response[1],
         "error_code": response[2],
@@ -3794,7 +3784,7 @@ def vm_update(name, kwargs=None, call=None):
         update_number = 1
     else:
         raise SaltCloudSystemExit(
-            "The update_type argument must be either {0} or {1}.".format(
+            "The update_type argument must be either {} or {}.".format(
                 update_args[0], update_args[1]
             )
         )
@@ -4482,7 +4472,7 @@ def _get_xml(xml_str):
     except etree.XMLSyntaxError as err:
         # opennebula returned invalid XML, which could be an error message, so
         # log it
-        raise SaltCloudSystemExit("opennebula returned: {0}".format(xml_str))
+        raise SaltCloudSystemExit("opennebula returned: {}".format(xml_str))
     return xml_data
 
 
@@ -4506,7 +4496,7 @@ def _get_xml_rpc():
         "password", vm_, __opts__, search_global=False
     )
 
-    server = salt.ext.six.moves.xmlrpc_client.ServerProxy(xml_rpc)
+    server = xmlrpc.client.ServerProxy(xml_rpc)
 
     return server, user, password
 
@@ -4567,7 +4557,7 @@ def _xml_to_dict(xml):
         key = item.tag.lower()
         idx = 1
         while key in dicts:
-            key += six.text_type(idx)
+            key += str(idx)
             idx += 1
         if item.text is None:
             dicts[key] = _xml_to_dict(item)
