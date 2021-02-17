@@ -8,11 +8,9 @@ available.
 
 """
 
-# Import python libs
 import logging
 import shlex
 
-# Import salt libs
 import salt.utils.json
 import salt.utils.path
 from salt.exceptions import CommandExecutionError

@@ -214,7 +214,6 @@ Anything else from the create_server_ docs can be passed through here.
 .. _os-client-config: https://docs.openstack.org/os-client-config/latest/user/configuration.html#config-files
 """
 
-# Import Python Libs
 import copy
 import logging
 import os
@@ -222,8 +221,6 @@ import pprint
 import socket
 
 import salt.config as config
-
-# Import Salt Libs
 import salt.utils.versions
 from salt.exceptions import (
     SaltCloudConfigError,
@@ -232,7 +229,6 @@ from salt.exceptions import (
     SaltCloudSystemExit,
 )
 
-# Import 3rd-Party Libs
 try:
     import shade
     import shade.openstackcloud

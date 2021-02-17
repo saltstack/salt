@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 CenturyLink Cloud Module
 ========================
@@ -64,25 +63,18 @@ cloud configuration at
 
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import importlib
 import logging
 import time
 
-# Import salt libs
 import salt.config as config
 import salt.utils.json
 from salt.exceptions import SaltCloudSystemExit
-from salt.ext import six
-
-# Get logging started
-log = logging.getLogger(__name__)
 
 # Attempt to import clc-sdk lib
 try:
-    # when running this in linode's Ubuntu 16.x version the following line is required to get the clc sdk libraries to load
+    # when running this in linode's Ubuntu 16.x version the following line is required
+    # to get the clc sdk libraries to load
     importlib.import_module("clc")
     import clc
 
@@ -98,6 +90,8 @@ try:
     disable_warnings()
 except Exception:  # pylint: disable=broad-except
     pass
+
+log = logging.getLogger(__name__)
 
 
 __virtualname__ = "clc"
@@ -300,7 +294,7 @@ def get_build_status(req_id, nodename):
     get the build status from CLC to make sure we don't return to early
     """
     counter = 0
-    req_id = six.text_type(req_id)
+    req_id = str(req_id)
     while counter < 10:
         queue = clc.v1.Blueprint.GetStatus(request_id=(req_id))
         if queue["PercentComplete"] == 100:
@@ -315,7 +309,7 @@ def get_build_status(req_id, nodename):
             log.info(
                 "Creating Cloud VM %s Time out in %s minutes",
                 nodename,
-                six.text_type(10 - counter),
+                str(10 - counter),
             )
             time.sleep(60)
 
@@ -379,7 +373,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "waiting for ssh",
-        "salt/cloud/{0}/waiting_for_ssh".format(name),
+        "salt/cloud/{}/waiting_for_ssh".format(name),
         sock_dir=__opts__["sock_dir"],
         args={"ip_address": vm_["ssh_host"]},
         transport=__opts__["transport"],

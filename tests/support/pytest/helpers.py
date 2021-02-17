@@ -27,18 +27,6 @@ from tests.support.sminion import create_sminion
 
 log = logging.getLogger(__name__)
 
-if not RUNTIME_VARS.PYTEST_SESSION:
-    # XXX: Remove this try/except once we fully switch to pytest
-
-    class FakePyTestHelpersNamespace:
-        __slots__ = ()
-
-        def register(self, func):
-            return func
-
-    # Patch pytest so it all works under runtests.py
-    pytest.helpers = FakePyTestHelpersNamespace()
-
 
 @pytest.helpers.register
 @contextmanager

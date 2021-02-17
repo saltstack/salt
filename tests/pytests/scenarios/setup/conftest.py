@@ -1,3 +1,4 @@
+import os
 import shutil
 
 import pytest
@@ -11,14 +12,15 @@ def virtualenv(tmp_path):
 
 @pytest.fixture
 def cache_dir(tmp_path, grains):
-    if grains["os"] == "Arch" or (
-        grains["os"] == "Fedora" and grains["osmajorrelease"] == 33
+    if os.environ.get("CI_RUN", "0") == "1" and (
+        grains["os"] == "Arch"
+        or (grains["os"] == "Fedora" and grains["osmajorrelease"] == 33)
     ):
         # Some of our golden images, at least, Arch Linux and Fedora 33, mount /tmp as a tmpfs.
         # These setup tests will currently consume all of the freespace on /tmp in these distributions,
         # and fail. Just skip these tests on these platforms, at least, for now.
         # to run these tests.
-        pytest.skip("Skipped as tests would consume all of /tmp and fail")
+        pytest.skip("Skipped on CI runs as tests would consume all of /tmp and fail")
 
     _cache_dir = tmp_path / ".cache"
     _cache_dir.mkdir(parents=True, exist_ok=True)
