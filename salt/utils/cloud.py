@@ -1244,8 +1244,7 @@ def deploy_windows(
     if port_available and service_available:
         log.debug("SMB port %s on %s is available", port, host)
         log.debug("Logging into %s:%s as %s", host, port, username)
-        newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
-        smb_conn = salt.utils.smb.get_conn(host, username, password)
+        smb_conn = salt.utils.smb.get_conn(host, username, password, port)
         if smb_conn is False:
             log.error("Please install smbprotocol to enable SMB functionality")
             return False

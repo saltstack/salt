@@ -19,9 +19,8 @@ Module for interop with the Splunk API
             port: 8080
 """
 
-
 import logging
-import urllib
+import urllib.parse
 
 import salt.utils.yaml
 from salt.utils.odict import OrderedDict
@@ -161,7 +160,7 @@ def create(name, profile="splunk", **kwargs):
         "perms.read": "*",
     }
     _req_url = "{}/servicesNS/{}/search/saved/searches/{}/acl".format(
-        url, config.get("username"), urllib.quote(name)
+        url, config.get("username"), urllib.parse.quote(name)
     )
     requests.post(_req_url, auth=auth, verify=True, data=data)
     return _get_splunk_search_props(search)

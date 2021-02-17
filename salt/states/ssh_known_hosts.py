@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Control of SSH known_hosts entries
 ==================================
@@ -19,12 +18,9 @@ Manage the information stored in the known_hosts files.
         - absent
         - user: root
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import os
 
-# Import Salt libs
 import salt.utils.platform
 from salt.exceptions import CommandNotFoundError
 
@@ -150,18 +146,18 @@ def present(
             )
         except CommandNotFoundError as err:
             ret["result"] = False
-            ret["comment"] = "ssh.check_known_host error: {0}".format(err)
+            ret["comment"] = "ssh.check_known_host error: {}".format(err)
             return ret
 
         if result == "exists":
-            comment = "Host {0} is already in {1}".format(name, config)
+            comment = "Host {} is already in {}".format(name, config)
             ret["result"] = True
             return dict(ret, comment=comment)
         elif result == "add":
-            comment = "Key for {0} is set to be added to {1}".format(name, config)
+            comment = "Key for {} is set to be added to {}".format(name, config)
             return dict(ret, comment=comment)
         else:  # 'update'
-            comment = "Key for {0} is set to be updated in {1}".format(name, config)
+            comment = "Key for {} is set to be updated in {}".format(name, config)
             return dict(ret, comment=comment)
 
     result = __salt__["ssh.set_known_host"](
@@ -177,7 +173,7 @@ def present(
         fingerprint_hash_type=fingerprint_hash_type,
     )
     if result["status"] == "exists":
-        return dict(ret, comment="{0} already exists in {1}".format(name, config))
+        return dict(ret, comment="{} already exists in {}".format(name, config))
     elif result["status"] == "error":
         return dict(ret, result=False, comment=result["error"])
     else:  # 'updated'
@@ -186,16 +182,14 @@ def present(
             return dict(
                 ret,
                 changes={"old": result["old"], "new": result["new"]},
-                comment="{0}'s key saved to {1} (key: {2})".format(
-                    name, config, new_key
-                ),
+                comment="{}'s key saved to {} (key: {})".format(name, config, new_key),
             )
         else:
             fingerprint = result["new"][0]["fingerprint"]
             return dict(
                 ret,
                 changes={"old": result["old"], "new": result["new"]},
-                comment="{0}'s key saved to {1} (fingerprint: {2})".format(
+                comment="{}'s key saved to {} (fingerprint: {})".format(
                     name, config, fingerprint
                 ),
             )
@@ -239,7 +233,7 @@ def absent(name, user=None, config=None):
         return dict(ret, comment="Host is already absent")
 
     if __opts__["test"]:
-        comment = "Key for {0} is set to be removed from {1}".format(name, config)
+        comment = "Key for {} is set to be removed from {}".format(name, config)
         ret["result"] = None
         return dict(ret, comment=comment)
 
