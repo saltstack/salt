@@ -122,13 +122,13 @@ class SystemdTestCase(TestCase, LoaderModuleMockMixin):
                                 [
                                     "baz",
                                     "service1",
+                                    "service10",
                                     "service4",
                                     "service7",
-                                    "service10",
                                     "timer1.timer",
+                                    "timer10.timer",
                                     "timer4.timer",
                                     "timer7.timer",
-                                    "timer10.timer",
                                 ],
                             )
 
@@ -162,14 +162,14 @@ class SystemdTestCase(TestCase, LoaderModuleMockMixin):
                                 systemd.get_disabled(),
                                 [
                                     "baz",
+                                    "service11",
                                     "service2",
                                     "service5",
                                     "service8",
-                                    "service11",
+                                    "timer11.timer",
                                     "timer2.timer",
                                     "timer5.timer",
                                     "timer8.timer",
-                                    "timer11.timer",
                                 ],
                             )
 
@@ -203,14 +203,14 @@ class SystemdTestCase(TestCase, LoaderModuleMockMixin):
                                 systemd.get_static(),
                                 [
                                     "baz",
+                                    "service12",
                                     "service3",
                                     "service6",
                                     "service9",
-                                    "service12",
+                                    "timer12.timer",
                                     "timer3.timer",
                                     "timer6.timer",
                                     "timer9.timer",
-                                    "timer12.timer",
                                 ],
                             )
 
