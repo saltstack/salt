@@ -156,7 +156,7 @@ def managed(name, ppa=None, copr=None, **kwargs):
 
     gpgautoimport
         Only valid for Zypper package manager. If set to ``True``, automatically
-        trust and import public PGP key for the repository. The key should be
+        trust and import the new repository signing key. The key should be
         specified with ``gpgkey`` parameter. See details below.
 
     Additional configuration values seen in YUM/DNF/Zypper repo files, such as
