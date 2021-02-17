@@ -1,23 +1,16 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Rahul Handay <rahulha@saltstack.com>
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
 import pytest
-
-# Import Salt Libs
 import salt.modules.systemd_service as systemd
 import salt.utils.systemd
 from salt.exceptions import CommandExecutionError
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-
-# Import Salt Testing Libs
 from tests.support.unit import TestCase
 
 _SYSTEMCTL_STATUS = {
@@ -52,12 +45,30 @@ _SYSTEMCTL_STATUS_GTE_231 = {
 }
 
 _LIST_UNIT_FILES = """\
-service1.service                           enabled
-service2.service                           disabled
-service3.service                           static
-timer1.timer                               enabled
-timer2.timer                               disabled
-timer3.timer                               static"""
+service1.service                           enabled              -
+service2.service                           disabled             -
+service3.service                           static               -
+timer1.timer                               enabled              -
+timer2.timer                               disabled             -
+timer3.timer                               static               -
+service4.service                           enabled              enabled
+service5.service                           disabled             enabled
+service6.service                           static               enabled
+timer4.timer                               enabled              enabled
+timer5.timer                               disabled             enabled
+timer6.timer                               static               enabled
+service7.service                           enabled              disabled
+service8.service                           disabled             disabled
+service9.service                           static               disabled
+timer7.timer                               enabled              disabled
+timer8.timer                               disabled             disabled
+timer9.timer                               static               disabled
+service10.service                          enabled
+service11.service                          disabled
+service12.service                          static
+timer10.timer                              enabled
+timer11.timer                              disabled
+timer12.timer                              static"""
 
 
 class SystemdTestCase(TestCase, LoaderModuleMockMixin):
@@ -93,7 +104,7 @@ class SystemdTestCase(TestCase, LoaderModuleMockMixin):
         cmd_mock = MagicMock(return_value=_LIST_UNIT_FILES)
         listdir_mock = MagicMock(return_value=["foo", "bar", "baz", "README"])
         sd_mock = MagicMock(
-            return_value=set([x.replace(".service", "") for x in _SYSTEMCTL_STATUS])
+            return_value={x.replace(".service", "") for x in _SYSTEMCTL_STATUS}
         )
         access_mock = MagicMock(
             side_effect=lambda x, y: x
@@ -108,7 +119,17 @@ class SystemdTestCase(TestCase, LoaderModuleMockMixin):
                         with patch.object(systemd, "_sysv_enabled", sysv_enabled_mock):
                             self.assertListEqual(
                                 systemd.get_enabled(),
-                                ["baz", "service1", "timer1.timer"],
+                                [
+                                    "baz",
+                                    "service1",
+                                    "service4",
+                                    "service7",
+                                    "service10",
+                                    "timer1.timer",
+                                    "timer4.timer",
+                                    "timer7.timer",
+                                    "timer10.timer",
+                                ],
                             )
 
     def test_get_disabled(self):
@@ -124,7 +145,7 @@ class SystemdTestCase(TestCase, LoaderModuleMockMixin):
         # only 'baz' will be considered an enabled sysv service).
         listdir_mock = MagicMock(return_value=["foo", "bar", "baz", "README"])
         sd_mock = MagicMock(
-            return_value=set([x.replace(".service", "") for x in _SYSTEMCTL_STATUS])
+            return_value={x.replace(".service", "") for x in _SYSTEMCTL_STATUS}
         )
         access_mock = MagicMock(
             side_effect=lambda x, y: x
@@ -139,7 +160,58 @@ class SystemdTestCase(TestCase, LoaderModuleMockMixin):
                         with patch.object(systemd, "_sysv_enabled", sysv_enabled_mock):
                             self.assertListEqual(
                                 systemd.get_disabled(),
-                                ["bar", "service2", "timer2.timer"],
+                                [
+                                    "baz",
+                                    "service2",
+                                    "service5",
+                                    "service8",
+                                    "service11",
+                                    "timer2.timer",
+                                    "timer5.timer",
+                                    "timer8.timer",
+                                    "timer11.timer",
+                                ],
+                            )
+
+    def test_get_static(self):
+        """
+        Test to return a list of all disabled services
+        """
+        cmd_mock = MagicMock(return_value=_LIST_UNIT_FILES)
+        # 'foo' should collide with the systemd services (as returned by
+        # sd_mock) and thus not be returned by _get_sysv_services(). It doesn't
+        # matter that it's not part of the _LIST_UNIT_FILES output, we just
+        # want to ensure that 'foo' isn't identified as a disabled initscript
+        # even though below we are mocking it to show as not enabled (since
+        # only 'baz' will be considered an enabled sysv service).
+        listdir_mock = MagicMock(return_value=["foo", "bar", "baz", "README"])
+        sd_mock = MagicMock(
+            return_value={x.replace(".service", "") for x in _SYSTEMCTL_STATUS}
+        )
+        access_mock = MagicMock(
+            side_effect=lambda x, y: x
+            != os.path.join(systemd.INITSCRIPT_PATH, "README")
+        )
+        sysv_enabled_mock = MagicMock(side_effect=lambda x, _: x == "baz")
+
+        with patch.dict(systemd.__salt__, {"cmd.run": cmd_mock}):
+            with patch.object(os, "listdir", listdir_mock):
+                with patch.object(systemd, "_get_systemd_services", sd_mock):
+                    with patch.object(os, "access", side_effect=access_mock):
+                        with patch.object(systemd, "_sysv_enabled", sysv_enabled_mock):
+                            self.assertListEqual(
+                                systemd.get_static(),
+                                [
+                                    "baz",
+                                    "service3",
+                                    "service6",
+                                    "service9",
+                                    "service12",
+                                    "timer3.timer",
+                                    "timer6.timer",
+                                    "timer9.timer",
+                                    "timer12.timer",
+                                ],
                             )
 
     def test_get_all(self):
