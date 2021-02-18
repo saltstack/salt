@@ -376,7 +376,7 @@ def _selftoken_expired():
         verify = __opts__["vault"].get("verify", None)
         # Vault Enterprise requires a namespace
         namespace = __opts__["vault"].get("namespace", None)
-        url = "{0}/v1/auth/token/lookup-self".format(__opts__["vault"]["url"])
+        url = "{}/v1/auth/token/lookup-self".format(__opts__["vault"]["url"])
         if "token" not in __opts__["vault"]["auth"]:
             return True
         headers = {"X-Vault-Token": __opts__["vault"]["auth"]["token"]}
@@ -400,7 +400,7 @@ def _wrapped_token_valid():
         verify = __opts__["vault"].get("verify", None)
         # Vault Enterprise requires a namespace
         namespace = __opts__["vault"].get("namespace", None)
-        url = "{0}/v1/sys/wrapping/lookup".format(__opts__["vault"]["url"])
+        url = "{}/v1/sys/wrapping/lookup".format(__opts__["vault"]["url"])
         if "token" not in __opts__["vault"]["auth"]:
             return False
         headers = {"X-Vault-Token": __opts__["vault"]["auth"]["token"]}

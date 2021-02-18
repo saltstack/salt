@@ -67,7 +67,7 @@ def generate_token(
             if _selftoken_expired():
                 log.debug("Vault token expired. Recreating one")
                 # Requesting a short ttl token
-                url = "{0}/v1/auth/approle/login".format(config["url"])
+                url = "{}/v1/auth/approle/login".format(config["url"])
                 payload = {"role_id": config["auth"]["role_id"]}
                 if "secret_id" in config["auth"]:
                     payload["secret_id"] = config["auth"]["secret_id"]
@@ -277,7 +277,7 @@ def _selftoken_expired():
         verify = __opts__["vault"].get("verify", None)
         # Vault Enterprise requires a namespace
         namespace = __opts__["vault"].get("namespace", None)
-        url = "{0}/v1/auth/token/lookup-self".format(__opts__["vault"]["url"])
+        url = "{}/v1/auth/token/lookup-self".format(__opts__["vault"]["url"])
         if "token" not in __opts__["vault"]["auth"]:
             return True
         headers = {"X-Vault-Token": __opts__["vault"]["auth"]["token"]}

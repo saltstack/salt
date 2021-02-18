@@ -25,6 +25,7 @@ Functions to interact with Hashicorp Vault.
             url: https://vault.service.domain:8200
             verify: /etc/ssl/certs/ca-certificates.crt
             role_name: minion_role
+            namespace:  vault_enterprice_namespace
             auth:
                 method: approle
                 role_id: 11111111-2222-3333-4444-1111111111111
@@ -48,6 +49,12 @@ Functions to interact with Hashicorp Vault.
         https://requests.readthedocs.io/en/master/user/advanced/#ssl-cert-verification
 
         .. versionadded:: 2018.3.0
+
+    namespaces
+        Optional Vault Namespace. Used with Vault enterprice 
+
+        For detail please see:
+        https://www.vaultproject.io/docs/enterprise/namespaces
 
     role_name
         Role name for minion tokens created. If omitted, minion tokens will be
