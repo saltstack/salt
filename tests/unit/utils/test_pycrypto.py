@@ -16,36 +16,36 @@ log = logging.getLogger(__name__)
 
 
 class PycryptoTestCase(TestCase):
-    '''
+    """
     TestCase for salt.utils.pycrypto module
-    '''
+    """
 
-    @skipIf(not salt.utils.pycrypto.HAS_CRYPT, 'No crypto library available')
+    @skipIf(not salt.utils.pycrypto.HAS_CRYPT, "No crypto library available")
     def test_gen_hash(self):
-        '''
+        """
         Test gen_hash
-        '''
-        passwd = 'test_password'
+        """
+        passwd = "test_password"
         ret = salt.utils.pycrypto.gen_hash(password=passwd)
-        self.assertTrue(ret.startswith('$6$'))
+        self.assertTrue(ret.startswith("$6$"))
 
-        ret = salt.utils.pycrypto.gen_hash(password=passwd, algorithm='md5')
-        self.assertTrue(ret.startswith('$1$'))
+        ret = salt.utils.pycrypto.gen_hash(password=passwd, algorithm="md5")
+        self.assertTrue(ret.startswith("$1$"))
 
-        ret = salt.utils.pycrypto.gen_hash(password=passwd, algorithm='sha256')
-        self.assertTrue(ret.startswith('$5$'))
+        ret = salt.utils.pycrypto.gen_hash(password=passwd, algorithm="sha256")
+        self.assertTrue(ret.startswith("$5$"))
 
     def test_secure_password(self):
-        '''
+        """
         test secure_password
-        '''
+        """
         ret = salt.utils.pycrypto.secure_password()
-        check_printable = re.compile(r'[^{0}]'.format(
-            string.ascii_letters + string.digits + string.punctuation)
+        check_printable = re.compile(
+            r"[^{0}]".format(string.ascii_letters + string.digits + string.punctuation)
         )
         assert check_printable.search(ret) is None
-        check_whitespace = re.compile(r'[{0}]'.format(string.whitespace))
+        check_whitespace = re.compile(r"[{0}]".format(string.whitespace))
         assert check_whitespace.search(ret) is None
         assert ret
-        self.assertEqual(salt.utils.pycrypto.secure_password(length=1, chars='A'), 'A')
+        self.assertEqual(salt.utils.pycrypto.secure_password(length=1, chars="A"), "A")
         self.assertEqual(len(salt.utils.pycrypto.secure_password(length=64)), 64)
