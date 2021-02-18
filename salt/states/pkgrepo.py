@@ -260,7 +260,7 @@ def managed(name, ppa=None, copr=None, **kwargs):
        ``keyid`` option must also be set for this option to work.
 
     key_url
-       URL to retrieve a PGP key from. Allows the usage of ``http://``,
+       URL to retrieve a GPG key from. Allows the usage of ``http://``,
        ``https://`` as well as ``salt://``.
 
        .. note::
