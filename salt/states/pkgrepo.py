@@ -268,7 +268,7 @@ def managed(name, ppa=None, copr=None, **kwargs):
            Use either ``keyid``/``keyserver`` or ``key_url``, but not both.
 
     key_text
-       The string representation of the PGP key to install.
+       The string representation of the GPG key to install.
 
        .. versionadded:: 2018.3.0
 
