@@ -103,12 +103,12 @@ class TimedProc(object):
             rt = threading.Thread(target=receive)
             rt.start()
             rt.join(self.timeout)
-            if rt.isAlive():
+            if rt.is_alive():
                 # Subprocess cleanup (best effort)
                 self.process.kill()
 
                 def terminate():
-                    if rt.isAlive():
+                    if rt.is_alive():
                         self.process.terminate()
 
                 threading.Timer(10, terminate).start()
