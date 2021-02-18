@@ -129,6 +129,7 @@ class CMDRunRedirectTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(ret[state_key]["result"])
 
     @pytest.mark.slow_test
+    @pytest.mark.windows_whitelisted
     def test_run_unless_multiple_cmds(self):
         """
         test cmd.run using multiple unless options where the first cmd in the
