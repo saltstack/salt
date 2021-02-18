@@ -258,7 +258,7 @@ def test_when_opts_has_a_role_it_should_be_used_for_get_event(fake_get_event):
 # Not 100% sure that 0 is a valid timeout. Also unsure if negative values are
 # allowable.
 @pytest.mark.parametrize(
-    "timeout,expected_timeout", [(None, 60_000), (10, 10_000), (60, 60_000), (0, 0)],
+    "timeout,expected_timeout", [(None, 60000), (10, 10000), (60, 60000), (0, 0)],
 )
 def test_when_timeout_is_None_then_default_should_be_60000_millis(
     timeout, expected_timeout, fake_get_event
