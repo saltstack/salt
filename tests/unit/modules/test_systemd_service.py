@@ -161,7 +161,7 @@ class SystemdTestCase(TestCase, LoaderModuleMockMixin):
                             self.assertListEqual(
                                 systemd.get_disabled(),
                                 [
-                                    "baz",
+                                    "bar",
                                     "service11",
                                     "service2",
                                     "service5",
@@ -202,7 +202,6 @@ class SystemdTestCase(TestCase, LoaderModuleMockMixin):
                             self.assertListEqual(
                                 systemd.get_static(),
                                 [
-                                    "baz",
                                     "service12",
                                     "service3",
                                     "service6",
