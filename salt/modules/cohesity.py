@@ -7,10 +7,7 @@ sdk can be installed using `pip install cohesity-management-sdk`
 
 # Python Modules Import
 import copy
-
-import json
 import logging
-
 import os
 
 try:
@@ -137,7 +134,7 @@ def get_vmware_source_ids(name, vm_list):
             vm_names.remove(vm.name)
             source_id_list.append(vm.id)
         if vm_names:
-            logger.error (
+            logger.error(
                 "Following list of vms '{}' are not available in vcenter, "
                 "please make sure the virtual machine names are correct".format(
                     ",".join(vm_names)
