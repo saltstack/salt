@@ -181,17 +181,17 @@ class FileserverTest(ShellCase):
 
         ret = self.run_run_plus(fun="fileserver.symlink_list")
         self.assertIsInstance(ret["return"], dict)
-        self.assertTrue("dest_sym_1" in ret["return"])
+        self.assertIn("dest_sym_1", ret["return"])
 
         # Backend submitted as a string
         ret = self.run_run_plus(fun="fileserver.symlink_list", backend="roots")
         self.assertIsInstance(ret["return"], dict)
-        self.assertTrue("dest_sym_1" in ret["return"])
+        self.assertIn("dest_sym_1", ret["return"])
 
         # Backend submitted as a list
         ret = self.run_run_plus(fun="fileserver.symlink_list", backend=["roots"])
         self.assertIsInstance(ret["return"], dict)
-        self.assertTrue("dest_sym_1" in ret["return"])
+        self.assertIn("dest_sym_1", ret["return"])
 
     @pytest.mark.slow_test
     def test_update(self):

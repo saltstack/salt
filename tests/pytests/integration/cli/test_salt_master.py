@@ -23,11 +23,20 @@ def master_id():
     return random_string("master-")
 
 
-@pytest.mark.skip_on_windows(reason=PRE_PYTEST_SKIP_REASON)
+# @pytest.mark.skip_on_windows(reason=PRE_PYTEST_SKIP_REASON)
 def test_exit_status_correct_usage(salt_factories, master_id):
     factory = salt_factories.get_salt_master_daemon(master_id)
     factory.start()
     assert factory.is_running()
     time.sleep(0.5)
     ret = factory.terminate()
+    print("")
+    print("*" * 68)
+    print(dir(ret))
+    print("-" * 68)
+    print(ret.cmdline)
+    print(ret.exitcode)
+    print(ret.stderr)
+    print(ret.stdout)
+    print("*" * 68)
     assert ret.exitcode == salt.defaults.exitcodes.EX_OK, ret
