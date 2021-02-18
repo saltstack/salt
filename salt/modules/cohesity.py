@@ -63,6 +63,7 @@ config_path = "/etc/salt/master.d/cohesity.conf"
 cohesity_config = {}
 if os.path.isfile(config_path):
     import yaml
+
     with salt.utils.files.fopen(config_path, "r") as file_obj:
         config = yaml.safe_load(file_obj)
         cohesity_config = config.get("cohesity_config", {})
