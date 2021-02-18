@@ -7,7 +7,6 @@ import pathlib
 
 import pytest
 from tests.support.case import ShellCase
-from tests.support.helpers import PRE_PYTEST_SKIP_REASON
 from tests.support.mock import MagicMock, create_autospec, patch
 from tests.support.runtests import RUNTIME_VARS
 
