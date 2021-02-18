@@ -960,32 +960,40 @@ def test_run_with_creates(docker_container, container_name, image, modules, tmp_
 
     log.debug("Trying %s", good_file1)
     ret = docker_container.run(
-        name=container_name, image=image, command="whoami", creates=good_file1,
+        name=container_name, image=image, command="whoami", creates=str(good_file1),
     )
-    assert ret.result is True
-    assert not ret.changes
-    assert ret.comment == "{} exists".format(good_file1)
-    modules.docker.rm(container_name, force=True)
+    try:
+        assert ret.result is True
+        assert not ret.changes
+        assert ret.comment == "{} exists".format(good_file1)
+    except AssertionError:
+        modules.docker.rm(container_name, force=True)
 
-    path = [good_file1, good_file2]
+    path = [str(good_file1), str(good_file2)]
     log.debug("Trying %s", path)
     ret = docker_container.run(
         name=container_name, image=image, command="whoami", creates=path,
     )
-    assert ret.result is True
-    assert not ret.changes
-    assert ret.comment == "All files in creates exist"
-    modules.docker.rm(container_name, force=True)
+    try:
+        assert ret.result is True
+        assert not ret.changes
+        assert ret.comment == "All files in creates exist"
+    except AssertionError:
+        modules.docker.rm(container_name, force=True)
 
-    for path in (bad_file, [good_file1, bad_file]):
+    for path in (str(bad_file), [str(good_file1), str(bad_file)]):
         log.debug("Trying %s", path)
         ret = docker_container.run(
             name=container_name, image=image, command="whoami", creates=path,
         )
-        assert ret.result is True
-        assert ret.changes["Logs"] == "root\n"
-        assert ret.comment == "Container ran and exited with a return code of 0"
-        modules.docker.rm(container_name, force=True)
+        try:
+            assert ret.result is True
+            assert ret.changes["Logs"] == "root\n"
+            assert ret.comment == "Container ran and exited with a return code of 0"
+        except AssertionError:
+            modules.docker.rm(container_name, force=True)
+        finally:
+            modules.docker.rm(container_name, force=True)
 
 
 def test_run_replace(docker_container, container_name, image):
