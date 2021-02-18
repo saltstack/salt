@@ -596,7 +596,7 @@ def absent(name, **kwargs):
         be removed.
 
     keyid_ppa : False
-        If set to ``True``, the PGP key's ID will be looked up from
+        If set to ``True``, the GPG key's ID will be looked up from
         ppa.launchpad.net and removed, and the ``keyid`` argument will be
         ignored.
 
