@@ -331,7 +331,7 @@ def _find_download_targets(
                     "name": name,
                     "changes": {},
                     "result": True,
-                    "comment": "Package {} is already " "downloaded".format(name),
+                    "comment": "Package {} is already downloaded".format(name),
                 }
 
     version_spec = False
@@ -422,7 +422,7 @@ def _find_advisory_targets(name=None, advisory_ids=None, **kwargs):
                 "name": name,
                 "changes": {},
                 "result": True,
-                "comment": "Advisory patch {} is already " "installed".format(name),
+                "comment": "Advisory patch {} is already installed".format(name),
             }
 
     # Find out which advisory patches will be targeted in the call to pkg.install
@@ -1989,7 +1989,7 @@ def installed(
             summary = ", ".join([_get_desired_pkg(x, desired) for x in modified])
         if len(summary) < 20:
             comment.append(
-                "The following packages were installed/updated: " "{}".format(summary)
+                "The following packages were installed/updated: {}".format(summary)
             )
         else:
             comment.append(
@@ -2024,7 +2024,7 @@ def installed(
             summary = ", ".join([_get_desired_pkg(x, desired) for x in not_modified])
         if len(not_modified) <= 20:
             comment.append(
-                "The following packages were already installed: " "{}".format(summary)
+                "The following packages were already installed: {}".format(summary)
             )
         else:
             comment.append(
@@ -2047,7 +2047,7 @@ def installed(
         else:
             summary = ", ".join([_get_desired_pkg(x, desired) for x in failed])
         comment.insert(
-            0, "The following packages failed to " "install/update: {}".format(summary)
+            0, "The following packages failed to install/update: {}".format(summary)
         )
         result = False
 
@@ -2265,14 +2265,14 @@ def downloaded(
         return targets
     elif not isinstance(targets, dict):
         ret["result"] = False
-        ret[
-            "comment"
-        ] = "An error was encountered while checking targets: " "{}".format(targets)
+        ret["comment"] = "An error was encountered while checking targets: {}".format(
+            targets
+        )
         return ret
 
     if __opts__["test"]:
         summary = ", ".join(targets)
-        ret["comment"] = "The following packages would be " "downloaded: {}".format(
+        ret["comment"] = "The following packages would be downloaded: {}".format(
             summary
         )
         return ret
@@ -2309,13 +2309,11 @@ def downloaded(
     if failed:
         summary = ", ".join([_get_desired_pkg(x, targets) for x in failed])
         ret["result"] = False
-        ret["comment"] = "The following packages failed to " "download: {}".format(
-            summary
-        )
+        ret["comment"] = "The following packages failed to download: {}".format(summary)
 
     if not ret["changes"] and not ret["comment"]:
         ret["result"] = True
-        ret["comment"] = "Packages downloaded: " "{}".format(", ".join(targets))
+        ret["comment"] = "Packages downloaded: {}".format(", ".join(targets))
 
     return ret
 
@@ -2373,16 +2371,16 @@ def patch_installed(name, advisory_ids=None, downloadonly=None, **kwargs):
         return targets
     elif not isinstance(targets, list):
         ret["result"] = False
-        ret[
-            "comment"
-        ] = "An error was encountered while checking targets: " "{}".format(targets)
+        ret["comment"] = "An error was encountered while checking targets: {}".format(
+            targets
+        )
         return ret
 
     if __opts__["test"]:
         summary = ", ".join(targets)
         ret[
             "comment"
-        ] = "The following advisory patches would be " "downloaded: {}".format(summary)
+        ] = "The following advisory patches would be downloaded: {}".format(summary)
         return ret
 
     try:
@@ -2793,7 +2791,7 @@ def latest(
 
             comments = []
             if failed:
-                msg = "The following packages failed to update: " "{}".format(
+                msg = "The following packages failed to update: {}".format(
                     ", ".join(sorted(failed))
                 )
                 comments.append(msg)
@@ -2834,7 +2832,7 @@ def latest(
                     )
                 )
             else:
-                comment = "Package {} failed to " "update.".format(
+                comment = "Package {} failed to update.".format(
                     next(iter(list(targets.keys())))
                 )
             if up_to_date:
@@ -2845,7 +2843,7 @@ def latest(
                         "{}".format(", ".join(sorted(up_to_date)))
                     )
                 else:
-                    comment += "{} packages were already " "up-to-date".format(
+                    comment += "{} packages were already up-to-date".format(
                         len(up_to_date)
                     )
 
