@@ -256,7 +256,7 @@ def managed(name, ppa=None, copr=None, **kwargs):
        This option also requires the ``keyserver`` option to be set.
 
     keyserver
-       This is the name of the keyserver to retrieve PGP keys from. The
+       This is the name of the keyserver to retrieve GPG keys from. The
        ``keyid`` option must also be set for this option to work.
 
     key_url
