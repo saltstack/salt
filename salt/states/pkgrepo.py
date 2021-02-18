@@ -252,7 +252,7 @@ def managed(name, ppa=None, copr=None, **kwargs):
        for.  (e.g. ``unstable``). This option is rarely needed.
 
     keyid
-       The KeyID or a list of KeyIDs of the PGP key to install.
+       The KeyID or a list of KeyIDs of the GPG key to install.
        This option also requires the ``keyserver`` option to be set.
 
     keyserver
