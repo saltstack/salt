@@ -122,7 +122,7 @@ def str_encode(value, encoder='base64'):
     return out
 
 
-def get_str(length=20):
+def get_str(length=20, **kwargs):
     '''
     .. versionadded:: 2014.7.0
 
@@ -131,13 +131,63 @@ def get_str(length=20):
     length : 20
         Any valid number of bytes.
 
+    chars : None
+        String with any character that should be used to generate random string.
+
+        This argument supersedes all other character controlling arguments.
+
+    lowercase : True
+        Use lowercase letters in generated random string.
+        (see https://docs.python.org/3/library/string.html#string.ascii_lowercase)
+
+        This argument is superseded by chars.
+
+    uppercase : True
+        Use uppercase letters in generated random string. (matches python string.ascii_uppercase)
+        (see https://docs.python.org/3/library/string.html#string.ascii_uppercase)
+
+        This argument is superseded by chars.
+
+    digits : True
+        Use digits in generated random string.
+        (see https://docs.python.org/3/library/string.html#string.digits)
+
+        This argument is superseded by chars.
+
+    printable : False
+        Use printable characters in generated random string and includes lowercase, uppercase,
+        digits, punctuation and whitespace.
+        (see https://docs.python.org/3/library/string.html#string.printable)
+
+        It is disabled by default as includes whitespace characters which some systems do not
+        handle well in passwords.
+
+        This argument is superseded by chars.
+
+    punctuation : True
+        Use punctuation characters in generated random string.
+        (see https://docs.python.org/3/library/string.html#string.punctuation)
+
+        This argument is superseded by chars.
+
+    whitespace : False
+        Use whitespace characters in generated random string.
+        (see https://docs.python.org/3/library/string.html#string.whitespace)
+
+        It is disabled by default as some systems do not handle whitespace characters in passwords
+        well.
+
+        This argument is superseded by chars.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' random.get_str 128
+        salt '*' random.get_str 128 chars='abc123.!()'
+        salt '*' random.get_str 128 lowercase=False whitespace=True
     '''
-    return salt.utils.pycrypto.secure_password(length)
+    return salt.utils.pycrypto.secure_password(length, **kwargs)
 
 
 def shadow_hash(crypt_salt=None, password=None, algorithm='sha512'):

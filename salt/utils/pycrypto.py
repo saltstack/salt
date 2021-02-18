@@ -39,10 +39,25 @@ from salt.ext import six
 log = logging.getLogger(__name__)
 
 
-def secure_password(length=20, use_random=True):
+def secure_password(length=20, use_random=True, **kwargs):
     '''
     Generate a secure password.
     '''
+    if not kwargs.get('chars'):
+        chars = ''
+        if kwargs.get('lowercase', True):
+            chars += string.ascii_lowercase
+        if kwargs.get('uppercase', True):
+            chars += string.ascii_uppercase
+        if kwargs.get('digits', True):
+            chars += string.digits
+        if kwargs.get('punctuation', True):
+            chars += string.punctuation
+        if kwargs.get('whitespace', False):
+            chars += string.whitespace
+        if kwargs.get('printable', False):
+            chars += string.printable
+    chars = ''.join(set(chars))
     try:
         length = int(length)
         pw = ''
@@ -55,12 +70,12 @@ def secure_password(length=20, use_random=True):
                     except UnicodeDecodeError:
                         continue
                 pw += re.sub(
-                    salt.utils.stringutils.to_str(r'[\W_]'),
+                    salt.utils.stringutils.to_str(r'[^{0}]'.format(chars)),
                     str(),  # future lint: disable=blacklisted-function
                     char
                 )
             else:
-                pw += random.SystemRandom().choice(string.ascii_letters + string.digits)
+                pw += random.SystemRandom().choice(chars)
         return pw
     except Exception as exc:
         log.exception('Failed to generate secure passsword')

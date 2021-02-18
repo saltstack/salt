@@ -4,6 +4,7 @@
 from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import re
+import string
 
 # Import Salt Libs
 import salt.utils.pycrypto
@@ -39,6 +40,12 @@ class PycryptoTestCase(TestCase):
         test secure_password
         '''
         ret = salt.utils.pycrypto.secure_password()
-        check = re.compile(r'[!@#$%^&*()_=+]')
-        assert check.search(ret) is None
+        check_printable = re.compile(r'[^{0}]'.format(
+            string.ascii_letters + string.digits + string.punctuation)
+        )
+        assert check_printable.search(ret) is None
+        check_whitespace = re.compile(r'[{0}]'.format(string.whitespace))
+        assert check_whitespace.search(ret) is None
         assert ret
+        self.assertEqual(salt.utils.pycrypto.secure_password(length=1, chars='A'), 'A')
+        self.assertEqual(len(salt.utils.pycrypto.secure_password(length=64)), 64)

@@ -82,9 +82,13 @@ class ModrandomTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test for Returns a random string of the specified length.
         '''
-        with patch.object(salt.utils.pycrypto,
-                          'secure_password', return_value='A'):
-            self.assertEqual(mod_random.get_str(), 'A')
+        self.assertEqual(mod_random.get_str(length=1, chars='A'), 'A')
+        self.assertEqual(len(mod_random.get_str(length=64)), 64)
+        ret = mod_random.get_str(
+            length=1, lowercase=False, uppercase=False, printable=False,
+            whitespace=False, punctuation=False)
+        self.assertNotRegex(ret, r'^[a-zA-Z]+$', 'Found invalid characters')
+        self.assertRegex(ret, r'^[0.9]+$', 'Not found required characters')
 
     def test_shadow_hash(self):
         '''
