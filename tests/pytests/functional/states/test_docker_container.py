@@ -167,6 +167,10 @@ def docker_container(states):
 
 @pytest.fixture(scope="module")
 def image(tmp_path_factory):
+    if not salt.utils.path.which("docker"):
+        # Somehow the above skip_if_binaries_missing marker for docker
+        # only get's evaluated after this fixture?!?
+        pytest.skip("The `docker` binary is not available")
     container_build_dir = tmp_path_factory.mktemp("busybox")
     image_name = random_string("salt-busybox-", uppercase=False)
 
