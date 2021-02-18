@@ -1,22 +1,15 @@
-# -*- coding: utf-8 -*-
 """
 :codeauthor: Rahul Handay <rahulha@saltstack.com>
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
-# Import Salt Libs
 import pytest
 import salt.modules.win_path as win_path
-import salt.utils.win_reg as reg_util
 import salt.utils.stringutils
-
-# Import Salt Testing Libs
+import salt.utils.win_reg as reg_util
 from tests.support.mock import MagicMock, patch
-
 
 pytestmark = [pytest.mark.windows_whitelisted, pytest.mark.skip_unless_on_windows]
 
@@ -27,7 +20,7 @@ Test cases for salt.modules.win_path.
 
 @pytest.fixture()
 def pathsep():
-    return str(";")
+    return ";"
 
 
 @pytest.fixture
@@ -36,9 +29,7 @@ def configure_loader_modules():
         win_path: {
             "__opts__": {"test": False},
             "__salt__": {},
-            "__utils__": {
-                "reg.read_value": reg_util.read_value,
-            },
+            "__utils__": {"reg.read_value": reg_util.read_value},
         },
     }
 
@@ -72,9 +63,7 @@ def test_add(pathsep):
 
     # Helper function to make the env var easier to reuse
     def _env(path):
-        return {
-            str("PATH"): salt.utils.stringutils.to_str(pathsep.join(path))
-        }
+        return {"PATH": salt.utils.stringutils.to_str(pathsep.join(path))}
 
     # Helper function to make the run call easier to reuse
     def _run(name, index=None, retval=True, path=None):
@@ -188,9 +177,7 @@ def test_remove(pathsep):
 
     # Helper function to make the env var easier to reuse
     def _env(path):
-        return {
-            str("PATH"): salt.utils.stringutils.to_str(pathsep.join(path))
-        }
+        return {"PATH": salt.utils.stringutils.to_str(pathsep.join(path))}
 
     def _run(name="c:\\salt", retval=True, path=None):
         if path is None:
