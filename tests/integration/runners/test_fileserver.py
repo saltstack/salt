@@ -169,7 +169,6 @@ class FileserverTest(ShellCase):
         self.assertTrue("grail/scene33" in ret["return"])
 
     @pytest.mark.slow_test
-    @pytest.mark.skip_on_windows(reason=PRE_PYTEST_SKIP_REASON)
     def test_symlink_list(self):
         """
         fileserver.symlink_list
