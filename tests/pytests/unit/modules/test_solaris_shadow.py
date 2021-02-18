@@ -8,7 +8,7 @@ from tests.support.mock import MagicMock, patch
 try:
     import pwd
 
-    missing_pwd = True
+    missing_pwd = False
 except ImportError:
     pwd = None
     missing_pwd = True
@@ -16,9 +16,9 @@ except ImportError:
 try:
     import spwd  # pylint: disable=unused-import
 
-    missing_spwd = True
+    missing_spwd = False
 except ImportError:
-    missing_swpd = True
+    missing_spwd = True
 
 
 skip_on_missing_spwd = pytest.mark.skipif(
