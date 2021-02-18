@@ -475,7 +475,7 @@ def update_package_site(new_url):
     return True
 
 
-def stats(local=False, remote=False, jail=None, chroot=None, root=None):
+def stats(local=False, remote=False, bytes=False, jail=None, chroot=None, root=None):
     """
     Return pkgng stats.
 
@@ -502,6 +502,15 @@ def stats(local=False, remote=False, jail=None, chroot=None, root=None):
         .. code-block:: bash
 
             salt '*' pkg.stats remote=True
+
+    bytes
+        Display disk space usage in bytes only.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.stats bytes=True
 
     jail
         Retrieve stats from the specified jail.
@@ -536,6 +545,8 @@ def stats(local=False, remote=False, jail=None, chroot=None, root=None):
         opts += "l"
     if remote:
         opts += "r"
+    if bytes:
+        opts += "b"
 
     cmd = _pkg(jail, chroot, root)
     cmd.append("stats")

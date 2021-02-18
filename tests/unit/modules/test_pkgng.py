@@ -1,21 +1,13 @@
-# -*- coding: utf-8 -*-
-
-# Import Python libs
-from __future__ import absolute_import
-
 import textwrap
 
-# Import Salt Libs
 import salt.modules.pkgng as pkgng
-
-# Import Salt Testing Libs
 from salt.utils.odict import OrderedDict
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
 
 
-class ListPackages(object):
+class ListPackages:
     def __init__(self):
         self._iteration = 0
 
@@ -278,6 +270,32 @@ class PkgNgTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(result, [])
             pkg_cmd.assert_called_with(
                 ["pkg", "stats", "-r"], output_loglevel="trace", python_shell=False,
+            )
+
+    def test_stats_with_bytes_remote(self):
+        """
+        Test pkg.stats to show disk space usage in bytes only for remote
+        """
+        pkg_cmd = MagicMock(return_value="")
+
+        with patch.dict(pkgng.__salt__, {"cmd.run": pkg_cmd}):
+            result = pkgng.stats(remote=True, bytes=True)
+            self.assertEqual(result, [])
+            pkg_cmd.assert_called_with(
+                ["pkg", "stats", "-rb"], output_loglevel="trace", python_shell=False,
+            )
+
+    def test_stats_with_bytes_local(self):
+        """
+        Test pkg.stats to show disk space usage in bytes only for remote
+        """
+        pkg_cmd = MagicMock(return_value="")
+
+        with patch.dict(pkgng.__salt__, {"cmd.run": pkg_cmd}):
+            result = pkgng.stats(local=True, bytes=True)
+            self.assertEqual(result, [])
+            pkg_cmd.assert_called_with(
+                ["pkg", "stats", "-lb"], output_loglevel="trace", python_shell=False,
             )
 
     def test_install_without_args(self):
