@@ -91,21 +91,7 @@ def get_user_groups(name, sid=False):
                 # not have permissions for it or something is wrong with DC
                 groups = win32net.NetUserGetLocalGroups(None, name, 0)
             else:
-                # If this fails, try once more but instead with global groups.
-                try:
-                    groups = win32net.NetUserGetGroups(None, name)
-                except win32net.error as exc:
-                    if exc.winerror in (5, 1722, 2453, 1927, 1355):
-                        # Try without LG_INCLUDE_INDIRECT flag, because the user might
-                        # not have permissions for it or something is wrong with DC
-                        groups = win32net.NetUserGetLocalGroups(None, name, 0)
-                except pywintypes.error:
-                    if exc.winerror in (5, 1722, 2453, 1927, 1355):
-                        # Try with LG_INCLUDE_INDIRECT flag, because the user might
-                        # not have permissions for it or something is wrong with DC
-                        groups = win32net.NetUserGetLocalGroups(None, name, 1)
-                    else:
-                        raise
+                raise
 
     if not sid:
         return groups
