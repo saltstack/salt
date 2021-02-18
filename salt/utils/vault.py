@@ -132,7 +132,9 @@ def get_vault_connection():
                         payload["secret_id"] = __opts__["vault"]["auth"]["secret_id"]
                     if namespace is not None:
                         headers = {"X-Vault-Namespace": namespace}
-                        response = requests.post(url, headers=headers, json=payload, verify=verify)
+                        response = requests.post(
+                            url, headers=headers, json=payload, verify=verify
+                        )
                     else:
                         response = requests.post(url, json=payload, verify=verify)
                     if response.status_code != 200:

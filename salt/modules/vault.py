@@ -51,7 +51,7 @@ Functions to interact with Hashicorp Vault.
         .. versionadded:: 2018.3.0
 
     namespaces
-        Optional Vault Namespace. Used with Vault enterprice 
+        Optional Vault Namespace. Used with Vault enterprice
 
         For detail please see:
         https://www.vaultproject.io/docs/enterprise/namespaces

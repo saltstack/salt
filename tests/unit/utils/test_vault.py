@@ -2,7 +2,6 @@
 Test case for the vault utils module
 """
 
-
 import json
 import logging
 import os
@@ -418,9 +417,8 @@ class TestVaultUtils(LoaderModuleMockMixin, TestCase):
         mock = self._mock_json_response(self.json_success)
         expected_headers = {
             "X-Vault-Token": "test",
-            "X-Vault-Namespace":
-            "test_namespace",
-            "Content-Type": "application/json"
+            "X-Vault-Namespace": "test_namespace",
+            "Content-Type": "application/json",
         }
         supplied_config = {"namespace": "test_namespace"}
         supplied_context = {"vault_token": copy(self.cache_single_namespace)}

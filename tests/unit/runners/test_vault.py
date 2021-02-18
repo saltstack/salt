@@ -6,7 +6,6 @@ Unit tests for the Vault runner
 import logging
 
 import salt.runners.vault as vault
-from salt.ext import six
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import ANY, MagicMock, Mock, call, patch
 from tests.support.unit import TestCase
@@ -129,7 +128,7 @@ class VaultTest(TestCase, LoaderModuleMockMixin):
             "salt.utils.minions.get_minion_data",
             MagicMock(return_value=(None, self.grains, None)),
         ):
-            for case, correct_output in cases.items()):
+            for case, correct_output in cases.items():
                 test_config = {"policies": [case]}
                 output = vault._get_policies(
                     "test-minion", test_config
@@ -295,9 +294,9 @@ class VaultTokenAuthTest(TestCase, LoaderModuleMockMixin):
         mock = _mock_json_response(
             {"auth": {"client_token": "test", "renewable": False, "lease_duration": 0}}
         )
-        supplied_config = {'namespace': 'test_namespace'}
+        supplied_config = {"namespace": "test_namespace"}
         with patch("requests.post", mock):
-            with patch.dict(vault.__opts__['vault'], supplied_config):
+            with patch.dict(vault.__opts__["vault"], supplied_config):
                 result = vault.generate_token("test-minion", "signature")
                 log.debug("generate_token result: %s", result)
                 self.assertTrue(isinstance(result, dict))
@@ -305,12 +304,12 @@ class VaultTokenAuthTest(TestCase, LoaderModuleMockMixin):
                 self.assertTrue("token" in result)
                 self.assertEqual(result["token"], "test")
                 mock.assert_called_with(
-                    "http://fake_url", 
+                    "http://fake_url",
                     headers={
-                        'X-Vault-Token': 'test', 
-                        'X-Vault-Namespace': 'test_namespace'
-                    }, 
-                    json=ANY, 
+                        "X-Vault-Token": "test",
+                        "X-Vault-Namespace": "test_namespace"
+                    },
+                    json=ANY,
                     verify=ANY,
                 )
 
@@ -358,8 +357,8 @@ class VaultAppRoleAuthTest(TestCase, LoaderModuleMockMixin):
             calls = [
                 call(
                     "http://127.0.0.1/v1/auth/approle/login",
-                    headers=ANY, 
-                    json=ANY, 
+                    headers=ANY,
+                    json=ANY,
                     verify=ANY,
                 ),
                 call("http://fake_url", headers=ANY, json=ANY, verify=ANY),
