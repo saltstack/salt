@@ -117,7 +117,11 @@ def test_when_disable_skip_verify_and_test_and_service_not_available_then_result
     expected_result = {"result": None, "comment": "Service fnord set to be disabled"}
     patch_salt = patch.dict(
         service.__salt__,
-        {"service.disabled": lambda name, **kwargs: False, "service.disable": None},
+        {
+            "service.disabled": lambda name, **kwargs: False,
+            "service.disable": None,
+            "service.info": lambda name, **kwargs: {"StartType": "fnord"},
+        },
     )
     patch_opts = patch.dict(service.__opts__, {"test": True})
     with patch_salt, patch_opts:
@@ -130,7 +134,11 @@ def test_when_disable_skip_verify_and_available_would_have_errored_then_test_res
     expected_result = {"result": None, "comment": "Service fnord set to be disabled"}
     patch_salt = patch.dict(
         service.__salt__,
-        {"service.disabled": lambda name, **kwargs: False, "service.disable": None},
+        {
+            "service.disabled": lambda name, **kwargs: False,
+            "service.disable": None,
+            "service.info": lambda name, **kwargs: {"StartType": "fnord"},
+        },
     )
     patch_opts = patch.dict(service.__opts__, {"test": True})
     patch_available = patch(
