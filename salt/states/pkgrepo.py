@@ -592,7 +592,7 @@ def absent(name, **kwargs):
                 - ppa_auth: username:password
 
     keyid
-        If passed, then the PGP key corresponding to the passed KeyID will also
+        If passed, then the GPG key corresponding to the passed KeyID will also
         be removed.
 
     keyid_ppa : False
