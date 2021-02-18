@@ -2859,11 +2859,11 @@ def latest(
         if len(desired_pkgs) > 10:
             comment = "All {} packages are up-to-date.".format(len(desired_pkgs))
         elif len(desired_pkgs) > 1:
-            comment = "All packages are up-to-date " "({}).".format(
+            comment = "All packages are up-to-date ({}).".format(
                 ", ".join(sorted(desired_pkgs))
             )
         else:
-            comment = "Package {} is already " "up-to-date".format(desired_pkgs[0])
+            comment = "Package {} is already up-to-date".format(desired_pkgs[0])
 
         return {"name": name, "changes": {}, "result": True, "comment": comment}
 
@@ -2885,7 +2885,7 @@ def _uninstall(
             "name": name,
             "changes": {},
             "result": False,
-            "comment": "Invalid action '{}'. " "This is probably a bug.".format(action),
+            "comment": "Invalid action '{}'. This is probably a bug.".format(action),
         }
 
     try:
@@ -2977,7 +2977,7 @@ def _uninstall(
             "{}".format(", ".join(not_installed))
         )
         comments.append(
-            "The following packages were {}d: " "{}.".format(action, ", ".join(targets))
+            "The following packages were {}d: {}.".format(action, ", ".join(targets))
         )
     else:
         comments.append("All targeted packages were {}d.".format(action))
@@ -3078,7 +3078,7 @@ def removed(name, version=None, pkgs=None, normalize=True, ignore_epoch=None, **
             ret["changes"] = {}
             ret[
                 "comment"
-            ] = "An error was encountered while removing " "package(s): {}".format(exc)
+            ] = "An error was encountered while removing package(s): {}".format(exc)
         return ret
 
 
@@ -3170,7 +3170,7 @@ def purged(name, version=None, pkgs=None, normalize=True, ignore_epoch=None, **k
             ret["changes"] = {}
             ret[
                 "comment"
-            ] = "An error was encountered while purging " "package(s): {}".format(exc)
+            ] = "An error was encountered while purging package(s): {}".format(exc)
         return ret
 
 
