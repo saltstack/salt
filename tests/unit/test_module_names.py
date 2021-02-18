@@ -25,7 +25,6 @@ EXCLUDED_DIRS = [
     os.path.join("tests", "unit", "modules", "zypp"),
     os.path.join("tests", "unit", "setup"),
     os.path.join("tests", "unit", "templates", "files"),
-    os.path.join("tests", "unit", "utils", "cache_mods"),
 ]
 INCLUDED_DIRS = [
     os.path.join("tests", "kitchen", "tests", "*", "tests", "*"),

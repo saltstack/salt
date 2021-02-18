@@ -246,9 +246,6 @@ def pytest_configure(config):
         "markers",
         "slow_test: Mark test as being slow. These tests are skipped by default unless `--run-slow` is passed",
     )
-    # Make sure the test suite "knows" this is a pytest test run
-    RUNTIME_VARS.PYTEST_SESSION = True
-
     # "Flag" the slowTest decorator if we're skipping slow tests or not
     os.environ["SLOW_TESTS"] = str(config.getoption("--run-slow"))
 

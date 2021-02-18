@@ -7,6 +7,7 @@ Salt Table of Contents
 .. toctree::
     :maxdepth: 2
 
+    topics/about_salt_project
     topics/index
     topics/salt_system_architecture
     topics/installation/index

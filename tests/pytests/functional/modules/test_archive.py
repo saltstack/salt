@@ -9,9 +9,6 @@ import textwrap
 
 import attr
 import pytest
-import salt.modules.archive as archive
-import salt.modules.cmdmod as cmdmod
-import salt.modules.cp as cp
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
@@ -147,41 +144,8 @@ class Archive:
 
 
 @pytest.fixture(scope="module")
-def opts(tmp_path_factory):
-    root_dir = tmp_path_factory.mktemp("archive-tests")
-    cache_dir = root_dir / "cache"
-    extension_modules = root_dir / "extensions"
-    for path in (cache_dir, extension_modules):
-        path.mkdir()
-
-    try:
-        yield {
-            "root_dir": str(root_dir),
-            "file_client": "local",
-            "cachedir": str(cache_dir),
-            "extension_modules": str(extension_modules),
-            "fileserver_backend": ["roots"],
-        }
-    finally:
-        shutil.rmtree(str(root_dir), ignore_errors=True)
-
-
-@pytest.fixture
-def configure_loader_modules(opts):
-    opts = opts.copy()
-    return {
-        archive: {
-            "__opts__": opts,
-            "__salt__": {
-                "cmd.run": cmdmod.run,
-                "cmd.run_all": cmdmod.run_all,
-                "cmd.retcode": cmdmod.retcode,
-                "cp.cache_file": cp.cache_file,
-            },
-        },
-        cmdmod: {"__opts__": opts},
-        cp: {"__opts__": opts},
-    }
+def archive(modules):
+    return modules.archive
 
 
 def unicode_filename_ids(value):
@@ -194,7 +158,7 @@ def unicode_filename(request):
 
 
 @pytest.mark.skip_if_binaries_missing("tar")
-def test_tar_pack(unicode_filename):
+def test_tar_pack(archive, unicode_filename):
     """
     Validate using the tar function to create archives
     """
@@ -205,7 +169,7 @@ def test_tar_pack(unicode_filename):
 
 
 @pytest.mark.skip_if_binaries_missing("tar")
-def test_tar_unpack(unicode_filename):
+def test_tar_unpack(archive, unicode_filename):
     """
     Validate using the tar function to extract archives
     """
@@ -220,7 +184,7 @@ def test_tar_unpack(unicode_filename):
 
 
 @pytest.mark.skip_if_binaries_missing("tar")
-def test_tar_list(unicode_filename):
+def test_tar_list(archive, unicode_filename):
     """
     Validate using the tar function to list archives
     """
@@ -229,13 +193,13 @@ def test_tar_list(unicode_filename):
         assert isinstance(ret, list)
         arch.assert_artifacts_in_ret(ret)
 
-        ret = archive.list_(str(arch.archive))
+        ret = archive.list(str(arch.archive))
         assert isinstance(ret, list)
         arch.assert_artifacts_in_ret(ret)
 
 
 @pytest.mark.skip_if_binaries_missing("gzip")
-def test_gzip(unicode_filename):
+def test_gzip(archive, unicode_filename):
     """
     Validate using the gzip function
     """
@@ -246,7 +210,7 @@ def test_gzip(unicode_filename):
 
 
 @pytest.mark.skip_if_binaries_missing("gzip", "gunzip")
-def test_gunzip(unicode_filename):
+def test_gunzip(archive, unicode_filename):
     """
     Validate using the gunzip function
     """
@@ -261,7 +225,7 @@ def test_gunzip(unicode_filename):
 
 
 @pytest.mark.skip_if_binaries_missing("zip")
-def test_cmd_zip(unicode_filename):
+def test_cmd_zip(archive, unicode_filename):
     """
     Validate using the cmd_zip function
     """
@@ -272,7 +236,7 @@ def test_cmd_zip(unicode_filename):
 
 
 @pytest.mark.skip_if_binaries_missing("zip", "unzip")
-def test_cmd_unzip(unicode_filename):
+def test_cmd_unzip(archive, unicode_filename):
     """
     Validate using the cmd_unzip function
     """
@@ -287,23 +251,23 @@ def test_cmd_unzip(unicode_filename):
 
 
 @pytest.mark.skipif(not HAS_ZIPFILE, reason="Cannot find zipfile python module")
-def test_zip(unicode_filename):
+def test_zip(archive, unicode_filename):
     """
     Validate using the zip function
     """
     with Archive("zip", unicode_filename=unicode_filename) as arch:
-        ret = archive.zip_(str(arch.archive), str(arch.src))
+        ret = archive.zip(str(arch.archive), str(arch.src))
         assert isinstance(ret, list)
         arch.assert_artifacts_in_ret(ret)
 
 
 @pytest.mark.skipif(not HAS_ZIPFILE, reason="Cannot find zipfile python module")
-def test_unzip(unicode_filename):
+def test_unzip(archive, unicode_filename):
     """
     Validate using the unzip function
     """
     with Archive("zip", unicode_filename=unicode_filename) as arch:
-        ret = archive.zip_(str(arch.archive), str(arch.src))
+        ret = archive.zip(str(arch.archive), str(arch.src))
         assert isinstance(ret, list)
         arch.assert_artifacts_in_ret(ret)
 
@@ -313,7 +277,7 @@ def test_unzip(unicode_filename):
 
 
 @pytest.mark.skip_if_binaries_missing("rar")
-def test_rar(unicode_filename):
+def test_rar(archive, unicode_filename):
     """
     Validate using the rar function
     """
@@ -324,7 +288,7 @@ def test_rar(unicode_filename):
 
 
 @pytest.mark.skip_if_binaries_missing("rar", "unrar")
-def test_unrar(unicode_filename):
+def test_unrar(archive, unicode_filename):
     """
     Validate using the unrar function
     """

@@ -1542,6 +1542,7 @@ _OS_NAME_MAP = {
     "oracleserv": "OEL",
     "cloudserve": "CloudLinux",
     "cloudlinux": "CloudLinux",
+    "almalinux": "AlmaLinux",
     "pidora": "Fedora",
     "scientific": "ScientificLinux",
     "synology": "Synology",
@@ -1556,6 +1557,7 @@ _OS_NAME_MAP = {
     "slesexpand": "RES",
     "linuxmint": "Mint",
     "neon": "KDE neon",
+    "pop": "Pop",
 }
 
 # Map the 'os' grain to the 'os_family' grain
@@ -1574,6 +1576,7 @@ _OS_FAMILY_MAP = {
     "Scientific": "RedHat",
     "Amazon": "RedHat",
     "CloudLinux": "RedHat",
+    "AlmaLinux": "RedHat",
     "OVS": "RedHat",
     "OEL": "RedHat",
     "XCP": "RedHat",
@@ -1581,6 +1584,7 @@ _OS_FAMILY_MAP = {
     "XenServer": "RedHat",
     "RES": "RedHat",
     "Sangoma": "RedHat",
+    "VMware Photon OS": "RedHat",
     "Mandrake": "Mandriva",
     "ESXi": "VMware",
     "Mint": "Debian",
@@ -1629,6 +1633,7 @@ _OS_FAMILY_MAP = {
     "Funtoo": "Gentoo",
     "AIX": "AIX",
     "TurnKey": "Debian",
+    "Pop": "Debian",
 }
 
 # Matches any possible format:
@@ -2543,7 +2548,11 @@ def dns():
     if salt.utils.platform.is_windows() or "proxyminion" in __opts__:
         return {}
 
-    resolv = salt.utils.dns.parse_resolv()
+    if os.path.exists("/run/systemd/resolve/resolv.conf"):
+        resolv = salt.utils.dns.parse_resolv("/run/systemd/resolve/resolv.conf")
+    else:
+        resolv = salt.utils.dns.parse_resolv()
+
     for key in ("nameservers", "ip4_nameservers", "ip6_nameservers", "sortlist"):
         if key in resolv:
             resolv[key] = [str(i) for i in resolv[key]]
