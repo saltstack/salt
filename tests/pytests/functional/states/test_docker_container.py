@@ -25,7 +25,9 @@ pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.skip_on_freebsd(reason="No Docker on FreeBSD available"),
     pytest.mark.skip_if_binaries_missing("busybox", message="Busybox not installed"),
-    pytest.mark.skip_if_binaries_missing("dockerd", message="Docker not installed"),
+    pytest.mark.skip_if_binaries_missing(
+        "docker", "dockerd", message="Docker not installed"
+    ),
 ]
 
 IPV6_ENABLED = bool(salt.utils.network.ip_addrs6(include_loopback=True))
@@ -945,55 +947,72 @@ def test_run_with_unless(docker_container, container_name, image, modules):
         modules.docker.rm(container_name, force=True)
 
 
-def test_run_with_creates(docker_container, container_name, image, modules, tmp_path):
+def test_run_with_creates(
+    docker_container, container_name, image, tmp_path, subtests, modules
+):
     """
     Test docker_container.run with creates. The container should not run
     (and the state should return a True result) if all of the files exist,
     but if if any of the files do not exist the container should run.
     """
 
-    bad_file = tmp_path / "file-that-does-not-exist"
+    bad_file = str(tmp_path / "file-that-does-not-exist")
     good_file1 = tmp_path / "good1"
     good_file1.touch()
+    good_file1 = str(good_file1)
     good_file2 = tmp_path / "good2"
     good_file2.touch()
+    good_file2 = str(good_file2)
 
-    log.debug("Trying %s", good_file1)
-    ret = docker_container.run(
-        name=container_name, image=image, command="whoami", creates=str(good_file1),
-    )
-    try:
-        assert ret.result is True
-        assert not ret.changes
-        assert ret.comment == "{} exists".format(good_file1)
-    except AssertionError:
-        modules.docker.rm(container_name, force=True)
-
-    path = [str(good_file1), str(good_file2)]
-    log.debug("Trying %s", path)
-    ret = docker_container.run(
-        name=container_name, image=image, command="whoami", creates=path,
-    )
-    try:
-        assert ret.result is True
-        assert not ret.changes
-        assert ret.comment == "All files in creates exist"
-    except AssertionError:
-        modules.docker.rm(container_name, force=True)
-
-    for path in (str(bad_file), [str(good_file1), str(bad_file)]):
-        log.debug("Trying %s", path)
-        ret = docker_container.run(
-            name=container_name, image=image, command="whoami", creates=path,
-        )
+    with subtests.test(path=good_file1):
         try:
+            log.debug("Trying %s", good_file1)
+            ret = docker_container.run(
+                name=container_name, image=image, command="whoami", creates=good_file1,
+            )
             assert ret.result is True
-            assert ret.changes["Logs"] == "root\n"
-            assert ret.comment == "Container ran and exited with a return code of 0"
-        except AssertionError:
-            modules.docker.rm(container_name, force=True)
+            assert not ret.changes
+            assert ret.comment == "{} exists".format(good_file1)
         finally:
-            modules.docker.rm(container_name, force=True)
+            try:
+                modules.docker.rm(container_name, force=True)
+            except CommandExecutionError as exc:
+                if "No such container" not in str(exc):
+                    raise
+
+    path = [good_file1, good_file2]
+    with subtests.test(path=path):
+        try:
+            log.debug("Trying %s", path)
+            ret = docker_container.run(
+                name=container_name, image=image, command="whoami", creates=path,
+            )
+            assert ret.result is True
+            assert not ret.changes
+            assert ret.comment == "All files in creates exist"
+        finally:
+            try:
+                modules.docker.rm(container_name, force=True)
+            except CommandExecutionError as exc:
+                if "No such container" not in str(exc):
+                    raise
+
+    for path in (bad_file, [good_file1, bad_file]):
+        with subtests.test(path=path):
+            try:
+                log.debug("Trying %s", path)
+                ret = docker_container.run(
+                    name=container_name, image=image, command="whoami", creates=path,
+                )
+                assert ret.result is True
+                assert ret.changes["Logs"] == "root\n"
+                assert ret.comment == "Container ran and exited with a return code of 0"
+            finally:
+                try:
+                    modules.docker.rm(container_name, force=True)
+                except CommandExecutionError as exc:
+                    if "No such container" not in str(exc):
+                        raise
 
 
 def test_run_replace(docker_container, container_name, image):
@@ -1012,12 +1031,10 @@ def test_run_replace(docker_container, container_name, image):
     )
     assert ret.result is False
     assert not ret.changes
-    assert (
-        ret.comment
-        == "Encountered error running container: Container '{}' exists. Run with replace=True to remove the existing container".format(
-            container_name
-        )
-    )
+    assert ret.comment == (
+        "Encountered error running container: Container '{}' exists. "
+        "Run with replace=True to remove the existing container"
+    ).format(container_name)
 
     # Run again with replace=True, this should proceed and there should be
     # a "Replaces" key in the changes dict to show that a container was
