@@ -1015,7 +1015,7 @@ class State:
 
         # If any are False the state will run
         def _check_cmd(cmd):
-            # Don't run condition
+            # Don't run condition (True)
             if cmd == 0:
                 ret.update(
                     {
