@@ -459,11 +459,8 @@ def test_orchestrate_batch_with_failhard_error(
     changes = data["salt_|-call_fail_state_|-call_fail_state_|-state"]["changes"]
 
     assert result is False
-    # Looks like there is a platform differences in execution.
-    # I see empty changes dict in MacOS for some reason. Maybe it's a bug?
-    if changes:
-        # The execution should stop after first error, so return dict should contain only one minion
-        assert len(changes["ret"]) == 1
+    # The execution should stop after first error, so return dict should contain only one minion
+    assert len(changes["ret"]) == 1
 
 
 def test_orchestrate_subset(
