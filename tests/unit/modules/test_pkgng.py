@@ -293,6 +293,32 @@ class PkgNgTestCase(TestCase, LoaderModuleMockMixin):
                 ["pkg", "stats", "-r"], output_loglevel="trace", python_shell=False,
             )
 
+    def test_stats_with_bytes_remote(self):
+        """
+        Test pkg.stats to show disk space usage in bytes only for remote
+        """
+        pkg_cmd = MagicMock(return_value="")
+
+        with patch.dict(pkgng.__salt__, {"cmd.run": pkg_cmd}):
+            result = pkgng.stats(remote=True, bytes=True)
+            self.assertEqual(result, [])
+            pkg_cmd.assert_called_with(
+                ["pkg", "stats", "-rb"], output_loglevel="trace", python_shell=False,
+            )
+
+    def test_stats_with_bytes_local(self):
+        """
+        Test pkg.stats to show disk space usage in bytes only for remote
+        """
+        pkg_cmd = MagicMock(return_value="")
+
+        with patch.dict(pkgng.__salt__, {"cmd.run": pkg_cmd}):
+            result = pkgng.stats(local=True, bytes=True)
+            self.assertEqual(result, [])
+            pkg_cmd.assert_called_with(
+                ["pkg", "stats", "-lb"], output_loglevel="trace", python_shell=False,
+            )
+
     def test_install_without_args(self):
         """
         Test pkg.install to install a package without arguments
