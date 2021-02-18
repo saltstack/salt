@@ -308,7 +308,7 @@ class PkgNgTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_stats_with_bytes_local(self):
         """
-        Test pkg.stats to show disk space usage in bytes only for remote
+        Test pkg.stats to show disk space usage in bytes only for local
         """
         pkg_cmd = MagicMock(return_value="")
 
