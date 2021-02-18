@@ -27,11 +27,6 @@ def refresh_pillar(salt_call_cli, salt_minion):
         assert ret.json
 
 
-@pytest.fixture(scope="module")
-def event_listener(salt_factories):
-    return salt_factories.event_listener
-
-
 @pytest.mark.slow_test
 @pytest.mark.parametrize("sync_refresh", [False, True])
 def test_pillar_refresh(

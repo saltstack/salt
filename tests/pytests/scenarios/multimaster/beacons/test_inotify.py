@@ -36,11 +36,6 @@ def inotify_test_path(tmp_path_factory):
 
 
 @pytest.fixture(scope="module")
-def event_listener(salt_factories):
-    return salt_factories.event_listener
-
-
-@pytest.fixture(scope="module")
 def setup_beacons(mm_master_1_salt_cli, salt_mm_minion_1, inotify_test_path):
     start_time = time.time()
     try:

@@ -358,7 +358,7 @@ def test_configparser():
     assert deserialized == data, deserialized
 
 
-@pytest.mark.skipif(toml.available is False, reason=SKIP_MESSAGE.format("toml"))
+@pytest.mark.skipif(toml.HAS_TOML is False, reason=SKIP_MESSAGE.format("toml"))
 def test_serialize_toml():
     data = {"foo": "bar"}
     serialized = toml.serialize(data)

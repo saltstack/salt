@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Azure Cloud Module
 ==================
@@ -36,25 +35,18 @@ Example ``/etc/salt/cloud.providers`` or
       certificate_path: /etc/salt/azure.pem
       management_host: management.core.windows.net
 """
-# pylint: disable=E0102
-
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
+# pylint: disable=function-redefined
 
 import copy
 import logging
 import pprint
 import time
 
-# Import salt libs
 import salt.config as config
 import salt.utils.cloud
 import salt.utils.stringutils
 import salt.utils.yaml
 from salt.exceptions import SaltCloudSystemExit
-
-# Import 3rd-party libs
-from salt.ext import six
 
 HAS_LIBS = False
 try:
@@ -443,7 +435,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "starting create",
-        "salt/cloud/{0}/creating".format(vm_["name"]),
+        "salt/cloud/{}/creating".format(vm_["name"]),
         args=__utils__["cloud.filter_event"](
             "creating", vm_, ["name", "profile", "provider", "driver"]
         ),
@@ -522,7 +514,7 @@ def create(vm_):
     # TODO: Might need to create a storage account
     media_link = vm_["media_link"]
     # TODO: Probably better to use more than just the name in the media_link
-    media_link += "/{0}.vhd".format(vm_["name"])
+    media_link += "/{}.vhd".format(vm_["name"])
     os_hd = azure.servicemanagement.OSVirtualHardDisk(vm_["image"], media_link)
 
     vm_kwargs = {
@@ -554,7 +546,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "requesting instance",
-        "salt/cloud/{0}/requesting".format(vm_["name"]),
+        "salt/cloud/{}/requesting".format(vm_["name"]),
         args=__utils__["cloud.filter_event"](
             "requesting", event_kwargs, list(event_kwargs)
         ),
@@ -571,7 +563,7 @@ def create(vm_):
         log.debug("Cloud service already exists")
     except Exception as exc:  # pylint: disable=broad-except
         error = "The hosted service name is invalid."
-        if error in six.text_type(exc):
+        if error in str(exc):
             log.error(
                 "Error creating %s on Azure.\n\n"
                 "The hosted service name is invalid. The name can contain "
@@ -606,7 +598,7 @@ def create(vm_):
         _wait_for_async(conn, result.request_id)
     except Exception as exc:  # pylint: disable=broad-except
         error = "The hosted service name is invalid."
-        if error in six.text_type(exc):
+        if error in str(exc):
             log.error(
                 "Error creating %s on Azure.\n\n"
                 "The VM name is invalid. The name can contain "
@@ -639,7 +631,7 @@ def create(vm_):
         try:
             conn.get_role(service_name, service_name, vm_["name"])
             data = show_instance(vm_["name"], call="action")
-            if "url" in data and data["url"] != six.text_type(""):
+            if "url" in data and data["url"] != "":
                 return data["url"]
         except AzureMissingResourceHttpError:
             pass
@@ -669,7 +661,7 @@ def create(vm_):
         __utils__["cloud.fire_event"](
             "event",
             "attaching volumes",
-            "salt/cloud/{0}/attaching_volumes".format(vm_["name"]),
+            "salt/cloud/{}/attaching_volumes".format(vm_["name"]),
             args=__utils__["cloud.filter_event"]("attaching_volumes", vm_, ["volumes"]),
             sock_dir=__opts__["sock_dir"],
             transport=__opts__["transport"],
@@ -701,7 +693,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "created instance",
-        "salt/cloud/{0}/created".format(vm_["name"]),
+        "salt/cloud/{}/created".format(vm_["name"]),
         args=__utils__["cloud.filter_event"](
             "created", vm_, ["name", "profile", "provider", "driver"]
         ),
@@ -724,7 +716,7 @@ def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
     if kwargs is None:
         kwargs = {}
 
-    if isinstance(kwargs["volumes"], six.string_types):
+    if isinstance(kwargs["volumes"], str):
         volumes = salt.utils.yaml.safe_load(kwargs["volumes"])
     else:
         volumes = kwargs["volumes"]
@@ -770,10 +762,10 @@ def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
         # The media link is vm_name-disk-[0-15].vhd
         volume.setdefault(
             "media_link",
-            kwargs["media_link"][:-4] + "-disk-{0}.vhd".format(volume["lun"]),
+            kwargs["media_link"][:-4] + "-disk-{}.vhd".format(volume["lun"]),
         )
         volume.setdefault(
-            "disk_label", kwargs["role_name"] + "-disk-{0}".format(volume["lun"])
+            "disk_label", kwargs["role_name"] + "-disk-{}".format(volume["lun"])
         )
         volume_dict = {"volume_name": volume["lun"], "disk_label": volume["disk_label"]}
 
@@ -800,7 +792,7 @@ def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
 
         # If attach is None then everything is fine
         if attach:
-            msg = "{0} attached to {1} (aka {2})".format(
+            msg = "{} attached to {} (aka {})".format(
                 volume_dict["volume_name"], kwargs["role_name"], name,
             )
             log.info(msg)
@@ -822,7 +814,7 @@ def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
     if kwargs is None:
         kwargs = {}
 
-    if isinstance(kwargs["volumes"], six.string_types):
+    if isinstance(kwargs["volumes"], str):
         volumes = salt.utils.yaml.safe_load(kwargs["volumes"])
     else:
         volumes = kwargs["volumes"]
@@ -868,10 +860,10 @@ def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
         # The media link is vm_name-disk-[0-15].vhd
         volume.setdefault(
             "media_link",
-            kwargs["media_link"][:-4] + "-disk-{0}.vhd".format(volume["lun"]),
+            kwargs["media_link"][:-4] + "-disk-{}.vhd".format(volume["lun"]),
         )
         volume.setdefault(
-            "disk_label", kwargs["role_name"] + "-disk-{0}".format(volume["lun"])
+            "disk_label", kwargs["role_name"] + "-disk-{}".format(volume["lun"])
         )
         volume_dict = {"volume_name": volume["lun"], "disk_label": volume["disk_label"]}
 
@@ -896,7 +888,7 @@ def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
         )
         _wait_for_async(conn, result.request_id)
 
-        msg = "{0} attached to {1} (aka {2})".format(
+        msg = "{} attached to {} (aka {})".format(
             volume_dict["volume_name"], kwargs["role_name"], name
         )
         log.info(msg)
@@ -968,7 +960,7 @@ def destroy(name, conn=None, call=None, kwargs=None):
             result = conn.delete_deployment(service_name, service_name)
         except AzureConflictHttpError as exc:
             log.error(exc.message)
-            raise SaltCloudSystemExit("{0}: {1}".format(name, exc.message))
+            raise SaltCloudSystemExit("{}: {}".format(name, exc.message))
         delete_type = "delete_deployment"
     _wait_for_async(conn, result.request_id)
     ret[name] = {
@@ -1070,10 +1062,8 @@ def list_storage_services(conn=None, call=None):
     """
     if call != "function":
         raise SaltCloudSystemExit(
-            (
-                "The list_storage_services function must be called "
-                "with -f or --function."
-            )
+            "The list_storage_services function must be called "
+            "with -f or --function."
         )
 
     if not conn:
@@ -1231,7 +1221,7 @@ def show_storage_keys(kwargs=None, conn=None, call=None):
                 "The storage account keys have not yet been created."
             )
         else:
-            raise SaltCloudSystemExit("{0}: {1}".format(kwargs["name"], exc.message))
+            raise SaltCloudSystemExit("{}: {}".format(kwargs["name"], exc.message))
     return object_to_dict(data)
 
 
@@ -1404,7 +1394,7 @@ def delete_storage(kwargs=None, conn=None, call=None):
         data = conn.delete_storage_account(kwargs["name"])
         return {"Success": "The storage account was successfully deleted"}
     except AzureMissingResourceHttpError as exc:
-        raise SaltCloudSystemExit("{0}: {1}".format(kwargs["name"], exc.message))
+        raise SaltCloudSystemExit("{}: {}".format(kwargs["name"], exc.message))
 
 
 def list_services(kwargs=None, conn=None, call=None):
@@ -1548,7 +1538,7 @@ def delete_service(kwargs=None, conn=None, call=None):
         conn.delete_hosted_service(kwargs["name"])
         return {"Success": "The service was successfully deleted"}
     except AzureMissingResourceHttpError as exc:
-        raise SaltCloudSystemExit("{0}: {1}".format(kwargs["name"], exc.message))
+        raise SaltCloudSystemExit("{}: {}".format(kwargs["name"], exc.message))
 
 
 def list_disks(kwargs=None, conn=None, call=None):
@@ -1682,7 +1672,7 @@ def delete_disk(kwargs=None, conn=None, call=None):
         data = conn.delete_disk(kwargs["name"], kwargs.get("delete_vhd", False))
         return {"Success": "The disk was successfully deleted"}
     except AzureMissingResourceHttpError as exc:
-        raise SaltCloudSystemExit("{0}: {1}".format(kwargs["name"], exc.message))
+        raise SaltCloudSystemExit("{}: {}".format(kwargs["name"], exc.message))
 
 
 def update_disk(kwargs=None, conn=None, call=None):
@@ -1898,7 +1888,7 @@ def delete_service_certificate(kwargs=None, conn=None, call=None):
         )
         return {"Success": "The service certificate was successfully deleted"}
     except AzureMissingResourceHttpError as exc:
-        raise SaltCloudSystemExit("{0}: {1}".format(kwargs["name"], exc.message))
+        raise SaltCloudSystemExit("{}: {}".format(kwargs["name"], exc.message))
 
 
 def list_management_certificates(kwargs=None, conn=None, call=None):
@@ -2039,7 +2029,7 @@ def delete_management_certificate(kwargs=None, conn=None, call=None):
         conn.delete_management_certificate(kwargs["thumbprint"])
         return {"Success": "The management certificate was successfully deleted"}
     except AzureMissingResourceHttpError as exc:
-        raise SaltCloudSystemExit("{0}: {1}".format(kwargs["thumbprint"], exc.message))
+        raise SaltCloudSystemExit("{}: {}".format(kwargs["thumbprint"], exc.message))
 
 
 def list_virtual_networks(kwargs=None, conn=None, call=None):
@@ -2090,14 +2080,14 @@ def list_input_endpoints(kwargs=None, conn=None, call=None):
     if "deployment" not in kwargs:
         raise SaltCloudSystemExit('A deployment name must be specified as "deployment"')
 
-    path = "services/hostedservices/{0}/deployments/{1}".format(
+    path = "services/hostedservices/{}/deployments/{}".format(
         kwargs["service"], kwargs["deployment"],
     )
 
     data = query(path)
     if data is None:
         raise SaltCloudSystemExit(
-            "There was an error listing endpoints with the {0} service on the {1} deployment.".format(
+            "There was an error listing endpoints with the {} service on the {} deployment.".format(
                 kwargs["service"], kwargs["deployment"]
             )
         )
@@ -2205,7 +2195,7 @@ def update_input_endpoint(kwargs=None, conn=None, call=None, activity="update"):
 
         if "enable_direct_server_return" not in kwargs:
             kwargs["enable_direct_server_return"] = False
-        kwargs["enable_direct_server_return"] = six.text_type(
+        kwargs["enable_direct_server_return"] = str(
             kwargs["enable_direct_server_return"]
         ).lower()
 
@@ -2254,7 +2244,7 @@ xmlns:i="http://www.w3.org/2001/XMLSchema-instance">
   <ConfigurationSets>
     <ConfigurationSet>
       <ConfigurationSetType>NetworkConfiguration</ConfigurationSetType>
-      <InputEndpoints>{0}
+      <InputEndpoints>{}
       </InputEndpoints>
     </ConfigurationSet>
   </ConfigurationSets>
@@ -2264,7 +2254,7 @@ xmlns:i="http://www.w3.org/2001/XMLSchema-instance">
         endpoints_xml
     )
 
-    path = "services/hostedservices/{0}/deployments/{1}/roles/{2}".format(
+    path = "services/hostedservices/{}/deployments/{}/roles/{}".format(
         kwargs["service"], kwargs["deployment"], kwargs["role"],
     )
     query(
@@ -2533,7 +2523,7 @@ def delete_affinity_group(kwargs=None, conn=None, call=None):
         conn.delete_affinity_group(kwargs["name"])
         return {"Success": "The affinity group was successfully deleted"}
     except AzureMissingResourceHttpError as exc:
-        raise SaltCloudSystemExit("{0}: {1}".format(kwargs["name"], exc.message))
+        raise SaltCloudSystemExit("{}: {}".format(kwargs["name"], exc.message))
 
 
 def get_storage_conn(storage_account=None, storage_key=None, conn_kwargs=None):
@@ -3014,12 +3004,12 @@ def lease_storage_container(kwargs=None, storage_conn=None, call=None):
 
     if kwargs.get("lease_action", None) not in lease_actions:
         raise SaltCloudSystemExit(
-            "A lease_action must be one of: {0}".format(", ".join(lease_actions))
+            "A lease_action must be one of: {}".format(", ".join(lease_actions))
         )
 
     if kwargs["lease_action"] != "acquire" and "lease_id" not in kwargs:
         raise SaltCloudSystemExit(
-            'A lease ID must be specified for the "{0}" lease action '
+            'A lease ID must be specified for the "{}" lease action '
             'as "lease_id"'.format(kwargs["lease_action"])
         )
 

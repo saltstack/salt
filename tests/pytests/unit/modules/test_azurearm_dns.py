@@ -109,8 +109,8 @@ def credentials():
     }
 
 
-@pytest.fixture(autouse=True)
-def setup_loader():
+@pytest.fixture
+def configure_loader_modules():
     """
     setup loader modules and override the azurearm.get_client utility
     """
@@ -120,11 +120,9 @@ def setup_loader():
         minion_config, utils=utils, whitelist=["azurearm_dns", "config"]
     )
     utils["azurearm.get_client"] = AzureClientMock()
-    setup_loader_modules = {
+    return {
         azurearm_dns: {"__utils__": utils, "__salt__": funcs},
     }
-    with pytest.helpers.loader_mock(setup_loader_modules) as loader_mock:
-        yield loader_mock
 
 
 def test_record_set_create_or_update(credentials):

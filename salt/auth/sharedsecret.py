@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Provide authentication using configured shared secret
 
 .. code-block:: yaml
@@ -29,9 +28,6 @@ frontal.
 
 .. versionadded:: Beryllium
 """
-
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 

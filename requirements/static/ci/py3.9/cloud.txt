@@ -5,7 +5,7 @@
 #    pip-compile -o requirements/static/ci/py3.9/cloud.txt -v requirements/static/ci/cloud.in
 #
 certifi==2019.3.9         # via requests
-cffi==1.14.3              # via cryptography
+cffi==1.14.4              # via cryptography
 chardet==3.0.4            # via requests
 cryptography==3.2.1       # via requests-ntlm, smbprotocol
 idna==2.8                 # via requests

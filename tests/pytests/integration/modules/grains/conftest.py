@@ -18,11 +18,6 @@ class PillarRefreshComplete:
 
 
 @pytest.fixture(scope="module")
-def event_listener(salt_factories):
-    return salt_factories.event_listener
-
-
-@pytest.fixture(scope="module")
 def wait_for_pillar_refresh_complete(event_listener, salt_minion):
     return PillarRefreshComplete(
         event_listener=event_listener, minion_id=salt_minion.id

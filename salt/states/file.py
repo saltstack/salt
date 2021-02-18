@@ -3098,7 +3098,8 @@ def managed(
             )
         if __opts__["test"]:
             if (
-                isinstance(ret_perms, dict)
+                mode
+                and isinstance(ret_perms, dict)
                 and "lmode" in ret_perms
                 and mode != ret_perms["lmode"]
             ):

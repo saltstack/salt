@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Docker executor module
 
@@ -6,9 +5,9 @@ Docker executor module
 
 Used with the docker proxy minion.
 """
-from __future__ import absolute_import, unicode_literals
 
 __virtualname__ = "docker"
+
 DOCKER_MOD_MAP = {
     "state.sls": "docker.sls",
     "state.apply": "docker.apply",
@@ -23,7 +22,7 @@ def __virtual__():
             "Docker executor is only meant to be used with Docker Proxy Minions",
         )
     if __opts__.get("proxy", {}).get("proxytype") != __virtualname__:
-        return False, "Proxytype does not match: {0}".format(__virtualname__)
+        return False, "Proxytype does not match: {}".format(__virtualname__)
     return True
 
 
