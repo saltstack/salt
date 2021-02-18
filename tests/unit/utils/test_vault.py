@@ -1,10 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 Test case for the vault utils module
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import json
 import logging
@@ -15,8 +12,6 @@ from copy import copy
 import salt.utils.vault as vault
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import ANY, MagicMock, Mock, mock_open, patch
-
-# Import Salt Testing libs
 from tests.support.unit import TestCase
 
 
@@ -421,11 +416,16 @@ class TestVaultUtils(LoaderModuleMockMixin, TestCase):
         Test request with namespace configured
         """
         mock = self._mock_json_response(self.json_success)
-        expected_headers = {"X-Vault-Token": "test", "X-Vault-Namespace": "test_namespace", "Content-Type": "application/json"}
-        supplied_config = {'namespace': 'test_namespace'}
+        expected_headers = {
+            "X-Vault-Token": "test",
+            "X-Vault-Namespace":
+            "test_namespace",
+            "Content-Type": "application/json"
+        }
+        supplied_config = {"namespace": "test_namespace"}
         supplied_context = {"vault_token": copy(self.cache_single_namespace)}
         with patch.dict(vault.__context__, supplied_context):
-            with patch.dict(vault.__opts__['vault'], supplied_config):
+            with patch.dict(vault.__opts__["vault"], supplied_config):
                 with patch("requests.request", mock):
                     vault_return = vault.make_request("/secret/my/secret", "key")
                     mock.assert_called_with(
