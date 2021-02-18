@@ -8,13 +8,13 @@ sdk can be installed using `pip install cohesity-management-sdk`
 # Python Modules Import
 import copy
 
-# import json
+import json
 import logging
 
-# import os
+import os
 
 try:
-    # import salt.utils.files
+    import salt.utils.files
 
     from cohesity_management_sdk.cohesity_client import CohesityClient
     from cohesity_management_sdk.exceptions.api_exception import APIException
@@ -64,13 +64,11 @@ __virtualname__ = "cohesity"
 
 config_path = "/etc/salt/master.d/cohesity.conf"
 cohesity_config = {}
-# if os.path.isfile(config_path):
-#    with salt.utils.files.fopen(config_path, "rb") as file_obj:
-#        config = json.loads(file_obj)
-#        cohesity_config = config.get("cohesity_config", {})
-#    if not cohesity_config:
-#        logger.error("Please update {} file".format(config_path))
-#        exit()
+if os.path.isfile(config_path):
+    import yaml
+    with salt.utils.files.fopen(config_path, "r") as file_obj:
+        config = yaml.safe_load(file_obj)
+        cohesity_config = config.get("cohesity_config", {})
 
 cluster_vip = cohesity_config.get("cluster_vip", "")
 c_username = cohesity_config.get("username", "")
@@ -122,7 +120,11 @@ def get_vmware_source_ids(name, vm_list):
             environments=env_enum.K_VMWARE
         )
         for each_source in result:
-            if each_source.registration_info.access_info.endpoint == name:
+            endpoint = each_source.registration_info.access_info.endpoint
+            v_name = each_source.protection_source.name
+
+            # Check for both endpoint and source name.
+            if name in [endpoint, v_name]:
                 parent_id = each_source.protection_source.id
         if parent_id == -1:
             logger.error("Vcenter {} not available in the cluster".format(name))
@@ -130,13 +132,13 @@ def get_vmware_source_ids(name, vm_list):
         vms = cohesity_client.protection_sources.list_virtual_machines(
             v_center_id=parent_id, names=vm_list
         )
-        vm_names = [vm_list] if type(vm_list) == str else copy.deepcopy(vm_list)
+        vm_names = copy.deepcopy(vm_list)
         for vm in vms:
             vm_names.remove(vm.name)
             source_id_list.append(vm.id)
         if vm_names:
-            return (
-                "Following list of vms {} are not available in vcenter, "
+            logger.error (
+                "Following list of vms '{}' are not available in vcenter, "
                 "please make sure the virtual machine names are correct".format(
                     ",".join(vm_names)
                 )
@@ -149,7 +151,13 @@ def get_vmware_source_ids(name, vm_list):
 
 def register_vcenter(vcenter, username, password):
     """
-    Function to fetch register Vcenter.
+    Function to fetch register Vmware Vcenter to cohesity cluster.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+    salt-call cohesity.register_vcenter vcenter=vcenter_name username=admin password=admin
     """
     try:
         existing_sources = cohesity_client.protection_sources.list_protection_sources_root_nodes(
@@ -182,16 +190,16 @@ def create_vmware_protection_job(
     description="",
 ):
     """
-    Create Virtual Protection Source
-    :param jobname
-    :param vcenter_name
-    :param sources
-    :param policy
-    :param domain
-    :param pause_job
-    :param timezone
-    :param description
-    :return
+    Create Protection Job for VMware Source.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+    salt-call cohesity.create_vmware_protection_job job_name=job_name vcenter_name=vcenter_name sources=virtual_machine
+    salt-call cohesity.create_vmware_protection_job job_name=job_name vcenter_name=vcenter_name sources=virtual_machine1,virtualmachine2
+    salt-call cohesity.create_vmware_protection_job job_name=job_name vcenter_name=vcenter_name sources=virtual_machine1,virtualmachine2 policy=Gold domain=DefaultStorageDomain pause_job=True timezone=Europe/Berlin description='Salt Job'
+    salt-call cohesity.create_vmware_protection_job job_name=job_name vcenter_name=vcenter_name sources=virtual_machine1,virtualmachine2 policy=Gold domain=DefaultStorageDomain pause_job=True timezone=Europe/Berlin
     """
     try:
         # Check if the job already exists.
@@ -209,7 +217,7 @@ def create_vmware_protection_job(
         body.environment = env_enum.K_VMWARE
         body.pause = True
         body.parent_source_id, body.source_ids = get_vmware_source_ids(
-            vcenter_name, sources
+            vcenter_name, sources.split(",")
         )
         if body.parent_source_id == -1:
             return "Unable to fetch Vcenter with name {}".format(vcenter_name)
@@ -231,7 +239,7 @@ def create_vmware_protection_job(
                 )
             return "Successfully created ProtectionGroup: {}".format(body.name)
     except APIException as err:
-        return "Error creating job {} {}".format(body.name, err)
+        return "Error creating job {} {}".format(job_name, err)
 
 
 def update_vmware_protection_job(
@@ -240,6 +248,14 @@ def update_vmware_protection_job(
     """
     Function to update vmware protection job, updatee virtual machines
     available in the job.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+    salt-call cohesity.update_vmware_protection_job job_name=job vcenter_name=vcenter sources=vitual_machine
+    salt-call cohesity.update_vmware_protection_job job_name=job vcenter_name=vcenter sources=vitual_machine replace_existing=True
+
     """
     try:
         resp = cohesity_client.protection_jobs.get_protection_jobs(
@@ -249,7 +265,7 @@ def update_vmware_protection_job(
             return "Job with name {} not available".format(job_name)
         body = resp[0]
         job_id = body.id
-        _, new_source_ids = get_vmware_source_ids(vcenter_name, sources)
+        _, new_source_ids = get_vmware_source_ids(vcenter_name, sources.split(","))
         body.source_ids = [] if replace_existing else body.source_ids
         for source_id in new_source_ids:
             if source_id not in body.source_ids:
@@ -264,6 +280,13 @@ def update_vmware_protection_job_state(job_name, state):
     """
     Function to update protection job state. Job state includes activate,
     deactivate, pause, resume.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+    salt-call cohesity.update_vmware_protection_job_state job_name=job state=activate
+
     """
     try:
         jobs = cohesity_client.protection_jobs.get_protection_jobs(
@@ -292,7 +315,14 @@ def update_vmware_protection_job_state(job_name, state):
 
 def cancel_vmware_protection_job(job_name):
     """
-    Function to cancel protection job.
+    Function to cancel a running protection job.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+    salt-call cohesity.cancel_vmware_protection_job job_name=job
+
     """
     try:
         jobs = cohesity_client.protection_jobs.get_protection_jobs(
@@ -306,6 +336,7 @@ def cancel_vmware_protection_job(job_name):
                 break
         if not job_id:
             return "Job with name {} not available.".format(job_name)
+
         # Get recent job run id and status.
         runs = cohesity_client.protection_runs.get_protection_runs(job_id=job_id)
         if not runs:
@@ -327,6 +358,13 @@ def cancel_vmware_protection_job(job_name):
 def run_vmware_protection_job(job_name):
     """
     Function to run protection job.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+    salt-call cohesity.run_vmware_protection_job job_name=job
+
     """
     try:
         jobs = cohesity_client.protection_jobs.get_protection_jobs(
@@ -352,7 +390,13 @@ def run_vmware_protection_job(job_name):
 
 def delete_vmware_protection_job(job_name, delete_snapshots=True):
     """
-    Function to delete protection job.
+    Function to delete protection job and snapshots.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+    salt-call cohesity.delete_vmware_protection_job job_name=job delete_snapshots=False
     """
     try:
         jobs = cohesity_client.protection_jobs.get_protection_jobs(
@@ -412,6 +456,14 @@ def restore_vms(
 ):
     """
     Function to recover vm.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+    salt-call cohesity.restore_vms task_name=task vcenter_name=vcenter vm_names=virtual_machine resource_pool=pool
+    salt-call cohesity.restore_vms task_name=task vcenter_name=vcenter vm_names=virtual_machine resource_pool=pool datastore_name=DS1 prefix='pre-' suffix='_copy' powered_on=True
+
     """
     try:
         body = RecoverTaskRequest()
