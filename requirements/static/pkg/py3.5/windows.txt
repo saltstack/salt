@@ -19,7 +19,6 @@ gitpython==3.1.12
 idna==2.8
 immutables==0.14          # via contextvars
 ioloop==0.1a0
-ipaddress==1.0.22
 jaraco.functools==2.0     # via cheroot, tempora
 jinja2==2.10.1
 libnacl==1.7.1

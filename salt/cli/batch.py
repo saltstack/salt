@@ -297,7 +297,7 @@ class Batch:
                         "Batch run stopped due to failhard",
                         minion,
                     )
-                    raise StopIteration
+                    return
 
             # remove inactive iterators from the iters list
             for queue in minion_tracker:

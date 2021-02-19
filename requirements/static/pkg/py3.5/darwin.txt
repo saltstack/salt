@@ -4,7 +4,7 @@
 #
 #    pip-compile -o requirements/static/pkg/py3.5/darwin.txt -v requirements/darwin.txt requirements/static/pkg/darwin.in
 #
-apache-libcloud==2.4.0
+apache-libcloud==2.5.0
 backports.ssl-match-hostname==3.7.0.1 ; python_version < "3.7"
 certifi==2020.6.20        # via requests
 cffi==1.12.2              # via cryptography
@@ -19,7 +19,6 @@ gitdb==4.0.5              # via gitpython
 gitpython==3.1.12
 idna==2.8
 immutables==0.14          # via contextvars
-ipaddress==1.0.22
 jaraco.functools==2.0     # via cheroot, tempora
 jinja2==2.10.1
 linode-python==1.1.1

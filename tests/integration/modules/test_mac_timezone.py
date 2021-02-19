@@ -13,12 +13,11 @@ import datetime
 
 import pytest
 from tests.support.case import ModuleCase
-from tests.support.helpers import flaky, runs_on
 from tests.support.unit import skipIf
 
 
-@flaky
-@runs_on(kernel="Darwin")
+@pytest.mark.flaky(max_runs=4)
+@pytest.mark.skip_unless_on_darwin
 @pytest.mark.skip_if_binaries_missing("systemsetup")
 @pytest.mark.skip_if_not_root
 class MacTimezoneModuleTest(ModuleCase):

@@ -108,10 +108,17 @@ def __virtual__():
     return __virtualname__
 
 
+def _get_active_provider_name():
+    try:
+        return __active_provider_name__.value()
+    except AttributeError:
+        return __active_provider_name__
+
+
 def get_configured_provider():
     return config.is_provider_configured(
         __opts__,
-        __active_provider_name__ or __virtualname__,
+        _get_active_provider_name() or __virtualname__,
         ("token", "token_pass", "user", "password",),
     )
 
@@ -321,7 +328,7 @@ def create(vm_):
     creds = get_creds()
     clc.v1.SetCredentials(creds["token"], creds["token_pass"])
     cloud_profile = config.is_provider_configured(
-        __opts__, __active_provider_name__ or __virtualname__, ("token",)
+        __opts__, _get_active_provider_name() or __virtualname__, ("token",)
     )
     group = config.get_cloud_config_value(
         "group", vm_, __opts__, search_global=False, default=None,
