@@ -102,6 +102,18 @@ class ReactorTest(TestCase, LoaderModuleMockMixin):
                     ret = reactor.list_()
                     self.assertIn({"test_event/*": ["/srv/reactors/reactor.sls"]}, ret)
 
+        event_returns = {
+            "_stamp": "2020-09-04T16:51:52.577711",
+        }
+
+        with patch.dict(reactor.__opts__, mock_opts):
+            with patch.object(SaltEvent, "get_event", return_value=event_returns):
+                with patch("salt.utils.master.get_master_key") as get_master_key:
+                    get_master_key.retun_value = MagicMock(
+                        retun_value="master_key")
+                    ret = reactor.list_()
+                    assert ret == None
+
         mock_opts = {}
         mock_opts["reactor"] = [{"test_event/*": ["/srv/reactors/reactor.sls"]}]
         with patch.dict(reactor.__opts__, mock_opts):
@@ -164,6 +176,20 @@ class ReactorTest(TestCase, LoaderModuleMockMixin):
                     self.assertTrue(ret["status"])
                     self.assertEqual("Reactor added.", ret["comment"])
 
+        event_returns = {
+            "reactors": [
+                {"test_event/*": ["/srv/reactors/reactor.sls"]}],
+            "_stamp": "2020-09-04T17:45:33.206408",
+        }
+
+        with patch.dict(reactor.__opts__, mock_opts):
+            with patch.object(SaltEvent, "get_event", return_value=event_returns):
+                with patch("salt.utils.master.get_master_key") as get_master_key:
+                    get_master_key.retun_value = MagicMock(
+                        retun_value="master_key")
+                    ret = reactor.add("test_event/*", "/srv/reactor/reactor.sls")
+                    assert ret == None
+
     def test_delete(self):
         """
         test reactor.delete runner
@@ -206,6 +232,19 @@ class ReactorTest(TestCase, LoaderModuleMockMixin):
                     self.assertIn("status", ret)
                     self.assertTrue(ret["status"])
                     self.assertEqual("Reactor deleted.", ret["comment"])
+
+        event_returns = {
+            "reactors": [{"bot/*": ["/srv/reactors/bot.sls"]}],
+            "_stamp": "2020-09-04T18:15:41.586552",
+        }
+
+        with patch.dict(reactor.__opts__, mock_opts):
+            with patch.object(SaltEvent, "get_event", return_value=event_returns):
+                with patch("salt.utils.master.get_master_key") as get_master_key:
+                    get_master_key.retun_value = MagicMock(
+                        retun_value="master_key")
+                    ret = reactor.delete("test_event/*")
+                    assert ret == None
 
     def test_is_leader(self):
         """

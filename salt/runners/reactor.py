@@ -67,8 +67,8 @@ def list_(saltenv="base", test=None):
 
         __jid_event__.fire_event({"key": master_key}, "salt/reactors/manage/list")
 
-        results = sevent.get_event(wait=30, tag="salt/reactors/manage/list-results")    
-        reactors = results.get('reactors', None)
+        results = sevent.get_event(wait=30, tag="salt/reactors/manage/list-results")
+        reactors = results.get("reactors")
         return reactors
 
 
@@ -104,8 +104,7 @@ def add(event, reactors, saltenv="base", test=None):
         )
 
         res = sevent.get_event(wait=30, tag="salt/reactors/manage/add-complete")
-        return res["result"]
-        return res.get('result', None)
+        return res.get("result")
 
 
 def delete(event, saltenv="base", test=None):
@@ -136,7 +135,7 @@ def delete(event, saltenv="base", test=None):
         )
 
         res = sevent.get_event(wait=30, tag="salt/reactors/manage/delete-complete")
-        return res.get('result', None)
+        return res.get("result")
 
 
 def is_leader():
