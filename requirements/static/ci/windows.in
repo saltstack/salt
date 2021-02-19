@@ -4,4 +4,5 @@ patch
 pygit2>=1.2.0; python_version >= '3.7'
 sed
 pywinrm>=0.4.1
-
+bcrypt==3.2.0
+passlib==1.7.4
