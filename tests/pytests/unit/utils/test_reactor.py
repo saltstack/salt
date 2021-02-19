@@ -28,6 +28,7 @@ def master_reactor(master_config):
     return reactor.Reactor(master_config)
 
 
+@pytest.mark.skip_on_windows(reason="Reactors unavailable on Windows")
 def test_run_minion_reactor(minion_config, minion_reactor):
     """
     Ensure that list_reactors() returns the correct list of reactor SLS
@@ -48,6 +49,7 @@ def test_run_minion_reactor(minion_config, minion_reactor):
                 os_nice_mock.assert_has_calls(calls)
 
 
+@pytest.mark.skip_on_windows(reason="Reactors unavailable on Windows")
 def test_run_master_reactor(master_config, master_reactor):
     """
     Ensure that list_reactors() returns the correct list of reactor SLS
