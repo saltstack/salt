@@ -1018,7 +1018,7 @@ class LocalClient:
 
         # if you have all the returns, stop
         if len(found.intersection(minions)) >= len(minions):
-            raise StopIteration()
+            return
 
         # otherwise, get them from the event system
         for event in event_iter:
@@ -1027,7 +1027,7 @@ class LocalClient:
                 yield event
             if len(found.intersection(minions)) >= len(minions):
                 self._clean_up_subscriptions(jid)
-                raise StopIteration()
+                return
 
     # TODO: tests!!
     def get_returns_no_block(self, tag, match_type=None):
@@ -1095,7 +1095,7 @@ class LocalClient:
                 log.warning("jid does not exist")
                 yield {}
                 # stop the iteration, since the jid is invalid
-                raise StopIteration()
+                return
         except Exception as exc:  # pylint: disable=broad-except
             log.warning(
                 "Returner unavailable: %s", exc, exc_info_on_loglevel=logging.DEBUG
@@ -1667,7 +1667,7 @@ class LocalClient:
             log.warning("jid does not exist")
             yield {}
             # stop the iteration, since the jid is invalid
-            raise StopIteration()
+            return
         # Wait for the hosts to check in
         while True:
             raw = self.event.get_event(timeout, auto_reconnect=self.auto_reconnect)

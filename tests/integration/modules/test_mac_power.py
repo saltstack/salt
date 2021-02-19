@@ -4,11 +4,10 @@ integration tests for mac_power
 
 import pytest
 from tests.support.case import ModuleCase
-from tests.support.helpers import flaky, runs_on
 
 
-@flaky(attempts=10)
-@runs_on(kernel="Darwin")
+@pytest.mark.flaky(max_runs=10)
+@pytest.mark.skip_unless_on_darwin
 @pytest.mark.skip_if_binaries_missing("systemsetup")
 @pytest.mark.skip_if_not_root
 class MacPowerModuleTest(ModuleCase):
@@ -151,8 +150,8 @@ class MacPowerModuleTest(ModuleCase):
         self.assertTrue(self.run_function("power.get_restart_freeze"))
 
 
-@flaky(attempts=10)
-@runs_on(kernel="Darwin")
+@pytest.mark.flaky(max_runs=10)
+@pytest.mark.skip_unless_on_darwin
 @pytest.mark.skip_if_binaries_missing("systemsetup")
 @pytest.mark.skip_if_not_root
 class MacPowerModuleTestSleepOnPowerButton(ModuleCase):
@@ -202,8 +201,8 @@ class MacPowerModuleTestSleepOnPowerButton(ModuleCase):
             self.assertFalse(self.run_function("power.get_sleep_on_power_button"))
 
 
-@flaky(attempts=10)
-@runs_on(kernel="Darwin")
+@pytest.mark.flaky(max_runs=10)
+@pytest.mark.skip_unless_on_darwin
 @pytest.mark.skip_if_binaries_missing("systemsetup")
 @pytest.mark.skip_if_not_root
 class MacPowerModuleTestRestartPowerFailure(ModuleCase):
@@ -252,8 +251,8 @@ class MacPowerModuleTestRestartPowerFailure(ModuleCase):
             self.assertFalse(self.run_function("power.get_restart_power_failure"))
 
 
-@flaky(attempts=10)
-@runs_on(kernel="Darwin")
+@pytest.mark.flaky(max_runs=10)
+@pytest.mark.skip_unless_on_darwin
 @pytest.mark.skip_if_binaries_missing("systemsetup")
 @pytest.mark.skip_if_not_root
 class MacPowerModuleTestWakeOnNet(ModuleCase):
@@ -298,8 +297,8 @@ class MacPowerModuleTestWakeOnNet(ModuleCase):
             self.assertFalse(self.run_function("power.get_wake_on_network"))
 
 
-@flaky(attempts=10)
-@runs_on(kernel="Darwin")
+@pytest.mark.flaky(max_runs=10)
+@pytest.mark.skip_unless_on_darwin
 @pytest.mark.skip_if_binaries_missing("systemsetup")
 @pytest.mark.skip_if_not_root
 class MacPowerModuleTestWakeOnModem(ModuleCase):

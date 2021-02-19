@@ -228,9 +228,9 @@ def get_opts():
 
 def cross_test(func, args=None):
     """
-    Execute a minion function via the __salt__ object in the test
-    module, used to verify that the minion functions can be called
-    via the __salt__ module.
+    Execute a minion function via the ``__salt__`` object in the test
+    module, used to verify that the Minion functions can be called
+    via the ``__salt__`` module.
 
     CLI Example:
 
@@ -246,7 +246,7 @@ def cross_test(func, args=None):
 def kwarg(**kwargs):
     """
     Print out the data passed into the function ``**kwargs``, this is used to
-    both test the publication data and cli kwarg passing, but also to display
+    both test the publication data and CLI ``kwarg`` passing, but also to display
     the information available within the publication data.
 
     CLI Example:
@@ -260,10 +260,12 @@ def kwarg(**kwargs):
 
 def arg(*args, **kwargs):
     """
-    Print out the data passed into the function ``*args`` and ```kwargs``, this
-    is used to both test the publication data and cli argument passing, but
+    Print out the data passed into the function ``*args`` and ``kwargs``, this
+    is used to both test the publication data and CLI argument passing, but
     also to display the information available within the publication data.
-    Returns {"args": args, "kwargs": kwargs}.
+
+    :return: ``{"args": args, "kwargs": kwargs}``
+    :rtype: dict
 
     CLI Example:
 
@@ -276,8 +278,10 @@ def arg(*args, **kwargs):
 
 def arg_type(*args, **kwargs):
     """
-    Print out the types of the args and kwargs. This is used to test the types
-    of the args and kwargs passed down to the minion
+    Print out the types of the ``args`` and ``kwargs``. This is used to test the types
+    of the ``args`` and ``kwargs`` passed down to the Minion
+
+    :rtype: dict
 
     CLI Example:
 
@@ -299,10 +303,11 @@ def arg_type(*args, **kwargs):
 
 def arg_repr(*args, **kwargs):
     """
-    Print out the data passed into the function ``*args`` and ```kwargs``, this
-    is used to both test the publication data and cli argument passing, but
+    Print out the data passed into the function ``*args`` and ``kwargs``, this
+    is used to both test the publication data and CLI argument passing, but
     also to display the information available within the publication data.
-    Returns {"args": repr(args), "kwargs": repr(kwargs)}.
+
+    :return: ``{"args": repr(args), "kwargs": repr(kwargs)}``
 
     CLI Example:
 
@@ -315,7 +320,8 @@ def arg_repr(*args, **kwargs):
 
 def arg_clean(*args, **kwargs):
     """
-    Like test.arg but cleans kwargs of the __pub* items
+    Like :mod:`test.arg <salt.modules.test.arg>` but cleans ``kwargs`` of the ``__pub*`` items
+
     CLI Example:
 
     .. code-block:: bash
@@ -327,7 +333,7 @@ def arg_clean(*args, **kwargs):
 
 def fib(num):
     """
-    Return the num-th Fibonacci number, and the time it took to compute in
+    Return the ``num``-th Fibonacci number, and the time it took to compute in
     seconds. Used for performance tests.
 
     This function is designed to have terrible performance.
@@ -476,8 +482,8 @@ def not_loaded():
 
 def opts_pkg():
     """
-    Return an opts package with the grains and opts for this minion.
-    This is primarily used to create the options used for master side
+    Return an ``opts`` package with the ``grains`` and ``opts`` for this Minion.
+    This is primarily used to create the options used for Master side
     state compiling routines
 
     CLI Example:
@@ -495,9 +501,9 @@ def opts_pkg():
 def rand_str(size=9999999999, hash_type=None):
     """
     This function has been renamed to
-    random_hash. This function will stay to
-    ensure backwards compatibility, but please
-    switch to using the preferred name random_hash.
+    :mod:`test.random_hash <salt.modules.test.random_hash>`. This function will stay to
+    ensure backwards compatibility, but please switch to using the preferred name
+    :mod:`test.random_hash <salt.modules.test.random_hash>`.
     """
     return random_hash(size=size, hash_type=hash_type)
 
@@ -510,8 +516,8 @@ def random_hash(size=9999999999, hash_type=None):
         ``test.random_hash``
 
     Generates a random number between 1 and ``size``, then returns a hash of
-    that number. If no ``hash_type`` is passed, the hash_type specified by the
-    minion's :conf_minion:`hash_type` config option is used.
+    that number. If no ``hash_type`` is passed, the ``hash_type`` specified by the
+    Minion's :conf_minion:`hash_type` config option is used.
 
     CLI Example:
 
@@ -555,7 +561,7 @@ def stack():
 
 def tty(*args, **kwargs):  # pylint: disable=W0613
     """
-    Deprecated! Moved to cmdmod.
+    Deprecated! Moved to :mod:`cmd.tty <salt.modules.cmdmod.tty>`
 
     CLI Example:
 
@@ -569,19 +575,17 @@ def tty(*args, **kwargs):  # pylint: disable=W0613
 
 def try_(module, return_try_exception=False, **kwargs):
     """
-    Try to run a module command. On an exception return None.
-    If `return_try_exception` is set True return the exception.
+    Try to run a module command. On an exception return ``None``.
+    If ``return_try_exception`` is set to ``True``, return the exception.
     This can be helpful in templates where running a module might fail as expected.
 
-    CLI Example:
+    Jinja Example:
 
-    .. code-block:: bash
+    .. code-block:: jinja
 
-        <pre>
         {% for i in range(0,230) %}
             {{ salt['test.try'](module='ipmi.get_users', bmc_host='172.2.2.'+i)|yaml(False) }}
         {% endfor %}
-        </pre>
     """
     try:
         return __salt__[module](**kwargs)
@@ -606,7 +610,7 @@ def assertion(assertion):
 
 def true_():
     """
-    Always return True
+    Always return ``True``
 
     CLI Example:
 
@@ -619,7 +623,7 @@ def true_():
 
 def false_():
     """
-    Always return False
+    Always return ``False``
 
     CLI Example:
 
@@ -632,7 +636,8 @@ def false_():
 
 def raise_exception(name, *args, **kwargs):
     """
-    Raise an exception. Built-in exceptions and those in ``salt.exceptions``
+    Raise an exception. Built-in exceptions and those in
+    :mod:`salt.exceptions <salt.internals.salt.exceptions>`
     can be raised by this test function. If no matching exception is found,
     then no exception will be raised and this function will return ``False``.
 

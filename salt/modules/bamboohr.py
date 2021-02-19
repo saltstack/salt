@@ -13,10 +13,10 @@ Requires a ``subdomain`` and an ``apikey`` in ``/etc/salt/minion``:
 """
 
 import logging
+import xml.etree.ElementTree as ET
 
 import salt.utils.http
 import salt.utils.yaml
-from salt._compat import ElementTree as ET
 
 log = logging.getLogger(__name__)
 

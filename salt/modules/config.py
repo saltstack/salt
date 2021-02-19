@@ -8,7 +8,6 @@ import logging
 import os
 import urllib.parse
 
-import salt._compat
 import salt.config
 import salt.syspaths as syspaths
 import salt.utils.data

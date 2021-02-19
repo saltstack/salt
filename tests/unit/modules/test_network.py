@@ -1,16 +1,12 @@
-# Import Python Libs
 import logging
 import os.path
 import socket
 
-# Import Salt Libs
 import salt.config
 import salt.modules.network as network
 import salt.utils.path
 from salt._compat import ipaddress
 from salt.exceptions import CommandExecutionError
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, mock_open, patch
 from tests.support.unit import TestCase, skipIf
