@@ -30,6 +30,7 @@ import salt.utils.powershell
 import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.timed_subprocess
+import salt.utils.url
 import salt.utils.user
 import salt.utils.versions
 import salt.utils.vt
@@ -2613,7 +2614,9 @@ def script(
             obj_name=cwd, principal=runas, permissions="full_control"
         )
 
-    path = salt.utils.files.mkstemp(dir=cwd, suffix=os.path.splitext(source)[1])
+    path = salt.utils.files.mkstemp(
+        dir=cwd, suffix=os.path.splitext(salt.utils.url.split_env(source)[0])[1]
+    )
 
     if template:
         if "pillarenv" in kwargs or "pillar" in kwargs:

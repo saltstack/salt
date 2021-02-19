@@ -103,7 +103,7 @@ class ServiceTestCase(TestCase, LoaderModuleMockMixin):
             },
             {
                 "changes": "saltstack",
-                "comment": "Started Service salt",
+                "comment": "Started service salt",
                 "name": "salt",
                 "result": True,
             },
@@ -121,13 +121,13 @@ class ServiceTestCase(TestCase, LoaderModuleMockMixin):
             },
             {
                 "changes": "saltstack",
-                "comment": "Started Service salt\nService masking not available on this minion",
+                "comment": "Started service salt\nService masking not available on this minion",
                 "name": "salt",
                 "result": True,
             },
             {
                 "changes": "saltstack",
-                "comment": "Started Service salt\nService masking not available on this minion",
+                "comment": "Started service salt\nService masking not available on this minion",
                 "name": "salt",
                 "result": True,
             },
@@ -571,7 +571,7 @@ class ServiceTestCaseFunctional(TestCase, LoaderModuleMockMixin):
             result = service.running(name=self.service_name, enable=True, reload=False)
 
         if salt.utils.platform.is_windows():
-            comment = "Started Service {}".format(self.service_name)
+            comment = "Started service {}".format(self.service_name)
         else:
             comment = "Service {} has been enabled, and is running".format(
                 self.service_name

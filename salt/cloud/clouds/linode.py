@@ -114,7 +114,6 @@ import re
 import time
 from pathlib import Path
 
-# Import Salt Libs
 import salt.config as config
 from salt.exceptions import (
     SaltCloudConfigError,
@@ -122,7 +121,6 @@ from salt.exceptions import (
     SaltCloudNotFound,
     SaltCloudSystemExit,
 )
-from salt.ext.six.moves import range
 
 try:
     import requests

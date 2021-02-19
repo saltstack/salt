@@ -9,7 +9,7 @@ The VMware cloud module allows you to manage VMware ESX, ESXi, and vCenter.
 
 See :ref:`Getting started with VMware <cloud-getting-started-vmware>` to get started.
 
-:codeauthor: Nitin Madhok <nmadhok@clemson.edu>
+:codeauthor: Nitin Madhok <nmadhok@g.clemson.edu>
 
 
 Dependencies
@@ -112,7 +112,6 @@ cloud configuration at
 To test the connection for ``my-vmware-config`` specified in the cloud
 configuration, run :py:func:`test_vcenter_connection`
 """
-
 
 import logging
 import os.path
