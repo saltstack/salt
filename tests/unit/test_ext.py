@@ -1,23 +1,15 @@
-# -*- coding: utf-8 -*-
-# Import Python libs
-from __future__ import absolute_import, unicode_literals
-
 import logging
 import os
 import subprocess
 import sys
 import tempfile
 
-# Import Salt libs
 import salt
-import salt.ext.six
 import salt.modules.cmdmod
 import salt.utils.files
 import salt.utils.platform
 import tests.support.helpers
 from tests.support.runtests import RUNTIME_VARS
-
-# Import Salt Testing libs
 from tests.support.unit import TestCase, skipIf
 
 log = logging.getLogger(__name__)
@@ -52,13 +44,7 @@ class VendorTornadoTest(TestCase):
             fp.write(tornado_source)
         # Preserve the virtual environment
         env = os.environ.copy()
-        if salt.utils.platform.is_windows():
-            if salt.ext.six.PY2:
-                env[b"PYTHONPATH"] = b";".join([a.encode() for a in sys.path])
-            else:
-                env["PYTHONPATH"] = ";".join(sys.path)
-        else:
-            env["PYTHONPATH"] = ":".join(sys.path)
+        env["PYTHONPATH"] = os.pathsep.join(sys.path)
         p = subprocess.Popen(
             [sys.executable, test_source_path],
             stderr=subprocess.PIPE,
