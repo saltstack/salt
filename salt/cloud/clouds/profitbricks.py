@@ -152,13 +152,20 @@ def __virtual__():
     return __virtualname__
 
 
+def _get_active_provider_name():
+    try:
+        return __active_provider_name__.value()
+    except AttributeError:
+        return __active_provider_name__
+
+
 def get_configured_provider():
     """
     Return the first configured instance.
     """
     return config.is_provider_configured(
         __opts__,
-        __active_provider_name__ or __virtualname__,
+        _get_active_provider_name() or __virtualname__,
         ("username", "password", "datacenter_id"),
     )
 
@@ -580,7 +587,7 @@ def list_nodes_full(conn=None, call=None):
         ret[node["name"]] = node
 
     __utils__["cloud.cache_node_list"](
-        ret, __active_provider_name__.split(":")[0], __opts__
+        ret, _get_active_provider_name().split(":")[0], __opts__
     )
 
     return ret
@@ -628,7 +635,7 @@ def show_instance(name, call=None):
         )
 
     nodes = list_nodes_full()
-    __utils__["cloud.cache_node"](nodes[name], __active_provider_name__, __opts__)
+    __utils__["cloud.cache_node"](nodes[name], _get_active_provider_name(), __opts__)
     return nodes[name]
 
 
@@ -770,7 +777,9 @@ def create(vm_):
         if (
             vm_["profile"]
             and config.is_profile_configured(
-                __opts__, (__active_provider_name__ or "profitbricks"), vm_["profile"]
+                __opts__,
+                (_get_active_provider_name() or "profitbricks"),
+                vm_["profile"],
             )
             is False
         ):
@@ -972,7 +981,7 @@ def destroy(name, call=None):
 
     if __opts__.get("update_cachedir", False) is True:
         __utils__["cloud.delete_minion_cachedir"](
-            name, __active_provider_name__.split(":")[0], __opts__
+            name, _get_active_provider_name().split(":")[0], __opts__
         )
 
     return True

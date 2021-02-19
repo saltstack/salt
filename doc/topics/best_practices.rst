@@ -22,6 +22,7 @@ General rules
 5. Don't use grains for matching in your pillar top file for any sensitive
    pillars.
 
+   .. include:: ../_incl/grains_passwords.rst
 
 Structuring States and Formulas
 -------------------------------
