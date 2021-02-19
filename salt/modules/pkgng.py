@@ -475,7 +475,7 @@ def update_package_site(new_url):
     return True
 
 
-def stats(local=False, remote=False, bytes=False, jail=None, chroot=None, root=None):
+def stats(local=False, remote=False, jail=None, chroot=None, root=None, bytes=False):
     """
     Return pkgng stats.
 
