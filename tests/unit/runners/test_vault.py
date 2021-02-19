@@ -307,7 +307,7 @@ class VaultTokenAuthTest(TestCase, LoaderModuleMockMixin):
                     "http://fake_url",
                     headers={
                         "X-Vault-Token": "test",
-                        "X-Vault-Namespace": "test_namespace"
+                        "X-Vault-Namespace": "test_namespace",
                     },
                     json=ANY,
                     verify=ANY,

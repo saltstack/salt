@@ -7,7 +7,6 @@ import logging
 import os
 from copy import copy
 
-# Import Salt libs
 import salt.utils.vault as vault
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import ANY, MagicMock, Mock, mock_open, patch
