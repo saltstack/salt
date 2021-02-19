@@ -2,17 +2,12 @@
 unit tests for the reactor runner
 """
 
-# Import Python Libs
 
 import logging
 
 import salt.runners.reactor as reactor
 from salt.exceptions import CommandExecutionError
-
-# Import Salt Libs
 from salt.utils.event import SaltEvent
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -109,10 +104,9 @@ class ReactorTest(TestCase, LoaderModuleMockMixin):
         with patch.dict(reactor.__opts__, mock_opts):
             with patch.object(SaltEvent, "get_event", return_value=event_returns):
                 with patch("salt.utils.master.get_master_key") as get_master_key:
-                    get_master_key.retun_value = MagicMock(
-                        retun_value="master_key")
+                    get_master_key.retun_value = MagicMock(retun_value="master_key")
                     ret = reactor.list_()
-                    assert ret == None
+                    assert ret is None
 
         mock_opts = {}
         mock_opts["reactor"] = [{"test_event/*": ["/srv/reactors/reactor.sls"]}]
@@ -177,18 +171,16 @@ class ReactorTest(TestCase, LoaderModuleMockMixin):
                     self.assertEqual("Reactor added.", ret["comment"])
 
         event_returns = {
-            "reactors": [
-                {"test_event/*": ["/srv/reactors/reactor.sls"]}],
+            "reactors": [{"test_event/*": ["/srv/reactors/reactor.sls"]}],
             "_stamp": "2020-09-04T17:45:33.206408",
         }
 
         with patch.dict(reactor.__opts__, mock_opts):
             with patch.object(SaltEvent, "get_event", return_value=event_returns):
                 with patch("salt.utils.master.get_master_key") as get_master_key:
-                    get_master_key.retun_value = MagicMock(
-                        retun_value="master_key")
+                    get_master_key.retun_value = MagicMock(retun_value="master_key")
                     ret = reactor.add("test_event/*", "/srv/reactor/reactor.sls")
-                    assert ret == None
+                    assert ret is None
 
     def test_delete(self):
         """
@@ -241,10 +233,9 @@ class ReactorTest(TestCase, LoaderModuleMockMixin):
         with patch.dict(reactor.__opts__, mock_opts):
             with patch.object(SaltEvent, "get_event", return_value=event_returns):
                 with patch("salt.utils.master.get_master_key") as get_master_key:
-                    get_master_key.retun_value = MagicMock(
-                        retun_value="master_key")
+                    get_master_key.retun_value = MagicMock(retun_value="master_key")
                     ret = reactor.delete("test_event/*")
-                    assert ret == None
+                    assert ret is None
 
     def test_is_leader(self):
         """
