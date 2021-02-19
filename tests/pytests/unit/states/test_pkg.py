@@ -218,7 +218,7 @@ def test_fulfills_version_string(version_string, installed_versions, expected_re
     )
     assert expected_result == pkg._fulfills_version_string(
         installed_versions, version_string
-    ), msg
+    )
 
 
 @pytest.mark.parametrize(
@@ -241,4 +241,4 @@ def test_fulfills_version_spec(installed_versions, operator, version, expected_r
     )
     assert expected_result == pkg._fulfills_version_spec(
         installed_versions, operator, version
-    ), msg
+    )
