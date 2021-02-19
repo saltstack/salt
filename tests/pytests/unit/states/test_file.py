@@ -108,7 +108,7 @@ def test_mod_beacon_file():
             "complete": True,
             "tag": "/salt/minion/minion_beacon_add_complete",
             "beacons": {
-                "beacon_inotify__tmp_tempfile": [
+                "beacon_inotify_/tmp/tempfile": [
                     {
                         "files": {
                             "/tmp/tempfile": {"mask": ["create", "delete", "modify"]},
@@ -146,10 +146,10 @@ def test_mod_beacon_file():
                                 name, sfun="managed", beacon="True"
                             )
                             expected = {
-                                "name": "beacon_inotify__tmp_tempfile",
+                                "name": "beacon_inotify_/tmp/tempfile",
                                 "changes": {},
                                 "result": True,
-                                "comment": "Adding beacon_inotify__tmp_tempfile to beacons",
+                                "comment": "Adding beacon_inotify_/tmp/tempfile to beacons",
                             }
 
                             assert ret == expected
@@ -187,7 +187,7 @@ def test_mod_beacon_directory():
             "complete": True,
             "tag": "/salt/minion/minion_beacon_add_complete",
             "beacons": {
-                "beacon_inotify__tmp_tempdir": [
+                "beacon_inotify_/tmp/tempdir": [
                     {
                         "files": {
                             "/tmp/tempdir": {
@@ -230,10 +230,10 @@ def test_mod_beacon_directory():
                                 name, sfun="directory", beacon="True"
                             )
                             expected = {
-                                "name": "beacon_inotify__tmp_tempdir",
+                                "name": "beacon_inotify_/tmp/tempdir",
                                 "changes": {},
                                 "result": True,
-                                "comment": "Adding beacon_inotify__tmp_tempdir to beacons",
+                                "comment": "Adding beacon_inotify_/tmp/tempdir to beacons",
                             }
 
                             assert ret == expected
