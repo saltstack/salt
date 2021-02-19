@@ -71,6 +71,7 @@ def test_gen_hash_crypt_no_arguments():
     assert salt.utils.pycrypto.gen_hash() is not None
 
 
+@pytest.mark.skipif(not salt.utils.pycrypto.HAS_CRYPT, reason="crypt not available")
 def test_gen_hash_crypt_default_algorithm():
     # Assert it works without algorithm passed
     default_algorithm = salt.utils.pycrypto.crypt.methods[0].name.lower()
