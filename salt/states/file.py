@@ -8872,9 +8872,7 @@ def mod_beacon(name, **kwargs):
                 data["recurse"] = _beacon_data.get("recurse", True)
                 data["exclude"] = _beacon_data.get("exclude", [])
 
-            beacon_name = "beacon_{}_{}".format(
-                beacon_module, re.sub(os.path.sep, "_", name)
-            )
+            beacon_name = "beacon_{}_{}".format(beacon_module, name)
             beacon_kwargs = {
                 "name": beacon_name,
                 "files": {name: data},
