@@ -44,6 +44,13 @@ def __virtual__():
     return True
 
 
+def _get_active_provider_name():
+    try:
+        return __active_provider_name__.value()
+    except AttributeError:
+        return __active_provider_name__
+
+
 def _get_grain_id(id_):
     if not get_configured_provider():
         return
@@ -309,7 +316,7 @@ def show_instance(name, call=None):
     if not call:
         call = "action"
     nodes = list_nodes_full(call=call)
-    __utils__["cloud.cache_node"](nodes[name], __active_provider_name__, __opts__)
+    __utils__["cloud.cache_node"](nodes[name], _get_active_provider_name(), __opts__)
     return nodes[name]
 
 
@@ -386,7 +393,7 @@ def destroy(vm_, call=None):
             )
             if __opts__.get("update_cachedir", False) is True:
                 __utils__["cloud.delete_minion_cachedir"](
-                    vm_, __active_provider_name__.split(":")[0], __opts__
+                    vm_, _get_active_provider_name().split(":")[0], __opts__
                 )
     return ret
 
@@ -493,7 +500,7 @@ def get_configured_provider(vm_=None):
     """
     if vm_ is None:
         vm_ = {}
-    dalias, driver = __active_provider_name__.split(":")
+    dalias, driver = _get_active_provider_name().split(":")
     data = None
     tgt = "unknown"
     img_provider = __opts__.get("list_images", "")
@@ -519,14 +526,17 @@ def get_configured_provider(vm_=None):
         curprof = __opts__["profile"]
         profs = __opts__["profiles"]
         tgt = "profile: {}".format(curprof)
-        if curprof in profs and profs[curprof]["provider"] == __active_provider_name__:
+        if (
+            curprof in profs
+            and profs[curprof]["provider"] == _get_active_provider_name()
+        ):
             prov, cdriver = profs[curprof]["provider"].split(":")
             tgt += " provider: {}".format(prov)
             data = get_provider(prov)
             matched = True
     # fallback if we have only __active_provider_name__
     if (__opts__.get("destroy", False) and not data) or (
-        not matched and __active_provider_name__
+        not matched and _get_active_provider_name()
     ):
         data = __opts__.get("providers", {}).get(dalias, {}).get(driver, {})
     # in all cases, verify that the linked saltmaster is alive.
@@ -537,7 +547,7 @@ def get_configured_provider(vm_=None):
         else:
             log.error(
                 "Configured provider %s minion: %s is unreachable",
-                __active_provider_name__,
+                _get_active_provider_name(),
                 data["target"],
             )
     return False

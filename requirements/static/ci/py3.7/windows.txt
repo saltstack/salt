@@ -46,7 +46,7 @@ idna==2.8
 importlib-metadata==0.23  # via jsonschema, pluggy, pytest, virtualenv
 iniconfig==1.0.1          # via pytest
 ioloop==0.1a0
-ipaddress==1.0.22
+ipaddress==1.0.22         # via kubernetes
 jaraco.functools==2.0
 jinja2==2.10.1
 jmespath==0.9.4
@@ -86,7 +86,7 @@ pyopenssl==19.0.0
 pyparsing==2.4.5          # via packaging
 pyrsistent==0.17.3        # via jsonschema
 pytest-helpers-namespace==2019.1.8
-pytest-salt-factories==0.121.0
+pytest-salt-factories==0.121.1
 pytest-subtests==0.4.0
 pytest-tempdir==2019.10.12
 pytest==6.1.2

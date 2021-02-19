@@ -12,7 +12,7 @@ from tests.support.unit import TestCase, skipIf
 try:
     from lxml import etree
 except ImportError:
-    from salt._compat import ElementTree as etree
+    import xml.etree.ElementTree as etree
 
 try:
     from jnpr.junos.utils.config import Config
