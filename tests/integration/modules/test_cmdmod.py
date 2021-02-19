@@ -472,7 +472,7 @@ class CMDModuleTest(ModuleCase):
             ).splitlines()
         self.assertIn("USER={}".format(self.runas_usr), out)
 
-    @pytest.mark.skip_if_binaries_missing("sleep")
+    @pytest.mark.skip_if_binaries_missing("sleep", message="sleep cmd not installed")
     def test_timeout(self):
         """
         cmd.run trigger timeout
@@ -482,7 +482,7 @@ class CMDModuleTest(ModuleCase):
         )
         self.assertTrue("Timed out" in out)
 
-    @pytest.mark.skip_if_binaries_missing("sleep")
+    @pytest.mark.skip_if_binaries_missing("sleep", message="sleep cmd not installed")
     def test_timeout_success(self):
         """
         cmd.run sufficient timeout to succeed
