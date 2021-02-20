@@ -4,7 +4,7 @@
 #
 #    pip-compile -o requirements/static/pkg/py3.8/darwin.txt -v requirements/darwin.txt requirements/static/pkg/darwin.in
 #
-apache-libcloud==2.4.0
+apache-libcloud==2.5.0
 certifi==2020.6.20        # via requests
 cffi==1.12.2              # via cryptography
 chardet==3.0.4            # via requests
@@ -16,7 +16,6 @@ distro==1.5.0
 gitdb==4.0.5              # via gitpython
 gitpython==3.1.12
 idna==2.8
-ipaddress==1.0.22
 jaraco.functools==2.0     # via cheroot, tempora
 jinja2==2.10.1
 linode-python==1.1.1

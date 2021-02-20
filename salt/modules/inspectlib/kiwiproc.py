@@ -31,7 +31,7 @@ except ImportError:
 try:
     from lxml import etree
 except ImportError:
-    from salt._compat import ElementTree as etree
+    import xml.etree.ElementTree as etree
 
 
 class KiwiExporter:
@@ -75,9 +75,7 @@ class KiwiExporter:
         return "\n".join(
             [
                 line
-                for line in minidom.parseString(
-                    etree.tostring(root, encoding="UTF-8", pretty_print=True)
-                )
+                for line in minidom.parseString(etree.tostring(root, encoding="UTF-8"))
                 .toprettyxml(indent="  ")
                 .split("\n")
                 if line.strip()

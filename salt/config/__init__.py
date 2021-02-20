@@ -1247,6 +1247,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "schedule": {},
         "ssh_merge_pillar": True,
         "disabled_requisites": [],
+        "reactor_niceness": None,
     }
 )
 

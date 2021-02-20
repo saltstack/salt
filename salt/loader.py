@@ -2197,14 +2197,14 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
         return (True, module_name, None, virtual_aliases)
 
-    def run(self, method, *args, **kwargs):
+    def run(self, _func_or_method, *args, **kwargs):
         """
-        Run the method in this loader's context
+        Run the `_func_or_method` in this loader's context
         """
         self._last_context = contextvars.copy_context()
-        return self._last_context.run(self._run_as, method, *args, **kwargs)
+        return self._last_context.run(self._run_as, _func_or_method, *args, **kwargs)
 
-    def _run_as(self, method, *args, **kwargs):
+    def _run_as(self, _func_or_method, *args, **kwargs):
         """
         Handle setting up the context properly and call the method
         """
@@ -2217,24 +2217,24 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             self.parent_loader = current_loader
         token = salt.loader_context.loader_ctxvar.set(self)
         try:
-            return method(*args, **kwargs)
+            return _func_or_method(*args, **kwargs)
         finally:
             self.parent_loader = None
             salt.loader_context.loader_ctxvar.reset(token)
 
-    def run_in_thread(self, method, *args, **kwargs):
+    def run_in_thread(self, _func_or_method, *args, **kwargs):
         """
         Run the function in a new thread with the context of this loader
         """
-        argslist = [self, method]
+        argslist = [self, _func_or_method]
         argslist.extend(args)
         thread = threading.Thread(target=self.target, args=argslist, kwargs=kwargs)
         thread.start()
         return thread
 
     @staticmethod
-    def target(loader, method, *args, **kwargs):
-        loader.run(method, *args, **kwargs)
+    def target(loader, _func_or_method, *args, **kwargs):
+        loader.run(_func_or_method, *args, **kwargs)
 
 
 def global_injector_decorator(inject_globals):
