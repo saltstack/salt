@@ -818,12 +818,9 @@ class TestClaimMantleOfResponsibility(TestCase):
 @skipIf(not HAS_PSUTIL, "Missing psutil")
 class TestCheckMantleOfResponsibility(TestCase):
     def test_simple_claim_no_psutil(self):
-        try:
-            self.assertIsNone(
-                salt.utils.process.check_mantle_of_responsibility("CMOR_TEST_FILE")
-            )
-        finally:
-            os.remove("CMOR_TEST_FILE")
+        self.assertIsNone(
+            salt.utils.process.check_mantle_of_responsibility("CMOR_TEST_FILE")
+        )
 
     def test_simple_claim(self):
         try:
