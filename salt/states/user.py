@@ -854,7 +854,12 @@ def present(
                 "logonscript": win_logonscript,
             }
 
-        if __salt__["user.add"](**params):
+        result = __salt__["user.add"](**params)
+        if result is not True and salt.utils.platform.is_windows():
+            ret["comment"] = result
+            ret["result"] = False
+            return ret
+        elif result:
             ret["comment"] = "New user {0} created".format(name)
             ret["changes"] = __salt__["user.info"](name)
             if not createhome:

@@ -175,7 +175,7 @@ def add(
         log.error("nbr: %s", exc.winerror)
         log.error("ctx: %s", exc.funcname)
         log.error("msg: %s", exc.strerror)
-        return False
+        return exc.strerror
 
     update(name=name, homedrive=homedrive, profile=profile, fullname=fullname)
 
@@ -277,7 +277,7 @@ def update(
         log.error("nbr: %s", exc.winerror)
         log.error("ctx: %s", exc.funcname)
         log.error("msg: %s", exc.strerror)
-        return False
+        return exc.strerror
 
     # Check parameters to update
     # Update the user object with new settings
@@ -336,7 +336,7 @@ def update(
         log.error("nbr: %s", exc.winerror)
         log.error("ctx: %s", exc.funcname)
         log.error("msg: %s", exc.strerror)
-        return False
+        return exc.strerror
 
     return True
 
@@ -376,7 +376,7 @@ def delete(name, purge=False, force=False):
         log.error("nbr: %s", exc.winerror)
         log.error("ctx: %s", exc.funcname)
         log.error("msg: %s", exc.strerror)
-        return False
+        return exc.strerror
 
     # Check if the user is logged in
     # Return a list of logged in users
@@ -414,7 +414,7 @@ def delete(name, purge=False, force=False):
                 log.error("nbr: %s", exc.winerror)
                 log.error("ctx: %s", exc.funcname)
                 log.error("msg: %s", exc.strerror)
-                return False
+                return exc.strerror
         else:
             log.error("User %s is currently logged in.", name)
             return False
@@ -433,7 +433,7 @@ def delete(name, purge=False, force=False):
                 log.error("nbr: %s", exc.winerror)
                 log.error("ctx: %s", exc.funcname)
                 log.error("msg: %s", exc.strerror)
-                return False
+                return exc.strerror
 
     # And finally remove the user account
     try:
@@ -443,7 +443,7 @@ def delete(name, purge=False, force=False):
         log.error("nbr: %s", exc.winerror)
         log.error("ctx: %s", exc.funcname)
         log.error("msg: %s", exc.strerror)
-        return False
+        return exc.strerror
 
     return True
 
