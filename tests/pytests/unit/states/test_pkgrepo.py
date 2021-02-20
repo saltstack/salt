@@ -29,7 +29,7 @@ def test_new_key_url():
 
     with patch.dict(pkgrepo.__salt__, {"pkg.get_repo": MagicMock(return_value=kwargs)}):
         ret = pkgrepo.managed(key_url=key_url, **kwargs)
-        assert {"key_url": {"old": None, "new": key_url}} == ret["changes"]
+        assert ret["changes"] == {"key_url": {"old": None, "new": key_url}}
 
 
 def test_update_key_url():
@@ -48,6 +48,6 @@ def test_update_key_url():
     with patch.dict(pkgrepo.__salt__, {"pkg.get_repo": MagicMock(return_value=kwargs)}):
         ret = pkgrepo.managed(**changed_kwargs)
         assert "key_url" in ret["changes"], "Expected a change to key_url"
-        assert {
+        assert ret["changes"] == {
             "key_url": {"old": kwargs["key_url"], "new": changed_kwargs["key_url"]}
-        } == ret["changes"]
+        }
