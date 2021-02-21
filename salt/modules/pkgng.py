@@ -1211,7 +1211,7 @@ def upgrade(*names, **kwargs):
     if force:
         opts += "f"
     if local:
-        opts += "L"
+        opts += "U"
     if fetchonly:
         opts += "F"
     if dryrun:

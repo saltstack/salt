@@ -1,21 +1,13 @@
-# -*- coding: utf-8 -*-
-
-# Import Python libs
-from __future__ import absolute_import
-
 import textwrap
 
-# Import Salt Libs
 import salt.modules.pkgng as pkgng
-
-# Import Salt Testing Libs
 from salt.utils.odict import OrderedDict
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
 
 
-class ListPackages(object):
+class ListPackages:
     def __init__(self):
         self._iteration = 0
 
@@ -250,6 +242,27 @@ class PkgNgTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertDictEqual(result, expected)
                 pkg_cmd.assert_called_with(
                     ["pkg", "upgrade", "-Fy"],
+                    output_loglevel="trace",
+                    python_shell=False,
+                )
+
+    def test_upgrade_with_local(self):
+        """
+        Test pkg upgrade to supress automatic update of the local copy of the
+        repository catalogue from remote
+        """
+        pkg_cmd = MagicMock(return_value={"retcode": 0})
+
+        with patch.dict(pkgng.__salt__, {"cmd.run_all": pkg_cmd}):
+            with patch("salt.modules.pkgng.list_pkgs", ListPackages()):
+                result = pkgng.upgrade(local=True)
+                expected = {
+                    "gettext-runtime": {"new": "0.20.1", "old": ""},
+                    "p5-Mojolicious": {"new": "8.40", "old": ""},
+                }
+                self.assertDictEqual(result, expected)
+                pkg_cmd.assert_called_with(
+                    ["pkg", "upgrade", "-Uy"],
                     output_loglevel="trace",
                     python_shell=False,
                 )
