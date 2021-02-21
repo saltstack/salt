@@ -66,7 +66,7 @@ class TimedProc:
                         str_args.append(arg)
                 args = str_args
             else:
-                if not isinstance(args, (list, tuple, (str,))):
+                if not isinstance(args, (list, tuple, str)):
                     # Handle corner case where someone does a 'cmd.run 3'
                     args = str(args)
             # Ensure that environment variables are strings
