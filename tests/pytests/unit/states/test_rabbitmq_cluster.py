@@ -28,7 +28,7 @@ def test_joined():
             ret.update(
                 {
                     "result": None,
-                    "comment": "Node is set to join " "cluster rahulha@salt",
+                    "comment": "Node is set to join cluster rahulha@salt",
                     "changes": {"new": "rahulha@salt", "old": ""},
                 }
             )
