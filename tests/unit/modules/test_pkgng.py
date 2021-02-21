@@ -246,6 +246,27 @@ class PkgNgTestCase(TestCase, LoaderModuleMockMixin):
                     python_shell=False,
                 )
 
+    def test_upgrade_with_local(self):
+        """
+        Test pkg upgrade to supress automatic update of the local copy of the
+        repository catalogue from remote
+        """
+        pkg_cmd = MagicMock(return_value={"retcode": 0})
+
+        with patch.dict(pkgng.__salt__, {"cmd.run_all": pkg_cmd}):
+            with patch("salt.modules.pkgng.list_pkgs", ListPackages()):
+                result = pkgng.upgrade(local=True)
+                expected = {
+                    "gettext-runtime": {"new": "0.20.1", "old": ""},
+                    "p5-Mojolicious": {"new": "8.40", "old": ""},
+                }
+                self.assertDictEqual(result, expected)
+                pkg_cmd.assert_called_with(
+                    ["pkg", "upgrade", "-Uy"],
+                    output_loglevel="trace",
+                    python_shell=False,
+                )
+
     def test_stats_with_local(self):
         """
         Test pkg.stats for local packages
