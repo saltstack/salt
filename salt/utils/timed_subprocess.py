@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 For running command line executables with a timeout
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import shlex
 import subprocess
@@ -13,7 +11,7 @@ import salt.utils.data
 from salt.ext import six
 
 
-class TimedProc(object):
+class TimedProc:
     """
     Create a TimedProc object, calls subprocess.Popen with passed args and **kwargs
     """
@@ -46,7 +44,7 @@ class TimedProc(object):
 
         if self.timeout and not isinstance(self.timeout, (int, float)):
             raise salt.exceptions.TimedProcTimeoutError(
-                "Error: timeout {0} must be a number".format(self.timeout)
+                "Error: timeout {} must be a number".format(self.timeout)
             )
         if kwargs.get("shell", False):
             args = salt.utils.data.decode(args, to_str=True)
@@ -59,24 +57,24 @@ class TimedProc(object):
                     try:
                         args = shlex.split(args)
                     except AttributeError:
-                        args = shlex.split(six.text_type(args))
+                        args = shlex.split(str(args))
                 str_args = []
                 for arg in args:
-                    if not isinstance(arg, six.string_types):
-                        str_args.append(six.text_type(arg))
+                    if not isinstance(arg, str):
+                        str_args.append(str(arg))
                     else:
                         str_args.append(arg)
                 args = str_args
             else:
-                if not isinstance(args, (list, tuple, six.string_types)):
+                if not isinstance(args, (list, tuple, (str,))):
                     # Handle corner case where someone does a 'cmd.run 3'
-                    args = six.text_type(args)
+                    args = str(args)
             # Ensure that environment variables are strings
-            for key, val in six.iteritems(kwargs.get("env", {})):
-                if not isinstance(val, six.string_types):
-                    kwargs["env"][key] = six.text_type(val)
-                if not isinstance(key, six.string_types):
-                    kwargs["env"][six.text_type(key)] = kwargs["env"].pop(key)
+            for key, val in kwargs.get("env", {}).items():
+                if not isinstance(val, str):
+                    kwargs["env"][key] = str(val)
+                if not isinstance(key, str):
+                    kwargs["env"][str(key)] = kwargs["env"].pop(key)
             if six.PY2 and "env" in kwargs:
                 # Ensure no unicode in custom env dict, as it can cause
                 # problems with subprocess.
@@ -113,8 +111,8 @@ class TimedProc(object):
 
                 threading.Timer(10, terminate).start()
                 raise salt.exceptions.TimedProcTimeoutError(
-                    "{0} : Timed out after {1} seconds".format(
-                        self.command, six.text_type(self.timeout),
+                    "{} : Timed out after {} seconds".format(
+                        self.command, str(self.timeout),
                     )
                 )
         return self.process.returncode
