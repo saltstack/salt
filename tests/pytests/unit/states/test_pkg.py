@@ -1,8 +1,9 @@
-import pytest
 import os
-import salt.states.pkg as pkg
+
+import pytest
 import salt.modules.beacons as beaconmod
 import salt.states.beacon as beaconstate
+import salt.states.pkg as pkg
 from salt.utils.event import SaltEvent
 from tests.support.mock import MagicMock, patch
 
@@ -258,6 +259,7 @@ def test_fulfills_version_spec(installed_versions, operator, version, expected_r
     assert expected_result == pkg._fulfills_version_spec(
         installed_versions, operator, version
     )
+
 
 def test_mod_beacon():
     """
