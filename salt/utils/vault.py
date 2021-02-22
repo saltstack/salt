@@ -401,7 +401,7 @@ def _wrapped_token_valid():
     try:
         verify = __opts__["vault"].get("verify", None)
         # Vault Enterprise requires a namespace
-        namespace = __opts__["vault"].get("namespace", None)
+        namespace = __opts__["vault"].get("namespace")
         url = "{}/v1/sys/wrapping/lookup".format(__opts__["vault"]["url"])
         if "token" not in __opts__["vault"]["auth"]:
             return False
