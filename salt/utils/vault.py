@@ -119,7 +119,7 @@ def get_vault_connection():
     def _use_local_config():
         log.debug("Using Vault connection details from local config")
         # Vault Enterprise requires a namespace
-        namespace = __opts__["vault"].get("namespace", None)
+        namespace = __opts__["vault"].get("namespace")
         try:
             if __opts__["vault"]["auth"]["method"] == "approle":
                 verify = __opts__["vault"].get("verify", None)
