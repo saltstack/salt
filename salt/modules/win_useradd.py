@@ -255,7 +255,7 @@ def update(
     .. code-block:: bash
 
         salt '*' user.update bob password=secret profile=C:\\Users\\Bob
-                 home=\\server\homeshare\bob homedrive=U:
+                 home=\\server\\homeshare\\bob homedrive=U:
     """
     # pylint: enable=anomalous-backslash-in-string
     if six.PY2:
