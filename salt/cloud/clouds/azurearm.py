@@ -148,6 +148,13 @@ def __virtual__():
     return __virtualname__
 
 
+def _get_active_provider_name():
+    try:
+        return __active_provider_name__.value()
+    except AttributeError:
+        return __active_provider_name__
+
+
 def get_api_versions(call=None, kwargs=None):  # pylint: disable=unused-argument
     """
     Get a resource type api versions
@@ -214,7 +221,7 @@ def get_configured_provider():
 
     for combo in key_combos:
         provider = config.is_provider_configured(
-            __opts__, __active_provider_name__ or __virtualname__, combo,
+            __opts__, _get_active_provider_name() or __virtualname__, combo,
         )
 
         if provider:
@@ -564,7 +571,7 @@ def show_instance(name, call=None):
         log.debug("Failed to get data for node '%s'", name)
         node = {}
 
-    __utils__["cloud.cache_node"](node, __active_provider_name__, __opts__)
+    __utils__["cloud.cache_node"](node, _get_active_provider_name(), __opts__)
 
     return node
 
@@ -1233,7 +1240,7 @@ def create(vm_):
             vm_["profile"]
             and config.is_profile_configured(
                 __opts__,
-                __active_provider_name__ or "azurearm",
+                _get_active_provider_name() or "azurearm",
                 vm_["profile"],
                 vm_=vm_,
             )
@@ -1373,7 +1380,7 @@ def destroy(name, call=None, kwargs=None):  # pylint: disable=unused-argument
 
     if __opts__.get("update_cachedir", False) is True:
         __utils__["cloud.delete_minion_cachedir"](
-            name, __active_provider_name__.split(":")[0], __opts__
+            name, _get_active_provider_name().split(":")[0], __opts__
         )
 
     cleanup_disks = config.get_cloud_config_value(

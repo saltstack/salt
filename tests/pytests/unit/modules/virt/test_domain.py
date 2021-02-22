@@ -1,10 +1,10 @@
 import os.path
+import xml.etree.ElementTree as ET
 
 import pytest
 import salt.modules.virt as virt
 import salt.syspaths
 import salt.utils.xmlutil as xmlutil
-from salt._compat import ElementTree as ET
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from tests.support.mock import MagicMock, patch
 
