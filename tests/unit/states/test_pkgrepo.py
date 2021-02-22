@@ -343,7 +343,7 @@ class PkgrepoTestCase(TestCase, LoaderModuleMockMixin):
             pkgrepo.__salt__, salt_mock
         ):
             self.assertEqual(
-                pkgrepo.migrated("/mnt", method="magic"),
+                pkgrepo.migrated("/mnt", method_="magic"),
                 {
                     "name": "/mnt",
                     "result": False,

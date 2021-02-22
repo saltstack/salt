@@ -779,8 +779,8 @@ def _copy_repository_to(root):
         __salt__["file.copy"](src=src, dst=dst, recurse=True)
 
 
-def migrated(name, keys=True, drop=False, method=None, **kwargs):
-    """Migrate a repository from one directory to another, including the
+def migrated(name, keys=True, drop=False, method_=None, **kwargs):
+    r"""Migrate a repository from one directory to another, including the
     GPG keys if requested
 
     .. versionadded:: TBD
@@ -799,7 +799,7 @@ def migrated(name, keys=True, drop=False, method=None, **kwargs):
         If True, the target repositories that do not exist in the
         source will be dropped
 
-    method
+    method\_
         If None or "salt", it will use the Salt API to migrate the
         repositories, if "copy", it will copy the repository files
         directly
@@ -815,7 +815,7 @@ def migrated(name, keys=True, drop=False, method=None, **kwargs):
         ret["comment"] = "Keys cannot be migrated for this platform"
         return ret
 
-    if method not in (None, "salt", "copy"):
+    if method_ not in (None, "salt", "copy"):
         ret["comment"] = "Migration method not supported"
         return ret
 
@@ -843,7 +843,7 @@ def migrated(name, keys=True, drop=False, method=None, **kwargs):
         return ret
 
     for repo, repo_info in repos_to_migrate:
-        if method == "copy":
+        if method_ == "copy":
             _copy_repository_to(name)
         else:
             __salt__["pkg.mod_repo"](repo, **dict(repo_info), root=name)
