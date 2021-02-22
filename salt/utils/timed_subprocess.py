@@ -8,7 +8,6 @@ import threading
 
 import salt.exceptions
 import salt.utils.data
-from salt.ext import six
 
 
 class TimedProc:
@@ -75,10 +74,6 @@ class TimedProc:
                     kwargs["env"][key] = str(val)
                 if not isinstance(key, str):
                     kwargs["env"][str(key)] = kwargs["env"].pop(key)
-            if six.PY2 and "env" in kwargs:
-                # Ensure no unicode in custom env dict, as it can cause
-                # problems with subprocess.
-                kwargs["env"] = salt.utils.data.encode_dict(kwargs["env"])
             args = salt.utils.data.decode(args)
             self.process = subprocess.Popen(args, **kwargs)
         self.command = args
