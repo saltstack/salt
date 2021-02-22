@@ -3,7 +3,7 @@ import logging
 
 import salt.modules.netmiko_mod as netmiko_mod
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import patch
+from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
 
 log = logging.getLogger(__name__)
@@ -62,6 +62,16 @@ class NetmikoTestCase(TestCase, LoaderModuleMockMixin):
         )
         self.assertEqual(ret.get("config_commands"), ["ls", "echo hello world"])
         self.assertEqual(ret.get("config_mode_command"), "config config-sess")
+
+        with patch.dict(
+            netmiko_mod.__proxy__, {"netmiko.conn": MagicMock(return_value=None)}
+        ):
+            _, ret = netmiko_mod.send_config(
+                config_commands=["ls", "echo hello world"],
+                config_mode_command="config config-sess",
+            )
+            self.assertEqual(ret.get("config_commands"), ["ls", "echo hello world"])
+            self.assertEqual(ret.get("config_mode_command"), "config config-sess")
 
     def test_virtual(self):
         with patch("salt.utils.platform.is_proxy", return_value=True, autospec=True):

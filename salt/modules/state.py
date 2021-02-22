@@ -10,7 +10,6 @@ highdata and won't hit the fileserver except for ``salt://`` links in the
 states themselves.
 """
 
-
 import logging
 import os
 import shutil
@@ -2306,21 +2305,21 @@ def disable(states):
     states = salt.utils.args.split_input(states)
 
     msg = []
-    _disabled = __salt__["grains.get"]("state_runs_disabled")
-    if not isinstance(_disabled, list):
-        _disabled = []
+    _disabled_state_runs = __salt__["grains.get"]("state_runs_disabled")
+    if not isinstance(_disabled_state_runs, list):
+        _disabled_state_runs = []
 
     _changed = False
     for _state in states:
-        if _state in _disabled:
+        if _state in _disabled_state_runs:
             msg.append("Info: {} state already disabled.".format(_state))
         else:
             msg.append("Info: {} state disabled.".format(_state))
-            _disabled.append(_state)
+            _disabled_state_runs.append(_state)
             _changed = True
 
     if _changed:
-        __salt__["grains.setval"]("state_runs_disabled", _disabled)
+        __salt__["grains.setval"]("state_runs_disabled", _disabled_state_runs)
 
     ret["msg"] = "\n".join(msg)
 
@@ -2355,22 +2354,22 @@ def enable(states):
     log.debug("states %s", states)
 
     msg = []
-    _disabled = __salt__["grains.get"]("state_runs_disabled")
-    if not isinstance(_disabled, list):
-        _disabled = []
+    _disabled_state_runs = __salt__["grains.get"]("state_runs_disabled")
+    if not isinstance(_disabled_state_runs, list):
+        _disabled_state_runs = []
 
     _changed = False
     for _state in states:
         log.debug("_state %s", _state)
-        if _state not in _disabled:
+        if _state not in _disabled_state_runs:
             msg.append("Info: {} state already enabled.".format(_state))
         else:
             msg.append("Info: {} state enabled.".format(_state))
-            _disabled.remove(_state)
+            _disabled_state_runs.remove(_state)
             _changed = True
 
     if _changed:
-        __salt__["grains.setval"]("state_runs_disabled", _disabled)
+        __salt__["grains.setval"]("state_runs_disabled", _disabled_state_runs)
 
     ret["msg"] = "\n".join(msg)
 
@@ -2399,9 +2398,11 @@ def _disabled(funs):
     that match state functions in funs.
     """
     ret = []
-    _disabled = __salt__["grains.get"]("state_runs_disabled")
+    _disabled_state_runs = __salt__["grains.get"]("state_runs_disabled")
+    if not isinstance(_disabled_state_runs, list):
+        _disabled_state_runs = []
     for state in funs:
-        for _state in _disabled:
+        for _state in _disabled_state_runs:
             if ".*" in _state:
                 target_state = _state.split(".")[0]
                 target_state = (
@@ -2477,7 +2478,7 @@ def event(
                         "{}\t{}".format(  # future lint: blacklisted-function
                             salt.utils.stringutils.to_str(ret["tag"]),
                             salt.utils.json.dumps(
-                                ret["data"],
+                                salt.utils.data.decode(ret["data"]),
                                 sort_keys=pretty,
                                 indent=None if not pretty else 4,
                             ),

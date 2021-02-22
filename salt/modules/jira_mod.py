@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 JIRA Execution module
 =====================
@@ -18,24 +17,19 @@ Configuration example:
     username: salt
     password: pass
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 
-# Import salt modules
-from salt.utils.args import clean_kwargs
+import salt.utils.args
 
-log = logging.getLogger(__name__)
-
-
-# Import third party modules
 try:
     import jira
 
     HAS_JIRA = True
 except ImportError:
     HAS_JIRA = False
+
+log = logging.getLogger(__name__)
 
 __virtualname__ = "jira"
 __proxyenabled__ = ["*"]
@@ -173,7 +167,7 @@ def create_issue(
         "priority": {"name": priority},
         "labels": labels,
     }
-    data.update(clean_kwargs(**kwargs))
+    data.update(salt.utils.args.clean_kwargs(**kwargs))
     issue = jira_.create_issue(data)
     issue_key = str(issue)
     if assignee:

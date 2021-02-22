@@ -2,6 +2,8 @@
     tests.pytests.conftest
     ~~~~~~~~~~~~~~~~~~~~~~
 """
+import functools
+import inspect
 import logging
 import os
 import shutil
@@ -9,6 +11,7 @@ import stat
 
 import attr
 import pytest
+import salt.ext.tornado.ioloop
 import salt.utils.files
 import salt.utils.platform
 from salt.serializers import yaml
@@ -316,8 +319,116 @@ def salt_proxy_factory(salt_factories, salt_master_factory):
     return factory
 
 
+@pytest.fixture
+def temp_salt_master(
+    request, salt_factories,
+):
+    config_defaults = {
+        "open_mode": True,
+        "transport": request.config.getoption("--transport"),
+    }
+    factory = salt_factories.get_salt_master_daemon(
+        random_string("temp-master-"),
+        config_defaults=config_defaults,
+        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+    )
+    return factory
+
+
+@pytest.fixture
+def temp_salt_minion(temp_salt_master):
+    config_defaults = {
+        "open_mode": True,
+        "transport": temp_salt_master.config["transport"],
+    }
+    factory = temp_salt_master.get_salt_minion_daemon(
+        random_string("temp-minion-"),
+        config_defaults=config_defaults,
+        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+    )
+    factory.register_after_terminate_callback(
+        pytest.helpers.remove_stale_minion_key, temp_salt_master, factory.id
+    )
+    return factory
+
+
 @pytest.fixture(scope="session")
 def bridge_pytest_and_runtests():
     """
     We're basically overriding the same fixture defined in tests/conftest.py
     """
+
+
+# ----- Async Test Fixtures ----------------------------------------------------------------------------------------->
+# This is based on https://github.com/eukaryote/pytest-tornasync
+# The reason why we don't use that pytest plugin instead is because it has
+# tornado as a dependency, and we need to use the tornado we ship with salt
+
+
+def get_test_timeout(pyfuncitem):
+    default_timeout = 30
+    marker = pyfuncitem.get_closest_marker("timeout")
+    if marker:
+        return marker.kwargs.get("seconds") or default_timeout
+    return default_timeout
+
+
+@pytest.mark.tryfirst
+def pytest_pycollect_makeitem(collector, name, obj):
+    if collector.funcnamefilter(name) and inspect.iscoroutinefunction(obj):
+        return list(collector._genfunctions(name, obj))
+
+
+@pytest.hookimpl(tryfirst=True)
+def pytest_runtest_setup(item):
+    if inspect.iscoroutinefunction(item.obj):
+        if "io_loop" not in item.fixturenames:
+            # Append the io_loop fixture for the async functions
+            item.fixturenames.append("io_loop")
+
+
+class CoroTestFunction:
+    def __init__(self, func, kwargs):
+        self.func = func
+        self.kwargs = kwargs
+        functools.update_wrapper(self, func)
+
+    async def __call__(self):
+        ret = await self.func(**self.kwargs)
+        return ret
+
+
+@pytest.mark.tryfirst
+def pytest_pyfunc_call(pyfuncitem):
+    if not inspect.iscoroutinefunction(pyfuncitem.obj):
+        return
+
+    funcargs = pyfuncitem.funcargs
+    testargs = {arg: funcargs[arg] for arg in pyfuncitem._fixtureinfo.argnames}
+
+    try:
+        loop = funcargs["io_loop"]
+    except KeyError:
+        loop = salt.ext.tornado.ioloop.IOLoop.current()
+
+    loop.run_sync(
+        CoroTestFunction(pyfuncitem.obj, testargs), timeout=get_test_timeout(pyfuncitem)
+    )
+    return True
+
+
+@pytest.fixture
+def io_loop():
+    """
+    Create new io loop for each test, and tear it down after.
+    """
+    loop = salt.ext.tornado.ioloop.IOLoop()
+    loop.make_current()
+    try:
+        yield loop
+    finally:
+        loop.clear_current()
+        loop.close(all_fds=True)
+
+
+# <---- Async Test Fixtures ------------------------------------------------------------------------------------------

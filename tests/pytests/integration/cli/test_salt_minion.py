@@ -1,9 +1,7 @@
 """
-tests.integration.shell.minion
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests.pytests.integration.cli.test_salt_minion
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
-
-
 import logging
 import os
 import time

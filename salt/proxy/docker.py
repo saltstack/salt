@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Docker Proxy Minion
 
@@ -32,7 +31,6 @@ name
 
     Name of the docker container
 """
-from __future__ import absolute_import, unicode_literals
 
 __proxyenabled__ = ["docker"]
 __virtualname__ = "docker"
@@ -40,7 +38,7 @@ __virtualname__ = "docker"
 
 def __virtual__():
     if __opts__.get("proxy", {}).get("proxytype") != __virtualname__:
-        return False, "Proxytype does not match: {0}".format(__virtualname__)
+        return False, "Proxytype does not match: {}".format(__virtualname__)
     return True
 
 

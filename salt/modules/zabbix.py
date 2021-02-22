@@ -23,22 +23,17 @@ Support for Zabbix
 :codeauthor: Jiri Kotlin <jiri.kotlin@ultimum.io>
 """
 
-# Import Python libs
 import logging
 import os
 import socket
+import urllib.error
 
 import salt.utils.data
 import salt.utils.files
 import salt.utils.http
 import salt.utils.json
 from salt.exceptions import SaltException
-
-# pylint: disable=import-error,no-name-in-module,unused-import
-from salt.ext.six.moves.urllib.error import HTTPError, URLError
 from salt.utils.versions import LooseVersion as _LooseVersion
-
-# pylint: enable=import-error,no-name-in-module,unused-import
 
 log = logging.getLogger(__name__)
 
@@ -128,7 +123,7 @@ def _frontend_url():
         try:
             response = salt.utils.http.query(frontend_url)
             error = response["error"]
-        except HTTPError as http_e:
+        except urllib.error.HTTPError as http_e:
             error = str(http_e)
         if error.find("412: Precondition Failed"):
             return frontend_url

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 1&1 Cloud Server Module
 =======================
@@ -91,18 +90,12 @@ Create a block storage
 
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import os
 import pprint
 import time
 
-# Import salt libs
 import salt.config as config
-
-# Import salt.cloud libs
 import salt.utils.cloud
 import salt.utils.files
 import salt.utils.stringutils
@@ -113,7 +106,6 @@ from salt.exceptions import (
     SaltCloudNotFound,
     SaltCloudSystemExit,
 )
-from salt.ext import six
 
 try:
     # pylint: disable=no-name-in-module
@@ -151,12 +143,19 @@ def __virtual__():
     return __virtualname__
 
 
+def _get_active_provider_name():
+    try:
+        return __active_provider_name__.value()
+    except AttributeError:
+        return __active_provider_name__
+
+
 def get_configured_provider():
     """
     Return the first configured instance.
     """
     return config.is_provider_configured(
-        __opts__, __active_provider_name__ or __virtualname__, ("api_token",)
+        __opts__, _get_active_provider_name() or __virtualname__, ("api_token",)
     )
 
 
@@ -201,7 +200,7 @@ def get_size(vm_):
         return size
 
     raise SaltCloudNotFound(
-        "The specified size, '{0}', could not be found.".format(vm_size)
+        "The specified size, '{}', could not be found.".format(vm_size)
     )
 
 
@@ -214,12 +213,12 @@ def get_image(vm_):
     )
 
     images = avail_images()
-    for key, value in six.iteritems(images):
+    for key, value in images.items():
         if vm_image and vm_image in (images[key]["id"], images[key]["name"]):
             return images[key]
 
     raise SaltCloudNotFound(
-        "The specified image, '{0}', could not be found.".format(vm_image)
+        "The specified image, '{}', could not be found.".format(vm_image)
     )
 
 
@@ -463,7 +462,7 @@ def show_instance(name, call=None):
         )
 
     nodes = list_nodes_full()
-    __utils__["cloud.cache_node"](nodes[name], __active_provider_name__, __opts__)
+    __utils__["cloud.cache_node"](nodes[name], _get_active_provider_name(), __opts__)
     return nodes[name]
 
 
@@ -589,7 +588,7 @@ def create(vm_):
         if (
             vm_["profile"]
             and config.is_profile_configured(
-                __opts__, (__active_provider_name__ or "oneandone"), vm_["profile"]
+                __opts__, (_get_active_provider_name() or "oneandone"), vm_["profile"]
             )
             is False
         ):
@@ -611,7 +610,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "requesting instance",
-        "salt/cloud/{0}/requesting".format(vm_["name"]),
+        "salt/cloud/{}/requesting".format(vm_["name"]),
         args={"name": vm_["name"]},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -687,7 +686,7 @@ def create(vm_):
         except SaltCloudSystemExit:
             pass
         finally:
-            raise SaltCloudSystemExit(six.text_type(exc.message))
+            raise SaltCloudSystemExit(str(exc.message))
 
     log.debug("VM is now running")
     log.info("Created Cloud VM %s", vm_)
@@ -696,7 +695,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "created instance",
-        "salt/cloud/{0}/created".format(vm_["name"]),
+        "salt/cloud/{}/created".format(vm_["name"]),
         args={
             "name": vm_["name"],
             "profile": vm_["profile"],
@@ -740,7 +739,7 @@ def destroy(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroying instance",
-        "salt/cloud/{0}/destroying".format(name),
+        "salt/cloud/{}/destroying".format(name),
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -754,7 +753,7 @@ def destroy(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroyed instance",
-        "salt/cloud/{0}/destroyed".format(name),
+        "salt/cloud/{}/destroyed".format(name),
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -762,7 +761,7 @@ def destroy(name, call=None):
 
     if __opts__.get("update_cachedir", False) is True:
         __utils__["cloud.delete_minion_cachedir"](
-            name, __active_provider_name__.split(":")[0], __opts__
+            name, _get_active_provider_name().split(":")[0], __opts__
         )
 
     return True
@@ -852,7 +851,7 @@ def get_key_filename(vm_):
         key_filename = os.path.expanduser(key_filename)
         if not os.path.isfile(key_filename):
             raise SaltCloudConfigError(
-                "The defined ssh_private_key '{0}' does not exist".format(key_filename)
+                "The defined ssh_private_key '{}' does not exist".format(key_filename)
             )
 
         return key_filename
@@ -869,7 +868,7 @@ def load_public_key(vm_):
         public_key_filename = os.path.expanduser(public_key_filename)
         if not os.path.isfile(public_key_filename):
             raise SaltCloudConfigError(
-                "The defined ssh_public_key '{0}' does not exist".format(
+                "The defined ssh_public_key '{}' does not exist".format(
                     public_key_filename
                 )
             )
@@ -903,11 +902,11 @@ def _wait_for_completion(conn, wait_timeout, server_id):
         if server_state == "powered_on":
             return
         elif server_state == "failed":
-            raise Exception("Server creation failed for {0}".format(server_id))
+            raise Exception("Server creation failed for {}".format(server_id))
         elif server_state in ("active", "enabled", "deploying", "configuring"):
             continue
         else:
-            raise Exception("Unknown server state {0}".format(server_state))
+            raise Exception("Unknown server state {}".format(server_state))
     raise Exception(
-        "Timed out waiting for server create completion for {0}".format(server_id)
+        "Timed out waiting for server create completion for {}".format(server_id)
     )

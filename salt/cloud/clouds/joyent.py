@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Joyent Cloud Module
 ===================
@@ -48,13 +47,10 @@ included:
 
 :depends: PyCrypto
 """
-# pylint: disable=invalid-name,function-redefined
-
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import base64
 import datetime
+import http.client
 import inspect
 import logging
 import os
@@ -66,18 +62,11 @@ import salt.utils.files
 import salt.utils.http
 import salt.utils.json
 import salt.utils.yaml
-from salt.cloud.libcloudfuncs import node_state
 from salt.exceptions import (
     SaltCloudExecutionFailure,
     SaltCloudExecutionTimeout,
     SaltCloudNotFound,
     SaltCloudSystemExit,
-)
-
-# Import salt libs
-from salt.ext import six
-from salt.ext.six.moves import (  # pylint: disable=import-error,no-name-in-module
-    http_client,
 )
 
 try:
@@ -124,10 +113,10 @@ DEFAULT_LOCATION = "us-east-1"
 POLL_ALL_LOCATIONS = True
 
 VALID_RESPONSE_CODES = [
-    http_client.OK,
-    http_client.ACCEPTED,
-    http_client.CREATED,
-    http_client.NO_CONTENT,
+    http.client.OK,
+    http.client.ACCEPTED,
+    http.client.CREATED,
+    http.client.NO_CONTENT,
 ]
 
 
@@ -144,12 +133,19 @@ def __virtual__():
     return __virtualname__
 
 
+def _get_active_provider_name():
+    try:
+        return __active_provider_name__.value()
+    except AttributeError:
+        return __active_provider_name__
+
+
 def get_configured_provider():
     """
     Return the first configured instance.
     """
     return config.is_provider_configured(
-        __opts__, __active_provider_name__ or __virtualname__, ("user", "password")
+        __opts__, _get_active_provider_name() or __virtualname__, ("user", "password")
     )
 
 
@@ -161,12 +157,12 @@ def get_image(vm_):
 
     vm_image = config.get_cloud_config_value("image", vm_, __opts__)
 
-    if vm_image and six.text_type(vm_image) in images:
+    if vm_image and str(vm_image) in images:
         images[vm_image]["name"] = images[vm_image]["id"]
         return images[vm_image]
 
     raise SaltCloudNotFound(
-        "The specified image, '{0}', could not be found.".format(vm_image)
+        "The specified image, '{}', could not be found.".format(vm_image)
     )
 
 
@@ -179,11 +175,11 @@ def get_size(vm_):
     if not vm_size:
         raise SaltCloudNotFound("No size specified for this VM.")
 
-    if vm_size and six.text_type(vm_size) in sizes:
+    if vm_size and str(vm_size) in sizes:
         return sizes[vm_size]
 
     raise SaltCloudNotFound(
-        "The specified size, '{0}', could not be found.".format(vm_size)
+        "The specified size, '{}', could not be found.".format(vm_size)
     )
 
 
@@ -191,7 +187,7 @@ def query_instance(vm_=None, call=None):
     """
     Query an instance upon creation from the Joyent API
     """
-    if isinstance(vm_, six.string_types) and call == "action":
+    if isinstance(vm_, str) and call == "action":
         vm_ = {"name": vm_, "provider": "joyent"}
 
     if call == "function":
@@ -204,7 +200,7 @@ def query_instance(vm_=None, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "querying instance",
-        "salt/cloud/{0}/querying".format(vm_["name"]),
+        "salt/cloud/{}/querying".format(vm_["name"]),
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
     )
@@ -249,7 +245,7 @@ def query_instance(vm_=None, call=None):
         except SaltCloudSystemExit:
             pass
         finally:
-            raise SaltCloudSystemExit(six.text_type(exc))
+            raise SaltCloudSystemExit(str(exc))
 
     return data
 
@@ -269,7 +265,10 @@ def create(vm_):
         if (
             vm_["profile"]
             and config.is_profile_configured(
-                __opts__, __active_provider_name__ or "joyent", vm_["profile"], vm_=vm_
+                __opts__,
+                _get_active_provider_name() or "joyent",
+                vm_["profile"],
+                vm_=vm_,
             )
             is False
         ):
@@ -284,7 +283,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "starting create",
-        "salt/cloud/{0}/creating".format(vm_["name"]),
+        "salt/cloud/{}/creating".format(vm_["name"]),
         args=__utils__["cloud.filter_event"](
             "creating", vm_, ["name", "profile", "provider", "driver"]
         ),
@@ -312,7 +311,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "requesting instance",
-        "salt/cloud/{0}/requesting".format(vm_["name"]),
+        "salt/cloud/{}/requesting".format(vm_["name"]),
         args={
             "kwargs": __utils__["cloud.filter_event"](
                 "requesting", kwargs, list(kwargs)
@@ -338,7 +337,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "created instance",
-        "salt/cloud/{0}/created".format(vm_["name"]),
+        "salt/cloud/{}/created".format(vm_["name"]),
         args=__utils__["cloud.filter_event"](
             "created", vm_, ["name", "profile", "provider", "driver"]
         ),
@@ -375,12 +374,12 @@ def create_node(**kwargs):
         create_data["locality"] = locality
 
     if metadata is not None:
-        for key, value in six.iteritems(metadata):
-            create_data["metadata.{0}".format(key)] = value
+        for key, value in metadata.items():
+            create_data["metadata.{}".format(key)] = value
 
     if tag is not None:
-        for key, value in six.iteritems(tag):
-            create_data["tag.{0}".format(key)] = value
+        for key, value in tag.items():
+            create_data["tag.{}".format(key)] = value
 
     if firewall_enabled is not None:
         create_data["firewall_enabled"] = firewall_enabled
@@ -420,7 +419,7 @@ def destroy(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroying instance",
-        "salt/cloud/{0}/destroying".format(name),
+        "salt/cloud/{}/destroying".format(name),
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -428,7 +427,7 @@ def destroy(name, call=None):
 
     node = get_node(name)
     ret = query(
-        command="my/machines/{0}".format(node["id"]),
+        command="my/machines/{}".format(node["id"]),
         location=node["location"],
         method="DELETE",
     )
@@ -436,7 +435,7 @@ def destroy(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroyed instance",
-        "salt/cloud/{0}/destroyed".format(name),
+        "salt/cloud/{}/destroyed".format(name),
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -444,7 +443,7 @@ def destroy(name, call=None):
 
     if __opts__.get("update_cachedir", False) is True:
         __utils__["cloud.delete_minion_cachedir"](
-            name, __active_provider_name__.split(":")[0], __opts__
+            name, _get_active_provider_name().split(":")[0], __opts__
         )
 
     return ret[0] in VALID_RESPONSE_CODES
@@ -468,7 +467,7 @@ def reboot(name, call=None):
         name=name,
         call=call,
         method="POST",
-        command="my/machines/{0}".format(node["id"]),
+        command="my/machines/{}".format(node["id"]),
         location=node["location"],
         data={"action": "reboot"},
     )
@@ -493,7 +492,7 @@ def stop(name, call=None):
         name=name,
         call=call,
         method="POST",
-        command="my/machines/{0}".format(node["id"]),
+        command="my/machines/{}".format(node["id"]),
         location=node["location"],
         data={"action": "stop"},
     )
@@ -519,7 +518,7 @@ def start(name, call=None):
         name=name,
         call=call,
         method="POST",
-        command="my/machines/{0}".format(node["id"]),
+        command="my/machines/{}".format(node["id"]),
         location=node["location"],
         data={"action": "start"},
     )
@@ -559,7 +558,7 @@ def take_action(
         ret = query(command=command, data=data, method=method, location=location)
         log.info("Success %s for node %s", caller, name)
     except Exception as exc:  # pylint: disable=broad-except
-        if "InvalidState" in six.text_type(exc):
+        if "InvalidState" in str(exc):
             ret = [200, {}]
         else:
             log.error(
@@ -692,12 +691,44 @@ def show_instance(name, call=None):
     """
     node = get_node(name)
     ret = query(
-        command="my/machines/{0}".format(node["id"]),
+        command="my/machines/{}".format(node["id"]),
         location=node["location"],
         method="GET",
     )
 
     return ret
+
+
+def _old_libcloud_node_state(id_):
+    """
+    Libcloud supported node states
+    """
+    states_int = {
+        0: "RUNNING",
+        1: "REBOOTING",
+        2: "TERMINATED",
+        3: "PENDING",
+        4: "UNKNOWN",
+        5: "STOPPED",
+        6: "SUSPENDED",
+        7: "ERROR",
+        8: "PAUSED",
+    }
+    states_str = {
+        "running": "RUNNING",
+        "rebooting": "REBOOTING",
+        "starting": "STARTING",
+        "terminated": "TERMINATED",
+        "pending": "PENDING",
+        "unknown": "UNKNOWN",
+        "stopping": "STOPPING",
+        "stopped": "STOPPED",
+        "suspended": "SUSPENDED",
+        "error": "ERROR",
+        "paused": "PAUSED",
+        "reconfiguring": "RECONFIGURING",
+    }
+    return states_str[id_] if isinstance(id_, str) else states_int[id_]
 
 
 def joyent_node_state(id_):
@@ -720,7 +751,7 @@ def joyent_node_state(id_):
     if id_ not in states:
         id_ = "unknown"
 
-    return node_state(states[id_])
+    return _old_libcloud_node_state(states[id_])
 
 
 def reformat_node(item=None, full=False):
@@ -759,7 +790,7 @@ def reformat_node(item=None, full=False):
     # remove all the extra key value pairs to provide a brief listing
     to_del = []
     if not full:
-        for key in six.iterkeys(item):  # iterate over a copy of the keys
+        for key in item.keys():  # iterate over a copy of the keys
             if key not in desired_keys:
                 to_del.append(key)
 
@@ -889,13 +920,11 @@ def avail_images(call=None):
         get_configured_provider(),
         __opts__,
         search_global=False,
-        default="{0}{1}/{2}/images".format(
-            DEFAULT_LOCATION, JOYENT_API_HOST_SUFFIX, user
-        ),
+        default="{}{}/{}/images".format(DEFAULT_LOCATION, JOYENT_API_HOST_SUFFIX, user),
     )
 
     if not img_url.startswith("http://") and not img_url.startswith("https://"):
-        img_url = "{0}://{1}".format(_get_proto(), img_url)
+        img_url = "{}://{}".format(_get_proto(), img_url)
 
     rcode, data = query(command="my/images", method="GET")
     log.debug(data)
@@ -961,7 +990,7 @@ def show_key(kwargs=None, call=None):
         log.error("A keyname is required.")
         return False
 
-    rcode, data = query(command="my/keys/{0}".format(kwargs["keyname"]), method="GET",)
+    rcode, data = query(command="my/keys/{}".format(kwargs["keyname"]), method="GET",)
     return {"keys": {data["name"]: data["key"]}}
 
 
@@ -1027,7 +1056,7 @@ def delete_key(kwargs=None, call=None):
         return False
 
     rcode, data = query(
-        command="my/keys/{0}".format(kwargs["keyname"]), method="DELETE",
+        command="my/keys/{}".format(kwargs["keyname"]), method="DELETE",
     )
     return data
 
@@ -1040,7 +1069,7 @@ def get_location_path(
     :param location: joyent data center location
     :return: url
     """
-    return "{0}://{1}{2}".format(_get_proto(), location, api_host_suffix)
+    return "{}://{}{}".format(_get_proto(), location, api_host_suffix)
 
 
 def query(action=None, command=None, args=None, method="GET", location=None, data=None):
@@ -1111,7 +1140,7 @@ def query(action=None, command=None, args=None, method="GET", location=None, dat
         path += action
 
     if command:
-        path += "/{0}".format(command)
+        path += "/{}".format(command)
 
     log.debug("User: '%s' on PATH: %s", user, path)
 
@@ -1134,9 +1163,9 @@ def query(action=None, command=None, args=None, method="GET", location=None, dat
     signed = base64.b64encode(signed)
     user_arr = user.split("/")
     if len(user_arr) == 1:
-        keyid = "/{0}/keys/{1}".format(user_arr[0], ssh_keyname)
+        keyid = "/{}/keys/{}".format(user_arr[0], ssh_keyname)
     elif len(user_arr) == 2:
-        keyid = "/{0}/users/{1}/keys/{2}".format(user_arr[0], user_arr[1], ssh_keyname)
+        keyid = "/{}/users/{}/keys/{}".format(user_arr[0], user_arr[1], ssh_keyname)
     else:
         log.error("Malformed user string")
 
@@ -1145,7 +1174,7 @@ def query(action=None, command=None, args=None, method="GET", location=None, dat
         "Accept": "application/json",
         "X-Api-Version": JOYENT_API_VERSION,
         "Date": timestamp,
-        "Authorization": 'Signature keyId="{0}",algorithm="rsa-sha256" {1}'.format(
+        "Authorization": 'Signature keyId="{}",algorithm="rsa-sha256" {}'.format(
             keyid, signed.decode(__salt_system_encoding__)
         ),
     }
