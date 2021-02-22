@@ -6,12 +6,12 @@ Connection library for Amazon S3
 
 import logging
 import urllib.parse
+import xml.etree.ElementTree as ET
 
 import salt.utils.aws
 import salt.utils.files
 import salt.utils.hashutils
 import salt.utils.xmlutil as xml
-from salt._compat import ElementTree as ET
 from salt.exceptions import CommandExecutionError
 
 try:

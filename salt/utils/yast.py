@@ -4,10 +4,11 @@ Utilities for managing YAST
 .. versionadded:: Beryllium
 """
 
+import xml.etree.ElementTree as ET
+
 import salt.utils.files
 import salt.utils.xmlutil as xml
 import salt.utils.yaml
-from salt._compat import ElementTree as ET
 
 
 def mksls(src, dst=None):

@@ -127,6 +127,15 @@ class CacheDisk(CacheDict):
         # Do the same as the parent but also persist
         self._write()
 
+    def clear(self):
+        """
+        Clear the cache
+        """
+        self._key_cache_time.clear()
+        self._dict.clear()
+        # Do the same as the parent but also persist
+        self._write()
+
     def _read(self):
         """
         Read in from disk

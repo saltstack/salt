@@ -79,13 +79,20 @@ def __virtual__():
     return __virtualname__
 
 
+def _get_active_provider_name():
+    try:
+        return __active_provider_name__.value()
+    except AttributeError:
+        return __active_provider_name__
+
+
 def get_configured_provider():
     """
     Return the first configured instance.
     """
     configured = config.is_provider_configured(
         __opts__,
-        __active_provider_name__ or __virtualname__,
+        _get_active_provider_name() or __virtualname__,
         (),  # keys we need from the provider configuration
     )
     return configured
@@ -146,7 +153,9 @@ def create(vm_info):
         if (
             vm_info["profile"]
             and config.is_profile_configured(
-                __opts__, __active_provider_name__ or "virtualbox", vm_info["profile"]
+                __opts__,
+                _get_active_provider_name() or "virtualbox",
+                vm_info["profile"],
             )
             is False
         ):
