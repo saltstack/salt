@@ -73,14 +73,14 @@ except ImportError:
 
 
 # Set the minimum version of PyWinrm.
-WINRM_MIN_VER = "0.4.1"
+WINRM_MIN_VER = "0.3.0"
 
 
 try:
     import winrm
     from winrm.exceptions import WinRMTransportError
 
-    # Verify WinRM 0.4.1 or greater
+    # Verify WinRM 0.3.0 or greater
     import pkg_resources  # pylint: disable=3rd-party-module-not-gated
 
     winrm_pkg = pkg_resources.get_distribution("pywinrm")
@@ -1219,7 +1219,7 @@ def deploy_windows(
 
     if use_winrm and not HAS_WINRM:
         log.error(
-            "WinRM requested but module winrm could not be imported."
+            "WinRM requested but module winrm could not be imported. "
             "Ensure you are using version {} or higher.".format(WINRM_MIN_VER)
         )
         return False
