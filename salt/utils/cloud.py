@@ -2,7 +2,6 @@
 Utility functions for salt.cloud
 """
 
-
 import codecs
 import copy
 import errno
