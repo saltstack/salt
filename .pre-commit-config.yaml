@@ -204,17 +204,6 @@ repos:
           - --passthrough-line-from-input=^pyobjc(.*)$
           - requirements/static/pkg/darwin.in
 
-      - id: pip-tools-compile
-        alias: compile-pkg-windows-3.5-zmq-requirements
-        name: Windows Packaging Py3.5 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|crypto|windows)\.txt|static/pkg/(windows\.in|py3\.5/windows\.txt))$
-        pass_filenames: false
-        args:
-          - -v
-          - --py-version=3.5
-          - --platform=windows
-          - --include=requirements/windows.txt
-          - requirements/static/pkg/windows.in
 
       - id: pip-tools-compile
         alias: compile-pkg-windows-3.6-zmq-requirements
@@ -666,20 +655,6 @@ repos:
           - --out-prefix=darwin
           - requirements/static/ci/crypto.in
 
-
-      - id: pip-tools-compile
-        alias: compile-ci-windows-py3.5-zmq-requirements
-        name: Windows CI Py3.5 ZeroMQ Requirements
-        files: requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(windows|common)\.in|pkg/py3\.5/windows\.txt))$
-        pass_filenames: false
-        args:
-          - -v
-          - --py-version=3.5
-          - --platform=windows
-          - --include=requirements/static/pkg/py{py_version}/windows.txt
-          - --include=requirements/pytest.txt
-          - --include=requirements/static/ci/common.in
-          - requirements/static/ci/windows.in
 
       - id: pip-tools-compile
         alias: compile-ci-windows-py3.6-zmq-requirements
