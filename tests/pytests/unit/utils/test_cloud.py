@@ -39,7 +39,6 @@ def create_class(tmp_path):
             """
             A test keyring which always outputs same password
             """
-
             def __init__(self):
                 self.__storage = {}
 
