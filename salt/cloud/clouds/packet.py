@@ -92,12 +92,19 @@ def __virtual__():
     return __virtualname__
 
 
+def _get_active_provider_name():
+    try:
+        return __active_provider_name__.value()
+    except AttributeError:
+        return __active_provider_name__
+
+
 def get_configured_provider():
     """
     Return the first configured instance.
     """
     return config.is_provider_configured(
-        __opts__, __active_provider_name__ or __virtualname__, ("token",)
+        __opts__, _get_active_provider_name() or __virtualname__, ("token",)
     )
 
 
@@ -262,7 +269,7 @@ def is_profile_configured(vm_):
             vm_["profile"]
             and config.is_profile_configured(
                 __opts__,
-                __active_provider_name__ or __virtualname__,
+                _get_active_provider_name() or __virtualname__,
                 vm_["profile"],
                 vm_=vm_,
             )
@@ -270,7 +277,7 @@ def is_profile_configured(vm_):
         ):
             return False
 
-        alias, driver = __active_provider_name__.split(":")
+        alias, driver = _get_active_provider_name().split(":")
 
         profile_data = __opts__["providers"][alias][driver]["profiles"][vm_["profile"]]
 

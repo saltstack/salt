@@ -12,7 +12,6 @@ import salt.utils.path
 import salt.utils.platform
 import salt.version
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
-from tests.support.runtests import RUNTIME_VARS
 
 log = logging.getLogger(__name__)
 
@@ -40,22 +39,22 @@ def virtualenv(virtualenv, use_static_requirements):
     return virtualenv
 
 
-def test_wheel(virtualenv, cache_dir, use_static_requirements):
+def test_wheel(virtualenv, cache_dir, use_static_requirements, src_dir):
     """
     test building and installing a bdist_wheel package
     """
     # Let's create the testing virtualenv
     with virtualenv as venv:
-        venv.run(venv.venv_python, "setup.py", "clean", cwd=RUNTIME_VARS.CODE_DIR)
+        venv.run(venv.venv_python, "setup.py", "clean", cwd=src_dir)
         venv.run(
             venv.venv_python,
             "setup.py",
             "bdist_wheel",
             "--dist-dir",
             str(cache_dir),
-            cwd=RUNTIME_VARS.CODE_DIR,
+            cwd=src_dir,
         )
-        venv.run(venv.venv_python, "setup.py", "clean", cwd=RUNTIME_VARS.CODE_DIR)
+        venv.run(venv.venv_python, "setup.py", "clean", cwd=src_dir)
 
         salt_generated_package = list(cache_dir.glob("*.whl"))
         if not salt_generated_package:
@@ -114,7 +113,7 @@ def test_wheel(virtualenv, cache_dir, use_static_requirements):
         assert salt_generated_version_file_path.is_file()
 
 
-def test_egg(virtualenv, cache_dir, use_static_requirements):
+def test_egg(virtualenv, cache_dir, use_static_requirements, src_dir):
     """
     test building and installing a bdist_egg package
     """
@@ -132,7 +131,7 @@ def test_egg(virtualenv, cache_dir, use_static_requirements):
                     setuptools_version
                 )
             )
-        venv.run(venv.venv_python, "setup.py", "clean", cwd=RUNTIME_VARS.CODE_DIR)
+        venv.run(venv.venv_python, "setup.py", "clean", cwd=src_dir)
 
         # Setuptools installs pre-release packages if we don't pin to an exact version
         # Let's download and install requirements before, running salt's install test
@@ -143,7 +142,7 @@ def test_egg(virtualenv, cache_dir, use_static_requirements):
             "download",
             "--dest",
             str(cache_dir),
-            RUNTIME_VARS.CODE_DIR,
+            src_dir,
         )
         packages = []
         for fname in cache_dir.iterdir():
@@ -190,9 +189,9 @@ def test_egg(virtualenv, cache_dir, use_static_requirements):
             "bdist_egg",
             "--dist-dir",
             str(cache_dir),
-            cwd=RUNTIME_VARS.CODE_DIR,
+            cwd=src_dir,
         )
-        venv.run(venv.venv_python, "setup.py", "clean", cwd=RUNTIME_VARS.CODE_DIR)
+        venv.run(venv.venv_python, "setup.py", "clean", cwd=src_dir)
 
         salt_generated_package = list(cache_dir.glob("*.egg"))
         if not salt_generated_package:
@@ -259,13 +258,13 @@ def test_egg(virtualenv, cache_dir, use_static_requirements):
     and sys.version_info < (3, 6),
     reason="Skip on python 3.5",
 )
-def test_sdist(virtualenv, cache_dir, use_static_requirements):
+def test_sdist(virtualenv, cache_dir, use_static_requirements, src_dir):
     """
     test building and installing a sdist package
     """
     # Let's create the testing virtualenv
     with virtualenv as venv:
-        venv.run(venv.venv_python, "setup.py", "clean", cwd=RUNTIME_VARS.CODE_DIR)
+        venv.run(venv.venv_python, "setup.py", "clean", cwd=src_dir)
 
         # Setuptools installs pre-release packages if we don't pin to an exact version
         # Let's download and install requirements before, running salt's install test
@@ -276,7 +275,7 @@ def test_sdist(virtualenv, cache_dir, use_static_requirements):
             "download",
             "--dest",
             str(cache_dir),
-            RUNTIME_VARS.CODE_DIR,
+            src_dir,
         )
         packages = []
         for fname in cache_dir.iterdir():
@@ -309,9 +308,9 @@ def test_sdist(virtualenv, cache_dir, use_static_requirements):
             "sdist",
             "--dist-dir",
             str(cache_dir),
-            cwd=RUNTIME_VARS.CODE_DIR,
+            cwd=src_dir,
         )
-        venv.run(venv.venv_python, "setup.py", "clean", cwd=RUNTIME_VARS.CODE_DIR)
+        venv.run(venv.venv_python, "setup.py", "clean", cwd=src_dir)
 
         salt_generated_package = list(cache_dir.glob("*.tar.gz"))
         if not salt_generated_package:
@@ -363,13 +362,13 @@ def test_sdist(virtualenv, cache_dir, use_static_requirements):
         )
 
 
-def test_setup_install(virtualenv, cache_dir, use_static_requirements):
+def test_setup_install(virtualenv, cache_dir, use_static_requirements, src_dir):
     """
     test installing directly from source
     """
     # Let's create the testing virtualenv
     with virtualenv as venv:
-        venv.run(venv.venv_python, "setup.py", "clean", cwd=RUNTIME_VARS.CODE_DIR)
+        venv.run(venv.venv_python, "setup.py", "clean", cwd=src_dir)
 
         # Setuptools installs pre-release packages if we don't pin to an exact version
         # Let's download and install requirements before, running salt's install test
@@ -380,7 +379,7 @@ def test_setup_install(virtualenv, cache_dir, use_static_requirements):
             "download",
             "--dest",
             str(cache_dir),
-            RUNTIME_VARS.CODE_DIR,
+            src_dir,
         )
         packages = []
         for fname in cache_dir.iterdir():
@@ -413,10 +412,10 @@ def test_setup_install(virtualenv, cache_dir, use_static_requirements):
             "install",
             "--prefix",
             venv.venv_dir,
-            cwd=RUNTIME_VARS.CODE_DIR,
+            cwd=src_dir,
         )
 
-        venv.run(venv.venv_python, "setup.py", "clean", cwd=RUNTIME_VARS.CODE_DIR)
+        venv.run(venv.venv_python, "setup.py", "clean", cwd=src_dir)
 
         # Let's ensure the version is correct
         cmd = venv.run(venv.venv_python, "-m", "pip", "list", "--format", "json")

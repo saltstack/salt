@@ -14,6 +14,7 @@ import pprint
 import re
 import socket
 import ssl
+import xml.etree.ElementTree as ET
 import zlib
 
 import salt.config
@@ -35,7 +36,6 @@ import salt.utils.stringutils
 import salt.utils.xmlutil as xml
 import salt.utils.yaml
 import salt.version
-from salt._compat import ElementTree as ET
 from salt.ext import six
 from salt.ext.six.moves import StringIO
 from salt.ext.six.moves.urllib.error import URLError

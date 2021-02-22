@@ -18,6 +18,7 @@ import pprint
 import subprocess
 import tempfile
 import time
+import xml.etree.ElementTree as etree
 
 import salt.config
 import salt.exceptions
@@ -29,7 +30,6 @@ import salt.utils.process
 import salt.utils.stringutils
 import salt.utils.yaml
 import salt.version
-from salt._compat import ElementTree as etree
 from salt.ext import six
 from salt.ext.six.moves import zip
 from salt.ext.six.moves.queue import Empty
