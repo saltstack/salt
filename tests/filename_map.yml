@@ -77,10 +77,10 @@ salt/(states|modules)/.*postgres.py:
   - unit.states.test_postgres_user
 
 salt/modules/rabbitmq.py:
-  - unit.states.test_rabbitmq_cluster
-  - unit.states.test_rabbitmq_plugin
-  - unit.states.test_rabbitmq_policy
-  - unit.states.test_rabbitmq_vhost
+  - pytests.unit.states.test_rabbitmq_cluster
+  - pytests.unit.states.test_rabbitmq_plugin
+  - pytests.unit.states.test_rabbitmq_policy
+  - pytests.unit.states.test_rabbitmq_vhost
   - integration.states.test_rabbitmq_user
   - integration.states.test_rabbitmq_vhost
 
