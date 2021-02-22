@@ -79,12 +79,19 @@ def __virtual__():
     return __virtualname__
 
 
+def _get_active_provider_name():
+    try:
+        return __active_provider_name__.value()
+    except AttributeError:
+        return __active_provider_name__
+
+
 def get_configured_provider():
     """
     Return the first configured instance.
     """
     return config.is_provider_configured(
-        __opts__, __active_provider_name__ or __virtualname__, ("id", "key")
+        __opts__, _get_active_provider_name() or __virtualname__, ("id", "key")
     )
 
 
@@ -350,7 +357,7 @@ def list_nodes_full(call=None):
         ]:
             ret[instance.InstanceName][k] = str(instanceAttribute[k])
 
-    provider = __active_provider_name__ or "tencentcloud"
+    provider = _get_active_provider_name() or "tencentcloud"
     if ":" in provider:
         comps = provider.split(":")
         provider = comps[0]
@@ -434,7 +441,7 @@ def create(vm_):
             vm_["profile"]
             and config.is_profile_configured(
                 __opts__,
-                __active_provider_name__ or "tencentcloud",
+                _get_active_provider_name() or "tencentcloud",
                 vm_["profile"],
                 vm_=vm_,
             )

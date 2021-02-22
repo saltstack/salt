@@ -488,7 +488,7 @@ PR Time!
 
 Once you’ve done all your dev work and tested locally, you should check
 out our `PR
-guidelines <https://docs.saltproject.io/en/develop/topics/development/pull_requests.html>`__.
+guidelines <https://docs.saltproject.io/en/master/topics/development/pull_requests.html>`__.
 After you read that page, it’s time to `open a new
 PR <https://github.com/saltstack/salt/compare>`__. Fill out the PR
 template - you should have updated or created any necessary docs, and

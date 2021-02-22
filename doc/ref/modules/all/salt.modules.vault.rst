@@ -1,5 +1,5 @@
-salt.modules.vault module
-=========================
+salt.modules.vault
+==================
 
 .. automodule:: salt.modules.vault
     :members:
