@@ -301,7 +301,7 @@ class VaultTokenAuthTest(TestCase, LoaderModuleMockMixin):
                 log.debug("generate_token result: %s", result)
                 self.assertIsInstance(result, dict)
                 self.assertNotIn("error", result)
-                self.assertTrue("token" in result)
+                self.assertIn("token", result)
                 self.assertEqual(result["token"], "test")
                 mock.assert_called_with(
                     "http://fake_url",
