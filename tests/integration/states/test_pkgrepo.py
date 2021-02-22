@@ -3,6 +3,7 @@ tests for pkgrepo states
 """
 
 import os
+import shutil
 
 import pytest
 import salt.utils.files
@@ -348,3 +349,44 @@ class PkgrepoTest(ModuleCase, SaltReturnAssertsMixin):
             for state_run in ret.values():
                 # On the second run though, we shouldn't have changes made
                 assert not state_run["changes"]
+
+
+@skipIf(salt.utils.platform.is_windows(), "minion is windows")
+class PkgrepoTestNonDestructive(ModuleCase, SaltReturnAssertsMixin):
+    @runs_on(kernel="linux", os="SUSE")
+    def test_pkgrepo_migrated(self):
+        def remove_directory(path):
+            if os.path.exists(path):
+                shutil.rmtree(path)
+
+        self.addCleanup(remove_directory, "/tmp/mnt")
+
+        # Do the first migration with "copy" method, so we can be sure
+        # that duplicate repositories are present
+        os.makedirs("/tmp/mnt", exist_ok=True)
+        ret = self.run_state(
+            "pkgrepo.migrated", name="/tmp/mnt", drop=False, method_="copy"
+        )
+        ret = ret[next(iter(ret))]
+        self.assertTrue(ret["result"])
+        self.assertEqual(ret["changes"]["keys dropped"], [])
+        self.assertTrue(len(ret["changes"]["keys migrated"]) > 1)
+        self.assertEqual(ret["changes"]["repos dropped"], [])
+        self.assertTrue(len(ret["changes"]["repos migrated"]) > 1)
+        self.assertEqual(ret["comment"], "Repositories synchronized")
+
+        # A second migration with "copy" should not synchronize anything
+        ret = self.run_state(
+            "pkgrepo.migrated", name="/tmp/mnt", drop=False, method_="copy"
+        )
+        ret = ret[next(iter(ret))]
+        self.assertTrue(ret["result"])
+        self.assertEqual(ret["changes"], {})
+        self.assertEqual(ret["comment"], "Repositories are already migrated")
+
+        # Same with the default method
+        ret = self.run_state("pkgrepo.migrated", name="/tmp/mnt", drop=False)
+        ret = ret[next(iter(ret))]
+        self.assertTrue(ret["result"])
+        self.assertEqual(ret["changes"], {})
+        self.assertEqual(ret["comment"], "Repositories are already migrated")
