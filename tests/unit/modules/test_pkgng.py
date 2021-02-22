@@ -1,21 +1,13 @@
-# -*- coding: utf-8 -*-
-
-# Import Python libs
-from __future__ import absolute_import
-
 import textwrap
 
-# Import Salt Libs
 import salt.modules.pkgng as pkgng
-
-# Import Salt Testing Libs
 from salt.utils.odict import OrderedDict
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
 
 
-class ListPackages(object):
+class ListPackages:
     def __init__(self):
         self._iteration = 0
 
@@ -539,3 +531,55 @@ class PkgNgTestCase(TestCase, LoaderModuleMockMixin):
                     python_shell=False,
                     env={},
                 )
+
+    def test_check_depends(self):
+        """
+        Test pkgng.check to check and install missing dependencies
+        """
+        pkg_cmd = MagicMock(return_value="")
+
+        with patch.dict(pkgng.__salt__, {"cmd.run": pkg_cmd}):
+            result = pkgng.check(depends=True)
+            self.assertEqual(result, "")
+            pkg_cmd.assert_called_with(
+                ["pkg", "check", "-dy"], output_loglevel="trace", python_shell=False,
+            )
+
+    def test_check_checksum(self):
+        """
+        Test pkgng.check for packages with invalid checksums
+        """
+        pkg_cmd = MagicMock(return_value="")
+
+        with patch.dict(pkgng.__salt__, {"cmd.run": pkg_cmd}):
+            result = pkgng.check(checksum=True)
+            self.assertEqual(result, "")
+            pkg_cmd.assert_called_with(
+                ["pkg", "check", "-s"], output_loglevel="trace", python_shell=False,
+            )
+
+    def test_check_recompute(self):
+        """
+        Test pkgng.check to recalculate the checksums of installed packages
+        """
+        pkg_cmd = MagicMock(return_value="")
+
+        with patch.dict(pkgng.__salt__, {"cmd.run": pkg_cmd}):
+            result = pkgng.check(recompute=True)
+            self.assertEqual(result, "")
+            pkg_cmd.assert_called_with(
+                ["pkg", "check", "-r"], output_loglevel="trace", python_shell=False,
+            )
+
+    def test_check_libs(self):
+        """
+        Test pkgng.check to regenerate the library dependency metadata
+        """
+        pkg_cmd = MagicMock(return_value="")
+
+        with patch.dict(pkgng.__salt__, {"cmd.run": pkg_cmd}):
+            result = pkgng.check(checklibs=True)
+            self.assertEqual(result, "")
+            pkg_cmd.assert_called_with(
+                ["pkg", "check", "-B"], output_loglevel="trace", python_shell=False,
+            )
