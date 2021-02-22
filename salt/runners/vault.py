@@ -53,7 +53,7 @@ def generate_token(
         config = __opts__.get("vault", {})
         verify = config.get("verify", None)
         # Vault Enterprise requires a namespace
-        namespace = config.get("namespace", None)
+        namespace = config.get("namespace")
         # Allow disabling of minion provided values via the master
         allow_minion_override = config["auth"].get("allow_minion_override", False)
         # This preserves the previous behavior of default TTL and 1 use
