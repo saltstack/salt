@@ -299,7 +299,7 @@ class VaultTokenAuthTest(TestCase, LoaderModuleMockMixin):
             with patch.dict(vault.__opts__["vault"], supplied_config):
                 result = vault.generate_token("test-minion", "signature")
                 log.debug("generate_token result: %s", result)
-                self.assertTrue(isinstance(result, dict))
+                self.assertIsInstance(result, dict)
                 self.assertFalse("error" in result)
                 self.assertTrue("token" in result)
                 self.assertEqual(result["token"], "test")
