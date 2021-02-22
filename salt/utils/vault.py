@@ -103,7 +103,7 @@ def _get_token_and_url_from_master():
         "url": result["url"],
         "token": result["token"],
         "verify": result.get("verify", None),
-        "namespace": result.get("namespace", None),
+        "namespace": result.get("namespace"),
         "uses": result.get("uses", 1),
         "lease_duration": result["lease_duration"],
         "issued": result["issued"],
