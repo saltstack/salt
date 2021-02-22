@@ -16,8 +16,8 @@ def configure_loader_modules():
 
 def test_latest():
     """
-        Checkout or update the working directory to
-        the latest revision from the remote repository.
+    Checkout or update the working directory to
+    the latest revision from the remote repository.
     """
     mock = MagicMock(return_value=True)
     with patch.object(svn, "_fail", mock):
@@ -61,9 +61,9 @@ def test_latest():
 
 def test_latest_trust_failures():
     """
-        Test that checks that the trust_failures option is handled
-        correctly when running svn.latest in test mode. This tests for the
-        bug reported as #59069.
+    Test that checks that the trust_failures option is handled
+    correctly when running svn.latest in test mode. This tests for the
+    bug reported as #59069.
     """
     os_path_exists_mock = MagicMock(side_effect=[False, True])
     svn_info_mock = MagicMock(return_value=[{"Revision": "42"}])
@@ -92,7 +92,7 @@ def test_latest_trust_failures():
 
 def test_export():
     """
-        Test to export a file or directory from an SVN repository
+    Test to export a file or directory from an SVN repository
     """
     mock = MagicMock(return_value=True)
     with patch.object(svn, "_fail", mock):
@@ -134,7 +134,7 @@ def test_export():
 
 def test_dirty():
     """
-        Test to determine if the working directory has been changed.
+    Test to determine if the working directory has been changed.
     """
     mock = MagicMock(return_value=True)
     with patch.object(svn, "_fail", mock):
