@@ -17,12 +17,12 @@ import re
 import sys
 import time
 import urllib.parse
+import xml.etree.ElementTree as ET
 from datetime import datetime
 
 import salt.config
 import salt.utils.hashutils
 import salt.utils.xmlutil as xml
-from salt._compat import ElementTree as ET
 
 try:
     import requests
