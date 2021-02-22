@@ -1,5 +1,5 @@
-salt.modules.pushbullet module
-==============================
+salt.modules.pushbullet
+=======================
 
 .. automodule:: salt.modules.pushbullet
     :members:

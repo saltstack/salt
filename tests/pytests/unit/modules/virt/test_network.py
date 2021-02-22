@@ -1,7 +1,8 @@
+import xml.etree.ElementTree as ET
+
 import pytest
 import salt.modules.virt as virt
 import salt.utils.xmlutil as xmlutil
-from salt._compat import ElementTree as ET
 
 from .conftest import loader_modules_config
 from .test_helpers import assert_called, assert_xml_equals, strip_xml
