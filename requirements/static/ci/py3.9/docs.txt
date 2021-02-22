@@ -9,7 +9,7 @@ babel==2.8.0              # via sphinx
 cachecontrol==0.12.6      # via cohesity-management-sdk
 certifi==2020.4.5.1       # via requests
 chardet==3.0.4            # via requests
-cohesity-management-sdk==1.5.2
+cohesity-management-sdk==1.6.0
 docutils==0.15.2          # via sphinx
 idna==2.9                 # via requests
 imagesize==1.2.0          # via sphinx
