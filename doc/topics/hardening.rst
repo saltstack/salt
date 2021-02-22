@@ -52,6 +52,8 @@ Salt hardening tips
 
 .. include:: ../_incl/grains_passwords.rst
 
+.. include:: ../_incl/jinja_security.rst
+
 - Subscribe to `salt-users`_ or `salt-announce`_ so you know when new Salt
   releases are available.
 - Keep your systems up-to-date with the latest patches.
