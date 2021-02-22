@@ -5,6 +5,7 @@ import multiprocessing
 import os
 import signal
 import sys
+import tempfile
 import threading
 import time
 import warnings
@@ -750,6 +751,11 @@ class CMORProcessHelper:
 
 @skipIf(not HAS_PSUTIL, "Missing psutil")
 class TestGetProcessInfo(TestCase):
+    def setUp(self):
+        handle, self.cmor_test_file_path = tempfile.mkstemp()
+        os.close(handle)
+        self.addCleanup(os.unlink, self.cmor_test_file_path)
+
     def test_this_process(self):
         this_process_info = salt.utils.process.get_process_info()
 
@@ -770,7 +776,7 @@ class TestGetProcessInfo(TestCase):
 
     def test_random_processes(self):
         for _ in range(3):
-            with CMORProcessHelper("CMOR_TEST_FILE") as p1:
+            with CMORProcessHelper(self.cmor_test_file_path) as p1:
                 pid = p1.pid
                 self.assertIsInstance(salt.utils.process.get_process_info(pid), dict)
             self.assertIsNone(salt.utils.process.get_process_info(pid))
@@ -778,94 +784,100 @@ class TestGetProcessInfo(TestCase):
 
 @skipIf(not HAS_PSUTIL, "Missing psutil")
 class TestClaimMantleOfResponsibility(TestCase):
+    def setUp(self):
+        handle, self.cmor_test_file_path = tempfile.mkstemp()
+        os.close(handle)
+        self.addCleanup(os.unlink, self.cmor_test_file_path)
+
     def test_simple_claim_no_psutil(self):
-        salt.utils.process.claim_mantle_of_responsibility("CMOR_TEST_FILE")
+        salt.utils.process.claim_mantle_of_responsibility(self.cmor_test_file_path)
 
     def test_simple_claim(self):
-        try:
-            for _ in range(5):
-                self.assertTrue(
-                    salt.utils.process.claim_mantle_of_responsibility("CMOR_TEST_FILE")
+        for _ in range(5):
+            self.assertTrue(
+                salt.utils.process.claim_mantle_of_responsibility(
+                    self.cmor_test_file_path
                 )
-        finally:
-            os.remove("CMOR_TEST_FILE")
+            )
 
     def test_multiple_processes(self):
-        try:
-            with CMORProcessHelper("CMOR_TEST_FILE") as p1:
-                self.assertTrue(p1.claim())
-                self.assertFalse(
-                    salt.utils.process.claim_mantle_of_responsibility("CMOR_TEST_FILE")
+        with CMORProcessHelper(self.cmor_test_file_path) as p1:
+            self.assertTrue(p1.claim())
+            self.assertFalse(
+                salt.utils.process.claim_mantle_of_responsibility(
+                    self.cmor_test_file_path
                 )
-                with CMORProcessHelper("CMOR_TEST_FILE") as p2:
-                    for _ in range(3):
-                        self.assertFalse(p2.claim())
-                self.assertTrue(p1.claim())
-
-            with CMORProcessHelper("CMOR_TEST_FILE") as p1:
-                self.assertTrue(p1.claim())
-                self.assertFalse(
-                    salt.utils.process.claim_mantle_of_responsibility("CMOR_TEST_FILE")
-                )
-
-            self.assertTrue(
-                salt.utils.process.claim_mantle_of_responsibility("CMOR_TEST_FILE")
             )
-        finally:
-            os.remove("CMOR_TEST_FILE")
+            with CMORProcessHelper(self.cmor_test_file_path) as p2:
+                for _ in range(3):
+                    self.assertFalse(p2.claim())
+            self.assertTrue(p1.claim())
+
+        with CMORProcessHelper(self.cmor_test_file_path) as p1:
+            self.assertTrue(p1.claim())
+            self.assertFalse(
+                salt.utils.process.claim_mantle_of_responsibility(
+                    self.cmor_test_file_path
+                )
+            )
+
+        self.assertTrue(
+            salt.utils.process.claim_mantle_of_responsibility(self.cmor_test_file_path)
+        )
 
 
 @skipIf(not HAS_PSUTIL, "Missing psutil")
 class TestCheckMantleOfResponsibility(TestCase):
+    def setUp(self):
+        handle, self.cmor_test_file_path = tempfile.mkstemp()
+        os.close(handle)
+        self.addCleanup(os.unlink, self.cmor_test_file_path)
+
     def test_simple_claim_no_psutil(self):
         self.assertIsNone(
-            salt.utils.process.check_mantle_of_responsibility("CMOR_TEST_FILE")
+            salt.utils.process.check_mantle_of_responsibility(self.cmor_test_file_path)
         )
 
     def test_simple_claim(self):
-        try:
-            self.assertIsNone(
-                salt.utils.process.check_mantle_of_responsibility("CMOR_TEST_FILE")
-            )
-            salt.utils.process.claim_mantle_of_responsibility("CMOR_TEST_FILE")
-            pid = salt.utils.process.get_process_info()["pid"]
-            self.assertEqual(
-                pid, salt.utils.process.check_mantle_of_responsibility("CMOR_TEST_FILE")
-            )
-        finally:
-            os.remove("CMOR_TEST_FILE")
+        self.assertIsNone(
+            salt.utils.process.check_mantle_of_responsibility(self.cmor_test_file_path)
+        )
+        salt.utils.process.claim_mantle_of_responsibility(self.cmor_test_file_path)
+        pid = salt.utils.process.get_process_info()["pid"]
+        self.assertEqual(
+            pid,
+            salt.utils.process.check_mantle_of_responsibility(self.cmor_test_file_path),
+        )
 
     def test_multiple_processes(self):
-        try:
-            self.assertIsNone(
-                salt.utils.process.check_mantle_of_responsibility("CMOR_TEST_FILE")
+        self.assertIsNone(
+            salt.utils.process.check_mantle_of_responsibility(self.cmor_test_file_path)
+        )
+
+        with CMORProcessHelper(self.cmor_test_file_path) as p1:
+            self.assertTrue(p1.claim())
+            random_pid = salt.utils.process.check_mantle_of_responsibility(
+                self.cmor_test_file_path
             )
 
-            with CMORProcessHelper("CMOR_TEST_FILE") as p1:
-                self.assertTrue(p1.claim())
-                random_pid = salt.utils.process.check_mantle_of_responsibility(
-                    "CMOR_TEST_FILE"
+            self.assertIsInstance(random_pid, int)
+
+            with CMORProcessHelper(self.cmor_test_file_path) as p2:
+                for _ in range(3):
+                    self.assertFalse(p2.claim())
+                self.assertEqual(
+                    random_pid,
+                    salt.utils.process.check_mantle_of_responsibility(
+                        self.cmor_test_file_path
+                    ),
                 )
 
-                self.assertIsInstance(random_pid, int)
-
-                with CMORProcessHelper("CMOR_TEST_FILE") as p2:
-                    for _ in range(3):
-                        self.assertFalse(p2.claim())
-                    self.assertEqual(
-                        random_pid,
-                        salt.utils.process.check_mantle_of_responsibility(
-                            "CMOR_TEST_FILE"
-                        ),
-                    )
-
-            self.assertIsNone(
-                salt.utils.process.check_mantle_of_responsibility("CMOR_TEST_FILE")
-            )
-            salt.utils.process.claim_mantle_of_responsibility("CMOR_TEST_FILE")
-            pid = salt.utils.process.get_process_info()["pid"]
-            self.assertEqual(
-                pid, salt.utils.process.check_mantle_of_responsibility("CMOR_TEST_FILE")
-            )
-        finally:
-            os.remove("CMOR_TEST_FILE")
+        self.assertIsNone(
+            salt.utils.process.check_mantle_of_responsibility(self.cmor_test_file_path)
+        )
+        salt.utils.process.claim_mantle_of_responsibility(self.cmor_test_file_path)
+        pid = salt.utils.process.get_process_info()["pid"]
+        self.assertEqual(
+            pid,
+            salt.utils.process.check_mantle_of_responsibility(self.cmor_test_file_path),
+        )
