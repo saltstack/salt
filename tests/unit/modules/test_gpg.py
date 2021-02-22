@@ -12,6 +12,7 @@ import pytest
 import salt.modules.gpg as gpg
 import salt.utils.files
 import salt.utils.platform
+from salt.exceptions import SaltInvocationError
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
@@ -320,9 +321,9 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
 
     @pytest.mark.destructive_test  # Need to run as root!?
     @skipIf(not HAS_GPG, "GPG Module Unavailable")
-    def test_delete_key(self):
+    def test_delete_key_without_passphrase(self):
         """
-        Test gpg.delete_key
+        Test gpg.delete_key without passphrase
         """
 
         _user_mock = {
@@ -378,9 +379,405 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
                     with patch(
                         "salt.modules.gpg.gnupg.GPG.delete_keys",
                         MagicMock(return_value="ok"),
-                    ):
+                    ) as gnupg_delete_keys:
                         ret = gpg.delete_key("xxxxxxxxxxxxxxxx", delete_secret=True)
                         self.assertEqual(ret, _expected_result)
+                        gnupg_delete_keys.assert_called_with(
+                            "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                            False,
+                            expect_passphrase=False,
+                        )
+
+    @pytest.mark.destructive_test  # Need to run as root!?
+    @skipIf(not HAS_GPG, "GPG Module Unavailable")
+    def test_delete_key_with_passphrase_without_gpg_passphrase_in_pillar(self):
+        """
+        Test gpg.delete_key with passphrase but without gpg_passphrase pillar
+        """
+
+        _user_mock = {
+            "shell": "/bin/bash",
+            "workphone": "",
+            "uid": 0,
+            "passwd": "x",
+            "roomnumber": "",
+            "gid": 0,
+            "groups": ["root"],
+            "home": self.gpghome,
+            "fullname": "root",
+            "homephone": "",
+            "name": "root",
+        }
+
+        _list_result = [
+            {
+                "dummy": "",
+                "keyid": "xxxxxxxxxxxxxxxx",
+                "expires": "2011188692",
+                "sigs": [],
+                "subkeys": [
+                    [
+                        "xxxxxxxxxxxxxxxx",
+                        "e",
+                        "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                    ]
+                ],
+                "length": "4096",
+                "ownertrust": "-",
+                "sig": "",
+                "algo": "1",
+                "fingerprint": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                "date": "1506612692",
+                "trust": "-",
+                "type": "pub",
+                "uids": ["GPG Person <person@example.com>"],
+            }
+        ]
+
+        _expected_result = {
+            "res": True,
+            "message": "gpg_passphrase not available in pillar.",
+        }
+
+        mock_opt = MagicMock(return_value="root")
+        pillar_mock = MagicMock(return_value=None)
+        with patch.dict(
+            gpg.__salt__, {"user.info": MagicMock(return_value=_user_mock)}
+        ):
+            with patch.dict(gpg.__salt__, {"config.option": mock_opt}), patch.dict(
+                gpg.__salt__, {"pillar.get": pillar_mock}
+            ):
+                with patch.object(gpg, "_list_keys", return_value=_list_result):
+                    with patch(
+                        "salt.modules.gpg.gnupg.GPG.delete_keys"
+                    ) as gnupg_delete_keys:
+                        ret = gpg.delete_key(
+                            "xxxxxxxxxxxxxxxx", delete_secret=True, use_passphrase=True
+                        )
+                        self.assertEqual(ret, _expected_result)
+                        gnupg_delete_keys.assert_not_called()
+
+    @pytest.mark.destructive_test  # Need to run as root!?
+    @skipIf(not HAS_GPG, "GPG Module Unavailable")
+    def test_delete_key_with_passphrase_with_gpg_passphrase_in_pillar(self):
+        """
+        Test gpg.delete_key with passphrase and gpg_passphrase pillar
+        """
+
+        _user_mock = {
+            "shell": "/bin/bash",
+            "workphone": "",
+            "uid": 0,
+            "passwd": "x",
+            "roomnumber": "",
+            "gid": 0,
+            "groups": ["root"],
+            "home": self.gpghome,
+            "fullname": "root",
+            "homephone": "",
+            "name": "root",
+        }
+
+        _list_result = [
+            {
+                "dummy": "",
+                "keyid": "xxxxxxxxxxxxxxxx",
+                "expires": "2011188692",
+                "sigs": [],
+                "subkeys": [
+                    [
+                        "xxxxxxxxxxxxxxxx",
+                        "e",
+                        "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                    ]
+                ],
+                "length": "4096",
+                "ownertrust": "-",
+                "sig": "",
+                "algo": "1",
+                "fingerprint": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                "date": "1506612692",
+                "trust": "-",
+                "type": "pub",
+                "uids": ["GPG Person <person@example.com>"],
+            }
+        ]
+
+        _expected_result = {
+            "res": True,
+            "message": "Secret key for xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx deleted\nPublic key for xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx deleted",
+        }
+
+        mock_opt = MagicMock(return_value="root")
+        pillar_mock = MagicMock(return_value=GPG_TEST_KEY_PASSPHRASE)
+        with patch.dict(
+            gpg.__salt__, {"user.info": MagicMock(return_value=_user_mock)}
+        ):
+            with patch.dict(gpg.__salt__, {"config.option": mock_opt}), patch.dict(
+                gpg.__salt__, {"pillar.get": pillar_mock}
+            ):
+                with patch.object(gpg, "_list_keys", return_value=_list_result):
+                    with patch(
+                        "salt.modules.gpg.gnupg.GPG.delete_keys",
+                        MagicMock(return_value="ok"),
+                    ) as gnupg_delete_keys:
+                        ret = gpg.delete_key(
+                            "xxxxxxxxxxxxxxxx", delete_secret=True, use_passphrase=True
+                        )
+                        self.assertEqual(ret, _expected_result)
+                        gnupg_delete_keys.assert_called_with(
+                            "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                            False,
+                            passphrase=GPG_TEST_KEY_PASSPHRASE,
+                        )
+
+    @pytest.mark.destructive_test  # Need to run as root!?
+    @skipIf(not HAS_GPG, "GPG Module Unavailable")
+    def test_export_key_without_passphrase(self):
+        """
+        Test gpg.export_key without passphrase
+        """
+
+        _user_mock = {
+            "shell": "/bin/bash",
+            "workphone": "",
+            "uid": 0,
+            "passwd": "x",
+            "roomnumber": "",
+            "gid": 0,
+            "groups": ["root"],
+            "home": self.gpghome,
+            "fullname": "root",
+            "homephone": "",
+            "name": "root",
+        }
+
+        mock_opt = MagicMock(return_value="root")
+        with patch.dict(
+            gpg.__salt__, {"user.info": MagicMock(return_value=_user_mock)}
+        ):
+            with patch.dict(gpg.__salt__, {"config.option": mock_opt}):
+                with patch(
+                    "salt.modules.gpg.gnupg.GPG.export_keys",
+                    MagicMock(return_value=GPG_TEST_PUB_KEY),
+                ) as gnupg_export_keys:
+                    ret = gpg.export_key("xxxxxxxxxxxxxxxx")
+                    self.assertEqual(ret, GPG_TEST_PUB_KEY)
+                    gnupg_export_keys.assert_called_with(
+                        ["xxxxxxxxxxxxxxxx"], False, expect_passphrase=False,
+                    )
+
+    @pytest.mark.destructive_test  # Need to run as root!?
+    @skipIf(not HAS_GPG, "GPG Module Unavailable")
+    def test_export_multiple_keys_without_passphrase(self):
+        """
+        Test gpg.export_key with multiple keys and without passphrase
+        """
+
+        _user_mock = {
+            "shell": "/bin/bash",
+            "workphone": "",
+            "uid": 0,
+            "passwd": "x",
+            "roomnumber": "",
+            "gid": 0,
+            "groups": ["root"],
+            "home": self.gpghome,
+            "fullname": "root",
+            "homephone": "",
+            "name": "root",
+        }
+
+        mock_opt = MagicMock(return_value="root")
+        with patch.dict(
+            gpg.__salt__, {"user.info": MagicMock(return_value=_user_mock)}
+        ):
+            with patch.dict(gpg.__salt__, {"config.option": mock_opt}):
+                with patch(
+                    "salt.modules.gpg.gnupg.GPG.export_keys",
+                    MagicMock(return_value=GPG_TEST_PUB_KEY),
+                ) as gnupg_export_keys:
+                    ret = gpg.export_key(
+                        "xxxxxxxxxxxxxxxx,yyyyyyyyyyyyyyyy,zzzzzzzzzzzzzzzz"
+                    )
+                    self.assertEqual(ret, GPG_TEST_PUB_KEY)
+                    gnupg_export_keys.assert_called_with(
+                        ["xxxxxxxxxxxxxxxx", "yyyyyyyyyyyyyyyy", "zzzzzzzzzzzzzzzz"],
+                        False,
+                        expect_passphrase=False,
+                    )
+
+    @pytest.mark.destructive_test  # Need to run as root!?
+    @skipIf(not HAS_GPG, "GPG Module Unavailable")
+    def test_export_key_with_passphrase_without_gpg_passphrase_in_pillar(self):
+        """
+        Test gpg.export_key with passphrase but without gpg_passphrase pillar
+        """
+
+        _user_mock = {
+            "shell": "/bin/bash",
+            "workphone": "",
+            "uid": 0,
+            "passwd": "x",
+            "roomnumber": "",
+            "gid": 0,
+            "groups": ["root"],
+            "home": self.gpghome,
+            "fullname": "root",
+            "homephone": "",
+            "name": "root",
+        }
+
+        mock_opt = MagicMock(return_value="root")
+        pillar_mock = MagicMock(return_value=None)
+        with patch.dict(
+            gpg.__salt__, {"user.info": MagicMock(return_value=_user_mock)}
+        ):
+            with patch.dict(gpg.__salt__, {"config.option": mock_opt}), patch.dict(
+                gpg.__salt__, {"pillar.get": pillar_mock}
+            ):
+                with patch(
+                    "salt.modules.gpg.gnupg.GPG.export_keys",
+                    MagicMock(return_value=GPG_TEST_PUB_KEY),
+                ) as gnupg_export_keys:
+                    with self.assertRaises(SaltInvocationError):
+                        assert gpg.export_key("xxxxxxxxxxxxxxxx", use_passphrase=True)
+                    gnupg_export_keys.assert_not_called()
+
+    @pytest.mark.destructive_test  # Need to run as root!?
+    @skipIf(not HAS_GPG, "GPG Module Unavailable")
+    def test_export_key_with_passphrase_with_gpg_passphrase_in_pillar(self):
+        """
+        Test gpg.export_key with passphrase and gpg_passphrase pillar
+        """
+
+        _user_mock = {
+            "shell": "/bin/bash",
+            "workphone": "",
+            "uid": 0,
+            "passwd": "x",
+            "roomnumber": "",
+            "gid": 0,
+            "groups": ["root"],
+            "home": self.gpghome,
+            "fullname": "root",
+            "homephone": "",
+            "name": "root",
+        }
+
+        mock_opt = MagicMock(return_value="root")
+        pillar_mock = MagicMock(return_value=GPG_TEST_KEY_PASSPHRASE)
+        with patch.dict(
+            gpg.__salt__, {"user.info": MagicMock(return_value=_user_mock)}
+        ):
+            with patch.dict(gpg.__salt__, {"config.option": mock_opt}), patch.dict(
+                gpg.__salt__, {"pillar.get": pillar_mock}
+            ):
+                with patch(
+                    "salt.modules.gpg.gnupg.GPG.export_keys",
+                    MagicMock(return_value=GPG_TEST_PUB_KEY),
+                ) as gnupg_export_keys:
+                    ret = gpg.export_key("xxxxxxxxxxxxxxxx", use_passphrase=True)
+                    self.assertEqual(ret, GPG_TEST_PUB_KEY)
+                    gnupg_export_keys.assert_called_with(
+                        ["xxxxxxxxxxxxxxxx"], False, passphrase=GPG_TEST_KEY_PASSPHRASE,
+                    )
+
+    @skipIf(not HAS_GPG, "GPG Module Unavailable")
+    def test__gen_key_input_without_passphrase(self):
+        """
+        Test if gpg._gen_key_input is generating the input with %no-protection set
+        """
+
+        _user_mock = {
+            "shell": "/bin/bash",
+            "workphone": "",
+            "uid": 0,
+            "passwd": "x",
+            "roomnumber": "",
+            "gid": 0,
+            "groups": ["root"],
+            "home": self.gpghome,
+            "fullname": "root",
+            "homephone": "",
+            "name": "root",
+        }
+
+        _input_params = {
+            "key_type": "RSA",
+            "key_length": 1024,
+            "name_real": "Autogenerated Key",
+            "name_comment": "Generated by SaltStack",
+            "no_protection": True,
+        }
+
+        _os_environ_dict = {
+            "LOGNAME": "person",
+            "USERNAME": "person",
+        }
+
+        _expected_result = (
+            "Key-Type: RSA\n"
+            "Key-Length: 1024\n"
+            "Name-Real: Autogenerated Key\n"
+            "Name-Comment: Generated by SaltStack\n"
+            "Name-Email: person@example.com\n"
+            "%no-protection\n"
+            "%commit\n"
+        )
+
+        with patch.dict(os.environ, _os_environ_dict):
+            with patch("socket.gethostname", MagicMock(return_value="example.com")):
+                ret = gpg._gen_key_input(**_input_params)
+                self.assertEqual(ret, _expected_result)
+
+    @skipIf(not HAS_GPG, "GPG Module Unavailable")
+    def test__gen_key_input_with_passphrase(self):
+        """
+        Test if gpg._gen_key_input is generating the input with the passphrase parameter
+        """
+
+        _user_mock = {
+            "shell": "/bin/bash",
+            "workphone": "",
+            "uid": 0,
+            "passwd": "x",
+            "roomnumber": "",
+            "gid": 0,
+            "groups": ["root"],
+            "home": self.gpghome,
+            "fullname": "root",
+            "homephone": "",
+            "name": "root",
+        }
+
+        _input_params = {
+            "key_type": "RSA",
+            "key_length": 1024,
+            "name_real": "Autogenerated Key",
+            "name_comment": "Generated by SaltStack",
+            "passphrase": GPG_TEST_KEY_PASSPHRASE,
+        }
+
+        _os_environ_dict = {
+            "LOGNAME": "person",
+            "USERNAME": "person",
+        }
+
+        _expected_result = (
+            "Key-Type: RSA\n"
+            "Key-Length: 1024\n"
+            "Name-Real: Autogenerated Key\n"
+            "Name-Comment: Generated by SaltStack\n"
+            "Passphrase: testkeypassphrase\n"
+            "Name-Email: person@example.com\n"
+            "%commit\n"
+        )
+
+        with patch.dict(os.environ, _os_environ_dict):
+            with patch("socket.gethostname", MagicMock(return_value="example.com")):
+                ret = gpg._gen_key_input(**_input_params)
+                self.assertEqual(ret, _expected_result)
 
     @skipIf(not HAS_GPG, "GPG Module Unavailable")
     def test_search_keys(self):
