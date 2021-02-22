@@ -8,14 +8,11 @@
 
 
 import os
-import shutil
 import tempfile
 
 import pytest
 import salt.utils.cloud as cloud
 from tests.support.mock import MagicMock, patch
-from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import SkipTest
 
 
 @pytest.fixture()
@@ -25,17 +22,15 @@ def configure_loader_modules():
     }
 
 
-@pytest.fixture()
-def create_class():
+@pytest.fixture
+def create_class(tmp_path):
     old_cwd = os.getcwd()
-    gpg_keydir = os.path.join(RUNTIME_VARS.TMP, "gpg-keydir")
+    gpg_keydir = tmp_path / "gpg-keydir"
+    gpg_keydir.mkdir()
     try:
         # The keyring library uses `getcwd()`, let's make sure we in a good directory
         # before importing keyring
-        if not os.path.isdir(gpg_keydir):
-            os.makedirs(gpg_keydir)
-        os.chdir(gpg_keydir)
-
+        os.chdir(str(gpg_keydir))
         # Late import because of the above reason
         import keyring
         import keyring.backend
@@ -44,7 +39,6 @@ def create_class():
             """
             A test keyring which always outputs same password
             """
-
             def __init__(self):
                 self.__storage = {}
 
@@ -60,7 +54,7 @@ def create_class():
             def get_password(
                 self, servicename, username
             ):  # pylint: disable=arguments-differ
-                return self.__storage.setdefault(servicename, {}).get(username, None)
+                return self.__storage.setdefault(servicename, {}).get(username)
 
             def delete_password(
                 self, servicename, username
@@ -72,12 +66,9 @@ def create_class():
         keyring.set_keyring(CustomKeyring())
         yield
     except ImportError:
-        raise SkipTest('The "keyring" python module is not installed')
+        pytest.skip('The "keyring" python module is not installed')
     finally:
         os.chdir(old_cwd)
-        if os.path.exists(gpg_keydir):
-            shutil.rmtree(gpg_keydir)
-        del gpg_keydir
 
 
 def test_ssh_password_regex(create_class):
@@ -222,9 +213,9 @@ def test_winrm_pinnned_version():
         try:
             import winrm
         except ImportError:
-            raise SkipTest('The "winrm" python module is not installed in this env.')
+            raise pytest.skip('The "winrm" python module is not installed in this env.')
         else:
             import pkg_resources
             winrm_pkg = pkg_resources.get_distribution("pywinrm")
-            assert winrm_pkg.version >= '0.4.1'
+            assert winrm_pkg.version >= '0.3.0'
     # fmt: on
