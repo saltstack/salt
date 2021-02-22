@@ -10,6 +10,7 @@
 """
 
 import base64
+import builtins
 import errno
 import fnmatch
 import functools
@@ -37,11 +38,9 @@ import salt.utils.platform
 import salt.utils.pycrypto
 import salt.utils.stringutils
 import salt.utils.versions
-from salt.ext import six
-from salt.ext.six.moves import builtins
-from saltfactories.exceptions import ProcessFailed
+from saltfactories.exceptions import FactoryFailure as ProcessFailed
 from saltfactories.utils.ports import get_unused_localhost_port
-from saltfactories.utils.processes.bases import ProcessResult
+from saltfactories.utils.processes import ProcessResult
 from tests.support.mock import patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.sminion import create_sminion
@@ -59,6 +58,7 @@ PRE_PYTEST_SKIP_REASON = (
 PRE_PYTEST_SKIP = pytest.mark.skipif(
     PRE_PYTEST_SKIP_OR_NOT, reason=PRE_PYTEST_SKIP_REASON
 )
+ON_PY35 = sys.version_info < (3, 6)
 
 
 def no_symlinks():
@@ -100,11 +100,13 @@ def destructiveTest(caller):
             def test_create_user(self):
                 pass
     """
-    # Late import
-    from tests.support.runtests import RUNTIME_VARS
-
-    if RUNTIME_VARS.PYTEST_SESSION:
-        setattr(caller, "__destructive_test__", True)
+    salt.utils.versions.warn_until_date(
+        "20220101",
+        "Please stop using `@destructiveTest`, it will be removed in {date}, and instead use "
+        "`@pytest.mark.destructive_test`.",
+        stacklevel=3,
+    )
+    setattr(caller, "__destructive_test__", True)
 
     if os.environ.get("DESTRUCTIVE_TESTS", "False").lower() == "false":
         reason = "Destructive tests are disabled"
@@ -136,11 +138,13 @@ def expensiveTest(caller):
             def test_create_user(self):
                 pass
     """
-    # Late import
-    from tests.support.runtests import RUNTIME_VARS
-
-    if RUNTIME_VARS.PYTEST_SESSION:
-        setattr(caller, "__expensive_test__", True)
+    salt.utils.versions.warn_until_date(
+        "20220101",
+        "Please stop using `@expensiveTest`, it will be removed in {date}, and instead use "
+        "`@pytest.mark.expensive_test`.",
+        stacklevel=3,
+    )
+    setattr(caller, "__expensive_test__", True)
 
     if os.environ.get("EXPENSIVE_TESTS", "False").lower() == "false":
         reason = "Expensive tests are disabled"
@@ -168,25 +172,13 @@ def slowTest(caller):
             def test_that_takes_much_time(self):
                 pass
     """
-    # Late import
-    from tests.support.runtests import RUNTIME_VARS
-
-    if RUNTIME_VARS.PYTEST_SESSION:
-        setattr(caller, "__slow_test__", True)
-
-    if os.environ.get("SLOW_TESTS", "False").lower() == "false":
-        reason = "Slow tests are disabled"
-
-        if not isinstance(caller, type):
-
-            @functools.wraps(caller)
-            def skip_wrapper(*args, **kwargs):
-                raise SkipTest(reason)
-
-            caller = skip_wrapper
-
-        caller.__unittest_skip__ = True
-        caller.__unittest_skip_why__ = reason
+    salt.utils.versions.warn_until_date(
+        "20220101",
+        "Please stop using `@slowTest`, it will be removed in {date}, and instead use "
+        "`@pytest.mark.slow_test`.",
+        stacklevel=3,
+    )
+    setattr(caller, "__slow_test__", True)
     return caller
 
 
@@ -204,6 +196,13 @@ def flaky(caller=None, condition=True, attempts=4):
         def test_sometimes_works(self):
             pass
     """
+    salt.utils.versions.warn_until_date(
+        "20220101",
+        "Please stop using `@flaky`, it will be removed in {date}, and instead use "
+        "`@pytest.mark.flaky`. See https://pypi.org/project/flaky for information on "
+        "how to use it.",
+        stacklevel=3,
+    )
     if caller is None:
         return functools.partial(flaky, condition=condition, attempts=attempts)
 
@@ -249,7 +248,7 @@ def flaky(caller=None, condition=True, attempts=4):
             except Exception as exc:  # pylint: disable=broad-except
                 exc_info = sys.exc_info()
                 if isinstance(exc, SkipTest):
-                    six.reraise(*exc_info)
+                    raise exc_info[0].with_traceback(exc_info[1], exc_info[2])
                 if not isinstance(exc, AssertionError) and log.isEnabledFor(
                     logging.DEBUG
                 ):
@@ -257,7 +256,7 @@ def flaky(caller=None, condition=True, attempts=4):
                 if attempt >= attempts - 1:
                     # We won't try to run tearDown once the attempts are exhausted
                     # because the regular test runner will do that for us
-                    six.reraise(*exc_info)
+                    raise exc_info[0].with_traceback(exc_info[1], exc_info[2])
                 # Run through tearDown again
                 teardown = getattr(cls, "tearDown", None)
                 if callable(teardown):
@@ -282,27 +281,9 @@ def requires_sshd_server(caller):
             def test_create_user(self):
                 pass
     """
-    if inspect.isclass(caller):
-        # We're decorating a class
-        old_setup = getattr(caller, "setUp", None)
-
-        def setUp(self, *args, **kwargs):
-            if os.environ.get("SSH_DAEMON_RUNNING", "False").lower() == "false":
-                self.skipTest("SSH tests are disabled")
-            if old_setup is not None:
-                old_setup(self, *args, **kwargs)
-
-        caller.setUp = setUp
-        return caller
-
-    # We're simply decorating functions
-    @functools.wraps(caller)
-    def wrap(cls):
-        if os.environ.get("SSH_DAEMON_RUNNING", "False").lower() == "false":
-            cls.skipTest("SSH tests are disabled")
-        return caller(cls)
-
-    return wrap
+    raise RuntimeError(
+        "Please replace @requires_sshd_server with @pytest.mark.requires_sshd_server"
+    )
 
 
 class RedirectStdStreams:
@@ -522,12 +503,6 @@ class ForceImportErrorOn:
     def __fake_import__(
         self, name, globals_=None, locals_=None, fromlist=None, level=None
     ):
-        if six.PY2:
-            if globals_ is None:
-                globals_ = {}
-            if locals_ is None:
-                locals_ = {}
-
         if level is None:
             level = 0
         if fromlist is None:
@@ -602,6 +577,12 @@ def requires_network(only_local_network=False):
     Simple decorator which is supposed to skip a test case in case there's no
     network connection to the internet.
     """
+    salt.utils.versions.warn_until_date(
+        "20220101",
+        "Please stop using `@requires_network`, it will be removed in {date}, and instead use "
+        "`@pytest.mark.requires_network`.",
+        stacklevel=3,
+    )
 
     def decorator(func):
         @functools.wraps(func)
@@ -1194,6 +1175,12 @@ def requires_salt_states(*names):
 
     .. versionadded:: 3000
     """
+    salt.utils.versions.warn_until_date(
+        "20220101",
+        "Please stop using `@requires_salt_states`, it will be removed in {date}, and instead use "
+        "`@pytest.mark.requires_salt_states`.",
+        stacklevel=3,
+    )
     not_available = _check_required_sminion_attributes("states", *names)
     if not_available:
         return skip("Unavailable salt states: {}".format(*not_available))
@@ -1206,6 +1193,12 @@ def requires_salt_modules(*names):
 
     .. versionadded:: 0.5.2
     """
+    salt.utils.versions.warn_until_date(
+        "20220101",
+        "Please stop using `@requires_salt_modules`, it will be removed in {date}, and instead use "
+        "`@pytest.mark.requires_salt_modules`.",
+        stacklevel=3,
+    )
     not_available = _check_required_sminion_attributes("functions", *names)
     if not_available:
         return skip("Unavailable salt modules: {}".format(*not_available))
@@ -1213,6 +1206,12 @@ def requires_salt_modules(*names):
 
 
 def skip_if_binaries_missing(*binaries, **kwargs):
+    salt.utils.versions.warn_until_date(
+        "20220101",
+        "Please stop using `@skip_if_binaries_missing`, it will be removed in {date}, and instead use "
+        "`@pytest.mark.skip_if_binaries_missing`.",
+        stacklevel=3,
+    )
     import salt.utils.path
 
     if len(binaries) == 1:
@@ -1243,11 +1242,13 @@ def skip_if_binaries_missing(*binaries, **kwargs):
 
 
 def skip_if_not_root(func):
-    # Late import
-    from tests.support.runtests import RUNTIME_VARS
-
-    if RUNTIME_VARS.PYTEST_SESSION:
-        setattr(func, "__skip_if_not_root__", True)
+    salt.utils.versions.warn_until_date(
+        "20220101",
+        "Please stop using `@skip_if_not_root`, it will be removed in {date}, and instead use "
+        "`@pytest.mark.skip_if_not_root`.",
+        stacklevel=3,
+    )
+    setattr(func, "__skip_if_not_root__", True)
 
     if not sys.platform.startswith("win"):
         if os.getuid() != 0:
@@ -1386,6 +1387,7 @@ def generate_random_name(prefix, size=6):
         "20220101",
         "Please replace your call 'generate_random_name({0})' with 'random_string({0}, lowercase=False)' as "
         "'generate_random_name' will be removed after {{date}}".format(prefix),
+        stacklevel=3,
     )
     return random_string(prefix, size=size, lowercase=False)
 
@@ -1435,7 +1437,7 @@ class Webserver:
         webserver.stop()
     """
 
-    def __init__(self, root=None, port=None, wait=5, handler=None):
+    def __init__(self, root=None, port=None, wait=5, handler=None, ssl_opts=None):
         """
         root
             Root directory of webserver. If not passed, it will default to the
@@ -1471,6 +1473,7 @@ class Webserver:
             handler if handler is not None else salt.ext.tornado.web.StaticFileHandler
         )
         self.web_root = None
+        self.ssl_opts = ssl_opts
 
     def target(self):
         """
@@ -1486,7 +1489,7 @@ class Webserver:
             self.application = salt.ext.tornado.web.Application(
                 [(r"/(.*)", self.handler)]
             )
-        self.application.listen(self.port)
+        self.application.listen(self.port, ssl_options=self.ssl_opts)
         self.ioloop.start()
 
     @property
@@ -1525,7 +1528,9 @@ class Webserver:
         if self.port is None:
             self.port = get_unused_localhost_port()
 
-        self.web_root = "http://127.0.0.1:{}".format(self.port)
+        self.web_root = "http{}://127.0.0.1:{}".format(
+            "s" if self.ssl_opts else "", self.port
+        )
 
         self.server_thread = threading.Thread(target=self.target)
         self.server_thread.daemon = True
@@ -1642,8 +1647,12 @@ patched_environ = PatchedEnviron
 
 
 class VirtualEnv:
-    def __init__(self, venv_dir=None):
+    def __init__(self, venv_dir=None, env=None):
         self.venv_dir = venv_dir or tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
+        environ = os.environ.copy()
+        if env:
+            environ.update(env)
+        self.environ = environ
         if salt.utils.platform.is_windows():
             self.venv_python = os.path.join(self.venv_dir, "Scripts", "python.exe")
         else:
@@ -1669,8 +1678,14 @@ class VirtualEnv:
         kwargs.setdefault("stdout", subprocess.PIPE)
         kwargs.setdefault("stderr", subprocess.PIPE)
         kwargs.setdefault("universal_newlines", True)
+        kwargs.setdefault("env", self.environ)
         proc = subprocess.run(args, check=False, **kwargs)
-        ret = ProcessResult(proc.returncode, proc.stdout, proc.stderr, proc.args)
+        ret = ProcessResult(
+            exitcode=proc.returncode,
+            stdout=proc.stdout,
+            stderr=proc.stderr,
+            cmdline=proc.args,
+        )
         log.debug(ret)
         if check is True:
             try:
@@ -1723,6 +1738,7 @@ class VirtualEnv:
         sminion.functions.virtualenv.create(
             self.venv_dir, python=self._get_real_python()
         )
+        self.install("-U", "pip")
         # https://github.com/pypa/setuptools/issues?q=is%3Aissue+setuptools+50+
         self.install("-U", "setuptools<50.0.0")
 

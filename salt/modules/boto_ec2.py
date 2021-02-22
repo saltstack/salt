@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Connection module for Amazon EC2
 
@@ -43,22 +42,17 @@ as a passed in dict, or as a string to pull from pillars or minion config:
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import time
 
-# Import Salt libs
 import salt.utils.compat
 import salt.utils.data
 import salt.utils.json
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.ext import six
 from salt.ext.six.moves import map
 
-# Import third party libs
 try:
     # pylint: disable=unused-import
     import boto
@@ -96,7 +90,6 @@ def __virtual__():
 
 
 def __init__(opts):
-    salt.utils.compat.pack_dunder(__name__)
     if HAS_BOTO:
         __utils__["boto.assign_funcs"](__name__, "ec2")
 
@@ -265,7 +258,7 @@ def get_eip_address_info(
         "private_ip_address",
     ]
 
-    return [dict([(x, getattr(address, x)) for x in interesting]) for address in ret]
+    return [{x: getattr(address, x) for x in interesting} for address in ret]
 
 
 def allocate_eip_address(domain=None, region=None, key=None, keyid=None, profile=None):
@@ -314,7 +307,7 @@ def allocate_eip_address(domain=None, region=None, key=None, keyid=None, profile
         "private_ip_address",
     ]
 
-    return dict([(x, getattr(address, x)) for x in interesting])
+    return {x: getattr(address, x) for x in interesting}
 
 
 def release_eip_address(
@@ -692,8 +685,8 @@ def find_instances(
             filter_parameters["filters"]["tag:Name"] = name
 
         if tags:
-            for tag_name, tag_value in six.iteritems(tags):
-                filter_parameters["filters"]["tag:{0}".format(tag_name)] = tag_value
+            for tag_name, tag_value in tags.items():
+                filter_parameters["filters"]["tag:{}".format(tag_name)] = tag_value
 
         if filters:
             filter_parameters["filters"].update(filters)
@@ -817,8 +810,8 @@ def find_images(
             if ami_name:
                 filter_parameters["filters"]["name"] = ami_name
             if tags:
-                for tag_name, tag_value in six.iteritems(tags):
-                    filter_parameters["filters"]["tag:{0}".format(tag_name)] = tag_value
+                for tag_name, tag_value in tags.items():
+                    filter_parameters["filters"]["tag:{}".format(tag_name)] = tag_value
             images = conn.get_all_images(**filter_parameters)
             log.debug(
                 "The filters criteria %s matched the following " "images:%s",
@@ -1020,7 +1013,7 @@ def _to_blockdev_map(thing):
         return None
     if isinstance(thing, BlockDeviceMapping):
         return thing
-    if isinstance(thing, six.string_types):
+    if isinstance(thing, str):
         thing = salt.utils.json.loads(thing)
     if not isinstance(thing, dict):
         log.error(
@@ -1032,7 +1025,7 @@ def _to_blockdev_map(thing):
         return None
 
     bdm = BlockDeviceMapping()
-    for d, t in six.iteritems(thing):
+    for d, t in thing.items():
         bdt = BlockDeviceType(
             ephemeral_name=t.get("ephemeral_name"),
             no_device=t.get("no_device", False),
@@ -1523,7 +1516,7 @@ def get_attribute(
         )
     if attribute not in attribute_list:
         raise SaltInvocationError(
-            "Attribute must be one of: {0}.".format(attribute_list)
+            "Attribute must be one of: {}.".format(attribute_list)
         )
     try:
         if instance_name:
@@ -1614,7 +1607,7 @@ def set_attribute(
         )
     if attribute not in attribute_list:
         raise SaltInvocationError(
-            "Attribute must be one of: {0}.".format(attribute_list)
+            "Attribute must be one of: {}.".format(attribute_list)
         )
     try:
         if instance_name:
@@ -1826,7 +1819,7 @@ def create_network_interface(
     )
     vpc_id = vpc_id.get("vpc_id")
     if not vpc_id:
-        msg = "subnet_id {0} does not map to a valid vpc id.".format(subnet_id)
+        msg = "subnet_id {} does not map to a valid vpc id.".format(subnet_id)
         r["error"] = {"message": msg}
         return r
     _groups = __salt__["boto_secgroup.convert_to_group_ids"](
@@ -2235,7 +2228,7 @@ def set_volumes_tags(
                         profile=profile,
                     )
                     if not instance_id:
-                        msg = "Couldn't resolve instance Name {0} to an ID.".format(v)
+                        msg = "Couldn't resolve instance Name {} to an ID.".format(v)
                         raise CommandExecutionError(msg)
                     new_filters["attachment.instance_id"] = instance_id
                 else:
@@ -2271,17 +2264,17 @@ def set_volumes_tags(
         else:
             log.debug("No changes needed for vol.id %s", vol.id)
         if add:
-            d = dict((k, tags[k]) for k in add)
+            d = {k: tags[k] for k in add}
             log.debug("New tags for vol.id %s: %s", vol.id, d)
         if update:
-            d = dict((k, tags[k]) for k in update)
+            d = {k: tags[k] for k in update}
             log.debug("Updated tags for vol.id %s: %s", vol.id, d)
         if not dry_run:
             if not create_tags(
                 vol.id, tags, region=region, key=key, keyid=keyid, profile=profile
             ):
                 ret["success"] = False
-                ret["comment"] = "Failed to set tags on vol.id {0}: {1}".format(
+                ret["comment"] = "Failed to set tags on vol.id {}: {}".format(
                     vol.id, tags
                 )
                 return ret
@@ -2299,7 +2292,7 @@ def set_volumes_tags(
                         ret["success"] = False
                         ret[
                             "comment"
-                        ] = "Failed to remove tags on vol.id {0}: {1}".format(
+                        ] = "Failed to remove tags on vol.id {}: {}".format(
                             vol.id, remove
                         )
                         return ret

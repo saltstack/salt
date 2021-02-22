@@ -75,12 +75,12 @@ A REST API for Salt
     debug : ``False``
         Starts the web server in development mode. It will reload itself when
         the underlying code is changed and will output more debugging info.
-    log.access_file
+    log_access_file
         Path to a file to write HTTP access logs.
 
         .. versionadded:: 2016.11.0
 
-    log.error_file
+    log_error_file
         Path to a file to write HTTP error logs.
 
         .. versionadded:: 2016.11.0
@@ -2011,7 +2011,7 @@ class Token(LowDataAdapter):
 class Run(LowDataAdapter):
     """
     Run commands bypassing the :ref:`normal session handling
-    <rest_cherrypy-auth>`
+    <rest_cherrypy-auth>`.
 
     salt-api does not enforce authorization, Salt's eauth system does that.
     Local/Runner/WheelClient all accept ``username``/``password``/``eauth``
@@ -2032,7 +2032,7 @@ class Run(LowDataAdapter):
     def POST(self, **kwargs):
         """
         Run commands bypassing the :ref:`normal session handling
-        <rest_cherrypy-auth>` Other than that this URL is identical to the
+        <rest_cherrypy-auth>`.  Otherwise, this URL is identical to the
         :py:meth:`root URL (/) <LowDataAdapter.POST>`.
 
         .. http:post:: /run
@@ -2100,14 +2100,9 @@ class Run(LowDataAdapter):
               ms-3: true
               ms-4: true
 
-        The /run enpoint can also be used to issue commands using the salt-ssh
-        subsystem.
-
-        When using salt-ssh, eauth credentials should not be supplied. Instead,
-        authentication should be handled by the SSH layer itself. The use of
-        the salt-ssh client does not require a salt master to be running.
-        Instead, only a roster file must be present in the salt configuration
-        directory.
+        The /run endpoint can also be used to issue commands using the salt-ssh
+        subsystem.  When using salt-ssh, eauth credentials must also be
+        supplied, and are subject to :ref:`eauth access-control lists <acl>`.
 
         All SSH client requests are synchronous.
 
@@ -2119,6 +2114,9 @@ class Run(LowDataAdapter):
                 -H 'Accept: application/x-yaml' \\
                 -d client='ssh' \\
                 -d tgt='*' \\
+                -d username='saltdev' \\
+                -d password='saltdev' \\
+                -d eauth='auto' \\
                 -d fun='test.ping'
 
         .. code-block:: text
@@ -2129,21 +2127,19 @@ class Run(LowDataAdapter):
             Content-Length: 75
             Content-Type: application/x-www-form-urlencoded
 
-            client=ssh&tgt=*&fun=test.ping
-
         **Example SSH response:**
 
         .. code-block:: text
 
                 return:
                 - silver:
-                  fun: test.ping
-                  fun_args: []
-                  id: silver
-                  jid: '20141203103525666185'
-                  retcode: 0
-                  return: true
-                  success: true
+                    _stamp: '2020-09-08T23:04:28.912609'
+                    fun: test.ping
+                    fun_args: []
+                    id: silver
+                    jid: '20200908230427905565'
+                    retcode: 0
+                    return: true
         """
         return {
             "return": list(self.exec_lowstate()),
@@ -2358,25 +2354,25 @@ class Events:
             """
             An iterator to yield Salt events
             """
-            event = salt.utils.event.get_event(
+            with salt.utils.event.get_event(
                 "master",
                 sock_dir=self.opts["sock_dir"],
                 transport=self.opts["transport"],
                 opts=self.opts,
                 listen=True,
-            )
-            stream = event.iter_events(full=True, auto_reconnect=True)
+            ) as event:
+                stream = event.iter_events(full=True, auto_reconnect=True)
 
-            yield "retry: 400\n"  # future lint: disable=blacklisted-function
+                yield "retry: 400\n"  # future lint: disable=blacklisted-function
 
-            while True:
-                data = next(stream)
-                yield "tag: {}\n".format(
-                    data.get("tag", "")
-                )  # future lint: disable=blacklisted-function
-                yield "data: {}\n\n".format(
-                    salt.utils.json.dumps(data)
-                )  # future lint: disable=blacklisted-function
+                while True:
+                    data = next(stream)
+                    yield "tag: {}\n".format(
+                        data.get("tag", "")
+                    )  # future lint: disable=blacklisted-function
+                    yield "data: {}\n\n".format(
+                        salt.utils.json.dumps(data)
+                    )  # future lint: disable=blacklisted-function
 
         return listen()
 
@@ -2538,38 +2534,38 @@ class WebsocketEndpoint:
             # blocks until send is called on the parent end of this pipe.
             pipe.recv()
 
-            event = salt.utils.event.get_event(
+            with salt.utils.event.get_event(
                 "master",
                 sock_dir=self.opts["sock_dir"],
                 transport=self.opts["transport"],
                 opts=self.opts,
                 listen=True,
-            )
-            stream = event.iter_events(full=True, auto_reconnect=True)
-            SaltInfo = event_processor.SaltInfo(handler)
+            ) as event:
+                stream = event.iter_events(full=True, auto_reconnect=True)
+                SaltInfo = event_processor.SaltInfo(handler)
 
-            def signal_handler(signal, frame):
-                os._exit(0)
+                def signal_handler(signal, frame):
+                    os._exit(0)
 
-            signal.signal(signal.SIGTERM, signal_handler)
+                signal.signal(signal.SIGTERM, signal_handler)
 
-            while True:
-                data = next(stream)
-                if data:
-                    try:  # work around try to decode catch unicode errors
-                        if "format_events" in kwargs:
-                            SaltInfo.process(data, salt_token, self.opts)
-                        else:
-                            handler.send(
-                                "data: {}\n\n".format(
-                                    salt.utils.json.dumps(data)
-                                ),  # future lint: disable=blacklisted-function
-                                False,
+                while True:
+                    data = next(stream)
+                    if data:
+                        try:  # work around try to decode catch unicode errors
+                            if "format_events" in kwargs:
+                                SaltInfo.process(data, salt_token, self.opts)
+                            else:
+                                handler.send(
+                                    "data: {}\n\n".format(
+                                        salt.utils.json.dumps(data)
+                                    ),  # future lint: disable=blacklisted-function
+                                    False,
+                                )
+                        except UnicodeDecodeError:
+                            logger.error(
+                                "Error: Salt event has non UTF-8 data:\n{}".format(data)
                             )
-                    except UnicodeDecodeError:
-                        logger.error(
-                            "Error: Salt event has non UTF-8 data:\n{}".format(data)
-                        )
 
         parent_pipe, child_pipe = Pipe()
         handler.pipe = parent_pipe

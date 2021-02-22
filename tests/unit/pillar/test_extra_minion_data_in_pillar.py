@@ -1,12 +1,4 @@
-# -*- coding: utf-8 -*-
-
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Salt Libs
 from salt.pillar import extra_minion_data_in_pillar
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock
 from tests.support.unit import TestCase
@@ -18,7 +10,7 @@ class ExtraMinionDataInPillarTestCase(TestCase, LoaderModuleMockMixin):
     """
 
     def setup_loader_modules(self):
-        return {extra_minion_data_in_pillar: {"__virtual__": True}}
+        return {extra_minion_data_in_pillar: {}}
 
     def setUp(self):
         self.pillar = MagicMock()

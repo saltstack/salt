@@ -1,10 +1,7 @@
-# coding: utf-8
 """
 A collection of mixins useful for the various *Client interfaces
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals, with_statement
 
 import copy as pycopy
 import fnmatch
@@ -14,10 +11,7 @@ import traceback
 import weakref
 from collections.abc import Mapping, MutableMapping
 
-# Import Salt libs
 import salt.exceptions
-
-# Import 3rd-party libs
 import salt.ext.tornado.stack_context
 import salt.log.setup
 import salt.minion
@@ -34,7 +28,6 @@ import salt.utils.process
 import salt.utils.state
 import salt.utils.user
 import salt.utils.versions
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -122,7 +115,7 @@ class ClientFuncsDict(MutableMapping):
         return iter(self.client.functions)
 
 
-class SyncClientMixin(object):
+class SyncClientMixin:
     """
     A mixin for *Client interfaces to abstract common function execution
     """
@@ -182,7 +175,7 @@ class SyncClientMixin(object):
             )
             if ret is None:
                 raise salt.exceptions.SaltClientTimeout(
-                    "RunnerClient job '{0}' timed out".format(job["jid"]),
+                    "RunnerClient job '{}' timed out".format(job["jid"]),
                     jid=job["jid"],
                 )
 
@@ -281,7 +274,7 @@ class SyncClientMixin(object):
             return True
 
         try:
-            return self.opts["{0}_returns".format(class_name)]
+            return self.opts["{}_returns".format(class_name)]
         except KeyError:
             # No such option, assume this isn't one we care about gating and
             # just return True.
@@ -308,7 +301,7 @@ class SyncClientMixin(object):
         tag = low.get("__tag__", salt.utils.event.tagify(jid, prefix=self.tag_prefix))
 
         data = {
-            "fun": "{0}.{1}".format(self.client, fun),
+            "fun": "{}.{}".format(self.client, fun),
             "jid": jid,
             "user": low.get("__user__", "UNKNOWN"),
         }
@@ -353,14 +346,14 @@ class SyncClientMixin(object):
                 # namespace only once per module-- not per func
                 completed_funcs = []
 
-                for mod_name in six.iterkeys(self_functions):
+                for mod_name in self_functions.keys():
                     if "." not in mod_name:
                         continue
                     mod, _ = mod_name.split(".", 1)
                     if mod in completed_funcs:
                         continue
                     completed_funcs.append(mod)
-                    for global_key, value in six.iteritems(func_globals):
+                    for global_key, value in func_globals.items():
                         self.functions[mod_name].__globals__[global_key] = value
 
                 # There are some discrepancies of what a "low" structure is in the
@@ -398,7 +391,7 @@ class SyncClientMixin(object):
                     except TypeError as exc:
                         data[
                             "return"
-                        ] = "\nPassed invalid arguments: {0}\n\nUsage:\n{1}".format(
+                        ] = "\nPassed invalid arguments: {}\n\nUsage:\n{}".format(
                             exc, func.__doc__
                         )
                     try:
@@ -413,9 +406,9 @@ class SyncClientMixin(object):
                         )
             except (Exception, SystemExit) as ex:  # pylint: disable=broad-except
                 if isinstance(ex, salt.exceptions.NotImplemented):
-                    data["return"] = six.text_type(ex)
+                    data["return"] = str(ex)
                 else:
-                    data["return"] = "Exception occurred in {0} {1}: {2}".format(
+                    data["return"] = "Exception occurred in {} {}: {}".format(
                         self.client, fun, traceback.format_exc(),
                     )
                 data["success"] = False
@@ -477,7 +470,7 @@ class SyncClientMixin(object):
         return salt.utils.doc.strip_rst(docs)
 
 
-class AsyncClientMixin(object):
+class AsyncClientMixin:
     """
     A mixin for *Client interfaces to enable easy asynchronous function execution
     """
@@ -577,9 +570,10 @@ class AsyncClientMixin(object):
         if suffix == "ret":
             # Check if outputter was passed in the return data. If this is the case,
             # then the return data will be a dict two keys: 'data' and 'outputter'
-            if isinstance(event.get("return"), dict) and set(event["return"]) == set(
-                ("data", "outputter")
-            ):
+            if isinstance(event.get("return"), dict) and set(event["return"]) == {
+                "data",
+                "outputter",
+            }:
                 event_data = event["return"]["data"]
                 outputter = event["return"]["outputter"]
             else:

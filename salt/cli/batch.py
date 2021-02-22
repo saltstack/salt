@@ -1,12 +1,7 @@
 """
 Execute batch runs
 """
-
-# Import python libs
-
 import copy
-
-# pylint: enable=import-error,no-name-in-module,redefined-builtin
 import logging
 import math
 import time
@@ -309,7 +304,7 @@ class Batch:
                         "Batch run stopped due to failhard",
                         minion,
                     )
-                    raise StopIteration
+                    return
 
             # remove inactive iterators from the iters list
             for queue in minion_tracker:
@@ -322,3 +317,4 @@ class Batch:
                             active.remove(minion)
                             if bwait:
                                 wait.append(datetime.now() + timedelta(seconds=bwait))
+        self.local.destroy()

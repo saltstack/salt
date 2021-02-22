@@ -56,16 +56,12 @@ set the reload value to True:
     :ref:`Requisites <requisites>` documentation.
 
 """
-# Import Python libs
 
 import time
 
-# Import Salt libs
 import salt.utils.data
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError
-
-# Import 3rd-party libs
 from salt.utils.args import get_function_argspec as _argspec
 from salt.utils.systemd import booted
 
@@ -388,6 +384,15 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
 
         .. versionadded:: 2017.7.0
 
+    timeout
+        **For Windows minions only.**
+
+        The time in seconds to wait for the service to start before returning.
+        Default is the default for :py:func:`win_service.start
+        <salt.modules.win_service.start>`.
+
+        .. versionadded:: 2017.7.9,2018.3.4
+
     unmask : False
         **For systemd minions only.** Set to ``True`` to remove an indefinite
         mask before attempting to start the service.
@@ -551,7 +556,7 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
         ret["changes"][name] = after_toggle_status
 
     if after_toggle_status:
-        ret["comment"] = "Started Service {}".format(name)
+        ret["comment"] = "Started service {}".format(name)
     else:
         ret["comment"] = "Service {} failed to start".format(name)
         ret["result"] = False
@@ -601,6 +606,16 @@ def dead(name, enable=None, sig=None, init_delay=None, **kwargs):
         **For systemd minions only.** Stops the service using ``--no-block``.
 
         .. versionadded:: 2017.7.0
+
+    timeout
+        **For Windows minions only.**
+
+        The time in seconds to wait for the service to stop before returning.
+        Default is the default for :py:func:`win_service.stop
+        <salt.modules.win_service.stop>`.
+
+        .. versionadded:: 2017.7.9,2018.3.4
+
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 

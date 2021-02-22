@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Connection module for Amazon Elasticache
 
@@ -44,9 +43,7 @@ Connection module for Amazon Elasticache
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
 
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import logging
 import time
 
@@ -54,12 +51,8 @@ import salt.utils.odict as odict
 import salt.utils.versions
 from salt.exceptions import SaltInvocationError
 
-# Import Salt libs
-from salt.ext import six
-
 log = logging.getLogger(__name__)
 
-# Import third party libs
 try:
     # pylint: disable=unused-import
     import boto
@@ -157,7 +150,7 @@ def create_replication_group(
             if config["status"] == "available":
                 return True
     except boto.exception.BotoServerError as e:
-        msg = "Failed to create replication group {0}.".format(name)
+        msg = "Failed to create replication group {}.".format(name)
         log.error(msg)
         log.debug(e)
         return {}
@@ -177,12 +170,12 @@ def delete_replication_group(name, region=None, key=None, keyid=None, profile=No
         return False
     try:
         conn.delete_replication_group(name)
-        msg = "Deleted ElastiCache replication group {0}.".format(name)
+        msg = "Deleted ElastiCache replication group {}.".format(name)
         log.info(msg)
         return True
     except boto.exception.BotoServerError as e:
         log.debug(e)
-        msg = "Failed to delete ElastiCache replication group {0}".format(name)
+        msg = "Failed to delete ElastiCache replication group {}".format(name)
         log.error(msg)
         return False
 
@@ -204,7 +197,7 @@ def describe_replication_group(
     try:
         cc = conn.describe_replication_groups(name)
     except boto.exception.BotoServerError as e:
-        msg = "Failed to get config for cache cluster {0}.".format(name)
+        msg = "Failed to get config for cache cluster {}.".format(name)
         log.error(msg)
         log.debug(e)
         return {}
@@ -222,7 +215,7 @@ def describe_replication_group(
         "primary_cluster_id",
         "node_groups",
     ]
-    for key, val in six.iteritems(cc):
+    for key, val in cc.items():
         _key = boto.utils.pythonize_name(key)
         if _key == "status":
             if val:
@@ -272,7 +265,7 @@ def get_config(name, region=None, key=None, keyid=None, profile=None):
     try:
         cc = conn.describe_cache_clusters(name, show_cache_node_info=True)
     except boto.exception.BotoServerError as e:
-        msg = "Failed to get config for cache cluster {0}.".format(name)
+        msg = "Failed to get config for cache cluster {}.".format(name)
         log.error(msg)
         log.debug(e)
         return {}
@@ -298,7 +291,7 @@ def get_config(name, region=None, key=None, keyid=None, profile=None):
         "cache_cluster_status",
         "cache_nodes",
     ]
-    for key, val in six.iteritems(cc):
+    for key, val in cc.items():
         _key = boto.utils.pythonize_name(key)
         if _key not in attrs:
             continue
@@ -349,7 +342,7 @@ def get_node_host(name, region=None, key=None, keyid=None, profile=None):
     try:
         cc = conn.describe_cache_clusters(name, show_cache_node_info=True)
     except boto.exception.BotoServerError as e:
-        msg = "Failed to get config for cache cluster {0}.".format(name)
+        msg = "Failed to get config for cache cluster {}.".format(name)
         log.error(msg)
         log.debug(e)
         return {}
@@ -374,7 +367,7 @@ def get_group_host(name, region=None, key=None, keyid=None, profile=None):
     try:
         cc = conn.describe_replication_groups(name)
     except boto.exception.BotoServerError as e:
-        msg = "Failed to get config for cache cluster {0}.".format(name)
+        msg = "Failed to get config for cache cluster {}.".format(name)
         log.error(msg)
         log.debug(e)
         return {}
@@ -449,7 +442,7 @@ def subnet_group_exists(
     try:
         ec = conn.describe_cache_subnet_groups(cache_subnet_group_name=name)
         if not ec:
-            msg = "ElastiCache subnet group does not exist in region {0}".format(region)
+            msg = "ElastiCache subnet group does not exist in region {}".format(region)
             log.debug(msg)
             return False
         return True
@@ -500,14 +493,14 @@ def create_subnet_group(
     try:
         ec = conn.create_cache_subnet_group(name, description, subnet_ids)
         if not ec:
-            msg = "Failed to create ElastiCache subnet group {0}".format(name)
+            msg = "Failed to create ElastiCache subnet group {}".format(name)
             log.error(msg)
             return False
         log.info("Created ElastiCache subnet group %s", name)
         return True
     except boto.exception.BotoServerError as e:
         log.debug(e)
-        msg = "Failed to create ElastiCache subnet group {0}".format(name)
+        msg = "Failed to create ElastiCache subnet group {}".format(name)
         log.error(msg)
         return False
 
@@ -527,16 +520,16 @@ def get_cache_subnet_group(name, region=None, key=None, keyid=None, profile=None
         csg = csg["DescribeCacheSubnetGroupsResponse"]
         csg = csg["DescribeCacheSubnetGroupsResult"]["CacheSubnetGroups"][0]
     except boto.exception.BotoServerError as e:
-        msg = "Failed to get cache subnet group {0}.".format(name)
+        msg = "Failed to get cache subnet group {}.".format(name)
         log.error(msg)
         log.debug(e)
         return False
     except (IndexError, TypeError, KeyError):
-        msg = "Failed to get cache subnet group {0} (2).".format(name)
+        msg = "Failed to get cache subnet group {} (2).".format(name)
         log.error(msg)
         return False
     ret = {}
-    for key, val in six.iteritems(csg):
+    for key, val in csg.items():
         if key == "CacheSubnetGroupName":
             ret["cache_subnet_group_name"] = val
         elif key == "CacheSubnetGroupDescription":
@@ -570,12 +563,12 @@ def delete_subnet_group(name, region=None, key=None, keyid=None, profile=None):
         return False
     try:
         conn.delete_cache_subnet_group(name)
-        msg = "Deleted ElastiCache subnet group {0}.".format(name)
+        msg = "Deleted ElastiCache subnet group {}.".format(name)
         log.info(msg)
         return True
     except boto.exception.BotoServerError as e:
         log.debug(e)
-        msg = "Failed to delete ElastiCache subnet group {0}".format(name)
+        msg = "Failed to delete ElastiCache subnet group {}".format(name)
         log.error(msg)
         return False
 
@@ -644,7 +637,7 @@ def create(
                 return True
         log.info("Created cache cluster %s.", name)
     except boto.exception.BotoServerError as e:
-        msg = "Failed to create cache cluster {0}.".format(name)
+        msg = "Failed to create cache cluster {}.".format(name)
         log.error(msg)
         log.debug(e)
         return False
@@ -675,7 +668,7 @@ def delete(name, wait=False, region=None, key=None, keyid=None, profile=None):
         log.info("Deleted cache cluster %s.", name)
         return True
     except boto.exception.BotoServerError as e:
-        msg = "Failed to delete cache cluster {0}.".format(name)
+        msg = "Failed to delete cache cluster {}.".format(name)
         log.error(msg)
         log.debug(e)
         return False
@@ -698,7 +691,7 @@ def create_cache_security_group(
         log.info("Created cache security group %s.", name)
         return True
     else:
-        msg = "Failed to create cache security group {0}.".format(name)
+        msg = "Failed to create cache security group {}.".format(name)
         log.error(msg)
         return False
 
@@ -718,7 +711,7 @@ def delete_cache_security_group(name, region=None, key=None, keyid=None, profile
         log.info("Deleted cache security group %s.", name)
         return True
     else:
-        msg = "Failed to delete cache security group {0}.".format(name)
+        msg = "Failed to delete cache security group {}.".format(name)
         log.error(msg)
         return False
 

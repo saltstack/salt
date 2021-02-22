@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 tests.integration.master.test_event_return
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -7,18 +6,17 @@ tests.integration.master.test_event_return
 
         https://github.com/saltstack/salt/pull/54731
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
 import shutil
 import subprocess
+import sys
 import time
 
-import salt.ext.six as six
 from salt.utils.nb_popen import NonBlockingPopen
 from saltfactories.utils.ports import get_unused_localhost_port
-from saltfactories.utils.processes.helpers import terminate_process
+from saltfactories.utils.processes import terminate_process
 from tests.support.cli_scripts import ScriptPathMixin
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.runtests import RUNTIME_VARS
@@ -57,6 +55,7 @@ class TestEventReturn(AdaptedConfigurationTestCaseMixin, ScriptPathMixin, TestCa
     def test_master_startup(self):
         proc = NonBlockingPopen(
             [
+                sys.executable,
                 self.get_script_path("master"),
                 "-c",
                 RUNTIME_VARS.TMP_CONF_DIR,
@@ -66,8 +65,8 @@ class TestEventReturn(AdaptedConfigurationTestCaseMixin, ScriptPathMixin, TestCa
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
         )
-        out = six.b("")
-        err = six.b("")
+        out = b""
+        err = b""
 
         # Testing this should never be longer than 1 minute
         max_time = time.time() + 60
@@ -83,17 +82,17 @@ class TestEventReturn(AdaptedConfigurationTestCaseMixin, ScriptPathMixin, TestCa
                 if _err:
                     err += _err
 
-                if six.b("DeprecationWarning: object() takes no parameters") in out:
+                if b"DeprecationWarning: object() takes no parameters" in out:
                     self.fail(
                         "'DeprecationWarning: object() takes no parameters' was seen in output"
                     )
 
-                if six.b("TypeError: object() takes no parameters") in out:
+                if b"TypeError: object() takes no parameters" in out:
                     self.fail(
                         "'TypeError: object() takes no parameters' was seen in output"
                     )
 
-                if six.b("Setting up the master communication server") in out:
+                if b"Setting up the master communication server" in out:
                     # We got past the place we need, stop the process
                     break
 

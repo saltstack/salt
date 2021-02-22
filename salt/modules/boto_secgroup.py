@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Connection module for Amazon Security Groups
 
@@ -44,19 +43,12 @@ Connection module for Amazon Security Groups
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
 
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import logging
 
 import salt.utils.odict as odict
 import salt.utils.versions
-
-# Import Salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-
-# Import third party libs
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -157,7 +149,7 @@ def _split_rules(rules):
                 "to_port": to_port,
                 "from_port": from_port,
             }
-            for key, val in six.iteritems(grant):
+            for key, val in grant.items():
                 _rule[key] = val
             split.append(_rule)
     return split
@@ -262,7 +254,7 @@ def _parse_rules(sg, rules):
                         "cidr_ip": "cidr_ip",
                     }
                     _grant = odict.OrderedDict()
-                    for g_attr, g_attr_map in six.iteritems(g_attrs):
+                    for g_attr, g_attr_map in g_attrs.items():
                         g_val = getattr(grant, g_attr)
                         if not g_val:
                             continue
@@ -306,9 +298,9 @@ def get_all_security_groups(
     """
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    if isinstance(groupnames, six.string_types):
+    if isinstance(groupnames, str):
         groupnames = [groupnames]
-    if isinstance(group_ids, six.string_types):
+    if isinstance(group_ids, str):
         groupnames = [group_ids]
 
     interesting = [
@@ -410,10 +402,10 @@ def convert_to_group_ids(
             else:
                 raise CommandExecutionError(
                     "Could not resolve Security Group name "
-                    "{0} to a Group ID".format(group)
+                    "{} to a Group ID".format(group)
                 )
         else:
-            group_ids.append(six.text_type(group_id))
+            group_ids.append(str(group_id))
     log.debug("security group contents %s post-conversion", group_ids)
     return group_ids
 
@@ -504,7 +496,7 @@ def create(
         log.info("Created security group %s.", name)
         return True
     else:
-        msg = "Failed to create security group {0}.".format(name)
+        msg = "Failed to create security group {}.".format(name)
         log.error(msg)
         return False
 
@@ -545,7 +537,7 @@ def delete(
             log.info("Deleted security group %s with id %s.", group.name, group.id)
             return True
         else:
-            msg = "Failed to delete security group {0}.".format(name)
+            msg = "Failed to delete security group {}.".format(name)
             log.error(msg)
             return False
     else:
@@ -620,7 +612,7 @@ def authorize(
                 )
                 return True
             else:
-                msg = "Failed to add rule to security group {0} with id {1}.".format(
+                msg = "Failed to add rule to security group {} with id {}.".format(
                     group.name, group.id
                 )
                 log.error(msg)
@@ -629,7 +621,7 @@ def authorize(
             # if we are trying to add the same rule then we are already in the desired state, return true
             if e.error_code == "InvalidPermission.Duplicate":
                 return True
-            msg = "Failed to add rule to security group {0} with id {1}.".format(
+            msg = "Failed to add rule to security group {} with id {}.".format(
                 group.name, group.id
             )
             log.error(msg)
@@ -710,13 +702,13 @@ def revoke(
                 )
                 return True
             else:
-                msg = "Failed to remove rule from security group {0} with id {1}.".format(
+                msg = "Failed to remove rule from security group {} with id {}.".format(
                     group.name, group.id
                 )
                 log.error(msg)
                 return False
         except boto.exception.EC2ResponseError as e:
-            msg = "Failed to remove rule from security group {0} with id {1}.".format(
+            msg = "Failed to remove rule from security group {} with id {}.".format(
                 group.name, group.id
             )
             log.error(msg)
@@ -764,8 +756,8 @@ def _find_vpcs(
         filter_parameters["filters"]["tag:Name"] = vpc_name
 
     if tags:
-        for tag_name, tag_value in six.iteritems(tags):
-            filter_parameters["filters"]["tag:{0}".format(tag_name)] = tag_value
+        for tag_name, tag_value in tags.items():
+            filter_parameters["filters"]["tag:{}".format(tag_name)] = tag_value
 
     vpcs = conn.get_all_vpcs(**filter_parameters)
     log.debug(

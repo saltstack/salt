@@ -190,8 +190,8 @@ class OpenstackTestCase(TestCase, LoaderModuleMockMixin):
         with patch_utils:
             openstack.request_instance(vm_=vm_, conn=fake_conn)
 
-            call = fake_conn.create_server.mock_calls[0]
-            self.assertDictEqual(call.kwargs["network"], expected_network)
+            call_kwargs = fake_conn.create_server.mock_calls[0][-1]
+            self.assertDictEqual(call_kwargs["network"], expected_network)
 
     # Here we're testing the list of dictionaries
     def test_request_instance_should_be_able_to_provide_a_list_of_dictionaries_for_network(
@@ -207,8 +207,8 @@ class OpenstackTestCase(TestCase, LoaderModuleMockMixin):
         with patch_utils:
             openstack.request_instance(vm_=vm_, conn=fake_conn)
 
-            call = fake_conn.create_server.mock_calls[0]
-            assert call.kwargs["network"] == expected_network
+            call_kwargs = fake_conn.create_server.mock_calls[0][-1]
+            assert call_kwargs["network"] == expected_network
 
     # Here we're testing for names/IDs
     def test_request_instance_should_be_able_to_provide_a_list_of_single_ids_or_names_for_network(
@@ -224,8 +224,8 @@ class OpenstackTestCase(TestCase, LoaderModuleMockMixin):
         with patch_utils:
             openstack.request_instance(vm_=vm_, conn=fake_conn)
 
-            call = fake_conn.create_server.mock_calls[0]
-            assert call.kwargs["network"] == expected_network
+            call_kwargs = fake_conn.create_server.mock_calls[0][-1]
+            assert call_kwargs["network"] == expected_network
 
     # Testing that we get a dict that we expect for create_server
     def test__clean_create_kwargs(self):

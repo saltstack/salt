@@ -1,14 +1,9 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
+
 import salt.states.aptpkg as aptpkg
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -34,7 +29,7 @@ class AptTestCase(TestCase, LoaderModuleMockMixin):
             "name": name,
             "result": False,
             "changes": {},
-            "comment": "Package {0} does not have a state".format(name),
+            "comment": "Package {} does not have a state".format(name),
         }
 
         mock = MagicMock(return_value=False)

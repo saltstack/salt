@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage a GPG keychains, add keys, create keys, retrieve keys from keyservers.
 Sign, encrypt and sign plus encrypt text and files.
@@ -12,8 +11,6 @@ Sign, encrypt and sign plus encrypt text and files.
 
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import functools
 import logging
@@ -21,14 +18,10 @@ import os
 import re
 import time
 
-# Import salt libs
 import salt.utils.files
 import salt.utils.path
 import salt.utils.stringutils
 from salt.exceptions import SaltInvocationError
-
-# Import 3rd-party libs
-from salt.ext import six
 from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Set up logging
@@ -129,7 +122,7 @@ def _get_user_info(user=None):
             # if it doesn't exist then fall back to user Salt running as
             userinfo = _get_user_info()
         else:
-            raise SaltInvocationError("User {0} does not exist".format(user))
+            raise SaltInvocationError("User {} does not exist".format(user))
 
     return userinfo
 
@@ -559,17 +552,13 @@ def delete_key(
                 "message"
             ] = "Secret key exists, delete first or pass delete_secret=True."
             return ret
-        elif (
-            skey
-            and delete_secret
-            and six.text_type(gpg.delete_keys(fingerprint, True)) == "ok"
-        ):
+        elif skey and delete_secret and str(gpg.delete_keys(fingerprint, True)) == "ok":
             # Delete the secret key
-            ret["message"] = "Secret key for {0} deleted\n".format(fingerprint)
+            ret["message"] = "Secret key for {} deleted\n".format(fingerprint)
 
         # Delete the public key
-        if six.text_type(gpg.delete_keys(fingerprint)) == "ok":
-            ret["message"] += "Public key for {0} deleted".format(fingerprint)
+        if str(gpg.delete_keys(fingerprint)) == "ok":
+            ret["message"] += "Public key for {} deleted".format(fingerprint)
         ret["res"] = True
         return ret
     else:
@@ -748,7 +737,7 @@ def import_key(text=None, filename=None, user=None, gnupghome=None):
         try:
             with salt.utils.files.flopen(filename, "rb") as _fp:
                 text = salt.utils.stringutils.to_unicode(_fp.read())
-        except IOError:
+        except OSError:
             raise SaltInvocationError("filename does not exist.")
 
     imported_data = gpg.import_keys(text)
@@ -813,7 +802,7 @@ def export_key(keyids=None, secret=False, user=None, gnupghome=None):
     """
     gpg = _create_gpg(user, gnupghome)
 
-    if isinstance(keyids, six.string_types):
+    if isinstance(keyids, str):
         keyids = keyids.split(",")
     return gpg.export_keys(keyids, secret)
 
@@ -856,7 +845,7 @@ def receive_keys(keyserver=None, keys=None, user=None, gnupghome=None):
     if not keyserver:
         keyserver = "pgp.mit.edu"
 
-    if isinstance(keys, six.string_types):
+    if isinstance(keys, str):
         keys = keys.split(",")
 
     recv_data = gpg.recv_keys(keyserver, *keys)
@@ -864,11 +853,11 @@ def receive_keys(keyserver=None, keys=None, user=None, gnupghome=None):
         if "ok" in result:
             if result["ok"] == "1":
                 ret["message"].append(
-                    "Key {0} added to keychain".format(result["fingerprint"])
+                    "Key {} added to keychain".format(result["fingerprint"])
                 )
             elif result["ok"] == "0":
                 ret["message"].append(
-                    "Key {0} already exists in keychain".format(result["fingerprint"])
+                    "Key {} already exists in keychain".format(result["fingerprint"])
                 )
         elif "problem" in result:
             ret["message"].append("Unable to add key to keychain")
@@ -926,12 +915,12 @@ def trust_key(keyid=None, fingerprint=None, trust_level=None, user=None):
             if key:
                 if "fingerprint" not in key:
                     ret["res"] = False
-                    ret["message"] = "Fingerprint not found for keyid {0}".format(keyid)
+                    ret["message"] = "Fingerprint not found for keyid {}".format(keyid)
                     return ret
                 fingerprint = key["fingerprint"]
             else:
                 ret["res"] = False
-                ret["message"] = "KeyID {0} not in GPG keychain".format(keyid)
+                ret["message"] = "KeyID {} not in GPG keychain".format(keyid)
                 return ret
         else:
             ret["res"] = False
@@ -939,9 +928,9 @@ def trust_key(keyid=None, fingerprint=None, trust_level=None, user=None):
             return ret
 
     if trust_level not in _VALID_TRUST_LEVELS:
-        return "ERROR: Valid trust levels - {0}".format(",".join(_VALID_TRUST_LEVELS))
+        return "ERROR: Valid trust levels - {}".format(",".join(_VALID_TRUST_LEVELS))
 
-    stdin = "{0}:{1}\n".format(fingerprint, NUM_TRUST_DICT[trust_level])
+    stdin = "{}:{}\n".format(fingerprint, NUM_TRUST_DICT[trust_level])
     cmd = [_gpg(), "--import-ownertrust"]
     _user = user
 
@@ -959,12 +948,12 @@ def trust_key(keyid=None, fingerprint=None, trust_level=None, user=None):
             _match = re.findall(r"\d", res["stderr"])
             if len(_match) == 2:
                 ret["fingerprint"] = fingerprint
-                ret["message"] = "Changing ownership trust from {0} to {1}.".format(
+                ret["message"] = "Changing ownership trust from {} to {}.".format(
                     INV_NUM_TRUST_DICT[_match[0]], INV_NUM_TRUST_DICT[_match[1]]
                 )
             else:
                 ret["fingerprint"] = fingerprint
-                ret["message"] = "Setting ownership trust to {0}.".format(
+                ret["message"] = "Setting ownership trust to {}.".format(
                     INV_NUM_TRUST_DICT[_match[0]]
                 )
         else:
@@ -1134,7 +1123,7 @@ def verify(
         ret["res"] = True
         ret["username"] = verified.username
         ret["key_id"] = verified.key_id
-        ret["trust_level"] = VERIFY_TRUST_LEVELS[six.text_type(verified.trust_level)]
+        ret["trust_level"] = VERIFY_TRUST_LEVELS[str(verified.trust_level)]
         ret["message"] = "The signature is verified."
     else:
         ret["res"] = False
@@ -1192,11 +1181,12 @@ def encrypt(
 
     .. code-block:: bash
 
-        salt '*' gpg.encrypt text='Hello there.  How are you?'
+        salt '*' gpg.encrypt text='Hello there.  How are you?' recipients=recipient@example.com
 
-        salt '*' gpg.encrypt filename='/path/to/important.file'
+        salt '*' gpg.encrypt filename='/path/to/important.file' recipients=recipient@example.com
 
-        salt '*' gpg.encrypt filename='/path/to/important.file' use_passphrase=True
+        salt '*' gpg.encrypt filename='/path/to/important.file' use_passphrase=True \\
+                             recipients=recipient@example.com
 
     """
     ret = {"res": True, "comment": ""}
@@ -1242,7 +1232,7 @@ def encrypt(
     if result.ok:
         if not bare:
             if output:
-                ret["comment"] = "Encrypted data has been written to {0}".format(output)
+                ret["comment"] = "Encrypted data has been written to {}".format(output)
             else:
                 ret["comment"] = result.data
         else:
@@ -1250,7 +1240,7 @@ def encrypt(
     else:
         if not bare:
             ret["res"] = False
-            ret["comment"] = "{0}.\nPlease check the salt-minion log.".format(
+            ret["comment"] = "{}.\nPlease check the salt-minion log.".format(
                 result.status
             )
         else:
@@ -1329,7 +1319,7 @@ def decrypt(
     if result.ok:
         if not bare:
             if output:
-                ret["comment"] = "Decrypted data has been written to {0}".format(output)
+                ret["comment"] = "Decrypted data has been written to {}".format(output)
             else:
                 ret["comment"] = result.data
         else:
@@ -1337,7 +1327,7 @@ def decrypt(
     else:
         if not bare:
             ret["res"] = False
-            ret["comment"] = "{0}.\nPlease check the salt-minion log.".format(
+            ret["comment"] = "{}.\nPlease check the salt-minion log.".format(
                 result.status
             )
         else:

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 NAPALM Grains
 =============
@@ -16,11 +15,9 @@ Dependencies
 .. versionadded:: 2016.11.0
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Salt lib
 import salt.utils.dns
 import salt.utils.napalm
 

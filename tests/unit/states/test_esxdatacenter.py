@@ -1,18 +1,11 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: :email:`Alexandru Bleotu <alexandru.bleotu@morganstanley.com>`
 
     Tests for functions in salt.states.esxdatacenter
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Salt Libs
 import salt.states.esxdatacenter as esxdatacenter
 from salt.exceptions import CommandExecutionError
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -22,7 +15,7 @@ class DatacenterConfiguredTestCase(TestCase, LoaderModuleMockMixin):
     """Tests for salt.modules.esxdatacenter.datacenter_configured"""
 
     def setup_loader_modules(self):
-        return {esxdatacenter: {"__virtual__": MagicMock(return_value="esxdatacenter")}}
+        return {esxdatacenter: {}}
 
     def setUp(self):
         self.mock_si = MagicMock()

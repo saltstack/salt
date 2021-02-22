@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 ACME / Let's Encrypt module
 ===========================
@@ -34,14 +33,11 @@ Make sure the appropriate certbot plugin for the wanted DNS provider is
 installed before using this module.
 
 """
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
 import logging
 import os
 
-# Import salt libs
 import salt.utils.path
 from salt.exceptions import SaltInvocationError
 
@@ -76,7 +72,7 @@ def _cert_file(name, cert_type):
     """
     Return expected path of a Let's Encrypt live cert
     """
-    return os.path.join(LE_LIVE, name, "{0}.pem".format(cert_type))
+    return os.path.join(LE_LIVE, name, "{}.pem".format(cert_type))
 
 
 def _expires(name):
@@ -92,9 +88,9 @@ def _expires(name):
         expiry = __salt__["tls.cert_info"](cert_file).get("not_after", 0)
     # Cobble it together using the openssl binary
     else:
-        openssl_cmd = "openssl x509 -in {0} -noout -enddate".format(cert_file)
+        openssl_cmd = "openssl x509 -in {} -noout -enddate".format(cert_file)
         # No %e format on my Linux'es here
-        strptime_sux_cmd = 'date --date="$({0} | cut -d= -f2)" +%s'.format(openssl_cmd)
+        strptime_sux_cmd = 'date --date="$({} | cut -d= -f2)" +%s'.format(openssl_cmd)
         expiry = float(__salt__["cmd.shell"](strptime_sux_cmd, output_loglevel="quiet"))
         # expiry = datetime.datetime.strptime(expiry.split('=', 1)[-1], '%b %e %H:%M:%S %Y %Z')
     return datetime.datetime.fromtimestamp(expiry)
@@ -199,10 +195,10 @@ def cert(
         cmd.append("--renew-by-default")
         renew = True
     if server:
-        cmd.append("--server {0}".format(server))
+        cmd.append("--server {}".format(server))
 
     if certname:
-        cmd.append("--cert-name {0}".format(certname))
+        cmd.append("--cert-name {}".format(certname))
 
     if test_cert:
         if server:
@@ -215,31 +211,29 @@ def cert(
     if webroot:
         cmd.append("--authenticator webroot")
         if webroot is not True:
-            cmd.append("--webroot-path {0}".format(webroot))
+            cmd.append("--webroot-path {}".format(webroot))
     elif dns_plugin in supported_dns_plugins:
         if dns_plugin == "cloudflare":
             cmd.append("--dns-cloudflare")
-            cmd.append(
-                "--dns-cloudflare-credentials {0}".format(dns_plugin_credentials)
-            )
+            cmd.append("--dns-cloudflare-credentials {}".format(dns_plugin_credentials))
         else:
             return {
                 "result": False,
-                "comment": "DNS plugin '{0}' is not supported".format(dns_plugin),
+                "comment": "DNS plugin '{}' is not supported".format(dns_plugin),
             }
     else:
         cmd.append("--authenticator standalone")
 
     if email:
-        cmd.append("--email {0}".format(email))
+        cmd.append("--email {}".format(email))
 
     if keysize:
-        cmd.append("--rsa-key-size {0}".format(keysize))
+        cmd.append("--rsa-key-size {}".format(keysize))
 
-    cmd.append("--domains {0}".format(name))
+    cmd.append("--domains {}".format(name))
     if aliases is not None:
         for dns in aliases:
-            cmd.append("--domains {0}".format(dns))
+            cmd.append("--domains {}".format(dns))
 
     if preferred_challenges:
         cmd.append("--preferred-challenges {}".format(preferred_challenges))
@@ -263,7 +257,7 @@ def cert(
                 return {
                     "result": False,
                     "comment": (
-                        "Certificate {0} renewal failed with:\n{1}"
+                        "Certificate {} renewal failed with:\n{}"
                         "".format(name, res["stderr"])
                     ),
                 }
@@ -271,19 +265,19 @@ def cert(
             return {
                 "result": False,
                 "comment": (
-                    "Certificate {0} renewal failed with:\n{1}"
+                    "Certificate {} renewal failed with:\n{}"
                     "".format(name, res["stderr"])
                 ),
             }
 
     if "no action taken" in res["stdout"]:
-        comment = "Certificate {0} unchanged".format(cert_file)
+        comment = "Certificate {} unchanged".format(cert_file)
         result = None
     elif renew:
-        comment = "Certificate {0} renewed".format(certname)
+        comment = "Certificate {} renewed".format(certname)
         result = True
     else:
-        comment = "Certificate {0} obtained".format(certname)
+        comment = "Certificate {} obtained".format(certname)
         result = True
 
     ret = {
@@ -347,7 +341,7 @@ def info(name):
         cert_info = __salt__["x509.read_certificate"](cert_file)
     else:
         # Cobble it together using the openssl binary
-        openssl_cmd = "openssl x509 -in {0} -noout -text".format(cert_file)
+        openssl_cmd = "openssl x509 -in {} -noout -text".format(cert_file)
         cert_info = {"text": __salt__["cmd.run"](openssl_cmd, output_loglevel="quiet")}
     return cert_info
 

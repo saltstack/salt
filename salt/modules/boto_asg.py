@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Connection module for Amazon Autoscale Groups
 
@@ -45,8 +44,6 @@ Connection module for Amazon Autoscale Groups
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
 import email.mime.multipart
@@ -54,14 +51,10 @@ import logging
 import sys
 import time
 
-# Import Salt libs
 import salt.utils.compat
 import salt.utils.json
 import salt.utils.odict as odict
 import salt.utils.versions
-
-# Import third party libs
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 DATE_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
@@ -102,7 +95,6 @@ def __virtual__():
 
 
 def __init__(opts):
-    salt.utils.compat.pack_dunder(__name__)
     if HAS_BOTO:
         __utils__["boto3.assign_funcs"](
             __name__, "autoscaling", get_conn_funcname="_get_conn_autoscaling_boto3"
@@ -125,7 +117,7 @@ def exists(name, region=None, key=None, keyid=None, profile=None):
             if _conn:
                 return True
             else:
-                msg = "The autoscale group does not exist in region {0}".format(region)
+                msg = "The autoscale group does not exist in region {}".format(region)
                 log.debug(msg)
                 return False
         except boto.exception.BotoServerError as e:
@@ -272,13 +264,13 @@ def create(
         salt myminion boto_asg.create myasg mylc '["us-east-1a", "us-east-1e"]' 1 10 load_balancers='["myelb", "myelb2"]' tags='[{"key": "Name", value="myasg", "propagate_at_launch": True}]'
     """
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-    if isinstance(availability_zones, six.string_types):
+    if isinstance(availability_zones, str):
         availability_zones = salt.utils.json.loads(availability_zones)
-    if isinstance(load_balancers, six.string_types):
+    if isinstance(load_balancers, str):
         load_balancers = salt.utils.json.loads(load_balancers)
-    if isinstance(vpc_zone_identifier, six.string_types):
+    if isinstance(vpc_zone_identifier, str):
         vpc_zone_identifier = salt.utils.json.loads(vpc_zone_identifier)
-    if isinstance(tags, six.string_types):
+    if isinstance(tags, str):
         tags = salt.utils.json.loads(tags)
     # Make a list of tag objects from the dict.
     _tags = []
@@ -302,11 +294,11 @@ def create(
                 propagate_at_launch=propagate_at_launch,
             )
             _tags.append(_tag)
-    if isinstance(termination_policies, six.string_types):
+    if isinstance(termination_policies, str):
         termination_policies = salt.utils.json.loads(termination_policies)
-    if isinstance(suspended_processes, six.string_types):
+    if isinstance(suspended_processes, str):
         suspended_processes = salt.utils.json.loads(suspended_processes)
-    if isinstance(scheduled_actions, six.string_types):
+    if isinstance(scheduled_actions, str):
         scheduled_actions = salt.utils.json.loads(scheduled_actions)
     retries = 30
     while True:
@@ -391,19 +383,19 @@ def update(
     )
     if not conn:
         return False, "failed to connect to AWS"
-    if isinstance(availability_zones, six.string_types):
+    if isinstance(availability_zones, str):
         availability_zones = salt.utils.json.loads(availability_zones)
-    if isinstance(load_balancers, six.string_types):
+    if isinstance(load_balancers, str):
         load_balancers = salt.utils.json.loads(load_balancers)
-    if isinstance(vpc_zone_identifier, six.string_types):
+    if isinstance(vpc_zone_identifier, str):
         vpc_zone_identifier = salt.utils.json.loads(vpc_zone_identifier)
-    if isinstance(tags, six.string_types):
+    if isinstance(tags, str):
         tags = salt.utils.json.loads(tags)
-    if isinstance(termination_policies, six.string_types):
+    if isinstance(termination_policies, str):
         termination_policies = salt.utils.json.loads(termination_policies)
-    if isinstance(suspended_processes, six.string_types):
+    if isinstance(suspended_processes, str):
         suspended_processes = salt.utils.json.loads(suspended_processes)
-    if isinstance(scheduled_actions, six.string_types):
+    if isinstance(scheduled_actions, str):
         scheduled_actions = salt.utils.json.loads(scheduled_actions)
 
     # Massage our tagset into  add / remove lists
@@ -429,12 +421,12 @@ def update(
                 key = tag.get("key")
             except KeyError:
                 log.error("Tag missing key.")
-                return False, "Tag {0} missing key".format(tag)
+                return False, "Tag {} missing key".format(tag)
             try:
                 value = tag.get("value")
             except KeyError:
                 log.error("Tag missing value.")
-                return False, "Tag {0} missing value".format(tag)
+                return False, "Tag {} missing value".format(tag)
             propagate_at_launch = tag.get("propagate_at_launch", False)
             _tag = {
                 "key": key,
@@ -508,9 +500,9 @@ def update(
                 retries -= 1
                 continue
             log.error(e)
-            msg = "Failed to update ASG {0}".format(name)
+            msg = "Failed to update ASG {}".format(name)
             log.error(msg)
-            return False, six.text_type(e)
+            return False, str(e)
 
 
 def _create_scaling_policies(conn, as_name, scaling_policies):
@@ -533,16 +525,12 @@ def _create_scheduled_actions(conn, as_name, scheduled_actions):
     Helper function to create scheduled actions
     """
     if scheduled_actions:
-        for name, action in six.iteritems(scheduled_actions):
-            if "start_time" in action and isinstance(
-                action["start_time"], six.string_types
-            ):
+        for name, action in scheduled_actions.items():
+            if "start_time" in action and isinstance(action["start_time"], str):
                 action["start_time"] = datetime.datetime.strptime(
                     action["start_time"], DATE_FORMAT
                 )
-            if "end_time" in action and isinstance(
-                action["end_time"], six.string_types
-            ):
+            if "end_time" in action and isinstance(action["end_time"], str):
                 action["end_time"] = datetime.datetime.strptime(
                     action["end_time"], DATE_FORMAT
                 )
@@ -571,7 +559,7 @@ def delete(name, force=False, region=None, key=None, keyid=None, profile=None):
     while True:
         try:
             conn.delete_auto_scaling_group(name, force)
-            msg = "Deleted autoscale group {0}.".format(name)
+            msg = "Deleted autoscale group {}.".format(name)
             log.info(msg)
             return True
         except boto.exception.BotoServerError as e:
@@ -581,7 +569,7 @@ def delete(name, force=False, region=None, key=None, keyid=None, profile=None):
                 retries -= 1
                 continue
             log.error(e)
-            msg = "Failed to delete autoscale group {0}".format(name)
+            msg = "Failed to delete autoscale group {}".format(name)
             log.error(msg)
             return False
 
@@ -597,15 +585,15 @@ def get_cloud_init_mime(cloud_init):
 
         salt myminion boto.get_cloud_init_mime <cloud init>
     """
-    if isinstance(cloud_init, six.string_types):
+    if isinstance(cloud_init, str):
         cloud_init = salt.utils.json.loads(cloud_init)
     _cloud_init = email.mime.multipart.MIMEMultipart()
     if "boothooks" in cloud_init:
-        for script_name, script in six.iteritems(cloud_init["boothooks"]):
+        for script_name, script in cloud_init["boothooks"].items():
             _script = email.mime.text.MIMEText(script, "cloud-boothook")
             _cloud_init.attach(_script)
     if "scripts" in cloud_init:
-        for script_name, script in six.iteritems(cloud_init["scripts"]):
+        for script_name, script in cloud_init["scripts"].items():
             _script = email.mime.text.MIMEText(script, "x-shellscript")
             _cloud_init.attach(_script)
     if "cloud-config" in cloud_init:
@@ -634,7 +622,7 @@ def launch_configuration_exists(name, region=None, key=None, keyid=None, profile
             if lc:
                 return True
             else:
-                msg = "The launch configuration does not exist in region {0}".format(
+                msg = "The launch configuration does not exist in region {}".format(
                     region
                 )
                 log.debug(msg)
@@ -702,7 +690,7 @@ def describe_launch_configuration(
             if lc:
                 return lc[0]
             else:
-                msg = "The launch configuration does not exist in region {0}".format(
+                msg = "The launch configuration does not exist in region {}".format(
                     region
                 )
                 log.debug(msg)
@@ -751,18 +739,18 @@ def create_launch_configuration(
         salt myminion boto_asg.create_launch_configuration mylc image_id=ami-0b9c9f62 key_name='mykey' security_groups='["mygroup"]' instance_type='c3.2xlarge'
     """
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-    if isinstance(security_groups, six.string_types):
+    if isinstance(security_groups, str):
         security_groups = salt.utils.json.loads(security_groups)
-    if isinstance(block_device_mappings, six.string_types):
+    if isinstance(block_device_mappings, str):
         block_device_mappings = salt.utils.json.loads(block_device_mappings)
     _bdms = []
     if block_device_mappings:
         # Boto requires objects for the mappings and the devices.
         _block_device_map = blockdevicemapping.BlockDeviceMapping()
         for block_device_dict in block_device_mappings:
-            for block_device, attributes in six.iteritems(block_device_dict):
+            for block_device, attributes in block_device_dict.items():
                 _block_device = blockdevicemapping.EBSBlockDeviceType()
-                for attribute, value in six.iteritems(attributes):
+                for attribute, value in attributes.items():
                     setattr(_block_device, attribute, value)
                 _block_device_map[block_device] = _block_device
         _bdms = [_block_device_map]
@@ -813,7 +801,7 @@ def create_launch_configuration(
                 retries -= 1
                 continue
             log.error(e)
-            msg = "Failed to create LC {0}".format(name)
+            msg = "Failed to create LC {}".format(name)
             log.error(msg)
             return False
 
@@ -840,7 +828,7 @@ def delete_launch_configuration(name, region=None, key=None, keyid=None, profile
                 retries -= 1
                 continue
             log.error(e)
-            msg = "Failed to delete LC {0}".format(name)
+            msg = "Failed to delete LC {}".format(name)
             log.error(msg)
             return False
 
@@ -1001,8 +989,7 @@ def _convert_attribute(instance, attribute):
     if attribute == "tags":
         tags = dict(getattr(instance, attribute))
         return {
-            key.encode("utf-8"): value.encode("utf-8")
-            for key, value in six.iteritems(tags)
+            key.encode("utf-8"): value.encode("utf-8") for key, value in tags.items()
         }
 
     return getattr(instance, attribute).encode("ascii")

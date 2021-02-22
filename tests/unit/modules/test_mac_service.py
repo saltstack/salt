@@ -3,14 +3,9 @@
 """
 
 
-# Import Python libs
 import pytest
-
-# Import Salt Libs
 import salt.modules.mac_service as mac_service
 from salt.exceptions import CommandExecutionError
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -246,6 +241,100 @@ class MacServiceTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch.object(mac_service, "show", MagicMock(return_value=info)):
             assert mac_service._always_running_service(srv_name) is False
+
+    def test_service_name_change_salt_minion(self):
+        srv_name = "salt-minion"
+        info = {
+            "com.saltstack.salt.minion": {
+                "file_name": "com.saltstack.salt.minion.plist",
+                "file_path": "/Library/LaunchDaemons/com.saltstack.salt.minion.plist",
+                "plist": {
+                    "HardResourceLimits": {"NumberOfFiles": 100000},
+                    "KeepAlive": True,
+                    "Label": "com.saltstack.salt.minion",
+                    "ProgramArguments": ["/opt/salt/bin/start-salt-minion.sh"],
+                    "RunAtLoad": True,
+                    "SoftResourceLimits": {"NumberOfFiles": 100000},
+                },
+            }
+        }
+        with patch.dict(
+            mac_service.__utils__,
+            {"mac_utils.available_services": MagicMock(return_value=info)},
+        ):
+            assert (
+                mac_service._get_service(srv_name) == info["com.saltstack.salt.minion"]
+            )
+
+    def test_service_name_change_salt_master(self):
+        srv_name = "salt-master"
+        info = {
+            "com.saltstack.salt.master": {
+                "file_name": "com.saltstack.salt.master.plist",
+                "file_path": "/Library/LaunchDaemons/com.saltstack.salt.master.plist",
+                "plist": {
+                    "HardResourceLimits": {"NumberOfFiles": 100000},
+                    "KeepAlive": True,
+                    "Label": "com.saltstack.salt.master",
+                    "ProgramArguments": ["/opt/salt/bin/start-salt-master.sh"],
+                    "RunAtLoad": True,
+                    "SoftResourceLimits": {"NumberOfFiles": 100000},
+                },
+            }
+        }
+        with patch.dict(
+            mac_service.__utils__,
+            {"mac_utils.available_services": MagicMock(return_value=info)},
+        ):
+            assert (
+                mac_service._get_service(srv_name) == info["com.saltstack.salt.master"]
+            )
+
+    def test_service_name_change_salt_api(self):
+        srv_name = "salt-api"
+        info = {
+            "com.saltstack.salt.api": {
+                "file_name": "com.saltstack.salt.api.plist",
+                "file_path": "/Library/LaunchDaemons/com.saltstack.salt.api.plist",
+                "plist": {
+                    "HardResourceLimits": {"NumberOfFiles": 100000},
+                    "KeepAlive": True,
+                    "Label": "com.saltstack.salt.api",
+                    "ProgramArguments": ["/opt/salt/bin/start-salt-api.sh"],
+                    "RunAtLoad": True,
+                    "SoftResourceLimits": {"NumberOfFiles": 100000},
+                },
+            }
+        }
+        with patch.dict(
+            mac_service.__utils__,
+            {"mac_utils.available_services": MagicMock(return_value=info)},
+        ):
+            assert mac_service._get_service(srv_name) == info["com.saltstack.salt.api"]
+
+    def test_service_name_change_salt_syndic(self):
+        srv_name = "salt-syndic"
+        info = {
+            "com.saltstack.salt.syndic": {
+                "file_name": "com.saltstack.salt.syndic.plist",
+                "file_path": "/Library/LaunchDaemons/com.saltstack.salt.syndic.plist",
+                "plist": {
+                    "HardResourceLimits": {"NumberOfFiles": 100000},
+                    "KeepAlive": True,
+                    "Label": "com.saltstack.salt.syndic",
+                    "ProgramArguments": ["/opt/salt/bin/start-salt-syndic.sh"],
+                    "RunAtLoad": True,
+                    "SoftResourceLimits": {"NumberOfFiles": 100000},
+                },
+            }
+        }
+        with patch.dict(
+            mac_service.__utils__,
+            {"mac_utils.available_services": MagicMock(return_value=info)},
+        ):
+            assert (
+                mac_service._get_service(srv_name) == info["com.saltstack.salt.syndic"]
+            )
 
     def test_service_restart_already_loaded(self):
         mock_cmd = MagicMock(return_value=True)

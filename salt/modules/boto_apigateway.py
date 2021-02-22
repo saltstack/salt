@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Connection module for Amazon APIGateway
 
@@ -78,8 +77,6 @@ Connection module for Amazon APIGateway
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
 import logging
@@ -88,12 +85,8 @@ import salt.utils.compat
 import salt.utils.json
 import salt.utils.versions
 
-# Import Salt libs
-from salt.ext import six
-
 log = logging.getLogger(__name__)
 
-# Import third party libs
 
 # pylint: disable=import-error
 try:
@@ -127,7 +120,6 @@ def __virtual__():
 
 
 def __init__(opts):
-    salt.utils.compat.pack_dunder(__name__)
     if HAS_BOTO:
         __utils__["boto3.assign_funcs"](__name__, "apigateway")
 
@@ -139,8 +131,8 @@ def _convert_datetime_str(response):
     if response:
         return dict(
             [
-                (k, "{0}".format(v)) if isinstance(v, datetime.date) else (k, v)
-                for k, v in six.iteritems(response)
+                (k, "{}".format(v)) if isinstance(v, datetime.date) else (k, v)
+                for k, v in response.items()
             ]
         )
     return None
@@ -386,9 +378,9 @@ def create_api_resources(
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         for path_part in path_parts:
             if current_path == "/":
-                current_path = "{0}{1}".format(current_path, path_part)
+                current_path = "{}{}".format(current_path, path_part)
             else:
-                current_path = "{0}/{1}".format(current_path, path_part)
+                current_path = "{}/{}".format(current_path, path_part)
             r = describe_api_resource(
                 restApiId,
                 current_path,
@@ -439,7 +431,7 @@ def delete_api_resources(
             conn.delete_resource(restApiId=restApiId, resourceId=resource["id"])
             return {"deleted": True}
         else:
-            return {"deleted": False, "error": "no resource found by {0}".format(path)}
+            return {"deleted": False, "error": "no resource found by {}".format(path)}
     except ClientError as e:
         return {"created": False, "error": __utils__["boto3.get_error"](e)}
 
@@ -903,12 +895,12 @@ def overwrite_api_stage_variables(
         for old_var in old_vars:
             if old_var not in variables:
                 patch_ops.append(
-                    dict(op="remove", path="/variables/{0}".format(old_var), value="")
+                    dict(op="remove", path="/variables/{}".format(old_var), value="")
                 )
-        for var, val in six.iteritems(variables):
+        for var, val in variables.items():
             if var not in old_vars or old_vars[var] != val:
                 patch_ops.append(
-                    dict(op="replace", path="/variables/{0}".format(var), value=val)
+                    dict(op="replace", path="/variables/{}".format(var), value=val)
                 )
 
         if patch_ops:
@@ -1630,7 +1622,7 @@ def _get_role_arn(name, region=None, key=None, keyid=None, profile=None):
         region=region, key=key, keyid=keyid, profile=profile
     )
 
-    return "arn:aws:iam::{0}:role/{1}".format(account_id, name)
+    return "arn:aws:iam::{}:role/{}".format(account_id, name)
 
 
 def create_api_integration(
@@ -1807,7 +1799,7 @@ def _validate_throttle(throttle):
     if throttle is not None:
         if not isinstance(throttle, dict):
             raise TypeError(
-                "throttle must be a dictionary, provided value: {0}".format(throttle)
+                "throttle must be a dictionary, provided value: {}".format(throttle)
             )
 
 
@@ -1818,12 +1810,12 @@ def _validate_quota(quota):
     if quota is not None:
         if not isinstance(quota, dict):
             raise TypeError(
-                "quota must be a dictionary, provided value: {0}".format(quota)
+                "quota must be a dictionary, provided value: {}".format(quota)
             )
         periods = ["DAY", "WEEK", "MONTH"]
         if "period" not in quota or quota["period"] not in periods:
             raise ValueError(
-                "quota must have a valid period specified, valid values are {0}".format(
+                "quota must have a valid period specified, valid values are {}".format(
                     ",".join(periods)
                 )
             )
@@ -1895,7 +1887,7 @@ def create_usage_plan(
     except ClientError as e:
         return {"error": __utils__["boto3.get_error"](e)}
     except (TypeError, ValueError) as e:
-        return {"error": six.text_type(e)}
+        return {"error": str(e)}
 
 
 def update_usage_plan(
@@ -1998,7 +1990,7 @@ def update_usage_plan(
     except ClientError as e:
         return {"error": __utils__["boto3.get_error"](e)}
     except (TypeError, ValueError) as e:
-        return {"error": six.text_type(e)}
+        return {"error": str(e)}
 
 
 def delete_usage_plan(plan_id, region=None, key=None, keyid=None, profile=None):
@@ -2055,7 +2047,7 @@ def _update_usage_plan_apis(
                 {
                     "op": op,
                     "path": "/apiStages",
-                    "value": "{0}:{1}".format(api["apiId"], api["stage"]),
+                    "value": "{}:{}".format(api["apiId"], api["stage"]),
                 }
             )
         res = None
