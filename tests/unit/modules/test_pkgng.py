@@ -571,7 +571,7 @@ class PkgNgTestCase(TestCase, LoaderModuleMockMixin):
                 ["pkg", "check", "-r"], output_loglevel="trace", python_shell=False,
             )
 
-    def test_check_libs(self):
+    def test_check_checklibs(self):
         """
         Test pkgng.check to regenerate the library dependency metadata
         """
