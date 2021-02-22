@@ -1141,7 +1141,7 @@ class SSHThinTestCase(TestCase):
             thin._pack_alternative(ext_conf, self.digest, self.tar)
             calls = self.tar.mock_calls
             for _file in exp_files:
-                assert [x for x in calls if "{}".format(_file) in x.args]
+                assert [x for x in calls if "{}".format(_file) in x[-2]]
 
     def test_pack_alternatives(self):
         """
@@ -1151,11 +1151,11 @@ class SSHThinTestCase(TestCase):
             thin._pack_alternative(self.ext_conf, self.digest, self.tar)
             calls = self.tar.mock_calls
             for _file in self.exp_files:
-                assert [x for x in calls if "{}".format(_file) in x.args]
+                assert [x for x in calls if "{}".format(_file) in x[-2]]
                 assert [
                     x
                     for x in calls
-                    if os.path.join("test", "pyall", _file) in x.kwargs["arcname"]
+                    if os.path.join("test", "pyall", _file) in x[-1]["arcname"]
                 ]
 
     def test_pack_alternatives_not_normalized(self):
@@ -1169,11 +1169,11 @@ class SSHThinTestCase(TestCase):
             thin._pack_alternative(self.ext_conf, self.digest, self.tar)
             calls = self.tar.mock_calls
             for _file in self.exp_files:
-                assert [x for x in calls if "{}".format(_file) in x.args]
+                assert [x for x in calls if "{}".format(_file) in x[-2]]
                 assert [
                     x
                     for x in calls
-                    if os.path.join("test", "pyall", _file) in x.kwargs["arcname"]
+                    if os.path.join("test", "pyall", _file) in x[-1]["arcname"]
                 ]
 
     def test_pack_alternatives_path_doesnot_exist(self):
@@ -1196,11 +1196,11 @@ class SSHThinTestCase(TestCase):
                 assert msg in log_handler.messages
         calls = self.tar.mock_calls
         for _file in self.exp_files:
-            arg = [x for x in calls if "{}".format(_file) in x.args]
+            arg = [x for x in calls if "{}".format(_file) in x[-2]]
             kwargs = [
                 x
                 for x in calls
-                if os.path.join("test", "pyall", _file) in x.kwargs["arcname"]
+                if os.path.join("test", "pyall", _file) in x[-1]["arcname"]
             ]
             if "jinja2" in _file:
                 assert not arg
@@ -1238,7 +1238,7 @@ class SSHThinTestCase(TestCase):
             thin._pack_alternative(ext_conf, self.digest, self.tar)
             calls = self.tar.mock_calls
             for _file in exp_files:
-                assert [x for x in calls if "{}".format(_file) in x.args]
+                assert [x for x in calls if "{}".format(_file) in x[-2]]
 
     def test_pack_alternatives_empty_dependencies(self):
         """
@@ -1270,7 +1270,7 @@ class SSHThinTestCase(TestCase):
             thin._pack_alternative(ext_conf, self.digest, self.tar)
             calls = self.tar.mock_calls
             for _file in exp_files:
-                assert [x for x in calls if "{}".format(_file) in x.args]
+                assert [x for x in calls if "{}".format(_file) in x[-2]]
 
     @skipIf(
         salt.utils.platform.is_windows(), "salt-ssh does not deploy to/from windows"

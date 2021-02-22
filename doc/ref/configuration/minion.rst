@@ -103,6 +103,16 @@ The option can also be set to a list of masters, enabling
           - address2
         master_type: failover
 
+.. conf_minion:: color
+
+``color``
+---------
+
+Default: ``True``
+
+By default output is colored. To disable colored output, set the color value to
+``False``.
+
 .. conf_minion:: ipv6
 
 ``ipv6``

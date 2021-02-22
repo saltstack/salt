@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Mike Place <mp@saltstack.com>
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.utils.platform
 from salt import client

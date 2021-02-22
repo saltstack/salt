@@ -1,2 +1,0 @@
-Do not generate grains for every job run on Windows minions. This makes Windows
-conform more to the way posix OSes work today.

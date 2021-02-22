@@ -1,0 +1,8 @@
+.. _release-3003:
+
+============================================
+Salt 3003 Release Notes - Codename Aluminium
+============================================
+
+Salt 3003 is an *unreleased* upcoming feature release.
+
