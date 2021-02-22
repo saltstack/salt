@@ -148,6 +148,8 @@ def _get_pydir(session):
     version_info = _get_session_python_version_info(session)
     if version_info < (3, 5):
         session.error("Only Python >= 3.5 is supported")
+    if IS_WINDOWS and version_info < (3, 6):
+        session.error("Only Python >= 3.6 is supported on Windows")
     return "py{}.{}".format(*version_info)
 
 
