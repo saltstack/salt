@@ -865,7 +865,7 @@ class SaltEvent:
                     # Minion fired a bad retcode, fire an event
                     self._fire_ret_load_specific_fun(load)
 
-    def set_event_handler(self, event_handler):
+    def set_event_handler(self, event_handler, auto_reconnect=False):
         """
         Invoke the event_handler callback each time an event arrives.
         """
@@ -874,7 +874,7 @@ class SaltEvent:
         if not self.cpub:
             self.connect_pub()
         # This will handle reconnects
-        return self.subscriber.read_async(event_handler)
+        return self.subscriber.read_async(event_handler, auto_reconnect=auto_reconnect)
 
     # pylint: disable=W1701
     def __del__(self):
