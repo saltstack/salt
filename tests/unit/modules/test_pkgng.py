@@ -631,7 +631,7 @@ class PkgNgTestCase(TestCase, LoaderModuleMockMixin):
                 ["pkg", "check", "-B"], output_loglevel="trace", python_shell=False,
             )
 
-    def test_autoremove_withdruyrun(self):
+    def test_autoremove_with_dryrun(self):
         """
         Test pkgng.autoremove with dryrun argument
         """
