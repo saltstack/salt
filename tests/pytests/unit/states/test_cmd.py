@@ -155,7 +155,7 @@ def test_script_runas_no_password():
         "changes": {},
         "result": False,
         "comment": "",
-        "commnd": "Must supply a password if runas argument is used on Windows.",
+        "command": "Must supply a password if runas argument is used on Windows.",
     }
 
     patch_opts = patch.dict(cmd.__opts__, {"test": False})
@@ -198,8 +198,6 @@ def test_call():
     specified in the state declaration.
     """
     name = "cmd.script"
-    #         func = 'myfunc'
-
     ret = {"name": name, "result": False, "changes": {}, "comment": ""}
 
     flag = None
