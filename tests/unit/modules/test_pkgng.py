@@ -630,3 +630,48 @@ class PkgNgTestCase(TestCase, LoaderModuleMockMixin):
             pkg_cmd.assert_called_with(
                 ["pkg", "check", "-B"], output_loglevel="trace", python_shell=False,
             )
+
+    def test_autoremove_withdruyrun(self):
+        """
+        Test pkgng.autoremove with dryrun argument
+        """
+        pkg_cmd = MagicMock(return_value="")
+
+        with patch.dict(pkgng.__salt__, {"cmd.run": pkg_cmd}):
+            result = pkgng.autoremove(dryrun=True)
+            self.assertEqual(result, "")
+            pkg_cmd.assert_called_with(
+                ["pkg", "autoremove", "-n"],
+                output_loglevel="trace",
+                python_shell=False,
+            )
+
+    def test_autoremove(self):
+        """
+        Test pkgng.autoremove
+        """
+        pkg_cmd = MagicMock(return_value="")
+
+        with patch.dict(pkgng.__salt__, {"cmd.run": pkg_cmd}):
+
+            result = pkgng.autoremove()
+            self.assertEqual(result, "")
+            pkg_cmd.assert_called_with(
+                ["pkg", "autoremove", "-y"],
+                output_loglevel="trace",
+                python_shell=False,
+            )
+
+    def test_audit(self):
+        """
+        Test pkgng.audit
+        """
+        pkg_cmd = MagicMock(return_value="")
+
+        with patch.dict(pkgng.__salt__, {"cmd.run": pkg_cmd}):
+
+            result = pkgng.audit()
+            self.assertEqual(result, "")
+            pkg_cmd.assert_called_with(
+                ["pkg", "audit", "-F"], output_loglevel="trace", python_shell=False,
+            )
