@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module to provide redis functionality to Salt
 
@@ -15,16 +14,8 @@ Module to provide redis functionality to Salt
     redis.password: None
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-from datetime import datetime
-
 import salt.utils.args
-from salt.ext import six
-from salt.ext.six.moves import zip
 
-# Import third party libs
 try:
     import redis
 
@@ -530,10 +521,7 @@ def lastsave(host=None, port=None, db=None, password=None):
     # works is because it's passed to the system strftime which may not support
     # it. See: https://stackoverflow.com/a/11743262
     server = _connect(host, port, db, password)
-    if six.PY2:
-        return int((server.lastsave() - datetime(1970, 1, 1)).total_seconds())
-    else:
-        return int(server.lastsave().timestamp())
+    return int(server.lastsave().timestamp())
 
 
 def llen(key, host=None, port=None, db=None, password=None):

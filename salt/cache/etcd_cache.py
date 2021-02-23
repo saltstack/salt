@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Minion data cache plugin for Etcd key/value data store.
 
@@ -48,7 +47,6 @@ value to ``etcd``:
 .. _`python-etcd documentation`: http://python-etcd.readthedocs.io/en/latest/
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import base64
 import logging
@@ -115,7 +113,7 @@ def _init_client():
     }
     path_prefix = __opts__.get("etcd.path_prefix", _DEFAULT_PATH_PREFIX)
     if path_prefix != "":
-        path_prefix = "/{0}".format(path_prefix.strip("/"))
+        path_prefix = "/{}".format(path_prefix.strip("/"))
     log.info("etcd: Setting up client with params: %r", etcd_kwargs)
     client = etcd.Client(**etcd_kwargs)
     try:
@@ -130,13 +128,13 @@ def store(bank, key, data):
     Store a key value.
     """
     _init_client()
-    etcd_key = "{0}/{1}/{2}".format(path_prefix, bank, key)
+    etcd_key = "{}/{}/{}".format(path_prefix, bank, key)
     try:
         value = __context__["serial"].dumps(data)
         client.write(etcd_key, base64.b64encode(value))
     except Exception as exc:  # pylint: disable=broad-except
         raise SaltCacheError(
-            "There was an error writing the key, {0}: {1}".format(etcd_key, exc)
+            "There was an error writing the key, {}: {}".format(etcd_key, exc)
         )
 
 
@@ -145,7 +143,7 @@ def fetch(bank, key):
     Fetch a key value.
     """
     _init_client()
-    etcd_key = "{0}/{1}/{2}".format(path_prefix, bank, key)
+    etcd_key = "{}/{}/{}".format(path_prefix, bank, key)
     try:
         value = client.read(etcd_key).value
         return __context__["serial"].loads(base64.b64decode(value))
@@ -153,7 +151,7 @@ def fetch(bank, key):
         return {}
     except Exception as exc:  # pylint: disable=broad-except
         raise SaltCacheError(
-            "There was an error reading the key, {0}: {1}".format(etcd_key, exc)
+            "There was an error reading the key, {}: {}".format(etcd_key, exc)
         )
 
 
@@ -163,9 +161,9 @@ def flush(bank, key=None):
     """
     _init_client()
     if key is None:
-        etcd_key = "{0}/{1}".format(path_prefix, bank)
+        etcd_key = "{}/{}".format(path_prefix, bank)
     else:
-        etcd_key = "{0}/{1}/{2}".format(path_prefix, bank, key)
+        etcd_key = "{}/{}/{}".format(path_prefix, bank, key)
     try:
         client.read(etcd_key)
     except etcd.EtcdKeyNotFound:
@@ -174,7 +172,7 @@ def flush(bank, key=None):
         client.delete(etcd_key, recursive=True)
     except Exception as exc:  # pylint: disable=broad-except
         raise SaltCacheError(
-            "There was an error removing the key, {0}: {1}".format(etcd_key, exc)
+            "There was an error removing the key, {}: {}".format(etcd_key, exc)
         )
 
 
@@ -198,12 +196,12 @@ def ls(bank):
     bank.
     """
     _init_client()
-    path = "{0}/{1}".format(path_prefix, bank)
+    path = "{}/{}".format(path_prefix, bank)
     try:
         return _walk(client.read(path))
     except Exception as exc:  # pylint: disable=broad-except
         raise SaltCacheError(
-            'There was an error getting the key "{0}": {1}'.format(bank, exc)
+            'There was an error getting the key "{}": {}'.format(bank, exc)
         )
 
 
@@ -212,7 +210,7 @@ def contains(bank, key):
     Checks if the specified bank contains the specified key.
     """
     _init_client()
-    etcd_key = "{0}/{1}/{2}".format(path_prefix, bank, key)
+    etcd_key = "{}/{}/{}".format(path_prefix, bank, key)
     try:
         r = client.read(etcd_key)
         # return True for keys, not dirs
@@ -221,5 +219,5 @@ def contains(bank, key):
         return False
     except Exception as exc:  # pylint: disable=broad-except
         raise SaltCacheError(
-            "There was an error getting the key, {0}: {1}".format(etcd_key, exc)
+            "There was an error getting the key, {}: {}".format(etcd_key, exc)
         )

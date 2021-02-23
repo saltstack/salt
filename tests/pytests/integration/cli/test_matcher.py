@@ -1,3 +1,5 @@
+import pathlib
+
 import pytest
 import salt.defaults.exitcodes
 
@@ -345,6 +347,59 @@ def test_grain(salt_cli, salt_master, salt_minion, salt_sub_minion):
     assert ret.exitcode == 0
     assert salt_minion.id in ret.json
     assert salt_sub_minion.id in ret.json
+
+
+def test_grains_targeting_os_running(grains, salt_cli, salt_minion, salt_sub_minion):
+    """
+    Tests running "salt -G 'os:<system-os>' test.ping and minions both return True
+    """
+    ret = salt_cli.run("-G", "test.ping", minion_tgt="os:{}".format(grains["os"]))
+    assert ret.exitcode == 0
+    assert salt_minion.id in ret.json
+    assert ret.json[salt_minion.id] is True
+    assert salt_sub_minion.id in ret.json
+    assert ret.json[salt_sub_minion.id] is True
+
+
+def test_grains_targeting_minion_id_running(salt_cli, salt_minion, salt_sub_minion):
+    """
+    Tests return of each running test minion targeting with minion id grain
+    """
+    ret = salt_cli.run("-G", "test.ping", minion_tgt="id:{}".format(salt_minion.id))
+    assert ret.exitcode == 0
+    assert salt_minion.id in ret.json
+    assert ret.json[salt_minion.id] is True
+
+    ret = salt_cli.run("-G", "test.ping", minion_tgt="id:{}".format(salt_sub_minion.id))
+    assert ret.exitcode == 0
+    assert salt_sub_minion.id in ret.json
+    assert ret.json[salt_sub_minion.id] is True
+
+
+def test_grains_targeting_minion_id_disconnected(salt_master, salt_minion, salt_cli):
+    """
+    Tests return of minion using grains targeting on a disconnected minion.
+    """
+    expected_output = "Minion did not return. [No response]"
+
+    # Create a minion key, but do not start the "fake" minion. This mimics a
+    # disconnected minion.
+    disconnected_minion_id = "disconnected"
+    minions_pki_dir = pathlib.Path(salt_master.config["pki_dir"]) / "minions"
+    with pytest.helpers.temp_file(
+        disconnected_minion_id,
+        minions_pki_dir.joinpath(salt_minion.id).read_text(),
+        minions_pki_dir,
+    ):
+        ret = salt_cli.run(
+            "--timeout=1",
+            "-G",
+            "test.ping",
+            minion_tgt="id:{}".format(disconnected_minion_id),
+        )
+        assert ret.exitcode == 1
+        assert disconnected_minion_id in ret.json
+        assert expected_output in ret.json[disconnected_minion_id]
 
 
 def test_regrain(salt_cli, salt_minion, salt_sub_minion):

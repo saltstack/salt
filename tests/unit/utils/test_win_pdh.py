@@ -1,6 +1,6 @@
+import pytest
 import salt.utils.platform
 import salt.utils.win_pdh as win_pdh
-from tests.support.helpers import slowTest
 from tests.support.mock import patch
 from tests.support.unit import TestCase, skipIf
 
@@ -15,7 +15,7 @@ except ImportError:
 @skipIf(not HAS_WIN32, "Requires pywin32")
 @skipIf(not salt.utils.platform.is_windows(), "System is not Windows")
 class WinPdhTestCase(TestCase):
-    @slowTest
+    @pytest.mark.slow_test
     def test_list_objects(self):
         known_objects = ["Cache", "Memory", "Process", "Processor", "System"]
         objects = win_pdh.list_objects()
@@ -61,7 +61,7 @@ class WinPdhTestCase(TestCase):
         ]
         self.assertEqual(resulting_paths, expected_paths)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_get_all_counters(self):
         results = win_pdh.get_all_counters("Processor")
         known_counters = [
@@ -76,7 +76,7 @@ class WinPdhTestCase(TestCase):
         for item in known_counters:
             self.assertTrue(item in results)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_get_counters(self):
         counter_list = [
             ("Memory", None, "Available Bytes"),

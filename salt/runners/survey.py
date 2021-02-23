@@ -155,19 +155,19 @@ def _get_pool_results(*args, **kwargs):
         key: value for (key, value) in kwargs.items() if not key.startswith("_")
     }
 
-    client = salt.client.get_local_client(__opts__["conf_file"])
-    try:
-        minions = client.cmd(
-            tgt,
-            cmd,
-            args[2:],
-            timeout=__opts__["timeout"],
-            tgt_type=tgt_type,
-            kwarg=kwargs_passthru,
-        )
-    except SaltClientError as client_error:
-        print(client_error)
-        return ret
+    with salt.client.get_local_client(__opts__["conf_file"]) as client:
+        try:
+            minions = client.cmd(
+                tgt,
+                cmd,
+                args[2:],
+                timeout=__opts__["timeout"],
+                tgt_type=tgt_type,
+                kwarg=kwargs_passthru,
+            )
+        except SaltClientError as client_error:
+            print(client_error)
+            return ret
 
     # hash minion return values as a string
     for minion in sorted(minions):

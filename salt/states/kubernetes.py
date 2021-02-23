@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage kubernetes resources as salt states
 ==========================================
@@ -80,13 +79,9 @@ The kubernetes module is used to manage different kubernetes resources.
 
 .. versionadded: 2017.7.0
 """
-from __future__ import absolute_import
 
 import copy
 import logging
-
-# Import 3rd-party libs
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -141,7 +136,7 @@ def deployment_absent(name, namespace="default", **kwargs):
         ret["changes"] = {"kubernetes.deployment": {"new": "absent", "old": "present"}}
         ret["comment"] = res["message"]
     else:
-        ret["comment"] = "Something went wrong, response: {0}".format(res)
+        ret["comment"] = "Something went wrong, response: {}".format(res)
 
     return ret
 
@@ -210,7 +205,7 @@ def deployment_present(
             saltenv=__env__,
             **kwargs
         )
-        ret["changes"]["{0}.{1}".format(namespace, name)] = {"old": {}, "new": res}
+        ret["changes"]["{}.{}".format(namespace, name)] = {"old": {}, "new": res}
     else:
         if __opts__["test"]:
             ret["result"] = None
@@ -299,7 +294,7 @@ def service_present(
             saltenv=__env__,
             **kwargs
         )
-        ret["changes"]["{0}.{1}".format(namespace, name)] = {"old": {}, "new": res}
+        ret["changes"]["{}.{}".format(namespace, name)] = {"old": {}, "new": res}
     else:
         if __opts__["test"]:
             ret["result"] = None
@@ -356,7 +351,7 @@ def service_absent(name, namespace="default", **kwargs):
         ret["changes"] = {"kubernetes.service": {"new": "absent", "old": "present"}}
         ret["comment"] = res["message"]
     else:
-        ret["comment"] = "Something went wrong, response: {0}".format(res)
+        ret["comment"] = "Something went wrong, response: {}".format(res)
 
     return ret
 
@@ -386,10 +381,7 @@ def namespace_absent(name, **kwargs):
     res = __salt__["kubernetes.delete_namespace"](name, **kwargs)
     if (
         res["code"] == 200
-        or (
-            isinstance(res["status"], six.string_types)
-            and "Terminating" in res["status"]
-        )
+        or (isinstance(res["status"], str) and "Terminating" in res["status"])
         or (isinstance(res["status"], dict) and res["status"]["phase"] == "Terminating")
     ):
         ret["result"] = True
@@ -399,7 +391,7 @@ def namespace_absent(name, **kwargs):
         else:
             ret["comment"] = "Terminating"
     else:
-        ret["comment"] = "Something went wrong, response: {0}".format(res)
+        ret["comment"] = "Something went wrong, response: {}".format(res)
 
     return ret
 
@@ -516,7 +508,7 @@ def secret_present(
             saltenv=__env__,
             **kwargs
         )
-        ret["changes"]["{0}.{1}".format(namespace, name)] = {"old": {}, "new": res}
+        ret["changes"]["{}.{}".format(namespace, name)] = {"old": {}, "new": res}
     else:
         if __opts__["test"]:
             ret["result"] = None
@@ -630,7 +622,7 @@ def configmap_present(
             saltenv=__env__,
             **kwargs
         )
-        ret["changes"]["{0}.{1}".format(namespace, name)] = {"old": {}, "new": res}
+        ret["changes"]["{}.{}".format(namespace, name)] = {"old": {}, "new": res}
     else:
         if __opts__["test"]:
             ret["result"] = None
@@ -689,7 +681,7 @@ def pod_absent(name, namespace="default", **kwargs):
         else:
             ret["comment"] = res["message"]
     else:
-        ret["comment"] = "Something went wrong, response: {0}".format(res)
+        ret["comment"] = "Something went wrong, response: {}".format(res)
 
     return ret
 
@@ -758,7 +750,7 @@ def pod_present(
             saltenv=__env__,
             **kwargs
         )
-        ret["changes"]["{0}.{1}".format(namespace, name)] = {"old": {}, "new": res}
+        ret["changes"]["{}.{}".format(namespace, name)] = {"old": {}, "new": res}
     else:
         if __opts__["test"]:
             ret["result"] = None
@@ -904,7 +896,7 @@ def node_label_present(name, node, value, **kwargs):
     old_labels = copy.copy(labels)
     labels[name] = value
 
-    ret["changes"]["{0}.{1}".format(node, name)] = {"old": old_labels, "new": labels}
+    ret["changes"]["{}.{}".format(node, name)] = {"old": old_labels, "new": labels}
     ret["result"] = True
 
     return ret

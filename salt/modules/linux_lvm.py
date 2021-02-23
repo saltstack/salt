@@ -357,12 +357,17 @@ def vgcreate(vgname, devices, force=False, **kwargs):
         cmd.append("-qq")
 
     valid = (
+        "addtag",
+        "alloc",
+        "autobackup",
         "clustered",
         "maxlogicalvolumes",
         "maxphysicalvolumes",
+        "metadatatype",
         "vgmetadatacopies",
         "metadatacopies",
         "physicalextentsize",
+        "zero",
     )
     for var in kwargs:
         if kwargs[var] and var in valid:

@@ -647,13 +647,26 @@ class Schedule:
                 tag="/salt/minion/minion_schedule_next_fire_time_complete",
             )
 
-    def job_status(self, name):
+    def job_status(self, name, fire_event=False):
         """
         Return the specified schedule item
         """
 
-        schedule = self._get_schedule()
-        return schedule.get(name, {})
+        if fire_event:
+            schedule = self._get_schedule()
+            data = schedule.get(name, {})
+
+            # Fire the complete event back along with updated list of schedule
+            with salt.utils.event.get_event(
+                "minion", opts=self.opts, listen=False
+            ) as evt:
+                evt.fire_event(
+                    {"complete": True, "data": data},
+                    tag="/salt/minion/minion_schedule_job_status_complete",
+                )
+        else:
+            schedule = self._get_schedule()
+            return schedule.get(name, {})
 
     def handle_func(self, multiprocessing_enabled, func, data, jid=None):
         """

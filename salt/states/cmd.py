@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Execution of arbitrary commands
 ===============================
@@ -232,20 +231,16 @@ To use it, one may pass it like this. Example:
 
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 import logging
 import os
 
-# Import salt libs
 import salt.utils.args
 import salt.utils.functools
 import salt.utils.json
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError, SaltRenderError
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -318,11 +313,11 @@ def _failout(state, msg):
 
 
 def _is_true(val):
-    if val and six.text_type(val).lower() in ("true", "yes", "1"):
+    if val and str(val).lower() in ("true", "yes", "1"):
         return True
-    elif six.text_type(val).lower() in ("false", "no", "0"):
+    elif str(val).lower() in ("false", "no", "0"):
         return False
-    raise ValueError("Failed parsing boolean value: {0}".format(val))
+    raise ValueError("Failed parsing boolean value: {}".format(val))
 
 
 def wait(
@@ -405,6 +400,11 @@ def wait(
                 - name: ls -l /
                 - env:
                   - PATH: {{ [current_path, '/my/special/bin']|join(':') }}
+
+        .. note::
+            When using environment variables on Window's, case-sensitivity
+            matters, i.e. Window's uses `Path` as opposed to `PATH` for other
+            systems.
 
     umask
          The umask (in octal) to use when running the command.
@@ -541,6 +541,11 @@ def wait_script(
                 - env:
                   - PATH: {{ [current_path, '/my/special/bin']|join(':') }}
 
+        .. note::
+            When using environment variables on Window's, case-sensitivity
+            matters, i.e. Window's uses `Path` as opposed to `PATH` for other
+            systems.
+
     umask
          The umask (in octal) to use when running the command.
 
@@ -660,6 +665,11 @@ def run(
                 - name: ls -l /
                 - env:
                   - PATH: {{ [current_path, '/my/special/bin']|join(':') }}
+
+        .. note::
+            When using environment variables on Window's, case-sensitivity
+            matters, i.e. Window's uses `Path` as opposed to `PATH` for other
+            systems.
 
     prepend_path
         $PATH segment to prepend (trailing ':' not necessary) to $PATH. This is
@@ -786,11 +796,11 @@ def run(
 
     if __opts__["test"] and not test_name:
         ret["result"] = None
-        ret["comment"] = 'Command "{0}" would have been executed'.format(name)
+        ret["comment"] = 'Command "{}" would have been executed'.format(name)
         return _reinterpreted_state(ret) if stateful else ret
 
     if cwd and not os.path.isdir(cwd):
-        ret["comment"] = ('Desired working directory "{0}" ' "is not available").format(
+        ret["comment"] = ('Desired working directory "{}" ' "is not available").format(
             cwd
         )
         return ret
@@ -802,12 +812,12 @@ def run(
             cmd=name, timeout=timeout, python_shell=True, **cmd_kwargs
         )
     except Exception as err:  # pylint: disable=broad-except
-        ret["comment"] = six.text_type(err)
+        ret["comment"] = str(err)
         return ret
 
     ret["changes"] = cmd_all
     ret["result"] = not bool(cmd_all["retcode"])
-    ret["comment"] = 'Command "{0}" run'.format(name)
+    ret["comment"] = 'Command "{}" run'.format(name)
 
     # Ignore timeout errors if asked (for nohups) and treat cmd as a success
     if ignore_timeout:
@@ -937,6 +947,11 @@ def script(
                 - name: ls -l /
                 - env:
                   - PATH: {{ [current_path, '/my/special/bin']|join(':') }}
+
+        .. note::
+            When using environment variables on Window's, case-sensitivity
+            matters, i.e. Window's uses `Path` as opposed to `PATH` for other
+            systems.
 
     saltenv : ``base``
         The Salt environment to use
@@ -1076,11 +1091,11 @@ def script(
 
     if __opts__["test"] and not test_name:
         ret["result"] = None
-        ret["comment"] = "Command '{0}' would have been " "executed".format(name)
+        ret["comment"] = "Command '{}' would have been " "executed".format(name)
         return _reinterpreted_state(ret) if stateful else ret
 
     if cwd and not os.path.isdir(cwd):
-        ret["comment"] = ('Desired working directory "{0}" ' "is not available").format(
+        ret["comment"] = ('Desired working directory "{}" ' "is not available").format(
             cwd
         )
         return ret
@@ -1088,8 +1103,8 @@ def script(
     # Wow, we passed the test, run this sucker!
     try:
         cmd_all = __salt__["cmd.script"](source, python_shell=True, **cmd_kwargs)
-    except (CommandExecutionError, SaltRenderError, IOError) as err:
-        ret["comment"] = six.text_type(err)
+    except (CommandExecutionError, SaltRenderError, OSError) as err:
+        ret["comment"] = str(err)
         return ret
 
     ret["changes"] = cmd_all
@@ -1098,11 +1113,11 @@ def script(
     else:
         ret["result"] = not bool(cmd_all["retcode"])
     if ret.get("changes", {}).get("cache_error"):
-        ret["comment"] = "Unable to cache script {0} from saltenv " "'{1}'".format(
+        ret["comment"] = "Unable to cache script {} from saltenv " "'{}'".format(
             source, __env__
         )
     else:
-        ret["comment"] = "Command '{0}' run".format(name)
+        ret["comment"] = "Command '{}' run".format(name)
     if stateful:
         ret = _reinterpreted_state(ret)
     if __opts__["test"] and cmd_all["retcode"] == 0 and ret["changes"]:
@@ -1168,7 +1183,7 @@ def call(
         # result must be JSON serializable else we get an error
         ret["changes"] = {"retval": result}
         ret["result"] = True if result is None else bool(result)
-        if isinstance(result, six.string_types):
+        if isinstance(result, str):
             ret["comment"] = result
         return ret
 
