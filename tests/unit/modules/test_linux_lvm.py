@@ -379,6 +379,36 @@ class LinuxLVMTestCase(TestCase, LoaderModuleMockMixin):
                     {"Output from lvcreate": 'Logical volume "None" created.'},
                 )
 
+    def test_lvcreate_extra_arguments_no_parameter(self):
+        extra_args = {
+            "nosync": None,
+            "noudevsync": None,
+            "ignoremonitoring": None,
+            "thin": None,
+        }
+        mock = MagicMock(return_value={"retcode": 0, "stderr": ""})
+        with patch.dict(linux_lvm.__salt__, {"cmd.run_all": mock}):
+            with patch.object(linux_lvm, "lvdisplay", return_value={}):
+                self.assertDictEqual(
+                    linux_lvm.lvcreate(None, None, None, 1, **extra_args),
+                    {"Output from lvcreate": 'Logical volume "None" created.'},
+                )
+        expected_args = ["--{}".format(arg) for arg in extra_args]
+        processed_extra_args = mock.call_args.args[0][-(len(extra_args) + 1) : -1]
+        self.assertTrue(all([arg in expected_args for arg in processed_extra_args]))
+
+    def test_lvcreate_invalid_extra_parameter(self):
+        invalid_parameter = {"foo": "bar"}
+        mock = MagicMock(return_value={"retcode": 0, "stderr": ""})
+        with patch.dict(linux_lvm.__salt__, {"cmd.run_all": mock}):
+            with patch.object(linux_lvm, "lvdisplay", return_value={}):
+                self.assertDictEqual(
+                    linux_lvm.lvcreate(None, None, None, 1, **invalid_parameter),
+                    {"Output from lvcreate": 'Logical volume "None" created.'},
+                )
+        processed_command = mock.call_args.args[0]
+        self.assertFalse("--foo" in processed_command)
+
     def test_vgremove(self):
         """
         Tests to remove an LVM volume group
