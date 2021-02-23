@@ -3856,9 +3856,6 @@ def disable_term_protect(name, call=None):
 def disable_detailed_monitoring(name, call=None):
     """
     Enable/disable detailed monitoring on a node
-
-    CLI Example:
-
     """
     if call != "action":
         raise SaltCloudSystemExit(
@@ -3883,9 +3880,6 @@ def disable_detailed_monitoring(name, call=None):
 def enable_detailed_monitoring(name, call=None):
     """
     Enable/disable detailed monitoring on a node
-
-    CLI Example:
-
     """
     if call != "action":
         raise SaltCloudSystemExit(
