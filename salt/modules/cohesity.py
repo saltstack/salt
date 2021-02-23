@@ -9,9 +9,9 @@ sdk can be installed using `pip install cohesity-management-sdk`
 import copy
 import logging
 import os
+import salt.utils.files
 
 try:
-    import salt.utils.files
 
     from cohesity_management_sdk.cohesity_client import CohesityClient
     from cohesity_management_sdk.exceptions.api_exception import APIException
@@ -55,7 +55,7 @@ except ImportError as err:
     print(err)
     exit(0)
 
-logger = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 ERROR_LIST = []
 __virtualname__ = "cohesity"
 
@@ -88,7 +88,7 @@ def get_sd_id(name):
     Function to fetch storage domain available in the cluster.
     : return storage domain id.
     """
-    logger.info("Getting sorage domain with name {}".format(name))
+    log.info("Getting sorage domain with name {}".format(name))
     resp = cohesity_client.view_boxes.get_view_boxes(names=name)
     if resp:
         return resp[0].id
@@ -99,7 +99,7 @@ def get_policy_id(name):
     Function to fetch policy available in the cluster.
     : return policy id.
     """
-    logger.info("Getting policy with name {}".format(name))
+    log.info("Getting policy with name {}".format(name))
     resp = cohesity_client.protection_policies.get_protection_policies(names=name)
     if resp:
         return resp[0].id
@@ -112,7 +112,7 @@ def get_vmware_source_ids(name, vm_list):
     """
     source_id_list = []
     parent_id = -1
-    logger.info("Fetching Vcenter and Vm ids")
+    log.info("Fetching Vcenter and Vm ids")
     try:
         result = cohesity_client.protection_sources.list_protection_sources_root_nodes(
             environments=env_enum.K_VMWARE
@@ -125,7 +125,7 @@ def get_vmware_source_ids(name, vm_list):
             if name in [endpoint, v_name]:
                 parent_id = each_source.protection_source.id
         if parent_id == -1:
-            logger.error("Vcenter {} not available in the cluster".format(name))
+            log.error("Vcenter {} not available in the cluster".format(name))
             exit()
         vms = cohesity_client.protection_sources.list_virtual_machines(
             v_center_id=parent_id, names=vm_list
@@ -135,7 +135,7 @@ def get_vmware_source_ids(name, vm_list):
             vm_names.remove(vm.name)
             source_id_list.append(vm.id)
         if vm_names:
-            logger.error(
+            log.error(
                 "Following list of vms '{}' are not available in vcenter, "
                 "please make sure the virtual machine names are correct".format(
                     ",".join(vm_names)
@@ -143,7 +143,7 @@ def get_vmware_source_ids(name, vm_list):
             )
         return parent_id, source_id_list
     except APIException as err:
-        logger.error(err)
+        log.error(err)
         return -1, []
 
 
@@ -173,7 +173,7 @@ def register_vcenter(vcenter, username, password):
         cohesity_client.protection_sources.create_register_protection_source(body)
         return "Successfully registered Vcenter {}".format(vcenter)
     except APIException as err:
-        logger.error(err)
+        log.error(err)
         return str(err)
 
 
