@@ -9,6 +9,7 @@ sdk can be installed using `pip install cohesity-management-sdk`
 import copy
 import logging
 import os
+
 import salt.utils.files
 
 try:
