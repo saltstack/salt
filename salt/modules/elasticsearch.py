@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Elasticsearch - A distributed RESTful search and analytics server
 
@@ -49,19 +48,13 @@ Module to provide Elasticsearch compatibility to Salt
     Some functionality might be limited by elasticsearch-py and Elasticsearch server versions.
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
-import sys
 
-# Import Salt Libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
-# Import third party libs
 try:
     import elasticsearch
 
@@ -103,7 +96,7 @@ def _get_instance(hosts=None, profile=None):
     if profile is None:
         profile = "elasticsearch"
 
-    if isinstance(profile, six.string_types):
+    if isinstance(profile, str):
         _profile = __salt__["config.option"](profile, None)
     elif isinstance(profile, dict):
         _profile = profile
@@ -124,7 +117,7 @@ def _get_instance(hosts=None, profile=None):
 
     if not hosts:
         hosts = ["127.0.0.1:9200"]
-    if isinstance(hosts, six.string_types):
+    if isinstance(hosts, str):
         hosts = [hosts]
     try:
         if proxies:
@@ -132,7 +125,7 @@ def _get_instance(hosts=None, profile=None):
             class ProxyConnection(RequestsHttpConnection):
                 def __init__(self, *args, **kwargs):
                     proxies = kwargs.pop("proxies", {})
-                    super(ProxyConnection, self).__init__(*args, **kwargs)
+                    super().__init__(*args, **kwargs)
                     self.session.proxies = proxies
 
             es = elasticsearch.Elasticsearch(
@@ -159,7 +152,7 @@ def _get_instance(hosts=None, profile=None):
         es.info()
     except elasticsearch.exceptions.TransportError as err:
         raise CommandExecutionError(
-            "Could not connect to Elasticsearch host/ cluster {0} due to {1}".format(
+            "Could not connect to Elasticsearch host/ cluster {} due to {}".format(
                 hosts, err
             )
         )
@@ -184,7 +177,7 @@ def ping(allow_failure=False, hosts=None, profile=None):
         _get_instance(hosts, profile)
     except CommandExecutionError as e:
         if allow_failure:
-            six.reraise(*sys.exc_info())
+            raise
         return False
     return True
 
@@ -206,7 +199,7 @@ def info(hosts=None, profile=None):
         return es.info()
     except elasticsearch.TransportError as e:
         raise CommandExecutionError(
-            "Cannot retrieve server information, server returned code {0} with message {1}".format(
+            "Cannot retrieve server information, server returned code {} with message {}".format(
                 e.status_code, e.error
             )
         )
@@ -233,7 +226,7 @@ def node_info(nodes=None, flat_settings=False, hosts=None, profile=None):
         return es.nodes.info(node_id=nodes, flat_settings=flat_settings)
     except elasticsearch.TransportError as e:
         raise CommandExecutionError(
-            "Cannot retrieve node information, server returned code {0} with message {1}".format(
+            "Cannot retrieve node information, server returned code {} with message {}".format(
                 e.status_code, e.error
             )
         )
@@ -262,7 +255,7 @@ def cluster_health(index=None, level="cluster", local=False, hosts=None, profile
         return es.cluster.health(index=index, level=level, local=local)
     except elasticsearch.TransportError as e:
         raise CommandExecutionError(
-            "Cannot retrieve health information, server returned code {0} with message {1}".format(
+            "Cannot retrieve health information, server returned code {} with message {}".format(
                 e.status_code, e.error
             )
         )
@@ -287,7 +280,7 @@ def cluster_stats(nodes=None, hosts=None, profile=None):
         return es.cluster.stats(node_id=nodes)
     except elasticsearch.TransportError as e:
         raise CommandExecutionError(
-            "Cannot retrieve cluster stats, server returned code {0} with message {1}".format(
+            "Cannot retrieve cluster stats, server returned code {} with message {}".format(
                 e.status_code, e.error
             )
         )
@@ -319,7 +312,7 @@ def cluster_get_settings(
         )
     except elasticsearch.TransportError as e:
         raise CommandExecutionError(
-            "Cannot retrieve cluster settings, server returned code {0} with message {1}".format(
+            "Cannot retrieve cluster settings, server returned code {} with message {}".format(
                 e.status_code, e.error
             )
         )
@@ -352,7 +345,7 @@ def cluster_put_settings(body=None, flat_settings=False, hosts=None, profile=Non
         return es.cluster.put_settings(body=body, flat_settings=flat_settings)
     except elasticsearch.TransportError as e:
         raise CommandExecutionError(
-            "Cannot update cluster settings, server returned code {0} with message {1}".format(
+            "Cannot update cluster settings, server returned code {} with message {}".format(
                 e.status_code, e.error
             )
         )
@@ -388,7 +381,7 @@ def alias_create(indices, alias, hosts=None, body=None, profile=None, source=Non
         return result.get("acknowledged", False)
     except elasticsearch.TransportError as e:
         raise CommandExecutionError(
-            "Cannot create alias {0} in index {1}, server returned code {2} with message {3}".format(
+            "Cannot create alias {} in index {}, server returned code {} with message {}".format(
                 alias, indices, e.status_code, e.error
             )
         )
@@ -423,7 +416,7 @@ def alias_delete(indices, aliases, hosts=None, body=None, profile=None, source=N
         return True
     except elasticsearch.TransportError as e:
         raise CommandExecutionError(
-            "Cannot delete alias {0} in index {1}, server returned code {2} with message {3}".format(
+            "Cannot delete alias {} in index {}, server returned code {} with message {}".format(
                 aliases, indices, e.status_code, e.error
             )
         )
@@ -449,7 +442,7 @@ def alias_exists(aliases, indices=None, hosts=None, profile=None):
         return False
     except elasticsearch.TransportError as e:
         raise CommandExecutionError(
-            "Cannot get alias {0} in index {1}, server returned code {2} with message {3}".format(
+            "Cannot get alias {} in index {}, server returned code {} with message {}".format(
                 aliases, indices, e.status_code, e.error
             )
         )
@@ -476,7 +469,7 @@ def alias_get(indices=None, aliases=None, hosts=None, profile=None):
         return None
     except elasticsearch.TransportError as e:
         raise CommandExecutionError(
-            "Cannot get alias {0} in index {1}, server returned code {2} with message {3}".format(
+            "Cannot get alias {} in index {}, server returned code {} with message {}".format(
                 aliases, indices, e.status_code, e.error
             )
         )
@@ -515,7 +508,7 @@ def document_create(
         return es.index(index=index, doc_type=doc_type, body=body, id=id)
     except elasticsearch.TransportError as e:
         raise CommandExecutionError(
-            "Cannot create document in index {0}, server returned code {1} with message {2}".format(
+            "Cannot create document in index {}, server returned code {} with message {}".format(
                 index, e.status_code, e.error
             )
         )
@@ -544,7 +537,7 @@ def document_delete(index, doc_type, id, hosts=None, profile=None):
         return None
     except elasticsearch.TransportError as e:
         raise CommandExecutionError(
-            "Cannot delete document {0} in index {1}, server returned code {2} with message {3}".format(
+            "Cannot delete document {} in index {}, server returned code {} with message {}".format(
                 id, index, e.status_code, e.error
             )
         )
@@ -573,7 +566,7 @@ def document_exists(index, id, doc_type="_all", hosts=None, profile=None):
         return False
     except elasticsearch.TransportError as e:
         raise CommandExecutionError(
-            "Cannot retrieve document {0} from index {1}, server returned code {2} with message {3}".format(
+            "Cannot retrieve document {} from index {}, server returned code {} with message {}".format(
                 id, index, e.status_code, e.error
             )
         )
@@ -602,7 +595,7 @@ def document_get(index, id, doc_type="_all", hosts=None, profile=None):
         return None
     except elasticsearch.TransportError as e:
         raise CommandExecutionError(
-            "Cannot retrieve document {0} from index {1}, server returned code {2} with message {3}".format(
+            "Cannot retrieve document {} from index {}, server returned code {} with message {}".format(
                 id, index, e.status_code, e.error
             )
         )
@@ -642,7 +635,7 @@ def index_create(index, body=None, hosts=None, profile=None, source=None):
             return True
 
         raise CommandExecutionError(
-            "Cannot create index {0}, server returned code {1} with message {2}".format(
+            "Cannot create index {}, server returned code {} with message {}".format(
                 index, e.status_code, e.error
             )
         )
@@ -669,7 +662,7 @@ def index_delete(index, hosts=None, profile=None):
         return True
     except elasticsearch.TransportError as e:
         raise CommandExecutionError(
-            "Cannot delete index {0}, server returned code {1} with message {2}".format(
+            "Cannot delete index {}, server returned code {} with message {}".format(
                 index, e.status_code, e.error
             )
         )
@@ -694,7 +687,7 @@ def index_exists(index, hosts=None, profile=None):
         return False
     except elasticsearch.TransportError as e:
         raise CommandExecutionError(
-            "Cannot retrieve index {0}, server returned code {1} with message {2}".format(
+            "Cannot retrieve index {}, server returned code {} with message {}".format(
                 index, e.status_code, e.error
             )
         )
@@ -719,7 +712,7 @@ def index_get(index, hosts=None, profile=None):
         return None
     except elasticsearch.TransportError as e:
         raise CommandExecutionError(
-            "Cannot retrieve index {0}, server returned code {1} with message {2}".format(
+            "Cannot retrieve index {}, server returned code {} with message {}".format(
                 index, e.status_code, e.error
             )
         )
@@ -764,7 +757,7 @@ def index_open(
         return result.get("acknowledged", False)
     except elasticsearch.TransportError as e:
         raise CommandExecutionError(
-            "Cannot open index {0}, server returned code {1} with message {2}".format(
+            "Cannot open index {}, server returned code {} with message {}".format(
                 index, e.status_code, e.error
             )
         )
@@ -809,7 +802,7 @@ def index_close(
         return result.get("acknowledged", False)
     except elasticsearch.TransportError as e:
         raise CommandExecutionError(
-            "Cannot close index {0}, server returned code {1} with message {2}".format(
+            "Cannot close index {}, server returned code {} with message {}".format(
                 index, e.status_code, e.error
             )
         )
@@ -862,7 +855,7 @@ def index_get_settings(hosts=None, profile=None, **kwargs):
         return None
     except elasticsearch.TransportError as e:
         raise CommandExecutionError(
-            "Cannot retrieve index settings {0}, server returned code {1} with message {2}".format(
+            "Cannot retrieve index settings {}, server returned code {} with message {}".format(
                 kwargs, e.status_code, e.error
             )
         )
@@ -928,7 +921,7 @@ def index_put_settings(body=None, hosts=None, profile=None, source=None, **kwarg
         return None
     except elasticsearch.TransportError as e:
         raise CommandExecutionError(
-            "Cannot update index settings {0}, server returned code {1} with message {2}".format(
+            "Cannot update index settings {}, server returned code {} with message {}".format(
                 kwargs, e.status_code, e.error
             )
         )
@@ -965,7 +958,7 @@ def mapping_create(index, doc_type, body=None, hosts=None, profile=None, source=
         return result.get("acknowledged", False)
     except elasticsearch.TransportError as e:
         raise CommandExecutionError(
-            "Cannot create mapping {0}, server returned code {1} with message {2}".format(
+            "Cannot create mapping {}, server returned code {} with message {}".format(
                 index, e.status_code, e.error
             )
         )
@@ -993,7 +986,7 @@ def mapping_delete(index, doc_type, hosts=None, profile=None):
         return True
     except elasticsearch.TransportError as e:
         raise CommandExecutionError(
-            "Cannot delete mapping {0}, server returned code {1} with message {2}".format(
+            "Cannot delete mapping {}, server returned code {} with message {}".format(
                 index, e.status_code, e.error
             )
         )
@@ -1022,7 +1015,7 @@ def mapping_get(index, doc_type, hosts=None, profile=None):
         return None
     except elasticsearch.TransportError as e:
         raise CommandExecutionError(
-            "Cannot retrieve mapping {0}, server returned code {1} with message {2}".format(
+            "Cannot retrieve mapping {}, server returned code {} with message {}".format(
                 index, e.status_code, e.error
             )
         )
@@ -1058,7 +1051,7 @@ def index_template_create(name, body=None, hosts=None, profile=None, source=None
         return result.get("acknowledged", False)
     except elasticsearch.TransportError as e:
         raise CommandExecutionError(
-            "Cannot create template {0}, server returned code {1} with message {2}".format(
+            "Cannot create template {}, server returned code {} with message {}".format(
                 name, e.status_code, e.error
             )
         )
@@ -1084,7 +1077,7 @@ def index_template_delete(name, hosts=None, profile=None):
         return True
     except elasticsearch.TransportError as e:
         raise CommandExecutionError(
-            "Cannot delete template {0}, server returned code {1} with message {2}".format(
+            "Cannot delete template {}, server returned code {} with message {}".format(
                 name, e.status_code, e.error
             )
         )
@@ -1106,7 +1099,7 @@ def index_template_exists(name, hosts=None, profile=None):
         return es.indices.exists_template(name=name)
     except elasticsearch.TransportError as e:
         raise CommandExecutionError(
-            "Cannot retrieve template {0}, server returned code {1} with message {2}".format(
+            "Cannot retrieve template {}, server returned code {} with message {}".format(
                 name, e.status_code, e.error
             )
         )
@@ -1131,7 +1124,7 @@ def index_template_get(name, hosts=None, profile=None):
         return None
     except elasticsearch.TransportError as e:
         raise CommandExecutionError(
-            "Cannot retrieve template {0}, server returned code {1} with message {2}".format(
+            "Cannot retrieve template {}, server returned code {} with message {}".format(
                 name, e.status_code, e.error
             )
         )
@@ -1158,7 +1151,7 @@ def pipeline_get(id, hosts=None, profile=None):
         return None
     except elasticsearch.TransportError as e:
         raise CommandExecutionError(
-            "Cannot create pipeline {0}, server returned code {1} with message {2}".format(
+            "Cannot create pipeline {}, server returned code {} with message {}".format(
                 id, e.status_code, e.error
             )
         )
@@ -1188,7 +1181,7 @@ def pipeline_delete(id, hosts=None, profile=None):
         return True
     except elasticsearch.TransportError as e:
         raise CommandExecutionError(
-            "Cannot delete pipeline {0}, server returned code {1} with message {2}".format(
+            "Cannot delete pipeline {}, server returned code {} with message {}".format(
                 id, e.status_code, e.error
             )
         )
@@ -1217,7 +1210,7 @@ def pipeline_create(id, body, hosts=None, profile=None):
         return out.get("acknowledged", False)
     except elasticsearch.TransportError as e:
         raise CommandExecutionError(
-            "Cannot create pipeline {0}, server returned code {1} with message {2}".format(
+            "Cannot create pipeline {}, server returned code {} with message {}".format(
                 id, e.status_code, e.error
             )
         )
@@ -1247,7 +1240,7 @@ def pipeline_simulate(id, body, verbose=False, hosts=None, profile=None):
         return es.ingest.simulate(id=id, body=body, verbose=verbose)
     except elasticsearch.TransportError as e:
         raise CommandExecutionError(
-            "Cannot simulate pipeline {0}, server returned code {1} with message {2}".format(
+            "Cannot simulate pipeline {}, server returned code {} with message {}".format(
                 id, e.status_code, e.error
             )
         )
@@ -1276,7 +1269,7 @@ def search_template_get(id, hosts=None, profile=None):
         return None
     except elasticsearch.TransportError as e:
         raise CommandExecutionError(
-            "Cannot obtain search template {0}, server returned code {1} with message {2}".format(
+            "Cannot obtain search template {}, server returned code {} with message {}".format(
                 id, e.status_code, e.error
             )
         )
@@ -1305,7 +1298,7 @@ def search_template_create(id, body, hosts=None, profile=None):
         return result.get("acknowledged", False)
     except elasticsearch.TransportError as e:
         raise CommandExecutionError(
-            "Cannot create search template {0}, server returned code {1} with message {2}".format(
+            "Cannot create search template {}, server returned code {} with message {}".format(
                 id, e.status_code, e.error
             )
         )
@@ -1334,7 +1327,7 @@ def search_template_delete(id, hosts=None, profile=None):
         return True
     except elasticsearch.TransportError as e:
         raise CommandExecutionError(
-            "Cannot delete search template {0}, server returned code {1} with message {2}".format(
+            "Cannot delete search template {}, server returned code {} with message {}".format(
                 id, e.status_code, e.error
             )
         )
@@ -1363,7 +1356,7 @@ def repository_get(name, local=False, hosts=None, profile=None):
         return None
     except elasticsearch.TransportError as e:
         raise CommandExecutionError(
-            "Cannot obtain repository {0}, server returned code {1} with message {2}".format(
+            "Cannot obtain repository {}, server returned code {} with message {}".format(
                 name, e.status_code, e.error
             )
         )
@@ -1392,7 +1385,7 @@ def repository_create(name, body, hosts=None, profile=None):
         return result.get("acknowledged", False)
     except elasticsearch.TransportError as e:
         raise CommandExecutionError(
-            "Cannot create repository {0}, server returned code {1} with message {2}".format(
+            "Cannot create repository {}, server returned code {} with message {}".format(
                 name, e.status_code, e.error
             )
         )
@@ -1421,7 +1414,7 @@ def repository_delete(name, hosts=None, profile=None):
         return True
     except elasticsearch.TransportError as e:
         raise CommandExecutionError(
-            "Cannot delete repository {0}, server returned code {1} with message {2}".format(
+            "Cannot delete repository {}, server returned code {} with message {}".format(
                 name, e.status_code, e.error
             )
         )
@@ -1448,7 +1441,7 @@ def repository_verify(name, hosts=None, profile=None):
         return None
     except elasticsearch.TransportError as e:
         raise CommandExecutionError(
-            "Cannot verify repository {0}, server returned code {1} with message {2}".format(
+            "Cannot verify repository {}, server returned code {} with message {}".format(
                 name, e.status_code, e.error
             )
         )
@@ -1483,7 +1476,7 @@ def snapshot_status(
         )
     except elasticsearch.TransportError as e:
         raise CommandExecutionError(
-            "Cannot obtain snapshot status, server returned code {0} with message {1}".format(
+            "Cannot obtain snapshot status, server returned code {} with message {}".format(
                 e.status_code, e.error
             )
         )
@@ -1518,7 +1511,7 @@ def snapshot_get(
         )
     except elasticsearch.TransportError as e:
         raise CommandExecutionError(
-            "Cannot obtain details of snapshot {0} in repository {1}, server returned code {2} with message {3}".format(
+            "Cannot obtain details of snapshot {} in repository {}, server returned code {} with message {}".format(
                 snapshot, repository, e.status_code, e.error
             )
         )
@@ -1551,7 +1544,7 @@ def snapshot_create(repository, snapshot, body=None, hosts=None, profile=None):
         return response.get("accepted", False)
     except elasticsearch.TransportError as e:
         raise CommandExecutionError(
-            "Cannot create snapshot {0} in repository {1}, server returned code {2} with message {3}".format(
+            "Cannot create snapshot {} in repository {}, server returned code {} with message {}".format(
                 snapshot, repository, e.status_code, e.error
             )
         )
@@ -1584,7 +1577,7 @@ def snapshot_restore(repository, snapshot, body=None, hosts=None, profile=None):
         return response.get("accepted", False)
     except elasticsearch.TransportError as e:
         raise CommandExecutionError(
-            "Cannot restore snapshot {0} in repository {1}, server returned code {2} with message {3}".format(
+            "Cannot restore snapshot {} in repository {}, server returned code {} with message {}".format(
                 snapshot, repository, e.status_code, e.error
             )
         )
@@ -1615,7 +1608,7 @@ def snapshot_delete(repository, snapshot, hosts=None, profile=None):
         return True
     except elasticsearch.TransportError as e:
         raise CommandExecutionError(
-            "Cannot delete snapshot {0} from repository {1}, server returned code {2} with message {3}".format(
+            "Cannot delete snapshot {} from repository {}, server returned code {} with message {}".format(
                 snapshot, repository, e.status_code, e.error
             )
         )

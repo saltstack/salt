@@ -25,6 +25,7 @@ import string
 import sys
 import tempfile
 import time
+import urllib.parse
 from collections import namedtuple
 from collections.abc import Iterable, Mapping
 from functools import reduce  # pylint: disable=redefined-builtin
@@ -48,14 +49,7 @@ import salt.utils.user
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationError
 from salt.exceptions import get_error_message as _get_error_message
-
-# pylint: disable=import-error,no-name-in-module,redefined-builtin
-from salt.ext import six
-from salt.ext.six.moves import range, zip
-from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
 from salt.utils.files import HASHES, HASHES_REVMAP
-
-# pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 try:
     import grp
@@ -849,7 +843,7 @@ def get_source_sum(
         hash_fn = source_hash
     else:
         try:
-            proto = _urlparse(source_hash).scheme
+            proto = urllib.parse.urlparse(source_hash).scheme
             if proto in salt.utils.files.VALID_PROTOS:
                 hash_fn = __salt__["cp.cache_file"](
                     source_hash, saltenv, verify_ssl=verify_ssl
@@ -1570,7 +1564,7 @@ def comment_line(path, regex, char="#", cmnt=True, backup=".bak"):
 
     try:
         # Open the file in write mode
-        mode = "wb" if six.PY2 and salt.utils.platform.is_windows() else "w"
+        mode = "w"
         with salt.utils.files.fopen(path, mode=mode, buffering=bufsize) as w_file:
             try:
                 # Open the temp file in read mode
@@ -1591,11 +1585,7 @@ def comment_line(path, regex, char="#", cmnt=True, backup=".bak"):
                             else:
                                 # Write the existing line (no change)
                                 wline = line
-                            wline = (
-                                salt.utils.stringutils.to_bytes(wline)
-                                if six.PY2 and salt.utils.platform.is_windows()
-                                else salt.utils.stringutils.to_str(wline)
-                            )
+                            wline = salt.utils.stringutils.to_str(wline)
                             w_file.write(wline)
                         except OSError as exc:
                             raise CommandExecutionError(
@@ -2341,12 +2331,8 @@ def line(
             fh_ = None
             try:
                 # Make sure we match the file mode from salt.utils.files.fopen
-                if six.PY2 and salt.utils.platform.is_windows():
-                    mode = "wb"
-                    body = salt.utils.data.encode_list(body)
-                else:
-                    mode = "w"
-                    body = salt.utils.data.decode_list(body, to_str=True)
+                mode = "w"
+                body = salt.utils.data.decode_list(body, to_str=True)
                 fh_ = salt.utils.atomicfile.atomic_open(path, mode)
                 fh_.writelines(body)
             finally:
@@ -4311,7 +4297,7 @@ def source_list(source, source_hash, saltenv):
                     continue
                 single_src = next(iter(single))
                 single_hash = single[single_src] if single[single_src] else source_hash
-                urlparsed_single_src = _urlparse(single_src)
+                urlparsed_single_src = urllib.parse.urlparse(single_src)
                 # Fix this for Windows
                 if salt.utils.platform.is_windows():
                     # urlparse doesn't handle a local Windows path without the
@@ -4319,7 +4305,9 @@ def source_list(source, source_hash, saltenv):
                     # drive letter instead of the protocol. So, we'll add the
                     # protocol and re-parse
                     if urlparsed_single_src.scheme.lower() in string.ascii_lowercase:
-                        urlparsed_single_src = _urlparse("file://" + single_src)
+                        urlparsed_single_src = urllib.parse.urlparse(
+                            "file://" + single_src
+                        )
                 proto = urlparsed_single_src.scheme
                 if proto == "salt":
                     path, senv = salt.utils.url.parse(single_src)
@@ -4354,14 +4342,14 @@ def source_list(source, source_hash, saltenv):
                 if (path, senv) in mfiles or (path, senv) in mdirs:
                     ret = (single, source_hash)
                     break
-                urlparsed_src = _urlparse(single)
+                urlparsed_src = urllib.parse.urlparse(single)
                 if salt.utils.platform.is_windows():
                     # urlparse doesn't handle a local Windows path without the
                     # protocol indicator (file://). The scheme will be the
                     # drive letter instead of the protocol. So, we'll add the
                     # protocol and re-parse
                     if urlparsed_src.scheme.lower() in string.ascii_lowercase:
-                        urlparsed_src = _urlparse("file://" + single)
+                        urlparsed_src = urllib.parse.urlparse("file://" + single)
                 proto = urlparsed_src.scheme
                 if proto == "file" and (
                     os.path.exists(urlparsed_src.netloc)
@@ -4432,9 +4420,7 @@ def apply_template_on_contents(contents, template, context, defaults, saltenv):
             salt=__salt__,
             opts=__opts__,
         )["data"]
-        if six.PY2:
-            contents = contents.encode("utf-8")
-        elif six.PY3 and isinstance(contents, bytes):
+        if isinstance(contents, bytes):
             # bytes -> str
             contents = contents.decode("utf-8")
     else:
@@ -4537,7 +4523,7 @@ def get_managed(
 
     # If we have a source defined, let's figure out what the hash is
     if source:
-        urlparsed_source = _urlparse(source)
+        urlparsed_source = urllib.parse.urlparse(source)
         if urlparsed_source.scheme in salt.utils.files.VALID_PROTOS:
             parsed_scheme = urlparsed_source.scheme
         else:
@@ -4761,7 +4747,7 @@ def extract_hash(
     if source:
         if not isinstance(source, str):
             source = str(source)
-        urlparsed_source = _urlparse(source)
+        urlparsed_source = urllib.parse.urlparse(source)
         source_basename = os.path.basename(
             urlparsed_source.path or urlparsed_source.netloc
         )
@@ -5411,7 +5397,10 @@ def check_managed_changes(
             __clean_tmp(sfn)
             return False, comments
         if sfn and source and keep_mode:
-            if _urlparse(source).scheme in ("salt", "file") or source.startswith("/"):
+            if urllib.parse.urlparse(source).scheme in (
+                "salt",
+                "file",
+            ) or source.startswith("/"):
                 try:
                     mode = __salt__["cp.stat_file"](source, saltenv=saltenv, octal=True)
                 except Exception as exc:  # pylint: disable=broad-except
@@ -5946,7 +5935,7 @@ def manage_file(
             source_sum = {"hash_type": htype, "hsum": get_hash(sfn, form=htype)}
 
         if keep_mode:
-            if _urlparse(source).scheme in ("salt", "file", ""):
+            if urllib.parse.urlparse(source).scheme in ("salt", "file", ""):
                 try:
                     mode = __salt__["cp.stat_file"](source, saltenv=saltenv, octal=True)
                 except Exception as exc:  # pylint: disable=broad-except
@@ -5979,7 +5968,7 @@ def manage_file(
             # If the downloaded file came from a non salt server or local
             # source, and we are not skipping checksum verification, then
             # verify that it matches the specified checksum.
-            if not skip_verify and _urlparse(source).scheme != "salt":
+            if not skip_verify and urllib.parse.urlparse(source).scheme != "salt":
                 dl_sum = get_hash(sfn, source_sum["hash_type"])
                 if dl_sum != source_sum["hsum"]:
                     ret["comment"] = (
@@ -6076,7 +6065,7 @@ def manage_file(
                 return _error(ret, "Source file '{}' not found".format(source))
             # If the downloaded file came from a non salt server source verify
             # that it matches the intended sum value
-            if not skip_verify and _urlparse(source).scheme != "salt":
+            if not skip_verify and urllib.parse.urlparse(source).scheme != "salt":
                 dl_sum = get_hash(sfn, source_sum["hash_type"])
                 if dl_sum != source_sum["hsum"]:
                     ret["comment"] = (
@@ -6156,9 +6145,9 @@ def manage_file(
                 # directories created with makedirs_() below can't be
                 # listed via a shell.
                 mode_list = [x for x in str(mode)][-3:]
-                for idx in range(len(mode_list)):
-                    if mode_list[idx] != "0":
-                        mode_list[idx] = str(int(mode_list[idx]) | 1)
+                for idx, part in enumerate(mode_list):
+                    if part != "0":
+                        mode_list[idx] = str(int(part) | 1)
                 dir_mode = "".join(mode_list)
 
             if salt.utils.platform.is_windows():
@@ -6185,7 +6174,7 @@ def manage_file(
                 return _error(ret, "Source file '{}' not found".format(source))
             # If the downloaded file came from a non salt server source verify
             # that it matches the intended sum value
-            if not skip_verify and _urlparse(source).scheme != "salt":
+            if not skip_verify and urllib.parse.urlparse(source).scheme != "salt":
                 dl_sum = get_hash(sfn, source_sum["hash_type"])
                 if dl_sum != source_sum["hsum"]:
                     ret["comment"] = (

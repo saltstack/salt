@@ -44,9 +44,9 @@ def _get_keys():
     """
     Get the keys
     """
-    keys = salt.key.get_key(__opts__)
-    minions = keys.all_keys()
-    return minions["minions"]
+    with salt.key.get_key(__opts__) as keys:
+        minions = keys.all_keys()
+        return minions["minions"]
 
 
 def _delete_keys(stale_keys, minions):

@@ -498,18 +498,19 @@ def fileserver(opts, backends):
     if backends is not None:
         if not isinstance(backends, list):
             backends = [backends]
-        # Make sure that the VCS backends work either with git or gitfs, hg or
-        # hgfs, etc.
-        vcs_re = re.compile("^(git|svn|hg)")
-        fs_re = re.compile("fs$")
-        vcs = []
-        non_vcs = []
-        for back in [fs_re.sub("", x) for x in backends]:
-            if vcs_re.match(back):
-                vcs.extend((back, back + "fs"))
+
+        # If backend is a VCS, add both the '-fs' and non '-fs' versions to the list.
+        # Use a set to keep them unique
+        backend_set = set()
+        vcs_re = re.compile("^(git|svn|hg)(?:fs)?$")
+        for backend in backends:
+            match = vcs_re.match(backend)
+            if match:
+                backend_set.add(match.group(1))
+                backend_set.add(match.group(1) + "fs")
             else:
-                non_vcs.append(back)
-        backends = vcs + non_vcs
+                backend_set.add(backend)
+        backends = list(backend_set)
 
     return LazyLoader(
         _module_dirs(opts, "fileserver"),
@@ -633,8 +634,8 @@ def ssh_wrapper(opts, functions=None, context=None):
         tag="wrapper",
         pack={
             "__salt__": functions,
-            "__grains__": opts.get("grains", {}),
-            "__pillar__": opts.get("pillar", {}),
+            #        "__grains__": opts.get("grains", {}),
+            #        "__pillar__": opts.get("pillar", {}),
             "__context__": context,
         },
     )
@@ -1082,15 +1083,15 @@ def executors(opts, functions=None, context=None, proxy=None):
     """
     Returns the executor modules
     """
+    if proxy is None:
+        proxy = {}
+    if context is None:
+        context = {}
     return LazyLoader(
         _module_dirs(opts, "executors", "executor"),
         opts,
         tag="executor",
-        pack={
-            "__salt__": functions,
-            "__context__": context or {},
-            "__proxy__": proxy or {},
-        },
+        pack={"__salt__": functions, "__context__": context, "__proxy__": proxy},
         pack_self="__executors__",
     )
 
@@ -1172,8 +1173,7 @@ class LoadedFunc:
         functools.update_wrapper(self, func)
 
     def __getattr__(self, name):
-        if name == "__globals__":
-            return self.func.__globals__
+        return getattr(self.func, name)
 
     def __call__(self, *args, **kwargs):
         if self.loader.inject_globals:
@@ -1572,13 +1572,19 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         Strip out of the opts any logger instance
         """
         if "__grains__" not in self.pack:
-            self.context_dict["grains"] = opts.get("grains", {})
+            grains = opts.get("grains", {})
+            if isinstance(grains, salt.loader_context.NamedLoaderContext):
+                grains = grains.value()
+            self.context_dict["grains"] = grains
             self.pack["__grains__"] = salt.utils.context.NamespacedDictWrapper(
                 self.context_dict, "grains"
             )
 
         if "__pillar__" not in self.pack:
-            self.context_dict["pillar"] = opts.get("pillar", {})
+            pillar = opts.get("pillar", {})
+            if isinstance(pillar, salt.loader_context.NamedLoaderContext):
+                pillar = pillar.value()
+            self.context_dict["pillar"] = pillar
             self.pack["__pillar__"] = salt.utils.context.NamespacedDictWrapper(
                 self.context_dict, "pillar"
             )
@@ -1796,12 +1802,17 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             except Exception:  # pylint: disable=broad-except
                 pass
             else:
-                tgt_fn = os.path.join("salt", "utils", "process.py")
-                if fn_.endswith(tgt_fn) and "_handle_signals" in caller:
-                    # Race conditon, SIGTERM or SIGINT received while loader
-                    # was in process of loading a module. Call sys.exit to
-                    # ensure that the process is killed.
-                    sys.exit(salt.defaults.exitcodes.EX_OK)
+                tgt_fns = [
+                    os.path.join("salt", "utils", "process.py"),
+                    os.path.join("salt", "cli", "daemons.py"),
+                    os.path.join("salt", "cli", "api.py"),
+                ]
+                for tgt_fn in tgt_fns:
+                    if fn_.endswith(tgt_fn) and "_handle_signals" in caller:
+                        # Race conditon, SIGTERM or SIGINT received while loader
+                        # was in process of loading a module. Call sys.exit to
+                        # ensure that the process is killed.
+                        sys.exit(salt.defaults.exitcodes.EX_OK)
             log.error(
                 "Failed to import %s %s as the module called exit()\n",
                 self.tag,
@@ -2191,14 +2202,14 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
         return (True, module_name, None, virtual_aliases)
 
-    def run(self, method, *args, **kwargs):
+    def run(self, _func_or_method, *args, **kwargs):
         """
-        Run the method in this loader's context
+        Run the `_func_or_method` in this loader's context
         """
         self._last_context = contextvars.copy_context()
-        return self._last_context.run(self._run_as, method, *args, **kwargs)
+        return self._last_context.run(self._run_as, _func_or_method, *args, **kwargs)
 
-    def _run_as(self, method, *args, **kwargs):
+    def _run_as(self, _func_or_method, *args, **kwargs):
         """
         Handle setting up the context properly and call the method
         """
@@ -2211,24 +2222,24 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             self.parent_loader = current_loader
         token = salt.loader_context.loader_ctxvar.set(self)
         try:
-            return method(*args, **kwargs)
+            return _func_or_method(*args, **kwargs)
         finally:
             self.parent_loader = None
             salt.loader_context.loader_ctxvar.reset(token)
 
-    def run_in_thread(self, method, *args, **kwargs):
+    def run_in_thread(self, _func_or_method, *args, **kwargs):
         """
         Run the function in a new thread with the context of this loader
         """
-        argslist = [self, method]
+        argslist = [self, _func_or_method]
         argslist.extend(args)
         thread = threading.Thread(target=self.target, args=argslist, kwargs=kwargs)
         thread.start()
         return thread
 
     @staticmethod
-    def target(loader, method, *args, **kwargs):
-        loader.run(method, *args, **kwargs)
+    def target(loader, _func_or_method, *args, **kwargs):
+        loader.run(_func_or_method, *args, **kwargs)
 
 
 def global_injector_decorator(inject_globals):

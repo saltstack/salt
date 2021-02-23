@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 State module for Cisco NX-OS Switch Proxy and Native minions
 
@@ -7,7 +6,6 @@ State module for Cisco NX-OS Switch Proxy and Native minions
 For documentation on setting up the nxos proxy minion look in the documentation
 for :mod:`salt.proxy.nxos<salt.proxy.nxos>`.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import re
 
@@ -355,7 +353,7 @@ def replace(name, repl, full_match=False):
     ret = {"name": name, "result": False, "changes": {}, "comment": ""}
 
     if full_match is False:
-        search = "^.*{0}.*$".format(name)
+        search = "^.*{}.*$".format(name)
     else:
         search = name
 
@@ -379,11 +377,11 @@ def replace(name, repl, full_match=False):
 
     if matches:
         ret["result"] = False
-        ret["comment"] = 'Failed to replace all instances of "{0}"'.format(name)
+        ret["comment"] = 'Failed to replace all instances of "{}"'.format(name)
     else:
         ret["result"] = True
-        ret[
-            "comment"
-        ] = 'Successfully replaced all instances of "{0}" with "{1}"'.format(name, repl)
+        ret["comment"] = 'Successfully replaced all instances of "{}" with "{}"'.format(
+            name, repl
+        )
 
     return ret

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Library for interacting with Mattermost Incoming Webhooks
 :configuration: This module can be used by specifying the name of a
@@ -10,19 +9,12 @@ Library for interacting with Mattermost Incoming Webhooks
           hook: 3tdgo8restnxiykdx88wqtxryr
           api_url: https://example.com
 """
-from __future__ import absolute_import, unicode_literals
 
+import http.client
 import logging
+import urllib.parse
 
-import salt.ext.six.moves.http_client
-
-# pylint: enable=import-error,no-name-in-module
 import salt.utils.http
-from salt.ext import six
-
-# Import 3rd-party libs
-# pylint: disable=import-error,no-name-in-module,redefined-builtin
-from salt.ext.six.moves.urllib.parse import urljoin as _urljoin
 from salt.version import __version__
 
 log = logging.getLogger(__name__)
@@ -40,15 +32,15 @@ def query(hook=None, api_url=None, data=None):
 
     ret = {"message": "", "res": True}
 
-    base_url = _urljoin(api_url, "/hooks/")
-    url = _urljoin(base_url, six.text_type(hook))
+    base_url = urllib.parse.urljoin(api_url, "/hooks/")
+    url = urllib.parse.urljoin(base_url, str(hook))
 
     result = salt.utils.http.query(url, method, data=data, decode=True, status=True)
 
-    if result.get("status", None) == salt.ext.six.moves.http_client.OK:
-        ret["message"] = "Message posted {0} correctly".format(data)
+    if result.get("status", None) == http.client.OK:
+        ret["message"] = "Message posted {} correctly".format(data)
         return ret
-    elif result.get("status", None) == salt.ext.six.moves.http_client.NO_CONTENT:
+    elif result.get("status", None) == http.client.NO_CONTENT:
         return True
     else:
         log.debug(url)

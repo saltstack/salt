@@ -146,7 +146,9 @@ def add_tags(
     if arn:
         boto_params = {
             "ARN": arn,
-            "TagList": [{"Key": k, "Value": tags[k]} for k in tags or {}.items()],
+            "TagList": [
+                {"Key": k, "Value": value} for k, value in (tags or {}).items()
+            ],
         }
         try:
             conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)

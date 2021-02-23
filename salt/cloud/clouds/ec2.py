@@ -90,7 +90,9 @@ import re
 import stat
 import sys
 import time
+import urllib.parse
 import uuid
+import xml.etree.ElementTree as ET
 from functools import cmp_to_key
 
 import salt.config as config
@@ -105,7 +107,6 @@ import salt.utils.json
 import salt.utils.msgpack
 import salt.utils.stringutils
 import salt.utils.yaml
-from salt._compat import ElementTree as ET
 from salt.exceptions import (
     SaltCloudConfigError,
     SaltCloudException,
@@ -113,8 +114,6 @@ from salt.exceptions import (
     SaltCloudExecutionTimeout,
     SaltCloudSystemExit,
 )
-from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
-from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
 
 try:
     import requests
@@ -172,12 +171,19 @@ def __virtual__():
     return __virtualname__
 
 
+def _get_active_provider_name():
+    try:
+        return __active_provider_name__.value()
+    except AttributeError:
+        return __active_provider_name__
+
+
 def get_configured_provider():
     """
     Return the first configured instance.
     """
     return config.is_provider_configured(
-        __opts__, __active_provider_name__ or __virtualname__, ("id", "key")
+        __opts__, _get_active_provider_name() or __virtualname__, ("id", "key")
     )
 
 
@@ -306,11 +312,11 @@ def query(
             )
 
             requesturl = "https://{}/".format(endpoint)
-            endpoint = _urlparse(requesturl).netloc
-            endpoint_path = _urlparse(requesturl).path
+            endpoint = urllib.parse.urlparse(requesturl).netloc
+            endpoint_path = urllib.parse.urlparse(requesturl).path
         else:
-            endpoint = _urlparse(requesturl).netloc
-            endpoint_path = _urlparse(requesturl).path
+            endpoint = urllib.parse.urlparse(requesturl).netloc
+            endpoint_path = urllib.parse.urlparse(requesturl).path
             if endpoint == "":
                 endpoint_err = (
                     "Could not find a valid endpoint in the "
@@ -328,7 +334,7 @@ def query(
         method = "GET"
         region = location
         service = "ec2"
-        canonical_uri = _urlparse(requesturl).path
+        canonical_uri = urllib.parse.urlparse(requesturl).path
         host = endpoint.strip()
 
         # Create a date for headers and the credential string
@@ -347,7 +353,7 @@ def query(
 
         keys = sorted(list(params_with_headers))
         values = map(params_with_headers.get, keys)
-        querystring = _urlencode(list(zip(keys, values)))
+        querystring = urllib.parse.urlencode(list(zip(keys, values)))
         querystring = querystring.replace("+", "%20")
 
         canonical_request = (
@@ -1344,7 +1350,7 @@ def get_provider(vm_=None):
     Extract the provider name from vm
     """
     if vm_ is None:
-        provider = __active_provider_name__ or "ec2"
+        provider = _get_active_provider_name() or "ec2"
     else:
         provider = vm_.get("provider", "ec2")
 
@@ -2587,7 +2593,7 @@ def create(vm_=None, call=None):
         if (
             vm_["profile"]
             and config.is_profile_configured(
-                __opts__, __active_provider_name__ or "ec2", vm_["profile"], vm_=vm_
+                __opts__, _get_active_provider_name() or "ec2", vm_["profile"], vm_=vm_
             )
             is False
         ):
@@ -2883,7 +2889,7 @@ def create(vm_=None, call=None):
 
     # Ensure that the latest node data is returned
     node = _get_node(instance_id=vm_["instance_id"])
-    __utils__["cloud.cache_node"](node, __active_provider_name__, __opts__)
+    __utils__["cloud.cache_node"](node, _get_active_provider_name(), __opts__)
     ret.update(node)
 
     # Add any block device tags specified
@@ -2955,7 +2961,7 @@ def queue_instances(instances):
     """
     for instance_id in instances:
         node = _get_node(instance_id=instance_id)
-        __utils__["cloud.cache_node"](node, __active_provider_name__, __opts__)
+        __utils__["cloud.cache_node"](node, _get_active_provider_name(), __opts__)
 
 
 def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
@@ -3418,7 +3424,7 @@ def destroy(name, call=None):
 
     if __opts__.get("update_cachedir", False) is True:
         __utils__["cloud.delete_minion_cachedir"](
-            name, __active_provider_name__.split(":")[0], __opts__
+            name, _get_active_provider_name().split(":")[0], __opts__
         )
 
     return ret
@@ -3505,7 +3511,7 @@ def show_instance(name=None, instance_id=None, call=None, kwargs=None):
         )
 
     node = _get_node(name=name, instance_id=instance_id)
-    __utils__["cloud.cache_node"](node, __active_provider_name__, __opts__)
+    __utils__["cloud.cache_node"](node, _get_active_provider_name(), __opts__)
     return node
 
 
@@ -3616,7 +3622,7 @@ def _list_nodes_full(location=None):
     """
     Return a list of the VMs that in this location
     """
-    provider = __active_provider_name__ or "ec2"
+    provider = _get_active_provider_name() or "ec2"
     if ":" in provider:
         comps = provider.split(":")
         provider = comps[0]
@@ -4162,6 +4168,31 @@ def volume_create(**kwargs):
     return create_volume(kwargs, "function")
 
 
+def _load_params(kwargs):
+    params = {"Action": "CreateVolume", "AvailabilityZone": kwargs["zone"]}
+
+    if "size" in kwargs:
+        params["Size"] = kwargs["size"]
+
+    if "snapshot" in kwargs:
+        params["SnapshotId"] = kwargs["snapshot"]
+
+    if "type" in kwargs:
+        params["VolumeType"] = kwargs["type"]
+
+    # io1 and io2 types require the iops parameter
+    if "iops" in kwargs and kwargs.get("type", "standard").lower() in ["io1", "io2"]:
+        params["Iops"] = kwargs["iops"]
+
+    # You can't set `encrypted` if you pass a snapshot
+    if "encrypted" in kwargs and "snapshot" not in kwargs:
+        params["Encrypted"] = kwargs["encrypted"]
+        if "kmskeyid" in kwargs:
+            params["KmsKeyId"] = kwargs["kmskeyid"]
+
+    return params
+
+
 def create_volume(kwargs=None, call=None, wait_to_finish=False):
     """
     Create a volume.
@@ -4176,16 +4207,17 @@ def create_volume(kwargs=None, call=None, wait_to_finish=False):
         The snapshot-id from which to create the volume. Integer.
 
     type
-        The volume type. This can be gp2 for General Purpose SSD, io1 for Provisioned
-        IOPS SSD, st1 for Throughput Optimized HDD, sc1 for Cold HDD, or standard for
-        Magnetic volumes. String.
+        The volume type. This can be ``gp2`` for General Purpose SSD, ``io1`` or
+        ``io2`` for Provisioned IOPS SSD, ``st1`` for Throughput Optimized HDD,
+        ``sc1`` for Cold HDD, or ``standard`` for Magnetic volumes. String.
 
     iops
         The number of I/O operations per second (IOPS) to provision for the volume,
         with a maximum ratio of 50 IOPS/GiB. Only valid for Provisioned IOPS SSD
         volumes. Integer.
 
-        This option will only be set if ``type`` is also specified as ``io1``.
+        This option will only be set if ``type`` is also specified as ``io1`` or
+        ``io2``
 
     encrypted
         Specifies whether the volume will be encrypted. Boolean.
@@ -4220,32 +4252,19 @@ def create_volume(kwargs=None, call=None, wait_to_finish=False):
         log.error("An availability zone must be specified to create a volume.")
         return False
 
+    if "kmskeyid" in kwargs and "encrypted" not in kwargs:
+        log.error("If a KMS Key ID is specified, encryption must be enabled")
+        return False
+
+    if kwargs.get("type").lower() in ["io1", "io2"] and "iops" not in kwargs:
+        log.error("Iops must be specified for types 'io1' and 'io2'")
+        return False
+
     if "size" not in kwargs and "snapshot" not in kwargs:
         # This number represents GiB
         kwargs["size"] = "10"
 
-    params = {"Action": "CreateVolume", "AvailabilityZone": kwargs["zone"]}
-
-    if "size" in kwargs:
-        params["Size"] = kwargs["size"]
-
-    if "snapshot" in kwargs:
-        params["SnapshotId"] = kwargs["snapshot"]
-
-    if "type" in kwargs:
-        params["VolumeType"] = kwargs["type"]
-
-    if "iops" in kwargs and kwargs.get("type", "standard") == "io1":
-        params["Iops"] = kwargs["iops"]
-
-    # You can't set `encrypted` if you pass a snapshot
-    if "encrypted" in kwargs and "snapshot" not in kwargs:
-        params["Encrypted"] = kwargs["encrypted"]
-        if "kmskeyid" in kwargs:
-            params["KmsKeyId"] = kwargs["kmskeyid"]
-    if "kmskeyid" in kwargs and "encrypted" not in kwargs:
-        log.error("If a KMS Key ID is specified, encryption must be enabled")
-        return False
+    params = _load_params(kwargs)
 
     log.debug(params)
 

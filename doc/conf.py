@@ -330,6 +330,7 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.autosummary",
     "sphinx.ext.extlinks",
+    "sphinx.ext.imgconverter",
     "sphinx.ext.intersphinx",
     "httpdomain",
     "youtube",

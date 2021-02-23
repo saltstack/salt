@@ -9,11 +9,6 @@ The data structure needs to be:
 """
 
 
-# pylint: disable=import-error
-
-# Try to import range from https://github.com/ytoolshed/range
-#
-
 import logging
 
 # The components here are simple, and they need to be and stay simple, we
@@ -33,9 +28,7 @@ from datetime import datetime
 import salt.cache
 import salt.config
 import salt.defaults.exitcodes
-
-# Import tornado
-import salt.ext.tornado.gen  # pylint: disable=F0401
+import salt.ext.tornado.gen
 import salt.loader
 import salt.payload
 import salt.syspaths as syspaths
@@ -59,7 +52,6 @@ from salt.exceptions import (
     SaltInvocationError,
     SaltReqTimeoutError,
 )
-from salt.ext import six
 
 HAS_RANGE = False
 try:
@@ -68,7 +60,6 @@ try:
     HAS_RANGE = True
 except ImportError:
     pass
-# pylint: enable=import-error
 
 
 log = logging.getLogger(__name__)
@@ -1027,7 +1018,7 @@ class LocalClient:
 
         # if you have all the returns, stop
         if len(found.intersection(minions)) >= len(minions):
-            raise StopIteration()
+            return
 
         # otherwise, get them from the event system
         for event in event_iter:
@@ -1036,7 +1027,7 @@ class LocalClient:
                 yield event
             if len(found.intersection(minions)) >= len(minions):
                 self._clean_up_subscriptions(jid)
-                raise StopIteration()
+                return
 
     # TODO: tests!!
     def get_returns_no_block(self, tag, match_type=None):
@@ -1104,7 +1095,7 @@ class LocalClient:
                 log.warning("jid does not exist")
                 yield {}
                 # stop the iteration, since the jid is invalid
-                raise StopIteration()
+                return
         except Exception as exc:  # pylint: disable=broad-except
             log.warning(
                 "Returner unavailable: %s", exc, exc_info_on_loglevel=logging.DEBUG
@@ -1676,7 +1667,7 @@ class LocalClient:
             log.warning("jid does not exist")
             yield {}
             # stop the iteration, since the jid is invalid
-            raise StopIteration()
+            return
         # Wait for the hosts to check in
         while True:
             raw = self.event.get_event(timeout, auto_reconnect=self.auto_reconnect)
@@ -1991,9 +1982,7 @@ class LocalClient:
         # This IS really necessary!
         # When running tests, if self.events is not destroyed, we leak 2
         # threads per test case which uses self.client
-        if hasattr(self, "event"):
-            # The call below will take care of calling 'self.event.destroy()'
-            del self.event
+        self.destroy()
 
     # pylint: enable=W1701
 
@@ -2001,6 +1990,17 @@ class LocalClient:
         if self.opts.get("order_masters"):
             self.event.unsubscribe("syndic/.*/{}".format(job_id), "regex")
         self.event.unsubscribe("salt/job/{}".format(job_id))
+
+    def destroy(self):
+        if self.event is not None:
+            self.event.destroy()
+            self.event = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.destroy()
 
 
 class FunctionWrapper(dict):

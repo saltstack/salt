@@ -55,6 +55,7 @@ try:
     )
     from ncclient.operations.errors import TimeoutExpiredError
     from ncclient.transport.third_party.junos.ioproc import IOProc
+
 except ImportError:
     HAS_JUNOS = False
 

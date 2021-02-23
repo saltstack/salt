@@ -7,7 +7,6 @@ Utilities supporting modules for Hashicorp Vault. Configuration instructions are
 documented in the execution module docs.
 """
 
-
 import base64
 import logging
 import os
@@ -19,7 +18,6 @@ import salt.exceptions
 import salt.utils.versions
 
 log = logging.getLogger(__name__)
-logging.getLogger("requests").setLevel(logging.WARNING)
 
 
 # Load the __salt__ dunder if not already loaded (when called from utils-module)
@@ -31,6 +29,7 @@ def __virtual__():  # pylint: disable=expected-2-blank-lines-found-0
         global __salt__  # pylint: disable=global-statement
         if not __salt__:
             __salt__ = salt.loader.minion_mods(__opts__)
+            logging.getLogger("requests").setLevel(logging.WARNING)
             return True
     except Exception as e:  # pylint: disable=broad-except
         log.error("Could not load __salt__: %s", e)

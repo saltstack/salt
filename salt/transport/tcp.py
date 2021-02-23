@@ -39,6 +39,7 @@ import salt.utils.msgpack
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.verify
+import salt.utils.versions
 from salt.exceptions import SaltClientError, SaltReqTimeoutError
 from salt.transport import iter_transport_opts
 
@@ -275,6 +276,16 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
             kwargs.get("crypt", "aes"),  # TODO: use the same channel for crypt
         )
 
+    @classmethod
+    def force_close_all_instances(cls):
+        """
+        Will force close all instances
+        :return: None
+        """
+        for weak_dict in list(cls.instance_map.values()):
+            for instance in list(weak_dict.values()):
+                instance.close()
+
     # has to remain empty for singletons, since __init__ will *always* be called
     def __init__(self, opts, **kwargs):
         pass
@@ -457,14 +468,19 @@ class AsyncTCPPubChannel(
         self.connected = False
         self._closing = False
         self._reconnected = False
+        self.message_client = None
         self.event = salt.utils.event.get_event("minion", opts=self.opts, listen=False)
 
     def close(self):
         if self._closing:
             return
         self._closing = True
-        if hasattr(self, "message_client"):
+        if self.message_client is not None:
             self.message_client.close()
+            self.message_client = None
+        if self.event is not None:
+            self.event.destroy()
+            self.event = None
 
     # pylint: disable=W1701
     def __del__(self):
@@ -581,7 +597,7 @@ class AsyncTCPPubChannel(
 
                 self.message_client = SaltMessageClientPool(
                     self.opts,
-                    args=(self.opts, self.opts["master_ip"], int(self.publish_port),),
+                    args=(self.opts, self.opts["master_ip"], int(self.publish_port)),
                     kwargs={
                         "io_loop": self.io_loop,
                         "connect_callback": self.connect_callback,
@@ -630,6 +646,7 @@ class TCPReqServerChannel(
     def __init__(self, opts):
         salt.transport.server.ReqServerChannel.__init__(self, opts)
         self._socket = None
+        self.req_server = None
 
     @property
     def socket(self):
@@ -646,30 +663,36 @@ class TCPReqServerChannel(
                     pass
                 else:
                     raise
-            self._socket.close()
+            if self.req_server is None:
+                # We only close the socket if we don't have a req_server instance.
+                # If we did, because the req_server is also handling this socket, when we call
+                # req_server.stop(), tornado will give us an AssertionError because it's trying to
+                # match the socket.fileno() (after close it's -1) to the fd it holds on it's _sockets cache
+                # so it can remove the socket from the IOLoop handlers
+                self._socket.close()
             self._socket = None
-        if hasattr(self.req_server, "shutdown"):
+        if self.req_server is not None:
             try:
-                self.req_server.shutdown()
-            except Exception as exc:  # pylint: disable=broad-except
-                log.exception(
-                    "TCPReqServerChannel close generated an exception: %s", str(exc)
-                )
-        elif hasattr(self.req_server, "stop"):
-            try:
-                self.req_server.stop()
+                self.req_server.close()
             except OSError as exc:
                 if exc.errno != 9:
                     raise
                 log.exception(
                     "TCPReqServerChannel close generated an exception: %s", str(exc)
                 )
+            self.req_server = None
 
     # pylint: disable=W1701
     def __del__(self):
         self.close()
 
     # pylint: enable=W1701
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.close()
 
     def pre_fork(self, process_manager):
         """
@@ -838,11 +861,11 @@ class SaltMessageServer(salt.ext.tornado.tcpserver.TCPServer):
         io_loop = (
             kwargs.pop("io_loop", None) or salt.ext.tornado.ioloop.IOLoop.current()
         )
+        self._closing = False
         super().__init__(*args, **kwargs)
         self.io_loop = io_loop
         self.clients = []
         self.message_handler = message_handler
-        self._shutting_down = False
 
     @salt.ext.tornado.gen.coroutine
     def handle_stream(self, stream, address):
@@ -862,7 +885,6 @@ class SaltMessageServer(salt.ext.tornado.tcpserver.TCPServer):
                     self.io_loop.spawn_callback(
                         self.message_handler, stream, header, framed_msg["body"]
                     )
-
         except salt.ext.tornado.iostream.StreamClosedError:
             log.trace("req client disconnected %s", address)
             self.remove_client((stream, address))
@@ -881,9 +903,21 @@ class SaltMessageServer(salt.ext.tornado.tcpserver.TCPServer):
         """
         Shutdown the whole server
         """
-        if self._shutting_down:
+        salt.utils.versions.warn_until(
+            "Phosphorus",
+            "Please stop calling {0}.{1}.shutdown() and instead call {0}.{1}.close()".format(
+                __name__, self.__class__.__name__
+            ),
+        )
+        self.close()
+
+    def close(self):
+        """
+        Close the server
+        """
+        if self._closing:
             return
-        self._shutting_down = True
+        self._closing = True
         for item in self.clients:
             client, address = item
             client.close()
@@ -913,8 +947,18 @@ if USE_LOAD_BALANCER:
             self.thread.start()
 
         def stop(self):
+            salt.utils.versions.warn_until(
+                "Phosphorus",
+                "Please stop calling {0}.{1}.stop() and instead call {0}.{1}.close()".format(
+                    __name__, self.__class__.__name__
+                ),
+            )
+            self.close()
+
+        def close(self):
             self._stop.set()
             self.thread.join()
+            super().close()
 
         def socket_queue_thread(self):
             try:
@@ -973,6 +1017,12 @@ class SaltMessageClientPool(salt.transport.MessageClientPool):
 
     def __init__(self, opts, args=None, kwargs=None):
         super().__init__(SaltMessageClient, opts, args=args, kwargs=kwargs)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.close()
 
     # pylint: disable=W1701
     def __del__(self):
@@ -1402,6 +1452,7 @@ class PubServer(salt.ext.tornado.tcpserver.TCPServer):
         self.clients = set()
         self.aes_funcs = salt.master.AESFuncs(self.opts)
         self.present = {}
+        self.event = None
         self.presence_events = False
         if self.opts.get("presence_events", False):
             tcp_only = True
@@ -1418,11 +1469,19 @@ class PubServer(salt.ext.tornado.tcpserver.TCPServer):
             self.event = salt.utils.event.get_event(
                 "master", opts=self.opts, listen=False
             )
+        else:
+            self.event = None
 
     def close(self):
         if self._closing:
             return
         self._closing = True
+        if self.event is not None:
+            self.event.destroy()
+            self.event = None
+        if self.aes_funcs is not None:
+            self.aes_funcs.destroy()
+            self.aes_funcs = None
 
     # pylint: disable=W1701
     def __del__(self):
@@ -1626,6 +1685,8 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
             self.io_loop.start()
         except (KeyboardInterrupt, SystemExit):
             salt.log.setup.shutdown_multiprocessing_logging()
+        finally:
+            pull_sock.close()
 
     def pre_fork(self, process_manager, kwargs=None):
         """

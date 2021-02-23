@@ -1,22 +1,19 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import
-
 import copy
+import io
 import os
 import shutil
 import sys
 import tempfile
 import textwrap
 
+import pytest
 import salt.config
 import salt.loader
 import salt.utils.files
 import salt.utils.versions
-from salt.ext import six
-from salt.ext.six.moves import StringIO
 from salt.state import HighState
 from salt.utils.pydsl import PyDslError
-from tests.support.helpers import slowTest, with_tempdir
+from tests.support.helpers import with_tempdir
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
 
@@ -89,10 +86,10 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
             kws.pop("env")
 
         return self.HIGHSTATE.state.rend["pydsl"](
-            StringIO(content), saltenv=saltenv, sls=sls, **kws
+            io.StringIO(content), saltenv=saltenv, sls=sls, **kws
         )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_state_declarations(self):
         result = self.render_sls(
             textwrap.dedent(
@@ -129,7 +126,7 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
         # 2 rather than 1 because pydsl adds an extra no-op state
         # declaration.
 
-        s_iter = six.itervalues(result)
+        s_iter = iter(result.values())
         try:
             s = next(s_iter)["file"]
         except KeyError:
@@ -138,7 +135,7 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
         self.assertEqual(s[1]["name"], "myfile.txt")
         self.assertEqual(s[2]["source"], "salt://path/to/file")
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_requisite_declarations(self):
         result = self.render_sls(
             textwrap.dedent(
@@ -169,7 +166,7 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
         self.assertEqual(result["G"]["service"][2]["watch_in"][0]["cmd"], "A")
         self.assertEqual(result["H"]["cmd"][1]["require_in"][0]["cmd"], "echo hello")
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_include_extend(self):
         result = self.render_sls(
             textwrap.dedent(
@@ -211,7 +208,7 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
         self.assertTrue("A" not in result)
         self.assertEqual(extend["A"]["cmd"][0], "run")
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_cmd_call(self):
         result = self.HIGHSTATE.state.call_template_str(
             textwrap.dedent(
@@ -231,16 +228,16 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
         """
             )
         )
-        ret = next(result[k] for k in six.iterkeys(result) if "do_something" in k)
+        ret = next(result[k] for k in result.keys() if "do_something" in k)
         changes = ret["changes"]
         self.assertEqual(
             changes, dict(a=1, b=2, args=(3,), kws=dict(x=1, y=2), some_var=12345)
         )
 
-        ret = next(result[k] for k in six.iterkeys(result) if "-G_" in k)
+        ret = next(result[k] for k in result.keys() if "-G_" in k)
         self.assertEqual(ret["changes"]["stdout"], "this is state G")
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_multiple_state_func_in_state_mod(self):
         with self.assertRaisesRegex(PyDslError, "Multiple state functions"):
             self.render_sls(
@@ -252,7 +249,7 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
                 )
             )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_no_state_func_in_state_mod(self):
         with self.assertRaisesRegex(PyDslError, "No state function specified"):
             self.render_sls(
@@ -263,7 +260,7 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
                 )
             )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_load_highstate(self):
         result = self.render_sls(
             textwrap.dedent(
@@ -304,7 +301,7 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
         self.assertIn({"watch": [{"cmd": "A"}]}, result["B"]["service"])
         self.assertEqual(len(result["B"]["service"]), 3)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_ordered_states(self):
         result = self.render_sls(
             textwrap.dedent(
@@ -325,7 +322,7 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
         self.assertEqual(result["B"]["file"][1]["require"][0]["cmd"], "C")
 
     @with_tempdir()
-    @slowTest
+    @pytest.mark.slow_test
     def test_pipe_through_stateconf(self, dirpath):
         output = os.path.join(dirpath, "output")
         write_to(
@@ -395,7 +392,7 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
             self.assertEqual("".join(f.read().split()), "XYZABCDEF")
 
     @with_tempdir()
-    @slowTest
+    @pytest.mark.slow_test
     def test_compile_time_state_execution(self, dirpath):
         if not sys.stdin.isatty():
             self.skipTest("Not attached to a TTY")
@@ -431,7 +428,7 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
             self.assertEqual(f.read(), "hehe" + os.linesep)
 
     @with_tempdir()
-    @slowTest
+    @pytest.mark.slow_test
     def test_nested_high_state_execution(self, dirpath):
         output = os.path.join(dirpath, "output")
         write_to(
@@ -468,7 +465,7 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
         self.state_highstate({"base": ["aaa"]}, dirpath)
 
     @with_tempdir()
-    @slowTest
+    @pytest.mark.slow_test
     def test_repeat_includes(self, dirpath):
         output = os.path.join(dirpath, "output")
         write_to(

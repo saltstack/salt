@@ -161,13 +161,11 @@ the :mod:`salt.modules.nxos<salt.modules.nxos>` execution module.
 
 """
 
-# Import Python libs
 import copy
 import logging
 import multiprocessing
 import re
 
-# Import Salt libs
 import salt.utils.nxos
 from salt.exceptions import CommandExecutionError, NxosCliError
 from salt.utils.args import clean_kwargs

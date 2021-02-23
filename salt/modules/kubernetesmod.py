@@ -59,8 +59,6 @@ import salt.utils.platform
 import salt.utils.templates
 import salt.utils.yaml
 from salt.exceptions import CommandExecutionError, TimeoutError
-from salt.ext.six import iteritems
-from salt.ext.six.moves import range  # pylint: disable=import-error
 
 try:
     import kubernetes  # pylint: disable=import-self
@@ -1464,7 +1462,7 @@ def __dict_to_object_meta(name, namespace, metadata):
     if "kubernetes.io/change-cause" not in metadata["annotations"]:
         metadata["annotations"]["kubernetes.io/change-cause"] = " ".join(sys.argv)
 
-    for key, value in iteritems(metadata):
+    for key, value in metadata.items():
         if hasattr(meta_obj, key):
             setattr(meta_obj, key, value)
 
@@ -1483,7 +1481,7 @@ def __dict_to_deployment_spec(spec):
     Converts a dictionary into kubernetes AppsV1beta1DeploymentSpec instance.
     """
     spec_obj = AppsV1beta1DeploymentSpec(template=spec.get("template", ""))
-    for key, value in iteritems(spec):
+    for key, value in spec.items():
         if hasattr(spec_obj, key):
             setattr(spec_obj, key, value)
 
@@ -1495,7 +1493,7 @@ def __dict_to_pod_spec(spec):
     Converts a dictionary into kubernetes V1PodSpec instance.
     """
     spec_obj = kubernetes.client.V1PodSpec()
-    for key, value in iteritems(spec):
+    for key, value in spec.items():
         if hasattr(spec_obj, key):
             setattr(spec_obj, key, value)
 
@@ -1507,13 +1505,13 @@ def __dict_to_service_spec(spec):
     Converts a dictionary into kubernetes V1ServiceSpec instance.
     """
     spec_obj = kubernetes.client.V1ServiceSpec()
-    for key, value in iteritems(spec):  # pylint: disable=too-many-nested-blocks
+    for key, value in spec.items():  # pylint: disable=too-many-nested-blocks
         if key == "ports":
             spec_obj.ports = []
             for port in value:
                 kube_port = kubernetes.client.V1ServicePort()
                 if isinstance(port, dict):
-                    for port_key, port_value in iteritems(port):
+                    for port_key, port_value in port.items():
                         if hasattr(kube_port, port_key):
                             setattr(kube_port, port_key, port_value)
                 else:
@@ -1531,7 +1529,7 @@ def __enforce_only_strings_dict(dictionary):
     """
     ret = {}
 
-    for key, value in iteritems(dictionary):
+    for key, value in dictionary.items():
         ret[str(key)] = str(value)
 
     return ret

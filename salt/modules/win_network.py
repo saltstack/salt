@@ -4,15 +4,9 @@ Module for gathering and managing network information
 
 import datetime
 import hashlib
-
-# Import Python libs
 import re
 import socket
 
-# Import 3rd party libraries
-import salt.ext.six as six  # pylint: disable=W0611
-
-# Import Salt libs
 import salt.utils.network
 import salt.utils.platform
 import salt.utils.validate.net
@@ -41,7 +35,7 @@ except ImportError:
 
 
 try:
-    import wmi  # pylint: disable=W0611
+    import wmi  # pylint: disable=import-error
 except ImportError:
     HAS_DEPENDENCIES = False
 

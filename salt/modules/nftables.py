@@ -12,7 +12,6 @@ import salt.utils.path
 from salt.exceptions import CommandExecutionError
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 
-# Set up logging
 log = logging.getLogger(__name__)
 
 _NFTABLES_FAMILIES = {
