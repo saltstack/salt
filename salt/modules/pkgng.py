@@ -475,7 +475,7 @@ def update_package_site(new_url):
     return True
 
 
-def stats(local=False, remote=False, jail=None, chroot=None, root=None):
+def stats(local=False, remote=False, jail=None, chroot=None, root=None, bytes=False):
     """
     Return pkgng stats.
 
@@ -502,6 +502,15 @@ def stats(local=False, remote=False, jail=None, chroot=None, root=None):
         .. code-block:: bash
 
             salt '*' pkg.stats remote=True
+
+    bytes
+        Display disk space usage in bytes only.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.stats bytes=True
 
     jail
         Retrieve stats from the specified jail.
@@ -536,6 +545,8 @@ def stats(local=False, remote=False, jail=None, chroot=None, root=None):
         opts += "l"
     if remote:
         opts += "r"
+    if bytes:
+        opts += "b"
 
     cmd = _pkg(jail, chroot, root)
     cmd.append("stats")
@@ -1211,7 +1222,7 @@ def upgrade(*names, **kwargs):
     if force:
         opts += "f"
     if local:
-        opts += "L"
+        opts += "U"
     if fetchonly:
         opts += "F"
     if dryrun:
@@ -1346,7 +1357,13 @@ def autoremove(jail=None, chroot=None, root=None, dryrun=False):
 
 
 def check(
-    jail=None, chroot=None, root=None, depends=False, recompute=False, checksum=False
+    jail=None,
+    chroot=None,
+    root=None,
+    depends=False,
+    recompute=False,
+    checksum=False,
+    checklibs=False,
 ):
     """
     Sanity checks installed packages
@@ -1384,7 +1401,7 @@ def check(
 
         .. code-block:: bash
 
-            salt '*' pkg.check recompute=True
+            salt '*' pkg.check depends=True
 
     recompute
         Recompute sizes and checksums of installed packages.
@@ -1393,7 +1410,7 @@ def check(
 
         .. code-block:: bash
 
-            salt '*' pkg.check depends=True
+            salt '*' pkg.check recompute=True
 
     checksum
         Find invalid checksums for installed packages.
@@ -1403,9 +1420,19 @@ def check(
         .. code-block:: bash
 
             salt '*' pkg.check checksum=True
+
+    checklibs
+        Regenerates the library dependency metadata for a package.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.check checklibs=True
+
     """
-    if not any((depends, recompute, checksum)):
-        return "One of depends, recompute, or checksum must be set to True"
+    if not any((depends, recompute, checksum, checklibs)):
+        return "One of depends, recompute, checksum or checklibs must be set to True"
 
     opts = ""
     if depends:
@@ -1414,6 +1441,8 @@ def check(
         opts += "r"
     if checksum:
         opts += "s"
+    if checklibs:
+        opts += "B"
 
     cmd = _pkg(jail, chroot, root)
     cmd.append("check")
