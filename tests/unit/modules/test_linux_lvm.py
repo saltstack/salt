@@ -6,7 +6,6 @@
 import os.path
 
 import salt.modules.linux_lvm as linux_lvm
-
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
