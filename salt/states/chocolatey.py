@@ -461,7 +461,7 @@ def source_present(name, source_location, username=None, password=None, force=Fa
     name
         The name of the source to be added as a chocolatey repository.
 
-    source
+    source_location
         Location of the source you want to work with.
 
     username
@@ -483,7 +483,7 @@ def source_present(name, source_location, username=None, password=None, force=Fa
         add_some_source:
           chocolatey.source_present:
             - name: reponame
-            - source: https://repo.exemple.com
+            - source_location: https://repo.exemple.com
             - username: myuser
             - password: mypassword
     """
