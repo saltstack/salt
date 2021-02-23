@@ -61,7 +61,7 @@ def show_link(name):
     """
     Display master link for the alternative
 
-    .. versionadded:: 2015.8.13, 2016.3.4, 2016.11.0
+    .. versionadded:: 2015.8.13,2016.3.4,2016.11.0
 
     CLI Example:
 
