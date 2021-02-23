@@ -719,11 +719,12 @@ class IPCMessageSubscriber(IPCClient):
         return self.io_loop.run_sync(lambda: self._read(timeout))
 
     @salt.ext.tornado.gen.coroutine
-    def read_async(self, callback):
+    def read_async(self, callback, auto_reconnect=False):
         """
         Asynchronously read messages and invoke a callback when they are ready.
 
         :param callback: A callback with the received data
+        :param bool auto_reconnect: Auto reconnect when stream closed
         """
         while not self.connected():
             try:
@@ -737,7 +738,15 @@ class IPCMessageSubscriber(IPCClient):
             except Exception as exc:  # pylint: disable=broad-except
                 log.error("Exception occurred while Subscriber connecting: %s", exc)
                 yield salt.ext.tornado.gen.sleep(1)
-        yield self._read(None, callback)
+        try:
+            yield self._read(None, callback)
+        except StreamClosedError as exc:
+            log.error("Subscriber closed stream on IPC %s", self.socket_path)
+            if auto_reconnect:
+                log.info("Subscriber stream auto reconnecting...")
+                yield self.read_async(callback)
+            else:
+                raise exc
 
     def close(self):
         """
