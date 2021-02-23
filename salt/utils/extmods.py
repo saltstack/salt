@@ -4,6 +4,7 @@ Functions used to sync external modules
 
 import logging
 import os
+import pathlib
 import shutil
 import sys
 
@@ -129,11 +130,15 @@ def sync(opts, form, saltenv=None, extmod_whitelist=None, extmod_blacklist=None)
                             os.makedirs(dest_dir)
                         shutil.copyfile(fn_, dest)
                         ret.append("{}.{}".format(form, relname))
-
                     # If the synchronized module is an utils
                     # directory, we add it to sys.path
                     for util_dir in opts["utils_dirs"]:
-                        if mod_dir.endswith(util_dir) and mod_dir not in sys.path:
+                        util_parts = pathlib.Path(util_dir).parts
+                        mod_parts = pathlib.Path(mod_dir).parts
+                        if (
+                            util_parts == mod_parts[-len(util_parts) :]
+                            and mod_dir not in sys.path
+                        ):
                             sys.path.append(mod_dir)
 
             touched = bool(ret)
