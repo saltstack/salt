@@ -796,7 +796,7 @@ def version_cmp(ver1, ver2, ignore_epoch=False, **kwargs):
     ignore_epoch : False
         Set to ``True`` to ignore the epoch when comparing versions
 
-        .. versionadded:: 2015.8.10, 2016.3.2
+        .. versionadded:: 2015.8.10,2016.3.2
 
     CLI Example:
 
@@ -967,7 +967,7 @@ def list_pkgs(versions_as_list=False, root=None, includes=None, **kwargs):
 
 def list_repo_pkgs(*args, **kwargs):
     """
-    .. versionadded:: 2017.7.5, 2018.3.1
+    .. versionadded:: 2017.7.5,2018.3.1
 
     Returns all available packages. Optionally, package names (and name globs)
     can be passed and the results will be filtered to packages matching those
@@ -1420,7 +1420,7 @@ def install(
     **kwargs
 ):
     """
-    .. versionchanged:: 2015.8.12, 2016.3.3, 2016.11.0
+    .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
         isolate commands which modify installed packages from the
         ``salt-minion`` daemon's control group. This is done to keep systemd
@@ -1711,7 +1711,7 @@ def upgrade(
     **kwargs
 ):  # pylint: disable=unused-argument
     """
-    .. versionchanged:: 2015.8.12, 2016.3.3, 2016.11.0
+    .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
         isolate commands which modify installed packages from the
         ``salt-minion`` daemon's control group. This is done to keep systemd
@@ -1913,7 +1913,7 @@ def remove(
     name=None, pkgs=None, root=None, **kwargs
 ):  # pylint: disable=unused-argument
     """
-    .. versionchanged:: 2015.8.12, 2016.3.3, 2016.11.0
+    .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
         isolate commands which modify installed packages from the
         ``salt-minion`` daemon's control group. This is done to keep systemd
@@ -1960,7 +1960,7 @@ def remove(
 
 def purge(name=None, pkgs=None, root=None, **kwargs):  # pylint: disable=unused-argument
     """
-    .. versionchanged:: 2015.8.12, 2016.3.3, 2016.11.0
+    .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
         isolate commands which modify installed packages from the
         ``salt-minion`` daemon's control group. This is done to keep systemd

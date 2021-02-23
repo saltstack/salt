@@ -391,7 +391,7 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
         Default is the default for :py:func:`win_service.start
         <salt.modules.win_service.start>`.
 
-        .. versionadded:: 2017.7.9, 2018.3.4
+        .. versionadded:: 2017.7.9,2018.3.4
 
     unmask : False
         **For systemd minions only.** Set to ``True`` to remove an indefinite
@@ -614,7 +614,7 @@ def dead(name, enable=None, sig=None, init_delay=None, **kwargs):
         Default is the default for :py:func:`win_service.stop
         <salt.modules.win_service.stop>`.
 
-        .. versionadded:: 2017.7.9, 2018.3.4
+        .. versionadded:: 2017.7.9,2018.3.4
 
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}

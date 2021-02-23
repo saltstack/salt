@@ -592,7 +592,7 @@ def sync_sdb(saltenv="base", extmod_whitelist=None, extmod_blacklist=None):
 
 def sync_tops(saltenv="base", extmod_whitelist=None, extmod_blacklist=None):
     """
-    .. versionadded:: 2016.3.7, 2016.11.4, 2017.7.0
+    .. versionadded:: 2016.3.7,2016.11.4,2017.7.0
 
     Sync master_tops modules from ``salt://_tops`` to the master
 
