@@ -262,7 +262,7 @@ def list_(pkg=None, dir=None, runas=None, env=None, depth=None):
     depth
         Limit the depth of the packages listed
 
-        .. versionadded:: 2016.11.6, 2017.7.0
+        .. versionadded:: 2016.11.6,2017.7.0
 
     CLI Example:
 

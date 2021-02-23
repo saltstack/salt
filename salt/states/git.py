@@ -2645,7 +2645,7 @@ def cloned(
     output_encoding=None,
 ):
     """
-    .. versionadded:: 2018.3.3, 2019.2.0
+    .. versionadded:: 2018.3.3,2019.2.0
 
     Ensure that a repository has been cloned to the specified target directory.
     If not, clone that repository. No fetches will be performed once cloned.

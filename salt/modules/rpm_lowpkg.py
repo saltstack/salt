@@ -685,7 +685,7 @@ def version_cmp(ver1, ver2, ignore_epoch=False):
     ignore_epoch : False
         Set to ``True`` to ignore the epoch when comparing versions
 
-        .. versionadded:: 2015.8.10, 2016.3.2
+        .. versionadded:: 2015.8.10,2016.3.2
 
     CLI Example:
 

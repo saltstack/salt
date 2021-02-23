@@ -822,7 +822,7 @@ def _error_detail(data, item):
 # Functions to handle docker-py client args
 def get_client_args(limit=None):
     """
-    .. versionadded:: 2016.3.6, 2016.11.4, 2017.7.0
+    .. versionadded:: 2016.3.6,2016.11.4,2017.7.0
     .. versionchanged:: 2017.7.0
         Replaced the container config args with the ones from the API's
         ``create_container`` function.
@@ -1401,7 +1401,7 @@ def connected(name, verbose=False):
 
 def login(*registries):
     """
-    .. versionadded:: 2016.3.7, 2016.11.4, 2017.7.0
+    .. versionadded:: 2016.3.7,2016.11.4,2017.7.0
 
     Performs a ``docker login`` to authenticate to one or more configured
     repositories. See the documentation at the top of this page to configure

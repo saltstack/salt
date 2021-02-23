@@ -664,7 +664,7 @@ def version_cmp(pkg1, pkg2, ignore_epoch=False, **kwargs):
     ignore_epoch : False
         Set to ``True`` to ignore the epoch when comparing versions
 
-        .. versionadded:: 2015.8.10, 2016.3.2
+        .. versionadded:: 2015.8.10,2016.3.2
 
     CLI Example:
 
@@ -1240,7 +1240,7 @@ def install(
     **kwargs
 ):
     """
-    .. versionchanged:: 2015.8.12, 2016.3.3, 2016.11.0
+    .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
         isolate commands which modify installed packages from the
         ``salt-minion`` daemon's control group. This is done to keep systemd
@@ -1826,7 +1826,7 @@ def upgrade(
     not be installed.
 
     .. versionchanged:: 2014.7.0
-    .. versionchanged:: 2015.8.12, 2016.3.3, 2016.11.0
+    .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
         isolate commands which modify installed packages from the
         ``salt-minion`` daemon's control group. This is done to keep systemd
@@ -2040,7 +2040,7 @@ def update(
 
 def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
     """
-    .. versionchanged:: 2015.8.12, 2016.3.3, 2016.11.0
+    .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
         isolate commands which modify installed packages from the
         ``salt-minion`` daemon's control group. This is done to keep systemd
@@ -2127,7 +2127,7 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
 
 def purge(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
     """
-    .. versionchanged:: 2015.8.12, 2016.3.3, 2016.11.0
+    .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
         isolate commands which modify installed packages from the
         ``salt-minion`` daemon's control group. This is done to keep systemd
@@ -2355,7 +2355,7 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
 
 def list_holds(pattern=__HOLD_PATTERN, full=True):
     r"""
-    .. versionchanged:: 2016.3.0, 2015.8.4, 2015.5.10
+    .. versionchanged:: 2016.3.0,2015.8.4,2015.5.10
         Function renamed from ``pkg.get_locked_pkgs`` to ``pkg.list_holds``.
 
     List information on locked packages
@@ -2482,7 +2482,7 @@ def group_list():
 def group_info(name, expand=False, ignore_groups=None):
     """
     .. versionadded:: 2014.1.0
-    .. versionchanged:: 3001, 2016.3.0, 2015.8.4, 2015.5.10
+    .. versionchanged:: 3001,2016.3.0,2015.8.4,2015.5.10
         The return data has changed. A new key ``type`` has been added to
         distinguish environment groups from package groups. Also, keys for the
         group name and group ID have been added. The ``mandatory packages``,
@@ -2592,7 +2592,7 @@ def group_info(name, expand=False, ignore_groups=None):
 def group_diff(name):
     """
     .. versionadded:: 2014.1.0
-    .. versionchanged:: 2016.3.0, 2015.8.4, 2015.5.10
+    .. versionchanged:: 2016.3.0,2015.8.4,2015.5.10
         Environment groups are now supported. The key names have been renamed,
         similar to the changes made in :py:func:`pkg.group_info
         <salt.modules.yumpkg.group_info>`.
