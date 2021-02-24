@@ -858,14 +858,14 @@ class GetProxyTypeTestCase(TestCase, LoaderModuleMockMixin):
 
 class SupportsProxiesTestCase(TestCase, LoaderModuleMockMixin):
     """
-    Tests for salt.modules.vsphere.supports_proxies decorator
+    Tests for salt.modules.vsphere._supports_proxies decorator
     """
 
     def setup_loader_modules(self):
         return {vsphere: {}}
 
     def test_supported_proxy(self):
-        @vsphere.supports_proxies("supported")
+        @vsphere._supports_proxies("supported")
         def mock_function():
             return "fake_function"
 
@@ -876,7 +876,7 @@ class SupportsProxiesTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual("fake_function", ret)
 
     def test_unsupported_proxy(self):
-        @vsphere.supports_proxies("supported")
+        @vsphere._supports_proxies("supported")
         def mock_function():
             return "fake_function"
 
@@ -1103,7 +1103,7 @@ class _GetProxyConnectionDetailsTestCase(TestCase, LoaderModuleMockMixin):
 
 class GetsServiceInstanceViaProxyTestCase(TestCase, LoaderModuleMockMixin):
     """
-    Tests for salt.modules.vsphere.gets_service_instance_via_proxy
+    Tests for salt.modules.vsphere._gets_service_instance_via_proxy
     decorator
     """
 
@@ -1129,7 +1129,7 @@ class GetsServiceInstanceViaProxyTestCase(TestCase, LoaderModuleMockMixin):
                 continue
 
     def test_no_service_instance_or_kwargs_parameters(self):
-        @vsphere.gets_service_instance_via_proxy
+        @vsphere._gets_service_instance_via_proxy
         def mock_function():
             return "fake_function"
 
@@ -1145,7 +1145,7 @@ class GetsServiceInstanceViaProxyTestCase(TestCase, LoaderModuleMockMixin):
     def test___get_proxy_connection_details_call(self):
         mock__get_proxy_connection_details = MagicMock()
 
-        @vsphere.gets_service_instance_via_proxy
+        @vsphere._gets_service_instance_via_proxy
         def mock_function(service_instance=None):
             return service_instance
 
@@ -1160,7 +1160,7 @@ class GetsServiceInstanceViaProxyTestCase(TestCase, LoaderModuleMockMixin):
         mock_get_service_instance = MagicMock(return_value=self.mock_si)
         mock_disconnect = MagicMock()
 
-        @vsphere.gets_service_instance_via_proxy
+        @vsphere._gets_service_instance_via_proxy
         def mock_function(service_instance=None):
             return service_instance
 
@@ -1183,7 +1183,7 @@ class GetsServiceInstanceViaProxyTestCase(TestCase, LoaderModuleMockMixin):
         mock_get_service_instance = MagicMock(return_value=self.mock_si)
         mock_disconnect = MagicMock()
 
-        @vsphere.gets_service_instance_via_proxy
+        @vsphere._gets_service_instance_via_proxy
         def mock_function(**kwargs):
             return kwargs["service_instance"]
 
@@ -1206,7 +1206,7 @@ class GetsServiceInstanceViaProxyTestCase(TestCase, LoaderModuleMockMixin):
         mock_get_service_instance = MagicMock()
         mock_disconnect = MagicMock()
 
-        @vsphere.gets_service_instance_via_proxy
+        @vsphere._gets_service_instance_via_proxy
         def mock_function(service_instance):
             return service_instance
 
@@ -1227,7 +1227,7 @@ class GetsServiceInstanceViaProxyTestCase(TestCase, LoaderModuleMockMixin):
         mock_get_service_instance = MagicMock()
         mock_disconnect = MagicMock()
 
-        @vsphere.gets_service_instance_via_proxy
+        @vsphere._gets_service_instance_via_proxy
         def mock_function(service_instance=None):
             return service_instance
 
@@ -1248,7 +1248,7 @@ class GetsServiceInstanceViaProxyTestCase(TestCase, LoaderModuleMockMixin):
         mock_get_service_instance = MagicMock()
         mock_disconnect = MagicMock()
 
-        @vsphere.gets_service_instance_via_proxy
+        @vsphere._gets_service_instance_via_proxy
         def mock_function(service_instance=None):
             return service_instance
 
@@ -1269,7 +1269,7 @@ class GetsServiceInstanceViaProxyTestCase(TestCase, LoaderModuleMockMixin):
         mock_get_service_instance = MagicMock()
         mock_disconnect = MagicMock()
 
-        @vsphere.gets_service_instance_via_proxy
+        @vsphere._gets_service_instance_via_proxy
         def mock_function(**kwargs):
             return kwargs["service_instance"]
 

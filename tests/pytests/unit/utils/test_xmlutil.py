@@ -1,6 +1,7 @@
+import xml.etree.ElementTree as ET
+
 import pytest
 import salt.utils.xmlutil as xml
-from salt._compat import ElementTree as ET
 
 
 @pytest.fixture

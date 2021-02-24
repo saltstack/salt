@@ -11,6 +11,7 @@ import stat
 import sys
 import tempfile
 
+import pytest
 import salt.utils.files
 import salt.utils.platform
 from salt.utils.verify import (
@@ -26,7 +27,7 @@ from salt.utils.verify import (
     verify_socket,
     zmq_version,
 )
-from tests.support.helpers import TstSuiteLoggingHandler, requires_network
+from tests.support.helpers import TstSuiteLoggingHandler
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
@@ -116,7 +117,7 @@ class TestVerify(TestCase):
         self.assertEqual(dir_stat.st_mode & stat.S_IRWXG, 40)
         self.assertEqual(dir_stat.st_mode & stat.S_IRWXO, 5)
 
-    @requires_network(only_local_network=True)
+    @pytest.mark.requires_network(only_local_network=True)
     def test_verify_socket(self):
         self.assertTrue(verify_socket("", 18000, 18001))
         if socket.has_ipv6:

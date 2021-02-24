@@ -1,5 +1,5 @@
-salt.modules.smartos_nictagadm module
-=====================================
+salt.modules.smartos_nictagadm
+==============================
 
 .. automodule:: salt.modules.smartos_nictagadm
     :members:

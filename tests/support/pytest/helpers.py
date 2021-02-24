@@ -27,18 +27,6 @@ from tests.support.sminion import create_sminion
 
 log = logging.getLogger(__name__)
 
-if not RUNTIME_VARS.PYTEST_SESSION:
-    # XXX: Remove this try/except once we fully switch to pytest
-
-    class FakePyTestHelpersNamespace:
-        __slots__ = ()
-
-        def register(self, func):
-            return func
-
-    # Patch pytest so it all works under runtests.py
-    pytest.helpers = FakePyTestHelpersNamespace()
-
 
 @pytest.helpers.register
 @contextmanager
@@ -149,6 +137,23 @@ def temp_file(name=None, contents=None, directory=None, strip_first_newline=True
         if file_path.exists():
             file_path.unlink()
             log.debug("Deleted temp file: %s", file_path)
+
+        try:
+            file_path.relative_to(directory)
+
+            created_directory = file_path.parent
+            while True:
+                if created_directory == directory:
+                    break
+                if created_directory.parent == directory:
+                    break
+                created_directory = created_directory.parent
+            if created_directory != directory:
+                shutil.rmtree(str(created_directory), ignore_errors=True)
+                log.debug("Deleted temp directory: %s", created_directory)
+        except ValueError:
+            # The 'file_path' is not located within 'directory'
+            pass
 
 
 @pytest.helpers.register

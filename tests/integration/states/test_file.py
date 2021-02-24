@@ -28,9 +28,7 @@ from tests.support.case import ModuleCase
 from tests.support.helpers import (
     Webserver,
     dedent,
-    destructiveTest,
     requires_system_grains,
-    skip_if_not_root,
     with_system_user_and_group,
     with_tempdir,
     with_tempfile,
@@ -395,7 +393,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         check_file = self.run_function("file.file_exists", [file_pillar_def])
         self.assertTrue(check_file)
 
-    @skip_if_not_root
+    @pytest.mark.skip_if_not_root
     def test_managed_dir_mode(self):
         """
         Tests to ensure that file.managed creates directories with the
@@ -723,7 +721,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         last_line = name.read_text()
         self.assertEqual(contents, last_line)
 
-    @skip_if_not_root
+    @pytest.mark.skip_if_not_root
     @skipIf(IS_WINDOWS, 'Windows does not support "mode" kwarg. Skipping.')
     @skipIf(not salt.utils.path.which("visudo"), "sudo is missing")
     def test_managed_check_cmd(self):
@@ -1075,7 +1073,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
     @requires_system_grains
-    @skip_if_not_root
+    @pytest.mark.skip_if_not_root
     @skipIf(IS_WINDOWS, "Mode not available in Windows")
     def test_directory_max_depth(self, grains):
         """
@@ -2707,7 +2705,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             except OSError:
                 pass
 
-    @skip_if_not_root
+    @pytest.mark.skip_if_not_root
     @skipIf(not HAS_PWD, "pwd not available. Skipping test")
     @skipIf(not HAS_GRP, "grp not available. Skipping test")
     @with_system_user_and_group(
@@ -2749,7 +2747,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             root_group = self.run_function("user.primary_group", ["root"])
             self.assertEqual(grp.getgrgid(twostats.st_gid).gr_name, root_group)
 
-    @skip_if_not_root
+    @pytest.mark.skip_if_not_root
     @skipIf(not HAS_PWD, "pwd not available. Skipping test")
     @skipIf(not HAS_GRP, "grp not available. Skipping test")
     @with_system_user_and_group(
@@ -2846,8 +2844,8 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         os.remove(source)
         os.remove(dest)
 
-    @destructiveTest
-    @skip_if_not_root
+    @pytest.mark.destructive_test
+    @pytest.mark.skip_if_not_root
     @skipIf(IS_WINDOWS, "Windows does not report any file modes. Skipping.")
     @with_tempfile()
     def test_file_copy_make_dirs(self, source):
@@ -2878,7 +2876,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertEqual(user_check, user)
             self.assertEqual(salt.utils.files.normalize_mode(mode_check), mode)
 
-    @skip_if_not_root
+    @pytest.mark.skip_if_not_root
     @skipIf(not HAS_PWD, "pwd not available. Skipping test")
     @skipIf(not HAS_GRP, "grp not available. Skipping test")
     @with_system_user_and_group(
@@ -2950,7 +2948,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state("file.managed", name=str(name), contents=BINARY_FILE)
         self.assertSaltTrueReturn(ret)
 
-    @skip_if_not_root
+    @pytest.mark.skip_if_not_root
     @skipIf(not HAS_PWD, "pwd not available. Skipping test")
     @skipIf(not HAS_GRP, "grp not available. Skipping test")
     @with_system_user_and_group(
@@ -5219,7 +5217,7 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
 WIN_TEST_FILE = "c:/testfile"
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 @skipIf(not IS_WINDOWS, "windows test only")
 @pytest.mark.windows_whitelisted
 class WinFileTest(ModuleCase):

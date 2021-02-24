@@ -264,12 +264,8 @@ next_release_dir = ""  # path on web server for next release branch
 today = ""
 copyright = ""
 if on_saltstack:
-    today = (
-        "Generated on "
-        + time.strftime("%B %d, %Y")
-        + " at "
-        + time.strftime("%X %Z")
-        + "."
+    today = "Generated on {} at {}.".format(
+        time.strftime("%B %d, %Y"), time.strftime("%X %Z")
     )
     copyright = time.strftime("%Y")
 
@@ -330,6 +326,7 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.autosummary",
     "sphinx.ext.extlinks",
+    "sphinx.ext.imgconverter",
     "sphinx.ext.intersphinx",
     "httpdomain",
     "youtube",
