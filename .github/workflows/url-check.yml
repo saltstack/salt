@@ -19,11 +19,13 @@ jobs:
         apt-get install -y wget libtinfo5
 
     - uses: actions/checkout@v2
-
+    - uses: actions/cache@v2
+      with:
+        path: .brokdb
     - name: Install brok
       run: |
         wget https://github.com/smallhadroncollider/brok/releases/download/1.1.0/brok-1.1.0_x86-64-linux.deb
         dpkg -i brok-1.1.0_x86-64-linux.deb
     - name: Run brok
       run: |
-        brok --ignore $(cat .brokignore) $(find . -type f -name "*.rst") $(find . -type f -name "*.md")
+        brok --ignore $(cat .brokignore) $(find . -type f -name "*.rst") $(find . -type f -name "*.md") > /dev/null
