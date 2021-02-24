@@ -684,6 +684,7 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
                     )
 
     @pytest.mark.destructive_test  # Need to run as root!?
+    @pytest.mark.slow_test
     @skipIf(not HAS_GPG, "GPG Module Unavailable")
     def test_create_key_without_passphrase(self):
         """
@@ -715,6 +716,7 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertEqual(ret["message"], "GPG key pair successfully generated.")
 
     @pytest.mark.destructive_test  # Need to run as root!?
+    @pytest.mark.slow_test
     @skipIf(not HAS_GPG, "GPG Module Unavailable")
     def test_create_key_with_passphrase_without_gpg_passphrase_in_pillar(self):
         """
@@ -750,6 +752,7 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
                 )
 
     @pytest.mark.destructive_test  # Need to run as root!?
+    @pytest.mark.slow_test
     @skipIf(not HAS_GPG, "GPG Module Unavailable")
     def test_create_key_with_passphrase_with_gpg_passphrase_in_pillar(self):
         """
