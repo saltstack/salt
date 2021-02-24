@@ -2,10 +2,10 @@ import os
 import shutil
 import tempfile
 
+import pytest
 import salt.config
 import salt.spm
 import salt.utils.files
-from tests.support.helpers import destructiveTest
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -38,7 +38,7 @@ _F1["contents"] = (
 )
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 class SPMTestUserInterface(salt.spm.SPMUserInterface):
     """
     Unit test user interface to SPMClient

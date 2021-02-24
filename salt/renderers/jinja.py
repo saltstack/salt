@@ -1,7 +1,7 @@
 """
 Jinja loading utils to enable a more powerful backend for jinja templates
 
-For Jinja usage information see :ref:`Understanding Jinja <understanding-jinja>`.
+.. include:: ../../../_incl/jinja_security.rst
 """
 
 

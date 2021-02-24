@@ -18,7 +18,7 @@ import salt.utils.platform
 import salt.utils.process
 import salt.utils.stringutils
 import zmq.eventloop.ioloop
-from tests.support.helpers import slowTest
+from saltfactories.utils.processes import terminate_process
 from tests.support.mock import MagicMock, patch
 
 log = logging.getLogger(__name__)
@@ -38,6 +38,7 @@ class Collector(salt.utils.process.SignalHandlingProcess):
         self.results = self.manager.list()
         self.zmq_filtering = zmq_filtering
         self.stopped = multiprocessing.Event()
+        self.started = multiprocessing.Event()
         self.running = multiprocessing.Event()
 
     def run(self):
@@ -53,7 +54,7 @@ class Collector(salt.utils.process.SignalHandlingProcess):
         last_msg = time.time()
         serial = salt.payload.Serial(self.minion_config)
         crypticle = salt.crypt.Crypticle(self.minion_config, self.aes_key)
-        self.running.set()
+        self.started.set()
         while True:
             curr_time = time.time()
             if time.time() > self.hard_timeout:
@@ -84,8 +85,8 @@ class Collector(salt.utils.process.SignalHandlingProcess):
         self.manager.__enter__()
         self.start()
         # Wait until we can start receiving events
-        self.running.wait()
-        self.running.clear()
+        self.started.wait()
+        self.started.clear()
         return self
 
     def __exit__(self, *args):
@@ -161,6 +162,9 @@ class PubServerChannelProcess(salt.utils.process.SignalHandlingProcess):
         self.process_manager.send_signal_to_processes(signal.SIGTERM)
         self.pub_server_channel.pub_close()
         self.process_manager.kill_children()
+        # Really terminate any process still left behind
+        for pid in self.process_manager._process_map:
+            terminate_process(pid=pid, kill_children=True, slow_stop=False)
         self.process_manager = None
 
     def publish(self, payload):
@@ -169,7 +173,7 @@ class PubServerChannelProcess(salt.utils.process.SignalHandlingProcess):
     def __enter__(self):
         self.start()
         self.collector.__enter__()
-        attempts = 10
+        attempts = 30
         while attempts > 0:
             self.publish({"tgt_type": "glob", "tgt": "*", "jid": -1, "start": True})
             if self.collector.running.wait(1) is True:
@@ -196,8 +200,8 @@ class PubServerChannelProcess(salt.utils.process.SignalHandlingProcess):
         log.info("The PubServerChannelProcess has terminated")
 
 
-@slowTest
 @pytest.mark.skip_on_windows
+@pytest.mark.slow_test
 def test_publish_to_pubserv_ipc(salt_master, salt_minion):
     """
     Test sending 10K messags to ZeroMQPubServerChannel using IPC transport
@@ -218,8 +222,8 @@ def test_publish_to_pubserv_ipc(salt_master, salt_minion):
     )
 
 
-@slowTest
 @pytest.mark.skip_on_freebsd
+@pytest.mark.slow_test
 def test_issue_36469_tcp(salt_master, salt_minion):
     """
     Test sending both large and small messags to publisher using TCP
@@ -259,8 +263,8 @@ def test_issue_36469_tcp(salt_master, salt_minion):
     )
 
 
-@slowTest
 @pytest.mark.skip_on_windows
+@pytest.mark.slow_test
 def test_zeromq_filtering(salt_master, salt_minion):
     """
     Test sending messages to publisher using UDP with zeromq_filtering enabled

@@ -603,7 +603,6 @@ def get_uid(path, follow_symlinks=True):
     Returns:
         str: The uid of the owner
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -642,7 +641,6 @@ def get_user(path, follow_symlinks=True):
 
     Returns:
         str: The name of the owner
-
 
     CLI Example:
 

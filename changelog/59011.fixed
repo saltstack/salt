@@ -1,0 +1,1 @@
+Fixes to netmiko module and proxy module to handle situations where the device is unreachable during the initial connection phase.
