@@ -59,6 +59,7 @@ ERROR_LIST = []
 __virtualname__ = "cohesity"
 __context__ = {}
 
+
 def _get_client():
     context_key = '{}.cohesity_client'.format(__name__)
     opts = salt.config.master_config("/etc/salt/master")
@@ -548,5 +549,3 @@ def restore_vms(
         return "Successfully created restore task {} ".format(task_name)
     except APIException as err:
         return str(err)
-
-
