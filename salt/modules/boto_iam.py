@@ -578,7 +578,7 @@ def delete_group_policy(
     """
     Delete a group policy.
 
-    CLI Example::
+    CLI Example:
 
     .. code-block:: bash
 
@@ -642,6 +642,8 @@ def get_all_groups(path_prefix="/", region=None, key=None, keyid=None, profile=N
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt-call boto_iam.get_all_groups
     """
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
@@ -669,6 +671,8 @@ def get_all_instance_profiles(
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt-call boto_iam.get_all_instance_profiles
     """
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
@@ -692,6 +696,8 @@ def list_instance_profiles(
     .. versionadded:: 2016.11.0
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt-call boto_iam.list_instance_profiles
     """
@@ -725,7 +731,7 @@ def delete_group(group_name, region=None, key=None, keyid=None, profile=None):
     """
     Delete a group policy.
 
-    CLI Example::
+    CLI Example:
 
     .. code-block:: bash
 
@@ -1374,6 +1380,8 @@ def get_all_roles(path_prefix=None, region=None, key=None, keyid=None, profile=N
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt-call boto_iam.get_all_roles
     """
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
@@ -1396,6 +1404,8 @@ def get_all_users(path_prefix="/", region=None, key=None, keyid=None, profile=No
     .. versionadded:: 2016.3.0
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt-call boto_iam.get_all_users
     """
@@ -1640,6 +1650,8 @@ def export_users(path_prefix="/", region=None, key=None, keyid=None, profile=Non
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt-call boto_iam.export_users --out=txt | sed "s/local: //" > iam_users.sls
     """
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
@@ -1676,6 +1688,8 @@ def export_roles(path_prefix="/", region=None, key=None, keyid=None, profile=Non
     sls file.
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt-call boto_iam.export_roles --out=txt | sed "s/local: //" > iam_roles.sls
     """

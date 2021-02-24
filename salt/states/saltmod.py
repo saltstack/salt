@@ -6,7 +6,7 @@ This state is intended for use from the Salt Master. It provides access to
 sending commands down to minions as well as access to executing master-side
 modules. These state functions wrap Salt's :ref:`Python API <python-api>`.
 
-    .. versionadded: 2016.11.0
+    .. versionadded:: 2016.11.0
 
     Support for masterless minions was added to the ``salt.state`` function,
     so they can run orchestration sls files. This is particularly useful when
@@ -134,7 +134,7 @@ def state(
     tgt
         The target specification for the state run.
 
-        .. versionadded: 2016.11.0
+        .. versionadded:: 2016.11.0
 
         Masterless support: When running on a masterless minion, the ``tgt``
         is ignored and will always be the local minion.
@@ -763,7 +763,7 @@ def parallel_runners(name, runners, **kwargs):  # pylint: disable=unused-argumen
     """
     Executes multiple runner modules on the master in parallel.
 
-    .. versionadded:: 2017.x.0 (Nitrogen)
+    .. versionadded:: 2018.3.0
 
     A separate thread is spawned for each runner. This state is intended to be
     used with the orchestrate runner in place of the ``saltmod.runner`` state

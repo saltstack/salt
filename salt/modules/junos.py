@@ -1970,7 +1970,7 @@ def rpc_file_list(path, **kwargs):
     Use the Junos RPC interface to get a list of files and return
     them as a structure dictionary.
 
-    .. versionadded:: Aluminum
+    .. versionadded:: 3003
 
     CLI Example:
 
@@ -2071,7 +2071,7 @@ def file_compare(file1, file2, **kwargs):
     .. note::
         This function only works on Juniper native minions
 
-    .. versionadded:: Aluminum
+    .. versionadded:: 3003
 
     CLI Example:
 
@@ -2129,7 +2129,7 @@ def fsentry_exists(dir, **kwargs):
     .. note::
         This function only works on Juniper native minions
 
-    .. versionadded:: Aluminum
+    .. versionadded:: 3003
 
     CLI Example:
 
@@ -2225,7 +2225,7 @@ def routing_engine(**kwargs):
 
     Under the hood parses the result of `show chassis routing-engine`
 
-    .. versionadded:: Aluminum
+    .. versionadded:: 3003
 
     CLI Example:
 
@@ -2280,7 +2280,7 @@ def dir_copy(source, dest, force=False, **kwargs):
 
     force : This function will not copy identical files unless `force` is `True`
 
-    .. versionadded:: Aluminum
+    .. versionadded:: 3003
 
     CLI Example:
 

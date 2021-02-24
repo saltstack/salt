@@ -143,7 +143,6 @@ def uninstall(pkg, dir, runas=None, env=None):
         format as the :py:func:`cmd.run <salt.modules.cmdmod.run>` execution
         function.
 
-
     CLI Example:
 
     .. code-block:: bash
