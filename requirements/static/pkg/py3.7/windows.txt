@@ -4,7 +4,6 @@
 #
 #    pip-compile -o requirements/static/pkg/py3.7/windows.txt -v requirements/windows.txt requirements/static/pkg/windows.in
 #
-cachecontrol==0.12.6      # via cohesity-management-sdk
 certifi==2020.6.20
 cffi==1.12.2
 chardet==3.0.4            # via requests

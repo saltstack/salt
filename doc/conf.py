@@ -149,6 +149,7 @@ MOCK_MODULES = [
     "OpenSSL",
     "avahi",
     "boto.regioninfo",
+    "cohesity-management-sdk",
     "dbus",
     "django",
     "dns",
