@@ -6,8 +6,6 @@ import pytest
 import salt.states.zabbix_template as zabbix_template
 from tests.support.mock import MagicMock, patch
 
-# INPUT_PARAMS = {"applications": [{"name": "Ceph OSD"}]}
-
 
 @pytest.fixture
 def defined_obj():
@@ -153,7 +151,7 @@ def test_present_create(substitute_params_create):
             """
             Differentiate between __salt__ exec module function calls with different parameters.
             """
-            if args[0] == "template.get":
+            if args[0] in ("template.get", "application.get"):
                 return []
             elif args[0] == "template.create":
                 return {"templateids": ["10206"]}
