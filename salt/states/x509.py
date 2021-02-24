@@ -640,6 +640,9 @@ def certificate_managed(
             - backup: True
 
     """
+    if "managed_private_key" in kwargs:
+        raise ValueError("'managed_private_key' HAS BEEN DEPRECATED!")
+
     if "path" in kwargs:
         name = kwargs.pop("path")
 
