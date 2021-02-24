@@ -24,7 +24,7 @@ def input_params():
 
 
 @pytest.fixture
-def exising_obj():
+def existing_obj():
     return [
         {
             "status": "0",
@@ -170,7 +170,7 @@ def test_present_create(input_params):
             assert zabbix_action.present(name, {}) == ret
 
 
-def test_present_exists(input_params, exising_obj):
+def test_present_exists(input_params, existing_obj):
     """
     Test to ensure that named action is present and not changed
     """
@@ -185,7 +185,7 @@ def test_present_exists(input_params, exising_obj):
                     return_value={"action": "actionid"}
                 ),
                 "zabbix.substitute_params": MagicMock(
-                    side_effect=[input_params, exising_obj]
+                    side_effect=[input_params, existing_obj]
                 ),
                 "zabbix.run_query": MagicMock(return_value=["length of result is 1"]),
                 "zabbix.compare_params": MagicMock(return_value={}),
