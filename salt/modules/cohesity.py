@@ -57,14 +57,14 @@ except ImportError as err:
 log = logging.getLogger(__name__)
 ERROR_LIST = []
 __virtualname__ = "cohesity"
-
+__context__ = {}
 
 def _get_client():
     context_key = '{}.cohesity_client'.format(__name__)
     opts = salt.config.master_config("/etc/salt/master")
-    print(opts)
-    #if context_key in __context__:
-    #    return __context__[context_key]
+    conf = opts.get('conf_file', '')
+    if context_key in __context__:
+        return __context__[context_key]
     cohesity_config = opts.get("cohesity_config", {})
     cluster_vip = cohesity_config.get("cluster_vip", "")
     c_username = cohesity_config.get("username", "")
@@ -73,9 +73,9 @@ def _get_client():
     cohesity_client = CohesityClient(
         cluster_vip=cluster_vip, username=c_username, password=c_password, domain=c_domain,
     )
-    __context__[context_key] = cohesity_client
+     __context__[context_key] = cohesity_client
     return cohesity_client
-cohesity_client = _get_client()
+
 # config_path = "/etc/salt/master.d/cohesity.conf"
 # cohesity_config = {}
 # if os.path.isfile(config_path):
@@ -105,6 +105,7 @@ def get_sd_id(name):
     Function to fetch storage domain available in the cluster.
     : return storage domain id.
     """
+    cohesity_client = _get_client()
     log.info("Getting sorage domain with name {}".format(name))
     resp = cohesity_client.view_boxes.get_view_boxes(names=name)
     if resp:
@@ -116,6 +117,7 @@ def get_policy_id(name):
     Function to fetch policy available in the cluster.
     : return policy id.
     """
+    cohesity_client = _get_client()
     log.info("Getting policy with name {}".format(name))
     resp = cohesity_client.protection_policies.get_protection_policies(names=name)
     if resp:
@@ -127,6 +129,7 @@ def get_vmware_source_ids(name, vm_list):
     Function to virtual machines available in the vcenter.
     : return source ids and vcenter id.
     """
+    cohesity_client = _get_client()
     source_id_list = []
     parent_id = -1
     log.info("Fetching Vcenter and Vm ids")
@@ -175,6 +178,7 @@ def register_vcenter(vcenter, username, password):
     salt-call cohesity.register_vcenter vcenter=vcenter_name username=admin password=admin
     """
     try:
+        cohesity_client = _get_client()
         existing_sources = cohesity_client.protection_sources.list_protection_sources_root_nodes(
             environment=env_enum.K_VMWARE
         )
@@ -217,6 +221,7 @@ def create_vmware_protection_job(
     salt-call cohesity.create_vmware_protection_job job_name=job_name vcenter_name=vcenter_name sources=virtual_machine1,virtualmachine2 policy=Gold domain=DefaultStorageDomain pause_job=True timezone=Europe/Berlin
     """
     try:
+        cohesity_client = _get_client()
         # Check if the job already exists.
         resp = cohesity_client.protection_jobs.get_protection_jobs(
             names=job_name, is_deleted=False
@@ -273,6 +278,7 @@ def update_vmware_protection_job(
 
     """
     try:
+        cohesity_client = _get_client()
         resp = cohesity_client.protection_jobs.get_protection_jobs(
             is_deleted=False, names=job_name
         )
@@ -304,6 +310,7 @@ def update_vmware_protection_job_state(job_name, state):
 
     """
     try:
+        cohesity_client = _get_client()
         jobs = cohesity_client.protection_jobs.get_protection_jobs(
             is_deleted=False, names=job_name
         )
@@ -340,6 +347,7 @@ def cancel_vmware_protection_job(job_name):
 
     """
     try:
+        cohesity_client = _get_client()
         jobs = cohesity_client.protection_jobs.get_protection_jobs(
             is_deleted=False, names=job_name
         )
@@ -382,6 +390,7 @@ def run_vmware_protection_job(job_name):
 
     """
     try:
+        cohesity_client = _get_client()
         jobs = cohesity_client.protection_jobs.get_protection_jobs(
             is_deleted=False, names=job_name
         )
@@ -414,6 +423,7 @@ def delete_vmware_protection_job(job_name, delete_snapshots=True):
     salt-call cohesity.delete_vmware_protection_job job_name=job delete_snapshots=False
     """
     try:
+        cohesity_client = _get_client()
         jobs = cohesity_client.protection_jobs.get_protection_jobs(
             is_deleted=False, names=job_name
         )
@@ -481,6 +491,7 @@ def restore_vms(
 
     """
     try:
+        cohesity_client = _get_client()
         body = RecoverTaskRequest()
         body.name = task_name
         parent_id, source_id = get_vmware_source_ids(vcenter_name, vm_names)
