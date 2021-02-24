@@ -22,6 +22,7 @@ jobs:
     - uses: actions/cache@v2
       with:
         path: .brokdb
+        key: ${{ hashFiles('.github/workflows/url-check.yml') }}-${{ hashFiles('.brokignore') }}-${{ steps.get-date.outputs.date }}
     - name: Install brok
       run: |
         wget https://github.com/smallhadroncollider/brok/releases/download/1.1.0/brok-1.1.0_x86-64-linux.deb
