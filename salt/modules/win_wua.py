@@ -93,33 +93,43 @@ def __virtual__():
     # has used win_wua before we enforced theses rules.
     # Most of win_wua still works when not all of the services are enabled
     # in some use cases
-    win_wua_warning=False
+    win_wua_warning = False
     if salt.utils.win_service.info("wuauserv")["StartType"] == "Disabled":
         log.warning("WUA: The Windows Update service (wuauserv) should not be disabled")
         win_wua_warning = True
 
     if salt.utils.win_service.info("msiserver")["StartType"] == "Disabled":
-        log.warning("WUA: The Windows Installer service (msiserver) should not be disabled")
+        log.warning(
+            "WUA: The Windows Installer service (msiserver) should not be disabled"
+        )
         win_wua_warning = True
 
     if salt.utils.win_service.info("BITS")["StartType"] == "Disabled":
-        log.warning("WUA: The Background Intelligent Transfer service (bits) should not "
-                    "be disabled")
+        log.warning(
+            "WUA: The Background Intelligent Transfer service (bits) should not "
+            "be disabled"
+        )
         win_wua_warning = True
 
     if not salt.utils.win_service.info("CryptSvc")["StartType"] == "Auto":
-        log.warning("WUA: The Cryptographic Services service (CryptSvc) should not be "
-                    "disabled")
+        log.warning(
+            "WUA: The Cryptographic Services service (CryptSvc) should not be "
+            "disabled"
+        )
         win_wua_warning = True
 
     if salt.utils.win_service.info("TrustedInstaller")["StartType"] == "Disabled":
-        log.warning("WUA: The Windows Module Installer service (TrustedInstaller) should "
-                    "not be disabled")
+        log.warning(
+            "WUA: The Windows Module Installer service (TrustedInstaller) should "
+            "not be disabled"
+        )
         win_wua_warning = True
 
     if win_wua_warning:
-        log.warning("WUA: (wuauserv), (msiserver), (CryptSvc) and (TrustedInstaller) "
-                    "should all be enabled for win_wua to work correctly!")
+        log.warning(
+            "WUA: (wuauserv), (msiserver), (CryptSvc) and (TrustedInstaller) "
+            "should all be enabled for win_wua to work correctly!"
+        )
 
     return True
 
