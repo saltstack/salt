@@ -10,7 +10,6 @@ import logging
 
 import salt.utils.files
 
-
 try:
 
     from cohesity_management_sdk.cohesity_client import CohesityClient
@@ -79,6 +78,7 @@ def _get_client():
     )
     __context__[context_key] = cohesity_client
     return cohesity_client
+
 
 # config_path = "/etc/salt/master.d/cohesity.conf"
 # cohesity_config = {}
