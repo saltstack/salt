@@ -29,16 +29,16 @@ def test_present():
         ssh_auth.__salt__, {"ssh.check_key": mock, "ssh.set_auth_key": mock_data}
     ):
         with patch.dict(ssh_auth.__opts__, {"test": True}):
-            comt = "The authorized host key sshkeys is already " "present for user root"
+            comt = "The authorized host key sshkeys is already present for user root"
             ret.update({"comment": comt})
             assert ssh_auth.present(name, user, source) == ret
 
         with patch.dict(ssh_auth.__opts__, {"test": False}):
-            comt = "The authorized host key sshkeys " "for user root was updated"
+            comt = "The authorized host key sshkeys for user root was updated"
             ret.update({"comment": comt, "changes": {name: "Updated"}})
             assert ssh_auth.present(name, user, source) == ret
 
-            comt = "The authorized host key sshkeys " "for user root was added"
+            comt = "The authorized host key sshkeys for user root was added"
             ret.update({"comment": comt, "changes": {name: "New"}})
             assert ssh_auth.present(name, user, source) == ret
 
