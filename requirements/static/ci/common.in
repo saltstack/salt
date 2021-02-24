@@ -10,6 +10,7 @@ certifi
 cffi>=1.12.2
 cherrypy>=17.4.1
 clustershell
+cohesity-management-sdk==1.6.0
 croniter>=0.3.0,!=0.3.22"; sys_platform != 'win32'
 dnspython
 docker
