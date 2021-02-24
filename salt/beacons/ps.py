@@ -62,7 +62,11 @@ def beacon(config):
     ret = []
     procs = []
     for proc in psutil.process_iter():
-        _name = proc.name()
+        try:
+            _name = proc.name()
+        except psutil.NoSuchProcess:
+            # The process is now gone
+            continue
         if _name not in procs:
             procs.append(_name)
 

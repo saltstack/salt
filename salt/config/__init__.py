@@ -372,6 +372,8 @@ VALID_OPTS = immutabletypes.freeze(
         "state_output": str,
         # Tells the highstate outputter to only report diffs of states that changed
         "state_output_diff": bool,
+        # Tells the highstate outputter whether profile information will be shown for each state run
+        "state_output_profile": bool,
         # When true, states run in the order defined in an SLS file, unless requisites re-order them
         "state_auto_order": bool,
         # Fire events as state chunks are processed by the state compiler
@@ -418,8 +420,11 @@ VALID_OPTS = immutabletypes.freeze(
         # Tells the minion to choose a bounded, random interval to have zeromq attempt to reconnect
         # in the event of a disconnect event
         "recon_randomize": bool,
+        # Configures retry interval, randomized between timer and timer_max if timer_max > 0
         "return_retry_timer": int,
         "return_retry_timer_max": int,
+        # Configures amount of return retries
+        "return_retry_tries": int,
         # Specify one or more returners in which all events will be sent to. Requires that the returners
         # in question have an event_return(event) function!
         "event_return": (list, str),
@@ -1142,6 +1147,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "state_verbose": True,
         "state_output": "full",
         "state_output_diff": False,
+        "state_output_profile": True,
         "state_auto_order": True,
         "state_events": False,
         "state_aggregate": False,
@@ -1165,6 +1171,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "recon_randomize": True,
         "return_retry_timer": 5,
         "return_retry_timer_max": 10,
+        "return_retry_tries": 3,
         "random_reauth_delay": 10,
         "winrepo_source_dir": "salt://win/repo-ng/",
         "winrepo_dir": os.path.join(salt.syspaths.BASE_FILE_ROOTS_DIR, "win", "repo"),
@@ -1243,6 +1250,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "schedule": {},
         "ssh_merge_pillar": True,
         "disabled_requisites": [],
+        "reactor_niceness": None,
     }
 )
 
@@ -1473,6 +1481,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "state_verbose": True,
         "state_output": "full",
         "state_output_diff": False,
+        "state_output_profile": True,
         "state_auto_order": True,
         "state_events": False,
         "state_aggregate": False,

@@ -146,6 +146,7 @@ def add(name, beacon_data, **kwargs):
 
     if name in list_(return_yaml=False, **kwargs):
         ret["comment"] = "Beacon {} is already configured.".format(name)
+        ret["result"] = True
         return ret
 
     # Check to see if a beacon_module is specified, if so, verify it is
@@ -726,7 +727,7 @@ def disable_beacon(name, **kwargs):
 
 def reset(**kwargs):
     """
-    Resest beacon configuration on the minion
+    Reset beacon configuration on the minion
 
     CLI Example:
 

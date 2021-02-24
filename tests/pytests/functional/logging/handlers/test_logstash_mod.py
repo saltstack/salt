@@ -8,7 +8,6 @@ import salt.utils.stringutils
 import zmq
 from salt.log.handlers.logstash_mod import DatagramLogstashHandler, ZMQLogstashHander
 from saltfactories.utils.ports import get_unused_localhost_port
-from tests.support.helpers import slowTest
 
 log = logging.getLogger(__name__)
 
@@ -50,7 +49,7 @@ def zmq_server():
         context.term()
 
 
-@slowTest
+@pytest.mark.slow_test
 def test_datagram_handler_log_pickling(datagram_server):
     # given
     the_log = "test message"

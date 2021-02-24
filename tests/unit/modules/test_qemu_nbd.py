@@ -1,15 +1,13 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import glob
 import os.path
 import tempfile
 
+import pytest
 import salt.modules.qemu_nbd as qemu_nbd
-from tests.support.helpers import slowTest
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -62,7 +60,7 @@ class QemuNbdTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'init' function tests: 1
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_init(self):
         """
         Test if it mount the named image via qemu-nbd

@@ -136,7 +136,9 @@ def exists(name, tags=None, region=None, key=None, keyid=None, profile=None):
     """
     Check to see if an RDS exists.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_rds.exists myrds region=us-east-1
     """
@@ -155,7 +157,9 @@ def option_group_exists(
     """
     Check to see if an RDS option group exists.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_rds.option_group_exists myoptiongr region=us-east-1
     """
@@ -174,7 +178,9 @@ def parameter_group_exists(
     """
     Check to see if an RDS parameter group exists.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_rds.parameter_group_exists myparametergroup \
                 region=us-east-1
@@ -198,7 +204,9 @@ def subnet_group_exists(
     """
     Check to see if an RDS subnet group exists.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_rds.subnet_group_exists my-param-group \
                 region=us-east-1
@@ -593,7 +601,9 @@ def update_parameter_group(
     """
     Update an RDS parameter group.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_rds.update_parameter_group my-param-group \
                 parameters='{"back_log":1, "binlog_cache_size":4096}' \
@@ -642,7 +652,9 @@ def describe(name, tags=None, region=None, key=None, keyid=None, profile=None):
     """
     Return RDS instance details.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_rds.describe myrds
 
@@ -722,7 +734,9 @@ def describe_db_instances(
     current scope.  Arbitrary subelements or subsections of the returned dataset
     can be selected by passing in a valid JMSEPath filter as well.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_rds.describe_db_instances jmespath='DBInstances[*].DBInstanceIdentifier'
 
@@ -757,7 +771,9 @@ def describe_db_subnet_groups(
     current scope.  Arbitrary subelements or subsections of the returned dataset
     can be selected by passing in a valid JMSEPath filter as well.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_rds.describe_db_subnet_groups
 
@@ -776,7 +792,9 @@ def get_endpoint(name, tags=None, region=None, key=None, keyid=None, profile=Non
     """
     Return the endpoint of an RDS instance.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_rds.get_endpoint myrds
 
@@ -814,7 +832,9 @@ def delete(
     """
     Delete an RDS instance.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_rds.delete myrds skip_final_snapshot=True \
                 region=us-east-1
@@ -887,7 +907,9 @@ def delete_option_group(name, region=None, key=None, keyid=None, profile=None):
     """
     Delete an RDS option group.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_rds.delete_option_group my-opt-group \
                 region=us-east-1
@@ -916,7 +938,9 @@ def delete_parameter_group(name, region=None, key=None, keyid=None, profile=None
     """
     Delete an RDS parameter group.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_rds.delete_parameter_group my-param-group \
                 region=us-east-1
@@ -939,7 +963,9 @@ def delete_subnet_group(name, region=None, key=None, keyid=None, profile=None):
     """
     Delete an RDS subnet group.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_rds.delete_subnet_group my-subnet-group \
                 region=us-east-1

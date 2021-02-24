@@ -1,18 +1,12 @@
-# -tests/integration/daemons/test_masterapi.py:71*- coding: utf-8 -*-
-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import os
 import shutil
 import stat
 
+import pytest
 import salt.utils.files
 import salt.utils.stringutils
 from tests.support.case import ShellCase
-from tests.support.helpers import slowTest
 from tests.support.runtests import RUNTIME_VARS
-
-# Import 3rd-party libs
 
 
 class AutosignGrainsTest(ShellCase):
@@ -25,12 +19,7 @@ class AutosignGrainsTest(ShellCase):
         self.autosign_file_permissions = (
             stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH | stat.S_IWUSR
         )
-        if RUNTIME_VARS.PYTEST_SESSION:
-            self.autosign_file_path = os.path.join(RUNTIME_VARS.TMP, "autosign_file")
-        else:
-            self.autosign_file_path = os.path.join(
-                RUNTIME_VARS.TMP, "rootdir", "autosign_file"
-            )
+        self.autosign_file_path = os.path.join(RUNTIME_VARS.TMP, "autosign_file")
         shutil.copyfile(
             os.path.join(RUNTIME_VARS.FILES, "autosign_grains", "autosign_file"),
             self.autosign_file_path,
@@ -67,7 +56,7 @@ class AutosignGrainsTest(ShellCase):
         except AttributeError:
             pass
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_autosign_grains_accept(self):
         grain_file_path = os.path.join(self.autosign_grains_dir, "test_grain")
         with salt.utils.files.fopen(grain_file_path, "w") as f:
@@ -79,7 +68,7 @@ class AutosignGrainsTest(ShellCase):
         )  # get minion to try to authenticate itself again
         self.assertIn("minion", self.run_key("-l acc"))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_autosign_grains_fail(self):
         grain_file_path = os.path.join(self.autosign_grains_dir, "test_grain")
         with salt.utils.files.fopen(grain_file_path, "w") as f:
