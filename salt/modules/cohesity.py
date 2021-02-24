@@ -73,7 +73,7 @@ def _get_client():
     cohesity_client = CohesityClient(
         cluster_vip=cluster_vip, username=c_username, password=c_password, domain=c_domain,
     )
-     __context__[context_key] = cohesity_client
+    __context__[context_key] = cohesity_client
     return cohesity_client
 
 # config_path = "/etc/salt/master.d/cohesity.conf"
