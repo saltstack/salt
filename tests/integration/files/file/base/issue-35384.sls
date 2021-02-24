@@ -1,3 +1,4 @@
+cmd_run_unless_multiple:
   cmd.run:
     - name: echo "hello"
     - unless:
@@ -8,5 +9,5 @@
   {% else %}
       - "$(which true)"
       - "$(which false)"
-      - "$(which true)"	
+      - "$(which true)"
   {% endif %}
