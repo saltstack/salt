@@ -134,8 +134,7 @@ command:
 Commands with ``salt-ssh`` follow the same syntax as the ``salt`` command.
 
 The standard salt functions are available! The output is the same as ``salt``
-and many of the same flags are available. Please see
-http://docs.saltstack.com/ref/cli/salt-ssh.html for all of the available
+and many of the same flags are available. Please see :ref:`salt-ssh cli <salt-ssh-cli>` for all of the available
 options.
 
 Raw Shell Calls

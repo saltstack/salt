@@ -83,8 +83,8 @@ served from the ``first`` repository.
 .. code-block:: yaml
 
     gitfs_remotes:
-      - https://mydomain.tld/repos/first.git
-      - https://mydomain.tld/repos/second.git
+      - https://example.com/repos/first.git
+      - https://example.com/repos/second.git
 
 .. note::
 

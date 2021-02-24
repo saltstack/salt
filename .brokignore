@@ -1,11 +1,15 @@
+http://127.0.0.1
 http://example.com
 http://example.org
 http://github.com
+http://localhost
 http://www.example.com
 http://www.example.org
+https://127.0.0.1
 https://example.com
 https://example.org
 https://github.com
+https://localhost
 https://twitter.com/intent/follow?screen_name=Salt_Project_OS
 https://www.example.com
 https://www.example.org
