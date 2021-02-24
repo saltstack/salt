@@ -534,6 +534,7 @@ def get_devices_by_token():
 def list_nodes(call=None):
     """
     Returns a list of devices, keeping only a brief listing.
+
     CLI Example:
 
     .. code-block:: bash

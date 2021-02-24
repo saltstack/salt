@@ -2,7 +2,7 @@
 Network NTP
 ===========
 
-.. versionadded: 2016.11.0
+.. versionadded:: 2016.11.0
 
 Manage the configuration of NTP peers and servers on the network devices through the NAPALM proxy.
 

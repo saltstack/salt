@@ -368,6 +368,7 @@ def create(vm_):
 def create_lb(kwargs=None, call=None):
     r"""
     Create a load-balancer configuration.
+
     CLI Example:
 
     .. code-block:: bash

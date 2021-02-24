@@ -176,7 +176,7 @@ def merge(value, default="", omit_opts=False, omit_master=False, omit_pillar=Fal
 
 def get(key, default=""):
     """
-    .. versionadded: 0.14.0
+    .. versionadded:: 0.14.0
 
     Attempt to retrieve the named value from opts, pillar, grains of the master
     config, if the named value is not available return the passed default.

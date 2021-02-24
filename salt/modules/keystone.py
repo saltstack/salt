@@ -488,7 +488,6 @@ def role_delete(role_id=None, name=None, profile=None, **connection_args):
     """
     Delete a role (keystone role-delete)
 
-
     CLI Examples:
 
     .. code-block:: bash
