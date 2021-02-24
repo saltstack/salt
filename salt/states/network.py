@@ -464,7 +464,7 @@ def managed(name, enabled=True, **kwargs):
     type : eth
         Type of interface and configuration
 
-        .. versionchanged:: Sodium?
+        .. versionchanged:: 3002
 
     enabled
         Designates the state of this interface.

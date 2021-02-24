@@ -1313,7 +1313,6 @@ def list_pkgs(
             Packages in this state now correctly show up in the output of this
             function.
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -2837,7 +2836,6 @@ def show(*names, **kwargs):
         If ``True``, the apt cache will be refreshed first. By default, no
         refresh is performed.
 
-
     CLI Examples:
 
     .. code-block:: bash
@@ -2914,7 +2912,7 @@ def info_installed(*names, **kwargs):
 
         .. versionadded:: 2016.11.3
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -2986,7 +2984,7 @@ def list_downloaded(root=None, **kwargs):
     root
         operate on a different root directory.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
