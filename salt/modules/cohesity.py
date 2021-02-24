@@ -5,10 +5,9 @@ https://github.com/cohesity/management-sdk-python
 sdk can be installed using `pip install cohesity-management-sdk`
 """
 
-# Python Modules Import
 import copy
 import logging
-import os
+# import os
 
 import salt.utils.files
 
@@ -81,11 +80,11 @@ cohesity_client = _get_client()
 # cohesity_config = {}
 # if os.path.isfile(config_path):
 #     import yaml
-# 
+#
 #     with salt.utils.files.fopen(config_path, "r") as file_obj:
 #         config = yaml.safe_load(file_obj)
 #         cohesity_config = config.get("cohesity_config", {})
-# 
+#
 # cluster_vip = cohesity_config.get("cluster_vip", "")
 # c_username = cohesity_config.get("username", "")
 # c_password = cohesity_config.get("password", "")
@@ -538,3 +537,5 @@ def restore_vms(
         return "Successfully created restore task {} ".format(task_name)
     except APIException as err:
         return str(err)
+
+
