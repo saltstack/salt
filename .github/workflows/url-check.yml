@@ -19,10 +19,17 @@ jobs:
         apt-get install -y wget libtinfo5
 
     - uses: actions/checkout@v2
+
+    - name: Get Date
+      id: get-date
+      run: |
+        echo "::set-output name=date::$(/bin/date -u "+%Y%m%d")"
+      shell: bash
     - uses: actions/cache@v2
       with:
         path: .brokdb
         key: ${{ hashFiles('.github/workflows/url-check.yml') }}-${{ hashFiles('.brokignore') }}-${{ steps.get-date.outputs.date }}
+
     - name: Install brok
       run: |
         wget https://github.com/smallhadroncollider/brok/releases/download/1.1.0/brok-1.1.0_x86-64-linux.deb
