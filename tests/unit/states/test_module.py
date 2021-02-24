@@ -152,7 +152,7 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
         with patch.dict(module.__salt__, {}, clear=True), patch.dict(
             module.__opts__, {"test": True, "use_superseded": ["module.run"]}
         ):
-            ret = module.run(**{})
+            ret = module.run()
         if ret["comment"] != "No function provided." or ret["result"] is not False:
             self.fail("module.run did not fail as expected: {}".format(ret))
 
