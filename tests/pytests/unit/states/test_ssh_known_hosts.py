@@ -27,7 +27,7 @@ def test_present():
 
     with patch.dict(ssh_known_hosts.__opts__, {"test": True}):
         with patch.object(os.path, "isabs", MagicMock(return_value=False)):
-            comt = 'If not specifying a "user", ' 'specify an absolute "config".'
+            comt = 'If not specifying a "user", specify an absolute "config".'
             ret.update({"comment": comt})
             assert ssh_known_hosts.present(name) == ret
 
@@ -45,11 +45,11 @@ def test_present():
             ret.update({"comment": comt, "result": True})
             assert ssh_known_hosts.present(name, user) == ret
 
-            comt = "Key for github.com is set to be" " added to .ssh/known_hosts"
+            comt = "Key for github.com is set to be added to .ssh/known_hosts"
             ret.update({"comment": comt, "result": None})
             assert ssh_known_hosts.present(name, user) == ret
 
-            comt = "Key for github.com is set to be " "updated in .ssh/known_hosts"
+            comt = "Key for github.com is set to be updated in .ssh/known_hosts"
             ret.update({"comment": comt})
             assert ssh_known_hosts.present(name, user) == ret
 
@@ -105,7 +105,7 @@ def test_absent():
     ret = {"name": name, "changes": {}, "result": False, "comment": ""}
 
     with patch.object(os.path, "isabs", MagicMock(return_value=False)):
-        comt = 'If not specifying a "user", ' 'specify an absolute "config".'
+        comt = 'If not specifying a "user", specify an absolute "config".'
         ret.update({"comment": comt})
         assert ssh_known_hosts.absent(name) == ret
 
@@ -118,7 +118,7 @@ def test_absent():
     mock = MagicMock(return_value=True)
     with patch.dict(ssh_known_hosts.__salt__, {"ssh.get_known_host_entries": mock}):
         with patch.dict(ssh_known_hosts.__opts__, {"test": True}):
-            comt = "Key for github.com is set to be" " removed from .ssh/known_hosts"
+            comt = "Key for github.com is set to be removed from .ssh/known_hosts"
             ret.update({"comment": comt, "result": None})
             assert ssh_known_hosts.absent(name, user) == ret
 
