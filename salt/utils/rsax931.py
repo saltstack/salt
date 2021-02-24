@@ -32,8 +32,13 @@ def _find_libcrypto():
         # look in salts pkg install location.
         lib = glob.glob("/opt/salt/lib/libcrypto.dylib")
         # Find library symlinks in Homebrew locations.
-        lib = lib or glob.glob("/usr/local/opt/openssl/lib/libcrypto.dylib")
-        lib = lib or glob.glob("/usr/local/opt/openssl@*/lib/libcrypto.dylib")
+        brew_prefix = os.getenv("HOMEBREW_PREFIX", "/usr/local")
+        lib = lib or glob.glob(
+            os.path.join(brew_prefix, "opt/openssl/lib/libcrypto.dylib")
+        )
+        lib = lib or glob.glob(
+            os.path.join(brew_prefix, "opt/openssl@*/lib/libcrypto.dylib")
+        )
         # look in macports.
         lib = lib or glob.glob("/opt/local/lib/libcrypto.dylib")
         # check if 10.15, regular libcrypto.dylib is just a false pointer.
