@@ -1,21 +1,13 @@
-# -*- coding: utf-8 -*-
-
-# Import Python libs
-from __future__ import absolute_import
-
 import textwrap
 
-# Import Salt Libs
 import salt.modules.pkgng as pkgng
-
-# Import Salt Testing Libs
 from salt.utils.odict import OrderedDict
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
 
 
-class ListPackages(object):
+class ListPackages:
     def __init__(self):
         self._iteration = 0
 
@@ -254,6 +246,27 @@ class PkgNgTestCase(TestCase, LoaderModuleMockMixin):
                     python_shell=False,
                 )
 
+    def test_upgrade_with_local(self):
+        """
+        Test pkg upgrade to supress automatic update of the local copy of the
+        repository catalogue from remote
+        """
+        pkg_cmd = MagicMock(return_value={"retcode": 0})
+
+        with patch.dict(pkgng.__salt__, {"cmd.run_all": pkg_cmd}):
+            with patch("salt.modules.pkgng.list_pkgs", ListPackages()):
+                result = pkgng.upgrade(local=True)
+                expected = {
+                    "gettext-runtime": {"new": "0.20.1", "old": ""},
+                    "p5-Mojolicious": {"new": "8.40", "old": ""},
+                }
+                self.assertDictEqual(result, expected)
+                pkg_cmd.assert_called_with(
+                    ["pkg", "upgrade", "-Uy"],
+                    output_loglevel="trace",
+                    python_shell=False,
+                )
+
     def test_stats_with_local(self):
         """
         Test pkg.stats for local packages
@@ -278,6 +291,32 @@ class PkgNgTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(result, [])
             pkg_cmd.assert_called_with(
                 ["pkg", "stats", "-r"], output_loglevel="trace", python_shell=False,
+            )
+
+    def test_stats_with_bytes_remote(self):
+        """
+        Test pkg.stats to show disk space usage in bytes only for remote
+        """
+        pkg_cmd = MagicMock(return_value="")
+
+        with patch.dict(pkgng.__salt__, {"cmd.run": pkg_cmd}):
+            result = pkgng.stats(remote=True, bytes=True)
+            self.assertEqual(result, [])
+            pkg_cmd.assert_called_with(
+                ["pkg", "stats", "-rb"], output_loglevel="trace", python_shell=False,
+            )
+
+    def test_stats_with_bytes_local(self):
+        """
+        Test pkg.stats to show disk space usage in bytes only for local
+        """
+        pkg_cmd = MagicMock(return_value="")
+
+        with patch.dict(pkgng.__salt__, {"cmd.run": pkg_cmd}):
+            result = pkgng.stats(local=True, bytes=True)
+            self.assertEqual(result, [])
+            pkg_cmd.assert_called_with(
+                ["pkg", "stats", "-lb"], output_loglevel="trace", python_shell=False,
             )
 
     def test_install_without_args(self):
@@ -539,3 +578,100 @@ class PkgNgTestCase(TestCase, LoaderModuleMockMixin):
                     python_shell=False,
                     env={},
                 )
+
+    def test_check_depends(self):
+        """
+        Test pkgng.check to check and install missing dependencies
+        """
+        pkg_cmd = MagicMock(return_value="")
+
+        with patch.dict(pkgng.__salt__, {"cmd.run": pkg_cmd}):
+            result = pkgng.check(depends=True)
+            self.assertEqual(result, "")
+            pkg_cmd.assert_called_with(
+                ["pkg", "check", "-dy"], output_loglevel="trace", python_shell=False,
+            )
+
+    def test_check_checksum(self):
+        """
+        Test pkgng.check for packages with invalid checksums
+        """
+        pkg_cmd = MagicMock(return_value="")
+
+        with patch.dict(pkgng.__salt__, {"cmd.run": pkg_cmd}):
+            result = pkgng.check(checksum=True)
+            self.assertEqual(result, "")
+            pkg_cmd.assert_called_with(
+                ["pkg", "check", "-s"], output_loglevel="trace", python_shell=False,
+            )
+
+    def test_check_recompute(self):
+        """
+        Test pkgng.check to recalculate the checksums of installed packages
+        """
+        pkg_cmd = MagicMock(return_value="")
+
+        with patch.dict(pkgng.__salt__, {"cmd.run": pkg_cmd}):
+            result = pkgng.check(recompute=True)
+            self.assertEqual(result, "")
+            pkg_cmd.assert_called_with(
+                ["pkg", "check", "-r"], output_loglevel="trace", python_shell=False,
+            )
+
+    def test_check_checklibs(self):
+        """
+        Test pkgng.check to regenerate the library dependency metadata
+        """
+        pkg_cmd = MagicMock(return_value="")
+
+        with patch.dict(pkgng.__salt__, {"cmd.run": pkg_cmd}):
+            result = pkgng.check(checklibs=True)
+            self.assertEqual(result, "")
+            pkg_cmd.assert_called_with(
+                ["pkg", "check", "-B"], output_loglevel="trace", python_shell=False,
+            )
+
+    def test_autoremove_with_dryrun(self):
+        """
+        Test pkgng.autoremove with dryrun argument
+        """
+        pkg_cmd = MagicMock(return_value="")
+
+        with patch.dict(pkgng.__salt__, {"cmd.run": pkg_cmd}):
+            result = pkgng.autoremove(dryrun=True)
+            self.assertEqual(result, "")
+            pkg_cmd.assert_called_with(
+                ["pkg", "autoremove", "-n"],
+                output_loglevel="trace",
+                python_shell=False,
+            )
+
+    def test_autoremove(self):
+        """
+        Test pkgng.autoremove
+        """
+        pkg_cmd = MagicMock(return_value="")
+
+        with patch.dict(pkgng.__salt__, {"cmd.run": pkg_cmd}):
+
+            result = pkgng.autoremove()
+            self.assertEqual(result, "")
+            pkg_cmd.assert_called_with(
+                ["pkg", "autoremove", "-y"],
+                output_loglevel="trace",
+                python_shell=False,
+            )
+
+    def test_audit(self):
+        """
+        Test pkgng.audit
+        """
+        pkg_cmd = MagicMock(return_value="")
+
+        with patch.dict(pkgng.__salt__, {"cmd.run": pkg_cmd}):
+
+            result = pkgng.audit()
+            self.assertEqual(result, "")
+            pkg_cmd.assert_called_with(
+                ["pkg", "audit", "-F"], output_loglevel="trace", python_shell=False,
+            )

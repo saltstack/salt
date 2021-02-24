@@ -635,6 +635,10 @@
 # states is cluttering the logs. Set it to True to ignore them.
 #state_output_diff: False
 
+# The state_output_profile setting changes whether profile information
+# will be shown for each state run.
+#state_output_profile: True
+
 # Automatically aggregate all states that have support for mod_aggregate by
 # setting to 'True'. Or pass a list of state module names to automatically
 # aggregate just those types.
