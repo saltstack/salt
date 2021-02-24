@@ -12,7 +12,7 @@ def configure_loader_modules():
     return {acme: {"__opts__": {"test": False}}}
 
 
-def test_cert_no_changes_t():
+def test_cert_no_changes_test():
     """
     Test cert state with no needed changes. (test=True)
     """
@@ -54,7 +54,7 @@ def test_cert_no_changes():
         assert acme.cert("testing.example.com", certname="test") == match
 
 
-def test_cert_fresh_certificate_t():
+def test_cert_fresh_certificate_test():
     """
     Test cert state fetching a new certificate. (test=True)
     """
@@ -98,7 +98,7 @@ def test_cert_fresh_certificate():
         assert acme.cert("testing.example.com", certname="test") == match
 
 
-def test_cert_renew_certificate_t():
+def test_cert_renew_certificate_test():
     """
     Test cert state renewing a certificate. (test=True)
     """
