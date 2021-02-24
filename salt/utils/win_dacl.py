@@ -1749,7 +1749,7 @@ def has_permission(
     obj_name, principal, permission, access_mode="grant", obj_type="file", exact=True
 ):
     r"""
-    Check if the object has a permission
+    Check if the object has a specific permission
 
     Args:
 
@@ -1838,7 +1838,8 @@ def has_permissions(
     obj_name, principal, permissions, access_mode="grant", obj_type="file", exact=True
 ):
     r"""
-    Check if the object has a permissions
+    Check if the object has the passed permissions. Can be all them or the exact
+    permissions passed and nothing more.
 
     Args:
 

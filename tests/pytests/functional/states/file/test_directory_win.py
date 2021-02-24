@@ -15,7 +15,7 @@ except NameError:
 pytestmark = [pytest.mark.windows_whitelisted, pytest.mark.skip_unless_on_windows]
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def configure_loader_modules():
     return {
         file: {
@@ -25,7 +25,13 @@ def configure_loader_modules():
                 "file.check_perms": win_file.check_perms,
             },
         },
-        win_file: {"__utils__": {"dacl.check_perms": win_dacl.check_perms}},
+        win_file: {
+            "__utils__": {
+                "dacl.check_perms": win_dacl.check_perms,
+                "dacl.set_owner": win_dacl.set_owner,
+                "dacl.set_perms": win_dacl.set_perms,
+            },
+        },
         win_dacl: {"__opts__": {"test": False}},
     }
 
