@@ -847,12 +847,9 @@ def present(
                 "logonscript": win_logonscript,
             }
 
+        # user.add returns true, false, or a str in the case of windows failure
         result = __salt__["user.add"](**params)
-        if result is not True and salt.utils.platform.is_windows():
-            ret["comment"] = result
-            ret["result"] = False
-            return ret
-        elif result:
+        if result is True:
             ret["comment"] = "New user {} created".format(name)
             ret["changes"] = __salt__["user.info"](name)
             if not createhome:
@@ -983,9 +980,13 @@ def present(
                     ret["result"] = False
                 ret["changes"]["passwd"] = "XXX-REDACTED-XXX"
         else:
-            ret["comment"] = "Failed to create new user {}".format(name)
+            # if we failed to create a user, result is either false or
+            # str in the case of windows so handle both cases here
+            if salt.utils.platform.is_windows():
+                ret["comment"] = result
+            else:
+                ret["comment"] = "Failed to create new user {}".format(name)
             ret["result"] = False
-
     return ret
 
 
