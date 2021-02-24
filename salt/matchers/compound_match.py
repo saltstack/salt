@@ -1,14 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 This is the default compound matcher function.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
 import salt.loader
 import salt.utils.minions  # pylint: disable=3rd-party-module-not-gated
-from salt.ext import six  # pylint: disable=3rd-party-module-not-gated
 
 HAS_RANGE = False
 try:
@@ -21,7 +18,7 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
-def match(tgt, opts=None):
+def match(tgt, opts=None, minion_id=None):
     """
     Runs the compound target check
     """
@@ -29,9 +26,10 @@ def match(tgt, opts=None):
         opts = __opts__
     nodegroups = opts.get("nodegroups", {})
     matchers = salt.loader.matchers(opts)
-    minion_id = opts.get("minion_id", opts["id"])
+    if not minion_id:
+        minion_id = opts.get("id")
 
-    if not isinstance(tgt, six.string_types) and not isinstance(tgt, (list, tuple)):
+    if not isinstance(tgt, str) and not isinstance(tgt, (list, tuple)):
         log.error("Compound target received that is neither string, list nor tuple")
         return False
     log.debug("compound_match: %s ? %s", minion_id, tgt)
@@ -51,7 +49,7 @@ def match(tgt, opts=None):
     results = []
     opers = ["and", "or", "not", "(", ")"]
 
-    if isinstance(tgt, six.string_types):
+    if isinstance(tgt, str):
         words = tgt.split()
     else:
         # we make a shallow copy in order to not affect the passed in arg
@@ -104,8 +102,8 @@ def match(tgt, opts=None):
                 engine_kwargs["delimiter"] = target_info["delimiter"]
 
             results.append(
-                six.text_type(
-                    matchers["{0}_match.match".format(engine)](
+                str(
+                    matchers["{}_match.match".format(engine)](
                         *engine_args, **engine_kwargs
                     )
                 )
@@ -113,7 +111,7 @@ def match(tgt, opts=None):
 
         else:
             # The match is not explicitly defined, evaluate it as a glob
-            results.append(six.text_type(matchers["glob_match.match"](word, opts)))
+            results.append(str(matchers["glob_match.match"](word, opts, minion_id)))
 
     results = " ".join(results)
     log.debug('compound_match %s ? "%s" => "%s"', minion_id, tgt, results)
