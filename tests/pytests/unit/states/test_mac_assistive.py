@@ -34,7 +34,7 @@ def test_installed():
 
 def test_installed_not_enabled():
     """
-    Test installing a bundle ID as being allowed to run with assistive access
+    Test installing a bundle ID as being allowed to run with disabled assistive access
     """
     expected = {
         "changes": {},
