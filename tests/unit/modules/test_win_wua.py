@@ -4,7 +4,7 @@ Test the win_wua execution module
 import salt.modules.win_wua as win_wua
 import salt.utils.platform
 import salt.utils.win_update
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import MagicMock, Mock, call, patch
 from tests.support.unit import TestCase, skipIf
 
 UPDATES_LIST = {
@@ -73,13 +73,11 @@ class WinWuaInstalledTestCase(TestCase):
                 self.service_auto,  # TrustedInstaller
             ]
         )
-        with patch("salt.utils.win_service.info", mock_service_info):
-            expected = (
-                False,
-                "WUA: The Windows Update service (wuauserv) must not be disabled",
-            )
-            result = win_wua.__virtual__()
-            self.assertEqual(expected, result)
+        with patch("salt.module.win_wua.log.warning", Mock()) as w:
+            with patch("salt.utils.win_service.info", mock_service_info):
+                self.assertTrue(win_wua.__virtual__())
+                msg = "WUA: The Windows Installer service (msiserver) should not be disabled"
+                self.assertIn(call(msg), w.call_args_list)
 
     def test__virtual__msiserver_disabled(self):
         """
@@ -94,13 +92,11 @@ class WinWuaInstalledTestCase(TestCase):
                 self.service_auto,  # TrustedInstaller
             ]
         )
-        with patch("salt.utils.win_service.info", mock_service_info):
-            expected = (
-                False,
-                "WUA: The Windows Installer service (msiserver) must not be disabled",
-            )
-            result = win_wua.__virtual__()
-            self.assertEqual(expected, result)
+        with patch("salt.module.win_wua.log.warning", Mock()) as w:
+            with patch("salt.utils.win_service.info", mock_service_info):
+                self.assertTrue(win_wua.__virtual__())
+                msg = "WUA: The Windows Installer service (msiserver) should not be disabled"
+                self.assertIn(call(msg), w.call_args_list)
 
     def test__virtual__BITS_disabled(self):
         """
@@ -115,13 +111,11 @@ class WinWuaInstalledTestCase(TestCase):
                 self.service_auto,  # TrustedInstaller
             ]
         )
-        with patch("salt.utils.win_service.info", mock_service_info):
-            expected = (
-                False,
-                "WUA: The Background Intelligent Transfer service (bits) must not be disabled",
-            )
-            result = win_wua.__virtual__()
-            self.assertEqual(expected, result)
+        with patch("salt.module.win_wua.log.warning", Mock()) as w:
+            with patch("salt.utils.win_service.info", mock_service_info):
+                self.assertTrue(win_wua.__virtual__())
+                msg = "WUA: The Background Intelligent Transfer service (bits) should not be disabled"
+                self.assertIn(call(msg), w.call_args_list)
 
     def test__virtual__BITS_manual(self):
         """
@@ -138,9 +132,7 @@ class WinWuaInstalledTestCase(TestCase):
             ]
         )
         with patch("salt.utils.win_service.info", mock_service_info):
-            expected = True
-            result = win_wua.__virtual__()
-            self.assertEqual(expected, result)
+            self.assertTrue(win_wua.__virtual__())
 
     def test__virtual__CryptSvc_disabled(self):
         """
@@ -155,13 +147,11 @@ class WinWuaInstalledTestCase(TestCase):
                 self.service_auto,  # TrustedInstaller
             ]
         )
-        with patch("salt.utils.win_service.info", mock_service_info):
-            expected = (
-                False,
-                "WUA: The Cryptographic Services service (CryptSvc) must not be disabled",
-            )
-            result = win_wua.__virtual__()
-            self.assertEqual(expected, result)
+        with patch("salt.module.win_wua.log.warning", Mock()) as w:
+            with patch("salt.utils.win_service.info", mock_service_info):
+                self.assertTrue(win_wua.__virtual__())
+                msg = "WUA: The Cryptographic Services service (CryptSvc) should not be disabled"
+                self.assertIn(call(msg), w.call_args_list)
 
     def test__virtual__TrustedInstaller_disabled(self):
         """
@@ -176,13 +166,11 @@ class WinWuaInstalledTestCase(TestCase):
                 self.service_disabled,  # TrustedInstaller
             ]
         )
-        with patch("salt.utils.win_service.info", mock_service_info):
-            expected = (
-                False,
-                "WUA: The Windows Module Installer service (TrustedInstaller) must not be disabled",
-            )
-            result = win_wua.__virtual__()
-            self.assertEqual(expected, result)
+        with patch("salt.module.win_wua.log.warning", Mock()) as w:
+            with patch("salt.utils.win_service.info", mock_service_info):
+                win_wua.__virtual__()
+                msg = "WUA: The Windows Module Installer service (TrustedInstaller) should not be disabled"
+                self.assertIn(call(msg), w.call_args_list)
 
     def test_installed(self):
         """
