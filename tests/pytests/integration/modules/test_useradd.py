@@ -4,11 +4,6 @@ Integration tests for modules/useradd.py and modules/win_useradd.py.
 import pytest
 from tests.support.helpers import random_string, requires_system_grains, runs_on
 
-pytestmark = [
-    pytest.mark.slow_test,
-    pytest.mark.windows_whitelisted,
-]
-
 
 @runs_on(kernel="Linux")
 @pytest.mark.destructive_test
@@ -55,7 +50,7 @@ def test_groups_includes_primary(grains, salt_call_cli):
     except AssertionError:
         pytest.raises(salt_call_cli.run("user.delete", [uname, True, True]))
 
-
+@runs_on(kernel="Linux")
 def test_user_primary_group(salt_call_cli):
     """
     Tests the primary_group function
@@ -91,6 +86,7 @@ def setup_teardown_vars(salt_call_cli):
         salt_call_cli.run("group.delete", [group_name])
 
 
+@runs_on(kernel="Windows")
 @pytest.mark.destructive_test
 def test_add_user(setup_teardown_vars, salt_call_cli):
     """
@@ -102,6 +98,7 @@ def test_add_user(setup_teardown_vars, salt_call_cli):
     assert user_name in user_add.json
 
 
+@runs_on(kernel="Windows")
 @pytest.mark.destructive_test
 def test_add_group(setup_teardown_vars, salt_call_cli):
     """
@@ -113,6 +110,7 @@ def test_add_group(setup_teardown_vars, salt_call_cli):
     assert group_name in group_list.json
 
 
+@runs_on(kernel="Windows")
 @pytest.mark.destructive_test
 def test_add_user_to_group(setup_teardown_vars, salt_call_cli):
     """
@@ -129,6 +127,7 @@ def test_add_user_to_group(setup_teardown_vars, salt_call_cli):
     assert group_name in user_info.json["groups"]
 
 
+@runs_on(kernel="Windows")
 @pytest.mark.destructive_test
 def test_add_user_addgroup(setup_teardown_vars, salt_call_cli):
     """
@@ -145,6 +144,7 @@ def test_add_user_addgroup(setup_teardown_vars, salt_call_cli):
     assert [group_name] == info.json["groups"]
 
 
+@runs_on(kernel="Windows")
 @pytest.mark.destructive_test
 def test_user_chhome(setup_teardown_vars, salt_call_cli):
     """
@@ -159,6 +159,7 @@ def test_user_chhome(setup_teardown_vars, salt_call_cli):
     assert user_dir == info.json["home"]
 
 
+@runs_on(kernel="Windows")
 @pytest.mark.destructive_test
 def test_user_chprofile(setup_teardown_vars, salt_call_cli):
     """
@@ -173,6 +174,7 @@ def test_user_chprofile(setup_teardown_vars, salt_call_cli):
     assert config == info.json["profile"]
 
 
+@runs_on(kernel="Windows")
 @pytest.mark.destructive_test
 def test_user_chfullname(setup_teardown_vars, salt_call_cli):
     """
@@ -187,6 +189,7 @@ def test_user_chfullname(setup_teardown_vars, salt_call_cli):
     assert name == info.json["fullname"]
 
 
+@runs_on(kernel="Windows")
 @pytest.mark.destructive_test
 def test_user_delete(setup_teardown_vars, salt_call_cli):
     """
@@ -199,6 +202,7 @@ def test_user_delete(setup_teardown_vars, salt_call_cli):
     assert {} == ret.json
 
 
+@runs_on(kernel="Windows")
 @pytest.mark.destructive_test
 def test_user_removegroup(setup_teardown_vars, salt_call_cli):
     """
@@ -219,6 +223,7 @@ def test_user_removegroup(setup_teardown_vars, salt_call_cli):
     assert [group_name] not in ret.json
 
 
+@runs_on(kernel="Windows")
 @pytest.mark.destructive_test
 def test_user_rename(setup_teardown_vars, salt_call_cli):
     """
@@ -234,6 +239,7 @@ def test_user_rename(setup_teardown_vars, salt_call_cli):
     assert info.json["active"] is True
 
 
+@runs_on(kernel="Windows")
 @pytest.mark.destructive_test
 def test_user_setpassword(setup_teardown_vars, salt_call_cli):
     """
