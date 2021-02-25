@@ -7,6 +7,8 @@ import sys
 import salt.modules.cmdmod as cmdmod
 import salt.modules.temp as temp
 import salt.modules.win_file as win_file
+import salt.utils.files
+import salt.utils.path
 import salt.utils.platform
 import salt.utils.win_dacl as win_dacl
 import salt.utils.win_functions
@@ -49,7 +51,10 @@ class WinFileTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {
             win_file: {
-                "__utils__": {"dacl.set_perms": win_dacl.set_perms},
+                "__utils__": {
+                    "dacl.set_perms": win_dacl.set_perms,
+                    "path.islink": salt.utils.path.islink,
+                },
                 "__salt__": {"cmd.run_stdout": cmdmod.run_stdout},
             }
         }
@@ -114,6 +119,8 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
                 "__utils__": {
                     "dacl.check_perms": win_dacl.check_perms,
                     "dacl.set_perms": win_dacl.set_perms,
+                    "files.normalize_mode": salt.utils.files.normalize_mode,
+                    "path.islink": salt.utils.path.islink,
                 }
             },
             win_dacl: {"__opts__": {"test": False}},

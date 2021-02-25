@@ -1,11 +1,20 @@
 import pytest
-import salt.states.reg as reg
-import salt.utils.win_dacl as win_dacl
-import salt.utils.win_functions as win_functions
-import salt.utils.win_reg as reg_util
 from tests.support.mock import patch
 
-pytestmark = [pytest.mark.windows_whitelisted, pytest.mark.skip_unless_on_windows]
+try:
+    import salt.states.reg as reg
+    import salt.utils.win_dacl as win_dacl
+    import salt.utils.win_functions as win_functions
+    import salt.utils.win_reg as reg_util
+    HAS_WIN_LIBS = True
+except ImportError:
+    HAS_WIN_LIBS = False
+
+pytestmark = [
+    pytest.mark.skip_unless_on_windows,
+    pytest.mark.skipif(HAS_WIN_LIBS is False, reason="Windows Libraries not available"),
+    pytest.mark.windows_whitelisted,
+]
 
 
 @pytest.fixture(scope="module")
