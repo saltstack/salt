@@ -214,7 +214,7 @@ def _xml_to_dict(xmltree):
         if "}" in name:
             comps = name.split("}")
             name = comps[1]
-
+        if name not in xmldict:
             if len(item) > 0:
                 xmldict[name] = _xml_to_dict(item)
             else:
