@@ -6,6 +6,7 @@ try:
     import salt.utils.win_dacl as win_dacl
     import salt.utils.win_functions as win_functions
     import salt.utils.win_reg as reg_util
+
     HAS_WIN_LIBS = True
 except ImportError:
     HAS_WIN_LIBS = False
@@ -38,7 +39,7 @@ def configure_loader_modules():
 @pytest.mark.destructive_test
 class TestRegState:
     """
-    Class for tests that required shared variables
+    Class for tests that require shared variables
     """
 
     hive = "HKEY_CURRENT_USER"
