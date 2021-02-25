@@ -13,7 +13,7 @@ cheroot==8.3.0            # via cherrypy
 cherrypy==17.4.1
 contextlib2==0.6.0.post1  # via cherrypy
 contextvars==2.4 ; python_version < "3.7"
-cryptography==3.2
+cryptography==3.0
 distro==1.5.0
 gitdb==4.0.5              # via gitpython
 gitpython==3.1.12

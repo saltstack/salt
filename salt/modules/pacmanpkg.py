@@ -658,7 +658,6 @@ def upgrade(refresh=False, root=None, **kwargs):
         {'<package>':  {'old': '<old-version>',
                         'new': '<new-version>'}}
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -915,6 +914,8 @@ def owner(*paths, **kwargs):
     then an empty string will be returned for that path.
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.owner /usr/bin/apachectl
         salt '*' pkg.owner /usr/bin/apachectl /usr/bin/zsh

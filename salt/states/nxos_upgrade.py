@@ -14,7 +14,7 @@
 """
 Manage NX-OS System Image Upgrades.
 
-.. versionadded: xxxx.xx.x
+.. versionadded:: 3001
 
 :maturity:   new
 :platform:   nxos

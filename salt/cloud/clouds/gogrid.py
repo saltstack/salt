@@ -340,6 +340,7 @@ def list_public_ips(kwargs=None, call=None):
     List all available public IPs.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt-cloud -f list_public_ips <provider>
@@ -347,6 +348,7 @@ def list_public_ips(kwargs=None, call=None):
     To list unavailable (assigned) IPs, use:
 
     CLI Example:
+
     .. code-block:: bash
 
         salt-cloud -f list_public_ips <provider> state=assigned
