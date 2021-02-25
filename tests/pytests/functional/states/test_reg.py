@@ -159,11 +159,11 @@ def test_present_perms(reg_vars, clean):
     )
     permissions = win_dacl.get_permissions(obj_name=reg_vars.name, obj_type="registry")
     expected = {
-        "deny": {"permissions": "Full Control", "applies to": "This key and subkeys",}
+        "deny": {"permissions": "Full Control", "applies to": "This key and subkeys"}
     }
     assert permissions["Not Inherited"].get("Guest") == expected
     expected = {
-        "grant": {"permissions": "Full Control", "applies to": "This key and subkeys",}
+        "grant": {"permissions": "Full Control", "applies to": "This key and subkeys"}
     }
     assert permissions["Not Inherited"].get("Backup Operators") == expected
 
