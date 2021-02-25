@@ -97,7 +97,7 @@ def match(tgt, opts=None, minion_id=None):
                 return False
 
             engine_args = [target_info["pattern"]]
-            engine_kwargs = {"opts": opts}
+            engine_kwargs = {"opts": opts, "minion_id": minion_id}
             if target_info["delimiter"]:
                 engine_kwargs["delimiter"] = target_info["delimiter"]
 
