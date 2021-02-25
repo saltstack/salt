@@ -28,10 +28,10 @@ salt/modules/(debian_service|freebsdservice|gentoo_service|launchctl_service|mac
   - integration.states.test_service
 
 salt/modules/*apache.py:
-  - unit.states.test_apache
-  - unit.states.test_apache_conf
-  - unit.states.test_apache_module
-  - unit.states.test_apache_site
+  - pytests.unit.states.test_apache
+  - pytests.unit.states.test_apache_conf
+  - pytests.unit.states.test_apache_module
+  - pytests.unit.states.test_apache_site
 
 salt/modules/augeas_cfg.py:
   - unit.states.test_augeas
