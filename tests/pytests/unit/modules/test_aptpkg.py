@@ -213,6 +213,11 @@ class MockSourceList:
         pass
 
 
+@pytest.fixture
+def configure_loader_modules():
+    return {aptpkg: {"__grains__": {}}}
+
+
 def test_version(lowpkg_info_var):
     """
     Test - Returns a string representing the package version or an empty string if
@@ -643,7 +648,6 @@ def test_mod_repo_enabled():
                         repo = aptpkg.mod_repo("foo", disabled=False)
                         data_is_true.assert_called_with(False)
 
-
     def test_mod_repo_match(self):
         """
         Checks if a repo is matched without taking into account any ending "/" in the uri.
@@ -701,6 +705,7 @@ def test_mod_repo_enabled():
                                             repo[source_line_no_slash]["uri"]
                                             == source_uri
                                         )
+
 
 @patch("salt.utils.path.os_walk", MagicMock(return_value=[("test", "test", "test")]))
 @patch("os.path.getsize", MagicMock(return_value=123456))
