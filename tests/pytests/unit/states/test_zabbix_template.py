@@ -155,8 +155,6 @@ def test_present_create(substitute_params_create):
                 return []
             elif args[0] == "template.create":
                 return {"templateids": ["10206"]}
-            elif args[0] == "application.get":
-                return []
             elif args[0] == "application.create":
                 return {"applicationids": ["701"]}
 
