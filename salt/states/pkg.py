@@ -3553,7 +3553,13 @@ def mod_watch(name, **kwargs):
 
 def mod_beacon(name, **kwargs):
     """
-    name
+    Create a beacon to monitor a package or packages
+    based on a beacon state argument.
+
+    .. note::
+        This state exists to support special handling of the ``beacon``
+        state argument for supported state functions. It should not be called directly.
+
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
