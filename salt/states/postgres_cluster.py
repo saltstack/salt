@@ -68,7 +68,7 @@ def present(
     wal_segsize
         Set the WAL segment size, in megabytes
 
-        .. versionadded:: 2015.XX
+        .. versionadded:: 2016.3.0
     """
     msg = "Cluster {}/{} is already present".format(version, name)
     ret = {"name": name, "changes": {}, "result": True, "comment": msg}
@@ -129,7 +129,7 @@ def absent(version, name):
     name
         The name of the cluster to remove
 
-        .. versionadded:: 2015.XX
+        .. versionadded:: 2016.3.0
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 

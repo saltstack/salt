@@ -110,13 +110,20 @@ def __virtual__():
     return __virtualname__
 
 
+def _get_active_provider_name():
+    try:
+        return __active_provider_name__.value()
+    except AttributeError:
+        return __active_provider_name__
+
+
 def get_configured_provider():
     """
     Return the first configured instance.
     """
     return config.is_provider_configured(
         __opts__,
-        __active_provider_name__ or "dimensiondata",
+        _get_active_provider_name() or "dimensiondata",
         ("user_id", "key", "region"),
     )
 
@@ -199,7 +206,7 @@ def create(vm_):
         if (
             vm_["profile"]
             and config.is_profile_configured(
-                __opts__, __active_provider_name__ or "dimensiondata", vm_["profile"]
+                __opts__, _get_active_provider_name() or "dimensiondata", vm_["profile"]
             )
             is False
         ):
@@ -361,6 +368,7 @@ def create(vm_):
 def create_lb(kwargs=None, call=None):
     r"""
     Create a load-balancer configuration.
+
     CLI Example:
 
     .. code-block:: bash

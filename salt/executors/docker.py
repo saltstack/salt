@@ -1,7 +1,7 @@
 """
 Docker executor module
 
-.. versionadded: 2019.2.0
+.. versionadded:: 2019.2.0
 
 Used with the docker proxy minion.
 """
