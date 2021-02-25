@@ -1753,7 +1753,10 @@ class VirtualEnv:
     def run_code(self, code_string, **kwargs):
         if code_string.startswith("\n"):
             code_string = code_string[1:]
-        code_string = textwrap.dedent(code_string)
+        code_string = textwrap.dedent(code_string).rstrip()
+        log.debug(
+            "Code to run passed to python:\n>>>>>>>>>>\n%s\n<<<<<<<<<<", code_string
+        )
         return self.run(str(self.venv_python), "-c", code_string, **kwargs)
 
     def get_installed_packages(self):
