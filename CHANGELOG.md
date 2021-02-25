@@ -11,7 +11,7 @@ Salt 3002.4 (2021-02-09)
 Salt 3002.5 (2021-02-25)
 ========================
 
-No significant changes.
+- Tests and fix for CVE-2021-25283
 
 
 Salt 3002.4 (2021-02-05)
