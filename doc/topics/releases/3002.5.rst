@@ -1,0 +1,19 @@
+.. _release-3002-5:
+
+=========================
+Salt 3002.5 Release Notes
+=========================
+
+Version 3002.5 is a cve fix release for :ref:`3002 <release-3002>`.
+
+Fixed
+-----
+
+- Tests and fix for CVE-2021-25283
+
+Known Issue
+-----------
+
+When using the Salt-API with the SSH client some of the SSH options are not working currently and will be fixed in an upcoming bug fix release.
+We are currently testing and fixing which options still need to be fixed, but have confirmed the following ones do not work in this release: extra-filerefs, pre-flight.
+This does not impact normal Salt-SSH usage on the cli.
