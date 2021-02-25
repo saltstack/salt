@@ -648,63 +648,58 @@ def test_mod_repo_enabled():
                         repo = aptpkg.mod_repo("foo", disabled=False)
                         data_is_true.assert_called_with(False)
 
-    def test_mod_repo_match(self):
-        """
-        Checks if a repo is matched without taking into account any ending "/" in the uri.
-        """
-        source_type = "deb"
-        source_uri = "http://cdn-aws.deb.debian.org/debian/"
-        source_line = "deb http://cdn-aws.deb.debian.org/debian/ stretch main\n"
 
-        mock_source = MockSourceEntry(
-            source_uri, source_type, source_line, False, "stretch"
-        )
-        mock_source_list = MockSourceList()
-        mock_source_list.list = [mock_source]
+def test_mod_repo_match():
+    """
+    Checks if a repo is matched without taking into account any ending "/" in the uri.
+    """
+    source_type = "deb"
+    source_uri = "http://cdn-aws.deb.debian.org/debian/"
+    source_line = "deb http://cdn-aws.deb.debian.org/debian/ stretch main\n"
 
-        with patch.dict(
-            aptpkg.__salt__,
-            {"config.option": MagicMock(), "no_proxy": MagicMock(return_value=False)},
-        ):
-            with patch("salt.modules.aptpkg._check_apt", MagicMock(return_value=True)):
-                with patch(
-                    "salt.modules.aptpkg.refresh_db", MagicMock(return_value={})
-                ):
-                    with patch("salt.utils.data.is_true", MagicMock(return_value=True)):
+    mock_source = MockSourceEntry(
+        source_uri, source_type, source_line, False, "stretch"
+    )
+    mock_source_list = MockSourceList()
+    mock_source_list.list = [mock_source]
+
+    with patch.dict(
+        aptpkg.__salt__,
+        {"config.option": MagicMock(), "no_proxy": MagicMock(return_value=False)},
+    ):
+        with patch("salt.modules.aptpkg._check_apt", MagicMock(return_value=True)):
+            with patch("salt.modules.aptpkg.refresh_db", MagicMock(return_value={})):
+                with patch("salt.utils.data.is_true", MagicMock(return_value=True)):
+                    with patch(
+                        "salt.modules.aptpkg._check_apt", MagicMock(return_value=True),
+                    ):
                         with patch(
-                            "salt.modules.aptpkg._check_apt",
-                            MagicMock(return_value=True),
+                            "salt.modules.aptpkg.sourceslist", MagicMock(), create=True,
                         ):
                             with patch(
-                                "salt.modules.aptpkg.sourceslist",
-                                MagicMock(),
+                                "salt.modules.aptpkg.sourceslist.SourcesList",
+                                MagicMock(return_value=mock_source_list),
                                 create=True,
                             ):
                                 with patch(
-                                    "salt.modules.aptpkg.sourceslist.SourcesList",
-                                    MagicMock(return_value=mock_source_list),
-                                    create=True,
+                                    "salt.modules.aptpkg._split_repo_str",
+                                    MagicMock(
+                                        return_value=(
+                                            "deb",
+                                            [],
+                                            "http://cdn-aws.deb.debian.org/debian/",
+                                            "stretch",
+                                            ["main"],
+                                        )
+                                    ),
                                 ):
-                                    with patch(
-                                        "salt.modules.aptpkg._split_repo_str",
-                                        MagicMock(
-                                            return_value=(
-                                                "deb",
-                                                [],
-                                                "http://cdn-aws.deb.debian.org/debian/",
-                                                "stretch",
-                                                ["main"],
-                                            )
-                                        ),
-                                    ):
-                                        source_line_no_slash = "deb http://cdn-aws.deb.debian.org/debian stretch main"
-                                        repo = aptpkg.mod_repo(
-                                            source_line_no_slash, enabled=False
-                                        )
-                                        assert (
-                                            repo[source_line_no_slash]["uri"]
-                                            == source_uri
-                                        )
+                                    source_line_no_slash = "deb http://cdn-aws.deb.debian.org/debian stretch main"
+                                    repo = aptpkg.mod_repo(
+                                        source_line_no_slash, enabled=False
+                                    )
+                                    assert (
+                                        repo[source_line_no_slash]["uri"] == source_uri
+                                    )
 
 
 @patch("salt.utils.path.os_walk", MagicMock(return_value=[("test", "test", "test")]))
