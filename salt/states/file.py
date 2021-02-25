@@ -8852,7 +8852,12 @@ def not_cached(name, saltenv="base"):
 
 def mod_beacon(name, **kwargs):
     """
-    name
+    Create a beacon to monitor a file based on a beacon state argument.
+
+    .. note::
+        This state exists to support special handling of the ``beacon``
+        state argument for supported state functions. It should not be called directly.
+
     """
     sfun = kwargs.pop("sfun", None)
     supported_funcs = ["managed", "directory"]
