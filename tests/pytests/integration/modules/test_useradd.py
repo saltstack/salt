@@ -50,6 +50,7 @@ def test_groups_includes_primary(grains, salt_call_cli):
     except AssertionError:
         pytest.raises(salt_call_cli.run("user.delete", [uname, True, True]))
 
+
 @runs_on(kernel="Linux")
 def test_user_primary_group(salt_call_cli):
     """
