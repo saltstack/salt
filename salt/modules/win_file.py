@@ -399,7 +399,7 @@ def get_pgid(path, follow_symlinks=True):
         path = _resolve_symlink(path)
 
     group_name = __utils__["dacl.get_primary_group"](path)
-    return __utils__["daclt.get_sid_string"](group_name)
+    return __utils__["dacl.get_sid_string"](group_name)
 
 
 def get_pgroup(path, follow_symlinks=True):
