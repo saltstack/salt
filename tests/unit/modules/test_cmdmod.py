@@ -2,7 +2,7 @@
     :codeauthor: Nicole Thomas <nicole@saltstack.com>
 """
 
-
+import builtins
 import os
 import sys
 import tempfile
@@ -12,7 +12,6 @@ import salt.utils.files
 import salt.utils.platform
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
-from salt.ext.six.moves import builtins  # pylint: disable=import-error
 from salt.log import LOG_LEVELS
 from tests.support.helpers import TstSuiteLoggingHandler
 from tests.support.mixins import LoaderModuleMockMixin
@@ -640,3 +639,16 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
             umask=None,
             use_vt=False,
         )
+
+    def test_cve_2021_25284(self):
+        proc = MagicMock(
+            return_value=MockTimedProc(stdout=b"foo", stderr=b"wtf", returncode=2)
+        )
+        with patch("salt.utils.timed_subprocess.TimedProc", proc):
+            with TstSuiteLoggingHandler() as log_handler:
+                cmdmod.run("testcmd -p ImAPassword", output_loglevel="error")
+                for x in log_handler.messages:
+                    if x.find("Executing command") > -1:
+                        assert x.find("ImAPassword") == -1, x
+                    if x.find("faild with return code") > -1:
+                        assert x.find("ImAPassword") == -1, x

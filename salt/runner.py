@@ -2,7 +2,6 @@
 Execute salt convenience routines
 """
 
-
 import logging
 import os
 
@@ -279,7 +278,7 @@ class Runner(RunnerClient):
                         outputter = None
                     display_output(ret, outputter, self.opts)
                 else:
-                    ret = self._proc_function(
+                    ret = self._proc_function_local(
                         self.opts["fun"],
                         low,
                         user,

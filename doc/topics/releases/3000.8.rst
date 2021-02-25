@@ -1,0 +1,13 @@
+.. _release-3000-8:
+
+=========================
+Salt 3000.8 Release Notes
+=========================
+
+Version 3000.8 is a bug fix release for :ref:`3000 <release-3000>`.
+
+Fixed
+-----
+
+- Fix runners that broke when patching for CVE-2021-25281
+- Fix issue with runners in SSE
