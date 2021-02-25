@@ -12,6 +12,6 @@ def match(tgt, opts=None, minion_id=None):
     if not opts:
         opts = __opts__
     if not minion_id:
-        minion_id = opts.get("id", __opts__["id"])
+        minion_id = opts.get("id")
 
     return bool(re.match(tgt, minion_id))

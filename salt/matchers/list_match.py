@@ -15,7 +15,7 @@ def match(tgt, opts=None, minion_id=None):
     if not opts:
         opts = __opts__
     if not minion_id:
-        minion_id = opts.get("id", __opts__["id"])
+        minion_id = opts.get("id")
 
     try:
         if (
@@ -27,11 +27,11 @@ def match(tgt, opts=None, minion_id=None):
         # tgt is a string, which we know because the if statement above did not
         # cause one of the exceptions being caught. Therefore, look for an
         # exact match. (e.g. salt -L foo test.ping)
-        return opts["id"] == tgt
+        return minion_id == tgt
     except (AttributeError, TypeError):
         # tgt is not a string, maybe it's a sequence type?
         try:
-            return opts["id"] in tgt
+            return minion_id in tgt
         except Exception:  # pylint: disable=broad-except
             # tgt was likely some invalid type
             return False
