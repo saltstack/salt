@@ -571,9 +571,7 @@ def _certificate_file_managed(ret, file_args):
     return ret
 
 
-def certificate_managed(
-    name, days_remaining=90, append_certs=None, **kwargs
-):
+def certificate_managed(name, days_remaining=90, append_certs=None, **kwargs):
     """
     Manage a Certificate
 
