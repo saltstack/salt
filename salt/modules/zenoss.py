@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module for working with the Zenoss API
 
@@ -17,9 +16,6 @@ Module for working with the Zenoss API
           username: admin
           password: admin123
 """
-
-
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import re
@@ -53,7 +49,7 @@ def __virtual__():
     else:
         return (
             False,
-            "The '{0}' module could not be loaded: "
+            "The '{}' module could not be loaded: "
             "'requests' is not installed.".format(__virtualname__),
         )
 
@@ -99,7 +95,7 @@ def _router_request(router, method, data=None):
 
     config = __salt__["config.option"]("zenoss")
     log.debug("Making request to router %s with method %s", router, method)
-    url = "{0}/zport/dmd/{1}_router".format(config.get("hostname"), ROUTERS[router])
+    url = "{}/zport/dmd/{}_router".format(config.get("hostname"), ROUTERS[router])
     response = _session().post(url, data=req_data)
 
     # The API returns a 200 response code even whe auth is bad.
@@ -128,6 +124,9 @@ def find_device(device=None):
         device:         (Optional) Will use the grain 'fqdn' by default
 
     CLI Example:
+
+    .. code-block:: bash
+
         salt '*' zenoss.find_device
     """
 
@@ -152,6 +151,9 @@ def device_exists(device=None):
         device:         (Optional) Will use the grain 'fqdn' by default
 
     CLI Example:
+
+    .. code-block:: bash
+
         salt '*' zenoss.device_exists
     """
 
@@ -174,6 +176,9 @@ def add_device(device=None, device_class=None, collector="localhost", prod_state
         prod_state:     (Optional) The prodState to set on the device. If none, defaults to 1000 ( production )
 
     CLI Example:
+
+    .. code-block:: bash
+
         salt '*' zenoss.add_device
     """
 
@@ -203,6 +208,9 @@ def set_prod_state(prod_state, device=None):
         device:         (Optional) Will use the grain 'fqdn' by default.
 
     CLI Example:
+
+    .. code-block:: bash
+
         salt zenoss.set_prod_state 1000 hostname
     """
 
@@ -212,7 +220,7 @@ def set_prod_state(prod_state, device=None):
     device_object = find_device(device)
 
     if not device_object:
-        return "Unable to find a device in Zenoss for {0}".format(device)
+        return "Unable to find a device in Zenoss for {}".format(device)
 
     log.info("Setting prodState to %d on %s device", prod_state, device)
     data = dict(

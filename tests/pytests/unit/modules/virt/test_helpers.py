@@ -1,5 +1,6 @@
+import xml.etree.ElementTree as ET
+
 import salt.utils.xmlutil as xmlutil
-from salt._compat import ElementTree as ET
 
 
 def append_to_XMLDesc(mocked, fragment):
@@ -34,3 +35,11 @@ def assert_called(mock, condition):
     I know it's a simple XOR, but makes the tests easier to read
     """
     assert not condition and not mock.called or condition and mock.called
+
+
+def assert_equal_unit(actual, expected, unit="KiB"):
+    """
+    Assert that two ElementTree nodes have the same value and unit
+    """
+    assert actual.get("unit") == unit
+    assert actual.text == str(expected)

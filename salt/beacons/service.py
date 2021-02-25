@@ -26,6 +26,14 @@ def validate(config):
         if "services" not in _config:
             return False, ("Configuration for service beacon requires services.")
         else:
+            if not isinstance(_config["services"], dict):
+                return (
+                    False,
+                    (
+                        "Services configuration item for service beacon must "
+                        "be a dictionary."
+                    ),
+                )
             for config_item in _config["services"]:
                 if not isinstance(_config["services"][config_item], dict):
                     return (

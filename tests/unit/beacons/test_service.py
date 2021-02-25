@@ -1,7 +1,4 @@
-# coding: utf-8
-
 # Python libs
-from __future__ import absolute_import
 
 from collections import namedtuple
 
@@ -43,6 +40,39 @@ class ServiceBeaconTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(
             ret, (False, "Configuration for service beacon requires services.")
         )
+
+    def test_validate_config_services_none(self):
+        config = [{"services": None}]
+
+        ret = service_beacon.validate(config)
+
+        self.assertEqual(
+            ret,
+            (
+                False,
+                "Services configuration item for service beacon must be a dictionary.",
+            ),
+        )
+
+    def test_validate_config_services_list(self):
+        config = [{"services": [{"sshd": {}}]}]
+
+        ret = service_beacon.validate(config)
+
+        self.assertEqual(
+            ret,
+            (
+                False,
+                "Services configuration item for service beacon must be a dictionary.",
+            ),
+        )
+
+    def test_validate_config_services_valid(self):
+        config = [{"services": {"sshd": {}}}]
+
+        ret = service_beacon.validate(config)
+
+        self.assertEqual(ret, (True, "Valid beacon configuration"))
 
     def test_service_running(self):
         with patch.dict(
