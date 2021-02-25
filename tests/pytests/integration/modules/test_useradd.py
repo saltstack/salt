@@ -5,18 +5,29 @@ import pytest
 from tests.support.helpers import random_string, requires_system_grains, runs_on
 
 
+@pytest.fixture(scope="function")
+def setup_teardown_vars(salt_call_cli):
+    user_name = random_string("RS-", lowercase=False)
+    group_name = random_string("RS-", lowercase=False)
+    try:
+        yield user_name, group_name
+    finally:
+        salt_call_cli.run("user.delete", user_name, True, True)
+        salt_call_cli.run("group.delete", group_name)
+
+
 @runs_on(kernel="Linux")
 @pytest.mark.destructive_test
 @pytest.mark.skip_if_not_root
 @requires_system_grains
-def test_groups_includes_primary(grains, salt_call_cli):
+def test_groups_includes_primary(setup_teardown_vars, grains, salt_call_cli):
     # Let's create a user, which usually creates the group matching the
     # name
     uname = random_string("RS-", lowercase=False)
     if salt_call_cli.run("user.add", [uname]) is not True:
         # Skip because creating is not what we're testing here
         salt_call_cli.run("user.delete", [uname, True, True])
-        pytest.skip(reason="Failed to create user")
+        pytest.skip("Failed to create user")
 
     try:
         uinfo = salt_call_cli.run("user.info", [uname])
@@ -34,7 +45,7 @@ def test_groups_includes_primary(grains, salt_call_cli):
         gname = random_string("RS-", lowercase=False)
         if salt_call_cli.run("group.add", [gname]) is not True:
             salt_call_cli.run("group.delete", [gname, True, True])
-            pytest.skip(reason="Failed to create group")
+            pytest.skip("Failed to create group")
 
         ginfo = salt_call_cli.run("group.info", [gname])
 
@@ -42,17 +53,17 @@ def test_groups_includes_primary(grains, salt_call_cli):
         if salt_call_cli.run("user.add", [uname, uid, ginfo["gid"]]) is False:
             # Skip because creating is not what we're testing here
             salt_call_cli.run("user.delete", [uname, True, True])
-            pytest.skip(reason="Failed to create user")
+            pytest.skip("Failed to create user")
 
         uinfo = salt_call_cli.run("user.info", [uname])
-        assert gname in uinfo["groups"]
+        assert gname in uinfo.json["groups"]
 
     except AssertionError:
         pytest.raises(salt_call_cli.run("user.delete", [uname, True, True]))
 
 
 @runs_on(kernel="Linux")
-def test_user_primary_group(salt_call_cli):
+def test_user_primary_group(setup_teardown_vars, salt_call_cli):
     """
     Tests the primary_group function
     """
@@ -67,24 +78,10 @@ def test_user_primary_group(salt_call_cli):
         # Test useradd.primary_group
         primary_group = salt_call_cli.run("user.primary_group", [name])
         uid_info = salt_call_cli.run("user.info", [name])
-        assert primary_group in uid_info["groups"]
+        assert primary_group in uid_info.json["groups"]
 
     except Exception:  # pylint: disable=broad-except
         pytest.raises(salt_call_cli.run("user.delete", [name]))
-
-
-@runs_on(kernel="Windows")
-@pytest.mark.destructive_test
-@pytest.mark.skip_if_not_root
-@pytest.fixture(scope="function")
-def setup_teardown_vars(salt_call_cli):
-    user_name = random_string("RS-", lowercase=False)
-    group_name = random_string("RS-", lowercase=False)
-    try:
-        yield user_name, group_name
-    finally:
-        salt_call_cli.run("user.delete", [user_name, True, True])
-        salt_call_cli.run("group.delete", [group_name])
 
 
 @runs_on(kernel="Windows")
