@@ -1,6 +1,8 @@
+"""
+Integration tests for modules/useradd.py and modules/win_useradd.py.
+"""
 import pytest
 from tests.support.helpers import random_string, requires_system_grains, runs_on
-
 
 pytestmark = [
     pytest.mark.slow_test,
