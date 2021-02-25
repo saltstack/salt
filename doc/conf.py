@@ -10,210 +10,6 @@ import types
 
 from sphinx.directives.other import TocTree
 
-
-class Mock:
-    """
-    Mock out specified imports.
-
-    This allows autodoc to do its thing without having oodles of req'd
-    installed libs. This doesn't work with ``import *`` imports.
-
-    This Mock class can be configured to return a specific values at specific names, if required.
-
-    https://read-the-docs.readthedocs.io/en/latest/faq.html#i-get-import-errors-on-libraries-that-depend-on-c-modules
-    """
-
-    def __init__(
-        self, mapping=None, *args, **kwargs
-    ):  # pylint: disable=unused-argument
-        """
-        Mapping allows autodoc to bypass the Mock object, but actually assign
-        a specific value, expected by a specific attribute returned.
-        """
-        self.__mapping = mapping or {}
-
-    __all__ = []
-
-    def __call__(self, *args, **kwargs):
-        # If mocked function is used as a decorator, expose decorated function.
-        # if args and callable(args[-1]):
-        #     functools.update_wrapper(ret, args[0])
-        return Mock(mapping=self.__mapping)
-
-    def __getattr__(self, name):
-        if name in self.__mapping:
-            data = self.__mapping.get(name)
-        elif name in ("__file__", "__path__"):
-            data = "/dev/null"
-        elif name in ("__mro_entries__", "__qualname__"):
-            raise AttributeError("'Mock' object has no attribute '%s'" % (name))
-        else:
-            data = Mock(mapping=self.__mapping)
-        return data
-
-    def __iter__(self):
-        return self
-
-    @staticmethod
-    def __next__():
-        raise StopIteration
-
-    # For Python 2
-    next = __next__
-
-
-def mock_decorator_with_params(*oargs, **okwargs):  # pylint: disable=unused-argument
-    """
-    Optionally mock a decorator that takes parameters
-
-    E.g.:
-
-    @blah(stuff=True)
-    def things():
-        pass
-    """
-
-    def inner(fn, *iargs, **ikwargs):  # pylint: disable=unused-argument
-        if hasattr(fn, "__call__"):
-            return fn
-        return Mock()
-
-    return inner
-
-
-MOCK_MODULES = [
-    # Python stdlib
-    "user",
-    # salt core
-    "Crypto",
-    "Crypto.Signature",
-    "Crypto.Cipher",
-    "Crypto.Hash",
-    "Crypto.PublicKey",
-    "Crypto.Random",
-    "Crypto.Signature",
-    "Crypto.Signature.PKCS1_v1_5",
-    "distro",
-    "M2Crypto",
-    "msgpack",
-    "yaml",
-    "yaml.constructor",
-    "yaml.nodes",
-    "yaml.parser",
-    "yaml.scanner",
-    "zmq",
-    "zmq.eventloop",
-    "zmq.eventloop.ioloop",
-    # third-party libs for cloud modules
-    "libcloud",
-    "libcloud.compute",
-    "libcloud.compute.base",
-    "libcloud.compute.deployment",
-    "libcloud.compute.providers",
-    "libcloud.compute.types",
-    "libcloud.loadbalancer",
-    "libcloud.loadbalancer.types",
-    "libcloud.loadbalancer.providers",
-    "libcloud.common",
-    "libcloud.common.google",
-    # third-party libs for netapi modules
-    "cherrypy",
-    "cherrypy.lib",
-    "cherrypy.process",
-    "cherrypy.wsgiserver",
-    "cherrypy.wsgiserver.ssl_builtin",
-    "tornado",
-    "tornado.concurrent",
-    "tornado.escape",
-    "tornado.gen",
-    "tornado.httpclient",
-    "tornado.httpserver",
-    "tornado.httputil",
-    "tornado.ioloop",
-    "tornado.iostream",
-    "tornado.netutil",
-    "tornado.simple_httpclient",
-    "tornado.stack_context",
-    "tornado.web",
-    "tornado.websocket",
-    "tornado.locks",
-    "ws4py",
-    "ws4py.server",
-    "ws4py.server.cherrypyserver",
-    "ws4py.websocket",
-    # modules, renderers, states, returners, et al
-    "ClusterShell",
-    "ClusterShell.NodeSet",
-    "MySQLdb",
-    "MySQLdb.cursors",
-    "OpenSSL",
-    "avahi",
-    "boto.regioninfo",
-    "dbus",
-    "django",
-    "dns",
-    "dns.resolver",
-    "dson",
-    "hjson",
-    "jnpr",
-    "jnpr.junos",
-    "jnpr.junos.utils",
-    "jnpr.junos.utils.config",
-    "jnpr.junos.utils.sw",
-    "keyring",
-    "kubernetes",
-    "kubernetes.config",
-    "libvirt",
-    "lxml",
-    "lxml.etree",
-    "msgpack",
-    "nagios_json",
-    "napalm",
-    "netaddr",
-    "netaddr.IPAddress",
-    "netaddr.core",
-    "netaddr.core.AddrFormatError",
-    "ntsecuritycon",
-    "psutil",
-    "pycassa",
-    "pyconnman",
-    "pyiface",
-    "pymongo",
-    "pyroute2",
-    "pyroute2.ipdb",
-    "rabbitmq_server",
-    "redis",
-    "rpm",
-    "rpmUtils",
-    "rpmUtils.arch",
-    "salt.ext.six.moves.winreg",
-    "twisted",
-    "twisted.internet",
-    "twisted.internet.protocol",
-    "twisted.internet.protocol.DatagramProtocol",
-    "win32security",
-    "yum",
-    "zfs",
-]
-
-MOCK_MODULES_MAPPING = {
-    "cherrypy": {"config": mock_decorator_with_params},
-    "ntsecuritycon": {"STANDARD_RIGHTS_REQUIRED": 0, "SYNCHRONIZE": 0,},
-    "psutil": {"total": 0},  # Otherwise it will crash Sphinx
-}
-
-for mod_name in MOCK_MODULES:
-    sys.modules[mod_name] = Mock(mapping=MOCK_MODULES_MAPPING.get(mod_name))
-
-# Define a fake version attribute for the following libs.
-sys.modules["libcloud"].__version__ = "0.0.0"
-sys.modules["msgpack"].version = (1, 0, 0)
-sys.modules["psutil"].version_info = (3, 0, 0)
-sys.modules["pymongo"].version = "0.0.0"
-sys.modules["tornado"].version_info = (0, 0, 0)
-sys.modules["boto.regioninfo"]._load_json_file = {"endpoints": None}
-
-
 # -- Add paths to PYTHONPATH ---------------------------------------------------
 try:
     docs_basepath = os.path.abspath(os.path.dirname(__file__))
@@ -228,7 +24,8 @@ addtl_paths = (
 )
 
 for addtl_path in addtl_paths:
-    sys.path.insert(0, os.path.abspath(os.path.join(docs_basepath, addtl_path)))
+    path = os.path.abspath(os.path.join(docs_basepath, addtl_path))
+    sys.path.insert(0, path)
 
 # We're now able to import salt
 import salt.version  # isort:skip
@@ -346,6 +143,9 @@ modindex_common_prefix = ["salt."]
 
 autosummary_generate = True
 autosummary_generate_overwrite = False
+
+# In case building docs throws import errors, please add the top level package name below
+autodoc_mock_imports = []
 
 # strip git rev as there won't necessarily be a release based on it
 stripped_release = re.sub(r"-\d+-g[0-9a-f]+$", "", release)
