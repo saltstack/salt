@@ -139,7 +139,21 @@ def _module_dirs(
             ):
                 try:
                     loaded_entry_point = entry_point.load()
-                    for path in loaded_entry_point():
+                    if isinstance(loaded_entry_point, types.ModuleType):
+                        # New way of defining entrypoints
+                        #   [options.entry_points]
+                        #   salt.loader=
+                        #     runner_dirs = thirpartypackage.runners
+                        #     module_dirs = thirpartypackage.modules
+                        loaded_entry_point_paths = loaded_entry_point.__path__
+                    else:
+                        # Old way of defining loader entry points
+                        #   [options.entry_points]
+                        #   salt.loader=
+                        #     runner_dirs = thirpartypackage.loader:func_to_get_list_of_dirs
+                        #     module_dirs = thirpartypackage.loader:func_to_get_list_of_dirs
+                        loaded_entry_point_paths = loaded_entry_point()
+                    for path in loaded_entry_point_paths:
                         ext_type_types.append(path)
                 except Exception as exc:  # pylint: disable=broad-except
                     entry_point_details = entrypoints.name_and_version_from_entry_point(
