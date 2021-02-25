@@ -243,9 +243,6 @@ def __virtual__():
         else:
             return False, "Module win_file: Missing Win32 modules"
 
-    if "dacl.get_owner" not in __utils__:
-        return (False, "Module win_file: Unable to load salt.utils.win_dacl")
-
     return __virtualname__
 
 
