@@ -605,8 +605,9 @@ class FakeSaltExtension:
 
             [options.entry_points]
             salt.loader=
-              module_dirs = {1}.loader:get_module_dirs
+              module_dirs = {1}
               runner_dirs = {1}.loader:get_runner_dirs
+              wheel_dirs = {1}.loader:get_new_style_entry_points
             """.format(
                         self.name, self.pkgname
                     )
@@ -629,6 +630,9 @@ class FakeSaltExtension:
 
             def get_runner_dirs():
                 return [str(PKG_ROOT / "runners1"), str(PKG_ROOT / "runners2")]
+
+            def get_new_style_entry_points():
+                return {"wheel": [str(PKG_ROOT / "the_wheel_modules")]}
             """
                 )
             )
@@ -684,6 +688,36 @@ class FakeSaltExtension:
                 )
             )
             modules_dir.joinpath("foobar2.py").write_text(
+                textwrap.dedent(
+                    """\
+            __virtualname__ = "foobar"
+
+            def __virtual__():
+                return True
+
+            def echo2(string):
+                return string
+            """
+                )
+            )
+
+            wheel_dir = extension_package_dir / "the_wheel_modules"
+            wheel_dir.mkdir()
+            wheel_dir.joinpath("__init__.py").write_text("")
+            wheel_dir.joinpath("foobar1.py").write_text(
+                textwrap.dedent(
+                    """\
+            __virtualname__ = "foobar"
+
+            def __virtual__():
+                return True
+
+            def echo1(string):
+                return string
+            """
+                )
+            )
+            wheel_dir.joinpath("foobar2.py").write_text(
                 textwrap.dedent(
                     """\
             __virtualname__ = "foobar"
