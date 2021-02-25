@@ -271,12 +271,16 @@ def _install_requirements(session, transport, *extra_requirements):
         return
 
     install_command = [
+        "python",
+        "-m",
+        "pip",
+        "install",
         "--progress-bar=off",
         "-U",
         "pip",
         "setuptools!=50.*,!=51.*,!=52.*",
     ]
-    session.install(*install_command, silent=PIP_INSTALL_SILENT)
+    session.run(*install_command, silent=PIP_INSTALL_SILENT)
 
     # Install requirements
     requirements_file = _get_pip_requirements_file(session, transport)
