@@ -35,8 +35,6 @@ def test_present():
         with patch.dict(beacon.__opts__, {"test": False}):
             assert beacon.present(beacon_name) == ret
 
-            assert beacon.present(beacon_name) == ret
-
         with patch.dict(beacon.__opts__, {"test": True}):
             ret.update({"result": True})
             assert beacon.present(beacon_name) == ret
