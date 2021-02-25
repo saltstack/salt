@@ -27,13 +27,16 @@ Module to provide Citrix Netscaler compatibility to Salt (compatible with netsca
     This data can also be passed into pillar. Options passed into opts will
     overwrite options passed into pillar.
 
-:CLI Examples:
+CLI Examples:
+
     Calls relying on configuration passed using /etc/salt/minion, grains, or pillars:
+
     .. code-block:: bash
 
         salt-call netscaler.server_exists server_name
 
     Calls passing configuration as opts
+
     .. code-block:: bash
 
         salt-call netscaler.server_exists server_name netscaler_host=1.2.3.4 netscaler_user=username netscaler_pass=password
@@ -475,7 +478,6 @@ def service_up(s_name, **connection_args):
 def service_enable(s_name, **connection_args):
     """
     Enable a service
-
 
     CLI Example:
 

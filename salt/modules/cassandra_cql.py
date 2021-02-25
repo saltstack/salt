@@ -451,7 +451,6 @@ def cql_query_with_prepare(
     :return:               A dictionary from the return values of the query
     :rtype:                list[dict]
 
-
     CLI Example:
 
     .. code-block:: bash

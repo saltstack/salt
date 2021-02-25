@@ -153,7 +153,6 @@ def enforce_nice_config():
        :py:func:`salt.modules.ebuild.ex_mod_init`
          for information on automatically running this when pkg is used.
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -537,6 +536,7 @@ def has_flag(conf, atom, flag):
 def get_missing_flags(conf, atom, flags):
     """
     Find out which of the given flags are currently not set.
+
     CLI Example:
 
     .. code-block:: bash

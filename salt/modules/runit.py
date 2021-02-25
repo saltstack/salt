@@ -523,6 +523,8 @@ def show(name):
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt '*' service.show <service name>
     """
     ret = {}
