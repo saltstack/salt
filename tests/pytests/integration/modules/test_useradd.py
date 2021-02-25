@@ -24,38 +24,42 @@ def test_groups_includes_primary(setup_teardown_vars, grains, salt_call_cli):
     # Let's create a user, which usually creates the group matching the
     # name
     uname = random_string("RS-", lowercase=False)
-    if salt_call_cli.run("user.add", [uname]) is not True:
+    ret = salt_call_cli.run("user.add", uname)
+    if ret.json is False:
         # Skip because creating is not what we're testing here
         salt_call_cli.run("user.delete", [uname, True, True])
         pytest.skip("Failed to create user")
 
     try:
-        uinfo = salt_call_cli.run("user.info", [uname])
+        uinfo = salt_call_cli.run("user.info", uname)
         if grains["os_family"] in ("Suse",):
-            assert "users" in uinfo["groups"]
+            assert "users" in uinfo.json["groups"]
         else:
-            assert uname in uinfo["groups"]
+            assert uname in uinfo.json["groups"]
 
         # This uid is available, store it
-        uid = uinfo["uid"]
+        uid = uinfo.json["uid"]
 
-        salt_call_cli.run("user.delete", [uname, True, True])
+        salt_call_cli.run("user.delete", uname, True, True)
 
         # Now, a weird group id
         gname = random_string("RS-", lowercase=False)
-        if salt_call_cli.run("group.add", [gname]) is not True:
-            salt_call_cli.run("group.delete", [gname, True, True])
+        ret = salt_call_cli.run("group.add", gname)
+        if ret.json is False:
+            salt_call_cli.run("group.delete", gname, True, True)
             pytest.skip("Failed to create group")
 
-        ginfo = salt_call_cli.run("group.info", [gname])
+        ginfo = salt_call_cli.run("group.info", gname)
+        ginfo = ginfo.json
 
         # And create the user with that gid
-        if salt_call_cli.run("user.add", [uname, uid, ginfo["gid"]]) is False:
+        ret = salt_call_cli.run("user.add", uname, uid, ginfo["gid"])
+        if ret.json is False:
             # Skip because creating is not what we're testing here
             salt_call_cli.run("user.delete", [uname, True, True])
             pytest.skip("Failed to create user")
 
-        uinfo = salt_call_cli.run("user.info", [uname])
+        uinfo = salt_call_cli.run("user.info", uname)
         assert gname in uinfo.json["groups"]
 
     except AssertionError:
@@ -70,18 +74,15 @@ def test_user_primary_group(setup_teardown_vars, salt_call_cli):
     name = "saltyuser"
 
     # Create a user to test primary group function
-    if salt_call_cli.run("user.add", [name]) is not True:
-        salt_call_cli.run("user.delete", [name])
-        pytest.skip(reason="Failed to create a user")
+    ret = salt_call_cli.run("user.add", name)
+    if ret.json is False:
+        salt_call_cli.run("user.delete", name)
+        pytest.skip("Failed to create a user")
 
-    try:
-        # Test useradd.primary_group
-        primary_group = salt_call_cli.run("user.primary_group", [name])
-        uid_info = salt_call_cli.run("user.info", [name])
-        assert primary_group in uid_info.json["groups"]
-
-    except Exception:  # pylint: disable=broad-except
-        pytest.raises(salt_call_cli.run("user.delete", [name]))
+    # Test useradd.primary_group
+    primary_group = salt_call_cli.run("user.primary_group", name)
+    uid_info = salt_call_cli.run("user.info", name)
+    assert primary_group.json in uid_info.json["groups"]
 
 
 @runs_on(kernel="Windows")
