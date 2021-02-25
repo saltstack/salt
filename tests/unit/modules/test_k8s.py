@@ -7,14 +7,14 @@ import hashlib
 import time
 from subprocess import PIPE, Popen
 
+import pytest
 import salt.modules.k8s as k8s
 import salt.utils.files
 import salt.utils.json
-from tests.support.helpers import skip_if_binaries_missing
 from tests.support.unit import TestCase
 
 
-@skip_if_binaries_missing(["kubectl"])
+@pytest.mark.skip_if_binaries_missing("kubectl")
 class TestK8SNamespace(TestCase):
 
     maxDiff = None
@@ -50,7 +50,7 @@ class TestK8SNamespace(TestCase):
         self.assertTrue(isinstance(kubectl_out, dict))
 
 
-@skip_if_binaries_missing(["kubectl"])
+@pytest.mark.skip_if_binaries_missing("kubectl")
 class TestK8SSecrets(TestCase):
 
     maxDiff = None
@@ -201,7 +201,7 @@ class TestK8SSecrets(TestCase):
         )
 
 
-@skip_if_binaries_missing(["kubectl"])
+@pytest.mark.skip_if_binaries_missing("kubectl")
 class TestK8SResourceQuotas(TestCase):
 
     maxDiff = None
@@ -403,7 +403,7 @@ spec:
         self.assertEqual("2Gi", limit)
 
 
-@skip_if_binaries_missing(["kubectl"])
+@pytest.mark.skip_if_binaries_missing("kubectl")
 class TestK8SLimitRange(TestCase):
 
     maxDiff = None

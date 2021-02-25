@@ -2,8 +2,9 @@
 Simple Smoke Tests for Connected SSH minions
 """
 
+import pytest
 from tests.support.case import SSHCase
-from tests.support.helpers import requires_system_grains, skip_if_not_root, slowTest
+from tests.support.helpers import requires_system_grains
 from tests.support.pytest.helpers import temp_state_file
 from tests.support.runtests import RUNTIME_VARS
 
@@ -13,7 +14,7 @@ class SSHMasterTestCase(SSHCase):
     Test ssh master functionality
     """
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_can_it_ping(self):
         """
         Ensure the proxy can ping
@@ -22,8 +23,8 @@ class SSHMasterTestCase(SSHCase):
         self.assertEqual(ret, True)
 
     @requires_system_grains
-    @skip_if_not_root
-    @slowTest
+    @pytest.mark.slow_test
+    @pytest.mark.skip_if_not_root
     def test_service(self, grains):
         service = "cron"
         os_family = grains["os_family"]
@@ -46,7 +47,7 @@ class SSHMasterTestCase(SSHCase):
         ret = self.run_function("service.status", [service])
         self.assertTrue(ret)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_state_apply(self):
         core_state = """
         {}/testfile:
@@ -63,7 +64,7 @@ class SSHMasterTestCase(SSHCase):
             for key, value in ret.items():
                 self.assertTrue(value["result"])
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_state_highstate(self):
         top_sls = """
         base:

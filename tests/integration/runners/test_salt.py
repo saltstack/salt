@@ -6,7 +6,6 @@ Tests for the salt runner
 
 import pytest
 from tests.support.case import ShellCase
-from tests.support.helpers import slowTest
 
 
 @pytest.mark.windows_whitelisted
@@ -15,7 +14,7 @@ class SaltRunnerTest(ShellCase):
     Test the salt runner
     """
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_salt_cmd(self):
         """
         test return values of salt.cmd
@@ -27,7 +26,7 @@ class SaltRunnerTest(ShellCase):
         self.assertEqual(out_ret, "True")
         self.assertTrue(return_ret)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_salt_cmd_invalid(self):
         """
         test return values of salt.cmd invalid parameters

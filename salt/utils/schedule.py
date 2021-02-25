@@ -160,7 +160,18 @@ class Schedule:
                 self.returners = returners
             else:
                 self.returners = returners.loader.gen_functions()
-        self.time_offset = self.functions.get("timezone.get_offset", lambda: "0000")()
+        try:
+            self.time_offset = self.functions.get(
+                "timezone.get_offset", lambda: "0000"
+            )()
+        except Exception:  # pylint: disable=W0703
+            # get_offset can fail, if that happens, default to 0000
+            log.warning(
+                "Unable to obtain correct timezone offset, defaulting to 0000",
+                exc_info_on_loglevel=logging.DEBUG,
+            )
+            self.time_offset = "0000"
+
         self.schedule_returner = self.option("schedule_returner")
         # Keep track of the lowest loop interval needed in this variable
         self.loop_interval = six.MAXSIZE

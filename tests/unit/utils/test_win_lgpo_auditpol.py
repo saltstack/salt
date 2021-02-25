@@ -1,9 +1,9 @@
 import random
 
+import pytest
 import salt.modules.cmdmod
 import salt.utils.platform
 import salt.utils.win_lgpo_auditpol as win_lgpo_auditpol
-from tests.support.helpers import slowTest
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
@@ -32,7 +32,7 @@ class WinLgpoAuditpolTestCase(TestCase, LoaderModuleMockMixin):
             KeyError, win_lgpo_auditpol.get_settings, category="Fake Category"
         )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_get_setting(self):
         names = win_lgpo_auditpol._get_valid_names()
         for name in names:

@@ -8,7 +8,6 @@ import pytest
 import salt.utils.path
 import salt.utils.platform
 from tests.support.case import ModuleCase
-from tests.support.helpers import slowTest
 from tests.support.mixins import SaltReturnAssertsMixin
 
 INIT_DELAY = 5
@@ -70,7 +69,7 @@ class ServiceTest(ModuleCase, SaltReturnAssertsMixin):
             if check_status is not exp_return:
                 self.fail("status of service is not returning correctly")
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_service_running(self):
         """
         test service.running state module
@@ -88,7 +87,7 @@ class ServiceTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(start_service)
         self.check_service_status(self.running)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_service_dead(self):
         """
         test service.dead state module
@@ -101,7 +100,7 @@ class ServiceTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
         self.check_service_status(self.stopped)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_service_dead_init_delay(self):
         """
         test service.dead state module with init_delay arg

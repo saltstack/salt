@@ -1,10 +1,10 @@
 import os
 import tempfile
 
+import pytest
 import salt.utils.path
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 from tests.support.case import ModuleCase
-from tests.support.helpers import slowTest
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
@@ -22,7 +22,7 @@ class VirtualenvModuleTest(ModuleCase):
         self.venv_test_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         self.venv_dir = os.path.join(self.venv_test_dir, "venv")
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_create_defaults(self):
         """
         virtualenv.managed
@@ -31,7 +31,7 @@ class VirtualenvModuleTest(ModuleCase):
         pip_file = os.path.join(self.venv_dir, "bin", "pip")
         self.assertTrue(os.path.exists(pip_file))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_site_packages(self):
         pip_bin = os.path.join(self.venv_dir, "bin", "pip")
         self.run_function(
@@ -43,7 +43,7 @@ class VirtualenvModuleTest(ModuleCase):
         without_site = self.run_function("pip.freeze", bin_env=pip_bin)
         self.assertFalse(with_site == without_site)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_clear(self):
         pip_bin = os.path.join(self.venv_dir, "bin", "pip")
         self.run_function("virtualenv.create", [self.venv_dir])

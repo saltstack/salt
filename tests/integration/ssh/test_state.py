@@ -5,8 +5,8 @@ import shutil
 import threading
 import time
 
+import pytest
 from tests.support.case import SSHCase
-from tests.support.helpers import flaky, slowTest
 from tests.support.pytest.helpers import temp_state_file
 from tests.support.runtests import RUNTIME_VARS
 
@@ -41,7 +41,7 @@ class SSHStateTest(SSHCase):
                 exp_ret=SSH_SLS,
             )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_state_apply(self):
         """
         test state.apply with salt-ssh
@@ -52,7 +52,7 @@ class SSHStateTest(SSHCase):
         check_file = self.run_function("file.file_exists", [SSH_SLS_FILE])
         self.assertTrue(check_file)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_state_sls_id(self):
         """
         test state.sls_id with salt-ssh
@@ -79,7 +79,7 @@ class SSHStateTest(SSHCase):
         check_file = self.run_function("file.file_exists", [SSH_SLS_FILE])
         self.assertTrue(check_file)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_state_sls_wrong_id(self):
         """
         test state.sls_id when id does not exist
@@ -88,7 +88,7 @@ class SSHStateTest(SSHCase):
         ret = self.run_function("state.sls_id", ["doesnotexist", SSH_SLS])
         assert "No matches for ID" in ret
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_state_sls_id_with_pillar(self):
         """
         test state.sls_id with pillar data
@@ -102,7 +102,7 @@ class SSHStateTest(SSHCase):
         )
         self.assertTrue(check_file)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_state_show_sls(self):
         """
         test state.show_sls with salt-ssh
@@ -113,7 +113,7 @@ class SSHStateTest(SSHCase):
         check_file = self.run_function("file.file_exists", [SSH_SLS_FILE], wipe=False)
         self.assertFalse(check_file)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_state_show_top(self):
         """
         test state.show_top with salt-ssh
@@ -140,7 +140,7 @@ class SSHStateTest(SSHCase):
             ret = self.run_function("state.show_top")
             self.assertEqual(ret, {"base": ["core", "master_tops_test"]})
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_state_single(self):
         """
         state.single with salt-ssh
@@ -158,7 +158,7 @@ class SSHStateTest(SSHCase):
             self.assertEqual(value["result"], ret_out["result"])
             self.assertEqual(value["comment"], ret_out["comment"])
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_show_highstate(self):
         """
         state.show_highstate with salt-ssh
@@ -188,7 +188,7 @@ class SSHStateTest(SSHCase):
             self.assertIn(destpath, high)
             self.assertEqual(high[destpath]["__env__"], "base")
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_state_high(self):
         """
         state.high with salt-ssh
@@ -206,7 +206,7 @@ class SSHStateTest(SSHCase):
             self.assertEqual(value["result"], ret_out["result"])
             self.assertEqual(value["comment"], ret_out["comment"])
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_show_lowstate(self):
         """
         state.show_lowstate with salt-ssh
@@ -234,7 +234,7 @@ class SSHStateTest(SSHCase):
             self.assertIsInstance(low, list)
             self.assertIsInstance(low[0], dict)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_state_low(self):
         """
         state.low with salt-ssh
@@ -253,7 +253,7 @@ class SSHStateTest(SSHCase):
             self.assertEqual(value["result"], ret_out["result"])
             self.assertEqual(value["comment"], ret_out["comment"])
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_state_request_check_clear(self):
         """
         test state.request system with salt-ssh
@@ -267,7 +267,7 @@ class SSHStateTest(SSHCase):
         clear = self.run_function("state.clear_request", wipe=False)
         self._check_request(empty=True)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_state_run_request(self):
         """
         test state.request system with salt-ssh
@@ -281,8 +281,8 @@ class SSHStateTest(SSHCase):
         check_file = self.run_function("file.file_exists", [SSH_SLS_FILE], wipe=False)
         self.assertTrue(check_file)
 
-    @flaky
-    @slowTest
+    @pytest.mark.flaky(max_runs=4)
+    @pytest.mark.slow_test
     def test_state_running(self):
         """
         test state.running with salt-ssh

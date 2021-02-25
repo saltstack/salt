@@ -6,13 +6,7 @@ import os
 
 import pytest
 from tests.support.case import ModuleCase
-from tests.support.helpers import (
-    requires_system_grains,
-    runs_on,
-    skip_if_binaries_missing,
-    skip_if_not_root,
-    slowTest,
-)
+from tests.support.helpers import requires_system_grains, runs_on
 from tests.support.runtests import RUNTIME_VARS
 
 TEST_PKG_URL = (
@@ -22,8 +16,8 @@ TEST_PKG_NAME = "org.macports.MacPorts"
 
 
 @runs_on(kernel="Darwin")
-@skip_if_not_root
-@skip_if_binaries_missing("pkgutil")
+@pytest.mark.skip_if_not_root
+@pytest.mark.skip_if_binaries_missing("pkgutil")
 class MacPkgutilModuleTest(ModuleCase):
     """
     Validate the mac_pkgutil module
@@ -52,7 +46,7 @@ class MacPkgutilModuleTest(ModuleCase):
         self.run_function("pkgutil.forget", [TEST_PKG_NAME])
         self.run_function("file.remove", ["/opt/local"])
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_list(self):
         """
         Test pkgutil.list
@@ -60,7 +54,7 @@ class MacPkgutilModuleTest(ModuleCase):
         self.assertIsInstance(self.run_function("pkgutil.list"), list)
         self.assertIn(self.pkg_name, self.run_function("pkgutil.list"))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_is_installed(self):
         """
         Test pkgutil.is_installed
@@ -72,7 +66,7 @@ class MacPkgutilModuleTest(ModuleCase):
         self.assertFalse(self.run_function("pkgutil.is_installed", ["spongebob"]))
 
     @pytest.mark.destructive_test
-    @slowTest
+    @pytest.mark.slow_test
     def test_install_forget(self):
         """
         Test pkgutil.install

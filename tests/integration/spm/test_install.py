@@ -10,7 +10,7 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.yaml
 from tests.support.case import SPMCase
-from tests.support.helpers import Webserver, slowTest
+from tests.support.helpers import Webserver
 
 
 @pytest.mark.destructive_test
@@ -58,7 +58,7 @@ class SPMInstallTest(SPMCase):
 
         self.assertTrue(os.path.exists(sls))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_spm_install_local_dir(self):
         """
         test spm install from local directory
@@ -72,7 +72,7 @@ class SPMInstallTest(SPMCase):
 
         self.assertTrue(os.path.exists(sls))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_spm_install_from_repo(self):
         """
         test spm install from repo

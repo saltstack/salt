@@ -1,7 +1,6 @@
 import pytest
 import salt.utils.platform
 from tests.support.case import ModuleCase
-from tests.support.helpers import slowTest
 from tests.support.unit import skipIf
 
 
@@ -25,7 +24,7 @@ class FirewallTest(ModuleCase):
                     self.assertTrue(self.run_function("firewall.disable", profile=net))
 
     @pytest.mark.destructive_test
-    @slowTest
+    @pytest.mark.slow_test
     def test_firewall_get_config(self):
         """
         test firewall.get_config
@@ -40,7 +39,7 @@ class FirewallTest(ModuleCase):
         self._pre_firewall_status(pre_run)
 
     @pytest.mark.destructive_test
-    @slowTest
+    @pytest.mark.slow_test
     def test_firewall_disable(self):
         """
         test firewall.disable
@@ -58,7 +57,7 @@ class FirewallTest(ModuleCase):
         self._pre_firewall_status(pre_run)
 
     @pytest.mark.destructive_test
-    @slowTest
+    @pytest.mark.slow_test
     def test_firewall_enable(self):
         """
         test firewall.enable
@@ -75,7 +74,7 @@ class FirewallTest(ModuleCase):
         self.assertTrue(ret)
         self._pre_firewall_status(pre_run)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_firewall_get_rule(self):
         """
         test firewall.get_rule
@@ -88,7 +87,7 @@ class FirewallTest(ModuleCase):
             self.assertIn(check, ret[rule])
 
     @pytest.mark.destructive_test
-    @slowTest
+    @pytest.mark.slow_test
     def test_firewall_add_delete_rule(self):
         """
         test firewall.add_rule and delete_rule

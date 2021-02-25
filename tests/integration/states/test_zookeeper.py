@@ -7,7 +7,6 @@ import logging
 import pytest
 import salt.utils.path
 from tests.support.case import ModuleCase
-from tests.support.helpers import slowTest
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.unit import skipIf
 
@@ -47,7 +46,7 @@ class ZookeeperTestCase(ModuleCase, SaltReturnAssertsMixin):
         self.run_state("docker_container.absent", name=self.container_name)
         self.run_state("docker_image.absent", name="docker.io/zookeeper", force=True)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_zookeeper_present(self):
         ret = self.run_state(
             "zookeeper.present", name="/test/name", value="testuser", makepath=True,
@@ -72,7 +71,7 @@ class ZookeeperTestCase(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_zookeeper_absent(self):
         self.run_state(
             "zookeeper.present", name="/test/name", value="testuser", makepath=True,
@@ -87,7 +86,7 @@ class ZookeeperTestCase(ModuleCase, SaltReturnAssertsMixin):
             bool(ret["zookeeper_|-/test/name_|-/test/name_|-absent"]["changes"])
         )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_zookeeper_acls(self):
         ret = self.run_state(
             "zookeeper.acls",

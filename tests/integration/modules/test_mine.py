@@ -8,7 +8,6 @@ import time
 import pytest
 import salt.utils.platform
 from tests.support.case import ModuleCase, ShellCase
-from tests.support.helpers import slowTest
 from tests.support.runtests import RUNTIME_VARS
 
 
@@ -25,7 +24,7 @@ class MineTest(ModuleCase, ShellCase):
             self.tgt = "*"
         self.wait_for_all_jobs()
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_get(self):
         """
         test mine.get and mine.update
@@ -36,7 +35,7 @@ class MineTest(ModuleCase, ShellCase):
         # mine.update will return True
         self.assertTrue(self.run_function("mine.get", ["minion", "test.ping"]))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_get_allow_tgt(self):
         """
         test mine.get and mine.update using allow_tgt
@@ -55,7 +54,7 @@ class MineTest(ModuleCase, ShellCase):
         min_ret = self.run_call("mine.get {} test.arg".format(self.tgt))
         assert "            - isn't" not in min_ret
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_send_allow_tgt(self):
         """
         test mine.send with allow_tgt set
@@ -79,7 +78,7 @@ class MineTest(ModuleCase, ShellCase):
         # ensure we did not get the mine_name mine function for minion
         assert "            - one" not in min_ret
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_send_allow_tgt_compound(self):
         """
         test mine.send with allow_tgt set
@@ -104,7 +103,7 @@ class MineTest(ModuleCase, ShellCase):
         for ret in [min_ret, sub_ret]:
             assert "            - one" in ret
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_send_allow_tgt_doesnotexist(self):
         """
         test mine.send with allow_tgt set when
@@ -129,7 +128,7 @@ class MineTest(ModuleCase, ShellCase):
         for ret in [sub_ret, min_ret]:
             assert "            - one" not in ret
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_send(self):
         """
         test mine.send
@@ -148,7 +147,7 @@ class MineTest(ModuleCase, ShellCase):
         )
         self.assertEqual(ret["minion"]["id"], "minion")
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_mine_flush(self):
         """
         Test mine.flush
@@ -173,7 +172,7 @@ class MineTest(ModuleCase, ShellCase):
         self.assertEqual(ret_flushed.get("minion", None), None)
         self.assertEqual(ret_flushed["sub_minion"]["id"], "sub_minion")
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_mine_delete(self):
         """
         Test mine.delete

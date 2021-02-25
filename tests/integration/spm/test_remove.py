@@ -7,7 +7,6 @@ import shutil
 
 import pytest
 from tests.support.case import SPMCase
-from tests.support.helpers import slowTest
 
 
 @pytest.mark.windows_whitelisted
@@ -21,7 +20,7 @@ class SPMRemoveTest(SPMCase):
         self.config = self._spm_config()
         self._spm_build_files(self.config)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_spm_remove(self):
         """
         test spm remove from an inital repo install

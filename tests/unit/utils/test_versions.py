@@ -12,12 +12,12 @@ import os
 import sys
 import warnings
 
+import pytest
 import salt.modules.cmdmod
 import salt.utils.platform
 import salt.utils.versions
 import salt.version
 from salt.utils.versions import LooseVersion, StrictVersion
-from tests.support.helpers import slowTest
 from tests.support.mock import patch
 from tests.support.paths import SALT_CODE_DIR
 from tests.support.unit import TestCase, skipIf
@@ -94,7 +94,7 @@ class VersionTestCase(TestCase):
             )
 
     @skipIf(not salt.utils.platform.is_linux(), "only need to run on linux")
-    @slowTest
+    @pytest.mark.slow_test
     def test_spelling_version_name(self):
         """
         check the spelling of the version name for the release

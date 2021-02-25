@@ -13,7 +13,6 @@ import salt.states.win_lgpo
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.stringutils
-from tests.support.helpers import slowTest
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, patch
 from tests.support.unit import TestCase, skipIf
@@ -865,7 +864,7 @@ class WinLGPOGetPointAndPrintENTestCase(TestCase, LoaderModuleMockMixin):
             return results
         return "Policy Not Found"
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_point_and_print_enabled(self):
         result = self._get_policy_adm_setting(
             policy_name="Point and Print Restrictions",
@@ -926,7 +925,7 @@ class WinLGPOGetPointAndPrintENTestCase(TestCase, LoaderModuleMockMixin):
         }
         self.assertDictEqual(result, expected)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_point_and_print_enabled_full_names_hierarchical(self):
         result = self._get_policy_adm_setting(
             policy_name="Point and Print Restrictions",

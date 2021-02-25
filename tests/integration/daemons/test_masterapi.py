@@ -2,10 +2,10 @@ import os
 import shutil
 import stat
 
+import pytest
 import salt.utils.files
 import salt.utils.stringutils
 from tests.support.case import ShellCase
-from tests.support.helpers import slowTest
 from tests.support.runtests import RUNTIME_VARS
 
 
@@ -56,7 +56,7 @@ class AutosignGrainsTest(ShellCase):
         except AttributeError:
             pass
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_autosign_grains_accept(self):
         grain_file_path = os.path.join(self.autosign_grains_dir, "test_grain")
         with salt.utils.files.fopen(grain_file_path, "w") as f:
@@ -68,7 +68,7 @@ class AutosignGrainsTest(ShellCase):
         )  # get minion to try to authenticate itself again
         self.assertIn("minion", self.run_key("-l acc"))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_autosign_grains_fail(self):
         grain_file_path = os.path.join(self.autosign_grains_dir, "test_grain")
         with salt.utils.files.fopen(grain_file_path, "w") as f:

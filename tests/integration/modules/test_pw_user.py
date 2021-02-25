@@ -1,19 +1,17 @@
 """
-    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
-
-    tests.integration.modules.pw_user
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests.integration.modules.pw_user
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
 
 import pytest
 from tests.support.case import ModuleCase
-from tests.support.helpers import random_string, runs_on, skip_if_not_root
+from tests.support.helpers import random_string, runs_on
 
 
 @runs_on(kernel="FreeBSD")
 class PwUserModuleTest(ModuleCase):
     @pytest.mark.destructive_test
-    @skip_if_not_root
+    @pytest.mark.skip_if_not_root
     def test_groups_includes_primary(self):
         # Let's create a user, which usually creates the group matching the name
         uname = random_string("PWU-", lowercase=False)

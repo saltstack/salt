@@ -2,11 +2,11 @@ import logging
 import random
 import string
 
+import pytest
 import salt.config
 import salt.loader
 import salt.states.boto_iot as boto_iot
 from salt.utils.versions import LooseVersion
-from tests.support.helpers import slowTest
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
@@ -255,7 +255,7 @@ class BotoIoTThingTypeTestCase(BotoIoTStateTestCaseBase, BotoIoTTestCaseMixin):
         self.assertTrue(result["result"])
         self.assertEqual(result["changes"], {})
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_absent_when_thing_type_exists(self):
         """
         Tests absent on a thing type

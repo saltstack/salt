@@ -146,6 +146,8 @@ def members(name, members_list):
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt '*' group.members foo 'user1,user2,user3,...'
 
     Replaces a membership list for a local group 'foo'.

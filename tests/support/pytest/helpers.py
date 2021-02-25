@@ -138,6 +138,23 @@ def temp_file(name=None, contents=None, directory=None, strip_first_newline=True
             file_path.unlink()
             log.debug("Deleted temp file: %s", file_path)
 
+        try:
+            file_path.relative_to(directory)
+
+            created_directory = file_path.parent
+            while True:
+                if created_directory == directory:
+                    break
+                if created_directory.parent == directory:
+                    break
+                created_directory = created_directory.parent
+            if created_directory != directory:
+                shutil.rmtree(str(created_directory), ignore_errors=True)
+                log.debug("Deleted temp directory: %s", created_directory)
+        except ValueError:
+            # The 'file_path' is not located within 'directory'
+            pass
+
 
 @pytest.helpers.register
 def temp_state_file(name, contents, saltenv="base", strip_first_newline=True):

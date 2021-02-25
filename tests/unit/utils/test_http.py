@@ -5,15 +5,16 @@
 import socket
 from contextlib import closing
 
+import pytest
 import salt.utils.http as http
-from tests.support.helpers import MirrorPostHandler, Webserver, slowTest
+from tests.support.helpers import MirrorPostHandler, Webserver
 from tests.support.mock import MagicMock, patch
 from tests.support.pytest.helpers import temp_state_file
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
 
 try:
-    import tornado.curl_httpclient  # pylint: disable=unused-import
+    import salt.ext.tornado.curl_httpclient  # pylint: disable=unused-import
 
     HAS_CURL = True
 except ImportError:
@@ -115,7 +116,7 @@ class HTTPTestCase(TestCase):
         ret = http._sanitize_url_components(mock_component_list, "foo")
         self.assertEqual(ret, mock_ret)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_query_null_response(self):
         """
         This tests that we get a null response when raise_error=False and the

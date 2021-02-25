@@ -1,11 +1,11 @@
 import os
 
+import pytest
 import salt.modules.cmdmod as cmd
 import salt.modules.virtualenv_mod
 import salt.modules.zcbuildout as modbuildout
 import salt.states.zcbuildout as buildout
 import salt.utils.path
-from tests.support.helpers import requires_network, slowTest
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 from tests.unit.modules.test_zcbuildout import KNOWN_VIRTUALENV_BINARY_NAMES, Base
@@ -15,7 +15,7 @@ from tests.unit.modules.test_zcbuildout import KNOWN_VIRTUALENV_BINARY_NAMES, Ba
     salt.utils.path.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES) is None,
     "The 'virtualenv' packaged needs to be installed",
 )
-@requires_network()
+@pytest.mark.requires_network
 class BuildoutTestCase(Base):
     def setup_loader_modules(self):
         module_globals = {
@@ -43,7 +43,7 @@ class BuildoutTestCase(Base):
         self.assertFalse("Log summary:" in cret["comment"], cret["comment"])
         self.assertTrue(cret["result"], cret["comment"])
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_error(self):
         b_dir = os.path.join(self.tdir, "e")
         ret = buildout.installed(b_dir, python=self.py_st)
@@ -52,7 +52,7 @@ class BuildoutTestCase(Base):
         )
         self.assertFalse(ret["result"])
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_installed(self):
         if salt.modules.virtualenv_mod.virtualenv_ver(self.ppy_st) >= (20, 0, 0):
             self.skipTest(
