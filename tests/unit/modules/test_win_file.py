@@ -1,5 +1,5 @@
 """
-:codeauthor: Shane Lee <slee@saltstack.com>
+:codeauthor: Shane Lee <leesh@vmware.com>
 """
 import os
 import sys
