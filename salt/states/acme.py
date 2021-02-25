@@ -2,7 +2,7 @@
 ACME / Let's Encrypt certificate management state
 =================================================
 
-.. versionadded: 2016.3
+.. versionadded:: 2016.3
 
 See also the module documentation
 

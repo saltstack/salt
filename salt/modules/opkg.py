@@ -7,7 +7,7 @@ Support for Opkg
     *'pkg.install' is not available*), see :ref:`here
     <module-provider-override>`.
 
-.. versionadded: 2016.3.0
+.. versionadded:: 2016.3.0
 
 .. note::
 
@@ -752,7 +752,6 @@ def upgrade(refresh=True, **kwargs):  # pylint: disable=unused-argument
         {'<package>':  {'old': '<old-version>',
                         'new': '<new-version>'}}
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -1137,7 +1136,7 @@ def info_installed(*names, **kwargs):
             install_date_time_t, md5sum, packager, provides, recommends,
             replaces, size, source, suggests, url, version
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -1625,6 +1624,8 @@ def owner(*paths, **kwargs):  # pylint: disable=unused-argument
     then an empty string will be returned for that path.
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.owner /usr/bin/apachectl
         salt '*' pkg.owner /usr/bin/apachectl /usr/bin/basename

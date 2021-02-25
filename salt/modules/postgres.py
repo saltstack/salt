@@ -126,7 +126,7 @@ def __virtual__():
 
 def _find_pg_binary(util):
     """
-    ... versionadded::  2016.3.2
+    .. versionadded:: 2016.3.2
 
     Helper function to locate various psql related binaries
     """
@@ -3574,7 +3574,7 @@ def datadir_init(
     checksums
         If True, the cluster will be created with data page checksums.
 
-        .. note::  Data page checksums are supported since PostgreSQL 9.3.
+        .. note:: Data page checksums are supported since PostgreSQL 9.3.
 
         .. versionadded:: 2019.2.0
 
@@ -3593,6 +3593,7 @@ def datadir_init(
         password=password,
         encoding=encoding,
         locale=locale,
+        waldir=waldir,
         checksums=checksums,
         runas=runas,
     )

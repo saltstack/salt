@@ -252,7 +252,7 @@ def lv_present(
         Any supported options to lvcreate. See
         :mod:`linux_lvm <salt.modules.linux_lvm>` for more details.
 
-    .. versionadded:: to_complete
+    .. versionadded:: 2016.11.0
 
     thinvolume
         Logical Volume is thinly provisioned

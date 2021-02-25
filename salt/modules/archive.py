@@ -670,7 +670,6 @@ def cmd_zip(zip_file, sources, template=None, cwd=None, runas=None):
 
         .. versionadded:: 2015.5.0
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -907,7 +906,6 @@ def cmd_unzip(
             appear in the log.
 
         .. versionadded:: 2016.11.0
-
 
     CLI Example:
 
