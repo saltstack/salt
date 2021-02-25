@@ -65,6 +65,9 @@ def test_compound_with_minion_id():
             opts={"extension_modules": "", "id": "bar03"},
         )
 
+        # Ensure that the id of the minion is bar03
+        assert match.__opts__["id"] == "bar03"
+
 
 def test_compound():
     """
