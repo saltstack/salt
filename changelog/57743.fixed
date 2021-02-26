@@ -1,4 +1,0 @@
-Moving import salt.modules.vsphere into `__virtual__` so we have access to test proxytype in opts,
-previously this was causing a traceback when run on proxy minion as `__opts__` does not exist
-outside of any functions. Introducing a new utils function, is_proxytype, to check that the
-device is a proxy minion and also that the proxy type matches.

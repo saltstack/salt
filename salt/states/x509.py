@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage X509 Certificates
 
@@ -24,7 +23,7 @@ For remote signing, peers must be permitted to remotely call the
 
     peer:
       .*:
-        - sign_remote_certificate
+        - x509.sign_remote_certificate
 
 
 /srv/salt/top.sls
@@ -170,7 +169,6 @@ be considered valid.
         - backup: True
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 import datetime
@@ -372,7 +370,7 @@ def csr_managed(name, **kwargs):
     try:
         old = __salt__["x509.read_csr"](name)
     except salt.exceptions.SaltInvocationError:
-        old = "{0} is not a valid csr.".format(name)
+        old = "{} is not a valid csr.".format(name)
 
     file_args, kwargs = _get_file_args(name, **kwargs)
     file_args["contents"] = __salt__["x509.create_csr"](text=True, **kwargs)
@@ -431,6 +429,9 @@ def _certificate_info_matches(cert_info, required_cert_info, check_serial=False)
 
     diff = []
     for k, v in required_cert_info.items():
+        # cert info comes as byte string
+        if isinstance(v, str):
+            v = salt.utils.stringutils.to_bytes(v)
         try:
             if v != cert_info[k]:
                 if k == "Subject Hash":
@@ -495,7 +496,7 @@ def _certificate_is_valid(name, days_remaining, append_certs, **cert_spec):
     If False, also provide a message explaining why.
     """
     if not os.path.isfile(name):
-        return False, "{0} does not exist".format(name), {}
+        return False, "{} does not exist".format(name), {}
 
     try:
         cert_info = __salt__["x509.read_certificate"](certificate=name)
@@ -504,7 +505,7 @@ def _certificate_is_valid(name, days_remaining, append_certs, **cert_spec):
         )
         if not isinstance(required_cert_info, dict):
             raise salt.exceptions.SaltInvocationError(
-                "Unable to create new certificate: x509 module error: {0}".format(
+                "Unable to create new certificate: x509 module error: {}".format(
                     required_cert_info
                 )
             )
@@ -532,7 +533,7 @@ def _certificate_is_valid(name, days_remaining, append_certs, **cert_spec):
         if not matches:
             return (
                 False,
-                "Certificate properties are different: {0}".format(", ".join(diff)),
+                "Certificate properties are different: {}".format(", ".join(diff)),
                 cert_info,
             )
 
@@ -540,7 +541,7 @@ def _certificate_is_valid(name, days_remaining, append_certs, **cert_spec):
         if days_remaining != 0 and actual_days_remaining < days_remaining:
             return (
                 False,
-                "Certificate needs renewal: {0} days remaining but it needs to be at least {1}".format(
+                "Certificate needs renewal: {} days remaining but it needs to be at least {}".format(
                     actual_days_remaining, days_remaining
                 ),
                 cert_info,
@@ -548,7 +549,7 @@ def _certificate_is_valid(name, days_remaining, append_certs, **cert_spec):
 
         return True, "", cert_info
     except salt.exceptions.SaltInvocationError as e:
-        return False, "{0} is not a valid certificate: {1}".format(name, str(e)), {}
+        return False, "{} is not a valid certificate: {}".format(name, str(e)), {}
 
 
 def _certificate_file_managed(ret, file_args):
@@ -560,7 +561,7 @@ def _certificate_file_managed(ret, file_args):
 
     ret["result"] = file_ret["result"]
     if ret["result"]:
-        ret["comment"] = "Certificate {0} is valid and up to date".format(ret["name"])
+        ret["comment"] = "Certificate {} is valid and up to date".format(ret["name"])
     else:
         ret["comment"] = file_ret["comment"]
 
@@ -651,9 +652,13 @@ def certificate_managed(
             "signing_policy must be specified if ca_server is."
         )
 
-    if "public_key" not in kwargs and "signing_private_key" not in kwargs:
+    if (
+        "public_key" not in kwargs
+        and "signing_private_key" not in kwargs
+        and "csr" not in kwargs
+    ):
         raise salt.exceptions.SaltInvocationError(
-            "public_key or signing_private_key must be specified."
+            "public_key, signing_private_key, or csr must be specified."
         )
 
     if managed_private_key:
@@ -686,7 +691,7 @@ def certificate_managed(
         ret = _certificate_file_managed(ret, file_args)
 
         ret["result"] = None
-        ret["comment"] = "Certificate {0} will be created".format(name)
+        ret["comment"] = "Certificate {} will be created".format(name)
         ret["changes"]["Status"] = {
             "Old": invalid_reason,
             "New": "Certificate will be valid and up to date",
@@ -701,7 +706,7 @@ def certificate_managed(
         ret["result"] = False
         ret[
             "comment"
-        ] = "An error occurred creating the certificate {0}. The result returned from x509.create_certificate is not a valid PEM file:\n{1}".format(
+        ] = "An error occurred creating the certificate {}. The result returned from x509.create_certificate is not a valid PEM file:\n{}".format(
             name, str(e)
         )
         return ret
@@ -718,7 +723,7 @@ def certificate_managed(
             ret["result"] = False
             ret[
                 "comment"
-            ] = "{0} is not a valid certificate file, cannot append it to the certificate {1}.\nThe error returned by the x509 module was:\n{2}".format(
+            ] = "{} is not a valid certificate file, cannot append it to the certificate {}.\nThe error returned by the x509 module was:\n{}".format(
                 append_file, name, str(e)
             )
             return ret
@@ -833,9 +838,9 @@ def crl_managed(
             if days_remaining == 0:
                 days_remaining = current_days_remaining - 1
         except salt.exceptions.SaltInvocationError:
-            current = "{0} is not a valid CRL.".format(name)
+            current = "{} is not a valid CRL.".format(name)
     else:
-        current = "{0} does not exist.".format(name)
+        current = "{} does not exist.".format(name)
 
     new_crl = __salt__["x509.create_crl"](
         text=True,

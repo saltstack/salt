@@ -1,2 +1,0 @@
-Grains module delkey and delval methods now support the force option. This is
-needed for deleting grains with complex (nested) values.

@@ -1,16 +1,13 @@
-# -*- coding: utf-8 -*-
-
 """
 Tests for the SVN state
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import shutil
 import socket
 
+import pytest
 from tests.support.case import ModuleCase
-from tests.support.helpers import slowTest
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
 
@@ -21,7 +18,7 @@ class SvnTest(ModuleCase, SaltReturnAssertsMixin):
     """
 
     def setUp(self):
-        super(SvnTest, self).setUp()
+        super().setUp()
 
         if not self.run_function("cmd.has_exec", ["svn"]):
             self.skipTest("The executable 'svn' is not available.")
@@ -32,12 +29,12 @@ class SvnTest(ModuleCase, SaltReturnAssertsMixin):
                 # 10 second dns timeout
                 socket.setdefaulttimeout(10)
             socket.gethostbyname(self.__domain)
-        except socket.error:
+        except OSError:
             msg = "error resolving {0}, possible network issue?"
             self.skipTest(msg.format(self.__domain))
 
         self.target = os.path.join(RUNTIME_VARS.TMP, "apache_http_test_repo")
-        self.name = "http://{0}/repos/asf/httpd/httpd/trunk/test/".format(self.__domain)
+        self.name = "http://{}/repos/asf/httpd/httpd/trunk/test/".format(self.__domain)
         self.new_rev = "1456987"
 
     def tearDown(self):
@@ -45,7 +42,7 @@ class SvnTest(ModuleCase, SaltReturnAssertsMixin):
         # Reset the dns timeout after the test is over
         socket.setdefaulttimeout(None)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_latest(self):
         """
         svn.latest
@@ -58,7 +55,7 @@ class SvnTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltStateChangesEqual(ret, self.name, keys=["new"])
         self.assertSaltStateChangesEqual(ret, self.new_rev, keys=["revision"])
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_latest_failure(self):
         """
         svn.latest
@@ -72,7 +69,7 @@ class SvnTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltFalseReturn(ret)
         self.assertFalse(os.path.isdir(os.path.join(self.target, ".svn")))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_latest_empty_dir(self):
         """
         svn.latest
@@ -103,7 +100,7 @@ class SvnTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
         self.assertSaltStateChangesEqual(
-            ret, "{0} => {1}".format(current_rev, self.new_rev), keys=["revision"]
+            ret, "{} => {}".format(current_rev, self.new_rev), keys=["revision"]
         )
         self.assertTrue(os.path.isdir(os.path.join(self.target, ".svn")))
 

@@ -1,11 +1,7 @@
-# -*- coding: utf-8 -*-
-
 """
 :maintainer:    Alberto Planas <aplanas@suse.com>
 :platform:      Linux
 """
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import pytest
 import salt.states.btrfs as btrfs
@@ -210,6 +206,33 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
             btrfs.__opts__, opts_mock
         ):
             assert btrfs.subvolume_created(name="@/var", device="/dev/sda1") == {
+                "name": "@/var",
+                "result": True,
+                "changes": {},
+                "comment": ["Subvolume @/var already present"],
+            }
+            salt_mock["btrfs.subvolume_exists"].assert_called_with("/tmp/xxx/@/var")
+            mount.assert_called_once()
+            umount.assert_called_once()
+
+    @skipIf(salt.utils.platform.is_windows(), "Skip on Windows")
+    @patch("salt.states.btrfs._umount")
+    @patch("salt.states.btrfs._mount")
+    def test_subvolume_created_exists_decorator(self, mount, umount):
+        """
+        Test creating a subvolume using a non-kwargs call
+        """
+        mount.return_value = "/tmp/xxx"
+        salt_mock = {
+            "btrfs.subvolume_exists": MagicMock(return_value=True),
+        }
+        opts_mock = {
+            "test": False,
+        }
+        with patch.dict(btrfs.__salt__, salt_mock), patch.dict(
+            btrfs.__opts__, opts_mock
+        ):
+            assert btrfs.subvolume_created("@/var", "/dev/sda1") == {
                 "name": "@/var",
                 "result": True,
                 "changes": {},

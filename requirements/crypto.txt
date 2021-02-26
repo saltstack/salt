@@ -1,1 +1,1 @@
-pycryptodomex>=3.9.7
+pycryptodomex>=3.9.8

@@ -1,0 +1,1 @@
+Fixing _sanitze_comments to use sqlparse instead of re.sub.

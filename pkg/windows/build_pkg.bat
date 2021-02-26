@@ -134,21 +134,12 @@ If Defined ProgramFiles(x86) (
 If Exist "%PreDir%" rd /s /q "%PreDir%"
 mkdir "%PreDir%"
 
-:: UCRT for 32bit is required for both x86 and x64 builds
-@echo.
-@echo Copying Universal C Runtimes X86 to Prerequisites
-@echo ----------------------------------------------------------------------
-set Url=http://repo.saltstack.com/windows/dependencies/32/ucrt_x86.zip
-set Name=ucrt_x86.zip
-@echo - Downloading %Name%
-powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url% -file "%PreDir%\%Name%"
-
 :: 32 bit binaries only needed for x86 installer
 :: ProgramFiles(x86) is defined on AMD64 systems
 :: If it's defined, skip the x86 binaries
-If Defined ProgramFiles(x86) goto vcredist_2013_x64
+If Defined ProgramFiles(x86) goto dependencies_x64
 
-:vcredist_2013_x86
+:dependencies_x86
 @echo.
 @echo Copying VCRedist 2013 X86 to Prerequisites
 @echo ----------------------------------------------------------------------
@@ -157,10 +148,18 @@ set Name=vcredist_x86_2013.exe
 @echo - Downloading %Name%
 powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url% -file "%PreDir%\%Name%"
 
+@echo.
+@echo Copying Universal C Runtimes X86 to Prerequisites
+@echo ----------------------------------------------------------------------
+set Url=http://repo.saltstack.com/windows/dependencies/32/ucrt_x86.zip
+set Name=ucrt_x86.zip
+@echo - Downloading %Name%
+powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url% -file "%PreDir%\%Name%"
+
 goto prereq_end
 
 :: These are only needed on 64bit installer
-:vcredist_2013_x64
+:dependencies_x64
 @echo.
 @echo Copying VCRedist 2013 X64 to Prerequisites
 @echo ----------------------------------------------------------------------
@@ -176,7 +175,6 @@ set Url=http://repo.saltstack.com/windows/dependencies/64/ucrt_x64.zip
 set Name=ucrt_x64.zip
 @echo - Downloading %Name%
 powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url% -file "%PreDir%\%Name%"
-
 
 :prereq_end
 

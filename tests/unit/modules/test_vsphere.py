@@ -1,13 +1,9 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Nicole Thomas <nicole@saltstack.com>
     :codeauthor: Alexandru Bleotu <alexandru.bleotu@morganstanley.com>
 
     Tests for functions in salt.modules.vsphere
 """
-
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.modules.vsphere as vsphere
 import salt.utils.args
@@ -18,16 +14,10 @@ from salt.exceptions import (
     VMwareObjectRetrievalError,
     VMwareSaltError,
 )
-
-# Import Salt Libs
-from salt.ext.six import text_type
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, call, patch
 from tests.support.unit import TestCase, skipIf
 
-# Import Third Party Libs
 try:
     from pyVmomi import vim, vmodl  # pylint: disable=unused-import,no-name-in-module
 
@@ -36,8 +26,7 @@ except ImportError:
     HAS_PYVMOMI = False
 
 try:
-    # pylint: disable=unused-import
-    from com.vmware.vapi.std_client import DynamicID
+    from com.vmware.vapi.std_client import DynamicID  # pylint: disable=unused-import
 
     HAS_VSPHERE_SDK = True
 except ImportError:
@@ -57,7 +46,7 @@ class VsphereTestCase(TestCase, LoaderModuleMockMixin):
     """
 
     def setup_loader_modules(self):
-        return {vsphere: {"__virtual__": MagicMock(return_value="vsphere")}}
+        return {vsphere: {}}
 
     # Tests for get_coredump_network_config function
 
@@ -819,7 +808,7 @@ class VsphereTestCase(TestCase, LoaderModuleMockMixin):
         config = "foo"
         ret = {
             "success": False,
-            "message": "'{0}' is not a valid config variable.".format(config),
+            "message": "'{}' is not a valid config variable.".format(config),
         }
         self.assertEqual(
             ret, vsphere._set_syslog_config_helper(HOST, USER, PASSWORD, config, "bar")
@@ -857,7 +846,7 @@ class GetProxyTypeTestCase(TestCase, LoaderModuleMockMixin):
     """
 
     def setup_loader_modules(self):
-        return {vsphere: {"__virtual__": MagicMock(return_value="vsphere")}}
+        return {vsphere: {}}
 
     def test_output(self):
         with patch.dict(
@@ -869,14 +858,14 @@ class GetProxyTypeTestCase(TestCase, LoaderModuleMockMixin):
 
 class SupportsProxiesTestCase(TestCase, LoaderModuleMockMixin):
     """
-    Tests for salt.modules.vsphere.supports_proxies decorator
+    Tests for salt.modules.vsphere._supports_proxies decorator
     """
 
     def setup_loader_modules(self):
-        return {vsphere: {"__virtual__": MagicMock(return_value="vsphere")}}
+        return {vsphere: {}}
 
     def test_supported_proxy(self):
-        @vsphere.supports_proxies("supported")
+        @vsphere._supports_proxies("supported")
         def mock_function():
             return "fake_function"
 
@@ -887,7 +876,7 @@ class SupportsProxiesTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual("fake_function", ret)
 
     def test_unsupported_proxy(self):
-        @vsphere.supports_proxies("supported")
+        @vsphere._supports_proxies("supported")
         def mock_function():
             return "fake_function"
 
@@ -908,7 +897,7 @@ class _GetProxyConnectionDetailsTestCase(TestCase, LoaderModuleMockMixin):
     """
 
     def setup_loader_modules(self):
-        return {vsphere: {"__virtual__": MagicMock(return_value="vsphere")}}
+        return {vsphere: {}}
 
     def setUp(self):
         self.esxi_host_details = {
@@ -1114,7 +1103,7 @@ class _GetProxyConnectionDetailsTestCase(TestCase, LoaderModuleMockMixin):
 
 class GetsServiceInstanceViaProxyTestCase(TestCase, LoaderModuleMockMixin):
     """
-    Tests for salt.modules.vsphere.gets_service_instance_via_proxy
+    Tests for salt.modules.vsphere._gets_service_instance_via_proxy
     decorator
     """
 
@@ -1125,12 +1114,7 @@ class GetsServiceInstanceViaProxyTestCase(TestCase, LoaderModuleMockMixin):
         patcher = patch("salt.utils.vmware.disconnect", MagicMock())
         patcher.start()
         self.addCleanup(patcher.stop)
-        return {
-            vsphere: {
-                "__virtual__": MagicMock(return_value="vsphere"),
-                "_get_proxy_connection_details": MagicMock(),
-            }
-        }
+        return {vsphere: {"_get_proxy_connection_details": MagicMock()}}
 
     def setUp(self):
         self.mock_si = MagicMock()
@@ -1145,7 +1129,7 @@ class GetsServiceInstanceViaProxyTestCase(TestCase, LoaderModuleMockMixin):
                 continue
 
     def test_no_service_instance_or_kwargs_parameters(self):
-        @vsphere.gets_service_instance_via_proxy
+        @vsphere._gets_service_instance_via_proxy
         def mock_function():
             return "fake_function"
 
@@ -1161,7 +1145,7 @@ class GetsServiceInstanceViaProxyTestCase(TestCase, LoaderModuleMockMixin):
     def test___get_proxy_connection_details_call(self):
         mock__get_proxy_connection_details = MagicMock()
 
-        @vsphere.gets_service_instance_via_proxy
+        @vsphere._gets_service_instance_via_proxy
         def mock_function(service_instance=None):
             return service_instance
 
@@ -1176,7 +1160,7 @@ class GetsServiceInstanceViaProxyTestCase(TestCase, LoaderModuleMockMixin):
         mock_get_service_instance = MagicMock(return_value=self.mock_si)
         mock_disconnect = MagicMock()
 
-        @vsphere.gets_service_instance_via_proxy
+        @vsphere._gets_service_instance_via_proxy
         def mock_function(service_instance=None):
             return service_instance
 
@@ -1199,7 +1183,7 @@ class GetsServiceInstanceViaProxyTestCase(TestCase, LoaderModuleMockMixin):
         mock_get_service_instance = MagicMock(return_value=self.mock_si)
         mock_disconnect = MagicMock()
 
-        @vsphere.gets_service_instance_via_proxy
+        @vsphere._gets_service_instance_via_proxy
         def mock_function(**kwargs):
             return kwargs["service_instance"]
 
@@ -1222,7 +1206,7 @@ class GetsServiceInstanceViaProxyTestCase(TestCase, LoaderModuleMockMixin):
         mock_get_service_instance = MagicMock()
         mock_disconnect = MagicMock()
 
-        @vsphere.gets_service_instance_via_proxy
+        @vsphere._gets_service_instance_via_proxy
         def mock_function(service_instance):
             return service_instance
 
@@ -1243,7 +1227,7 @@ class GetsServiceInstanceViaProxyTestCase(TestCase, LoaderModuleMockMixin):
         mock_get_service_instance = MagicMock()
         mock_disconnect = MagicMock()
 
-        @vsphere.gets_service_instance_via_proxy
+        @vsphere._gets_service_instance_via_proxy
         def mock_function(service_instance=None):
             return service_instance
 
@@ -1264,7 +1248,7 @@ class GetsServiceInstanceViaProxyTestCase(TestCase, LoaderModuleMockMixin):
         mock_get_service_instance = MagicMock()
         mock_disconnect = MagicMock()
 
-        @vsphere.gets_service_instance_via_proxy
+        @vsphere._gets_service_instance_via_proxy
         def mock_function(service_instance=None):
             return service_instance
 
@@ -1285,7 +1269,7 @@ class GetsServiceInstanceViaProxyTestCase(TestCase, LoaderModuleMockMixin):
         mock_get_service_instance = MagicMock()
         mock_disconnect = MagicMock()
 
-        @vsphere.gets_service_instance_via_proxy
+        @vsphere._gets_service_instance_via_proxy
         def mock_function(**kwargs):
             return kwargs["service_instance"]
 
@@ -1314,7 +1298,6 @@ class GetServiceInstanceViaProxyTestCase(TestCase, LoaderModuleMockMixin):
         self.addCleanup(patcher.stop)
         return {
             vsphere: {
-                "__virtual__": MagicMock(return_value="vsphere"),
                 "get_proxy_type": MagicMock(return_value="esxi"),
                 "_get_proxy_connection_details": MagicMock(),
             }
@@ -1364,7 +1347,6 @@ class DisconnectTestCase(TestCase, LoaderModuleMockMixin):
         self.addCleanup(patcher.stop)
         return {
             vsphere: {
-                "__virtual__": MagicMock(return_value="vsphere"),
                 "_get_proxy_connection_details": MagicMock(),
                 "get_proxy_type": MagicMock(return_value="esxi"),
             }
@@ -1412,7 +1394,6 @@ class TestVcenterConnectionTestCase(TestCase, LoaderModuleMockMixin):
         self.addCleanup(patcher.stop)
         return {
             vsphere: {
-                "__virtual__": MagicMock(return_value="vsphere"),
                 "_get_proxy_connection_details": MagicMock(),
                 "get_proxy_type": MagicMock(return_value="esxi"),
             }
@@ -1461,7 +1442,7 @@ class TestVcenterConnectionTestCase(TestCase, LoaderModuleMockMixin):
         ):
             with self.assertRaises(Exception) as excinfo:
                 res = vsphere.test_vcenter_connection()
-        self.assertEqual("NonVMwareSaltError", text_type(excinfo.exception))
+        self.assertEqual("NonVMwareSaltError", str(excinfo.exception))
 
     def test_output_true(self):
         with patch(
@@ -1502,7 +1483,6 @@ class ListDatacentersViaProxyTestCase(TestCase, LoaderModuleMockMixin):
         self.addCleanup(patcher.stop)
         return {
             vsphere: {
-                "__virtual__": MagicMock(return_value="vsphere"),
                 "_get_proxy_connection_details": MagicMock(),
                 "get_proxy_type": MagicMock(return_value="esxdatacenter"),
             }
@@ -1591,7 +1571,6 @@ class CreateDatacenterTestCase(TestCase, LoaderModuleMockMixin):
         self.addCleanup(patcher.stop)
         return {
             vsphere: {
-                "__virtual__": MagicMock(return_value="vsphere"),
                 "_get_proxy_connection_details": MagicMock(),
                 "get_proxy_type": MagicMock(return_value="esxdatacenter"),
             }
@@ -1633,7 +1612,6 @@ class EraseDiskPartitionsTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {
             vsphere: {
-                "__virtual__": MagicMock(return_value="vsphere"),
                 "_get_proxy_connection_details": MagicMock(),
                 "__proxy__": {
                     "esxi.get_details": MagicMock(
@@ -1740,7 +1718,6 @@ class RemoveDatastoreTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {
             vsphere: {
-                "__virtual__": MagicMock(return_value="vsphere"),
                 "_get_proxy_connection_details": MagicMock(),
                 "get_proxy_type": MagicMock(return_value="esxdatacenter"),
             }
@@ -1842,7 +1819,6 @@ class RemoveDiskgroupTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {
             vsphere: {
-                "__virtual__": MagicMock(return_value="vsphere"),
                 "_get_proxy_connection_details": MagicMock(),
                 "__proxy__": {
                     "esxi.get_details": MagicMock(
@@ -1950,7 +1926,6 @@ class RemoveCapacityFromDiskgroupTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {
             vsphere: {
-                "__virtual__": MagicMock(return_value="vsphere"),
                 "_get_proxy_connection_details": MagicMock(),
                 "__proxy__": {
                     "esxi.get_details": MagicMock(
@@ -2164,13 +2139,7 @@ class ListClusterTestCase(TestCase, LoaderModuleMockMixin):
     """
 
     def setup_loader_modules(self):
-        return {
-            vsphere: {
-                "__virtual__": MagicMock(return_value="vsphere"),
-                "_get_proxy_connection_details": MagicMock(),
-                "__salt__": {},
-            }
-        }
+        return {vsphere: {"_get_proxy_connection_details": MagicMock(), "__salt__": {}}}
 
     def setUp(self):
         attrs = (
@@ -2272,7 +2241,6 @@ class RenameDatastoreTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {
             vsphere: {
-                "__virtual__": MagicMock(return_value="vsphere"),
                 "_get_proxy_connection_details": MagicMock(),
                 "get_proxy_type": MagicMock(return_value="esxdatacenter"),
             }
@@ -2365,7 +2333,6 @@ class _GetProxyTargetTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {
             vsphere: {
-                "__virtual__": MagicMock(return_value="vsphere"),
                 "_get_proxy_connection_details": MagicMock(),
                 "get_proxy_type": MagicMock(return_value="esxdatacenter"),
             }
@@ -2516,7 +2483,6 @@ class TestVSphereTagging(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {
             vsphere: {
-                "__virtual__": MagicMock(return_value="vsphere"),
                 "_get_proxy_connection_details": MagicMock(),
                 "get_proxy_type": MagicMock(return_value="vcenter"),
             }

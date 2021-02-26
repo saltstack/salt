@@ -1,3 +1,0 @@
-The ``gid_from_name`` argument was removed from the ``user.present`` state in
-version 3001, with no deprecation path. It has been restored and put on a
-proper deprecation path.

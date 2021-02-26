@@ -1,3 +1,0 @@
-Added support to lo ip alias in network.managed state by checking if lo inet data
-from network.interfaces contains label with the name of managed interface.
-Return status True if match found.

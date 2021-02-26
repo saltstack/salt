@@ -12,14 +12,24 @@ Function Get-Settings {
 
         $ini = @{}
 
+        If ( -Not (Test-Path env:SrcDir)) {
+            $env:SrcDir = $(git rev-parse --show-toplevel).Replace("/", "\")
+        }
+        If ( -Not (Test-Path env:PyVerMajor)) { $env:PyVerMajor = "3" }
+        If ( -Not (Test-Path env:PyVerMinor)) { $env:PyVerMinor = "7" }
+        If ( -Not (Test-Path env:PyDir)) { $env:PyDir = "C:\Python37" }
+
         # Location where the files are kept
         $Settings = @{
-            "SaltRepo"    = "https://repo.saltstack.com/windows/dependencies"
-            "SaltDir"     = "C:\salt"
-            "Python3Dir"   = "C:\Python37"
-            "Scripts3Dir"  = "C:\Python37\Scripts"
-            "SitePkgs3Dir" = "C:\Python37\Lib\site-packages"
-            "DownloadDir" = "$env:Temp\DevSalt"
+            "SrcDir"       = "$env:SrcDir"
+            "SaltRepo"     = "https://repo.saltstack.com/windows/dependencies"
+            "SaltDir"      = "C:\salt"
+            "PyVerMajor"   = "$env:PyVerMajor"
+            "PyVerMinor"   = "$env:PyVerMinor"
+            "Python3Dir"   = "$env:PyDir"
+            "Scripts3Dir"  = "$env:PyDir\Scripts"
+            "SitePkgs3Dir" = "$env:PyDir\Lib\site-packages"
+            "DownloadDir"  = "$env:Temp\DevSalt"
             }
 
         $ini.Add("Settings", $Settings)
@@ -28,6 +38,7 @@ Function Get-Settings {
         # Prerequisite software
         $Prerequisites = @{
             "NSIS"             = "nsis-3.03-setup.exe"
+            "NSISPluginEnVar"  = "nsis-plugin-envar.zip"
             "NSISPluginUnzipA" = "nsis-plugin-nsisunz.zip"
             "NSISPluginUnzipU" = "nsis-plugin-nsisunzu.zip"
             "VCppBuildTools"   = "visualcppbuildtools_full.exe"

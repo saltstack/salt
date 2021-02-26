@@ -103,6 +103,16 @@ The option can also be set to a list of masters, enabling
           - address2
         master_type: failover
 
+.. conf_minion:: color
+
+``color``
+---------
+
+Default: ``True``
+
+By default output is colored. To disable colored output, set the color value to
+``False``.
+
 .. conf_minion:: ipv6
 
 ``ipv6``
@@ -1067,7 +1077,9 @@ to be released (after reaching ``socket.timeout``) when there is no fqdn for tha
 These calls to ``socket.gethostbyaddr`` are processed asynchronously, however, it still
 adds 5 seconds every time grains are generated if an IP does not resolve. In Windows
 grains are regenerated each time a new process is spawned. Therefore, the default for
-Windows is ``False``. All other OSes default to ``True``. This options was
+Windows is ``False``. In many cases this value does not make sense to include for proxy
+minions as it will be FQDN for the host running the proxy minion process, so the default
+for proxy minions is ``False```. All other OSes default to ``True``. This options was
 added `here <https://github.com/saltstack/salt/pull/55581>`_.
 
 .. code-block:: yaml
@@ -1229,7 +1241,7 @@ when trying to authenticate to the master.
 
 .. versionadded:: 2014.7.0
 
-Default: ``60``
+Default: ``5``
 
 When waiting for a master to accept the minion's public key, salt will
 continuously attempt to reconnect until successful. This is the timeout value,
@@ -1238,9 +1250,12 @@ will wait for :conf_minion:`acceptance_wait_time` seconds before trying again.
 Unless your master is under unusually heavy load, this should be left at the
 default.
 
+.. note::
+    For high latency networks try increasing this value
+
 .. code-block:: yaml
 
-    auth_timeout: 60
+    auth_timeout: 5
 
 .. conf_minion:: auth_safemode
 
@@ -1407,6 +1422,19 @@ retry timeout will be a random int between ``return_retry_timer`` and
 .. code-block:: yaml
 
     return_retry_timer_max: 10
+
+.. conf_minion:: return_retry_tries
+
+``return_retry_tries``
+--------------------------
+
+Default: ``3``
+
+The maximum number of retries for a minion return attempt.
+
+.. code-block:: yaml
+
+    return_retry_tries: 3
 
 .. conf_minion:: cache_sreqs
 
@@ -2177,6 +2205,28 @@ or just post what changes are going to be made.
 
     test: False
 
+.. conf_minion:: state_aggregate
+
+``state_aggregate``
+-------------------
+
+Default: ``False``
+
+Automatically aggregate all states that have support for ``mod_aggregate`` by
+setting to ``True``.
+
+.. code-block:: yaml
+
+    state_aggregate: True
+
+Or pass a list of state module names to automatically
+aggregate just those types.
+
+.. code-block:: yaml
+
+    state_aggregate:
+      - pkg
+
 .. conf_minion:: state_verbose
 
 ``state_verbose``
@@ -2226,6 +2276,20 @@ states is cluttering the logs. Set it to True to ignore them.
 .. code-block:: yaml
 
     state_output_diff: False
+
+.. conf_minion:: state_output_profile
+
+``state_output_profile``
+------------------------
+
+Default: ``True``
+
+The ``state_output_profile`` setting changes whether profile information
+will be shown for each state run.
+
+.. code-block:: yaml
+
+    state_output_profile: True
 
 .. conf_minion:: autoload_dynamic_modules
 
@@ -2943,7 +3007,7 @@ Default: ``None``
 TLS/SSL connection options. This could be set to a dictionary containing
 arguments corresponding to python ``ssl.wrap_socket`` method. For details see
 `Tornado <http://www.tornadoweb.org/en/stable/tcpserver.html#tornado.tcpserver.TCPServer>`_
-and `Python <https://docs.python.org/2/library/ssl.html#ssl.wrap_socket>`_
+and `Python <https://docs.python.org/3/library/ssl.html#ssl.wrap_socket>`_
 documentation.
 
 Note: to set enum arguments values like ``cert_reqs`` and ``ssl_version`` use

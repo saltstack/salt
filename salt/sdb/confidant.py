@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 An SDB module for getting credentials from confidant.
 
@@ -35,13 +34,10 @@ The module can be configured via sdb in the minion config:
 Module Documentation
 ====================
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import copy
 import logging
 
-# Import third party libs
 try:
     # pylint: disable=no-name-in-module
     import confidant.client
@@ -73,6 +69,8 @@ def get(key, profile=None):
     Read pillar data from Confidant via its API.
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt myminion sdb.get 'sdb://confidant/credentials'
 

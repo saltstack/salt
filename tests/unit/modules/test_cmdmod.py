@@ -1,18 +1,13 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Nicole Thomas <nicole@saltstack.com>
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import sys
 import tempfile
 
 import salt.modules.cmdmod as cmdmod
-
-# Import Salt Libs
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.stringutils
@@ -20,8 +15,6 @@ from salt.exceptions import CommandExecutionError
 from salt.ext.six.moves import builtins  # pylint: disable=import-error
 from salt.log import LOG_LEVELS
 from tests.support.helpers import TstSuiteLoggingHandler
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, MockTimedProc, mock_open, patch
 from tests.support.runtests import RUNTIME_VARS
@@ -141,10 +134,17 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
         """
         with patch("salt.modules.cmdmod._is_valid_shell", MagicMock(return_value=True)):
             with patch("salt.utils.platform.is_windows", MagicMock(return_value=True)):
-                with patch.dict(cmdmod.__grains__, {"os": "fake_os"}):
-                    self.assertRaises(
-                        CommandExecutionError, cmdmod._run, "foo", "bar", runas="baz"
-                    )
+                with patch(
+                    "salt.utils.win_chcp.get_codepage_id", MagicMock(return_value=65001)
+                ):
+                    with patch.dict(cmdmod.__grains__, {"os": "fake_os"}):
+                        self.assertRaises(
+                            CommandExecutionError,
+                            cmdmod._run,
+                            "foo",
+                            "bar",
+                            runas="baz",
+                        )
 
     def test_run_user_not_available(self):
         """
@@ -358,7 +358,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
         when bash is the default shell for the selected user
         """
 
-        class _CommandHandler(object):
+        class _CommandHandler:
             """
             Class for capturing cmd
             """
