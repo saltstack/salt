@@ -132,7 +132,7 @@ def check_file_list_cache(opts, form, list_cache, w_lock):
                             current_time,
                             file_mtime,
                         )
-                        age = 0
+                        age = -1
                     else:
                         age = current_time - file_mtime
                 else:

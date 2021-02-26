@@ -181,7 +181,8 @@ def _install_system_packages(session):
                 shutil.copyfile(src, dst)
 
 
-def _get_pip_requirements_file(session, transport, crypto=None):
+def _get_pip_requirements_file(session, transport, crypto=None, requirements_type="ci"):
+    assert requirements_type in ("ci", "pkg")
     pydir = _get_pydir(session)
 
     if IS_WINDOWS:
@@ -189,36 +190,40 @@ def _get_pip_requirements_file(session, transport, crypto=None):
             _requirements_file = os.path.join(
                 "requirements",
                 "static",
-                "ci",
+                requirements_type,
                 pydir,
                 "{}-windows.txt".format(transport),
             )
             if os.path.exists(_requirements_file):
                 return _requirements_file
             _requirements_file = os.path.join(
-                "requirements", "static", "ci", pydir, "windows.txt"
+                "requirements", "static", requirements_type, pydir, "windows.txt"
             )
             if os.path.exists(_requirements_file):
                 return _requirements_file
         _requirements_file = os.path.join(
-            "requirements", "static", "ci", pydir, "windows-crypto.txt"
+            "requirements", "static", requirements_type, pydir, "windows-crypto.txt"
         )
         if os.path.exists(_requirements_file):
             return _requirements_file
     elif IS_DARWIN:
         if crypto is None:
             _requirements_file = os.path.join(
-                "requirements", "static", "ci", pydir, "{}-darwin.txt".format(transport)
+                "requirements",
+                "static",
+                requirements_type,
+                pydir,
+                "{}-darwin.txt".format(transport),
             )
             if os.path.exists(_requirements_file):
                 return _requirements_file
             _requirements_file = os.path.join(
-                "requirements", "static", "ci", pydir, "darwin.txt"
+                "requirements", "static", requirements_type, pydir, "darwin.txt"
             )
             if os.path.exists(_requirements_file):
                 return _requirements_file
         _requirements_file = os.path.join(
-            "requirements", "static", "ci", pydir, "darwin-crypto.txt"
+            "requirements", "static", requirements_type, pydir, "darwin-crypto.txt"
         )
         if os.path.exists(_requirements_file):
             return _requirements_file
@@ -227,19 +232,19 @@ def _get_pip_requirements_file(session, transport, crypto=None):
             _requirements_file = os.path.join(
                 "requirements",
                 "static",
-                "ci",
+                requirements_type,
                 pydir,
                 "{}-freebsd.txt".format(transport),
             )
             if os.path.exists(_requirements_file):
                 return _requirements_file
             _requirements_file = os.path.join(
-                "requirements", "static", "ci", pydir, "freebsd.txt"
+                "requirements", "static", requirements_type, pydir, "freebsd.txt"
             )
             if os.path.exists(_requirements_file):
                 return _requirements_file
         _requirements_file = os.path.join(
-            "requirements", "static", "ci", pydir, "freebsd-crypto.txt"
+            "requirements", "static", requirements_type, pydir, "freebsd-crypto.txt"
         )
         if os.path.exists(_requirements_file):
             return _requirements_file
@@ -247,36 +252,51 @@ def _get_pip_requirements_file(session, transport, crypto=None):
         _install_system_packages(session)
         if crypto is None:
             _requirements_file = os.path.join(
-                "requirements", "static", "ci", pydir, "{}-linux.txt".format(transport)
+                "requirements",
+                "static",
+                requirements_type,
+                pydir,
+                "{}-linux.txt".format(transport),
             )
             if os.path.exists(_requirements_file):
                 return _requirements_file
             _requirements_file = os.path.join(
-                "requirements", "static", "ci", pydir, "linux.txt"
+                "requirements", "static", requirements_type, pydir, "linux.txt"
             )
             if os.path.exists(_requirements_file):
                 return _requirements_file
         _requirements_file = os.path.join(
-            "requirements", "static", "ci", pydir, "linux-crypto.txt"
+            "requirements", "static", requirements_type, pydir, "linux-crypto.txt"
         )
         if os.path.exists(_requirements_file):
             return _requirements_file
 
 
-def _install_requirements(session, transport, *extra_requirements):
+def _install_requirements(
+    session, transport, *extra_requirements, requirements_type="ci"
+):
     if SKIP_REQUIREMENTS_INSTALL:
         session.log(
             "Skipping Python Requirements because SKIP_REQUIREMENTS_INSTALL was found in the environ"
         )
         return
 
-    # setuptools 50.0.0 is broken
-    # https://github.com/pypa/setuptools/issues?q=is%3Aissue+setuptools+50+
-    install_command = ["--progress-bar=off", "-U", "setuptools<50.0.0"]
-    session.install(*install_command, silent=PIP_INSTALL_SILENT)
+    install_command = [
+        "python",
+        "-m",
+        "pip",
+        "install",
+        "--progress-bar=off",
+        "-U",
+        "pip",
+        "setuptools!=50.*,!=51.*,!=52.*",
+    ]
+    session.run(*install_command, silent=PIP_INSTALL_SILENT)
 
     # Install requirements
-    requirements_file = _get_pip_requirements_file(session, transport)
+    requirements_file = _get_pip_requirements_file(
+        session, transport, requirements_type=requirements_type
+    )
     install_command = ["--progress-bar=off", "-r", requirements_file]
     session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
@@ -979,12 +999,12 @@ def docs_html(session, compress, clean):
     """
     Build Salt's HTML Documentation
     """
-    pydir = _get_pydir(session)
     requirements_file = os.path.join(
         "requirements", "static", "ci", _get_pydir(session), "docs.txt"
     )
     install_command = ["--progress-bar=off", "-r", requirements_file]
     session.install(*install_command, silent=PIP_INSTALL_SILENT)
+    _install_requirements(session, "zeromq", requirements_type="pkg")
     os.chdir("doc/")
     if clean:
         session.run("make", "clean", external=True)
@@ -1002,12 +1022,12 @@ def docs_man(session, compress, update, clean):
     """
     Build Salt's Manpages Documentation
     """
-    pydir = _get_pydir(session)
     requirements_file = os.path.join(
         "requirements", "static", "ci", _get_pydir(session), "docs.txt"
     )
     install_command = ["--progress-bar=off", "-r", requirements_file]
     session.install(*install_command, silent=PIP_INSTALL_SILENT)
+    _install_requirements(session, "zeromq", requirements_type="pkg")
     os.chdir("doc/")
     if clean:
         session.run("make", "clean", external=True)
