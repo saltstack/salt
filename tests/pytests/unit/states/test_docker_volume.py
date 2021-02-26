@@ -72,7 +72,7 @@ def test_present():
 
         # run it again with a different driver but don't force
         ret = docker_state.present("volume_foo", driver="local")
-        assert {
+        assert ret == {
             "name": "volume_foo",
             "comment": (
                 "Driver for existing volume 'volume_foo'"
@@ -81,12 +81,12 @@ def test_present():
             ),
             "changes": {},
             "result": False,
-        } == ret
+        }
         assert orig_volumes == volumes
 
         # run it again with a different driver and force
         ret = docker_state.present("volume_foo", driver="local", force=True)
-        assert {
+        assert ret == {
             "name": "volume_foo",
             "comment": "",
             "changes": {
@@ -94,7 +94,7 @@ def test_present():
                 "created": {"Driver": "local", "Name": "volume_foo"},
             },
             "result": True,
-        } == ret
+        }
         mod_orig_volumes = [orig_volumes[0].copy()]
         mod_orig_volumes[0]["Driver"] = "local"
         assert mod_orig_volumes == volumes
