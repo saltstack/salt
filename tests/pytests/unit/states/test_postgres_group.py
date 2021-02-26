@@ -3,14 +3,17 @@ import salt.modules.postgres as postgres
 import salt.states.postgres_group as postgres_group
 from tests.support.mock import create_autospec, patch
 
-DB_ARGS = {
-    "runas": None,
-    "host": None,
-    "port": None,
-    "maintenance_db": None,
-    "user": None,
-    "password": None,
-}
+
+@pytest.fixture(name="db_args")
+def fixture_db_args():
+    return {
+        "runas": None,
+        "host": None,
+        "port": None,
+        "maintenance_db": None,
+        "user": None,
+        "password": None,
+    }
 
 
 @pytest.fixture(name="md5_pw")
@@ -77,7 +80,7 @@ def setup_loader(mocks):
 # ==========
 
 
-def test_present_create_basic(mocks):
+def test_present_create_basic(mocks, db_args):
     assert postgres_group.present("groupname") == {
         "name": "groupname",
         "result": True,
@@ -85,7 +88,7 @@ def test_present_create_basic(mocks):
         "comment": "The group groupname has been created",
     }
     mocks["postgres.role_get"].assert_called_once_with(
-        "groupname", return_password=True, **DB_ARGS
+        "groupname", return_password=True, **db_args
     )
     mocks["postgres.group_create"].assert_called_once_with(
         groupname="groupname",
@@ -98,13 +101,13 @@ def test_present_create_basic(mocks):
         replication=None,
         rolepassword=None,
         groups=None,
-        **DB_ARGS
+        **db_args
     )
     mocks["postgres.group_update"].assert_not_called()
 
 
 @pytest.mark.usefixtures("test_mode")
-def test_present_create_basic_test(mocks):
+def test_present_create_basic_test(mocks, db_args):
     assert postgres_group.present("groupname") == {
         "name": "groupname",
         "result": None,
@@ -112,13 +115,13 @@ def test_present_create_basic_test(mocks):
         "comment": "Group groupname is set to be created",
     }
     mocks["postgres.role_get"].assert_called_once_with(
-        "groupname", return_password=True, **DB_ARGS
+        "groupname", return_password=True, **db_args
     )
     mocks["postgres.group_create"].assert_not_called()
     mocks["postgres.group_update"].assert_not_called()
 
 
-def test_present_exists_basic(mocks, existing_group):
+def test_present_exists_basic(mocks, existing_group, db_args):
     mocks["postgres.role_get"].return_value = existing_group
 
     assert postgres_group.present("groupname") == {
@@ -128,13 +131,13 @@ def test_present_exists_basic(mocks, existing_group):
         "comment": "Group groupname is already present",
     }
     mocks["postgres.role_get"].assert_called_once_with(
-        "groupname", return_password=True, **DB_ARGS
+        "groupname", return_password=True, **db_args
     )
     mocks["postgres.group_create"].assert_not_called()
     mocks["postgres.group_update"].assert_not_called()
 
 
-def test_present_create_basic_error(mocks):
+def test_present_create_basic_error(mocks, db_args):
     mocks["postgres.group_create"].return_value = False
 
     assert postgres_group.present("groupname") == {
@@ -144,13 +147,13 @@ def test_present_create_basic_error(mocks):
         "comment": "Failed to create group groupname",
     }
     mocks["postgres.role_get"].assert_called_once_with(
-        "groupname", return_password=True, **DB_ARGS
+        "groupname", return_password=True, **db_args
     )
     mocks["postgres.group_create"].assert_called_once()
     mocks["postgres.group_update"].assert_not_called()
 
 
-def test_present_change_option(mocks, existing_group):
+def test_present_change_option(mocks, existing_group, db_args):
     mocks["postgres.role_get"].return_value = existing_group
 
     assert postgres_group.present("groupname", replication=True) == {
@@ -173,11 +176,11 @@ def test_present_change_option(mocks, existing_group):
         replication=True,
         rolepassword=None,
         groups=None,
-        **DB_ARGS
+        **db_args
     )
 
 
-def test_present_create_md5_password(mocks, md5_pw):
+def test_present_create_md5_password(mocks, md5_pw, db_args):
     assert postgres_group.present("groupname", password="password", encrypted=True) == {
         "name": "groupname",
         "result": True,
@@ -196,12 +199,12 @@ def test_present_create_md5_password(mocks, md5_pw):
         replication=None,
         rolepassword=md5_pw,
         groups=None,
-        **DB_ARGS
+        **db_args
     )
     mocks["postgres.group_update"].assert_not_called()
 
 
-def test_present_create_plain_password(mocks):
+def test_present_create_plain_password(mocks, db_args):
     assert postgres_group.present(
         "groupname", password="password", encrypted=False
     ) == {
@@ -222,17 +225,19 @@ def test_present_create_plain_password(mocks):
         replication=None,
         rolepassword="password",
         groups=None,
-        **DB_ARGS
+        **db_args
     )
     mocks["postgres.group_update"].assert_not_called()
 
 
-def test_present_create_md5_password_default_plain(mocks, monkeypatch, md5_pw):
+def test_present_create_md5_password_default_plain(mocks, monkeypatch, md5_pw, db_args):
     monkeypatch.setattr(postgres, "_DEFAULT_PASSWORDS_ENCRYPTION", False)
-    test_present_create_md5_password(mocks, md5_pw)
+    test_present_create_md5_password(mocks, md5_pw, db_args)
 
 
-def test_present_create_md5_password_default_encrypted(mocks, monkeypatch, md5_pw):
+def test_present_create_md5_password_default_encrypted(
+    mocks, monkeypatch, md5_pw, db_args
+):
     monkeypatch.setattr(postgres, "_DEFAULT_PASSWORDS_ENCRYPTION", True)
 
     assert postgres_group.present("groupname", password="password") == {
@@ -253,12 +258,12 @@ def test_present_create_md5_password_default_encrypted(mocks, monkeypatch, md5_p
         replication=None,
         rolepassword=md5_pw,
         groups=None,
-        **DB_ARGS
+        **db_args
     )
     mocks["postgres.group_update"].assert_not_called()
 
 
-def test_present_create_md5_prehashed(mocks, md5_pw):
+def test_present_create_md5_prehashed(mocks, md5_pw, db_args):
     assert postgres_group.present("groupname", password=md5_pw, encrypted=True) == {
         "name": "groupname",
         "result": True,
@@ -277,7 +282,7 @@ def test_present_create_md5_prehashed(mocks, md5_pw):
         replication=None,
         rolepassword=md5_pw,
         groups=None,
-        **DB_ARGS
+        **db_args
     )
     mocks["postgres.group_update"].assert_not_called()
 
@@ -312,7 +317,7 @@ def test_present_md5_matches_prehashed(mocks, existing_group, md5_pw):
     mocks["postgres.group_update"].assert_not_called()
 
 
-def test_present_update_md5_password(mocks, existing_group, md5_pw):
+def test_present_update_md5_password(mocks, existing_group, md5_pw, db_args):
     existing_group["password"] = "md500000000000000000000000000000000"
     mocks["postgres.role_get"].return_value = existing_group
 
@@ -335,7 +340,7 @@ def test_present_update_md5_password(mocks, existing_group, md5_pw):
         replication=None,
         rolepassword=md5_pw,
         groups=None,
-        **DB_ARGS
+        **db_args
     )
 
 
@@ -355,7 +360,7 @@ def test_present_update_error(mocks, existing_group):
     mocks["postgres.group_update"].assert_called_once()
 
 
-def test_present_update_password_no_check(mocks, existing_group, md5_pw):
+def test_present_update_password_no_check(mocks, existing_group, md5_pw, db_args):
     mocks["postgres.role_get"].return_value = existing_group
 
     assert postgres_group.present(
@@ -367,7 +372,7 @@ def test_present_update_password_no_check(mocks, existing_group, md5_pw):
         "comment": "The group groupname has been updated",
     }
     mocks["postgres.role_get"].assert_called_once_with(
-        "groupname", return_password=False, **DB_ARGS
+        "groupname", return_password=False, **db_args
     )
     mocks["postgres.group_create"].assert_not_called()
     mocks["postgres.group_update"].assert_called_once_with(
@@ -381,7 +386,7 @@ def test_present_update_password_no_check(mocks, existing_group, md5_pw):
         replication=None,
         rolepassword=md5_pw,
         groups=None,
-        **DB_ARGS
+        **db_args
     )
 
 
@@ -390,7 +395,7 @@ def test_present_update_password_no_check(mocks, existing_group, md5_pw):
 # ==========
 
 
-def test_absent_delete(mocks):
+def test_absent_delete(mocks, db_args):
     mocks["postgres.user_exists"].return_value = True
 
     assert postgres_group.absent("groupname") == {
@@ -399,12 +404,12 @@ def test_absent_delete(mocks):
         "changes": {"groupname": "Absent"},
         "comment": "Group groupname has been removed",
     }
-    mocks["postgres.user_exists"].assert_called_once_with("groupname", **DB_ARGS)
-    mocks["postgres.group_remove"].assert_called_once_with("groupname", **DB_ARGS)
+    mocks["postgres.user_exists"].assert_called_once_with("groupname", **db_args)
+    mocks["postgres.group_remove"].assert_called_once_with("groupname", **db_args)
 
 
 @pytest.mark.usefixtures("test_mode")
-def test_absent_test(mocks):
+def test_absent_test(mocks, db_args):
     mocks["postgres.user_exists"].return_value = True
 
     assert postgres_group.absent("groupname") == {
@@ -413,11 +418,11 @@ def test_absent_test(mocks):
         "changes": {},
         "comment": "Group groupname is set to be removed",
     }
-    mocks["postgres.user_exists"].assert_called_once_with("groupname", **DB_ARGS)
+    mocks["postgres.user_exists"].assert_called_once_with("groupname", **db_args)
     mocks["postgres.group_remove"].assert_not_called()
 
 
-def test_absent_already(mocks):
+def test_absent_already(mocks, db_args):
     mocks["postgres.user_exists"].return_value = False
 
     assert postgres_group.absent("groupname") == {
@@ -426,7 +431,7 @@ def test_absent_already(mocks):
         "changes": {},
         "comment": "Group groupname is not present, so it cannot be removed",
     }
-    mocks["postgres.user_exists"].assert_called_once_with("groupname", **DB_ARGS)
+    mocks["postgres.user_exists"].assert_called_once_with("groupname", **db_args)
     mocks["postgres.group_remove"].assert_not_called()
 
 

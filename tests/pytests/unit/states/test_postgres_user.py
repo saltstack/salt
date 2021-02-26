@@ -3,19 +3,22 @@ import salt.modules.postgres as postgres
 import salt.states.postgres_user as postgres_user
 from tests.support.mock import create_autospec, patch
 
-DB_ARGS = {
-    "runas": None,
-    "host": None,
-    "port": None,
-    "maintenance_db": None,
-    "user": None,
-    "password": None,
-}
-
 
 class ScramHash:
     def __eq__(self, other):
         return other.startswith("SCRAM-SHA-256$4096:")
+
+
+@pytest.fixture(name="db_args")
+def fixture_db_args():
+    return {
+        "runas": None,
+        "host": None,
+        "port": None,
+        "maintenance_db": None,
+        "user": None,
+        "password": None,
+    }
 
 
 @pytest.fixture(name="md5_pw")
@@ -92,7 +95,7 @@ def setup_loader(mocks):
 # ==========
 
 
-def test_present_create_basic(mocks):
+def test_present_create_basic(mocks, db_args):
     assert postgres_user.present("username") == {
         "name": "username",
         "result": True,
@@ -100,7 +103,7 @@ def test_present_create_basic(mocks):
         "comment": "The user username has been created",
     }
     mocks["postgres.role_get"].assert_called_once_with(
-        "username", return_password=True, **DB_ARGS
+        "username", return_password=True, **db_args
     )
     mocks["postgres.user_create"].assert_called_once_with(
         username="username",
@@ -114,13 +117,13 @@ def test_present_create_basic(mocks):
         rolepassword=None,
         valid_until=None,
         groups=None,
-        **DB_ARGS
+        **db_args
     )
     mocks["postgres.user_update"].assert_not_called()
 
 
 @pytest.mark.usefixtures("test_mode")
-def test_present_create_basic_test(mocks):
+def test_present_create_basic_test(mocks, db_args):
     assert postgres_user.present("username") == {
         "name": "username",
         "result": None,
@@ -128,13 +131,13 @@ def test_present_create_basic_test(mocks):
         "comment": "User username is set to be created",
     }
     mocks["postgres.role_get"].assert_called_once_with(
-        "username", return_password=True, **DB_ARGS
+        "username", return_password=True, **db_args
     )
     mocks["postgres.user_create"].assert_not_called()
     mocks["postgres.user_update"].assert_not_called()
 
 
-def test_present_exists_basic(mocks, existing_user):
+def test_present_exists_basic(mocks, existing_user, db_args):
     mocks["postgres.role_get"].return_value = existing_user
 
     assert postgres_user.present("username") == {
@@ -144,13 +147,13 @@ def test_present_exists_basic(mocks, existing_user):
         "comment": "User username is already present",
     }
     mocks["postgres.role_get"].assert_called_once_with(
-        "username", return_password=True, **DB_ARGS
+        "username", return_password=True, **db_args
     )
     mocks["postgres.user_create"].assert_not_called()
     mocks["postgres.user_update"].assert_not_called()
 
 
-def test_present_create_basic_error(mocks):
+def test_present_create_basic_error(mocks, db_args):
     mocks["postgres.user_create"].return_value = False
 
     assert postgres_user.present("username") == {
@@ -160,13 +163,13 @@ def test_present_create_basic_error(mocks):
         "comment": "Failed to create user username",
     }
     mocks["postgres.role_get"].assert_called_once_with(
-        "username", return_password=True, **DB_ARGS
+        "username", return_password=True, **db_args
     )
     mocks["postgres.user_create"].assert_called_once()
     mocks["postgres.user_update"].assert_not_called()
 
 
-def test_present_change_option(mocks, existing_user):
+def test_present_change_option(mocks, existing_user, db_args):
     mocks["postgres.role_get"].return_value = existing_user
 
     assert postgres_user.present("username", replication=True) == {
@@ -190,11 +193,11 @@ def test_present_change_option(mocks, existing_user):
         rolepassword=None,
         valid_until=None,
         groups=None,
-        **DB_ARGS
+        **db_args
     )
 
 
-def test_present_create_md5_password(mocks, md5_pw):
+def test_present_create_md5_password(mocks, md5_pw, db_args):
     assert postgres_user.present("username", password="password", encrypted=True) == {
         "name": "username",
         "result": True,
@@ -214,12 +217,12 @@ def test_present_create_md5_password(mocks, md5_pw):
         rolepassword=md5_pw,
         valid_until=None,
         groups=None,
-        **DB_ARGS
+        **db_args
     )
     mocks["postgres.user_update"].assert_not_called()
 
 
-def test_present_create_scram_password(mocks):
+def test_present_create_scram_password(mocks, db_args):
     assert postgres_user.present(
         "username", password="password", encrypted="scram-sha-256"
     ) == {
@@ -241,12 +244,12 @@ def test_present_create_scram_password(mocks):
         rolepassword=ScramHash(),
         valid_until=None,
         groups=None,
-        **DB_ARGS
+        **db_args
     )
     mocks["postgres.user_update"].assert_not_called()
 
 
-def test_present_create_plain_password(mocks):
+def test_present_create_plain_password(mocks, db_args):
     assert postgres_user.present("username", password="password", encrypted=False) == {
         "name": "username",
         "result": True,
@@ -266,17 +269,19 @@ def test_present_create_plain_password(mocks):
         rolepassword="password",
         valid_until=None,
         groups=None,
-        **DB_ARGS
+        **db_args
     )
     mocks["postgres.user_update"].assert_not_called()
 
 
-def test_present_create_md5_password_default_plain(mocks, monkeypatch, md5_pw):
+def test_present_create_md5_password_default_plain(mocks, monkeypatch, md5_pw, db_args):
     monkeypatch.setattr(postgres, "_DEFAULT_PASSWORDS_ENCRYPTION", False)
-    test_present_create_md5_password(mocks, md5_pw)
+    test_present_create_md5_password(mocks, md5_pw, db_args)
 
 
-def test_present_create_md5_password_default_encrypted(mocks, monkeypatch, md5_pw):
+def test_present_create_md5_password_default_encrypted(
+    mocks, monkeypatch, md5_pw, db_args
+):
     monkeypatch.setattr(postgres, "_DEFAULT_PASSWORDS_ENCRYPTION", True)
 
     assert postgres_user.present("username", password="password") == {
@@ -298,12 +303,12 @@ def test_present_create_md5_password_default_encrypted(mocks, monkeypatch, md5_p
         rolepassword=md5_pw,
         valid_until=None,
         groups=None,
-        **DB_ARGS
+        **db_args
     )
     mocks["postgres.user_update"].assert_not_called()
 
 
-def test_present_create_md5_prehashed(mocks, md5_pw):
+def test_present_create_md5_prehashed(mocks, md5_pw, db_args):
     assert postgres_user.present("username", password=md5_pw, encrypted=True) == {
         "name": "username",
         "result": True,
@@ -323,7 +328,7 @@ def test_present_create_md5_prehashed(mocks, md5_pw):
         rolepassword=md5_pw,
         valid_until=None,
         groups=None,
-        **DB_ARGS
+        **db_args
     )
     mocks["postgres.user_update"].assert_not_called()
 
@@ -390,7 +395,7 @@ def test_present_scram_matches_prehashed(mocks, existing_user, scram_pw):
     mocks["postgres.user_update"].assert_not_called()
 
 
-def test_present_update_md5_password(mocks, existing_user, md5_pw):
+def test_present_update_md5_password(mocks, existing_user, md5_pw, db_args):
     existing_user["password"] = "md500000000000000000000000000000000"
     mocks["postgres.role_get"].return_value = existing_user
 
@@ -414,11 +419,11 @@ def test_present_update_md5_password(mocks, existing_user, md5_pw):
         rolepassword=md5_pw,
         valid_until=None,
         groups=None,
-        **DB_ARGS
+        **db_args
     )
 
 
-def test_present_refresh_scram_password(mocks, existing_user, scram_pw):
+def test_present_refresh_scram_password(mocks, existing_user, scram_pw, db_args):
     existing_user["password"] = scram_pw
     mocks["postgres.role_get"].return_value = existing_user
 
@@ -434,7 +439,7 @@ def test_present_refresh_scram_password(mocks, existing_user, scram_pw):
         "comment": "The user username has been updated",
     }
     mocks["postgres.role_get"].assert_called_once_with(
-        "username", return_password=False, **DB_ARGS
+        "username", return_password=False, **db_args
     )
     mocks["postgres.user_create"].assert_not_called()
     mocks["postgres.user_update"].assert_called_once_with(
@@ -449,7 +454,7 @@ def test_present_refresh_scram_password(mocks, existing_user, scram_pw):
         rolepassword=ScramHash(),
         valid_until=None,
         groups=None,
-        **DB_ARGS
+        **db_args
     )
 
 
@@ -469,7 +474,7 @@ def test_present_update_error(mocks, existing_user):
     mocks["postgres.user_update"].assert_called_once()
 
 
-def test_present_update_password_no_check(mocks, existing_user, md5_pw):
+def test_present_update_password_no_check(mocks, existing_user, md5_pw, db_args):
     del existing_user["password"]
     mocks["postgres.role_get"].return_value = existing_user
 
@@ -482,7 +487,7 @@ def test_present_update_password_no_check(mocks, existing_user, md5_pw):
         "comment": "The user username has been updated",
     }
     mocks["postgres.role_get"].assert_called_once_with(
-        "username", return_password=False, **DB_ARGS
+        "username", return_password=False, **db_args
     )
     mocks["postgres.user_create"].assert_not_called()
     mocks["postgres.user_update"].assert_called_once_with(
@@ -497,11 +502,11 @@ def test_present_update_password_no_check(mocks, existing_user, md5_pw):
         rolepassword=md5_pw,
         valid_until=None,
         groups=None,
-        **DB_ARGS
+        **db_args
     )
 
 
-def test_present_create_default_password(mocks, md5_pw):
+def test_present_create_default_password(mocks, md5_pw, db_args):
     assert postgres_user.present(
         "username", default_password="password", encrypted=True
     ) == {
@@ -523,11 +528,11 @@ def test_present_create_default_password(mocks, md5_pw):
         rolepassword=md5_pw,
         valid_until=None,
         groups=None,
-        **DB_ARGS
+        **db_args
     )
 
 
-def test_present_create_unused_default_password(mocks, md5_pw):
+def test_present_create_unused_default_password(mocks, md5_pw, db_args):
     assert postgres_user.present(
         "username", password="password", default_password="changeme", encrypted=True
     ) == {
@@ -549,7 +554,7 @@ def test_present_create_unused_default_password(mocks, md5_pw):
         rolepassword=md5_pw,
         valid_until=None,
         groups=None,
-        **DB_ARGS
+        **db_args
     )
     mocks["postgres.user_update"].assert_not_called()
 
@@ -570,7 +575,7 @@ def test_present_existing_default_password(mocks, existing_user):
     mocks["postgres.user_update"].assert_not_called()
 
 
-def test_present_plain_to_scram(mocks, existing_user):
+def test_present_plain_to_scram(mocks, existing_user, db_args):
     existing_user["password"] = "password"
     mocks["postgres.role_get"].return_value = existing_user
 
@@ -596,11 +601,11 @@ def test_present_plain_to_scram(mocks, existing_user):
         rolepassword=ScramHash(),
         valid_until=None,
         groups=None,
-        **DB_ARGS
+        **db_args
     )
 
 
-def test_present_plain_to_md5(mocks, existing_user, md5_pw):
+def test_present_plain_to_md5(mocks, existing_user, md5_pw, db_args):
     existing_user["password"] = "password"
     mocks["postgres.role_get"].return_value = existing_user
 
@@ -624,11 +629,11 @@ def test_present_plain_to_md5(mocks, existing_user, md5_pw):
         rolepassword=md5_pw,
         valid_until=None,
         groups=None,
-        **DB_ARGS
+        **db_args
     )
 
 
-def test_present_md5_to_scram(mocks, existing_user):
+def test_present_md5_to_scram(mocks, existing_user, db_args):
     mocks["postgres.role_get"].return_value = existing_user
 
     assert postgres_user.present(
@@ -653,11 +658,11 @@ def test_present_md5_to_scram(mocks, existing_user):
         rolepassword=ScramHash(),
         valid_until=None,
         groups=None,
-        **DB_ARGS
+        **db_args
     )
 
 
-def test_present_scram_to_md5(mocks, existing_user, scram_pw, md5_pw):
+def test_present_scram_to_md5(mocks, existing_user, scram_pw, md5_pw, db_args):
     existing_user["password"] = scram_pw
     mocks["postgres.role_get"].return_value = existing_user
 
@@ -681,7 +686,7 @@ def test_present_scram_to_md5(mocks, existing_user, scram_pw, md5_pw):
         rolepassword=md5_pw,
         valid_until=None,
         groups=None,
-        **DB_ARGS
+        **db_args
     )
 
 
@@ -690,7 +695,7 @@ def test_present_scram_to_md5(mocks, existing_user, scram_pw, md5_pw):
 # ==========
 
 
-def test_absent_delete(mocks):
+def test_absent_delete(mocks, db_args):
     mocks["postgres.user_exists"].return_value = True
 
     assert postgres_user.absent("username") == {
@@ -699,12 +704,12 @@ def test_absent_delete(mocks):
         "changes": {"username": "Absent"},
         "comment": "User username has been removed",
     }
-    mocks["postgres.user_exists"].assert_called_once_with("username", **DB_ARGS)
-    mocks["postgres.user_remove"].assert_called_once_with("username", **DB_ARGS)
+    mocks["postgres.user_exists"].assert_called_once_with("username", **db_args)
+    mocks["postgres.user_remove"].assert_called_once_with("username", **db_args)
 
 
 @pytest.mark.usefixtures("test_mode")
-def test_absent_test(mocks):
+def test_absent_test(mocks, db_args):
     mocks["postgres.user_exists"].return_value = True
 
     assert postgres_user.absent("username") == {
@@ -713,11 +718,11 @@ def test_absent_test(mocks):
         "changes": {},
         "comment": "User username is set to be removed",
     }
-    mocks["postgres.user_exists"].assert_called_once_with("username", **DB_ARGS)
+    mocks["postgres.user_exists"].assert_called_once_with("username", **db_args)
     mocks["postgres.user_remove"].assert_not_called()
 
 
-def test_absent_already(mocks):
+def test_absent_already(mocks, db_args):
     mocks["postgres.user_exists"].return_value = False
 
     assert postgres_user.absent("username") == {
@@ -726,7 +731,7 @@ def test_absent_already(mocks):
         "changes": {},
         "comment": "User username is not present, so it cannot be removed",
     }
-    mocks["postgres.user_exists"].assert_called_once_with("username", **DB_ARGS)
+    mocks["postgres.user_exists"].assert_called_once_with("username", **db_args)
     mocks["postgres.user_remove"].assert_not_called()
 
 
