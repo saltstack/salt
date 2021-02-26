@@ -1,12 +1,10 @@
 """
-Integration tests for modules/useradd.py and modules/win_useradd.py.
+Integration tests for modules/useradd.py and modules/win_useradd.py
 """
 import pytest
 from tests.support.helpers import random_string, requires_system_grains
 
-
-pytestmark = [pytest.mark.windows_whitelisted,
-              pytest.mark.skip_unless_on_windows]
+pytestmark = [pytest.mark.windows_whitelisted, pytest.mark.skip_unless_on_windows]
 
 
 @pytest.fixture(scope="function")
@@ -274,6 +272,8 @@ def test_user_setpassword_policy(setup_teardown_vars, salt_call_cli):
 
     # fix the policy and store the previous strerror in ret to cleanup
     salt_call_cli.run("lgpo.set", "computer_policy={'Minimum Password Length': 0}")
-    assert ret.json == ("The password does not meet the password policy requirements."
-                        " Check the minimum password length, password complexity and"
-                        " password history requirements.")
+    assert ret.json == (
+        "The password does not meet the password policy requirements."
+        " Check the minimum password length, password complexity and"
+        " password history requirements."
+    )
