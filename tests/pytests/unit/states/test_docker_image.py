@@ -50,7 +50,7 @@ def test_present_already_local():
         assert ret == {
             "changes": {},
             "result": True,
-            "comment": "Image 'image:latest' was pulled, " "but there were no changes",
+            "comment": "Image 'image:latest' was pulled, but there were no changes",
             "name": "image:latest",
         }
 
