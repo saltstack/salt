@@ -28,9 +28,6 @@ def test_present():
         assert makeconf.present(name) == ret
 
 
-# 'absent' function tests: 1
-
-
 def test_absent():
     """
     Test to verify that the variable is not in the ``make.conf``.
