@@ -480,7 +480,7 @@ Module/Global Level Variables
 
 If you need access to module or global level variables, please use a pytest fixture. The
 use of module and global variables can introduce mutable global objects and increases
-processing time because all globals are evaulated when collecting tests. For example,
+processing time because all globals are evaluated when collecting tests. For example,
 if all of your tests need access to a string variable:
 
 .. code-block:: python
