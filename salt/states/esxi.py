@@ -1359,7 +1359,7 @@ def diskgroups_configured(name, diskgroups, erase_disks=False):
             continue
 
         # No capacity needs to be added
-        s = "Disk group #{} is correctly configured. Nothing to be done." "".format(idx)
+        s = "Disk group #{} is correctly configured. Nothing to be done.".format(idx)
         log.info(s)
         comments.append(s)
     __salt__["vsphere.disconnect"](si)
