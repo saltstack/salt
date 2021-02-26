@@ -1313,7 +1313,6 @@ def list_pkgs(
             Packages in this state now correctly show up in the output of this
             function.
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -2432,7 +2431,7 @@ def mod_repo(repo, saltenv="base", **kwargs):
         # has already been modified on a previous run.
         repo_matches = (
             source.type == repo_type
-            and source.uri == repo_uri
+            and source.uri.rstrip("/") == repo_uri.rstrip("/")
             and source.dist == repo_dist
         )
         kw_matches = source.dist == kw_dist and source.type == kw_type
@@ -2837,7 +2836,6 @@ def show(*names, **kwargs):
         If ``True``, the apt cache will be refreshed first. By default, no
         refresh is performed.
 
-
     CLI Examples:
 
     .. code-block:: bash
@@ -2914,7 +2912,7 @@ def info_installed(*names, **kwargs):
 
         .. versionadded:: 2016.11.3
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -2986,7 +2984,7 @@ def list_downloaded(root=None, **kwargs):
     root
         operate on a different root directory.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 

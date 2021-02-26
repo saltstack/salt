@@ -573,7 +573,7 @@ def info_installed(*names, **kwargs):
     :param root:
         Operate on a different root directory.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -616,7 +616,7 @@ def info_available(*names, **kwargs):
     root
         operate on a different root directory.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -709,7 +709,7 @@ def latest_version(*names, **kwargs):
     root
         operate on a different root directory.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -2598,7 +2598,7 @@ def download(*packages, **kwargs):
     root
         operate on a different root directory.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -2655,7 +2655,7 @@ def list_downloaded(root=None, **kwargs):
     root
         operate on a different root directory.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -2693,7 +2693,7 @@ def diff(*paths, **kwargs):
     :param path: Full path to the installed file
     :return: Difference string or raises and exception if examined file is binary.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 

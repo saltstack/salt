@@ -1,6 +1,6 @@
 """
 Module for working with the Glassfish/Payara 4.x management API
-.. versionadded:: Carbon
+.. versionadded:: 2016.11.0
 :depends: requests
 """
 

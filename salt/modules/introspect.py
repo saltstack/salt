@@ -17,6 +17,8 @@ def running_service_owners(
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt myminion introspect.running_service_owners
     """
     error = {}
@@ -65,6 +67,8 @@ def enabled_service_owners():
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt myminion introspect.enabled_service_owners
     """
     error = {}
@@ -105,6 +109,8 @@ def service_highstate(requires=True):
     package dependencies, set ``requires`` to False.
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt myminion introspect.service_highstate
         salt myminion introspect.service_highstate requires=False

@@ -270,10 +270,17 @@ def _install_requirements(session, transport, *extra_requirements):
         )
         return
 
-    # setuptools 50.0.0 is broken
-    # https://github.com/pypa/setuptools/issues?q=is%3Aissue+setuptools+50+
-    install_command = ["--progress-bar=off", "-U", "setuptools<50.0.0"]
-    session.install(*install_command, silent=PIP_INSTALL_SILENT)
+    install_command = [
+        "python",
+        "-m",
+        "pip",
+        "install",
+        "--progress-bar=off",
+        "-U",
+        "pip",
+        "setuptools!=50.*,!=51.*,!=52.*",
+    ]
+    session.run(*install_command, silent=PIP_INSTALL_SILENT)
 
     # Install requirements
     requirements_file = _get_pip_requirements_file(session, transport)

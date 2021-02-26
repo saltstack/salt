@@ -435,7 +435,6 @@ def get_docker(interfaces=None, cidrs=None, with_container_id=False):
 
         .. versionadded:: 2015.8.2
 
-
     CLI Example:
 
     .. code-block:: bash

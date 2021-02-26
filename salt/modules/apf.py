@@ -64,6 +64,7 @@ def _status_apf():
 def running():
     """
     Check apf status
+
     CLI Example:
 
     .. code-block:: bash
@@ -76,6 +77,7 @@ def running():
 def disable():
     """
     Stop (flush) all firewall rules
+
     CLI Example:
 
     .. code-block:: bash
@@ -89,6 +91,7 @@ def disable():
 def enable():
     """
     Load all firewall rules
+
     CLI Example:
 
     .. code-block:: bash
@@ -102,6 +105,7 @@ def enable():
 def reload():
     """
     Stop (flush) & reload firewall rules
+
     CLI Example:
 
     .. code-block:: bash
@@ -115,6 +119,7 @@ def reload():
 def refresh():
     """
     Refresh & resolve dns names in trust rules
+
     CLI Example:
 
     .. code-block:: bash
@@ -127,6 +132,7 @@ def refresh():
 def allow(ip, port=None):
     """
     Add host (IP/FQDN) to allow_hosts.rules and immediately load new rule into firewall
+
     CLI Example:
 
     .. code-block:: bash
@@ -140,6 +146,7 @@ def allow(ip, port=None):
 def deny(ip):
     """
     Add host (IP/FQDN) to deny_hosts.rules and immediately load new rule into firewall
+
     CLI Example:
 
     .. code-block:: bash
@@ -152,6 +159,7 @@ def deny(ip):
 def remove(ip):
     """
     Remove host from [glob]*_hosts.rules and immediately remove rule from firewall
+
     CLI Example:
 
     .. code-block:: bash

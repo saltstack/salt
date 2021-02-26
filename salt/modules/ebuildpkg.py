@@ -217,7 +217,7 @@ def ex_mod_init(low):
     .. versionadded:: 0.17.0
        Initial automatic enforcement added when pkg is used on a Gentoo system.
 
-    .. versionchanged:: 2014.1.0-Hydrogen
+    .. versionchanged:: 2014.7.0
        Configure option added to make this behaviour optional, defaulting to
        off.
 
@@ -355,7 +355,7 @@ def list_upgrades(refresh=True, backtrack=3, **kwargs):  # pylint: disable=W0613
         calculation fails due to a conflict or an unsatisfied dependency
         (default: ´3´).
 
-        .. versionadded: 2015.8.0
+        .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -909,7 +909,7 @@ def upgrade(refresh=True, binhost=None, backtrack=3, **kwargs):
         calculation fails due to a conflict or an unsatisfied dependency
         (default: ´3´).
 
-        .. versionadded: 2015.8.0
+        .. versionadded:: 2015.8.0
 
     Returns a dictionary containing the changes:
 
@@ -917,7 +917,6 @@ def upgrade(refresh=True, binhost=None, backtrack=3, **kwargs):
 
         {'<package>':  {'old': '<old-version>',
                         'new': '<new-version>'}}
-
 
     CLI Example:
 
