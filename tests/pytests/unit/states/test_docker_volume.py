@@ -49,12 +49,12 @@ def test_present():
         docker_create_volume.assert_called_with(
             "volume_foo", driver=None, driver_opts=None
         )
-        assert {
+        assert ret == {
             "name": "volume_foo",
             "comment": "",
             "changes": {"created": {"Driver": default_driver, "Name": "volume_foo"}},
             "result": True,
-        } == ret
+        }
         assert len(volumes) == 1
         assert volumes[0]["Name"] == "volume_foo"
         assert volumes[0]["Driver"] is default_driver
@@ -62,12 +62,12 @@ def test_present():
         # run it again with the same arguments
         orig_volumes = [volumes[0].copy()]
         ret = docker_state.present("volume_foo")
-        assert {
+        assert ret == {
             "name": "volume_foo",
             "comment": "Volume 'volume_foo' already exists.",
             "changes": {},
             "result": True,
-        } == ret
+        }
         assert orig_volumes == volumes
 
         # run it again with a different driver but don't force
