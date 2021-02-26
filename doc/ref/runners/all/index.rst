@@ -25,6 +25,8 @@ runner modules
     f5
     fileserver
     git_pillar
+    heist
+    heist_salt
     http
     jobs
     launchd

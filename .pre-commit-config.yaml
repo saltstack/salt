@@ -253,7 +253,8 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-linux-py3.5-zmq-requirements
         name: Linux CI Py3.5 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(linux\.in|git-sources\.txt)|pkg/py3\.5/linux\.txt))$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(linux\.in|common\.in|git-sources\.txt)|pkg/py3\.5/linux\.txt))$
+
         pass_filenames: false
         args:
           - -v
@@ -268,7 +269,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-linux-py3.6-zmq-requirements
         name: Linux CI Py3.6 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(linux\.in|git-sources\.txt)|pkg/py3\.6/linux\.txt))$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(linux\.in|common\.in||git-sources\.txt)|pkg/py3\.6/linux\.txt))$
         pass_filenames: false
         args:
           - -v
@@ -283,7 +284,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-linux-py3.7-zmq-requirements
         name: Linux CI Py3.7 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(linux\.in|git-sources\.txt)|pkg/py3\.7/linux\.txt))$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(linux\.in|common\.in|git-sources\.txt)|pkg/py3\.7/linux\.txt))$
         pass_filenames: false
         args:
           - -v
@@ -298,7 +299,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-linux-py3.8-zmq-requirements
         name: Linux CI Py3.8 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(linux\.in|git-sources\.txt)|pkg/py3\.8/linux\.txt))$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(linux\.in|common\.in|git-sources\.txt)|pkg/py3\.8/linux\.txt))$
         pass_filenames: false
         args:
           - -v
@@ -313,7 +314,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-linux-py3.9-zmq-requirements
         name: Linux CI Py3.9 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(linux\.in|git-sources\.txt)|pkg/py3\.9/linux\.txt))$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(linux\.in|common\.in|git-sources\.txt)|pkg/py3\.9/linux\.txt))$
         pass_filenames: false
         args:
           - -v
@@ -328,7 +329,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-linux-py3.10-zmq-requirements
         name: Linux CI Py3.10 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(linux\.in|git-sources\.txt)|pkg/py3\.10/linux\.txt))$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(linux\.in|common\.in|git-sources\.txt)|pkg/py3\.10/linux\.txt))$
         pass_filenames: false
         args:
           - -v

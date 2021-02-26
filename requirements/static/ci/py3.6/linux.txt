@@ -6,10 +6,20 @@
 #
 --extra-index-url https://cdn.githubraw.com/saltstack/vsphere-automation-sdk-python/master/lib/
 
+acct==6.1.1
+    # via heist
 adal==1.2.3
     # via
     #   azure-datalake-store
     #   msrestazure
+aiofiles==0.4.0
+    # via
+    #   acct
+    #   aiologger
+aiohttp==3.7.4.post0
+    # via heist
+aiologger[aiofiles]==0.6.1
+    # via pop-config
 ansible-base==2.10.9
     # via ansible
 ansible==3.4.0
@@ -24,8 +34,13 @@ asn1crypto==1.3.0
     # via
     #   certvalidator
     #   oscrypto
+async-timeout==3.0.1
+    # via aiohttp
+asyncssh==2.7.0
+    # via heist
 attrs==20.3.0
     # via
+    #   aiohttp
     #   jsonschema
     #   pytest
     #   pytest-salt-factories
@@ -385,6 +400,7 @@ cfn-lint==0.44.3
 chardet==3.0.4
     # via
     #   -r requirements/static/pkg/py3.6/linux.txt
+    #   aiohttp
     #   requests
 cheetah3==3.2.6.post2
     # via -r requirements/static/ci/common.in
@@ -399,20 +415,28 @@ cherrypy==17.4.1
 click==7.1.1
     # via geomet
 clustershell==1.8.3
-    # via -r requirements/static/ci/common.in
+    # via
+    #   -r requirements/static/ci/common.in
+    #   heist
+colored==1.4.2
+    # via rend
 contextlib2==0.5.5
     # via
     #   -r requirements/static/pkg/py3.6/linux.txt
     #   cherrypy
 contextvars==2.4
-    # via -r requirements/static/pkg/py3.6/linux.txt
+    # via
+    #   -r requirements/static/pkg/py3.6/linux.txt
+    #   sniffio
 croniter==0.3.29 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
 cryptography==3.3.2
     # via
     #   -r requirements/static/pkg/py3.6/linux.txt
+    #   acct
     #   adal
     #   ansible-base
+    #   asyncssh
     #   azure-cosmosdb-table
     #   azure-keyvault
     #   azure-storage-common
@@ -424,6 +448,12 @@ cryptography==3.3.2
     #   vcert
 decorator==4.4.2
     # via networkx
+dict-toolbox==2
+    # via
+    #   acct
+    #   pop
+    #   pop-config
+    #   rend
 distlib==0.3.0
     # via virtualenv
 distro==1.5.0
@@ -459,11 +489,17 @@ gitpython==3.1.12
     # via -r requirements/static/ci/common.in
 google-auth==1.6.3
     # via kubernetes
+heist==4.0.0
+    # via -r requirements/static/ci/common.in
+idna-ssl==1.1.0
+    # via aiohttp
 idna==2.8
     # via
     #   -r requirements/static/pkg/py3.6/linux.txt
+    #   idna-ssl
     #   moto
     #   requests
+    #   yarl
 immutables==0.14
     # via
     #   -r requirements/static/pkg/py3.6/linux.txt
@@ -496,6 +532,7 @@ jinja2==2.11.3
     #   ansible-base
     #   junos-eznc
     #   moto
+    #   rend
 jmespath==0.9.4
     # via
     #   -r requirements/static/ci/common.in
@@ -558,6 +595,8 @@ moto==1.3.16
 msgpack==1.0.2
     # via
     #   -r requirements/static/pkg/py3.6/linux.txt
+    #   acct
+    #   dict-toolbox
     #   pytest-salt-factories
 msrest==0.6.14
     # via
@@ -648,8 +687,14 @@ msrestazure==0.6.3
     #   azure-mgmt-subscription
     #   azure-mgmt-trafficmanager
     #   azure-mgmt-web
+multidict==5.1.0
+    # via
+    #   aiohttp
+    #   yarl
 ncclient==0.6.4
     # via junos-eznc
+nest-asyncio==1.5.1
+    # via pop-loop
 netaddr==0.7.19
     # via junos-eznc
 networkx==2.5
@@ -684,10 +729,24 @@ pathtools==0.1.2
     # via watchdog
 pluggy==0.13.0
     # via pytest
+pop-config==6.11
+    # via pop
+pop-loop==1.0.3
+    # via pop
+pop==20.0.0
+    # via
+    #   -r requirements/static/ci/common.in
+    #   acct
+    #   heist
+    #   pop-config
+    #   pop-loop
+    #   rend
 portend==2.4
     # via
     #   -r requirements/static/pkg/py3.6/linux.txt
     #   cherrypy
+proxy-tools==0.1.0
+    # via pop
 psutil==5.8.0
     # via
     #   -r requirements/static/pkg/py3.6/linux.txt
@@ -781,18 +840,27 @@ pyvmomi==6.7.1.2018.12
 pyyaml==5.4.1
     # via
     #   -r requirements/static/pkg/py3.6/linux.txt
+    #   acct
     #   ansible-base
     #   cfn-lint
     #   clustershell
+    #   dict-toolbox
+    #   heist
     #   junos-eznc
     #   kubernetes
     #   moto
+    #   pop
+    #   rend
     #   watchdog
     #   yamlordereddictloader
 pyzmq==18.0.1 ; python_version < "3.9"
     # via
     #   -r requirements/static/pkg/py3.6/linux.txt
     #   pytest-salt-factories
+rend==6.2.0
+    # via
+    #   acct
+    #   heist
 requests-oauthlib==1.3.0
     # via msrest
 requests==2.25.1
@@ -872,6 +940,8 @@ six==1.16.0
     #   websocket-client
 smmap==3.0.4
     # via gitdb
+sniffio==1.2.0
+    # via pop-loop
 sqlparse==0.4.1
     # via -r requirements/static/ci/common.in
 sshpubkeys==3.1.0
@@ -894,8 +964,13 @@ toml==0.10.2
     # via
     #   -r requirements/static/ci/common.in
     #   pytest
+    #   rend
 transitions==0.8.1
     # via junos-eznc
+typing-extensions==3.10.0.0
+    # via
+    #   aiohttp
+    #   yarl
 urllib3==1.26.4
     # via
     #   -r requirements/static/pkg/py3.6/linux.txt
@@ -951,6 +1026,8 @@ xmltodict==0.12.0
     # via moto
 yamlordereddictloader==0.4.0
     # via junos-eznc
+yarl==1.6.3
+    # via aiohttp
 zc.lockfile==1.4
     # via
     #   -r requirements/static/pkg/py3.6/linux.txt
