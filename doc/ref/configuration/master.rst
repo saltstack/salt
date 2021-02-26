@@ -5099,6 +5099,39 @@ Used by ``salt-api`` for the master requests timeout.
 
     rest_timeout: 300
 
+.. conf_master:: netapi_disable_clients
+
+``netapi_disable_clients``
+--------------------------
+
+Default: ``[]``
+
+Used by ``salt-api`` to disable access to the listed clients. Adding a
+client to this list will cause requests to be rejected before
+authentication is attempted or processing of the low state occurs.
+
+This can be used where certain functionality is not required via
+``salt-api`` and should be disabled entirely.
+
+Configuration with all possible clients disabled:
+
+.. code-block:: yaml
+
+    netapi_disable_clients:
+      - local
+      - local_async
+      - local_batch
+      - local_subset
+      - runner
+      - runner_async
+      - ssh
+      - wheel
+      - wheel_async
+
+.. note::
+
+    Disabling all clients is not recommened as it will stop
+    the ``salt-api`` functioning.
 
 .. _syndic-server-settings:
 
