@@ -87,6 +87,8 @@ def show_master(path=MASTER_CF):
 
     CLI Examples:
 
+    .. code-block:: bash
+
         salt <minion> postfix.show_master
         salt <minion> postfix.show_master path=/path/to/master.cf
     """
@@ -125,6 +127,8 @@ def set_master(
     ``write_conf`` option to ``False``, it will skip writing the file.
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt <minion> postfix.set_master smtp inet n y n n 100 smtpd
     """
@@ -250,6 +254,8 @@ def show_main(path=MAIN_CF):
 
     CLI Examples:
 
+    .. code-block:: bash
+
         salt <minion> postfix.show_main
         salt <minion> postfix.show_main path=/path/to/main.cf
     """
@@ -263,6 +269,8 @@ def set_main(key, value, path=MAIN_CF):
     exist, it will be appended to the end.
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt <minion> postfix.set_main mailq_path /usr/bin/mailq
     """

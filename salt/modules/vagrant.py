@@ -249,7 +249,6 @@ def list_inactive_vms(cwd=None):
     Return a list of machine names for inactive virtual machine on the host,
     which are defined in the Vagrantfile at the indicated path.
 
-
     CLI Example:
 
     .. code-block:: bash

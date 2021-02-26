@@ -77,7 +77,7 @@ The kubernetes module is used to manage different kubernetes resources.
             key2: value2
             key3: value3
 
-.. versionadded: 2017.7.0
+.. versionadded:: 2017.7.0
 """
 
 import copy
