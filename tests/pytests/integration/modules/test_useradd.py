@@ -2,7 +2,11 @@
 Integration tests for modules/useradd.py and modules/win_useradd.py.
 """
 import pytest
-from tests.support.helpers import random_string, requires_system_grains, runs_on
+from tests.support.helpers import random_string, requires_system_grains
+
+
+pytestmark = [pytest.mark.windows_whitelisted,
+              pytest.mark.skip_unless_on_windows]
 
 
 @pytest.fixture(scope="function")
@@ -14,9 +18,10 @@ def setup_teardown_vars(salt_call_cli):
     finally:
         salt_call_cli.run("user.delete", user_name, True, True)
         salt_call_cli.run("group.delete", group_name)
+        salt_call_cli.run("lgpo.set", "computer_policy={'Minimum Password Length': 0}")
 
 
-@runs_on(kernel="Linux")
+@pytest.mark.skip_on_windows(reason="Windows does not do user checks")
 @pytest.mark.destructive_test
 @pytest.mark.skip_if_not_root
 @requires_system_grains
@@ -66,7 +71,9 @@ def test_groups_includes_primary(setup_teardown_vars, grains, salt_call_cli):
         pytest.raises(salt_call_cli.run("user.delete", [uname, True, True]))
 
 
-@runs_on(kernel="Linux")
+@pytest.mark.skip_on_windows(reason="Windows does not do user checks")
+@pytest.mark.destructive_test
+@pytest.mark.skip_if_not_root
 def test_user_primary_group(setup_teardown_vars, salt_call_cli):
     """
     Tests the primary_group function
@@ -85,7 +92,7 @@ def test_user_primary_group(setup_teardown_vars, salt_call_cli):
     assert primary_group.json in uid_info.json["groups"]
 
 
-@runs_on(kernel="Windows")
+@pytest.mark.skip_unless_on_windows(reason="Test is only applicable to Windows.")
 @pytest.mark.destructive_test
 def test_add_user(setup_teardown_vars, salt_call_cli):
     """
@@ -97,7 +104,7 @@ def test_add_user(setup_teardown_vars, salt_call_cli):
     assert user_name in user_add.json
 
 
-@runs_on(kernel="Windows")
+@pytest.mark.skip_unless_on_windows(reason="Test is only applicable to Windows.")
 @pytest.mark.destructive_test
 def test_add_group(setup_teardown_vars, salt_call_cli):
     """
@@ -109,7 +116,7 @@ def test_add_group(setup_teardown_vars, salt_call_cli):
     assert group_name in group_list.json
 
 
-@runs_on(kernel="Windows")
+@pytest.mark.skip_unless_on_windows(reason="Test is only applicable to Windows.")
 @pytest.mark.destructive_test
 def test_add_user_to_group(setup_teardown_vars, salt_call_cli):
     """
@@ -126,7 +133,7 @@ def test_add_user_to_group(setup_teardown_vars, salt_call_cli):
     assert group_name in user_info.json["groups"]
 
 
-@runs_on(kernel="Windows")
+@pytest.mark.skip_unless_on_windows(reason="Test is only applicable to Windows.")
 @pytest.mark.destructive_test
 def test_add_user_addgroup(setup_teardown_vars, salt_call_cli):
     """
@@ -143,7 +150,7 @@ def test_add_user_addgroup(setup_teardown_vars, salt_call_cli):
     assert [group_name] == info.json["groups"]
 
 
-@runs_on(kernel="Windows")
+@pytest.mark.skip_unless_on_windows(reason="Test is only applicable to Windows.")
 @pytest.mark.destructive_test
 def test_user_chhome(setup_teardown_vars, salt_call_cli):
     """
@@ -158,7 +165,7 @@ def test_user_chhome(setup_teardown_vars, salt_call_cli):
     assert user_dir == info.json["home"]
 
 
-@runs_on(kernel="Windows")
+@pytest.mark.skip_unless_on_windows(reason="Test is only applicable to Windows.")
 @pytest.mark.destructive_test
 def test_user_chprofile(setup_teardown_vars, salt_call_cli):
     """
@@ -173,7 +180,7 @@ def test_user_chprofile(setup_teardown_vars, salt_call_cli):
     assert config == info.json["profile"]
 
 
-@runs_on(kernel="Windows")
+@pytest.mark.skip_unless_on_windows(reason="Test is only applicable to Windows.")
 @pytest.mark.destructive_test
 def test_user_chfullname(setup_teardown_vars, salt_call_cli):
     """
@@ -188,7 +195,7 @@ def test_user_chfullname(setup_teardown_vars, salt_call_cli):
     assert name == info.json["fullname"]
 
 
-@runs_on(kernel="Windows")
+@pytest.mark.skip_unless_on_windows(reason="Test is only applicable to Windows.")
 @pytest.mark.destructive_test
 def test_user_delete(setup_teardown_vars, salt_call_cli):
     """
@@ -201,7 +208,7 @@ def test_user_delete(setup_teardown_vars, salt_call_cli):
     assert {} == ret.json
 
 
-@runs_on(kernel="Windows")
+@pytest.mark.skip_unless_on_windows(reason="Test is only applicable to Windows.")
 @pytest.mark.destructive_test
 def test_user_removegroup(setup_teardown_vars, salt_call_cli):
     """
@@ -222,7 +229,7 @@ def test_user_removegroup(setup_teardown_vars, salt_call_cli):
     assert [group_name] not in ret.json
 
 
-@runs_on(kernel="Windows")
+@pytest.mark.skip_unless_on_windows(reason="Test is only applicable to Windows.")
 @pytest.mark.destructive_test
 def test_user_rename(setup_teardown_vars, salt_call_cli):
     """
@@ -238,7 +245,7 @@ def test_user_rename(setup_teardown_vars, salt_call_cli):
     assert info.json["active"] is True
 
 
-@runs_on(kernel="Windows")
+@pytest.mark.skip_unless_on_windows(reason="Test is only applicable to Windows.")
 @pytest.mark.destructive_test
 def test_user_setpassword(setup_teardown_vars, salt_call_cli):
     """
@@ -250,3 +257,23 @@ def test_user_setpassword(setup_teardown_vars, salt_call_cli):
     salt_call_cli.run("user.add", user_name)
     ret = salt_call_cli.run("user.setpassword", user_name, passwd)
     assert ret.json is True
+
+
+@pytest.mark.skip_unless_on_windows(reason="Test is only applicable to Windows.")
+@pytest.mark.destructive_test
+def test_user_setpassword_policy(setup_teardown_vars, salt_call_cli):
+    """
+    Test setting a password with a password policy.
+    """
+    passwd = "test"
+    user_name = setup_teardown_vars[0]
+
+    # attempt to set a password policy that will cause a failure when creating a user
+    salt_call_cli.run("lgpo.set", "computer_policy={'Minimum Password Length': 8}")
+    ret = salt_call_cli.run("user.add", user_name, password=passwd)
+
+    # fix the policy and store the previous strerror in ret to cleanup
+    salt_call_cli.run("lgpo.set", "computer_policy={'Minimum Password Length': 0}")
+    assert ret.json == ("The password does not meet the password policy requirements."
+                        " Check the minimum password length, password complexity and"
+                        " password history requirements.")
