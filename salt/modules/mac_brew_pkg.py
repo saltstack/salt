@@ -530,7 +530,6 @@ def upgrade(refresh=True, **kwargs):
         {'<package>':  {'old': '<old-version>',
                         'new': '<new-version>'}}
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -571,7 +570,7 @@ def info_installed(*names, **kwargs):
     names
         The names of the packages for which to return information.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 

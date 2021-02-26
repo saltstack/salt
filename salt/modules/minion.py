@@ -72,9 +72,12 @@ def kill(timeout=15):
     If you have a monitor that restarts ``salt-minion`` when it dies then this is
     a great way to restart after a minion upgrade.
 
-    CLI example::
+    CLI Example:
 
-        >$ salt minion[12] minion.kill
+    .. code-block:: bash
+
+        salt minion[12] minion.kill
+
         minion1:
             ----------
             killed:
@@ -146,9 +149,12 @@ def restart():
     process to perform the restart.  This behavior is intended for managed
     salt minion processes.
 
-    CLI example::
+    CLI Example:
 
-        >$ salt minion[12] minion.restart
+    .. code-block:: bash
+
+        salt minion[12] minion.restart
+
         minion1:
             ----------
             comment:

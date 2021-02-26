@@ -138,7 +138,6 @@ def reset(all=False, vms=False, switches=False):
     vms:
         Reset and terminate all VMs.
 
-
     CLI Example:
 
     .. code-block:: bash

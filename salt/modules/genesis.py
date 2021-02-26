@@ -214,7 +214,7 @@ def _mkpart(root, fs_format, fs_opts, mount_dir):
     """
     Make a partition, and make it bootable
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
     """
     __salt__["partition.mklabel"](root, "msdos")
     loop1 = __salt__["cmd.run"]("losetup -f")
@@ -254,7 +254,7 @@ def _mkfs(root, fs_format, fs_opts=None):
     """
     Make a filesystem using the appropriate module
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
     """
     if fs_opts is None:
         fs_opts = {}
@@ -673,6 +673,8 @@ def ldd_deps(filename, ret=None):
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt myminion genesis.ldd_deps bash
         salt myminion genesis.ldd_deps /bin/bash
     """
@@ -715,10 +717,12 @@ def mksls(fmt, src, dst=None):
 
     CLI Examples:
 
+    .. code-block:: bash
+
         salt <minion> genesis.mksls kickstart /path/to/kickstart.cfg
         salt <minion> genesis.mksls kickstart /path/to/kickstart.cfg /path/to/dest.sls
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
     """
     if fmt == "kickstart":
         return salt.utils.kickstart.mksls(src, dst)

@@ -26,7 +26,7 @@ localhost to avoid someone eavesdropping on the shared secret.
 See the documentation for cherrypy to setup the headers in your
 frontal.
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.8.0
 """
 
 import logging

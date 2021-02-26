@@ -1,6 +1,6 @@
 """
 Manage Glassfish/Payara server
-.. versionadded:: Carbon
+.. versionadded:: 2016.11.0
 
 Management of glassfish using its RESTful API
 You can setup connection parameters like this

@@ -124,6 +124,9 @@ def find_device(device=None):
         device:         (Optional) Will use the grain 'fqdn' by default
 
     CLI Example:
+
+    .. code-block:: bash
+
         salt '*' zenoss.find_device
     """
 
@@ -148,6 +151,9 @@ def device_exists(device=None):
         device:         (Optional) Will use the grain 'fqdn' by default
 
     CLI Example:
+
+    .. code-block:: bash
+
         salt '*' zenoss.device_exists
     """
 
@@ -170,6 +176,9 @@ def add_device(device=None, device_class=None, collector="localhost", prod_state
         prod_state:     (Optional) The prodState to set on the device. If none, defaults to 1000 ( production )
 
     CLI Example:
+
+    .. code-block:: bash
+
         salt '*' zenoss.add_device
     """
 
@@ -199,6 +208,9 @@ def set_prod_state(prod_state, device=None):
         device:         (Optional) Will use the grain 'fqdn' by default.
 
     CLI Example:
+
+    .. code-block:: bash
+
         salt zenoss.set_prod_state 1000 hostname
     """
 

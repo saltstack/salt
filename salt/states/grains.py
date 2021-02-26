@@ -66,7 +66,7 @@ def present(name, value, delimiter=DEFAULT_TARGET_DELIM, force=False):
     """
     Ensure that a grain is set
 
-    .. versionchanged:: v2015.8.2
+    .. versionchanged:: 2015.8.2
 
     name
         The grain name
@@ -78,12 +78,12 @@ def present(name, value, delimiter=DEFAULT_TARGET_DELIM, force=False):
         If force is True, the existing grain will be overwritten
         regardless of its existing or provided value type. Defaults to False
 
-        .. versionadded:: v2015.8.2
+        .. versionadded:: 2015.8.2
 
     delimiter
         A delimiter different from the default can be provided.
 
-        .. versionadded:: v2015.8.2
+        .. versionadded:: 2015.8.2
 
     It is now capable to set a grain to a complex value (ie. lists and dicts)
     and supports nested grains as well.
@@ -155,7 +155,7 @@ def list_present(name, value, delimiter=DEFAULT_TARGET_DELIM):
     delimiter
         A delimiter different from the default ``:`` can be provided.
 
-        .. versionadded:: v2015.8.2
+        .. versionadded:: 2015.8.2
 
     The grain should be `list type <http://docs.python.org/2/tutorial/datastructures.html#data-structures>`_
 
@@ -257,7 +257,7 @@ def list_absent(name, value, delimiter=DEFAULT_TARGET_DELIM):
     delimiter
         A delimiter different from the default ``:`` can be provided.
 
-        .. versionadded:: v2015.8.2
+        .. versionadded:: 2015.8.2
 
     The grain should be `list type <http://docs.python.org/2/tutorial/datastructures.html#data-structures>`_
 
@@ -335,14 +335,14 @@ def absent(name, destructive=False, delimiter=DEFAULT_TARGET_DELIM, force=False)
         If force is True, the existing grain will be overwritten
         regardless of its existing or provided value type. Defaults to False
 
-        .. versionadded:: v2015.8.2
+        .. versionadded:: 2015.8.2
 
     delimiter
         A delimiter different from the default can be provided.
 
-        .. versionadded:: v2015.8.2
+        .. versionadded:: 2015.8.2
 
-    .. versionchanged:: v2015.8.2
+    .. versionchanged:: 2015.8.2
 
     This state now support nested grains and complex values. It is also more
     conservative: if a grain has a value that is a list or a dict, it will
@@ -419,7 +419,7 @@ def append(name, value, convert=False, delimiter=DEFAULT_TARGET_DELIM):
     delimiter
         A delimiter different from the default can be provided.
 
-        .. versionadded:: v2015.8.2
+        .. versionadded:: 2015.8.2
 
     .. code-block:: yaml
 

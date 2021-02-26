@@ -28,10 +28,10 @@ salt/modules/(debian_service|freebsdservice|gentoo_service|launchctl_service|mac
   - integration.states.test_service
 
 salt/modules/*apache.py:
-  - unit.states.test_apache
-  - unit.states.test_apache_conf
-  - unit.states.test_apache_module
-  - unit.states.test_apache_site
+  - pytests.unit.states.test_apache
+  - pytests.unit.states.test_apache_conf
+  - pytests.unit.states.test_apache_module
+  - pytests.unit.states.test_apache_site
 
 salt/modules/augeas_cfg.py:
   - unit.states.test_augeas
@@ -53,8 +53,8 @@ salt/modules/file.py:
   - pytests.integration.states.test_cron
 
 salt/modules/influxdb08mod.py:
-  - unit.states.test_influxdb08_database
-  - unit.states.test_influxdb08_user
+  - pytests.unit.states.test_influxdb08_database
+  - pytests.unit.states.test_influxdb08_user
 
 salt/modules/mysql.py:
   - unit.states.test_mysql_user
@@ -85,8 +85,8 @@ salt/modules/rabbitmq.py:
   - integration.states.test_rabbitmq_vhost
 
 salt/modules/ssh.py:
-  - unit.states.test_ssh_auth
-  - unit.states.test_ssh_known_hosts
+  - pytests.unit.states.test_ssh_auth
+  - pytests.unit.states.test_ssh_known_hosts
 
 salt/auth/*:
   - pytests.integration.cli.test_salt_auth

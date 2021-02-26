@@ -14,7 +14,7 @@ Dependencies
 
 - :mod:`napalm probes management module <salt.modules.napalm_probes>`
 
-.. versionadded: 2016.11.0
+.. versionadded:: 2016.11.0
 """
 
 import copy
