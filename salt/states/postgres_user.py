@@ -226,7 +226,7 @@ def present(
                 update["valid_until"] = valid_until
         if groups is not None:
             lgroups = groups
-            if isinstance(groups, ((str,), str)):
+            if isinstance(groups, str):
                 lgroups = lgroups.split(",")
             if isinstance(lgroups, list):
                 missing_groups = [a for a in lgroups if a not in user_groups]
