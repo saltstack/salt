@@ -1364,14 +1364,7 @@ def container_device_get(
 
 
 def container_device_add(
-    name,
-    device_name,
-    device_type="disk",
-    remote_addr=None,
-    cert=None,
-    key=None,
-    verify_cert=True,
-    **kwargs
+    name, device_name, remote_addr=None, cert=None, key=None, verify_cert=True, **kwargs
 ):
     """
     Add a container device
@@ -1381,9 +1374,6 @@ def container_device_add(
 
     device_name :
         The device name to add
-
-    device_type :
-        Type of the device
 
     ** kwargs :
         Additional device args
@@ -1415,7 +1405,14 @@ def container_device_add(
     """
     container = container_get(name, remote_addr, cert, key, verify_cert, _raw=True)
 
-    kwargs["type"] = device_type
+    if "type" not in kwargs:
+        kwargs["type"] = "disk"
+
+    # retro compatibility
+    if "device_type" in kwargs:
+        kwargs["type"] = kwargs["device_type"]
+        del kwargs["device_type"]
+
     return _set_property_dict_item(container, "devices", device_name, kwargs)
 
 
