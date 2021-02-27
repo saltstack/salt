@@ -1048,7 +1048,7 @@ def script(
         return ret
 
     if runas and salt.utils.platform.is_windows() and not password:
-        ret["command"] = "Must supply a password if runas argument is used on Windows."
+        ret["comment"] = "Must supply a password if runas argument is used on Windows."
         return ret
 
     tmpctx = defaults if defaults else {}
