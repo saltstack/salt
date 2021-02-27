@@ -1678,7 +1678,7 @@ def symlink(
         will be deleted to make room for the symlink, unless
         backupname is set, when it will be renamed
 
-        .. versionchanged:: Neon
+        .. versionchanged:: 3000
             Force will now remove all types of existing file system entries,
             not just files, directories and symlinks.
 
@@ -2771,7 +2771,7 @@ def managed(
                     setype: system_conf_t
                     seranage: s0
 
-        .. versionadded:: Neon
+        .. versionadded:: 3000
 
     win_owner : None
         The owner of the directory. If this is not passed, user will be used. If
@@ -5730,13 +5730,13 @@ def blockreplace(
         If markers are not found, this parameter can be set to a regex which will
         insert the block before the first found occurrence in the file.
 
-        .. versionadded:: Sodium
+        .. versionadded:: 3001
 
     insert_after_match
         If markers are not found, this parameter can be set to a regex which will
         insert the block after the first found occurrence in the file.
 
-        .. versionadded:: Sodium
+        .. versionadded:: 3001
 
     backup
         The file extension to use for a backup of the file if any edit is made.
@@ -8848,3 +8848,59 @@ def not_cached(name, saltenv="base"):
         ret["result"] = True
         ret["comment"] = "{} is not cached".format(name)
     return ret
+
+
+def mod_beacon(name, **kwargs):
+    """
+    Create a beacon to monitor a file based on a beacon state argument.
+
+    .. note::
+        This state exists to support special handling of the ``beacon``
+        state argument for supported state functions. It should not be called directly.
+
+    """
+    sfun = kwargs.pop("sfun", None)
+    supported_funcs = ["managed", "directory"]
+
+    if sfun in supported_funcs:
+        if kwargs.get("beacon"):
+            beacon_module = "inotify"
+
+            data = {}
+            _beacon_data = kwargs.get("beacon_data", {})
+
+            default_mask = ["create", "delete", "modify"]
+            data["mask"] = _beacon_data.get("mask", default_mask)
+
+            if sfun == "directory":
+                data["auto_add"] = _beacon_data.get("auto_add", True)
+                data["recurse"] = _beacon_data.get("recurse", True)
+                data["exclude"] = _beacon_data.get("exclude", [])
+
+            beacon_name = "beacon_{}_{}".format(beacon_module, name)
+            beacon_kwargs = {
+                "name": beacon_name,
+                "files": {name: data},
+                "interval": _beacon_data.get("interval", 60),
+                "coalesce": _beacon_data.get("coalesce", False),
+                "beacon_module": beacon_module,
+            }
+
+            ret = __states__["beacon.present"](**beacon_kwargs)
+            return ret
+        else:
+            return {
+                "name": name,
+                "changes": {},
+                "comment": "Not adding beacon.",
+                "result": True,
+            }
+    else:
+        return {
+            "name": name,
+            "changes": {},
+            "comment": "file.{} does not work with the beacon state function".format(
+                sfun
+            ),
+            "result": False,
+        }

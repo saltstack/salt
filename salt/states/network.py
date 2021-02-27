@@ -127,6 +127,11 @@ Ethernet Interface
         - dns:
           - 8.8.8.8
           - 8.8.4.4
+        - channels:
+            rx: 4
+            tx: 4
+            other: 4
+            combined: 4
 
 Ranged Interfaces (RHEL/CentOS Only)
 ************************************
@@ -464,7 +469,7 @@ def managed(name, enabled=True, **kwargs):
     type : eth
         Type of interface and configuration
 
-        .. versionchanged:: Sodium?
+        .. versionchanged:: 3002
 
     enabled
         Designates the state of this interface.

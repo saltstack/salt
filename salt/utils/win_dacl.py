@@ -17,7 +17,7 @@ If you need access only to flags, use the Flags object.
 
 The Dacl object inherits Flags. To use the Dacl object:
 
-..code-block:: python
+.. code-block:: python
 
     import salt.utils.win_dacl
     dacl = salt.utils.win_dacl.Dacl(obj_type='file')

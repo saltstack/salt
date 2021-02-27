@@ -4,7 +4,6 @@
 Tests for cluster related functions in salt.utils.vmware
 """
 
-
 import base64
 import logging
 import ssl
@@ -1690,13 +1689,13 @@ class PrivateGetServiceInstanceTestCase(TestCase):
                 mechanism="sspi",
             )
 
-    def test_second_attempt_successful_connection(self):
+    def test_first_attempt_successful_connection_verify_ssl_false(self):
         with patch("ssl.SSLContext", MagicMock()), patch(
             "ssl._create_unverified_context", MagicMock()
         ):
             exc = vim.fault.HostConnectFault()
             exc.msg = "[SSL: CERTIFICATE_VERIFY_FAILED]"
-            mock_sc = MagicMock(side_effect=[exc, None])
+            mock_sc = MagicMock(side_effect=[None])
             mock_ssl = MagicMock()
 
             with patch("salt.utils.vmware.SmartConnect", mock_sc):
@@ -1711,19 +1710,11 @@ class PrivateGetServiceInstanceTestCase(TestCase):
                         mechanism="sspi",
                         principal="fake_principal",
                         domain="fake_domain",
+                        verify_ssl=False,
                     )
 
                     mock_ssl.assert_called_once_with()
                     calls = [
-                        call(
-                            host="fake_host.fqdn",
-                            user="fake_username",
-                            pwd="fake_password",
-                            protocol="fake_protocol",
-                            port=1,
-                            b64token="fake_token",
-                            mechanism="sspi",
-                        ),
                         call(
                             host="fake_host.fqdn",
                             user="fake_username",
@@ -1737,21 +1728,18 @@ class PrivateGetServiceInstanceTestCase(TestCase):
                     ]
                     mock_sc.assert_has_calls(calls)
 
-    def test_third_attempt_successful_connection(self):
+    def test_second_attempt_successful_connection_verify_ssl_false(self):
         with patch("ssl.SSLContext", MagicMock()), patch(
             "ssl._create_unverified_context", MagicMock()
         ):
-            exc = vim.fault.HostConnectFault()
-            exc.msg = "[SSL: CERTIFICATE_VERIFY_FAILED]"
-            exc2 = Exception("certificate verify failed")
-            mock_sc = MagicMock(side_effect=[exc, exc2, None])
+            exc = Exception("certificate verify failed")
+            mock_sc = MagicMock(side_effect=[exc, None])
             mock_ssl_unverif = MagicMock()
             mock_ssl_context = MagicMock()
 
             with patch("salt.utils.vmware.SmartConnect", mock_sc):
                 with patch("ssl._create_unverified_context", mock_ssl_unverif):
                     with patch("ssl.SSLContext", mock_ssl_context):
-
                         salt.utils.vmware._get_service_instance(
                             host="fake_host.fqdn",
                             username="fake_username",
@@ -1761,20 +1749,12 @@ class PrivateGetServiceInstanceTestCase(TestCase):
                             mechanism="sspi",
                             principal="fake_principal",
                             domain="fake_domain",
+                            verify_ssl=False,
                         )
 
                         mock_ssl_context.assert_called_once_with(ssl.PROTOCOL_TLSv1)
                         mock_ssl_unverif.assert_called_once_with()
                         calls = [
-                            call(
-                                host="fake_host.fqdn",
-                                user="fake_username",
-                                pwd="fake_password",
-                                protocol="fake_protocol",
-                                port=1,
-                                b64token="fake_token",
-                                mechanism="sspi",
-                            ),
                             call(
                                 host="fake_host.fqdn",
                                 user="fake_username",
@@ -1798,7 +1778,7 @@ class PrivateGetServiceInstanceTestCase(TestCase):
                         ]
                         mock_sc.assert_has_calls(calls)
 
-    def test_first_attempt_unsuccessful_connection_default_error(self):
+    def test_attempt_unsuccessful_connection_default_error(self):
         exc = Exception("Exception")
         mock_sc = MagicMock(side_effect=exc)
 
@@ -1815,13 +1795,12 @@ class PrivateGetServiceInstanceTestCase(TestCase):
                     domain="fake_domain",
                 )
 
-                self.assertEqual(mock_sc.call_count, 1)
-                self.assertIn(
-                    "Could not connect to host 'fake_host.fqdn'",
-                    excinfo.Exception.message,
-                )
+        self.assertEqual(mock_sc.call_count, 1)
+        self.assertIn(
+            "Could not connect to host 'fake_host.fqdn'", excinfo.exception.message,
+        )
 
-    def test_first_attempt_unsuccessful_connection_vim_fault(self):
+    def test_attempt_unsuccessful_connection_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = "VimFault"
         mock_sc = MagicMock(side_effect=exc)
@@ -1839,15 +1818,15 @@ class PrivateGetServiceInstanceTestCase(TestCase):
                     domain="fake_domain",
                 )
 
-                self.assertEqual(mock_sc.call_count, 1)
-                self.assertEqual("VimFault", excinfo.Exception.message)
+        self.assertEqual(mock_sc.call_count, 1)
+        self.assertEqual("VimFault", excinfo.exception.message)
 
-    def test_second_attempt_unsuccsessful_connection_default_error(self):
+    def test_first_attempt_unsuccsessful_connection_default_error(self):
         with patch("ssl.SSLContext", MagicMock()), patch(
             "ssl._create_unverified_context", MagicMock()
         ):
             exc = vim.fault.HostConnectFault()
-            exc.msg = "[SSL: CERTIFICATE_VERIFY_FAILED]"
+            exc.msg = "certificate verify failed"
             exc2 = Exception("Exception")
             mock_sc = MagicMock(side_effect=[exc, exc2])
 
@@ -1862,22 +1841,47 @@ class PrivateGetServiceInstanceTestCase(TestCase):
                         mechanism="sspi",
                         principal="fake_principal",
                         domain="fake_domain",
+                        verify_ssl=False,
                     )
 
-                    self.assertEqual(mock_sc.call_count, 2)
-                    self.assertIn(
-                        "Could not connect to host 'fake_host.fqdn'",
-                        excinfo.Exception.message,
+            self.assertEqual(mock_sc.call_count, 2)
+            self.assertIn(
+                "Could not connect to host 'fake_host.fqdn'", excinfo.exception.message
+            )
+
+    def test_first_attempt_unsuccsessful_cannot_vim_fault_verify_ssl(self):
+        with patch("ssl.SSLContext", MagicMock()), patch(
+            "ssl._create_unverified_context", MagicMock()
+        ):
+            exc = vim.fault.VimFault()
+            exc.msg = "VimFault"
+
+            mock_sc = MagicMock(side_effect=[exc])
+
+            with patch("salt.utils.vmware.SmartConnect", mock_sc):
+                with self.assertRaises(VMwareConnectionError) as excinfo:
+                    salt.utils.vmware._get_service_instance(
+                        host="fake_host.fqdn",
+                        username="fake_username",
+                        password="fake_password",
+                        protocol="fake_protocol",
+                        port=1,
+                        mechanism="sspi",
+                        principal="fake_principal",
+                        domain="fake_domain",
+                        verify_ssl=False,
                     )
 
-    def test_second_attempt_unsuccsessful_connection_vim_fault(self):
+            self.assertEqual(mock_sc.call_count, 1)
+            self.assertIn("VimFault", excinfo.exception.message)
+
+    def test_third_attempt_unsuccessful_connection_detault_error(self):
         with patch("ssl.SSLContext", MagicMock()), patch(
             "ssl._create_unverified_context", MagicMock()
         ):
             exc = vim.fault.HostConnectFault()
-            exc.msg = "[SSL: CERTIFICATE_VERIFY_FAILED]"
-            exc2 = vim.fault.VimFault()
-            exc2.msg = "VimFault"
+            exc.msg = "certificate verify failed"
+            exc2 = Exception("Exception")
             mock_sc = MagicMock(side_effect=[exc, exc2])
 
             with patch("salt.utils.vmware.SmartConnect", mock_sc):
@@ -1891,20 +1895,21 @@ class PrivateGetServiceInstanceTestCase(TestCase):
                         mechanism="sspi",
                         principal="fake_principal",
                         domain="fake_domain",
+                        verify_ssl=False,
                     )
 
-                    self.assertEqual(mock_sc.call_count, 2)
-                    self.assertIn("VimFault", excinfo.Exception.message)
+            self.assertEqual(mock_sc.call_count, 2)
+            self.assertIn(
+                "Could not connect to host 'fake_host.fqdn", excinfo.exception.message
+            )
 
-    def test_third_attempt_unsuccessful_connection_detault_error(self):
+    def test_second_attempt_unsuccessful_connection_vim_fault(self):
         with patch("ssl.SSLContext", MagicMock()), patch(
             "ssl._create_unverified_context", MagicMock()
         ):
-            exc = vim.fault.HostConnectFault()
-            exc.msg = "[SSL: CERTIFICATE_VERIFY_FAILED]"
-            exc2 = Exception("certificate verify failed")
-            exc3 = Exception("Exception")
-            mock_sc = MagicMock(side_effect=[exc, exc2, exc3])
+            exc = vim.fault.VimFault()
+            exc.msg = "VimFault"
+            mock_sc = MagicMock(side_effect=[exc])
 
             with patch("salt.utils.vmware.SmartConnect", mock_sc):
                 with self.assertRaises(VMwareConnectionError) as excinfo:
@@ -1917,37 +1922,11 @@ class PrivateGetServiceInstanceTestCase(TestCase):
                         mechanism="sspi",
                         principal="fake_principal",
                         domain="fake_domain",
+                        verify_ssl=False,
                     )
 
-                    self.assertEqual(mock_sc.call_count, 3)
-                    self.assertIn("Exception", excinfo.Exception.message)
-
-    def test_third_attempt_unsuccessful_connection_vim_fault(self):
-        with patch("ssl.SSLContext", MagicMock()), patch(
-            "ssl._create_unverified_context", MagicMock()
-        ):
-            exc = vim.fault.HostConnectFault()
-            exc.msg = "[SSL: CERTIFICATE_VERIFY_FAILED]"
-            exc2 = Exception("certificate verify failed")
-            exc3 = vim.fault.VimFault()
-            exc3.msg = "VimFault"
-            mock_sc = MagicMock(side_effect=[exc, exc2, exc3])
-
-            with patch("salt.utils.vmware.SmartConnect", mock_sc):
-                with self.assertRaises(VMwareConnectionError) as excinfo:
-                    salt.utils.vmware._get_service_instance(
-                        host="fake_host.fqdn",
-                        username="fake_username",
-                        password="fake_password",
-                        protocol="fake_protocol",
-                        port=1,
-                        mechanism="sspi",
-                        principal="fake_principal",
-                        domain="fake_domain",
-                    )
-
-                    self.assertEqual(mock_sc.call_count, 3)
-                    self.assertIn("VimFault", excinfo.Exception.message)
+            self.assertEqual(mock_sc.call_count, 1)
+            self.assertIn("VimFault", excinfo.exception.message)
 
 
 @skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
@@ -1974,7 +1953,15 @@ class GetServiceInstanceTestCase(TestCase):
         with patch("salt.utils.vmware._get_service_instance", mock_get_si):
             salt.utils.vmware.get_service_instance(host="fake_host")
             mock_get_si.assert_called_once_with(
-                "fake_host", None, None, "https", 443, "userpass", None, None
+                "fake_host",
+                None,
+                None,
+                "https",
+                443,
+                "userpass",
+                None,
+                None,
+                verify_ssl=True,
             )
 
     def test_no_cached_service_instance_same_host_on_proxy(self):
@@ -2001,6 +1988,7 @@ class GetServiceInstanceTestCase(TestCase):
                     "fake_mechanism",
                     "fake_principal",
                     "fake_domain",
+                    verify_ssl=True,
                 )
 
     def test_cached_service_instance_different_host(self):
@@ -2038,6 +2026,7 @@ class GetServiceInstanceTestCase(TestCase):
                 mechanism="fake_mechanism",
                 principal="fake_principal",
                 domain="fake_domain",
+                verify_ssl=True,
             )
             mock_get_si.assert_called_once_with(
                 "fake_host",
@@ -2048,6 +2037,7 @@ class GetServiceInstanceTestCase(TestCase):
                 "fake_mechanism",
                 "fake_principal",
                 "fake_domain",
+                verify_ssl=True,
             )
 
     def test_unauthenticated_service_instance(self):

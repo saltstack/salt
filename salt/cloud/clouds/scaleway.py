@@ -430,6 +430,7 @@ def destroy(name, call=None):
     """ Destroy a node. Will check termination protection and warn if enabled.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt-cloud --destroy mymachine

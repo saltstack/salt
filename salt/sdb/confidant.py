@@ -70,6 +70,8 @@ def get(key, profile=None):
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt myminion sdb.get 'sdb://confidant/credentials'
 
     Valid keys are: credentials, credentials_metadata, result. credentials
