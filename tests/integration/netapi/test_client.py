@@ -452,10 +452,47 @@ class NetapiSSHClientAuthTest(SSHCase):
         except AssertionError:
             self.mod_case.run_function("user.delete", [self.USERA], remove=True)
             self.skipTest("Could not add user or password, skipping test")
+        self.expfile = os.path.join(RUNTIME_VARS.TMP, "exploited")
 
     def tearDown(self):
+        try:
+            os.remove(self.expfile)
+        except OSError:
+            pass
+        del self.expfile
         del self.netapi
         self.mod_case.run_function("user.delete", [self.USERA], remove=True)
+
+    @staticmethod
+    def cleanup_file(path):
+        try:
+            os.remove(path)
+        except OSError:
+            pass
+
+    @pytest.mark.slow_test
+    def test_extra_mods(self):
+        """
+        validate input from extra_mods
+        """
+        path = os.path.join(RUNTIME_VARS.TMP, "test_extra_mods")
+        self.addCleanup(self.cleanup_file, path)
+        low = {
+            "client": "ssh",
+            "tgt": "localhost",
+            "fun": "test.ping",
+            "roster_file": "roster",
+            "rosters": [self.rosters],
+            "ssh_priv": self.priv_file,
+            "eauth": "pam",
+            "username": self.USERA,
+            "password": self.USERA_PWD,
+            "regen_thin": True,
+            "thin_extra_mods": "';touch {};'".format(path),
+        }
+
+        ret = self.netapi.run(low)
+        self.assertFalse(os.path.exists(path))
 
     @classmethod
     def setUpClass(cls):
@@ -571,3 +608,38 @@ class NetapiSSHClientAuthTest(SSHCase):
         ret = self.netapi.run(low)
         assert "localhost" in ret
         assert ret["localhost"]["return"] is True
+
+    def test_ssh_cve_2021_3197_a(self):
+        assert not os.path.exists(self.expfile)
+        low = {
+            "eauth": "auto",
+            "username": self.USERA,
+            "password": self.USERA_PWD,
+            "client": "ssh",
+            "tgt": "localhost",
+            "fun": "test.ping",
+            "ssh_port": '22 -o ProxyCommand="touch {}"'.format(self.expfile),
+            "ssh_priv": self.priv_file,
+            "roster_file": "roster",
+            "rosters": [self.rosters],
+        }
+        ret = self.netapi.run(low)
+        assert not os.path.exists(self.expfile)
+
+    def test_ssh_cve_2021_3197_b(self):
+        assert not os.path.exists(self.expfile)
+        low = {
+            "eauth": "auto",
+            "username": self.USERA,
+            "password": self.USERA_PWD,
+            "client": "ssh",
+            "tgt": "localhost",
+            "fun": "test.ping",
+            "ssh_port": 22,
+            "ssh_priv": self.priv_file,
+            "ssh_options": ['ProxyCommand="touch {}"'.format(self.expfile)],
+            "roster_file": "roster",
+            "rosters": [self.rosters],
+        }
+        ret = self.netapi.run(low)
+        assert not os.path.exists(self.expfile)
