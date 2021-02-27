@@ -6,15 +6,22 @@ A module that adds data to the Pillar structure from a NetBox API.
 Configuring the NetBox ext_pillar
 ---------------------------------
 
+To use this pillar, you must first create a token in your NetBox instance at
+http://netbox.example.com/user/api-tokens/ (substituting the hostname of your
+NetBox instance)
+
+The NetBox api_url and api_token must be set in the master
+config.
+
+For example ``/etc/salt/master.d/netbox.conf``:
+
 .. code-block:: yaml
 
   ext_pillar:
     - netbox:
-        api_url: http://netbox_url.com/api/
+        api_url: http://netbox.example.com/api/
         api_token: 123abc
 
-Create a token in your NetBox instance at
-http://netbox_url.com/user/api-tokens/
 
 The following options are optional, and determine whether or not
 the module will attempt to configure the ``proxy`` pillar data for
@@ -61,8 +68,455 @@ interface_ips: ``False``
     Whether should retrieve the IP addresses for interfaces of the device.
     (interfaces must be set to True as well)
 
-Note that enabling retrieval of interface and IP address information can
-have a detrimental impact on pillar performance, so use with caution.
+Note that each option you enable can have a detrimental impact on pillar
+performance, so use them with caution.
+
+After configuring the pillar, you must restart the Salt master for the changes
+to take effect.
+
+For example:
+
+.. code-block:: shell
+
+  systemctl restart salt-master
+
+To query perform a quick test of the pillar, you should refresh the pillar on
+the minion with the following:
+
+.. code-block:: shell
+
+  salt minion1 saltutil.refresh_pillar
+
+And then query the pillar:
+
+.. code-block:: shell
+
+  salt minion1 pillar.items 'netbox'
+
+.. code-block:: shell
+
+  minion1:
+      netbox:
+          ----------
+          id:
+              511
+          url:
+              https://netbox.example.com/api/dcim/devices/511/
+          name:
+              minion1
+          node_type:
+              device
+          display_name:
+              minion1
+          device_type:
+              ----------
+              id:
+                  4
+              url:
+                  https://netbox.example.com/api/dcim/device-types/4/
+              manufacturer:
+                  ----------
+                  id:
+                      1
+                  url:
+                      https://netbox.example.com/api/dcim/manufacturers/1/
+                  name:
+                      Cisco
+                  slug:
+                      cisco
+              model:
+                  ISR2901
+              slug:
+                  isr2901
+              display_name:
+                  Cisco ISR2901
+          device_role:
+              ----------
+              id:
+                  45
+              url:
+                  https://netbox.example.com/api/dcim/device-roles/45/
+              name:
+                  Network
+              slug:
+                  network
+          interfaces:
+              |_
+                ----------
+                id:
+                    8158
+                ip_addresses:
+                    |_
+                      ----------
+                      id:
+                          1146
+                      url:
+                          https://netbox.example.com/api/ipam/ip-addresses/1146/
+                      family:
+                          ----------
+                          value:
+                              4
+                          label:
+                              IPv4
+                      address:
+                          192.0.2.1/24
+                      vrf:
+                          None
+                      tenant:
+                          None
+                      status:
+                          ----------
+                          value:
+                              active
+                           label:
+                              Active
+                      role:
+                          None
+                      nat_inside:
+                          None
+                      nat_outside:
+                          None
+                      dns_name:
+                      description:
+                      tags:
+                      custom_fields:
+                      created:
+                          2021-02-19
+                      last_updated:
+                          2021-02-19T06:12:04.153386Z
+                url:
+                    https://netbox.example.com/api/dcim/interfaces/8158/
+                name:
+                    GigabitEthernet0/0
+                label:
+                type:
+                    ----------
+                    value:
+                        1000base-t
+                    label:
+                        1000BASE-T (1GE)
+                enabled:
+                    True
+                lag:
+                    None
+                mtu:
+                    None
+                mac_address:
+                    None
+                mgmt_only:
+                    False
+                description:
+                mode:
+                    None
+                untagged_vlan:
+                    None
+                tagged_vlans:
+                cable:
+                    None
+                cable_peer:
+                    None
+                cable_peer_type:
+                    None
+                connected_endpoint:
+                    None
+                connected_endpoint_type:
+                    None
+                connected_endpoint_reachable:
+                    None
+                tags:
+                count_ipaddresses:
+                    1
+              |_
+                ----------
+                id:
+                    8159
+                ip_addresses:
+                    |_
+                      ----------
+                      id:
+                          1147
+                      url:
+                          https://netbox.example.com/api/ipam/ip-addresses/1147/
+                      family:
+                          ----------
+                          value:
+                              4
+                          label:
+                              IPv4
+                      address:
+                          198.51.100.1/24
+                      vrf:
+                          None
+                      tenant:
+                          None
+                      status:
+                          ----------
+                          value:
+                              active
+                          label:
+                              Active
+                      role:
+                          None
+                      nat_inside:
+                          None
+                      nat_outside:
+                          None
+                      dns_name:
+                      description:
+                      tags:
+                      custom_fields:
+                      created:
+                          2021-02-19
+                      last_updated:
+                          2021-02-19T06:12:40.508154Z
+                      url:
+                          https://netbox.example.com/api/dcim/interfaces/8159/
+                      name:
+                          GigabitEthernet0/1
+                      label:
+                      type:
+                          ----------
+                          value:
+                              1000base-t
+                          label:
+                              1000BASE-T (1GE)
+                      enabled:
+                          True
+                      lag:
+                          None
+                      mtu:
+                          None
+                      mac_address:
+                          None
+                      mgmt_only:
+                          False
+                      description:
+                      mode:
+                          None
+                      untagged_vlan:
+                          None
+                      tagged_vlans:
+                      cable:
+                          None
+                      cable_peer:
+                          None
+                      cable_peer_type:
+                          None
+                      connected_endpoint:
+                          None
+                      connected_endpoint_type:
+                          None
+                      connected_endpoint_reachable:
+                          None
+                      tags:
+                      count_ipaddresses:
+                          1
+          tenant:
+              None
+          platform:
+              ----------
+              id:
+                  1
+              url:
+                  https://netbox.example.com/api/dcim/platforms/1/
+              name:
+                  Cisco IOS
+              slug:
+                  ios
+          serial:
+          asset_tag:
+              None
+          site:
+              ----------
+              id:
+                  18
+              url:
+                  https://netbox.example.com/api/dcim/sites/18/
+              name:
+                  Site 1
+              slug:
+                  site1
+              status:
+                  ----------
+                  value:
+                      active
+                  label:
+                      Active
+              region:
+                  None
+              tenant:
+                  None
+              facility:
+              asn:
+                  None
+              time_zone:
+                  None
+              description:
+              physical_address:
+              shipping_address:
+              latitude:
+                  None
+              longitude:
+                  None
+              contact_name:
+              contact_phone:
+              contact_email:
+              comments:
+              tags:
+              custom_fields:
+              created:
+                  2021-02-25
+              last_updated:
+                  2021-02-25T14:21:07.898957Z
+              circuit_count:
+                  0
+              device_count:
+                  1
+              prefix_count:
+                  2
+              rack_count:
+                  0
+              virtualmachine_count:
+                  1
+              vlan_count:
+                  0
+              prefixes:
+                  |_
+                    ----------
+                    id:
+                        284
+                    url:
+                        https://netbox.example.com/api/ipam/prefixes/284/
+                    family:
+                        ----------
+                        value:
+                            4
+                        label:
+                            IPv4
+                    prefix:
+                        192.0.2.0/24
+                    vrf:
+                        None
+                    tenant:
+                        None
+                    vlan:
+                        None
+                          ----------
+                        value:
+                            active
+                        label:
+                            Active
+                    role:
+                        None
+                    is_pool:
+                        False
+                    description:
+                    tags:
+                    custom_fields:
+                    created:
+                        2021-02-25
+                    last_updated:
+                        2021-02-25T15:08:27.136305Z
+                  |_
+                    ----------
+                    id:
+                        285
+                    url:
+                        https://netbox.example.com/api/ipam/prefixes/285/
+                    family:
+                        ----------
+                        value:
+                            4
+                        label:
+                            IPv4
+                    prefix:
+                        198.51.100.0/24
+                    vrf:
+                        None
+                    tenant:
+                        None
+                    vlan:
+                        None
+                    status:
+                        ----------
+                        value:
+                            active
+                        label:
+                            Active
+                    role:
+                        None
+                    is_pool:
+                        False
+                    description:
+                    tags:
+                    custom_fields:
+                    created:
+                        2021-02-25
+                    last_updated:
+                        2021-02-25T15:08:59.880440Z
+          rack:
+              None
+          position:
+              None
+          face:
+              None
+          parent_device:
+              None
+          status:
+              ----------
+              value:
+                  active
+              label:
+                  Active
+          primary_ip:
+              ----------
+              id:
+                  1146
+              url:
+                  https://netbox.example.com/api/ipam/ip-addresses/1146/
+              family:
+                  4
+              address:
+                  192.0.2.1/24
+          primary_ip4:
+              ----------
+              id:
+                  1146
+              url:
+                  https://netbox.example.com/api/ipam/ip-addresses/1146/
+              family:
+                  4
+              address:
+                  192.0.2.1/24
+          primary_ip6:
+              None
+          cluster:
+              None
+          virtual_chassis:
+              None
+          vc_position:
+              None
+          vc_priority:
+              None
+          comments:
+          local_context_data:
+              None
+          tags:
+          custom_fields:
+          config_context:
+          created:
+              2021-02-19
+          last_updated:
+              2021-02-19T06:12:04.171105Z
+      proxy:
+          ----------
+          host:
+              192.0.2.1
+          driver:
+              ios
+          proxytype:
+              napalm
+
 """
 
 import logging
