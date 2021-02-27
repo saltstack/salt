@@ -7,7 +7,6 @@ Versions are `MAJOR.PATCH`.
 
 # Changelog
 
-Salt 3002.4 (2021-02-09)
 Salt 3002.5 (2021-02-25)
 ========================
 
@@ -38,7 +37,7 @@ Fixed
   you can use `verify_ssl: False`. (CVE-2020-28972)
 - CVE-2020-35662 - Ensure the asam runner, qingcloud, splunk returner, panos
   proxy, cimc proxy, zenoss module, esxi module, vsphere module, glassfish
-  module, bigip module, and keystone module validate SSL by default. If you want 
+  module, bigip module, and keystone module validate SSL by default. If you want
   to skip SSL verification you can use `verify_ssl: False`. (CVE-2020-35662)
 - CVE-2021-25281 - Fix salt-api so it honors eauth credentials for the
   wheel_async client. (CVE-2021-25281)
@@ -282,7 +281,7 @@ Added
 
   ### Example
   ```sls
-  # cat /srv/salt/example.sls 
+  # cat /srv/salt/example.sls
   {%- profile as 'local data' %}
     {%- set local_data = {'counter': 0} %}
     {%- for i in range(313377) %}
@@ -311,7 +310,7 @@ Added
 - - Added the ability for states to return `sub_state_run`s -- results frome external state engines (#57993)
 - Added salt-cloud support for Linode APIv4 via the ``api_version`` provider configuration parameter. (#58093)
 - Added support to manage services in Slackware Linux. (#58206)
-- Added list_sources to chocolatey module to have an overview of the repositories present on the minions.  
+- Added list_sources to chocolatey module to have an overview of the repositories present on the minions.
   Added source_added to chocolatey state in order to add repositories to chocolatey. (#58588)
 - Adding tests for changes to virtual function for netmiko module. Adding tests for netmiko proxy minion module. (#58609)
 - Added features config option for feature flags. Added a feature flag
@@ -325,7 +324,7 @@ Salt 3001.6 (2021-02-09)
 Fixed
 -----
 
-- Fix runners that broke when patching for CVE-2021-25281 
+- Fix runners that broke when patching for CVE-2021-25281
 - Fix issue with runners in SSE
 
 Salt 3001.5
@@ -340,7 +339,7 @@ Fixed
   you can use `verify_ssl: False`. (CVE-2020-28972)
 - CVE-2020-35662 - Ensure the asam runner, qingcloud, splunk returner, panos
   proxy, cimc proxy, zenoss module, esxi module, vsphere module, glassfish
-  module, bigip module, and keystone module validate SSL by default. If you want 
+  module, bigip module, and keystone module validate SSL by default. If you want
   to skip SSL verification you can use `verify_ssl: False`. (CVE-2020-35662)
 - CVE-2021-25281 - Fix salt-api so it honors eauth credentials for the
   wheel_async client. (CVE-2021-25281)
@@ -394,7 +393,7 @@ Changed
   to address some issues with slowness. (#56296, #57529)
 - Handle the UCRT libraries the same way they are handled in the Python 3
   installer (#57594)
-- Changes the 'SSDs' grain name to 'ssds' as all grains needs to be 
+- Changes the 'SSDs' grain name to 'ssds' as all grains needs to be
   resolved in lowered case. (#57612)
 - Updated requirement to psutil 5.6.7 due to vulnerability in psutil 5.6.6. (#58018)
 - Updated requirement to PyYAML 5.3.1 due to vulnerability in PyYAML 5.2.1. (#58019)
@@ -414,7 +413,7 @@ Fixed
   anything in stdout. This causes the JSON parser to fail because an empty string
   is not valid JSON. This changes an empty string to `{}` which is valid JSON and
   will not cause the JSON loader to stacktrace. (#57493)
-- Improves performance. Profiling `test.ping` on Windows shows that 13 of 17 
+- Improves performance. Profiling `test.ping` on Windows shows that 13 of 17
   seconds are wasted when the esxi grain loads vsphere before noting that
   the OS is not a esxi host. (#57529)
 - Fixed permissions issue with certain pip/virtualenv states/modules when configured for non-root user. (#57550)
@@ -816,7 +815,7 @@ Salt 3000.8 (2021-02-09)
 Fixed
 -----
 
-- Fix runners that broke when patching for CVE-2021-25281 
+- Fix runners that broke when patching for CVE-2021-25281
 - Fix issue with runners in SSE
 
 Salt 3000.7
