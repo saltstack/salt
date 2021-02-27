@@ -35,7 +35,7 @@ you will use SSH keys to authenticate to the network device.  If password
 authentication is desired, it is recommended to create another ``proxy``
 key in pillar_roots (or git_pillar) with just the ``passwd`` key and use
 :py:func:`salt.renderers.gpg <salt.renderers.gpg>` to encrypt the value. If
-your devices more than one username, leave proxy_username unset, and set 
+your devices more than one username, leave proxy_username unset, and set
 the ``username`` key in your pillar as well.
 If any additional options for the proxy setup are needed they should also be
 configured in pillar_roots.
@@ -66,11 +66,254 @@ have a detrimental impact on pillar performance, so use with caution.
 """
 
 import logging
+from urllib.parse import urlparse
 
 import salt.utils.http
 from salt._compat import ipaddress
 
+try:
+    import validators
+
+    HAS_LIBS = True
+except ImportError:
+    HAS_LIBS = False
+
+# Set up logging
 log = logging.getLogger(__name__)
+
+__virtualname__ = "netbox"
+
+
+def __virtual__():
+    """
+    Only return if validators is installed.
+    """
+    if HAS_LIBS:
+        return __virtualname__
+    else:
+        return False
+
+
+def _get_devices(api_url, minion_id, headers):
+    device_url = "{api_url}/{app}/{endpoint}".format(
+        api_url=api_url, app="dcim", endpoint="devices"
+    )
+    device_results = salt.utils.http.query(
+        device_url, params={"name": minion_id}, header_dict=headers, decode=True
+    )
+    # Check status code for API call
+    if "error" in device_results:
+        log.error(
+            'API query failed for "%s", status code: %d',
+            minion_id,
+            device_results["status"],
+        )
+        log.error(device_results["error"])
+        return {}
+    # Set the node type
+    device_count = 0
+    for device in device_results["dict"]["results"]:
+        device_results["dict"]["results"][device_count]["node_type"] = "device"
+        device_count += 1
+    # Return the results
+    return device_results["dict"]["results"]
+
+
+def _get_virtual_machines(api_url, minion_id, headers):
+    vm_url = "{api_url}/{app}/{endpoint}".format(
+        api_url=api_url, app="virtualization", endpoint="virtual-machines"
+    )
+    vm_results = salt.utils.http.query(
+        vm_url, params={"name": minion_id}, header_dict=headers, decode=True
+    )
+    # Check status code for API call
+    if "error" in vm_results:
+        log.info(
+            'API query failed for "%s", status code: %d',
+            minion_id,
+            vm_results["status"],
+        )
+        log.error(vm_results["error"])
+        return {}
+    # Set the node type
+    vm_count = 0
+    for vm in vm_results["dict"]["results"]:
+        vm_results["dict"]["results"][vm_count]["node_type"] = "virtual-machine"
+        vm_count += 1
+    # Return the results
+    return vm_results["dict"]["results"]
+
+
+def _get_interfaces(api_url, minion_id, node_id, node_type, headers):
+    log.debug(
+        'Retrieving interfaces for "%s"', node_id,
+    )
+    if node_type == "device":
+        app_name = "dcim"
+        node_param = "device_id"
+    elif node_type == "virtual-machine":
+        app_name = "virtualization"
+        node_param = "virtual_machine_id"
+    interfaces_url = "{api_url}/{app}/{endpoint}".format(
+        api_url=api_url, app=app_name, endpoint="interfaces"
+    )
+    interfaces_ret = salt.utils.http.query(
+        interfaces_url, params={node_param: node_id}, header_dict=headers, decode=True,
+    )
+    if "error" in interfaces_ret:
+        log.info(
+            "Unable to retrieve interfaces for %s (Type %s, ID %d)",
+            minion_id,
+            node_type,
+            node_id,
+        )
+        log.error(
+            "Status code: %d, error: %s",
+            interfaces_ret["status"],
+            interfaces_ret["error"],
+        )
+        return {}
+    interface_count = 0
+    for interface in interfaces_ret["dict"]["results"]:
+        if node_type == "device":
+            del interfaces_ret["dict"]["results"][interface_count]["device"]
+        elif node_type == "virtual-machine":
+            del interfaces_ret["dict"]["results"][interface_count]["virtual_machine"]
+        interface_count += 1
+
+    return interfaces_ret["dict"]["results"]
+
+
+def _get_interface_ips(api_url, minion_id, node_id, node_type, headers):
+    # We get all the IP addresses for the node at once instead of
+    # having to make a separate call for each interface
+    log.debug(
+        'Retrieving IP addresses for "%s"', node_id,
+    )
+    if node_type == "device":
+        app_name = "dcim"
+        node_param = "device_id"
+    elif node_type == "virtual-machine":
+        app_name = "virtualization"
+        node_param = "virtual_machine_id"
+    interface_ips_url = "{api_url}/{app}/{endpoint}".format(
+        api_url=api_url, app="ipam", endpoint="ip-addresses"
+    )
+    interface_ips_ret = salt.utils.http.query(
+        interface_ips_url,
+        params={node_param: node_id},
+        header_dict=headers,
+        decode=True,
+    )
+    if "error" in interface_ips_ret:
+        log.info(
+            "Unable to retrieve interface IP addresses for %s (Type %s, ID %d)",
+            minion_id,
+            node_type,
+            node_id,
+        )
+        log.error(
+            "Status code: %d, error: %s",
+            interface_ips_ret["status"],
+            interface_ips_ret["error"],
+        )
+    return interface_ips_ret["dict"]["results"]
+
+
+def _associate_ips_to_interfaces(node_type, interfaces_list, interface_ips_list):
+    interface_count = 0
+    for interface in interfaces_list:
+        if len(interface_ips_list) > 0:
+            interfaces_list[interface_count]["ip_addresses"] = []
+            for ip in interface_ips_list:
+                if (
+                    "assigned_object_id" in ip
+                    and ip["assigned_object_id"] == interface["id"]
+                ):
+                    del ip["assigned_object_type"]
+                    del ip["assigned_object_id"]
+                    del ip["assigned_object"]
+                    interfaces_list[interface_count]["ip_addresses"].append(ip)
+        interface_count += 1
+    return interfaces_list
+
+
+def _get_site_details(api_url, minion_id, site_name, site_id, headers):
+    log.debug(
+        'Retrieving site details for "%s" - site %s (ID %d)',
+        minion_id,
+        site_name,
+        site_id,
+    )
+    site_url = "{api_url}/{app}/{endpoint}/{site_id}/".format(
+        api_url=api_url, app="dcim", endpoint="sites", site_id=site_id
+    )
+    site_details_ret = salt.utils.http.query(site_url, header_dict=headers, decode=True)
+    if "error" in site_details_ret:
+        log.info("Unable to retrieve site details for %s (ID %d)", site_name, site_id)
+        log.error(
+            "Status code: %d, error: %s",
+            site_details_ret["status"],
+            site_details_ret["error"],
+        )
+    else:
+        return site_details_ret["dict"]
+
+
+def _get_site_prefixes(api_url, minion_id, site_name, site_id, headers):
+    log.debug(
+        'Retrieving site prefixes for "%s" - site %s (ID %d)',
+        minion_id,
+        site_name,
+        site_id,
+    )
+    prefixes_url = "{api_url}/{app}/{endpoint}".format(
+        api_url=api_url, app="ipam", endpoint="prefixes"
+    )
+    site_prefixes_ret = salt.utils.http.query(
+        prefixes_url, params={"site_id": site_id}, header_dict=headers, decode=True
+    )
+    if "error" in site_prefixes_ret:
+        log.info("Unable to retrieve site prefixes for %s (ID %d)", site_name, site_id)
+        log.error(
+            "Status code: %d, error: %s",
+            site_prefixes_ret["status"],
+            site_prefixes_ret["error"],
+        )
+    else:
+        prefix_count = 0
+        for prefix in site_prefixes_ret["dict"]["results"]:
+            del site_prefixes_ret["dict"]["results"][prefix_count]["site"]
+            prefix_count += 1
+        return site_prefixes_ret["dict"]["results"]
+
+
+def _get_proxy_details(api_url, minion_id, primary_ip, platform_id, headers):
+    log.debug(
+        'Retrieving proxy details for "%s"', minion_id,
+    )
+    platform_url = "{api_url}/{app}/{endpoint}/{id}/".format(
+        api_url=api_url, app="dcim", endpoint="platforms", id=platform_id
+    )
+    platform_ret = salt.utils.http.query(
+        platform_url, params={}, header_dict=headers, decode=True
+    )
+    # Check status code for API call
+    if "error" in platform_ret:
+        log.info("Unable to proxy details for %s", minion_id)
+        log.error(
+            "Status code: %d, error: %s", platform_ret["status"], platform_ret["error"],
+        )
+    # Assign results from API call to "proxy" key if the platform has a
+    # napalm_driver defined.
+    napalm_driver = platform_ret["dict"].get("napalm_driver")
+    if napalm_driver:
+        proxy = {
+            "host": str(ipaddress.IPv4Interface(primary_ip).ip),
+            "driver": napalm_driver,
+            "proxytype": "napalm",
+        }
+        return proxy
 
 
 def ext_pillar(minion_id, pillar, *args, **kwargs):
@@ -86,60 +329,45 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
     devices = kwargs.get("devices", True)
     virtual_machines = kwargs.get("virtual_machines", False)
     interfaces = kwargs.get("interfaces", False)
-    interface_ips = kwargs.get("interfaces", False)
+    interface_ips = kwargs.get("interface_ips", False)
     site_details = kwargs.get("site_details", True)
     site_prefixes = kwargs.get("site_prefixes", True)
     proxy_username = kwargs.get("proxy_username", None)
     proxy_return = kwargs.get("proxy_return", True)
     ret = {}
 
+    # Check that we have a valid API URL:
+    if not validators.url(api_url) or (
+        urlparse(api_url).scheme != "http" and urlparse(api_url).scheme != "https"
+    ):
+        log.error(
+            'Provided URL for api_url "%s" is malformed or is not an http/https URL',
+            api_url,
+        )
+        return ret
+
+    # Check that the user has enabled at least one of the node options
+    if not devices and not virtual_machines:
+        log.error("At least one of devices or virtual_machines must be True")
+        return ret
+
+    # Check that the user has enabled interfaces if they've enabled interface_ips
+    if interface_ips and not interfaces:
+        log.error("The value for interfaces must be True if interface_ips is True")
+        return ret
+
     # Fetch device from API
     headers = {}
     if api_token:
         headers = {"Authorization": "Token {}".format(api_token)}
+    else:
+        log.error("The value for api_token is not set")
+        return ret
     nodes = []
     if devices:
-        device_url = "{api_url}/{app}/{endpoint}".format(
-            api_url=api_url, app="dcim", endpoint="devices"
-        )
-        device_results = salt.utils.http.query(
-            device_url, params={"name": minion_id}, header_dict=headers, decode=True
-        )
-        # Check status code for API call
-        if "error" in device_results:
-            log.error(
-                'API query failed for "%s", status code: %d',
-                minion_id,
-                device_results["status"],
-            )
-            log.error(device_results["error"])
-            return ret
-        # Set the node type
-        for device in device_results["dict"]["results"]:
-            device["node_type"] = "device"
-        # Assign results from API call to "netbox" key
-        nodes.extend(device_results["dict"]["results"])
+        nodes.extend(_get_devices(api_url, minion_id, headers))
     if virtual_machines:
-        vm_url = "{api_url}/{app}/{endpoint}".format(
-            api_url=api_url, app="virtualization", endpoint="virtual-machines"
-        )
-        vm_results = salt.utils.http.query(
-            vm_url, params={"name": minion_id}, header_dict=headers, decode=True
-        )
-        # Check status code for API call
-        if "error" in vm_results:
-            log.error(
-                'API query failed for "%s", status code: %d',
-                minion_id,
-                vm_results["status"],
-            )
-            log.error(vm_results["error"])
-            return ret
-        # Set the node type
-        for vm in vm_results["dict"]["results"]:
-            vm["node_type"] = "virtual-machine"
-        # Assign results from API call to "netbox" key
-        nodes.extend(vm_results["dict"]["results"])
+        nodes.extend(_get_virtual_machines(api_url, minion_id, headers))
     if len(nodes) == 1:
         ret["netbox"] = nodes[0]
     elif len(nodes) > 1:
@@ -151,165 +379,33 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
     node_id = ret["netbox"]["id"]
     node_type = ret["netbox"]["node_type"]
     if interfaces:
-        log.debug(
-            'Retrieving interfaces for "%s"', minion_id,
+        interfaces_list = _get_interfaces(
+            api_url, minion_id, node_id, node_type, headers
         )
-        if node_type == "device":
-            app_name = "dcim"
-            node_param = "device_id"
-        elif node_type == "virtual-machine":
-            app_name = "virtualization"
-            node_param = "virtual_machine_id"
-        interfaces_url = "{api_url}/{app}/{endpoint}".format(
-            api_url=api_url, app=app_name, endpoint="interfaces"
-        )
-        interfaces_ret = salt.utils.http.query(
-            interfaces_url,
-            params={node_param: node_id},
-            header_dict=headers,
-            decode=True,
-        )
-        if "error" in interfaces_ret:
-            log.error(
-                "Unable to retrieve interfaces for %s (Type %s, ID %d)",
-                minion_id,
-                node_type,
-                node_id,
+        if len(interfaces_list) > 0 and interface_ips:
+            interface_ips_list = _get_interface_ips(
+                api_url, minion_id, node_id, node_type, headers
             )
-            log.error(
-                "Status code: %d, error: %s",
-                interfaces_ret["status"],
-                interfaces_ret["error"],
+            ret["netbox"]["interfaces"] = _associate_ips_to_interfaces(
+                node_type, interfaces_list, interface_ips_list
             )
-        else:
-            if interface_ips:
-                # We get all the IP addresses for the node at once instead of
-                # having to make a separate call for each interface
-                interface_ips_url = "{api_url}/{app}/{endpoint}".format(
-                    api_url=api_url, app="ipam", endpoint="ip-addresses"
-                )
-                interface_ips_ret = salt.utils.http.query(
-                    interface_ips_url,
-                    params={node_param: node_id},
-                    header_dict=headers,
-                    decode=True,
-                )
-                if "error" in interface_ips_ret:
-                    log.error(
-                        "Unable to interfaces IP addresses for %s (Type %s, ID %d)",
-                        minion_id,
-                        node_type,
-                        node_id,
-                    )
-                    log.error(
-                        "Status code: %d, error: %s",
-                        interface_ips_ret["status"],
-                        interface_ips_ret["error"],
-                    )
-            interface_count = 0
-            for interface in interfaces_ret["dict"]["results"]:
-                if node_type == "device":
-                    del interface["device"]
-                elif node_type == "virtual-machine":
-                    del interface["virtual_machine"]
-                if len(interface_ips_ret["dict"]["results"]) > 0:
-                    interfaces_ret["dict"]["results"][interface_count][
-                        "ip_addresses"
-                    ] = []
-                    for ip in interface_ips_ret["dict"]["results"]:
-                        if (
-                            "assigned_object_id" in ip
-                            and ip["assigned_object_id"] == interface["id"]
-                        ):
-                            del ip["assigned_object_type"]
-                            del ip["assigned_object_id"]
-                            del ip["assigned_object"]
-                            interfaces_ret["dict"]["results"][interface_count][
-                                "ip_addresses"
-                            ].append(ip)
-                interface_count += 1
-            ret["netbox"]["interfaces"] = interfaces_ret["dict"]["results"]
     site_id = ret["netbox"]["site"]["id"]
     site_name = ret["netbox"]["site"]["name"]
     if site_details:
-        log.debug(
-            'Retrieving site details for "%s" - site %s (ID %d)',
-            minion_id,
-            site_name,
-            site_id,
+        ret["netbox"]["site"] = _get_site_details(
+            api_url, minion_id, site_name, site_id, headers
         )
-        site_url = "{api_url}/{app}/{endpoint}/{site_id}/".format(
-            api_url=api_url, app="dcim", endpoint="sites", site_id=site_id
-        )
-        site_details_ret = salt.utils.http.query(
-            site_url, header_dict=headers, decode=True
-        )
-        if "error" in site_details_ret:
-            log.error(
-                "Unable to retrieve site details for %s (ID %d)", site_name, site_id
-            )
-            log.error(
-                "Status code: %d, error: %s",
-                site_details_ret["status"],
-                site_details_ret["error"],
-            )
-        else:
-            ret["netbox"]["site"] = site_details_ret["dict"]
     if site_prefixes:
-        log.debug(
-            'Retrieving site prefixes for "%s" - site %s (ID %d)',
-            minion_id,
-            site_name,
-            site_id,
+        ret["netbox"]["site"]["prefixes"] = _get_site_prefixes(
+            api_url, minion_id, site_name, site_id, headers
         )
-        prefixes_url = "{api_url}/{app}/{endpoint}".format(
-            api_url=api_url, app="ipam", endpoint="prefixes"
-        )
-        site_prefixes_ret = salt.utils.http.query(
-            prefixes_url, params={"site_id": site_id}, header_dict=headers, decode=True
-        )
-        if "error" in site_prefixes_ret:
-            log.error(
-                "Unable to retrieve site prefixes for %s (ID %d)", site_name, site_id
-            )
-            log.error(
-                "Status code: %d, error: %s",
-                site_prefixes_ret["status"],
-                site_prefixes_ret["error"],
-            )
-        else:
-            ret["netbox"]["site"]["prefixes"] = site_prefixes_ret["dict"]["results"]
     if proxy_return:
-        # Attempt to add "proxy" key, based on platform API call
-        try:
-            # Fetch device from API
-            platform_results = salt.utils.http.query(
-                ret["netbox"]["platform"]["url"], header_dict=headers, decode=True
-            )
-            # Check status code for API call
-            if "error" in platform_results:
-                log.info(
-                    'API query failed for "%s": %s',
-                    minion_id,
-                    platform_results["error"],
-                )
-            # Assign results from API call to "proxy" key if the platform has a
-            # napalm_driver defined.
-            napalm_driver = platform_results["dict"].get("napalm_driver")
-            if napalm_driver:
-                ret["proxy"] = {
-                    "host": str(
-                        ipaddress.IPv4Interface(
-                            ret["netbox"]["primary_ip4"]["address"]
-                        ).ip
-                    ),
-                    "driver": napalm_driver,
-                    "proxytype": "napalm",
-                }
-                if proxy_username:
-                    ret["proxy"]["username"] = proxy_username
-
-        except Exception:  # pylint: disable=broad-except
-            log.debug('Could not create proxy config data for "%s"', minion_id)
+        platform_id = ret["netbox"]["platform"]["id"]
+        primary_ip = ret["netbox"]["primary_ip"]["address"]
+        proxy = _get_proxy_details(api_url, minion_id, primary_ip, platform_id, headers)
+        if proxy:
+            ret["proxy"] = proxy
+            if proxy_username:
+                ret["proxy"]["username"] = proxy_username
 
     return ret
