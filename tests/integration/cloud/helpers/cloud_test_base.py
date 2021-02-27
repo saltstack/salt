@@ -9,6 +9,7 @@ import shutil
 from time import sleep
 
 import pytest
+import salt.utils.files
 from salt.config import cloud_config, cloud_providers_config
 from salt.utils.yaml import safe_load
 from tests.support.case import ShellCase
@@ -194,6 +195,18 @@ class CloudTest(ShellCase):
     @property
     def profile_str(self):
         return self.PROVIDER + "-config"
+
+    def add_profile_config(self, name, data, conf, new_profile):
+        """
+        copy the current profile and add a new profile in the same file
+        """
+        conf_path = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "cloud.profiles.d", conf)
+        with salt.utils.files.fopen(conf_path, "r") as fp:
+            conf = safe_load(fp)
+        conf[new_profile] = conf[name].copy()
+        conf[new_profile].update(data)
+        with salt.utils.files.fopen(conf_path, "w") as fp:
+            salt.utils.yaml.safe_dump(conf, fp)
 
     def setUp(self):
         """
