@@ -88,7 +88,6 @@ import os
 import pprint
 import re
 import stat
-import sys
 import time
 import urllib.parse
 import uuid
@@ -202,12 +201,7 @@ def _xml_to_dict(xmltree):
     """
     Convert an XML tree into a dict
     """
-    if sys.version_info < (2, 7):
-        children_len = len(xmltree.getchildren())
-    else:
-        children_len = len(xmltree)
-
-    if children_len < 1:
+    if len(xmltree) < 1:
         name = xmltree.tag
         if "}" in name:
             comps = name.split("}")
@@ -221,12 +215,7 @@ def _xml_to_dict(xmltree):
             comps = name.split("}")
             name = comps[1]
         if name not in xmldict:
-            if sys.version_info < (2, 7):
-                children_len = len(item.getchildren())
-            else:
-                children_len = len(item)
-
-            if children_len > 0:
+            if len(item) > 0:
                 xmldict[name] = _xml_to_dict(item)
             else:
                 xmldict[name] = item.text
@@ -471,15 +460,10 @@ def query(
         items = root
 
     if setname:
-        if sys.version_info < (2, 7):
-            children_len = len(root.getchildren())
-        else:
-            children_len = len(root)
-
-        for item in range(0, children_len):
-            comps = root[item].tag.split("}")
+        for idx, item in enumerate(root):
+            comps = item.tag.split("}")
             if comps[1] == setname:
-                items = root[item]
+                items = root[idx]
 
     ret = []
     for item in items:
