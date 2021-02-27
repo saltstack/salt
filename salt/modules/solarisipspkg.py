@@ -207,7 +207,6 @@ def upgrade(refresh=False, **kwargs):
     When there is a failure, an explanation is also included in the error
     message, based on the return code of the ``pkg update`` command.
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -514,7 +513,6 @@ def install(name=None, refresh=False, pkgs=None, version=None, test=False, **kwa
 
     pkgs
         A list of packages to install. Must be passed as a python list.
-
 
     CLI Example:
 

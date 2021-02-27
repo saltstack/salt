@@ -62,7 +62,7 @@ Salt is tested and packaged to run on CentOS, Debian, RHEL, Ubuntu, MacOS,
 Windows, and more. Download Salt and get started now.
 
 * `<https://repo.saltproject.io/>`_
-* `Installation Instructions <https://docs.saltproject.io/en/latest/topics/installation/index.html>`_
+* `Installation Instructions <https://docs.saltproject.io/en/master/topics/installation/index.html>`_
 
 Salt Project Documentation
 ==========================
@@ -72,7 +72,7 @@ documentation, and contributing to Salt.
 
 * `Getting Started with Salt <https://docs.saltproject.io/en/getstarted/>`_
 * `Latest Salt Documentation`_
-* `Salt’s Contributor Guide <https://docs.saltproject.io/en/latest/topics/development/contributing.html>`_
+* `Salt’s Contributor Guide <https://docs.saltproject.io/en/master/topics/development/contributing.html>`_
 
 Security Advisories
 ===================

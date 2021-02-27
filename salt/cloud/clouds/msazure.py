@@ -86,13 +86,20 @@ def __virtual__():
     return __virtualname__
 
 
+def _get_active_provider_name():
+    try:
+        return __active_provider_name__.value()
+    except AttributeError:
+        return __active_provider_name__
+
+
 def get_configured_provider():
     """
     Return the first configured instance.
     """
     return config.is_provider_configured(
         __opts__,
-        __active_provider_name__ or __virtualname__,
+        _get_active_provider_name() or __virtualname__,
         ("subscription_id", "certificate_path"),
     )
 
@@ -407,7 +414,9 @@ def show_instance(name, call=None):
     if "name" not in nodes[name]:
         nodes[name]["name"] = nodes[name]["id"]
     try:
-        __utils__["cloud.cache_node"](nodes[name], __active_provider_name__, __opts__)
+        __utils__["cloud.cache_node"](
+            nodes[name], _get_active_provider_name(), __opts__
+        )
     except TypeError:
         log.warning(
             "Unable to show cache node data; this may be because the node has been deleted"
@@ -424,7 +433,10 @@ def create(vm_):
         if (
             vm_["profile"]
             and config.is_profile_configured(
-                __opts__, __active_provider_name__ or "azure", vm_["profile"], vm_=vm_
+                __opts__,
+                _get_active_provider_name() or "azure",
+                vm_["profile"],
+                vm_=vm_,
             )
             is False
         ):
@@ -968,7 +980,7 @@ def destroy(name, conn=None, call=None, kwargs=None):
     }
     if __opts__.get("update_cachedir", False) is True:
         __utils__["cloud.delete_minion_cachedir"](
-            name, __active_provider_name__.split(":")[0], __opts__
+            name, _get_active_provider_name().split(":")[0], __opts__
         )
 
     cleanup_disks = config.get_cloud_config_value(

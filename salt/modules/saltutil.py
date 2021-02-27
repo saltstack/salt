@@ -1773,7 +1773,7 @@ def wheel(name, *args, **kwargs):
         Any positional arguments to pass to the wheel function. A common example
         of this would be the ``match`` arg needed for key functions.
 
-        .. versionadded:: v2015.8.11
+        .. versionadded:: 2015.8.11
 
     kwargs
         Any keyword arguments to pass to the wheel function

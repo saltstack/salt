@@ -425,7 +425,6 @@ def upgrade(refresh=True, **kwargs):  # pylint: disable=W0613
         {'<package>':  {'old': '<old-version>',
                         'new': '<new-version>'}}
 
-
     CLI Example:
 
     .. code-block:: bash

@@ -11,6 +11,7 @@ import salt.utils.yaml
 from salt.output import display_output
 from tests.support.case import ShellCase
 from tests.support.mixins import RUNTIME_VARS
+from tests.support.pytest.helpers import temp_state_file
 
 
 class OutputReturnTest(ShellCase):
@@ -131,49 +132,55 @@ class OutputReturnTest(ShellCase):
         Regression tests for the highstate outputter. Calls a basic state with various
         flags. Each comparison should be identical when successful.
         """
-        # Test basic highstate output. No frills.
-        expected = [
-            "minion:",
-            "          ID: simple-ping",
-            "    Function: module.run",
-            "        Name: test.ping",
-            "      Result: True",
-            "     Comment: Module function test.ping executed",
-            "     Changes:   ",
-            "              ret:",
-            "                  True",
-            "Summary for minion",
-            "Succeeded: 1 (changed=1)",
-            "Failed:    0",
-            "Total states run:     1",
-        ]
-        state_run = self.run_salt('"minion" state.sls simple-ping')
+        simple_ping_sls = """
+        simple-ping:
+          module.run:
+            - name: test.ping
+        """
+        with temp_state_file("simple-ping.sls", simple_ping_sls):
+            # Test basic highstate output. No frills.
+            expected = [
+                "minion:",
+                "          ID: simple-ping",
+                "    Function: module.run",
+                "        Name: test.ping",
+                "      Result: True",
+                "     Comment: Module function test.ping executed",
+                "     Changes:   ",
+                "              ret:",
+                "                  True",
+                "Summary for minion",
+                "Succeeded: 1 (changed=1)",
+                "Failed:    0",
+                "Total states run:     1",
+            ]
+            state_run = self.run_salt('"minion" state.sls simple-ping')
 
-        for expected_item in expected:
-            self.assertIn(expected_item, state_run)
+            for expected_item in expected:
+                self.assertIn(expected_item, state_run)
 
-        # Test highstate output while also passing --out=highstate.
-        # This is a regression test for Issue #29796
-        state_run = self.run_salt('"minion" state.sls simple-ping --out=highstate')
+            # Test highstate output while also passing --out=highstate.
+            # This is a regression test for Issue #29796
+            state_run = self.run_salt('"minion" state.sls simple-ping --out=highstate')
 
-        for expected_item in expected:
-            self.assertIn(expected_item, state_run)
+            for expected_item in expected:
+                self.assertIn(expected_item, state_run)
 
-        # Test highstate output when passing --static and running a state function.
-        # See Issue #44556.
-        state_run = self.run_salt('"minion" state.sls simple-ping --static')
+            # Test highstate output when passing --static and running a state function.
+            # See Issue #44556.
+            state_run = self.run_salt('"minion" state.sls simple-ping --static')
 
-        for expected_item in expected:
-            self.assertIn(expected_item, state_run)
+            for expected_item in expected:
+                self.assertIn(expected_item, state_run)
 
-        # Test highstate output when passing --static and --out=highstate.
-        # See Issue #44556.
-        state_run = self.run_salt(
-            '"minion" state.sls simple-ping --static --out=highstate'
-        )
+            # Test highstate output when passing --static and --out=highstate.
+            # See Issue #44556.
+            state_run = self.run_salt(
+                '"minion" state.sls simple-ping --static --out=highstate'
+            )
 
-        for expected_item in expected:
-            self.assertIn(expected_item, state_run)
+            for expected_item in expected:
+                self.assertIn(expected_item, state_run)
 
     @pytest.mark.slow_test
     def test_output_highstate_falls_back_nested(self):

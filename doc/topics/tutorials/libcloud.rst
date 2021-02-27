@@ -118,7 +118,7 @@ such as Google Storage, S3 and OpenStack Swift
 
 .. code-block:: bash
 
-    $ salt '*' libcloud_storage.download_object DeploymentTools test.sh /tmp/test.sh google_storage
+    salt '*' libcloud_storage.download_object DeploymentTools test.sh /tmp/test.sh google_storage
 
 Using the state modules
 =======================

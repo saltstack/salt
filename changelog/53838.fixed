@@ -1,0 +1,1 @@
+Fixed zabbix_host.present to accept all Zabbix host properties

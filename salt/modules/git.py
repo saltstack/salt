@@ -2339,7 +2339,6 @@ def init(
     .. _`git-init(1)`: http://git-scm.com/docs/git-init
     .. _`template directory`: http://git-scm.com/docs/git-init#_template_directory
 
-
     CLI Examples:
 
     .. code-block:: bash
@@ -3823,7 +3822,6 @@ def rebase(
         .. versionadded:: 2018.3.1
 
     .. _`git-rebase(1)`: http://git-scm.com/docs/git-rebase
-
 
     CLI Example:
 

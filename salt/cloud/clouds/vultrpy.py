@@ -102,12 +102,19 @@ def __virtual__():
     return __virtualname__
 
 
+def _get_active_provider_name():
+    try:
+        return __active_provider_name__.value()
+    except AttributeError:
+        return __active_provider_name__
+
+
 def get_configured_provider():
     """
     Return the first configured instance
     """
     return config.is_provider_configured(
-        __opts__, __active_provider_name__ or "vultr", ("api_key",)
+        __opts__, _get_active_provider_name() or "vultr", ("api_key",)
     )
 
 
@@ -309,7 +316,7 @@ def show_instance(name, call=None):
     # Find under which cloud service the name is listed, if any
     if name not in nodes:
         return {}
-    __utils__["cloud.cache_node"](nodes[name], __active_provider_name__, __opts__)
+    __utils__["cloud.cache_node"](nodes[name], _get_active_provider_name(), __opts__)
     return nodes[name]
 
 

@@ -391,7 +391,7 @@ def info(*packages, **kwargs):
 
         .. versionadded:: 2016.11.3
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
