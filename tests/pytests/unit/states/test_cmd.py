@@ -154,8 +154,7 @@ def test_script_runas_no_password():
         "name": "cmd.script",
         "changes": {},
         "result": False,
-        "comment": "",
-        "command": "Must supply a password if runas argument is used on Windows.",
+        "comment": "Must supply a password if runas argument is used on Windows.",
     }
 
     patch_opts = patch.dict(cmd.__opts__, {"test": False})
