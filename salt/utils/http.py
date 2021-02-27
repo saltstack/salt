@@ -7,6 +7,8 @@ and the like, but also useful for basic HTTP testing.
 
 import cgi
 import gzip
+import http.client
+import http.cookiejar
 import io
 import logging
 import os
@@ -14,13 +16,13 @@ import pprint
 import re
 import socket
 import ssl
+import urllib.error
+import urllib.parse
+import urllib.request
 import xml.etree.ElementTree as ET
 import zlib
 
 import salt.config
-import salt.ext.six.moves.http_client
-import salt.ext.six.moves.http_cookiejar
-import salt.ext.six.moves.urllib.request as urllib_request
 import salt.ext.tornado.httputil
 import salt.ext.tornado.simple_httpclient
 import salt.loader
@@ -36,12 +38,6 @@ import salt.utils.stringutils
 import salt.utils.xmlutil as xml
 import salt.utils.yaml
 import salt.version
-from salt.ext import six
-from salt.ext.six.moves import StringIO
-from salt.ext.six.moves.urllib.error import URLError
-from salt.ext.six.moves.urllib.parse import splitquery
-from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
-from salt.ext.six.moves.urllib.parse import urlparse
 from salt.ext.tornado.httpclient import HTTPClient
 from salt.template import compile_template
 from salt.utils.decorators.jinja import jinja_filter
@@ -317,11 +313,9 @@ def query(
 
     if cookies is not None:
         if cookie_format == "mozilla":
-            sess_cookies = salt.ext.six.moves.http_cookiejar.MozillaCookieJar(
-                cookie_jar
-            )
+            sess_cookies = http.cookiejar.MozillaCookieJar(cookie_jar)
         else:
-            sess_cookies = salt.ext.six.moves.http_cookiejar.LWPCookieJar(cookie_jar)
+            sess_cookies = http.cookiejar.LWPCookieJar(cookie_jar)
         if not os.path.isfile(cookie_jar):
             sess_cookies.save()
         sess_cookies.load()
@@ -366,7 +360,7 @@ def query(
                 method,
                 url,
                 params=params,
-                files={formdata_fieldname: (formdata_filename, StringIO(data))},
+                files={formdata_fieldname: (formdata_filename, io.StringIO(data))},
                 **req_kwargs
             )
         else:
@@ -400,15 +394,15 @@ def query(
             body = body.decode(result.encoding or "utf-8")
         ret["body"] = body
     elif backend == "urllib2":
-        request = urllib_request.Request(url_full, data)
+        request = urllib.request.Request(url_full, data)
         handlers = [
-            urllib_request.HTTPHandler,
-            urllib_request.HTTPCookieProcessor(sess_cookies),
+            urllib.request.HTTPHandler,
+            urllib.request.HTTPCookieProcessor(sess_cookies),
         ]
 
         if url.startswith("https"):
             hostname = request.get_host()
-            handlers[0] = urllib_request.HTTPSHandler(1)
+            handlers[0] = urllib.request.HTTPSHandler(1)
             if not HAS_MATCHHOSTNAME:
                 log.warning(
                     "match_hostname() not available, SSL hostname checking "
@@ -459,7 +453,7 @@ def query(
                         # Python >= 2.7.9
                         context = ssl.SSLContext.load_cert_chain(*cert_chain)
                         handlers.append(
-                            urllib_request.HTTPSHandler(context=context)
+                            urllib.request.HTTPSHandler(context=context)
                         )  # pylint: disable=E1123
                     else:
                         # Python < 2.7.9
@@ -470,17 +464,15 @@ def query(
                         }
                         if len(cert_chain) > 1:
                             cert_kwargs["key_file"] = cert_chain[1]
-                        handlers[0] = salt.ext.six.moves.http_client.HTTPSConnection(
-                            **cert_kwargs
-                        )
+                        handlers[0] = http.client.HTTPSConnection(**cert_kwargs)
 
-        opener = urllib_request.build_opener(*handlers)
+        opener = urllib.request.build_opener(*handlers)
         for header in header_dict:
             request.add_header(header, header_dict[header])
         request.get_method = lambda: method
         try:
             result = opener.open(request)
-        except URLError as exc:
+        except urllib.error.URLError as exc:
             return {"Error": str(exc)}
         if stream is True or handle is True:
             return {
@@ -501,7 +493,7 @@ def query(
                 and not isinstance(result_text, str)
             ):
                 result_text = result_text.decode(res_params["charset"])
-        if six.PY3 and isinstance(result_text, bytes) and decode_body:
+        if isinstance(result_text, bytes) and decode_body:
             result_text = result_text.decode("utf-8")
         ret["body"] = result_text
     else:
@@ -525,7 +517,7 @@ def query(
                 )
 
         if isinstance(data, dict):
-            data = _urlencode(data)
+            data = urllib.parse.urlencode(data)
 
         if verify_ssl:
             req_kwargs["ca_certs"] = ca_bundle
@@ -561,7 +553,7 @@ def query(
 
         # Since tornado doesnt support no_proxy, we'll always hand it empty proxies or valid ones
         # except we remove the valid ones if a url has a no_proxy hostname in it
-        if urlparse(url_full).hostname in no_proxy:
+        if urllib.parse.urlparse(url_full).hostname in no_proxy:
             proxy_host = None
             proxy_port = None
             proxy_username = None
@@ -655,7 +647,7 @@ def query(
                 and not isinstance(result_text, str)
             ):
                 result_text = result_text.decode(res_params["charset"])
-        if six.PY3 and isinstance(result_text, bytes) and decode_body:
+        if isinstance(result_text, bytes) and decode_body:
             result_text = result_text.decode("utf-8")
         ret["body"] = result_text
         if "Set-Cookie" in result_headers and cookies is not None:
@@ -994,9 +986,7 @@ def parse_cookie_header(header):
 
         # cookielib.Cookie() requires an epoch
         if "expires" in cookie:
-            cookie["expires"] = salt.ext.six.moves.http_cookiejar.http2time(
-                cookie["expires"]
-            )
+            cookie["expires"] = http.cookiejar.http2time(cookie["expires"])
 
         # Fill in missing required fields
         for req in reqd:
@@ -1012,9 +1002,7 @@ def parse_cookie_header(header):
         # Remove attribs that don't apply to Cookie objects
         cookie.pop("httponly", None)
         cookie.pop("samesite", None)
-        ret.append(
-            salt.ext.six.moves.http_cookiejar.Cookie(name=name, value=value, **cookie)
-        )
+        ret.append(http.cookiejar.Cookie(name=name, value=value, **cookie))
 
     return ret
 
@@ -1024,7 +1012,7 @@ def sanitize_url(url, hide_fields):
     Make sure no secret fields show up in logs
     """
     if isinstance(hide_fields, list):
-        url_comps = splitquery(url)
+        url_comps = urllib.parse.splitquery(url)
         log_url = url_comps[0]
         if len(url_comps) > 1:
             log_url += "?"
@@ -1057,3 +1045,23 @@ def _sanitize_url_components(comp_list, field):
         ret = "{}&".format(comp_list[0])
         comp_list.remove(comp_list[0])
         return ret + _sanitize_url_components(comp_list, field)
+
+
+def session(user=None, password=None, verify_ssl=True, ca_bundle=None, headers=None):
+    """
+    create a requests session
+    """
+    session = requests.session()
+    if user and password:
+        session.auth = (user, password)
+    if ca_bundle and not verify_ssl:
+        log.error("You cannot use both ca_bundle and verify_ssl False together")
+        return False
+    if ca_bundle:
+        opts = {"ca_bundle": ca_bundle}
+        session.verify = get_ca_bundle(opts)
+    if not verify_ssl:
+        session.verify = False
+    if headers:
+        session.headers.update(headers)
+    return session
