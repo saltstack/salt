@@ -52,6 +52,11 @@ class LxdContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
             name="test-container",
             running=True,
             source={"type": "image", "alias": "images:centos/7"},
+            devices={
+                "data1": {"type": "disk", "source": "/tmp", "path": "/mnt/data"},
+                "data2": {"type": "disk", "source": "/tmp", "path": "/mnt/data2"},
+                "data3": {"type": "disk", "source": "/tmp", "path": "/mnt/data3"},
+            },
         )
         ret = self.run_state(
             "lxd_container.present",
@@ -63,6 +68,12 @@ class LxdContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
                 {"key": "boot.autostart", "value": 1},
                 {"key": "security.privileged", "value": "1"},
             ],
+            devices={
+                "eth1": {"nictype": "bridged", "parent": "lxdbr0", "type": "nic"},
+                "data1": {"type": "disk", "source": "/tmp", "path": "/mnt/data1"},
+                "data2": {"type": "disk", "source": "/tmp", "path": "/mnt/data2"},
+                "data4": {"type": "disk", "source": "/tmp", "path": "/mnt/data4"},
+            },
         )
         name = "lxd_container_|-test-container_|-test-container_|-present"
         self.assertSaltTrueReturn(ret)
@@ -70,6 +81,12 @@ class LxdContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         assert ret[name]["changes"]["config"] == {
             "boot.autostart": 'Added config key "boot.autostart" = "1"',
             "security.privileged": 'Added config key "security.privileged" = "1"',
+        }
+        assert ret[name]["changes"]["devices"] == {
+            "eth1": 'Added device "eth1"',
+            "data1": 'Changed device "data1"',
+            "data3": 'Removed device "data3"',
+            "data4": 'Added device "data4"',
         }
 
     def test_08__running_container(self):
