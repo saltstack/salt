@@ -57,6 +57,7 @@ class SSHClient(object):
             ('rosters', list),
             ('ignore_host_keys', bool),
             ('raw_shell', bool),
+            ('extra_filerefs', str),
         ]
         sane_kwargs = {}
         for name, kind in roster_vals:
