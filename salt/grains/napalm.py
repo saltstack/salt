@@ -273,7 +273,7 @@ def username(proxy=None):
 
     Output:
 
-    .. code-block::yaml
+    .. code-block:: yaml
 
         device1:
             True

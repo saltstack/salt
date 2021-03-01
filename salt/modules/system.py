@@ -181,7 +181,9 @@ def has_settable_hwclock():
 
     CLI Example:
 
-    salt '*' system.has_settable_hwclock
+    .. code-block:: bash
+
+        salt '*' system.has_settable_hwclock
     """
     if salt.utils.path.which_bin(["hwclock"]) is not None:
         res = __salt__["cmd.run_all"](

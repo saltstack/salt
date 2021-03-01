@@ -23,16 +23,12 @@ import logging
 import pprint
 import time
 import urllib.parse
+import urllib.request
+import xml.etree.ElementTree as ET
 from urllib.error import URLError
-from urllib.request import HTTPBasicAuthHandler as _HTTPBasicAuthHandler
-from urllib.request import Request as _Request
-from urllib.request import build_opener as _build_opener
-from urllib.request import install_opener as _install_opener
-from urllib.request import urlopen as _urlopen
 
 import salt.config as config
 import salt.utils.cloud
-from salt._compat import ElementTree as ET
 from salt.exceptions import (
     SaltCloudExecutionFailure,
     SaltCloudExecutionTimeout,
@@ -40,7 +36,6 @@ from salt.exceptions import (
     SaltCloudSystemExit,
 )
 
-# Get logging started
 log = logging.getLogger(__name__)
 
 __virtualname__ = "parallels"
@@ -57,13 +52,20 @@ def __virtual__():
     return __virtualname__
 
 
+def _get_active_provider_name():
+    try:
+        return __active_provider_name__.value()
+    except AttributeError:
+        return __active_provider_name__
+
+
 def get_configured_provider():
     """
     Return the first configured instance.
     """
     return config.is_provider_configured(
         __opts__,
-        __active_provider_name__ or __virtualname__,
+        _get_active_provider_name() or __virtualname__,
         ("user", "password", "url",),
     )
 
@@ -263,7 +265,7 @@ def create(vm_):
             vm_["profile"]
             and config.is_profile_configured(
                 __opts__,
-                __active_provider_name__ or "parallels",
+                _get_active_provider_name() or "parallels",
                 vm_["profile"],
                 vm_=vm_,
             )
@@ -365,7 +367,7 @@ def query(action=None, command=None, args=None, method="GET", data=None):
     path = config.get_cloud_config_value(
         "url", get_configured_provider(), __opts__, search_global=False
     )
-    auth_handler = _HTTPBasicAuthHandler()
+    auth_handler = urllib.request.HTTPBasicAuthHandler()
     auth_handler.add_password(
         realm="Parallels Instance Manager",
         uri=path,
@@ -376,8 +378,8 @@ def query(action=None, command=None, args=None, method="GET", data=None):
             "password", get_configured_provider(), __opts__, search_global=False
         ),
     )
-    opener = _build_opener(auth_handler)
-    _install_opener(opener)
+    opener = urllib.request.build_opener(auth_handler)
+    urllib.request.install_opener(opener)
 
     if action:
         path += action
@@ -396,9 +398,9 @@ def query(action=None, command=None, args=None, method="GET", data=None):
 
     if args:
         params = urllib.parse.urlencode(args)
-        req = _Request(url="{}?{}".format(path, params), **kwargs)
+        req = urllib.request.Request(url="{}?{}".format(path, params), **kwargs)
     else:
-        req = _Request(url=path, **kwargs)
+        req = urllib.request.Request(url=path, **kwargs)
 
     req.get_method = lambda: method
 
@@ -407,7 +409,7 @@ def query(action=None, command=None, args=None, method="GET", data=None):
         log.debug(data)
 
     try:
-        result = _urlopen(req)
+        result = urllib.request.urlopen(req)
         log.debug("PARALLELS Response Status Code: %s", result.getcode())
 
         if "content-length" in result.headers:
@@ -418,9 +420,8 @@ def query(action=None, command=None, args=None, method="GET", data=None):
 
         return {}
     except URLError as exc:
-        log.error("PARALLELS Response Status Code: %s %s", exc.code, exc.msg)
         root = ET.fromstring(exc.read())
-        log.error(root)
+        log.error("PARALLELS Response Status Code: %s %s\n%s", exc.code, exc.msg, root)
         return {"error": root}
 
 
@@ -482,7 +483,7 @@ def show_instance(name, call=None):
             for child in children:
                 ret[item.tag][child.tag] = child.attrib
 
-    __utils__["cloud.cache_node"](ret, __active_provider_name__, __opts__)
+    __utils__["cloud.cache_node"](ret, _get_active_provider_name(), __opts__)
     return ret
 
 
@@ -547,7 +548,7 @@ def destroy(name, call=None):
 
     if __opts__.get("update_cachedir", False) is True:
         __utils__["cloud.delete_minion_cachedir"](
-            name, __active_provider_name__.split(":")[0], __opts__
+            name, _get_active_provider_name().split(":")[0], __opts__
         )
 
     return {"Destroyed": "{} was destroyed.".format(name)}

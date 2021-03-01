@@ -575,7 +575,6 @@ def key_absent(name, use_32bit_registry=False):
     Returns:
         dict: A dictionary showing the results of the registry operation.
 
-
     CLI Example:
 
         The following example will delete the ``SOFTWARE\DeleteMe`` key in the

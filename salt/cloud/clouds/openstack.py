@@ -258,18 +258,29 @@ def __virtual__():
     return __virtualname__
 
 
+def _get_active_provider_name():
+    try:
+        return __active_provider_name__.value()
+    except AttributeError:
+        return __active_provider_name__
+
+
 def get_configured_provider():
     """
     Return the first configured instance.
     """
     provider = config.is_provider_configured(
-        __opts__, __active_provider_name__ or __virtualname__, ("auth", "region_name")
+        __opts__,
+        _get_active_provider_name() or __virtualname__,
+        ("auth", "region_name"),
     )
     if provider:
         return provider
 
     return config.is_provider_configured(
-        __opts__, __active_provider_name__ or __virtualname__, ("cloud", "region_name")
+        __opts__,
+        _get_active_provider_name() or __virtualname__,
+        ("cloud", "region_name"),
     )
 
 
@@ -324,8 +335,8 @@ def get_conn():
     """
     Return a conn object for the passed VM data
     """
-    if __active_provider_name__ in __context__:
-        return __context__[__active_provider_name__]
+    if _get_active_provider_name() in __context__:
+        return __context__[_get_active_provider_name()]
     vm_ = get_configured_provider()
     profile = vm_.pop("profile", None)
     if profile is not None:
@@ -333,8 +344,8 @@ def get_conn():
             os_client_config.vendors.get_profile(profile), vm_
         )
     conn = shade.openstackcloud.OpenStackCloud(cloud_config=None, **vm_)
-    if __active_provider_name__ is not None:
-        __context__[__active_provider_name__] = conn
+    if _get_active_provider_name() is not None:
+        __context__[_get_active_provider_name()] = conn
     return conn
 
 
@@ -833,7 +844,7 @@ def destroy(name, conn=None, call=None):
             )
         if __opts__.get("update_cachedir", False) is True:
             __utils__["cloud.delete_minion_cachedir"](
-                name, __active_provider_name__.split(":")[0], __opts__
+                name, _get_active_provider_name().split(":")[0], __opts__
             )
         __utils__["cloud.cachedir_index_del"](name)
         return True
