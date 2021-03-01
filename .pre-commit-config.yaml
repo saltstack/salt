@@ -1151,7 +1151,7 @@ repos:
       - id: bandit
         alias: bandit-salt
         name: Run bandit against Salt
-        args: [--silent, -lll]
+        args: [--silent, -lll, --skip, B701]
         exclude: >
             (?x)^(
                 templates/.*|
@@ -1164,7 +1164,7 @@ repos:
       - id: bandit
         alias: bandit-tests
         name: Run bandit against the test suite
-        args: [--silent, -lll]
+        args: [--silent, -lll, B701]
         files: ^tests/.*
         exclude: ^tests/minionswarm\.py
   # <---- Security ---------------------------------------------------------------------------------------------------
