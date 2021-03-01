@@ -152,9 +152,10 @@ def test_run_with_tuple():
     """
     mock_true = MagicMock(return_value=True)
     with patch("salt.modules.cmdmod._is_valid_shell", mock_true):
-        with patch("os.path.isfile", mock_true):
-            with patch("os.access", mock_true):
-                cmdmod._run(("echo", "foo"))
+        with patch("salt.utils.platform.is_windows", MagicMock(return_value=False)):
+            with patch("os.path.isfile", mock_true):
+                with patch("os.access", mock_true):
+                    cmdmod._run(("echo", "foo"))
 
 
 def test_run_user_not_available():
