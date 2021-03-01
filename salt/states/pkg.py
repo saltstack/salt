@@ -331,7 +331,7 @@ def _find_download_targets(
                     "name": name,
                     "changes": {},
                     "result": True,
-                    "comment": "Package {} is already downloaded".format(name),
+                    "comment": "Package {} is already " "downloaded".format(name),
                 }
 
     version_spec = False
@@ -422,7 +422,7 @@ def _find_advisory_targets(name=None, advisory_ids=None, **kwargs):
                 "name": name,
                 "changes": {},
                 "result": True,
-                "comment": "Advisory patch {} is already installed".format(name),
+                "comment": "Advisory patch {} is already " "installed".format(name),
             }
 
     # Find out which advisory patches will be targeted in the call to pkg.install
@@ -1989,7 +1989,7 @@ def installed(
             summary = ", ".join([_get_desired_pkg(x, desired) for x in modified])
         if len(summary) < 20:
             comment.append(
-                "The following packages were installed/updated: {}".format(summary)
+                "The following packages were installed/updated: " "{}".format(summary)
             )
         else:
             comment.append(
@@ -2024,7 +2024,7 @@ def installed(
             summary = ", ".join([_get_desired_pkg(x, desired) for x in not_modified])
         if len(not_modified) <= 20:
             comment.append(
-                "The following packages were already installed: {}".format(summary)
+                "The following packages were already installed: " "{}".format(summary)
             )
         else:
             comment.append(
@@ -2047,7 +2047,7 @@ def installed(
         else:
             summary = ", ".join([_get_desired_pkg(x, desired) for x in failed])
         comment.insert(
-            0, "The following packages failed to install/update: {}".format(summary)
+            0, "The following packages failed to " "install/update: {}".format(summary)
         )
         result = False
 
@@ -2265,14 +2265,14 @@ def downloaded(
         return targets
     elif not isinstance(targets, dict):
         ret["result"] = False
-        ret["comment"] = "An error was encountered while checking targets: {}".format(
-            targets
-        )
+        ret[
+            "comment"
+        ] = "An error was encountered while checking targets: " "{}".format(targets)
         return ret
 
     if __opts__["test"]:
         summary = ", ".join(targets)
-        ret["comment"] = "The following packages would be downloaded: {}".format(
+        ret["comment"] = "The following packages would be " "downloaded: {}".format(
             summary
         )
         return ret
@@ -2309,11 +2309,13 @@ def downloaded(
     if failed:
         summary = ", ".join([_get_desired_pkg(x, targets) for x in failed])
         ret["result"] = False
-        ret["comment"] = "The following packages failed to download: {}".format(summary)
+        ret["comment"] = "The following packages failed to " "download: {}".format(
+            summary
+        )
 
     if not ret["changes"] and not ret["comment"]:
         ret["result"] = True
-        ret["comment"] = "Packages downloaded: {}".format(", ".join(targets))
+        ret["comment"] = "Packages downloaded: " "{}".format(", ".join(targets))
 
     return ret
 
@@ -2371,16 +2373,16 @@ def patch_installed(name, advisory_ids=None, downloadonly=None, **kwargs):
         return targets
     elif not isinstance(targets, list):
         ret["result"] = False
-        ret["comment"] = "An error was encountered while checking targets: {}".format(
-            targets
-        )
+        ret[
+            "comment"
+        ] = "An error was encountered while checking targets: " "{}".format(targets)
         return ret
 
     if __opts__["test"]:
         summary = ", ".join(targets)
         ret[
             "comment"
-        ] = "The following advisory patches would be downloaded: {}".format(summary)
+        ] = "The following advisory patches would be " "downloaded: {}".format(summary)
         return ret
 
     try:
@@ -2791,7 +2793,7 @@ def latest(
 
             comments = []
             if failed:
-                msg = "The following packages failed to update: {}".format(
+                msg = "The following packages failed to update: " "{}".format(
                     ", ".join(sorted(failed))
                 )
                 comments.append(msg)
@@ -2832,7 +2834,7 @@ def latest(
                     )
                 )
             else:
-                comment = "Package {} failed to update.".format(
+                comment = "Package {} failed to " "update.".format(
                     next(iter(list(targets.keys())))
                 )
             if up_to_date:
@@ -2843,7 +2845,7 @@ def latest(
                         "{}".format(", ".join(sorted(up_to_date)))
                     )
                 else:
-                    comment += "{} packages were already up-to-date".format(
+                    comment += "{} packages were already " "up-to-date".format(
                         len(up_to_date)
                     )
 
@@ -2857,11 +2859,11 @@ def latest(
         if len(desired_pkgs) > 10:
             comment = "All {} packages are up-to-date.".format(len(desired_pkgs))
         elif len(desired_pkgs) > 1:
-            comment = "All packages are up-to-date ({}).".format(
+            comment = "All packages are up-to-date " "({}).".format(
                 ", ".join(sorted(desired_pkgs))
             )
         else:
-            comment = "Package {} is already up-to-date".format(desired_pkgs[0])
+            comment = "Package {} is already " "up-to-date".format(desired_pkgs[0])
 
         return {"name": name, "changes": {}, "result": True, "comment": comment}
 
@@ -2883,7 +2885,7 @@ def _uninstall(
             "name": name,
             "changes": {},
             "result": False,
-            "comment": "Invalid action '{}'. This is probably a bug.".format(action),
+            "comment": "Invalid action '{}'. " "This is probably a bug.".format(action),
         }
 
     try:
@@ -2975,7 +2977,7 @@ def _uninstall(
             "{}".format(", ".join(not_installed))
         )
         comments.append(
-            "The following packages were {}d: {}.".format(action, ", ".join(targets))
+            "The following packages were {}d: " "{}.".format(action, ", ".join(targets))
         )
     else:
         comments.append("All targeted packages were {}d.".format(action))
@@ -3076,7 +3078,7 @@ def removed(name, version=None, pkgs=None, normalize=True, ignore_epoch=None, **
             ret["changes"] = {}
             ret[
                 "comment"
-            ] = "An error was encountered while removing package(s): {}".format(exc)
+            ] = "An error was encountered while removing " "package(s): {}".format(exc)
         return ret
 
 
@@ -3168,7 +3170,7 @@ def purged(name, version=None, pkgs=None, normalize=True, ignore_epoch=None, **k
             ret["changes"] = {}
             ret[
                 "comment"
-            ] = "An error was encountered while purging package(s): {}".format(exc)
+            ] = "An error was encountered while purging " "package(s): {}".format(exc)
         return ret
 
 
@@ -3551,3 +3553,52 @@ def mod_watch(name, **kwargs):
         "comment": "pkg.{} does not work with the watch requisite".format(sfun),
         "result": False,
     }
+
+
+def mod_beacon(name, **kwargs):
+    """
+    Create a beacon to monitor a package or packages
+    based on a beacon state argument.
+
+    .. note::
+        This state exists to support special handling of the ``beacon``
+        state argument for supported state functions. It should not be called directly.
+
+    """
+    ret = {"name": name, "changes": {}, "result": True, "comment": ""}
+
+    sfun = kwargs.pop("sfun", None)
+    supported_funcs = ["installed", "removed"]
+
+    if sfun in supported_funcs:
+        if kwargs.get("beacon"):
+            beacon_module = "pkg"
+
+            beacon_name = "beacon_{}_{}".format(beacon_module, name)
+
+            beacon_kwargs = {
+                "name": beacon_name,
+                "pkgs": kwargs.get("pkgs", [name]),
+                "interval": 60,
+                "beacon_module": beacon_module,
+            }
+
+            ret = __states__["beacon.present"](**beacon_kwargs)
+            return ret
+        else:
+            return {
+                "name": name,
+                "changes": {},
+                "comment": "Not adding beacon.",
+                "result": True,
+            }
+
+    else:
+        return {
+            "name": name,
+            "changes": {},
+            "comment": "pkg.{} does not work with the mod_beacon state function".format(
+                sfun
+            ),
+            "result": False,
+        }
