@@ -5,7 +5,7 @@ Manage python installations with pyenv.
     Git needs to be installed and available via PATH if pyenv is to be
     installed automatically by the module.
 
-.. versionadded:: v2014.04
+.. versionadded:: 2014.4.0
 """
 
 import logging

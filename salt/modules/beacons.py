@@ -68,7 +68,7 @@ def list_(return_yaml=True, include_pillar=True, include_opts=True, **kwargs):
         # Effectively a no-op, since we can't really return without an event system
         ret = {}
         ret["result"] = False
-        ret["comment"] = "Event module not available. Beacon add failed."
+        ret["comment"] = "Event module not available. Beacon list failed."
         return ret
 
     if beacons:
@@ -110,11 +110,11 @@ def list_available(return_yaml=True, **kwargs):
                 )
                 if event_ret and event_ret["complete"]:
                     beacons = event_ret["beacons"]
-    except KeyError:
+    except KeyError as e:
         # Effectively a no-op, since we can't really return without an event system
         ret = {}
         ret["result"] = False
-        ret["comment"] = "Event module not available. Beacon add failed."
+        ret["comment"] = "Event module not available. Beacon list_available failed."
         return ret
 
     if beacons:
@@ -196,7 +196,7 @@ def add(name, beacon_data, **kwargs):
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system
             ret["result"] = False
-            ret["comment"] = "Event module not available. Beacon add failed."
+            ret["comment"] = "Event module not available. Beacon validation failed."
             return ret
 
         try:
@@ -214,7 +214,9 @@ def add(name, beacon_data, **kwargs):
                     )
                     if event_ret and event_ret["complete"]:
                         beacons = event_ret["beacons"]
-                        if name in beacons and beacons[name] == beacon_data:
+                        if name in beacons and all(
+                            [item in beacons[name] for item in beacon_data]
+                        ):
                             ret["result"] = True
                             ret["comment"] = "Added beacon: {}.".format(name)
                     elif event_ret:
@@ -416,7 +418,7 @@ def delete(name, **kwargs):
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system
             ret["result"] = False
-            ret["comment"] = "Event module not available. Beacon add failed."
+            ret["comment"] = "Event module not available. Beacon delete failed."
     return ret
 
 
@@ -561,7 +563,7 @@ def disable(**kwargs):
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system
             ret["result"] = False
-            ret["comment"] = "Event module not available. Beacons enable job failed."
+            ret["comment"] = "Event module not available. Beacons disable job failed."
     return ret
 
 
@@ -646,7 +648,9 @@ def enable_beacon(name, **kwargs):
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system
             ret["result"] = False
-            ret["comment"] = "Event module not available. Beacon enable job failed."
+            ret[
+                "comment"
+            ] = "Event module not available. Beacon enable_beacon job failed."
     return ret
 
 
@@ -721,7 +725,9 @@ def disable_beacon(name, **kwargs):
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system
             ret["result"] = False
-            ret["comment"] = "Event module not available. Beacon disable job failed."
+            ret[
+                "comment"
+            ] = "Event module not available. Beacon disable_beacon job failed."
     return ret
 
 

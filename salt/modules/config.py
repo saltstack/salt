@@ -302,7 +302,7 @@ def get(
     omit_grains=False,
 ):
     """
-    .. versionadded: 0.14.0
+    .. versionadded:: 0.14.0
 
     Attempt to retrieve the named value from the minion config file, pillar,
     grains or the master config. If the named value is not available, return

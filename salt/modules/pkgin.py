@@ -138,7 +138,7 @@ def search(pkg_name, **kwargs):
 
 def latest_version(*names, **kwargs):
     """
-    .. versionchanged: 2016.3.0
+    .. versionchanged:: 2016.3.0
 
     Return the latest version of the named package available for upgrade or
     installation.
@@ -228,7 +228,6 @@ def refresh_db(force=False, **kwargs):
 
         .. versionadded:: 2018.3.0
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -269,7 +268,7 @@ def _list_pkgs_from_context(versions_as_list):
 
 def list_pkgs(versions_as_list=False, **kwargs):
     """
-    .. versionchanged: 2016.3.0
+    .. versionchanged:: 2016.3.0
 
     List the packages currently installed as a dict::
 
@@ -475,7 +474,6 @@ def upgrade(refresh=True, pkgs=None, **kwargs):
         {'<package>':  {'old': '<old-version>',
                         'new': '<new-version>'}}
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -659,7 +657,7 @@ def file_list(package, **kwargs):
 
 def file_dict(*packages, **kwargs):
     """
-    .. versionchanged: 2016.3.0
+    .. versionchanged:: 2016.3.0
 
     List the files that belong to a package.
 
