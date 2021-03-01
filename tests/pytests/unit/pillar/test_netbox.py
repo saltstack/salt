@@ -452,6 +452,11 @@ def no_results():
 
 
 @pytest.fixture
+def http_error():
+    return {"error": "HTTP 404: Not Found", "status": 404}
+
+
+@pytest.fixture
 def device_interface_results():
     return {
         "dict": {
@@ -1447,49 +1452,103 @@ def test_when_we_retrieve_a_single_device_then_return_dict(
     default_kwargs, headers, device_results
 ):
 
+    expected_result = device_results["dict"]["results"]
+
     with patch("salt.utils.http.query", autospec=True) as query:
         query.return_value = device_results
 
-        assert (
-            netbox._get_devices(
-                default_kwargs["api_url"], default_kwargs["minion_id"], headers
-            )
-            == device_results["dict"]["results"]
+        actual_result = netbox._get_devices(
+            default_kwargs["api_url"], default_kwargs["minion_id"], headers
         )
+
+        assert actual_result == expected_result
+
+
+def test_when_we_retrieve_a_device_and_get_http_error_then_return_empty_dict(
+    default_kwargs, headers, http_error
+):
+    expected_result = {}
+
+    with patch("salt.utils.http.query", autospec=True) as query:
+        query.return_value = http_error
+
+        actual_result = netbox._get_devices(
+            default_kwargs["api_url"], default_kwargs["minion_id"], headers
+        )
+
+        assert actual_result == expected_result
 
 
 def test_when_we_retrieve_a_single_virtual_machines_then_return_dict(
     default_kwargs, headers, virtual_machine_results
 ):
 
+    expected_result = virtual_machine_results["dict"]["results"]
+
     with patch("salt.utils.http.query", autospec=True) as query:
         query.return_value = virtual_machine_results
 
-        assert (
-            netbox._get_virtual_machines(
-                default_kwargs["api_url"], default_kwargs["minion_id"], headers
-            )
-            == virtual_machine_results["dict"]["results"]
+        actual_result = netbox._get_virtual_machines(
+            default_kwargs["api_url"], default_kwargs["minion_id"], headers
         )
+
+        assert actual_result == expected_result
+
+
+def test_when_we_retrieve_a_virtual_machine_and_get_http_error_then_return_empty_dict(
+    default_kwargs, headers, http_error
+):
+
+    expected_result = {}
+
+    with patch("salt.utils.http.query", autospec=True) as query:
+        query.return_value = http_error
+
+        actual_result = netbox._get_virtual_machines(
+            default_kwargs["api_url"], default_kwargs["minion_id"], headers
+        )
+
+        assert actual_result == expected_result
 
 
 def test_when_we_retrieve_device_interfaces_then_return_dict(
     default_kwargs, headers, device_interface_results, device_interfaces_list
 ):
 
+    expected_result = device_interfaces_list
+
     with patch("salt.utils.http.query", autospec=True) as query:
         query.return_value = device_interface_results
 
-        assert (
-            netbox._get_interfaces(
-                default_kwargs["api_url"],
-                default_kwargs["minion_id"],
-                511,
-                "device",
-                headers,
-            )
-            == device_interfaces_list
+        actual_result = netbox._get_interfaces(
+            default_kwargs["api_url"],
+            default_kwargs["minion_id"],
+            511,
+            "device",
+            headers,
         )
+
+        assert actual_result == expected_result
+
+
+def test_when_we_retrieve_device_interfaces_and_get_http_error_then_return_empty_dict(
+    default_kwargs, headers, http_error
+):
+
+    expected_result = {}
+
+    with patch("salt.utils.http.query", autospec=True) as query:
+        query.return_value = http_error
+
+        actual_result = netbox._get_interfaces(
+            default_kwargs["api_url"],
+            default_kwargs["minion_id"],
+            511,
+            "device",
+            headers,
+        )
+
+        assert actual_result == expected_result
 
 
 def test_when_we_retrieve_virtual_machine_interfaces_then_return_dict(
@@ -1499,147 +1558,272 @@ def test_when_we_retrieve_virtual_machine_interfaces_then_return_dict(
     virtual_machine_interfaces_list,
 ):
 
+    expected_result = virtual_machine_interfaces_list
+
     with patch("salt.utils.http.query", autospec=True) as query:
         query.return_value = virtual_machine_interface_results
 
-        assert (
-            netbox._get_interfaces(
-                default_kwargs["api_url"],
-                default_kwargs["minion_id"],
-                222,
-                "virtual-machine",
-                headers,
-            )
-            == virtual_machine_interfaces_list
+        actual_result = netbox._get_interfaces(
+            default_kwargs["api_url"],
+            default_kwargs["minion_id"],
+            222,
+            "virtual-machine",
+            headers,
         )
+
+        assert actual_result == expected_result
+
+
+def test_when_we_retrieve_virtual_machine_interfaces_and_get_http_error_then_return_empty_dict(
+    default_kwargs, headers, http_error
+):
+
+    expected_result = {}
+
+    with patch("salt.utils.http.query", autospec=True) as query:
+        query.return_value = http_error
+
+        actual_result = netbox._get_interfaces(
+            default_kwargs["api_url"],
+            default_kwargs["minion_id"],
+            222,
+            "virtual-machine",
+            headers,
+        )
+
+        assert actual_result == expected_result
 
 
 def test_when_we_retrieve_device_interface_ips_then_return_dict(
     default_kwargs, headers, device_ip_results
 ):
 
+    expected_result = device_ip_results["dict"]["results"]
+
     with patch("salt.utils.http.query", autospec=True) as query:
         query.return_value = device_ip_results
 
-        assert (
-            netbox._get_interface_ips(
-                default_kwargs["api_url"],
-                default_kwargs["minion_id"],
-                511,
-                "device",
-                headers,
-            )
-            == device_ip_results["dict"]["results"]
+        actual_result = netbox._get_interface_ips(
+            default_kwargs["api_url"],
+            default_kwargs["minion_id"],
+            511,
+            "device",
+            headers,
         )
+
+        assert actual_result == expected_result
+
+
+def test_when_we_retrieve_device_interface_ips_and_get_http_error_then_return_empty_dict(
+    default_kwargs, headers, http_error
+):
+
+    expected_result = {}
+
+    with patch("salt.utils.http.query", autospec=True) as query:
+        query.return_value = http_error
+
+        actual_result = netbox._get_interface_ips(
+            default_kwargs["api_url"],
+            default_kwargs["minion_id"],
+            511,
+            "device",
+            headers,
+        )
+
+        assert actual_result == expected_result
 
 
 def test_when_we_retrieve_virtual_machine_interface_ips_then_return_dict(
     default_kwargs, headers, virtual_machine_ip_results
 ):
 
+    expected_result = virtual_machine_ip_results["dict"]["results"]
+
     with patch("salt.utils.http.query", autospec=True) as query:
         query.return_value = virtual_machine_ip_results
 
-        assert (
-            netbox._get_interface_ips(
-                default_kwargs["api_url"],
-                default_kwargs["minion_id"],
-                222,
-                "virtual-machine",
-                headers,
-            )
-            == virtual_machine_ip_results["dict"]["results"]
+        actual_result = netbox._get_interface_ips(
+            default_kwargs["api_url"],
+            default_kwargs["minion_id"],
+            222,
+            "virtual-machine",
+            headers,
         )
 
+        assert actual_result == expected_result
 
-def test_associate_device_ips_to_interfaces_then_return_dict(
+
+def test_when_we_retrieve_virtual_machine_interface_ips_and_get_http_error_then_return_empty_dict(
+    default_kwargs, headers, http_error
+):
+
+    expected_result = {}
+
+    with patch("salt.utils.http.query", autospec=True) as query:
+        query.return_value = http_error
+
+        actual_result = netbox._get_interface_ips(
+            default_kwargs["api_url"],
+            default_kwargs["minion_id"],
+            222,
+            "virtual-machine",
+            headers,
+        )
+
+        assert actual_result == expected_result
+
+
+def test_associate_ips_to_interfaces_then_return_dict(
     default_kwargs, device_interfaces_list, device_ip_results, device_interfaces_ip_list
 ):
+
+    expected_result = device_interfaces_ip_list
 
     interfaces_list = device_interfaces_list
     interface_ips_list = device_ip_results["dict"]["results"]
 
-    assert (
-        netbox._associate_ips_to_interfaces(
-            "device", interfaces_list, interface_ips_list
-        )
-        == device_interfaces_ip_list
+    actual_result = netbox._associate_ips_to_interfaces(
+        interfaces_list, interface_ips_list
     )
 
+    assert actual_result == expected_result
 
-def test_associate_virtual_machine_ips_to_interfaces_then_return_dict(
-    default_kwargs,
-    virtual_machine_interfaces_list,
-    virtual_machine_ip_results,
-    virtual_machine_interfaces_ip_list,
+
+def test_associate_empty_ip_list_to_interfaces_then_return_dict(
+    default_kwargs, device_interfaces_list, device_ip_results
 ):
 
-    interfaces_list = virtual_machine_interfaces_list
-    interface_ips_list = virtual_machine_ip_results["dict"]["results"]
+    expected_result = device_interfaces_list
 
-    assert (
-        netbox._associate_ips_to_interfaces(
-            "virtual-machine", interfaces_list, interface_ips_list
-        )
-        == virtual_machine_interfaces_ip_list
+    interfaces_list = device_interfaces_list
+    interface_ips_list = []
+
+    actual_result = netbox._associate_ips_to_interfaces(
+        interfaces_list, interface_ips_list
     )
+
+    assert actual_result == expected_result
 
 
 def test_when_we_retrieve_site_details_then_return_dict(
     default_kwargs, headers, site_results
 ):
 
+    expected_result = site_results["dict"]
+
     with patch("salt.utils.http.query", autospec=True) as query:
         query.return_value = site_results
 
-        assert (
-            netbox._get_site_details(
-                default_kwargs["api_url"],
-                default_kwargs["minion_id"],
-                "Site 1",
-                18,
-                headers,
-            )
-            == site_results["dict"]
+        actual_result = netbox._get_site_details(
+            default_kwargs["api_url"],
+            default_kwargs["minion_id"],
+            "Site 1",
+            18,
+            headers,
         )
+
+        assert actual_result == expected_result
+
+
+def test_when_we_retrieve_site_details_and_get_http_error_then_dont_return(
+    default_kwargs, headers, http_error
+):
+
+    expected_result = None
+
+    with patch("salt.utils.http.query", autospec=True) as query:
+        query.return_value = http_error
+
+        actual_result = netbox._get_site_details(
+            default_kwargs["api_url"],
+            default_kwargs["minion_id"],
+            "Site 1",
+            18,
+            headers,
+        )
+
+        assert actual_result == expected_result
 
 
 def test_when_we_retrieve_site_prefixes_then_return_dict(
     default_kwargs, headers, site_prefixes_results, site_prefixes
 ):
 
+    expected_result = site_prefixes
+
     with patch("salt.utils.http.query", autospec=True) as query:
         query.return_value = site_prefixes_results
 
-        assert (
-            netbox._get_site_prefixes(
-                default_kwargs["api_url"],
-                default_kwargs["minion_id"],
-                "Site 1",
-                18,
-                headers,
-            )
-            == site_prefixes
+        actual_result = netbox._get_site_prefixes(
+            default_kwargs["api_url"],
+            default_kwargs["minion_id"],
+            "Site 1",
+            18,
+            headers,
         )
+
+        assert actual_result == expected_result
+
+
+def test_when_we_retrieve_site_prefixes_and_get_http_error_then_dont_return(
+    default_kwargs, headers, http_error
+):
+
+    expected_result = None
+
+    with patch("salt.utils.http.query", autospec=True) as query:
+        query.return_value = http_error
+
+        actual_result = netbox._get_site_prefixes(
+            default_kwargs["api_url"],
+            default_kwargs["minion_id"],
+            "Site 1",
+            18,
+            headers,
+        )
+
+        assert actual_result == expected_result
 
 
 def test_when_we_retrieve_proxy_details_then_return_dict(
     default_kwargs, headers, proxy_details_results, proxy_details
 ):
 
+    expected_result = proxy_details
+
     with patch("salt.utils.http.query", autospec=True) as query:
         query.return_value = proxy_details_results
 
-        assert (
-            netbox._get_proxy_details(
-                default_kwargs["api_url"],
-                default_kwargs["minion_id"],
-                "192.0.2.1/32",
-                1,
-                headers,
-            )
-            == proxy_details
+        actual_result = netbox._get_proxy_details(
+            default_kwargs["api_url"],
+            default_kwargs["minion_id"],
+            "192.0.2.1/24",
+            1,
+            headers,
         )
+
+        assert actual_result == expected_result
+
+
+def test_when_we_retrieve_proxy_details_and_get_http_error_then_dont_return(
+    default_kwargs, headers, http_error
+):
+
+    expected_result = None
+
+    with patch("salt.utils.http.query", autospec=True) as query:
+        query.return_value = http_error
+
+        actual_result = netbox._get_proxy_details(
+            default_kwargs["api_url"],
+            default_kwargs["minion_id"],
+            "192.0.2.1/24",
+            1,
+            headers,
+        )
+
+        assert actual_result == expected_result
 
 
 def test_when_we_retrieve_multiple_devices_then_error_message_should_be_logged(
@@ -1753,6 +1937,9 @@ def test_when_we_retrieve_everything_successfully_then_return_dict(
     proxy_details,
     pillar_results,
 ):
+
+    expected_result = pillar_results
+
     default_kwargs["virtual_machines"] = False
     default_kwargs["interfaces"] = True
     default_kwargs["interface_ips"] = True
@@ -1782,4 +1969,6 @@ def test_when_we_retrieve_everything_successfully_then_return_dict(
         get_site_prefixes.return_value = site_prefixes
         get_proxy_details.return_value = proxy_details
 
-        assert netbox.ext_pillar(**default_kwargs) == pillar_results
+        actual_result = netbox.ext_pillar(**default_kwargs)
+
+        assert actual_result == expected_result

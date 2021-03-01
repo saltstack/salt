@@ -671,10 +671,11 @@ def _get_interface_ips(api_url, minion_id, node_id, node_type, headers):
             interface_ips_ret["status"],
             interface_ips_ret["error"],
         )
+        return {}
     return interface_ips_ret["dict"]["results"]
 
 
-def _associate_ips_to_interfaces(node_type, interfaces_list, interface_ips_list):
+def _associate_ips_to_interfaces(interfaces_list, interface_ips_list):
     interface_count = 0
     for interface in interfaces_list:
         if len(interface_ips_list) > 0:
@@ -760,14 +761,15 @@ def _get_proxy_details(api_url, minion_id, primary_ip, platform_id, headers):
         )
     # Assign results from API call to "proxy" key if the platform has a
     # napalm_driver defined.
-    napalm_driver = platform_ret["dict"].get("napalm_driver")
-    if napalm_driver:
-        proxy = {
-            "host": str(ipaddress.IPv4Interface(primary_ip).ip),
-            "driver": napalm_driver,
-            "proxytype": "napalm",
-        }
-        return proxy
+    else:
+        napalm_driver = platform_ret["dict"].get("napalm_driver")
+        if napalm_driver:
+            proxy = {
+                "host": str(ipaddress.ip_interface(primary_ip).ip),
+                "driver": napalm_driver,
+                "proxytype": "napalm",
+            }
+            return proxy
 
 
 def ext_pillar(minion_id, pillar, *args, **kwargs):
@@ -841,7 +843,7 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
                 api_url, minion_id, node_id, node_type, headers
             )
             ret["netbox"]["interfaces"] = _associate_ips_to_interfaces(
-                node_type, interfaces_list, interface_ips_list
+                interfaces_list, interface_ips_list
             )
     site_id = ret["netbox"]["site"]["id"]
     site_name = ret["netbox"]["site"]["name"]
