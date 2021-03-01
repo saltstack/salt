@@ -35,11 +35,11 @@ def test_get_tops_python(version):
     with patch_proc, patch_which:
         salt.utils.thin.get_tops_python("python2", ext_py_ver=version)
         cmds = [x[0][0] for x in mock_popen.call_args_list]
-        assert [x for x in cmds if "jinja2" in x]
+        assert [x for x in cmds if "jinja2" in x[2]]
         if python3:
-            assert [x for x in cmds if "distro" in x]
+            assert [x for x in cmds if "distro" in x[2]]
         else:
-            assert not [x for x in cmds if "distro" in x]
+            assert not [x for x in cmds if "distro" in x[2]]
 
 
 @pytest.mark.parametrize("version", [[2, 7], [3, 0], [3, 7]])

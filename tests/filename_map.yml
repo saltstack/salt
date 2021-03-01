@@ -43,8 +43,8 @@ salt/modules/cp.py:
   - integration.states.test_file
 
 salt/modules/dockermod.py:
-  - unit.states.test_docker_image
-  - unit.states.test_docker_volume
+  - pytests.unit.states.test_docker_image
+  - pytests.unit.states.test_docker_volume
   - unit.utils.test_dockermod
   - pytests.functional.states.test_docker_container
   - integration.states.test_docker_network
