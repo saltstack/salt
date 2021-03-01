@@ -198,7 +198,7 @@ def present(
             update["password"] = True
         if groups is not None:
             lgroups = groups
-            if isinstance(groups, ((str,), str)):
+            if isinstance(groups, str):
                 lgroups = lgroups.split(",")
             if isinstance(lgroups, list):
                 missing_groups = [a for a in lgroups if a not in role_groups]
