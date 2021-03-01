@@ -146,6 +146,17 @@ def test_run_runas_with_windows():
                         cmdmod._run("foo", "bar", runas="baz")
 
 
+def test_run_with_tuple():
+    """
+    Tests return when cmd is a tuple
+    """
+    mock_true = MagicMock(return_value=True)
+    with patch("salt.modules.cmdmod._is_valid_shell", mock_true):
+        with patch("os.path.isfile", mock_true):
+            with patch("os.access", mock_true):
+                cmdmod._run(("echo", "foo"))
+
+
 def test_run_user_not_available():
     """
     Tests return when runas user is not available
