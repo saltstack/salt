@@ -1,17 +1,12 @@
-# -*- coding: utf-8 -*-
 """
 Load up the libvirt keys into Pillar for a given minion if said keys have been
 generated using the libvirt key runner
 
 :depends: certtool
 """
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import python libs
 import os
 import subprocess
 
-# Import salt libs
 import salt.utils.files
 import salt.utils.path
 import salt.utils.stringutils
@@ -24,9 +19,7 @@ def __virtual__():
     return salt.utils.path.which("certtool") is not None
 
 
-def ext_pillar(
-    minion_id, pillar, command  # pylint: disable=W0613
-):  # pylint: disable=W0613
+def ext_pillar(minion_id, pillar, command):
     """
     Read in the generated libvirt keys
     """
@@ -48,7 +41,7 @@ def ext_pillar(
             continue
         fn_ = os.path.join(key_dir, key)
         with salt.utils.files.fopen(fn_, "r") as fp_:
-            ret["libvirt.{0}".format(key)] = salt.utils.stringutils.to_unicode(
+            ret["libvirt.{}".format(key)] = salt.utils.stringutils.to_unicode(
                 fp_.read()
             )
     with salt.utils.files.fopen(cacert, "r") as fp_:
@@ -78,11 +71,11 @@ def gen_hyper_keys(
         with salt.utils.files.fopen(cainfo, "w+") as fp_:
             fp_.write("cn = salted\nca\ncert_signing_key")
     if not os.path.isfile(cakey):
-        subprocess.call("certtool --generate-privkey > {0}".format(cakey), shell=True)
+        subprocess.call("certtool --generate-privkey > {}".format(cakey), shell=True)
     if not os.path.isfile(cacert):
         cmd = (
-            "certtool --generate-self-signed --load-privkey {0} "
-            "--template {1} --outfile {2}"
+            "certtool --generate-self-signed --load-privkey {} "
+            "--template {} --outfile {}"
         ).format(cakey, cainfo, cacert)
         subprocess.call(cmd, shell=True)
     sub_dir = os.path.join(key_dir, minion_id)
@@ -97,27 +90,27 @@ def gen_hyper_keys(
     if not os.path.isfile(srvinfo):
         with salt.utils.files.fopen(srvinfo, "w+") as fp_:
             infodat = salt.utils.stringutils.to_str(
-                "organization = salted\ncn = {0}\ntls_www_server"
+                "organization = salted\ncn = {}\ntls_www_server"
                 "\nencryption_key\nsigning_key"
-                "\ndigitalSignature\nexpiration_days = {1}".format(
+                "\ndigitalSignature\nexpiration_days = {}".format(
                     __grains__["fqdn"], expiration_days
                 )
             )
             fp_.write(infodat)
     if not os.path.isfile(priv):
-        subprocess.call("certtool --generate-privkey > {0}".format(priv), shell=True)
+        subprocess.call("certtool --generate-privkey > {}".format(priv), shell=True)
     if not os.path.isfile(cert):
         cmd = (
-            "certtool --generate-certificate --load-privkey {0} "
-            "--load-ca-certificate {1} --load-ca-privkey {2} "
-            "--template {3} --outfile {4}"
+            "certtool --generate-certificate --load-privkey {} "
+            "--load-ca-certificate {} --load-ca-privkey {} "
+            "--template {} --outfile {}"
         ).format(priv, cacert, cakey, srvinfo, cert)
         subprocess.call(cmd, shell=True)
     if not os.path.isfile(clientinfo):
         with salt.utils.files.fopen(clientinfo, "w+") as fp_:
             infodat = salt.utils.stringutils.to_str(
-                "country = {0}\nstate = {1}\nlocality = {2}\n"
-                "organization = {3}\ncn = {4}\n"
+                "country = {}\nstate = {}\nlocality = {}\n"
+                "organization = {}\ncn = {}\n"
                 "tls_www_client\nencryption_key\nsigning_key\n"
                 "digitalSignature".format(
                     country, state, locality, organization, __grains__["fqdn"]
@@ -125,11 +118,11 @@ def gen_hyper_keys(
             )
             fp_.write(infodat)
     if not os.path.isfile(cpriv):
-        subprocess.call("certtool --generate-privkey > {0}".format(cpriv), shell=True)
+        subprocess.call("certtool --generate-privkey > {}".format(cpriv), shell=True)
     if not os.path.isfile(ccert):
         cmd = (
-            "certtool --generate-certificate --load-privkey {0} "
-            "--load-ca-certificate {1} --load-ca-privkey {2} "
-            "--template {3} --outfile {4}"
+            "certtool --generate-certificate --load-privkey {} "
+            "--load-ca-certificate {} --load-ca-privkey {} "
+            "--template {} --outfile {}"
         ).format(cpriv, cacert, cakey, clientinfo, ccert)
         subprocess.call(cmd, shell=True)
