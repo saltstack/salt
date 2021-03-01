@@ -4,7 +4,6 @@ Support for haproxy
 .. versionadded:: 2014.7.0
 """
 
-# Import Python libs
 
 import logging
 import os
