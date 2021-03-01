@@ -380,7 +380,9 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
                         "salt.modules.gpg.gnupg.GPG.delete_keys",
                         MagicMock(return_value="ok"),
                     ) as gnupg_delete_keys:
-                        ret = gpg.delete_key("xxxxxxxxxxxxxxxx", delete_secret=True)
+                        ret = gpg.delete_key(
+                            "xxxxxxxxxxxxxxxx", delete_secret=True, use_passphrase=False
+                        )
                         self.assertEqual(ret, _expected_result)
                         gnupg_delete_keys.assert_called_with(
                             "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
@@ -451,9 +453,7 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
                     with patch(
                         "salt.modules.gpg.gnupg.GPG.delete_keys"
                     ) as gnupg_delete_keys:
-                        ret = gpg.delete_key(
-                            "xxxxxxxxxxxxxxxx", delete_secret=True, use_passphrase=True
-                        )
+                        ret = gpg.delete_key("xxxxxxxxxxxxxxxx", delete_secret=True)
                         self.assertEqual(ret, _expected_result)
                         gnupg_delete_keys.assert_not_called()
 
@@ -521,9 +521,7 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
                         "salt.modules.gpg.gnupg.GPG.delete_keys",
                         MagicMock(return_value="ok"),
                     ) as gnupg_delete_keys:
-                        ret = gpg.delete_key(
-                            "xxxxxxxxxxxxxxxx", delete_secret=True, use_passphrase=True
-                        )
+                        ret = gpg.delete_key("xxxxxxxxxxxxxxxx", delete_secret=True)
                         self.assertEqual(ret, _expected_result)
                         gnupg_delete_keys.assert_called_with(
                             "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
