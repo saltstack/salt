@@ -1419,7 +1419,7 @@ def _subnets_present(
             subnet_ids.append(r["id"])
 
     # Describe routing table
-    route_table = __salt__["boto_vpc.describe_route_tables"](
+    route_tables = __salt__["boto_vpc.describe_route_tables"](
         route_table_name=route_table_name,
         tags=tags,
         region=region,
@@ -1427,7 +1427,7 @@ def _subnets_present(
         keyid=keyid,
         profile=profile,
     )
-    if not route_table:
+    if not route_tables:
         msg = "Could not retrieve configuration for route table {}.".format(
             route_table_name
         )
@@ -1435,13 +1435,25 @@ def _subnets_present(
         ret["result"] = False
         return ret
 
-    assoc_ids = [x["subnet_id"] for x in route_table["associations"]]
+    route_table = route_tables[0]
 
-    to_create = [x for x in subnet_ids if x not in assoc_ids]
+    assoc_ids = [x["id"] for x in route_table["associations"]]
+
+    new_assoc_ids = []
+    for subnet_id in subnet_ids:
+        _describe = __salt__["boto_vpc.describe_subnet"](
+            subnet_id=subnet_id, region=region, key=key, keyid=keyid, profile=profile
+        )
+        if "explicit_route_table_association_id" not in _describe["subnet"]:
+            continue
+        new_assoc_ids.append(_describe["subnet"]["explicit_route_table_association_id"])
+
+    to_create = [x for x in new_assoc_ids if x not in assoc_ids]
+
     to_delete = []
     for x in route_table["associations"]:
         # Don't remove the main route table association
-        if x["subnet_id"] not in subnet_ids and x["subnet_id"] is not None:
+        if x["id"] not in new_assoc_ids and not x["main"]:
             to_delete.append(x["id"])
 
     if to_create or to_delete:
