@@ -1,11 +1,12 @@
-# -*- coding: utf-8 -*-
 """
 Simple Smoke Tests for Connected SSH minions
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
+import pytest
 from tests.support.case import SSHCase
-from tests.support.helpers import requires_system_grains, skip_if_not_root, slowTest
+from tests.support.helpers import requires_system_grains
+from tests.support.pytest.helpers import temp_state_file
+from tests.support.runtests import RUNTIME_VARS
 
 
 class SSHMasterTestCase(SSHCase):
@@ -13,7 +14,7 @@ class SSHMasterTestCase(SSHCase):
     Test ssh master functionality
     """
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_can_it_ping(self):
         """
         Ensure the proxy can ping
@@ -22,8 +23,8 @@ class SSHMasterTestCase(SSHCase):
         self.assertEqual(ret, True)
 
     @requires_system_grains
-    @skip_if_not_root
-    @slowTest
+    @pytest.mark.slow_test
+    @pytest.mark.skip_if_not_root
     def test_service(self, grains):
         service = "cron"
         os_family = grains["os_family"]
@@ -46,24 +47,44 @@ class SSHMasterTestCase(SSHCase):
         ret = self.run_function("service.status", [service])
         self.assertTrue(ret)
 
-    @requires_system_grains
-    @slowTest
-    def test_grains_items(self, grains):
-        os_family = grains["os_family"]
-        ret = self.run_function("grains.items")
-        if os_family == "MacOS":
-            self.assertEqual(ret["kernel"], "Darwin")
-        else:
-            self.assertEqual(ret["kernel"], "Linux")
-
-    @slowTest
+    @pytest.mark.slow_test
     def test_state_apply(self):
-        ret = self.run_function("state.apply", ["core"])
-        for key, value in ret.items():
-            self.assertTrue(value["result"])
+        core_state = """
+        {}/testfile:
+          file:
+            - managed
+            - source: salt://testfile
+            - makedirs: true
+            """.format(
+            RUNTIME_VARS.TMP
+        )
 
-    @slowTest
+        with temp_state_file("core.sls", core_state):
+            ret = self.run_function("state.apply", ["core"])
+            for key, value in ret.items():
+                self.assertTrue(value["result"])
+
+    @pytest.mark.slow_test
     def test_state_highstate(self):
-        ret = self.run_function("state.highstate")
-        for key, value in ret.items():
-            self.assertTrue(value["result"])
+        top_sls = """
+        base:
+          '*':
+            - core
+            """
+
+        core_state = """
+        {}/testfile:
+          file:
+            - managed
+            - source: salt://testfile
+            - makedirs: true
+            """.format(
+            RUNTIME_VARS.TMP
+        )
+
+        with temp_state_file("top.sls", top_sls), temp_state_file(
+            "core.sls", core_state
+        ):
+            ret = self.run_function("state.highstate")
+            for key, value in ret.items():
+                self.assertTrue(value["result"])

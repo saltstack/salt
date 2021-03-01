@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Support for BambooHR
 
@@ -13,16 +12,11 @@ Requires a ``subdomain`` and an ``apikey`` in ``/etc/salt/minion``:
       subdomain: mycompany
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
+import xml.etree.ElementTree as ET
 
-# Import salt libs
 import salt.utils.http
 import salt.utils.yaml
-from salt._compat import ElementTree as ET
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -52,6 +46,8 @@ def list_employees(order_by="id"):
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt myminion bamboohr.list_employees
 
     By default, the return data will be keyed by ID. However, it can be ordered
@@ -62,6 +58,8 @@ def list_employees(order_by="id"):
     unique.
 
     CLI Examples:
+
+    .. code-block:: bash
 
         salt myminion bamboohr.list_employees order_by=id
         salt myminion bamboohr.list_employees order_by=displayName
@@ -88,6 +86,8 @@ def show_employee(emp_id, fields=None):
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt myminion bamboohr.show_employee 1138
 
     By default, the fields normally returned from bamboohr.list_employees are
@@ -112,6 +112,8 @@ def show_employee(emp_id, fields=None):
     If needed, a different set of fields may be specified, separated by commas:
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt myminion bamboohr.show_employee 1138 displayName,dateOfBirth
 
@@ -157,6 +159,8 @@ def update_employee(emp_id, key=None, value=None, items=None):
 
     CLI Examples:
 
+    .. code-block:: bash
+
         salt myminion bamboohr.update_employee 1138 nickname Curly
         salt myminion bamboohr.update_employee 1138 nickname ''
         salt myminion bamboohr.update_employee 1138 items='{"nickname": "Curly"}
@@ -166,13 +170,13 @@ def update_employee(emp_id, key=None, value=None, items=None):
         if key is None or value is None:
             return {"Error": "At least one key/value pair is required"}
         items = {key: value}
-    elif isinstance(items, six.string_types):
+    elif isinstance(items, str):
         items = salt.utils.yaml.safe_load(items)
 
     xml_items = ""
     for pair in items:
-        xml_items += '<field id="{0}">{1}</field>'.format(pair, items[pair])
-    xml_items = "<employee>{0}</employee>".format(xml_items)
+        xml_items += '<field id="{}">{}</field>'.format(pair, items[pair])
+    xml_items = "<employee>{}</employee>".format(xml_items)
 
     status, result = _query(
         action="employees", command=emp_id, data=xml_items, method="POST",
@@ -187,6 +191,8 @@ def list_users(order_by="id"):
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt myminion bamboohr.list_users
 
     By default, the return data will be keyed by ID. However, it can be ordered
@@ -197,6 +203,8 @@ def list_users(order_by="id"):
     unique.
 
     CLI Examples:
+
+    .. code-block:: bash
 
         salt myminion bamboohr.list_users order_by=id
         salt myminion bamboohr.list_users order_by=email
@@ -223,6 +231,8 @@ def list_meta_fields():
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt myminion bamboohr.list_meta_fields
     """
     ret = {}
@@ -246,13 +256,13 @@ def _query(action=None, command=None, args=None, method="GET", data=None):
     The password can be any random text, so we chose Salty text.
     """
     subdomain = __opts__.get("bamboohr", {}).get("subdomain", None)
-    path = "https://api.bamboohr.com/api/gateway.php/{0}/v1/".format(subdomain)
+    path = "https://api.bamboohr.com/api/gateway.php/{}/v1/".format(subdomain)
 
     if action:
         path += action
 
     if command:
-        path += "/{0}".format(command)
+        path += "/{}".format(command)
 
     log.debug("BambooHR URL: %s", path)
 

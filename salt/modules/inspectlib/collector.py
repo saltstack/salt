@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # Copyright 2015 SUSE LLC
 #
@@ -13,14 +12,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-# Import Python Libs
-from __future__ import absolute_import, print_function
-
 import logging
 import os
+import subprocess
 import sys
-from subprocess import PIPE, STDOUT, Popen
 
 import salt.utils.crypt
 import salt.utils.files
@@ -36,8 +31,6 @@ from salt.modules.inspectlib.entities import (
     PackageCfgFile,
     PayloadFile,
 )
-
-# Import Salt Libs
 from salt.modules.inspectlib.exceptions import InspectorSnapshotException
 
 try:
@@ -94,11 +87,11 @@ class Inspector(EnvLoader):
         """
         Call an external system command.
         """
-        return Popen(
+        return subprocess.Popen(
             [command] + list(params),
-            stdout=PIPE,
-            stdin=PIPE,
-            stderr=STDOUT,
+            stdout=subprocess.PIPE,
+            stdin=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
             env=env or os.environ,
         ).communicate(input=input)
 
@@ -413,7 +406,7 @@ class Inspector(EnvLoader):
         all_links = list()
         for entry_path in [pth for pth in (allowed or os.listdir("/")) if pth]:
             if entry_path[0] != "/":
-                entry_path = "/{0}".format(entry_path)
+                entry_path = "/{}".format(entry_path)
             if entry_path in ignored or os.path.islink(entry_path):
                 continue
             e_files, e_dirs, e_links = self._get_all_files(entry_path, *ignored)
@@ -492,7 +485,7 @@ class Inspector(EnvLoader):
         Take a snapshot of the system.
         """
         if mode not in self.MODE:
-            raise InspectorSnapshotException("Unknown mode: '{0}'".format(mode))
+            raise InspectorSnapshotException("Unknown mode: '{}'".format(mode))
 
         if is_alive(self.pidfile):
             raise CommandExecutionError("Inspection already in progress.")
@@ -500,7 +493,7 @@ class Inspector(EnvLoader):
         self._prepare_full_scan(**kwargs)
 
         os.system(
-            "nice -{0} python {1} {2} {3} {4} & > /dev/null".format(
+            "nice -{} python {} {} {} {} & > /dev/null".format(
                 priority,
                 __file__,
                 os.path.dirname(self.pidfile),
@@ -590,7 +583,7 @@ if __name__ == "__main__":
             with salt.utils.files.fopen(
                 os.path.join(pidfile, EnvLoader.PID_FILE), "w"
             ) as fp_:
-                fp_.write("{0}\n".format(pid))
+                fp_.write("{}\n".format(pid))
             sys.exit(0)
     except OSError as ex:
         sys.exit(1)

@@ -1,2 +1,0 @@
-remove encoding kwarg for both pack(b)/unpack(b) in msgpack for versions >=1.0.0
-https://github.com/msgpack/msgpack-python/blob/master/ChangeLog.rst#100

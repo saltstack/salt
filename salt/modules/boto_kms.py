@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Connection module for Amazon KMS
 
@@ -36,21 +35,16 @@ Connection module for Amazon KMS
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
 
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import logging
 
 import salt.serializers.json
-
-# Import Salt libs
 import salt.utils.compat
 import salt.utils.odict as odict
 import salt.utils.versions
 
 log = logging.getLogger(__name__)
 
-# Import third party libs
 try:
     # pylint: disable=unused-import
     import boto
@@ -71,7 +65,6 @@ def __virtual__():
 
 
 def __init__(opts):
-    salt.utils.compat.pack_dunder(__name__)
     if HAS_BOTO:
         __utils__["boto.assign_funcs"](__name__, "kms", pack=__salt__)
 
@@ -82,7 +75,9 @@ def create_alias(
     """
     Create a display name for a key.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_kms.create_alias 'alias/mykey' key_id
     """
@@ -114,7 +109,9 @@ def create_grant(
     Adds a grant to a key to specify who can access the key and under what
     conditions.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_kms.create_grant 'alias/mykey' 'arn:aws:iam::1111111:/role/myrole' operations='["Encrypt","Decrypt"]'
     """
@@ -149,7 +146,9 @@ def create_key(
     """
     Creates a master key.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_kms.create_key '{"Statement":...}' "My master key"
     """
@@ -179,7 +178,9 @@ def decrypt(
     """
     Decrypt ciphertext.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_kms.decrypt encrypted_ciphertext
     """
@@ -202,7 +203,9 @@ def key_exists(key_id, region=None, key=None, keyid=None, profile=None):
     """
     Check for the existence of a key.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_kms.key_exists 'alias/mykey'
     """
@@ -233,7 +236,9 @@ def describe_key(key_id, region=None, key=None, keyid=None, profile=None):
     """
     Get detailed information about a key.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_kms.describe_key 'alias/mykey'
     """
@@ -253,7 +258,9 @@ def disable_key(key_id, region=None, key=None, keyid=None, profile=None):
     """
     Mark key as disabled.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_kms.disable_key 'alias/mykey'
     """
@@ -273,7 +280,9 @@ def disable_key_rotation(key_id, region=None, key=None, keyid=None, profile=None
     """
     Disable key rotation for specified key.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_kms.disable_key_rotation 'alias/mykey'
     """
@@ -293,7 +302,9 @@ def enable_key(key_id, region=None, key=None, keyid=None, profile=None):
     """
     Mark key as enabled.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_kms.enable_key 'alias/mykey'
     """
@@ -313,7 +324,9 @@ def enable_key_rotation(key_id, region=None, key=None, keyid=None, profile=None)
     """
     Disable key rotation for specified key.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_kms.enable_key_rotation 'alias/mykey'
     """
@@ -342,7 +355,9 @@ def encrypt(
     """
     Encrypt plaintext into cipher text using specified key.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_kms.encrypt 'alias/mykey' 'myplaindata' '{"aws:username":"myuser"}'
     """
@@ -376,7 +391,9 @@ def generate_data_key(
     """
     Generate a secure data key.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_kms.generate_data_key 'alias/mykey' number_of_bytes=1024 key_spec=AES_128
     """
@@ -411,7 +428,9 @@ def generate_data_key_without_plaintext(
     """
     Generate a secure data key without a plaintext copy of the key.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_kms.generate_data_key_without_plaintext 'alias/mykey' number_of_bytes=1024 key_spec=AES_128
     """
@@ -438,7 +457,9 @@ def generate_random(
     """
     Generate a random string.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_kms.generate_random number_of_bytes=1024
     """
@@ -459,7 +480,9 @@ def get_key_policy(
     """
     Get the policy for the specified key.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_kms.get_key_policy 'alias/mykey' mypolicy
     """
@@ -480,7 +503,9 @@ def get_key_rotation_status(key_id, region=None, key=None, keyid=None, profile=N
     """
     Get status of whether or not key rotation is enabled for a key.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_kms.get_key_rotation_status 'alias/mykey'
     """
@@ -501,7 +526,9 @@ def list_grants(
     """
     List grants for the specified key.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_kms.list_grants 'alias/mykey'
     """
@@ -533,7 +560,9 @@ def list_key_policies(
     """
     List key_policies for the specified key.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_kms.list_key_policies 'alias/mykey'
     """
@@ -557,7 +586,9 @@ def put_key_policy(
     """
     Attach a key policy to the specified key.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_kms.put_key_policy 'alias/mykey' default '{"Statement":...}'
     """
@@ -589,7 +620,9 @@ def re_encrypt(
     """
     Reencrypt encrypted data with a new master key.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_kms.re_encrypt 'encrypted_data' 'alias/mynewkey' default '{"Statement":...}'
     """
@@ -614,7 +647,9 @@ def revoke_grant(key_id, grant_id, region=None, key=None, keyid=None, profile=No
     """
     Revoke a grant from a key.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_kms.revoke_grant 'alias/mykey' 8u89hf-j09j...
     """
@@ -638,7 +673,9 @@ def update_key_description(
     """
     Update a key's description.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_kms.update_key_description 'alias/mykey' 'My key'
     """

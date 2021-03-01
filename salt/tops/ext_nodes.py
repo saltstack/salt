@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 External Nodes Classifier
 =========================
@@ -45,13 +44,9 @@ The above essentially is the same as a top.sls containing the following:
         - basepackages
         - database
 """
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Python libs
 import logging
 import subprocess
 
-# Import Salt libs
 import salt.utils.yaml
 
 log = logging.getLogger(__name__)
@@ -72,7 +67,7 @@ def top(**kwargs):
     """
     if "id" not in kwargs["opts"]:
         return {}
-    cmd = "{0} {1}".format(__opts__["master_tops"]["ext_nodes"], kwargs["opts"]["id"])
+    cmd = "{} {}".format(__opts__["master_tops"]["ext_nodes"], kwargs["opts"]["id"])
     ndata = salt.utils.yaml.safe_load(
         subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE).communicate()[0]
     )

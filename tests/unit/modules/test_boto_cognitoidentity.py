@@ -1,25 +1,15 @@
-# -*- coding: utf-8 -*-
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import random
 import string
 
-# Import Salt libs
 import salt.config
 import salt.loader
 import salt.modules.boto_cognitoidentity as boto_cognitoidentity
 from salt.ext.six.moves import range  # pylint: disable=import-error
 from salt.utils.versions import LooseVersion
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
-
-# Import 3rd-party libs
 
 # pylint: disable=import-error,no-name-in-module
 try:
@@ -140,7 +130,7 @@ class BotoCognitoIdentityTestCaseBase(TestCase, LoaderModuleMockMixin):
         return {boto_cognitoidentity: {"__utils__": utils}}
 
     def setUp(self):
-        super(BotoCognitoIdentityTestCaseBase, self).setUp()
+        super().setUp()
         boto_cognitoidentity.__init__(self.opts)
         del self.opts
 
@@ -163,16 +153,16 @@ class BotoCognitoIdentityTestCaseBase(TestCase, LoaderModuleMockMixin):
         session_instance.client.return_value = self.conn
 
 
-class BotoCognitoIdentityTestCaseMixin(object):
+class BotoCognitoIdentityTestCaseMixin:
     pass
 
 
-@skipIf(True, "Skip these tests while investigating failures")
+# @skipIf(True, "Skip these tests while investigating failures")
 @skipIf(HAS_BOTO is False, "The boto module must be installed.")
 @skipIf(
     _has_required_boto() is False,
     "The boto3 module must be greater than"
-    " or equal to version {0}".format(required_boto3_version),
+    " or equal to version {}".format(required_boto3_version),
 )
 class BotoCognitoIdentityTestCase(
     BotoCognitoIdentityTestCaseBase, BotoCognitoIdentityTestCaseMixin
