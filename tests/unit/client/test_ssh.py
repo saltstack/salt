@@ -16,6 +16,7 @@ from tests.support.case import ShellCase
 from tests.support.mock import patch, MagicMock, call
 
 # Import Salt libs
+import salt.client.ssh.client
 import salt.config
 import salt.roster
 import salt.utils.files
@@ -207,3 +208,26 @@ class SSHTests(ShellCase):
                 call("/bin/sh '.35d96ccac2ff.py'"),
                 call("rm '.35d96ccac2ff.py'"),
             ] == mock_cmd.call_args_list
+
+    def test_extra_filerefs(self):
+        """
+        test parse_tgt when only the host set on
+        the ssh cli tgt
+        """
+        opts = {
+            "eauth": "auto",
+            "username": "test",
+            "password": "test",
+            "client": "ssh",
+            "tgt": "localhost",
+            "fun": "test.ping",
+            "ssh_port": 22,
+            "extra_filerefs": "salt://foobar",
+        }
+        roster = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "roster")
+        client = salt.client.ssh.client.SSHClient(
+            mopts=self.opts, disable_custom_roster=True
+        )
+        with patch("salt.roster.get_roster_file", MagicMock(return_value=roster)):
+            ssh_obj = client._prep_ssh(**opts)
+            assert ssh_obj.opts.get("extra_filerefs", None) == "salt://foobar"
