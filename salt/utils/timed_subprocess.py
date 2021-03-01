@@ -8,6 +8,7 @@ import threading
 
 import salt.exceptions
 import salt.utils.data
+import salt.utils.stringutils
 
 
 class TimedProc:

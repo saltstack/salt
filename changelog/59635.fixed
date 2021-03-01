@@ -1,0 +1,1 @@
+Fixing the virtual function for the netimiko module to allow it to run outside of a proxy minion. Adding additional tests.
