@@ -670,8 +670,8 @@ class SSHTests(ShellCase):
 
     def test_extra_filerefs(self):
         """
-        test parse_tgt when only the host set on
-        the ssh cli tgt
+        test "extra_filerefs" are not excluded from kwargs
+        when preparing the SSH opts
         """
         opts = {
             "eauth": "auto",
