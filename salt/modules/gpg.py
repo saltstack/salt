@@ -509,7 +509,7 @@ def delete_key(
     delete_secret=False,
     user=None,
     gnupghome=None,
-    use_passphrase=False,
+    use_passphrase=True,
 ):
     """
     Get a key from the GPG keychain
