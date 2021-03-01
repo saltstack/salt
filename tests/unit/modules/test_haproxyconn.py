@@ -2,12 +2,7 @@
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
-# Import Python Libs
-
-# Import Salt Libs
 import salt.modules.haproxyconn as haproxyconn
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase
 
