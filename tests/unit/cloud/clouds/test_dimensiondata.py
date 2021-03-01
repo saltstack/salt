@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: `Anthony Shaw <anthonyshaw@apache.org>`
 
@@ -6,15 +5,9 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Salt Libs
 from salt.cloud.clouds import dimensiondata
 from salt.exceptions import SaltCloudSystemExit
 from salt.utils.versions import LooseVersion
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock
 from tests.support.mock import __version__ as mock_version
@@ -70,7 +63,6 @@ class DimensionDataTestCase(ExtendedTestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {
             dimensiondata: {
-                "__virtual__": MagicMock(return_value="dimensiondata"),
                 "__active_provider_name__": "",
                 "__opts__": {
                     "providers": {

@@ -1,19 +1,16 @@
-# -*- coding: utf-8 -*-
-"""
+r"""
 Manage Windows Local Group Policy
 =================================
 
 .. versionadded:: 2016.11.0
 
-This state allows configuring local Windows Group Policy
-
-The state can be used to ensure the setting of a single policy or multiple
-policies in one pass.
+This state module allows you to configure local Group Policy on Windows. You
+can ensure the setting of a single policy or multiple policies in one pass.
 
 Single policies must specify the policy name, the setting, and the policy class
-(Machine/User/Both)
+(Machine/User/Both). Here are some examples for setting a single policy setting.
 
-Example single policy configuration
+Example single policy configuration:
 
 .. code-block:: yaml
 
@@ -23,12 +20,18 @@ Example single policy configuration
         - setting: 90
         - policy_class: Machine
 
+Example using abbreviated form:
+
 .. code-block:: yaml
 
     Account lockout duration:
       lgpo.set:
         - setting: 120
         - policy_class: Machine
+
+It is also possible to set multiple policies in a single state. This is done by
+setting the settings under either `computer_policy` or `user_policy`. Here are
+some examples for setting multiple policy settings in a single state.
 
 Multiple policy configuration
 
@@ -103,22 +106,114 @@ Multiple policy configuration
                 "Set the intranet update service for detecting updates": http://mywsus
                 "Set the intranet statistics server": http://mywsus
         - cumulative_rights_assignments: True
-"""
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
+    Some policy settings can't be set on their own an require that other policy
+    settings are set at the same time. It can be difficult to figure out what
+    additional settings need to be applied. The easiest way to do this is to
+    modify the setting manually using the Group Policy Editor (`gpedit.msc`) on
+    the machine. Then `get` the policy settings configured on that machine. Use
+    the following command:
+
+    .. code-block:: bash
+
+        salt-call --local lgpo.get machine
+
+    For example, if I want to set the Windows Update settings for a Windows
+    Server 2016 machine I would go into the Group Policy Editor (`gpedit.msc`)
+    and configure the group policy. That policy can be found at: Computer
+    Configuration -> Administrative Templates -> Windows Components -> Windows
+    Update -> Configure Automatic Updates. You have the option to "Enable" the
+    policy and set some configuration options. In this example, just click
+    "Enable" and accept the default configuration options. Click "OK" to apply
+    the setting.
+
+    Now run the `get` command as shown above. You will find the following in
+    the minion return:
+
+    .. code-block:: bash
+
+        Windows Components\Windows Update\Configure Automatic Updates:
+            ----------
+            Configure automatic updating:
+                3 - Auto download and notify for install
+            Install during automatic maintenance:
+                False
+            Install updates for other Microsoft products:
+                False
+            Scheduled install day:
+                0 - Every day
+            Scheduled install time:
+                03:00
+
+    This shows you that to enable the "Configure Automatic Updates" policy you
+    also have to configure the following settings:
+
+    - Configure automatic updating
+    - Install during automatic maintenance
+    - Install updates for other Microsoft products
+    - Scheduled install day
+    - Scheduled install time
+
+    So, if you were writing a state for the above policy, it would look like
+    this:
+
+    .. code-block:: bash
+
+        configure_windows_update_settings:
+          lgpo.set:
+            - computer_policy:
+                Configure Automatic Updates:
+                  Configure automatic updating: 3 - Auto download and notify for install
+                  Install during automatic maintenance: False
+                  Install updates for other Microsoft products: False
+                  Scheduled install day: 0 - Every day
+                  Scheduled install time: 03:00
+
+    .. note::
+
+        It is important that you put names of policies and settings exactly as
+        they are displayed in the return. That includes capitalization and
+        punctuation such as periods, dashes, etc. This rule applies to both
+        the setting name and the setting value.
+
+    .. warning::
+
+        From time to time Microsoft updates the Administrative templates on the
+        machine. This can cause the policy name to change or the list of
+        settings that must be applied at the same time. These settings often
+        change between versions of Windows as well. For example, Windows Server
+        2019 allows you to also specify a specific week of the month to apply
+        the update.
+
+    Another thing note is the long policy name returned by the `get` function:
+
+    .. code-block:: bash
+
+        Windows Components\Windows Update\Configure Automatic Updates:
+
+    When we wrote the state for this policy we only used the final portion of
+    the policy name, `Configure Automatic Updates`. This usually works fine, but
+    if you are having problems, you may try the long policy name.
+
+    When writing the long name in a state file either wrap the name in single
+    quotes to make yaml see it as raw data, or escape the back slashes.
+
+    .. code-block:: bash
+
+        'Windows Components\Windows Update\Configure Automatic Updates:'
+
+        or
+
+        Windows Components\\Windows Update\\Configure Automatic Updates:
+"""
 import logging
 
-# Import salt libs
 import salt.utils.data
 import salt.utils.dictdiffer
 import salt.utils.json
 import salt.utils.stringutils
 import salt.utils.versions
 import salt.utils.win_functions
-
-# Import 3rd party libs
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 __virtualname__ = "lgpo"
@@ -131,7 +226,7 @@ def __virtual__():
     """
     if "lgpo.set" in __salt__:
         return __virtualname__
-    return (False, "lgpo module could not be loaded")
+    return False, "lgpo module could not be loaded"
 
 
 def _compare_policies(new_policy, current_policy):
@@ -140,7 +235,7 @@ def _compare_policies(new_policy, current_policy):
     otherwise ``False``
     """
     # Compared dicts, lists, and strings
-    if isinstance(new_policy, (six.string_types, six.integer_types)):
+    if isinstance(new_policy, (str, int)):
         return new_policy == current_policy
     elif isinstance(new_policy, list):
         if isinstance(current_policy, list):
@@ -170,13 +265,11 @@ def _convert_to_unicode(data):
     will just remove all the null bytes (`/x00`), again comparing apples to
     apples.
     """
-    if isinstance(data, six.string_types):
+    if isinstance(data, str):
         data = data.replace("\x00", "")
         return salt.utils.stringutils.to_unicode(data)
     elif isinstance(data, dict):
-        return dict(
-            (_convert_to_unicode(k), _convert_to_unicode(v)) for k, v in data.items()
-        )
+        return {_convert_to_unicode(k): _convert_to_unicode(v) for k, v in data.items()}
     elif isinstance(data, list):
         return list(_convert_to_unicode(v) for v in data)
     else:
@@ -263,17 +356,11 @@ def set_(
         ret["comment"] = msg
         return ret
     if policy_class and policy_class.lower() not in policy_classes:
-        msg = "The policy_class parameter must be one of the following: {0}"
+        msg = "The policy_class parameter must be one of the following: {}"
         ret["result"] = False
         ret["comment"] = msg
         return ret
     if not setting:
-        if computer_policy and user_policy:
-            policy_class = "both"
-        elif computer_policy:
-            policy_class = "machine"
-        elif user_policy:
-            policy_class = "user"
         if computer_policy and not isinstance(computer_policy, dict):
             msg = "The computer_policy must be specified as a dict."
             ret["result"] = False
@@ -301,9 +388,9 @@ def set_(
 
     current_policy = {}
     deprecation_comments = []
-    for p_class, p_data in six.iteritems(pol_data):
+    for p_class, p_data in pol_data.items():
         if p_data["requested_policy"]:
-            for p_name, _ in six.iteritems(p_data["requested_policy"]):
+            for p_name, _ in p_data["requested_policy"].items():
                 lookup = __salt__["lgpo.get_policy_info"](
                     policy_name=p_name,
                     policy_class=p_class,
@@ -337,8 +424,8 @@ def set_(
                                     msg = (
                                         "The LGPO module changed the way "
                                         "it gets policy element names.\n"
-                                        '"{0}" is no longer valid.\n'
-                                        'Please use "{1}" instead.'
+                                        '"{}" is no longer valid.\n'
+                                        'Please use "{}" instead.'
                                         "".format(e_name, new_e_name)
                                     )
                                     salt.utils.versions.warn_until("Phosphorus", msg)
@@ -351,7 +438,7 @@ def set_(
                                     )
                                     deprecation_comments.append(msg)
                                 else:
-                                    msg = "Invalid element name: {0}".format(e_name)
+                                    msg = "Invalid element name: {}".format(e_name)
                                     ret["comment"] = "\n".join(
                                         [ret["comment"], msg]
                                     ).strip()
@@ -371,10 +458,10 @@ def set_(
 
     # compare policies
     policy_changes = []
-    for p_class, p_data in six.iteritems(pol_data):
+    for p_class, p_data in pol_data.items():
         requested_policy = p_data.get("requested_policy")
         if requested_policy:
-            for p_name, p_setting in six.iteritems(requested_policy):
+            for p_name, p_setting in requested_policy.items():
                 if p_name in current_policy[class_map[p_class]]:
                     # compare
                     log.debug(
@@ -392,9 +479,6 @@ def set_(
                         requested_policy_json
                     )
                     current_policy_check = salt.utils.json.loads(current_policy_json)
-
-                    if six.PY2:
-                        current_policy_check = _convert_to_unicode(current_policy_check)
 
                     # Are the requested and current policies identical
                     policies_are_equal = _compare_policies(
@@ -430,14 +514,14 @@ def set_(
                             )
                             policy_changes.append(p_name)
                     else:
-                        msg = '"{0}" is already set'.format(p_name)
+                        msg = '"{}" is already set'.format(p_name)
                         log.debug(msg)
                 else:
                     policy_changes.append(p_name)
                     log.debug("policy %s is not set, we will configure it", p_name)
     if __opts__["test"]:
         if policy_changes:
-            msg = "The following policies are set to change:\n{0}" "".format(
+            msg = "The following policies are set to change:\n{}".format(
                 "\n".join(policy_changes)
             )
             ret["result"] = None
@@ -456,11 +540,9 @@ def set_(
             if _ret:
                 ret["result"] = _ret
                 new_policy = {}
-                for p_class, p_data in six.iteritems(pol_data):
+                for p_class, p_data in pol_data.items():
                     if p_data["requested_policy"]:
-                        for p_name, p_setting in six.iteritems(
-                            p_data["requested_policy"]
-                        ):
+                        for p_name, p_setting in p_data["requested_policy"].items():
                             new_policy.setdefault(class_map[p_class], {})
                             new_policy[class_map[p_class]][p_name] = __salt__[
                                 "lgpo.get_policy"
@@ -474,18 +556,18 @@ def set_(
                     old=current_policy, new=new_policy
                 )
                 if ret["changes"]:
-                    msg = "The following policies changed:\n{0}" "".format(
+                    msg = "The following policies changed:\n{}".format(
                         "\n".join(policy_changes)
                     )
                 else:
                     msg = (
                         "The following policies are in the correct "
-                        "state:\n{0}".format("\n".join(policy_changes))
+                        "state:\n{}".format("\n".join(policy_changes))
                     )
             else:
                 msg = (
                     "Errors occurred while attempting to configure "
-                    "policies: {0}".format(_ret)
+                    "policies: {}".format(_ret)
                 )
                 ret["result"] = False
             deprecation_comments.append(msg)

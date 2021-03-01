@@ -1,13 +1,13 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
+
 # Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Libs
 import salt.modules.sdb as sdb
+from salt.exceptions import SaltInvocationError
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -22,7 +22,7 @@ class SdbTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {sdb: {}}
 
-    # 'get' function tests: 1
+    # 'get' function tests: 4
 
     def test_get(self):
         """
@@ -30,6 +30,36 @@ class SdbTestCase(TestCase, LoaderModuleMockMixin):
         sdb://<profile>/<key>
         """
         self.assertEqual(sdb.get("sdb://salt/foo"), "sdb://salt/foo")
+
+    def test_get_strict_no_sdb_in_uri(self):
+        """
+        Test if SaltInvocationError exception will be raised if we
+        don't start uri with sdb://
+        """
+
+        msg = 'SDB uri must start with "sdb://"'
+        with self.assertRaisesRegex(SaltInvocationError, msg) as cm:
+            sdb.get("://salt/foo", strict=True)
+
+    def test_get_strict_no_profile(self):
+        """
+        Test if SaltInvocationError exception will be raised if we
+        don't have a valid profile in the uri
+        """
+
+        msg = "SDB uri must have a profile name as a first part of the uri before the /"
+        with self.assertRaisesRegex(SaltInvocationError, msg) as cm:
+            sdb.get("sdb://salt", strict=True)
+
+    def test_get_strict_no_profile_in_config(self):
+        """
+        Test if SaltInvocationError exception will be raised if we
+        don't have expected profile in the minion config
+        """
+
+        msg = 'SDB profile "salt" wasnt found in the minion configuration'
+        with self.assertRaisesRegex(SaltInvocationError, msg) as cm:
+            sdb.get("sdb://salt/foo", strict=True)
 
     # 'set_' function tests: 1
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Pedro Algarvio (pedro@algarvio.me)
     :codeauthor: Alexandru Bleotu (alexandru.bleotu@morganstanley.com)
@@ -7,28 +6,27 @@
     ~~~~~~~~~~~~~~~~~~~~~~
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function
 
+import logging
 import os
 import shutil
 import tempfile
 import textwrap
 
-# Import salt libs
+import salt.config
 import salt.exceptions
 import salt.fileclient
 import salt.utils.stringutils
 from salt.utils.files import fopen
 from tests.support.helpers import with_tempdir
 from tests.support.mock import MagicMock, patch
-
-# Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
 
+log = logging.getLogger(__name__)
 
-class MockFileclient(object):
+
+class MockFileclient:
     def __init__(self, cache_file=None, get_state=None, list_states=None):
         if cache_file is not None:
             self.cache_file = lambda *x, **y: cache_file
@@ -1305,3 +1303,116 @@ class AsyncRemotePillarTestCase(TestCase):
             },
             dictkey="pillar",
         )
+
+
+@patch("salt.transport.client.ReqChannel.factory", MagicMock())
+class PillarCacheTestCase(TestCase):
+    """
+    Tests for instantiating a PillarCache in salt.pillar
+    """
+
+    def setUp(self):
+        self.grains = {}
+
+    @classmethod
+    def setUpClass(cls):
+        cls.mock_master_default_opts = salt.config.DEFAULT_MASTER_OPTS.copy()
+        cls.mock_master_default_opts["cachedir"] = tempfile.mkdtemp(
+            dir=RUNTIME_VARS.TMP
+        )
+
+    def tearDown(self):
+        for attr in ("grains",):
+            try:
+                delattr(self, attr)
+            except AttributeError:
+                continue
+
+    def test_compile_pillar_disk_cache(self):
+        self.mock_master_default_opts.update(
+            {"pillar_cache_backend": "disk", "pillar_cache_ttl": 3600}
+        )
+
+        pillar = salt.pillar.PillarCache(
+            self.mock_master_default_opts,
+            self.grains,
+            "mocked_minion",
+            "fake_env",
+            pillarenv="base",
+        )
+
+        with patch("salt.utils.cache.CacheDisk._write", MagicMock()):
+            with patch(
+                "salt.pillar.PillarCache.fetch_pillar",
+                side_effect=[{"foo": "bar"}, {"foo": "baz"}],
+            ):
+                # Run once for pillarenv base
+                ret = pillar.compile_pillar()
+                expected_cache = {"mocked_minion": {"base": {"foo": "bar"}}}
+                self.assertEqual(pillar.cache._dict, expected_cache)
+
+                # Run a second time for pillarenv base
+                ret = pillar.compile_pillar()
+                expected_cache = {"mocked_minion": {"base": {"foo": "bar"}}}
+                self.assertEqual(pillar.cache._dict, expected_cache)
+
+                # Change the pillarenv
+                pillar.pillarenv = "dev"
+
+                # Run once for pillarenv dev
+                ret = pillar.compile_pillar()
+                expected_cache = {
+                    "mocked_minion": {"base": {"foo": "bar"}, "dev": {"foo": "baz"}}
+                }
+                self.assertEqual(pillar.cache._dict, expected_cache)
+
+                # Run a second time for pillarenv dev
+                ret = pillar.compile_pillar()
+                expected_cache = {
+                    "mocked_minion": {"base": {"foo": "bar"}, "dev": {"foo": "baz"}}
+                }
+                self.assertEqual(pillar.cache._dict, expected_cache)
+
+    def test_compile_pillar_memory_cache(self):
+        self.mock_master_default_opts.update(
+            {"pillar_cache_backend": "memory", "pillar_cache_ttl": 3600}
+        )
+
+        pillar = salt.pillar.PillarCache(
+            self.mock_master_default_opts,
+            self.grains,
+            "mocked_minion",
+            "fake_env",
+            pillarenv="base",
+        )
+
+        with patch(
+            "salt.pillar.PillarCache.fetch_pillar",
+            side_effect=[{"foo": "bar"}, {"foo": "baz"}],
+        ):
+            # Run once for pillarenv base
+            ret = pillar.compile_pillar()
+            expected_cache = {"base": {"foo": "bar"}}
+            self.assertIn("mocked_minion", pillar.cache)
+            self.assertEqual(pillar.cache["mocked_minion"], expected_cache)
+
+            # Run a second time for pillarenv base
+            ret = pillar.compile_pillar()
+            expected_cache = {"base": {"foo": "bar"}}
+            self.assertIn("mocked_minion", pillar.cache)
+            self.assertEqual(pillar.cache["mocked_minion"], expected_cache)
+
+            # Change the pillarenv
+            pillar.pillarenv = "dev"
+
+            # Run once for pillarenv dev
+            ret = pillar.compile_pillar()
+            expected_cache = {"base": {"foo": "bar"}, "dev": {"foo": "baz"}}
+            self.assertIn("mocked_minion", pillar.cache)
+            self.assertEqual(pillar.cache["mocked_minion"], expected_cache)
+
+            # Run a second time for pillarenv dev
+            ret = pillar.compile_pillar()
+            expected_cache = {"base": {"foo": "bar"}, "dev": {"foo": "baz"}}
+            self.assertIn("mocked_minion", pillar.cache)
+            self.assertEqual(pillar.cache["mocked_minion"], expected_cache)

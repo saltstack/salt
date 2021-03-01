@@ -1,7 +1,3 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 
 import pytest
@@ -27,7 +23,7 @@ pytestmark = pytest.mark.skipif(
 )
 
 
-class AzureObjMock(object):
+class AzureObjMock:
     """
     mock azure object for as_dict calls
     """
@@ -50,7 +46,7 @@ class AzureObjMock(object):
         return self.args, self.kwargs
 
 
-class AzureFuncMock(object):
+class AzureFuncMock:
     """
     mock azure client function calls
     """
@@ -69,7 +65,7 @@ class AzureFuncMock(object):
         return azure_obj
 
 
-class AzureSubMock(object):
+class AzureSubMock:
     """
     mock azure client sub-modules
     """
@@ -87,7 +83,7 @@ class AzureSubMock(object):
         return MagicMock(return_value=self.__return_value)()
 
 
-class AzureClientMock(object):
+class AzureClientMock:
     """
     mock azure client
     """
@@ -113,8 +109,8 @@ def credentials():
     }
 
 
-@pytest.fixture(autouse=True)
-def setup_loader(request):
+@pytest.fixture
+def configure_loader_modules():
     """
     setup loader modules and override the azurearm.get_client utility
     """
@@ -124,11 +120,9 @@ def setup_loader(request):
         minion_config, utils=utils, whitelist=["azurearm_dns", "config"]
     )
     utils["azurearm.get_client"] = AzureClientMock()
-    setup_loader_modules = {
+    return {
         azurearm_dns: {"__utils__": utils, "__salt__": funcs},
     }
-    with pytest.helpers.loader_mock(request, setup_loader_modules) as loader_mock:
-        yield loader_mock
 
 
 def test_record_set_create_or_update(credentials):

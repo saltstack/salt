@@ -1,7 +1,3 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import pytest
 import salt.modules.kubeadm as kubeadm
 from salt.exceptions import CommandExecutionError
@@ -226,6 +222,18 @@ class KubeAdmTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(kubeadm.__salt__, salt_mock):
             with pytest.raises(CommandExecutionError):
                 assert kubeadm.token_generate()
+
+    def test_token_empty(self):
+        """
+        Test kuebadm.token_list when no outout
+        """
+        result = {"retcode": 0, "stdout": ""}
+        salt_mock = {
+            "cmd.run_all": MagicMock(return_value=result),
+        }
+        with patch.dict(kubeadm.__salt__, salt_mock):
+            assert kubeadm.token_list() == []
+            salt_mock["cmd.run_all"].assert_called_with(["kubeadm", "token", "list"])
 
     def test_token_list(self):
         """

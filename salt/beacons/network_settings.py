@@ -1,20 +1,16 @@
-# -*- coding: utf-8 -*-
 """
 Beacon to monitor network adapter setting changes on Linux
 
 .. versionadded:: 2016.3.0
 
 """
-from __future__ import absolute_import, unicode_literals
 
 import ast
 import logging
 import re
 
 import salt.loader
-from salt.ext.six.moves import map
 
-# Import third party libs
 try:
     from pyroute2 import IPDB
 

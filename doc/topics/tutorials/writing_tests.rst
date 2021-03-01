@@ -475,6 +475,6 @@ Python testing documentation. Please see the follow references for more informat
 .. _asserts: https://docs.pytest.org/en/latest/assert.html
 .. _pytest syntax: https://docs.pytest.org/en/latest/usage.html#specifying-tests-selecting-tests
 .. _MagicMock: https://docs.python.org/3/library/unittest.mock.html
-.. _Python Unittest: https://docs.python.org/2/library/unittest.html
-.. _Python's Assert Functions: https://docs.python.org/2/library/unittest.html#assert-methods
+.. _Python Unittest: https://docs.python.org/3/library/unittest.html
+.. _Python's Assert Functions: https://docs.python.org/3/library/unittest.html#assert-methods
 .. _salt jenkins: https://github.com/saltstack/salt-jenkins

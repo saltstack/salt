@@ -1,0 +1,1 @@
+Do not raise "StreamClosedError" traceback on the master logs but only log it

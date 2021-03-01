@@ -102,10 +102,10 @@ Alternatively ssh agent forwarding can be used by setting the priv to agent-forw
 Calling Salt SSH
 ================
 
-.. note:: ``salt-ssh`` on RHEL/CentOS 5
+.. note:: ``salt-ssh`` on target hosts without Python 3
 
-    The ``salt-ssh`` command requires at least python 2.6, which is not
-    installed by default on RHEL/CentOS 5.  An easy workaround in this
+    The ``salt-ssh`` command requires at least python 3, which is not
+    installed by default on some target hosts.  An easy workaround in this
     situation is to use the ``-r`` option to run a raw shell command that
     installs python26:
 
@@ -322,4 +322,5 @@ is being dropped we have provided multiple ways to work around this with Salt-SS
 can use the following options:
 
   * :ref:`ssh_pre_flight <ssh_pre_flight>`
-  * :ref:`SSH ext alternatives <ssh-ext-alternatives>`
+  * Using the Salt-SSH raw shell calls to install Python3.
+  * Use an older version of Salt on the target host that still supports Python 2 using the feature :ref:`SSH ext alternatives <ssh-ext-alternatives>`

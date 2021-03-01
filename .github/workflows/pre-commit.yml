@@ -1,0 +1,55 @@
+name: Pre-Commit
+
+on: [push, pull_request]
+
+jobs:
+  Pre-Commit:
+    name: Run Pre-Commit Against Salt
+
+    runs-on: ubuntu-latest
+
+    container:
+      image: python:3.8.6-slim-buster
+
+    steps:
+
+    - name: Install System Deps
+      run: |
+        apt-get update
+        apt-get install -y enchant git gcc make zlib1g-dev libc-dev libffi-dev g++ libxml2 libxml2-dev libxslt-dev libcurl4-openssl-dev libssl-dev libgnutls28-dev
+
+    - uses: actions/checkout@v2
+
+    - name: Set Pre-Commit Cache Key
+      run: echo "PY=$(python --version --version | sha256sum | cut -d' ' -f1)" >> $GITHUB_ENV
+
+    - name: Setup Pre-Commit Cache
+      uses: pat-s/always-upload-cache@v2.1.3
+      with:
+        path: ~/.cache/pre-commit
+        key: pre-commit|${{ env.PY }}|${{ hashFiles('.pre-commit-config.yaml') }}
+
+    - id: changed-files
+      name: Get Changed Files
+      uses: dorny/paths-filter@v2
+      with:
+        token: ${{ github.token }}
+        list-files: json
+        filters: |
+          repo:
+            - added|modified:
+              - '**'
+
+    - name: Check ALL Files On Branch
+      uses: pre-commit/action@v2.0.0
+      if: github.event_name != 'pull_request'
+      env:
+        SKIP: lint-salt,lint-tests,pyupgrade,remove-import-headers,rstcheck
+
+    - name: Check Changed Files On PR
+      uses: pre-commit/action@v2.0.0
+      if: github.event_name == 'pull_request' && steps.changed-files.outputs.repo == 'true'
+      with:
+        extra_args: --files ${{ join(fromJSON(steps.changed-files.outputs.repo_files), ' ') }}
+      env:
+        SKIP: lint-salt,lint-tests

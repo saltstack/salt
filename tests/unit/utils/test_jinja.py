@@ -12,6 +12,7 @@ import random
 import re
 import tempfile
 
+import pytest
 import salt.config
 import salt.loader
 
@@ -34,7 +35,6 @@ from salt.utils.jinja import (
 from salt.utils.odict import OrderedDict
 from salt.utils.templates import JINJA, render_jinja_tmpl
 from tests.support.case import ModuleCase
-from tests.support.helpers import requires_network
 from tests.support.mock import MagicMock, Mock, patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
@@ -896,6 +896,19 @@ class TestCustomExtensions(TestCase):
         with self.assertRaises(exceptions.TemplateNotFound):
             env.from_string('{% import_text "does not exists" as doc %}').render()
 
+    def test_profile(self):
+        env = Environment(extensions=[SerializerExtension])
+
+        source = (
+            "{%- profile as 'profile test' %}"
+            + "{% set var = 'val' %}"
+            + "{%- endprofile %}"
+            + "{{ var }}"
+        )
+
+        rendered = env.from_string(source).render()
+        self.assertEqual(rendered, "val")
+
     def test_catalog(self):
         loader = DictLoader(
             {
@@ -1367,7 +1380,7 @@ class TestCustomExtensions(TestCase):
         )
         self.assertEqual(rendered, "16777216")
 
-    @requires_network()
+    @pytest.mark.requires_network
     def test_http_query(self):
         """
         Test the `http_query` Jinja filter.

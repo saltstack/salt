@@ -273,3 +273,42 @@ class INotifyBeaconTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(len(ret), 1)
         self.assertEqual(ret[0]["path"], fp)
         self.assertEqual(ret[0]["change"], "IN_DELETE")
+
+    # Check __get_notifier and ensure that the right bits are in __context__
+    # including a beacon_name specific notifier is found.
+    def test__get_notifier(self):
+        config = {
+            "files": {
+                "/tmp/httpd/vhost.d": {
+                    "mask": ["delete", "modify"],
+                    "recurse": True,
+                    "auto_add": True,
+                    "exclude": [
+                        {"/tmp/httpd/vhost.d/.+?\\.sw[px]*$|4913|~$": {"regex": True}}
+                    ],
+                },
+                "/tmp/httpd/conf.d": {
+                    "mask": ["delete", "modify"],
+                    "recurse": True,
+                    "auto_add": True,
+                    "exclude": [
+                        {"/tmp/httpd/vhost.d/.+?\\.sw[px]*$|4913|~$": {"regex": True}}
+                    ],
+                },
+                "/tmp/httpd/conf": {
+                    "mask": ["delete", "modify"],
+                    "recurse": True,
+                    "auto_add": True,
+                    "exclude": [
+                        {"/tmp/httpd/vhost.d/.+?\\.sw[px]*$|4913|~$": {"regex": True}}
+                    ],
+                },
+            },
+            "coalesce": True,
+            "beacon_module": "inotify",
+            "_beacon_name": "httpd.inotify",
+        }
+
+        ret = inotify._get_notifier(config)
+        self.assertIn("inotify.queue", inotify.__context__)
+        self.assertIn("httpd.inotify.notifier", inotify.__context__)

@@ -1420,8 +1420,8 @@ def create_certificate(path=None, text=False, overwrite=True, ca_server=None, **
                 "if requesting remote certificate from ca_server {}.".format(ca_server)
             )
         if "csr" in kwargs:
-            kwargs["csr"] = get_pem_entry(
-                kwargs["csr"], pem_type="CERTIFICATE REQUEST"
+            kwargs["csr"] = salt.utils.stringutils.to_str(
+                get_pem_entry(kwargs["csr"], pem_type="CERTIFICATE REQUEST")
             ).replace("\n", "")
         if "public_key" in kwargs:
             # Strip newlines to make passing through as cli functions easier

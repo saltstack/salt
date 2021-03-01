@@ -21,6 +21,7 @@ beacon modules
     haproxy
     inotify
     journald
+    junos_rre_keys
     load
     log_beacon
     memusage
@@ -37,6 +38,7 @@ beacon modules
     smartos_imgadm
     smartos_vmadm
     status
+    swapusage
     telegram_bot_msg
     twilio_txt_msg
     watchdog
