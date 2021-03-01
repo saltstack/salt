@@ -53,6 +53,7 @@ class SSHClient:
             ("ssh_remote_port_forwards", str),
             ("ssh_options", list),
             ("roster_file", str),
+            ("roster", str),
             ("rosters", list),
             ("ignore_host_keys", bool),
             ("raw_shell", bool),

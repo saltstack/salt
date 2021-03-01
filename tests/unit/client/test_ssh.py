@@ -690,3 +690,20 @@ class SSHTests(ShellCase):
         with patch("salt.roster.get_roster_file", MagicMock(return_value=roster)):
             ssh_obj = client._prep_ssh(**opts)
             assert ssh_obj.opts.get("extra_filerefs", None) == "salt://foobar"
+
+    def test_roster_kwargs(self):
+        """
+        test "roster" are not excluded from kwargs
+        when preparing the SSH opts
+        """
+        kwargs = {
+            "tgt": "localhost",
+            "fun": "test.ping",
+            "roster": "my-custom-roster",
+        }
+        roster = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "roster")
+        client = salt.client.ssh.client.SSHClient(mopts=self.opts)
+
+        with patch("salt.roster.get_roster_file", MagicMock(return_value=roster)):
+            ssh_obj = client._prep_ssh(**kwargs)
+            assert ssh_obj.opts.get("roster") == "my-custom-roster"
