@@ -8,19 +8,16 @@ Support for Apache
     Debian-based system is detected.
 """
 
-# Import python libs
 
 import logging
 import re
 
-# Import salt libs
 import salt.utils.data
 import salt.utils.files
 import salt.utils.path
 import salt.utils.stringutils
 from salt.exceptions import SaltException
 
-# Import 3rd-party libs
 # pylint: disable=import-error,no-name-in-module
 from salt.ext.six.moves import cStringIO
 from salt.ext.six.moves.urllib.error import URLError
