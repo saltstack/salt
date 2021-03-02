@@ -757,7 +757,7 @@ def mounted(
                         "mount.set_fstab. This is most likely "
                         "a bug."
                     ).format(name, out)
-                if "comment" in ret:
+                if ret.get("comment"):
                     ret["comment"] = "{}. {}".format(ret["comment"], comment)
                 else:
                     ret["comment"] = comment
