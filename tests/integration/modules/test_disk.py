@@ -4,15 +4,14 @@ import shutil
 import pytest
 import salt.utils.platform
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, slowTest
 from tests.support.unit import skipIf
 
 
-@destructiveTest
 @pytest.mark.windows_whitelisted
 @skipIf(salt.utils.platform.is_darwin(), "No mtab on Darwin")
 @skipIf(salt.utils.platform.is_freebsd(), "No mtab on FreeBSD")
 @skipIf(salt.utils.platform.is_windows(), "No mtab on Windows")
+@pytest.mark.destructive_test
 class DiskModuleVirtualizationTest(ModuleCase):
     """
     Test to make sure we return a clean result under Docker. Refs #8976
@@ -40,7 +39,7 @@ class DiskModuleTest(ModuleCase):
     Validate the disk module
     """
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_usage(self):
         """
         disk.usage

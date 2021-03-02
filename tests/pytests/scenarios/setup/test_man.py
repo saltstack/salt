@@ -8,7 +8,6 @@ import pprint
 import pytest
 import salt.utils.platform
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
-from tests.support.runtests import RUNTIME_VARS
 
 pytestmark = [
     pytest.mark.slow_test,
@@ -18,7 +17,7 @@ pytestmark = [
 ]
 
 
-def test_man_pages(virtualenv):
+def test_man_pages(virtualenv, src_dir):
     """
     Make sure that man pages are installed
     """
@@ -60,7 +59,7 @@ def test_man_pages(virtualenv):
             "setup.py",
             "install",
             "--root={}".format(rootdir),
-            cwd=RUNTIME_VARS.CODE_DIR,
+            cwd=src_dir,
         )
 
         manpage_fns = set(manpages)

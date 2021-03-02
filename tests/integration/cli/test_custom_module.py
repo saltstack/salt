@@ -31,7 +31,6 @@
 
 import pytest
 from tests.support.case import SSHCase
-from tests.support.helpers import slowTest
 
 
 @pytest.mark.windows_whitelisted
@@ -40,7 +39,7 @@ class SSHCustomModuleTest(SSHCase):
     Test sls with custom module functionality using ssh
     """
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_ssh_regular_module(self):
         """
         Test regular module work using SSHCase environment
@@ -49,7 +48,7 @@ class SSHCustomModuleTest(SSHCase):
         cmd = self.run_function("test.echo", arg=["hello"])
         self.assertEqual(expected, cmd)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_ssh_custom_module(self):
         """
         Test custom module work using SSHCase environment
@@ -58,7 +57,7 @@ class SSHCustomModuleTest(SSHCase):
         cmd = self.run_function("test.recho", arg=["hello"])
         self.assertEqual(expected, cmd)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_ssh_sls_with_custom_module(self):
         """
         Test sls with custom module work using SSHCase environment

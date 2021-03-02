@@ -7,6 +7,7 @@ import re
 import shutil
 import tempfile
 
+import pytest
 import salt.config
 import salt.roster
 import salt.utils.files
@@ -15,7 +16,6 @@ import salt.utils.thin
 import salt.utils.yaml
 from salt.client import ssh
 from tests.support.case import ShellCase
-from tests.support.helpers import slowTest
 from tests.support.mock import MagicMock, call, patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
@@ -23,7 +23,7 @@ from tests.support.unit import TestCase, skipIf
 
 @skipIf(not salt.utils.path.which("ssh"), "No ssh binary found in path")
 class SSHPasswordTests(ShellCase):
-    @slowTest
+    @pytest.mark.slow_test
     def test_password_failure(self):
         """
         Check password failures when trying to deploy keys

@@ -3,10 +3,10 @@ import random
 import string
 from copy import deepcopy
 
+import pytest
 import salt.loader
 import salt.states.boto_s3_bucket as boto_s3_bucket
 from salt.utils.versions import LooseVersion
-from tests.support.helpers import slowTest
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
@@ -271,7 +271,7 @@ class BotoS3BucketTestCase(BotoS3BucketStateTestCaseBase, BotoS3BucketTestCaseMi
     TestCase for salt.modules.boto_s3_bucket state.module
     """
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_present_when_bucket_does_not_exist(self):
         """
         Tests present on a bucket that does not exist.
@@ -295,7 +295,7 @@ class BotoS3BucketTestCase(BotoS3BucketStateTestCaseBase, BotoS3BucketTestCaseMi
             config_ret["get_bucket_location"],
         )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_present_when_bucket_exists_no_mods(self):
         self.conn.list_buckets.return_value = deepcopy(list_ret)
         for key, value in config_ret.items():
@@ -311,7 +311,7 @@ class BotoS3BucketTestCase(BotoS3BucketStateTestCaseBase, BotoS3BucketTestCaseMi
         self.assertTrue(result["result"])
         self.assertEqual(result["changes"], {})
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_present_when_bucket_exists_all_mods(self):
         self.conn.list_buckets.return_value = deepcopy(list_ret)
         for key, value in config_ret.items():
@@ -329,7 +329,7 @@ class BotoS3BucketTestCase(BotoS3BucketStateTestCaseBase, BotoS3BucketTestCaseMi
         self.assertTrue(result["result"])
         self.assertNotEqual(result["changes"], {})
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_present_with_failure(self):
         self.conn.head_bucket.side_effect = [not_found_error, None]
         self.conn.list_buckets.return_value = deepcopy(list_ret)

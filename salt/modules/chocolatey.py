@@ -733,7 +733,6 @@ def install_gem(name, version=None, install_args=None, override_args=False):
         to False install_args will be appended to the end of the default
         arguments
 
-
     CLI Example:
 
     .. code-block:: bash

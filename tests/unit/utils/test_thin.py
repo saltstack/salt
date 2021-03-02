@@ -11,6 +11,7 @@ import tarfile
 import tempfile
 
 import jinja2
+import pytest
 import salt.exceptions
 import salt.utils.hashutils
 import salt.utils.json
@@ -18,7 +19,7 @@ import salt.utils.platform
 import salt.utils.stringutils
 from salt.utils import thin
 from salt.utils.stringutils import to_bytes as bts
-from tests.support.helpers import TstSuiteLoggingHandler, VirtualEnv, slowTest
+from tests.support.helpers import TstSuiteLoggingHandler, VirtualEnv
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
@@ -1315,7 +1316,7 @@ class SSHThinTestCase(TestCase):
             for _file in exp_files:
                 assert [x for x in calls if "{}".format(_file) in x[-2]]
 
-    @slowTest
+    @pytest.mark.slow_test
     @skipIf(
         salt.utils.platform.is_windows(), "salt-ssh does not deploy to/from windows"
     )

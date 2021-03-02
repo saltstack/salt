@@ -71,11 +71,24 @@ try:
 except ImportError:
     HAS_PSEXEC = False
 
+
+# Set the minimum version of PyWinrm.
+WINRM_MIN_VER = "0.3.0"
+
+
 try:
     import winrm
     from winrm.exceptions import WinRMTransportError
 
-    HAS_WINRM = True
+    # Verify WinRM 0.3.0 or greater
+    import pkg_resources  # pylint: disable=3rd-party-module-not-gated
+
+    winrm_pkg = pkg_resources.get_distribution("pywinrm")
+    if not salt.utils.versions.compare(winrm_pkg.version, ">=", WINRM_MIN_VER):
+        HAS_WINRM = False
+    else:
+        HAS_WINRM = True
+
 except ImportError:
     HAS_WINRM = False
 
@@ -1205,7 +1218,11 @@ def deploy_windows(
         opts = {}
 
     if use_winrm and not HAS_WINRM:
-        log.error("WinRM requested but module winrm could not be imported")
+        log.error(
+            "WinRM requested but module winrm could not be imported. "
+            "Ensure you are using version %s or higher.",
+            WINRM_MIN_VER,
+        )
         return False
 
     starttime = time.mktime(time.localtime())
@@ -1244,8 +1261,7 @@ def deploy_windows(
     if port_available and service_available:
         log.debug("SMB port %s on %s is available", port, host)
         log.debug("Logging into %s:%s as %s", host, port, username)
-        newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
-        smb_conn = salt.utils.smb.get_conn(host, username, password)
+        smb_conn = salt.utils.smb.get_conn(host, username, password, port)
         if smb_conn is False:
             log.error("Please install smbprotocol to enable SMB functionality")
             return False

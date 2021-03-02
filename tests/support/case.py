@@ -364,24 +364,29 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
             return False
         popen_kwargs = popen_kwargs or {}
 
+        python_path_env_var = os.environ.get("PYTHONPATH") or None
+        if python_path_env_var is None:
+            python_path_entries = [RUNTIME_VARS.CODE_DIR]
+        else:
+            python_path_entries = python_path_env_var.split(os.pathsep)
+            if RUNTIME_VARS.CODE_DIR in python_path_entries:
+                python_path_entries.remove(RUNTIME_VARS.CODE_DIR)
+            python_path_entries.insert(0, RUNTIME_VARS.CODE_DIR)
+        python_path_entries.extend(sys.path[0:])
+
+        if "env" not in popen_kwargs:
+            popen_kwargs["env"] = os.environ.copy()
+
+        popen_kwargs["env"]["PYTHONPATH"] = os.pathsep.join(python_path_entries)
+
+        if "cwd" not in popen_kwargs:
+            popen_kwargs["cwd"] = RUNTIME_VARS.TMP
+
         if salt.utils.platform.is_windows():
             cmd = "python "
-            if "cwd" not in popen_kwargs:
-                popen_kwargs["cwd"] = os.getcwd()
-            if "env" not in popen_kwargs:
-                popen_kwargs["env"] = os.environ.copy()
-                popen_kwargs["env"]["PYTHONPATH"] = RUNTIME_VARS.CODE_DIR
         else:
-            cmd = "PYTHONPATH="
-            python_path = os.environ.get("PYTHONPATH", None)
-            if python_path is not None:
-                cmd += "{}:".format(python_path)
+            cmd = "python{}.{} ".format(*sys.version_info)
 
-            if sys.version_info[0] < 3:
-                cmd += "{} ".format(":".join(sys.path[1:]))
-            else:
-                cmd += "{} ".format(":".join(sys.path[0:]))
-            cmd += "python{}.{} ".format(*sys.version_info)
         cmd += "{} --config-dir={} {} ".format(
             script_path, config_dir or RUNTIME_VARS.TMP_CONF_DIR, arg_str
         )
@@ -402,8 +407,19 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
         if catch_stderr is True:
             popen_kwargs["stderr"] = subprocess.PIPE
 
-        if not sys.platform.lower().startswith("win"):
-            popen_kwargs["close_fds"] = True
+        if salt.utils.platform.is_windows():
+            # Windows does not support closing FDs
+            close_fds = False
+        elif salt.utils.platform.is_freebsd() and sys.version_info < (3, 9):
+            # Closing FDs in FreeBSD before Py3.9 can be slow
+            #   https://bugs.python.org/issue38061
+            close_fds = False
+        else:
+            close_fds = True
+
+        popen_kwargs["close_fds"] = close_fds
+
+        if not salt.utils.platform.is_windows():
 
             def detach_from_parent_group():
                 # detach from parent group (no more inherited signals!)
@@ -461,7 +477,6 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
 
         if timeout is not None:
             stop_at = datetime.now() + timedelta(seconds=timeout)
-            term_sent = False
             while True:
                 process.poll()
                 time.sleep(0.1)
@@ -484,23 +499,7 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
             out = tmp_file.read().decode("utf-8")
 
         if catch_stderr:
-            if sys.version_info < (2, 7):
-                # On python 2.6, the subprocess'es communicate() method uses
-                # select which, is limited by the OS to 1024 file descriptors
-                # We need more available descriptors to run the tests which
-                # need the stderr output.
-                # So instead of .communicate() we wait for the process to
-                # finish, but, as the python docs state "This will deadlock
-                # when using stdout=PIPE and/or stderr=PIPE and the child
-                # process generates enough output to a pipe such that it
-                # blocks waiting for the OS pipe buffer to accept more data.
-                # Use communicate() to avoid that." <- a catch, catch situation
-                #
-                # Use this work around were it's needed only, python 2.6
-                process.wait()
-                err = process.stderr.read()
-            else:
-                _, err = process.communicate()
+            _, err = process.communicate()
             # Force closing stderr/stdout to release file descriptors
             if process.stdout is not None:
                 process.stdout.close()

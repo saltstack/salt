@@ -5,12 +5,12 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
 
+import pytest
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, slowTest
 from tests.support.mixins import SaltReturnAssertsMixin
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 class NetworkTest(ModuleCase, SaltReturnAssertsMixin):
     """
     Validate network state module
@@ -23,7 +23,7 @@ class NetworkTest(ModuleCase, SaltReturnAssertsMixin):
                 "Network state only supported on RedHat and Debian based systems"
             )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_managed(self):
         """
         network.managed
@@ -35,7 +35,7 @@ class NetworkTest(ModuleCase, SaltReturnAssertsMixin):
             "Interface dummy0 is set to be added.", ret[state_key]["comment"]
         )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_routes(self):
         """
         network.routes
@@ -49,7 +49,7 @@ class NetworkTest(ModuleCase, SaltReturnAssertsMixin):
             ret[state_key]["comment"], "Interface dummy0 routes are set to be added."
         )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_system(self):
         """
         network.system

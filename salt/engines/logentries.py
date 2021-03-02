@@ -6,7 +6,7 @@ An engine that sends events to the Logentries logging service.
 :depends:     ssl, certifi
 :platform:    all
 
-.. versionadded: 2016.3.0
+.. versionadded:: 2016.3.0
 
 To enable this engine the master and/or minion will need the following
 python libraries
@@ -58,8 +58,7 @@ try:
 except ImportError:
     HAS_CERTIFI = False
 
-# This is here for older python installs, it is needed to setup an
-# encrypted tcp connection
+# This is here for older python installs, it is needed to setup an encrypted tcp connection
 try:
     import ssl
 

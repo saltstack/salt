@@ -4,10 +4,10 @@ Tests for the MySQL states
 
 import logging
 
+import pytest
 import salt.utils.path
 from salt.modules import mysql as mysqlmod
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.unit import skipIf
 
@@ -51,7 +51,7 @@ class MysqlGrantsStateTest(ModuleCase, SaltReturnAssertsMixin):
         "user4": {"name": "user \xe6\xa8\x99", "pwd": "\xe6\xa8\x99\xe6\xa8\x99"},
     }
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def setUp(self):
         """
         Test presence of MySQL server, enforce a root password
@@ -133,7 +133,7 @@ class MysqlGrantsStateTest(ModuleCase, SaltReturnAssertsMixin):
             connection_pass=self.password,
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def tearDown(self):
         """
         Removes created users and db
@@ -182,7 +182,7 @@ class MysqlGrantsStateTest(ModuleCase, SaltReturnAssertsMixin):
             saltenv={"LC_ALL": "en_US.utf8"},
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_grant_present_absent(self):
         """
         mysql_database.present

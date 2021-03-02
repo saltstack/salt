@@ -1,7 +1,8 @@
+import xml.etree.ElementTree as ET
+
 import pytest
 import salt.modules.virt as virt
 import salt.utils.xmlutil as xmlutil
-from salt._compat import ElementTree as ET
 
 from .conftest import loader_modules_config
 from .test_helpers import assert_called, assert_xml_equals, strip_xml
@@ -166,8 +167,8 @@ def test_gen_xml_dns():
             <hostname>mirror.acme.lab</hostname>
             <hostname>test.acme.lab</hostname>
           </host>
-          <srv name='srv1' protocol='tcp' port='1024' target='.' priority='10' weight='10' domain='test-domain-name'/>
-          <srv name='srv2' protocol='udp'/>
+          <srv service='srv1' protocol='tcp' port='1024' target='.' priority='10' weight='10' domain='test-domain-name'/>
+          <srv service='srv2' protocol='udp'/>
         </dns>
         """
     )

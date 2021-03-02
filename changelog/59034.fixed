@@ -1,0 +1,3 @@
+Correct comment when updating postrges users and groups.
+Errors reported when removing postgres groups.
+Partial group membership changes in postgres groups.

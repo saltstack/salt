@@ -39,6 +39,7 @@ beacon modules
     smartos_imgadm
     smartos_vmadm
     status
+    swapusage
     telegram_bot_msg
     twilio_txt_msg
     watchdog

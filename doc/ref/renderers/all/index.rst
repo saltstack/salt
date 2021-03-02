@@ -4,6 +4,8 @@
 renderer modules
 ================
 
+.. include:: ../../../_incl/jinja_security.rst
+
 .. currentmodule:: salt.renderers
 
 .. autosummary::

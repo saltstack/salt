@@ -3,12 +3,12 @@
 """
 import copy
 
+import pytest
 import salt.config
 import salt.loader
 import salt.states.win_lgpo as win_lgpo
 import salt.utils.platform
 import salt.utils.stringutils
-from tests.support.helpers import destructiveTest, slowTest
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch
 from tests.support.unit import TestCase, skipIf
@@ -92,8 +92,8 @@ class WinLGPOComparePoliciesTestCase(TestCase):
         self.assertFalse(win_lgpo._compare_policies(compare_integer, None))
 
 
-@destructiveTest
 @skipIf(not salt.utils.platform.is_windows(), "System is not Windows")
+@pytest.mark.destructive_test
 class WinLGPOPolicyElementNames(TestCase, LoaderModuleMockMixin):
     """
     Test variations of the Point and Print Restrictions policy when Not
@@ -124,7 +124,7 @@ class WinLGPOPolicyElementNames(TestCase, LoaderModuleMockMixin):
         with patch.dict(win_lgpo.__opts__, {"test": False}):
             win_lgpo.set_(name="nc_state", computer_policy=computer_policy)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_current_element_naming_style(self):
         computer_policy = {
             "Point and Print Restrictions": {
@@ -153,7 +153,7 @@ class WinLGPOPolicyElementNames(TestCase, LoaderModuleMockMixin):
             result["changes"]["new"]["Computer Configuration"], expected
         )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_old_element_naming_style(self):
         computer_policy = {
             "Point and Print Restrictions": {
@@ -191,7 +191,7 @@ class WinLGPOPolicyElementNames(TestCase, LoaderModuleMockMixin):
         )
         self.assertEqual(result["comment"], expected)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_invalid_elements(self):
         computer_policy = {
             "Point and Print Restrictions": {
@@ -215,8 +215,8 @@ class WinLGPOPolicyElementNames(TestCase, LoaderModuleMockMixin):
         self.assertFalse(expected["result"])
 
 
-@destructiveTest
 @skipIf(not salt.utils.platform.is_windows(), "System is not Windows")
+@pytest.mark.destructive_test
 class WinLGPOPolicyElementNamesTestTrue(TestCase, LoaderModuleMockMixin):
     """
     Test variations of the Point and Print Restrictions policy when Not
@@ -261,7 +261,7 @@ class WinLGPOPolicyElementNamesTestTrue(TestCase, LoaderModuleMockMixin):
                 win_lgpo.set_(name="nc_state", computer_policy=computer_policy)
             self.configured = True
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_current_element_naming_style(self):
         computer_policy = {
             "Point and Print Restrictions": {
@@ -283,7 +283,7 @@ class WinLGPOPolicyElementNamesTestTrue(TestCase, LoaderModuleMockMixin):
         self.assertTrue(result["result"])
         self.assertEqual(result["comment"], expected["comment"])
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_old_element_naming_style(self):
         computer_policy = {
             "Point and Print Restrictions": {
@@ -309,7 +309,7 @@ class WinLGPOPolicyElementNamesTestTrue(TestCase, LoaderModuleMockMixin):
         self.assertTrue(result["result"])
         self.assertEqual(result["comment"], expected["comment"])
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_invalid_elements(self):
         computer_policy = {
             "Point and Print Restrictions": {

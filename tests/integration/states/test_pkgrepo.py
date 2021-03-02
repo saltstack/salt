@@ -4,29 +4,24 @@ tests for pkgrepo states
 
 import os
 
+import pytest
 import salt.utils.files
 import salt.utils.platform
 from tests.support.case import ModuleCase
-from tests.support.helpers import (
-    destructiveTest,
-    requires_salt_states,
-    requires_system_grains,
-    runs_on,
-    slowTest,
-)
+from tests.support.helpers import requires_system_grains, runs_on
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.pytest.helpers import temp_state_file
 from tests.support.unit import skipIf
 
 
-@destructiveTest
 @skipIf(salt.utils.platform.is_windows(), "minion is windows")
+@pytest.mark.destructive_test
 class PkgrepoTest(ModuleCase, SaltReturnAssertsMixin):
     """
     pkgrepo state tests
     """
 
-    @requires_salt_states("pkgrepo.managed")
+    @pytest.mark.requires_salt_states("pkgrepo.managed")
     @requires_system_grains
     def test_pkgrepo_01_managed(self, grains):
         """
@@ -46,7 +41,7 @@ class PkgrepoTest(ModuleCase, SaltReturnAssertsMixin):
         for state_id, state_result in ret.items():
             self.assertSaltTrueReturn(dict([(state_id, state_result)]))
 
-    @requires_salt_states("pkgrepo.absent")
+    @pytest.mark.requires_salt_states("pkgrepo.absent")
     @requires_system_grains
     def test_pkgrepo_02_absent(self, grains):
         """
@@ -61,9 +56,9 @@ class PkgrepoTest(ModuleCase, SaltReturnAssertsMixin):
         for state_id, state_result in ret.items():
             self.assertSaltTrueReturn(dict([(state_id, state_result)]))
 
-    @requires_salt_states("pkgrepo.absent", "pkgrepo.managed")
+    @pytest.mark.requires_salt_states("pkgrepo.absent", "pkgrepo.managed")
     @requires_system_grains
-    @slowTest
+    @pytest.mark.slow_test
     def test_pkgrepo_03_with_comments(self, grains):
         """
         Test adding a repo with comments
@@ -114,9 +109,9 @@ class PkgrepoTest(ModuleCase, SaltReturnAssertsMixin):
             # Clean up
             self.run_state("pkgrepo.absent", name=kwargs["name"])
 
-    @requires_salt_states("pkgrepo.managed")
+    @pytest.mark.requires_salt_states("pkgrepo.managed")
     @requires_system_grains
-    @slowTest
+    @pytest.mark.slow_test
     def test_pkgrepo_04_apt_with_architectures(self, grains):
         """
         Test managing a repo with architectures specified
@@ -247,9 +242,9 @@ class PkgrepoTest(ModuleCase, SaltReturnAssertsMixin):
             except OSError:
                 pass
 
-    @requires_salt_states("pkgrepo.absent", "pkgrepo.managed")
+    @pytest.mark.requires_salt_states("pkgrepo.absent", "pkgrepo.managed")
     @requires_system_grains
-    @slowTest
+    @pytest.mark.slow_test
     def test_pkgrepo_05_copr_with_comments(self, grains):
         """
         Test copr

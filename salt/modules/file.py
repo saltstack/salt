@@ -261,7 +261,6 @@ def get_gid(path, follow_symlinks=True):
     follow_symlinks
         indicated if symlinks should be followed
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -1482,7 +1481,6 @@ def comment_line(path, regex, char="#", cmnt=True, backup=".bak"):
     .. code-block:: bash
 
         salt '*' file.comment_line '/etc/modules' '^pcspkr'
-
 
     CLI Example:
 
@@ -2789,13 +2787,13 @@ def blockreplace(
         If markers are not found, this parameter can be set to a regex which will
         insert the block before the first found occurrence in the file.
 
-        .. versionadded:: Sodium
+        .. versionadded:: 3001
 
     insert_after_match
         If markers are not found, this parameter can be set to a regex which will
         insert the block after the first found occurrence in the file.
 
-        .. versionadded:: Sodium
+        .. versionadded:: 3001
 
     backup
         The file extension to use for a backup of the file if any edit is made.
@@ -3859,7 +3857,7 @@ def access(path, mode):
     Test whether the Salt process has the specified access to the file. One of
     the following modes must be specified:
 
-    .. code-block::text
+    .. code-block:: text
 
         f: Test the existence of the path
         r: Test the readability of the path
@@ -4103,7 +4101,7 @@ def remove(path):
 
         salt '*' file.remove /tmp/foo
 
-    .. versionchanged:: Neon
+    .. versionchanged:: 3000
         The method now works on all types of file system entries, not just
         files, directories and symlinks.
     """
