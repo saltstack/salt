@@ -41,6 +41,10 @@ def configure_loader_modules():
 
 
 def test_get_systemd_only():
+    """
+    Test the _get_system_only function
+    """
+
     def test_func(cats, dogs, no_block):
         pass
 
@@ -58,6 +62,10 @@ def test_get_systemd_only():
 
 
 def test_get_systemd_only_platform():
+    """
+    Test the _get_system_only function on unsupported platforms
+    """
+
     def test_func(cats, dogs, no_block):
         pass
 
@@ -76,6 +84,10 @@ def test_get_systemd_only_platform():
 
 
 def test_get_systemd_only_no_mock():
+    """
+    Test the _get_system_only without mocking
+    """
+
     def test_func(cats, dogs, no_block):
         pass
 
@@ -89,7 +101,7 @@ def test_get_systemd_only_no_mock():
 
 def test_running():
     """
-        Test to verify that the service is running
+    Test to verify that the service is running
     """
     ret = [
         {"comment": "", "changes": {}, "name": "salt", "result": True},
@@ -306,7 +318,7 @@ def test_running():
 
 def test_dead():
     """
-        Test to ensure that the named service is dead
+    Test to ensure that the named service is dead
     """
     ret = [
         {"changes": {}, "comment": "", "name": "salt", "result": True},
@@ -444,7 +456,7 @@ def test_dead_with_missing_service():
 
 def test_enabled():
     """
-        Test to verify that the service is enabled
+    Test to verify that the service is enabled
     """
     ret = {"changes": "saltstack", "comment": "", "name": "salt", "result": True}
     mock = MagicMock(return_value={"changes": "saltstack"})
@@ -455,7 +467,7 @@ def test_enabled():
 
 def test_disabled():
     """
-        Test to verify that the service is disabled
+    Test to verify that the service is disabled
     """
     ret = {"changes": "saltstack", "comment": "", "name": "salt", "result": True}
     mock = MagicMock(return_value={"changes": "saltstack"})
@@ -466,7 +478,7 @@ def test_disabled():
 
 def test_mod_watch():
     """
-        Test to the service watcher, called to invoke the watch command.
+    Test to the service watcher, called to invoke the watch command.
     """
     ret = [
         {
@@ -610,7 +622,9 @@ def test_mod_beacon():
 @pytest.mark.destructive_test
 @pytest.mark.slow_test
 def test_running_with_reload():
-
+    """
+    Test that a running service is properly reloaded
+    """
     opts = salt.config.DEFAULT_MINION_OPTS.copy()
     opts["grains"] = salt.loader.grains(opts)
     utils = salt.loader.utils(opts)
