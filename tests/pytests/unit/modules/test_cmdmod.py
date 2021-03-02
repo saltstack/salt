@@ -146,6 +146,7 @@ def test_run_runas_with_windows():
                         cmdmod._run("foo", "bar", runas="baz")
 
 
+@pytest.mark.skip_on_windows
 def test_run_with_tuple():
     """
     Tests return when cmd is a tuple
