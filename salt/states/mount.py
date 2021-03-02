@@ -742,12 +742,10 @@ def mounted(
                 elif out == "change":
                     if mount:
                         comment = (
-                            "{} is mounted, but its fstab entry " "must be updated."
+                            "{} is mounted, but its fstab entry must be updated."
                         ).format(name)
                     else:
-                        comment = ("The {} fstab entry " "must be updated.").format(
-                            name
-                        )
+                        comment = ("The {} fstab entry must be updated.").format(name)
                 else:
                     ret["result"] = False
                     comment = (
@@ -868,7 +866,7 @@ def swap(name, persist=True, config="/etc/fstab"):
                 ret["result"] = None
                 if name in on_:
                     ret["comment"] = (
-                        "Swap {} is set to be added to the " "fstab and to be activated"
+                        "Swap {} is set to be added to the fstab and to be activated"
                     ).format(name)
             return ret
 
@@ -952,7 +950,7 @@ def unmounted(
         # The mount is present! Unmount it
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = ("Mount point {} is mounted but should not " "be").format(
+            ret["comment"] = ("Mount point {} is mounted but should not be").format(
                 name
             )
             return ret
