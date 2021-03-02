@@ -146,7 +146,6 @@ def test_run_runas_with_windows():
                         cmdmod._run("foo", "bar", runas="baz")
 
 
-@pytest.mark.skip_on_windows
 def test_run_with_tuple():
     """
     Tests return when cmd is a tuple
@@ -156,7 +155,7 @@ def test_run_with_tuple():
         with patch("salt.utils.platform.is_windows", MagicMock(return_value=False)):
             with patch("os.path.isfile", mock_true):
                 with patch("os.access", mock_true):
-                    cmdmod._run(("echo", "foo"))
+                    cmdmod._run(("echo", "foo"), python_shell=True)
 
 
 def test_run_user_not_available():
