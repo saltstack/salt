@@ -41,19 +41,13 @@ This module currently only supports the napalm proxy minion and assumes
 you will use SSH keys to authenticate to the network device.  If password
 authentication is desired, it is recommended to create another ``proxy``
 key in pillar_roots (or git_pillar) with just the ``passwd`` key and use
-:py:func:`salt.renderers.gpg <salt.renderers.gpg>` to encrypt the value. If
-your devices more than one username, leave proxy_username unset, and set
-the ``username`` key in your pillar as well.
-If any additional options for the proxy setup are needed they should also be
-configured in pillar_roots.
+:py:func:`salt.renderers.gpg <salt.renderers.gpg>` to encrypt the value.
 
-Other available options:
+If you use more than one username for your devices, leave proxy_username unset,
+and set the ``username`` key in your pillar as well. If any additional options
+for the proxy setup are needed, they should also be configured in pillar_roots.
 
-devices: ``True``
-    Whether should retrieve physical devices.
-
-virtual_machines: ``False``
-    Whether should retrieve virtual machines.
+Other available configuration options:
 
 site_details: ``True``
     Whether should retrieve details of the site the device belongs to.
@@ -61,10 +55,24 @@ site_details: ``True``
 site_prefixes: ``True``
     Whether should retrieve the prefixes of the site the device belongs to.
 
+devices: ``True``
+    .. versionadded:: 3004.0
+
+    Whether should retrieve physical devices.
+
+virtual_machines: ``False``
+    .. versionadded:: 3004.0
+
+    Whether should retrieve virtual machines.
+
 interfaces: ``False``
+    .. versionadded:: 3004.0
+
     Whether should retrieve the interfaces of the device.
 
 interface_ips: ``False``
+    .. versionadded:: 3004.0
+
     Whether should retrieve the IP addresses for interfaces of the device.
     (interfaces must be set to True as well)
 
@@ -93,7 +101,9 @@ And then query the pillar:
 
   salt minion1 pillar.items 'netbox'
 
-.. code-block:: shell
+Example output:
+
+.. code-block:: text
 
   minion1:
       netbox:
@@ -508,15 +518,6 @@ And then query the pillar:
               2021-02-19
           last_updated:
               2021-02-19T06:12:04.171105Z
-      proxy:
-          ----------
-          host:
-              192.0.2.1
-          driver:
-              ios
-          proxytype:
-              napalm
-
 """
 
 import logging
@@ -759,9 +760,9 @@ def _get_proxy_details(api_url, minion_id, primary_ip, platform_id, headers):
         log.error(
             "Status code: %d, error: %s", platform_ret["status"], platform_ret["error"],
         )
-    # Assign results from API call to "proxy" key if the platform has a
-    # napalm_driver defined.
     else:
+        # Assign results from API call to "proxy" key if the platform has a
+        # napalm_driver defined.
         napalm_driver = platform_ret["dict"].get("napalm_driver")
         if napalm_driver:
             proxy = {
@@ -825,6 +826,7 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
     if virtual_machines:
         nodes.extend(_get_virtual_machines(api_url, minion_id, headers))
     if len(nodes) == 1:
+        # Return the 0th (and only) item in the list
         ret["netbox"] = nodes[0]
     elif len(nodes) > 1:
         log.error('More than one node found for "%s"', minion_id)
