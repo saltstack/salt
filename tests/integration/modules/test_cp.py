@@ -10,7 +10,6 @@ import uuid
 
 import psutil  # pylint: disable=3rd-party-module-not-gated
 import pytest
-import salt.ext.six as six
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
@@ -65,8 +64,7 @@ class CPModuleTest(ModuleCase):
 
     @with_tempfile()
     @skipIf(
-        salt.utils.platform.is_windows() and six.PY3,
-        "This test hangs on Windows on Py3",
+        salt.utils.platform.is_windows(), "This test hangs on Windows on Py3",
     )
     def test_get_file_templated_paths(self, tgt):
         """
@@ -229,9 +227,6 @@ class CPModuleTest(ModuleCase):
         self.assertIn("KNIGHT:  They're nervous, sire.", data)
         self.assertNotIn("bacon", data)
 
-    @skipIf(
-        salt.utils.platform.is_darwin() and six.PY2, "This test hangs on OS X on Py2"
-    )
     @with_tempfile()
     @pytest.mark.slow_test
     def test_get_url_https(self, tgt):
@@ -246,9 +241,6 @@ class CPModuleTest(ModuleCase):
         self.assertIn("Windows", data)
         self.assertNotIn("AYBABTU", data)
 
-    @skipIf(
-        salt.utils.platform.is_darwin() and six.PY2, "This test hangs on OS X on Py2"
-    )
     @pytest.mark.slow_test
     def test_get_url_https_dest_empty(self):
         """
@@ -263,9 +255,6 @@ class CPModuleTest(ModuleCase):
         self.assertIn("Windows", data)
         self.assertNotIn("AYBABTU", data)
 
-    @skipIf(
-        salt.utils.platform.is_darwin() and six.PY2, "This test hangs on OS X on Py2"
-    )
     @pytest.mark.slow_test
     def test_get_url_https_no_dest(self):
         """
@@ -350,9 +339,6 @@ class CPModuleTest(ModuleCase):
         ret = self.run_function("cp.get_file_str", [src])
         self.assertEqual(ret, False)
 
-    @skipIf(
-        salt.utils.platform.is_darwin() and six.PY2, "This test hangs on OS X on Py2"
-    )
     @pytest.mark.slow_test
     def test_get_file_str_https(self):
         """

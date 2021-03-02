@@ -1,9 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Test utility methods that communicate with SMB shares.
 """
-from __future__ import absolute_import
-
 import getpass
 import logging
 import os
@@ -110,7 +107,7 @@ class TestSmb(TestCase):
                 )
             )
         cls._smbd = subprocess.Popen(
-            "{0} -FS -P0 -s {1}".format(which_smbd(), samba_conf), shell=True
+            "{} -FS -P0 -s {}".format(which_smbd(), samba_conf), shell=True
         )
         time.sleep(1)
         pidfile = os.path.join(cls.samba_dir, "smbd.pid")

@@ -1,0 +1,2 @@
+SCRAM-SHA-256 support for PostgreSQL passwords.
+Pass encrypted=scram-sha-256 to the postgres_user.present (or postgres_group.present) state.
