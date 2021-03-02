@@ -43,8 +43,8 @@ salt/modules/cp.py:
   - integration.states.test_file
 
 salt/modules/dockermod.py:
-  - unit.states.test_docker_image
-  - unit.states.test_docker_volume
+  - pytests.unit.states.test_docker_image
+  - pytests.unit.states.test_docker_volume
   - unit.utils.test_dockermod
   - pytests.functional.states.test_docker_container
   - integration.states.test_docker_network
@@ -69,12 +69,12 @@ salt/(states|modules)/.*postgres.py:
   - unit.states.test_postgres_cluster
   - unit.states.test_postgres_database
   - unit.states.test_postgres_extension
-  - unit.states.test_postgres_group
+  - pytests.unit.states.test_postgres_group
   - unit.states.test_postgres_initdb
   - unit.states.test_postgres_language
   - unit.states.test_postgres_privileges
   - unit.states.test_postgres_schema
-  - unit.states.test_postgres_user
+  - pytests.unit.states.test_postgres_user
 
 salt/modules/rabbitmq.py:
   - pytests.unit.states.test_rabbitmq_cluster

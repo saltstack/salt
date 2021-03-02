@@ -1,9 +1,6 @@
 """
 Use pycrypto to generate random passwords on the fly.
 """
-
-# Import python libraries
-
 import logging
 import random
 import re
