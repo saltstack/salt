@@ -15,6 +15,7 @@ from salt.exceptions import SaltClientError, SaltSystemExit, get_error_message
 # the try block below bypasses an issue at build time so that modules don't
 # cause the build to fail
 from salt.utils import migrations
+from salt.utils.platform import is_junos
 from salt.utils.process import HAS_PSUTIL
 from salt.utils.verify import verify_log
 
@@ -435,8 +436,9 @@ class ProxyMinion(
         super().prepare()
 
         ## allow for native minion
-        ## if not self.values.proxyid:
-        ##     self.error("salt-proxy requires --proxyid")
+        if not is_junos():
+            if not self.values.proxyid:
+                self.error("salt-proxy requires --proxyid")
 
         # Proxies get their ID from the command line.  This may need to change in
         # the future.

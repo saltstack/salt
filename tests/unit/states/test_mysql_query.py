@@ -1,19 +1,44 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
+import logging
 import os
 
-# Import Salt Libs
+import salt.modules.mysql as mysql_mod
 import salt.states.mysql_query as mysql_query
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
+
+log = logging.getLogger(__name__)
+NO_MYSQL = False
+NO_PyMYSQL = False
+try:
+    import MySQLdb  # pylint: disable=W0611
+except ImportError:
+    NO_MYSQL = True
+
+try:
+    # MySQLdb import failed, try to import PyMySQL
+    import pymysql
+
+    pymysql.install_as_MySQLdb()
+    import MySQLdb
+except ImportError:
+    NO_PyMYSQL = True
+
+
+class MockMySQLConnect:
+    def __init__(self, *args, **kwargs):
+        self.args = args
+        self.kwargs = kwargs
+
+    def autocommit(self, *args, **kwards):
+        return True
+
+    def cursor(self, *args, **kwards):
+        return MagicMock()
 
 
 class MysqlQueryTestCase(TestCase, LoaderModuleMockMixin):
@@ -22,7 +47,7 @@ class MysqlQueryTestCase(TestCase, LoaderModuleMockMixin):
     """
 
     def setup_loader_modules(self):
-        return {mysql_query: {}}
+        return {mysql_query: {}, mysql_mod: {}}
 
     # 'run' function tests: 1
 
@@ -48,7 +73,7 @@ class MysqlQueryTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertDictEqual(mysql_query.run(name, database, query), ret)
 
             with patch.object(mysql_query, "_get_mysql_error", mock_none):
-                comt = "Database {0} is not present".format(name)
+                comt = "Database {} is not present".format(name)
                 ret.update({"comment": comt, "result": None})
                 self.assertDictEqual(mysql_query.run(name, database, query), ret)
 
@@ -146,3 +171,36 @@ class MysqlQueryTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(mysql_query.__opts__, {"test": False}):
                 ret.update({"comment": "salt", "changes": {"query": "Executed"}})
                 self.assertDictEqual(mysql_query.run(name, database, query), ret)
+
+    @skipIf(
+        NO_MYSQL and NO_PyMYSQL,
+        "Install MySQL bindings before running MySQL unit tests.",
+    )
+    def test_run_multiple_statements(self):
+        """
+        Test to execute an arbitrary query on the specified database
+        and ensure that the correct multi_statements flag is passed along
+        to MySQLdb.connect.
+        """
+        name = "query_id"
+        database = "my_database"
+        query = "SELECT * FROM table; SELECT * from another_table;"
+
+        mock_t = MagicMock(return_value=True)
+
+        with patch.dict(mysql_query.__salt__, {"mysql.db_exists": mock_t}), patch.dict(
+            mysql_query.__opts__, {"test": False}
+        ), patch.dict(
+            mysql_query.__salt__, {"mysql.query": mysql_mod.query}
+        ), patch.dict(
+            mysql_query.__salt__, {"mysql._execute": MagicMock()}
+        ), patch.dict(
+            mysql_mod.__salt__, {"config.option": MagicMock()}
+        ), patch(
+            "MySQLdb.connect", return_value=MockMySQLConnect()
+        ) as mock_connect:
+            ret = mysql_query.run(
+                name, database, query, client_flags=["multi_statements"]
+            )
+            self.assertEqual(1, len(mock_connect.mock_calls))
+            self.assertIn("client_flag=65536", str(mock_connect.mock_calls[0]))

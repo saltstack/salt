@@ -88,7 +88,7 @@ def _discovery_token_ca_cert_hash():
 
 def join_params(create_if_needed=False):
     """
-    .. versionadded:: TBD
+    .. versionadded:: 3001
 
     Return the parameters required for joining into the cluster
 
@@ -115,7 +115,7 @@ def join_params(create_if_needed=False):
 
 def version(kubeconfig=None, rootfs=None):
     """
-    .. versionadded:: TBD
+    .. versionadded:: 3001
 
     Return the version of kubeadm
 
@@ -164,7 +164,7 @@ def token_create(
     rootfs=None,
 ):
     """
-    .. versionadded:: TBD
+    .. versionadded:: 3001
 
     Create bootstrap tokens on the server
 
@@ -234,7 +234,7 @@ def token_create(
 
 def token_delete(token, kubeconfig=None, rootfs=None):
     """
-    .. versionadded:: TBD
+    .. versionadded:: 3001
 
     Delete bootstrap tokens on the server
 
@@ -270,7 +270,7 @@ def token_delete(token, kubeconfig=None, rootfs=None):
 
 def token_generate(kubeconfig=None, rootfs=None):
     """
-    .. versionadded:: TBD
+    .. versionadded:: 3001
 
     Generate and return a bootstrap token, but do not create it on the
     server
@@ -301,7 +301,7 @@ def token_generate(kubeconfig=None, rootfs=None):
 
 def token_list(kubeconfig=None, rootfs=None):
     """
-    .. versionadded:: TBD
+    .. versionadded:: 3001
 
     List bootstrap tokens on the server
 
@@ -348,7 +348,7 @@ def token_list(kubeconfig=None, rootfs=None):
 
 def alpha_certs_renew(rootfs=None):
     """
-    .. versionadded:: TBD
+    .. versionadded:: 3001
 
     Renews certificates for a Kubernetes cluster
 
@@ -382,7 +382,7 @@ def alpha_kubeconfig_user(
     rootfs=None,
 ):
     """
-    .. versionadded:: TBD
+    .. versionadded:: 3001
 
     Outputs a kubeconfig file for an additional user
 
@@ -436,7 +436,7 @@ def alpha_kubeconfig_user(
 
 def alpha_kubelet_config_download(kubeconfig=None, kubelet_version=None, rootfs=None):
     """
-    .. versionadded:: TBD
+    .. versionadded:: 3001
 
     Downloads the kubelet configuration from the cluster ConfigMap
     kubelet-config-1.X
@@ -477,7 +477,7 @@ def alpha_kubelet_config_enable_dynamic(
     node_name, kubeconfig=None, kubelet_version=None, rootfs=None
 ):
     """
-    .. versionadded:: TBD
+    .. versionadded:: 3001
 
     Enables or updates dynamic kubelet configuration for a node
 
@@ -532,7 +532,7 @@ def alpha_selfhosting_pivot(
     rootfs=None,
 ):
     """
-    .. versionadded:: TBD
+    .. versionadded:: 3001
 
     Converts a static Pod-hosted control plane into a selt-hosted one
 
@@ -586,7 +586,7 @@ def config_images_list(
     rootfs=None,
 ):
     """
-    .. versionadded:: TBD
+    .. versionadded:: 3001
 
     Print a list of images kubeadm will use
 
@@ -640,7 +640,7 @@ def config_images_pull(
     rootfs=None,
 ):
     """
-    .. versionadded:: TBD
+    .. versionadded:: 3001
 
     Pull images used by kubeadm
 
@@ -692,7 +692,7 @@ def config_images_pull(
 
 def config_migrate(old_config, new_config=None, kubeconfig=None, rootfs=None):
     """
-    .. versionadded:: TBD
+    .. versionadded:: 3001
 
     Read an older version of the kubeadm configuration API types from
     a file, and output the similar config object for the newer version
@@ -735,7 +735,7 @@ def config_migrate(old_config, new_config=None, kubeconfig=None, rootfs=None):
 
 def config_print_init_defaults(component_configs=None, kubeconfig=None, rootfs=None):
     """
-    .. versionadded:: TBD
+    .. versionadded:: 3001
 
     Return default init configuration, that can be used for 'kubeadm
     init'
@@ -775,7 +775,7 @@ def config_print_init_defaults(component_configs=None, kubeconfig=None, rootfs=N
 
 def config_print_join_defaults(component_configs=None, kubeconfig=None, rootfs=None):
     """
-    .. versionadded:: TBD
+    .. versionadded:: 3001
 
     Return default join configuration, that can be used for 'kubeadm
     join'
@@ -815,7 +815,7 @@ def config_print_join_defaults(component_configs=None, kubeconfig=None, rootfs=N
 
 def config_upload_from_file(config, kubeconfig=None, rootfs=None):
     """
-    .. versionadded:: TBD
+    .. versionadded:: 3001
 
     Upload a configuration file to the in-cluster ConfigMap for
     kubeadm configuration
@@ -863,7 +863,7 @@ def config_upload_from_flags(
     rootfs=None,
 ):
     """
-    .. versionadded:: TBD
+    .. versionadded:: 3001
 
     Create the in-cluster configuration file for the first time using
     flags
@@ -946,7 +946,7 @@ def config_upload_from_flags(
 
 def config_view(kubeconfig=None, rootfs=None):
     """
-    .. versionadded:: TBD
+    .. versionadded:: 3001
 
     View the kubeadm configuration stored inside the cluster
 
@@ -999,7 +999,7 @@ def init(
     rootfs=None,
 ):
     """
-    .. versionadded:: TBD
+    .. versionadded:: 3001
 
     Command to set up the Kubernetes control plane
 
@@ -1181,7 +1181,7 @@ def join(
     rootfs=None,
 ):
     """
-    .. versionadded:: TBD
+    .. versionadded:: 3001
 
     Command to join to an existing cluster
 
@@ -1306,7 +1306,7 @@ def reset(
     rootfs=None,
 ):
     """
-    .. versionadded:: TBD
+    .. versionadded:: 3001
 
     Revert any changes made to this host by 'kubeadm init' or 'kubeadm
     join'

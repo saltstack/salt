@@ -1,19 +1,12 @@
-# -*- coding: utf-8 -*-
 """
 Support for getting and setting the environment variables
 of the current salt process.
 """
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
 
-# Import Salt libs
 import salt.utils.platform
-
-# Import 3rd-party libs
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -71,7 +64,7 @@ def setval(key, val, false_unsets=False, permanent=False):
                 r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment"
             )
 
-    if not isinstance(key, six.string_types):
+    if not isinstance(key, str):
         log.debug("%s: 'key' argument is not a string type: '%s'", __name__, key)
     if val is False:
         if false_unsets is True:
@@ -91,7 +84,7 @@ def setval(key, val, false_unsets=False, permanent=False):
                 return False
         else:
             val = ""
-    if isinstance(val, six.string_types):
+    if isinstance(val, str):
         try:
             os.environ[key] = val
             if permanent and is_windows:
@@ -157,7 +150,6 @@ def setenv(
         this will be ignored. Note: This will only take affect on applications
         opened after this has been set.
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -174,8 +166,8 @@ def setenv(
         to_unset = [key for key in os.environ if key not in environ]
         for key in to_unset:
             ret[key] = setval(key, False, false_unsets, permanent=permanent)
-    for key, val in six.iteritems(environ):
-        if isinstance(val, six.string_types):
+    for key, val in environ.items():
+        if isinstance(val, str):
             ret[key] = setval(key, val, permanent=permanent)
         elif val is False:
             ret[key] = setval(key, val, false_unsets, permanent=permanent)
@@ -212,7 +204,6 @@ def get(key, default=""):
         If the key is not found in the environment, return this value.
         Default: ''
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -220,7 +211,7 @@ def get(key, default=""):
         salt '*' environ.get foo
         salt '*' environ.get baz default=False
     """
-    if not isinstance(key, six.string_types):
+    if not isinstance(key, str):
         log.debug("%s: 'key' argument is not a string type: '%s'", __name__, key)
         return False
     return os.environ.get(key, default)
@@ -245,7 +236,7 @@ def has_value(key, value=None):
 
         salt '*' environ.has_value foo
     """
-    if not isinstance(key, six.string_types):
+    if not isinstance(key, str):
         log.debug("%s: 'key' argument is not a string type: '%s'", __name__, key)
         return False
     try:
@@ -282,7 +273,7 @@ def item(keys, default=""):
     """
     ret = {}
     key_list = []
-    if isinstance(keys, six.string_types):
+    if isinstance(keys, str):
         key_list.append(keys)
     elif isinstance(keys, list):
         key_list = keys
