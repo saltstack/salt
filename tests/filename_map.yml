@@ -62,7 +62,7 @@ salt/modules/mysql.py:
   - unit.states.test_mysql_grants
 
 salt/modules/openvswitch.py:
-  - unit.states.test_openvswitch_port
+  - pytests.unit.states.test_openvswitch_port
 
 salt/(states|modules)/.*postgres.py:
   - unit.states.test_postgres
