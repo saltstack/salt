@@ -372,7 +372,7 @@ def test_set_policy():
             with patch.dict(nftables.__opts__, {"test": True}):
                 ret.update(
                     {
-                        "comment": "nftables default policy for chain on table  for "
+                        "comment": "nftables default policy for chain  on table  for "
                         "ipv4 needs to be set to sal",
                         "result": None,
                     }
