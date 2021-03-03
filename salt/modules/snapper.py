@@ -11,8 +11,6 @@ Module to manage filesystem snapshots with snapper
 :maturity:      new
 :platform:      Linux
 """
-
-
 import difflib
 import logging
 import os
