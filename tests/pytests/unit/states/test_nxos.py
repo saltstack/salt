@@ -28,7 +28,9 @@ def configure_loader_modules():
 
 def test_user_present_create():
 
-    """ UT: nxos module:user_present method - create """
+    """
+    user_present method - create
+    """
 
     roles = ["vdc-admin"]
 
@@ -47,7 +49,9 @@ def test_user_present_create():
 
 def test_user_present_create_opts_test():
 
-    """ UT: nxos module:user_present method - create """
+    """
+    user_present method - create opts
+    """
 
     roles = ["vdc-admin"]
 
@@ -66,7 +70,9 @@ def test_user_present_create_opts_test():
 
 def test_user_present_create_non_defaults():
 
-    """ UT: nxos module:user_present method - create non default opts """
+    """
+    user_present method - create non default opts
+    """
 
     username = "daniel"
     password = "ghI&435y55#"
@@ -112,7 +118,9 @@ def test_user_present_create_non_defaults():
 
 def test_user_present_create_encrypted_password_no_roles_opts_test():
 
-    """ UT: nxos module:user_present method - encrypted password, no roles """
+    """
+    user_present method - encrypted password, no roles
+    """
 
     username = "daniel"
     password = "$1$foobar12$K7x4Rxua11qakvrRjcwDC/"
@@ -141,7 +149,9 @@ def test_user_present_create_encrypted_password_no_roles_opts_test():
 
 def test_user_present_create_user_exists():
 
-    """ UT: nxos module:user_present method - user exists """
+    """
+    user_present method - user exists
+    """
 
     username = "daniel"
     password = "$1$foobar12$K7x4Rxua11qakvrRjcwDC/"
@@ -170,7 +180,9 @@ def test_user_present_create_user_exists():
 
 def test_user_present_create_user_exists_opts_test():
 
-    """ UT: nxos module:user_present method - user exists """
+    """
+    user_present method - user exists with opts
+    """
 
     username = "daniel"
     password = "$1$foobar12$K7x4Rxua11qakvrRjcwDC/"
@@ -205,7 +217,9 @@ def test_user_present_create_user_exists_opts_test():
 
 def test_user_absent():
 
-    """ UT: nxos module:user_absent method - remove user """
+    """
+    user_absent method - remove user
+    """
 
     username = "daniel"
 
@@ -225,7 +239,9 @@ def test_user_absent():
 
 def test_user_absent_user_does_not_exist():
 
-    """ UT: nxos module:user_absent method - remove user """
+    """
+    user_absent method - remove user
+    """
 
     username = "daniel"
 
@@ -244,7 +260,9 @@ def test_user_absent_user_does_not_exist():
 
 def test_user_absent_test_opts():
 
-    """ UT: nxos module:user_absent method - remove user """
+    """
+    user_absent method - remove user with opts
+    """
 
     username = "daniel"
 
@@ -264,7 +282,9 @@ def test_user_absent_test_opts():
 
 def test_config_present():
 
-    """ UT: nxos module:config_present method - add config """
+    """
+    config_present method - add config
+    """
 
     config_data = [
         "snmp-server community randomSNMPstringHERE group network-operator",
@@ -300,7 +320,9 @@ def test_config_present():
 
 def test_config_present_already_configured():
 
-    """ UT: nxos module:config_present method - add config already configured """
+    """
+    config_present method - add config already configured
+    """
 
     config_data = [
         "snmp-server community randomSNMPstringHERE group network-operator",
@@ -322,7 +344,9 @@ def test_config_present_already_configured():
 
 def test_config_present_test_opts():
 
-    """ UT: nxos module:config_present method - add config """
+    """
+    config_present method - add config
+    """
 
     config_data = [
         "snmp-server community randomSNMPstringHERE group network-operator",
@@ -358,7 +382,9 @@ def test_config_present_test_opts():
 
 def test_config_present_fail_to_add():
 
-    """ UT: nxos module:config_present method - add config fails"""
+    """
+    config_present method - add config fails
+    """
 
     config_data = [
         "snmp-server community randomSNMPstringHERE group network-operator",
@@ -388,7 +414,9 @@ def test_config_present_fail_to_add():
 
 def test_replace():
 
-    """ UT: nxos module:replace method - replace config """
+    """
+    replace method - replace config
+    """
 
     name = "randomSNMPstringHERE"
     repl = "NEWrandoSNMPstringHERE"
@@ -423,7 +451,9 @@ def test_replace():
 
 def test_replace_test_opts():
 
-    """ UT: nxos module:replace method - replace config """
+    """
+    replace method - replace config
+    """
 
     name = "randomSNMPstringHERE"
     repl = "NEWrandoSNMPstringHERE"
@@ -455,7 +485,9 @@ def test_replace_test_opts():
 
 def test_config_absent():
 
-    """ UT: nxos module:config_absent method - remove config """
+    """
+    config_absent method - remove config
+    """
 
     config_data = [
         "snmp-server community randomSNMPstringHERE group network-operator",
@@ -492,7 +524,9 @@ def test_config_absent():
 
 def test_config_absent_already_configured():
 
-    """ UT: nxos module:config_absent method - add config removed """
+    """
+    config_absent method - add config removed
+    """
 
     config_data = [
         "snmp-server community randomSNMPstringHERE group network-operator",
@@ -514,7 +548,9 @@ def test_config_absent_already_configured():
 
 def test_config_absent_test_opts():
 
-    """ UT: nxos module:config_absent method - remove config """
+    """
+    config_absent method - remove config
+    """
 
     config_data = [
         "snmp-server community randomSNMPstringHERE group network-operator",
