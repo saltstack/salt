@@ -37,13 +37,20 @@ def __virtual__():
 
 def _convert_to_mb(size):
 
-    size = str(size)
-    unit = size[-1:].lower()
+    str_size = str(size).lower()
+    unit = str_size[-1:]
     if unit.isdigit():
         unit = "m"
+    elif unit == "b":
+        unit = str_size[-2:-1]
+        str_size = str_size[:-2]
     else:
-        size = size[:-1]
-    size = int(size)
+        str_size = str_size[:-1]
+
+    if str_size[-1:].isdigit():
+        size = int(str_size)
+    else:
+        raise salt.exceptions.ArgumentValueError("Size {} is invalid.".format(size))
 
     if unit == "s":
         target_size = size / 2048
@@ -235,7 +242,9 @@ def lv_present(
         The name of the Volume Group on which the Logical Volume resides
 
     size
-        The size of the Logical Volume
+        The size of the Logical Volume in megabytes, or use a suffix
+        such as S, M, G, T, P for 512 byte sectors, megabytes, gigabytes
+        or terabytes respectively. The suffix is case insensitive.
 
     extents
         The number of logical extents allocated to the Logical Volume
@@ -277,6 +286,9 @@ def lv_present(
         ret["comment"] = "Only one of extents or size can be specified."
         ret["result"] = False
         return ret
+
+    if size:
+        size_mb = _convert_to_mb(size)
 
     _snapshot = None
 
@@ -326,7 +338,6 @@ def lv_present(
             old_extents = int(lv_info["Current Logical Extents Associated"])
             old_size_mb = _convert_to_mb(lv_info["Logical Volume Size"] + "s")
             if size:
-                size_mb = _convert_to_mb(size)
                 extents = old_extents
             else:
                 # ignore percentage "extents" if the logical volume already exists
