@@ -74,6 +74,33 @@ would allow access to the salt master from the 10.0.0.0/8 subnet:
         - saltmaster
       - sources:
         - 10.0.0.0/8
+
+Another way of implementing the same rule above using rich rules is demonstrated
+here:
+
+.. code-block:: yaml
+
+  saltzone:
+    firewalld.present:
+      - name: saltzone
+      - rich_rules:
+        - rule service name="saltmaster" accept
+      - sources:
+        - 10.0.0.0/8
+
+The format of rich rules is the same as:
+
+.. code-block:: shell
+
+  firewall-cmd --list-rich-rules
+
+with an example output of:
+
+.. code-block:: text
+
+  rule protocol value="icmp" accept
+  rule protocol value="ipv6-icmp" accept
+  rule service name="snmp" accept
 """
 
 # Import Python Libs
