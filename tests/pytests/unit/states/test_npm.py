@@ -31,12 +31,12 @@ def test_installed():
 
     with patch.dict(npm.__salt__, {"npm.list": mock_dict, "npm.install": mock_err}):
         with patch.dict(npm.__opts__, {"test": True}):
-            comt = "Package(s) 'coffee-script' " "satisfied by coffee-script@1.2"
+            comt = "Package(s) 'coffee-script' satisfied by coffee-script@1.2"
             ret.update({"comment": comt, "result": True})
             assert npm.installed(name) == ret
 
         with patch.dict(npm.__opts__, {"test": False}):
-            comt = "Package(s) 'coffee-script' " "satisfied by coffee-script@1.2"
+            comt = "Package(s) 'coffee-script' satisfied by coffee-script@1.2"
             ret.update({"comment": comt, "result": True})
             assert npm.installed(name) == ret
 
