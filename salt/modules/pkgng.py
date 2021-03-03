@@ -196,7 +196,6 @@ def version(*names, **kwargs):
 
         .. versionadded:: 2014.1.0
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -358,6 +357,21 @@ available_version = salt.utils.functools.alias_function(
 )
 
 
+def _list_pkgs_from_context(
+    versions_as_list, contextkey_pkg, contextkey_origins, with_origin
+):
+    """
+    Use pkg list from __context__
+    """
+    ret = copy.deepcopy(__context__[contextkey_pkg])
+    if not versions_as_list:
+        __salt__["pkg_resource.stringify"](ret)
+    if salt.utils.data.is_true(with_origin):
+        origins = __context__.get(contextkey_origins, {})
+        return {x: {"origin": origins.get(x, ""), "version": y} for x, y in ret.items()}
+    return ret
+
+
 def list_pkgs(
     versions_as_list=False,
     jail=None,
@@ -406,16 +420,10 @@ def list_pkgs(
     contextkey_pkg = _contextkey(jail, chroot, root)
     contextkey_origins = _contextkey(jail, chroot, root, prefix="pkg.origin")
 
-    if contextkey_pkg in __context__:
-        ret = copy.deepcopy(__context__[contextkey_pkg])
-        if not versions_as_list:
-            __salt__["pkg_resource.stringify"](ret)
-        if salt.utils.data.is_true(with_origin):
-            origins = __context__.get(contextkey_origins, {})
-            return {
-                x: {"origin": origins.get(x, ""), "version": y} for x, y in ret.items()
-            }
-        return ret
+    if contextkey_pkg in __context__ and kwargs.get("use_context", True):
+        return _list_pkgs_from_context(
+            versions_as_list, contextkey_pkg, contextkey_origins, with_origin
+        )
 
     ret = {}
     origins = {}
@@ -466,7 +474,7 @@ def update_package_site(new_url):
     return True
 
 
-def stats(local=False, remote=False, jail=None, chroot=None, root=None):
+def stats(local=False, remote=False, jail=None, chroot=None, root=None, bytes=False):
     """
     Return pkgng stats.
 
@@ -493,6 +501,15 @@ def stats(local=False, remote=False, jail=None, chroot=None, root=None):
         .. code-block:: bash
 
             salt '*' pkg.stats remote=True
+
+    bytes
+        Display disk space usage in bytes only.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.stats bytes=True
 
     jail
         Retrieve stats from the specified jail.
@@ -527,6 +544,8 @@ def stats(local=False, remote=False, jail=None, chroot=None, root=None):
         opts += "l"
     if remote:
         opts += "r"
+    if bytes:
+        opts += "b"
 
     cmd = _pkg(jail, chroot, root)
     cmd.append("stats")
@@ -1105,7 +1124,6 @@ def upgrade(*names, **kwargs):
         {'<package>':  {'old': '<old-version>',
                         'new': '<new-version>'}}
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -1202,7 +1220,7 @@ def upgrade(*names, **kwargs):
     if force:
         opts += "f"
     if local:
-        opts += "L"
+        opts += "U"
     if fetchonly:
         opts += "F"
     if dryrun:
@@ -1337,7 +1355,13 @@ def autoremove(jail=None, chroot=None, root=None, dryrun=False):
 
 
 def check(
-    jail=None, chroot=None, root=None, depends=False, recompute=False, checksum=False
+    jail=None,
+    chroot=None,
+    root=None,
+    depends=False,
+    recompute=False,
+    checksum=False,
+    checklibs=False,
 ):
     """
     Sanity checks installed packages
@@ -1375,7 +1399,7 @@ def check(
 
         .. code-block:: bash
 
-            salt '*' pkg.check recompute=True
+            salt '*' pkg.check depends=True
 
     recompute
         Recompute sizes and checksums of installed packages.
@@ -1384,7 +1408,7 @@ def check(
 
         .. code-block:: bash
 
-            salt '*' pkg.check depends=True
+            salt '*' pkg.check recompute=True
 
     checksum
         Find invalid checksums for installed packages.
@@ -1394,9 +1418,19 @@ def check(
         .. code-block:: bash
 
             salt '*' pkg.check checksum=True
+
+    checklibs
+        Regenerates the library dependency metadata for a package.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.check checklibs=True
+
     """
-    if not any((depends, recompute, checksum)):
-        return "One of depends, recompute, or checksum must be set to True"
+    if not any((depends, recompute, checksum, checklibs)):
+        return "One of depends, recompute, checksum or checklibs must be set to True"
 
     opts = ""
     if depends:
@@ -1405,6 +1439,8 @@ def check(
         opts += "r"
     if checksum:
         opts += "s"
+    if checklibs:
+        opts += "B"
 
     cmd = _pkg(jail, chroot, root)
     cmd.append("check")

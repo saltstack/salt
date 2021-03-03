@@ -1738,9 +1738,7 @@ class VirtualEnv:
         sminion.functions.virtualenv.create(
             self.venv_dir, python=self._get_real_python()
         )
-        self.install("-U", "pip")
-        # https://github.com/pypa/setuptools/issues?q=is%3Aissue+setuptools+50+
-        self.install("-U", "setuptools<50.0.0")
+        self.install("-U", "pip", "setuptools!=50.*,!=51.*,!=52.*")
 
 
 @contextmanager

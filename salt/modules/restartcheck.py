@@ -11,6 +11,7 @@ https://packages.debian.org/debian-goodies) and psdel by Sam Morris.
 """
 import os
 import re
+import shlex
 import subprocess
 import sys
 import time
@@ -483,6 +484,7 @@ def restartcheck(ignorelist=None, blacklist=None, excludepid=None, **kwargs):
     .. versionadded:: 2015.8.3
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' restartcheck.restartcheck
@@ -612,7 +614,8 @@ def restartcheck(ignorelist=None, blacklist=None, excludepid=None, **kwargs):
     for package in packages:
         _check_timeout(start_time, timeout)
         cmd = cmd_pkg_query + package
-        paths = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
+        cmd = shlex.split(cmd)
+        paths = subprocess.Popen(cmd, stdout=subprocess.PIPE)
 
         while True:
             _check_timeout(start_time, timeout)

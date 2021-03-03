@@ -125,6 +125,8 @@ For this example to work, you would need to have defined the grain
 Writing Grains
 ==============
 
+.. include:: ../../_incl/grains_passwords.rst
+
 The grains are derived by executing all of the "public" functions (i.e. those
 which do not begin with an underscore) found in the modules located in the
 Salt's core grains code, followed by those in any custom grains modules. The

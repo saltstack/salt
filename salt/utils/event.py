@@ -1146,7 +1146,7 @@ class EventPublisher(salt.utils.process.SignalHandlingProcess):
                 if self.opts["ipc_mode"] != "tcp" and (
                     self.opts["publisher_acl"] or self.opts["external_auth"]
                 ):
-                    os.chmod(
+                    os.chmod(  # nosec
                         os.path.join(self.opts["sock_dir"], "master_event_pub.ipc"),
                         0o666,
                     )

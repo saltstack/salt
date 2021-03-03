@@ -164,6 +164,8 @@ def list_queues(region, opts=None, user=None):
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt '*' aws_sqs.list_queues <region>
 
     """
@@ -193,6 +195,8 @@ def create_queue(name, region, opts=None, user=None):
         Run hg as a user other than what the minion runs as
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt '*' aws_sqs.create_queue <sqs queue> <region>
 
@@ -225,6 +229,8 @@ def delete_queue(name, region, opts=None, user=None):
         Run hg as a user other than what the minion runs as
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt '*' aws_sqs.delete_queue <sqs queue> <region>
 
@@ -271,6 +277,8 @@ def queue_exists(name, region, opts=None, user=None):
         Run hg as a user other than what the minion runs as
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt '*' aws_sqs.queue_exists <sqs queue> <region>
 

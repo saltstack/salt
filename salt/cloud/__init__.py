@@ -2,14 +2,12 @@
 The top level interface used to translate configuration data back to the
 correct cloud modules
 """
-
 import copy
 import glob
 import logging
 import multiprocessing
 import os
 import signal
-import sys
 import time
 import traceback
 from itertools import groupby
@@ -40,7 +38,7 @@ try:
     import Cryptodome.Random
 except ImportError:
     try:
-        import Crypto.Random
+        import Crypto.Random  # nosec
     except ImportError:
         pass  # pycrypto < 2.1
 
@@ -1664,6 +1662,8 @@ class Map(Cloud):
     def delete_map(self, query=None):
         query_map = self.interpolated_map(query=query)
         for alias, drivers in query_map.copy().items():
+            if alias == "Errors":
+                continue
             for driver, vms in drivers.copy().items():
                 for vm_name, vm_details in vms.copy().items():
                     if vm_details == "Absent":

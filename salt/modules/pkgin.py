@@ -138,7 +138,7 @@ def search(pkg_name, **kwargs):
 
 def latest_version(*names, **kwargs):
     """
-    .. versionchanged: 2016.3.0
+    .. versionchanged:: 2016.3.0
 
     Return the latest version of the named package available for upgrade or
     installation.
@@ -228,7 +228,6 @@ def refresh_db(force=False, **kwargs):
 
         .. versionadded:: 2018.3.0
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -255,9 +254,21 @@ def refresh_db(force=False, **kwargs):
     return True
 
 
+def _list_pkgs_from_context(versions_as_list):
+    """
+    Use pkg list from __context__
+    """
+    if versions_as_list:
+        return __context__["pkg.list_pkgs"]
+    else:
+        ret = copy.deepcopy(__context__["pkg.list_pkgs"])
+        __salt__["pkg_resource.stringify"](ret)
+        return ret
+
+
 def list_pkgs(versions_as_list=False, **kwargs):
     """
-    .. versionchanged: 2016.3.0
+    .. versionchanged:: 2016.3.0
 
     List the packages currently installed as a dict::
 
@@ -276,13 +287,8 @@ def list_pkgs(versions_as_list=False, **kwargs):
     ):
         return {}
 
-    if "pkg.list_pkgs" in __context__:
-        if versions_as_list:
-            return __context__["pkg.list_pkgs"]
-        else:
-            ret = copy.deepcopy(__context__["pkg.list_pkgs"])
-            __salt__["pkg_resource.stringify"](ret)
-            return ret
+    if "pkg.list_pkgs" in __context__ and kwargs.get("use_context", True):
+        return _list_pkgs_from_context(versions_as_list)
 
     pkgin = _check_pkgin()
     ret = {}
@@ -468,7 +474,6 @@ def upgrade(refresh=True, pkgs=None, **kwargs):
         {'<package>':  {'old': '<old-version>',
                         'new': '<new-version>'}}
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -652,7 +657,7 @@ def file_list(package, **kwargs):
 
 def file_dict(*packages, **kwargs):
     """
-    .. versionchanged: 2016.3.0
+    .. versionchanged:: 2016.3.0
 
     List the files that belong to a package.
 

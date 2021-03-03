@@ -3,6 +3,7 @@
 """
 
 import salt.states.lvm as lvm
+from salt.exceptions import ArgumentValueError
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -159,9 +160,92 @@ class LvmTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(lvm.__opts__, {"test": True}):
                 self.assertDictEqual(lvm.lv_present(name, vgname=vgname), ret)
 
+    def test_lv_present_with_valid_suffixes(self):
+        """
+        Test to create a new logical volume specifying valid suffixes
+        """
+        name = "testlv01"
+        vgname = "testvg01"
+        sizes_list = [
+            "2048",
+            "2048m",
+            "2048M",
+            "2048MB",
+            "2048mb",
+            "2g",
+            "2G",
+            "2GB",
+            "2gb",
+            "4194304s",
+            "4194304S",
+        ]
+        comt = "Logical Volume {} already present".format(name)
+        ret = {"name": name, "changes": {}, "result": True, "comment": comt}
+
+        mock = MagicMock(return_value=STUB_LVDISPLAY_LV01)
+        with patch.dict(lvm.__salt__, {"lvm.lvdisplay": mock}):
+            for size in sizes_list:
+                self.assertDictEqual(
+                    lvm.lv_present(name, vgname=vgname, size=size), ret
+                )
+
+        sizes_list = [
+            "1G",
+            "1g",
+            "2M",
+            "2m",
+            "3T",
+            "3t",
+            "4P",
+            "4p",
+            "5s",
+            "5S",
+            "1GB",
+            "1gb",
+            "2MB",
+            "2mb",
+            "3TB",
+            "3tb",
+            "4PB",
+            "4pb",
+        ]
+        mock = MagicMock(return_value=STUB_LVDISPLAY_LV02)
+        with patch.dict(lvm.__salt__, {"lvm.lvdisplay": mock}):
+            comt = "Logical Volume {} is set to be created".format(name)
+            ret.update({"comment": comt, "result": None})
+            with patch.dict(lvm.__opts__, {"test": True}):
+                for size in sizes_list:
+                    self.assertDictEqual(
+                        lvm.lv_present(name, vgname=vgname, size=size), ret
+                    )
+
+    def test_lv_present_with_invalid_suffixes(self):
+        """
+        Test to create a new logical volume specifying valid suffixes
+        """
+        name = "testlv01"
+        vgname = "testvg01"
+        sizes_list = ["1B", "1b", "2K", "2k", "2KB", "2kb", "3BB", "3Bb", "4JKL", "YJK"]
+        comt = "Logical Volume {} already present".format(name)
+        ret = {"name": name, "changes": {}, "result": True, "comment": comt}
+
+        mock = MagicMock(return_value=STUB_LVDISPLAY_LV02)
+        with patch.dict(lvm.__salt__, {"lvm.lvdisplay": mock}):
+            comt = "Logical Volume {} is set to be created".format(name)
+            ret.update({"comment": comt, "result": None})
+            with patch.dict(lvm.__opts__, {"test": True}):
+                for size in sizes_list:
+                    self.assertRaises(
+                        ArgumentValueError,
+                        lvm.lv_present,
+                        name,
+                        vgname=vgname,
+                        size=size,
+                    )
+
     def test_lv_present_with_percentage_extents(self):
         """
-        Test do create a new logical volume specifying extents as a percentage
+        Test to create a new logical volume specifying extents as a percentage
         """
         name = "testlv01"
         vgname = "testvg01"

@@ -557,7 +557,6 @@ def netmiko_multi_call(*methods, **kwargs):
         - ``args``: list of arguments to send to the ``name`` method.
         - ``kwargs``: key-value arguments to send to the ``name`` method.
 
-
     CLI Example:
 
     .. code-block:: bash

@@ -404,7 +404,7 @@ def _get_yum_config():
                     conf[opt] = cp.get("main", opt)
         else:
             log.warning(
-                "Could not find [main] section in %s, using internal " "defaults", fn
+                "Could not find [main] section in %s, using internal defaults", fn
             )
 
     return conf
@@ -676,6 +676,15 @@ def version_cmp(pkg1, pkg2, ignore_epoch=False, **kwargs):
     return __salt__["lowpkg.version_cmp"](pkg1, pkg2, ignore_epoch=ignore_epoch)
 
 
+def _list_pkgs_from_context(versions_as_list, contextkey, attr):
+    """
+    Use pkg list from __context__
+    """
+    return __salt__["pkg_resource.format_pkg_list"](
+        __context__[contextkey], versions_as_list, attr
+    )
+
+
 def list_pkgs(versions_as_list=False, **kwargs):
     """
     List the packages currently installed as a dict. By default, the dict
@@ -722,42 +731,42 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
     contextkey = "pkg.list_pkgs"
 
-    if contextkey not in __context__:
-        ret = {}
-        cmd = [
-            "rpm",
-            "-qa",
-            "--queryformat",
-            salt.utils.pkg.rpm.QUERYFORMAT.replace("%{REPOID}", "(none)") + "\n",
-        ]
-        output = __salt__["cmd.run"](cmd, python_shell=False, output_loglevel="trace")
-        for line in output.splitlines():
-            pkginfo = salt.utils.pkg.rpm.parse_pkginfo(
-                line, osarch=__grains__["osarch"]
-            )
-            if pkginfo is not None:
-                # see rpm version string rules available at https://goo.gl/UGKPNd
-                pkgver = pkginfo.version
-                epoch = None
-                release = None
-                if ":" in pkgver:
-                    epoch, pkgver = pkgver.split(":", 1)
-                if "-" in pkgver:
-                    pkgver, release = pkgver.split("-", 1)
-                all_attr = {
-                    "epoch": epoch,
-                    "version": pkgver,
-                    "release": release,
-                    "arch": pkginfo.arch,
-                    "install_date": pkginfo.install_date,
-                    "install_date_time_t": pkginfo.install_date_time_t,
-                }
-                __salt__["pkg_resource.add_pkg"](ret, pkginfo.name, all_attr)
+    if contextkey in __context__ and kwargs.get("use_context", True):
+        return _list_pkgs_from_context(versions_as_list, contextkey, attr)
 
-        for pkgname in ret:
-            ret[pkgname] = sorted(ret[pkgname], key=lambda d: d["version"])
+    ret = {}
+    cmd = [
+        "rpm",
+        "-qa",
+        "--queryformat",
+        salt.utils.pkg.rpm.QUERYFORMAT.replace("%{REPOID}", "(none)") + "\n",
+    ]
+    output = __salt__["cmd.run"](cmd, python_shell=False, output_loglevel="trace")
+    for line in output.splitlines():
+        pkginfo = salt.utils.pkg.rpm.parse_pkginfo(line, osarch=__grains__["osarch"])
+        if pkginfo is not None:
+            # see rpm version string rules available at https://goo.gl/UGKPNd
+            pkgver = pkginfo.version
+            epoch = None
+            release = None
+            if ":" in pkgver:
+                epoch, pkgver = pkgver.split(":", 1)
+            if "-" in pkgver:
+                pkgver, release = pkgver.split("-", 1)
+            all_attr = {
+                "epoch": epoch,
+                "version": pkgver,
+                "release": release,
+                "arch": pkginfo.arch,
+                "install_date": pkginfo.install_date,
+                "install_date_time_t": pkginfo.install_date_time_t,
+            }
+            __salt__["pkg_resource.add_pkg"](ret, pkginfo.name, all_attr)
 
-        __context__[contextkey] = ret
+    for pkgname in ret:
+        ret[pkgname] = sorted(ret[pkgname], key=lambda d: d["version"])
+
+    __context__[contextkey] = ret
 
     return __salt__["pkg_resource.format_pkg_list"](
         __context__[contextkey], versions_as_list, attr
@@ -1051,7 +1060,7 @@ def list_downloaded(**kwargs):
 
     List prefetched packages downloaded by Yum in the local disk.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -1085,7 +1094,7 @@ def info_installed(*names, **kwargs):
     :param all_versions:
         Include information for all versions of the packages installed on the minion.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -1682,9 +1691,7 @@ def install(
         holds = list_holds(full=False)
     except SaltInvocationError:
         holds = []
-        log.debug(
-            "Failed to get holds, versionlock plugin is probably not " "installed"
-        )
+        log.debug("Failed to get holds, versionlock plugin is probably not installed")
     unhold_prevented = []
 
     @contextlib.contextmanager
@@ -1840,7 +1847,6 @@ def upgrade(
 
         {'<package>':  {'old': '<old-version>',
                         'new': '<new-version>'}}
-
 
     CLI Example:
 
@@ -2338,7 +2344,7 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
                 else:
                     ret[target][
                         "comment"
-                    ] = "Package {} was unable to be " "unheld.".format(target)
+                    ] = "Package {} was unable to be unheld.".format(target)
         else:
             ret[target].update(result=True)
             ret[target]["comment"] = "Package {} is not being held.".format(target)
@@ -2365,7 +2371,6 @@ def list_holds(pattern=__HOLD_PATTERN, full=True):
     full : True
         Show the full hold definition including version and epoch. Set to
         ``False`` to return just the name of the package(s) being held.
-
 
     CLI Example:
 
@@ -3200,7 +3205,7 @@ def download(*packages, **kwargs):
         ``yum-utils`` will already be installed on the minion if the package
         was installed from the Fedora / EPEL repositories.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -3271,7 +3276,7 @@ def diff(*paths, **kwargs):
     :param path: Full path to the installed file
     :return: Difference string or raises and exception if examined file is binary.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 

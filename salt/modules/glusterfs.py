@@ -762,6 +762,7 @@ def get_max_op_version():
     Requires Glusterfs version > 3.9
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' glusterfs.get_max_op_version
@@ -823,7 +824,9 @@ def get_version():
     .. versionadded:: 2019.2.0
 
     Returns the version of glusterfs.
+
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' glusterfs.get_version

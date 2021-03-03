@@ -705,7 +705,7 @@ def sentinel_get_master_ip(master, host=None, port=None, password=None):
     """
     Get ip for sentinel master
 
-    .. versionadded: 2016.3.0
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 
@@ -722,7 +722,7 @@ def get_master_ip(host=None, port=None, password=None):
     """
     Get host information about slave
 
-    .. versionadded: 2016.3.0
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 

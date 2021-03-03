@@ -904,7 +904,8 @@ def set_vfstab(
     **kwargs
 ):
     """
-    ..verionadded:: 2016.3.2
+    .. versionadded:: 2016.3.2
+
     Verify that this mount is represented in the fstab, change the mount
     to match the data passed, or add the mount if it is not present.
 
@@ -1365,6 +1366,7 @@ def umount(name, device=None, user=None, util="mount"):
         salt '*' mount.umount /mnt/foo
 
     .. versionadded:: 2015.5.0
+
     .. code-block:: bash
 
         salt '*' mount.umount /mnt/foo /dev/xvdc1
