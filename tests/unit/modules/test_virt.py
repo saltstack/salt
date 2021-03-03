@@ -9,13 +9,13 @@ import datetime
 import os
 import shutil
 import tempfile
+import xml.etree.ElementTree as ET
 
 import salt.config
 import salt.modules.config as config
 import salt.modules.virt as virt
 import salt.syspaths
 import salt.utils.yaml
-from salt._compat import ElementTree as ET
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 # pylint: disable=import-error

@@ -1925,6 +1925,23 @@ class EAuthMixIn(metaclass=MixInMeta):
         self.add_option_group(group)
 
 
+class JIDMixin:
+
+    _mixin_prio_ = 30
+
+    def _mixin_setup(self):
+        self.add_option(
+            "--jid",
+            default=None,
+            help="Pass a JID to be used instead of generating one.",
+        )
+
+    def process_jid(self):
+        if self.options.jid is not None:
+            if not salt.utils.jid.is_jid(self.options.jid):
+                self.error("'{}' is not a valid JID".format(self.options.jid))
+
+
 class MasterOptionParser(
     OptionParser,
     ConfigDirMixIn,
@@ -3023,6 +3040,7 @@ class SaltRunOptionParser(
     ProfilingPMixIn,
     EAuthMixIn,
     NoParseMixin,
+    JIDMixin,
     metaclass=OptionParserMeta,
 ):
 
@@ -3109,6 +3127,7 @@ class SaltSSHOptionParser(
     SaltfileMixIn,
     HardCrashMixin,
     NoParseMixin,
+    JIDMixin,
     metaclass=OptionParserMeta,
 ):
 
@@ -3254,11 +3273,6 @@ class SaltSSHOptionParser(
             "--python3-bin",
             default="python3",
             help="Path to a python3 binary which has salt installed.",
-        )
-        self.add_option(
-            "--jid",
-            default=None,
-            help="Pass a JID to be used instead of generating one.",
         )
 
         self.add_option(
@@ -3423,11 +3437,6 @@ class SaltSSHOptionParser(
         opts = config.master_config(self.get_config_file_path())
         salt.features.setup_features(opts)
         return opts
-
-    def process_jid(self):
-        if self.options.jid is not None:
-            if not salt.utils.jid.is_jid(self.options.jid):
-                self.error("'{}' is not a valid JID".format(self.options.jid))
 
 
 class SaltCloudParser(

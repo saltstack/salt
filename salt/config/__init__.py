@@ -372,6 +372,8 @@ VALID_OPTS = immutabletypes.freeze(
         "state_output": str,
         # Tells the highstate outputter to only report diffs of states that changed
         "state_output_diff": bool,
+        # Tells the highstate outputter whether profile information will be shown for each state run
+        "state_output_profile": bool,
         # When true, states run in the order defined in an SLS file, unless requisites re-order them
         "state_auto_order": bool,
         # Fire events as state chunks are processed by the state compiler
@@ -1145,6 +1147,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "state_verbose": True,
         "state_output": "full",
         "state_output_diff": False,
+        "state_output_profile": True,
         "state_auto_order": True,
         "state_events": False,
         "state_aggregate": False,
@@ -1247,6 +1250,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "schedule": {},
         "ssh_merge_pillar": True,
         "disabled_requisites": [],
+        "reactor_niceness": None,
     }
 )
 
@@ -1477,6 +1481,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "state_verbose": True,
         "state_output": "full",
         "state_output_diff": False,
+        "state_output_profile": True,
         "state_auto_order": True,
         "state_events": False,
         "state_aggregate": False,

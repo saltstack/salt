@@ -1,5 +1,6 @@
+import xml.etree.ElementTree as ET
+
 import salt.utils.xmlutil as xmlutil
-from salt._compat import ElementTree as ET
 
 
 def append_to_XMLDesc(mocked, fragment):

@@ -75,7 +75,9 @@ def list_topics(region=None, key=None, keyid=None, profile=None):
     """
     Returns a list of the requester's topics
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto3_sns.list_topics
     """
@@ -96,7 +98,9 @@ def describe_topic(name, region=None, key=None, keyid=None, profile=None):
     """
     Returns details about a specific SNS topic, specified by name or ARN.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt my_favorite_client boto3_sns.describe_topic a_sns_topic_of_my_choice
     """
@@ -126,7 +130,9 @@ def topic_exists(name, region=None, key=None, keyid=None, profile=None):
     """
     Check to see if an SNS topic exists.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto3_sns.topic_exists mytopic region=us-east-1
     """
@@ -138,7 +144,9 @@ def create_topic(Name, region=None, key=None, keyid=None, profile=None):
     """
     Create an SNS topic.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto3_sns.create_topic mytopic region=us-east-1
     """
@@ -159,7 +167,9 @@ def delete_topic(TopicArn, region=None, key=None, keyid=None, profile=None):
     """
     Delete an SNS topic.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto3_sns.delete_topic mytopic region=us-east-1
     """
@@ -178,7 +188,9 @@ def get_topic_attributes(TopicArn, region=None, key=None, keyid=None, profile=No
     Returns all of the properties of a topic.  Topic properties returned might differ based on the
     authorization of the user.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto3_sns.get_topic_attributes someTopic region=us-west-1
     """
@@ -202,7 +214,9 @@ def set_topic_attributes(
     """
     Set an attribute of a topic to a new value.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto3_sns.set_topic_attributes someTopic DisplayName myDisplayNameValue
     """
@@ -237,7 +251,9 @@ def list_subscriptions_by_topic(
     """
     Returns a list of the subscriptions to a specific topic
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto3_sns.list_subscriptions_by_topic mytopic region=us-east-1
     """
@@ -262,7 +278,9 @@ def list_subscriptions(region=None, key=None, keyid=None, profile=None):
     """
     Returns a list of the requester's topics
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto3_sns.list_subscriptions region=us-east-1
     """
@@ -287,7 +305,9 @@ def get_subscription_attributes(
     """
     Returns all of the properties of a subscription.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto3_sns.get_subscription_attributes somesubscription region=us-west-1
     """
@@ -317,7 +337,9 @@ def set_subscription_attributes(
     """
     Set an attribute of a subscription to a new value.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto3_sns.set_subscription_attributes someSubscription RawMessageDelivery jsonStringValue
     """
@@ -352,7 +374,9 @@ def subscribe(
     """
     Subscribe to a Topic.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto3_sns.subscribe mytopic https https://www.example.com/sns-endpoint
     """

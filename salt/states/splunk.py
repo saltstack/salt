@@ -1,7 +1,7 @@
 """
 Splunk User State Module
 
-.. versionadded:: 2016.3.0.
+.. versionadded:: 2016.3.0
 
 This state is used to ensure presence of users in splunk.
 

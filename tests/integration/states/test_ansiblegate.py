@@ -11,16 +11,16 @@ import salt.utils.files
 import salt.utils.path
 import yaml
 from tests.support.case import ModuleCase
-from tests.support.helpers import flaky, requires_system_grains
+from tests.support.helpers import requires_system_grains
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import SkipTest, skipIf
+from tests.support.unit import SkipTest
 
 
 @pytest.mark.destructive_test
 @pytest.mark.requires_sshd_server
-@skipIf(
-    not salt.utils.path.which("ansible-playbook"), "ansible-playbook is not installed"
+@pytest.mark.skip_if_binaries_missing(
+    "ansible-playbook", message="ansible-playbook is not installed"
 )
 class AnsiblePlaybooksTestCase(ModuleCase, SaltReturnAssertsMixin):
     """
@@ -63,7 +63,7 @@ class AnsiblePlaybooksTestCase(ModuleCase, SaltReturnAssertsMixin):
         delattr(self, "tempdir")
         delattr(self, "inventory")
 
-    @flaky
+    @pytest.mark.flaky(max_runs=4)
     def test_ansible_playbook(self):
         ret = self.run_state(
             "ansible.playbooks",

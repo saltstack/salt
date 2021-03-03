@@ -99,6 +99,7 @@ def bridge_list():
     .. versionadded:: 2016.3.0
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' openvswitch.bridge_list
@@ -120,6 +121,7 @@ def bridge_exists(br):
     .. versionadded:: 2016.3.0
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' openvswitch.bridge_exists br0
@@ -144,6 +146,7 @@ def bridge_create(br, may_exist=True):
     .. versionadded:: 2016.3.0
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' openvswitch.bridge_create br0
@@ -168,6 +171,7 @@ def bridge_delete(br, if_exists=True):
     .. versionadded:: 2016.3.0
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' openvswitch.bridge_delete br0
@@ -195,6 +199,7 @@ def port_add(br, port, may_exist=False, internal=False):
     .. versionadded:: 2016.3.0
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' openvswitch.port_add br0 8080
@@ -223,6 +228,7 @@ def port_remove(br, port, if_exists=True):
     .. versionadded:: 2016.3.0
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' openvswitch.port_remove br0 8080
@@ -251,6 +257,7 @@ def port_list(br):
     .. versionadded:: 2016.3.0
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' openvswitch.port_list br0
@@ -275,6 +282,7 @@ def port_get_tag(port):
     .. versionadded:: 2016.3.0
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' openvswitch.port_get_tag tap0
@@ -299,6 +307,7 @@ def interface_get_options(port):
     .. versionadded:: 2016.3.0
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' openvswitch.interface_get_options tap0
@@ -323,6 +332,7 @@ def interface_get_type(port):
     .. versionadded:: 2016.3.0
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' openvswitch.interface_get_type tap0
@@ -350,6 +360,7 @@ def port_create_vlan(br, port, id, internal=False):
     .. versionadded:: 2016.3.0
 
     CLI Example:
+
     .. code-block:: bash
 
        salt '*' openvswitch.port_create_vlan br0 tap0 100
@@ -391,6 +402,7 @@ def port_create_gre(br, port, id, remote):
     .. versionadded:: 2016.3.0
 
     CLI Example:
+
     .. code-block:: bash
 
        salt '*' openvswitch.port_create_gre br0 gre1 5001 192.168.1.10
@@ -433,6 +445,7 @@ def port_create_vxlan(br, port, id, remote, dst_port=None):
     .. versionadded:: 2016.3.0
 
     CLI Example:
+
     .. code-block:: bash
 
        salt '*' openvswitch.port_create_vxlan br0 vx1 5001 192.168.1.10 8472

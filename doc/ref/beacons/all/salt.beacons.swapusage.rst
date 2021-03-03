@@ -1,5 +1,5 @@
-salt.beacons.swapusage module
-=============================
+salt.beacons.swapusage
+======================
 
 .. automodule:: salt.beacons.swapusage
     :members:

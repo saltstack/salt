@@ -8,3 +8,4 @@ python-dateutil>=2.8.0
 python-gnupg>=0.4.4
 setproctitle>=1.1.10
 timelib>=0.2.5
+distro>=1.3.0

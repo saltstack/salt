@@ -196,6 +196,13 @@ def flaky(caller=None, condition=True, attempts=4):
         def test_sometimes_works(self):
             pass
     """
+    salt.utils.versions.warn_until_date(
+        "20220101",
+        "Please stop using `@flaky`, it will be removed in {date}, and instead use "
+        "`@pytest.mark.flaky`. See https://pypi.org/project/flaky for information on "
+        "how to use it.",
+        stacklevel=3,
+    )
     if caller is None:
         return functools.partial(flaky, condition=condition, attempts=attempts)
 
@@ -1731,9 +1738,7 @@ class VirtualEnv:
         sminion.functions.virtualenv.create(
             self.venv_dir, python=self._get_real_python()
         )
-        self.install("-U", "pip")
-        # https://github.com/pypa/setuptools/issues?q=is%3Aissue+setuptools+50+
-        self.install("-U", "setuptools<50.0.0")
+        self.install("-U", "pip", "setuptools!=50.*,!=51.*,!=52.*")
 
 
 @contextmanager

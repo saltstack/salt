@@ -264,6 +264,8 @@ def head(
 
     CLI Examples:
 
+    .. code-block:: bash
+
         salt myminion s3.head mybucket
         salt myminion s3.head mybucket myfile.png
     """

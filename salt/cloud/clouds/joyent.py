@@ -62,7 +62,6 @@ import salt.utils.files
 import salt.utils.http
 import salt.utils.json
 import salt.utils.yaml
-from salt.cloud.libcloudfuncs import node_state
 from salt.exceptions import (
     SaltCloudExecutionFailure,
     SaltCloudExecutionTimeout,
@@ -84,8 +83,8 @@ except ImportError:
         HAS_REQUIRED_CRYPTO = True
     except ImportError:
         try:
-            from Crypto.Hash import SHA256
-            from Crypto.Signature import PKCS1_v1_5
+            from Crypto.Hash import SHA256  # nosec
+            from Crypto.Signature import PKCS1_v1_5  # nosec
 
             HAS_REQUIRED_CRYPTO = True
         except ImportError:
@@ -134,12 +133,19 @@ def __virtual__():
     return __virtualname__
 
 
+def _get_active_provider_name():
+    try:
+        return __active_provider_name__.value()
+    except AttributeError:
+        return __active_provider_name__
+
+
 def get_configured_provider():
     """
     Return the first configured instance.
     """
     return config.is_provider_configured(
-        __opts__, __active_provider_name__ or __virtualname__, ("user", "password")
+        __opts__, _get_active_provider_name() or __virtualname__, ("user", "password")
     )
 
 
@@ -259,7 +265,10 @@ def create(vm_):
         if (
             vm_["profile"]
             and config.is_profile_configured(
-                __opts__, __active_provider_name__ or "joyent", vm_["profile"], vm_=vm_
+                __opts__,
+                _get_active_provider_name() or "joyent",
+                vm_["profile"],
+                vm_=vm_,
             )
             is False
         ):
@@ -434,7 +443,7 @@ def destroy(name, call=None):
 
     if __opts__.get("update_cachedir", False) is True:
         __utils__["cloud.delete_minion_cachedir"](
-            name, __active_provider_name__.split(":")[0], __opts__
+            name, _get_active_provider_name().split(":")[0], __opts__
         )
 
     return ret[0] in VALID_RESPONSE_CODES
@@ -496,7 +505,6 @@ def start(name, call=None):
     :param name: name given to the machine
     :param call: call value in this case is 'action'
     :return: true if successful
-
 
     CLI Example:
 
@@ -690,6 +698,38 @@ def show_instance(name, call=None):
     return ret
 
 
+def _old_libcloud_node_state(id_):
+    """
+    Libcloud supported node states
+    """
+    states_int = {
+        0: "RUNNING",
+        1: "REBOOTING",
+        2: "TERMINATED",
+        3: "PENDING",
+        4: "UNKNOWN",
+        5: "STOPPED",
+        6: "SUSPENDED",
+        7: "ERROR",
+        8: "PAUSED",
+    }
+    states_str = {
+        "running": "RUNNING",
+        "rebooting": "REBOOTING",
+        "starting": "STARTING",
+        "terminated": "TERMINATED",
+        "pending": "PENDING",
+        "unknown": "UNKNOWN",
+        "stopping": "STOPPING",
+        "stopped": "STOPPED",
+        "suspended": "SUSPENDED",
+        "error": "ERROR",
+        "paused": "PAUSED",
+        "reconfiguring": "RECONFIGURING",
+    }
+    return states_str[id_] if isinstance(id_, str) else states_int[id_]
+
+
 def joyent_node_state(id_):
     """
     Convert joyent returned state to state common to other data center return
@@ -710,7 +750,7 @@ def joyent_node_state(id_):
     if id_ not in states:
         id_ = "unknown"
 
-    return node_state(states[id_])
+    return _old_libcloud_node_state(states[id_])
 
 
 def reformat_node(item=None, full=False):
