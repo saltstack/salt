@@ -676,7 +676,27 @@ def _execute(cur, qry, args=None):
 def _sanitize_comments(content):
     # Remove comments which might affect line by line parsing
     # Regex should remove any text beginning with # (or --) not inside of ' or "
-    return sqlparse.format(content, strip_comments=True)
+    if HAS_SQLPARSE:
+        return sqlparse.format(content, strip_comments=True)
+    else:
+        content = re.sub(
+            r"""(['"](?:[^'"]+|(?<=\\)['"])*['"])|#[^\n]*""",
+            lambda m: m.group(1) or "",
+            content,
+            re.S,
+        )
+        content = re.sub(
+            r"""(['"](?:[^'"]+|(?<=\\)['"])*['"])|--[^\n]*""",
+            lambda m: m.group(1) or "",
+            content,
+            re.S,
+        )
+        cleaned = ""
+        for line in content.splitlines():
+            line = line.strip()
+            if line != "":
+                cleaned += line + "\n"
+        return cleaned
 
 
 def query(database, query, **connection_args):
@@ -841,8 +861,7 @@ def file_query(database, file_name, **connection_args):
 
     """
     if not HAS_SQLPARSE:
-        log.error("mysql.file_query unavailable, no python sqlparse library installed.")
-        return False
+        log.info("mysql.file_query unavailable, no python sqlparse library installed. Using module:re")
 
     if any(
         file_name.startswith(proto)
