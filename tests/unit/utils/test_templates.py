@@ -6,6 +6,7 @@ Unit tests for salt.utils.templates.py
 import logging
 import os
 import sys
+from collections import OrderedDict
 from pathlib import PurePath, PurePosixPath
 
 import pytest
@@ -58,8 +59,8 @@ class RenderTestCase(TestCase):
         self.assertEqual(res, "OK")
 
     def test_render_jinja_tojson_sorted(self):
-        templ = """thing: {{ var|tojson(sort_keys=False) }}"""
-        expected = """thing: {"z": "zzz", "y": "yyy", "x": "xxx"}"""
+        templ = """thing: {{ var|tojson(sort_keys=True) }}"""
+        expected = """thing: {"x": "xxx", "y": "yyy", "z": "zzz"}"""
 
         with patch.dict(self.context, {"var": {"z": "zzz", "y": "yyy", "x": "xxx"}}):
             res = salt.utils.templates.render_jinja_tmpl(templ, self.context)
@@ -68,9 +69,16 @@ class RenderTestCase(TestCase):
 
     def test_render_jinja_tojson_unsorted(self):
         templ = """thing: {{ var|tojson(sort_keys=False) }}"""
-        expected = """thing: {"z": "zzz", "y": "yyy", "x": "xxx"}"""
+        expected = """thing: {"z": "zzz", "x": "xxx", "y": "yyy"}"""
 
-        with patch.dict(self.context, {"var": {"z": "zzz", "y": "yyy", "x": "xxx"}}):
+        # Values must be added to the dict in the expected order. This is
+        # only necessary for older Pythons that don't remember dict order.
+        d = OrderedDict()
+        d["z"] = "zzz"
+        d["x"] = "xxx"
+        d["y"] = "yyy"
+
+        with patch.dict(self.context, {"var": d}):
             res = salt.utils.templates.render_jinja_tmpl(templ, self.context)
 
         assert res == expected
@@ -417,9 +425,7 @@ class WrapRenderTestCase(TestCase):
             slspath="foo/foo",
         )
 
-    @patch(
-        "salt.utils.templates._generate_sls_context_legacy", return_value="legacy"
-    )
+    @patch("salt.utils.templates._generate_sls_context_legacy", return_value="legacy")
     @patch("salt.utils.templates._generate_sls_context", return_value="new")
     @patch("salt.utils.templates.features.get", return_value=True)
     def test_feature_flag_on(self, feature_get, new_impl, legacy_impl):
@@ -430,9 +436,7 @@ class WrapRenderTestCase(TestCase):
         new_impl.assert_called_with(tplpath, sls)
         legacy_impl.assert_not_called()
 
-    @patch(
-        "salt.utils.templates._generate_sls_context_legacy", return_value="legacy"
-    )
+    @patch("salt.utils.templates._generate_sls_context_legacy", return_value="legacy")
     @patch("salt.utils.templates._generate_sls_context", return_value="new")
     @patch("salt.utils.templates.features.get", return_value=False)
     def test_feature_flag_off(self, feature_get, new_impl, legacy_impl):
