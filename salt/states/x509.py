@@ -177,7 +177,6 @@ import os
 import re
 
 import salt.exceptions
-import salt.utils.versions
 
 try:
     from M2Crypto.RSA import RSAError
@@ -638,9 +637,6 @@ def certificate_managed(name, days_remaining=90, append_certs=None, **kwargs):
             - backup: True
 
     """
-    if "managed_private_key" in kwargs:
-        raise ValueError("'managed_private_key' HAS BEEN DEPRECATED!")
-
     if "path" in kwargs:
         name = kwargs.pop("path")
 
