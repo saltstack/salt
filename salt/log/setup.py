@@ -12,7 +12,6 @@
     logger instance uses our ``salt.log.setup.SaltLoggingClass``.
 """
 
-
 import logging
 import logging.handlers
 import multiprocessing
