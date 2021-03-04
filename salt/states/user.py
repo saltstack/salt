@@ -982,7 +982,7 @@ def present(
         else:
             # if we failed to create a user, result is either false or
             # str in the case of windows so handle both cases here
-            if salt.utils.platform.is_windows() and isinstance(result, str):
+            if isinstance(result, str):
                 ret["comment"] = result
             else:
                 ret["comment"] = "Failed to create new user {}".format(name)
