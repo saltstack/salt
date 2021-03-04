@@ -46,15 +46,16 @@ the mine where it can be easily retrieved by other minions.
 
 .. code-block:: yaml
 
-    salt-minion:
-      service.running:
-        - enable: True
-        - watch:
-          - file: /etc/salt/minion.d/x509.conf
-
     /etc/salt/minion.d/x509.conf:
       file.managed:
         - source: salt://x509.conf
+
+    restart-salt-minion:
+      cmd.run:
+        - name: 'salt-call service.restart salt-minion'
+        - bg: True
+        - onchanges:
+          - file: /etc/salt/minion.d/x509.conf
 
     /etc/pki:
       file.directory
@@ -62,9 +63,8 @@ the mine where it can be easily retrieved by other minions.
     /etc/pki/issued_certs:
       file.directory
 
-    /etc/pki/ca.crt:
+    /etc/pki/ca.key:
       x509.private_key_managed:
-        - name: /etc/pki/ca.key
         - bits: 4096
         - backup: True
 
