@@ -1144,6 +1144,31 @@ repos:
         additional_dependencies: [black==19.10b0]
   # <---- Code Formatting --------------------------------------------------------------------------------------------
 
+  # ----- Security -------------------------------------------------------------------------------------------------->
+  - repo: https://github.com/PyCQA/bandit
+    rev: "1.7.0"
+    hooks:
+      - id: bandit
+        alias: bandit-salt
+        name: Run bandit against Salt
+        args: [--silent, -lll, --skip, B701]
+        exclude: >
+            (?x)^(
+                templates/.*|
+                salt/ext/.*|
+                tests/.*
+            )$
+  - repo: https://github.com/PyCQA/bandit
+    rev: "1.7.0"
+    hooks:
+      - id: bandit
+        alias: bandit-tests
+        name: Run bandit against the test suite
+        args: [--silent, -lll, B701]
+        files: ^tests/.*
+        exclude: ^tests/minionswarm\.py
+  # <---- Security ---------------------------------------------------------------------------------------------------
+
   # ----- Pre-Commit ------------------------------------------------------------------------------------------------>
   - repo: https://github.com/saltstack/mirrors-nox
     rev: v2020.8.22

@@ -2535,8 +2535,7 @@ def remove_sshkey(host, known_hosts=None):
     else:
         log.debug("Removing ssh key for %s from known hosts file", host)
 
-    cmd = "ssh-keygen -R {}".format(host)
-    subprocess.call(cmd, shell=True)
+    subprocess.call(["ssh-keygen", "-R", host])
 
 
 def wait_for_ip(

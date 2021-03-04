@@ -57,7 +57,7 @@ except ImportError:
     try:
         from Cryptodome.PublicKey import RSA
     except ImportError:
-        from Crypto.PublicKey import RSA
+        from Crypto.PublicKey import RSA  # nosec
 
 __virtualname__ = "digicert"
 log = logging.getLogger(__name__)
