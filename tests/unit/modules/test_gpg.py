@@ -156,7 +156,6 @@ except ImportError:
     HAS_GPG = False
 
 
-@pytest.mark.destructive_test
 @skipIf(not salt.utils.platform.is_linux(), "These tests can only be run on linux")
 class GpgTestCase(TestCase, LoaderModuleMockMixin):
     """
@@ -319,7 +318,6 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
                     ret = gpg.get_key("xxxxxxxxxxxxxxxx")
                     self.assertEqual(ret, _expected_result)
 
-    @pytest.mark.destructive_test  # Need to run as root!?
     @skipIf(not HAS_GPG, "GPG Module Unavailable")
     def test_delete_key_without_passphrase(self):
         """
@@ -390,7 +388,6 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
                             expect_passphrase=False,
                         )
 
-    @pytest.mark.destructive_test  # Need to run as root!?
     @skipIf(not HAS_GPG, "GPG Module Unavailable")
     def test_delete_key_with_passphrase_without_gpg_passphrase_in_pillar(self):
         """
@@ -457,7 +454,6 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
                         self.assertEqual(ret, _expected_result)
                         gnupg_delete_keys.assert_not_called()
 
-    @pytest.mark.destructive_test  # Need to run as root!?
     @skipIf(not HAS_GPG, "GPG Module Unavailable")
     def test_delete_key_with_passphrase_with_gpg_passphrase_in_pillar(self):
         """
@@ -529,7 +525,6 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
                             passphrase=GPG_TEST_KEY_PASSPHRASE,
                         )
 
-    @pytest.mark.destructive_test  # Need to run as root!?
     @skipIf(not HAS_GPG, "GPG Module Unavailable")
     def test_export_key_without_passphrase(self):
         """
@@ -565,7 +560,6 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
                         ["xxxxxxxxxxxxxxxx"], False, expect_passphrase=False,
                     )
 
-    @pytest.mark.destructive_test  # Need to run as root!?
     @skipIf(not HAS_GPG, "GPG Module Unavailable")
     def test_export_multiple_keys_without_passphrase(self):
         """
@@ -605,7 +599,6 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
                         expect_passphrase=False,
                     )
 
-    @pytest.mark.destructive_test  # Need to run as root!?
     @skipIf(not HAS_GPG, "GPG Module Unavailable")
     def test_export_key_with_passphrase_without_gpg_passphrase_in_pillar(self):
         """
@@ -642,7 +635,6 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
                         assert gpg.export_key("xxxxxxxxxxxxxxxx", use_passphrase=True)
                     gnupg_export_keys.assert_not_called()
 
-    @pytest.mark.destructive_test  # Need to run as root!?
     @skipIf(not HAS_GPG, "GPG Module Unavailable")
     def test_export_key_with_passphrase_with_gpg_passphrase_in_pillar(self):
         """
@@ -681,7 +673,6 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
                         ["xxxxxxxxxxxxxxxx"], False, passphrase=GPG_TEST_KEY_PASSPHRASE,
                     )
 
-    @pytest.mark.destructive_test  # Need to run as root!?
     @pytest.mark.slow_test
     @skipIf(not HAS_GPG, "GPG Module Unavailable")
     def test_create_key_without_passphrase(self):
@@ -713,7 +704,6 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertTrue(ret["fingerprint"])
                 self.assertEqual(ret["message"], "GPG key pair successfully generated.")
 
-    @pytest.mark.destructive_test  # Need to run as root!?
     @pytest.mark.slow_test
     @skipIf(not HAS_GPG, "GPG Module Unavailable")
     def test_create_key_with_passphrase_without_gpg_passphrase_in_pillar(self):
@@ -749,7 +739,6 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
                     ret["message"], "gpg_passphrase not available in pillar."
                 )
 
-    @pytest.mark.destructive_test  # Need to run as root!?
     @pytest.mark.slow_test
     @skipIf(not HAS_GPG, "GPG Module Unavailable")
     def test_create_key_with_passphrase_with_gpg_passphrase_in_pillar(self):

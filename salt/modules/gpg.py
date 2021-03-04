@@ -536,6 +536,8 @@ def delete_key(
         Whether to use a passphrase with the signing key. Passphrase is received
         from Pillar.
 
+        .. versionadded: 3003
+
     CLI Example:
 
     .. code-block:: bash
@@ -830,6 +832,8 @@ def export_key(
     use_passphrase
         Whether to use a passphrase with the signing key. Passphrase is received
         from Pillar.
+
+        .. versionadded: 3003
 
     CLI Example:
 
