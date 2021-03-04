@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 XenServer Cloud Driver
 ======================
@@ -59,20 +57,13 @@ Example profile configuration:
 
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import time
 from datetime import datetime
 
-# Import salt libs
 import salt.config as config
-
-# Import Salt-Cloud Libs
 import salt.utils.cloud
 from salt.exceptions import SaltCloudException, SaltCloudSystemExit
-from salt.ext import six
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -103,6 +94,13 @@ def __virtual__():
     return __virtualname__
 
 
+def _get_active_provider_name():
+    try:
+        return __active_provider_name__.value()
+    except AttributeError:
+        return __active_provider_name__
+
+
 def _get_dependencies():
     """
     Warn if dependencies aren't met.
@@ -117,7 +115,7 @@ def get_configured_provider():
     Return the first configured instance.
     """
     return config.is_provider_configured(
-        __opts__, __active_provider_name__ or __virtualname__, ("url",)
+        __opts__, _get_active_provider_name() or __virtualname__, ("url",)
     )
 
 
@@ -154,7 +152,7 @@ def _get_session():
         )
         session.xenapi.login_with_password(user, password, api_version, originator)
     except XenAPI.Failure as ex:
-        pool_master_addr = six.text_type(ex.__dict__["details"][1])
+        pool_master_addr = str(ex.__dict__["details"][1])
         slash_parts = url.split("/")
         new_url = "/".join(slash_parts[:2]) + "/" + pool_master_addr
         session = XenAPI.Session(new_url)
@@ -323,7 +321,7 @@ def list_nodes_full(session=None):
                 del vm_cfg["snapshot_time"]
             ret[record["name_label"]] = vm_cfg
 
-    provider = __active_provider_name__ or "xen"
+    provider = _get_active_provider_name() or "xen"
     if ":" in provider:
         comps = provider.split(":")
         provider = comps[0]
@@ -485,7 +483,7 @@ def show_instance(name, session=None, call=None):
             "public_ips": None,
         }
 
-        __utils__["cloud.cache_node"](ret, __active_provider_name__, __opts__)
+        __utils__["cloud.cache_node"](ret, _get_active_provider_name(), __opts__)
     return ret
 
 
@@ -547,7 +545,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "starting create",
-        "salt/cloud/{0}/creating".format(name),
+        "salt/cloud/{}/creating".format(name),
         args={"name": name, "profile": vm_["profile"], "provider": vm_["driver"]},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -577,7 +575,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "requesting instance",
-        "salt/cloud/{0}/requesting".format(name),
+        "salt/cloud/{}/requesting".format(name),
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
     )
@@ -620,7 +618,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "created instance",
-        "salt/cloud/{0}/created".format(name),
+        "salt/cloud/{}/created".format(name),
         args={"name": name, "profile": vm_["profile"], "provider": vm_["driver"]},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -978,7 +976,7 @@ def destroy(name=None, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroying instance",
-        "salt/cloud/{0}/destroying".format(name),
+        "salt/cloud/{}/destroying".format(name),
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -1003,14 +1001,14 @@ def destroy(name=None, call=None):
         __utils__["cloud.fire_event"](
             "event",
             "destroyed instance",
-            "salt/cloud/{0}/destroyed".format(name),
+            "salt/cloud/{}/destroyed".format(name),
             args={"name": name},
             sock_dir=__opts__["sock_dir"],
             transport=__opts__["transport"],
         )
         if __opts__.get("update_cachedir", False) is True:
             __utils__["cloud.delete_minion_cachedir"](
-                name, __active_provider_name__.split(":")[0], __opts__
+                name, _get_active_provider_name().split(":")[0], __opts__
             )
         __utils__["cloud.cachedir_index_del"](name)
         return ret

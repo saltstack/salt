@@ -982,7 +982,6 @@ def multi_find(*patterns, **kwargs):
     display: ``True``
         Display on the screen or return structured object? Default: `True` (return on the CLI).
 
-
     CLI Example:
 
     .. code-block:: bash
