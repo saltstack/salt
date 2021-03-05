@@ -27,7 +27,6 @@ def configure_loader_modules():
 
 
 def test_user_present_create():
-
     """
     user_present method - create
     """
@@ -48,7 +47,6 @@ def test_user_present_create():
 
 
 def test_user_present_create_opts_test():
-
     """
     user_present method - create opts
     """
@@ -69,7 +67,6 @@ def test_user_present_create_opts_test():
 
 
 def test_user_present_create_non_defaults():
-
     """
     user_present method - create non default opts
     """
@@ -117,7 +114,6 @@ def test_user_present_create_non_defaults():
 
 
 def test_user_present_create_encrypted_password_no_roles_opts_test():
-
     """
     user_present method - encrypted password, no roles
     """
@@ -148,7 +144,6 @@ def test_user_present_create_encrypted_password_no_roles_opts_test():
 
 
 def test_user_present_create_user_exists():
-
     """
     user_present method - user exists
     """
@@ -179,7 +174,6 @@ def test_user_present_create_user_exists():
 
 
 def test_user_present_create_user_exists_opts_test():
-
     """
     user_present method - user exists with opts
     """
@@ -216,7 +210,6 @@ def test_user_present_create_user_exists_opts_test():
 
 
 def test_user_absent():
-
     """
     user_absent method - remove user
     """
@@ -238,7 +231,6 @@ def test_user_absent():
 
 
 def test_user_absent_user_does_not_exist():
-
     """
     user_absent method - remove user
     """
@@ -259,7 +251,6 @@ def test_user_absent_user_does_not_exist():
 
 
 def test_user_absent_test_opts():
-
     """
     user_absent method - remove user with opts
     """
@@ -281,7 +272,6 @@ def test_user_absent_test_opts():
 
 
 def test_config_present():
-
     """
     config_present method - add config
     """
@@ -319,7 +309,6 @@ def test_config_present():
 
 
 def test_config_present_already_configured():
-
     """
     config_present method - add config already configured
     """
@@ -343,7 +332,6 @@ def test_config_present_already_configured():
 
 
 def test_config_present_test_opts():
-
     """
     config_present method - add config
     """
@@ -381,7 +369,6 @@ def test_config_present_test_opts():
 
 
 def test_config_present_fail_to_add():
-
     """
     config_present method - add config fails
     """
@@ -413,7 +400,6 @@ def test_config_present_fail_to_add():
 
 
 def test_replace():
-
     """
     replace method - replace config
     """
@@ -450,7 +436,6 @@ def test_replace():
 
 
 def test_replace_test_opts():
-
     """
     replace method - replace config
     """
@@ -484,7 +469,6 @@ def test_replace_test_opts():
 
 
 def test_config_absent():
-
     """
     config_absent method - remove config
     """
@@ -523,7 +507,6 @@ def test_config_absent():
 
 
 def test_config_absent_already_configured():
-
     """
     config_absent method - add config removed
     """
@@ -547,7 +530,6 @@ def test_config_absent_already_configured():
 
 
 def test_config_absent_test_opts():
-
     """
     config_absent method - remove config
     """
