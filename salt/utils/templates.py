@@ -460,13 +460,9 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
             undefined=jinja2.StrictUndefined, **env_args
         )
 
-    tojson_filter = jinja_env.filters.get("tojson")
     indent_filter = jinja_env.filters.get("indent")
     jinja_env.tests.update(JinjaTest.salt_jinja_tests)
     jinja_env.filters.update(JinjaFilter.salt_jinja_filters)
-    if tojson_filter is not None:
-        # Use the existing tojson filter, if present (jinja2 >= 2.9)
-        jinja_env.filters["tojson"] = tojson_filter
     if salt.utils.jinja.JINJA_VERSION >= LooseVersion("2.11"):
         # Use the existing indent filter on Jinja versions where it's not broken
         jinja_env.filters["indent"] = indent_filter
