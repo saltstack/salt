@@ -87,8 +87,8 @@ def __virtual__():
 def get_sd_id(name):
     """
     Function to fetch storage domain available in the cluster.
-    
-    :return: storage domain id.
+
+    : return: storage domain id.
     """
     cohesity_client = _get_client()
     log.info("Getting sorage domain with name {}".format(name))
