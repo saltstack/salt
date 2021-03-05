@@ -20,14 +20,14 @@ Salt feature releases are based on the Periodic Table. Any new features going
 into the ``master`` branch will be named after the next element in the Periodic
 Table. For example, Magnesium was the feature release name associated with the
 ``v3002`` tag. At that point in time, any new features going into the
-``master`` branch, after ``v3002`` was tagged, were part of the Aluminium feature
+``master`` branch, after ``v3002`` was tagged, were part of the 3003 feature
 release.
 
 A deprecation warning should be in place for at least two major releases before
 the deprecated code and its accompanying deprecation warning are removed.  More
 time should be given for more complex changes.  For example, if the current
 release under development is ``3001``, the deprecated code and associated
-warnings should remain in place and warn for at least ``Aluminium``.
+warnings should remain in place and warn for at least ``3003``.
 
 To help in this deprecation task, salt provides
 :func:`salt.utils.versions.warn_until <salt.utils.versions.warn_until>`. The
@@ -45,13 +45,13 @@ Consider the following example:
     def some_function(bar=False, foo=None):
         if foo is not None:
             salt.utils.versions.warn_until(
-                "Aluminium",
+                "3003",
                 "The 'foo' argument has been deprecated and its "
                 "functionality removed, as such, its usage is no longer "
                 "required.",
             )
 
-Development begins on ``Aluminium``, or ``v3003``, after the ``v3002`` tag is
+Development begins on ``3003``, or ``v3003``, after the ``v3002`` tag is
 applied to the ``master`` branch.  Once this occurs, all uses of the
-``warn_until`` function targeting ``Aluminium``, along with the code they are
+``warn_until`` function targeting ``3003``, along with the code they are
 warning about should be removed from the code.
