@@ -7,12 +7,12 @@ function below, only an ``mmatch()``
 
 import logging
 
-import salt.utils.minions  # pylint: disable=3rd-party-module-not-gated
+import salt.utils.minions
 
 log = logging.getLogger(__name__)
 
 
-def mmatch(expr, delimiter, greedy, opts=None, minion_id=None):
+def mmatch(expr, delimiter, greedy, opts=None):
     """
     Return the minions found by looking via pillar
     """
