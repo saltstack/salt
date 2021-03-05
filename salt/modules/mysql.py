@@ -2393,7 +2393,11 @@ def grant_exists(
         if (
             salt.utils.versions.version_cmp(server_version, "8.0") >= 0
             and "MariaDB" not in server_version
+            and database == '*.*'
         ):
+            log.info("token database: %s", database)
+            # https://dev.mysql.com/doc/refman/8.0/en/show-grants.html
+            # it makes sense ONLY with GLOBAL checks - "GRANT ALL PRIVILEGES TO user@host ON *.*"
             grant = ",".join([i for i in __all_privileges__])
         else:
             grant = "ALL PRIVILEGES"
