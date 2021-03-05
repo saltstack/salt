@@ -1,1 +1,0 @@
-removed the arg `managed_private_key` from 'salt.states.x509.certificate_managed'

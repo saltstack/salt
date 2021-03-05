@@ -1,1 +1,0 @@
-Added ``pkg.services_need_restart`` which lists system services that should be restarted after package management operations.
