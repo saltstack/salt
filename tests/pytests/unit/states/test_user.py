@@ -34,7 +34,7 @@ def test_present():
                 "user.add": mock_false,
             },
         ):
-            ret.update({"comment": "The following group(s) are" " not present: salt"})
+            ret.update({"comment": "The following group(s) are not present: salt"})
             assert user.present("salt", groups=["salt"]) == ret
 
             mock_false = MagicMock(
@@ -66,14 +66,14 @@ def test_present():
 
                     with patch.dict(user.__opts__, {"test": True}):
                         ret.update(
-                            {"comment": "User salt set to" " be added", "result": None}
+                            {"comment": "User salt set to be added", "result": None}
                         )
                         assert user.present("salt") == ret
 
                     with patch.dict(user.__opts__, {"test": False}):
                         ret.update(
                             {
-                                "comment": "Failed to create new" " user salt",
+                                "comment": "Failed to create new user salt",
                                 "result": False,
                             }
                         )
