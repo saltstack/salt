@@ -18,35 +18,6 @@ and :py:func:`postgres_group.present <salt.states.postgres_group.present>`
 states. This allows migration away from the insecure and deprecated
 previous storage methods.
 
-Execution Module Changes
-========================
-
-Changed
--------
-
-- The :py:mod:`pkg <salt.modules.yumpkg>` module now supports ``tdnf`` used by
-  VMWare Photon OS.  As part of this change, ``VMWare Photon OS``'s
-  ``os_family`` grain will now resolve as ``RedHat``.  This may require changes
-  to existing uses of :py:func:`grains.filter_by
-  <salt.modules.grains.filter_by>`
-- The ``salt-run`` CLI now accepts ``--jid`` which allows scripting against it.
-
-Salt Cloud
-==========
-
-Added
------
-
-- Firewall groups support to Vultr Salt Cloud provider
-
-Fixed
------
-
-- The Google Cloud Engine salt-cloud provider now requires `apache-libcloud>=2.5.0`. Service account authentication is broken on older versions.
-
-
-Salt 3003
-=========
 
 Removed
 -------
@@ -64,6 +35,12 @@ Deprecated
 Changed
 -------
 
+- The :py:mod:`pkg <salt.modules.yumpkg>` module now supports ``tdnf`` used by
+  VMWare Photon OS.  As part of this change, ``VMWare Photon OS``'s
+  ``os_family`` grain will now resolve as ``RedHat``.  This may require changes
+  to existing uses of :py:func:`grains.filter_by
+  <salt.modules.grains.filter_by>`
+- The ``salt-run`` CLI now accepts ``--jid`` which allows scripting against it.
 - Change `brew cask --list` to `brew list --cask` (#58381)
 - Store git sha in salt/_version.py when installing from a tag so it can be found if needed later. (#59137)
 - Changed package manager detection in yumpkg module (#59201)
@@ -73,6 +50,7 @@ Changed
 Fixed
 -----
 
+- The Google Cloud Engine salt-cloud provider now requires `apache-libcloud>=2.5.0`. Service account authentication is broken on older versions.
 - Fix incorrect documentation for pillar_source_merging_strategy (#26396)
 - Don't iterate through cloud map errors (#34033)
 - Supress noisy warnings when very old pyzmq is used. (#50327)
@@ -173,6 +151,7 @@ Fixed
 Added
 -----
 
+- Firewall groups support to Vultr Salt Cloud provider
 - Adding the ability to clear and show the pillar cache enabled when pillar_cache is True. (#37080)
 - SCRAM-SHA-256 support for PostgreSQL passwords.
   Pass encrypted=scram-sha-256 to the postgres_user.present (or postgres_group.present) state. (#51271)
