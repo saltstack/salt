@@ -585,7 +585,7 @@ def encode(
     return data
 
 
-@jinja_filter("json_decode_dict")  # Remove this for 3003
+@jinja_filter("json_decode_dict")  # Remove this for Aluminium
 @jinja_filter("json_encode_dict")
 def encode_dict(
     data,
@@ -654,7 +654,7 @@ def encode_dict(
     return ret
 
 
-@jinja_filter("json_decode_list")  # Remove this for 3003
+@jinja_filter("json_decode_list")  # Remove this for Aluminium
 @jinja_filter("json_encode_list")
 def encode_list(
     data,
