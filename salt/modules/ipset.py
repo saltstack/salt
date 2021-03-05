@@ -285,7 +285,7 @@ def version():
     return out[1]
 
 
-def new_set(set=None, set_type=None, family="ipv4", comment=False, **kwargs):
+def new_set(setname=None, set_type=None, family="ipv4", comment=False, **kwargs):
     """
     .. versionadded:: 2014.7.0
 
@@ -304,8 +304,8 @@ def new_set(set=None, set_type=None, family="ipv4", comment=False, **kwargs):
     """
 
     ipset_family = _IPSET_FAMILIES[family]
-    if not set:
-        return "Error: Set needs to be specified"
+    if not setname:
+        return "Error: Set Name needs to be specified"
 
     if not set_type:
         return "Error: Set Type needs to be specified"
@@ -318,7 +318,7 @@ def new_set(set=None, set_type=None, family="ipv4", comment=False, **kwargs):
         if item not in kwargs:
             return "Error: {} is a required argument".format(item)
 
-    cmd = "{} create {} {}".format(_ipset_cmd(), set, set_type)
+    cmd = "{} create {} {}".format(_ipset_cmd(), setname, set_type)
 
     for item in _CREATE_OPTIONS[set_type]:
         if item in kwargs:
@@ -341,7 +341,7 @@ def new_set(set=None, set_type=None, family="ipv4", comment=False, **kwargs):
     return out
 
 
-def delete_set(set=None, family="ipv4"):
+def delete_set(setname=None, family="ipv4"):
     """
     .. versionadded:: 2014.7.0
 
@@ -357,10 +357,10 @@ def delete_set(set=None, family="ipv4"):
         salt '*' ipset.delete_set custom_set family=ipv6
     """
 
-    if not set:
+    if not setname:
         return "Error: Set needs to be specified"
 
-    cmd = "{} destroy {}".format(_ipset_cmd(), set)
+    cmd = "{} destroy {}".format(_ipset_cmd(), setname)
     out = __salt__["cmd.run"](cmd, python_shell=False)
 
     if not out:
@@ -368,7 +368,7 @@ def delete_set(set=None, family="ipv4"):
     return out
 
 
-def rename_set(set=None, new_set=None, family="ipv4"):
+def rename_set(setname=None, new_set=None, family="ipv4"):
     """
     .. versionadded:: 2014.7.0
 
@@ -384,13 +384,13 @@ def rename_set(set=None, new_set=None, family="ipv4"):
         salt '*' ipset.rename_set custom_set new_set=new_set_name family=ipv6
     """
 
-    if not set:
+    if not setname:
         return "Error: Set needs to be specified"
 
     if not new_set:
         return "Error: New name for set needs to be specified"
 
-    settype = _find_set_type(set)
+    settype = _find_set_type(setname)
     if not settype:
         return "Error: Set does not exist"
 
@@ -398,7 +398,7 @@ def rename_set(set=None, new_set=None, family="ipv4"):
     if settype:
         return "Error: New Set already exists"
 
-    cmd = "{} rename {} {}".format(_ipset_cmd(), set, new_set)
+    cmd = "{} rename {} {}".format(_ipset_cmd(), setname, new_set)
     out = __salt__["cmd.run"](cmd, python_shell=False)
 
     if not out:
@@ -437,7 +437,7 @@ def list_sets(family="ipv4"):
     return sets
 
 
-def check_set(set=None, family="ipv4"):
+def check_set(setname=None, family="ipv4"):
     """
     Check that given ipset set exists.
 
@@ -450,10 +450,10 @@ def check_set(set=None, family="ipv4"):
         salt '*' ipset.check_set setname
 
     """
-    if not set:
+    if not setname:
         return "Error: Set needs to be specified"
 
-    setinfo = _find_set_info(set)
+    setinfo = _find_set_info(setname)
     if not setinfo:
         return False
     return True
@@ -520,7 +520,7 @@ def add(setname=None, entry=None, family="ipv4", **kwargs):
     return "Error: {}".format(out)
 
 
-def delete(set=None, entry=None, family="ipv4", **kwargs):
+def delete(setname=None, entry=None, family="ipv4", **kwargs):
     """
     Delete an entry from the specified set.
 
@@ -531,17 +531,17 @@ def delete(set=None, entry=None, family="ipv4", **kwargs):
         salt '*' ipset.delete setname 192.168.0.3,AA:BB:CC:DD:EE:FF
 
     """
-    if not set:
+    if not setname:
         return "Error: Set needs to be specified"
     if not entry:
         return "Error: Entry needs to be specified"
 
-    settype = _find_set_type(set)
+    settype = _find_set_type(setname)
 
     if not settype:
-        return "Error: Set {} does not exist".format(set)
+        return "Error: Set {} does not exist".format(setname)
 
-    cmd = "{} del {} {}".format(_ipset_cmd(), set, entry)
+    cmd = "{} del {} {}".format(_ipset_cmd(), setname, entry)
     out = __salt__["cmd.run"](cmd, python_shell=False)
 
     if not out:
@@ -549,11 +549,11 @@ def delete(set=None, entry=None, family="ipv4", **kwargs):
     return "Error: {}".format(out)
 
 
-def check(set=None, entry=None, family="ipv4"):
+def check(setname=None, entry=None, family="ipv4"):
     """
     Check that an entry exists in the specified set.
 
-    set
+    setname
         The ipset name
 
     entry
@@ -576,16 +576,16 @@ def check(set=None, entry=None, family="ipv4"):
         salt '*' ipset.check setname '192.168.0.1 comment "Hello"'
 
     """
-    if not set:
+    if not setname:
         return "Error: Set needs to be specified"
     if not entry:
         return "Error: Entry needs to be specified"
 
-    settype = _find_set_type(set)
+    settype = _find_set_type(setname)
     if not settype:
-        return "Error: Set {} does not exist".format(set)
+        return "Error: Set {} does not exist".format(setname)
 
-    current_members = _parse_members(settype, _find_set_members(set))
+    current_members = _parse_members(settype, _find_set_members(setname))
 
     if not current_members:
         return False
@@ -603,7 +603,7 @@ def check(set=None, entry=None, family="ipv4"):
     return False
 
 
-def test(set=None, entry=None, family="ipv4", **kwargs):
+def test(setname=None, entry=None, family="ipv4", **kwargs):
     """
     Test if an entry is in the specified set.
 
@@ -616,16 +616,16 @@ def test(set=None, entry=None, family="ipv4", **kwargs):
         IPv6:
         salt '*' ipset.test setname fd81:fc56:9ac7::/48
     """
-    if not set:
+    if not setname:
         return "Error: Set needs to be specified"
     if not entry:
         return "Error: Entry needs to be specified"
 
-    settype = _find_set_type(set)
+    settype = _find_set_type(setname)
     if not settype:
-        return "Error: Set {} does not exist".format(set)
+        return "Error: Set {} does not exist".format(setname)
 
-    cmd = "{} test {} {}".format(_ipset_cmd(), set, entry)
+    cmd = "{} test {} {}".format(_ipset_cmd(), setname, entry)
     out = __salt__["cmd.run_all"](cmd, python_shell=False)
 
     if out["retcode"] > 0:
@@ -635,7 +635,7 @@ def test(set=None, entry=None, family="ipv4", **kwargs):
     return True
 
 
-def flush(set=None, family="ipv4"):
+def flush(setname=None, family="ipv4"):
     """
     Flush entries in the specified set,
     Flush all sets if set is not specified.
@@ -654,13 +654,13 @@ def flush(set=None, family="ipv4"):
         salt '*' ipset.flush set
     """
 
-    settype = _find_set_type(set)
+    settype = _find_set_type(setname)
     if not settype:
-        return "Error: Set {} does not exist".format(set)
+        return "Error: Set {} does not exist".format(setname)
 
     ipset_family = _IPSET_FAMILIES[family]
-    if set:
-        cmd = "{} flush {}".format(_ipset_cmd(), set)
+    if setname:
+        cmd = "{} flush {}".format(_ipset_cmd(), setname)
     else:
         cmd = "{} flush".format(_ipset_cmd())
     out = __salt__["cmd.run"](cmd, python_shell=False)
@@ -668,12 +668,12 @@ def flush(set=None, family="ipv4"):
     return not out
 
 
-def _find_set_members(set):
+def _find_set_members(setname):
     """
     Return list of members for a set
     """
 
-    cmd = "{} list {}".format(_ipset_cmd(), set)
+    cmd = "{} list {}".format(_ipset_cmd(), setname)
     out = __salt__["cmd.run_all"](cmd, python_shell=False)
 
     if out["retcode"] > 0:
@@ -691,12 +691,12 @@ def _find_set_members(set):
     return members
 
 
-def _find_set_info(set):
+def _find_set_info(setname):
     """
     Return information about the set
     """
 
-    cmd = "{} list -t {}".format(_ipset_cmd(), set)
+    cmd = "{} list -t {}".format(_ipset_cmd(), setname)
     out = __salt__["cmd.run_all"](cmd, python_shell=False)
 
     if out["retcode"] > 0:
@@ -713,11 +713,11 @@ def _find_set_info(set):
     return setinfo
 
 
-def _find_set_type(set):
+def _find_set_type(setname):
     """
     Find the type of the set
     """
-    setinfo = _find_set_info(set)
+    setinfo = _find_set_info(setname)
 
     if setinfo:
         return setinfo["Type"]
