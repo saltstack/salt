@@ -1,2 +1,0 @@
-Rename `salt.renderers.toml` to `salt.renderers.tomlmod` which fixes the import error issues as described in #58822
-Do note that, the renderer is still called `toml`.
