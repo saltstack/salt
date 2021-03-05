@@ -5,7 +5,7 @@ This is the default compound matcher function.
 import logging
 
 import salt.loader
-import salt.utils.minions  # pylint: disable=3rd-party-module-not-gated
+import salt.utils.minions
 
 HAS_RANGE = False
 try:
@@ -90,7 +90,7 @@ def match(tgt, opts=None, minion_id=None):
             if not engine:
                 # If an unknown engine is called at any time, fail out
                 log.error(
-                    'Unrecognized target engine "%s" for target ' 'expression "%s"',
+                    'Unrecognized target engine "%s" for target expression "%s"',
                     target_info["engine"],
                     word,
                 )
@@ -119,5 +119,4 @@ def match(tgt, opts=None, minion_id=None):
         return eval(results)  # pylint: disable=W0123
     except Exception:  # pylint: disable=broad-except
         log.error("Invalid compound target: %s for results: %s", tgt, results)
-        return False
     return False
