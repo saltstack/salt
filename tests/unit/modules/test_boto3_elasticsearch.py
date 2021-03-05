@@ -1,28 +1,21 @@
-# -*- coding: utf-8 -*-
 """
     Tests for salt.modules.boto3_elasticsearch
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
 import random
 import string
 import textwrap
 
-# Import Salt libs
 import salt.loader
 import salt.modules.boto3_elasticsearch as boto3_elasticsearch
 from salt.ext.six.moves import range
 from salt.utils.versions import LooseVersion
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
 
-# Import 3rd-party libs
 try:
     import boto3
     from botocore.exceptions import ClientError
@@ -150,7 +143,7 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
         return {boto3_elasticsearch: {"__utils__": utils}}
 
     def setUp(self):
-        super(Boto3ElasticsearchTestCase, self).setUp()
+        super().setUp()
         boto3_elasticsearch.__init__(self.opts)
         del self.opts
 
@@ -380,6 +373,20 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                 boto3_elasticsearch.add_tags(
                     "testdomain", tags={"foo": "bar", "baz": "qux"}, **CONN_PARAMETERS
                 ),
+                {"result": True},
+            )
+
+    def test_add_tags_default(self):
+        """
+        Test that when tags are not provided, no error is raised.
+        """
+        with patch.object(
+            self.conn,
+            "describe_elasticsearch_domain",
+            return_value={"DomainStatus": DOMAIN_RET},
+        ):
+            self.assertEqual(
+                boto3_elasticsearch.add_tags("testdomain", **CONN_PARAMETERS),
                 {"result": True},
             )
 
