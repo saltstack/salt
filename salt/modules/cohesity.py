@@ -50,8 +50,6 @@ try:
     HAS_LIBS = True
 except ImportError as err:
     HAS_LIBS = False
-    print("Error while importing Cohesity SDK modules.")
-    print(err)
 
 log = logging.getLogger(__name__)
 ERROR_LIST = []
