@@ -17,17 +17,6 @@ from tests.support.mock import MagicMock, patch
 @pytest.fixture
 def configure_loader_modules():
     MINION_ID = "bar03"
-
-    return {
-        match: {"__opts__": {"extension_modules": "", "id": MINION_ID}},
-        compound_match: {"__opts__": {"id": MINION_ID}},
-        glob_match: {"__opts__": {"id": MINION_ID}},
-        list_match: {"__opts__": {"id": MINION_ID}},
-    }
-
-
-@pytest.fixture(scope="module", autouse=True)
-def auto_mock():
     MATCHERS_DICT = {
         "compound_match.match": compound_match.match,
         "glob_match.match": glob_match.match,
@@ -36,7 +25,12 @@ def auto_mock():
     }
 
     with patch("salt.loader.matchers", MagicMock(return_value=MATCHERS_DICT)):
-        yield
+        yield {
+            match: {"__opts__": {"extension_modules": "", "id": MINION_ID}},
+            compound_match: {"__opts__": {"id": MINION_ID}},
+            glob_match: {"__opts__": {"id": MINION_ID}},
+            list_match: {"__opts__": {"id": MINION_ID}},
+        }
 
 
 def test_compound_with_minion_id():
