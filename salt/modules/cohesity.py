@@ -100,6 +100,7 @@ def get_sd_id(name):
 def get_policy_id(name):
     """
     Function to fetch policy available in the cluster.
+
     : return policy id.
     """
     cohesity_client = _get_client()
@@ -112,6 +113,7 @@ def get_policy_id(name):
 def get_vmware_source_ids(name, vm_list):
     """
     Function to virtual machines available in the vcenter.
+
     : return source ids and vcenter id.
     """
     cohesity_client = _get_client()
@@ -160,7 +162,7 @@ def register_vcenter(vcenter, username, password):
 
     .. code-block:: bash
 
-    salt-call cohesity.register_vcenter vcenter=vcenter_name username=admin password=admin
+        salt-call cohesity.register_vcenter vcenter=vcenter_name username=admin password=admin
     """
     try:
         cohesity_client = _get_client()
@@ -200,10 +202,10 @@ def create_vmware_protection_job(
 
     .. code-block:: bash
 
-    salt-call cohesity.create_vmware_protection_job job_name=job_name vcenter_name=vcenter_name sources=virtual_machine
-    salt-call cohesity.create_vmware_protection_job job_name=job_name vcenter_name=vcenter_name sources=virtual_machine1,virtualmachine2
-    salt-call cohesity.create_vmware_protection_job job_name=job_name vcenter_name=vcenter_name sources=virtual_machine1,virtualmachine2 policy=Gold domain=DefaultStorageDomain pause_job=True timezone=Europe/Berlin description='Salt Job'
-    salt-call cohesity.create_vmware_protection_job job_name=job_name vcenter_name=vcenter_name sources=virtual_machine1,virtualmachine2 policy=Gold domain=DefaultStorageDomain pause_job=True timezone=Europe/Berlin
+        salt-call cohesity.create_vmware_protection_job job_name=job_name vcenter_name=vcenter_name sources=virtual_machine
+        salt-call cohesity.create_vmware_protection_job job_name=job_name vcenter_name=vcenter_name sources=virtual_machine1,virtualmachine2
+        salt-call cohesity.create_vmware_protection_job job_name=job_name vcenter_name=vcenter_name sources=virtual_machine1,virtualmachine2 policy=Gold domain=DefaultStorageDomain pause_job=True timezone=Europe/Berlin description='Salt Job'
+        salt-call cohesity.create_vmware_protection_job job_name=job_name vcenter_name=vcenter_name sources=virtual_machine1,virtualmachine2 policy=Gold domain=DefaultStorageDomain pause_job=True timezone=Europe/Berlin
     """
     try:
         cohesity_client = _get_client()
@@ -258,8 +260,8 @@ def update_vmware_protection_job(
 
     .. code-block:: bash
 
-    salt-call cohesity.update_vmware_protection_job job_name=job vcenter_name=vcenter sources=vitual_machine
-    salt-call cohesity.update_vmware_protection_job job_name=job vcenter_name=vcenter sources=vitual_machine replace_existing=True
+        salt-call cohesity.update_vmware_protection_job job_name=job vcenter_name=vcenter sources=vitual_machine
+        salt-call cohesity.update_vmware_protection_job job_name=job vcenter_name=vcenter sources=vitual_machine replace_existing=True
 
     """
     try:
@@ -291,7 +293,7 @@ def update_vmware_protection_job_state(job_name, state):
 
     .. code-block:: bash
 
-    salt-call cohesity.update_vmware_protection_job_state job_name=job state=activate
+        salt-call cohesity.update_vmware_protection_job_state job_name=job state=activate
 
     """
     try:
@@ -328,7 +330,7 @@ def cancel_vmware_protection_job(job_name):
 
     .. code-block:: bash
 
-    salt-call cohesity.cancel_vmware_protection_job job_name=job
+        salt-call cohesity.cancel_vmware_protection_job job_name=job
 
     """
     try:
@@ -371,7 +373,7 @@ def run_vmware_protection_job(job_name):
 
     .. code-block:: bash
 
-    salt-call cohesity.run_vmware_protection_job job_name=job
+        salt-call cohesity.run_vmware_protection_job job_name=job
 
     """
     try:
@@ -405,7 +407,7 @@ def delete_vmware_protection_job(job_name, delete_snapshots=True):
 
     .. code-block:: bash
 
-    salt-call cohesity.delete_vmware_protection_job job_name=job delete_snapshots=False
+        salt-call cohesity.delete_vmware_protection_job job_name=job delete_snapshots=False
     """
     try:
         cohesity_client = _get_client()
@@ -471,8 +473,8 @@ def restore_vms(
 
     .. code-block:: bash
 
-    salt-call cohesity.restore_vms task_name=task vcenter_name=vcenter vm_names=virtual_machine resource_pool=pool
-    salt-call cohesity.restore_vms task_name=task vcenter_name=vcenter vm_names=virtual_machine resource_pool=pool datastore_name=DS1 prefix='pre-' suffix='_copy' powered_on=True
+        salt-call cohesity.restore_vms task_name=task vcenter_name=vcenter vm_names=virtual_machine resource_pool=pool
+        salt-call cohesity.restore_vms task_name=task vcenter_name=vcenter vm_names=virtual_machine resource_pool=pool datastore_name=DS1 prefix='pre-' suffix='_copy' powered_on=True
 
     """
     try:
