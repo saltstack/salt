@@ -247,6 +247,13 @@ try:
 except ImportError:
     HAS_SHADE = (False, "Install pypi module shade >= 1.19.0")
 
+# Import netaddr IP matching
+try:
+    from netaddr import all_matching_cidrs
+    HAS_NETADDR = True
+except ImportError:
+    HAS_NETADDR = False
+
 log = logging.getLogger(__name__)
 __virtualname__ = "openstack"
 
@@ -290,13 +297,14 @@ def get_dependencies():
     deps = {
         "shade": HAS_SHADE[0],
         "os_client_config": HAS_SHADE[0],
+        "netaddr": HAS_NETADDR
     }
     return config.check_driver_dependencies(__virtualname__, deps)
 
 
 def preferred_ip(vm_, ips):
     """
-    Return the preferred Internet protocol. Either 'ipv4' (default) or 'ipv6'.
+    Return either an ipv4' (default) or 'ipv6' address depending on 'protocol' option.
     """
     proto = config.get_cloud_config_value(
         "protocol", vm_, __opts__, default="ipv4", search_global=False
@@ -306,6 +314,9 @@ def preferred_ip(vm_, ips):
     if proto == "ipv6":
         family = socket.AF_INET6
     for ip in ips:
+        ignore_ip = ignore_cidr(vm_, ip)
+        if ignore_ip:
+            continue
         try:
             socket.inet_pton(family, ip)
             return ip
@@ -313,6 +324,25 @@ def preferred_ip(vm_, ips):
             continue
     return False
 
+def ignore_cidr(vm_, ip):
+    '''
+    Return True if we are to ignore the specified IP. Compatible with IPv4.
+    '''
+    if HAS_NETADDR is False:
+        log.error('Error: netaddr is not installed')
+        # If we cannot check, assume all is ok
+        return False
+
+    cidr = config.get_cloud_config_value(
+        'ignore_cidr', vm_, __opts__, default='', search_global=False
+    )
+    if cidr != '' and all_matching_cidrs(ip, [cidr]):
+        log.warning(
+            'IP \'{0}\' found within \'{1}\'; ignoring it.'.format(ip, cidr)
+        )
+        return True
+
+    return False
 
 def ssh_interface(vm_):
     """
