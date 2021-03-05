@@ -85,14 +85,17 @@ fi
 if [ -d '/Library/Developer/CommandLineTools/usr/bin' ]; then
     PATH=/Library/Developer/CommandLineTools/usr/bin:$INSTALL_DIR/bin:$PATH
     MAKE=/Library/Developer/CommandLineTools/usr/bin/make
+    CPATH=/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include
 elif [ -d '/Applications/Xcode.app/Contents/Developer/usr/bin' ]; then
     PATH=/Applications/Xcode.app/Contents/Developer/usr/bin:$INSTALL_DIR/bin:$PATH
     MAKE=/Applications/Xcode.app/Contents/Developer/usr/bin/make
+    CPATH=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include
 else
     echo "No installation of XCode found. This script requires XCode."
     exit -1
 fi
 export PATH
+export CPATH
 
 ############################################################################
 # Download Function
@@ -262,7 +265,12 @@ echo "##########################################################################
 echo "Note there are some test failures"
 cd $PKGDIR
 echo -n -e "\033]0;Build_Env: Python: configure\007"
-./configure --prefix=$INSTALL_DIR --enable-shared --enable-toolbox-glue --with-ensurepip=install
+SDK=`xcrun --show-sdk-path`
+CFLAGS_OSL="-I$INSTALL_DIR/include"
+CFLAGS_SYS="-I$SDK/usr/include"
+CFLAGS_TK="-I$SDK/System/Library/Frameworks/Tk.framework/Headers"
+LFLAGS_OSL="-L$INSTALL_DIR/lib"
+./configure CPPFLAGS="$CFLAGS_OSL $CFLAGS_SYS $CFLAGS_TK" LDFLAGS="$LFLAGS_OSL" --prefix=$INSTALL_DIR --enable-shared --enable-toolbox-glue --with-ensurepip=install
 echo -n -e "\033]0;Build_Env: Python: make\007"
 $MAKE
 echo -n -e "\033]0;Build_Env: Python: make install\007"
