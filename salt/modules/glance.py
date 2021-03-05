@@ -97,7 +97,7 @@ def _auth(profile=None, api_version=2, **connection_args):
     Only intended to be used within glance-enabled modules
     """
     __utils__["versions.warn_until"](
-        "Aluminium",
+        "3003",
         (
             "The glance module has been deprecated and will be removed in {version}.  "
             "Please update to using the glanceng module"

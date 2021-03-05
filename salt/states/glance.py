@@ -107,7 +107,7 @@ def image_present(
         'qcow2', 'aki', 'ari' or 'ami')
     """
     __utils__["versions.warn_until"](
-        "Aluminium",
+        "3003",
         (
             "The glance state module has been deprecated and will be removed in {version}.  "
             "Please update to using the glance_image state module"
