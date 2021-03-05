@@ -1,0 +1,1 @@
+Fixing an issue preventing running pillar.get against pillar values with integers as pillar keys.

@@ -271,6 +271,7 @@ class SaltObject:
 
     .. code-block:: python
        :linenos:
+
         Salt = SaltObject(__salt__)
         Salt.cmd.run(bar)
     """

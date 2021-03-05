@@ -14,7 +14,7 @@
 """
 Execution module to upgrade Cisco NX-OS Switches.
 
-.. versionadded:: xxxx.xx.x
+.. versionadded:: 3001
 
 This module supports execution using a Proxy Minion or Native Minion:
     1) Proxy Minion: Connect over SSH or NX-API HTTP(S).

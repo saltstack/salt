@@ -100,16 +100,18 @@ def route_create(
 
     CLI Example:
 
-    salt 'salt-master.novalocal' gcp.route_create
-        credential_file=/root/secret_key.json
-        project_id=cp100-170315
-        name=derby-db-route1
-        next_hop_instance=instance-1
-        instance_zone=us-central1-a
-        network=default
-        dest_range=0.0.0.0/0
-        tags=['no-ip']
-        priority=700
+    .. code-block:: bash
+
+        salt 'salt-master.novalocal' gcp.route_create
+            credential_file=/root/secret_key.json
+            project_id=cp100-170315
+            name=derby-db-route1
+            next_hop_instance=instance-1
+            instance_zone=us-central1-a
+            network=default
+            dest_range=0.0.0.0/0
+            tags=['no-ip']
+            priority=700
 
     In above example, the instances which are having tag "no-ip" will route the
     packet to instance "instance-1"(if packet is intended to other network)

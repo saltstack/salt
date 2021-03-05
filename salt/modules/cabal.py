@@ -112,7 +112,7 @@ def list_(pkg=None, user=None, installed=False, env=None):
         same ``env`` format as the :py:func:`cmd.run
         <salt.modules.cmdmod.run>` execution function
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 

@@ -1,0 +1,1 @@
+Updated the documentation, handling and error messages for what size units are allowed by "size" parameter in lvm.lv_present

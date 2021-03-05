@@ -262,7 +262,7 @@ group <https://github.com/saltstack/docs-hub>`__ and the `testing
 working
 group <https://github.com/saltstack/community/tree/master/working_groups/wg-Testing>`__.
 We also regularly stream our test clinic `live on
-Twitch <https://www.twitch.tv/saltstackinc>`__ every Tuesday afternoon
+Twitch <https://www.twitch.tv/saltprojectoss>`__ every Tuesday afternoon
 and Thursday morning, Central Time. If you’d like specific help with
 tests, bring them to the clinic. If no community members need help, you
 can also just watch tests written in real time.
@@ -488,7 +488,7 @@ PR Time!
 
 Once you’ve done all your dev work and tested locally, you should check
 out our `PR
-guidelines <https://docs.saltproject.io/en/develop/topics/development/pull_requests.html>`__.
+guidelines <https://docs.saltproject.io/en/master/topics/development/pull_requests.html>`__.
 After you read that page, it’s time to `open a new
 PR <https://github.com/saltstack/salt/compare>`__. Fill out the PR
 template - you should have updated or created any necessary docs, and

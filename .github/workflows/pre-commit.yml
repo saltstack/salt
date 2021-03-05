@@ -39,6 +39,9 @@ jobs:
           repo:
             - added|modified:
               - '**'
+          deleted:
+            - deleted:
+              - '**'
 
     - name: Check ALL Files On Branch
       uses: pre-commit/action@v2.0.0
@@ -53,3 +56,9 @@ jobs:
         extra_args: --files ${{ join(fromJSON(steps.changed-files.outputs.repo_files), ' ') }}
       env:
         SKIP: lint-salt,lint-tests
+
+    - name: Check Docs On Deleted Files
+      uses: pre-commit/action@v2.0.0
+      if: steps.changed-files.outputs.deleted == 'true'
+      with:
+        extra_args: check-docs --files ${{ join(fromJSON(steps.changed-files.outputs.deleted_files), ' ') }}

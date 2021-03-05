@@ -1,7 +1,7 @@
 """
 An engine that reads messages from Slack and can act on them
 
-.. versionadded: 2016.3.0
+.. versionadded:: 2016.3.0
 
 :depends: `slackclient <https://pypi.org/project/slackclient/>`_ Python module
 

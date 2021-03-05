@@ -253,7 +253,9 @@ def get_route(ip):
 
     .. versionadded:: 2016.11.5
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' network.get_route 10.10.10.10
     """
