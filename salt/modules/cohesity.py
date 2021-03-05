@@ -99,7 +99,7 @@ def _get_client():
 def __virtual__():
     if HAS_LIBS:
         return __virtualname__
-    return True
+    return False, "Could not import the Cohesity SDK modules"
 
 
 def get_sd_id(name):
