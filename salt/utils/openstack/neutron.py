@@ -103,7 +103,7 @@ class SaltNeutron(NeutronShell):
         Set up neutron credentials
         """
         salt.utils.versions.warn_until(
-            "3003",
+            "Aluminium",
             (
                 "The neutron module has been deprecated and will be removed in {version}.  "
                 "Please update to using the neutronng module"
