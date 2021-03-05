@@ -1,0 +1,1 @@
+Allow the gpg module to use export_key, delete_key and create_key without a passphrase in GnuPG >= 2.1

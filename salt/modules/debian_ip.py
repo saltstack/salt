@@ -5,32 +5,23 @@ References:
 
 * http://www.debian.org/doc/manuals/debian-reference/ch05.en.html
 """
-
-# Import python libs
-
 import functools
+import io
 import logging
 import os
 import os.path
 import re
 import time
 
-# Import third party libs
 import jinja2
 import jinja2.exceptions
-
-# Import salt libs
 import salt.utils.dns
 import salt.utils.files
 import salt.utils.odict
 import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.validate.net
-from salt.ext.six.moves import (  # pylint: disable=import-error,no-name-in-module
-    StringIO,
-)
 
-# Set up logging
 log = logging.getLogger(__name__)
 
 # Set up template environment
@@ -1505,7 +1496,7 @@ def _read_temp(data):
     """
     Return what would be written to disk
     """
-    tout = StringIO()
+    tout = io.StringIO()
     tout.write(data)
     tout.seek(0)
     output = tout.readlines()

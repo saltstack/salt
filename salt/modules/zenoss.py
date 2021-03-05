@@ -3,8 +3,6 @@ Module for working with the Zenoss API
 
 .. versionadded:: 2016.3.0
 
-:depends: requests
-
 :configuration: This module requires a 'zenoss' entry in the master/minion config.
 
     For example:
@@ -15,25 +13,15 @@ Module for working with the Zenoss API
           hostname: https://zenoss.example.com
           username: admin
           password: admin123
+          verify_ssl: True
+          ca_bundle: /etc/ssl/certs/ca-certificates.crt
 """
 
 import logging
 import re
 
+import salt.utils.http
 import salt.utils.json
-
-try:
-    import requests
-
-    HAS_LIBS = True
-except ImportError:
-    HAS_LIBS = False
-
-
-# Disable INFO level logs from requests/urllib3
-urllib3_logger = logging.getLogger("urllib3")
-urllib3_logger.setLevel(logging.WARNING)
-
 
 log = logging.getLogger(__name__)
 
@@ -44,14 +32,7 @@ def __virtual__():
     """
     Only load if requests is installed
     """
-    if HAS_LIBS:
-        return __virtualname__
-    else:
-        return (
-            False,
-            "The '{}' module could not be loaded: "
-            "'requests' is not installed.".format(__virtualname__),
-        )
+    return __virtualname__
 
 
 ROUTERS = {
@@ -75,11 +56,13 @@ def _session():
     """
 
     config = __salt__["config.option"]("zenoss")
-    session = requests.session()
-    session.auth = (config.get("username"), config.get("password"))
-    session.verify = False
-    session.headers.update({"Content-type": "application/json; charset=utf-8"})
-    return session
+    return salt.utils.http.session(
+        user=config.get("username"),
+        password=config.get("password"),
+        verify_ssl=config.get("verify_ssl", True),
+        ca_bundle=config.get("ca_bundle"),
+        headers={"Content-type": "application/json; charset=utf-8"},
+    )
 
 
 def _router_request(router, method, data=None):
