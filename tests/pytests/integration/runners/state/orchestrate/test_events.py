@@ -114,7 +114,9 @@ def test_parallel_orchestrations(
 ):
     """
     Test to confirm that the parallel state requisite works in orch
-    we do this by running 10 test.sleep's of 10 seconds, and insure it only takes roughly 10s
+    we do this by running 19 test.sleep's of 10 seconds, and a last 10 seconds sleep
+    which depends on the previous 19.
+    It should take more than 20 seconds and less than 19*10 seconds
     """
     test_orch_contents = """
     {% for count in range(1, 20) %}
@@ -148,9 +150,13 @@ def test_parallel_orchestrations(
             # we expect each duration to be greater than 10s
             assert step_data["duration"] > 10 * 1000
 
-        # self confirm that the total runtime is roughly 30s (left 10s for buffer)
+        # Since we started range(1, 20)(19) sleep state steps, and the last state
+        # step requires all of those to have finished before it runs, since we are
+        # running in parallel, the duration should be more than 20 seconds, and
+        # less than 19*10(190) seconds, less then half actually
         duration = time.time() - start_time
-        assert duration < 40
+        assert duration > 20
+        assert duration < 19 * 10 / 2
 
         expected_event_tag = "salt/run/{}/ret".format(jid)
         event_pattern = (salt_master.id, expected_event_tag)
@@ -166,9 +172,13 @@ def test_parallel_orchestrations(
                 # we expect each duration to be greater than 10s
                 assert job_data["duration"] > 10 * 1000
 
-        # self confirm that the total runtime is roughly 30s (left 10s for buffer)
+        # Since we started range(1, 20)(19) sleep state steps, and the last state
+        # step requires all of those to have finished before it runs, since we are
+        # running in parallel, the duration should be more than 20 seconds, and
+        # less than 19*10(190) seconds, less then half actually
         duration = time.time() - start_time
-        assert duration < 40
+        assert duration > 20
+        assert duration < 19 * 10 / 2
 
 
 def test_orchestration_soft_kill(

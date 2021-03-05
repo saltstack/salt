@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 This is the default grains matcher function.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
@@ -14,7 +12,7 @@ from salt.defaults import (  # pylint: disable=3rd-party-module-not-gated
 log = logging.getLogger(__name__)
 
 
-def match(tgt, delimiter=DEFAULT_TARGET_DELIM, opts=None):
+def match(tgt, delimiter=DEFAULT_TARGET_DELIM, opts=None, minion_id=None):
     """
     Reads in the grains glob match
     """
