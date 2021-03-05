@@ -78,24 +78,6 @@ def _get_client():
     return cohesity_client
 
 
-# config_path = "/etc/salt/master.d/cohesity.conf"
-# cohesity_config = {}
-# if os.path.isfile(config_path):
-#     import yaml
-#
-#     with salt.utils.files.fopen(config_path, "r") as file_obj:
-#         config = yaml.safe_load(file_obj)
-#         cohesity_config = config.get("cohesity_config", {})
-#
-# cluster_vip = cohesity_config.get("cluster_vip", "")
-# c_username = cohesity_config.get("username", "")
-# c_password = cohesity_config.get("password", "")
-# c_domain = cohesity_config.get("domain", "")
-# cohesity_client = CohesityClient(
-#     cluster_vip=cluster_vip, username=c_username, password=c_password, domain=c_domain,
-# )
-
-
 def __virtual__():
     if HAS_LIBS:
         return __virtualname__
