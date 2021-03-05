@@ -584,7 +584,9 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(
                 mysql, "user_grants", return_value=mock_grants
             ) as mock_user_grants:
-                ret = mysql.grant_exists("ALL", "testdb.testtableone", "testuser", "%")
+                ret = mysql.grant_exists(
+                    "ALL", "testdb.testtableone", "testuser", "%"
+                )
                 self.assertEqual(ret, True)
 
         with patch.object(mysql, "version", return_value="8.0.10"):
@@ -594,6 +596,17 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
             ) as mock_user_grants:
                 ret = mysql.grant_exists(
                     "all privileges", "testdb.testtableone", "testuser", "%"
+                )
+                self.assertEqual(ret, True)
+
+        mock_grants = ["GRANT ALL PRIVILEGES ON *.* TO `root`@`localhost`"]
+        with patch.object(mysql, "version", return_value="8.0.10"):
+            mock = MagicMock(return_value=mock_grants)
+            with patch.object(
+                mysql, "user_grants", return_value=mock_grants
+            ) as mock_user_grants:
+                ret = mysql.grant_exists(
+                    "all privileges", "*.*", "root", "localhost"
                 )
                 self.assertEqual(ret, True)
 
@@ -607,6 +620,7 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
                     "ALL PRIVILEGES", "testdb.testtableone", "testuser", "%"
                 )
                 self.assertEqual(ret, True)
+
 
     @skipIf(True, "TODO: Mock up user_grants()")
     def test_grant_add(self):
