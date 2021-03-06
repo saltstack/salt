@@ -1385,18 +1385,6 @@ def test_when_minion_id_is_star_then_result_should_be_empty_dict(default_kwargs)
     assert actual_result == expected_result
 
 
-def test_when_api_url_is_malformed_then_error_message_should_be_logged(default_kwargs):
-    default_kwargs["api_url"] = "http://netbox.example.com;"
-
-    with patch("salt.pillar.netbox.log.error", autospec=True) as fake_error:
-        netbox.ext_pillar(**default_kwargs)
-
-        fake_error.assert_called_with(
-            'Provided URL for api_url "%s" is malformed or is not an http/https URL',
-            "http://netbox.example.com;",
-        )
-
-
 def test_when_api_url_is_not_http_or_https_then_error_message_should_be_logged(
     default_kwargs,
 ):

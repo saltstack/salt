@@ -521,32 +521,13 @@ Example output:
 """
 
 import logging
-from urllib.parse import urlparse
 
 import salt.utils.http
+import salt.utils.url
 from salt._compat import ipaddress
-
-try:
-    import validators
-
-    HAS_LIBS = True
-except ImportError:
-    HAS_LIBS = False
 
 # Set up logging
 log = logging.getLogger(__name__)
-
-__virtualname__ = "netbox"
-
-
-def __virtual__():
-    """
-    Only return if validators is installed.
-    """
-    if HAS_LIBS:
-        return __virtualname__
-    else:
-        return False
 
 
 def _get_devices(api_url, minion_id, headers):
@@ -794,9 +775,7 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
     ret = {}
 
     # Check that we have a valid API URL:
-    if not validators.url(api_url) or (
-        urlparse(api_url).scheme != "http" and urlparse(api_url).scheme != "https"
-    ):
+    if not salt.utils.url.validate(api_url, ["http", "https"]):
         log.error(
             'Provided URL for api_url "%s" is malformed or is not an http/https URL',
             api_url,

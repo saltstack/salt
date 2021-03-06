@@ -232,7 +232,6 @@ timelib==0.2.5
 toml==0.10.2
 transitions==0.8.1        # via junos-eznc
 urllib3==1.24.2
-validators==0.18.2
 vapi-client-bindings==3.5.0  # via vsphere-automation-sdk
 vapi-common-client==2.19.0  # via nsx-policy-python-sdk, nsx-python-sdk, nsx-vmc-aws-integration-python-sdk, nsx-vmc-policy-python-sdk, vmc-client-bindings, vmc-draas-client-bindings, vsphere-automation-sdk
 vapi-runtime==2.19.0      # via nsx-policy-python-sdk, nsx-python-sdk, nsx-vmc-aws-integration-python-sdk, nsx-vmc-policy-python-sdk, vapi-client-bindings, vapi-common-client, vmc-client-bindings, vmc-draas-client-bindings, vsphere-automation-sdk
