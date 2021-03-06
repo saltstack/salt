@@ -1,1 +1,0 @@
-Added tcp_reconnect_backoff minion config option for specifying reconnection backoff time for TCP transport 
