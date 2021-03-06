@@ -1164,7 +1164,7 @@ repos:
       - id: bandit
         alias: bandit-tests
         name: Run bandit against the test suite
-        args: [--silent, -lll, B701]
+        args: [--silent, -lll, --skip, B701]
         files: ^tests/.*
         exclude: ^tests/minionswarm\.py
   # <---- Security ---------------------------------------------------------------------------------------------------

@@ -8,15 +8,16 @@
 
     Test support helpers
 """
-
 import base64
 import builtins
 import errno
 import fnmatch
 import functools
 import inspect
+import json
 import logging
 import os
+import pathlib
 import random
 import shutil
 import socket
@@ -30,6 +31,7 @@ import time
 import types
 from contextlib import contextmanager
 
+import attr
 import pytest
 import salt.ext.tornado.ioloop
 import salt.ext.tornado.web
@@ -294,9 +296,6 @@ class RedirectStdStreams:
     """
 
     def __init__(self, stdout=None, stderr=None):
-        # Late import
-        import salt.utils.files
-
         if stdout is None:
             # pylint: disable=resource-leakage
             stdout = salt.utils.files.fopen(os.devnull, "w")
@@ -1646,18 +1645,42 @@ class PatchedEnviron:
 patched_environ = PatchedEnviron
 
 
+def _cast_to_pathlib_path(value):
+    if isinstance(value, pathlib.Path):
+        return value
+    return pathlib.Path(str(value))
+
+
+@attr.s(frozen=True, slots=True)
 class VirtualEnv:
-    def __init__(self, venv_dir=None, env=None):
-        self.venv_dir = venv_dir or tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
+    venv_dir = attr.ib(converter=_cast_to_pathlib_path)
+    env = attr.ib(default=None)
+    system_site_packages = attr.ib(default=False)
+    environ = attr.ib(init=False, repr=False)
+    venv_python = attr.ib(init=False, repr=False)
+    venv_bin_dir = attr.ib(init=False, repr=False)
+
+    @venv_dir.default
+    def _default_venv_dir(self):
+        return pathlib.Path(tempfile.mkdtemp(dir=RUNTIME_VARS.TMP))
+
+    @environ.default
+    def _default_environ(self):
         environ = os.environ.copy()
-        if env:
-            environ.update(env)
-        self.environ = environ
+        if self.env:
+            environ.update(self.env)
+        return environ
+
+    @venv_python.default
+    def _default_venv_python(self):
+        # Once we drop Py3.5 we can stop casting to string
         if salt.utils.platform.is_windows():
-            self.venv_python = os.path.join(self.venv_dir, "Scripts", "python.exe")
-        else:
-            self.venv_python = os.path.join(self.venv_dir, "bin", "python")
-        self.venv_bin_dir = os.path.dirname(self.venv_python)
+            return str(self.venv_dir / "Scripts" / "python.exe")
+        return str(self.venv_dir / "bin" / "python")
+
+    @venv_bin_dir.default
+    def _default_venv_bin_dir(self):
+        return pathlib.Path(self.venv_python).parent
 
     def __enter__(self):
         try:
@@ -1667,14 +1690,14 @@ class VirtualEnv:
         return self
 
     def __exit__(self, *args):
-        salt.utils.files.rm_rf(self.venv_dir)
+        shutil.rmtree(str(self.venv_dir), ignore_errors=True)
 
     def install(self, *args, **kwargs):
         return self.run(self.venv_python, "-m", "pip", "install", *args, **kwargs)
 
     def run(self, *args, **kwargs):
         check = kwargs.pop("check", True)
-        kwargs.setdefault("cwd", self.venv_dir)
+        kwargs.setdefault("cwd", str(self.venv_dir))
         kwargs.setdefault("stdout", subprocess.PIPE)
         kwargs.setdefault("stderr", subprocess.PIPE)
         kwargs.setdefault("universal_newlines", True)
@@ -1700,7 +1723,8 @@ class VirtualEnv:
                 )
         return ret
 
-    def _get_real_python(self):
+    @staticmethod
+    def get_real_python():
         """
         The reason why the virtualenv creation is proxied by this function is mostly
         because under windows, we can't seem to properly create a virtualenv off of
@@ -1733,12 +1757,44 @@ class VirtualEnv:
         except AttributeError:
             return sys.executable
 
+    def run_code(self, code_string, **kwargs):
+        if code_string.startswith("\n"):
+            code_string = code_string[1:]
+        code_string = textwrap.dedent(code_string).rstrip()
+        log.debug(
+            "Code to run passed to python:\n>>>>>>>>>>\n%s\n<<<<<<<<<<", code_string
+        )
+        return self.run(str(self.venv_python), "-c", code_string, **kwargs)
+
+    def get_installed_packages(self):
+        data = {}
+        ret = self.run(str(self.venv_python), "-m", "pip", "list", "--format", "json")
+        for pkginfo in json.loads(ret.stdout):
+            data[pkginfo["name"]] = pkginfo["version"]
+        return data
+
     def _create_virtualenv(self):
         sminion = create_sminion()
         sminion.functions.virtualenv.create(
-            self.venv_dir, python=self._get_real_python()
+            str(self.venv_dir),
+            python=self.get_real_python(),
+            system_site_packages=self.system_site_packages,
         )
         self.install("-U", "pip", "setuptools!=50.*,!=51.*,!=52.*")
+        log.debug("Created virtualenv in %s", self.venv_dir)
+
+
+@attr.s(frozen=True, slots=True)
+class SaltVirtualEnv(VirtualEnv):
+    """
+    This is a VirtualEnv implementation which has this salt checkout installed in it
+    """
+
+    system_site_packages = attr.ib(init=False, default=True)
+
+    def _create_virtualenv(self):
+        super()._create_virtualenv()
+        self.install("--no-use-pep517", RUNTIME_VARS.CODE_DIR)
 
 
 @contextmanager
