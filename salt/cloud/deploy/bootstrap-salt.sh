@@ -14,16 +14,16 @@
 #
 #          BUGS: https://github.com/saltstack/salt-bootstrap/issues
 #
-#     COPYRIGHT: (c) 2012-2018 by the SaltStack Team, see AUTHORS.rst for more
+#     COPYRIGHT: (c) 2012-2021 by the SaltStack Team, see AUTHORS.rst for more
 #                details.
 #
 #       LICENSE: Apache 2.0
-#  ORGANIZATION: SaltStack (saltstack.com)
+#  ORGANIZATION: SaltStack (saltproject.io)
 #       CREATED: 10/15/2012 09:49:37 PM WEST
 #======================================================================================================================
 set -o nounset                              # Treat unset variables as an error
 
-__ScriptVersion="2020.10.20"
+__ScriptVersion="2021.03.02"
 __ScriptName="bootstrap-salt.sh"
 
 __ScriptFullName="$0"
@@ -267,12 +267,12 @@ _CUSTOM_REPO_URL="null"
 _CUSTOM_MASTER_CONFIG="null"
 _CUSTOM_MINION_CONFIG="null"
 _QUIET_GIT_INSTALLATION=$BS_FALSE
-_REPO_URL="repo.saltstack.com"
+_REPO_URL="repo.saltproject.io"
 _PY_EXE=""
 _INSTALL_PY="$BS_FALSE"
 _TORNADO_MAX_PY3_VERSION="5.0"
 _POST_NEON_INSTALL=$BS_FALSE
-_MINIMUM_PIP_VERSION="8.0.0"
+_MINIMUM_PIP_VERSION="9.0.1"
 _MINIMUM_SETUPTOOLS_VERSION="9.1"
 _POST_NEON_PIP_INSTALL_ARGS="--prefix=/usr"
 
@@ -293,9 +293,9 @@ __usage() {
     - stable              Install latest stable release. This is the default
                           install type
     - stable [branch]     Install latest version on a branch. Only supported
-                          for packages available at repo.saltstack.com
+                          for packages available at repo.saltproject.io
     - stable [version]    Install a specific version. Only supported for
-                          packages available at repo.saltstack.com
+                          packages available at repo.saltproject.io
                           To pin a 3xxx minor version, specify it as 3xxx.0
     - testing             RHEL-family specific: configure EPEL testing repo
     - git                 Install from the head of the master branch
@@ -377,8 +377,8 @@ __usage() {
         on the system.
     -R  Specify a custom repository URL. Assumes the custom repository URL
         points to a repository that mirrors Salt packages located at
-        repo.saltstack.com. The option passed with -R replaces the
-        "repo.saltstack.com". If -R is passed, -r is also set. Currently only
+        repo.saltproject.io. The option passed with -R replaces the
+        "repo.saltproject.io". If -R is passed, -r is also set. Currently only
         works on CentOS/RHEL and Debian based distributions.
     -J  Replace the Master config file with data passed in as a JSON string. If
         a Master config file is found, a reasonable effort will be made to save
@@ -604,7 +604,7 @@ elif [ "$ITYPE" = "stable" ]; then
     if [ "$#" -eq 0 ];then
         STABLE_REV="latest"
     else
-        if [ "$(echo "$1" | grep -E '^(latest|1\.6|1\.7|2014\.1|2014\.7|2015\.5|2015\.8|2016\.3|2016\.11|2017\.7|2018\.3|2019\.2|3000|3001|3002)$')" != "" ]; then
+        if [ "$(echo "$1" | grep -E '^(latest|1\.6|1\.7|2014\.1|2014\.7|2015\.5|2015\.8|2016\.3|2016\.11|2017\.7|2018\.3|2019\.2|3000|3001|3002|3003)$')" != "" ]; then
             STABLE_REV="$1"
             shift
         elif [ "$(echo "$1" | grep -E '^(2[0-9]*\.[0-9]*\.[0-9]*|[3-9][0-9]{3}(\.[0-9]*)?)$')" != "" ]; then
@@ -615,7 +615,7 @@ elif [ "$ITYPE" = "stable" ]; then
             fi
             shift
         else
-            echo "Unknown stable version: $1 (valid: 1.6, 1.7, 2014.1, 2014.7, 2015.5, 2015.8, 2016.3, 2016.11, 2017.7, 2018.3, 2019.2, 3000, 3001 3002, latest, \$MAJOR.\$MINOR.\$PATCH until 2019.2, \$MAJOR or \$MAJOR.\$PATCH starting from 3000)"
+            echo "Unknown stable version: $1 (valid: 1.6, 1.7, 2014.1, 2014.7, 2015.5, 2015.8, 2016.3, 2016.11, 2017.7, 2018.3, 2019.2, 3000, 3001, 3002, 3003, latest, \$MAJOR.\$MINOR.\$PATCH until 2019.2, \$MAJOR or \$MAJOR.\$PATCH starting from 3000)"
             exit 1
         fi
     fi
@@ -721,7 +721,7 @@ if [ "$ITYPE" != "git" ]; then
     fi
 fi
 
-# Set the _REPO_URL value based on if -R was passed or not. Defaults to repo.saltstack.com.
+# Set the _REPO_URL value based on if -R was passed or not. Defaults to repo.saltproject.io.
 if [ "$_CUSTOM_REPO_URL" != "null" ]; then
     _REPO_URL="$_CUSTOM_REPO_URL"
 
@@ -900,6 +900,8 @@ __derive_debian_numeric_version() {
             NUMERIC_VERSION=$(__parse_version_string "9.0")
         elif [ "$INPUT_VERSION" = "buster/sid" ]; then
             NUMERIC_VERSION=$(__parse_version_string "10.0")
+        elif [ "$INPUT_VERSION" = "bullseye/sid" ]; then
+            NUMERIC_VERSION=$(__parse_version_string "11.0")
         else
             echowarn "Unable to parse the Debian Version (codename: '$INPUT_VERSION')"
         fi
@@ -1360,7 +1362,7 @@ __check_dpkg_architecture() {
     fi
 
     __REPO_ARCH="$DPKG_ARCHITECTURE"
-    __REPO_ARCH_DEB='deb'
+    __REPO_ARCH_DEB='deb [signed-by=/usr/share/keyrings/salt-archive-keyring.gpg]'
     __return_code=0
 
     case $DPKG_ARCHITECTURE in
@@ -1379,7 +1381,7 @@ __check_dpkg_architecture() {
                 # Saltstack official repository does not yet have arm64 metadata,
                 # use amd64 repositories on arm64, since all pkgs are arch-independent
                 __REPO_ARCH="amd64"
-                __REPO_ARCH_DEB="deb [arch=$__REPO_ARCH]"
+                __REPO_ARCH_DEB="deb [signed-by=/usr/share/keyrings/salt-archive-keyring.gpg arch=$__REPO_ARCH]"
                 warn_msg="Support for arm64 packages is experimental and might rely on architecture-independent packages from the amd64 repository."
             fi
             error_msg=""
@@ -1543,20 +1545,17 @@ __debian_derivatives_translation() {
 __debian_codename_translation() {
 
     case $DISTRO_MAJOR_VERSION in
-        "7")
-            DISTRO_CODENAME="wheezy"
-            ;;
-        "8")
-            DISTRO_CODENAME="jessie"
-            ;;
         "9")
             DISTRO_CODENAME="stretch"
             ;;
         "10")
             DISTRO_CODENAME="buster"
             ;;
+        "11")
+            DISTRO_CODENAME="bullseye"
+            ;;
         *)
-            DISTRO_CODENAME="jessie"
+            DISTRO_CODENAME="stretch"
             ;;
     esac
 }
@@ -1569,8 +1568,8 @@ __debian_codename_translation() {
 __check_end_of_life_versions() {
     case "${DISTRO_NAME_L}" in
         debian)
-            # Debian versions below 7 are not supported
-            if [ "$DISTRO_MAJOR_VERSION" -lt 8 ]; then
+            # Debian versions below 9 are not supported
+            if [ "$DISTRO_MAJOR_VERSION" -lt 9 ]; then
                 echoerror "End of life distributions are not supported."
                 echoerror "Please consider upgrading to the next stable. See:"
                 echoerror "    https://wiki.debian.org/DebianReleases"
@@ -1581,15 +1580,16 @@ __check_end_of_life_versions() {
         ubuntu)
             # Ubuntu versions not supported
             #
-            #  < 14.04
-            #  = 14.10
-            #  = 15.04, 15.10
+            #  < 16.04
             #  = 16.10
             #  = 17.04, 17.10
-            if [ "$DISTRO_MAJOR_VERSION" -lt 14 ] || \
-                [ "$DISTRO_MAJOR_VERSION" -eq 15 ] || \
+            #  = 18.10
+            #  = 19.04, 19.10
+            if [ "$DISTRO_MAJOR_VERSION" -lt 16 ] || \
                 [ "$DISTRO_MAJOR_VERSION" -eq 17 ] || \
-                { [ "$DISTRO_MAJOR_VERSION" -eq 16 ] && [ "$DISTRO_MINOR_VERSION" -eq 10 ]; }; then
+                [ "$DISTRO_MAJOR_VERSION" -eq 19 ] || \
+                { [ "$DISTRO_MAJOR_VERSION" -eq 16 ] && [ "$DISTRO_MINOR_VERSION" -eq 10 ]; } || \
+                { [ "$DISTRO_MAJOR_VERSION" -eq 18 ] && [ "$DISTRO_MINOR_VERSION" -eq 10 ]; }; then
                 echoerror "End of life distributions are not supported."
                 echoerror "Please consider upgrading to the next stable. See:"
                 echoerror "    https://wiki.ubuntu.com/Releases"
@@ -1989,7 +1989,7 @@ __apt_key_fetch() {
     tempfile="$(__temp_gpg_pub)"
 
     __fetch_url "$tempfile" "$url" || return 1
-    apt-key add "$tempfile" || return 1
+    cp -f "$tempfile" /usr/share/keyrings/salt-archive-keyring.gpg && chmod 644 /usr/share/keyrings/salt-archive-keyring.gpg || return 1
     rm -f "$tempfile"
 
     return 0
@@ -2714,8 +2714,13 @@ EOM
 )
     if ! ${_py_exe} -c "$CHECK_PIP_VERSION_SCRIPT"; then
         # Upgrade pip to at least 1.2 which is when we can start using "python -m pip"
-        echodebug "Running '${_pip_cmd} install ${_POST_NEON_PIP_INSTALL_ARGS} pip>=${_MINIMUM_PIP_VERSION}'"
-        ${_pip_cmd} install ${_POST_NEON_PIP_INSTALL_ARGS} -v "pip>=${_MINIMUM_PIP_VERSION}"
+        if [ "${_py_version}" = "3.5" ]; then
+          echodebug "Running '${_pip_cmd} install ${_POST_NEON_PIP_INSTALL_ARGS} pip>=${_MINIMUM_PIP_VERSION},<21.0'"
+          ${_pip_cmd} install ${_POST_NEON_PIP_INSTALL_ARGS} -v "pip>=${_MINIMUM_PIP_VERSION},<21.0"
+        else
+          echodebug "Running '${_pip_cmd} install ${_POST_NEON_PIP_INSTALL_ARGS} pip>=${_MINIMUM_PIP_VERSION}'"
+          ${_pip_cmd} install ${_POST_NEON_PIP_INSTALL_ARGS} -v "pip>=${_MINIMUM_PIP_VERSION}"
+        fi
         sleep 1
         echodebug "PATH: ${PATH}"
         _pip_cmd="pip${_py_version}"
@@ -2902,11 +2907,10 @@ __enable_universe_repository() {
 
 __install_saltstack_ubuntu_repository() {
     # Workaround for latest non-LTS ubuntu
-    if [ "$DISTRO_MAJOR_VERSION" -eq 19 ] || \
-        { [ "$DISTRO_MAJOR_VERSION" -eq 18 ] && [ "$DISTRO_MINOR_VERSION" -eq 10 ]; }; then
+    if { [ "$DISTRO_MAJOR_VERSION" -eq 20 ] && [ "$DISTRO_MINOR_VERSION" -eq 10 ]; }; then
         echowarn "Non-LTS Ubuntu detected, but stable packages requested. Trying packages for previous LTS release. You may experience problems."
-        UBUNTU_VERSION=18.04
-        UBUNTU_CODENAME="bionic"
+        UBUNTU_VERSION=20.04
+        UBUNTU_CODENAME="focal"
     else
         UBUNTU_VERSION=${DISTRO_VERSION}
         UBUNTU_CODENAME=${DISTRO_CODENAME}
@@ -2937,7 +2941,7 @@ __install_saltstack_ubuntu_repository() {
     SALTSTACK_UBUNTU_URL="${HTTP_VAL}://${_REPO_URL}/${__PY_VERSION_REPO}/ubuntu/${UBUNTU_VERSION}/${__REPO_ARCH}/${STABLE_REV}"
     echo "$__REPO_ARCH_DEB $SALTSTACK_UBUNTU_URL $UBUNTU_CODENAME main" > /etc/apt/sources.list.d/saltstack.list
 
-    __apt_key_fetch "$SALTSTACK_UBUNTU_URL/SALTSTACK-GPG-KEY.pub" || return 1
+    __apt_key_fetch "$SALTSTACK_UBUNTU_URL/salt-archive-keyring.gpg" || return 1
 
     __wait_for_apt apt-get update || return 1
 }
@@ -3026,8 +3030,12 @@ install_ubuntu_stable_deps() {
 
     if [ "${_UPGRADE_SYS}" -eq $BS_TRUE ]; then
         if [ "${_INSECURE_DL}" -eq $BS_TRUE ]; then
-            __apt_get_install_noinput --allow-unauthenticated debian-archive-keyring &&
-                apt-key update && apt-get update || return 1
+            if [ "$DISTRO_MAJOR_VERSION" -ge 20 ]; then
+                __apt_get_install_noinput --allow-unauthenticated debian-archive-keyring && apt-get update || return 1
+            else
+                __apt_get_install_noinput --allow-unauthenticated debian-archive-keyring &&
+                    apt-key update && apt-get update || return 1
+            fi
         fi
 
         __apt_get_upgrade_noinput || return 1
@@ -3339,8 +3347,17 @@ install_ubuntu_check_services() {
 #   Debian Install Functions
 #
 __install_saltstack_debian_repository() {
-    DEBIAN_RELEASE="$DISTRO_MAJOR_VERSION"
-    DEBIAN_CODENAME="$DISTRO_CODENAME"
+    if [ "$DISTRO_MAJOR_VERSION" -eq 11 ]; then
+        # Packages for Debian 11 at repo.saltproject.io are not yet available
+        # Set up repository for Debian 10 for Debian 11 for now until support
+        # is available at repo.saltproject.io for Debian 11.
+        echowarn "Debian 11 distribution detected, but stable packages requested. Trying packages from Debian 10. You may experience problems."
+        DEBIAN_RELEASE="10"
+        DEBIAN_CODENAME="buster"
+    else
+        DEBIAN_RELEASE="$DISTRO_MAJOR_VERSION"
+        DEBIAN_CODENAME="$DISTRO_CODENAME"
+    fi
 
     __PY_VERSION_REPO="apt"
     if [ -n "$_PY_EXE" ] && [ "$_PY_MAJOR_VERSION" -eq 3 ]; then
@@ -3367,7 +3384,7 @@ __install_saltstack_debian_repository() {
     SALTSTACK_DEBIAN_URL="${HTTP_VAL}://${_REPO_URL}/${__PY_VERSION_REPO}/debian/${DEBIAN_RELEASE}/${__REPO_ARCH}/${STABLE_REV}"
     echo "$__REPO_ARCH_DEB $SALTSTACK_DEBIAN_URL $DEBIAN_CODENAME main" > "/etc/apt/sources.list.d/saltstack.list"
 
-    __apt_key_fetch "$SALTSTACK_DEBIAN_URL/SALTSTACK-GPG-KEY.pub" || return 1
+    __apt_key_fetch "$SALTSTACK_DEBIAN_URL/salt-archive-keyring.gpg" || return 1
 
     __wait_for_apt apt-get update || return 1
 }
@@ -3385,8 +3402,12 @@ install_debian_deps() {
     if [ "${_UPGRADE_SYS}" -eq $BS_TRUE ]; then
         # Try to update GPG keys first if allowed
         if [ "${_INSECURE_DL}" -eq $BS_TRUE ]; then
-            __apt_get_install_noinput --allow-unauthenticated debian-archive-keyring &&
-                apt-key update && apt-get update || return 1
+            if [ "$DISTRO_MAJOR_VERSION" -ge 10 ]; then
+                __apt_get_install_noinput --allow-unauthenticated debian-archive-keyring && apt-get update || return 1
+            else
+                __apt_get_install_noinput --allow-unauthenticated debian-archive-keyring &&
+                    apt-key update && apt-get update || return 1
+            fi
         fi
 
         __apt_get_upgrade_noinput || return 1
@@ -5798,6 +5819,7 @@ install_arch_check_services() {
 # Using a separate conf step to head for idempotent install...
 __configure_freebsd_pkg_details() {
     _SALT_ETC_DIR="/usr/local/etc/salt"
+    _PKI_DIR=${_SALT_ETC_DIR}/pki
     _POST_NEON_PIP_INSTALL_ARGS="--prefix=/usr/local"
 }
 
@@ -5821,6 +5843,8 @@ install_freebsd_git_deps() {
         /usr/local/sbin/pkg install -y ${SALT_DEPENDENCIES} python || return 1
 
         /usr/local/sbin/pkg install -y py37-requests || return 1
+        /usr/local/sbin/pkg install -y py37-tornado4 || return 1
+
     else
         /usr/local/sbin/pkg install -y python py37-pip py37-setuptools libzmq4 libunwind || return 1
     fi
@@ -6304,7 +6328,7 @@ __set_suse_pkg_repo() {
         suse_pkg_url_base="https://download.opensuse.org/repositories/systemsmanagement:/saltstack"
         suse_pkg_url_path="${DISTRO_REPO}/systemsmanagement:saltstack.repo"
     else
-        suse_pkg_url_base="${HTTP_VAL}://repo.saltstack.com/opensuse"
+        suse_pkg_url_base="${HTTP_VAL}://repo.saltproject.io/opensuse"
         suse_pkg_url_path="${DISTRO_REPO}/systemsmanagement:saltstack:products.repo"
     fi
     SUSE_PKG_URL="$suse_pkg_url_base/$suse_pkg_url_path"
@@ -6441,6 +6465,9 @@ install_opensuse_git_deps() {
         if [ "$_INSTALL_CLOUD" -eq $BS_TRUE ]; then
             __PACKAGES="${__PACKAGES} python-apache-libcloud"
         fi
+    # Check for Tumbleweed
+    elif [ "${DISTRO_MAJOR_VERSION}" -ge 20210101 ]; then
+        __PACKAGES="python3-pip"
     else
         __PACKAGES="python-pip python-setuptools gcc"
     fi
@@ -6522,7 +6549,7 @@ install_opensuse_git_post() {
         [ $fname = "minion" ] && [ "$_INSTALL_MINION" -eq $BS_FALSE ] && continue
         [ $fname = "syndic" ] && [ "$_INSTALL_SYNDIC" -eq $BS_FALSE ] && continue
 
-        if [ -f /bin/systemctl ]; then
+        if command -v systemctl; then
             use_usr_lib=$BS_FALSE
 
             if [ "${DISTRO_MAJOR_VERSION}" -ge 15 ]; then
@@ -7056,10 +7083,20 @@ __gentoo_pre_dep() {
         mkdir /etc/portage
     fi
 
-    # Enable python 3.6 if installing pre Neon Salt release
+    # Enable Python 3.6 target for pre Neon Salt release
     if echo "${STABLE_REV}" | grep -q "2019" || [ "${ITYPE}" = "git" ] && [ "${_POST_NEON_INSTALL}" -eq $BS_FALSE ]; then
-        if ! emerge --info | sed 's/.*\(PYTHON_TARGETS="[^"]*"\).*/\1/' | grep -q 'python3_6' ; then
-            echo "PYTHON_TARGETS=\"\${PYTHON_TARGETS} python3_6\"" >> /etc/portage/make.conf
+        EXTRA_PYTHON_TARGET=python3_6
+    fi
+
+    # Enable Python 3.7 target for Salt Neon using GIT
+    if [ "${ITYPE}" = "git" ] && [ "${GIT_REV}" = "v3000" ]; then
+        EXTRA_PYTHON_TARGET=python3_7
+    fi
+
+    if [ -n "${EXTRA_PYTHON_TARGET:-}" ]; then
+        if ! emerge --info | sed 's/.*\(PYTHON_TARGETS="[^"]*"\).*/\1/' | grep -q "${EXTRA_PYTHON_TARGET}" ; then
+            echo "PYTHON_TARGETS=\"\${PYTHON_TARGETS} ${EXTRA_PYTHON_TARGET}\"" >> /etc/portage/make.conf
+            emerge --deep --with-bdeps=y --newuse --quiet @world
         fi
     fi
 }
@@ -7103,26 +7140,19 @@ install_gentoo_deps() {
 install_gentoo_git_deps() {
     __gentoo_pre_dep || return 1
 
-    GENTOO_GIT_PACKAGES=""
-
     # Install pip if it does not exist
     if ! __check_command_exists pip ; then
-        GENTOO_GIT_PACKAGES="${GENTOO_GIT_PACKAGES} dev-python/pip"
+        GENTOO_GIT_PACKAGES="${GENTOO_GIT_PACKAGES:-} dev-python/pip"
     fi
 
     # Install GIT if it does not exist
     if ! __check_command_exists git ; then
-        GENTOO_GIT_PACKAGES="${GENTOO_GIT_PACKAGES} dev-vcs/git"
+        GENTOO_GIT_PACKAGES="${GENTOO_GIT_PACKAGES:-} dev-vcs/git"
     fi
 
     # Salt <3000 does not automatically install dependencies. It has to be done manually.
     if [ "${_POST_NEON_INSTALL}" -eq $BS_FALSE ]; then
-        # Install Python 3.6 if it does not exist
-        if ! __check_command_exists python3.6 ; then
-            GENTOO_GIT_PACKAGES="${GENTOO_GIT_PACKAGES} dev-lang/python:3.6"
-        fi
-
-        GENTOO_GIT_PACKAGES="${GENTOO_GIT_PACKAGES}
+        GENTOO_GIT_PACKAGES="${GENTOO_GIT_PACKAGES:-}
             sys-apps/pciutils
             dev-python/pyyaml
             dev-python/pyzmq
@@ -7130,7 +7160,7 @@ install_gentoo_git_deps() {
             dev-python/pycryptodome
             dev-python/py
             dev-python/requests
-            dev-python/msgpack
+            <dev-python/msgpack-1.0
             dev-python/jinja
             dev-python/pyasn1
             dev-python/markupsafe
@@ -7143,10 +7173,10 @@ install_gentoo_git_deps() {
 
     # Install libcloud when Salt Cloud support was requested
     if [ "$_INSTALL_CLOUD" -eq $BS_TRUE ]; then
-        GENTOO_GIT_PACKAGES="${GENTOO_GIT_PACKAGES} dev-python/libcloud"
+        GENTOO_GIT_PACKAGES="${GENTOO_GIT_PACKAGES:-} dev-python/libcloud"
     fi
 
-    if [ -n "${GENTOO_GIT_PACKAGES}" ]; then
+    if [ -n "${GENTOO_GIT_PACKAGES:-}" ]; then
         # shellcheck disable=SC2086
         __autounmask ${GENTOO_GIT_PACKAGES} || return 1
         # shellcheck disable=SC2086
@@ -7172,16 +7202,23 @@ install_gentoo_stable() {
 }
 
 install_gentoo_git() {
-    if [ "${_POST_NEON_INSTALL}" -eq $BS_TRUE ]; then
-        __install_salt_from_repo_post_neon "${_PY_EXE}" || return 1
-        return 0
+    _PYEXE=${_PY_EXE}
+
+    if [ "$_PY_EXE" = "python3" ] || [ -z "$_PY_EXE" ]; then
+        if [ "${GIT_REV}" = "v3000" ]; then
+            # Salt Neon does not support Python 3.8 and greater
+            _PYEXE=python3.7
+        elif [ "${_POST_NEON_INSTALL}" -eq $BS_FALSE ]; then
+            # Tornado 4.3 ebuild supports only Python 3.6, use Python 3.6 as the default Python 3 interpreter
+            _PYEXE=python3.6
+        else
+            _PYEXE=$(emerge --info | grep -oE 'PYTHON_SINGLE_TARGET="[^"]*"' | sed -e 's/"//g' -e 's/_/./g' | cut -d= -f2)
+        fi
     fi
 
-    # Tornado 4.3 ebuild supports only Python 3.6, use Python 3.6 as the default Python 3 interpreter
-    if [ "$_PY_EXE" = "python3" ] || [ -z "$_PY_EXE" ]; then
-        _PYEXE=python3.6
-    else
-        _PYEXE=${_PY_EXE}
+    if [ "${_POST_NEON_INSTALL}" -eq $BS_TRUE ]; then
+        __install_salt_from_repo_post_neon "${_PYEXE}" || return 1
+        return 0
     fi
 
     if [ -f "${_SALT_GIT_CHECKOUT_DIR}/salt/syspaths.py" ]; then
@@ -7426,7 +7463,7 @@ __macosx_get_packagesite() {
     fi
 
     PKG="salt-${STABLE_REV}-${__PY_VERSION_REPO}-${DARWIN_ARCH}.pkg"
-    SALTPKGCONFURL="https://repo.saltstack.com/osx/${PKG}"
+    SALTPKGCONFURL="https://repo.saltproject.io/osx/${PKG}"
 }
 
 # Using a separate conf step to head for idempotent install...

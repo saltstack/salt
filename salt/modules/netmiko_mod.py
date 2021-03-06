@@ -226,13 +226,13 @@ def __virtual__():
             False,
             "The netmiko execution module requires netmiko library to be installed.",
         )
-    if salt.utils.platform.is_proxy() and __opts__["proxy"]["proxytype"] == "netmiko":
-        return __virtualname__
-    else:
+    if salt.utils.platform.is_proxy() and __opts__["proxy"]["proxytype"] != "netmiko":
         return (
             False,
-            "Not a proxy or a proxy of type netmiko.",
+            "Not a proxy minion of type netmiko.",
         )
+
+    return __virtualname__
 
 
 # -----------------------------------------------------------------------------

@@ -14,9 +14,9 @@
    :alt: Salt Project Slack Community
    :target: https://saltstackcommunity.herokuapp.com/
 
-.. image:: https://img.shields.io/twitch/status/saltstackinc
+.. image:: https://img.shields.io/twitch/status/saltprojectoss
    :alt: Salt Project Twitch Channel
-   :target: https://www.twitch.tv/saltstackinc
+   :target: https://www.twitch.tv/saltprojectoss
 
 .. image:: https://img.shields.io/reddit/subreddit-subscribers/saltstack?style=social
    :alt: Salt Project subreddit
@@ -106,7 +106,7 @@ Also, check out some of our community resources including:
 * `Salt Project Community Slack <https://saltstackcommunity.herokuapp.com/>`_
 * `Salt Project: IRC on Freenode <https://webchat.freenode.net/#salt>`_
 * `Salt Project YouTube channel <https://www.youtube.com/user/SaltStack>`_
-* `Salt Project Twitch channel <https://www.twitch.tv/saltstackinc>`_
+* `Salt Project Twitch channel <https://www.twitch.tv/saltprojectoss>`_
 
 There are lots of ways to get involved in our community. Every month, there are
 around a dozen opportunities to meet with other contributors and the Salt Core

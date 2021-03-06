@@ -4,7 +4,6 @@ An execution module which can manipulate an f5 bigip via iControl REST
     :platform:      f5_bigip_11.6
 """
 
-
 import salt.exceptions
 import salt.utils.json
 
@@ -44,7 +43,7 @@ def _build_session(username, password, trans_label=None):
 
     bigip = requests.session()
     bigip.auth = (username, password)
-    bigip.verify = False
+    bigip.verify = True
     bigip.headers.update({"Content-Type": "application/json"})
 
     if trans_label:

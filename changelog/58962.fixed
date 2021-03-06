@@ -1,1 +1,0 @@
-Strip trailing "/" from repo.uri when comparing repos in "apktpkg.mod_repo"
