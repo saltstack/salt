@@ -4,10 +4,8 @@ This is the default grains matcher function.
 
 import logging
 
-import salt.utils.data  # pylint: disable=3rd-party-module-not-gated
-from salt.defaults import (  # pylint: disable=3rd-party-module-not-gated
-    DEFAULT_TARGET_DELIM,
-)
+import salt.utils.data
+from salt.defaults import DEFAULT_TARGET_DELIM
 
 log = logging.getLogger(__name__)
 
@@ -21,9 +19,7 @@ def match(tgt, delimiter=DEFAULT_TARGET_DELIM, opts=None, minion_id=None):
 
     log.debug("grains target: %s", tgt)
     if delimiter not in tgt:
-        log.error(
-            "Got insufficient arguments for grains match " "statement from master"
-        )
+        log.error("Got insufficient arguments for grains match statement from master")
         return False
 
     return salt.utils.data.subdict_match(opts["grains"], tgt, delimiter=delimiter)
