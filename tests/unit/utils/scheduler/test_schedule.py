@@ -1,14 +1,13 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Nicole Thomas <nicole@saltstack.com>
 """
-
-from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 import datetime
 import logging
 
+import pytest
+import salt.config
 import salt.utils.schedule
 from salt.utils.schedule import Schedule
 from tests.support.mock import MagicMock, patch
@@ -35,7 +34,7 @@ class ScheduleTestCase(SchedulerTestsBase):
 
     # delete_job tests
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_delete_job_exists(self):
         """
         Tests ensuring the job exists and deleting it
@@ -45,7 +44,7 @@ class ScheduleTestCase(SchedulerTestsBase):
         self.schedule.delete_job("foo")
         self.assertNotIn("foo", self.schedule.opts["schedule"])
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_delete_job_in_pillar(self):
         """
         Tests ignoring deletion job from pillar
@@ -57,7 +56,7 @@ class ScheduleTestCase(SchedulerTestsBase):
         self.schedule.delete_job("foo")
         self.assertIn("foo", self.schedule.opts["pillar"]["schedule"])
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_delete_job_intervals(self):
         """
         Tests removing job from intervals
@@ -67,7 +66,7 @@ class ScheduleTestCase(SchedulerTestsBase):
         self.schedule.delete_job("foo")
         self.assertNotIn("foo", self.schedule.intervals)
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_delete_job_prefix(self):
         """
         Tests ensuring jobs exists and deleting them by prefix
@@ -84,7 +83,7 @@ class ScheduleTestCase(SchedulerTestsBase):
         self.schedule.delete_job_prefix("fooba")
         self.assertEqual(self.schedule.opts, ret)
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_delete_job_prefix_in_pillar(self):
         """
         Tests ignoring deletion jobs by prefix from pillar
@@ -117,7 +116,7 @@ class ScheduleTestCase(SchedulerTestsBase):
         data = {"key1": "value1", "key2": "value2"}
         self.assertRaises(ValueError, Schedule.add_job, self.schedule, data)
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_add_job(self):
         """
         Tests adding a job to the schedule
@@ -141,7 +140,7 @@ class ScheduleTestCase(SchedulerTestsBase):
 
     # enable_job tests
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_enable_job(self):
         """
         Tests enabling a job
@@ -150,7 +149,7 @@ class ScheduleTestCase(SchedulerTestsBase):
         Schedule.enable_job(self.schedule, "name")
         self.assertTrue(self.schedule.opts["schedule"]["name"]["enabled"])
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_enable_job_pillar(self):
         """
         Tests ignoring enable a job from pillar
@@ -163,7 +162,7 @@ class ScheduleTestCase(SchedulerTestsBase):
 
     # disable_job tests
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_disable_job(self):
         """
         Tests disabling a job
@@ -174,7 +173,7 @@ class ScheduleTestCase(SchedulerTestsBase):
         Schedule.disable_job(self.schedule, "name")
         self.assertFalse(self.schedule.opts["schedule"]["name"]["enabled"])
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_disable_job_pillar(self):
         """
         Tests ignoring disable a job in pillar
@@ -187,7 +186,7 @@ class ScheduleTestCase(SchedulerTestsBase):
 
     # modify_job tests
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_modify_job(self):
         """
         Tests modifying a job in the scheduler
@@ -226,7 +225,7 @@ class ScheduleTestCase(SchedulerTestsBase):
 
     # enable_schedule tests
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_enable_schedule(self):
         """
         Tests enabling the scheduler
@@ -242,7 +241,7 @@ class ScheduleTestCase(SchedulerTestsBase):
 
     # disable_schedule tests
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_disable_schedule(self):
         """
         Tests disabling the scheduler
@@ -393,7 +392,7 @@ class ScheduleTestCase(SchedulerTestsBase):
             > self.schedule.opts["schedule"]["testjob"]["_next_fire_time"]
         )
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_handle_func_schedule_minion_blackout(self):
         """
         Tests eval if the schedule from pillar is not a dictionary
@@ -423,3 +422,74 @@ class ScheduleTestCase(SchedulerTestsBase):
             with patch("salt.utils.process.daemonize"), patch("sys.platform", "linux2"):
                 self.schedule.handle_func(False, "test.ping", data)
                 self.assertTrue(log_mock.exception.called)
+
+    def test_handle_func_check_data(self):
+        """
+        Tests handle_func to ensure that __pub_fun_args is not
+        being duplicated in the value of kwargs in data.
+        """
+
+        data = {
+            "function": "test.arg",
+            "_next_scheduled_fire_time": datetime.datetime(
+                2018, 11, 21, 14, 9, 53, 903438
+            ),
+            "run": True,
+            "args": ["arg1", "arg2"],
+            "kwargs": {"key1": "value1", "key2": "value2"},
+            "name": "testjob",
+            "seconds": 60,
+            "_splay": None,
+            "_seconds": 60,
+            "jid_include": True,
+            "maxrunning": 1,
+            "_next_fire_time": datetime.datetime(2018, 11, 21, 14, 8, 53, 903438),
+        }
+
+        with patch("salt.utils.process.daemonize"), patch("sys.platform", "linux2"):
+            with patch.object(self.schedule, "standalone", return_value=True):
+                # run handle_func once
+                self.schedule.handle_func(False, "test.arg", data)
+
+                # run handle_func and ensure __pub_fun_args
+                # is not in kwargs
+                self.schedule.handle_func(False, "test.arg", data)
+
+                self.assertIn("kwargs", data)
+                self.assertNotIn("__pub_fun_args", data["kwargs"])
+
+    # @skipIf(not salt.utils.platform.is_windows(), "Skip on Non-Windows systems")
+    def test_handle_func_check_dicts(self):
+        """
+        Tests that utils, functions, and returners dicts are not
+        empty after handle_func has run on Windows.
+        """
+
+        data = {
+            "function": "test.arg",
+            "_next_scheduled_fire_time": datetime.datetime(
+                2018, 11, 21, 14, 9, 53, 903438
+            ),
+            "run": True,
+            "args": ["arg1", "arg2"],
+            "kwargs": {"key1": "value1", "key2": "value2"},
+            "name": "testjob",
+            "seconds": 60,
+            "_splay": None,
+            "_seconds": 60,
+            "jid_include": True,
+            "maxrunning": 1,
+            "_next_fire_time": datetime.datetime(2018, 11, 21, 14, 8, 53, 903438),
+        }
+
+        with patch("salt.utils.process.daemonize"):
+            with patch.object(self.schedule, "standalone", return_value=True):
+                # simulate what happens before handle_func is called on Windows
+                self.schedule.functions = {}
+                self.schedule.returners = {}
+                self.schedule.utils = {}
+                self.schedule.handle_func(False, "test.arg", data)
+
+                self.assertNotEqual({}, self.schedule.functions)
+                self.assertNotEqual({}, self.schedule.returners)
+                self.assertNotEqual({}, self.schedule.utils)

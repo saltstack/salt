@@ -38,6 +38,49 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
         ret = pip._pip_bin_env(None, None)
         self.assertIsNone(ret)
 
+    def test_install_frozen_app(self):
+        pkg = "pep8"
+        mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
+        with patch("sys.frozen", True, create=True):
+            with patch("sys._MEIPASS", True, create=True):
+                with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
+                    pip.install(pkg)
+                    expected = [
+                        sys.executable,
+                        "pip",
+                        "install",
+                        pkg,
+                    ]
+                    mock.assert_called_with(
+                        expected,
+                        python_shell=False,
+                        saltenv="base",
+                        use_vt=False,
+                        runas=None,
+                    )
+
+    def test_install_source_app(self):
+        pkg = "pep8"
+        mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
+        with patch("sys.frozen", False, create=True):
+            with patch("sys._MEIPASS", False, create=True):
+                with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
+                    pip.install(pkg)
+                    expected = [
+                        sys.executable,
+                        "-m",
+                        "pip",
+                        "install",
+                        pkg,
+                    ]
+                    mock.assert_called_with(
+                        expected,
+                        python_shell=False,
+                        saltenv="base",
+                        use_vt=False,
+                        runas=None,
+                    )
+
     def test_fix4361(self):
         mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
         with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
@@ -1412,3 +1455,102 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                     use_vt=False,
                     python_shell=False,
                 )
+
+    # TODO: When we switch to pytest, mark parametrized with None for user as well -W. Werner, 2020-06-23
+    def test_when_upgrade_is_called_and_there_are_available_upgrades_it_should_call_correct_command(
+        self,
+    ):
+        fake_run_all = MagicMock(return_value={"retcode": 0, "stdout": ""})
+        expected_user = "fnord"
+        with patch.dict(pip.__salt__, {"cmd.run_all": fake_run_all}), patch(
+            "salt.modules.pip.list_upgrades", autospec=True, return_value=["fnord"]
+        ), patch(
+            "salt.modules.pip._get_pip_bin",
+            autospec=True,
+            return_value=["some-other-pip"],
+        ):
+            pip.upgrade(user=expected_user)
+
+            fake_run_all.assert_any_call(
+                ["some-other-pip", "install", "-U", "freeze", "--all", "fnord"],
+                runas=expected_user,
+                cwd=None,
+                use_vt=False,
+            )
+
+    # TODO: Yeah, parametrize the user here -W. Werner, 2020-07-07
+    def test_when_list_upgrades_is_provided_a_user_it_should_be_passed_to_the_version_command(
+        self,
+    ):
+        fake_run_all = MagicMock(return_value={"retcode": 0, "stdout": "{}"})
+        expected_user = "fnord"
+
+        def all_new_commands(*args, **kwargs):
+            """
+            Without this, mutating the return value mutates the return value
+            for EVERYTHING.
+            """
+            return ["some-other-pip"]
+
+        with patch.dict(pip.__salt__, {"cmd.run_all": fake_run_all}), patch(
+            "salt.modules.pip._get_pip_bin",
+            autospec=True,
+            side_effect=all_new_commands,
+        ):
+            pip._clear_context()
+            pip.list_upgrades(user=expected_user)
+            fake_run_all.assert_any_call(
+                ["some-other-pip", "--version"],
+                runas=expected_user,
+                cwd=None,
+                python_shell=False,
+            )
+
+    # TODO: Yeah, parametrize the user here -W. Werner, 2020-07-07
+    def test_when_install_is_provided_a_user_it_should_be_passed_to_the_version_command(
+        self,
+    ):
+        fake_run_all = MagicMock(return_value={"retcode": 0, "stdout": "{}"})
+        expected_user = "fnord"
+
+        def all_new_commands(*args, **kwargs):
+            """
+            Without this, mutating the return value mutates the return value
+            for EVERYTHING.
+            """
+            return ["some-other-pip"]
+
+        with patch.dict(pip.__salt__, {"cmd.run_all": fake_run_all}), patch(
+            "salt.modules.pip._get_pip_bin",
+            autospec=True,
+            side_effect=all_new_commands,
+        ):
+            pip._clear_context()
+            pip.install(user=expected_user)
+            fake_run_all.assert_any_call(
+                ["some-other-pip", "--version"],
+                runas=expected_user,
+                cwd=None,
+                python_shell=False,
+            )
+
+    # TODO: When we switch to pytest, parameterize the user - None and fnord should be enough, maybe a 3rd user -W. Werner, 2020-07-07
+    def test_when_version_is_called_with_a_user_it_should_be_passed_to_undelying_runas(
+        self,
+    ):
+        fake_run_all = MagicMock(return_value={"retcode": 0, "stdout": ""})
+        expected_user = "fnord"
+        with patch.dict(pip.__salt__, {"cmd.run_all": fake_run_all}), patch(
+            "salt.modules.pip.list_upgrades", autospec=True, return_value=["fnord"]
+        ), patch(
+            "salt.modules.pip._get_pip_bin",
+            autospec=True,
+            return_value=["some-new-pip"],
+        ):
+            pip.version(user=expected_user)
+            fake_run_all.assert_called_with(
+                ["some-new-pip", "--version"],
+                runas=expected_user,
+                cwd=None,
+                python_shell=False,
+            )

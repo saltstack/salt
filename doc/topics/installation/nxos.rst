@@ -14,7 +14,7 @@ STEP 1: Verify Platform and Software Version Support
 
 The following platforms and software versions have been certified to work with this version of Salt.
 
-  .. table:: Platform / Software Mininum Requirements
+  .. table:: Platform / Software Minimum Requirements
      :widths: auto
      :align: center
 
@@ -47,15 +47,15 @@ Using the tables above, select the Salt Minion type.
 
 Choices:
   * ``SSH`` Proxy Minion (See `Salt Proxy Minion Configuration`_ Section)
-  * ``NX-API`` Proxy Minon (See `Salt Proxy Minion Configuration`_ Section)
+  * ``NX-API`` Proxy Minion (See `Salt Proxy Minion Configuration`_ Section)
   * ``GuestShell`` Native Minion (See `GuestShell Salt Minion Installation`_ Section)
-      * Some platforms support a native minon installed directly on the NX-OS device inside the GuestShell
+      * Some platforms support a native minion installed directly on the NX-OS device inside the GuestShell
       * The GuestShell is a secure Linux container environment running CentOS
 
 STEP 3: Network Connectivity
 ----------------------------
 
-Ensure that IP reachability exists between the NX-OS Salt Minon device and the SaltStack Master.
+Ensure that IP reachability exists between the NX-OS Salt Minion device and the SaltStack Master.
 
 **Note:** The management interface exists in a separate VRF context and requires additional configuration as shown.
 
@@ -89,7 +89,7 @@ Here is a sample Proxy Minion directory structure
   ├── n7k-proxy.sls
   └── top.sls
 
-This displays a top sls file and two proxy minon sls files for a Nexus 3k and Nexus 7k device.
+This displays a top sls file and two proxy minion sls files for a Nexus 3k and Nexus 7k device.
 
 Sample contents for the ``top.sls`` file.
 
@@ -105,7 +105,7 @@ Sample contents for the ``top.sls`` file.
 Proxy Minion Pillar Data
 ------------------------
 
-Here is a sample Proxy Minon pillar data file.
+Here is a sample Proxy Minion pillar data file.
 
 All of the data for both ssh and nxapi proxy minion types can be stored in the same pillar data file.  To choose ``ssh`` or ``nxapi``, simply set the ``connection:`` parameter accordingly.
 
@@ -165,7 +165,7 @@ Starting in release ``9.2(1)`` and onward, the .ova file can be copied to the ``
 
 Copy the ``guestshell.ova`` file to ``volatile:`` if supported, otherwise copy it to ``bootflash:``
 
-.. code:: bash
+.. code-block:: console
 
   n3xxx# copy scp://admin@1.2.3.4/guestshell.ova volatile: vrf management
   guestshell.ova 100% 55MB 10.9MB/s 00:05
@@ -174,7 +174,7 @@ Copy the ``guestshell.ova`` file to ``volatile:`` if supported, otherwise copy i
 
 Use the ``guestshell enable`` command to install and enable guestshell.
 
-.. code:: bash
+.. code-block:: console
 
   n3xxx# guestshell enable package volatile:guestshell.ova
 
@@ -213,7 +213,7 @@ The ``guestshell`` container environment is enabled by default on most platforms
 
 **Example.** Allocate resources for guestshell by setting new limits to 500MB disk and 350MB memory.
 
-.. code:: bash
+.. code:: console
 
   n3k# guestshell resize rootfs 500
   n3k# guestshell resize memory 350
@@ -238,7 +238,7 @@ The ``guestshell`` is an independent CentOS container that does not inherit sett
 
 **OPTIONAL: Add DNS Configuration**
 
-.. code:: bash
+.. code:: console
 
   [root@guestshell guestshell]#  cat >> /etc/resolv.conf << EOF
   nameserver 10.0.0.202
@@ -248,7 +248,7 @@ The ``guestshell`` is an independent CentOS container that does not inherit sett
 
 **OPTIONAL: Define proxy server variables if needed to allow network access to SaltStack package repositories**
 
-.. code:: bash
+.. code:: console
 
   export http_proxy=http://proxy.yourdomain.com:<port>
   export https_proxy=https://proxy.yourdomain.com:<port>
@@ -305,7 +305,7 @@ Example:
   - #id: salt
   + id: n3k-guestshell-minion
 
-Start the Minon in the Guestshell and accept the key on the SaltStack Master.
+Start the Minion in the Guestshell and accept the key on the SaltStack Master.
 
   ``[root@guestshell ~]# systemctl start salt-minion``
 
@@ -327,7 +327,7 @@ Start the Minon in the Guestshell and accept the key on the SaltStack Master.
   Proceed? [n/Y] Y
   Key for minion n3k-guestshell-minion accepted.
 
-Ping the SaltStack Minon running in the Guestshell.
+Ping the SaltStack Minion running in the Guestshell.
 
 .. code:: bash
 

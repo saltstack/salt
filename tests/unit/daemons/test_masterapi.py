@@ -1,22 +1,14 @@
-# -*- coding: utf-8 -*-
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import io
-import os
 import stat
 from functools import wraps
 
-# Import Salt libs
+import pytest
 import salt.config
 import salt.daemons.masterapi as masterapi
 import salt.utils.platform
+from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, patch
-
-# Import Salt Testing Libs
-from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 
 def gen_permissions(owner="", group="", others=""):
@@ -276,10 +268,12 @@ class LocalFuncsTestCase(TestCase):
     def setUp(self):
         opts = salt.config.master_config(None)
         self.local_funcs = masterapi.LocalFuncs(opts, "test-key")
+        self.addCleanup(self.local_funcs.destroy)
+        self.addCleanup(delattr, self, "local_funcs")
 
     # runner tests
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_runner_token_not_authenticated(self):
         """
         Asserts that a TokenAuthenticationError is returned when the token can't authenticate.
@@ -293,7 +287,7 @@ class LocalFuncsTestCase(TestCase):
         ret = self.local_funcs.runner({"token": "asdfasdfasdfasdf"})
         self.assertDictEqual(mock_ret, ret)
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_runner_token_authorization_error(self):
         """
         Asserts that a TokenAuthenticationError is returned when the token authenticates, but is
@@ -317,7 +311,7 @@ class LocalFuncsTestCase(TestCase):
 
         self.assertDictEqual(mock_ret, ret)
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_runner_token_salt_invocation_error(self):
         """
         Asserts that a SaltInvocationError is returned when the token authenticates, but the
@@ -342,7 +336,7 @@ class LocalFuncsTestCase(TestCase):
 
         self.assertDictEqual(mock_ret, ret)
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_runner_eauth_not_authenticated(self):
         """
         Asserts that an EauthAuthenticationError is returned when the user can't authenticate.
@@ -357,7 +351,7 @@ class LocalFuncsTestCase(TestCase):
         ret = self.local_funcs.runner({"eauth": "foo"})
         self.assertDictEqual(mock_ret, ret)
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_runner_eauth_authorization_error(self):
         """
         Asserts that an EauthAuthenticationError is returned when the user authenticates, but is
@@ -378,7 +372,7 @@ class LocalFuncsTestCase(TestCase):
 
         self.assertDictEqual(mock_ret, ret)
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_runner_eauth_salt_invocation_error(self):
         """
         Asserts that an EauthAuthenticationError is returned when the user authenticates, but the
@@ -407,7 +401,7 @@ class LocalFuncsTestCase(TestCase):
 
     # wheel tests
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_wheel_token_not_authenticated(self):
         """
         Asserts that a TokenAuthenticationError is returned when the token can't authenticate.
@@ -421,7 +415,7 @@ class LocalFuncsTestCase(TestCase):
         ret = self.local_funcs.wheel({"token": "asdfasdfasdfasdf"})
         self.assertDictEqual(mock_ret, ret)
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_wheel_token_authorization_error(self):
         """
         Asserts that a TokenAuthenticationError is returned when the token authenticates, but is
@@ -445,7 +439,7 @@ class LocalFuncsTestCase(TestCase):
 
         self.assertDictEqual(mock_ret, ret)
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_wheel_token_salt_invocation_error(self):
         """
         Asserts that a SaltInvocationError is returned when the token authenticates, but the
@@ -470,7 +464,7 @@ class LocalFuncsTestCase(TestCase):
 
         self.assertDictEqual(mock_ret, ret)
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_wheel_eauth_not_authenticated(self):
         """
         Asserts that an EauthAuthenticationError is returned when the user can't authenticate.
@@ -485,7 +479,7 @@ class LocalFuncsTestCase(TestCase):
         ret = self.local_funcs.wheel({"eauth": "foo"})
         self.assertDictEqual(mock_ret, ret)
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_wheel_eauth_authorization_error(self):
         """
         Asserts that an EauthAuthenticationError is returned when the user authenticates, but is
@@ -506,7 +500,7 @@ class LocalFuncsTestCase(TestCase):
 
         self.assertDictEqual(mock_ret, ret)
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_wheel_eauth_salt_invocation_error(self):
         """
         Asserts that an EauthAuthenticationError is returned when the user authenticates, but the
@@ -533,7 +527,7 @@ class LocalFuncsTestCase(TestCase):
 
         self.assertDictEqual(mock_ret, ret)
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_wheel_user_not_authenticated(self):
         """
         Asserts that an UserAuthenticationError is returned when the user can't authenticate.
@@ -550,7 +544,7 @@ class LocalFuncsTestCase(TestCase):
 
     # publish tests
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_publish_user_is_blacklisted(self):
         """
         Asserts that an AuthorizationError is returned when the user has been blacklisted.
@@ -568,7 +562,7 @@ class LocalFuncsTestCase(TestCase):
                 mock_ret, self.local_funcs.publish({"user": "foo", "fun": "test.arg"})
             )
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_publish_cmd_blacklisted(self):
         """
         Asserts that an AuthorizationError is returned when the command has been blacklisted.
@@ -588,7 +582,7 @@ class LocalFuncsTestCase(TestCase):
                 mock_ret, self.local_funcs.publish({"user": "foo", "fun": "test.arg"})
             )
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_publish_token_not_authenticated(self):
         """
         Asserts that an AuthenticationError is returned when the token can't authenticate.
@@ -612,7 +606,7 @@ class LocalFuncsTestCase(TestCase):
         ):
             self.assertEqual(mock_ret, self.local_funcs.publish(load))
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_publish_token_authorization_error(self):
         """
         Asserts that an AuthorizationError is returned when the token authenticates, but is not
@@ -645,7 +639,7 @@ class LocalFuncsTestCase(TestCase):
         ):
             self.assertEqual(mock_ret, self.local_funcs.publish(load))
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_publish_eauth_not_authenticated(self):
         """
         Asserts that an AuthenticationError is returned when the user can't authenticate.
@@ -669,7 +663,7 @@ class LocalFuncsTestCase(TestCase):
         ):
             self.assertEqual(mock_ret, self.local_funcs.publish(load))
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_publish_eauth_authorization_error(self):
         """
         Asserts that an AuthorizationError is returned when the user authenticates, but is not
@@ -699,7 +693,7 @@ class LocalFuncsTestCase(TestCase):
         ):
             self.assertEqual(mock_ret, self.local_funcs.publish(load))
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_publish_user_not_authenticated(self):
         """
         Asserts that an AuthenticationError is returned when the user can't authenticate.
@@ -718,7 +712,7 @@ class LocalFuncsTestCase(TestCase):
         ):
             self.assertEqual(mock_ret, self.local_funcs.publish(load))
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_publish_user_authenticated_missing_auth_list(self):
         """
         Asserts that an AuthenticationError is returned when the user has an effective user id and is
@@ -749,7 +743,7 @@ class LocalFuncsTestCase(TestCase):
         ):
             self.assertEqual(mock_ret, self.local_funcs.publish(load))
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_publish_user_authorization_error(self):
         """
         Asserts that an AuthorizationError is returned when the user authenticates, but is not
@@ -784,7 +778,7 @@ class LocalFuncsTestCase(TestCase):
             self.assertEqual(mock_ret, self.local_funcs.publish(load))
 
 
-class FakeCache(object):
+class FakeCache:
     def __init__(self):
         self.data = {}
 
@@ -801,13 +795,14 @@ class RemoteFuncsTestCase(TestCase):
     """
 
     def setUp(self):
-        opts = salt.config.master_config(
-            os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "master")
-        )
+        opts = AdaptedConfigurationTestCaseMixin.get_temp_config("master")
+        salt.cache.MemCache.data.clear()
         self.funcs = masterapi.RemoteFuncs(opts)
         self.funcs.cache = FakeCache()
+        self.addCleanup(self.funcs.destroy)
+        self.addCleanup(delattr, self, "funcs")
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_mine_get(self, tgt_type_key="tgt_type"):
         """
         Asserts that ``mine_get`` gives the expected results.
@@ -834,7 +829,7 @@ class RemoteFuncsTestCase(TestCase):
             )
         self.assertDictEqual(ret, dict(webserver="2001:db8::1:3"))
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_mine_get_pre_nitrogen_compat(self):
         """
         Asserts that pre-Nitrogen API key ``expr_form`` is still accepted.
@@ -843,7 +838,7 @@ class RemoteFuncsTestCase(TestCase):
         """
         self.test_mine_get(tgt_type_key="expr_form")
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_mine_get_dict_str(self, tgt_type_key="tgt_type"):
         """
         Asserts that ``mine_get`` gives the expected results when request
@@ -879,7 +874,7 @@ class RemoteFuncsTestCase(TestCase):
             ),
         )
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_mine_get_dict_list(self, tgt_type_key="tgt_type"):
         """
         Asserts that ``mine_get`` gives the expected results when request
@@ -915,7 +910,7 @@ class RemoteFuncsTestCase(TestCase):
             ),
         )
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_mine_get_acl_allowed(self):
         """
         Asserts that ``mine_get`` gives the expected results when this is allowed
@@ -952,7 +947,7 @@ class RemoteFuncsTestCase(TestCase):
             )
         self.assertDictEqual(ret, {"ip_addr": {"webserver": "2001:db8::1:4"}})
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_mine_get_acl_rejected(self):
         """
         Asserts that ``mine_get`` gives the expected results when this is rejected

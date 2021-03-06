@@ -42,17 +42,70 @@ class ArgsTestCase(TestCase):
         )
 
     def test_get_function_argspec(self):
-        def dummy_func(first, second, third, fourth="fifth"):
+        class DummyClass(object):
+            def __init__(self, first):
+                pass
+
+            def __call__(self, first):
+                pass
+
+        dummy_class = DummyClass("foo")
+
+        def dummy_func_nodefault(first, second, third):
             pass
 
-        expected_argspec = namedtuple("ArgSpec", "args varargs keywords defaults")(
-            args=["first", "second", "third", "fourth"],
+        def dummy_func_default(first, second, third="fourth"):
+            pass
+
+        def dummy_func_varargs_keywords(*args, **kwargs):
+            pass
+
+        _ArgSpec = namedtuple("ArgSpec", "args varargs keywords defaults")
+
+        # Callable class instance
+        expected_argspec = _ArgSpec(
+            args=["first"], varargs=None, keywords=None, defaults=None,
+        )
+        ret = salt.utils.args.get_function_argspec(dummy_class)
+        self.assertEqual(ret, expected_argspec)
+
+        # Function with no varargs, no keywords, and no defaults
+        expected_argspec = _ArgSpec(
+            args=["first", "second", "third"],
             varargs=None,
             keywords=None,
-            defaults=("fifth",),
+            defaults=None,
         )
-        ret = salt.utils.args.get_function_argspec(dummy_func)
+        ret = salt.utils.args.get_function_argspec(dummy_func_nodefault)
+        self.assertEqual(ret, expected_argspec)
 
+        # Function with no varargs, no keywords, and one default
+        expected_argspec = _ArgSpec(
+            args=["first", "second", "third"],
+            varargs=None,
+            keywords=None,
+            defaults=("fourth",),
+        )
+        ret = salt.utils.args.get_function_argspec(dummy_func_default)
+        self.assertEqual(ret, expected_argspec)
+
+        # Function with both varargs and keywords
+        expected_argspec = _ArgSpec(
+            args=[], varargs="args", keywords="kwargs", defaults=None,
+        )
+        ret = salt.utils.args.get_function_argspec(dummy_func_varargs_keywords)
+        self.assertEqual(ret, expected_argspec)
+
+        # Test that is_class_method=True is respected. Note that we don't
+        # actually have a decorated function from rest_tornado here to test
+        # this case, but we're testing for the behavior we expect, which is
+        # that the first argument is popped off of the args.
+        expected_argspec = _ArgSpec(
+            args=["second", "third"], varargs=None, keywords=None, defaults=None,
+        )
+        ret = salt.utils.args.get_function_argspec(
+            dummy_func_nodefault, is_class_method=True
+        )
         self.assertEqual(ret, expected_argspec)
 
     def test_parse_kwarg(self):
@@ -320,6 +373,19 @@ class ArgsTestCase(TestCase):
         # the string contains a '#', so we need to test again here.
         self.assertEqual(_yamlify_arg('["foo", "bar"]'), ["foo", "bar"])
         self.assertEqual(_yamlify_arg('{"foo": "bar"}'), {"foo": "bar"})
+
+        # Make sure that an empty string is loaded properly.
+        self.assertEqual(_yamlify_arg("   "), "   ")
+
+        # Make sure that we don't improperly load strings that would be
+        # interpreted by PyYAML as YAML document start/end.
+        self.assertEqual(_yamlify_arg("---"), "---")
+        self.assertEqual(_yamlify_arg("--- "), "--- ")
+        self.assertEqual(_yamlify_arg("..."), "...")
+        self.assertEqual(_yamlify_arg(" ..."), " ...")
+
+        # Make sure that non-printable whitespace is not YAML-loaded
+        self.assertEqual(_yamlify_arg("foo\t\nbar"), "foo\t\nbar")
 
 
 class KwargRegexTest(TestCase):

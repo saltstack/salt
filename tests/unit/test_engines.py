@@ -1,25 +1,16 @@
-# -*- coding: utf-8 -*-
 """
 unit tests for the Salt engines
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
+import pytest
 import salt.config
-
-# Import Salt Libs
 import salt.engines as engines
 import salt.utils.process
-
-# Import 3rd-party libs
-from salt.ext import six
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 log = logging.getLogger(__name__)
 
@@ -32,7 +23,7 @@ class EngineTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {engines: {}}
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_engine_module(self):
         """
         Test
@@ -49,7 +40,7 @@ class EngineTestCase(TestCase, LoaderModuleMockMixin):
             salt.engines.start_engines(mock_opts, process_manager)
             process_map = process_manager._process_map
             count = 0
-            for proc in six.iterkeys(process_map):
+            for proc in process_map:
                 count += 1
                 fun = process_map[proc]["Process"].fun
 

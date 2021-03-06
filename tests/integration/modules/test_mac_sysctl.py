@@ -1,30 +1,24 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Nicole Thomas <nicole@saltstack.com>
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import os
 import random
 
-# Import Salt Libs
+import pytest
 import salt.utils.files
 from salt.exceptions import CommandExecutionError
-
-# Import Salt Testing Libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, skip_if_not_root
-from tests.support.unit import skipIf
+from tests.support.helpers import runs_on
 
 # Module Variables
 ASSIGN_CMD = "net.inet.icmp.icmplim"
 CONFIG = "/etc/sysctl.conf"
 
 
-@destructiveTest
-@skip_if_not_root
+@pytest.mark.destructive_test
+@runs_on(kernel="Darwin")
+@pytest.mark.skip_if_not_root
 class DarwinSysctlModuleTest(ModuleCase):
     """
     Integration tests for the darwin_sysctl module
@@ -34,10 +28,7 @@ class DarwinSysctlModuleTest(ModuleCase):
         """
         Sets up the test requirements
         """
-        super(DarwinSysctlModuleTest, self).setUp()
-        os_grain = self.run_function("grains.item", ["kernel"])
-        if os_grain["kernel"] not in "Darwin":
-            self.skipTest("Test not applicable to '{kernel}' kernel".format(**os_grain))
+        super().setUp()
         # Data needed for cleanup
         self.has_conf = False
         self.val = self.run_function("sysctl.get", [ASSIGN_CMD])
@@ -53,7 +44,7 @@ class DarwinSysctlModuleTest(ModuleCase):
                 raise CommandExecutionError(msg.format(CONFIG))
             os.remove(CONFIG)
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_assign(self):
         """
         Tests assigning a single sysctl parameter
@@ -73,7 +64,7 @@ class DarwinSysctlModuleTest(ModuleCase):
             self.run_function("sysctl.assign", [ASSIGN_CMD, self.val])
             raise
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_persist_new_file(self):
         """
         Tests assigning a sysctl value to a system without a sysctl.conf file
@@ -83,14 +74,14 @@ class DarwinSysctlModuleTest(ModuleCase):
             os.remove(CONFIG)
         try:
             self.run_function("sysctl.persist", [ASSIGN_CMD, 10])
-            line = "{0}={1}".format(ASSIGN_CMD, 10)
+            line = "{}={}".format(ASSIGN_CMD, 10)
             found = self.__check_string(CONFIG, line)
             self.assertTrue(found)
         except CommandExecutionError:
             os.remove(CONFIG)
             raise
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_persist_already_set(self):
         """
         Tests assigning a sysctl value that is already set in sysctl.conf file
@@ -106,7 +97,7 @@ class DarwinSysctlModuleTest(ModuleCase):
             os.remove(CONFIG)
             raise
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_persist_apply_change(self):
         """
         Tests assigning a sysctl value and applying the change to system

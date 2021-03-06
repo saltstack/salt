@@ -1,9 +1,6 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import
-
 import logging
 
+import pytest
 from tests.support.unit import skipIf
 from tests.unit.utils.scheduler.base import SchedulerTestsBase
 
@@ -26,10 +23,14 @@ class SchedulerSkipTest(SchedulerTestsBase):
     """
 
     def setUp(self):
-        super(SchedulerSkipTest, self).setUp()
+        super().setUp()
         self.schedule.opts["loop_interval"] = 1
 
-    @skipIf(True, "SLOWTEST skip")
+    def tearDown(self):
+        self.schedule.reset()
+        super().tearDown()
+
+    @pytest.mark.slow_test
     def test_skip(self):
         """
         verify that scheduled job is skipped at the specified time
@@ -69,7 +70,7 @@ class SchedulerSkipTest(SchedulerTestsBase):
         ret = self.schedule.job_status(job_name)
         self.assertEqual(ret["_last_run"], run_time)
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_skip_during_range(self):
         """
         verify that scheduled job is skipped during the specified range
@@ -149,9 +150,7 @@ class SchedulerSkipTest(SchedulerTestsBase):
         # Check the first job
         ret = self.schedule.job_status(job_name1)
         _expected = (
-            "Invalid date string for start in "
-            "skip_during_range. Ignoring "
-            "job {0}."
+            "Invalid date string for start in " "skip_during_range. Ignoring " "job {}."
         ).format(job_name1)
         self.assertEqual(ret["_error"], _expected)
 
@@ -167,11 +166,11 @@ class SchedulerSkipTest(SchedulerTestsBase):
         # Check the second job
         ret = self.schedule.job_status(job_name2)
         _expected = (
-            "Invalid date string for end in " "skip_during_range. Ignoring " "job {0}."
+            "Invalid date string for end in " "skip_during_range. Ignoring " "job {}."
         ).format(job_name2)
         self.assertEqual(ret["_error"], _expected)
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_skip_during_range_global(self):
         """
         verify that scheduled job is skipped during the specified range
@@ -209,7 +208,7 @@ class SchedulerSkipTest(SchedulerTestsBase):
         ret = self.schedule.job_status(job_name)
         self.assertEqual(ret["_last_run"], run_time)
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_run_after_skip_range(self):
         """
         verify that scheduled job is skipped during the specified range
@@ -246,7 +245,7 @@ class SchedulerSkipTest(SchedulerTestsBase):
         ret = self.schedule.job_status(job_name)
         self.assertEqual(ret["_last_run"], run_time)
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_run_seconds_skip(self):
         """
         verify that scheduled job is skipped during the specified range

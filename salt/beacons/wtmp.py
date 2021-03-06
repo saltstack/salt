@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Beacon to fire events at login of users as registered in the wtmp file
 
@@ -117,26 +116,13 @@ Match the event like so in the master config file:
     on how to set up a bot user.
 """
 
-# Import Python libs
-from __future__ import absolute_import, unicode_literals
-
 import datetime
 import logging
 import os
 import struct
 
 import salt.utils.files
-
-# Import salt libs
 import salt.utils.stringutils
-
-# Import 3rd-party libs
-from salt.ext import six
-
-# pylint: disable=import-error
-from salt.ext.six.moves import map
-
-# pylint: enable=import-error
 
 __virtualname__ = "wtmp"
 WTMP = "/var/log/wtmp"
@@ -161,7 +147,6 @@ LOGOUT_TYPE = 8
 
 log = logging.getLogger(__name__)
 
-# pylint: disable=import-error
 try:
     import dateutil.parser as dateutil_parser
 
@@ -338,7 +323,7 @@ def beacon(config):
             event = {}
             for ind, field in enumerate(FIELDS):
                 event[field] = pack[ind]
-                if isinstance(event[field], six.string_types):
+                if isinstance(event[field], (str, bytes)):
                     if isinstance(event[field], bytes):
                         event[field] = salt.utils.stringutils.to_unicode(event[field])
                     event[field] = event[field].strip("\x00")
@@ -346,14 +331,14 @@ def beacon(config):
             if event["type"] == login_type:
                 event["action"] = "login"
                 # Store the tty to identify the logout event
-                __context__["{0}{1}".format(TTY_KEY_PREFIX, event["line"])] = event[
+                __context__["{}{}".format(TTY_KEY_PREFIX, event["line"])] = event[
                     "user"
                 ]
             elif event["type"] == logout_type:
                 event["action"] = "logout"
                 try:
                     event["user"] = __context__.pop(
-                        "{0}{1}".format(TTY_KEY_PREFIX, event["line"])
+                        "{}{}".format(TTY_KEY_PREFIX, event["line"])
                     )
                 except KeyError:
                     pass

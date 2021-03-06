@@ -41,7 +41,7 @@ class NestedOutputterTestCase(TestCase, LoaderModuleMockMixin):
         self.addCleanup(delattr, self, "data")
 
     def test_output_with_colors(self):
-        # Should look exacly like that, with the default color scheme:
+        # Should look exactly like that, with the default color scheme:
         #
         # local:
         #    ----------
@@ -123,3 +123,22 @@ class NestedOutputterTestCase(TestCase, LoaderModuleMockMixin):
         )
         ret = nested.output(self.data, nested_indent=2)
         self.assertEqual(ret, expected_output_str)
+
+    def test_display_with_integer_keys(self):
+        """
+        Test display output when ret contains a combination of integer and
+        string keys. See issue #56909
+        """
+        nest = nested.NestDisplay(retcode=0)
+        test_dict = {1: "test int 1", 2: "test int 2", "three": "test text three"}
+        lines = nest.display(ret=test_dict, indent=2, prefix="", out=[])
+        expected = [
+            "  \x1b[0;36m----------\x1b[0;0m",
+            "  \x1b[0;36m1\x1b[0;0m:",
+            "      \x1b[0;32mtest int 1\x1b[0;0m",
+            "  \x1b[0;36m2\x1b[0;0m:",
+            "      \x1b[0;32mtest int 2\x1b[0;0m",
+            "  \x1b[0;36mthree\x1b[0;0m:",
+            "      \x1b[0;32mtest text three\x1b[0;0m",
+        ]
+        self.assertListEqual(lines, expected)

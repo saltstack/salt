@@ -240,7 +240,7 @@ Minion information is sent in response to the following minion events:
 - connection drops
     - requires running ``manage.present`` periodically every ``loop_interval`` seconds
 - minion addition
-- minon removal
+- minion removal
 
 .. code-block:: python
 

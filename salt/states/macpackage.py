@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Installing of mac pkg files
 ===========================
@@ -23,18 +22,16 @@ Install any kind of pkg, dmg or app file on macOS:
         - version_check: xcodebuild -version=Xcode 7.1\\n.*7B91b
 
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
 import re
 
-# Import Salt libs
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
+
 __virtualname__ = "macpackage"
 
 
@@ -54,9 +51,6 @@ def installed(
     store=False,
     app=False,
     mpkg=False,
-    user=None,
-    onlyif=None,
-    unless=None,
     force=False,
     allow_untrusted=False,
     version_check=None,
@@ -84,17 +78,6 @@ def installed(
     mpkg
         Is the file a .mpkg? If so then we'll check all of the .pkg files found are installed
 
-    user
-        Name of the user performing the unless or onlyif checks
-
-    onlyif
-        A command to run as a check, run the named command only if the command
-        passed to the ``onlyif`` option returns true
-
-    unless
-        A command to run as a check, only run the named command if the command
-        passed to the ``unless`` option returns false
-
     force
         Force the package to be installed even if its already been found installed
 
@@ -115,17 +98,6 @@ def installed(
 
     real_pkg = name
 
-    # Check onlyif, unless first
-    run_check_cmd_kwargs = {"runas": user, "python_shell": True}
-    if "shell" in __grains__:
-        run_check_cmd_kwargs["shell"] = __grains__["shell"]
-
-    cret = _mod_run_check(run_check_cmd_kwargs, onlyif, unless)
-
-    if isinstance(cret, dict):
-        ret.update(cret)
-        return ret
-
     # Check version info
     if version_check is not None:
         split = version_check.split("=")
@@ -141,10 +113,10 @@ def installed(
                 version_out = ""
 
             if re.match(expected_version, version_out) is not None:
-                ret["comment"] += "Version already matches {0}".format(expected_version)
+                ret["comment"] += "Version already matches {}".format(expected_version)
                 return ret
             else:
-                ret["comment"] += "Version {0} doesn't match {1}. ".format(
+                ret["comment"] += "Version {} doesn't match {}. ".format(
                     version_out, expected_version
                 )
 
@@ -157,7 +129,7 @@ def installed(
         out, mount_point = __salt__["macpackage.mount"](name)
         if "attach failed" in out:
             ret["result"] = False
-            ret["comment"] += "Unable to mount {0}".format(name)
+            ret["comment"] += "Unable to mount {}".format(name)
             return ret
 
         if app:
@@ -177,7 +149,7 @@ def installed(
 
                 if ".app" not in out:
                     ret["result"] = False
-                    ret["comment"] += "Unable to find .app in {0}".format(mount_point)
+                    ret["comment"] += "Unable to find .app in {}".format(mount_point)
                     return ret
                 else:
                     pkg_ids = out.split("\n")
@@ -185,7 +157,7 @@ def installed(
                 pkg_ids = [os.path.basename(name)]
                 mount_point = os.path.dirname(name)
 
-            if onlyif is None and unless is None and version_check is None:
+            if version_check is None:
                 for p in pkg_ids:
                     if target[-4:] == ".app":
                         install_dir = target
@@ -218,7 +190,7 @@ def installed(
 
             def failed_pkg(f_pkg):
                 ret["result"] = False
-                ret["comment"] += "{0} failed to install: {1}".format(name, out)
+                ret["comment"] += "{} failed to install: {}".format(name, out)
 
                 if "failed" in ret["changes"]:
                     ret["changes"]["failed"].append(f_pkg)
@@ -227,7 +199,7 @@ def installed(
 
             for app in installing:
                 try:
-                    log.info("Copying {0} to {1}".format(app, target))
+                    log.info("Copying {} to {}".format(app, target))
 
                     out = __salt__["macpackage.install_app"](
                         os.path.join(mount_point, app), target
@@ -236,7 +208,7 @@ def installed(
                     if len(out) != 0:
                         failed_pkg(app)
                     else:
-                        ret["comment"] += "{0} installed".format(app)
+                        ret["comment"] += "{} installed".format(app)
                         if "installed" in ret["changes"]:
                             ret["changes"]["installed"].append(app)
                         else:
@@ -251,9 +223,9 @@ def installed(
 
             if out["retcode"] != 0:
                 ret["result"] = False
-                ret["comment"] += ". {0} failed to install: {1}".format(name, out)
+                ret["comment"] += ". {} failed to install: {}".format(name, out)
             else:
-                ret["comment"] += "{0} installed".format(name)
+                ret["comment"] += "{} installed".format(name)
                 ret["changes"]["installed"] = installing
 
     finally:
@@ -262,31 +234,3 @@ def installed(
             __salt__["macpackage.unmount"](mount_point)
 
     return ret
-
-
-def _mod_run_check(cmd_kwargs, onlyif, unless):
-    """
-    Execute the onlyif and unless logic.
-    Return a result dict if:
-    * onlyif failed (onlyif != 0)
-    * unless succeeded (unless == 0)
-    else return True
-    """
-    if onlyif:
-        if __salt__["cmd.retcode"](onlyif, **cmd_kwargs) != 0:
-            return {
-                "comment": "onlyif condition is false",
-                "skip_watch": True,
-                "result": True,
-            }
-
-    if unless:
-        if __salt__["cmd.retcode"](unless, **cmd_kwargs) == 0:
-            return {
-                "comment": "unless condition is true",
-                "skip_watch": True,
-                "result": True,
-            }
-
-    # No reason to stop, return True
-    return True

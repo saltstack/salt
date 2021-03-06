@@ -1,18 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 Beacon to emit adb device state changes for Android devices
 
 .. versionadded:: 2016.3.0
 """
-
-# Import Python libs
-from __future__ import absolute_import, unicode_literals
-
 import logging
 
-# Salt libs
 import salt.utils.path
-from salt.ext.six.moves import map
 
 log = logging.getLogger(__name__)
 
@@ -70,7 +63,7 @@ def validate(config):
                     False,
                     (
                         "Need a one of the following adb "
-                        "states: {0}".format(", ".join(states))
+                        "states: {}".format(", ".join(states))
                     ),
                 )
     return True, "Valid beacon configuration"
@@ -122,7 +115,7 @@ def beacon(config):
 
             if "battery_low" in _config:
                 val = last_state.get(device, {})
-                cmd = "adb -s {0} shell cat /sys/class/power_supply/*/capacity".format(
+                cmd = "adb -s {} shell cat /sys/class/power_supply/*/capacity".format(
                     device
                 )
                 battery_levels = __salt__["cmd.run"](
@@ -163,11 +156,10 @@ def beacon(config):
 
     # Maybe send an event if we don't have any devices
     if "no_devices_event" in _config and _config["no_devices_event"] is True:
-        if len(found_devices) == 0 and not last_state_extra["no_devices"]:
+        if not found_devices and not last_state_extra["no_devices"]:
             ret.append({"tag": "no_devices"})
 
     # Did we have no devices listed this time around?
-
-    last_state_extra["no_devices"] = len(found_devices) == 0
+    last_state_extra["no_devices"] = not found_devices
 
     return ret

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     tests.support.cli_scripts
     ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -6,15 +5,11 @@
     Code to generate Salt CLI scripts for test runs
 """
 
-# Import Python Libs
-from __future__ import absolute_import, unicode_literals
 
 import logging
 import os
-import sys
 
-# Import Pytest Salt libs
-from pytestsalt.utils import cli_scripts
+from tests.support.saltfactories_compat import generate_script
 
 log = logging.getLogger(__name__)
 
@@ -33,18 +28,18 @@ def get_script_path(bin_dir, script_name):
     script_path = os.path.join(bin_dir, cli_script_name)
 
     if not os.path.isfile(script_path):
-        cli_scripts.generate_script(
+        generate_script(
             bin_dir=bin_dir,
             script_name=script_name,
-            executable=sys.executable,
             code_dir=RUNTIME_VARS.CODE_DIR,
+            inject_coverage="COVERAGE_PROCESS_START" in os.environ,
             inject_sitecustomize="COVERAGE_PROCESS_START" in os.environ,
         )
     log.info("Returning script path %r", script_path)
     return script_path
 
 
-class ScriptPathMixin(object):
+class ScriptPathMixin:
     def get_script_path(self, script_name):
         """
         Return the path to a testing runtime script

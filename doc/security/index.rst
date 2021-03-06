@@ -38,19 +38,19 @@ Security disclosure policy
     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
-    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
+    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
@@ -61,20 +61,20 @@ Security disclosure policy
     Y+fiK6hAcL25amjzc+yYo9eaaqTn6RATbzdhHQZdpAMxY+vNT0+NhP1Zo5gYBMR6
     5Zp/VhFsf67ijb03FUtdw9N8dHwiR2m8vVA8kO/gCD6wS2p9RdXqrJ9JhnHYWjiV
     uXR+f755ZAndyQfRtowMdQIoiXuJEXYw6XN+/BX81gJaynJYc0uw0MnxWQX+A5m8
-    HqEsbIFUXBYXPgbwXTm7c4IHGgXXdwARAQABiQI8BBgBAgAmAhsMFiEEir5O/PD0
-    skv/Kq+Q1XDy006geT0FAlvR7oMFCQvebyAACgkQ1XDy006geT2Hxw//Zha8j8Uc
-    4B+DmHhZIvPmHp9aFI4DWhC7CBDrYKztBz42H6eX+UsBu4p+uBDKdW9xJH+Qt/zF
-    nf/zB5Bhc/wFceVRCAkWxPdiIQeo5XQGjZeORjle7E9iunTko+5q1q9I7IgqWYrn
-    jRmulDvRhO7AoUrqGACDrV6t0F1/XPB8seR2i6axFmFlt1qBHasRq11yksdgNYiD
-    KXaovf7csDGPGOCWEKMX7BFGpdK/dWdNYfH0Arfom0U5TqNfvGtP4yRPx2bcs7/1
-    VXPj7IqhBgOtA9pwtMjFki8HGkqj7bB2ErFBOnSwqqNnNcbnhiO6D74SHVGAHhKZ
-    whaMPDg76EvjAezoLHg7KWYOyUkWJSLa+YoM9r4+PJuEuW/XuaZCNbrAhek+p3pD
-    ywhElvZe/2UFk619qKzwSbTzk7a90rxLQ2wwtd0vxAW/GyjWl4/kOMZhI5+LAk1l
-    REucE0fSQxzCTeXu2ObvFR9ic02IYGH3Koz8CrGReEI1J05041Y5IhKxdsvGOD2W
-    e7ymcblYW4Gz8eYFlLeNJkj/38R7qmNZ028XHzAZDCAWDiTFrnCoglyk+U0JRHfg
-    HTsdvoc8mBdT/s24LhnfAbpLizlrZZquuOF6NLQSkbuLtmIwf+h9ynEEJxEkGGWg
-    7JqB1tMjNHLkRpveO/DTYB+iffpba1nCguk=
-    =OgRY
+    HqEsbIFUXBYXPgbwXTm7c4IHGgXXdwARAQABiQI8BBgBCAAmAhsMFiEEir5O/PD0
+    skv/Kq+Q1XDy006geT0FAl7W5K0FCQ+hPUoACgkQ1XDy006geT1Q0Q//atnw1D4J
+    13nL8Mygk+ANY4Xljub/TeZqKtzmnWGso843XysErLH1adCu1KDX1Dj4/o3WoPOt
+    0O78uSS81N428ocOPKx+fA63n7q1mRqHHy6pLLVKoT66tmvE1ZN0ObaiPK9IxZkB
+    ThGlHJk9VaUg0vzAaRznogWeBh1dyZktVrtbUO5u4xDX9iql/unVmCWm+U1R7t4q
+    fqPEbk8ZnWc7x4bAZf8/vSQ93mAbpnRRuJdDK9tsiuhl8pRz7OyzvMS81rVF75ja
+    7CcShPofrW4yZ7FqAUMwTbfrvsAraWmDjW17Ao7C2dUA9ViwSKJ6u6Pd5no/hwbm
+    jVoxtO2RvjGOBxKneD36uENAUMBExjDTkSHmOxUYSknrEKUy7P1OL2ZHLG8/rouN
+    5ZvIxHiMkz12ukSt29IHvCngn1UB4/7+tvDHqug4ZAZPuwH7TC5Hk6WO0OoK8Eb2
+    sQa2QoehQjwK0IakGd5kFEqKgbrwYPPa3my7l58nOZmPHdMcTOzgKvUEYAITjsT4
+    oOtocs9Nj+cfCfp6YUn6JeYfiHs+Xhze5igdWIl0ZO5rTmbqcD8A1URKBds0WA+G
+    FLP9shPC0rS/L3Y1fKhqAc0h+znWBU6xjipTkmzh3FdM8gGT6g9YwGQNbi/x47k5
+    vtBIWO4LPeGEvb2Gs65PL2eouOqU6yvBr5Y=
+    =F/97
     -----END PGP PUBLIC KEY BLOCK-----
 
 The SaltStack Security Team is available at security@saltstack.com for
@@ -114,8 +114,20 @@ quickly and safely as is possible.
     lists. The announcement contains a description of the issue and a link to
     the full release documentation and download locations.
 
+.. _saltstack_security_announcements:
+
 Receiving security announcements
 ================================
 
-The fastest place to receive security announcements is via the `salt-announce`_
-mailing list. This list is low-traffic.
+The following mailing lists, per the previous tasks identified in our response
+procedure, will receive security-relevant notifications:
+
+* `salt-packagers`_
+* `salt-users`_
+* `salt-announce`_
+
+In addition to the mailing lists, SaltStack also provides the following resources:
+
+* `SaltStack Security Announcements <https://www.saltstack.com/security-announcements/>`__ landing page
+* `SaltStack Security RSS Feed <http://www.saltstack.com/feed/?post_type=security>`__
+* `SaltStack Community Slack Workspace <http://saltstackcommunity.slack.com/>`__

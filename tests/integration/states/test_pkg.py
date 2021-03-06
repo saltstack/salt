@@ -1,9 +1,6 @@
-# -*- coding: utf-8 -*-
-
 """
 tests for pkg state
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
@@ -14,25 +11,16 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.pkg.rpm
 import salt.utils.platform
-from salt.ext import six
-from salt.ext.six.moves import range
 from tests.support.case import ModuleCase
-from tests.support.helpers import (
-    destructiveTest,
-    not_runs_on,
-    requires_salt_modules,
-    requires_salt_states,
-    requires_system_grains,
-    runs_on,
-)
+from tests.support.helpers import not_runs_on, requires_system_grains, runs_on
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
 
 
-@destructiveTest
 @pytest.mark.windows_whitelisted
+@pytest.mark.destructive_test
 class PkgTest(ModuleCase, SaltReturnAssertsMixin):
     _PKG_EPOCH_TARGETS = []
     _PKG_32_TARGETS = []
@@ -47,8 +35,8 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         cls.ctx = {}
         cls._PKG_TARGETS = ["figlet", "sl"]
         if grains["os"] == "Windows":
-            cls._PKG_TARGETS = ["7zip", "putty"]
-        elif grains["os"] == "freebsd":
+            cls._PKG_TARGETS = ["vlc", "putty"]
+        elif grains["os"] == "FreeBSD":
             cls._VERSION_SPEC_SUPPORTED = False
         elif grains["os_family"] in ("Arch", "Debian"):
             cls._WILDCARDS_SUPPORTED = True
@@ -101,14 +89,14 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
                 # Only a single target, pkg.latest_version returned a string
                 self.ctx[key][targets[0]] = result
 
-        ret = dict([(x, self.ctx[key].get(x, "")) for x in names])
+        ret = {x: self.ctx[key].get(x, "") for x in names}
         if len(names) == 1:
             return ret[names[0]]
         return ret
 
     @requires_system_grains
     def setUp(self, grains=None):  # pylint:disable=W0221
-        super(PkgTest, self).setUp()
+        super().setUp()
         if "refresh" not in self.ctx:
             self.run_function("pkg.refresh_db")
             self.ctx["refresh"] = True
@@ -123,9 +111,9 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             else:
                 raise Exception("Package database locked after 60 seconds, bailing out")
 
-    @requires_salt_modules("pkg.version")
-    @requires_salt_states("pkg.installed", "pkg.removed")
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.requires_salt_modules("pkg.version")
+    @pytest.mark.requires_salt_states("pkg.installed", "pkg.removed")
+    @pytest.mark.slow_test
     def test_pkg_001_installed(self):
         """
         This is a destructive test as it installs and then removes a package
@@ -143,15 +131,13 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state("pkg.removed", name=target)
         self.assertSaltTrueReturn(ret)
 
-    @requires_salt_states("pkg.installed", "pkg.removed")
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.requires_salt_states("pkg.installed", "pkg.removed")
     def test_pkg_002_installed_with_version(self):
         """
         This is a destructive test as it installs and then removes a package
         """
         if not self._VERSION_SPEC_SUPPORTED:
             self.skipTest("Version specification not supported")
-
         target = self._PKG_TARGETS[0]
         version = self.latest_version(target)
 
@@ -167,8 +153,8 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state("pkg.removed", name=target)
         self.assertSaltTrueReturn(ret)
 
-    @requires_salt_states("pkg.installed", "pkg.removed")
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.requires_salt_states("pkg.installed", "pkg.removed")
+    @pytest.mark.slow_test
     def test_pkg_003_installed_multipkg(self):
         """
         This is a destructive test as it installs and then removes two packages
@@ -192,15 +178,13 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             ret = self.run_state("pkg.removed", name=None, pkgs=self._PKG_TARGETS)
             self.assertSaltTrueReturn(ret)
 
-    @requires_salt_states("pkg.installed", "pkg.removed")
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.requires_salt_states("pkg.installed", "pkg.removed")
     def test_pkg_004_installed_multipkg_with_version(self):
         """
         This is a destructive test as it installs and then removes two packages
         """
         if not self._VERSION_SPEC_SUPPORTED:
             self.skipTest("Version specification not supported")
-
         version = self.latest_version(self._PKG_TARGETS[0])
 
         # If this assert fails, we need to find new targets, this test needs to
@@ -217,8 +201,8 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             ret = self.run_state("pkg.removed", name=None, pkgs=self._PKG_TARGETS)
             self.assertSaltTrueReturn(ret)
 
-    @requires_salt_modules("pkg.version")
-    @requires_salt_states("pkg.installed", "pkg.removed")
+    @pytest.mark.requires_salt_modules("pkg.version")
+    @pytest.mark.requires_salt_states("pkg.installed", "pkg.removed")
     def test_pkg_005_installed_32bit(self):
         """
         This is a destructive test as it installs and then removes a package
@@ -244,7 +228,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state("pkg.removed", name=target)
         self.assertSaltTrueReturn(ret)
 
-    @requires_salt_states("pkg.installed", "pkg.removed")
+    @pytest.mark.requires_salt_states("pkg.installed", "pkg.removed")
     def test_pkg_006_installed_32bit_with_version(self):
         """
         This is a destructive test as it installs and then removes a package
@@ -272,7 +256,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state("pkg.removed", name=target)
         self.assertSaltTrueReturn(ret)
 
-    @requires_salt_states("pkg.installed", "pkg.removed")
+    @pytest.mark.requires_salt_states("pkg.installed", "pkg.removed")
     def test_pkg_007_with_dot_in_pkgname(self=None):
         """
         This tests for the regression found in the following issue:
@@ -296,7 +280,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state("pkg.removed", name=target)
         self.assertSaltTrueReturn(ret)
 
-    @requires_salt_states("pkg.installed", "pkg.removed")
+    @pytest.mark.requires_salt_states("pkg.installed", "pkg.removed")
     def test_pkg_008_epoch_in_version(self):
         """
         This tests for the regression found in the following issue:
@@ -322,11 +306,11 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state("pkg.removed", name=target)
         self.assertSaltTrueReturn(ret)
 
-    @requires_salt_modules("pkg.version", "pkg.info_installed")
-    @requires_salt_states("pkg.installed", "pkg.removed")
+    @pytest.mark.requires_salt_modules("pkg.version", "pkg.info_installed")
+    @pytest.mark.requires_salt_states("pkg.installed", "pkg.removed")
     @runs_on(kernel="linux")
     @not_runs_on(os="Amazon")
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_pkg_009_latest_with_epoch(self):
         """
         This tests for the following issue:
@@ -341,10 +325,10 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
         ret = self.run_function("pkg.info_installed", [package])
-        self.assertTrue(pkgquery in six.text_type(ret))
+        self.assertTrue(pkgquery in str(ret))
 
-    @requires_salt_states("pkg.latest", "pkg.removed")
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.requires_salt_states("pkg.latest", "pkg.removed")
+    @pytest.mark.slow_test
     def test_pkg_010_latest(self):
         """
         This tests pkg.latest with a package that has no epoch (or a zero
@@ -363,10 +347,12 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state("pkg.removed", name=target)
         self.assertSaltTrueReturn(ret)
 
-    @requires_salt_modules("pkg.list_pkgs", "pkg.list_upgrades", "pkg.version")
-    @requires_salt_states("pkg.latest")
+    @pytest.mark.requires_salt_modules(
+        "pkg.list_pkgs", "pkg.list_upgrades", "pkg.version"
+    )
+    @pytest.mark.requires_salt_states("pkg.latest")
     @runs_on(kernel="linux", os_family="Debian")
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_pkg_011_latest_only_upgrade(self):
         """
         WARNING: This test will pick a package with an available upgrade (if
@@ -416,11 +402,11 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             )
             self.assertEqual(
                 ret["pkg_|-{0}_|-{0}_|-latest".format(target)]["comment"],
-                "Package {0} is already up-to-date".format(target),
+                "Package {} is already up-to-date".format(target),
             )
 
-    @requires_salt_modules("pkg.version")
-    @requires_salt_states("pkg.installed", "pkg.removed")
+    @pytest.mark.requires_salt_modules("pkg.version")
+    @pytest.mark.requires_salt_states("pkg.installed", "pkg.removed")
     def test_pkg_012_installed_with_wildcard_version(self):
         """
         This is a destructive test as it installs and then removes a package
@@ -459,10 +445,10 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state("pkg.removed", name=target)
         self.assertSaltTrueReturn(ret)
 
-    @requires_salt_modules("pkg.version", "pkg.latest_version")
-    @requires_salt_states("pkg.installed", "pkg.removed")
+    @pytest.mark.requires_salt_modules("pkg.version", "pkg.latest_version")
+    @pytest.mark.requires_salt_states("pkg.installed", "pkg.removed")
     @runs_on(kernel="linux", os_family=["Debian", "RedHat"])
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_pkg_013_installed_with_comparison_operator(self):
         """
         This is a destructive test as it installs and then removes a package
@@ -493,8 +479,8 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             ret = self.run_state("pkg.removed", name=target)
             self.assertSaltTrueReturn(ret)
 
-    @requires_salt_modules("pkg.version")
-    @requires_salt_states("pkg.installed", "pkg.removed")
+    @pytest.mark.requires_salt_modules("pkg.version")
+    @pytest.mark.requires_salt_states("pkg.installed", "pkg.removed")
     @runs_on(kernel="linux", os_familiy="RedHat")
     def test_pkg_014_installed_missing_release(self):
         """
@@ -521,10 +507,12 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state("pkg.removed", name=target)
         self.assertSaltTrueReturn(ret)
 
-    @requires_salt_modules("pkg.hold", "pkg.unhold", "pkg.version", "pkg.list_pkgs")
-    @requires_salt_states("pkg.installed", "pkg.removed")
+    @pytest.mark.requires_salt_modules(
+        "pkg.hold", "pkg.unhold", "pkg.version", "pkg.list_pkgs"
+    )
+    @pytest.mark.requires_salt_states("pkg.installed", "pkg.removed")
     @requires_system_grains
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_pkg_015_installed_held(self, grains=None):
         """
         Tests that a package can be held even when the package is already installed.
@@ -532,7 +520,9 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         versionlock_pkg = None
         if grains["os_family"] == "RedHat":
             pkgs = {
-                p for p in self.run_function("pkg.list_pkgs") if "-versionlock" in p
+                p
+                for p in self.run_function("pkg.list_repo_pkgs")
+                if "yum-plugin-versionlock" in p
             }
             if not pkgs:
                 self.skipTest("No versionlock package found in repositories")
@@ -566,7 +556,11 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
 
         # changes from pkg.hold for Red Hat family are different
         target_changes = {}
-        if grains["os_family"] == "RedHat":
+        if (
+            grains["os_family"] == "RedHat"
+            or grains["os"] == "FreeBSD"
+            or grains["os_family"] == "Suse"
+        ):
             target_changes = {"new": "hold", "old": ""}
         elif grains["os_family"] == "Debian":
             target_changes = {"new": "hold", "old": "install"}
@@ -593,7 +587,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
                 ret = self.run_state("pkg.removed", name=versionlock_pkg)
                 self.assertSaltTrueReturn(ret)
 
-    @requires_salt_states("pkg.installed", "pkg.removed")
+    @pytest.mark.requires_salt_states("pkg.installed", "pkg.removed")
     def test_pkg_016_conditionally_ignore_epoch(self):
         """
         See
@@ -630,8 +624,82 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state("pkg.removed", name=target)
         self.assertSaltTrueReturn(ret)
 
-    @requires_salt_modules("pkg.version")
-    @requires_salt_states("pkg.installed", "pkg.removed")
+    @pytest.mark.requires_salt_modules(
+        "pkg.hold", "pkg.unhold", "pkg.version", "pkg.list_pkgs"
+    )
+    @pytest.mark.requires_salt_states("pkg.installed", "pkg.removed")
+    @requires_system_grains
+    @pytest.mark.slow_test
+    def test_pkg_017_installed_held_equals_false(self, grains=None):
+        """
+        Tests that a package is installed when hold is explicitly False.
+
+        See https://github.com/saltstack/salt/issues/58801.
+        """
+        versionlock_pkg = None
+        if grains["os_family"] == "RedHat":
+            from salt.modules.yumpkg import _versionlock_pkg
+
+            pkgs = {
+                p
+                for p in self.run_function("pkg.list_repo_pkgs")
+                if _versionlock_pkg(grains) in p
+            }
+            if not pkgs:
+                self.skipTest("No versionlock package found in repositories")
+            for versionlock_pkg in pkgs:
+                ret = self.run_state(
+                    "pkg.installed", name=versionlock_pkg, refresh=False
+                )
+                # Exit loop if a versionlock package installed correctly
+                try:
+                    self.assertSaltTrueReturn(ret)
+                    log.debug(
+                        "Installed versionlock package: {}".format(versionlock_pkg)
+                    )
+                    break
+                except AssertionError as e:
+                    log.debug("Versionlock package not found:\n{}".format(e))
+            else:
+                self.fail("Could not install versionlock package from {}".format(pkgs))
+
+        target = self._PKG_TARGETS[0]
+
+        # First we ensure that the package is installed
+        target_ret = self.run_state(
+            "pkg.installed", name=target, hold=False, refresh=False,
+        )
+        self.assertSaltTrueReturn(target_ret)
+
+        if versionlock_pkg and "-versionlock is not installed" in str(target_ret):
+            self.skipTest("{}  `{}` is installed".format(target_ret, versionlock_pkg))
+
+        try:
+            tag = "pkg_|-{0}_|-{0}_|-installed".format(target)
+            self.assertSaltTrueReturn(target_ret)
+            self.assertIn(tag, target_ret)
+            self.assertIn("changes", target_ret[tag])
+            # On Centos 7 package is already installed, no change happened
+            if target_ret[tag].get("changes"):
+                self.assertIn(target, target_ret[tag]["changes"])
+            if grains["os_family"] == "Suse":
+                self.assertIn("packages were installed", target_ret[tag]["comment"])
+            else:
+                #  The "held" string is part of a longer comment that may look
+                #  like:
+                #
+                #    Package units is not being held.
+                self.assertIn("held", target_ret[tag]["comment"])
+        finally:
+            # Clean up, unhold package and remove
+            ret = self.run_state("pkg.removed", name=target)
+            self.assertSaltTrueReturn(ret)
+            if versionlock_pkg:
+                ret = self.run_state("pkg.removed", name=versionlock_pkg)
+                self.assertSaltTrueReturn(ret)
+
+    @pytest.mark.requires_salt_modules("pkg.version")
+    @pytest.mark.requires_salt_states("pkg.installed", "pkg.removed")
     def test_pkg_cap_001_installed(self):
         """
         This is a destructive test as it installs and then removes a package
@@ -658,9 +726,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
                 test=True,
             )
             self.assertInSaltComment(
-                "The following packages would be installed/updated: {0}".format(
-                    realpkg
-                ),
+                "The following packages would be installed/updated: {}".format(realpkg),
                 ret,
             )
             ret = self.run_state(
@@ -671,7 +737,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             ret = self.run_state("pkg.removed", name=realpkg)
             self.assertSaltTrueReturn(ret)
 
-    @requires_salt_states("pkg.installed", "pkg.removed")
+    @pytest.mark.requires_salt_states("pkg.installed", "pkg.removed")
     def test_pkg_cap_002_already_installed(self):
         """
         This is a destructive test as it installs and then removes a package
@@ -716,17 +782,14 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             ret = self.run_state("pkg.removed", name=realpkg)
             self.assertSaltTrueReturn(ret)
 
-    @requires_salt_states("pkg.installed", "pkg.removed")
+    @skipIf(not _PKG_CAP_TARGETS, "Capability not available")
+    @pytest.mark.requires_salt_states("pkg.installed", "pkg.removed")
     def test_pkg_cap_003_installed_multipkg_with_version(self):
         """
         This is a destructive test as it installs and then removes two packages
         """
-        if not self._PKG_CAP_TARGETS:
-            self.skipTest("Capability not provided")
-
         if not self._VERSION_SPEC_SUPPORTED:
             self.skipTest("Version specification not supported")
-
         target, realpkg = self._PKG_CAP_TARGETS[0]
         version = self.latest_version(target)
         realver = self.latest_version(realpkg)
@@ -761,7 +824,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
                 test=True,
             )
             self.assertInSaltComment("packages would be installed/updated", ret)
-            self.assertInSaltComment("{0}={1}".format(realpkg, realver), ret)
+            self.assertInSaltComment("{}={}".format(realpkg, realver), ret)
 
             ret = self.run_state(
                 "pkg.installed",
@@ -780,8 +843,8 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             )
             self.assertSaltTrueReturn(ret)
 
-    @requires_salt_modules("pkg.version")
-    @requires_salt_states("pkg.latest", "pkg.removed")
+    @pytest.mark.requires_salt_modules("pkg.version")
+    @pytest.mark.requires_salt_states("pkg.latest", "pkg.removed")
     def test_pkg_cap_004_latest(self):
         """
         This tests pkg.latest with a package that has no epoch (or a zero
@@ -809,7 +872,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
                 test=True,
             )
             self.assertInSaltComment(
-                "The following packages would be installed/upgraded: {0}".format(
+                "The following packages would be installed/upgraded: {}".format(
                     realpkg
                 ),
                 ret,
@@ -828,8 +891,8 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             ret = self.run_state("pkg.removed", name=realpkg)
             self.assertSaltTrueReturn(ret)
 
-    @requires_salt_modules("pkg.version")
-    @requires_salt_states("pkg.installed", "pkg.removed", "pkg.downloaded")
+    @pytest.mark.requires_salt_modules("pkg.version")
+    @pytest.mark.requires_salt_states("pkg.installed", "pkg.removed", "pkg.downloaded")
     def test_pkg_cap_005_downloaded(self):
         """
         This is a destructive test as it installs and then removes a package
@@ -858,7 +921,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             test=True,
         )
         self.assertInSaltComment(
-            "The following packages would be downloaded: {0}".format(realpkg), ret
+            "The following packages would be downloaded: {}".format(realpkg), ret
         )
 
         ret = self.run_state(
@@ -866,8 +929,8 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
 
-    @requires_salt_modules("pkg.version")
-    @requires_salt_states("pkg.installed", "pkg.removed", "pkg.uptodate")
+    @pytest.mark.requires_salt_modules("pkg.version")
+    @pytest.mark.requires_salt_states("pkg.installed", "pkg.removed", "pkg.uptodate")
     def test_pkg_cap_006_uptodate(self):
         """
         This is a destructive test as it installs and then removes a package

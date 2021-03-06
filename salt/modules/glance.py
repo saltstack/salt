@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module for handling openstack glance calls.
 
@@ -35,16 +34,12 @@ Module for handling openstack glance calls.
         salt '*' glance.image_list profile=openstack1
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import pprint
 import re
 
-# Import salt libs
 from salt.exceptions import SaltInvocationError
-from salt.ext import six
 
 # pylint: disable=import-error
 HAS_GLANCE = False
@@ -212,9 +207,7 @@ def _add_image(collection, image):
     elif type(collection) is list:
         collection.append(image_prep)
     else:
-        msg = (
-            '"collection" is {0}'.format(type(collection)) + "instead of dict or list."
-        )
+        msg = '"collection" is {}'.format(type(collection)) + "instead of dict or list."
         log.error(msg)
         raise TypeError(msg)
     return collection
@@ -261,7 +254,7 @@ def image_create(
         if visibility not in v_list:
             raise SaltInvocationError(
                 '"visibility" needs to be one '
-                + "of the following: {0}".format(", ".join(v_list))
+                + "of the following: {}".format(", ".join(v_list))
             )
         elif visibility == "public":
             kwargs["is_public"] = True
@@ -272,14 +265,14 @@ def image_create(
     if container_format not in cf_list:
         raise SaltInvocationError(
             '"container_format" needs to be '
-            + "one of the following: {0}".format(", ".join(cf_list))
+            + "one of the following: {}".format(", ".join(cf_list))
         )
     else:
         kwargs["container_format"] = container_format
     if disk_format not in df_list:
         raise SaltInvocationError(
             '"disk_format" needs to be one '
-            + "of the following: {0}".format(", ".join(df_list))
+            + "of the following: {}".format(", ".join(df_list))
         )
     else:
         kwargs["disk_format"] = disk_format
@@ -315,20 +308,20 @@ def image_delete(id=None, name=None, profile=None):  # pylint: disable=C0103
     if not id:
         return {
             "result": False,
-            "comment": "Unable to resolve image id " "for name {0}".format(name),
+            "comment": "Unable to resolve image id " "for name {}".format(name),
         }
     elif not name:
         name = image["name"]
     try:
         g_client.images.delete(id)
     except exc.HTTPNotFound:
-        return {"result": False, "comment": "No image with ID {0}".format(id)}
+        return {"result": False, "comment": "No image with ID {}".format(id)}
     except exc.HTTPForbidden as forbidden:
-        log.error(six.text_type(forbidden))
-        return {"result": False, "comment": six.text_type(forbidden)}
+        log.error(str(forbidden))
+        return {"result": False, "comment": str(forbidden)}
     return {
         "result": True,
-        "comment": "Deleted image '{0}' ({1}).".format(name, id),
+        "comment": "Deleted image '{}' ({}).".format(name, id),
     }
 
 
@@ -352,12 +345,12 @@ def image_show(id=None, name=None, profile=None):  # pylint: disable=C0103
     if not id:
         return {
             "result": False,
-            "comment": "Unable to resolve image ID " "for name '{0}'".format(name),
+            "comment": "Unable to resolve image ID " "for name '{}'".format(name),
         }
     try:
         image = g_client.images.get(id)
     except exc.HTTPNotFound:
-        return {"result": False, "comment": "No image with ID {0}".format(id)}
+        return {"result": False, "comment": "No image with ID {}".format(id)}
     pformat = pprint.PrettyPrinter(indent=4).pformat
     log.debug(
         "Properties of image %s:\n%s",
@@ -398,8 +391,7 @@ def image_list(id=None, profile=None, name=None):  # pylint: disable=C0103
                     # Not really worth an exception
                     return {
                         "result": False,
-                        "comment": "More than one image with "
-                        'name "{0}"'.format(name),
+                        "comment": "More than one image with " 'name "{}"'.format(name),
                     }
                 _add_image(ret, image)
     log.debug("Returning images: %s", ret)
@@ -440,7 +432,7 @@ def image_update(id=None, name=None, profile=None, **kwargs):  # pylint: disable
         if "result" in image and not image["result"]:
             return image
         elif len(image) == 1:
-            image = image.values()[0]
+            image = next(iter(image.values()))
     elif name:
         img_list = image_list(name=name, profile=profile)
         if img_list is dict and "result" in img_list:
@@ -448,7 +440,7 @@ def image_update(id=None, name=None, profile=None, **kwargs):  # pylint: disable
         elif not img_list:
             return {
                 "result": False,
-                "comment": "No image with name '{0}' " "found.".format(name),
+                "comment": "No image with name '{}' " "found.".format(name),
             }
         elif len(img_list) == 1:
             try:

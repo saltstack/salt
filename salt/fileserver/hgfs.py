@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Mercurial Fileserver Backend
 
@@ -36,8 +35,6 @@ will set the desired branch method. Possible values are: ``branches``,
             - python bindings for mercurial (``python-hglib``)
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 import errno
@@ -50,8 +47,6 @@ import shutil
 from datetime import datetime
 
 import salt.fileserver
-
-# Import salt libs
 import salt.utils.data
 import salt.utils.files
 import salt.utils.gzip_util
@@ -60,8 +55,6 @@ import salt.utils.stringutils
 import salt.utils.url
 import salt.utils.versions
 from salt.exceptions import FileserverConfigError
-
-# Import third party libs
 from salt.ext import six
 from salt.utils.event import tagify
 
@@ -82,7 +75,8 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
-__virtualname__ = "hg"
+__virtualname__ = "hgfs"
+__virtual_aliases__ = ("hg",)
 
 
 def __virtual__():
@@ -207,20 +201,18 @@ def init():
 
     per_remote_defaults = {}
     for param in PER_REMOTE_OVERRIDES:
-        per_remote_defaults[param] = six.text_type(__opts__["hgfs_{0}".format(param)])
+        per_remote_defaults[param] = str(__opts__["hgfs_{}".format(param)])
 
     for remote in __opts__["hgfs_remotes"]:
         repo_conf = copy.deepcopy(per_remote_defaults)
         if isinstance(remote, dict):
             repo_url = next(iter(remote))
-            per_remote_conf = dict(
-                [
-                    (key, six.text_type(val))
-                    for key, val in six.iteritems(
-                        salt.utils.data.repack_dictlist(remote[repo_url])
-                    )
-                ]
-            )
+            per_remote_conf = {
+                key: str(val)
+                for key, val in salt.utils.data.repack_dictlist(
+                    remote[repo_url]
+                ).items()
+            }
             if not per_remote_conf:
                 log.error(
                     "Invalid per-remote configuration for hgfs remote %s. If "
@@ -262,7 +254,7 @@ def init():
         else:
             repo_url = remote
 
-        if not isinstance(repo_url, six.string_types):
+        if not isinstance(repo_url, str):
             log.error(
                 "Invalid hgfs remote %s. Remotes must be strings, you may "
                 "need to enclose the URL in quotes",
@@ -279,7 +271,7 @@ def init():
             pass
 
         hash_type = getattr(hashlib, __opts__.get("hash_type", "md5"))
-        repo_hash = hash_type(repo_url).hexdigest()
+        repo_hash = hash_type(repo_url.encode("utf-8")).hexdigest()
         rp_ = os.path.join(bp_, repo_hash)
         if not os.path.isdir(rp_):
             os.makedirs(rp_)
@@ -309,7 +301,7 @@ def init():
             _failhard()
 
         try:
-            refs = repo.config(names="paths")
+            refs = repo.config(names=b"paths")
         except hglib.error.CommandError:
             refs = None
 
@@ -322,7 +314,7 @@ def init():
             with salt.utils.files.fopen(hgconfpath, "w+") as hgconfig:
                 hgconfig.write("[paths]\n")
                 hgconfig.write(
-                    salt.utils.stringutils.to_str("default = {0}\n".format(repo_url))
+                    salt.utils.stringutils.to_str("default = {}\n".format(repo_url))
                 )
 
         repo_conf.update(
@@ -332,7 +324,7 @@ def init():
                 "hash": repo_hash,
                 "cachedir": rp_,
                 "lockfile": os.path.join(
-                    __opts__["cachedir"], "hgfs", "{0}.update.lk".format(repo_hash)
+                    __opts__["cachedir"], "hgfs", "{}.update.lk".format(repo_hash)
                 ),
             }
         )
@@ -344,11 +336,11 @@ def init():
         try:
             with salt.utils.files.fopen(remote_map, "w+") as fp_:
                 timestamp = datetime.now().strftime("%d %b %Y %H:%M:%S.%f")
-                fp_.write("# hgfs_remote map as of {0}\n".format(timestamp))
+                fp_.write("# hgfs_remote map as of {}\n".format(timestamp))
                 for repo in repos:
                     fp_.write(
                         salt.utils.stringutils.to_str(
-                            "{0} = {1}\n".format(repo["hash"], repo["url"])
+                            "{} = {}\n".format(repo["hash"], repo["url"])
                         )
                     )
         except OSError:
@@ -409,7 +401,7 @@ def clear_cache():
             try:
                 shutil.rmtree(rdir)
             except OSError as exc:
-                errors.append("Unable to delete {0}: {1}".format(rdir, exc))
+                errors.append("Unable to delete {}: {}".format(rdir, exc))
     return errors
 
 
@@ -424,7 +416,7 @@ def clear_lock(remote=None):
 
     def _do_clear_lock(repo):
         def _add_error(errlist, repo, exc):
-            msg = "Unable to remove update lock for {0} ({1}): {2} ".format(
+            msg = "Unable to remove update lock for {} ({}): {} ".format(
                 repo["url"], repo["lockfile"], exc
             )
             log.debug(msg)
@@ -447,7 +439,7 @@ def clear_lock(remote=None):
                 else:
                     _add_error(failed, repo, exc)
             else:
-                msg = "Removed lock for {0}".format(repo["url"])
+                msg = "Removed lock for {}".format(repo["url"])
                 log.debug(msg)
                 success.append(msg)
         return success, failed
@@ -464,7 +456,7 @@ def clear_lock(remote=None):
                     continue
             except TypeError:
                 # remote was non-string, try again
-                if not fnmatch.fnmatch(repo["url"], six.text_type(remote)):
+                if not fnmatch.fnmatch(repo["url"], str(remote)):
                     continue
         success, failed = _do_clear_lock(repo)
         cleared.extend(success)
@@ -488,14 +480,14 @@ def lock(remote=None):
             try:
                 with salt.utils.files.fopen(repo["lockfile"], "w"):
                     pass
-            except (IOError, OSError) as exc:
-                msg = "Unable to set update lock for {0} ({1}): {2} ".format(
+            except OSError as exc:
+                msg = "Unable to set update lock for {} ({}): {} ".format(
                     repo["url"], repo["lockfile"], exc
                 )
                 log.debug(msg)
                 failed.append(msg)
             else:
-                msg = "Set lock for {0}".format(repo["url"])
+                msg = "Set lock for {}".format(repo["url"])
                 log.debug(msg)
                 success.append(msg)
         return success, failed
@@ -512,7 +504,7 @@ def lock(remote=None):
                     continue
             except TypeError:
                 # remote was non-string, try again
-                if not fnmatch.fnmatch(repo["url"], six.text_type(remote)):
+                if not fnmatch.fnmatch(repo["url"], str(remote)):
                     continue
         success, failed = _do_lock(repo)
         locked.extend(success)
@@ -592,7 +584,7 @@ def update():
         salt.fileserver.reap_fileserver_cache_dir(
             os.path.join(__opts__["cachedir"], "hgfs/hash"), find_file
         )
-    except (IOError, OSError):
+    except OSError:
         # Hash file won't exist if no files have yet been served up
         pass
 
@@ -649,13 +641,13 @@ def find_file(path, tgt_env="base", **kwargs):  # pylint: disable=W0613
 
     dest = os.path.join(__opts__["cachedir"], "hgfs/refs", tgt_env, path)
     hashes_glob = os.path.join(
-        __opts__["cachedir"], "hgfs/hash", tgt_env, "{0}.hash.*".format(path)
+        __opts__["cachedir"], "hgfs/hash", tgt_env, "{}.hash.*".format(path)
     )
     blobshadest = os.path.join(
-        __opts__["cachedir"], "hgfs/hash", tgt_env, "{0}.hash.blob_sha1".format(path)
+        __opts__["cachedir"], "hgfs/hash", tgt_env, "{}.hash.blob_sha1".format(path)
     )
     lk_fn = os.path.join(
-        __opts__["cachedir"], "hgfs/hash", tgt_env, "{0}.lk".format(path)
+        __opts__["cachedir"], "hgfs/hash", tgt_env, "{}.lk".format(path)
     )
     destdir = os.path.dirname(dest)
     hashdir = os.path.dirname(blobshadest)
@@ -697,7 +689,7 @@ def find_file(path, tgt_env="base", **kwargs):  # pylint: disable=W0613
                     repo["repo"].close()
                     return fnd
         try:
-            repo["repo"].cat(["path:{0}".format(repo_path)], rev=ref[2], output=dest)
+            repo["repo"].cat(["path:{}".format(repo_path)], rev=ref[2], output=dest)
         except hglib.error.CommandError:
             repo["repo"].close()
             continue
@@ -712,7 +704,7 @@ def find_file(path, tgt_env="base", **kwargs):  # pylint: disable=W0613
             fp_.write(ref[2])
         try:
             os.remove(lk_fn)
-        except (OSError, IOError):
+        except OSError:
             pass
         fnd["rel"] = path
         fnd["path"] = dest
@@ -782,7 +774,7 @@ def file_hash(load, fnd):
         __opts__["cachedir"],
         "hgfs/hash",
         load["saltenv"],
-        "{0}.hash.{1}".format(relpath, __opts__["hash_type"]),
+        "{}.hash.{}".format(relpath, __opts__["hash_type"]),
     )
     if not os.path.isfile(hashdest):
         ret["hsum"] = salt.utils.hashutils.get_hash(path, __opts__["hash_type"])
@@ -810,8 +802,8 @@ def _file_lists(load, form):
         except os.error:
             log.critical("Unable to make cachedir %s", list_cachedir)
             return []
-    list_cache = os.path.join(list_cachedir, "{0}.p".format(load["saltenv"]))
-    w_lock = os.path.join(list_cachedir, ".{0}.w".format(load["saltenv"]))
+    list_cache = os.path.join(list_cachedir, "{}.p".format(load["saltenv"]))
+    w_lock = os.path.join(list_cachedir, ".{}.w".format(load["saltenv"]))
     cache_match, refresh_cache, save_cache = salt.fileserver.check_file_list_cache(
         __opts__, form, list_cache, w_lock
     )

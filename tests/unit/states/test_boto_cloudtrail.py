@@ -1,24 +1,12 @@
-# -*- coding: utf-8 -*-
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import random
 import string
 
-# Import Salt libs
+import pytest
 import salt.config
 import salt.loader
-
-# Import Salt Libs
 import salt.states.boto_cloudtrail as boto_cloudtrail
-
-# Import 3rd-party libs
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 from salt.utils.versions import LooseVersion
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
@@ -104,7 +92,7 @@ if _has_required_boto():
 @skipIf(
     _has_required_boto() is False,
     "The boto3 module must be greater than"
-    " or equal to version {0}".format(required_boto3_version),
+    " or equal to version {}".format(required_boto3_version),
 )
 class BotoCloudTrailStateTestCaseBase(TestCase, LoaderModuleMockMixin):
     conn = None
@@ -176,7 +164,7 @@ class BotoCloudTrailTestCase(
     TestCase for salt.modules.boto_cloudtrail state.module
     """
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_present_when_trail_does_not_exist(self):
         """
         Tests present on a trail that does not exist.
@@ -196,7 +184,7 @@ class BotoCloudTrailTestCase(
         self.assertTrue(result["result"])
         self.assertEqual(result["changes"]["new"]["trail"]["Name"], trail_ret["Name"])
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_present_when_trail_exists(self):
         self.conn.get_trail_status.return_value = status_ret
         self.conn.create_trail.return_value = trail_ret
@@ -213,7 +201,7 @@ class BotoCloudTrailTestCase(
         self.assertTrue(result["result"])
         self.assertEqual(result["changes"], {})
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_present_with_failure(self):
         self.conn.get_trail_status.side_effect = [not_found_error, status_ret]
         self.conn.create_trail.side_effect = ClientError(error_content, "create_trail")

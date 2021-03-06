@@ -15,6 +15,7 @@ import textwrap
 # Import Salt Module
 import salt.modules.acme as acme
 import salt.utils.dictupdate
+import salt.utils.platform
 from salt.exceptions import SaltInvocationError
 
 # Import Salt Testing libs
@@ -42,7 +43,14 @@ class AcmeTestCase(TestCase, LoaderModuleMockMixin):
                     return_value=[".", "..", "README", "test_expired", "test_valid"]
                 )
             },
-        ), patch("os.path.isdir", side_effect=[False, True, True]):
+        ), patch(
+            "os.path.isdir",
+            side_effect=lambda path: path
+            in [
+                os.path.join(acme.LE_LIVE, "test_expired"),
+                os.path.join(acme.LE_LIVE, "test_valid"),
+            ],
+        ):
             self.assertEqual(acme.certs(), ["test_expired", "test_valid"])
 
     def test_has(self):
@@ -261,14 +269,28 @@ class AcmeTestCase(TestCase, LoaderModuleMockMixin):
             ),
             "retcode": 0,
         }
-        result_no_renew = {
-            "comment": "Certificate "
-            + os.path.join("/etc/letsencrypt/live/test", "cert.pem")
-            + " unchanged",
-            "not_after": datetime.datetime.fromtimestamp(valid_timestamp).isoformat(),
-            "changes": {},
-            "result": True,
-        }
+        if salt.utils.platform.is_freebsd():
+            result_no_renew = {
+                "comment": "Certificate "
+                + os.path.join("/usr/local/etc/letsencrypt/live/test", "cert.pem")
+                + " unchanged",
+                "not_after": datetime.datetime.fromtimestamp(
+                    valid_timestamp
+                ).isoformat(),
+                "changes": {},
+                "result": True,
+            }
+        else:
+            result_no_renew = {
+                "comment": "Certificate "
+                + os.path.join("/etc/letsencrypt/live/test", "cert.pem")
+                + " unchanged",
+                "not_after": datetime.datetime.fromtimestamp(
+                    valid_timestamp
+                ).isoformat(),
+                "changes": {},
+                "result": True,
+            }
         result_renew = {
             "comment": "Certificate test renewed",
             "not_after": datetime.datetime.fromtimestamp(expired_timestamp).isoformat(),
@@ -294,6 +316,9 @@ class AcmeTestCase(TestCase, LoaderModuleMockMixin):
             },
         ):
             self.assertEqual(acme.cert("test"), result_new_cert)
+            self.assertEqual(
+                acme.cert("testing.example.com", certname="test"), result_new_cert
+            )
         # Test not renewing a valid certificate
         with patch("salt.modules.acme.LEA", "certbot"), patch.dict(
             acme.__salt__,
@@ -310,6 +335,9 @@ class AcmeTestCase(TestCase, LoaderModuleMockMixin):
             },
         ):
             self.assertEqual(acme.cert("test"), result_no_renew)
+            self.assertEqual(
+                acme.cert("testing.example.com", certname="test"), result_no_renew
+            )
         # Test renewing an expired certificate
         with patch("salt.modules.acme.LEA", "certbot"), patch.dict(
             acme.__salt__,
@@ -328,3 +356,6 @@ class AcmeTestCase(TestCase, LoaderModuleMockMixin):
             },
         ):
             self.assertEqual(acme.cert("test"), result_renew)
+            self.assertEqual(
+                acme.cert("testing.example.com", certname="test"), result_renew
+            )

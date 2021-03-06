@@ -1,22 +1,27 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: :email:`Bo Maryniuk <bo@suse.de>`
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
+import copy
 import os
+import pathlib
+import shutil
 import sys
+import tarfile
+import tempfile
 
+import jinja2
+import pytest
 import salt.exceptions
-import salt.ext.six
+import salt.utils.hashutils
 import salt.utils.json
 import salt.utils.platform
 import salt.utils.stringutils
-from salt.ext.six.moves import range
 from salt.utils import thin
 from salt.utils.stringutils import to_bytes as bts
-from tests.support.helpers import TstSuiteLoggingHandler
+from tests.support.helpers import TstSuiteLoggingHandler, VirtualEnv
 from tests.support.mock import MagicMock, patch
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
 
 try:
@@ -25,11 +30,77 @@ except ImportError:
     pytest = None
 
 
+def patch_if(condition, *args, **kwargs):
+    """
+    Return a patch decorator if the provided condition is met
+    """
+    if condition:
+        return patch(*args, **kwargs)
+
+    def inner(func):
+        return func
+
+    return inner
+
+
 @skipIf(pytest is None, "PyTest is missing")
 class SSHThinTestCase(TestCase):
     """
     TestCase for SaltSSH-related parts.
     """
+
+    def setUp(self):
+        self.jinja_fp = os.path.dirname(jinja2.__file__)
+
+        self.ext_conf = {
+            "test": {
+                "py-version": [2, 7],
+                "path": RUNTIME_VARS.SALT_CODE_DIR,
+                "dependencies": {"jinja2": self.jinja_fp},
+            }
+        }
+        self.tops = copy.deepcopy(self.ext_conf)
+        self.tops["test"]["dependencies"] = [self.jinja_fp]
+        self.tar = self._tarfile(None).open()
+        self.digest = salt.utils.hashutils.DigestCollector()
+        self.exp_files = [
+            os.path.join("salt", "payload.py"),
+            os.path.join("jinja2", "__init__.py"),
+        ]
+        lib_root = os.path.join(RUNTIME_VARS.TMP, "fake-libs")
+        self.fake_libs = {
+            "distro": os.path.join(lib_root, "distro"),
+            "jinja2": os.path.join(lib_root, "jinja2"),
+            "yaml": os.path.join(lib_root, "yaml"),
+            "tornado": os.path.join(lib_root, "tornado"),
+            "msgpack": os.path.join(lib_root, "msgpack"),
+        }
+
+        code_dir = pathlib.Path(RUNTIME_VARS.CODE_DIR).resolve()
+        self.exp_ret = {
+            "distro": str(code_dir / "distro.py"),
+            "jinja2": str(code_dir / "jinja2"),
+            "yaml": str(code_dir / "yaml"),
+            "tornado": str(code_dir / "tornado"),
+            "msgpack": str(code_dir / "msgpack"),
+            "certifi": str(code_dir / "certifi"),
+            "singledispatch": str(code_dir / "singledispatch.py"),
+        }
+        self.exc_libs = ["jinja2", "yaml"]
+
+    def tearDown(self):
+        for lib, fp in self.fake_libs.items():
+            if os.path.exists(fp):
+                shutil.rmtree(fp)
+        self.exc_libs = None
+        self.jinja_fp = None
+        self.ext_conf = None
+        self.tops = None
+        self.tar = None
+        self.digest = None
+        self.exp_files = None
+        self.fake_libs = None
+        self.exp_ret = None
 
     def _popen(self, return_value=None, side_effect=None, returncode=0):
         """
@@ -78,7 +149,6 @@ class SSHThinTestCase(TestCase):
 
         return tf
 
-    @patch("salt.exceptions.SaltSystemExit", Exception)
     @patch("salt.utils.thin.log", MagicMock())
     @patch("salt.utils.thin.os.path.isfile", MagicMock(return_value=False))
     def test_get_ext_tops_cfg_missing_dependencies(self):
@@ -89,7 +159,7 @@ class SSHThinTestCase(TestCase):
         """
         cfg = {"namespace": {"py-version": [0, 0], "path": "/foo", "dependencies": []}}
 
-        with pytest.raises(Exception) as err:
+        with pytest.raises(salt.exceptions.SaltSystemExit) as err:
             thin.get_ext_tops(cfg)
         self.assertIn("Missing dependencies", str(err.value))
         self.assertTrue(thin.log.error.called)
@@ -164,7 +234,6 @@ class SSHThinTestCase(TestCase):
             == thin.log.warning.mock_calls[0][1][0] % "test"
         )
 
-    @patch("salt.exceptions.SaltSystemExit", Exception)
     @patch("salt.utils.thin.log", MagicMock())
     @patch("salt.utils.thin.os.path.isfile", MagicMock(return_value=False))
     def test_get_ext_tops_dependency_config_check(self):
@@ -222,6 +291,7 @@ class SSHThinTestCase(TestCase):
                     "yaml": "/yaml/",
                     "tornado": "/tornado/tornado.py",
                     "msgpack": "msgpack.py",
+                    "distro": "distro.py",
                 },
             }
         }
@@ -229,7 +299,13 @@ class SSHThinTestCase(TestCase):
         assert out["namespace"]["py-version"] == cfg["namespace"]["py-version"]
         assert out["namespace"]["path"] == cfg["namespace"]["path"]
         assert sorted(out["namespace"]["dependencies"]) == sorted(
-            ["/tornado/tornado.py", "/jinja/foo.py", "/yaml/", "msgpack.py"]
+            [
+                "/tornado/tornado.py",
+                "/jinja/foo.py",
+                "/yaml/",
+                "msgpack.py",
+                "distro.py",
+            ]
         )
 
     @patch("salt.utils.thin.sys.argv", [None, '{"foo": "bar"}'])
@@ -249,7 +325,7 @@ class SSHThinTestCase(TestCase):
         """
         container = []
         for pth in ["/foo/bar.py", "/something/else/__init__.py"]:
-            thin._add_dependency(container, type(str("obj"), (), {"__file__": pth})())
+            thin._add_dependency(container, type("obj", (), {"__file__": pth})())
         assert "__init__" not in container[1]
         assert container == ["/foo/bar.py", "/something/else"]
 
@@ -307,52 +383,63 @@ class SSHThinTestCase(TestCase):
             thin._get_ext_namespaces({"ns": {}})
 
     @patch(
-        "salt.utils.thin.salt",
-        type(str("salt"), (), {"__file__": "/site-packages/salt"}),
+        "salt.utils.thin.distro",
+        type("distro", (), {"__file__": "/site-packages/distro"}),
+    )
+    @patch(
+        "salt.utils.thin.salt", type("salt", (), {"__file__": "/site-packages/salt"}),
     )
     @patch(
         "salt.utils.thin.jinja2",
-        type(str("jinja2"), (), {"__file__": "/site-packages/jinja2"}),
+        type("jinja2", (), {"__file__": "/site-packages/jinja2"}),
     )
     @patch(
-        "salt.utils.thin.yaml",
-        type(str("yaml"), (), {"__file__": "/site-packages/yaml"}),
+        "salt.utils.thin.yaml", type("yaml", (), {"__file__": "/site-packages/yaml"}),
     )
     @patch(
         "salt.utils.thin.tornado",
-        type(str("tornado"), (), {"__file__": "/site-packages/tornado"}),
+        type("tornado", (), {"__file__": "/site-packages/tornado"}),
     )
     @patch(
         "salt.utils.thin.msgpack",
-        type(str("msgpack"), (), {"__file__": "/site-packages/msgpack"}),
+        type("msgpack", (), {"__file__": "/site-packages/msgpack"}),
     )
     @patch(
         "salt.utils.thin.certifi",
-        type(str("certifi"), (), {"__file__": "/site-packages/certifi"}),
+        type("certifi", (), {"__file__": "/site-packages/certifi"}),
     )
     @patch(
         "salt.utils.thin.singledispatch",
-        type(str("singledispatch"), (), {"__file__": "/site-packages/sdp"}),
+        type("singledispatch", (), {"__file__": "/site-packages/sdp"}),
     )
     @patch(
         "salt.utils.thin.singledispatch_helpers",
-        type(str("singledispatch_helpers"), (), {"__file__": "/site-packages/sdp_hlp"}),
+        type("singledispatch_helpers", (), {"__file__": "/site-packages/sdp_hlp"}),
     )
     @patch(
         "salt.utils.thin.ssl_match_hostname",
-        type(str("ssl_match_hostname"), (), {"__file__": "/site-packages/ssl_mh"}),
+        type("ssl_match_hostname", (), {"__file__": "/site-packages/ssl_mh"}),
     )
     @patch(
         "salt.utils.thin.markupsafe",
-        type(str("markupsafe"), (), {"__file__": "/site-packages/markupsafe"}),
+        type("markupsafe", (), {"__file__": "/site-packages/markupsafe"}),
     )
     @patch(
         "salt.utils.thin.backports_abc",
-        type(str("backports_abc"), (), {"__file__": "/site-packages/backports_abc"}),
+        type("backports_abc", (), {"__file__": "/site-packages/backports_abc"}),
     )
     @patch(
         "salt.utils.thin.concurrent",
-        type(str("concurrent"), (), {"__file__": "/site-packages/concurrent"}),
+        type("concurrent", (), {"__file__": "/site-packages/concurrent"}),
+    )
+    @patch(
+        "salt.utils.thin.contextvars",
+        type("contextvars", (), {"__file__": "/site-packages/contextvars"}),
+    )
+    @patch_if(
+        salt.utils.thin.has_immutables,
+        "salt.utils.thin.immutables",
+        type("immutables", (), {"__file__": "/site-packages/immutables"}),
     )
     @patch("salt.utils.thin.log", MagicMock())
     def test_get_tops(self):
@@ -361,6 +448,7 @@ class SSHThinTestCase(TestCase):
         :return:
         """
         base_tops = [
+            "/site-packages/distro",
             "/site-packages/salt",
             "/site-packages/jinja2",
             "/site-packages/yaml",
@@ -373,59 +461,72 @@ class SSHThinTestCase(TestCase):
             "/site-packages/markupsafe",
             "/site-packages/backports_abc",
             "/site-packages/concurrent",
+            "/site-packages/contextvars",
         ]
-
+        if salt.utils.thin.has_immutables:
+            base_tops.extend(["/site-packages/immutables"])
         tops = thin.get_tops()
         assert len(tops) == len(base_tops)
-        assert sorted(tops) == sorted(base_tops)
+        assert sorted(tops) == sorted(base_tops), sorted(tops)
 
     @patch(
-        "salt.utils.thin.salt",
-        type(str("salt"), (), {"__file__": "/site-packages/salt"}),
+        "salt.utils.thin.distro",
+        type("distro", (), {"__file__": "/site-packages/distro"}),
+    )
+    @patch(
+        "salt.utils.thin.salt", type("salt", (), {"__file__": "/site-packages/salt"}),
     )
     @patch(
         "salt.utils.thin.jinja2",
-        type(str("jinja2"), (), {"__file__": "/site-packages/jinja2"}),
+        type("jinja2", (), {"__file__": "/site-packages/jinja2"}),
     )
     @patch(
-        "salt.utils.thin.yaml",
-        type(str("yaml"), (), {"__file__": "/site-packages/yaml"}),
+        "salt.utils.thin.yaml", type("yaml", (), {"__file__": "/site-packages/yaml"}),
     )
     @patch(
         "salt.utils.thin.tornado",
-        type(str("tornado"), (), {"__file__": "/site-packages/tornado"}),
+        type("tornado", (), {"__file__": "/site-packages/tornado"}),
     )
     @patch(
         "salt.utils.thin.msgpack",
-        type(str("msgpack"), (), {"__file__": "/site-packages/msgpack"}),
+        type("msgpack", (), {"__file__": "/site-packages/msgpack"}),
     )
     @patch(
         "salt.utils.thin.certifi",
-        type(str("certifi"), (), {"__file__": "/site-packages/certifi"}),
+        type("certifi", (), {"__file__": "/site-packages/certifi"}),
     )
     @patch(
         "salt.utils.thin.singledispatch",
-        type(str("singledispatch"), (), {"__file__": "/site-packages/sdp"}),
+        type("singledispatch", (), {"__file__": "/site-packages/sdp"}),
     )
     @patch(
         "salt.utils.thin.singledispatch_helpers",
-        type(str("singledispatch_helpers"), (), {"__file__": "/site-packages/sdp_hlp"}),
+        type("singledispatch_helpers", (), {"__file__": "/site-packages/sdp_hlp"}),
     )
     @patch(
         "salt.utils.thin.ssl_match_hostname",
-        type(str("ssl_match_hostname"), (), {"__file__": "/site-packages/ssl_mh"}),
+        type("ssl_match_hostname", (), {"__file__": "/site-packages/ssl_mh"}),
     )
     @patch(
         "salt.utils.thin.markupsafe",
-        type(str("markupsafe"), (), {"__file__": "/site-packages/markupsafe"}),
+        type("markupsafe", (), {"__file__": "/site-packages/markupsafe"}),
     )
     @patch(
         "salt.utils.thin.backports_abc",
-        type(str("backports_abc"), (), {"__file__": "/site-packages/backports_abc"}),
+        type("backports_abc", (), {"__file__": "/site-packages/backports_abc"}),
     )
     @patch(
         "salt.utils.thin.concurrent",
-        type(str("concurrent"), (), {"__file__": "/site-packages/concurrent"}),
+        type("concurrent", (), {"__file__": "/site-packages/concurrent"}),
+    )
+    @patch(
+        "salt.utils.thin.contextvars",
+        type("contextvars", (), {"__file__": "/site-packages/contextvars"}),
+    )
+    @patch_if(
+        salt.utils.thin.has_immutables,
+        "salt.utils.thin.immutables",
+        type("immutables", (), {"__file__": "/site-packages/immutables"}),
     )
     @patch("salt.utils.thin.log", MagicMock())
     def test_get_tops_extra_mods(self):
@@ -434,6 +535,7 @@ class SSHThinTestCase(TestCase):
         :return:
         """
         base_tops = [
+            "/site-packages/distro",
             "/site-packages/salt",
             "/site-packages/jinja2",
             "/site-packages/yaml",
@@ -446,69 +548,81 @@ class SSHThinTestCase(TestCase):
             "/site-packages/concurrent",
             "/site-packages/markupsafe",
             "/site-packages/backports_abc",
+            "/site-packages/contextvars",
             os.sep + os.path.join("custom", "foo"),
             os.sep + os.path.join("custom", "bar.py"),
         ]
+        if salt.utils.thin.has_immutables:
+            base_tops.extend(["/site-packages/immutables"])
         builtins = sys.version_info.major == 3 and "builtins" or "__builtin__"
         foo = {"__file__": os.sep + os.path.join("custom", "foo", "__init__.py")}
         bar = {"__file__": os.sep + os.path.join("custom", "bar")}
         with patch(
             "{}.__import__".format(builtins),
-            MagicMock(
-                side_effect=[type(str("foo"), (), foo), type(str("bar"), (), bar)]
-            ),
+            MagicMock(side_effect=[type("foo", (), foo), type("bar", (), bar)]),
         ):
             tops = thin.get_tops(extra_mods="foo,bar")
         self.assertEqual(len(tops), len(base_tops))
         self.assertListEqual(sorted(tops), sorted(base_tops))
 
     @patch(
-        "salt.utils.thin.salt",
-        type(str("salt"), (), {"__file__": "/site-packages/salt"}),
+        "salt.utils.thin.distro",
+        type("distro", (), {"__file__": "/site-packages/distro"}),
+    )
+    @patch(
+        "salt.utils.thin.salt", type("salt", (), {"__file__": "/site-packages/salt"}),
     )
     @patch(
         "salt.utils.thin.jinja2",
-        type(str("jinja2"), (), {"__file__": "/site-packages/jinja2"}),
+        type("jinja2", (), {"__file__": "/site-packages/jinja2"}),
     )
     @patch(
-        "salt.utils.thin.yaml",
-        type(str("yaml"), (), {"__file__": "/site-packages/yaml"}),
+        "salt.utils.thin.yaml", type("yaml", (), {"__file__": "/site-packages/yaml"}),
     )
     @patch(
         "salt.utils.thin.tornado",
-        type(str("tornado"), (), {"__file__": "/site-packages/tornado"}),
+        type("tornado", (), {"__file__": "/site-packages/tornado"}),
     )
     @patch(
         "salt.utils.thin.msgpack",
-        type(str("msgpack"), (), {"__file__": "/site-packages/msgpack"}),
+        type("msgpack", (), {"__file__": "/site-packages/msgpack"}),
     )
     @patch(
         "salt.utils.thin.certifi",
-        type(str("certifi"), (), {"__file__": "/site-packages/certifi"}),
+        type("certifi", (), {"__file__": "/site-packages/certifi"}),
     )
     @patch(
         "salt.utils.thin.singledispatch",
-        type(str("singledispatch"), (), {"__file__": "/site-packages/sdp"}),
+        type("singledispatch", (), {"__file__": "/site-packages/sdp"}),
     )
     @patch(
         "salt.utils.thin.singledispatch_helpers",
-        type(str("singledispatch_helpers"), (), {"__file__": "/site-packages/sdp_hlp"}),
+        type("singledispatch_helpers", (), {"__file__": "/site-packages/sdp_hlp"}),
     )
     @patch(
         "salt.utils.thin.ssl_match_hostname",
-        type(str("ssl_match_hostname"), (), {"__file__": "/site-packages/ssl_mh"}),
+        type("ssl_match_hostname", (), {"__file__": "/site-packages/ssl_mh"}),
     )
     @patch(
         "salt.utils.thin.markupsafe",
-        type(str("markupsafe"), (), {"__file__": "/site-packages/markupsafe"}),
+        type("markupsafe", (), {"__file__": "/site-packages/markupsafe"}),
     )
     @patch(
         "salt.utils.thin.backports_abc",
-        type(str("backports_abc"), (), {"__file__": "/site-packages/backports_abc"}),
+        type("backports_abc", (), {"__file__": "/site-packages/backports_abc"}),
     )
     @patch(
         "salt.utils.thin.concurrent",
-        type(str("concurrent"), (), {"__file__": "/site-packages/concurrent"}),
+        type("concurrent", (), {"__file__": "/site-packages/concurrent"}),
+    )
+    @patch(
+        "salt.utils.thin.contextvars",
+        type("contextvars", (), {"__file__": "/site-packages/contextvars"}),
+    )
+    @patch_if(
+        salt.utils.thin.has_immutables,
+        "salt.utils.thin.immutables",
+        type("immutables", (), {"__file__": "/site-packages/immutables"}),
     )
     @patch("salt.utils.thin.log", MagicMock())
     def test_get_tops_so_mods(self):
@@ -517,6 +631,7 @@ class SSHThinTestCase(TestCase):
         :return:
         """
         base_tops = [
+            "/site-packages/distro",
             "/site-packages/salt",
             "/site-packages/jinja2",
             "/site-packages/yaml",
@@ -529,16 +644,19 @@ class SSHThinTestCase(TestCase):
             "/site-packages/concurrent",
             "/site-packages/markupsafe",
             "/site-packages/backports_abc",
+            "/site-packages/contextvars",
             "/custom/foo.so",
             "/custom/bar.so",
         ]
+        if salt.utils.thin.has_immutables:
+            base_tops.extend(["/site-packages/immutables"])
         builtins = sys.version_info.major == 3 and "builtins" or "__builtin__"
         with patch(
             "{}.__import__".format(builtins),
             MagicMock(
                 side_effect=[
-                    type(str("salt"), (), {"__file__": "/custom/foo.so"}),
-                    type(str("salt"), (), {"__file__": "/custom/bar.so"}),
+                    type("salt", (), {"__file__": "/custom/foo.so"}),
+                    type("salt", (), {"__file__": "/custom/bar.so"}),
                 ]
             ),
         ):
@@ -591,74 +709,10 @@ class SSHThinTestCase(TestCase):
             thin.sys.exc_clear = lambda: None
             thin.gen_thin("")
         self.assertIn(
-            "The minimum required python version to run salt-ssh is " '"2.6"',
+            "The minimum required python version to run salt-ssh is " '"3"',
             str(err.value),
         )
 
-    @skipIf(
-        salt.utils.platform.is_windows() and thin._six.PY2, "Dies on Python2 on Windows"
-    )
-    @patch("salt.exceptions.SaltSystemExit", Exception)
-    @patch("salt.utils.thin.os.makedirs", MagicMock())
-    @patch("salt.utils.files.fopen", MagicMock())
-    @patch("salt.utils.thin._get_salt_call", MagicMock())
-    @patch("salt.utils.thin._get_ext_namespaces", MagicMock())
-    @patch("salt.utils.thin.get_tops", MagicMock(return_value=["/foo3", "/bar3"]))
-    @patch("salt.utils.thin.get_ext_tops", MagicMock(return_value={}))
-    @patch("salt.utils.thin.os.path.isfile", MagicMock())
-    @patch("salt.utils.thin.os.path.isdir", MagicMock(return_value=True))
-    @patch("salt.utils.thin.os.remove", MagicMock())
-    @patch("salt.utils.thin.os.path.exists", MagicMock())
-    @patch("salt.utils.path.os_walk", MagicMock(return_value=[]))
-    @patch(
-        "salt.utils.thin.subprocess.Popen",
-        _popen(
-            None,
-            side_effect=[(bts("2.7"), bts("")), (bts('["/foo27", "/bar27"]'), bts(""))],
-        ),
-    )
-    @patch("salt.utils.thin.tarfile", MagicMock())
-    @patch("salt.utils.thin.zipfile", MagicMock())
-    @patch("salt.utils.thin.os.getcwd", MagicMock())
-    @patch("salt.utils.thin.os.chdir", MagicMock())
-    @patch("salt.utils.thin.tempfile.mkdtemp", MagicMock())
-    @patch(
-        "salt.utils.thin.tempfile.mkstemp", MagicMock(return_value=(3, ".temporary"))
-    )
-    @patch("salt.utils.thin.shutil", MagicMock())
-    @patch("salt.utils.path.which", MagicMock(return_value=""))
-    @patch("salt.utils.thin._get_thintar_prefix", MagicMock())
-    def test_gen_thin_python_exist_or_not(self):
-        """
-        Test thin.gen_thin function if the opposite python
-        binary does not exist
-        """
-        with TstSuiteLoggingHandler() as handler:
-            thin.gen_thin("")
-            salt.utils.thin.subprocess.Popen.assert_not_called()
-
-            if salt.ext.six.PY2:
-                self.assertIn(
-                    "DEBUG:python3 binary does not exist. Will not attempt to generate "
-                    "tops for Python 3",
-                    handler.messages,
-                )
-
-            if salt.ext.six.PY3:
-                self.assertIn(
-                    "DEBUG:python2 binary does not exist. Will not "
-                    "detect Python 2 version",
-                    handler.messages,
-                )
-                self.assertIn(
-                    "DEBUG:python2 binary does not exist. Will not attempt to generate "
-                    "tops for Python 2",
-                    handler.messages,
-                )
-
-    @skipIf(
-        salt.utils.platform.is_windows() and thin._six.PY2, "Dies on Python2 on Windows"
-    )
     @patch("salt.exceptions.SaltSystemExit", Exception)
     @patch("salt.utils.thin.log", MagicMock())
     @patch("salt.utils.thin.os.makedirs", MagicMock())
@@ -683,6 +737,7 @@ class SSHThinTestCase(TestCase):
     @patch("salt.utils.thin.tarfile", MagicMock())
     @patch("salt.utils.thin.zipfile", MagicMock())
     @patch("salt.utils.thin.os.getcwd", MagicMock())
+    @patch("salt.utils.thin.os.access", MagicMock(return_value=True))
     @patch("salt.utils.thin.os.chdir", MagicMock())
     @patch("salt.utils.thin.os.close", MagicMock())
     @patch("salt.utils.thin.tempfile.mkdtemp", MagicMock())
@@ -690,8 +745,6 @@ class SSHThinTestCase(TestCase):
         "salt.utils.thin.tempfile.mkstemp", MagicMock(return_value=(3, ".temporary"))
     )
     @patch("salt.utils.thin.shutil", MagicMock())
-    @patch("salt.utils.thin._six.PY3", True)
-    @patch("salt.utils.thin._six.PY2", False)
     @patch("salt.utils.thin.sys.version_info", _version_info(None, 3, 6))
     @patch("salt.utils.path.which", MagicMock(return_value="/usr/bin/python"))
     def test_gen_thin_compression_fallback_py3(self):
@@ -735,6 +788,7 @@ class SSHThinTestCase(TestCase):
     @patch("salt.utils.thin.tarfile", MagicMock())
     @patch("salt.utils.thin.zipfile", MagicMock())
     @patch("salt.utils.thin.os.getcwd", MagicMock())
+    @patch("salt.utils.thin.os.access", MagicMock(return_value=True))
     @patch("salt.utils.thin.os.chdir", MagicMock())
     @patch("salt.utils.thin.os.close", MagicMock())
     @patch("salt.utils.thin.tempfile.mkdtemp", MagicMock(return_value=""))
@@ -742,15 +796,11 @@ class SSHThinTestCase(TestCase):
         "salt.utils.thin.tempfile.mkstemp", MagicMock(return_value=(3, ".temporary"))
     )
     @patch("salt.utils.thin.shutil", MagicMock())
-    @patch("salt.utils.thin._six.PY3", True)
-    @patch("salt.utils.thin._six.PY2", False)
     @patch("salt.utils.thin.sys.version_info", _version_info(None, 3, 6))
     @patch("salt.utils.path.which", MagicMock(return_value="/usr/bin/python"))
     def test_gen_thin_control_files_written_py3(self):
         """
         Test thin.gen_thin function if control files are written (version, salt-call etc).
-        NOTE: Py2 version of this test is not required, as code shares the same spot across the versions.
-
         :return:
         """
         thin.gen_thin("")
@@ -760,7 +810,7 @@ class SSHThinTestCase(TestCase):
         for idx, fname in enumerate(
             ["version", ".thin-gen-py-version", "salt-call", "supported-versions"]
         ):
-            name = thin.tarfile.open().method_calls[idx + 4][1][0]
+            name = thin.tarfile.open().method_calls[idx + 2][1][0]
             self.assertEqual(name, fname)
         thin.tarfile.open().close.assert_called()
 
@@ -786,16 +836,12 @@ class SSHThinTestCase(TestCase):
             )
         ),
     )
-    @patch(
-        "salt.utils.thin.subprocess.Popen",
-        _popen(
-            None,
-            side_effect=[(bts("2.7"), bts("")), (bts('["/foo27", "/bar27"]'), bts(""))],
-        ),
-    )
     @patch("salt.utils.thin.tarfile", _tarfile(None))
     @patch("salt.utils.thin.zipfile", MagicMock())
-    @patch("salt.utils.thin.os.getcwd", MagicMock())
+    @patch(
+        "salt.utils.thin.os.getcwd",
+        MagicMock(return_value=os.path.join(RUNTIME_VARS.TMP, "fake-cwd")),
+    )
     @patch("salt.utils.thin.os.chdir", MagicMock())
     @patch("salt.utils.thin.os.close", MagicMock())
     @patch("salt.utils.thin.tempfile.mkdtemp", MagicMock(return_value=""))
@@ -803,8 +849,6 @@ class SSHThinTestCase(TestCase):
         "salt.utils.thin.tempfile.mkstemp", MagicMock(return_value=(3, ".temporary"))
     )
     @patch("salt.utils.thin.shutil", MagicMock())
-    @patch("salt.utils.thin._six.PY3", True)
-    @patch("salt.utils.thin._six.PY2", False)
     @patch("salt.utils.thin.sys.version_info", _version_info(None, 3, 6))
     @patch("salt.utils.hashutils.DigestCollector", MagicMock())
     @patch("salt.utils.path.which", MagicMock(return_value="/usr/bin/python"))
@@ -817,11 +861,11 @@ class SSHThinTestCase(TestCase):
         """
         thin.gen_thin("")
         files = []
-        for py in ("py2", "py2", "py3", "pyall"):
+        for py in ("py3", "pyall"):
             for i in range(1, 4):
-                files.append(os.path.join(py, "root", "r{0}".format(i)))
+                files.append(os.path.join(py, "root", "r{}".format(i)))
             for i in range(4, 7):
-                files.append(os.path.join(py, "root2", "r{0}".format(i)))
+                files.append(os.path.join(py, "root2", "r{}".format(i)))
         for cl in thin.tarfile.open().method_calls[:-6]:
             arcname = cl[2].get("arcname")
             self.assertIn(arcname, files)
@@ -840,7 +884,7 @@ class SSHThinTestCase(TestCase):
         MagicMock(
             return_value={
                 "namespace": {
-                    "py-version": [2, 7],
+                    "py-version": [3, 0],
                     "path": "/opt/2015.8/salt",
                     "dependencies": ["/opt/certifi", "/opt/whatever"],
                 }
@@ -861,16 +905,12 @@ class SSHThinTestCase(TestCase):
             )
         ),
     )
-    @patch(
-        "salt.utils.thin.subprocess.Popen",
-        _popen(
-            None,
-            side_effect=[(bts("2.7"), bts("")), (bts('["/foo27", "/bar27"]'), bts(""))],
-        ),
-    )
     @patch("salt.utils.thin.tarfile", _tarfile(None))
     @patch("salt.utils.thin.zipfile", MagicMock())
-    @patch("salt.utils.thin.os.getcwd", MagicMock())
+    @patch(
+        "salt.utils.thin.os.getcwd",
+        MagicMock(return_value=os.path.join(RUNTIME_VARS.TMP, "fake-cwd")),
+    )
     @patch("salt.utils.thin.os.chdir", MagicMock())
     @patch("salt.utils.thin.os.close", MagicMock())
     @patch("salt.utils.thin.tempfile.mkdtemp", MagicMock(return_value=""))
@@ -878,27 +918,34 @@ class SSHThinTestCase(TestCase):
         "salt.utils.thin.tempfile.mkstemp", MagicMock(return_value=(3, ".temporary"))
     )
     @patch("salt.utils.thin.shutil", MagicMock())
-    @patch("salt.utils.thin._six.PY3", True)
-    @patch("salt.utils.thin._six.PY2", False)
     @patch("salt.utils.thin.sys.version_info", _version_info(None, 3, 6))
     @patch("salt.utils.hashutils.DigestCollector", MagicMock())
     @patch("salt.utils.path.which", MagicMock(return_value="/usr/bin/python"))
     def test_gen_thin_ext_alternative_content_files_written_py3(self):
         """
         Test thin.gen_thin function if external alternative content files are written.
-        NOTE: Py2 version of this test is not required, as code shares the same spot across the versions.
-
         :return:
         """
-        thin.gen_thin("")
-        files = []
-        for py in ("pyall", "pyall", "py2"):
-            for i in range(1, 4):
-                files.append(os.path.join("namespace", py, "root", "r{0}".format(i)))
-            for i in range(4, 7):
-                files.append(os.path.join("namespace", py, "root2", "r{0}".format(i)))
+        ext_conf = {
+            "namespace": {
+                "py-version": [3, 0],
+                "path": "/opt/2015.8/salt",
+                "dependencies": {
+                    "certifi": "/opt/certifi",
+                    "whatever": "/opt/whatever",
+                },
+            }
+        }
 
-        for idx, cl in enumerate(thin.tarfile.open().method_calls[12:-6]):
+        thin.gen_thin("", extended_cfg=ext_conf)
+        files = []
+        for py in ("pyall", "pyall", "py3"):
+            for i in range(1, 4):
+                files.append(os.path.join("namespace", py, "root", "r{}".format(i)))
+            for i in range(4, 7):
+                files.append(os.path.join("namespace", py, "root2", "r{}".format(i)))
+
+        for idx, cl in enumerate(thin.tarfile.open().method_calls[:-6]):
             arcname = cl[2].get("arcname")
             self.assertIn(arcname, files)
             files.pop(files.index(arcname))
@@ -951,3 +998,348 @@ class SSHThinTestCase(TestCase):
         )
         for t_line in ["second-system-effect:2:7", "solar-interference:2:6"]:
             self.assertIn(t_line, out)
+
+    @patch("salt.exceptions.SaltSystemExit", Exception)
+    @patch("salt.utils.thin.log", MagicMock())
+    @patch("salt.utils.thin.os.makedirs", MagicMock())
+    @patch("salt.utils.files.fopen", MagicMock())
+    @patch("salt.utils.thin._get_salt_call", MagicMock())
+    @patch("salt.utils.thin._get_ext_namespaces", MagicMock())
+    @patch("salt.utils.thin.get_tops", MagicMock(return_value=["/foo3", "/bar3"]))
+    @patch("salt.utils.thin.get_ext_tops", MagicMock(return_value={}))
+    @patch("salt.utils.thin.os.path.isfile", MagicMock())
+    @patch("salt.utils.thin.os.path.isdir", MagicMock(return_value=False))
+    @patch("salt.utils.thin.log", MagicMock())
+    @patch("salt.utils.thin.os.remove", MagicMock())
+    @patch("salt.utils.thin.os.path.exists", MagicMock())
+    @patch("salt.utils.path.os_walk", MagicMock(return_value=[]))
+    @patch(
+        "salt.utils.thin.subprocess.Popen",
+        _popen(
+            None,
+            side_effect=[(bts("2.7"), bts("")), (bts('["/foo27", "/bar27"]'), bts(""))],
+        ),
+    )
+    @patch("salt.utils.thin.tarfile", MagicMock())
+    @patch("salt.utils.thin.zipfile", MagicMock())
+    @patch("salt.utils.thin.os.getcwd", MagicMock())
+    @patch("salt.utils.thin.os.access", MagicMock(return_value=False))
+    @patch("salt.utils.thin.os.chdir", MagicMock())
+    @patch("salt.utils.thin.os.close", MagicMock())
+    @patch("salt.utils.thin.tempfile.mkdtemp", MagicMock(return_value=""))
+    @patch(
+        "salt.utils.thin.tempfile.mkstemp", MagicMock(return_value=(3, ".temporary"))
+    )
+    @patch("salt.utils.thin.shutil", MagicMock())
+    @patch("salt.utils.thin.sys.version_info", _version_info(None, 3, 6))
+    def test_gen_thin_control_files_written_access_denied_cwd(self):
+        """
+        Test thin.gen_thin function if control files are written (version, salt-call etc)
+        when the current working directory is inaccessible, eg. Salt is configured to run as
+        a non-root user but the command is executed in a directory that the user does not
+        have permissions to.  Issue #54317.
+
+        NOTE: Py2 version of this test is not required, as code shares the same spot across the versions.
+
+        :return:
+        """
+        thin.gen_thin("")
+        arc_name, arc_mode = thin.tarfile.method_calls[0][1]
+        self.assertEqual(arc_name, ".temporary")
+        self.assertEqual(arc_mode, "w:gz")
+        for idx, fname in enumerate(
+            ["version", ".thin-gen-py-version", "salt-call", "supported-versions"]
+        ):
+            name = thin.tarfile.open().method_calls[idx + 2][1][0]
+            self.assertEqual(name, fname)
+        thin.tarfile.open().close.assert_called()
+
+    def test_get_tops_python(self):
+        """
+        test get_tops_python
+        """
+        patch_proc = patch(
+            "salt.utils.thin.subprocess.Popen",
+            self._popen(
+                None,
+                side_effect=[
+                    (bts("jinja2/__init__.py"), bts("")),
+                    (bts("yaml/__init__.py"), bts("")),
+                    (bts("tornado/__init__.py"), bts("")),
+                    (bts("msgpack/__init__.py"), bts("")),
+                    (bts("certifi/__init__.py"), bts("")),
+                    (bts("singledispatch.py"), bts("")),
+                    (bts(""), bts("")),
+                    (bts(""), bts("")),
+                    (bts(""), bts("")),
+                    (bts(""), bts("")),
+                    (bts(""), bts("")),
+                    (bts("distro.py"), bts("")),
+                ],
+            ),
+        )
+
+        patch_os = patch("os.path.exists", return_value=True)
+        patch_which = patch("salt.utils.path.which", return_value=True)
+        with patch_proc, patch_os, patch_which:
+            with TstSuiteLoggingHandler() as log_handler:
+                exp_ret = copy.deepcopy(self.exp_ret)
+                ret = thin.get_tops_python("python3.7", ext_py_ver=[3, 7])
+                if salt.utils.platform.is_windows():
+                    for key, value in ret.items():
+                        ret[key] = str(pathlib.Path(value).resolve(strict=False))
+                    for key, value in exp_ret.items():
+                        exp_ret[key] = str(pathlib.Path(value).resolve(strict=False))
+                assert ret == exp_ret
+                assert (
+                    "ERROR:Could not auto detect file location for module concurrent for python version python3.7"
+                    in log_handler.messages
+                )
+
+    def test_get_tops_python_exclude(self):
+        """
+        test get_tops_python when excluding modules
+        """
+        patch_proc = patch(
+            "salt.utils.thin.subprocess.Popen",
+            self._popen(
+                None,
+                side_effect=[
+                    (bts("tornado/__init__.py"), bts("")),
+                    (bts("msgpack/__init__.py"), bts("")),
+                    (bts("certifi/__init__.py"), bts("")),
+                    (bts("singledispatch.py"), bts("")),
+                    (bts(""), bts("")),
+                    (bts(""), bts("")),
+                    (bts(""), bts("")),
+                    (bts(""), bts("")),
+                    (bts(""), bts("")),
+                    (bts("distro.py"), bts("")),
+                ],
+            ),
+        )
+        exp_ret = copy.deepcopy(self.exp_ret)
+        for lib in self.exc_libs:
+            exp_ret.pop(lib)
+
+        patch_os = patch("os.path.exists", return_value=True)
+        patch_which = patch("salt.utils.path.which", return_value=True)
+        with patch_proc, patch_os, patch_which:
+            ret = thin.get_tops_python(
+                "python3.7", exclude=self.exc_libs, ext_py_ver=[3, 7]
+            )
+            if salt.utils.platform.is_windows():
+                for key, value in ret.items():
+                    ret[key] = str(pathlib.Path(value).resolve(strict=False))
+                for key, value in exp_ret.items():
+                    exp_ret[key] = str(pathlib.Path(value).resolve(strict=False))
+            assert ret == exp_ret
+
+    def test_pack_alternatives_exclude(self):
+        """
+        test pack_alternatives when mixing
+        manually set dependencies and auto
+        detecting other modules.
+        """
+        patch_proc = patch(
+            "salt.utils.thin.subprocess.Popen",
+            self._popen(
+                None,
+                side_effect=[
+                    (bts(self.fake_libs["distro"]), bts("")),
+                    (bts(self.fake_libs["yaml"]), bts("")),
+                    (bts(self.fake_libs["tornado"]), bts("")),
+                    (bts(self.fake_libs["msgpack"]), bts("")),
+                    (bts(""), bts("")),
+                    (bts(""), bts("")),
+                    (bts(""), bts("")),
+                    (bts(""), bts("")),
+                    (bts(""), bts("")),
+                    (bts(""), bts("")),
+                    (bts(""), bts("")),
+                ],
+            ),
+        )
+
+        patch_os = patch("os.path.exists", return_value=True)
+        ext_conf = copy.deepcopy(self.ext_conf)
+        ext_conf["test"]["auto_detect"] = True
+
+        for lib in self.fake_libs.values():
+            os.makedirs(lib)
+            with salt.utils.files.fopen(os.path.join(lib, "__init__.py"), "w+") as fp_:
+                fp_.write("test")
+
+        exp_files = self.exp_files.copy()
+        exp_files.extend(
+            [
+                os.path.join("yaml", "__init__.py"),
+                os.path.join("tornado", "__init__.py"),
+                os.path.join("msgpack", "__init__.py"),
+            ]
+        )
+
+        patch_which = patch("salt.utils.path.which", return_value=True)
+
+        with patch_os, patch_proc, patch_which:
+            thin._pack_alternative(ext_conf, self.digest, self.tar)
+            calls = self.tar.mock_calls
+            for _file in exp_files:
+                assert [x for x in calls if "{}".format(_file) in x[-2]]
+
+    def test_pack_alternatives(self):
+        """
+        test thin._pack_alternatives
+        """
+        with patch("salt.utils.thin.get_ext_tops", MagicMock(return_value=self.tops)):
+            thin._pack_alternative(self.ext_conf, self.digest, self.tar)
+            calls = self.tar.mock_calls
+            for _file in self.exp_files:
+                assert [x for x in calls if "{}".format(_file) in x[-2]]
+                assert [
+                    x
+                    for x in calls
+                    if os.path.join("test", "pyall", _file) in x[-1]["arcname"]
+                ]
+
+    def test_pack_alternatives_not_normalized(self):
+        """
+        test thin._pack_alternatives when the path
+        is not normalized
+        """
+        tops = copy.deepcopy(self.tops)
+        tops["test"]["dependencies"] = [self.jinja_fp + "/"]
+        with patch("salt.utils.thin.get_ext_tops", MagicMock(return_value=tops)):
+            thin._pack_alternative(self.ext_conf, self.digest, self.tar)
+            calls = self.tar.mock_calls
+            for _file in self.exp_files:
+                assert [x for x in calls if "{}".format(_file) in x[-2]]
+                assert [
+                    x
+                    for x in calls
+                    if os.path.join("test", "pyall", _file) in x[-1]["arcname"]
+                ]
+
+    def test_pack_alternatives_path_doesnot_exist(self):
+        """
+        test thin._pack_alternatives when the path
+        doesnt exist. Check error log message
+        and expect that because the directory
+        does not exist jinja2 does not get
+        added to the tar
+        """
+        bad_path = os.path.join(tempfile.gettempdir(), "doesnotexisthere")
+        tops = copy.deepcopy(self.tops)
+        tops["test"]["dependencies"] = [bad_path]
+        with patch("salt.utils.thin.get_ext_tops", MagicMock(return_value=tops)):
+            with TstSuiteLoggingHandler() as log_handler:
+                thin._pack_alternative(self.ext_conf, self.digest, self.tar)
+                msg = "ERROR:File path {} does not exist. Unable to add to salt-ssh thin".format(
+                    bad_path
+                )
+                assert msg in log_handler.messages
+        calls = self.tar.mock_calls
+        for _file in self.exp_files:
+            arg = [x for x in calls if "{}".format(_file) in x[-2]]
+            kwargs = [
+                x
+                for x in calls
+                if os.path.join("test", "pyall", _file) in x[-1]["arcname"]
+            ]
+            if "jinja2" in _file:
+                assert not arg
+                assert not kwargs
+            else:
+                assert arg
+                assert kwargs
+
+    def test_pack_alternatives_auto_detect(self):
+        """
+        test thin._pack_alternatives when auto_detect
+        is enabled
+        """
+        ext_conf = copy.deepcopy(self.ext_conf)
+        ext_conf["test"]["auto_detect"] = True
+
+        for lib in self.fake_libs.values():
+            os.makedirs(lib)
+            with salt.utils.files.fopen(os.path.join(lib, "__init__.py"), "w+") as fp_:
+                fp_.write("test")
+
+        patch_tops_py = patch(
+            "salt.utils.thin.get_tops_python", return_value=self.fake_libs
+        )
+
+        exp_files = self.exp_files.copy()
+        exp_files.extend(
+            [
+                os.path.join("yaml", "__init__.py"),
+                os.path.join("tornado", "__init__.py"),
+                os.path.join("msgpack", "__init__.py"),
+            ]
+        )
+        with patch_tops_py:
+            thin._pack_alternative(ext_conf, self.digest, self.tar)
+            calls = self.tar.mock_calls
+            for _file in exp_files:
+                assert [x for x in calls if "{}".format(_file) in x[-2]]
+
+    def test_pack_alternatives_empty_dependencies(self):
+        """
+        test _pack_alternatives when dependencies is not
+        set in the config.
+        """
+        ext_conf = copy.deepcopy(self.ext_conf)
+        ext_conf["test"]["auto_detect"] = True
+        ext_conf["test"].pop("dependencies")
+
+        for lib in self.fake_libs.values():
+            os.makedirs(lib)
+            with salt.utils.files.fopen(os.path.join(lib, "__init__.py"), "w+") as fp_:
+                fp_.write("test")
+
+        patch_tops_py = patch(
+            "salt.utils.thin.get_tops_python", return_value=self.fake_libs
+        )
+
+        exp_files = self.exp_files.copy()
+        exp_files.extend(
+            [
+                os.path.join("yaml", "__init__.py"),
+                os.path.join("tornado", "__init__.py"),
+                os.path.join("msgpack", "__init__.py"),
+            ]
+        )
+        with patch_tops_py:
+            thin._pack_alternative(ext_conf, self.digest, self.tar)
+            calls = self.tar.mock_calls
+            for _file in exp_files:
+                assert [x for x in calls if "{}".format(_file) in x[-2]]
+
+    @pytest.mark.slow_test
+    @skipIf(
+        salt.utils.platform.is_windows(), "salt-ssh does not deploy to/from windows"
+    )
+    def test_thin_dir(self):
+        """
+        Test the thin dir to make sure salt-call can run
+
+        Run salt call via a python in a new virtual environment to ensure
+        salt-call has all dependencies needed.
+        """
+        # This was previously an integration test and is now here, as a unit test.
+        # Should actually be a functional test
+        with VirtualEnv() as venv:
+            salt.utils.thin.gen_thin(venv.venv_dir)
+            thin_dir = os.path.join(venv.venv_dir, "thin")
+            thin_archive = os.path.join(thin_dir, "thin.tgz")
+            tar = tarfile.open(thin_archive)
+            tar.extractall(thin_dir)
+            tar.close()
+            ret = venv.run(
+                venv.venv_python,
+                os.path.join(thin_dir, "salt-call"),
+                "--version",
+                check=False,
+            )
+            assert ret.exitcode == 0, ret

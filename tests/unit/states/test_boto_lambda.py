@@ -1,32 +1,19 @@
-# -*- coding: utf-8 -*-
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import random
 import string
 
-# Import Salt libs
+import pytest
 import salt.config
 import salt.loader
 import salt.states.boto_lambda as boto_lambda
 import salt.utils.json
-
-# Import 3rd-party libs
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 from salt.utils.versions import LooseVersion
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
 
 # pylint: disable=import-error,no-name-in-module
 from tests.unit.modules.test_boto_lambda import BotoLambdaTestCaseMixin, TempZipFile
-
-# Import test suite libs
-
 
 try:
     import boto3
@@ -111,8 +98,8 @@ def _has_required_boto():
 @skipIf(
     _has_required_boto() is False,
     (
-        "The boto3 module must be greater than or equal to version {0}, "
-        "and botocore must be greater than or equal to {1}".format(
+        "The boto3 module must be greater than or equal to version {}, "
+        "and botocore must be greater than or equal to {}".format(
             required_boto3_version, required_botocore_version
         )
     ),
@@ -183,7 +170,7 @@ class BotoLambdaFunctionTestCase(BotoLambdaStateTestCaseBase, BotoLambdaTestCase
     TestCase for salt.modules.boto_lambda state.module
     """
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_present_when_function_does_not_exist(self):
         """
         Tests present on a function that does not exist.
@@ -212,7 +199,7 @@ class BotoLambdaFunctionTestCase(BotoLambdaStateTestCaseBase, BotoLambdaTestCase
             function_ret["FunctionName"],
         )
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_present_when_function_exists(self):
         self.conn.list_functions.return_value = {"Functions": [function_ret]}
         self.conn.update_function_code.return_value = function_ret
@@ -240,7 +227,7 @@ class BotoLambdaFunctionTestCase(BotoLambdaStateTestCaseBase, BotoLambdaTestCase
         self.assertTrue(result["result"])
         self.assertEqual(result["changes"], {})
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_present_with_failure(self):
         self.conn.list_functions.side_effect = [
             {"Functions": []},
@@ -300,7 +287,7 @@ class BotoLambdaFunctionTestCase(BotoLambdaStateTestCaseBase, BotoLambdaTestCase
         self.assertFalse(result["result"])
         self.assertTrue("An error occurred" in result["comment"])
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_present_when_function_exists_and_permissions(self):
         self.conn.list_functions.return_value = {"Functions": [function_ret]}
         self.conn.update_function_code.return_value = function_ret
@@ -369,8 +356,8 @@ class BotoLambdaFunctionTestCase(BotoLambdaStateTestCaseBase, BotoLambdaTestCase
 @skipIf(
     _has_required_boto() is False,
     (
-        "The boto3 module must be greater than or equal to version {0}, "
-        "and botocore must be greater than or equal to {1}".format(
+        "The boto3 module must be greater than or equal to version {}, "
+        "and botocore must be greater than or equal to {}".format(
             required_boto3_version, required_botocore_version
         )
     ),
@@ -409,7 +396,7 @@ class BotoLambdaAliasTestCase(BotoLambdaStateTestCaseBase, BotoLambdaTestCaseMix
         self.assertTrue(result["result"])
         self.assertEqual(result["changes"], {})
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_present_with_failure(self):
         self.conn.list_aliases.side_effect = [{"Aliases": []}, {"Aliases": [alias_ret]}]
         self.conn.create_alias.side_effect = ClientError(error_content, "create_alias")
@@ -455,8 +442,8 @@ class BotoLambdaAliasTestCase(BotoLambdaStateTestCaseBase, BotoLambdaTestCaseMix
 @skipIf(
     _has_required_boto() is False,
     (
-        "The boto3 module must be greater than or equal to version {0}, "
-        "and botocore must be greater than or equal to {1}".format(
+        "The boto3 module must be greater than or equal to version {}, "
+        "and botocore must be greater than or equal to {}".format(
             required_boto3_version, required_botocore_version
         )
     ),
@@ -507,7 +494,7 @@ class BotoLambdaEventSourceMappingTestCase(
         self.assertTrue(result["result"])
         self.assertEqual(result["changes"], {})
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_present_with_failure(self):
         self.conn.list_event_source_mappings.side_effect = [
             {"EventSourceMappings": []},
