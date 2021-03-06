@@ -79,7 +79,7 @@ def __virtual__():
 
 
 def _log_cmd(cmd):
-    if not isinstance(cmd, list):
+    if isinstance(cmd, str):
         return cmd.split()[0].strip()
     return cmd[0].strip()
 
