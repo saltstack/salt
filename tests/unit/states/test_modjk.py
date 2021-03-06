@@ -1,21 +1,11 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
 import salt.states.modjk as modjk
-from salt.ext import six
-
-# Import Salt Testing Libs
 from tests.support.unit import TestCase
 
-if six.PY2:
-    LIST_NOT_STR = "workers should be a list not a <type 'unicode'>"
-else:
-    LIST_NOT_STR = "workers should be a list not a <class 'str'>"
+LIST_NOT_STR = "workers should be a list not a <class 'str'>"
 
 
 class ModjkTestCase(TestCase):

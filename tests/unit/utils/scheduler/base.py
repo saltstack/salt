@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
 """
     tests.unit.utils.scheduler.base
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
 
-from __future__ import absolute_import
 
 import copy
 import logging
@@ -14,7 +12,7 @@ import salt.utils.platform
 import salt.utils.schedule
 from salt.modules.test import ping
 from salt.utils.process import SubprocessList
-from saltfactories.utils.processes.helpers import terminate_process
+from saltfactories.utils.processes import terminate_process
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Vault SDB Module
 
@@ -41,7 +40,6 @@ The above URI is analogous to running the following vault command:
 """
 
 # import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
@@ -68,7 +66,7 @@ def set_(key, value, profile=None):
         data = {"data": data}
 
     try:
-        url = "v1/{0}".format(path)
+        url = "v1/{}".format(path)
         response = __utils__["vault.make_request"]("POST", url, json=data)
 
         if response.status_code != 204:
@@ -93,8 +91,8 @@ def get(key, profile=None):
         path = version2["data"]
 
     try:
-        url = "v1/{0}".format(path)
-        response = __utils__["vault.make_request"]("GET", url, profile)
+        url = "v1/{}".format(path)
+        response = __utils__["vault.make_request"]("GET", url)
         if response.status_code == 404:
             return None
         if response.status_code != 200:

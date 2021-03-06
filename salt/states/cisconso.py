@@ -1,17 +1,12 @@
-# -*- coding: utf-8 -*-
 """
 State module for Cisco NSO Proxy minions
 
-.. versionadded: 2016.11.0
+.. versionadded:: 2016.11.0
 
 For documentation on setting up the cisconso proxy minion look in the documentation
 for :mod:`salt.proxy.cisconso <salt.proxy.cisconso>`.
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Salt libs
 import salt.utils.compat
 
 
@@ -82,7 +77,7 @@ def value_present(name, datastore, path, config):
     return ret
 
 
-class _DictDiffer(object):
+class _DictDiffer:
     """
     Calculate the difference between two dictionaries as:
     (1) items added
@@ -106,11 +101,7 @@ class _DictDiffer(object):
         return self.set_past - self.intersect
 
     def changed(self):
-        return set(
-            o for o in self.intersect if self.past_dict[o] != self.current_dict[o]
-        )
+        return {o for o in self.intersect if self.past_dict[o] != self.current_dict[o]}
 
     def unchanged(self):
-        return set(
-            o for o in self.intersect if self.past_dict[o] == self.current_dict[o]
-        )
+        return {o for o in self.intersect if self.past_dict[o] == self.current_dict[o]}

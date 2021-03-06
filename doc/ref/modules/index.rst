@@ -97,7 +97,7 @@ included libraries.
 
 Then, create the zip:
 
-.. code-block:: bash
+.. code-block:: console
 
     modules $ zip -r lumberjack lumberjack
       adding: lumberjack/ (stored 0%)
@@ -131,7 +131,7 @@ Once placed in :conf_master:`file_roots`, Salt users can distribute and use
     minion1:
       True
 
-.. _`Python package`: https://docs.python.org/2/tutorial/modules.html#packages
+.. _`Python package`: https://docs.python.org/3/tutorial/modules.html#packages
 
 .. _cross-calling-execution-modules:
 

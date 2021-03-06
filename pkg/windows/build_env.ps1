@@ -301,18 +301,10 @@ If (!($Path.ToLower().Contains("$($ini['Settings']['Scripts3Dir'])".ToLower())))
 # Update PIP and SetupTools
 #==============================================================================
 Write-Output " ----------------------------------------------------------------"
-Write-Output " - $script_name :: Updating PIP and SetupTools . . ."
+Write-Output " - $script_name :: Updating PIP, SetupTools, and Wheel . . ."
 Write-Output " ----------------------------------------------------------------"
-Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['Python3Dir'])\python.exe -m pip --disable-pip-version-check --no-cache-dir install -r $($script_path)\req_pip.txt" "python pip"
+Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['Python3Dir'])\python.exe -m pip --disable-pip-version-check --no-cache-dir install -U pip setuptools wheel" "update pip"
 
-
-#==============================================================================
-# Install windows specific pypi resources using pip
-#==============================================================================
-Write-Output " ----------------------------------------------------------------"
-Write-Output " - $script_name :: Installing windows specific pypi resources using pip . . ."
-Write-Output " ----------------------------------------------------------------"
-Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['Python3Dir'])\python.exe -m pip --disable-pip-version-check --no-cache-dir install -r $($script_path)\req_win.txt" "pip install"
 
 #==============================================================================
 # Install pypi resources using pip
@@ -321,7 +313,7 @@ If ($NoPipDependencies -eq $false) {
   Write-Output " ----------------------------------------------------------------"
   Write-Output " - $script_name :: Installing pypi resources using pip . . ."
   Write-Output " ----------------------------------------------------------------"
-  Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['Python3Dir'])\python.exe -m pip --disable-pip-version-check --no-cache-dir install -r $($script_path)\req.txt" "pip install"
+  Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['Python3Dir'])\python.exe -m pip --disable-pip-version-check --no-cache-dir install -r $($ini['Settings']['SrcDir'])\requirements\static\pkg\py$($ini['Settings']['PyVerMajor']).$($ini['Settings']['PyVerMinor'])\windows.txt" "pip install"
 }
 
 If (Test-Path "$($ini['Settings']['SitePkgs3Dir'])\pywin32_system32" -PathType Container )

@@ -1,19 +1,13 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: :email:`Anthony Shaw <anthonyshaw@apache.org>`
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
+import salt.modules.napalm_ntp as napalm_ntp
 import tests.support.napalm as napalm_test_support
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import MagicMock
+from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
-
-import salt.modules.napalm_ntp as napalm_ntp  # NOQA
 
 
 def mock_net_load_template(template, *args, **kwargs):
@@ -25,9 +19,15 @@ def mock_net_load_template(template, *args, **kwargs):
 
 class NapalmNtpModuleTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
+        patcher = patch(
+            "salt.utils.napalm.get_device",
+            MagicMock(return_value=napalm_test_support.MockNapalmDevice()),
+        )
+        patcher.start()
+        self.addCleanup(patcher.stop)
         module_globals = {
             "__salt__": {
-                "config.option": MagicMock(
+                "config.get": MagicMock(
                     return_value={"test": {"driver": "test", "key": "2orgk34kgk34g"}}
                 ),
                 "file.file_exists": napalm_test_support.true,

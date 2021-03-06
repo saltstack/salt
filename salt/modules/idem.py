@@ -8,7 +8,7 @@ Idem Support
 
 This module provides access to idem execution modules
 
-.. versionadded:: Magnesium
+.. versionadded:: 3002
 """
 # Function alias to make sure not to shadow built-in's
 __func_alias__ = {"exec_": "exec"}

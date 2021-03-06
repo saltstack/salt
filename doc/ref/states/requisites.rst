@@ -363,6 +363,8 @@ shown in json for clarity:
         }
     }
 
+.. code-block:: json
+
     {
         "local": {
             "pkgrepo_|-salt-minion_|-salt-minion_|-managed": {
@@ -919,6 +921,21 @@ In the above case, ``some_check`` will be run prior to _each_ name -- once for
               args:
                 - mysql-server-5.7
 
+    .. versionchanged:: sodium
+      For modules which return a deeper data structure, the ``get_return`` key can
+      be used to access results.
+
+    .. code-block:: yaml
+
+      test:
+        test.nop:
+          - name: foo
+          - unless:
+            - fun: consul.get
+              consul_url: http://127.0.0.1:8500
+              key:  not-existing
+              get_return: res
+
 .. _onlyif-requisite:
 
 onlyif
@@ -972,14 +989,14 @@ if the gluster commands return a 0 ret value.
             - name: httpd
             - onlyif:
               - fun: match.grain
-                tgt: 'os_family: RedHat'
+                tgt: 'os_family:RedHat'
 
         install apache on debian based distros:
           pkg.latest:
             - name: apache2
             - onlyif:
               - fun: match.grain
-                tgt: 'os_family: Debian'
+                tgt: 'os_family:Debian'
 
     .. code-block:: yaml
 
@@ -991,6 +1008,22 @@ if the gluster commands return a 0 ret value.
               args:
                 - /etc/crontab
                 - 'entry1'
+
+.. versionchanged:: sodium
+    For modules which return a deeper data structure, the ``get_return`` key can
+    be used to access results.
+
+    .. code-block:: yaml
+
+      test:
+        test.nop:
+          - name: foo
+          - onlyif:
+            - fun: consul.get
+              consul_url: http://127.0.0.1:8500
+              key:  does-exist
+              get_return: res
+
 
 .. _creates-requisite:
 
@@ -1024,8 +1057,9 @@ run if **any** of the files do not exist:
               - /path/file
               - /path/file2
 
-listen
-~~~~~~
+runas
+~~~~~
+
 
 .. versionadded:: 2017.7.0
 
