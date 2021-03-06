@@ -7,7 +7,7 @@ import salt.modules.yumpkg as yumpkg
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import MagicMock, Mock, patch
+from tests.support.mock import MagicMock, Mock, call, patch
 from tests.support.unit import TestCase, skipIf
 
 try:
@@ -1722,3 +1722,33 @@ class YumUtilsTestCase(TestCase, LoaderModuleMockMixin):
                 python_shell=True,
                 username="Darth Vader",
             )
+
+    @skipIf(not salt.utils.systemd.booted(), "Requires systemd")
+    @patch("salt.modules.yumpkg._yum", Mock(return_value="dnf"))
+    def test_services_need_restart(self):
+        """
+        Test that dnf needs-restarting output is parsed and
+        salt.utils.systemd.pid_to_service is called as expected.
+        """
+        expected = ["firewalld", "salt-minion"]
+
+        dnf_mock = Mock(
+            return_value="123 : /usr/bin/firewalld\n456 : /usr/bin/salt-minion\n"
+        )
+        systemd_mock = Mock(side_effect=["firewalld", "salt-minion"])
+        with patch.dict(yumpkg.__salt__, {"cmd.run_stdout": dnf_mock}), patch(
+            "salt.utils.systemd.pid_to_service", systemd_mock
+        ):
+            assert sorted(yumpkg.services_need_restart()) == expected
+            systemd_mock.assert_has_calls([call("123"), call("456")])
+
+    @patch("salt.modules.yumpkg._yum", Mock(return_value="dnf"))
+    def test_services_need_restart_requires_systemd(self):
+        """Test that yumpkg.services_need_restart raises an error if systemd is unavailable."""
+        with patch("salt.utils.systemd.booted", Mock(return_value=False)):
+            pytest.raises(CommandExecutionError, yumpkg.services_need_restart)
+
+    @patch("salt.modules.yumpkg._yum", Mock(return_value="yum"))
+    def test_services_need_restart_requires_dnf(self):
+        """Test that yumpkg.services_need_restart raises an error if DNF is unavailable."""
+        pytest.raises(CommandExecutionError, yumpkg.services_need_restart)

@@ -23,7 +23,7 @@ salt/modules/(aix_group|groupadd|mac_group|pw_group|solaris_group|win_groupadd)\
   - unit.states.test_group
 
 salt/modules/(debian_service|freebsdservice|gentoo_service|launchctl_service|mac_service|netbsdservice|openbsdrcctl_service|openbsdservice|rh_service|runit|linux_service|smf_service|systemd_service|upstart_service|win_service)\.py:
-  - unit.states.test_service
+  - pytests.unit.states.test_service
   - integration.modules.test_service
   - integration.states.test_service
 
@@ -62,7 +62,7 @@ salt/modules/mysql.py:
   - unit.states.test_mysql_grants
 
 salt/modules/openvswitch.py:
-  - unit.states.test_openvswitch_port
+  - pytests.unit.states.test_openvswitch_port
 
 salt/(states|modules)/.*postgres.py:
   - unit.states.test_postgres
@@ -124,6 +124,12 @@ salt/cloud/__init__.py:
 
 salt/grains/*:
   - integration.grains.test_custom
+
+salt/matchers/*:
+  - integration.states.test_match
+  - pytests.integration.cli.test_matcher
+  - pytests.unit.modules.test_match
+  - unit.matchers.test_confirm_top
 
 salt/proxy/*:
   - pytests.integration.proxy.test_shell

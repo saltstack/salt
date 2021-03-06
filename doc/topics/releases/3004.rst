@@ -1,0 +1,8 @@
+.. _release-3004:
+
+==========================================
+Salt 3004 Release Notes - Codename Silicon
+==========================================
+
+Salt 3004 is an *unreleased* upcoming feature release.
+
