@@ -404,7 +404,7 @@ def _get_yum_config():
                     conf[opt] = cp.get("main", opt)
         else:
             log.warning(
-                "Could not find [main] section in %s, using internal " "defaults", fn
+                "Could not find [main] section in %s, using internal defaults", fn
             )
 
     return conf
@@ -1691,9 +1691,7 @@ def install(
         holds = list_holds(full=False)
     except SaltInvocationError:
         holds = []
-        log.debug(
-            "Failed to get holds, versionlock plugin is probably not " "installed"
-        )
+        log.debug("Failed to get holds, versionlock plugin is probably not installed")
     unhold_prevented = []
 
     @contextlib.contextmanager
@@ -2346,7 +2344,7 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
                 else:
                     ret[target][
                         "comment"
-                    ] = "Package {} was unable to be " "unheld.".format(target)
+                    ] = "Package {} was unable to be unheld.".format(target)
         else:
             ret[target].update(result=True)
             ret[target]["comment"] = "Package {} is not being held.".format(target)
