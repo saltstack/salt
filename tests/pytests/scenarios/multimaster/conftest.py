@@ -1,8 +1,10 @@
 import logging
 import os
 import shutil
+import subprocess
 
 import pytest
+import salt.utils.platform
 
 log = logging.getLogger(__name__)
 
@@ -40,6 +42,8 @@ def mm_master_1_salt_cli(salt_mm_master_1):
 
 @pytest.fixture(scope="package")
 def salt_mm_master_2(salt_factories, salt_mm_master_1):
+    if salt.utils.platform.is_darwin():
+        subprocess.check_output(["ifconfig", "lo0", "alias", "127.0.0.2", "up"])
 
     config_defaults = {
         "open_mode": True,
