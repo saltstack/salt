@@ -183,7 +183,7 @@ salt/minion.py:
   - pytests.integration.modules.test_pillar
 
 salt/modules/*_sysctl.py:
-  - unit.states.test_sysctl
+  - pytests.unit.states.test_sysctl
   - integration.modules.test_sysctl
 
 salt/netapi/rest_cherrypy/*:
