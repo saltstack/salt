@@ -1,10 +1,8 @@
 import logging
+import shutil
 import types
 
 import pytest
-import salt.modules.aliases as aliases
-import salt.modules.cmdmod as cmdmod
-import salt.modules.config as config
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
@@ -13,29 +11,31 @@ pytestmark = [
 log = logging.getLogger(__name__)
 
 
-@pytest.fixture
-def configure_loader_modules(tmp_path):
-    aliases_file = tmp_path / "aliases-file"
-    log.debug("Aliases file path: %s", aliases_file)
-    opts = {"aliases.file": str(aliases_file), "integration.test": True}
-    return {
-        aliases: {
-            "__opts__": opts,
-            "__salt__": {"cmd.run": cmdmod.run, "config.option": config.option},
-        },
-        cmdmod: {},
-        config: {"__opts__": opts},
-    }
+@pytest.fixture(scope="module")
+def minion_opts(minion_opts, tmp_path_factory):
+    temp_path = tmp_path_factory.mktemp("aliases-temp")
+    aliases_file = temp_path / "aliases-file"
+    try:
+        minion_opts["aliases.file"] = str(aliases_file)
+        minion_opts["integration.test"] = True
+        yield minion_opts
+    finally:
+        shutil.rmtree(str(temp_path), ignore_errors=True)
+
+
+@pytest.fixture(scope="module")
+def aliases(modules):
+    return modules.aliases
 
 
 @pytest.fixture
-def alias():
+def alias(aliases):
     ret = aliases.set_target(alias="fred", target="bob")
     assert ret is True
     return types.SimpleNamespace(name="fred", target="bob")
 
 
-def test_set_target(alias):
+def test_set_target(aliases, alias):
     """
     aliases.set_target and aliases.get_target
     """
@@ -43,7 +43,7 @@ def test_set_target(alias):
     assert ret == alias.target
 
 
-def test_has_target(alias):
+def test_has_target(aliases, alias):
     """
     aliases.set_target and aliases.has_target
     """
@@ -51,7 +51,7 @@ def test_has_target(alias):
     assert ret is True
 
 
-def test_list_aliases(alias):
+def test_list_aliases(aliases, alias):
     """
     aliases.list_aliases
     """
@@ -60,7 +60,7 @@ def test_list_aliases(alias):
     assert alias.name in ret
 
 
-def test_rm_alias(alias):
+def test_rm_alias(aliases, alias):
     """
     aliases.rm_alias
     """

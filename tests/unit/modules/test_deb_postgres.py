@@ -1,11 +1,4 @@
-# Import python libs
-
 import salt.modules.deb_postgres as deb_postgres
-
-# Import salt libs
-from salt.ext import six
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import Mock, patch
 from tests.support.unit import TestCase
@@ -145,11 +138,6 @@ class PostgresLsClusterTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(
             "/usr/bin/pg_lsclusters --no-header", self.cmd_run_all_mock.call_args[0][0]
         )
-        if six.PY2:
-            # Python 3 returns iterable views (dict_keys in this case) on
-            # dict.keys() calls instead of lists. We should only perform
-            # this check in Python 2.
-            self.assertIsInstance(return_list, list)
         return_dict = deb_postgres.cluster_list(verbose=True)
         self.assertIsInstance(return_dict, dict)
 

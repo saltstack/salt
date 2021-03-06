@@ -26,17 +26,12 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
 :depends: IPy >= 0.81
 """
 
-# Import python libs
-
 import logging
 import pprint
 import re
 import time
 
-# Import salt cloud libs
 import salt.config as config
-
-# Import salt libs
 import salt.utils.cloud
 import salt.utils.json
 from salt.exceptions import (
@@ -44,9 +39,6 @@ from salt.exceptions import (
     SaltCloudExecutionTimeout,
     SaltCloudSystemExit,
 )
-
-# Import 3rd-party Libs
-from salt.ext.six.moves import range
 
 try:
     import requests
@@ -81,12 +73,19 @@ def __virtual__():
     return __virtualname__
 
 
+def _get_active_provider_name():
+    try:
+        return __active_provider_name__.value()
+    except AttributeError:
+        return __active_provider_name__
+
+
 def get_configured_provider():
     """
     Return the first configured instance.
     """
     return config.is_provider_configured(
-        __opts__, __active_provider_name__ or __virtualname__, ("user",)
+        __opts__, _get_active_provider_name() or __virtualname__, ("user",)
     )
 
 
@@ -298,6 +297,7 @@ def _lookup_proxmox_task(upid):
 def get_resources_nodes(call=None, resFilter=None):
     """
     Retrieve all hypervisors (nodes) available on this environment
+
     CLI Example:
 
     .. code-block:: bash
@@ -608,7 +608,10 @@ def create(vm_):
         if (
             vm_["profile"]
             and config.is_profile_configured(
-                __opts__, __active_provider_name__ or "proxmox", vm_["profile"], vm_=vm_
+                __opts__,
+                _get_active_provider_name() or "proxmox",
+                vm_["profile"],
+                vm_=vm_,
             )
             is False
         ):
@@ -947,7 +950,7 @@ def show_instance(name, call=None):
         )
 
     nodes = list_nodes_full()
-    __utils__["cloud.cache_node"](nodes[name], __active_provider_name__, __opts__)
+    __utils__["cloud.cache_node"](nodes[name], _get_active_provider_name(), __opts__)
     return nodes[name]
 
 
@@ -1067,7 +1070,7 @@ def destroy(name, call=None):
         )
         if __opts__.get("update_cachedir", False) is True:
             __utils__["cloud.delete_minion_cachedir"](
-                name, __active_provider_name__.split(":")[0], __opts__
+                name, _get_active_provider_name().split(":")[0], __opts__
             )
 
         return {"Destroyed": "{} was destroyed.".format(name)}

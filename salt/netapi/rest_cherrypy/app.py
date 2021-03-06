@@ -691,7 +691,7 @@ def salt_api_acl_tool(username, request):
     in order to provide whitelisting for the API similar to the
     master, but over the API.
 
-    ..code-block:: yaml
+    .. code-block:: yaml
 
         rest_cherrypy:
             api_acl:
@@ -2792,7 +2792,7 @@ class App:
         This is useful in combination with a browser-based app using the HTML5
         history API.
 
-        .. http::get:: /app
+        .. http:get:: /app
 
             :reqheader X-Auth-Token: |req_token|
 

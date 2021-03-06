@@ -1,6 +1,5 @@
 import pytest
 from tests.support.case import SyndicCase
-from tests.support.helpers import slowTest
 from tests.support.unit import skipIf
 
 
@@ -11,14 +10,14 @@ class TestSyndic(SyndicCase):
     Validate the syndic interface by testing the test module
     """
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_ping(self):
         """
         test.ping
         """
         self.assertTrue(self.run_function("test.ping"))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_fib(self):
         """
         test.fib
