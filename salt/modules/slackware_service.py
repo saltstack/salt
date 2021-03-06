@@ -10,8 +10,6 @@ The service module for Slackware
 
 import fnmatch
 import glob
-
-# Import python libs
 import os
 import re
 
@@ -39,7 +37,7 @@ def start(name):
     """
     Start the specified service
 
-    .. versionadded:: Magnesium
+    .. versionadded:: 3002
 
     CLI Example:
 
@@ -55,7 +53,7 @@ def stop(name):
     """
     Stop the specified service
 
-    .. versionadded:: Magnesium
+    .. versionadded:: 3002
 
     CLI Example:
 
@@ -71,7 +69,7 @@ def restart(name):
     """
     Restart the named service
 
-    .. versionadded:: Magnesium
+    .. versionadded:: 3002
 
     CLI Example:
 
@@ -87,7 +85,7 @@ def reload_(name):
     """
     Reload the named service
 
-    .. versionadded:: Magnesium
+    .. versionadded:: 3002
 
     CLI Example:
 
@@ -103,7 +101,7 @@ def force_reload(name):
     """
     Force-reload the named service
 
-    .. versionadded:: Magnesium
+    .. versionadded:: 3002
 
     CLI Example:
 
@@ -121,7 +119,7 @@ def status(name, sig=None):
     If the name contains globbing, a dict mapping service name to True/False
     values is returned.
 
-    .. versionadded:: Magnesium
+    .. versionadded:: 3002
 
     Args:
         name (str): The name of the service to check
@@ -194,7 +192,7 @@ def get_enabled():
     """
     Return a list of service that are enabled on boot
 
-    .. versionadded:: Magnesium
+    .. versionadded:: 3002
 
     CLI Example:
 
@@ -209,7 +207,7 @@ def get_disabled():
     """
     Return a set of services that are installed but disabled
 
-    .. versionadded:: Magnesium
+    .. versionadded:: 3002
 
     CLI Example:
 
@@ -225,7 +223,7 @@ def available(name):
     Returns ``True`` if the specified service is available, otherwise returns
     ``False``.
 
-    .. versionadded:: Magnesium
+    .. versionadded:: 3002
 
     CLI Example:
 
@@ -242,7 +240,7 @@ def missing(name):
     Returns ``True`` if the specified service is not available, otherwise returns
     ``False``.
 
-    .. versionadded:: Magnesium
+    .. versionadded:: 3002
 
     CLI Example:
 
@@ -257,7 +255,7 @@ def get_all():
     """
     Return all available boot services
 
-    .. versionadded:: Magnesium
+    .. versionadded:: 3002
 
     CLI Example:
 
@@ -290,7 +288,7 @@ def enable(name, **kwargs):
     """
     Enable the named service to start at boot
 
-    .. versionadded:: Magnesium
+    .. versionadded:: 3002
 
     CLI Example:
 
@@ -305,7 +303,7 @@ def disable(name, **kwargs):
     """
     Disable the named service to start at boot
 
-    .. versionadded:: Magnesium
+    .. versionadded:: 3002
 
     CLI Example:
 
@@ -320,7 +318,7 @@ def enabled(name, **kwargs):
     """
     Return True if the named service is enabled, false otherwise
 
-    .. versionadded:: Magnesium
+    .. versionadded:: 3002
 
     CLI Example:
 
@@ -338,7 +336,7 @@ def disabled(name):
     """
     Return True if the named service is enabled, false otherwise
 
-    .. versionadded:: Magnesium
+    .. versionadded:: 3002
 
     CLI Example:
 

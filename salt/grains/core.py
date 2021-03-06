@@ -9,7 +9,6 @@ module can be overwritten just by returning dict keys with the same value
 as those returned here
 """
 
-# Import Python libs
 import datetime
 import hashlib
 import locale
@@ -18,14 +17,13 @@ import os
 import platform
 import re
 import socket
+import subprocess
 import sys
 import time
 import uuid
 from errno import EACCES, EPERM
 
 import distro
-
-# Import Salt libs
 import salt.exceptions
 import salt.log
 
@@ -71,10 +69,11 @@ if salt.utils.platform.is_windows():
     # attempt to import the python wmi module
     # the Windows minion uses WMI for some of its grains
     try:
-        import wmi  # pylint: disable=import-error
-        import salt.utils.winapi
         import win32api
+        import wmi  # pylint: disable=import-error
+
         import salt.utils.win_reg
+        import salt.utils.winapi
 
         HAS_WMI = True
     except ImportError:
@@ -101,6 +100,24 @@ HAS_UNAME = hasattr(os, "uname")
 # Possible value for h_errno defined in netdb.h
 HOST_NOT_FOUND = 1
 NO_DATA = 4
+
+
+def _parse_junos_showver(txt):
+    showver = {}
+    for l in txt.splitlines():
+        decoded_line = l.decode("utf-8")
+        if decoded_line.startswith("Model"):
+            showver["model"] = decoded_line.split(" ")[1]
+        if decoded_line.startswith("Junos"):
+            showver["osrelease"] = decoded_line.split(" ")[1]
+            showver["osmajorrelease"] = decoded_line.split(".")[0]
+            showver["osrelease_info"] = decoded_line.split(".")
+        if decoded_line.startswith("JUNOS OS Kernel"):
+            showver["kernelversion"] = decoded_line
+            relno = re.search(r"\[(.*)\]", decoded_line)
+            if relno:
+                showver["kernelrelease"] = relno.group(1)
+    return showver
 
 
 def _windows_cpudata():
@@ -1038,7 +1055,7 @@ def _virtual(osdata):
         if os.path.isfile("/sys/devices/virtual/dmi/id/product_name"):
             try:
                 with salt.utils.files.fopen(
-                    "/sys/devices/virtual/dmi/id/product_name", "r"
+                    "/sys/devices/virtual/dmi/id/product_name", "rb"
                 ) as fhr:
                     output = salt.utils.stringutils.to_unicode(
                         fhr.read(), errors="replace"
@@ -1503,15 +1520,18 @@ def id_():
 _REPLACE_LINUX_RE = re.compile(r"\W(?:gnu/)?linux", re.IGNORECASE)
 
 # This maps (at most) the first ten characters (no spaces, lowercased) of
-# 'osfullname' to the 'os' grain that Salt traditionally uses.
-# Please see os_data() and _supported_dists.
-# If your system is not detecting properly it likely needs an entry here.
+# 'osfullname' to the 'os' grain that Salt traditionally uses, and is used by
+# the os_data() function to create the "os" grain.
+#
+# If your system is not detecting the "os" grain properly, it likely needs an
+# entry in this dictionary.
 _OS_NAME_MAP = {
     "redhatente": "RedHat",
     "gentoobase": "Gentoo",
     "archarm": "Arch ARM",
     "arch": "Arch",
     "debian": "Debian",
+    "Junos": "Junos",
     "raspbian": "Raspbian",
     "fedoraremi": "Fedora",
     "chapeau": "Chapeau",
@@ -1522,6 +1542,7 @@ _OS_NAME_MAP = {
     "oracleserv": "OEL",
     "cloudserve": "CloudLinux",
     "cloudlinux": "CloudLinux",
+    "almalinux": "AlmaLinux",
     "pidora": "Fedora",
     "scientific": "ScientificLinux",
     "synology": "Synology",
@@ -1536,6 +1557,7 @@ _OS_NAME_MAP = {
     "slesexpand": "RES",
     "linuxmint": "Mint",
     "neon": "KDE neon",
+    "pop": "Pop",
 }
 
 # Map the 'os' grain to the 'os_family' grain
@@ -1549,10 +1571,12 @@ _OS_FAMILY_MAP = {
     "Korora": "RedHat",
     "FedBerry": "RedHat",
     "CentOS": "RedHat",
+    "CentOS Stream": "RedHat",
     "GoOSe": "RedHat",
     "Scientific": "RedHat",
     "Amazon": "RedHat",
     "CloudLinux": "RedHat",
+    "AlmaLinux": "RedHat",
     "OVS": "RedHat",
     "OEL": "RedHat",
     "XCP": "RedHat",
@@ -1560,6 +1584,7 @@ _OS_FAMILY_MAP = {
     "XenServer": "RedHat",
     "RES": "RedHat",
     "Sangoma": "RedHat",
+    "VMware Photon OS": "RedHat",
     "Mandrake": "Mandriva",
     "ESXi": "VMware",
     "Mint": "Debian",
@@ -1608,6 +1633,7 @@ _OS_FAMILY_MAP = {
     "Funtoo": "Gentoo",
     "AIX": "AIX",
     "TurnKey": "Debian",
+    "Pop": "Debian",
 }
 
 # Matches any possible format:
@@ -1758,7 +1784,18 @@ def os_data():
     ) = platform.uname()
     # pylint: enable=unpacking-non-sequence
 
-    if salt.utils.platform.is_proxy():
+    if salt.utils.platform.is_junos():
+        grains["kernel"] = "Junos"
+        grains["osfullname"] = "Junos"
+        grains["os"] = "Junos"
+        grains["os_family"] = "FreeBSD"
+        showver = _parse_junos_showver(
+            subprocess.run(
+                ["/usr/sbin/cli", "show", "version"], stdout=subprocess.PIPE, check=True
+            ).stdout
+        )
+        grains.update(showver)
+    elif salt.utils.platform.is_proxy():
         grains["kernel"] = "proxy"
         grains["kernelrelease"] = "proxy"
         grains["kernelversion"] = "proxy"
@@ -2389,7 +2426,7 @@ def ip_fqdn():
             try:
                 start_time = datetime.datetime.utcnow()
                 info = socket.getaddrinfo(_fqdn, None, socket_type)
-                ret[key] = list(item[4][0] for item in info)
+                ret[key] = list({item[4][0] for item in info})
             except (OSError, UnicodeError):
                 timediff = datetime.datetime.utcnow() - start_time
                 if timediff.seconds > 5 and __opts__["__role"] == "master":
@@ -2511,7 +2548,11 @@ def dns():
     if salt.utils.platform.is_windows() or "proxyminion" in __opts__:
         return {}
 
-    resolv = salt.utils.dns.parse_resolv()
+    if os.path.exists("/run/systemd/resolve/resolv.conf"):
+        resolv = salt.utils.dns.parse_resolv("/run/systemd/resolve/resolv.conf")
+    else:
+        resolv = salt.utils.dns.parse_resolv()
+
     for key in ("nameservers", "ip4_nameservers", "ip6_nameservers", "sortlist"):
         if key in resolv:
             resolv[key] = [str(i) for i in resolv[key]]
@@ -2667,7 +2708,7 @@ def _hw_data(osdata):
             contents_file = os.path.join("/sys/class/dmi/id", fw_file)
             if os.path.exists(contents_file):
                 try:
-                    with salt.utils.files.fopen(contents_file, "r") as ifile:
+                    with salt.utils.files.fopen(contents_file, "rb") as ifile:
                         grains[key] = salt.utils.stringutils.to_unicode(
                             ifile.read().strip(), errors="replace"
                         )

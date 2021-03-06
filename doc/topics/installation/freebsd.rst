@@ -1,3 +1,7 @@
+.. meta::
+   :description: How do you install Salt on FreeBSD?
+   :keywords: freebsd
+
 =======
 FreeBSD
 =======
@@ -27,6 +31,7 @@ For Python 2.7 use:
 
     pkg install py27-salt
 
+
 FreeBSD ports
 =============
 
@@ -36,6 +41,7 @@ Installation from ports:
 
     cd /usr/ports/sysutils/py-salt
     make install
+
 
 Post-installation tasks
 =======================

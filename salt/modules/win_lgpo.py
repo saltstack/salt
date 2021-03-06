@@ -92,11 +92,13 @@ PRESENTATION_ANCESTOR_XPATH = None
 TEXT_ELEMENT_XPATH = None
 
 try:
+    import struct
+
+    import lxml
     import win32net
     import win32security
-    import lxml
-    import struct
     from lxml import etree
+
     from salt.utils.win_reg import Registry
 
     HAS_WINDOWS_MODULES = True
@@ -5658,7 +5660,7 @@ def _getDataFromRegPolData(search_string, policy_data, return_value_name=False):
                     match.start() : (
                         policy_data.index("]".encode("utf-16-le"), match.end())
                     )
-                ].split(encoded_semicolon)
+                ].split(encoded_semicolon, 4)
                 if len(pol_entry) >= 2:
                     valueName = pol_entry[1].decode("utf-16-le").rstrip(chr(0))
                 if len(pol_entry) >= 5:
@@ -6025,9 +6027,9 @@ def _processValueItem(
             element_valuenames = []
             element_values = this_element_value
             if this_element_value is not None:
-                element_valuenames = list(
-                    [str(z) for z in range(1, len(this_element_value) + 1)]
-                )
+                element_valuenames = [
+                    str(z) for z in range(1, len(this_element_value) + 1)
+                ]
             if "additive" in element.attrib:
                 if element.attrib["additive"].lower() == "false":
                     # a delete values will be added before all the other
@@ -6790,6 +6792,23 @@ def _checkAllAdmxPolicies(
                                         "explicitValue list, we will return value names"
                                     )
                                     return_value_name = True
+                                regex_str = [
+                                    r"(?!\*",
+                                    r"\*",
+                                    "D",
+                                    "e",
+                                    "l",
+                                    "V",
+                                    "a",
+                                    "l",
+                                    "s",
+                                    r"\.",
+                                    ")",
+                                ]
+                                delvals_regex = "\x00".join(regex_str)
+                                delvals_regex = salt.utils.stringutils.to_bytes(
+                                    delvals_regex
+                                )
                                 if _regexSearchRegPolData(
                                     re.escape(
                                         _processValueItem(
@@ -6801,9 +6820,7 @@ def _checkAllAdmxPolicies(
                                             check_deleted=False,
                                         )
                                     )
-                                    + salt.utils.stringutils.to_bytes(
-                                        r"(?!\*\*delvals\.)"
-                                    ),
+                                    + delvals_regex,
                                     policy_file_data,
                                 ):
                                     configured_value = _getDataFromRegPolData(
@@ -9100,6 +9117,21 @@ def _get_policy_adm_setting(
                         ):
                             log.trace("explicitValue list, we will return value names")
                             return_value_name = True
+                        regex_str = [
+                            r"(?!\*",
+                            r"\*",
+                            "D",
+                            "e",
+                            "l",
+                            "V",
+                            "a",
+                            "l",
+                            "s",
+                            r"\.",
+                            ")",
+                        ]
+                        delvals_regex = "\x00".join(regex_str)
+                        delvals_regex = salt.utils.stringutils.to_bytes(delvals_regex)
                         if _regexSearchRegPolData(
                             re.escape(
                                 _processValueItem(
@@ -9111,7 +9143,7 @@ def _get_policy_adm_setting(
                                     check_deleted=False,
                                 )
                             )
-                            + salt.utils.stringutils.to_bytes(r"(?!\*\*delvals\.)"),
+                            + delvals_regex,
                             policy_data=policy_file_data,
                         ):
                             configured_value = _getDataFromRegPolData(

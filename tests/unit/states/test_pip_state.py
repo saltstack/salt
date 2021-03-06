@@ -1,35 +1,24 @@
-# -*- coding: utf-8 -*-
 """
-    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
-
-
-    tests.unit.states.pip_test
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests.unit.states.pip_test
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
-
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
 import subprocess
 import sys
 
+import pytest
 import salt.states.pip_state as pip_state
 import salt.utils.path
-
-# Import salt libs
 import salt.version
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
-from tests.support.helpers import VirtualEnv, dedent, requires_network, slowTest
-
-# Import Salt Testing libs
+from tests.support.helpers import VirtualEnv, dedent
 from tests.support.mixins import LoaderModuleMockMixin, SaltReturnAssertsMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
 
-# Import 3rd-party libs
 try:
     import pip
 
@@ -356,7 +345,7 @@ class PipStateTest(TestCase, SaltReturnAssertsMixin, LoaderModuleMockMixin):
                     ret = pip_state.installed(name="", requirements=req_filename)
                     self.assertSaltTrueReturn({"test": ret})
                     assert (
-                        "Successfully processed requirements file {0}.".format(
+                        "Successfully processed requirements file {}.".format(
                             req_filename
                         )
                         == ret["comment"]
@@ -419,9 +408,9 @@ class PipStateUtilsTest(TestCase):
 @skipIf(
     salt.utils.path.which_bin(KNOWN_BINARY_NAMES) is None, "virtualenv not installed"
 )
-@requires_network()
+@pytest.mark.requires_network
 class PipStateInstallationErrorTest(TestCase):
-    @slowTest
+    @pytest.mark.slow_test
     def test_importable_installation_error(self):
         extra_requirements = []
         for name, version in salt.version.dependency_information():

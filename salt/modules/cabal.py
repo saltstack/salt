@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage and query Cabal packages
 ===============================
@@ -6,7 +5,6 @@ Manage and query Cabal packages
 .. versionadded:: 2015.8.0
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
@@ -14,6 +12,7 @@ import salt.utils.path
 from salt.exceptions import CommandExecutionError
 
 logger = logging.getLogger(__name__)
+
 
 # Function alias to make sure not to shadow built-in's
 __func_alias__ = {"list_": "list"}
@@ -86,9 +85,9 @@ def install(pkg=None, pkgs=None, user=None, install_global=False, env=None):
         cmd.append("--global")
 
     if pkg:
-        cmd.append('"{0}"'.format(pkg))
+        cmd.append('"{}"'.format(pkg))
     elif pkgs:
-        cmd.append('"{0}"'.format('" "'.join(pkgs)))
+        cmd.append('"{}"'.format('" "'.join(pkgs)))
 
     result = __salt__["cmd.run_all"](" ".join(cmd), runas=user, env=env)
 
@@ -113,7 +112,7 @@ def list_(pkg=None, user=None, installed=False, env=None):
         same ``env`` format as the :py:func:`cmd.run
         <salt.modules.cmdmod.run>` execution function
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -126,7 +125,7 @@ def list_(pkg=None, user=None, installed=False, env=None):
         cmd.append("--installed")
 
     if pkg:
-        cmd.append('"{0}"'.format(pkg))
+        cmd.append('"{}"'.format(pkg))
 
     result = __salt__["cmd.run_all"](" ".join(cmd), runas=user, env=env)
 
@@ -161,7 +160,7 @@ def uninstall(pkg, user=None, env=None):
 
     """
     cmd = ["ghc-pkg unregister"]
-    cmd.append('"{0}"'.format(pkg))
+    cmd.append('"{}"'.format(pkg))
 
     result = __salt__["cmd.run_all"](" ".join(cmd), runas=user, env=env)
 

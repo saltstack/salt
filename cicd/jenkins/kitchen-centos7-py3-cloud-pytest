@@ -1,4 +1,4 @@
-@Library('salt@master-1.7') _
+@Library('salt@master-1.9') _
 
 runTestSuite(
     ami_image_id: 'ami-05764f27cdf8f99e0',
@@ -13,6 +13,7 @@ runTestSuite(
     nox_passthrough_opts: '',
     python_version: 'py3',
     testrun_timeout: 6,
+    force_run_full: true,
     use_spot_instances: true)
 
 // vim: ft=groovy

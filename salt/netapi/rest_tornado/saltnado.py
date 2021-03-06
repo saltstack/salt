@@ -184,9 +184,7 @@ a return like::
 .. |406| replace:: requested Content-Type not available
 .. |500| replace:: internal server error
 """
-# Import Python libs
 
-# pylint: disable=import-error
 import cgi
 import fnmatch
 import logging
@@ -196,8 +194,6 @@ from copy import copy
 
 import salt.auth
 import salt.client
-
-# salt imports
 import salt.ext.tornado.escape
 import salt.ext.tornado.gen
 import salt.ext.tornado.httpserver
@@ -218,9 +214,6 @@ from salt.exceptions import (
 )
 from salt.ext.tornado.concurrent import Future
 from salt.utils.event import tagify
-
-# pylint: enable=import-error
-
 
 salt.utils.zeromq.install_zmq()
 _json = salt.utils.json.import_json()

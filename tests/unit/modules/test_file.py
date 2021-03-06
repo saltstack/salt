@@ -13,7 +13,6 @@ import salt.utils.files
 import salt.utils.platform
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.ext import six
 from salt.utils.jinja import SaltCacheLoader
 from tests.support.helpers import with_tempfile
 from tests.support.mixins import LoaderModuleMockMixin
@@ -1468,10 +1467,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
         of strings back.
         """
         ret = content.splitlines(True)
-        if six.PY2 and salt.utils.platform.is_windows():
-            return salt.utils.data.encode_list(ret)
-        else:
-            return salt.utils.data.decode_list(ret, to_str=True)
+        return salt.utils.data.decode_list(ret, to_str=True)
 
     def test_set_line_should_raise_command_execution_error_with_no_mode(self):
         with self.assertRaises(CommandExecutionError) as err:
@@ -3201,12 +3197,14 @@ class FileBasicsTestCase(TestCase, LoaderModuleMockMixin):
                     "cp.cache_file": MagicMock(return_value="/tmp/http.conf"),
                 },
             ):
-                ret = filemod.source_list(
-                    [{"http://t.est.com/http/httpd.conf": "filehash"}], "", "base"
-                )
-                self.assertEqual(
-                    list(ret), ["http://t.est.com/http/httpd.conf", "filehash"]
-                )
+                with patch("salt.utils.http.query") as http_query:
+                    http_query.return_value = {}
+                    ret = filemod.source_list(
+                        [{"http://t.est.com/http/httpd.conf": "filehash"}], "", "base"
+                    )
+                    self.assertEqual(
+                        list(ret), ["http://t.est.com/http/httpd.conf", "filehash"]
+                    )
 
     def test_source_list_for_list_returns_existing_file(self):
         with patch.dict(

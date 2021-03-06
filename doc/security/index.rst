@@ -114,8 +114,20 @@ quickly and safely as is possible.
     lists. The announcement contains a description of the issue and a link to
     the full release documentation and download locations.
 
+.. _saltstack_security_announcements:
+
 Receiving security announcements
 ================================
 
-The fastest place to receive security announcements is via the `salt-announce`_
-mailing list. This list is low-traffic.
+The following mailing lists, per the previous tasks identified in our response
+procedure, will receive security-relevant notifications:
+
+* `salt-packagers`_
+* `salt-users`_
+* `salt-announce`_
+
+In addition to the mailing lists, SaltStack also provides the following resources:
+
+* `SaltStack Security Announcements <https://www.saltstack.com/security-announcements/>`__ landing page
+* `SaltStack Security RSS Feed <http://www.saltstack.com/feed/?post_type=security>`__
+* `SaltStack Community Slack Workspace <http://saltstackcommunity.slack.com/>`__

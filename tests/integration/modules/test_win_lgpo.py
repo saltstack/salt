@@ -2,11 +2,12 @@ import logging
 import os
 import re
 
+import pytest
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.win_reg as reg
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, random_string
+from tests.support.helpers import random_string
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
@@ -157,10 +158,12 @@ class WinLgpoTest(ModuleCase):
         lgpo_function = "set_computer_policy"
         lgpo_class = "/m"
         lgpo_folder = "Machine"
+        lgpo_top_level = "Computer Configuration"
         if policy_class.lower() == "user":
             lgpo_function = "set_user_policy"
             lgpo_class = "/u"
             lgpo_folder = "User"
+            lgpo_top_level = "User Configuration"
 
         ret = self.run_function(
             "lgpo.{}".format(lgpo_function), (policy_name, policy_config)
@@ -188,6 +191,90 @@ class WinLgpoTest(ModuleCase):
                     msg='Failed validating policy "{}" configuration, regex '
                     '"{}" not found in lgpo output:\n{}'
                     "".format(policy_name, expected_regex, lgpo_output),
+                )
+            # validate the lgpo also sees the right setting
+            this_policy_info = self.run_function(
+                "lgpo.get_policy_info",
+                (),
+                policy_name=policy_name,
+                policy_class=policy_class,
+            )
+            ret = self.run_function(
+                "lgpo.get", (), policy_class=policy_class, return_not_configured=True
+            )
+            self.assertTrue(
+                lgpo_top_level in ret, msg="lgpo did not return the expected entries"
+            )
+            found_policy = False
+            output_policy_name = None
+            if "policy_aliases" in this_policy_info:
+                for policy_alias in this_policy_info["policy_aliases"]:
+                    if policy_alias in ret[lgpo_top_level]:
+                        found_policy = True
+                        output_policy_name = policy_alias
+                        break
+            else:
+                found_policy = policy_name in ret[lgpo_top_level]
+            self.assertTrue(
+                found_policy, msg="The configured policy is not in the lgpo.get output"
+            )
+            if isinstance(policy_config, list):
+                for this_item in policy_config:
+                    self.assertTrue(
+                        this_item in ret[lgpo_top_level][output_policy_name],
+                        msg="Item {} not found in policy configuration".format(
+                            this_item
+                        ),
+                    )
+            elif isinstance(policy_config, dict):
+                for this_item, this_val in policy_config.items():
+                    item_correct = False
+                    actual_val = None
+                    if (
+                        "policy_elements" in this_policy_info
+                        and this_policy_info["policy_elements"]
+                    ):
+                        for policy_element in this_policy_info["policy_elements"]:
+                            if item_correct:
+                                break
+                            if (
+                                "element_aliases" in policy_element
+                                and policy_element["element_aliases"]
+                            ):
+                                if this_item in policy_element["element_aliases"]:
+                                    for element_alias in policy_element[
+                                        "element_aliases"
+                                    ]:
+                                        if (
+                                            element_alias
+                                            in ret[lgpo_top_level][output_policy_name]
+                                        ):
+                                            actual_val = ret[lgpo_top_level][
+                                                output_policy_name
+                                            ][element_alias]
+                                            if (
+                                                ret[lgpo_top_level][output_policy_name][
+                                                    element_alias
+                                                ]
+                                                == this_val
+                                            ):
+                                                item_correct = True
+                                                break
+                    self.assertTrue(
+                        item_correct,
+                        msg='Item "{}" does not have the expected value of "{}"{}'.format(
+                            this_item,
+                            this_val,
+                            ' value found: "{}"'.format(actual_val)
+                            if actual_val
+                            else "",
+                        ),
+                    )
+            else:
+                self.assertEqual(
+                    ret[lgpo_top_level][output_policy_name],
+                    policy_config,
+                    msg="lgpo did not return the expected value for the policy",
                 )
         else:
             # expecting it to fail
@@ -226,7 +313,7 @@ class WinLgpoTest(ModuleCase):
             )
             log.debug("ret from archive.unzip == %s", ret)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_user_policy_point_and_print_restrictions(self):
         """
         Test setting/unsetting/changing the PointAndPrint_Restrictions user policy
@@ -275,7 +362,7 @@ class WinLgpoTest(ModuleCase):
             policy_class="User",
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_computer_policy_NTP_Client(self):
         """
         Test setting/unsetting/changing NTP Client policies
@@ -325,7 +412,7 @@ class WinLgpoTest(ModuleCase):
             ],
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_computer_policy_RA_Unsolicit(self):
         """
         Test setting/unsetting/changing RA_Unsolicit policy
@@ -347,7 +434,6 @@ class WinLgpoTest(ModuleCase):
         self._testAdmxPolicy(
             "RA_Unsolicit",
             {
-                "Configure Offer Remote Access": "Enabled",
                 "Permit remote control of this computer": "Allow helpers to remotely control the computer",
                 "Helpers": ["administrators", "user1"],
             },
@@ -368,7 +454,7 @@ class WinLgpoTest(ModuleCase):
             ],
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_computer_policy_Pol_HardenedPaths(self):
         # Disable Pol_HardenedPaths
         log.debug("Attempting to disable Pol_HardenedPaths")
@@ -404,7 +490,7 @@ class WinLgpoTest(ModuleCase):
             ],
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_computer_policy_WindowsUpdate(self):
         """
         Test setting/unsetting/changing WindowsUpdate policy
@@ -539,7 +625,7 @@ class WinLgpoTest(ModuleCase):
             ],
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_computer_policy_ClipboardRedirection(self):
         """
         Test setting/unsetting/changing ClipboardRedirection policy
@@ -567,7 +653,7 @@ class WinLgpoTest(ModuleCase):
             ],
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_computer_policy_LockoutDuration(self):
         """
         Test setting LockoutDuration
@@ -588,7 +674,7 @@ class WinLgpoTest(ModuleCase):
         # set LockoutDuration zero value, the secedit zero value is -1
         self._testSeceditPolicy("LockoutDuration", 0, [r"^LockoutDuration = -1"])
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_computer_policy_GuestAccountStatus(self):
         """
         Test setting/unsetting/changing GuestAccountStatus
@@ -602,7 +688,7 @@ class WinLgpoTest(ModuleCase):
             "GuestAccountStatus", "Enabled", [r"^EnableGuestAccount = 1"]
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_computer_policy_PasswordComplexity(self):
         """
         Test setting/unsetting/changing PasswordComplexity
@@ -618,7 +704,7 @@ class WinLgpoTest(ModuleCase):
             "PasswordComplexity", "Enabled", [r"^PasswordComplexity = 1"]
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_computer_policy_PasswordLen(self):
         """
         Test setting/unsetting/changing PasswordLength
@@ -630,7 +716,7 @@ class WinLgpoTest(ModuleCase):
         # set MinimumPasswordLength = 0
         self._testSeceditPolicy("MinPasswordLen", 0, [r"^MinimumPasswordLength = 0"])
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_computer_policy_SeNetworkLogonRight(self):
         """
         Test setting/unsetting/changing PasswordLength
@@ -651,7 +737,7 @@ class WinLgpoTest(ModuleCase):
             ],
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_computer_policy_multipleAdmxPolicies(self):
         """
         Tests setting several ADMX policies in succession and validating the configuration w/lgop
@@ -669,7 +755,6 @@ class WinLgpoTest(ModuleCase):
         self._testAdmxPolicy(
             "RA_Unsolicit",
             {
-                "Configure Offer Remote Access": "Enabled",
                 "Permit remote control of this computer": "Allow helpers to remotely control the computer",
                 "Helpers": ["administrators", "user1"],
             },
@@ -700,7 +785,7 @@ class WinLgpoTest(ModuleCase):
             ],
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_computer_policy_DisableDomainCreds(self):
         """
         Tests Enable/Disable of DisableDomainCreds policy
@@ -722,7 +807,7 @@ class WinLgpoTest(ModuleCase):
             expected_value_data=0,
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_computer_policy_ForceGuest(self):
         """
         Tests changing ForceGuest policy
@@ -744,7 +829,7 @@ class WinLgpoTest(ModuleCase):
             expected_value_data=0,
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_computer_policy_DisableUXWUAccess(self):
         """
         Tests changing DisableUXWUAccess
@@ -781,7 +866,7 @@ class WinLgpoTest(ModuleCase):
                 ],
             )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_computer_policy_Access_data_sources_across_domains(self):
         """
         Tests that a policy that has multiple names
@@ -811,7 +896,7 @@ class WinLgpoTest(ModuleCase):
             ],
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_computer_policy_ActiveHours(self):
         """
         Test configuring the ActiveHours policy, #47784
@@ -867,7 +952,7 @@ class WinLgpoTest(ModuleCase):
                 ],
             )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_computer_policy_AllowTelemetry(self):
         """
         Tests that a the AllowTelemetry policy is applied correctly and that it
@@ -945,7 +1030,7 @@ class WinLgpoTest(ModuleCase):
                     }
                     self.assertDictEqual(result[name]["changes"], expected)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_computer_policy_ScRemoveOption(self):
         """
         Tests changing ScRemoveOption policy
@@ -977,6 +1062,62 @@ class WinLgpoTest(ModuleCase):
             None,
             None,
             False,
+        )
+
+    @pytest.mark.destructive_test
+    def test_set_sxs_servicing_policy(self):
+        """
+        Test setting/unsetting/changing sxs-servicing policy
+        """
+
+        # Disable sxs-servicing
+        log.debug("Attempting to disable sxs-servicing")
+        self._testAdmxPolicy(
+            "Specify settings for optional component installation and component repair",
+            "Disabled",
+            [
+                r"Computer[\s]*Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Servicing[\s]*LocalSourcePath[\s]*DELETE",
+                r"Computer[\s]*Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Servicing[\s]*UseWindowsUpdate[\s]*DELETE",
+                r"Computer[\s]*Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Servicing[\s]*RepairContentServerSource[\s]*DELETE",
+            ],
+        )
+        # configure sxs-servicing
+        log.debug("Attempting to enable sxs-servicing")
+        self._testAdmxPolicy(
+            "Specify settings for optional component installation and component repair",
+            {
+                "Alternate source file path": "",
+                "Never attempt to download payload from Windows Update": True,
+                "CheckBox_SidestepWSUS": False,
+            },
+            [
+                r"Computer[\s]*Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Servicing[\s]*LocalSourcePath[\s]*EXSZ:",
+                r"Computer[\s]*Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Servicing[\s]*UseWindowsUpdate[\s]*DWORD:2",
+                r"Computer[\s]*Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Servicing[\s]*RepairContentServerSource[\s]*DELETE",
+            ],
+        )
+        log.debug("Attempting to set different values on sxs-servicing")
+        self._testAdmxPolicy(
+            "Specify settings for optional component installation and component repair",
+            {
+                "Alternate source file path": r"\\some\fake\server",
+                "Never attempt to download payload from Windows Update": True,
+                "CheckBox_SidestepWSUS": False,
+            },
+            [
+                r"Computer[\s]*Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Servicing[\s]*LocalSourcePath[\s]*EXSZ:\\\\\\\\some\\\\fake\\\\server",
+                r"Computer[\s]*Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Servicing[\s]*UseWindowsUpdate[\s]*DWORD:2",
+                r"Computer[\s]*Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Servicing[\s]*RepairContentServerSource[\s]*DELETE",
+            ],
+        )
+        # Not Configure sxs-servicing
+        log.debug("Attempting to set sxs-servicing to Not Configured")
+        self._testAdmxPolicy(
+            "Specify settings for optional component installation and component repair",
+            "Not Configured",
+            [
+                r"; Source file:  c:\\windows\\system32\\grouppolicy\\machine\\registry.pol[\s]*; PARSING COMPLETED."
+            ],
         )
 
     def tearDown(self):

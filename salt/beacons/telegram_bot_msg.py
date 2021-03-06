@@ -1,19 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 Beacon to emit Telegram messages
 
 Requires the python-telegram-bot library
 
 """
-
-# Import Python libs
-from __future__ import absolute_import, unicode_literals
-
 import logging
 
-from salt.ext.six.moves import map
-
-# Import 3rd Party libs
 try:
     import telegram
 

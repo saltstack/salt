@@ -1,1 +1,0 @@
-Add new verify_ssl option to file modules. This allows a user to not validate the server certificate for HTTPS source and source hash's.

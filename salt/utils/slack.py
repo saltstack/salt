@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Library for interacting with Slack API
 
@@ -15,7 +14,6 @@ Library for interacting with Slack API
         slack:
           api_key: peWcBiMOS9HrZG15peWcBiMOS9HrZG15
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
@@ -24,7 +22,6 @@ import salt.ext.six.moves.http_client
 # pylint: enable=import-error,no-name-in-module
 import salt.utils.http
 
-# Import 3rd-party libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext.six.moves.urllib.parse import urljoin as _urljoin
 from salt.version import __version__
@@ -120,7 +117,8 @@ def query(
                 ret["message"] = result["error"]
                 ret["res"] = False
                 return ret
-            ret["message"] = _result.get(response)
+            ret["message"] = "Unknown response"
+            ret["res"] = False
         else:
             ret["message"] = "invalid_auth"
             ret["res"] = False

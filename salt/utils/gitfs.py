@@ -80,6 +80,18 @@ log = logging.getLogger(__name__)
 
 # pylint: disable=import-error
 try:
+    if (
+        salt.utils.platform.is_darwin()
+        and salt.utils.path.which("git") == "/usr/bin/git"
+    ):
+        # On a freshly installed macOS, if we proceed a GUI dialog box
+        # will be opened. Instead, we can see if it's safe to check
+        # first. If git is a stub, git is _not_ present.
+        from salt.utils.mac_utils import git_is_stub
+
+        if git_is_stub():
+            raise ImportError("Git is not present.")
+
     import git
     import gitdb
 
@@ -2592,14 +2604,14 @@ class GitBase:
 
         # if there is a change, fire an event
         if self.opts.get("fileserver_events", False):
-            event = salt.utils.event.get_event(
+            with salt.utils.event.get_event(
                 "master",
                 self.opts["sock_dir"],
                 self.opts["transport"],
                 opts=self.opts,
                 listen=False,
-            )
-            event.fire_event(data, tagify(["gitfs", "update"], prefix="fileserver"))
+            ) as event:
+                event.fire_event(data, tagify(["gitfs", "update"], prefix="fileserver"))
         try:
             salt.fileserver.reap_fileserver_cache_dir(
                 self.hash_cachedir, self.find_file

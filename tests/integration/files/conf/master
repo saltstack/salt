@@ -142,5 +142,9 @@ peer_run:
   - vault.generate_token
 sdbvault:
   driver: vault
+sdbetcd:
+  driver: etcd
+  etcd.host: 127.0.0.1
+  etcd.port: 2379
 venafi:
   fake: "true"
