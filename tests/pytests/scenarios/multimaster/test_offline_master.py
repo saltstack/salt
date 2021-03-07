@@ -42,6 +42,21 @@ def test_minion_hangs_on_master_failure_50814(
             break
         time.sleep(0.5)
 
+    def wait_for_minion(salt_cli, tgt, timeout=30):
+        start = time.time()
+        while True:
+            ret = salt_cli.run("test.ping", "--timeout=5", minion_tgt=tgt)
+            if ret.exitcode == 0 and ret.json is True:
+                break
+            if time.time() - start > timeout:
+                raise TimeoutError("Minion failed to respond top ping after timeout")
+
+    # Wait for the minion to re-connect so this test will not affect any
+    # others.
+    salt_mm_master_1.register_after_start_callback(
+        wait_for_minion, salt_mm_master_1.get_salt_cli(), salt_mm_minion_1.id
+    )
+
     # Now, let's try this one of the masters offline
     with salt_mm_master_1.stopped():
         assert salt_mm_master_1.is_running() is False

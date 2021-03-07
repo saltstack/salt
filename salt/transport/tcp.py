@@ -1109,6 +1109,8 @@ class SaltMessageClient:
         self._stream_return_future = salt.ext.tornado.concurrent.Future()
         self.io_loop.spawn_callback(self._stream_return)
 
+        self.backoff = opts.get("tcp_reconnect_backoff", 1)
+
     def _stop_io_loop(self):
         if self.io_loop is not None:
             self.io_loop.stop()
@@ -1187,7 +1189,6 @@ class SaltMessageClient:
 
         return future
 
-    # TODO: tcp backoff opts
     @salt.ext.tornado.gen.coroutine
     def _connect(self):
         """
@@ -1219,12 +1220,13 @@ class SaltMessageClient:
                 break
             except Exception as exc:  # pylint: disable=broad-except
                 log.warning(
-                    "TCP Message Client encountered an exception while connecting to %s:%s: %r",
+                    "TCP Message Client encountered an exception while connecting to %s:%s: %r, will reconnect in %d seconds",
                     self.host,
                     self.port,
                     exc,
+                    self.backoff,
                 )
-                yield salt.ext.tornado.gen.sleep(1)  # TODO: backoff
+                yield salt.ext.tornado.gen.sleep(self.backoff)
                 # self._connecting_future.set_exception(exc)
 
     @salt.ext.tornado.gen.coroutine
