@@ -53,7 +53,6 @@ except ImportError as err:
 
 log = logging.getLogger(__name__)
 __virtualname__ = "cohesity"
-__context__ = {}
 
 
 def _get_client():
