@@ -57,11 +57,9 @@ __virtualname__ = "cohesity"
 
 def _get_client():
     context_key = "{}.cohesity_client".format(__name__)
-    opts = salt.config.master_config("/etc/salt/master")
-    conf = opts.get("conf_file", "")
     if context_key in __context__:
         return __context__[context_key]
-    cohesity_config = opts.get("cohesity_config", {})
+    cohesity_config = __opts__.get("cohesity_config", {})
     cluster_vip = cohesity_config.get("cluster_vip", "")
     c_username = cohesity_config.get("username", "")
     c_password = cohesity_config.get("password", "")
