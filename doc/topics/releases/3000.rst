@@ -749,7 +749,7 @@ Cloud Deprecations
 Jinja Filter Deprecations
 -------------------------
 
-- The following jinja filters are set to be removed in the Aluminium release:
+- The following jinja filters are set to be removed in the 3003 release:
 
   - :jinja_ref:`json_decode_dict` in favor of :jinja_ref:`tojson`
   - :jinja_ref:`json_decode_list` in favor of :jinja_ref:`tojson`

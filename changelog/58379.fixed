@@ -1,3 +1,0 @@
-Fixed issue with win_timezone when dst is turned off. This was causing the
-minion not to start
-Use default timezone offset in scheduler when correct timezone cannot be determined

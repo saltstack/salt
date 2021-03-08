@@ -5,10 +5,18 @@
 # Author: Shane Lee
 # Date: December 2020
 #
-# Description: This notarizes the macOS Installer Package (.pkg)
+# Description: This notarizes the macOS Installer Package (.pkg). It uses the
+#              `altool` xcode utility which is only available in the full
+#              Xcode package. It is not available in Command Line Tools.
+#
+#              This script will upload a copy of the package to apple and wait
+#.             for the notarization to return. This can take several minutes.
 #
 # Requirements:
-#     - Xcode Command Line Tools (xcode-select --install)
+#     - Full Xcode Installation
+#       I had issues installing Xcode after installing Command Line Tools. This
+#       works better when it is a clean machine and only Xcode is installed.
+#       The Xcode installation includes the Command Line Tools.
 #
 # Usage:
 #     This script must be passed 2 parameters
