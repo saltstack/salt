@@ -1,1 +1,0 @@
-Fix pkg.upgrade with -U arg on FreeBSD, -L flag was deprecated long time.

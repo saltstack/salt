@@ -15,31 +15,29 @@ from tests.support.mock import MagicMock, patch
 
 
 @pytest.fixture
-def configure_loader_modules():
-    MINION_ID = "bar03"
-
-    return {
-        match: {"__opts__": {"extension_modules": "", "id": MINION_ID}},
-        compound_match: {"__opts__": {"id": MINION_ID}},
-        glob_match: {"__opts__": {"id": MINION_ID}},
-        list_match: {"__opts__": {"id": MINION_ID}},
-    }
+def minion_id():
+    return "bar03"
 
 
-@pytest.fixture(scope="module", autouse=True)
-def auto_mock():
-    MATCHERS_DICT = {
+@pytest.fixture
+def configure_loader_modules(minion_id):
+    matchers_dict = {
         "compound_match.match": compound_match.match,
         "glob_match.match": glob_match.match,
         "list_match.match": list_match.match,
         "pcre_match.match": pcre_match.match,
     }
 
-    with patch("salt.loader.matchers", MagicMock(return_value=MATCHERS_DICT)):
-        yield
+    with patch("salt.loader.matchers", MagicMock(return_value=matchers_dict)):
+        yield {
+            match: {"__opts__": {"extension_modules": "", "id": minion_id}},
+            compound_match: {"__opts__": {"id": minion_id}},
+            glob_match: {"__opts__": {"id": minion_id}},
+            list_match: {"__opts__": {"id": minion_id}},
+        }
 
 
-def test_compound_with_minion_id():
+def test_compound_with_minion_id(minion_id):
     """
     Make sure that when a minion_id IS past, that it is contained in opts
     """
@@ -54,27 +52,24 @@ def test_compound_with_minion_id():
     ) as matchers:
         match.compound(target, minion_id=new_minion_id)
 
-        # The matcher should get called with MINION_ID
+        # The matcher should get called with minion_id
         matchers.assert_called_once()
-        matchers_opts = matchers.call_args[0][0]
 
-        # The compound matcher should not get MINION_ID, no opts should be passed
+        # The compound matcher should not get minion_id, no opts should be passed
         mock_compound_match.assert_called_once_with(
             target,
             minion_id="new_minion_id",
-            opts={"extension_modules": "", "id": "bar03"},
+            opts={"extension_modules": "", "id": minion_id},
         )
 
         # Ensure that the id of the minion is bar03
-        assert match.__opts__["id"] == "bar03"
+        assert match.__opts__["id"] == minion_id
 
 
-def test_compound():
+def test_compound(minion_id):
     """
     Test issue #55149
     """
-    MINION_ID = "bar03"
-
     mock_compound_match = MagicMock()
     target = "bar04"
 
@@ -85,14 +80,14 @@ def test_compound():
     ) as matchers:
         match.compound(target)
 
-        # The matcher should get called with MINION_ID
+        # The matcher should get called with minion_id
         matchers.assert_called_once()
         assert len(matchers.call_args[0]) == 1
-        assert matchers.call_args[0][0].get("id") == MINION_ID
+        assert matchers.call_args[0][0].get("id") == minion_id
 
-        # The compound matcher should not get MINION_ID, no opts should be passed
+        # The compound matcher should not get minion_id, no opts should be passed
         mock_compound_match.assert_called_once_with(
-            target, minion_id=None, opts={"extension_modules": "", "id": "bar03"}
+            target, minion_id=None, opts={"extension_modules": "", "id": minion_id}
         )
 
 
@@ -109,7 +104,7 @@ def test_filter_by():
     assert match.filter_by(lookup) == result
 
 
-def test_watch_for_opts_mismatch_glob_match():
+def test_watch_for_opts_mismatch_glob_match(minion_id):
     """
     Tests for situations where the glob matcher might reference __opts__ directly
     instead of the local opts variable.
@@ -119,12 +114,12 @@ def test_watch_for_opts_mismatch_glob_match():
     and use it instead of `__opts__`.  If sometime in the future we update the matchers
     and use `__opts__` directly this breaks proxy matching.
     """
-    assert glob_match.match("bar03")
+    assert glob_match.match(minion_id)
     assert glob_match.match("rest03", {"id": "rest03"})
     assert not glob_match.match("rest03")
 
 
-def test_watch_for_opts_mismatch_list_match():
+def test_watch_for_opts_mismatch_list_match(minion_id):
     """
     Tests for situations where the list matcher might reference __opts__ directly
     instead of the local opts variable
@@ -134,12 +129,12 @@ def test_watch_for_opts_mismatch_list_match():
     and use it instead of `__opts__`.  If sometime in the future we update the matchers
     and use `__opts__` directly this breaks proxy matching.
     """
-    assert list_match.match("bar03")
+    assert list_match.match(minion_id)
     assert list_match.match("rest03", {"id": "rest03"})
     assert not list_match.match("rest03")
 
 
-def test_watch_for_opts_mismatch_compound_match():
+def test_watch_for_opts_mismatch_compound_match(minion_id):
     """
     Tests for situations where the compound matcher might reference __opts__ directly
     instead of the local opts variable
@@ -149,7 +144,7 @@ def test_watch_for_opts_mismatch_compound_match():
     and use it instead of `__opts__`.  If sometime in the future we update the matchers
     and use `__opts__` directly this breaks proxy matching.
     """
-    assert compound_match.match("L@bar03")
+    assert compound_match.match("L@{}".format(minion_id))
     assert compound_match.match("L@rest03", {"id": "rest03"})
     assert not compound_match.match("L@rest03")
 

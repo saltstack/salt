@@ -19,7 +19,7 @@ def match(tgt, opts=None, minion_id=None):
 
     try:
         if (
-            "," + minion_id + "," in tgt
+            ",{},".format(minion_id) in tgt
             or tgt.startswith(minion_id + ",")
             or tgt.endswith("," + minion_id)
         ):
