@@ -359,20 +359,6 @@ def bridge_pytest_and_runtests():
     """
 
 
-@pytest.fixture
-def minion_config():
-    opts = salt.config.DEFAULT_MINION_OPTS.copy()
-    opts["__role"] = "minion"
-    return opts
-
-
-@pytest.fixture
-def master_config():
-    opts = salt.config.DEFAULT_MASTER_OPTS.copy()
-    opts["__role"] = "master"
-    return opts
-
-
 # ----- Async Test Fixtures ----------------------------------------------------------------------------------------->
 # This is based on https://github.com/eukaryote/pytest-tornasync
 # The reason why we don't use that pytest plugin instead is because it has

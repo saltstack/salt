@@ -1,6 +1,5 @@
 import pytest
 import salt.client.ssh.client
-import salt.config
 import salt.utils.msgpack
 from salt.client import ssh
 from tests.support.mock import MagicMock, patch
