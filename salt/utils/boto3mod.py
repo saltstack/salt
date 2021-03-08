@@ -305,7 +305,8 @@ def ordered(obj):
     if isinstance(obj, (list, tuple)):
         try:
             return sorted(ordered(x) for x in obj)
-        except Exception as e:
+        except TypeError as exc:
+            log.warning("Trying to sort dictionaries without a key: %s", exc)
             return sorted((ordered(x) for x in obj), key=lambda d: sorted(d.items()))
     elif isinstance(obj, dict):
         return {str(k) if isinstance(k, str) else k: ordered(v) for k, v in obj.items()}
