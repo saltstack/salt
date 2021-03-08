@@ -462,7 +462,6 @@ def get_namespaces(namespace="", apiserver_url=None):
 
         kubectl get namespaces namespace_name -o json
 
-
     CLI Example:
 
     .. code-block:: bash

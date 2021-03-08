@@ -127,6 +127,7 @@ def _clear_cache(
     """
     if tgt is None:
         return False
+
     pillar_util = salt.utils.master.MasterPillarUtil(
         tgt,
         tgt_type,

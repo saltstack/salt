@@ -78,6 +78,8 @@ class Base(TestCase, LoaderModuleMockMixin):
         subprocess.check_call(
             [salt.utils.path.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES), cls.ppy_st]
         )
+        # Setuptools >=53.0.0 no longer has easy_install
+        # Between 50.0.0 and 53.0.0 it has problems with salt, use an older version
         subprocess.check_call(
             [os.path.join(cls.bin_st, "pip"), "install", "-U", "setuptools<50.0.0"]
         )
