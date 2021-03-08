@@ -52,7 +52,6 @@ except ImportError as err:
     HAS_LIBS = False
 
 log = logging.getLogger(__name__)
-ERROR_LIST = []
 __virtualname__ = "cohesity"
 __context__ = {}
 
