@@ -624,6 +624,8 @@ def absent(name, **kwargs):
 
     if __grains__["os_family"] == "Debian":
         stripname = salt.utils.pkg.deb.strip_uri(name)
+    else:
+        stripname = name
 
     try:
         repo = __salt__["pkg.get_repo"](stripname, **kwargs)
