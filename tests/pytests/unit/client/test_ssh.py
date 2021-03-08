@@ -1,12 +1,9 @@
-import pathlib
-
 import pytest
 import salt.client.ssh.client
 import salt.config
 import salt.utils.msgpack
 from salt.client import ssh
 from tests.support.mock import MagicMock, patch
-from tests.support.runtests import RUNTIME_VARS
 
 
 @pytest.fixture
@@ -93,8 +90,8 @@ def test_cmd_block_python_version_error(ssh_target):
         ("roster_file", "/test1", True),
         ("rosters", ["test1"], False),
         ("ignore_host_keys", True, True),
-        ("min_extra_mods", ["test"], True),
-        ("thin_extra_mods", ["test1"], True),
+        ("min_extra_mods", "test", True),
+        ("thin_extra_mods", "test1", True),
         ("verbose", True, True),
         ("static", True, True),
         ("ssh_wipe", True, True),
@@ -108,13 +105,11 @@ def test_cmd_block_python_version_error(ssh_target):
         ("doesnotexist", None, False),
     ],
 )
-def test_ssh_kwargs(master_config, test_opts):
+def test_ssh_kwargs(test_opts):
     """
     test all ssh kwargs are not excluded from kwargs
     when preparing the SSH opts
     """
-
-    ssh_kwargs = salt.utils.parsers.SaltSSHOptionParser().defaults
     opt_key = test_opts[0]
     opt_value = test_opts[1]
     # Is the kwarg in salt.utils.parsers?
@@ -129,13 +124,11 @@ def test_ssh_kwargs(master_config, test_opts):
         "fun": "test.ping",
         opt_key: opt_value,
     }
-    roster = pathlib.Path(RUNTIME_VARS.TMP_CONF_DIR) / "roster"
-    client = salt.client.ssh.client.SSHClient(
-        mopts=master_config, disable_custom_roster=True
-    )
+    client = salt.client.ssh.client.SSHClient(disable_custom_roster=True)
     if in_parser:
+        ssh_kwargs = salt.utils.parsers.SaltSSHOptionParser().defaults
         assert opt_key in ssh_kwargs
 
-    with patch("salt.roster.get_roster_file", MagicMock(return_value=roster)):
+    with patch("salt.roster.get_roster_file", MagicMock(return_value="")):
         ssh_obj = client._prep_ssh(**opts)
         assert ssh_obj.opts.get(opt_key, None) == opt_value
