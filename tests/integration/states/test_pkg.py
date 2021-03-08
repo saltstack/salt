@@ -556,7 +556,11 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
 
         # changes from pkg.hold for Red Hat family are different
         target_changes = {}
-        if grains["os_family"] == "RedHat" or grains["os"] == "FreeBSD":
+        if (
+            grains["os_family"] == "RedHat"
+            or grains["os"] == "FreeBSD"
+            or grains["os_family"] == "Suse"
+        ):
             target_changes = {"new": "hold", "old": ""}
         elif grains["os_family"] == "Debian":
             target_changes = {"new": "hold", "old": "install"}
@@ -628,7 +632,9 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
     @pytest.mark.slow_test
     def test_pkg_017_installed_held_equals_false(self, grains=None):
         """
-        Tests that a package installed with held set to False
+        Tests that a package is installed when hold is explicitly False.
+
+        See https://github.com/saltstack/salt/issues/58801.
         """
         versionlock_pkg = None
         if grains["os_family"] == "RedHat":
@@ -676,7 +682,14 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             # On Centos 7 package is already installed, no change happened
             if target_ret[tag].get("changes"):
                 self.assertIn(target, target_ret[tag]["changes"])
-            self.assertIn("held", target_ret[tag]["comment"])
+            if grains["os_family"] == "Suse":
+                self.assertIn("packages were installed", target_ret[tag]["comment"])
+            else:
+                #  The "held" string is part of a longer comment that may look
+                #  like:
+                #
+                #    Package units is not being held.
+                self.assertIn("held", target_ret[tag]["comment"])
         finally:
             # Clean up, unhold package and remove
             ret = self.run_state("pkg.removed", name=target)

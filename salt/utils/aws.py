@@ -14,7 +14,6 @@ import hmac
 import logging
 import random
 import re
-import sys
 import time
 import urllib.parse
 import xml.etree.ElementTree as ET
@@ -536,15 +535,10 @@ def query(
         items = root
 
     if setname:
-        if sys.version_info < (2, 7):
-            children_len = len(root.getchildren())
-        else:
-            children_len = len(root)
-
-        for item in range(0, children_len):
-            comps = root[item].tag.split("}")
+        for idx, item in enumerate(root):
+            comps = item.tag.split("}")
             if comps[1] == setname:
-                items = root[item]
+                items = root[idx]
 
     ret = []
     for item in items:

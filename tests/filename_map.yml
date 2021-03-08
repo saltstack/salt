@@ -23,15 +23,15 @@ salt/modules/(aix_group|groupadd|mac_group|pw_group|solaris_group|win_groupadd)\
   - unit.states.test_group
 
 salt/modules/(debian_service|freebsdservice|gentoo_service|launchctl_service|mac_service|netbsdservice|openbsdrcctl_service|openbsdservice|rh_service|runit|linux_service|smf_service|systemd_service|upstart_service|win_service)\.py:
-  - unit.states.test_service
+  - pytests.unit.states.test_service
   - integration.modules.test_service
   - integration.states.test_service
 
 salt/modules/*apache.py:
-  - unit.states.test_apache
-  - unit.states.test_apache_conf
-  - unit.states.test_apache_module
-  - unit.states.test_apache_site
+  - pytests.unit.states.test_apache
+  - pytests.unit.states.test_apache_conf
+  - pytests.unit.states.test_apache_module
+  - pytests.unit.states.test_apache_site
 
 salt/modules/augeas_cfg.py:
   - unit.states.test_augeas
@@ -43,8 +43,8 @@ salt/modules/cp.py:
   - integration.states.test_file
 
 salt/modules/dockermod.py:
-  - unit.states.test_docker_image
-  - unit.states.test_docker_volume
+  - pytests.unit.states.test_docker_image
+  - pytests.unit.states.test_docker_volume
   - unit.utils.test_dockermod
   - pytests.functional.states.test_docker_container
   - integration.states.test_docker_network
@@ -53,8 +53,8 @@ salt/modules/file.py:
   - pytests.integration.states.test_cron
 
 salt/modules/influxdb08mod.py:
-  - unit.states.test_influxdb08_database
-  - unit.states.test_influxdb08_user
+  - pytests.unit.states.test_influxdb08_database
+  - pytests.unit.states.test_influxdb08_user
 
 salt/modules/mysql.py:
   - unit.states.test_mysql_user
@@ -62,19 +62,19 @@ salt/modules/mysql.py:
   - unit.states.test_mysql_grants
 
 salt/modules/openvswitch.py:
-  - unit.states.test_openvswitch_port
+  - pytests.unit.states.test_openvswitch_port
 
 salt/(states|modules)/.*postgres.py:
   - unit.states.test_postgres
   - unit.states.test_postgres_cluster
   - unit.states.test_postgres_database
   - unit.states.test_postgres_extension
-  - unit.states.test_postgres_group
+  - pytests.unit.states.test_postgres_group
   - unit.states.test_postgres_initdb
   - unit.states.test_postgres_language
   - unit.states.test_postgres_privileges
   - unit.states.test_postgres_schema
-  - unit.states.test_postgres_user
+  - pytests.unit.states.test_postgres_user
 
 salt/modules/rabbitmq.py:
   - pytests.unit.states.test_rabbitmq_cluster
@@ -85,8 +85,8 @@ salt/modules/rabbitmq.py:
   - integration.states.test_rabbitmq_vhost
 
 salt/modules/ssh.py:
-  - unit.states.test_ssh_auth
-  - unit.states.test_ssh_known_hosts
+  - pytests.unit.states.test_ssh_auth
+  - pytests.unit.states.test_ssh_known_hosts
 
 salt/auth/*:
   - pytests.integration.cli.test_salt_auth
@@ -124,6 +124,12 @@ salt/cloud/__init__.py:
 
 salt/grains/*:
   - integration.grains.test_custom
+
+salt/matchers/*:
+  - integration.states.test_match
+  - pytests.integration.cli.test_matcher
+  - pytests.unit.modules.test_match
+  - unit.matchers.test_confirm_top
 
 salt/proxy/*:
   - pytests.integration.proxy.test_shell

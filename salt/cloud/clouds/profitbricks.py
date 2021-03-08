@@ -1038,7 +1038,6 @@ def start(name, call=None):
     :param call: call value in this case is 'action'
     :return: true if successful
 
-
     CLI Example:
 
     .. code-block:: bash

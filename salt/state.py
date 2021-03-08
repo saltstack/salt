@@ -3116,6 +3116,33 @@ class State:
 
         return running
 
+    def call_beacons(self, chunks, running):
+        """
+        Find all of the beacon routines and call the associated mod_beacon runs
+        """
+        listeners = []
+        crefs = {}
+        beacons = []
+        for chunk in chunks:
+            if "beacon" in chunk:
+                beacons.append(chunk)
+        mod_beacons = []
+        errors = {}
+        for chunk in beacons:
+            low = chunk.copy()
+            low["sfun"] = chunk["fun"]
+            low["fun"] = "mod_beacon"
+            low["__id__"] = "beacon_{}".format(low["__id__"])
+            mod_beacons.append(low)
+        ret = self.call_chunks(mod_beacons)
+
+        running.update(ret)
+        for err in errors:
+            errors[err]["__run_num__"] = self.__run_num
+            self.__run_num += 1
+        running.update(errors)
+        return running
+
     def call_listen(self, chunks, running):
         """
         Find all of the listen routines and call the associated mod_watch runs
@@ -3134,6 +3161,7 @@ class State:
                         listeners.append(
                             {(key, val, "lookup"): [{chunk["state"]: chunk["__id__"]}]}
                         )
+
         mod_watchers = []
         errors = {}
         for l_dict in listeners:
@@ -3240,6 +3268,7 @@ class State:
             return errors
         ret = self.call_chunks(chunks)
         ret = self.call_listen(chunks, ret)
+        ret = self.call_beacons(chunks, ret)
 
         def _cleanup_accumulator_data():
             accum_data_path = os.path.join(
