@@ -11,7 +11,7 @@ from yaml.constructor import ConstructorError
 from yaml.nodes import MappingNode, SequenceNode
 
 # prefer C bindings over python when available
-BaseLoader = getattr(yaml, 'CSafeLoader', yaml.SafeLoader)
+BaseLoader = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
 
 
 __all__ = ["SaltYamlSafeLoader", "load", "safe_load"]
