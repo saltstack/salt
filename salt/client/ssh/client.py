@@ -78,7 +78,6 @@ class SSHClient(object):
             ('regen_thin', bool),
             ('python2_bin', str),
             ('python3_bin', str),
-            ('ssh_run_pre_flight', bool),
             ('no_host_keys', bool),
             ('saltfile', str),
         ]

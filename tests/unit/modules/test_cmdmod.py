@@ -573,3 +573,14 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
                         assert x.find('ImAPassword') == -1, x
                     if x.find('faild with return code') > -1:
                         assert x.find('ImAPassword') == -1, x
+
+    def test_run_with_tuple(self):
+        """
+        Tests return when cmd is a tuple
+        """
+        mock_true = MagicMock(return_value=True)
+        with patch("salt.modules.cmdmod._is_valid_shell", mock_true):
+            with patch("salt.utils.platform.is_windows", MagicMock(return_value=False)):
+                with patch("os.path.isfile", mock_true):
+                    with patch("os.access", mock_true):
+                        cmdmod._run(("echo", "foo"), python_shell=True)

@@ -155,17 +155,12 @@ class SSHSingleTests(TestCase):
 class SSHTests(ShellCase):
     def setUp(self):
         self.tmp_cachedir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
+
         self.argv = [
             "ssh.set_auth_key",
             "root",
             "hobn+amNAXSBTiOXEqlBjGB...rsa root@master",
         ]
-        self.opts = {
-            "argv": self.argv,
-            "__role": "master",
-            "cachedir": self.tmp_cachedir,
-            "extension_modules": os.path.join(self.tmp_cachedir, "extmods"),
-        }
         self.target = {
             "passwd": "abc123",
             "ssh_options": None,
@@ -179,18 +174,27 @@ class SSHTests(ShellCase):
             "port": "22",
             "priv": "/etc/salt/pki/master/ssh/salt-ssh.rsa",
         }
+        self.opts = salt.config.client_config(self.get_config_file_path("master"))
+        self.opts["selected_target_option"] = "glob"
 
     def test_shim_cmd(self):
         """
         test Single.shim_cmd()
         """
+        opts = {
+            "argv": self.argv,
+            "__role": "master",
+            "cachedir": self.tmp_cachedir,
+            "extension_modules": os.path.join(self.tmp_cachedir, "extmods"),
+        }
+
         single = ssh.Single(
-            self.opts,
-            self.opts["argv"],
+            opts,
+            opts["argv"],
             "localhost",
             mods={},
             fsclient=None,
-            thin=salt.utils.thin.thin_path(self.opts["cachedir"]),
+            thin=salt.utils.thin.thin_path(opts["cachedir"]),
             mine=False,
             winrm=False,
             tty=True,
@@ -231,3 +235,78 @@ class SSHTests(ShellCase):
         with patch("salt.roster.get_roster_file", MagicMock(return_value=roster)):
             ssh_obj = client._prep_ssh(**opts)
             assert ssh_obj.opts.get("extra_filerefs", None) == "salt://foobar"
+
+    def test_ssh_kwargs(self):
+        """
+        test all ssh kwargs are not excluded from kwargs
+        when preparing the SSH opts
+        """
+        test_opts = (
+            ("extra_filerefs", "salt://foobar", True),
+            ("host", "testhost", False),
+            ("ssh_user", "testuser", True),
+            ("ssh_passwd", "testpasswd", True),
+            ("ssh_port", 23, False),
+            ("ssh_sudo", True, True),
+            ("ssh_sudo_user", "sudouser", False),
+            ("ssh_priv", "test_priv", True),
+            ("ssh_priv_passwd", "sshpasswd", True),
+            ("ssh_identities_only", True, True),
+            ("ssh_remote_port_forwards", "test", True),
+            ("ssh_options", ["test1", "test2"], True),
+            ("ssh_max_procs", 2, True),
+            ("ssh_askpass", True, True),
+            ("ssh_key_deploy", True, True),
+            ("ssh_update_roster", True, True),
+            ("ssh_scan_ports", "test", True),
+            ("ssh_scan_timeout", 1.0, True),
+            ("ssh_timeout", 1, False),
+            ("ssh_log_file", "/tmp/test", True),
+            ("raw_shell", True, True),
+            ("refresh_cache", True, True),
+            ("roster", "/test", True),
+            ("roster_file", "/test1", True),
+            ("rosters", ["test1"], False),
+            ("ignore_host_keys", True, True),
+            ("min_extra_mods", "test", True),
+            ("thin_extra_mods", "test1", True),
+            ("verbose", True, True),
+            ("static", True, True),
+            ("ssh_wipe", True, True),
+            ("rand_thin_dir", True, True),
+            ("regen_thin", True, True),
+            ("python2_bin", "python2", True),
+            ("python3_bin", "python3", True),
+            ("no_host_keys", True, True),
+            ("saltfile", "/tmp/test", True),
+            ("doesnotexist", None, False),
+        )
+
+        for test_opt in test_opts:
+            opt_key = test_opt[0]
+            opt_value = test_opt[1]
+            # Is the kwarg in salt.utils.parsers?
+            in_parser = test_opt[2]
+
+            opts = {
+                "eauth": "auto",
+                "username": "test",
+                "password": "test",
+                "client": "ssh",
+                "tgt": "localhost",
+                "fun": "test.ping",
+                opt_key: opt_value,
+            }
+            roster = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "roster")
+            client = salt.client.ssh.client.SSHClient(
+                mopts=self.opts, disable_custom_roster=True
+            )
+
+            if in_parser:
+                ssh_kwargs = salt.utils.parsers.SaltSSHOptionParser().defaults
+                self.assertIn(opt_key, ssh_kwargs)
+
+            with patch("salt.roster.get_roster_file", MagicMock(return_value=roster)):
+                with patch("salt.client.ssh.shell.gen_key", MagicMock(return_value="")):
+                    ssh_obj = client._prep_ssh(**opts)
+                    self.assertEqual(ssh_obj.opts.get(opt_key, None), opt_value)
