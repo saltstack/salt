@@ -6,6 +6,16 @@ This changelog follows [keepachangelog](https://keepachangelog.com/en/1.0.0/) fo
 This project versioning is _similar_ to [Semantic Versioning](https://semver.org), and is documented in [SEP 14](https://github.com/saltstack/salt-enhancement-proposals/pull/20/files).
 Versions are `MAJOR.PATCH`.
 
+Salt 3000.9 (2021-03-10)
+========================
+
+Fixed
+-----
+
+- Allow "extra_filerefs" as sanitized kwargs for SSH client.
+  Fix regression on "cmd.run" when passing tuples as cmd. (#59664)
+- Allow all ssh kwargs as sanitized kwargs for SSH client. (#59748)
+
 Salt 3000.8 (2021-01-28)
 ========================
 
