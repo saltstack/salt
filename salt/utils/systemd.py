@@ -11,6 +11,12 @@ import salt.loader_context
 import salt.utils.stringutils
 from salt.exceptions import SaltInvocationError
 
+try:
+    import dbus
+except ImportError:
+    dbus = None
+
+
 log = logging.getLogger(__name__)
 
 
@@ -93,3 +99,66 @@ def has_scope(context=None):
     if _sd_version is None:
         return False
     return _sd_version >= 205
+
+
+def pid_to_service(pid):
+    """
+    Check if a PID belongs to a systemd service and return its name.
+    Return None if the PID does not belong to a service.
+
+    Uses DBUS if available.
+    """
+    if dbus:
+        return _pid_to_service_dbus(pid)
+    else:
+        return _pid_to_service_systemctl(pid)
+
+
+def _pid_to_service_systemctl(pid):
+    systemd_cmd = ["systemctl", "--output", "json", "status", str(pid)]
+    try:
+        systemd_output = subprocess.run(
+            systemd_cmd, check=True, text=True, capture_output=True
+        )
+        status_json = salt.utils.json.find_json(systemd_output.stdout)
+    except (ValueError, subprocess.CalledProcessError):
+        return None
+
+    name = status_json.get("_SYSTEMD_UNIT")
+    if name and name.endswith(".service"):
+        return _strip_suffix(name)
+    else:
+        return None
+
+
+def _pid_to_service_dbus(pid):
+    """
+    Use DBUS to check if a PID belongs to a running systemd service and return the service name if it does.
+    """
+    bus = dbus.SystemBus()
+    systemd_object = bus.get_object(
+        "org.freedesktop.systemd1", "/org/freedesktop/systemd1"
+    )
+    systemd = dbus.Interface(systemd_object, "org.freedesktop.systemd1.Manager")
+    try:
+        service_path = systemd.GetUnitByPID(pid)
+        service_object = bus.get_object("org.freedesktop.systemd1", service_path)
+        service_props = dbus.Interface(
+            service_object, "org.freedesktop.DBus.Properties"
+        )
+        service_name = service_props.Get("org.freedesktop.systemd1.Unit", "Id")
+        name = str(service_name)
+
+        if name and name.endswith(".service"):
+            return _strip_suffix(name)
+        else:
+            return None
+    except dbus.DBusException:
+        return None
+
+
+def _strip_suffix(service_name):
+    """
+    Strip ".service" suffix from a given service name.
+    """
+    return service_name[:-8]
