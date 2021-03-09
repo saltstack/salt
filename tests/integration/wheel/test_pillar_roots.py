@@ -1,8 +1,9 @@
+# -*- coding: utf-8 -*-
+from __future__ import absolute_import
 import os
 import salt.wheel
 from tests.support.unit import TestCase
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
-
 
 
 class WheelPillarRootsTest(TestCase, AdaptedConfigurationTestCaseMixin):
@@ -15,11 +16,11 @@ class WheelPillarRootsTest(TestCase, AdaptedConfigurationTestCaseMixin):
     def tearDown(self):
         try:
             os.remove(os.path.join(self.pillar_dir, 'foo'))
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             pass
         try:
             os.remove(os.path.join(self.traversed_dir, 'foo'))
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             pass
         del self.wheel
 

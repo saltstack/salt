@@ -662,8 +662,7 @@ class NetapiSSHClientAuthTest(SSHCase, ModuleCase):
             "fun": "test.ping",
             "ssh_port": 22,
             "ssh_priv": self.priv_file,
-            'ssh_options': ['ProxyCommand="touch {}"'.format(self.expfile),]
+            'ssh_options': ['ProxyCommand="touch {}"'.format(self.expfile), ]
         }
         ret = self.netapi.run(low)
         assert not os.path.exists(self.expfile)
-
