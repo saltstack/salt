@@ -203,12 +203,12 @@ def get_connection(
         conn = session.client(module)
         if conn is None:
             raise SaltInvocationError('Region "{}" is not ' "valid.".format(region))
-    except boto.exception.NoAuthHandlerFound:
+    except boto.exception.NoAuthHandlerFound as exp:
         raise SaltInvocationError(
             "No authentication credentials found when "
             "attempting to make boto {} connection to "
             'region "{}".'.format(service, region)
-        )
+        ) from exp
     __context__[cxkey] = conn
     return conn
 
