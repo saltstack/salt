@@ -1645,9 +1645,15 @@ class PatchedEnviron:
 patched_environ = PatchedEnviron
 
 
+def _cast_to_pathlib_path(value):
+    if isinstance(value, pathlib.Path):
+        return value
+    return pathlib.Path(str(value))
+
+
 @attr.s(frozen=True, slots=True)
 class VirtualEnv:
-    venv_dir = attr.ib()
+    venv_dir = attr.ib(converter=_cast_to_pathlib_path)
     env = attr.ib(default=None)
     system_site_packages = attr.ib(default=False)
     environ = attr.ib(init=False, repr=False)
@@ -1667,13 +1673,14 @@ class VirtualEnv:
 
     @venv_python.default
     def _default_venv_python(self):
+        # Once we drop Py3.5 we can stop casting to string
         if salt.utils.platform.is_windows():
-            return self.venv_dir / "Scripts" / "python.exe"
-        return self.venv_dir / "bin" / "python"
+            return str(self.venv_dir / "Scripts" / "python.exe")
+        return str(self.venv_dir / "bin" / "python")
 
     @venv_bin_dir.default
     def _default_venv_bin_dir(self):
-        return self.venv_python.parent
+        return pathlib.Path(self.venv_python).parent
 
     def __enter__(self):
         try:
@@ -1686,7 +1693,7 @@ class VirtualEnv:
         shutil.rmtree(str(self.venv_dir), ignore_errors=True)
 
     def install(self, *args, **kwargs):
-        return self.run(str(self.venv_python), "-m", "pip", "install", *args, **kwargs)
+        return self.run(self.venv_python, "-m", "pip", "install", *args, **kwargs)
 
     def run(self, *args, **kwargs):
         check = kwargs.pop("check", True)

@@ -93,7 +93,7 @@ class SaltStackVersion:
         "Neon": (3000,),
         "Sodium": (3001,),
         "Magnesium": (3002,),
-        "Aluminium": (MAX_SIZE - 96, 0),
+        "Aluminium": (3003,),
         "Silicon": (MAX_SIZE - 95, 0),
         "Phosphorus": (MAX_SIZE - 94, 0),
         # pylint: disable=E8265
