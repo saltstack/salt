@@ -170,7 +170,7 @@ def _send_textmetrics(metrics):
 
     data = [" ".join(map(str, metric)) for metric in metrics] + [""]
 
-    return "\n".join(data)
+    return "\n".join(data).encode()
 
 
 def _walk(path, value, metrics, timestamp, skip):
