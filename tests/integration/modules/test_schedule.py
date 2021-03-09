@@ -20,8 +20,11 @@ class ScheduleModuleTest(ModuleCase):
 
     def test_schedule_reload(self):
         """
-        schedule.list
+        schedule.reload
         """
-        expected = {"comment": [], "result": True}
+        expected = {
+            "comment": ["Reloaded schedule from pillar on minion."],
+            "result": True,
+        }
         ret = self.run_function("schedule.reload")
         self.assertEqual(ret, expected)
