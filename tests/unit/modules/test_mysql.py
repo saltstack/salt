@@ -621,7 +621,6 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 self.assertEqual(ret, True)
 
-
     @skipIf(True, "TODO: Mock up user_grants()")
     def test_grant_add(self):
         """

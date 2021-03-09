@@ -861,7 +861,9 @@ def file_query(database, file_name, **connection_args):
 
     """
     if not HAS_SQLPARSE:
-        log.info("mysql.file_query unavailable, no python sqlparse library installed. Using module:re")
+        log.info(
+            "No module:sqlparse found. Using module:re for mysql.file_query"
+        )
 
     if any(
         file_name.startswith(proto)
@@ -2393,9 +2395,9 @@ def grant_exists(
         if (
             salt.utils.versions.version_cmp(server_version, "8.0") >= 0
             and "MariaDB" not in server_version
-            and database == '*.*'
+            and database == "*.*"
         ):
-            log.info("token database: %s", database)
+            # log.info("database to check: %s", database)
             # https://dev.mysql.com/doc/refman/8.0/en/show-grants.html
             # it makes sense ONLY with GLOBAL checks - "GRANT ALL PRIVILEGES TO user@host ON *.*"
             grant = ",".join([i for i in __all_privileges__])
