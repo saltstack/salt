@@ -29,17 +29,17 @@ The builds should include the latest version of the OS that is currently availab
 
         baseurl=https://repo.saltproject.io/salt_rc/py3/redhat/$releasever/$basearch/
 
-    For Ubuntu Python 3 (replace os_version, with ubuntu version. For example 20.04)
+    For Ubuntu Python 3 (replace os_version and os_codename with ubuntu version. For example 20.04 and focal.)
 
     .. code-block:: none
 
-        deb https://repo.saltproject.io/salt_rc/py3/ubuntu/<os_version>/amd64 focal main
+        deb https://repo.saltproject.io/salt_rc/py3/ubuntu/<os_version>/amd64 <os_codename> main
 
-    For Debian Python 3 (replace os_version, with debian version. For example 10)
+    For Debian Python 3 (replace os_version and os_codename with debian version. For example 10 and buster.)
 
     .. code-block:: none
 
-        deb https://repo.saltproject.io/salt_rc/py3/debian/<os_version>/amd64 buster main
+        deb https://repo.saltproject.io/salt_rc/py3/debian/<os_version>/amd64 <os_codename> main
 
 The OSs that will be built for each RC release are the latest version of each OS on https://repo.saltproject.io
 
