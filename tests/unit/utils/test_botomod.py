@@ -4,7 +4,6 @@ import sys
 import salt.utils.boto3mod as boto3mod
 import salt.utils.botomod as botomod
 from salt.exceptions import SaltInvocationError
-from salt.ext import six
 from salt.utils.odict import OrderedDict
 from salt.utils.versions import LooseVersion
 from tests.support.mixins import LoaderModuleMockMixin
