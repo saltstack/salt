@@ -5,6 +5,8 @@ import salt.utils.msgpack
 from salt.client import ssh
 from tests.support.mock import MagicMock, patch
 
+pytestmark = [pytest.mark.skip_if_binaries_missing("ssh", "ssh-keygen", check_all=True)]
+
 
 @pytest.fixture
 def ssh_target(tmpdir):
