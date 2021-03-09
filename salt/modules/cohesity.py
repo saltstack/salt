@@ -85,7 +85,7 @@ def get_sd_id(name):
     : return: storage domain id.
     """
     cohesity_client = _get_client()
-    log.info("Getting sorage domain with name {}".format(name))
+    log.info("Getting storage domain with name %s" % name)
     resp = cohesity_client.view_boxes.get_view_boxes(names=name)
     if resp:
         return resp[0].id
@@ -127,7 +127,6 @@ def get_vmware_source_ids(name, vm_list):
                 parent_id = each_source.protection_source.id
         if parent_id == -1:
             log.error("Vcenter {} not available in the cluster".format(name))
-            exit()
         vms = cohesity_client.protection_sources.list_virtual_machines(
             v_center_id=parent_id, names=vm_list
         )
