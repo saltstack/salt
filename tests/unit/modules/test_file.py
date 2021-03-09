@@ -1,3 +1,4 @@
+import logging
 import os
 import shutil
 import tempfile
@@ -16,7 +17,7 @@ from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.utils.jinja import SaltCacheLoader
 from tests.support.helpers import with_tempfile
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import DEFAULT, MagicMock, Mock, mock_open, patch
+from tests.support.mock import DEFAULT, MagicMock, Mock, call, mock_open, patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
 
@@ -30,6 +31,7 @@ if salt.utils.platform.is_windows():
     import salt.modules.win_file as win_file
     import salt.utils.win_dacl as win_dacl
 
+log = logging.getLogger(__name__)
 SED_CONTENT = """test
 some
 content
@@ -3205,6 +3207,50 @@ class FileBasicsTestCase(TestCase, LoaderModuleMockMixin):
                     self.assertEqual(
                         list(ret), ["http://t.est.com/http/httpd.conf", "filehash"]
                     )
+
+    def test_source_list_use_requests(self):
+        with patch("salt.modules.file.os.remove") as remove:
+            remove.return_value = None
+            with patch.dict(
+                filemod.__salt__,
+                {
+                    "cp.list_master": MagicMock(return_value=[]),
+                    "cp.list_master_dirs": MagicMock(return_value=[]),
+                    "cp.cache_file": MagicMock(return_value="/tmp/http.conf"),
+                },
+            ):
+                expected_call = call(
+                    "http://t.est.com/http/file1",
+                    decode_body=False,
+                    method="HEAD",
+                    backend="requests",
+                )
+                with patch(
+                    "salt.utils.http.query", MagicMock(return_value={})
+                ) as http_query:
+                    with patch.object(filemod, "HAS_REQUESTS", True):
+                        ret = filemod.source_list(
+                            [{"http://t.est.com/http/file1": "filehash"}], "", "base"
+                        )
+                        self.assertEqual(
+                            list(ret), ["http://t.est.com/http/file1", "filehash"]
+                        )
+                        self.assertIn(expected_call, http_query.mock_calls)
+
+                expected_call = call(
+                    "http://t.est.com/http/file2", decode_body=False, method="HEAD"
+                )
+                with patch(
+                    "salt.utils.http.query", MagicMock(return_value={})
+                ) as http_query:
+                    with patch.object(filemod, "HAS_REQUESTS", False):
+                        ret = filemod.source_list(
+                            [{"http://t.est.com/http/file2": "filehash"}], "", "base"
+                        )
+                        self.assertEqual(
+                            list(ret), ["http://t.est.com/http/file2", "filehash"]
+                        )
+                        self.assertIn(expected_call, http_query.mock_calls)
 
     def test_source_list_for_list_returns_existing_file(self):
         with patch.dict(

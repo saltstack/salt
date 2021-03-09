@@ -57,6 +57,12 @@ try:
 except ImportError:
     pass
 
+try:
+    import requests  # pylint: disable=unused-import
+
+    HAS_REQUESTS = True  # pylint: disable=W0612
+except ImportError:
+    HAS_REQUESTS = False  # pylint: disable=W0612
 
 log = logging.getLogger(__name__)
 
@@ -4315,7 +4321,21 @@ def source_list(source, source_hash, saltenv):
                         ret = (single_src, single_hash)
                         break
                 elif proto.startswith("http") or proto == "ftp":
-                    query_res = salt.utils.http.query(single_src, method="HEAD")
+                    # If rquests is available we'll use that for the HEAD request in case the URL ends up being a
+                    # 3xx redirect, tornado switches the request method to GET request and we'll end up with the
+                    # content in the body.  We also don't want to decode the body data in case it ends up in the return,
+                    # our only concern is if the remote file exists.
+                    if HAS_REQUESTS:
+                        query_res = salt.utils.http.query(
+                            single_src,
+                            method="HEAD",
+                            decode_body=False,
+                            backend="requests",
+                        )
+                    else:
+                        query_res = salt.utils.http.query(
+                            single_src, method="HEAD", decode_body=False
+                        )
                     if "error" not in query_res:
                         ret = (single_src, single_hash)
                         break
@@ -4359,7 +4379,18 @@ def source_list(source, source_hash, saltenv):
                     ret = (single, source_hash)
                     break
                 elif proto.startswith("http") or proto == "ftp":
-                    query_res = salt.utils.http.query(single, method="HEAD")
+                    # If rquests is available we'll use that for the HEAD request in case the URL ends up being a
+                    # 3xx redirect, tornado switches the request method to GET request and we'll end up with the
+                    # content in the body.  We also don't want to decode the body data in case it ends up in the return,
+                    # our only concern is if the remote file exists.
+                    if HAS_REQUESTS:
+                        query_res = salt.utils.http.query(
+                            single, method="HEAD", decode_body=False, backend="requests"
+                        )
+                    else:
+                        query_res = salt.utils.http.query(
+                            single, method="HEAD", decode_body=False
+                        )
                     if "error" not in query_res:
                         ret = (single, source_hash)
                         break
