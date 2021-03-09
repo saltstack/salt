@@ -50,7 +50,6 @@ try:
 except ImportError:
     HAS_MOTO = False
 
-
     def mock_ec2(self):
         """
         if the mock_ec2 function is not available due to import failure
