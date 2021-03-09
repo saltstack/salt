@@ -1,0 +1,1 @@
+When calling salt.utils.http.query with a HEAD method to check for the existence of a source, default to using the requests library as the tornado library switches the method from HEAD to GET if the original URL is a 3xx redirect.
