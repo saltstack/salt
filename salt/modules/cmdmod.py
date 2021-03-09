@@ -838,7 +838,9 @@ def _run(
         if not ignore_retcode and ret["retcode"] != 0:
             if output_loglevel < LOG_LEVELS["error"]:
                 output_loglevel = LOG_LEVELS["error"]
-            msg = "Command '{}' failed with return code: {}".format(_log_cmd(cmd), ret["retcode"])
+            msg = "Command '{}' failed with return code: {}".format(
+                _log_cmd(cmd), ret["retcode"]
+            )
             log.error(log_callback(msg))
         if ret["stdout"]:
             log.log(output_loglevel, "stdout: %s", log_callback(ret["stdout"]))
@@ -1208,7 +1210,9 @@ def run(
         if not ignore_retcode and ret["retcode"] != 0:
             if lvl < LOG_LEVELS["error"]:
                 lvl = LOG_LEVELS["error"]
-            msg = "Command '{}' failed with return code: {}".format(_log_cmd(cmd), ret["retcode"])
+            msg = "Command '{}' failed with return code: {}".format(
+                _log_cmd(cmd), ret["retcode"]
+            )
             log.error(log_callback(msg))
             if raise_err:
                 raise CommandExecutionError(
