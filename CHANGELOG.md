@@ -15,6 +15,8 @@ Fixed
 - Allow "extra_filerefs" as sanitized kwargs for SSH client.
   Fix regression on "cmd.run" when passing tuples as cmd. (#59664)
 - Allow all ssh kwargs as sanitized kwargs for SSH client. (#59748)
+- Fix argument injection bug in restartcheck.restartcheck. This change hardens
+  the fix for CVE-2020-28243.
 
 Salt 3000.8 (2021-01-28)
 ========================
