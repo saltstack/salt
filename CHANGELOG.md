@@ -7,6 +7,19 @@ Versions are `MAJOR.PATCH`.
 
 # Changelog
 
+Salt 3001.7 (2021-03-10)
+========================
+
+Fixed
+-----
+
+- Fix argument injection bug in restartcheck.restartcheck. This change hardens
+  the fix for CVE-2020-28243. (#200)
+- Allow "extra_filerefs" as sanitized kwargs for SSH client.
+  Fix regression on "cmd.run" when passing tuples as cmd. (#59664)
+- Allow all ssh kwargs as sanitized kwargs for SSH client. (#59748)
+
+
 Salt 3001.6 (2021-02-09)
 ========================
 
@@ -490,6 +503,18 @@ Added
 - `fetchonly` parameter added for `pkg.upgrade` when using `pkgng` (FreeBSD). (#57371)
 - Added `efi` parameter to virt module, so `uefi` firmware can be auto selected. (#57397)
 - [#56637](https://github.com/saltstack/salt/pull/56637) - Add ``win_wua.installed`` to the ``win_wua`` execution module
+
+Salt 3000.9 (2021-03-10)
+========================
+
+Fixed
+-----
+
+- Allow "extra_filerefs" as sanitized kwargs for SSH client.
+  Fix regression on "cmd.run" when passing tuples as cmd. (#59664)
+- Allow all ssh kwargs as sanitized kwargs for SSH client. (#59748)
+- Fix argument injection bug in restartcheck.restartcheck. This change hardens
+  the fix for CVE-2020-28243.
 
 Salt 3000.8 (2021-02-09)
 ========================
