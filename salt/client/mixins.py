@@ -28,7 +28,6 @@ import salt.utils.process
 import salt.utils.state
 import salt.utils.user
 import salt.utils.versions
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 

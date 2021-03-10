@@ -1,14 +1,8 @@
-# -*- coding: utf-8 -*-
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import copy
 import logging
 import os
 import random
 
-# Import Salt libs
 import salt.config
 import salt.syspaths as syspaths
 import salt.utils.args
@@ -17,7 +11,7 @@ from salt.exceptions import SaltClientError  # Temporary
 log = logging.getLogger(__name__)
 
 
-class SSHClient(object):
+class SSHClient:
     """
     Create a client object for executing routines via the salt-ssh backend
 
@@ -58,10 +52,34 @@ class SSHClient(object):
             ("ssh_identities_only", bool),
             ("ssh_remote_port_forwards", str),
             ("ssh_options", list),
+            ("ssh_max_procs", int),
+            ("ssh_askpass", bool),
+            ("ssh_key_deploy", bool),
+            ("ssh_update_roster", bool),
+            ("ssh_scan_ports", str),
+            ("ssh_scan_timeout", int),
+            ("ssh_timeout", int),
+            ("ssh_log_file", str),
+            ("raw_shell", bool),
+            ("refresh_cache", bool),
+            ("roster", str),
             ("roster_file", str),
             ("rosters", list),
             ("ignore_host_keys", bool),
             ("raw_shell", bool),
+            ("extra_filerefs", str),
+            ("min_extra_mods", str),
+            ("thin_extra_mods", str),
+            ("verbose", bool),
+            ("static", bool),
+            ("ssh_wipe", bool),
+            ("rand_thin_dir", bool),
+            ("regen_thin", bool),
+            ("python2_bin", str),
+            ("python3_bin", str),
+            ("ssh_run_pre_flight", bool),
+            ("no_host_keys", bool),
+            ("saltfile", str),
         ]
         sane_kwargs = {}
         for name, kind in roster_vals:
@@ -126,8 +144,7 @@ class SSHClient(object):
         .. versionadded:: 2015.5.0
         """
         ssh = self._prep_ssh(tgt, fun, arg, timeout, tgt_type, kwarg, **kwargs)
-        for ret in ssh.run_iter(jid=kwargs.get("jid", None)):
-            yield ret
+        yield from ssh.run_iter(jid=kwargs.get("jid", None))
 
     def cmd(
         self, tgt, fun, arg=(), timeout=None, tgt_type="glob", kwarg=None, **kwargs
