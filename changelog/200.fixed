@@ -1,2 +1,0 @@
-Fix argument injection bug in restartcheck.restartcheck. This change hardens
-the fix for CVE-2020-28243.
