@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
+from __future__ import absolute_import
 import os
 import time
 import salt.auth
 import salt.config
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
-
 
 
 class AuthTest(TestCase):
