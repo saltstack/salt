@@ -568,7 +568,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
         stdout = b"test"
         proc = MagicMock(return_value=MockTimedProc(stdout=stdout))
 
-        msg = "INFO:Executing command 'some command' in directory"
+        msg = "INFO:Executing command 'some' in directory"
         with patch("salt.utils.timed_subprocess.TimedProc", proc):
             with TstSuiteLoggingHandler() as log_handler:
                 ret = cmdmod.run_all("some command", output_loglevel="debug")
@@ -643,11 +643,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_cve_2021_25284(self):
         proc = MagicMock(
-            return_value=MockTimedProc(
-                stdout=b"foo",
-                stderr=b"wtf",
-                returncode=2
-            )
+            return_value=MockTimedProc(stdout=b"foo", stderr=b"wtf", returncode=2)
         )
         with patch("salt.utils.timed_subprocess.TimedProc", proc):
             with TstSuiteLoggingHandler() as log_handler:
@@ -657,3 +653,14 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
                         assert x.find("ImAPassword") == -1, x
                     if x.find("faild with return code") > -1:
                         assert x.find("ImAPassword") == -1, x
+
+    def test_run_with_tuple(self):
+        """
+        Tests return when cmd is a tuple
+        """
+        mock_true = MagicMock(return_value=True)
+        with patch("salt.modules.cmdmod._is_valid_shell", mock_true):
+            with patch("salt.utils.platform.is_windows", MagicMock(return_value=False)):
+                with patch("os.path.isfile", mock_true):
+                    with patch("os.access", mock_true):
+                        cmdmod._run(("echo", "foo"), python_shell=True)
