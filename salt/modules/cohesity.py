@@ -361,6 +361,7 @@ def cancel_vmware_protection_job(job_name):
 def run_vmware_protection_job(job_name):
     """
     Function to run protection job.
+
     CLI Examples:
     .. code-block:: bash
         salt-call cohesity.run_vmware_protection_job job_name=job
