@@ -25,9 +25,11 @@ DEFAULT_SHELL = "foo/bar"
 MOCK_SHELL_FILE = "# List of acceptable shells\n" "\n" "/bin/bash\n"
 
 
-@pytest.fixture
-def configure_loader_modules():
-    return {cmdmod: {}}
+@pytest.fixture(autouse=True)
+def setup_loader():
+    setup_loader_modules = {cmdmod: {}}
+    with pytest.helpers.loader_mock(setup_loader_modules) as loader_mock:
+        yield loader_mock
 
 
 @pytest.fixture(scope="module")
