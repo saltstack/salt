@@ -3711,6 +3711,10 @@ class ProxyMinionManager(MinionManager):
 
 
 def _metaproxy_call(opts, fn_name):
+    if "metaproxy" not in opts:
+        # Disable metaproxy LazyLoad when no specific metaproxy requested
+        import salt.metaproxy.proxy  # late import to avoid circular dependency
+        return getattr(salt.metaproxy.proxy, fn_name)
     loaded_base_name = "{}.{}".format(opts["id"], salt.loader.LOADED_BASE_NAME)
     metaproxy = salt.loader.metaproxy(opts, loaded_base_name=loaded_base_name)
     try:
