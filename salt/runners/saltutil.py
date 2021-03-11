@@ -146,6 +146,11 @@ def sync_all(saltenv="base", extmod_whitelist=None, extmod_blacklist=None):
         extmod_whitelist=extmod_whitelist,
         extmod_blacklist=extmod_blacklist,
     )
+    ret["netapi"] = sync_netapi(
+        saltenv=saltenv,
+        extmod_whitelist=extmod_whitelist,
+        extmod_blacklist=extmod_blacklist,
+    )
     return ret
 
 
@@ -826,6 +831,37 @@ def sync_executors(saltenv="base", extmod_whitelist=None, extmod_blacklist=None)
     return salt.utils.extmods.sync(
         __opts__,
         "executors",
+        saltenv=saltenv,
+        extmod_whitelist=extmod_whitelist,
+        extmod_blacklist=extmod_blacklist,
+    )[0]
+
+
+def sync_netapi(saltenv="base", extmod_whitelist=None, extmod_blacklist=None):
+    """
+    .. versionadded:: 3003
+
+    Sync netapi modules from ``salt://_netapi`` to the master
+
+    saltenv : base
+        The fileserver environment from which to sync. To sync from more than
+        one environment, pass a comma-separated list.
+
+    extmod_whitelist : None
+        comma-seperated list of modules to sync
+
+    extmod_blacklist : None
+        comma-seperated list of modules to blacklist based on type
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run saltutil.sync_netapi
+    """
+    return salt.utils.extmods.sync(
+        __opts__,
+        "netapi",
         saltenv=saltenv,
         extmod_whitelist=extmod_whitelist,
         extmod_blacklist=extmod_blacklist,
