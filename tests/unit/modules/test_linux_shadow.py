@@ -2,7 +2,6 @@
     :codeauthor: Erik Johnson <erik@saltstack.com>
 """
 
-import spwd
 import textwrap
 
 import pytest
@@ -13,12 +12,16 @@ from tests.support.mock import DEFAULT, MagicMock, mock_open, patch
 from tests.support.unit import TestCase, skipIf
 
 try:
+    import spwd
+except ImportError:
+    pass
+
+try:
     import salt.modules.linux_shadow as shadow
 
     HAS_SHADOW = True
 except ImportError:
     HAS_SHADOW = False
-
 
 _PASSWORD = "lamepassword"
 
