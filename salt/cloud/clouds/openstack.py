@@ -91,6 +91,7 @@ The salt specific ones are:
   - ssh_key_file: The name of the keypair in openstack
   - userdata_template: The renderer to use if the userdata is a file that is templated. Default: False
   - ssh_interface: The interface to use to login for bootstrapping: public_ips, private_ips, floating_ips, fixed_ips
+  - ignore_cidr: Specify a CIDR range of unreachable private addresses for salt to ignore when connecting
 
 .. code-block:: yaml
 
@@ -119,6 +120,15 @@ If metadata is set to make sure that the host has finished setting up the
       wait_for_metadata:
         rax_service_level_automation: Complete
         rackconnect_automation_status: DEPLOYED
+
+If your OpenStack instances only have private IP addresses and a CIDR range of
+private addresses are not reachable from the salt-master, you may set your
+preference to have Salt ignore it:
+
+.. code-block:: yaml
+
+    my-openstack-config:
+      ignore_cidr: 192.168.0.0/16
 
 Anything else from the create_server_ docs can be passed through here.
 
@@ -305,6 +315,7 @@ def get_dependencies():
 def preferred_ip(vm_, ips):
     """
     Return either an ipv4' (default) or 'ipv6' address depending on 'protocol' option.
+    The list of IPs is filtered by ignore_cidr() to remove any unreachable private addresses.
     """
     proto = config.get_cloud_config_value(
         "protocol", vm_, __opts__, default="ipv4", search_global=False
