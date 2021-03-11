@@ -13,7 +13,7 @@ def configure_loader_modules():
 
 def test_present():
     """
-    Test to ensure that the named user is present with
+    Test to ensure that the named database is present with
     the specified properties.
     """
     dbname = "my_test"
@@ -122,7 +122,7 @@ def test_present():
 
 def test_absent():
     """
-    Test to ensure that the named user is absent.
+    Test to ensure that the named database is absent.
     """
     dbname = "my_test"
 
