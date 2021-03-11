@@ -17,9 +17,9 @@ def loader():
         (cachedir / "fnord").write_text("hello")
         loader = jinja.SaltCacheLoader(
             opts={
-                "cachedir": cachedir,
+                "cachedir": str(cachedir),
                 "extension_modules": "ext_mods",
-                "pki_dir": pkidir,
+                "pki_dir": str(pkidir),
                 "id": "fnord",
                 "master_uri": "localhost",
                 "__role": "test thing",
