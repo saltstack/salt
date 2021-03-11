@@ -1,7 +1,7 @@
 import pytest
 import salt.modules.mount
 import salt.states.mount as mount
-from tests.support.mock import create_autospec, patch
+from tests.support.mock import call, create_autospec, patch
 
 
 @pytest.fixture
@@ -32,6 +32,16 @@ def test_when_os_is_solaris_and_opts_is_defaults_then_opts_should_be_replaced_wi
     expected_fstype = "fnordfs"
     expected_config = {"some": "config"}
     expected_match_on = "diamond"
+    expected_calls = [
+        call(
+            expected_name,
+            expected_device,
+            expected_fstype,
+            expected_opts,
+            config=expected_config,
+            match_on=expected_match_on,
+        )
+    ]
 
     with patch.dict(mount.__grains__, {"os": "Solaris"}), patch.dict(
         mount.__salt__,
@@ -46,14 +56,8 @@ def test_when_os_is_solaris_and_opts_is_defaults_then_opts_should_be_replaced_wi
             match_on=expected_match_on,
         )
 
-    mount.__salt__["mount.set_vfstab"].assert_called_with(
-        expected_name,
-        expected_device,
-        expected_fstype,
-        expected_opts,
-        config=expected_config,
-        match_on=expected_match_on,
-    )
+    mount.__salt__["mount.set_vfstab"].assert_has_calls(expected_calls)
+    mount.__salt__["mount.set_fstab"].assert_not_called()
 
 
 def test_when_os_is_not_solaris_and_opts_is_defaults_then_opts_should_be_defaults():
