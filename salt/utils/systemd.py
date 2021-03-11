@@ -55,7 +55,7 @@ def booted(context=None):
 def offline(context=None):
     """Return True is systemd is in offline mode"""
     contextkey = "salt.utils.systemd.offline"
-    if isinstance(context, dict):
+    if isinstance(context, (dict, salt.loader.context.NamedLoaderContext)):
         if contextkey in context:
             return context[contextkey]
     elif context is not None:
