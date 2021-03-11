@@ -36,7 +36,7 @@ def test_present_table():
         },
     ):
         with patch.dict(postgres_privileges.__opts__, {"test": True}):
-            comt = ("The privilege(s): {} are set to be granted to {}").format(
+            comt = "The privilege(s): {} are set to be granted to {}".format(
                 "ALL", name
             )
             ret.update({"comment": comt, "result": None})
@@ -48,7 +48,7 @@ def test_present_table():
             )
 
         with patch.dict(postgres_privileges.__opts__, {"test": False}):
-            comt = ("The privilege(s): {} have been granted to {}").format("ALL", name)
+            comt = "The privilege(s): {} have been granted to {}".format("ALL", name)
             ret.update(
                 {"comment": comt, "result": True, "changes": {"baruwa": "Present"}}
             )
@@ -77,14 +77,14 @@ def test_present_group():
         },
     ):
         with patch.dict(postgres_privileges.__opts__, {"test": True}):
-            comt = ("The privilege(s): {} are set to be granted to {}").format(
+            comt = "The privilege(s): {} are set to be granted to {}".format(
                 group_name, name
             )
             ret.update({"comment": comt, "result": None})
             assert postgres_privileges.present(name, group_name, "group") == ret
 
         with patch.dict(postgres_privileges.__opts__, {"test": False}):
-            comt = ("The privilege(s): {} have been granted to {}").format(
+            comt = "The privilege(s): {} have been granted to {}".format(
                 group_name, name
             )
             ret.update(
@@ -118,7 +118,7 @@ def test_absent_table():
         },
     ):
         with patch.dict(postgres_privileges.__opts__, {"test": True}):
-            comt = ("The privilege(s): {} are set to be revoked from {}").format(
+            comt = "The privilege(s): {} are set to be revoked from {}".format(
                 "ALL", name
             )
             ret.update({"comment": comt, "result": None})
@@ -130,9 +130,7 @@ def test_absent_table():
             )
 
         with patch.dict(postgres_privileges.__opts__, {"test": False}):
-            comt = ("The privilege(s): {} have been revoked from {}").format(
-                "ALL", name
-            )
+            comt = "The privilege(s): {} have been revoked from {}".format("ALL", name)
             ret.update(
                 {"comment": comt, "result": True, "changes": {"baruwa": "Absent"}}
             )
@@ -160,14 +158,14 @@ def test_absent_group():
         },
     ):
         with patch.dict(postgres_privileges.__opts__, {"test": True}):
-            comt = ("The privilege(s): {} are set to be revoked from {}").format(
+            comt = "The privilege(s): {} are set to be revoked from {}".format(
                 group_name, name
             )
             ret.update({"comment": comt, "result": None})
             assert postgres_privileges.absent(name, group_name, "group") == ret
 
         with patch.dict(postgres_privileges.__opts__, {"test": False}):
-            comt = ("The privilege(s): {} have been revoked from {}").format(
+            comt = "The privilege(s): {} have been revoked from {}".format(
                 group_name, name
             )
             ret.update(
