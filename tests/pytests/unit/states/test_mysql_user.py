@@ -16,7 +16,7 @@ def configure_loader_modules():
 def test_present():
     """
     Test to ensure that the named user is present with
-     the specified properties.
+    the specified properties.
     """
     name = "frank"
     password = "bob@cat"
