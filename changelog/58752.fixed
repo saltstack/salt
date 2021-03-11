@@ -1,2 +1,0 @@
-Return result=None from module.run state to indicate that changes would be made
-Return result=False from module.run state when called with no functions

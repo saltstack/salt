@@ -53,8 +53,7 @@ def get_osarch():
     """
     if salt.utils.path.which("rpm"):
         ret = subprocess.Popen(
-            'rpm --eval "%{_host_cpu}"',
-            shell=True,
+            ["rpm", "--eval", "%{_host_cpu}"],
             close_fds=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,

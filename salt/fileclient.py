@@ -3,7 +3,7 @@ Classes that manage file clients
 """
 import contextlib
 import errno
-import ftplib
+import ftplib  # nosec
 import http.server
 import logging
 import os
@@ -577,7 +577,7 @@ class Client:
                 )
         if url_data.scheme == "ftp":
             try:
-                ftp = ftplib.FTP()
+                ftp = ftplib.FTP()  # nosec
                 ftp_port = url_data.port
                 if not ftp_port:
                     ftp_port = 21
