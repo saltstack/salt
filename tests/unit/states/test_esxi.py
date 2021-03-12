@@ -1,13 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 tests.unit.states.test_esxi
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Unit tests for the esxi state module
 """
-
-
-from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.modules.vsphere as vsphere
 import salt.states.esxi as esxi

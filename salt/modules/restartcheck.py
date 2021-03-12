@@ -484,6 +484,7 @@ def restartcheck(ignorelist=None, blacklist=None, excludepid=None, **kwargs):
     .. versionadded:: 2015.8.3
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' restartcheck.restartcheck

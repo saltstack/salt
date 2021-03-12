@@ -4,7 +4,6 @@
 Tests for cluster related functions in salt.utils.vmware
 """
 
-
 import base64
 import logging
 import ssl
@@ -21,7 +20,6 @@ from salt.exceptions import (
 )
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, PropertyMock, call, patch
-from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
 
 try:
@@ -2897,9 +2895,7 @@ class CreateDvsTestCase(TestCase):
         self.mock_wait_for_task.assert_called_once_with(
             self.mock_task,
             "fake_dvs",
-            "<class '{}unit.utils.test_vmware.FakeTaskClass'>".format(
-                "tests." if RUNTIME_VARS.PYTEST_SESSION else ""
-            ),
+            "<class 'tests.unit.utils.test_vmware.FakeTaskClass'>",
         )
 
 
@@ -2980,9 +2976,7 @@ class UpdateDvsTestCase(TestCase):
         self.mock_wait_for_task.assert_called_once_with(
             self.mock_task,
             "fake_dvs",
-            "<class '{}unit.utils.test_vmware.FakeTaskClass'>".format(
-                "tests." if RUNTIME_VARS.PYTEST_SESSION else ""
-            ),
+            "<class 'tests.unit.utils.test_vmware.FakeTaskClass'>",
         )
 
 
@@ -3337,9 +3331,7 @@ class CreateDvportgroupTestCase(TestCase):
         self.mock_wait_for_task.assert_called_once_with(
             self.mock_task,
             "fake_dvs",
-            "<class '{}unit.utils.test_vmware.FakeTaskClass'>".format(
-                "tests." if RUNTIME_VARS.PYTEST_SESSION else ""
-            ),
+            "<class 'tests.unit.utils.test_vmware.FakeTaskClass'>",
         )
 
 
@@ -3415,9 +3407,7 @@ class UpdateDvportgroupTestCase(TestCase):
         self.mock_wait_for_task.assert_called_once_with(
             self.mock_task,
             "fake_pg",
-            "<class '{}unit.utils.test_vmware.FakeTaskClass'>".format(
-                "tests." if RUNTIME_VARS.PYTEST_SESSION else ""
-            ),
+            "<class 'tests.unit.utils.test_vmware.FakeTaskClass'>",
         )
 
 
@@ -3490,9 +3480,7 @@ class RemoveDvportgroupTestCase(TestCase):
         self.mock_wait_for_task.assert_called_once_with(
             self.mock_task,
             "fake_pg",
-            "<class '{}unit.utils.test_vmware.FakeTaskClass'>".format(
-                "tests." if RUNTIME_VARS.PYTEST_SESSION else ""
-            ),
+            "<class 'tests.unit.utils.test_vmware.FakeTaskClass'>",
         )
 
 

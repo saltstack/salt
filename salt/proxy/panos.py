@@ -203,12 +203,11 @@ apikey
 The generated XML API key for the Panorama server. Required.
 """
 
-
 import logging
+import xml.etree.ElementTree as ET
 
 import salt.exceptions
 import salt.utils.xmlutil as xml
-from salt._compat import ElementTree as ET
 
 # This must be present or the Salt loader won't load this module.
 __proxyenabled__ = ["panos"]

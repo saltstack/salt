@@ -25,12 +25,12 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
 :depends: requests
 """
 
-
 import base64
 import hmac
 import logging
 import pprint
 import time
+import urllib.parse
 from hashlib import sha256
 
 import salt.config as config
@@ -43,8 +43,6 @@ from salt.exceptions import (
     SaltCloudNotFound,
     SaltCloudSystemExit,
 )
-from salt.ext.six.moves import range
-from salt.ext.six.moves.urllib.parse import quote as _quote
 
 try:
     import requests
@@ -77,13 +75,20 @@ def __virtual__():
     return __virtualname__
 
 
+def _get_active_provider_name():
+    try:
+        return __active_provider_name__.value()
+    except AttributeError:
+        return __active_provider_name__
+
+
 def get_configured_provider():
     """
     Return the first configured instance.
     """
     return config.is_provider_configured(
         __opts__,
-        __active_provider_name__ or __virtualname__,
+        _get_active_provider_name() or __virtualname__,
         ("access_key_id", "secret_access_key", "zone", "key_filename"),
     )
 
@@ -109,7 +114,9 @@ def _compute_signature(parameters, access_key_secret, method, path):
     pairs = []
     for key in keys:
         val = str(parameters[key]).encode("utf-8")
-        pairs.append(_quote(key, safe="") + "=" + _quote(val, safe="-_~"))
+        pairs.append(
+            urllib.parse.quote(key, safe="") + "=" + urllib.parse.quote(val, safe="-_~")
+        )
     qs = "&".join(pairs)
     string_to_sign += qs
 
@@ -507,7 +514,7 @@ def list_nodes_full(call=None):
 
         result[node["instance_id"]] = node
 
-    provider = __active_provider_name__ or "qingcloud"
+    provider = _get_active_provider_name() or "qingcloud"
     if ":" in provider:
         comps = provider.split(":")
         provider = comps[0]
@@ -656,7 +663,7 @@ def create(vm_):
             vm_["profile"]
             and config.is_profile_configured(
                 __opts__,
-                __active_provider_name__ or "qingcloud",
+                _get_active_provider_name() or "qingcloud",
                 vm_["profile"],
                 vm_=vm_,
             )

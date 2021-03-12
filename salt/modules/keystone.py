@@ -51,7 +51,6 @@ Module for handling openstack keystone calls.
         salt '*' keystone.tenant_list profile=openstack1
 """
 
-
 import logging
 
 import salt.utils.http
@@ -493,7 +492,6 @@ def role_create(name, profile=None, **connection_args):
 def role_delete(role_id=None, name=None, profile=None, **connection_args):
     """
     Delete a role (keystone role-delete)
-
 
     CLI Examples:
 

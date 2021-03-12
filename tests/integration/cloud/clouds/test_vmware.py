@@ -1,7 +1,9 @@
 """
     :codeauthor: Megan Wilhite <mwilhite@saltstack.com>
 """
-# Create the cloud instance name to be used throughout the tests
+
+import socket
+
 from tests.integration.cloud.helpers.cloud_test_base import TIMEOUT, CloudTest
 
 
@@ -12,6 +14,18 @@ class VMWareTest(CloudTest):
 
     PROVIDER = "vmware"
     REQUIRED_PROVIDER_CONFIG_ITEMS = ("password", "user", "url")
+
+    def setUp(self):
+        super().setUp()
+        test_host = self.provider_config["url"]
+        try:
+            socket.gethostbyname_ex(test_host)
+        except OSError as exc:
+            self.skipTest(
+                "The required vmware host at {} is not available: {}".format(
+                    test_host, exc
+                )
+            )
 
     def test_instance(self):
         """
@@ -52,9 +66,7 @@ class VMWareTest(CloudTest):
         self.assertInstanceExists(ret_val)
 
         create_snapshot = self.run_cloud(
-            "-a create_snapshot {} \
-                                         snapshot_name='Test Cloud' \
-                                         memdump=True -y".format(
+            "-a create_snapshot {} snapshot_name='Test Cloud' memdump=True -y".format(
                 self.instance_name
             ),
             timeout=TIMEOUT,

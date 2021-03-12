@@ -6,7 +6,7 @@ Connection library for VMware
 This is a base library used by a number of VMware services such as VMware
 ESX, ESXi, and vCenter servers.
 
-:codeauthor: Nitin Madhok <nmadhok@clemson.edu>
+:codeauthor: Nitin Madhok <nmadhok@g.clemson.edu>
 :codeauthor: Alexandru Bleotu <alexandru.bleotu@morganstanley.com>
 
 Dependencies
@@ -71,7 +71,6 @@ If the connection was successful, ESXCLI was successfully installed on your syst
 You should see output related to the ESXi host's syslog configuration.
 
 """
-
 
 import atexit
 import errno
@@ -169,11 +168,8 @@ def esxcli(
             host, user, pwd, protocol, port, cmd
         )
     else:
-        esx_cmd += (
-            " -s {} -h {} -u {} -p '{}' "
-            "--protocol={} --portnumber={} {}".format(
-                host, esxi_host, user, pwd, protocol, port, cmd
-            )
+        esx_cmd += " -s {} -h {} -u {} -p '{}' --protocol={} --portnumber={} {}".format(
+            host, esxi_host, user, pwd, protocol, port, cmd
         )
 
     ret = salt.modules.cmdmod.run_all(esx_cmd, output_loglevel="quiet")

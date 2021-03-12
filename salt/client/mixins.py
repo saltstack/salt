@@ -28,7 +28,6 @@ import salt.utils.process
 import salt.utils.state
 import salt.utils.user
 import salt.utils.versions
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -504,27 +503,6 @@ class AsyncClientMixin:
             log.error(exc)
 
     def _proc_function(self, fun, low, user, tag, jid, daemonize=True):
-        """
-        Run this method in a multiprocess target to execute the function
-        locally and fire the return data on the event bus
-        """
-        if daemonize and not salt.utils.platform.is_windows():
-            # Shutdown the multiprocessing before daemonizing
-            salt.log.setup.shutdown_multiprocessing_logging()
-
-            salt.utils.process.daemonize()
-
-            # Reconfigure multiprocessing logging after daemonizing
-            salt.log.setup.setup_multiprocessing_logging()
-
-        # pack a few things into low
-        low["__jid__"] = jid
-        low["__user__"] = user
-        low["__tag__"] = tag
-
-        return self.low(fun, low)
-
-    def _proc_function_local(self, fun, low, user, tag, jid, daemonize=True):
         """
         Run this method in a multiprocess target to execute the function
         locally and fire the return data on the event bus

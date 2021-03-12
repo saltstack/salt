@@ -4,7 +4,10 @@ directories for python loadable code and organizes the code into the
 plugin interfaces used by Salt.
 """
 
+import contextvars
+import copy
 import functools
+import importlib
 import importlib.machinery  # pylint: disable=no-name-in-module,import-error
 import importlib.util  # pylint: disable=no-name-in-module,import-error
 import inspect
@@ -18,11 +21,13 @@ import time
 import traceback
 import types
 from collections.abc import MutableMapping
+from contextlib import contextmanager
 from zipimport import zipimporter
 
 import salt.config
 import salt.defaults.events
 import salt.defaults.exitcodes
+import salt.loader_context
 import salt.syspaths
 import salt.utils.args
 import salt.utils.context
@@ -36,17 +41,9 @@ import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.versions
 from salt.exceptions import LoaderError
-from salt.ext import six
-from salt.ext.six.moves import reload_module
 from salt.template import check_render_pipe_str
+from salt.utils import entrypoints
 from salt.utils.decorators import Depends
-
-try:
-    import pkg_resources
-
-    HAS_PKG_RESOURCES = True
-except ImportError:
-    HAS_PKG_RESOURCES = False
 
 log = logging.getLogger(__name__)
 
@@ -117,18 +114,6 @@ def static_loader(
     return ret
 
 
-def _format_entrypoint_target(ep):
-    """
-    Makes a string describing the target of an EntryPoint object.
-
-    Base strongly on EntryPoint.__str__().
-    """
-    s = ep.module_name
-    if ep.attrs:
-        s += ":" + ".".join(ep.attrs)
-    return s
-
-
 def _module_dirs(
     opts,
     ext_type,
@@ -149,23 +134,93 @@ def _module_dirs(
             ext_type_dirs = "{}_dirs".format(tag)
         if ext_type_dirs in opts:
             ext_type_types.extend(opts[ext_type_dirs])
-        if HAS_PKG_RESOURCES and ext_type_dirs:
-            for entry_point in pkg_resources.iter_entry_points(
-                "salt.loader", ext_type_dirs
-            ):
-                try:
+        if ext_type_dirs:
+            for entry_point in entrypoints.iter_entry_points("salt.loader"):
+                with catch_entry_points_exception(entry_point) as ctx:
                     loaded_entry_point = entry_point.load()
-                    for path in loaded_entry_point():
+                if ctx.exception_caught:
+                    continue
+
+                # Old way of defining loader entry points
+                #   [options.entry_points]
+                #   salt.loader=
+                #     runner_dirs = thirpartypackage.loader:func_to_get_list_of_dirs
+                #     module_dirs = thirpartypackage.loader:func_to_get_list_of_dirs
+                #
+                #
+                # New way of defining entrypoints
+                #   [options.entry_points]
+                #   salt.loader=
+                #     <this-name-does-not-matter> = thirpartypackage
+                #     <this-name-does-not-matter> = thirpartypackage:callable
+                #
+                # We try and see if the thirpartypackage has a `ext_type` sub module, and if so,
+                # we append it to loaded_entry_point_paths.
+                # If the entry-point is in the form of `thirpartypackage:callable`, the return of that
+                # callable must be a dictionary where the keys are the `ext_type`'s and the values must be
+                # lists of paths.
+
+                # We could feed the paths we load directly to `ext_type_types`, but we would not
+                # check for duplicates
+                loaded_entry_point_paths = set()
+
+                if isinstance(loaded_entry_point, types.FunctionType):
+                    # If the entry point object is a function, we have two scenarios
+                    #   1: It returns a list; This is an old style entry entry_point
+                    #   2: It returns a dictionary; This is a new style entry point
+                    with catch_entry_points_exception(entry_point) as ctx:
+                        loaded_entry_point_value = loaded_entry_point()
+                    if ctx.exception_caught:
+                        continue
+
+                    if isinstance(loaded_entry_point_value, list):
+                        # This is old style entry-point, and, as such, the entry point name MUST
+                        # match the value of `ext_type_dirs
+                        if entry_point.name != ext_type_dirs:
+                            continue
+                        for path in loaded_entry_point_value:
+                            loaded_entry_point_paths.add(path)
+                    elif isinstance(loaded_entry_point_value, dict):
+                        # This is new style entry-point and it returns a dictionary.
+                        # It MUST contain `ext_type` in it's keys to be considered
+                        if ext_type not in loaded_entry_point_value:
+                            continue
+                        with catch_entry_points_exception(entry_point) as ctx:
+                            if isinstance(loaded_entry_point_value[ext_type], str):
+                                # No strings please!
+                                raise ValueError(
+                                    "The callable must return an iterable of strings. "
+                                    "A single string is not supported."
+                                )
+                            for path in loaded_entry_point_value[ext_type]:
+                                loaded_entry_point_paths.add(path)
+                elif isinstance(loaded_entry_point, types.ModuleType):
+                    # This is a new style entry points definition which just points us to a package
+                    #
+                    # We try and see if the thirpartypackage has a `ext_type` sub module, and if so,
+                    # we append it to loaded_entry_point_paths.
+                    for loaded_entry_point_path in loaded_entry_point.__path__:
+                        with catch_entry_points_exception(entry_point) as ctx:
+                            entry_point_ext_type_package_path = os.path.join(
+                                loaded_entry_point_path, ext_type
+                            )
+                            if not os.path.exists(entry_point_ext_type_package_path):
+                                continue
+                        if ctx.exception_caught:
+                            continue
+                        loaded_entry_point_paths.add(entry_point_ext_type_package_path)
+                else:
+                    with catch_entry_points_exception(entry_point):
+                        raise ValueError(
+                            "Don't know how to load a salt extension from {}".format(
+                                loaded_entry_point
+                            )
+                        )
+
+                # Finally, we check all paths that we collected to see if they exist
+                for path in loaded_entry_point_paths:
+                    if os.path.exists(path):
                         ext_type_types.append(path)
-                except Exception as exc:  # pylint: disable=broad-except
-                    log.error(
-                        "Error getting module directories from %s: %s",
-                        _format_entrypoint_target(entry_point),
-                        exc,
-                    )
-                    log.debug(
-                        "Full backtrace for module directories error", exc_info=True
-                    )
 
     cli_module_dirs = []
     # The dirs can be any module dir, or a in-tree _{ext_type} dir
@@ -240,9 +295,8 @@ def minion_mods(
         loaded_base_name=loaded_base_name,
         static_modules=static_modules,
         extra_module_dirs=utils.module_dirs if utils else None,
+        pack_self="__salt__",
     )
-
-    ret.pack["__salt__"] = ret
 
     # Load any provider overrides from the configuration file providers option
     #  Note: Providers can be pkg, service, user or group - not to be confused
@@ -303,7 +357,6 @@ def metaproxy(opts, loaded_base_name=None):
     """
     Return functions used in the meta proxy
     """
-
     return LazyLoader(
         _module_dirs(opts, "metaproxy"),
         opts,
@@ -339,12 +392,18 @@ def engines(opts, functions, runners, utils, proxy=None):
 
 
 def proxy(
-    opts, functions=None, returners=None, whitelist=None, utils=None, context=None
+    opts,
+    functions=None,
+    returners=None,
+    whitelist=None,
+    utils=None,
+    context=None,
+    pack_self="__proxy__",
 ):
     """
     Returns the proxy module for this salt-proxy-minion
     """
-    ret = LazyLoader(
+    return LazyLoader(
         _module_dirs(opts, "proxy"),
         opts,
         tag="proxy",
@@ -355,11 +414,8 @@ def proxy(
             "__context__": context,
         },
         extra_module_dirs=utils.module_dirs if utils else None,
+        pack_self=pack_self,
     )
-
-    ret.pack["__proxy__"] = ret
-
-    return ret
 
 
 def returners(opts, functions, whitelist=None, context=None, proxy=None):
@@ -375,7 +431,7 @@ def returners(opts, functions, whitelist=None, context=None, proxy=None):
     )
 
 
-def utils(opts, whitelist=None, context=None, proxy=proxy):
+def utils(opts, whitelist=None, context=None, proxy=proxy, pack_self=None):
     """
     Returns the utility modules
     """
@@ -385,6 +441,7 @@ def utils(opts, whitelist=None, context=None, proxy=proxy):
         tag="utils",
         whitelist=whitelist,
         pack={"__context__": context, "__proxy__": proxy or {}},
+        pack_self=pack_self,
     )
 
 
@@ -399,8 +456,8 @@ def pillars(opts, functions, context=None):
         tag="pillar",
         pack={"__salt__": functions, "__context__": context, "__utils__": _utils},
         extra_module_dirs=_utils.module_dirs,
+        pack_self="__ext_pillar__",
     )
-    ret.pack["__ext_pillar__"] = ret
     return FilterDictWrapper(ret, ".ext_pillar")
 
 
@@ -493,18 +550,19 @@ def fileserver(opts, backends):
     if backends is not None:
         if not isinstance(backends, list):
             backends = [backends]
-        # Make sure that the VCS backends work either with git or gitfs, hg or
-        # hgfs, etc.
-        vcs_re = re.compile("^(git|svn|hg)")
-        fs_re = re.compile("fs$")
-        vcs = []
-        non_vcs = []
-        for back in [fs_re.sub("", x) for x in backends]:
-            if vcs_re.match(back):
-                vcs.extend((back, back + "fs"))
+
+        # If backend is a VCS, add both the '-fs' and non '-fs' versions to the list.
+        # Use a set to keep them unique
+        backend_set = set()
+        vcs_re = re.compile("^(git|svn|hg)(?:fs)?$")
+        for backend in backends:
+            match = vcs_re.match(backend)
+            if match:
+                backend_set.add(match.group(1))
+                backend_set.add(match.group(1) + "fs")
             else:
-                non_vcs.append(back)
-        backends = vcs + non_vcs
+                backend_set.add(backend)
+        backends = list(backend_set)
 
     return LazyLoader(
         _module_dirs(opts, "fileserver"),
@@ -561,19 +619,21 @@ def states(
     if context is None:
         context = {}
 
-    ret = LazyLoader(
+    return LazyLoader(
         _module_dirs(opts, "states"),
         opts,
         tag="states",
-        pack={"__salt__": functions, "__proxy__": proxy or {}},
+        pack={
+            "__salt__": functions,
+            "__proxy__": proxy or {},
+            "__utils__": utils,
+            "__serializers__": serializers,
+            "__context__": context,
+        },
         whitelist=whitelist,
         extra_module_dirs=utils.module_dirs if utils else None,
+        pack_self="__states__",
     )
-    ret.pack["__states__"] = ret
-    ret.pack["__utils__"] = utils
-    ret.pack["__serializers__"] = serializers
-    ret.pack["__context__"] = context
-    return ret
 
 
 def beacons(opts, functions, context=None, proxy=None):
@@ -626,8 +686,8 @@ def ssh_wrapper(opts, functions=None, context=None):
         tag="wrapper",
         pack={
             "__salt__": functions,
-            "__grains__": opts.get("grains", {}),
-            "__pillar__": opts.get("pillar", {}),
+            #        "__grains__": opts.get("grains", {}),
+            #        "__pillar__": opts.get("pillar", {}),
             "__context__": context,
         },
     )
@@ -648,7 +708,11 @@ def render(opts, functions, states=None, proxy=None, context=None):
 
     if states:
         pack["__states__"] = states
-    pack["__proxy__"] = proxy or {}
+
+    if proxy is None:
+        proxy = {}
+    pack["__proxy__"] = proxy
+
     ret = LazyLoader(
         _module_dirs(opts, "renderers", "render", ext_type_dirs="render_dirs",),
         opts,
@@ -683,7 +747,6 @@ def grain_funcs(opts, proxy=None, context=None):
     """
     _utils = utils(opts, proxy=proxy)
     pack = {"__utils__": utils(opts, proxy=proxy), "__context__": context}
-
     ret = LazyLoader(
         _module_dirs(opts, "grains", "grain", ext_type_dirs="grains_dirs",),
         opts,
@@ -960,17 +1023,16 @@ def runner(opts, utils=None, context=None, whitelist=None):
         utils = {}
     if context is None:
         context = {}
-    ret = LazyLoader(
+    return LazyLoader(
         _module_dirs(opts, "runners", "runner", ext_type_dirs="runner_dirs"),
         opts,
         tag="runners",
         pack={"__utils__": utils, "__context__": context},
         whitelist=whitelist,
         extra_module_dirs=utils.module_dirs if utils else None,
+        # TODO: change from __salt__ to something else, we overload __salt__ too much
+        pack_self="__salt__",
     )
-    # TODO: change from __salt__ to something else, we overload __salt__ too much
-    ret.pack["__salt__"] = ret
-    return ret
 
 
 def queues(opts):
@@ -997,7 +1059,6 @@ def sdb(opts, functions=None, whitelist=None, utils=None):
         tag="sdb",
         pack={
             "__sdb__": functions,
-            "__opts__": opts,
             "__utils__": utils,
             "__salt__": minion_mods(opts, utils=utils),
         },
@@ -1074,18 +1135,17 @@ def executors(opts, functions=None, context=None, proxy=None):
     """
     Returns the executor modules
     """
-    executors = LazyLoader(
+    if proxy is None:
+        proxy = {}
+    if context is None:
+        context = {}
+    return LazyLoader(
         _module_dirs(opts, "executors", "executor"),
         opts,
         tag="executor",
-        pack={
-            "__salt__": functions,
-            "__context__": context or {},
-            "__proxy__": proxy or {},
-        },
+        pack={"__salt__": functions, "__context__": context, "__proxy__": proxy},
+        pack_self="__executors__",
     )
-    executors.pack["__executors__"] = executors
-    return executors
 
 
 def cache(opts, serial):
@@ -1096,7 +1156,7 @@ def cache(opts, serial):
         _module_dirs(opts, "cache", "cache"),
         opts,
         tag="cache",
-        pack={"__opts__": opts, "__context__": {"serial": serial}},
+        pack={"__context__": {"serial": serial}},
     )
 
 
@@ -1147,6 +1207,53 @@ class FilterDictWrapper(MutableMapping):
                 yield key.replace(self.suffix, "")
 
 
+class LoadedFunc:
+    """
+    The functions loaded by LazyLoader instances using subscript notation
+    'a[k]' will be wrapped with LoadedFunc.
+
+      - Makes sure functions are called with the correct loader's context.
+      - Provides access to a wrapped func's __global__ attribute
+
+    :param func callable: The callable to wrap.
+    :param dict loader: The loader to use in the context when the wrapped callable is called.
+    """
+
+    def __init__(self, func, loader):
+        self.func = func
+        self.loader = loader
+        functools.update_wrapper(self, func)
+
+    def __getattr__(self, name):
+        return getattr(self.func, name)
+
+    def __call__(self, *args, **kwargs):
+        if self.loader.inject_globals:
+            run_func = global_injector_decorator(self.loader.inject_globals)(self.func)
+        else:
+            run_func = self.func
+        return self.loader.run(run_func, *args, **kwargs)
+
+
+class LoadedMod:
+    def __init__(self, mod, loader):
+        """
+        Return the wrapped func's globals via this object's __globals__
+        attribute.
+        """
+        self.mod = mod
+        self.loader = loader
+
+    def __getattr__(self, name):
+        """
+        Run the wrapped function in the loader's context.
+        """
+        attr = getattr(self.mod, name)
+        if inspect.isfunction(attr) or inspect.ismethod(attr):
+            return LoadedFunc(attr, self.loader)
+        return attr
+
+
 class LazyLoader(salt.utils.lazy.LazyDict):
     """
     A pseduo-dictionary which has a set of keys which are the
@@ -1168,6 +1275,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
     :param str virtual_funcs: The name of additional functions in the module to call to verify its functionality.
                                 If not true, the module will not load.
     :param list extra_module_dirs: A list of directories that will be able to import from
+    :param str pack_self: Pack this module into a variable by this name into modules loaded
     :returns: A LazyLoader object which functions as a dictionary. Keys are 'module.function' and values
     are function references themselves which are loaded on-demand.
     # TODO:
@@ -1191,19 +1299,25 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         proxy=None,
         virtual_funcs=None,
         extra_module_dirs=None,
+        pack_self=None,
     ):  # pylint: disable=W0231
         """
         In pack, if any of the values are None they will be replaced with an
         empty context-specific dict
         """
 
+        self.parent_loader = None
         self.inject_globals = {}
         self.pack = {} if pack is None else pack
+        for i in self.pack:
+            if isinstance(self.pack[i], salt.loader_context.NamedLoaderContext):
+                self.pack[i] = self.pack[i].value()
         if opts is None:
             opts = {}
         threadsafety = not opts.get("multiprocessing")
         self.context_dict = salt.utils.context.ContextDict(threadsafe=threadsafety)
         self.opts = self.__prep_mod_opts(opts)
+        self.pack_self = pack_self
 
         self.module_dirs = module_dirs
         self.tag = tag
@@ -1281,10 +1395,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         to last-minute inject globals
         """
         func = super().__getitem__(item)
-        if self.inject_globals:
-            return global_injector_decorator(self.inject_globals)(func)
-        else:
-            return func
+        return LoadedFunc(func, self)
 
     def __getattr__(self, mod_name):
         """
@@ -1309,7 +1420,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 if self._load_module(name) and mod_name in self.loaded_modules:
                     break
         if mod_name in self.loaded_modules:
-            return self.loaded_modules[mod_name]
+            return LoadedMod(self.loaded_modules[mod_name], self)
         else:
             raise AttributeError(mod_name)
 
@@ -1465,7 +1576,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                                 self.file_mapping[f_noext][0],
                             )
 
-                        if six.PY3 and ext == ".pyc" and curr_ext == ".pyc":
+                        if ext == ".pyc" and curr_ext == ".pyc":
                             # Check the optimization level
                             if opt_index >= curr_opt_index:
                                 # Module name match, but a higher-priority
@@ -1478,7 +1589,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                             # exists, so skip this.
                             continue
 
-                    if six.PY3 and not dirname and ext == ".pyc":
+                    if not dirname and ext == ".pyc":
                         # On Python 3, we should only load .pyc files from the
                         # __pycache__ subdirectory (i.e. when dirname is not an
                         # empty string).
@@ -1513,13 +1624,19 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         Strip out of the opts any logger instance
         """
         if "__grains__" not in self.pack:
-            self.context_dict["grains"] = opts.get("grains", {})
+            grains = opts.get("grains", {})
+            if isinstance(grains, salt.loader_context.NamedLoaderContext):
+                grains = grains.value()
+            self.context_dict["grains"] = grains
             self.pack["__grains__"] = salt.utils.context.NamespacedDictWrapper(
                 self.context_dict, "grains"
             )
 
         if "__pillar__" not in self.pack:
-            self.context_dict["pillar"] = opts.get("pillar", {})
+            pillar = opts.get("pillar", {})
+            if isinstance(pillar, salt.loader_context.NamedLoaderContext):
+                pillar = pillar.value()
+            self.context_dict["pillar"] = pillar
             self.pack["__pillar__"] = salt.utils.context.NamespacedDictWrapper(
                 self.context_dict, "pillar"
             )
@@ -1560,7 +1677,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         for submodule in submodules:
             # it is a submodule if the name is in a namespace under mod
             if submodule.__name__.startswith(mod.__name__ + "."):
-                reload_module(submodule)
+                importlib.reload(submodule)
                 self._reload_submodules(submodule)
 
     def __populate_sys_path(self):
@@ -1704,7 +1821,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                     # loading using exec_module has been causing odd things
                     # with the magic dunders we pack into the loaded
                     # modules, most notably with salt-ssh's __opts__.
-                    mod = spec.loader.load_module()
+                    mod = self.run(spec.loader.load_module)
                     # mod = importlib.util.module_from_spec(spec)
                     # spec.loader.exec_module(mod)
                     # pylint: enable=no-member
@@ -1737,12 +1854,17 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             except Exception:  # pylint: disable=broad-except
                 pass
             else:
-                tgt_fn = os.path.join("salt", "utils", "process.py")
-                if fn_.endswith(tgt_fn) and "_handle_signals" in caller:
-                    # Race conditon, SIGTERM or SIGINT received while loader
-                    # was in process of loading a module. Call sys.exit to
-                    # ensure that the process is killed.
-                    sys.exit(salt.defaults.exitcodes.EX_OK)
+                tgt_fns = [
+                    os.path.join("salt", "utils", "process.py"),
+                    os.path.join("salt", "cli", "daemons.py"),
+                    os.path.join("salt", "cli", "api.py"),
+                ]
+                for tgt_fn in tgt_fns:
+                    if fn_.endswith(tgt_fn) and "_handle_signals" in caller:
+                        # Race conditon, SIGTERM or SIGINT received while loader
+                        # was in process of loading a module. Call sys.exit to
+                        # ensure that the process is killed.
+                        sys.exit(salt.defaults.exitcodes.EX_OK)
             log.error(
                 "Failed to import %s %s as the module called exit()\n",
                 self.tag,
@@ -1755,14 +1877,56 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             sys.path.remove(fpath_dirname)
             self.__clean_sys_path()
 
-        if hasattr(mod, "__opts__"):
-            mod.__opts__.update(self.opts)
+        loader_context = salt.loader_context.LoaderContext()
+        if hasattr(mod, "__salt_loader__"):
+            if not isinstance(mod.__salt_loader__, salt.loader_context.LoaderContext):
+                log.warning("Override  __salt_loader__: %s", mod)
+                mod.__salt_loader__ = loader_context
         else:
-            mod.__opts__ = self.opts
+            mod.__salt_loader__ = loader_context
+
+        if hasattr(mod, "__opts__"):
+            if not isinstance(mod.__opts__, salt.loader_context.NamedLoaderContext):
+                if not hasattr(mod, "__orig_opts__"):
+                    mod.__orig_opts__ = copy.deepcopy(mod.__opts__)
+                mod.__opts__ = copy.deepcopy(mod.__orig_opts__)
+                mod.__opts__.update(self.opts)
+        else:
+            if not hasattr(mod, "__orig_opts__"):
+                mod.__orig_opts__ = {}
+            mod.__opts__ = copy.deepcopy(mod.__orig_opts__)
+            mod.__opts__.update(self.opts)
 
         # pack whatever other globals we were asked to
         for p_name, p_value in self.pack.items():
-            setattr(mod, p_name, p_value)
+            mod_named_context = getattr(mod, p_name, None)
+            if hasattr(mod_named_context, "default"):
+                default = copy.deepcopy(mod_named_context.default)
+            else:
+                default = None
+            named_context = loader_context.named_context(p_name, default)
+            if mod_named_context is None:
+                setattr(mod, p_name, named_context)
+            elif named_context != mod_named_context:
+                log.debug("Override  %s: %s", p_name, mod)
+                setattr(mod, p_name, named_context)
+            else:
+                setattr(mod, p_name, named_context)
+
+        if self.pack_self is not None:
+            mod_named_context = getattr(mod, self.pack_self, None)
+            if hasattr(mod_named_context, "default"):
+                default = copy.deepcopy(mod_named_context.default)
+            else:
+                default = None
+            named_context = loader_context.named_context(self.pack_self, default)
+            if mod_named_context is None:
+                setattr(mod, self.pack_self, named_context)
+            elif named_context != mod_named_context:
+                log.debug("Override  %s: %s", self.pack_self, mod)
+                setattr(mod, self.pack_self, named_context)
+            else:
+                setattr(mod, self.pack_self, named_context)
 
         module_name = mod.__name__.rsplit(".", 1)[-1]
 
@@ -1770,7 +1934,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         module_init = getattr(mod, "__init__", None)
         if inspect.isfunction(module_init):
             try:
-                module_init(self.opts)
+                self.run(module_init, self.opts)
             except TypeError as e:
                 log.error(e)
             except Exception:  # pylint: disable=broad-except
@@ -1999,7 +2163,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             if hasattr(mod, "__virtual__") and inspect.isfunction(mod.__virtual__):
                 try:
                     start = time.time()
-                    virtual = getattr(mod, virtual_func)()
+                    virtual_attr = getattr(mod, virtual_func)
+                    virtual = self.run(virtual_attr)
                     if isinstance(virtual, tuple):
                         error_reason = virtual[1]
                         virtual = virtual[0]
@@ -2089,6 +2254,45 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
         return (True, module_name, None, virtual_aliases)
 
+    def run(self, _func_or_method, *args, **kwargs):
+        """
+        Run the `_func_or_method` in this loader's context
+        """
+        self._last_context = contextvars.copy_context()
+        return self._last_context.run(self._run_as, _func_or_method, *args, **kwargs)
+
+    def _run_as(self, _func_or_method, *args, **kwargs):
+        """
+        Handle setting up the context properly and call the method
+        """
+        self.parent_loader = None
+        try:
+            current_loader = salt.loader_context.loader_ctxvar.get()
+        except LookupError:
+            current_loader = None
+        if current_loader is not self:
+            self.parent_loader = current_loader
+        token = salt.loader_context.loader_ctxvar.set(self)
+        try:
+            return _func_or_method(*args, **kwargs)
+        finally:
+            self.parent_loader = None
+            salt.loader_context.loader_ctxvar.reset(token)
+
+    def run_in_thread(self, _func_or_method, *args, **kwargs):
+        """
+        Run the function in a new thread with the context of this loader
+        """
+        argslist = [self, _func_or_method]
+        argslist.extend(args)
+        thread = threading.Thread(target=self.target, args=argslist, kwargs=kwargs)
+        thread.start()
+        return thread
+
+    @staticmethod
+    def target(loader, _func_or_method, *args, **kwargs):
+        loader.run(_func_or_method, *args, **kwargs)
+
 
 def global_injector_decorator(inject_globals):
     """
@@ -2108,3 +2312,20 @@ def global_injector_decorator(inject_globals):
         return wrapper
 
     return inner_decorator
+
+
+@contextmanager
+def catch_entry_points_exception(entry_point):
+    context = types.SimpleNamespace(exception_caught=False)
+    try:
+        yield context
+    except Exception as exc:  # pylint: disable=broad-except
+        context.exception_caught = True
+        entry_point_details = entrypoints.name_and_version_from_entry_point(entry_point)
+        log.error(
+            "Error processing Salt Extension %s(version: %s): %s",
+            entry_point_details.name,
+            entry_point_details.version,
+            exc,
+            exc_info_on_loglevel=logging.DEBUG,
+        )

@@ -1,17 +1,10 @@
-# -*- coding: utf-8 -*-
 """
     Beacon to manage and report the status of
     one or more salt proxy processes
 
     .. versionadded:: 2015.8.3
 """
-
-# Import python libs
-from __future__ import absolute_import, unicode_literals
-
 import logging
-
-from salt.ext.six.moves import map
 
 log = logging.getLogger(__name__)
 
@@ -27,9 +20,9 @@ def _run_proxy_processes(proxies):
         result = {}
         if not __salt__["salt_proxy.is_running"](proxy)["result"]:
             __salt__["salt_proxy.configure_proxy"](proxy, start=True)
-            result[proxy] = "Proxy {0} was started".format(proxy)
+            result[proxy] = "Proxy {} was started".format(proxy)
         else:
-            msg = "Proxy {0} is already running".format(proxy)
+            msg = "Proxy {} is already running".format(proxy)
             result[proxy] = msg
             log.debug(msg)
         ret.append(result)

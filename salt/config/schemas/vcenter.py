@@ -8,7 +8,6 @@
     VCenter configuration schemas
 """
 
-
 from salt.utils.schema import ArrayItem, BooleanItem, IntegerItem, Schema, StringItem
 
 

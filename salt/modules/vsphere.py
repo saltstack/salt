@@ -351,7 +351,7 @@ def _get_proxy_connection_details():
     return tuple(proxy_details)
 
 
-def supports_proxies(*proxy_types):
+def _supports_proxies(*proxy_types):
     """
     Decorator to specify which proxy types are supported by a function
 
@@ -359,9 +359,9 @@ def supports_proxies(*proxy_types):
         Arbitrary list of strings with the supported types of proxies
     """
 
-    def _supports_proxies(fn):
+    def _supports_proxies_(fn):
         @wraps(fn)
-        def __supports_proxies(*args, **kwargs):
+        def __supports_proxies_(*args, **kwargs):
             proxy_type = get_proxy_type()
             if proxy_type not in proxy_types:
                 raise CommandExecutionError(
@@ -370,12 +370,12 @@ def supports_proxies(*proxy_types):
                 )
             return fn(*args, **salt.utils.args.clean_kwargs(**kwargs))
 
-        return __supports_proxies
+        return __supports_proxies_
 
-    return _supports_proxies
+    return _supports_proxies_
 
 
-def gets_service_instance_via_proxy(fn):
+def _gets_service_instance_via_proxy(fn):
     """
     Decorator that connects to a target system (vCenter or ESXi host) using the
     proxy details and passes the connection (vim.ServiceInstance) to
@@ -391,9 +391,6 @@ def gets_service_instance_via_proxy(fn):
         3. If the ``service_instance`` parameter in not defined, the
         connection is created using the proxy details and the service instance
         is returned.
-
-    CLI Example:
-        None, this is a decorator
     """
     fn_name = fn.__name__
     (
@@ -405,7 +402,7 @@ def gets_service_instance_via_proxy(fn):
     default_values = default_values if default_values is not None else []
 
     @wraps(fn)
-    def _gets_service_instance_via_proxy(*args, **kwargs):
+    def _gets_service_instance_via_proxy_(*args, **kwargs):
         if "service_instance" not in arg_names and not kwargs_name:
             raise CommandExecutionError(
                 "Function {} must have either a 'service_instance', or a "
@@ -468,11 +465,11 @@ def gets_service_instance_via_proxy(fn):
             # raise original exception and traceback
             raise
 
-    return _gets_service_instance_via_proxy
+    return _gets_service_instance_via_proxy_
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies("esxi", "esxcluster", "esxdatacenter", "vcenter", "esxvm")
+@_supports_proxies("esxi", "esxcluster", "esxdatacenter", "vcenter", "esxvm")
 def get_service_instance_via_proxy(service_instance=None):
     """
     Returns a service instance to the proxied endpoint (vCenter/ESXi host).
@@ -485,6 +482,7 @@ def get_service_instance_via_proxy(service_instance=None):
         Should be used by state functions not invoked directly.
 
     CLI Example:
+
         See note above
     """
     connection_details = _get_proxy_connection_details()
@@ -494,7 +492,7 @@ def get_service_instance_via_proxy(service_instance=None):
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies("esxi", "esxcluster", "esxdatacenter", "vcenter", "esxvm")
+@_supports_proxies("esxi", "esxcluster", "esxdatacenter", "vcenter", "esxvm")
 def disconnect(service_instance):
     """
     Disconnects from a vCenter or ESXi host
@@ -2387,8 +2385,8 @@ def get_vsan_eligible_disks(
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies("esxi", "esxcluster", "esxdatacenter", "vcenter", "esxvm")
-@gets_service_instance_via_proxy
+@_supports_proxies("esxi", "esxcluster", "esxdatacenter", "vcenter", "esxvm")
+@_gets_service_instance_via_proxy
 def test_vcenter_connection(service_instance=None):
     """
     Checks if a connection is to a vCenter
@@ -4526,8 +4524,8 @@ def _get_dvs_infrastructure_traffic_resources(dvs_name, dvs_infra_traffic_ress):
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies("esxdatacenter", "esxcluster")
-@gets_service_instance_via_proxy
+@_supports_proxies("esxdatacenter", "esxcluster")
+@_gets_service_instance_via_proxy
 def list_dvss(datacenter=None, dvs_names=None, service_instance=None):
     """
     Returns a list of distributed virtual switches (DVSs).
@@ -4733,8 +4731,8 @@ def _apply_dvs_network_resource_pools(network_resource_pools, resource_dicts):
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies("esxdatacenter", "esxcluster")
-@gets_service_instance_via_proxy
+@_supports_proxies("esxdatacenter", "esxcluster")
+@_gets_service_instance_via_proxy
 def create_dvs(dvs_dict, dvs_name, service_instance=None):
     """
     Creates a distributed virtual switch (DVS).
@@ -4806,8 +4804,8 @@ def create_dvs(dvs_dict, dvs_name, service_instance=None):
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies("esxdatacenter", "esxcluster")
-@gets_service_instance_via_proxy
+@_supports_proxies("esxdatacenter", "esxcluster")
+@_gets_service_instance_via_proxy
 def update_dvs(dvs_dict, dvs, service_instance=None):
     """
     Updates a distributed virtual switch (DVS).
@@ -5032,8 +5030,8 @@ def _get_dvportgroup_dict(pg_ref):
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies("esxdatacenter", "esxcluster")
-@gets_service_instance_via_proxy
+@_supports_proxies("esxdatacenter", "esxcluster")
+@_gets_service_instance_via_proxy
 def list_dvportgroups(dvs=None, portgroup_names=None, service_instance=None):
     """
     Returns a list of distributed virtual switch portgroups.
@@ -5089,8 +5087,8 @@ def list_dvportgroups(dvs=None, portgroup_names=None, service_instance=None):
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies("esxdatacenter", "esxcluster")
-@gets_service_instance_via_proxy
+@_supports_proxies("esxdatacenter", "esxcluster")
+@_gets_service_instance_via_proxy
 def list_uplink_dvportgroup(dvs, service_instance=None):
     """
     Returns the uplink portgroup of a distributed virtual switch.
@@ -5304,8 +5302,8 @@ def _apply_dvportgroup_config(pg_name, pg_spec, pg_conf):
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies("esxdatacenter", "esxcluster")
-@gets_service_instance_via_proxy
+@_supports_proxies("esxdatacenter", "esxcluster")
+@_gets_service_instance_via_proxy
 def create_dvportgroup(portgroup_dict, portgroup_name, dvs, service_instance=None):
     """
     Creates a distributed virtual portgroup.
@@ -5355,8 +5353,8 @@ def create_dvportgroup(portgroup_dict, portgroup_name, dvs, service_instance=Non
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies("esxdatacenter", "esxcluster")
-@gets_service_instance_via_proxy
+@_supports_proxies("esxdatacenter", "esxcluster")
+@_gets_service_instance_via_proxy
 def update_dvportgroup(portgroup_dict, portgroup, dvs, service_instance=True):
     """
     Updates a distributed virtual portgroup.
@@ -5429,8 +5427,8 @@ def update_dvportgroup(portgroup_dict, portgroup, dvs, service_instance=True):
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies("esxdatacenter", "esxcluster")
-@gets_service_instance_via_proxy
+@_supports_proxies("esxdatacenter", "esxcluster")
+@_gets_service_instance_via_proxy
 def remove_dvportgroup(portgroup, dvs, service_instance=None):
     """
     Removes a distributed virtual portgroup.
@@ -5508,8 +5506,8 @@ def _get_policy_dict(policy):
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies("esxdatacenter", "vcenter")
-@gets_service_instance_via_proxy
+@_supports_proxies("esxdatacenter", "vcenter")
+@_gets_service_instance_via_proxy
 def list_storage_policies(policy_names=None, service_instance=None):
     """
     Returns a list of storage policies.
@@ -5539,8 +5537,8 @@ def list_storage_policies(policy_names=None, service_instance=None):
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies("esxdatacenter", "vcenter")
-@gets_service_instance_via_proxy
+@_supports_proxies("esxdatacenter", "vcenter")
+@_gets_service_instance_via_proxy
 def list_default_vsan_policy(service_instance=None):
     """
     Returns the default vsan storage policy.
@@ -5581,8 +5579,8 @@ def _get_capability_definition_dict(cap_metadata):
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies("esxdatacenter", "vcenter")
-@gets_service_instance_via_proxy
+@_supports_proxies("esxdatacenter", "vcenter")
+@_gets_service_instance_via_proxy
 def list_capability_definitions(service_instance=None):
     """
     Returns a list of the metadata of all capabilities in the vCenter.
@@ -5654,8 +5652,8 @@ def _apply_policy_config(policy_spec, policy_dict):
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies("esxdatacenter", "vcenter")
-@gets_service_instance_via_proxy
+@_supports_proxies("esxdatacenter", "vcenter")
+@_gets_service_instance_via_proxy
 def create_storage_policy(policy_name, policy_dict, service_instance=None):
     """
     Creates a storage policy.
@@ -5698,8 +5696,8 @@ def create_storage_policy(policy_name, policy_dict, service_instance=None):
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies("esxdatacenter", "vcenter")
-@gets_service_instance_via_proxy
+@_supports_proxies("esxdatacenter", "vcenter")
+@_gets_service_instance_via_proxy
 def update_storage_policy(policy, policy_dict, service_instance=None):
     """
     Updates a storage policy.
@@ -5740,8 +5738,8 @@ def update_storage_policy(policy, policy_dict, service_instance=None):
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies("esxcluster", "esxdatacenter", "vcenter")
-@gets_service_instance_via_proxy
+@_supports_proxies("esxcluster", "esxdatacenter", "vcenter")
+@_gets_service_instance_via_proxy
 def list_default_storage_policy_of_datastore(datastore, service_instance=None):
     """
     Returns a list of datastores assign the storage policies.
@@ -5779,8 +5777,8 @@ def list_default_storage_policy_of_datastore(datastore, service_instance=None):
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies("esxcluster", "esxdatacenter", "vcenter")
-@gets_service_instance_via_proxy
+@_supports_proxies("esxcluster", "esxdatacenter", "vcenter")
+@_gets_service_instance_via_proxy
 def assign_default_storage_policy_to_datastore(
     policy, datastore, service_instance=None
 ):
@@ -5828,8 +5826,8 @@ def assign_default_storage_policy_to_datastore(
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies("esxdatacenter", "esxcluster", "vcenter", "esxvm")
-@gets_service_instance_via_proxy
+@_supports_proxies("esxdatacenter", "esxcluster", "vcenter", "esxvm")
+@_gets_service_instance_via_proxy
 def list_datacenters_via_proxy(datacenter_names=None, service_instance=None):
     """
     Returns a list of dict representations of VMware datacenters.
@@ -5869,8 +5867,8 @@ def list_datacenters_via_proxy(datacenter_names=None, service_instance=None):
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies("esxdatacenter", "vcenter")
-@gets_service_instance_via_proxy
+@_supports_proxies("esxdatacenter", "vcenter")
+@_gets_service_instance_via_proxy
 def create_datacenter(datacenter_name, service_instance=None):
     """
     Creates a datacenter.
@@ -5983,8 +5981,8 @@ def _get_cluster_dict(cluster_name, cluster_ref):
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies("esxcluster", "esxdatacenter")
-@gets_service_instance_via_proxy
+@_supports_proxies("esxcluster", "esxdatacenter")
+@_gets_service_instance_via_proxy
 def list_cluster(datacenter=None, cluster=None, service_instance=None):
     """
     Returns a dict representation of an ESX cluster.
@@ -6157,8 +6155,8 @@ def _apply_cluster_dict(cluster_spec, cluster_dict, vsan_spec=None, vsan_61=True
 
 @depends(HAS_PYVMOMI)
 @depends(HAS_JSONSCHEMA)
-@supports_proxies("esxcluster", "esxdatacenter")
-@gets_service_instance_via_proxy
+@_supports_proxies("esxcluster", "esxdatacenter")
+@_gets_service_instance_via_proxy
 def create_cluster(cluster_dict, datacenter=None, cluster=None, service_instance=None):
     """
     Creates a cluster.
@@ -6254,8 +6252,8 @@ def create_cluster(cluster_dict, datacenter=None, cluster=None, service_instance
 
 @depends(HAS_PYVMOMI)
 @depends(HAS_JSONSCHEMA)
-@supports_proxies("esxcluster", "esxdatacenter")
-@gets_service_instance_via_proxy
+@_supports_proxies("esxcluster", "esxdatacenter")
+@_gets_service_instance_via_proxy
 def update_cluster(cluster_dict, datacenter=None, cluster=None, service_instance=None):
     """
     Updates a cluster.
@@ -6368,8 +6366,8 @@ def update_cluster(cluster_dict, datacenter=None, cluster=None, service_instance
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies("esxi", "esxcluster", "esxdatacenter")
-@gets_service_instance_via_proxy
+@_supports_proxies("esxi", "esxcluster", "esxdatacenter")
+@_gets_service_instance_via_proxy
 def list_datastores_via_proxy(
     datastore_names=None,
     backing_disk_ids=None,
@@ -6469,8 +6467,8 @@ def list_datastores_via_proxy(
 
 @depends(HAS_PYVMOMI)
 @depends(HAS_JSONSCHEMA)
-@supports_proxies("esxi")
-@gets_service_instance_via_proxy
+@_supports_proxies("esxi")
+@_gets_service_instance_via_proxy
 def create_vmfs_datastore(
     datastore_name,
     disk_id,
@@ -6533,8 +6531,8 @@ def create_vmfs_datastore(
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies("esxi", "esxcluster", "esxdatacenter")
-@gets_service_instance_via_proxy
+@_supports_proxies("esxi", "esxcluster", "esxdatacenter")
+@_gets_service_instance_via_proxy
 def rename_datastore(datastore_name, new_datastore_name, service_instance=None):
     """
     Renames a datastore. The datastore needs to be visible to the proxy.
@@ -6571,8 +6569,8 @@ def rename_datastore(datastore_name, new_datastore_name, service_instance=None):
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies("esxi", "esxcluster", "esxdatacenter")
-@gets_service_instance_via_proxy
+@_supports_proxies("esxi", "esxcluster", "esxdatacenter")
+@_gets_service_instance_via_proxy
 def remove_datastore(datastore, service_instance=None):
     """
     Removes a datastore. If multiple datastores an error is raised.
@@ -6606,8 +6604,8 @@ def remove_datastore(datastore, service_instance=None):
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies("esxcluster", "esxdatacenter")
-@gets_service_instance_via_proxy
+@_supports_proxies("esxcluster", "esxdatacenter")
+@_gets_service_instance_via_proxy
 def list_licenses(service_instance=None):
     """
     Lists all licenses on a vCenter.
@@ -6637,8 +6635,8 @@ def list_licenses(service_instance=None):
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies("esxcluster", "esxdatacenter")
-@gets_service_instance_via_proxy
+@_supports_proxies("esxcluster", "esxdatacenter")
+@_gets_service_instance_via_proxy
 def add_license(key, description, safety_checks=True, service_instance=None):
     """
     Adds a license to the vCenter or ESXi host
@@ -6727,8 +6725,8 @@ def _validate_entity(entity):
 
 @depends(HAS_PYVMOMI)
 @depends(HAS_JSONSCHEMA)
-@supports_proxies("esxcluster", "esxdatacenter")
-@gets_service_instance_via_proxy
+@_supports_proxies("esxcluster", "esxdatacenter")
+@_gets_service_instance_via_proxy
 def list_assigned_licenses(
     entity, entity_display_name, license_keys=None, service_instance=None
 ):
@@ -6779,8 +6777,8 @@ def list_assigned_licenses(
 
 @depends(HAS_PYVMOMI)
 @depends(HAS_JSONSCHEMA)
-@supports_proxies("esxcluster", "esxdatacenter")
-@gets_service_instance_via_proxy
+@_supports_proxies("esxcluster", "esxdatacenter")
+@_gets_service_instance_via_proxy
 def assign_license(
     license_key,
     license_name,
@@ -6836,8 +6834,8 @@ def assign_license(
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies("esxi", "esxcluster", "esxdatacenter", "vcenter")
-@gets_service_instance_via_proxy
+@_supports_proxies("esxi", "esxcluster", "esxdatacenter", "vcenter")
+@_gets_service_instance_via_proxy
 def list_hosts_via_proxy(
     hostnames=None, datacenter=None, cluster=None, service_instance=None
 ):
@@ -6890,8 +6888,8 @@ def list_hosts_via_proxy(
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies("esxi")
-@gets_service_instance_via_proxy
+@_supports_proxies("esxi")
+@_gets_service_instance_via_proxy
 def list_disks(disk_ids=None, scsi_addresses=None, service_instance=None):
     """
     Returns a list of dict representations of the disks in an ESXi host.
@@ -6945,8 +6943,8 @@ def list_disks(disk_ids=None, scsi_addresses=None, service_instance=None):
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies("esxi")
-@gets_service_instance_via_proxy
+@_supports_proxies("esxi")
+@_gets_service_instance_via_proxy
 def erase_disk_partitions(disk_id=None, scsi_address=None, service_instance=None):
     """
     Erases the partitions on a disk.
@@ -7004,8 +7002,8 @@ def erase_disk_partitions(disk_id=None, scsi_address=None, service_instance=None
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies("esxi")
-@gets_service_instance_via_proxy
+@_supports_proxies("esxi")
+@_gets_service_instance_via_proxy
 def list_disk_partitions(disk_id=None, scsi_address=None, service_instance=None):
     """
     Lists the partitions on a disk.
@@ -7079,8 +7077,8 @@ def list_disk_partitions(disk_id=None, scsi_address=None, service_instance=None)
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies("esxi")
-@gets_service_instance_via_proxy
+@_supports_proxies("esxi")
+@_gets_service_instance_via_proxy
 def list_diskgroups(cache_disk_ids=None, service_instance=None):
     """
     Returns a list of disk group dict representation on an ESXi host.
@@ -7124,8 +7122,8 @@ def list_diskgroups(cache_disk_ids=None, service_instance=None):
 
 @depends(HAS_PYVMOMI)
 @depends(HAS_JSONSCHEMA)
-@supports_proxies("esxi")
-@gets_service_instance_via_proxy
+@_supports_proxies("esxi")
+@_gets_service_instance_via_proxy
 def create_diskgroup(
     cache_disk_id, capacity_disk_ids, safety_checks=True, service_instance=None
 ):
@@ -7198,8 +7196,8 @@ def create_diskgroup(
 
 @depends(HAS_PYVMOMI)
 @depends(HAS_JSONSCHEMA)
-@supports_proxies("esxi")
-@gets_service_instance_via_proxy
+@_supports_proxies("esxi")
+@_gets_service_instance_via_proxy
 def add_capacity_to_diskgroup(
     cache_disk_id, capacity_disk_ids, safety_checks=True, service_instance=None
 ):
@@ -7268,8 +7266,8 @@ def add_capacity_to_diskgroup(
 
 @depends(HAS_PYVMOMI)
 @depends(HAS_JSONSCHEMA)
-@supports_proxies("esxi")
-@gets_service_instance_via_proxy
+@_supports_proxies("esxi")
+@_gets_service_instance_via_proxy
 def remove_capacity_from_diskgroup(
     cache_disk_id,
     capacity_disk_ids,
@@ -7348,8 +7346,8 @@ def remove_capacity_from_diskgroup(
 
 @depends(HAS_PYVMOMI)
 @depends(HAS_JSONSCHEMA)
-@supports_proxies("esxi")
-@gets_service_instance_via_proxy
+@_supports_proxies("esxi")
+@_gets_service_instance_via_proxy
 def remove_diskgroup(cache_disk_id, data_accessibility=True, service_instance=None):
     """
     Remove the diskgroup with the specified cache disk.
@@ -7387,8 +7385,8 @@ def remove_diskgroup(cache_disk_id, data_accessibility=True, service_instance=No
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies("esxi")
-@gets_service_instance_via_proxy
+@_supports_proxies("esxi")
+@_gets_service_instance_via_proxy
 def get_host_cache(service_instance=None):
     """
     Returns the host cache configuration on the proxy host.
@@ -7421,8 +7419,8 @@ def get_host_cache(service_instance=None):
 
 @depends(HAS_PYVMOMI)
 @depends(HAS_JSONSCHEMA)
-@supports_proxies("esxi")
-@gets_service_instance_via_proxy
+@_supports_proxies("esxi")
+@_gets_service_instance_via_proxy
 def configure_host_cache(
     enabled, datastore=None, swap_size_MiB=None, service_instance=None
 ):
@@ -8203,7 +8201,7 @@ def add_host_to_dvs(
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies("esxi", "esxcluster", "esxdatacenter", "vcenter")
+@_supports_proxies("esxi", "esxcluster", "esxdatacenter", "vcenter")
 def _get_proxy_target(service_instance):
     """
     Returns the target object of a proxy.
@@ -8334,7 +8332,7 @@ def _get_esxi_proxy_details():
 
 
 @depends(HAS_PYVMOMI)
-@gets_service_instance_via_proxy
+@_gets_service_instance_via_proxy
 def get_vm(
     name,
     datacenter=None,
@@ -8377,7 +8375,7 @@ def get_vm(
 
 
 @depends(HAS_PYVMOMI)
-@gets_service_instance_via_proxy
+@_gets_service_instance_via_proxy
 def get_vm_config_file(name, datacenter, placement, datastore, service_instance=None):
     """
     Queries the virtual machine config file and returns
@@ -8514,8 +8512,8 @@ def _apply_memory_config(config_spec, memory):
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies("esxvm", "esxcluster", "esxdatacenter")
-@gets_service_instance_via_proxy
+@_supports_proxies("esxvm", "esxcluster", "esxdatacenter")
+@_gets_service_instance_via_proxy
 def get_advanced_configs(vm_name, datacenter, service_instance=None):
     """
     Returns extra config parameters from a virtual machine advanced config list
@@ -8567,8 +8565,8 @@ def _apply_advanced_config(config_spec, advanced_config, vm_extra_config=None):
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies("esxvm", "esxcluster", "esxdatacenter")
-@gets_service_instance_via_proxy
+@_supports_proxies("esxvm", "esxcluster", "esxdatacenter")
+@_gets_service_instance_via_proxy
 def set_advanced_configs(vm_name, datacenter, advanced_configs, service_instance=None):
     """
     Appends extra config parameters to a virtual machine advanced config list
@@ -8641,8 +8639,8 @@ def _delete_advanced_config(config_spec, advanced_config, vm_extra_config):
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies("esxvm", "esxcluster", "esxdatacenter")
-@gets_service_instance_via_proxy
+@_supports_proxies("esxvm", "esxcluster", "esxdatacenter")
+@_gets_service_instance_via_proxy
 def delete_advanced_configs(
     vm_name, datacenter, advanced_configs, service_instance=None
 ):
@@ -9797,7 +9795,7 @@ def compare_vm_configs(new_config, current_config):
     return diffs
 
 
-@gets_service_instance_via_proxy
+@_gets_service_instance_via_proxy
 def get_vm_config(name, datacenter=None, objects=True, service_instance=None):
     """
     Queries and converts the virtual machine properties to the available format
@@ -10358,8 +10356,8 @@ def _get_client(server, username, password, verify_ssl=None, ca_bundle=None):
 
 
 @depends(HAS_PYVMOMI, HAS_VSPHERE_SDK)
-@supports_proxies("vcenter")
-@gets_service_instance_via_proxy
+@_supports_proxies("vcenter")
+@_gets_service_instance_via_proxy
 def list_tag_categories(
     server=None,
     username=None,
@@ -10403,8 +10401,8 @@ def list_tag_categories(
 
 
 @depends(HAS_PYVMOMI, HAS_VSPHERE_SDK)
-@supports_proxies("vcenter")
-@gets_service_instance_via_proxy
+@_supports_proxies("vcenter")
+@_gets_service_instance_via_proxy
 def list_tags(
     server=None,
     username=None,
@@ -10448,8 +10446,8 @@ def list_tags(
 
 
 @depends(HAS_PYVMOMI, HAS_VSPHERE_SDK)
-@supports_proxies("vcenter")
-@gets_service_instance_via_proxy
+@_supports_proxies("vcenter")
+@_gets_service_instance_via_proxy
 def attach_tag(
     object_id,
     tag_id,
@@ -10533,8 +10531,8 @@ def attach_tag(
 
 
 @depends(HAS_PYVMOMI, HAS_VSPHERE_SDK)
-@supports_proxies("vcenter")
-@gets_service_instance_via_proxy
+@_supports_proxies("vcenter")
+@_gets_service_instance_via_proxy
 def list_attached_tags(
     object_id,
     managed_obj="ClusterComputeResource",
@@ -10605,8 +10603,8 @@ def list_attached_tags(
 
 
 @depends(HAS_PYVMOMI, HAS_VSPHERE_SDK)
-@supports_proxies("vcenter")
-@gets_service_instance_via_proxy
+@_supports_proxies("vcenter")
+@_gets_service_instance_via_proxy
 def create_tag_category(
     name,
     description,
@@ -10686,8 +10684,8 @@ def create_tag_category(
 
 
 @depends(HAS_PYVMOMI, HAS_VSPHERE_SDK)
-@supports_proxies("vcenter")
-@gets_service_instance_via_proxy
+@_supports_proxies("vcenter")
+@_gets_service_instance_via_proxy
 def delete_tag_category(
     category_id,
     server=None,
@@ -10744,8 +10742,8 @@ def delete_tag_category(
 
 
 @depends(HAS_PYVMOMI, HAS_VSPHERE_SDK)
-@supports_proxies("vcenter")
-@gets_service_instance_via_proxy
+@_supports_proxies("vcenter")
+@_gets_service_instance_via_proxy
 def create_tag(
     name,
     description,
@@ -10818,8 +10816,8 @@ def create_tag(
 
 
 @depends(HAS_PYVMOMI, HAS_VSPHERE_SDK)
-@supports_proxies("vcenter")
-@gets_service_instance_via_proxy
+@_supports_proxies("vcenter")
+@_gets_service_instance_via_proxy
 def delete_tag(
     tag_id,
     server=None,
@@ -10877,8 +10875,8 @@ def delete_tag(
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies("esxvm", "esxcluster", "esxdatacenter")
-@gets_service_instance_via_proxy
+@_supports_proxies("esxvm", "esxcluster", "esxdatacenter")
+@_gets_service_instance_via_proxy
 def create_vm(
     vm_name,
     cpu,
@@ -11099,8 +11097,8 @@ def create_vm(
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies("esxvm", "esxcluster", "esxdatacenter")
-@gets_service_instance_via_proxy
+@_supports_proxies("esxvm", "esxcluster", "esxdatacenter")
+@_gets_service_instance_via_proxy
 def update_vm(
     vm_name,
     cpu=None,
@@ -11311,8 +11309,8 @@ def update_vm(
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies("esxvm", "esxcluster", "esxdatacenter")
-@gets_service_instance_via_proxy
+@_supports_proxies("esxvm", "esxcluster", "esxdatacenter")
+@_gets_service_instance_via_proxy
 def register_vm(name, datacenter, placement, vmx_path, service_instance=None):
     """
     Registers a virtual machine to the inventory with the given vmx file.
@@ -11392,8 +11390,8 @@ def register_vm(name, datacenter, placement, vmx_path, service_instance=None):
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies("esxvm", "esxcluster", "esxdatacenter")
-@gets_service_instance_via_proxy
+@_supports_proxies("esxvm", "esxcluster", "esxdatacenter")
+@_gets_service_instance_via_proxy
 def power_on_vm(name, datacenter=None, service_instance=None):
     """
     Powers on a virtual machine specified by its name.
@@ -11433,8 +11431,8 @@ def power_on_vm(name, datacenter=None, service_instance=None):
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies("esxvm", "esxcluster", "esxdatacenter")
-@gets_service_instance_via_proxy
+@_supports_proxies("esxvm", "esxcluster", "esxdatacenter")
+@_gets_service_instance_via_proxy
 def power_off_vm(name, datacenter=None, service_instance=None):
     """
     Powers off a virtual machine specified by its name.
@@ -11517,8 +11515,8 @@ def _remove_vm(name, datacenter, service_instance, placement=None, power_off=Non
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies("esxvm", "esxcluster", "esxdatacenter")
-@gets_service_instance_via_proxy
+@_supports_proxies("esxvm", "esxcluster", "esxdatacenter")
+@_gets_service_instance_via_proxy
 def delete_vm(name, datacenter, placement=None, power_off=False, service_instance=None):
     """
     Deletes a virtual machine defined by name and placement
@@ -11561,8 +11559,8 @@ def delete_vm(name, datacenter, placement=None, power_off=False, service_instanc
 
 
 @depends(HAS_PYVMOMI)
-@supports_proxies("esxvm", "esxcluster", "esxdatacenter")
-@gets_service_instance_via_proxy
+@_supports_proxies("esxvm", "esxcluster", "esxdatacenter")
+@_gets_service_instance_via_proxy
 def unregister_vm(
     name, datacenter, placement=None, power_off=False, service_instance=None
 ):

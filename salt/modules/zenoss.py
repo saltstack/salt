@@ -3,8 +3,6 @@ Module for working with the Zenoss API
 
 .. versionadded:: 2016.3.0
 
-:depends: requests
-
 :configuration: This module requires a 'zenoss' entry in the master/minion config.
 
     For example:
@@ -19,25 +17,11 @@ Module for working with the Zenoss API
           ca_bundle: /etc/ssl/certs/ca-certificates.crt
 """
 
-
 import logging
 import re
 
 import salt.utils.http
 import salt.utils.json
-
-try:
-    import requests  # pylint: disable=unused-import
-
-    HAS_LIBS = True
-except ImportError:
-    HAS_LIBS = False
-
-
-# Disable INFO level logs from requests/urllib3
-urllib3_logger = logging.getLogger("urllib3")
-urllib3_logger.setLevel(logging.WARNING)
-
 
 log = logging.getLogger(__name__)
 
@@ -48,14 +32,7 @@ def __virtual__():
     """
     Only load if requests is installed
     """
-    if HAS_LIBS:
-        return __virtualname__
-    else:
-        return (
-            False,
-            "The '{}' module could not be loaded: "
-            "'requests' is not installed.".format(__virtualname__),
-        )
+    return __virtualname__
 
 
 ROUTERS = {
@@ -130,6 +107,9 @@ def find_device(device=None):
         device:         (Optional) Will use the grain 'fqdn' by default
 
     CLI Example:
+
+    .. code-block:: bash
+
         salt '*' zenoss.find_device
     """
 
@@ -154,6 +134,9 @@ def device_exists(device=None):
         device:         (Optional) Will use the grain 'fqdn' by default
 
     CLI Example:
+
+    .. code-block:: bash
+
         salt '*' zenoss.device_exists
     """
 
@@ -176,6 +159,9 @@ def add_device(device=None, device_class=None, collector="localhost", prod_state
         prod_state:     (Optional) The prodState to set on the device. If none, defaults to 1000 ( production )
 
     CLI Example:
+
+    .. code-block:: bash
+
         salt '*' zenoss.add_device
     """
 
@@ -205,6 +191,9 @@ def set_prod_state(prod_state, device=None):
         device:         (Optional) Will use the grain 'fqdn' by default.
 
     CLI Example:
+
+    .. code-block:: bash
+
         salt zenoss.set_prod_state 1000 hostname
     """
 

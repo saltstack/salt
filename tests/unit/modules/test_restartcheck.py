@@ -4,16 +4,12 @@
 
 import os
 
-# Import Salt Libsrestartcheck
 import salt.modules.restartcheck as restartcheck
 import salt.utils.path
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
-
-# import salt.utils.files
-# from salt.exceptions import CommandExecutionError
 
 
 class RestartcheckTestCase(TestCase, LoaderModuleMockMixin):

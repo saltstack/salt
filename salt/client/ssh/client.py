@@ -1,23 +1,17 @@
-# -*- coding: utf-8 -*-
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import copy
 import logging
 import os
 import random
 
-# Import Salt libs
 import salt.config
-import salt.syspaths as syspaths
+import salt.syspaths
 import salt.utils.args
-from salt.exceptions import SaltClientError  # Temporary
+from salt.exceptions import SaltClientError
 
 log = logging.getLogger(__name__)
 
 
-class SSHClient(object):
+class SSHClient:
     """
     Create a client object for executing routines via the salt-ssh backend
 
@@ -26,7 +20,7 @@ class SSHClient(object):
 
     def __init__(
         self,
-        c_path=os.path.join(syspaths.CONFIG_DIR, "master"),
+        c_path=os.path.join(salt.syspaths.CONFIG_DIR, "master"),
         mopts=None,
         disable_custom_roster=False,
     ):
@@ -62,6 +56,7 @@ class SSHClient(object):
             ("rosters", list),
             ("ignore_host_keys", bool),
             ("raw_shell", bool),
+            ("extra_filerefs", str),
         ]
         sane_kwargs = {}
         for name, kind in roster_vals:
@@ -70,13 +65,13 @@ class SSHClient(object):
             try:
                 val = kind(kwargs[name])
             except ValueError:
-                log.warn("Unable to cast kwarg %s", name)
+                log.warning("Unable to cast kwarg %s", name)
                 continue
             if kind is bool or kind is int:
                 sane_kwargs[name] = val
             elif kind is str:
                 if val.find("ProxyCommand") != -1:
-                    log.warn("Filter unsafe value for kwarg %s", name)
+                    log.warning("Filter unsafe value for kwarg %s", name)
                     continue
                 sane_kwargs[name] = val
             elif kind is list:
@@ -84,7 +79,7 @@ class SSHClient(object):
                 for item in val:
                     # This assumes the values are strings
                     if item.find("ProxyCommand") != -1:
-                        log.warn("Filter unsafe value for kwarg %s", name)
+                        log.warning("Filter unsafe value for kwarg %s", name)
                         continue
                     sane_val.append(item)
                 sane_kwargs[name] = sane_val
@@ -126,8 +121,7 @@ class SSHClient(object):
         .. versionadded:: 2015.5.0
         """
         ssh = self._prep_ssh(tgt, fun, arg, timeout, tgt_type, kwarg, **kwargs)
-        for ret in ssh.run_iter(jid=kwargs.get("jid", None)):
-            yield ret
+        yield from ssh.run_iter(jid=kwargs.get("jid", None))
 
     def cmd(
         self, tgt, fun, arg=(), timeout=None, tgt_type="glob", kwarg=None, **kwargs
@@ -241,3 +235,20 @@ class SSHClient(object):
         return self.cmd_iter(
             f_tgt, fun, arg, timeout, tgt_type="list", ret=ret, kwarg=kwarg, **kwargs
         )
+
+    def destroy(self):
+        """
+        API compatibility method with salt.client.LocalClient
+        """
+
+    def __enter__(self):
+        """
+        API compatibility method with salt.client.LocalClient
+        """
+        return self
+
+    def __exit__(self, *args):
+        """
+        API compatibility method with salt.client.LocalClient
+        """
+        self.destroy()

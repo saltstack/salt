@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 
 Send json response data to Splunk via the HTTP Event Collector
@@ -18,20 +17,13 @@ Run a test by using ``salt-call test.ping --return splunk``
 Written by Scott Pack (github.com/scottjpack)
 
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import socket
 import time
 
 import requests
-
-# Import salt libs
 import salt.utils.json
-
-# Import 3rd-party libs
-from salt.ext import six
 
 _max_content_bytes = 100000
 http_event_collector_debug = False
@@ -88,8 +80,7 @@ def _send_splunk(event, index_override=None, sourcetype_override=None):
     # Get Splunk Options
     opts = _get_options()
     log.info(
-        str("Options: %s"),  # future lint: disable=blacklisted-function
-        salt.utils.json.dumps(opts),
+        "Options: %s", salt.utils.json.dumps(opts),
     )
     http_event_collector_key = opts["token"]
     http_event_collector_host = opts["indexer"]
@@ -116,8 +107,7 @@ def _send_splunk(event, index_override=None, sourcetype_override=None):
     # Add the event
     payload.update({"event": event})
     log.info(
-        str("Payload: %s"),  # future lint: disable=blacklisted-function
-        salt.utils.json.dumps(payload),
+        "Payload: %s", salt.utils.json.dumps(payload),
     )
     # Fire it off
     splunk_event.sendEvent(payload)
@@ -127,7 +117,7 @@ def _send_splunk(event, index_override=None, sourcetype_override=None):
 # Thanks to George Starcher for the http_event_collector class (https://github.com/georgestarcher/)
 
 
-class http_event_collector(object):
+class http_event_collector:
     def __init__(
         self,
         token,
@@ -173,7 +163,7 @@ class http_event_collector(object):
 
         # If eventtime in epoch not passed as optional argument use current system time in epoch
         if not eventtime:
-            eventtime = six.text_type(int(time.time()))
+            eventtime = str(int(time.time()))
 
         # Fill in local hostname if not manually populated
         if "host" not in payload:
@@ -216,7 +206,7 @@ class http_event_collector(object):
 
         # If eventtime in epoch not passed as optional argument use current system time in epoch
         if not eventtime:
-            eventtime = six.text_type(int(time.time()))
+            eventtime = str(int(time.time()))
 
         # Update time value on payload if need to use system time
         data = {"time": eventtime}

@@ -2,7 +2,6 @@
 Execute salt convenience routines
 """
 
-
 import logging
 import os
 
@@ -202,7 +201,7 @@ class Runner(RunnerClient):
             low = {"fun": self.opts["fun"]}
             try:
                 # Allocate a jid
-                async_pub = self._gen_async_pub()
+                async_pub = self._gen_async_pub(jid=self.opts.get("jid"))
                 self.jid = async_pub["jid"]
 
                 fun_args = salt.utils.args.parse_input(
@@ -263,7 +262,7 @@ class Runner(RunnerClient):
                     log.warning(
                         "Running in asynchronous mode. Results of this execution may "
                         "be collected by attaching to the master event bus or "
-                        "by examing the master job cache, if configured. "
+                        "by examining the master job cache, if configured. "
                         "This execution is running under tag %s",
                         async_pub["tag"],
                     )
@@ -279,7 +278,7 @@ class Runner(RunnerClient):
                         outputter = None
                     display_output(ret, outputter, self.opts)
                 else:
-                    ret = self._proc_function_local(
+                    ret = self._proc_function(
                         self.opts["fun"],
                         low,
                         user,

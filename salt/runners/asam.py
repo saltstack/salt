@@ -2,11 +2,11 @@
 Novell ASAM Runner
 ==================
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.8.0
 
 Runner to interact with Novell ASAM Fan-Out Driver
 
-:codeauthor: Nitin Madhok <nmadhok@clemson.edu>
+:codeauthor: Nitin Madhok <nmadhok@g.clemson.edu>
 
 To use this runner, set up the Novell Fan-Out Driver URL, username and password in the
 master configuration at ``/etc/salt/master`` or ``/etc/salt/master.d/asam.conf``:

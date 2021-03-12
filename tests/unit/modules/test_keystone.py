@@ -2,7 +2,6 @@
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
-
 import salt.modules.config as config
 import salt.modules.keystone as keystone
 from tests.support.mixins import LoaderModuleMockMixin

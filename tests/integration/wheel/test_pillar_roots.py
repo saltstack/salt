@@ -14,11 +14,11 @@ class WheelPillarRootsTest(TestCase, AdaptedConfigurationTestCaseMixin):
     def tearDown(self):
         try:
             os.remove(os.path.join(self.pillar_dir, "foo"))
-        except Exception:
+        except OSError:
             pass
         try:
             os.remove(os.path.join(self.traversed_dir, "foo"))
-        except Exception:
+        except OSError:
             pass
         del self.wheel
 

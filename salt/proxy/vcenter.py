@@ -181,7 +181,6 @@ and that host would reach out over the network and communicate with the ESXi
 host.
 """
 
-
 import logging
 import os
 

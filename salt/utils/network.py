@@ -896,15 +896,13 @@ def linux_interfaces():
     ifconfig_path = None if ip_path else salt.utils.path.which("ifconfig")
     if ip_path:
         cmd1 = subprocess.Popen(
-            "{} link show".format(ip_path),
-            shell=True,
+            [ip_path, "link", "show"],
             close_fds=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
         ).communicate()[0]
         cmd2 = subprocess.Popen(
-            "{} addr show".format(ip_path),
-            shell=True,
+            [ip_path, "addr", "show"],
             close_fds=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
@@ -916,10 +914,7 @@ def linux_interfaces():
         )
     elif ifconfig_path:
         cmd = subprocess.Popen(
-            "{} -a".format(ifconfig_path),
-            shell=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
+            [ifconfig_path, "-a"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
         ).communicate()[0]
         ifaces = _interfaces_ifconfig(salt.utils.stringutils.to_str(cmd))
     return ifaces
@@ -985,6 +980,88 @@ def _netbsd_interfaces_ifconfig(out):
     return ret
 
 
+def _junos_interfaces_ifconfig(out):
+    """
+    Uses ifconfig to return a dictionary of interfaces with various information
+    about each (up/down state, ip address, netmask, and hwaddr)
+    """
+    ret = dict()
+
+    piface = re.compile(r"^([^\s:]+)")
+    pmac = re.compile("curr media .*? ([0-9a-f:]+)")
+
+    pip = re.compile(
+        r".*?inet\s*(primary)*\s+mtu (\d+)\s+local=[^\d]*(.*?)\s+dest=[^\d]*(.*?)\/([\d]*)\s+bcast=((?:[0-9]{1,3}\.){3}[0-9]{1,3})"
+    )
+    pip6 = re.compile(
+        r".*?inet6 mtu [^\d]+\s+local=([0-9a-f:]+)%([a-zA-Z0-9]*)/([\d]*)\s"
+    )
+
+    pupdown = re.compile("UP")
+    pbcast = re.compile(r".*?broadcast ([\d\.]+)")
+
+    groups = re.compile("\r?\n(?=\\S)").split(out)
+    for group in groups:
+        data = dict()
+        iface = ""
+        updown = False
+        primary = False
+        for line in group.splitlines():
+            miface = piface.match(line)
+            mmac = pmac.match(line)
+            mip = pip.match(line)
+            mip6 = pip6.match(line)
+            mupdown = pupdown.search(line)
+            if miface:
+                iface = miface.group(1)
+            if mmac:
+                data["hwaddr"] = mmac.group(1)
+            if mip:
+                if "primary" in data:
+                    primary = True
+                if "inet" not in data:
+                    data["inet"] = list()
+                if mip.group(2):
+                    data["mtu"] = int(mip.group(2))
+                addr_obj = dict()
+                addr_obj["address"] = mip.group(3)
+                mmask = mip.group(5)
+                if mip.group(5):
+                    addr_obj["netmask"] = cidr_to_ipv4_netmask(mip.group(5))
+                mbcast = pbcast.match(line)
+                if mbcast:
+                    addr_obj["broadcast"] = mbcast.group(1)
+                data["inet"].append(addr_obj)
+            if mupdown:
+                updown = True
+            if mip6:
+                if "inet6" not in data:
+                    data["inet6"] = list()
+                addr_obj = dict()
+                addr_obj["address"] = mip6.group(1)
+                mmask6 = mip6.group(3)
+                addr_obj["scope"] = mip6.group(2)
+                addr_obj["prefixlen"] = mip6.group(3)
+                data["inet6"].append(addr_obj)
+        data["up"] = updown
+        ret[iface] = data
+        del data
+    return ret
+
+
+def junos_interfaces():
+    """
+    Obtain interface information for Junos; ifconfig
+    output diverged from other BSD variants (Netmask is now part of the
+    address)
+    """
+    ifconfig_path = salt.utils.path.which("ifconfig")
+    cmd = subprocess.Popen(
+        [ifconfig_path, "-a"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+    ).communicate()[0]
+    return _junos_interfaces_ifconfig(salt.utils.stringutils.to_str(cmd))
+
+
 def netbsd_interfaces():
     """
     Obtain interface information for NetBSD >= 8 where the ifconfig
@@ -997,10 +1074,7 @@ def netbsd_interfaces():
 
     ifconfig_path = salt.utils.path.which("ifconfig")
     cmd = subprocess.Popen(
-        "{} -a".format(ifconfig_path),
-        shell=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
+        [ifconfig_path, "-a"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
     ).communicate()[0]
     return _netbsd_interfaces_ifconfig(salt.utils.stringutils.to_str(cmd))
 
@@ -1072,6 +1146,8 @@ def interfaces():
     """
     if salt.utils.platform.is_windows():
         return win_interfaces()
+    elif salt.utils.platform.is_junos():
+        return junos_interfaces()
     elif salt.utils.platform.is_netbsd():
         return netbsd_interfaces()
     else:
@@ -1140,8 +1216,10 @@ def _hw_addr_aix(iface):
     MAC address not available in through interfaces
     """
     cmd = subprocess.Popen(
-        "entstat -d {} | grep 'Hardware Address'".format(iface),
-        shell=True,
+        ["grep", "Hardware Address"],
+        stdin=subprocess.Popen(
+            ["entstat", "-d", iface], stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+        ).stdout,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
     ).communicate()[0]
