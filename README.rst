@@ -10,6 +10,10 @@
    :alt: PyPi Package Downloads
    :target: https://lgtm.com/projects/g/saltstack/salt/context:python
 
+.. image:: https://codecov.io/gh/saltstack/salt/branch/master/graph/badge.svg
+   :alt: Codecov Code Coverage Metrics
+   :target: https://codecov.io/gh/saltstack/salt
+
 .. image:: https://img.shields.io/badge/slack-@saltstackcommunity-blue.svg?logo=slack
    :alt: Salt Project Slack Community
    :target: https://saltstackcommunity.herokuapp.com/
