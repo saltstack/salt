@@ -411,7 +411,7 @@ def test_setup_install(virtualenv, cache_dir, use_static_requirements, src_dir):
             "setup.py",
             "install",
             "--prefix",
-            venv.venv_dir,
+            str(venv.venv_dir),
             cwd=src_dir,
         )
 
