@@ -80,8 +80,11 @@ def get_enabled():
     """
     prefix = "/etc/rc[S{}].d/S".format(_get_runlevel())
     ret = set()
-    for line in [x.rsplit(os.sep, 1)[-1] for x in glob.glob("{}*".format(prefix))]:
-        ret.add(re.split(r"\d+", line)[-1])
+    rc_started = re.compile(r"S\d{2}(.*)")
+    for rc_filename in glob.glob("{}*".format(prefix)):
+        check_rc = rc_started.match(os.path.basename(rc_filename))
+        if check_rc:
+            ret.add(check_rc.group(1))
     return sorted(ret)
 
 
