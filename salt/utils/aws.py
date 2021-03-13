@@ -87,13 +87,16 @@ def creds(provider):
     ## if needed
     if provider["id"] == IROLE_CODE or provider["key"] == IROLE_CODE:
         # Check to see if we have cache credentials that are still good
-        if not __Expiration__ or __Expiration__ < datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"):
+        if not __Expiration__ or __Expiration__ < datetime.utcnow().strftime(
+            "%Y-%m-%dT%H:%M:%SZ"
+        ):            
             # We don't have any cached credentials, or they are expired, get them
             # Connections to instance meta-data must fail fast and never be proxied
             try:
                 result = requests.get(
                     "http://169.254.169.254/latest/meta-data/iam/security-credentials/",
-                    proxies={"http": ""}, timeout=AWS_METADATA_TIMEOUT,
+                    proxies={"http": ""},
+                    timeout=AWS_METADATA_TIMEOUT,
                 )
                 result.raise_for_status()
                 role = result.text
@@ -102,8 +105,11 @@ def creds(provider):
 
             try:
                 result = requests.get(
-                    "http://169.254.169.254/latest/meta-data/iam/security-credentials/{0}".format(role),
-                    proxies={"http": ""}, timeout=AWS_METADATA_TIMEOUT,
+                    "http://169.254.169.254/latest/meta-data/iam/security-credentials/{}".format(
+                        role
+                    ),
+                    proxies={"http": ""},
+                    timeout=AWS_METADATA_TIMEOUT,
                 )
                 result.raise_for_status()
             except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError):
