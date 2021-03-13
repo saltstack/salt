@@ -262,7 +262,7 @@ group <https://github.com/saltstack/docs-hub>`__ and the `testing
 working
 group <https://github.com/saltstack/community/tree/master/working_groups/wg-Testing>`__.
 We also regularly stream our test clinic `live on
-Twitch <https://www.twitch.tv/saltstackinc>`__ every Tuesday afternoon
+Twitch <https://www.twitch.tv/saltprojectoss>`__ every Tuesday afternoon
 and Thursday morning, Central Time. If you’d like specific help with
 tests, bring them to the clinic. If no community members need help, you
 can also just watch tests written in real time.

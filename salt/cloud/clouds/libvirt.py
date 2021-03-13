@@ -541,7 +541,7 @@ def do_cleanup(cleanup):
     Returns:
         none
 
-    .. versionadded: 2017.7.3
+    .. versionadded:: 2017.7.3
     """
     log.info("Cleaning up after exception")
     for leftover in cleanup:

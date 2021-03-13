@@ -1,17 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 Managing Images in OpenStack Glance
 ===================================
 """
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import time
 
-# Import salt libs
-
-# Import OpenStack libs
 try:
     from keystoneclient.exceptions import Unauthorized as kstone_Unauthorized
 
@@ -58,7 +52,7 @@ def _find_image(name):
         return False, "keystoneclient: Unauthorized"
     except glance_Unauthorized:
         return False, "glanceclient: Unauthorized"
-    log.debug("Got images: {0}".format(images))
+    log.debug("Got images: {}".format(images))
 
     if type(images) is dict and len(images) == 1 and "images" in images:
         images = images["images"]
@@ -66,9 +60,9 @@ def _find_image(name):
     images_list = images.values() if type(images) is dict else images
 
     if len(images_list) == 0:
-        return None, 'No image with name "{0}"'.format(name)
+        return None, 'No image with name "{}"'.format(name)
     elif len(images_list) == 1:
-        return images_list[0], "Found image {0}".format(name)
+        return images_list[0], "Found image {}".format(name)
     elif len(images_list) > 1:
         return False, "Found more than one image with given name"
     else:
@@ -146,10 +140,9 @@ def image_present(
     if image is None and location is not None:
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = (
-                "glance.image_present would "
-                "create an image from {0}".format(location)
-            )
+            ret[
+                "comment"
+            ] = "glance.image_present would " "create an image from {}".format(location)
             return ret
         image = __salt__["glance.image_create"](
             name=name,
@@ -158,7 +151,7 @@ def image_present(
             location=location,
             disk_format=disk_format,
         )
-        log.debug("Created new image:\n{0}".format(image))
+        log.debug("Created new image:\n{}".format(image))
         ret["changes"] = {name: {"new": {"id": image["id"]}, "old": None}}
         timer = timeout
         # Kinda busy-loopy but I don't think the Glance
@@ -166,7 +159,7 @@ def image_present(
         while timer > 0:
             if "status" in image and image["status"] in acceptable:
                 log.debug(
-                    "Image {0} has reached status {1}".format(
+                    "Image {} has reached status {}".format(
                         image["name"], image["status"]
                     )
                 )
@@ -178,15 +171,15 @@ def image_present(
                 if not image:
                     ret["result"] = False
                     ret["comment"] += (
-                        "Created image {0} ".format(name) + " vanished:\n" + msg
+                        "Created image {} ".format(name) + " vanished:\n" + msg
                     )
                     return ret
         if timer <= 0 and image["status"] not in acceptable:
             ret["result"] = False
             ret["comment"] += (
                 "Image didn't reach an acceptable "
-                + "state ({0}) before timeout:\n".format(acceptable)
-                + '\tLast status was "{0}".\n'.format(image["status"])
+                + "state ({}) before timeout:\n".format(acceptable)
+                + '\tLast status was "{}".\n'.format(image["status"])
             )
 
     # There's no image but where would I get one??
@@ -222,7 +215,7 @@ def image_present(
                     ret["result"] = False
                 elif __opts__["test"]:
                     ret["result"] = None
-                ret["comment"] += '"visibility" is {0}, ' "should be {1}.\n".format(
+                ret["comment"] += '"visibility" is {}, ' "should be {}.\n".format(
                     image["visibility"], visibility
                 )
             else:
@@ -235,18 +228,18 @@ def image_present(
                 else:
                     ret["changes"]["old"] = {"visibility": old_value}
         else:
-            ret["comment"] += '"visibility" is correct ({0}).\n'.format(visibility)
+            ret["comment"] += '"visibility" is correct ({}).\n'.format(visibility)
     if protected is not None:
         if not isinstance(protected, bool) or image["protected"] ^ protected:
             if not __opts__["test"]:
                 ret["result"] = False
             else:
                 ret["result"] = None
-            ret["comment"] += '"protected" is {0}, should be {1}.\n'.format(
+            ret["comment"] += '"protected" is {}, should be {}.\n'.format(
                 image["protected"], protected
             )
         else:
-            ret["comment"] += '"protected" is correct ({0}).\n'.format(protected)
+            ret["comment"] += '"protected" is correct ({}).\n'.format(protected)
     if "status" in image and checksum:
         if image["status"] == "active":
             if "checksum" not in image:
@@ -259,22 +252,22 @@ def image_present(
                     ret["result"] = None
                 ret["comment"] += (
                     "No checksum available for this image:\n"
-                    + '\tImage has status "{0}".'.format(image["status"])
+                    + '\tImage has status "{}".'.format(image["status"])
                 )
             elif image["checksum"] != checksum:
                 if not __opts__["test"]:
                     ret["result"] = False
                 else:
                     ret["result"] = None
-                ret["comment"] += '"checksum" is {0}, should be {1}.\n'.format(
+                ret["comment"] += '"checksum" is {}, should be {}.\n'.format(
                     image["checksum"], checksum
                 )
             else:
-                ret["comment"] += '"checksum" is correct ({0}).\n'.format(checksum)
+                ret["comment"] += '"checksum" is correct ({}).\n'.format(checksum)
         elif image["status"] in ["saving", "queued"]:
             ret["comment"] += (
                 "Checksum won't be verified as image "
                 + 'hasn\'t reached\n\t "status=active" yet.\n'
             )
-    log.debug("glance.image_present will return: {0}".format(ret))
+    log.debug("glance.image_present will return: {}".format(ret))
     return ret

@@ -83,8 +83,8 @@ except ImportError:
         HAS_REQUIRED_CRYPTO = True
     except ImportError:
         try:
-            from Crypto.Hash import SHA256
-            from Crypto.Signature import PKCS1_v1_5
+            from Crypto.Hash import SHA256  # nosec
+            from Crypto.Signature import PKCS1_v1_5  # nosec
 
             HAS_REQUIRED_CRYPTO = True
         except ImportError:
@@ -505,7 +505,6 @@ def start(name, call=None):
     :param name: name given to the machine
     :param call: call value in this case is 'action'
     :return: true if successful
-
 
     CLI Example:
 

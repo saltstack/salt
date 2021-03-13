@@ -225,7 +225,6 @@ def version(*names, **kwargs):
 
         .. versionadded:: 2014.1.0
 
-
     CLI Example:
 
     .. code-block:: bash
