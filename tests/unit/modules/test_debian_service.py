@@ -13,7 +13,7 @@ class DebianServicesTestCase(TestCase, LoaderModuleMockMixin):
         return {debian_service: {}}
 
     def test_get_enabled(self):
-        init_d_globs = ["/etc/init.d/S50foo", "/etc/init.d/S90bar"]
+        init_d_globs = ["/etc/rcS/S50foo", "/etc/rc3/S90bar", "/etc/rc3/S90bar2"]
         glob_mock = MagicMock(
             side_effect=lambda x: init_d_globs if x == "/etc/rc[S3].d/S*" else DEFAULT
         )
@@ -21,8 +21,8 @@ class DebianServicesTestCase(TestCase, LoaderModuleMockMixin):
             debian_service, "_get_runlevel", MagicMock(return_value="3")
         ):
             ret = debian_service.get_enabled()
-            expected = ["bar", "foo"]
-            assert ret == expected, ret
+            expected = ["foo", "bar", "bar2"]
+            assert ret == expected), ret
 
     def test_get_disabled(self):
         get_all = MagicMock(return_value=["foo", "bar", "baz"])
