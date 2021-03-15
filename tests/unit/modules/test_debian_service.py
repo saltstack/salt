@@ -22,7 +22,7 @@ class DebianServicesTestCase(TestCase, LoaderModuleMockMixin):
         ):
             ret = debian_service.get_enabled()
             expected = ["foo", "bar", "bar2"]
-            assert ret == expected), ret
+            assert sorted(ret) == sorted(expected), ret
 
     def test_get_disabled(self):
         get_all = MagicMock(return_value=["foo", "bar", "baz"])
