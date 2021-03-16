@@ -10,6 +10,7 @@ import logging
 
 try:
 
+    from cohesity_management_sdk.controllers.base_controller import BaseController
     from cohesity_management_sdk.cohesity_client import CohesityClient
     from cohesity_management_sdk.exceptions.api_exception import APIException
     from cohesity_management_sdk.models.cancel_protection_job_run_param import (
@@ -46,6 +47,9 @@ try:
     )
 
     HAS_LIBS = True
+
+    # Update the user-agent.
+    BaseController.global_headers['user-agent'] = 'cohesity-salt/1.0.0'
 except ImportError as err:
     HAS_LIBS = False
 
