@@ -90,3 +90,20 @@ def test_when_nqn_is_not_then_host_update_should_not_call_set_host(fake_set_host
 
     for call in fake_set_host.mock_calls:
         assert "addnqnlist" not in call.kwargs
+
+
+def test_when_nqn_is_correctly_provided_it_should_be_set_on_the_host(fake_set_host):
+    purefa._get_host.return_value = True
+    expected_calls = [call("fnord", addnqnlist=["roscivs"])]
+
+    purefa.host_update("fnord", nqn="roscivs")
+
+    fake_set_host.assert_has_calls(expected_calls)
+
+
+def test_when_nqn_is_correctly_provided_result_should_be_True(fake_set_host):
+    purefa._get_host.return_value = True
+
+    result = purefa.host_update("fnord", nqn="roscivs")
+
+    assert result is True
