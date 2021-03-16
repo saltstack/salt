@@ -77,3 +77,16 @@ def test_when_nqn_is_provided_but_set_host_fails_then_creation_should_be_rolled_
 
     assert result is False
     fake_delete_host.assert_called_with(expected_host)
+
+
+@pytest.mark.parametrize(
+    "nqn", [None, "", [], ()],
+)
+def test_when_nqn_is_not_then_host_update_should_not_call_set_host(fake_set_host, nqn):
+    # if _get_host is None then there's no host to update, is there?
+    purefa._get_host.return_value = True
+
+    purefa.host_update("fnord", nqn=nqn)
+
+    for call in fake_set_host.mock_calls:
+        assert "addnqnlist" not in call.kwargs
