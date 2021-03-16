@@ -22,6 +22,8 @@ Deprecated
 
 - Added deprecation warning for grains.get_or_set_hash (#59425)
 
+Salt 3002.6 (2021-03-10)
+========================
 
 Changed
 -------
@@ -30,6 +32,7 @@ Changed
 - Store git sha in salt/_version.py when installing from a tag so it can be found if needed later. (#59137)
 - Changed package manager detection in yumpkg module (#59201)
 - Updating the pkg beacon to fire the events when there are upgrades to packages, but also when watched packages are installed or removed. Breaking out the logic for listing pkgs from context into a separate function to aid in testing. Updating tests to ensure context is not used when use_context option to list_pkgs is False. (#59463)
+- Store git sha in salt/_version.py when installing from a tag so it can be found if needed later. (#59137)
 
 
 Fixed
@@ -167,6 +170,11 @@ Added
 - Add -B flag to FreeBSD pkgng.check() to regenerate the library dependency
   metadata for a package by extracting library requirement information from the
   binary ELF files in the package. (#59569)
+- Fix argument injection bug in restartcheck.restartcheck. This change hardens
+  the fix for CVE-2020-28243. (#200)
+- Allow "extra_filerefs" as sanitized kwargs for SSH client.
+  Fix regression on "cmd.run" when passing tuples as cmd. (#59664)
+- Allow all ssh kwargs as sanitized kwargs for SSH client. (#59748)
 
 
 Salt 3002.5 (2021-02-25)
@@ -479,6 +487,18 @@ Added
   `enable_slsvars_fixes` to enable fixes to tpldir, tplfile and sls_path.
   This flag will be deprecated in the Phosphorus release when this functionality
   becomes the default. (#58652)
+
+Salt 3001.7 (2021-03-10)
+========================
+
+Fixed
+-----
+
+- Fix argument injection bug in restartcheck.restartcheck. This change hardens
+  the fix for CVE-2020-28243. (#200)
+- Allow "extra_filerefs" as sanitized kwargs for SSH client.
+  Fix regression on "cmd.run" when passing tuples as cmd. (#59664)
+- Allow all ssh kwargs as sanitized kwargs for SSH client. (#59748)
 
 Salt 3001.6 (2021-02-09)
 ========================
@@ -970,6 +990,18 @@ Added
 - Added `efi` parameter to virt module, so `uefi` firmware can be auto selected. (#57397)
 - [#56637](https://github.com/saltstack/salt/pull/56637) - Add ``win_wua.installed`` to the ``win_wua`` execution module
 - Clarify how to get the master fingerprint (#54699)
+
+Salt 3000.9 (2021-03-10)
+========================
+
+Fixed
+-----
+
+- Allow "extra_filerefs" as sanitized kwargs for SSH client.
+  Fix regression on "cmd.run" when passing tuples as cmd. (#59664)
+- Allow all ssh kwargs as sanitized kwargs for SSH client. (#59748)
+- Fix argument injection bug in restartcheck.restartcheck. This change hardens
+  the fix for CVE-2020-28243.
 
 Salt 3000.8 (2021-02-09)
 ========================
