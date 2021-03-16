@@ -1,6 +1,7 @@
+# pylint: disable=unexpected-keyword-arg
 import pytest
 import salt.modules.purefa as purefa
-from tests.support.mock import MagicMock, create_autospec, patch
+from tests.support.mock import MagicMock, call, create_autospec, patch
 
 
 @pytest.fixture
@@ -26,3 +27,23 @@ def test_when_nqn_is_not_anything_set_host_should_not_have_addnqnlist_called(
 
     for call in fake_set_host.mock_calls:
         assert "addnqnlist" not in call.kwargs
+
+
+def test_when_nqn_is_provided_and_adding_is_successful_then_set_host_should_have_addqnlist(
+    fake_set_host,
+):
+    nqn = "fnord"
+    host = "fnord-host"
+    expected_calls = [call(host, addnqnlist=[nqn])]
+    purefa.host_create(host, nqn=nqn)
+
+    fake_set_host.assert_has_calls(expected_calls)
+
+
+def test_when_nqn_is_provided_and_adding_is_successful_then_result_should_be_True(
+    fake_set_host,
+):
+
+    result = purefa.host_create("fnord", nqn="fnordqn")
+
+    assert result is True
