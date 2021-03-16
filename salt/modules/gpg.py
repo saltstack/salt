@@ -503,6 +503,7 @@ def create_key(
     return ret
 
 
+@_restore_ownership
 def delete_key(
     keyid=None,
     fingerprint=None,
