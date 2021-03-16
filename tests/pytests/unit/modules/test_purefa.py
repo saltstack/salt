@@ -107,3 +107,12 @@ def test_when_nqn_is_correctly_provided_result_should_be_True(fake_set_host):
     result = purefa.host_update("fnord", nqn="roscivs")
 
     assert result is True
+
+
+def test_when_nqn_fails_result_should_be_False(fake_set_host):
+    purefa._get_host.return_value = True
+    fake_set_host.side_effect = purefa.purestorage.PureError("oops!")
+
+    result = purefa.host_update("fnord", nqn="roscivs")
+
+    assert result is False
