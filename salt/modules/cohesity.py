@@ -49,7 +49,7 @@ try:
     HAS_LIBS = True
 
     # Update the user-agent.
-    BaseController.global_headers['user-agent'] = 'cohesity-salt/1.0.0'
+    BaseController.global_headers['user-agent'] = "cohesity-salt/1.0.0"
 except ImportError as err:
     HAS_LIBS = False
 
@@ -89,7 +89,7 @@ def _get_sd_id(name):
     : return: storage domain id.
     """
     cohesity_client = _get_client()
-    log.info("Getting storage domain with name %s" % name)
+    log.info("Getting storage domain with name %s", name)
     resp = cohesity_client.view_boxes.get_view_boxes(names=name)
     if resp:
         return resp[0].id
@@ -102,7 +102,7 @@ def _get_policy_id(name):
     : return policy id.
     """
     cohesity_client = _get_client()
-    log.info("Getting policy with name %s" % name)
+    log.info("Getting policy with name %s", name)
     resp = cohesity_client.protection_policies.get_protection_policies(names=name)
     if resp:
         return resp[0].id
@@ -130,7 +130,7 @@ def _get_vmware_source_ids(name, vm_list):
             if name in [endpoint, v_name]:
                 parent_id = each_source.protection_source.id
         if parent_id == -1:
-            log.error("Vcenter %s not available in the cluster" % name)
+            log.error("Vcenter %s not available in the cluster", name)
         vms = cohesity_client.protection_sources.list_virtual_machines(
             v_center_id=parent_id, names=vm_list
         )
@@ -142,7 +142,7 @@ def _get_vmware_source_ids(name, vm_list):
             log.error(
                 "Following list of vms '%s' are not available in vcenter, "
                 "please make sure the virtual machine names are correct"
-                % (",".join(vm_names))
+               , (",".join(vm_names))
             )
         return parent_id, source_id_list
     except APIException as err:
