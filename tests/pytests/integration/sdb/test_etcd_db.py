@@ -10,6 +10,13 @@ log = logging.getLogger(__name__)
 
 pytestmark = [pytest.mark.skip_if_binaries_missing("dockerd")]
 
+def debug_port(port):
+    import subprocess
+    cmd = "netstat -pna | grep {}".format(port)
+    proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
+    proc.wait()
+    return proc.stdout.read()
+
 
 @pytest.fixture(scope="module", autouse=True)
 def etc_docker_container(salt_call_cli, sdb_etcd_port):
@@ -31,6 +38,7 @@ def etc_docker_container(salt_call_cli, sdb_etcd_port):
             environment={"ALLOW_NONE_AUTHENTICATION": "yes", "ETCD_ENABLE_V2": "true"},
             cap_add="IPC_LOCK",
         )
+        print(debug_port(sdb_etcd_port))
         assert ret.exitcode == 0, ret.stdout
         assert ret.json
         state_run = next(iter(ret.json.values()))

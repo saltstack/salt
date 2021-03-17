@@ -47,6 +47,13 @@ def pillar_tree(base_env_pillar_tree_root_dir, salt_minion):
 def vault_container_version_id(value):
     return "vault=={}".format(value)
 
+def debug_port(port):
+    import subprocess
+    cmd = "netstat -pna | grep {}".format(port)
+    proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
+    proc.wait()
+    return proc.stdout.read()
+
 
 @pytest.fixture(
     scope="module",
@@ -90,6 +97,7 @@ def vault_container_version(request, salt_call_cli, vault_port):
                 },
                 cap_add="IPC_LOCK",
             )
+            print(debug_port(sdb_etcd_port))
             assert ret.exitcode == 0, ret.stdout
             assert ret.json
             state_run = next(iter(ret.json.values()))
