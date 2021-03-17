@@ -5620,8 +5620,19 @@ def _getFullPolicyName(
 
 def _regexSearchRegPolData(search_string, policy_data):
     """
-    helper function to do a search of Policy data from a registry.pol file
-    returns True if the regex search_string is found, otherwise False
+    Helper function to do a regex search of a string value in policy_data.
+    This is used to search the policy data from a registry.pol file or from
+    gpt.ini
+
+    Args:
+
+        search_string (str): The string to search for
+
+        policy_data (str): The data to be searched
+
+    Returns:
+
+        bool: ``True`` if the regex search_string is found, otherwise ``False``
     """
     if policy_data:
         if search_string:
@@ -7223,12 +7234,12 @@ def _write_regpol_data(
     if os.path.exists(gpt_ini_path):
         with salt.utils.files.fopen(gpt_ini_path, "r") as gpt_file:
             gpt_ini_data = gpt_file.read()
-    if not _regexSearchRegPolData(r"\[General\]\r\n", gpt_ini_data):
-        gpt_ini_data = "[General]\r\n" + gpt_ini_data
+    if not _regexSearchRegPolData(r"\[General\]\r?\n", gpt_ini_data):
+        gpt_ini_data = "[General]\r?\n" + gpt_ini_data
     if _regexSearchRegPolData(r"{}=".format(re.escape(gpt_extension)), gpt_ini_data):
         # ensure the line contains the ADM guid
         gpt_ext_loc = re.search(
-            r"^{}=.*\r\n".format(re.escape(gpt_extension)),
+            r"^{}=.*\r?\n".format(re.escape(gpt_extension)),
             gpt_ini_data,
             re.IGNORECASE | re.MULTILINE,
         )
@@ -7246,7 +7257,7 @@ def _write_regpol_data(
             )
     else:
         general_location = re.search(
-            r"^\[General\]\r\n", gpt_ini_data, re.IGNORECASE | re.MULTILINE
+            r"^\[General\]\r?\n", gpt_ini_data, re.IGNORECASE | re.MULTILINE
         )
         gpt_ini_data = "{}{}={}\r\n{}".format(
             gpt_ini_data[general_location.start() : general_location.end()],
@@ -7257,7 +7268,7 @@ def _write_regpol_data(
     # https://technet.microsoft.com/en-us/library/cc978247.aspx
     if _regexSearchRegPolData(r"Version=", gpt_ini_data):
         version_loc = re.search(
-            r"^Version=.*\r\n", gpt_ini_data, re.IGNORECASE | re.MULTILINE
+            r"^Version=.*\r?\n", gpt_ini_data, re.IGNORECASE | re.MULTILINE
         )
         version_str = gpt_ini_data[version_loc.start() : version_loc.end()]
         version_str = version_str.split("=")
@@ -7275,7 +7286,7 @@ def _write_regpol_data(
         )
     else:
         general_location = re.search(
-            r"^\[General\]\r\n", gpt_ini_data, re.IGNORECASE | re.MULTILINE
+            r"^\[General\]\r?\n", gpt_ini_data, re.IGNORECASE | re.MULTILINE
         )
         if gpt_extension.lower() == "gPCMachineExtensionNames".lower():
             version_nums = (0, 1)
