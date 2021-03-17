@@ -12,19 +12,14 @@ from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
 
 log = logging.getLogger(__name__)
-NO_MYSQL = False
 NO_PyMYSQL = False
-try:
-    import MySQLdb  # pylint: disable=W0611
-except ImportError:
-    NO_MYSQL = True
 
 try:
-    # MySQLdb import failed, try to import PyMySQL
+    # try to import PyMySQL
     import pymysql
 
     pymysql.install_as_MySQLdb()
-    import MySQLdb
+    import MySQLdb  # pylint: disable=W0611
 except ImportError:
     NO_PyMYSQL = True
 
@@ -173,8 +168,7 @@ class MysqlQueryTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertDictEqual(mysql_query.run(name, database, query), ret)
 
     @skipIf(
-        NO_MYSQL and NO_PyMYSQL,
-        "Install MySQL bindings before running MySQL unit tests.",
+        NO_PyMYSQL, "Install MySQL bindings before running MySQL unit tests.",
     )
     def test_run_multiple_statements(self):
         """
