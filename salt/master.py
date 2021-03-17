@@ -1429,9 +1429,6 @@ class AESFuncs(TransportMethods):
             return {}
         return self.masterapi._master_tops(load, skip_verify=True)
 
-    # Needed so older minions can request master_tops
-    _ext_nodes = _master_tops
-
     def _master_opts(self, load):
         """
         Return the master options to the minion
