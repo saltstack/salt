@@ -31,7 +31,7 @@ def etc_docker_container(salt_call_cli, sdb_etcd_port):
             environment={"ALLOW_NONE_AUTHENTICATION": "yes", "ETCD_ENABLE_V2": "true"},
             cap_add="IPC_LOCK",
         )
-        assert ret.exitcode == 0
+        assert ret.exitcode == 0, ret.stdout
         assert ret.json
         state_run = next(iter(ret.json.values()))
         assert state_run["result"] is True
@@ -49,7 +49,7 @@ def etc_docker_container(salt_call_cli, sdb_etcd_port):
             ret = salt_call_cli.run(
                 "state.single", "docker_container.absent", name="etcd"
             )
-            assert ret.exitcode == 0
+            assert ret.exitcode == 0, ret.stdout
             assert ret.json
             state_run = next(iter(ret.json.values()))
             assert state_run["result"] is True

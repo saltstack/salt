@@ -67,7 +67,7 @@ def vault_container_version(request, salt_call_cli, vault_port):
         ret = salt_call_cli.run(
             "state.single", "docker_image.present", name="vault", tag=vault_version
         )
-        assert ret.exitcode == 0
+        assert ret.exitcode == 0, ret.stdout
         assert ret.json
         state_run = next(iter(ret.json.values()))
         assert state_run["result"] is True
@@ -90,7 +90,7 @@ def vault_container_version(request, salt_call_cli, vault_port):
                 },
                 cap_add="IPC_LOCK",
             )
-            assert ret.exitcode == 0
+            assert ret.exitcode == 0, ret.stdout
             assert ret.json
             state_run = next(iter(ret.json.values()))
             assert state_run["result"] is True
