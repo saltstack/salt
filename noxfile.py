@@ -1004,7 +1004,6 @@ def docs_html(session, compress, clean):
     )
     install_command = ["--progress-bar=off", "-r", requirements_file]
     session.install(*install_command, silent=PIP_INSTALL_SILENT)
-    _install_requirements(session, "zeromq", requirements_type="pkg")
     os.chdir("doc/")
     if clean:
         session.run("make", "clean", external=True)
@@ -1027,7 +1026,6 @@ def docs_man(session, compress, update, clean):
     )
     install_command = ["--progress-bar=off", "-r", requirements_file]
     session.install(*install_command, silent=PIP_INSTALL_SILENT)
-    _install_requirements(session, "zeromq", requirements_type="pkg")
     os.chdir("doc/")
     if clean:
         session.run("make", "clean", external=True)
