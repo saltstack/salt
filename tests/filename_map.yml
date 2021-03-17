@@ -57,9 +57,9 @@ salt/modules/influxdb08mod.py:
   - pytests.unit.states.test_influxdb08_user
 
 salt/modules/mysql.py:
-  - pytests.unit.states.mysql.test_mysql_user
-  - pytests.unit.states.mysql.test_mysql_query
-  - pytests.unit.states.mysql.test_mysql_grants
+  - pytests.unit.states.mysql.test_user
+  - pytests.unit.states.mysql.test_query
+  - pytests.unit.states.mysql.test_grants
 
 salt/modules/openvswitch.py:
   - pytests.unit.states.test_openvswitch_port
