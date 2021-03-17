@@ -46,9 +46,7 @@ repo_primary_branch = (
     "master"  # This is the default branch on GitHub for the Salt project
 )
 version = salt.version.__version__
-latest_release = os.environ.get(
-    "LATEST_RELEASE", "latest_release"
-)  # latest release (2019.2.3)
+latest_release = os.environ.get("LATEST_RELEASE", "3002.5")  # latest release (2019.2.3)
 previous_release = os.environ.get(
     "PREVIOUS_RELEASE", "previous_release"
 )  # latest release from previous branch (2018.3.5)
