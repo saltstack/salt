@@ -39,6 +39,7 @@ try:
 except ImportError:
     HAS_MOTO = False
 
+
     def mock_ec2(self):
         """
         if the mock_ec2 function is not available due to import failure
@@ -51,7 +52,6 @@ except ImportError:
             pass
 
         return stub_function
-
 
 if sys.version_info[0] < 3:
     PYTHON_VER = 2
@@ -306,20 +306,20 @@ class Boto3UtilsTestOrdering(BotoUtilsTestCaseBase):
     def test_sorting_of_dictionaries(self):
         passed_list = [
             OrderedDict(
-                [("key", "Name"), ("value", "test-name"), ("propagate_at_launch", True)]
+                [("key", "Name"), ("value", "test-name"), ("propagate_at_launch", True)
+                 ]
             ),
             OrderedDict(
-                [("key", "Type"), ("value", "test-type"), ("propagate_at_launch", True)]
+                [("key", "Type"), ("value", "test-type"), ("propagate_at_launch", True)
+                 ]
             ),
             OrderedDict(
-                [("key", "Owner"), ("value", "salt"), ("propagate_at_launch", True)]
+                [("key", "Owner"), ("value", "salt"), ("propagate_at_launch", True)
+                 ]
             ),
             OrderedDict(
-                [
-                    ("key", "Monitoring"),
-                    ("value", "development"),
-                    ("propagate_at_launch", True),
-                ]
+                [("key", "Monitoring"), ("value", "development"), ("propagate_at_launch", True),
+                 ]
             ),
         ]
 
