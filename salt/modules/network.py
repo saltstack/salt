@@ -605,6 +605,23 @@ def _ip_route_linux():
                     "interface": ip_interface,
                 }
             )
+
+        elif comps[0] == "multicast":
+            ip_interface = ""
+            if comps[2] == "dev":
+                ip_interface = comps[3]
+
+            ret.append(
+                {
+                    "addr_family": "inet6",
+                    "destination": comps[1],
+                    "gateway": comps[4],
+                    "netmask": "",
+                    "flags": "U",
+                    "interface": ip_interface,
+                }
+            )
+
         else:
             address_mask = convert_cidr(comps[0])
             ip_interface = ""
