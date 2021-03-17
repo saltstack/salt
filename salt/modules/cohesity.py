@@ -142,7 +142,7 @@ def _get_vmware_source_ids(name, vm_list):
             log.error(
                 "Following list of vms '%s' are not available in vcenter, "
                 "please make sure the virtual machine names are correct",
-                (",".join(vm_names)),
+                ",".join(vm_names),
             )
         return parent_id, source_id_list
     except APIException as err:
