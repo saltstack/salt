@@ -846,7 +846,7 @@ repos:
           - -v
           - --py-version=3.5
           - --platform=linux
-          - --include=requirements/static/ci/py{py_version}/linux.txt
+          - --include=requirements/static/pkg/py{py_version}/linux.txt
           - requirements/static/ci/docs.in
 
       - id: pip-tools-compile
@@ -858,7 +858,7 @@ repos:
           - -v
           - --py-version=3.6
           - --platform=linux
-          - --include=requirements/static/ci/py{py_version}/linux.txt
+          - --include=requirements/static/pkg/py{py_version}/linux.txt
           - requirements/static/ci/docs.in
 
       - id: pip-tools-compile
@@ -870,7 +870,7 @@ repos:
           - -v
           - --py-version=3.7
           - --platform=linux
-          - --include=requirements/static/ci/py{py_version}/linux.txt
+          - --include=requirements/static/pkg/py{py_version}/linux.txt
           - requirements/static/ci/docs.in
 
       - id: pip-tools-compile
@@ -882,7 +882,7 @@ repos:
           - -v
           - --py-version=3.8
           - --platform=linux
-          - --include=requirements/static/ci/py{py_version}/linux.txt
+          - --include=requirements/static/pkg/py{py_version}/linux.txt
           - requirements/static/ci/docs.in
 
       - id: pip-tools-compile
@@ -894,7 +894,7 @@ repos:
           - -v
           - --py-version=3.9
           - --platform=linux
-          - --include=requirements/static/ci/py{py_version}/linux.txt
+          - --include=requirements/static/pkg/py{py_version}/linux.txt
           - requirements/static/ci/docs.in
 
   # <---- Doc CI Requirements ----------------------------------------------------------------------------------------
