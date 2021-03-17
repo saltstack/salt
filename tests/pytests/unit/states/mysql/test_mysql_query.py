@@ -15,28 +15,10 @@ log = logging.getLogger(__name__)
 HAS_PyMYSQL = False
 HAS_MYSQL = False
 
-try:
-    MySQLdb = pytest.importorskip("MySQLdb")
-    import MySQLdb  # pylint: disable=unused-import
+MySQLdb = pytest.importorskip("MySQLdb")
+pymysql = pytest.importorskip("pymysql")
 
-    HAS_MYSQL = True
-except ImportError:
-    HAS_MYSQL = False
-
-try:
-    import pymysql
-
-    pymysql.install_as_MySQLdb()
-    import MySQLdb
-
-    HAS_PyMYSQL = True
-except ImportError:
-    HAS_PyMYSQL = False
-
-skip_on_missing_mysql = pytest.mark.skipif(
-    HAS_MYSQL is False and HAS_PyMYSQL is False,
-    reason="Install MySQL bindings before running MySQL unit tests.",
-)
+pymysql.install_as_MySQLdb()
 
 
 class MockMySQLConnect:
@@ -167,7 +149,6 @@ def test_run():
             assert mysql_query.run(name, database, query) == ret
 
 
-@skip_on_missing_mysql
 def test_run_multiple_statements():
     """
     Test to execute an arbitrary query on the specified database
