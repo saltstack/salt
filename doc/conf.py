@@ -59,6 +59,10 @@ previous_release_dir = os.environ.get(
 next_release = ""  # next release
 next_release_dir = ""  # path on web server for next release branch
 
+# Sphinx variable
+# https://www.sphinx-doc.org/en/master/usage/configuration.html#confval-version
+version = latest_release
+
 today = ""
 copyright = ""
 if on_saltstack:
