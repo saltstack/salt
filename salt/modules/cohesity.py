@@ -49,7 +49,7 @@ try:
     HAS_LIBS = True
 
     # Update the user-agent.
-    BaseController.global_headers['user-agent'] = "cohesity-salt/1.0.0"
+    BaseController.global_headers["user-agent"] = "cohesity-salt/1.0.0"
 except ImportError as err:
     HAS_LIBS = False
 
@@ -141,8 +141,8 @@ def _get_vmware_source_ids(name, vm_list):
         if vm_names:
             log.error(
                 "Following list of vms '%s' are not available in vcenter, "
-                "please make sure the virtual machine names are correct"
-               , (",".join(vm_names))
+                "please make sure the virtual machine names are correct",
+                (",".join(vm_names))
             )
         return parent_id, source_id_list
     except APIException as err:
