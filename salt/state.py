@@ -3928,7 +3928,7 @@ class BaseHighState:
             return {}
         return self.merge_tops(tops)
 
-    def top_matches(self, top):
+    def top_matches(self, top, __env__=False):
         """
         Search through the top high data for matches and return the states
         that this minion needs to execute.
@@ -3939,9 +3939,12 @@ class BaseHighState:
         matches = DefaultOrderedDict(OrderedDict)
         # pylint: disable=cell-var-from-loop
         for saltenv, body in top.items():
-            if self.opts["saltenv"]:
-                if saltenv != self.opts["saltenv"]:
+            if __env__:
+                if saltenv != "__env__":
                     continue
+                saltenv = self.opts["saltenv"]
+            elif self.opts["saltenv"] and saltenv != self.opts["saltenv"]:
+                continue
             for match, data in body.items():
 
                 def _filter_matches(_match, _data, _opts):
@@ -3976,6 +3979,9 @@ class BaseHighState:
                 first = top_file_matches
                 second = ext_matches[saltenv]
             matches[saltenv] = first + [x for x in second if x not in first]
+
+        if not matches and not __env__:
+            return self.top_matches(top, __env__=True)
 
         # pylint: enable=cell-var-from-loop
         return matches

@@ -71,6 +71,12 @@ def test_top_matches_with_string(highstate):
     assert matches == {"env": ["state1"]}
 
 
+def test_top_matches_with_catchall_saltenv(highstate):
+    top = {"__env__": {"match": "state1"}}
+    matches = highstate.top_matches(top)
+    assert matches == {"__env__": ["state1"]}
+
+
 def test_matches_whitelist(highstate):
     matches = {"env": ["state1", "state2", "state3"]}
     matches = highstate.matches_whitelist(matches, ["state2"])
