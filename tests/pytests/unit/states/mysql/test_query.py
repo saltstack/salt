@@ -12,9 +12,6 @@ from tests.support.mock import MagicMock, patch
 
 log = logging.getLogger(__name__)
 
-HAS_PyMYSQL = False
-HAS_MYSQL = False
-
 MySQLdb = pytest.importorskip("MySQLdb")
 pymysql = pytest.importorskip("pymysql")
 
