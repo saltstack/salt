@@ -1,10 +1,6 @@
-# coding: utf-8
 """
 Test the RSA ANSI X9.31 signer and verifier
 """
-
-# python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import ctypes
 import ctypes.util
@@ -210,6 +206,28 @@ class RSAX931Test(TestCase):
             "/opt/salt/lib/libcrypto.dylib",
             "/usr/local/opt/openssl/lib/libcrypto.dylib",
             "/usr/local/opt/openssl@*/lib/libcrypto.dylib",
+            "/opt/local/lib/libcrypto.dylib",
+            "/usr/lib/libcrypto.*.dylib",
+        ):
+            if fnmatch.fnmatch(lib_path, i):
+                passed = True
+                break
+        self.assertTrue(passed)
+
+    @skipIf(not salt.utils.platform.is_darwin(), "Host OS is not Darwin-like or macOS.")
+    @patch.object(platform, "mac_ver", lambda: ("11.0", (), ""))
+    def test_find_libcrypto_darwin_bigsur(self):
+        """
+        Test _find_libcrypto on a Darwin-like  macOS host where there isn't a
+        lacation returned by ctypes.util.find_library()
+        """
+        lib_path = _find_libcrypto()
+        brew_prefix = os.getenv("HOMEBREW_PREFIX", "/usr/local")
+        passed = False
+        for i in (
+            "/opt/salt/lib/libcrypto.dylib",
+            os.path.join(brew_prefix, "opt/openssl/lib/libcrypto.dylib"),
+            os.path.join(brew_prefix, "opt/openssl@*/lib/libcrypto.dylib"),
             "/opt/local/lib/libcrypto.dylib",
             "/usr/lib/libcrypto.*.dylib",
         ):
