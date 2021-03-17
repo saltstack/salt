@@ -314,6 +314,8 @@ def make_request(
     namespace = namespace or connection["namespace"]
     if "verify" in args:
         args["verify"] = args["verify"]
+    elif "verify" in connection:
+        args["verify"] = connection["verify"]
     else:
         try:
             args["verify"] = __opts__.get("vault").get("verify", None)
