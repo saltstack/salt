@@ -50,7 +50,7 @@ try:
 
     # Update the user-agent.
     BaseController.global_headers["user-agent"] = "cohesity-salt/1.0.0"
-except ImportError as err:
+except ImportError:
     HAS_LIBS = False
 
 log = logging.getLogger(__name__)
