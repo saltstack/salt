@@ -116,3 +116,4 @@ kitchen.local.yml
 Gemfile.lock
 /artifacts/
 requirements/static/py*/*.log
+/venv/
