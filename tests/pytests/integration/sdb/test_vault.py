@@ -97,7 +97,7 @@ def vault_container_version(request, salt_call_cli, vault_port):
                 },
                 cap_add="IPC_LOCK",
             )
-            print(debug_port(sdb_etcd_port))
+            print(debug_port(vault_port))
             assert ret.exitcode == 0, ret.stdout
             assert ret.json
             state_run = next(iter(ret.json.values()))
