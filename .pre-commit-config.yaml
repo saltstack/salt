@@ -840,7 +840,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-doc-requirements
         name: Docs CI Py3.5 Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/docs\.in|static/ci/common\.in)$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/docs\.in|static/ci/common\.in|static/pkg/.*/linux\.txt)$
         pass_filenames: false
         args:
           - -v
@@ -852,7 +852,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-doc-requirements
         name: Docs CI Py3.6 Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/docs\.in|static/ci/common\.in)$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/docs\.in|static/ci/common\.in|static/pkg/.*/linux\.txt)$
         pass_filenames: false
         args:
           - -v
@@ -864,7 +864,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-doc-requirements
         name: Docs CI Py3.7 Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/docs\.in|static/ci/common\.in)$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/docs\.in|static/ci/common\.in|static/pkg/.*/linux\.txt)$
         pass_filenames: false
         args:
           - -v
@@ -876,7 +876,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-doc-requirements
         name: Docs CI Py3.8 Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/docs\.in|static/ci/common\.in)$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/docs\.in|static/ci/common\.in|static/pkg/.*/linux\.txt)$
         pass_filenames: false
         args:
           - -v
@@ -888,7 +888,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-doc-requirements
         name: Docs CI Py3.9 Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/docs\.in|static/ci/common\.in)$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/docs\.in|static/ci/common\.in|static/pkg/.*/linux\.txt)$
         pass_filenames: false
         args:
           - -v
