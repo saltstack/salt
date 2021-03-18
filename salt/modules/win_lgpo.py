@@ -7234,12 +7234,18 @@ def _write_regpol_data(
     if os.path.exists(gpt_ini_path):
         with salt.utils.files.fopen(gpt_ini_path, "r") as gpt_file:
             gpt_ini_data = gpt_file.read()
-    if not _regexSearchRegPolData(r"\[General\]\r?\n", gpt_ini_data):
-        gpt_ini_data = "[General]\r?\n" + gpt_ini_data
+        # Make sure it has Windows Style line endings
+        gpt_ini_data = (
+            gpt_ini_data.replace("\r\n", "_|-")
+            .replace("\n", "_|-")
+            .replace("_|-", "\r\n")
+        )
+    if not _regexSearchRegPolData(r"\[General\]\r\n", gpt_ini_data):
+        gpt_ini_data = "[General]\r\n" + gpt_ini_data
     if _regexSearchRegPolData(r"{}=".format(re.escape(gpt_extension)), gpt_ini_data):
         # ensure the line contains the ADM guid
         gpt_ext_loc = re.search(
-            r"^{}=.*\r?\n".format(re.escape(gpt_extension)),
+            r"^{}=.*\r\n".format(re.escape(gpt_extension)),
             gpt_ini_data,
             re.IGNORECASE | re.MULTILINE,
         )
@@ -7257,7 +7263,7 @@ def _write_regpol_data(
             )
     else:
         general_location = re.search(
-            r"^\[General\]\r?\n", gpt_ini_data, re.IGNORECASE | re.MULTILINE
+            r"^\[General\]\r\n", gpt_ini_data, re.IGNORECASE | re.MULTILINE
         )
         gpt_ini_data = "{}{}={}\r\n{}".format(
             gpt_ini_data[general_location.start() : general_location.end()],
@@ -7268,7 +7274,7 @@ def _write_regpol_data(
     # https://technet.microsoft.com/en-us/library/cc978247.aspx
     if _regexSearchRegPolData(r"Version=", gpt_ini_data):
         version_loc = re.search(
-            r"^Version=.*\r?\n", gpt_ini_data, re.IGNORECASE | re.MULTILINE
+            r"^Version=.*\r\n", gpt_ini_data, re.IGNORECASE | re.MULTILINE
         )
         version_str = gpt_ini_data[version_loc.start() : version_loc.end()]
         version_str = version_str.split("=")
@@ -7286,7 +7292,7 @@ def _write_regpol_data(
         )
     else:
         general_location = re.search(
-            r"^\[General\]\r?\n", gpt_ini_data, re.IGNORECASE | re.MULTILINE
+            r"^\[General\]\r\n", gpt_ini_data, re.IGNORECASE | re.MULTILINE
         )
         if gpt_extension.lower() == "gPCMachineExtensionNames".lower():
             version_nums = (0, 1)
