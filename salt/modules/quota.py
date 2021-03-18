@@ -205,7 +205,7 @@ def on(device):
         salt '*' quota.on
     """
     cmd = "quotaon {0}".format(device)
-    __salt__["cmd.run"](cmd, python_shell=False)
+    __salt__["cmd.run"](cmd, python_shell=False, success_retcodes=[2])
     return True
 
 
@@ -236,7 +236,7 @@ def get_mode(device):
     """
     ret = {}
     cmd = "quotaon -p {0}".format(device)
-    out = __salt__["cmd.run"](cmd, python_shell=False)
+    out = __salt__["cmd.run"](cmd, python_shell=False, success_retcodes=[2])
     for line in out.splitlines():
         comps = line.strip().split()
         if comps[3] not in ret:

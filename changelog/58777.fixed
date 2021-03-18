@@ -1,0 +1,1 @@
+Allow a returncode of 2 from quotaon to be considered 'success'.
