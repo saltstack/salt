@@ -38,8 +38,13 @@ import salt.utils.url
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.loader import _format_cached_grains
+from salt.loader_context import LoaderContext
 from salt.runners.state import orchestrate as _orchestrate
 from salt.utils.odict import OrderedDict
+
+__salt_loader = LoaderContext()
+__pillar__ = __salt_loader.named_context("__pillar__")
+__opts__ = {}
 
 __proxyenabled__ = ["*"]
 
@@ -425,7 +430,7 @@ def _check_queue(queue, kwargs):
 
 def _get_initial_pillar(opts):
     return (
-        __pillar__
+        __pillar__.value()
         if __opts__.get("__cli", None) == "salt-call"
         and opts["pillarenv"] == __opts__["pillarenv"]
         else None
