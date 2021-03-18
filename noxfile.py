@@ -999,6 +999,8 @@ def docs_html(session, compress, clean):
     """
     Build Salt's HTML Documentation
     """
+    install_upgrades = ["--progress-bar=off", "-U", "pip", "setuptools", "wheel"]
+    session.install(*install_upgrades, silent=PIP_INSTALL_SILENT)
     requirements_file = os.path.join(
         "requirements", "static", "ci", _get_pydir(session), "docs.txt"
     )
@@ -1021,6 +1023,8 @@ def docs_man(session, compress, update, clean):
     """
     Build Salt's Manpages Documentation
     """
+    install_upgrades = ["--progress-bar=off", "-U", "pip", "setuptools", "wheel"]
+    session.install(*install_upgrades, silent=PIP_INSTALL_SILENT)
     requirements_file = os.path.join(
         "requirements", "static", "ci", _get_pydir(session), "docs.txt"
     )
