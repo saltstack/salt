@@ -160,7 +160,7 @@ it can be verified with Salt:
 
 .. code-block:: bash
 
-    salt xenvm02 test.ping
+    salt xenvm02 test.version
 
 
 Listing Sizes

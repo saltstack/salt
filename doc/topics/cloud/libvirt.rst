@@ -84,7 +84,7 @@ it can be verified with Salt:
 
 .. code-block:: bash
 
-    # salt my-centos7-clone test.ping
+    # salt my-centos7-clone test.version
 
 
 Required Settings

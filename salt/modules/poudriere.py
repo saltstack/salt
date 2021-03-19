@@ -20,7 +20,7 @@ def __virtual__():
     '''
     Module load on freebsd only and if poudriere installed
     '''
-    if __grains__['os'] == 'FreeBSD' and salt.utils.path.which('poudriere'):
+    if __grains__.get('os') == 'FreeBSD' and salt.utils.path.which('poudriere'):
         return 'poudriere'
     else:
         return (False, 'The poudriere execution module failed to load: only available on FreeBSD with the poudriere binary in the path.')

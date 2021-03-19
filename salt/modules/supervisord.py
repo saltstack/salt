@@ -63,10 +63,12 @@ def _ctl_cmd(cmd, name, conf_file, bin_env):
 
 
 def _get_return(ret):
-    if ret['retcode'] == 0:
-        return ret['stdout']
-    else:
-        return ''
+    retmsg = ret['stdout']
+    if ret['retcode'] != 0:
+        # This is a non 0 exit code
+        if 'ERROR' not in retmsg:
+            retmsg = 'ERROR: {}'.format(retmsg)
+    return retmsg
 
 
 def start(name='all', user=None, conf_file=None, bin_env=None):

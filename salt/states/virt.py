@@ -797,7 +797,7 @@ def pool_running(name,
                                          source_name=(source or {}).get('name', None),
                                          source_format=(source or {}).get('format', None),
                                          transient=transient,
-                                         start=True,
+                                         start=False,
                                          connection=connection,
                                          username=username,
                                          password=password)
@@ -809,11 +809,6 @@ def pool_running(name,
                                                     password=password)
 
             __salt__['virt.pool_build'](name,
-                                        connection=connection,
-                                        username=username,
-                                        password=password)
-
-            __salt__['virt.pool_start'](name,
                                         connection=connection,
                                         username=username,
                                         password=password)

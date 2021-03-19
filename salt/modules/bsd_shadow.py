@@ -46,7 +46,7 @@ def default_hash():
     return '*' if __grains__['os'].lower() == 'freebsd' else '*************'
 
 
-def info(name):
+def info(name, **kwargs):
     '''
     Return information for the specified user
 

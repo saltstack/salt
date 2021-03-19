@@ -31,39 +31,39 @@ Match all minions:
 
 .. code-block:: bash
 
-    salt '*' test.ping
+    salt '*' test.version
 
 Match all minions in the example.net domain or any of the example domains:
 
 .. code-block:: bash
 
-    salt '*.example.net' test.ping
-    salt '*.example.*' test.ping
+    salt '*.example.net' test.version
+    salt '*.example.*' test.version
 
 Match all the ``webN`` minions in the example.net domain (``web1.example.net``,
 ``web2.example.net`` … ``webN.example.net``):
 
 .. code-block:: bash
 
-    salt 'web?.example.net' test.ping
+    salt 'web?.example.net' test.version
 
 Match the ``web1`` through ``web5`` minions:
 
 .. code-block:: bash
 
-    salt 'web[1-5]' test.ping
+    salt 'web[1-5]' test.version
 
 Match the ``web1`` and ``web3`` minions:
 
 .. code-block:: bash
 
-    salt 'web[1,3]' test.ping
+    salt 'web[1,3]' test.version
 
 Match the ``web-x``, ``web-y``, and ``web-z`` minions:
 
 .. code-block:: bash
 
-    salt 'web-[x-z]' test.ping
+    salt 'web-[x-z]' test.version
 
 .. note::
 
@@ -81,7 +81,7 @@ Match both ``web1-prod`` and ``web1-devel`` minions:
 
 .. code-block:: bash
 
-    salt -E 'web1-(prod|devel)' test.ping
+    salt -E 'web1-(prod|devel)' test.version
 
 When using regular expressions in a State's :term:`top file`, you must specify
 the matcher as the first option. The following example executes the contents of
@@ -102,4 +102,4 @@ At the most basic level, you can specify a flat list of minion IDs:
 
 .. code-block:: bash
 
-    salt -L 'web1,web2,web3' test.ping
+    salt -L 'web1,web2,web3' test.version

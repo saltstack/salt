@@ -82,11 +82,11 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
             'z -v -weird-long-opt arg',
         ]
         ret_tar_opts = [
-            ['tar', 'x', '--no-anchored', 'foo', '-f'],
+            ['tar', 'xv', '--no-anchored', 'foo', '-f'],
             ['tar', 'xv', '-p', '--opt', '-f'],
-            ['tar', 'x', '-v', '-p', '-f'],
-            ['tar', 'x', '--long-opt', '-z', '-f'],
-            ['tar', 'xz', '-v', '-weird-long-opt', 'arg', '-f'],
+            ['tar', 'xv', '-p', '-f'],
+            ['tar', 'xv', '--long-opt', '-z', '-f'],
+            ['tar', 'xvz', '-weird-long-opt', 'arg', '-f'],
         ]
 
         mock_true = MagicMock(return_value=True)
@@ -163,7 +163,7 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
                                     options='xvzf',
                                     enforce_toplevel=False,
                                     keep=True)
-            self.assertEqual(ret['changes']['extracted_files'], 'stdout')
+            self.assertEqual(ret['changes']['extracted_files'], ['stdout'])
 
     def test_tar_bsdtar(self):
         '''
@@ -202,7 +202,7 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
                                     options='xvzf',
                                     enforce_toplevel=False,
                                     keep=True)
-            self.assertEqual(ret['changes']['extracted_files'], 'stderr')
+            self.assertEqual(ret['changes']['extracted_files'], ['stderr'])
 
     def test_extracted_when_if_missing_path_exists(self):
         '''

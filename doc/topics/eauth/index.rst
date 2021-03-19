@@ -199,7 +199,7 @@ any user on the same system as the master with the ``-a`` option:
 
 .. code-block:: bash
 
-    $ salt -a pam web\* test.ping
+    $ salt -a pam web\* test.version
 
 The system will ask the user for the credentials required by the
 authentication system and then publish the command.
@@ -217,7 +217,7 @@ adding a ``-T`` option when authenticating:
 
 .. code-block:: bash
 
-    $ salt -T -a pam web\* test.ping
+    $ salt -T -a pam web\* test.version
 
 Now a token will be created that has an expiration of 12 hours (by default).
 This token is stored in a file named ``salt_token`` in the active user's home

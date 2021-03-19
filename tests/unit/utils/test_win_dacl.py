@@ -333,8 +333,6 @@ class WinDaclRegTestCase(TestCase, LoaderModuleMockMixin):
                 reset=False)
 
         expected = {
-            'comment': '',
-            'name': self.obj_name,
             'changes': {'owner': 'Users',
                         'perms': {'Backup Operators': {'grant': 'read',
                                                        'deny': ['delete']},
@@ -342,6 +340,8 @@ class WinDaclRegTestCase(TestCase, LoaderModuleMockMixin):
                                                                'set_value',
                                                                'write_dac',
                                                                'write_owner']}}},
+            'comment': '',
+            'name': self.obj_name,
             'result': None}
         self.assertDictEqual(result, expected)
 
@@ -633,8 +633,6 @@ class WinDaclFileTestCase(TestCase, LoaderModuleMockMixin):
                 reset=False)
 
         expected = {
-            'comment': '',
-            'name': self.obj_name,
             'changes': {'owner': 'Users',
                         'perms': {'Backup Operators': {'grant': 'read',
                                                        'deny': ['delete']},
@@ -642,6 +640,8 @@ class WinDaclFileTestCase(TestCase, LoaderModuleMockMixin):
                                                                'set_value',
                                                                'write_dac',
                                                                'write_owner']}}},
+            'comment': '',
+            'name': self.obj_name,
             'result': None}
         self.assertDictEqual(result, expected)
 

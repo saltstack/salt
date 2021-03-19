@@ -109,7 +109,7 @@ against the command target.
 The typical lifecycle of a salt job from the perspective of the master
 might be as follows:
 
-1) A command is issued on the CLI. For example, 'salt my_minion test.ping'.
+1) A command is issued on the CLI. For example, 'salt my_minion test.version'.
 
 2) The 'salt' command uses LocalClient to generate a request to the salt master
    by connecting to the ReqServer on TCP:4506 and issuing the job.

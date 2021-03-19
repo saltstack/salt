@@ -23,8 +23,8 @@ or the special grains key ``minion_blackout_whitelist``, which is formed as a li
 .. code-block:: yaml
 
     minion_blackout_whitelist:
-      - test.ping
-      - pillar.get
+     - test.version
+     - pillar.get
 
 When use a special pillar key ``minion_blackout`` then salt will get ``minion_blackout_whitelist`` from the
 pillar keys. And will get it from the grains when use ``minion_blackout`` as a special grains key.

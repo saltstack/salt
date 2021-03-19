@@ -49,6 +49,7 @@ class SchedulerErrorTest(ModuleCase, SaltReturnAssertsMixin):
             functions = {'test.ping': ping}
             self.schedule = salt.utils.schedule.Schedule(copy.deepcopy(DEFAULT_CONFIG), functions, returners={})
         self.schedule.opts['loop_interval'] = 1
+        self.schedule.opts['run_schedule_jobs_in_background'] = False
 
         self.schedule.opts['grains']['whens'] = {'tea time': '11/29/2017 12:00pm'}
 

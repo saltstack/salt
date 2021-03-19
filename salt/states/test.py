@@ -43,6 +43,24 @@ calls, e.g. running, calling, logging, output filtering etc.
             - foo
         - integer:
             - bar
+
+You may also use these states for controlled failure in state definitions, for example if certain conditions in
+pillar or grains do not apply. The following state definition will fail with a message "OS not supported!" when
+`grains['os']` is neither Ubuntu nor CentOS:
+
+.. code-block:: jinja
+
+    {% if grains['os'] in ['Ubuntu', 'CentOS'] %}
+
+    # Your state definitions go here
+
+    {% else %}
+    failure:
+      test.fail_without_changes:
+        - name: "OS not supported!"
+        - failhard: True
+    {% endif %}
+
 '''
 from __future__ import absolute_import, print_function, unicode_literals
 

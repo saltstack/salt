@@ -123,7 +123,7 @@ Post-Deploy Commands
 Once a minion has been deployed, it has the option to run a salt command.
 Normally, this would be the :py:func:`state.apply <salt.modules.state.apply_>`,
 which would finish provisioning the VM. Another common option (for testing) is
-to use :py:func:`test.ping <salt.modules.test.ping>`. This is configured in the
+to use :py:func:`test.version <salt.modules.test.version>`. This is configured in the
 main cloud config file:
 
 .. code-block:: yaml

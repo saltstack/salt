@@ -93,6 +93,7 @@ def md5_digest(instr):
     )
 
 
+@jinja_filter('sha1')
 def sha1_digest(instr):
     '''
     Generate an sha1 hash of a given string.

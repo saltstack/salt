@@ -37,7 +37,7 @@ def __virtual__():
     '''
     Set the user module if the kernel is SunOS
     '''
-    if __grains__['kernel'] == 'SunOS' and HAS_PWD:
+    if __grains__.get('kernel') == 'SunOS' and HAS_PWD:
         return __virtualname__
     return (False, 'The solaris_user execution module failed to load: '
             'only available on Solaris systems with pwd module installed.')

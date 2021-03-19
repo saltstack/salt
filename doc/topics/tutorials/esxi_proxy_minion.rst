@@ -227,9 +227,10 @@ This allows you to use any number of potential fallback passwords.
 
     This scenario is especially true, and even slower, when the proxy
     minion first starts. If the correct password is not the first password
-    on the list, it may take up to a minute for ``test.ping`` to respond
-    with a ``True`` result. Once the initial authorization is complete, the
-    responses for commands will be a little faster.
+    on the list, it may take up to a minute for ``test.version`` to respond
+    with salt's version installed (Example: ``2018.3.4``. Once the initial 
+    authorization is complete, the responses for commands will be a little 
+    faster.
 
     To avoid these longer waiting periods, SaltStack recommends moving the
     correct password to the top of the list and restarting the proxy minion
@@ -366,7 +367,7 @@ proxy processes!
 
 .. code-block:: bash
 
-    # salt 'esxi-*' test.ping
+    # salt 'esxi-*' test.version
     esxi-1:
         True
     esxi-3:
@@ -377,7 +378,7 @@ Executing Commands
 ==================
 
 Now that you've configured your Proxy Minions and have them responding successfully
-to a ``test.ping``, we can start executing commands against the ESXi hosts via Salt.
+to a ``test.version``, we can start executing commands against the ESXi hosts via Salt.
 
 It's important to understand how this particular proxy works, and there are a couple
 of important pieces to be aware of in order to start running remote execution and

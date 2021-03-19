@@ -238,7 +238,7 @@ The minion will connect to the first master from its master list
     [DEBUG   ] Decrypting the current master AES key
 
 
-A test.ping on the master the minion is currently connected to should be run to
+A test.version on the master the minion is currently connected to should be run to
 test connectivity.
 
 If successful, that master should be turned off. A firewall-rule denying the

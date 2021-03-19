@@ -192,9 +192,12 @@ class SampleConfTest(DefaultConfigsBase, TestCase):
         commented out. This test loops through all of the files in that directory to check
         for any lines that are not commented or blank.
         '''
-        cloud_sample_files = os.listdir(SAMPLE_CONF_DIR + 'cloud.profiles.d/')
+        cloud_sample_dir = SAMPLE_CONF_DIR + 'cloud.profiles.d/'
+        if not os.path.exists(cloud_sample_dir):
+            self.skipTest("Sample config directory '{}' is missing.".format(cloud_sample_dir))
+        cloud_sample_files = os.listdir(cloud_sample_dir)
         for conf_file in cloud_sample_files:
-            profile_conf = SAMPLE_CONF_DIR + 'cloud.profiles.d/' + conf_file
+            profile_conf = cloud_sample_dir + conf_file
             ret = salt.config._read_conf_file(profile_conf)
             self.assertEqual(
                 ret,
@@ -210,9 +213,12 @@ class SampleConfTest(DefaultConfigsBase, TestCase):
         commented out. This test loops through all of the files in that directory to check
         for any lines that are not commented or blank.
         '''
-        cloud_sample_files = os.listdir(SAMPLE_CONF_DIR + 'cloud.providers.d/')
+        cloud_sample_dir = SAMPLE_CONF_DIR + 'cloud.providers.d/'
+        if not os.path.exists(cloud_sample_dir):
+            self.skipTest("Sample config directory '{}' is missing.".format(cloud_sample_dir))
+        cloud_sample_files = os.listdir(cloud_sample_dir)
         for conf_file in cloud_sample_files:
-            provider_conf = SAMPLE_CONF_DIR + 'cloud.providers.d/' + conf_file
+            provider_conf = cloud_sample_dir + conf_file
             ret = salt.config._read_conf_file(provider_conf)
             self.assertEqual(
                 ret,
@@ -228,9 +234,12 @@ class SampleConfTest(DefaultConfigsBase, TestCase):
         commented out. This test loops through all of the files in that directory to check
         for any lines that are not commented or blank.
         '''
-        cloud_sample_files = os.listdir(SAMPLE_CONF_DIR + 'cloud.maps.d/')
+        cloud_sample_dir = SAMPLE_CONF_DIR + 'cloud.maps.d/'
+        if not os.path.exists(cloud_sample_dir):
+            self.skipTest("Sample config directory '{}' is missing.".format(cloud_sample_dir))
+        cloud_sample_files = os.listdir(cloud_sample_dir)
         for conf_file in cloud_sample_files:
-            map_conf = SAMPLE_CONF_DIR + 'cloud.maps.d/' + conf_file
+            map_conf = cloud_sample_dir + conf_file
             ret = salt.config._read_conf_file(map_conf)
             self.assertEqual(
                 ret,
@@ -531,6 +540,15 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             os.path.join(tempdir, 'c')
         ]))
 
+    def test_validate_bad_file_roots(self):
+        expected = salt.config._expand_glob_path(
+            [salt.syspaths.BASE_FILE_ROOTS_DIR]
+        )
+        with patch('salt.config._normalize_roots') as mk:
+            ret = salt.config._validate_file_roots(None)
+            assert not mk.called
+        assert ret == {'base': expected}
+
     @with_tempfile()
     @with_tempdir()
     def test_master_pillar_roots_glob(self, tempdir, fpath):
@@ -553,6 +571,15 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             os.path.join(tempdir, 'b'),
             os.path.join(tempdir, 'c')
         ]))
+
+    def test_validate_bad_pillar_roots(self):
+        expected = salt.config._expand_glob_path(
+            [salt.syspaths.BASE_PILLAR_ROOTS_DIR]
+        )
+        with patch('salt.config._normalize_roots') as mk:
+            ret = salt.config._validate_pillar_roots(None)
+            assert not mk.called
+        assert ret == {'base': expected}
 
     @with_tempdir()
     def test_master_id_function(self, tempdir):

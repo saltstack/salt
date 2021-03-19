@@ -23,7 +23,7 @@
 #======================================================================================================================
 set -o nounset                              # Treat unset variables as an error
 
-__ScriptVersion="2019.01.08"
+__ScriptVersion="2019.05.20"
 __ScriptName="bootstrap-salt.sh"
 
 __ScriptFullName="$0"
@@ -499,6 +499,7 @@ exec 2>"$LOGPIPE"
 #              14               SIGALRM
 #              15               SIGTERM
 #----------------------------------------------------------------------------------------------------------------------
+APT_ERR=$(mktemp /tmp/apt_error.XXXX)
 __exit_cleanup() {
     EXIT_CODE=$?
 
@@ -519,6 +520,12 @@ __exit_cleanup() {
     if [ -p "$LOGPIPE" ]; then
         echodebug "Removing the logging pipe $LOGPIPE"
         rm -f "$LOGPIPE"
+    fi
+
+    # Remove the temporary apt error file when the script exits
+    if [ -f "$APT_ERR" ]; then
+        echodebug "Removing the temporary apt error file $APT_ERR"
+        rm -f "$APT_ERR"
     fi
 
     # Kill tee when exiting, CentOS, at least requires this
@@ -1431,7 +1438,7 @@ __debian_derivatives_translation() {
     # If the file does not exist, return
     [ ! -f /etc/os-release ] && return
 
-    DEBIAN_DERIVATIVES="(cumulus_.+|devuan|kali|linuxmint|raspbian)"
+    DEBIAN_DERIVATIVES="(cumulus_.+|devuan|kali|linuxmint|raspbian|bunsenlabs|turnkey)"
     # Mappings
     cumulus_2_debian_base="7.0"
     cumulus_3_debian_base="8.0"
@@ -1441,6 +1448,8 @@ __debian_derivatives_translation() {
     linuxmint_1_debian_base="8.0"
     raspbian_8_debian_base="8.0"
     raspbian_9_debian_base="9.0"
+    bunsenlabs_9_debian_base="9.0"
+    turnkey_9_debian_base="9.0"
 
     # Translate Debian derivatives to their base Debian version
     match=$(echo "$DISTRO_NAME_L" | grep -E ${DEBIAN_DERIVATIVES})
@@ -1466,6 +1475,14 @@ __debian_derivatives_translation() {
             raspbian)
                 _major=$(echo "$DISTRO_VERSION" | sed 's/^\([0-9]*\).*/\1/g')
                 _debian_derivative="raspbian"
+                ;;
+            bunsenlabs)
+                _major=$(echo "$DISTRO_VERSION" | sed 's/^\([0-9]*\).*/\1/g')
+                _debian_derivative="bunsenlabs"
+                ;;
+            turnkey)
+                _major=$(echo "$DISTRO_VERSION" | sed 's/^\([0-9]*\).*/\1/g')
+                _debian_derivative="turnkey"
                 ;;
         esac
 
@@ -1808,25 +1825,23 @@ __wait_for_apt(){
     WAIT_TIMEOUT=900
 
     # Run our passed in apt command
-    "${@}"
+    "${@}" 2>"$APT_ERR"
     APT_RETURN=$?
 
-    # If our exit code from apt is 100, then we're waiting on a lock
-    while [ $APT_RETURN -eq 100 ]; do
-      echoinfo "Aware of the lock. Patiently waiting $WAIT_TIMEOUT more seconds..."
-      sleep 1
-      WAIT_TIMEOUT=$((WAIT_TIMEOUT - 1))
+    # Make sure we're not waiting on a lock
+    while [ $APT_RETURN -ne 0 ] && grep -q '^E: Could not get lock' "$APT_ERR"; do
+        echoinfo "Aware of the lock. Patiently waiting $WAIT_TIMEOUT more seconds..."
+        sleep 1
+        WAIT_TIMEOUT=$((WAIT_TIMEOUT - 1))
 
-      # If timeout reaches 0, abort.
-      if [ "$WAIT_TIMEOUT" -eq 0 ]; then
-          echoerror "Apt, apt-get, aptitude, or dpkg process is taking too long."
-          echoerror "Bootstrap script cannot proceed. Aborting."
-          return 1
-      else
-          # Try running apt again until our return code != 100
-	  "${@}"
-    	  APT_RETURN=$?
-      fi
+        if [ "$WAIT_TIMEOUT" -eq 0 ]; then
+            echoerror "Apt, apt-get, aptitude, or dpkg process is taking too long."
+            echoerror "Bootstrap script cannot proceed. Aborting."
+            return 1
+        else
+            "${@}" 2>"$APT_ERR"
+            APT_RETURN=$?
+        fi
     done
 
     return $APT_RETURN
@@ -1852,6 +1867,26 @@ __apt_get_upgrade_noinput() {
 
 
 #---  FUNCTION  -------------------------------------------------------------------------------------------------------
+#          NAME:  __temp_gpg_pub
+#   DESCRIPTION:  Create a temporary file for downloading a GPG public key.
+#----------------------------------------------------------------------------------------------------------------------
+__temp_gpg_pub() {
+    if __check_command_exists mktemp; then
+        tempfile="$(mktemp /tmp/salt-gpg-XXXXXXXX.pub 2>/dev/null)"
+
+        if [ -z "$tempfile" ]; then
+            echoerror "Failed to create temporary file in /tmp"
+            return 1
+        fi
+    else
+        tempfile="/tmp/salt-gpg-$$.pub"
+    fi
+
+    echo $tempfile
+}   # ----------- end of function __temp_gpg_pub  -----------
+
+
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  __apt_key_fetch
 #   DESCRIPTION:  Download and import GPG public key for "apt-secure"
 #    PARAMETERS:  url
@@ -1859,8 +1894,13 @@ __apt_get_upgrade_noinput() {
 __apt_key_fetch() {
     url=$1
 
-    # shellcheck disable=SC2086
-    __wait_for_apt apt-key adv ${_GPG_ARGS} --fetch-keys "$url"; return $?
+    tempfile="$(__temp_gpg_pub)"
+
+    __fetch_url "$tempfile" "$url" || return 1
+    apt-key add "$tempfile" || return 1
+    rm -f "$tempfile"
+
+    return 0
 }   # ----------  end of function __apt_key_fetch  ----------
 
 
@@ -1872,16 +1912,7 @@ __apt_key_fetch() {
 __rpm_import_gpg() {
     url=$1
 
-    if __check_command_exists mktemp; then
-        tempfile="$(mktemp /tmp/salt-gpg-XXXXXXXX.pub 2>/dev/null)"
-
-        if [ -z "$tempfile" ]; then
-            echoerror "Failed to create temporary file in /tmp"
-            return 1
-        fi
-    else
-        tempfile="/tmp/salt-gpg-$$.pub"
-    fi
+    tempfile="$(__temp_gpg_pub)"
 
     __fetch_url "$tempfile" "$url" || return 1
     rpm --import "$tempfile" || return 1
@@ -2778,6 +2809,7 @@ install_ubuntu_git_deps() {
         __PACKAGES="${__PACKAGES} python${PY_PKG_VER}-msgpack python${PY_PKG_VER}-requests"
         __PACKAGES="${__PACKAGES} python${PY_PKG_VER}-tornado python${PY_PKG_VER}-yaml"
         __PACKAGES="${__PACKAGES} python${PY_PKG_VER}-zmq"
+        __PACKAGES="${__PACKAGES} python-concurrent.futures"
 
         if [ "$_INSTALL_CLOUD" -eq $BS_TRUE ]; then
             # Install python-libcloud if asked to
@@ -3819,7 +3851,7 @@ install_centos_git_deps() {
 
     if [ "${_PY_EXE}" != "" ] && [ "$_PIP_ALLOWED" -eq "$BS_TRUE" ]; then
         # If "-x" is defined, install dependencies with pip based on the Python version given.
-        _PIP_PACKAGES="m2crypto jinja2 msgpack-python pycrypto PyYAML tornado<5.0 zmq futures>=2.0"
+        _PIP_PACKAGES="m2crypto!=0.33.0 jinja2 msgpack-python pycrypto PyYAML tornado<5.0 zmq futures>=2.0"
 
         # install swig and openssl on cent6
         if [ "$DISTRO_MAJOR_VERSION" -eq 6 ]; then
@@ -4778,8 +4810,7 @@ install_amazon_linux_ami_2_deps() {
     if [ $_DISABLE_REPOS -eq $BS_FALSE ] || [ "$_CUSTOM_REPO_URL" != "null" ]; then
         __REPO_FILENAME="saltstack-repo.repo"
 
-        base_url="$HTTP_VAL://${_REPO_URL}/yum/redhat/7/\$basearch/$repo_rev/"
-        base_url="$HTTP_VAL://${_REPO_URL}/yum/amazon/2/\$basearch/latest/"
+        base_url="$HTTP_VAL://${_REPO_URL}/yum/amazon/2/\$basearch/$repo_rev/"
         gpg_key="${base_url}SALTSTACK-GPG-KEY.pub
         ${base_url}base/RPM-GPG-KEY-CentOS-7"
         repo_name="SaltStack repo for Amazon Linux 2.0"
@@ -4803,7 +4834,7 @@ _eof
 
     # Package python-ordereddict-1.1-2.el6.noarch is obsoleted by python26-2.6.9-2.88.amzn1.x86_64
     # which is already installed
-    __PACKAGES="m2crypto ${pkg_append}-crypto ${pkg_append}-jinja2 PyYAML"
+    __PACKAGES="m2crypto ${pkg_append}-crypto ${pkg_append}-jinja2 PyYAML procps-ng"
     __PACKAGES="${__PACKAGES} ${pkg_append}-msgpack ${pkg_append}-requests ${pkg_append}-zmq"
     __PACKAGES="${__PACKAGES} ${pkg_append}-futures"
 
@@ -5151,17 +5182,21 @@ __configure_freebsd_pkg_details() {
     fi
     FROM_FREEBSD="-r FreeBSD"
 
-    ## add saltstack freebsd repo
-    salt_conf_file=/usr/local/etc/pkg/repos/saltstack.conf
-    {
-        echo "SaltStack:{"
-        echo "    url: \"${SALTPKGCONFURL}\","
-        echo "    mirror_type: \"http\","
-        echo "    enabled: true"
-        echo "    priority: 10"
-        echo "}"
-    } > $salt_conf_file
-    FROM_SALTSTACK="-r SaltStack"
+    ##### Workaround : Waiting for SaltStack Repository to be available for FreeBSD 12 ####
+    if [ "${DISTRO_MAJOR_VERSION}" -ne 12 ]; then
+        ## add saltstack freebsd repo
+        salt_conf_file=/usr/local/etc/pkg/repos/saltstack.conf
+        {
+            echo "SaltStack:{"
+            echo "    url: \"${SALTPKGCONFURL}\","
+            echo "    mirror_type: \"http\","
+            echo "    enabled: true"
+            echo "    priority: 10"
+            echo "}"
+        } > $salt_conf_file
+        FROM_SALTSTACK="-r SaltStack"
+    fi
+    ##### End Workaround : Waiting for SaltStack Repository to be available for FreeBSD 12 ####
 
     ## ensure future ports builds use pkgng
     echo "WITH_PKGNG=   yes" >> /etc/make.conf
@@ -5219,6 +5254,10 @@ install_freebsd_11_stable_deps() {
     install_freebsd_9_stable_deps
 }
 
+install_freebsd_12_stable_deps() {
+    install_freebsd_9_stable_deps
+}
+
 install_freebsd_git_deps() {
     install_freebsd_9_stable_deps || return 1
 
@@ -5226,6 +5265,8 @@ install_freebsd_git_deps() {
     SALT_DEPENDENCIES=$(/usr/local/sbin/pkg search ${FROM_FREEBSD} -R -d sysutils/py-salt | grep -i origin | sed -e 's/^[[:space:]]*//' | tail -n +2 | awk -F\" '{print $2}' | tr '\n' ' ')
     # shellcheck disable=SC2086
     /usr/local/sbin/pkg install ${FROM_FREEBSD} -y ${SALT_DEPENDENCIES} || return 1
+    # install python meta package
+    /usr/local/sbin/pkg install -y lang/python || return 1
 
     if ! __check_command_exists git; then
         /usr/local/sbin/pkg install -y git || return 1
@@ -5303,6 +5344,16 @@ install_freebsd_11_stable() {
     return 0
 }
 
+install_freebsd_12_stable() {
+#
+# installing latest version of salt from FreeBSD CURRENT ports repo
+#
+    # shellcheck disable=SC2086
+    /usr/local/sbin/pkg install ${FROM_FREEBSD} -y sysutils/py-salt || return 1
+
+    return 0
+}
+
 install_freebsd_git() {
 
     # /usr/local/bin/python2 in FreeBSD is a symlink to /usr/local/bin/python2.7
@@ -5366,6 +5417,10 @@ install_freebsd_10_stable_post() {
 }
 
 install_freebsd_11_stable_post() {
+    install_freebsd_9_stable_post
+}
+
+install_freebsd_12_stable_post() {
     install_freebsd_9_stable_post
 }
 
@@ -6036,7 +6091,7 @@ install_opensuse_15_git_deps() {
         PY_PKG_VER=2
 
         # This is required by some of the python2 packages below
-        __PACKAGES="libpython2_7-1_0"
+        __PACKAGES="libpython2_7-1_0 python2-futures python-ipaddress"
     else
         PY_PKG_VER=3
         __PACKAGES=""
@@ -6044,6 +6099,7 @@ install_opensuse_15_git_deps() {
 
     __PACKAGES="${__PACKAGES} libzmq5 python${PY_PKG_VER}-Jinja2 python${PY_PKG_VER}-msgpack"
     __PACKAGES="${__PACKAGES} python${PY_PKG_VER}-pycrypto python${PY_PKG_VER}-pyzmq"
+    __PACKAGES="${__PACKAGES} python${PY_PKG_VER}-xml"
 
     if [ -f "${_SALT_GIT_CHECKOUT_DIR}/requirements/base.txt" ]; then
         # We're on the develop branch, install whichever tornado is on the requirements file
@@ -7096,3 +7152,5 @@ else
 fi
 
 exit 0
+
+# vim: set sts=4 ts=4 et

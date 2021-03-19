@@ -57,7 +57,7 @@ To match a nodegroup on the CLI, use the ``-N`` command-line option:
 
 .. code-block:: bash
 
-    salt -N group1 test.ping
+    salt -N group1 test.version
 
 .. versionadded:: 2019.2.0
 .. note::

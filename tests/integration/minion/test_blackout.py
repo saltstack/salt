@@ -6,7 +6,7 @@ Tests for minion blackout
 # Import Python libs
 from __future__ import absolute_import
 import os
-import time
+import logging
 import textwrap
 
 # Import Salt Testing libs
@@ -17,6 +17,8 @@ from tests.support.runtests import RUNTIME_VARS
 # Import Salt libs
 import salt.utils.files
 
+log = logging.getLogger(__name__)
+
 
 class MinionBlackoutTestCase(ModuleCase):
     '''
@@ -25,37 +27,72 @@ class MinionBlackoutTestCase(ModuleCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.blackout_pillar = os.path.join(RUNTIME_VARS.PILLAR_DIR, 'base', 'blackout.sls')
+        cls.top_pillar = os.path.join(RUNTIME_VARS.TMP_PILLAR_TREE, 'top.sls')
+        cls.blackout_pillar = os.path.join(RUNTIME_VARS.TMP_PILLAR_TREE, 'blackout.sls')
+
+    @classmethod
+    def tearDownClass(cls):
+        if os.path.exists(cls.top_pillar):
+            os.unlink(cls.top_pillar)
+        del cls.top_pillar
+        if os.path.exists(cls.blackout_pillar):
+            os.unlink(cls.blackout_pillar)
+        del cls.blackout_pillar
+
+    def setUp(self):
+        with salt.utils.files.fopen(self.top_pillar, 'w') as wfh:
+            wfh.write(textwrap.dedent('''\
+                base:
+                  '*':
+                    - blackout
+                '''))
+        with salt.utils.files.fopen(self.blackout_pillar, 'w') as wfh:
+            wfh.write('minion_blackout: False')
+        self.addCleanup(self.cleanup_blackout_pillar)
 
     def tearDown(self):
-        self.end_blackout(sleep=False)
+        self.end_blackout()
         # Make sure we also refresh the sub_minion pillar
         refreshed = self.run_function(
             'saltutil.refresh_pillar',
             minion_tgt='sub_minion',
-            async=False)  # pylint: disable=pep8-reserved-keywords
+            **{'async': False})
         self.assertTrue(refreshed)
+        self.wait_for_all_jobs()
+
+    def cleanup_blackout_pillar(self):
+        if os.path.exists(self.top_pillar):
+            os.unlink(self.top_pillar)
+        if os.path.exists(self.blackout_pillar):
+            os.unlink(self.blackout_pillar)
 
     def begin_blackout(self, blackout_data='minion_blackout: True'):
         '''
         setup minion blackout mode
         '''
+        log.info('Entering minion blackout...')
+        self.wait_for_all_jobs()
         with salt.utils.files.fopen(self.blackout_pillar, 'w') as wfh:
             wfh.write(blackout_data)
         refreshed = self.run_function(
             'saltutil.refresh_pillar',
-            async=False)  # pylint: disable=pep8-reserved-keywords
+            **{'async': False})
         self.assertTrue(refreshed)
+        log.info('Entered minion blackout.')
 
-    def end_blackout(self, sleep=True):
+    def end_blackout(self):
         '''
         takedown minion blackout mode
         '''
+        log.info('Exiting minion blackout...')
         with salt.utils.files.fopen(self.blackout_pillar, 'w') as wfh:
             wfh.write('minion_blackout: False\n')
-        self.run_function('saltutil.refresh_pillar')
-        if sleep:
-            time.sleep(10)  # wait for minion to exit blackout mode
+        refreshed = self.run_function(
+            'saltutil.refresh_pillar',
+            **{'async': False})
+        self.assertTrue(refreshed)
+        self.wait_for_all_jobs()
+        log.info('Exited minion blackout.')
 
     @flaky
     def test_blackout(self):

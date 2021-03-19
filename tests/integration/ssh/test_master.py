@@ -14,7 +14,7 @@ from tests.support.helpers import requires_sshd_server
 @requires_sshd_server
 class SSHMasterTestCase(ModuleCase):
     '''
-    Test minion blackout functionality
+    Test ssh master functionality
     '''
     def test_can_it_ping(self):
         '''

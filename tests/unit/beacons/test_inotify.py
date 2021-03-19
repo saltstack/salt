@@ -39,10 +39,33 @@ class INotifyBeaconTestCase(TestCase, LoaderModuleMockMixin):
     def tearDown(self):
         shutil.rmtree(self.tmpdir, ignore_errors=True)
 
+    def test_non_list_config(self):
+        config = {}
+
+        ret = inotify.validate(config)
+
+        self.assertEqual(ret, (False, 'Configuration for inotify beacon must'
+                                      ' be a list.'))
+
     def test_empty_config(self):
         config = [{}]
-        ret = inotify.beacon(config)
-        self.assertEqual(ret, [])
+        ret = inotify.validate(config)
+        _expected = (False, 'Configuration for inotify beacon must include files.')
+        self.assertEqual(ret, _expected)
+
+    def test_files_none_config(self):
+        config = [{'files': None}]
+        ret = inotify.validate(config)
+        _expected = (False, 'Configuration for inotify beacon invalid, '
+                            'files must be a dict.')
+        self.assertEqual(ret, _expected)
+
+    def test_files_list_config(self):
+        config = [{'files': [{u'/importantfile': {u'mask': [u'modify']}}]}]
+        ret = inotify.validate(config)
+        _expected = (False, 'Configuration for inotify beacon invalid, '
+                            'files must be a dict.')
+        self.assertEqual(ret, _expected)
 
     def test_file_open(self):
         path = os.path.realpath(__file__)

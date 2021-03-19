@@ -48,7 +48,7 @@ class ManageTest(ShellCase):
         )
         # Make sure we can see the new key
         expected = 'Passed invalid arguments:'
-        self.assertIn(expected, ret['return'])
+        self.assertRaisesRegex(TypeError, expected)
 
     def test_grains(self):
         '''

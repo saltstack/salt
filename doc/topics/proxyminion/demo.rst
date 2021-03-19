@@ -96,7 +96,7 @@ the 'url' key above should say ``url: http://127.0.0.1:8000``
 
 .. code-block:: bash
 
-    salt p8000 test.ping
+    salt p8000 test.version
 
 8. The REST service implements a degenerately simple pkg and service provider as
    well as a small set of grains.  To "install" a package, use a standard

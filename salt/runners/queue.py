@@ -206,24 +206,24 @@ def process_queue(queue, quantity=1, backend='sqlite', is_runner=False):
         salt-run queue.process_queue myqueue all backend=sqlite
     '''
     # get ready to send an event
-    event = get_event(
+    with get_event(
                 'master',
                 __opts__['sock_dir'],
                 __opts__['transport'],
                 opts=__opts__,
-                listen=False)
-    try:
-        items = pop(queue=queue, quantity=quantity, backend=backend, is_runner=is_runner)
-    except SaltInvocationError as exc:
-        error_txt = '{0}'.format(exc)
-        __jid_event__.fire_event({'errors': error_txt}, 'progress')
-        return False
+                listen=False) as event_bus:
+        try:
+            items = pop(queue=queue, quantity=quantity, backend=backend, is_runner=is_runner)
+        except SaltInvocationError as exc:
+            error_txt = '{0}'.format(exc)
+            __jid_event__.fire_event({'errors': error_txt}, 'progress')
+            return False
 
-    data = {'items': items,
-            'backend': backend,
-            'queue': queue,
-            }
-    event.fire_event(data, tagify([queue, 'process'], prefix='queue'))
+        data = {'items': items,
+                'backend': backend,
+                'queue': queue,
+                }
+        event_bus.fire_event(data, tagify([queue, 'process'], prefix='queue'))
     return data
 
 

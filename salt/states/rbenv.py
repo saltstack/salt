@@ -9,7 +9,7 @@ Rbenv will be installed automatically the first time it is needed and can be
 updated later. This module will *not* automatically install packages which rbenv
 will need to compile the versions of ruby. If your version of ruby fails to
 install, refer to the ruby-build documentation to verify you are not missing any
-dependencies: https://github.com/sstephenson/ruby-build/wiki
+dependencies: https://github.com/rbenv/ruby-build/wiki
 
 If rbenv is run as the root user then it will be installed to /usr/local/rbenv,
 otherwise it will be installed to the users ~/.rbenv directory. To make

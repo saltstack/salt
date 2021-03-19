@@ -28,8 +28,11 @@ FirewallD use the command line client ``firewall-cmd``.
 
     firewall-cmd --permanent --zone=<zone> --add-port=4505-4506/tcp
 
-Please choose the desired zone according to your setup. Don't forget to reload
-after you made your changes.
+A network zone defines the security level of trust for the the network. 
+The user should choose an appropriate zone value for their setup.
+Possible values include: drop, block, public, external, dmz, work, home, internal, trusted.
+
+Don't forget to reload after you made your changes.
 
 .. code-block:: bash
 
@@ -229,5 +232,5 @@ be set on the Master:
     needs to communicate with the listening network socket of
     ``salt-master`` on the *loopback* interface. Without this you will
     see no outgoing Salt traffic from the master, even for a simple
-    ``salt '*' test.ping``, because the ``salt`` client never reached
+    ``salt '*' test.version``, because the ``salt`` client never reached
     the ``salt-master`` to tell it to carry out the execution.

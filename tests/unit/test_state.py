@@ -129,6 +129,72 @@ class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             run_num = ret['test_|-step_one_|-step_one_|-succeed_with_changes']['__run_num__']
             self.assertEqual(run_num, 0)
 
+    def test_verify_onlyif_parse(self):
+        low_data = {
+            "onlyif": [
+                {
+                    "fun": "file.search",
+                    "args": [
+                        "/etc/crontab",
+                        "run-parts"
+                    ]
+                }
+            ],
+            "name": "mysql-server-5.7",
+            "state": "debconf",
+            "__id__": "set root password",
+            "fun": "set",
+            "__env__": "base",
+            "__sls__": "debconf",
+            "data": {
+                "mysql-server/root_password": {
+                    "type": "password",
+                    "value": "temp123"
+                }
+            },
+            "order": 10000
+        }
+        expected_result = {'comment': 'onlyif condition is true', 'result': False}
+
+        with patch('salt.state.State._gather_pillar') as state_patch:
+            minion_opts = self.get_temp_config('minion')
+            state_obj = salt.state.State(minion_opts)
+            return_result = state_obj._run_check_onlyif(low_data, '')
+            self.assertEqual(expected_result, return_result)
+
+    def test_verify_unless_parse(self):
+        low_data = {
+            "unless": [
+                {
+                    "fun": "file.search",
+                    "args": [
+                        "/etc/crontab",
+                        "run-parts"
+                    ]
+                }
+            ],
+            "name": "mysql-server-5.7",
+            "state": "debconf",
+            "__id__": "set root password",
+            "fun": "set",
+            "__env__": "base",
+            "__sls__": "debconf",
+            "data": {
+                "mysql-server/root_password": {
+                    "type": "password",
+                    "value": "temp123"
+                }
+            },
+            "order": 10000
+        }
+        expected_result = {'comment': 'unless condition is true', 'result': True, 'skip_watch': True}
+
+        with patch('salt.state.State._gather_pillar') as state_patch:
+            minion_opts = self.get_temp_config('minion')
+            state_obj = salt.state.State(minion_opts)
+            return_result = state_obj._run_check_unless(low_data, '')
+            self.assertEqual(expected_result, return_result)
+
 
 class HighStateTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
     def setUp(self):

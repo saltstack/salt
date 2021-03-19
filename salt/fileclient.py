@@ -20,7 +20,6 @@ from salt.exceptions import (
     CommandExecutionError, MinionError
 )
 import salt.client
-import salt.crypt
 import salt.loader
 import salt.payload
 import salt.transport.client
