@@ -12,8 +12,8 @@ log = logging.getLogger(__name__)
 
 
 class ListPackages:
-    def __init__(self):
-        self._iteration = 0
+    def __init__(self, iteration=0):
+        self._iteration = iteration
 
     def __call__(self):
         pkg_lists = [
@@ -34,13 +34,13 @@ class ListPackages:
             },
         ]
         pkgs = pkg_lists[self._iteration]
-        self._iteration += 1
+        self._iteration = (self._iteration + 1) % 2
         return pkgs
 
 
 class ListPackagesDict:
-    def __init__(self):
-        self._iteration = 0
+    def __init__(self, iteration=0):
+        self._iteration = iteration
 
     def __call__(self):
         pkg_lists = [
@@ -62,7 +62,7 @@ class ListPackagesDict:
             },
         ]
         pkgs = pkg_lists[self._iteration]
-        self._iteration += 1
+        self._iteration = (self._iteration + 1) % 2
         return pkgs
 
 
@@ -122,10 +122,6 @@ def test_install_single_named_package():
     """
 
     install_target = "compress/zip"
-    parsed_targets = (
-        {install_target: None},
-        "repository",
-    )
     cmd_out = {
         "retcode": 0,
         "stdout": "",
@@ -134,9 +130,6 @@ def test_install_single_named_package():
     run_all_mock = MagicMock(return_value=cmd_out)
     patches = {
         "cmd.run_all": run_all_mock,
-        "pkg_resource.parse_targets": MagicMock(return_value=parsed_targets),
-        "pkg_resource.stringify": MagicMock(),
-        "pkg_resource.sort_pkglist": MagicMock(),
         "solarisipspkg.is_installed": MagicMock(return_value=False),
         "cmd.retcode": MagicMock(return_value=False),
     }
@@ -171,10 +164,6 @@ def test_install_single_pkg_package():
     """
 
     install_target = "pkg://solaris/compress/zip"
-    parsed_targets = (
-        {install_target: None},
-        "repository",
-    )
     cmd_out = {
         "retcode": 0,
         "stdout": "",
@@ -183,9 +172,6 @@ def test_install_single_pkg_package():
     run_all_mock = MagicMock(return_value=cmd_out)
     patches = {
         "cmd.run_all": run_all_mock,
-        "pkg_resource.parse_targets": MagicMock(return_value=parsed_targets),
-        "pkg_resource.stringify": MagicMock(),
-        "pkg_resource.sort_pkglist": MagicMock(),
         "solarisipspkg.is_installed": MagicMock(return_value=False),
         "cmd.retcode": MagicMock(return_value=False),
     }
@@ -328,3 +314,124 @@ def test_install_already_installed_single_pkg():
     with patch.dict(solarisipspkg.__salt__, patches):
         result = solarisipspkg.install(install_target)
         assert result == expected_result
+
+
+def test_get_fmri_single_named():
+    """
+    Test getting the frmi for a specific package
+    - a single package pkg://solaris/compress/zip 3.0-11.4.0.0.1.14.0:20180814T153154Z
+    """
+
+    install_target = "compress/zip"
+    pkg_info_out = [
+        "pkg://solaris/compress/zip@3.0-11.4.0.0.1.14.0:20180814T153154Z              i--",
+    ]
+
+    run_stdout_mock = MagicMock(return_value="\n".join(pkg_info_out))
+    patches = {
+        "cmd.run_stdout": run_stdout_mock,
+    }
+
+    with patch.dict(solarisipspkg.__salt__, patches):
+        with patch("salt.modules.solarisipspkg.list_pkgs", ListPackages(1)):
+            added = solarisipspkg.get_fmri(install_target, refresh=False)
+            expected = ["pkg://solaris/compress/zip"]
+            assert added == expected
+
+    expected_calls = [
+        call(["/bin/pkg", "list", "-aHv", install_target],),
+    ]
+    run_stdout_mock.assert_has_calls(expected_calls, any_order=True)
+    assert run_stdout_mock.call_count == 1
+
+
+def test_get_fmri_single_pkg():
+    """
+    Test getting the frmi for a specific package
+    - a single package pkg://solaris/compress/zip 3.0-11.4.0.0.1.14.0:20180814T153154Z
+    """
+
+    install_target = "pkg://solaris/compress/zip"
+    result = solarisipspkg.get_fmri(install_target, refresh=False)
+    assert result == install_target
+
+
+def test_remove_single_named_package():
+    """
+    Test removing a single specific named package
+    - a single package compress/zip
+    """
+
+    install_target = "compress/zip"
+    cmd_out = {
+        "retcode": 0,
+        "stdout": "",
+        "stderr": "",
+    }
+    run_all_mock = MagicMock(return_value=cmd_out)
+    patches = {
+        "cmd.run_all": run_all_mock,
+        "solarisipspkg.is_installed": MagicMock(return_value=False),
+        "cmd.retcode": MagicMock(return_value=False),
+    }
+
+    with patch.dict(solarisipspkg.__salt__, patches):
+        with patch("salt.modules.solarisipspkg.list_pkgs", ListPackages(1)):
+            added = solarisipspkg.remove(install_target, refresh=False)
+            expected = {
+                "pkg://solaris/compress/zip": {
+                    "new": "",
+                    "old": "3.0-11.4.0.0.1.14.0:20180814T153154Z",
+                }
+            }
+            assert added == expected
+
+    expected_calls = [
+        call(["/bin/pkg", "uninstall", "-v", install_target], output_loglevel="trace",),
+    ]
+    run_all_mock.assert_has_calls(expected_calls, any_order=True)
+    assert run_all_mock.call_count == 1
+
+
+def test_remove_listed_pkgs():
+    """
+    Test removing a list of packages
+    """
+    install_target = [{"tree": ""}, {"xclock": ""}]
+    cmd_out = {
+        "retcode": 0,
+        "stdout": "",
+        "stderr": "",
+    }
+    run_all_mock = MagicMock(return_value=cmd_out)
+    patches = {
+        "cmd.run_all": run_all_mock,
+        "solarisipspkg.is_installed": MagicMock(return_value=False),
+        "cmd.retcode": MagicMock(return_value=False),
+    }
+
+    with patch.dict(solarisipspkg.__salt__, patches):
+        with patch("salt.modules.solarisipspkg.list_pkgs", ListPackagesDict(1)), patch(
+            "salt.modules.solarisipspkg.is_installed", MagicMock(return_value=False)
+        ):
+            added = solarisipspkg.remove(pkgs=install_target, refresh=False)
+            expected = {
+                "pkg://solaris/file/tree": {
+                    "new": "",
+                    "old": "1.7.0-11.4.0.0.1.14.0:20180814T163602Z",
+                },
+                "pkg://solaris/x11/xclock": {
+                    "new": "",
+                    "old": "1.0.7-11.4.0.0.1.14.0:20180814T173537Z",
+                },
+            }
+            assert added == expected
+
+    expected_calls = [
+        call(
+            ["/bin/pkg", "uninstall", "-v", install_target[0], install_target[1]],
+            output_loglevel="trace",
+        ),
+    ]
+    run_all_mock.assert_has_calls(expected_calls, any_order=True)
+    assert run_all_mock.call_count == 1
