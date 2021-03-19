@@ -1,0 +1,3 @@
+`gpg.absent` ignores parameters when checking keychain.
+`gpg.present` can report wrong key in comments.
+
