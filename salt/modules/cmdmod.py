@@ -1197,14 +1197,14 @@ def run(
         If stdout returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Neon
+      .. versionadded:: Silicon
 
     :param list success_stderr: This parameter will be allow a list of
         strings that when found in standard error should be considered a success.
         If stderr returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Neon
+      .. versionadded:: Silicon
 
     :param bool stdin_raw_newlines: False
         If ``True``, Salt will not automatically convert the characters ``\\n``
@@ -1479,14 +1479,14 @@ def shell(
         If stdout returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Neon
+      .. versionadded:: Silicon
 
     :param list success_stderr: This parameter will be allow a list of
         strings that when found in standard error should be considered a success.
         If stderr returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Neon
+      .. versionadded:: Silicon
 
     :param bool stdin_raw_newlines: False
         If ``True``, Salt will not automatically convert the characters ``\\n``
@@ -1731,14 +1731,14 @@ def run_stdout(
         If stdout returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Neon
+      .. versionadded:: Silicon
 
     :param list success_stderr: This parameter will be allow a list of
         strings that when found in standard error should be considered a success.
         If stderr returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Neon
+      .. versionadded:: Silicon
 
     :param bool stdin_raw_newlines: False
         If ``True``, Salt will not automatically convert the characters ``\\n``
@@ -1965,14 +1965,14 @@ def run_stderr(
         If stdout returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Neon
+      .. versionadded:: Silicon
 
     :param list success_stderr: This parameter will be allow a list of
         strings that when found in standard error should be considered a success.
         If stderr returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Neon
+      .. versionadded:: Silicon
 
     :param bool stdin_raw_newlines: False
         If ``True``, Salt will not automatically convert the characters ``\\n``
@@ -2242,14 +2242,14 @@ def run_all(
         If stdout returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Neon
+      .. versionadded:: Silicon
 
     :param list success_stderr: This parameter will be allow a list of
         strings that when found in standard error should be considered a success.
         If stderr returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Neon
+      .. versionadded:: Silicon
 
     :param bool stdin_raw_newlines: False
         If ``True``, Salt will not automatically convert the characters ``\\n``
@@ -2467,14 +2467,14 @@ def retcode(
         If stdout returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Neon
+      .. versionadded:: Silicon
 
     :param list success_stderr: This parameter will be allow a list of
         strings that when found in standard error should be considered a success.
         If stderr returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Neon
+      .. versionadded:: Silicon
 
     :param bool stdin_raw_newlines: False
         If ``True``, Salt will not automatically convert the characters ``\\n``
@@ -2766,14 +2766,14 @@ def script(
         If stdout returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Neon
+      .. versionadded:: Silicon
 
     :param list success_stderr: This parameter will be allow a list of
         strings that when found in standard error should be considered a success.
         If stderr returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Neon
+      .. versionadded:: Silicon
 
     :param bool stdin_raw_newlines: False
         If ``True``, Salt will not automatically convert the characters ``\\n``
@@ -3043,14 +3043,14 @@ def script_retcode(
         If stdout returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Neon
+      .. versionadded:: Silicon
 
     :param list success_stderr: This parameter will be allow a list of
         strings that when found in standard error should be considered a success.
         If stderr returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Neon
+      .. versionadded:: Silicon
 
     :param bool stdin_raw_newlines: False
         If ``True``, Salt will not automatically convert the characters ``\\n``
@@ -3392,14 +3392,14 @@ def run_chroot(
         If stdout returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Neon
+      .. versionadded:: Silicon
 
     :param list success_stderr: This parameter will be allow a list of
         strings that when found in standard error should be considered a success.
         If stderr returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Neon
+      .. versionadded:: Silicon
 
     CLI Example:
 
@@ -3954,14 +3954,14 @@ def powershell(
         If stdout returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Neon
+      .. versionadded:: Silicon
 
     :param list success_stderr: This parameter will be allow a list of
         strings that when found in standard error should be considered a success.
         If stderr returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Neon
+      .. versionadded:: Silicon
 
     :param bool stdin_raw_newlines: False
         If ``True``, Salt will not automatically convert the characters ``\\n``
@@ -4293,14 +4293,14 @@ def powershell_all(
         If stdout returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Neon
+      .. versionadded:: Silicon
 
     :param list success_stderr: This parameter will be allow a list of
         strings that when found in standard error should be considered a success.
         If stderr returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Neon
+      .. versionadded:: Silicon
 
     :param bool stdin_raw_newlines: False
         If ``True``, Salt will not automatically convert the characters ``\\n``
@@ -4592,14 +4592,14 @@ def run_bg(
         If stdout returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Neon
+      .. versionadded:: Silicon
 
     :param list success_stderr: This parameter will be allow a list of
         strings that when found in standard error should be considered a success.
         If stderr returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Neon
+      .. versionadded:: Silicon
 
     :param bool stdin_raw_newlines: False
         If ``True``, Salt will not automatically convert the characters ``\\n``
