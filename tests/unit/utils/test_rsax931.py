@@ -175,8 +175,8 @@ class RSAX931Test(TestCase):
     @patch.object(glob, "glob", lambda _: [])
     def test_find_libcrypto_with_system_before_catalina(self):
         """
-        Test _find_libcrypto on a Catalina-like macOS host, simulate
-        not finding any other libcryptos and just defaulting to system.
+        Test _find_libcrypto on a pre-Catalina macOS host by simulating not
+        finding any other libcryptos and verifying that it defaults to system.
         """
         lib_path = _find_libcrypto()
         self.assertEqual(lib_path, "/usr/lib/libcrypto.dylib")
