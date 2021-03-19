@@ -1204,7 +1204,6 @@ class AESFuncs(TransportMethods):
     expose_methods = (
         "verify_minion",
         "_master_tops",
-        "_ext_nodes",
         "_master_opts",
         "_mine_get",
         "_mine",
