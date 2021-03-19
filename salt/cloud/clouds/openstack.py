@@ -356,7 +356,7 @@ def ignore_cidr(vm_, ip):
     cidr = config.get_cloud_config_value(
         "ignore_cidr", vm_, __opts__, default="", search_global=False
     )
-    if cidr != "" and all_matching_cidrs(ip, [cidr]):
+    if cidr and all_matching_cidrs(ip, [cidr]):
         log.warning("IP '{}' found within '{}'; ignoring it.".format(ip, cidr))
         return True
 
