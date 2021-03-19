@@ -840,8 +840,8 @@ def run(
             "output_loglevel": output_loglevel,
             "hide_output": hide_output,
             "success_retcodes": success_retcodes,
-            'success_stdout': success_stdout,
-            'success_stderr': success_stderr,
+            "success_stdout": success_stdout,
+            "success_stderr": success_stderr,
         }
     )
 
@@ -1138,8 +1138,8 @@ def script(
             "context": tmpctx,
             "saltenv": __env__,
             "success_retcodes": success_retcodes,
-            'success_stdout': success_stdout,
-            'success_stderr': success_stderr,
+            "success_stdout": success_stdout,
+            "success_stderr": success_stderr,
         }
     )
 
