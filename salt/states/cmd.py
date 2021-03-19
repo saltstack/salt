@@ -456,14 +456,14 @@ def wait(
         If stdout returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Neon
+      .. versionadded:: Silicon
 
     success_stderr: This parameter will be allow a list of
         strings that when found in standard error should be considered a success.
         If stderr returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Neon
+      .. versionadded:: Silicon
     """
     # Ignoring our arguments is intentional.
     return {"name": name, "changes": {}, "result": True, "comment": ""}
@@ -606,14 +606,14 @@ def wait_script(
         If stdout returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Neon
+      .. versionadded:: Silicon
 
     success_stderr: This parameter will be allow a list of
         strings that when found in standard error should be considered a success.
         If stderr returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Neon
+      .. versionadded:: Silicon
     """
     # Ignoring our arguments is intentional.
     return {"name": name, "changes": {}, "result": True, "comment": ""}
@@ -776,14 +776,14 @@ def run(
         If stdout returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Neon
+      .. versionadded:: Silicon
 
     success_stderr: This parameter will be allow a list of
         strings that when found in standard error should be considered a success.
         If stderr returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Neon
+      .. versionadded:: Silicon
 
     .. note::
 
@@ -1077,14 +1077,14 @@ def script(
         If stdout returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Neon
+      .. versionadded:: Silicon
 
     success_stderr: This parameter will be allow a list of
         strings that when found in standard error should be considered a success.
         If stderr returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Neon
+      .. versionadded:: Silicon
     """
     test_name = None
     if not isinstance(stateful, list):
