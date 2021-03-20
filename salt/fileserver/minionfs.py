@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Fileserver backend which serves files pushed to the Master
 
@@ -27,14 +26,10 @@ Other minionfs settings include: :conf_master:`minionfs_whitelist`,
 .. seealso:: :ref:`tutorial-minionfs`
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
-
-# Import python libs
 import os
 
-# Import salt libs
 import salt.fileserver
 import salt.utils.files
 import salt.utils.gzip_util
@@ -43,8 +38,6 @@ import salt.utils.path
 import salt.utils.stringutils
 import salt.utils.url
 import salt.utils.versions
-
-# Import third party libs
 from salt.ext import six
 
 log = logging.getLogger(__name__)
@@ -192,7 +185,7 @@ def file_hash(load, fnd):
         "minionfs",
         "hash",
         load["saltenv"],
-        "{0}.hash.{1}".format(fnd["rel"], __opts__["hash_type"]),
+        "{}.hash.{}".format(fnd["rel"], __opts__["hash_type"]),
     )
     # if we have a cache, serve that if the mtime hasn't changed
     if os.path.exists(cache_path):
@@ -228,7 +221,7 @@ def file_hash(load, fnd):
     if not os.path.exists(cache_dir):
         os.makedirs(cache_dir)
     # save the cache object "hash:mtime"
-    cache_object = "{0}:{1}".format(ret["hsum"], os.path.getmtime(path))
+    cache_object = "{}:{}".format(ret["hsum"], os.path.getmtime(path))
     with salt.utils.files.flopen(cache_path, "w") as fp_:
         fp_.write(cache_object)
     return ret

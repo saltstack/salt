@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Functions for working with Mako templates
 """
-from __future__ import absolute_import, unicode_literals
 
 try:
     from mako.lookup import (
@@ -79,9 +77,7 @@ if HAS_MAKO:
             if scheme in ("salt", "file"):
                 return uri
             elif scheme:
-                raise ValueError(
-                    "Unsupported URL scheme({0}) in {1}".format(scheme, uri)
-                )
+                raise ValueError("Unsupported URL scheme({}) in {}".format(scheme, uri))
             return self.lookup.adjust_uri(uri, filename)
 
         def get_template(self, uri, relativeto=None):

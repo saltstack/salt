@@ -1,15 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 Utilities to enable exception reraising across the master commands
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import salt libs
 import salt.exceptions
 import salt.utils.event
-
-# Import 3rd-party libs
 from salt.ext.six.moves import builtins as exceptions
 
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Configure a Pacemaker/Corosync cluster with PCS
 ===============================================
@@ -10,9 +9,7 @@ Pacemaker/Cororsync conifguration system (PCS)
 
 .. versionadded:: 2016.3.0
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import salt libs
 import salt.utils.path
 from salt.ext import six
 
@@ -48,10 +45,10 @@ def item_show(
     """
     cmd = ["pcs"]
 
-    if isinstance(cibfile, six.string_types):
+    if isinstance(cibfile, str):
         cmd += ["-f", cibfile]
 
-    if isinstance(item, six.string_types):
+    if isinstance(item, str):
         cmd += [item]
     elif isinstance(item, (list, tuple)):
         cmd += item
@@ -60,12 +57,12 @@ def item_show(
     if item in ["constraint"]:
         cmd += [item_type]
 
-    if isinstance(show, six.string_types):
+    if isinstance(show, str):
         cmd += [show]
     elif isinstance(show, (list, tuple)):
         cmd += show
 
-    if isinstance(item_id, six.string_types):
+    if isinstance(item_id, str):
         cmd += [item_id]
 
     if isinstance(extra_args, (list, tuple)):
@@ -100,20 +97,20 @@ def item_create(
         use cibfile instead of the live CIB
     """
     cmd = ["pcs"]
-    if isinstance(cibfile, six.string_types):
+    if isinstance(cibfile, str):
         cmd += ["-f", cibfile]
 
-    if isinstance(item, six.string_types):
+    if isinstance(item, str):
         cmd += [item]
     elif isinstance(item, (list, tuple)):
         cmd += item
 
     # constraint command follows a different order
     if item in ["constraint"]:
-        if isinstance(item_type, six.string_types):
+        if isinstance(item_type, str):
             cmd += [item_type]
 
-    if isinstance(create, six.string_types):
+    if isinstance(create, str):
         cmd += [create]
     elif isinstance(create, (list, tuple)):
         cmd += create
@@ -122,13 +119,13 @@ def item_create(
     # constraint command follows a different order
     if item not in ["constraint"]:
         cmd += [item_id]
-        if isinstance(item_type, six.string_types):
+        if isinstance(item_type, str):
             cmd += [item_type]
 
     if isinstance(extra_args, (list, tuple)):
         # constraint command needs item_id in format 'id=<id' after all params
         if item in ["constraint"]:
-            extra_args = extra_args + ["id={0}".format(item_id)]
+            extra_args = extra_args + ["id={}".format(item_id)]
         cmd += extra_args
 
     return __salt__["cmd.run_all"](cmd, output_loglevel="trace", python_shell=False)
@@ -259,8 +256,8 @@ def cib_create(cibfile, scope="configuration", extra_args=None):
         salt '*' pcs.cib_create cibfile='/tmp/VIP_apache_1.cib' scope=False
     """
     cmd = ["pcs", "cluster", "cib", cibfile]
-    if isinstance(scope, six.string_types):
-        cmd += ["scope={0}".format(scope)]
+    if isinstance(scope, str):
+        cmd += ["scope={}".format(scope)]
     if isinstance(extra_args, (list, tuple)):
         cmd += extra_args
 
@@ -285,8 +282,8 @@ def cib_push(cibfile, scope="configuration", extra_args=None):
         salt '*' pcs.cib_push cibfile='/tmp/VIP_apache_1.cib' scope=False
     """
     cmd = ["pcs", "cluster", "cib-push", cibfile]
-    if isinstance(scope, six.string_types):
-        cmd += ["scope={0}".format(scope)]
+    if isinstance(scope, str):
+        cmd += ["scope={}".format(scope)]
     if isinstance(extra_args, (list, tuple)):
         cmd += extra_args
 
@@ -352,7 +349,7 @@ def prop_set(prop, value, extra_args=None, cibfile=None):
     """
     return item_create(
         item="property",
-        item_id="{0}={1}".format(prop, value),
+        item_id="{}={}".format(prop, value),
         item_type=None,
         create="set",
         extra_args=extra_args,

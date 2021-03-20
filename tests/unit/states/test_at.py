@@ -1,14 +1,8 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
 import salt.states.at as at
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -73,7 +67,7 @@ class AtTestCase(TestCase, LoaderModuleMockMixin):
             {
                 "result": False,
                 "changes": {},
-                "comment": "user {0} does not exists".format(user),
+                "comment": "user {} does not exists".format(user),
             }
         )
 
@@ -151,7 +145,7 @@ class AtTestCase(TestCase, LoaderModuleMockMixin):
                 {
                     "result": False,
                     "changes": {},
-                    "comment": "limit parameter not supported {0}".format(name),
+                    "comment": "limit parameter not supported {}".format(name),
                 }
             )
             self.assertDictEqual(at.absent(name, limit="all"), ret_limit)

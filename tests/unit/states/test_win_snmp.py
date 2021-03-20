@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :synopsis: Unit Tests for Windows SNMP Module 'state.win_snmp'
     :platform: Windows
@@ -6,14 +5,9 @@
     .. versionadded:: 2017.7.0
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
 import salt.states.win_snmp as win_snmp
 from salt.ext import six
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -44,9 +38,7 @@ class WinSnmpTestCase(TestCase, LoaderModuleMockMixin):
             "result": True,
         }
         # Using this instead of dictionary comprehension in order to make pylint happy.
-        get_ret = dict(
-            (key, value) for (key, value) in six.iteritems(kwargs) if key != "name"
-        )
+        get_ret = {key: value for (key, value) in kwargs.items() if key != "name"}
         mock_value_get = MagicMock(return_value=get_ret)
         mock_value_set = MagicMock(return_value=True)
         with patch.dict(

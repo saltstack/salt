@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Configure Chronos jobs via a salt proxy.
 
@@ -13,7 +12,6 @@ Configure Chronos jobs via a salt proxy.
 
 .. versionadded:: 2015.8.2
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 import logging
@@ -82,15 +80,15 @@ def config(name, config):
                     if len(_new) == 3 and len(_old) == 3:
                         log.debug(
                             "_new[0] == _old[0]: %s",
-                            six.text_type(_new[0]) == six.text_type(_old[0]),
+                            str(_new[0]) == str(_old[0]),
                         )
                         log.debug(
                             "_new[2] == _old[2]: %s",
-                            six.text_type(_new[2]) == six.text_type(_old[2]),
+                            str(_new[2]) == str(_old[2]),
                         )
-                        if six.text_type(_new[0]) == six.text_type(
-                            _old[0]
-                        ) and six.text_type(_new[2]) == six.text_type(_old[2]):
+                        if str(_new[0]) == str(_old[0]) and str(_new[2]) == str(
+                            _old[2]
+                        ):
                             log.debug("schedules match--no need for changes")
                             ret["changes"] = {}
 
@@ -100,23 +98,23 @@ def config(name, config):
         # if test report there will be an update
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "Chronos job {0} is set to be updated".format(name)
+            ret["comment"] = "Chronos job {} is set to be updated".format(name)
             return ret
 
         update_result = __salt__["chronos.update_job"](name, update_config)
         if "exception" in update_result:
             ret["result"] = False
-            ret["comment"] = "Failed to update job config for {0}: {1}".format(
+            ret["comment"] = "Failed to update job config for {}: {}".format(
                 name,
                 update_result["exception"],
             )
             return ret
         else:
             ret["result"] = True
-            ret["comment"] = "Updated job config for {0}".format(name)
+            ret["comment"] = "Updated job config for {}".format(name)
             return ret
     ret["result"] = True
-    ret["comment"] = "Chronos job {0} configured correctly".format(name)
+    ret["comment"] = "Chronos job {} configured correctly".format(name)
     return ret
 
 
@@ -130,18 +128,18 @@ def absent(name):
     ret = {"name": name, "changes": {}, "result": False, "comment": ""}
     if not __salt__["chronos.has_job"](name):
         ret["result"] = True
-        ret["comment"] = "Job {0} already absent".format(name)
+        ret["comment"] = "Job {} already absent".format(name)
         return ret
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "Job {0} is set to be removed".format(name)
+        ret["comment"] = "Job {} is set to be removed".format(name)
         return ret
     if __salt__["chronos.rm_job"](name):
         ret["changes"] = {"job": name}
         ret["result"] = True
-        ret["comment"] = "Removed job {0}".format(name)
+        ret["comment"] = "Removed job {}".format(name)
         return ret
     else:
         ret["result"] = False
-        ret["comment"] = "Failed to remove job {0}".format(name)
+        ret["comment"] = "Failed to remove job {}".format(name)
         return ret

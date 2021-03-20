@@ -1,10 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 Package support for the dummy proxy used by the test suite
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 
 import salt.utils.data
@@ -98,9 +95,9 @@ def installed(
     p = __proxy__["dummy.package_status"](name)
     if version is None:
         if "ret" in p:
-            return six.text_type(p["ret"])
+            return str(p["ret"])
         else:
             return True
     else:
         if p is not None:
-            return version == six.text_type(p)
+            return version == str(p)

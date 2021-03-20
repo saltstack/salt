@@ -18,7 +18,6 @@
 Unittest for the twisted-style reactor.
 """
 
-from __future__ import absolute_import, division, print_function
 
 import logging
 import os
@@ -177,12 +176,12 @@ class ReactorTwoCallLaterTest(ReactorTestCase):
 @skipIfNoTwisted
 class ReactorCallFromThreadTest(ReactorTestCase):
     def setUp(self):
-        super(ReactorCallFromThreadTest, self).setUp()
+        super().setUp()
         self._mainThread = thread.get_ident()
 
     def tearDown(self):
         self._thread.join()
-        super(ReactorCallFromThreadTest, self).tearDown()
+        super().tearDown()
 
     def _newThreadRun(self):
         self.assertNotEqual(self._mainThread, thread.get_ident())
@@ -206,7 +205,7 @@ class ReactorCallFromThreadTest(ReactorTestCase):
 @skipIfNoTwisted
 class ReactorCallInThread(ReactorTestCase):
     def setUp(self):
-        super(ReactorCallInThread, self).setUp()
+        super().setUp()
         self._mainThread = thread.get_ident()
 
     def _fnCalledInThread(self, *args, **kwargs):
@@ -223,7 +222,7 @@ class ReactorCallInThread(ReactorTestCase):
 
 if have_twisted:
     @implementer(IReadDescriptor)
-    class Reader(object):
+    class Reader:
         def __init__(self, fd, callback):
             self._fd = fd
             self._callback = callback
@@ -247,7 +246,7 @@ if have_twisted:
             self._callback(self._fd)
 
     @implementer(IWriteDescriptor)
-    class Writer(object):
+    class Writer:
         def __init__(self, fd, callback):
             self._fd = fd
             self._callback = callback
@@ -275,7 +274,7 @@ class ReactorReaderWriterTest(ReactorTestCase):
         fcntl.fcntl(fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
 
     def setUp(self):
-        super(ReactorReaderWriterTest, self).setUp()
+        super().setUp()
         r, w = os.pipe()
         self._set_nonblocking(r)
         self._set_nonblocking(w)
@@ -285,7 +284,7 @@ class ReactorReaderWriterTest(ReactorTestCase):
         self._p2 = os.fdopen(w, "wb", 0)
 
     def tearDown(self):
-        super(ReactorReaderWriterTest, self).tearDown()
+        super().tearDown()
         self._p1.close()
         self._p2.close()
 
@@ -597,14 +596,13 @@ if have_twisted:
         ],
         'twisted.internet.test.test_unix.UNIXPortTestsBuilder': [],
     }
-    if sys.version_info >= (3,):
-        # In Twisted 15.2.0 on Python 3.4, the process tests will try to run
-        # but fail, due in part to interactions between Tornado's strict
-        # warnings-as-errors policy and Twisted's own warning handling
-        # (it was not obvious how to configure the warnings module to
-        # reconcile the two), and partly due to what looks like a packaging
-        # error (process_cli.py missing). For now, just skip it.
-        del twisted_tests['twisted.internet.test.test_process.ProcessTestsBuilder']
+    # In Twisted 15.2.0 on Python 3.4, the process tests will try to run
+    # but fail, due in part to interactions between Tornado's strict
+    # warnings-as-errors policy and Twisted's own warning handling
+    # (it was not obvious how to configure the warnings module to
+    # reconcile the two), and partly due to what looks like a packaging
+    # error (process_cli.py missing). For now, just skip it.
+    del twisted_tests['twisted.internet.test.test_process.ProcessTestsBuilder']
     for test_name, blacklist in twisted_tests.items():
         try:
             test_class = import_object(test_name)
@@ -627,10 +625,10 @@ if have_twisted:
                     self.__curdir = os.getcwd()
                     self.__tempdir = tempfile.mkdtemp()
                     os.chdir(self.__tempdir)
-                    super(TornadoTest, self).setUp()  # type: ignore
+                    super().setUp()  # type: ignore
 
                 def tearDown(self):
-                    super(TornadoTest, self).tearDown()  # type: ignore
+                    super().tearDown()  # type: ignore
                     os.chdir(self.__curdir)
                     shutil.rmtree(self.__tempdir)
 
@@ -645,7 +643,7 @@ if have_twisted:
                     # enabled) but without our filter rules to ignore those
                     # warnings from Twisted code.
                     filtered = []
-                    for w in super(TornadoTest, self).flushWarnings(  # type: ignore
+                    for w in super().flushWarnings(  # type: ignore
                             *args, **kwargs):
                         if w['category'] in (BytesWarning, ResourceWarning):
                             continue
@@ -703,11 +701,11 @@ if have_twisted:
             # denominator.
             self.real_io_loop = SelectIOLoop(make_current=False)  # type: ignore
             reactor = TornadoReactor(io_loop=self.real_io_loop)
-            super(LayeredTwistedIOLoop, self).initialize(reactor=reactor, **kwargs)
+            super().initialize(reactor=reactor, **kwargs)
             self.add_callback(self.make_current)
 
         def close(self, all_fds=False):
-            super(LayeredTwistedIOLoop, self).close(all_fds=all_fds)
+            super().close(all_fds=all_fds)
             # HACK: This is the same thing that test_class.unbuildReactor does.
             for reader in self.reactor._internalReaders:
                 self.reactor.removeReader(reader)

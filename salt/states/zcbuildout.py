@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Management of zc.buildout
 =========================
@@ -35,13 +34,10 @@ Available Functions
           - onlyif: /bin/test_else_installed
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 import sys
 
-# Import salt libs
 from salt.ext.six import string_types
 
 # Define the module's virtual name

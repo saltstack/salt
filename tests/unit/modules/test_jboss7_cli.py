@@ -1,23 +1,14 @@
-# -*- coding: utf-8 -*-
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import re
 
 import salt.modules.jboss7_cli as jboss7_cli
 from salt.exceptions import CommandExecutionError
-
-# Import Salt libs
 from salt.ext import six
-
-# Import Salt testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch
 from tests.support.unit import TestCase
 
 
-class CmdMock(object):
+class CmdMock:
     commands = []
     command_response_func = None  # if you want to test complete response object (with retcode, stdout and stderr)
     cli_commands = []
@@ -154,7 +145,7 @@ class JBoss7CliTestCase(TestCase, LoaderModuleMockMixin):
             assert False
         except CommandExecutionError as err:
             self.assertTrue(
-                six.text_type(err).startswith("Could not execute jboss-cli.sh script")
+                str(err).startswith("Could not execute jboss-cli.sh script")
             )
 
     def test_handling_other_cmd_error(self):
@@ -172,7 +163,7 @@ class JBoss7CliTestCase(TestCase, LoaderModuleMockMixin):
             # should throw an exception
             self.fail("An exception should be thrown")
         except CommandExecutionError as err:
-            self.assertTrue(six.text_type(err).startswith("Command execution failed"))
+            self.assertTrue(str(err).startswith("Command execution failed"))
 
     def test_matches_cli_output(self):
         text = """{

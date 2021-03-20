@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage RabbitMQ Users
 =====================
@@ -22,12 +21,9 @@ Example:
         - runas: rabbitmq
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import salt libs
 import salt.utils.path
 from salt.exceptions import CommandExecutionError
 from salt.ext import six
@@ -60,7 +56,7 @@ def _check_perms_changes(name, newperms, runas=None, existing=None):
 
     perm_need_change = False
     for vhost_perms in newperms:
-        for vhost, perms in six.iteritems(vhost_perms):
+        for vhost, perms in vhost_perms.items():
             if vhost in existing:
                 existing_vhost = existing[vhost]
                 if perms != existing_vhost:
@@ -109,7 +105,7 @@ def present(name, password=None, force=False, tags=None, perms=(), runas=None):
     try:
         user = __salt__["rabbitmq.user_exists"](name, runas=runas)
     except CommandExecutionError as err:
-        ret["comment"] = "Error: {0}".format(err)
+        ret["comment"] = "Error: {}".format(err)
         return ret
 
     passwd_reqs_update = False
@@ -119,7 +115,7 @@ def present(name, password=None, force=False, tags=None, perms=(), runas=None):
                 passwd_reqs_update = True
                 log.debug("RabbitMQ user %s password update required", name)
         except CommandExecutionError as err:
-            ret["comment"] = "Error: {0}".format(err)
+            ret["comment"] = "Error: {}".format(err)
             return ret
 
     if user and not any((force, perms, tags, passwd_reqs_update)):
@@ -130,7 +126,7 @@ def present(name, password=None, force=False, tags=None, perms=(), runas=None):
             ),
             name,
         )
-        ret["comment"] = "User '{0}' is already present.".format(name)
+        ret["comment"] = "User '{}' is already present.".format(name)
         ret["result"] = True
         return ret
 
@@ -138,14 +134,14 @@ def present(name, password=None, force=False, tags=None, perms=(), runas=None):
         ret["changes"].update({"user": {"old": "", "new": name}})
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "User '{0}' is set to be created.".format(name)
+            ret["comment"] = "User '{}' is set to be created.".format(name)
             return ret
 
         log.debug("RabbitMQ user '%s' doesn't exist - Creating.", name)
         try:
             __salt__["rabbitmq.add_user"](name, password, runas=runas)
         except CommandExecutionError as err:
-            ret["comment"] = "Error: {0}".format(err)
+            ret["comment"] = "Error: {}".format(err)
             return ret
     else:
         log.debug("RabbitMQ user '%s' exists", name)
@@ -157,7 +153,7 @@ def present(name, password=None, force=False, tags=None, perms=(), runas=None):
                             name, password, runas=runas
                         )
                     except CommandExecutionError as err:
-                        ret["comment"] = "Error: {0}".format(err)
+                        ret["comment"] = "Error: {}".format(err)
                         return ret
                 ret["changes"].update({"password": {"old": "", "new": "Set password."}})
             else:
@@ -166,7 +162,7 @@ def present(name, password=None, force=False, tags=None, perms=(), runas=None):
                     try:
                         __salt__["rabbitmq.clear_password"](name, runas=runas)
                     except CommandExecutionError as err:
-                        ret["comment"] = "Error: {0}".format(err)
+                        ret["comment"] = "Error: {}".format(err)
                         return ret
                 ret["changes"].update(
                     {"password": {"old": "Removed password.", "new": ""}}
@@ -174,7 +170,7 @@ def present(name, password=None, force=False, tags=None, perms=(), runas=None):
 
     if tags is not None:
         current_tags = _get_current_tags(name, runas=runas)
-        if isinstance(tags, six.string_types):
+        if isinstance(tags, str):
             tags = tags.split()
         # Diff the tags sets. Symmetric difference operator ^ will give us
         # any element in one set, but not both
@@ -183,25 +179,25 @@ def present(name, password=None, force=False, tags=None, perms=(), runas=None):
                 try:
                     __salt__["rabbitmq.set_user_tags"](name, tags, runas=runas)
                 except CommandExecutionError as err:
-                    ret["comment"] = "Error: {0}".format(err)
+                    ret["comment"] = "Error: {}".format(err)
                     return ret
             ret["changes"].update({"tags": {"old": current_tags, "new": tags}})
     try:
         existing_perms = __salt__["rabbitmq.list_user_permissions"](name, runas=runas)
     except CommandExecutionError as err:
-        ret["comment"] = "Error: {0}".format(err)
+        ret["comment"] = "Error: {}".format(err)
         return ret
 
     if _check_perms_changes(name, perms, runas=runas, existing=existing_perms):
         for vhost_perm in perms:
-            for vhost, perm in six.iteritems(vhost_perm):
+            for vhost, perm in vhost_perm.items():
                 if not __opts__["test"]:
                     try:
                         __salt__["rabbitmq.set_permissions"](
                             vhost, name, perm[0], perm[1], perm[2], runas=runas
                         )
                     except CommandExecutionError as err:
-                        ret["comment"] = "Error: {0}".format(err)
+                        ret["comment"] = "Error: {}".format(err)
                         return ret
                 new_perms = {vhost: perm}
                 if existing_perms != new_perms:
@@ -212,15 +208,15 @@ def present(name, password=None, force=False, tags=None, perms=(), runas=None):
 
     ret["result"] = True
     if ret["changes"] == {}:
-        ret["comment"] = "'{0}' is already in the desired state.".format(name)
+        ret["comment"] = "'{}' is already in the desired state.".format(name)
         return ret
 
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "Configuration for '{0}' will change.".format(name)
+        ret["comment"] = "Configuration for '{}' will change.".format(name)
         return ret
 
-    ret["comment"] = "'{0}' was configured.".format(name)
+    ret["comment"] = "'{}' was configured.".format(name)
     return ret
 
 
@@ -238,7 +234,7 @@ def absent(name, runas=None):
     try:
         user_exists = __salt__["rabbitmq.user_exists"](name, runas=runas)
     except CommandExecutionError as err:
-        ret["comment"] = "Error: {0}".format(err)
+        ret["comment"] = "Error: {}".format(err)
         return ret
 
     if user_exists:
@@ -246,19 +242,19 @@ def absent(name, runas=None):
             try:
                 __salt__["rabbitmq.delete_user"](name, runas=runas)
             except CommandExecutionError as err:
-                ret["comment"] = "Error: {0}".format(err)
+                ret["comment"] = "Error: {}".format(err)
                 return ret
         ret["changes"].update({"name": {"old": name, "new": ""}})
     else:
         ret["result"] = True
-        ret["comment"] = "The user '{0}' is not present.".format(name)
+        ret["comment"] = "The user '{}' is not present.".format(name)
         return ret
 
     if __opts__["test"] and ret["changes"]:
         ret["result"] = None
-        ret["comment"] = "The user '{0}' will be removed.".format(name)
+        ret["comment"] = "The user '{}' will be removed.".format(name)
         return ret
 
     ret["result"] = True
-    ret["comment"] = "The user '{0}' was removed.".format(name)
+    ret["comment"] = "The user '{}' was removed.".format(name)
     return ret

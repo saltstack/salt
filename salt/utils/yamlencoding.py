@@ -1,18 +1,12 @@
-# -*- coding: utf-8 -*-
 """
 Functions for adding yaml encoding to the jinja context
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import io
 
-# Import 3rd-party libs
 import yaml  # pylint: disable=blacklisted-import
 from salt.ext import six
-
-# Import salt libs
 from salt.utils.decorators.jinja import jinja_filter
 
 
@@ -25,7 +19,7 @@ def yaml_dquote(text):
     """
     with io.StringIO() as ostream:
         yemitter = yaml.emitter.Emitter(ostream, width=six.MAXSIZE)
-        yemitter.write_double_quoted(six.text_type(text))
+        yemitter.write_double_quoted(str(text))
         return ostream.getvalue()
 
 
@@ -38,7 +32,7 @@ def yaml_squote(text):
     """
     with io.StringIO() as ostream:
         yemitter = yaml.emitter.Emitter(ostream, width=six.MAXSIZE)
-        yemitter.write_single_quoted(six.text_type(text))
+        yemitter.write_single_quoted(str(text))
         return ostream.getvalue()
 
 
@@ -53,7 +47,7 @@ def yaml_encode(data):
     if not isinstance(ynode, yaml.ScalarNode):
         raise TypeError(
             "yaml_encode() only works with YAML scalar data;"
-            " failed for {0}".format(type(data))
+            " failed for {}".format(type(data))
         )
 
     tag = ynode.tag.rsplit(":", 1)[-1]

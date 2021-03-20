@@ -1,19 +1,13 @@
-# -*- coding: utf-8 -*-
 """
 Unit Tests for functions located in salt/utils/files.py
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 import os
 
-# Import Salt libs
 import salt.utils.files
 from salt.ext import six
-
-# Import Salt Testing libs
 from tests.support.helpers import with_tempdir
 from tests.support.mock import patch
 from tests.support.unit import TestCase, skipIf
@@ -37,7 +31,7 @@ class FilesTestCase(TestCase):
         error = False
         try:
             salt.utils.files.safe_rm("/tmp/no_way_this_is_a_file_nope.sh")
-        except (IOError, OSError):
+        except OSError:
             error = True
         self.assertFalse(
             error, "salt.utils.files.safe_rm raised exception when it should not have"
@@ -46,7 +40,7 @@ class FilesTestCase(TestCase):
     @with_tempdir()
     def test_safe_walk_symlink_recursion(self, tmp):
         if os.stat(tmp).st_ino == 0:
-            self.skipTest("inodes not supported in {0}".format(tmp))
+            self.skipTest("inodes not supported in {}".format(tmp))
         os.mkdir(os.path.join(tmp, "fax"))
         os.makedirs(os.path.join(tmp, "foo", "bar"))
         os.symlink(os.path.join("..", ".."), os.path.join(tmp, "foo", "bar", "baz"))
@@ -96,14 +90,14 @@ class FilesTestCase(TestCase):
                 # middle of a program's execution.
                 self.fail(
                     "fopen() should have been prevented from opening a file "
-                    "using {0} as the filename".format(invalid_fn)
+                    "using {} as the filename".format(invalid_fn)
                 )
 
     def _create_temp_structure(self, temp_directory, structure):
-        for folder, files in six.iteritems(structure):
+        for folder, files in structure.items():
             current_directory = os.path.join(temp_directory, folder)
             os.makedirs(current_directory)
-            for name, content in six.iteritems(files):
+            for name, content in files.items():
                 path = os.path.join(temp_directory, folder, name)
                 with salt.utils.files.fopen(path, "w+") as fh:
                     fh.write(content)
@@ -111,8 +105,8 @@ class FilesTestCase(TestCase):
     def _validate_folder_structure_and_contents(
         self, target_directory, desired_structure
     ):
-        for folder, files in six.iteritems(desired_structure):
-            for name, content in six.iteritems(files):
+        for folder, files in desired_structure.items():
+            for name, content in files.items():
                 path = os.path.join(target_directory, folder, name)
                 with salt.utils.files.fopen(path) as fh:
                     assert fh.read().strip() == content

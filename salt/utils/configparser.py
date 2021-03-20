@@ -1,16 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 Custom configparser classes
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import re
 
-# Import Salt libs
 import salt.utils.stringutils
-
-# Import 3rd-party libs
 from salt.ext import six
 from salt.ext.six.moves.configparser import *  # pylint: disable=no-name-in-module,wildcard-import
 
@@ -22,7 +16,7 @@ except ImportError:
 
 
 # pylint: disable=string-substitution-usage-error
-class GitConfigParser(RawConfigParser, object):  # pylint: disable=undefined-variable
+class GitConfigParser(RawConfigParser):  # pylint: disable=undefined-variable
     """
     Custom ConfigParser which reads and writes git config files.
 
@@ -60,7 +54,7 @@ class GitConfigParser(RawConfigParser, object):  # pylint: disable=undefined-var
         """
         Changes default value for allow_no_value from False to True
         """
-        super(GitConfigParser, self).__init__(defaults, dict_type, allow_no_value)
+        super().__init__(defaults, dict_type, allow_no_value)
 
     # pylint: enable=useless-super-delegation
 
@@ -160,7 +154,7 @@ class GitConfigParser(RawConfigParser, object):  # pylint: disable=undefined-var
                 )
             elif not is_list:
                 value = [value]
-            if not all(isinstance(x, six.string_types) for x in value):
+            if not all(isinstance(x, str) for x in value):
                 raise TypeError("option values must be strings")
 
     def get(self, section, option, as_list=False):
@@ -169,7 +163,7 @@ class GitConfigParser(RawConfigParser, object):  # pylint: disable=undefined-var
         is helpful when iterating over an option which may or may not be a
         multivar.
         """
-        ret = super(GitConfigParser, self).get(section, option)
+        ret = super().get(section, option)
         if as_list and not isinstance(ret, list):
             ret = [ret]
         return ret
@@ -180,12 +174,12 @@ class GitConfigParser(RawConfigParser, object):  # pylint: disable=undefined-var
         default value for the 'value' argument.
         """
         self._string_check(value)
-        super(GitConfigParser, self).set(section, option, value)
+        super().set(section, option, value)
 
     def _add_option(self, sectdict, key, value):
         if isinstance(value, list):
             sectdict[key] = value
-        elif isinstance(value, six.string_types):
+        elif isinstance(value, str):
             try:
                 sectdict[key].append(value)
             except KeyError:
@@ -274,12 +268,12 @@ class GitConfigParser(RawConfigParser, object):  # pylint: disable=undefined-var
         )
         if self._defaults:
             fp_.write(convert("[%s]\n" % self.DEFAULTSECT))
-            for (key, value) in six.iteritems(self._defaults):
+            for (key, value) in self._defaults.items():
                 value = salt.utils.stringutils.to_unicode(value).replace("\n", "\n\t")
-                fp_.write(convert("%s = %s\n" % (key, value)))
+                fp_.write(convert("{} = {}\n".format(key, value)))
         for section in self._sections:
             fp_.write(convert("[%s]\n" % section))
-            for (key, value) in six.iteritems(self._sections[section]):
+            for (key, value) in self._sections[section].items():
                 if (value is not None) or (self._optcre == self.OPTCRE):
                     if not isinstance(value, list):
                         value = [value]

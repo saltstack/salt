@@ -1,13 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 Return data to local job cache
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import bisect
-
-# Import python libs
 import errno
 import glob
 import logging
@@ -16,8 +12,6 @@ import shutil
 import time
 
 import salt.exceptions
-
-# Import salt libs
 import salt.payload
 import salt.utils.atomicfile
 import salt.utils.files
@@ -25,8 +19,6 @@ import salt.utils.jid
 import salt.utils.minions
 import salt.utils.msgpack
 import salt.utils.stringutils
-
-# Import 3rd-party libs
 from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
@@ -99,7 +91,7 @@ def prep_jid(nocache=False, passed_jid=None, recurse_count=0):
     So do what you have to do to make sure that stays the case
     """
     if recurse_count >= 5:
-        err = "prep_jid could not store a jid after {0} tries.".format(recurse_count)
+        err = "prep_jid could not store a jid after {} tries.".format(recurse_count)
         log.error(err)
         raise salt.exceptions.SaltCacheError(err)
     if passed_jid is None:  # this can be a None or an empty string.
@@ -125,7 +117,7 @@ def prep_jid(nocache=False, passed_jid=None, recurse_count=0):
         if nocache:
             with salt.utils.files.fopen(os.path.join(jid_dir, "nocache"), "wb+"):
                 pass
-    except IOError:
+    except OSError:
         log.warning("Could not write out jid file for job %s. Retrying.", jid)
         time.sleep(0.1)
         return prep_jid(
@@ -172,9 +164,7 @@ def returner(load):
         raise
 
     serial.dump(
-        dict(
-            (key, load[key]) for key in ["return", "retcode", "success"] if key in load
-        ),
+        {key: load[key] for key in ["return", "retcode", "success"] if key in load},
         # Use atomic open here to avoid the file being read before it's
         # completely written to. Refs #1935
         salt.utils.atomicfile.atomic_open(os.path.join(hn_dir, RETURN_P), "w+b"),
@@ -198,7 +188,7 @@ def save_load(jid, clear_load, minions=None, recurse_count=0):
     as for salt-ssh)
     """
     if recurse_count >= 5:
-        err = "save_load could not write job cache file after {0} retries.".format(
+        err = "save_load could not write job cache file after {} retries.".format(
             recurse_count
         )
         log.error(err)
@@ -222,7 +212,7 @@ def save_load(jid, clear_load, minions=None, recurse_count=0):
     try:
         with salt.utils.files.fopen(os.path.join(jid_dir, LOAD_P), "w+b") as wfh:
             serial.dump(clear_load, wfh)
-    except IOError as exc:
+    except OSError as exc:
         log.warning("Could not write job invocation cache file: %s", exc)
         time.sleep(0.1)
         return save_load(
@@ -252,7 +242,7 @@ def save_minions(jid, minions, syndic_id=None):
     log.debug(
         "Adding minions for job %s%s: %s",
         jid,
-        " from syndic master '{0}'".format(syndic_id) if syndic_id else "",
+        " from syndic master '{}'".format(syndic_id) if syndic_id else "",
         minions,
     )
     serial = salt.payload.Serial(__opts__)
@@ -283,7 +273,7 @@ def save_minions(jid, minions, syndic_id=None):
                 pass
         with salt.utils.files.fopen(minions_path, "w+b") as wfh:
             serial.dump(minions, wfh)
-    except IOError as exc:
+    except OSError as exc:
         log.error(
             "Failed to write minion list %s to job cache file %s: %s",
             minions,
@@ -325,7 +315,7 @@ def get_load(jid):
         try:
             with salt.utils.files.fopen(minions_path, "rb") as rfh:
                 all_minions.update(serial.load(rfh))
-        except IOError as exc:
+        except OSError as exc:
             salt.utils.files.process_read_exception(exc, minions_path)
 
     if all_minions:
@@ -367,7 +357,7 @@ def get_jid(jid):
                         with salt.utils.files.fopen(outp, "rb") as rfh:
                             ret[fn_]["out"] = serial.load(rfh)
                 except Exception as exc:  # pylint: disable=broad-except
-                    if "Permission denied:" in six.text_type(exc):
+                    if "Permission denied:" in str(exc):
                         raise
     return ret
 
@@ -481,7 +471,7 @@ def update_endtime(jid, time):
             os.makedirs(jid_dir)
         with salt.utils.files.fopen(os.path.join(jid_dir, ENDTIME), "w") as etfile:
             etfile.write(salt.utils.stringutils.to_str(time))
-    except IOError as exc:
+    except OSError as exc:
         log.warning("Could not write job invocation cache file: %s", exc)
 
 

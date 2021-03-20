@@ -39,7 +39,6 @@ To select ``curl_httpclient``, call `AsyncHTTPClient.configure` at startup::
 """
 # pylint: skip-file
 
-from __future__ import absolute_import, division, print_function
 
 import functools
 import time
@@ -52,7 +51,7 @@ from salt.ext.tornado.ioloop import IOLoop
 from salt.ext.tornado.util import Configurable
 
 
-class HTTPClient(object):
+class HTTPClient:
     """A blocking HTTP client.
 
     This interface is provided for convenience and testing; most applications
@@ -165,7 +164,7 @@ class AsyncHTTPClient(Configurable):
             instance_cache = cls._async_clients()
         if instance_cache is not None and io_loop in instance_cache:
             return instance_cache[io_loop]
-        instance = super(AsyncHTTPClient, cls).__new__(cls, io_loop=io_loop,
+        instance = super().__new__(cls, io_loop=io_loop,
                                                        **kwargs)
         # Make sure the instance knows which cache to remove itself from.
         # It can't simply call _async_clients() because we may be in
@@ -284,10 +283,10 @@ class AsyncHTTPClient(Configurable):
 
            AsyncHTTPClient.configure("tornado.curl_httpclient.CurlAsyncHTTPClient")
         """
-        super(AsyncHTTPClient, cls).configure(impl, **kwargs)
+        super().configure(impl, **kwargs)
 
 
-class HTTPRequest(object):
+class HTTPRequest:
     """HTTP client request object."""
 
     # Default values for HTTPRequest parameters.
@@ -521,7 +520,7 @@ class HTTPRequest(object):
         self._prepare_curl_callback = stack_context.wrap(value)
 
 
-class HTTPResponse(object):
+class HTTPResponse:
     """HTTP Response object.
 
     Attributes:
@@ -597,7 +596,7 @@ class HTTPResponse(object):
 
     def __repr__(self):
         args = ",".join("%s=%r" % i for i in sorted(self.__dict__.items()))
-        return "%s(%s)" % (self.__class__.__name__, args)
+        return "{}({})".format(self.__class__.__name__, args)
 
 
 class HTTPError(Exception):
@@ -618,7 +617,7 @@ class HTTPError(Exception):
         self.code = code
         self.message = message or httputil.responses.get(code, "Unknown")
         self.response = response
-        super(HTTPError, self).__init__(code, message, response)
+        super().__init__(code, message, response)
 
     def __str__(self):
         return "HTTP %d: %s" % (self.code, self.message)
@@ -630,7 +629,7 @@ class HTTPError(Exception):
     __repr__ = __str__
 
 
-class _RequestProxy(object):
+class _RequestProxy:
     """Combines an object with a dictionary of defaults.
 
     Used internally by AsyncHTTPClient implementations.

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage Data Pipelines
 
@@ -49,8 +48,6 @@ config:
           myDDBTableName: my-dynamo-table
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 import datetime
@@ -139,13 +136,11 @@ def present(
         profile=profile,
     )
     if present:
-        ret["comment"] = "AWS data pipeline {0} present".format(name)
+        ret["comment"] = "AWS data pipeline {} present".format(name)
         return ret
 
     if __opts__["test"]:
-        ret["comment"] = "Data pipeline {0} is set to be created or updated".format(
-            name
-        )
+        ret["comment"] = "Data pipeline {} is set to be created or updated".format(name)
         ret["result"] = None
         return ret
 
@@ -159,7 +154,7 @@ def present(
     )
     if "error" in result_create_pipeline:
         ret["result"] = False
-        ret["comment"] = "Failed to create data pipeline {0}: {1}".format(
+        ret["comment"] = "Failed to create data pipeline {}: {}".format(
             name, result_create_pipeline["error"]
         )
         return ret
@@ -192,7 +187,7 @@ def present(
             )
             if "error" in result_delete_pipeline:
                 ret["result"] = False
-                ret["comment"] = "Failed to delete data pipeline {0}: {1}".format(
+                ret["comment"] = "Failed to delete data pipeline {}: {}".format(
                     pipeline_id, result_delete_pipeline["error"]
                 )
                 return ret
@@ -207,7 +202,7 @@ def present(
             )
             if "error" in result_create_pipeline:
                 ret["result"] = False
-                ret["comment"] = "Failed to create data pipeline {0}: {1}".format(
+                ret["comment"] = "Failed to create data pipeline {}: {}".format(
                     name, result_create_pipeline["error"]
                 )
                 return ret
@@ -234,7 +229,7 @@ def present(
         if "error" in result_pipeline_definition:
             # Still erroring after possible retry
             ret["result"] = False
-            ret["comment"] = "Failed to create data pipeline {0}: {1}".format(
+            ret["comment"] = "Failed to create data pipeline {}: {}".format(
                 name, result_pipeline_definition["error"]
             )
             return ret
@@ -248,7 +243,7 @@ def present(
     )
     if "error" in result_activate_pipeline:
         ret["result"] = False
-        ret["comment"] = "Failed to create data pipeline {0}: {1}".format(
+        ret["comment"] = "Failed to create data pipeline {}: {}".format(
             name, result_pipeline_definition["error"]
         )
         return ret
@@ -268,10 +263,10 @@ def present(
 
     if not old_pipeline_definition:
         ret["changes"]["new"] = "Pipeline created."
-        ret["comment"] = "Data pipeline {0} created".format(name)
+        ret["comment"] = "Data pipeline {} created".format(name)
     else:
         ret["changes"]["diff"] = _diff(old_pipeline_definition, new_pipeline_definition)
-        ret["comment"] = "Data pipeline {0} updated".format(name)
+        ret["comment"] = "Data pipeline {} updated".format(name)
 
     return ret
 
@@ -460,7 +455,7 @@ def _standardize(structure):
                 mutating_helper(each)
         elif isinstance(structure, dict):
             structure = dict(structure)
-            for k, v in six.iteritems(structure):
+            for k, v in structure.items():
                 mutating_helper(k)
                 mutating_helper(v)
 
@@ -530,7 +525,7 @@ def _dict_to_list_ids(objects):
     while still satisfying the boto api.
     """
     list_with_ids = []
-    for key, value in six.iteritems(objects):
+    for key, value in objects.items():
         element = {"id": key}
         element.update(value)
         list_with_ids.append(element)
@@ -564,7 +559,7 @@ def _properties_from_dict(d, key_name="key"):
         ]
     """
     fields = []
-    for key, value in six.iteritems(d):
+    for key, value in d.items():
         if isinstance(value, dict):
             fields.append({key_name: key, "refValue": value["ref"]})
         else:
@@ -604,7 +599,7 @@ def absent(name, region=None, key=None, keyid=None, profile=None):
     if "error" not in result_pipeline_id:
         pipeline_id = result_pipeline_id["result"]
         if __opts__["test"]:
-            ret["comment"] = "Data pipeline {0} set to be deleted.".format(name)
+            ret["comment"] = "Data pipeline {} set to be deleted.".format(name)
             ret["result"] = None
             return ret
         else:
@@ -618,6 +613,6 @@ def absent(name, region=None, key=None, keyid=None, profile=None):
             ret["changes"]["old"] = {"pipeline_id": pipeline_id}
             ret["changes"]["new"] = None
     else:
-        ret["comment"] = "AWS data pipeline {0} absent.".format(name)
+        ret["comment"] = "AWS data pipeline {} absent.".format(name)
 
     return ret

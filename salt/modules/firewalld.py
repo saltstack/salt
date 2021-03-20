@@ -1,19 +1,14 @@
-# -*- coding: utf-8 -*-
 """
 Support for firewalld.
 
 .. versionadded:: 2015.2.0
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import re
 
 import salt.utils.path
-
-# Import Salt Libs
 from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
@@ -36,7 +31,7 @@ def __firewall_cmd(cmd):
     """
     Return the firewall-cmd location
     """
-    firewall_cmd = "{0} {1}".format(salt.utils.path.which("firewall-cmd"), cmd)
+    firewall_cmd = "{} {}".format(salt.utils.path.which("firewall-cmd"), cmd)
     out = __salt__["cmd.run_all"](firewall_cmd)
 
     if out["retcode"] != 0:
@@ -44,7 +39,7 @@ def __firewall_cmd(cmd):
             msg = out["stdout"]
         else:
             msg = out["stderr"]
-        raise CommandExecutionError("firewall-cmd failed: {0}".format(msg))
+        raise CommandExecutionError("firewall-cmd failed: {}".format(msg))
     return out["stdout"]
 
 
@@ -53,7 +48,7 @@ def __mgmt(name, _type, action):
     Perform zone management
     """
     # It's permanent because the 4 concerned functions need the permanent option, it's wrong without
-    cmd = "--{0}-{1}={2} --permanent".format(action, _type, name)
+    cmd = "--{}-{}={} --permanent".format(action, _type, name)
 
     return __firewall_cmd(cmd)
 
@@ -250,7 +245,7 @@ def set_default_zone(zone):
 
         salt '*' firewalld.set_default_zone damian
     """
-    return __firewall_cmd("--set-default-zone={0}".format(zone))
+    return __firewall_cmd("--set-default-zone={}".format(zone))
 
 
 def new_service(name, restart=True):
@@ -327,7 +322,7 @@ def list_all(zone=None, permanent=True):
     id_ = ""
 
     if zone:
-        cmd = "--zone={0} --list-all".format(zone)
+        cmd = "--zone={} --list-all".format(zone)
     else:
         cmd = "--list-all"
 
@@ -372,7 +367,7 @@ def list_services(zone=None, permanent=True):
         salt '*' firewalld.list_services my_zone
     """
     if zone:
-        cmd = "--zone={0} --list-services".format(zone)
+        cmd = "--zone={} --list-services".format(zone)
     else:
         cmd = "--list-services"
 
@@ -399,9 +394,9 @@ def add_service(service, zone=None, permanent=True):
         salt '*' firewalld.add_service ssh my_zone
     """
     if zone:
-        cmd = "--zone={0} --add-service={1}".format(zone, service)
+        cmd = "--zone={} --add-service={}".format(zone, service)
     else:
-        cmd = "--add-service={0}".format(service)
+        cmd = "--add-service={}".format(service)
 
     if permanent:
         cmd += " --permanent"
@@ -427,9 +422,9 @@ def remove_service(service, zone=None, permanent=True):
         salt '*' firewalld.remove_service ssh dmz
     """
     if zone:
-        cmd = "--zone={0} --remove-service={1}".format(zone, service)
+        cmd = "--zone={} --remove-service={}".format(zone, service)
     else:
-        cmd = "--remove-service={0}".format(service)
+        cmd = "--remove-service={}".format(service)
 
     if permanent:
         cmd += " --permanent"
@@ -452,7 +447,7 @@ def add_service_port(service, port):
     if service not in get_services(permanent=True):
         raise CommandExecutionError("The service does not exist.")
 
-    cmd = "--permanent --service={0} --add-port={1}".format(service, port)
+    cmd = "--permanent --service={} --add-port={}".format(service, port)
     return __firewall_cmd(cmd)
 
 
@@ -471,7 +466,7 @@ def remove_service_port(service, port):
     if service not in get_services(permanent=True):
         raise CommandExecutionError("The service does not exist.")
 
-    cmd = "--permanent --service={0} --remove-port={1}".format(service, port)
+    cmd = "--permanent --service={} --remove-port={}".format(service, port)
     return __firewall_cmd(cmd)
 
 
@@ -487,7 +482,7 @@ def get_service_ports(service):
 
         salt '*' firewalld.get_service_ports zone
     """
-    cmd = "--permanent --service={0} --get-ports".format(service)
+    cmd = "--permanent --service={} --get-ports".format(service)
     return __firewall_cmd(cmd).split()
 
 
@@ -503,7 +498,7 @@ def add_service_protocol(service, protocol):
 
         salt '*' firewalld.add_service_protocol zone ssh
     """
-    cmd = "--permanent --service={0} --add-protocol={1}".format(service, protocol)
+    cmd = "--permanent --service={} --add-protocol={}".format(service, protocol)
     return __firewall_cmd(cmd)
 
 
@@ -519,7 +514,7 @@ def remove_service_protocol(service, protocol):
 
         salt '*' firewalld.remove_service_protocol zone ssh
     """
-    cmd = "--permanent --service={0} --remove-protocol={1}".format(service, protocol)
+    cmd = "--permanent --service={} --remove-protocol={}".format(service, protocol)
     return __firewall_cmd(cmd)
 
 
@@ -535,7 +530,7 @@ def get_service_protocols(service):
 
         salt '*' firewalld.get_service_protocols zone
     """
-    cmd = "--permanent --service={0} --get-protocols".format(service)
+    cmd = "--permanent --service={} --get-protocols".format(service)
     return __firewall_cmd(cmd).split()
 
 
@@ -578,7 +573,7 @@ def add_masquerade(zone=None, permanent=True):
         salt '*' firewalld.add_masquerade dmz
     """
     if zone:
-        cmd = "--zone={0} --add-masquerade".format(zone)
+        cmd = "--zone={} --add-masquerade".format(zone)
     else:
         cmd = "--add-masquerade"
 
@@ -608,7 +603,7 @@ def remove_masquerade(zone=None, permanent=True):
         salt '*' firewalld.remove_masquerade dmz
     """
     if zone:
-        cmd = "--zone={0} --remove-masquerade".format(zone)
+        cmd = "--zone={} --remove-masquerade".format(zone)
     else:
         cmd = "--remove-masquerade"
 
@@ -637,7 +632,7 @@ def add_port(zone, port, permanent=True, force_masquerade=False):
     if force_masquerade and not get_masquerade(zone):
         add_masquerade(zone)
 
-    cmd = "--zone={0} --add-port={1}".format(zone, port)
+    cmd = "--zone={} --add-port={}".format(zone, port)
 
     if permanent:
         cmd += " --permanent"
@@ -657,7 +652,7 @@ def remove_port(zone, port, permanent=True):
 
         salt '*' firewalld.remove_port internal 443/tcp
     """
-    cmd = "--zone={0} --remove-port={1}".format(zone, port)
+    cmd = "--zone={} --remove-port={}".format(zone, port)
 
     if permanent:
         cmd += " --permanent"
@@ -677,7 +672,7 @@ def list_ports(zone, permanent=True):
 
         salt '*' firewalld.list_ports
     """
-    cmd = "--zone={0} --list-ports".format(zone)
+    cmd = "--zone={} --list-ports".format(zone)
 
     if permanent:
         cmd += " --permanent"
@@ -706,10 +701,8 @@ def add_port_fwd(
     if force_masquerade and not get_masquerade(zone):
         add_masquerade(zone)
 
-    cmd = (
-        "--zone={0} --add-forward-port=port={1}:proto={2}:toport={3}:toaddr={4}".format(
-            zone, src, proto, dest, dstaddr
-        )
+    cmd = "--zone={} --add-forward-port=port={}:proto={}:toport={}:toaddr={}".format(
+        zone, src, proto, dest, dstaddr
     )
 
     if permanent:
@@ -730,7 +723,7 @@ def remove_port_fwd(zone, src, dest, proto="tcp", dstaddr="", permanent=True):
 
         salt '*' firewalld.remove_port_fwd public 80 443 tcp
     """
-    cmd = "--zone={0} --remove-forward-port=port={1}:proto={2}:toport={3}:toaddr={4}".format(
+    cmd = "--zone={} --remove-forward-port=port={}:proto={}:toport={}:toaddr={}".format(
         zone, src, proto, dest, dstaddr
     )
 
@@ -754,7 +747,7 @@ def list_port_fwd(zone, permanent=True):
     """
     ret = []
 
-    cmd = "--zone={0} --list-forward-ports".format(zone)
+    cmd = "--zone={} --list-forward-ports".format(zone)
 
     if permanent:
         cmd += " --permanent"
@@ -794,7 +787,7 @@ def block_icmp(zone, icmp, permanent=True):
         log.info("ICMP block already exists")
         return "success"
 
-    cmd = "--zone={0} --add-icmp-block={1}".format(zone, icmp)
+    cmd = "--zone={} --add-icmp-block={}".format(zone, icmp)
 
     if permanent:
         cmd += " --permanent"
@@ -822,7 +815,7 @@ def allow_icmp(zone, icmp, permanent=True):
         log.info("ICMP Type is already permitted")
         return "success"
 
-    cmd = "--zone={0} --remove-icmp-block={1}".format(zone, icmp)
+    cmd = "--zone={} --remove-icmp-block={}".format(zone, icmp)
 
     if permanent:
         cmd += " --permanent"
@@ -842,7 +835,7 @@ def list_icmp_block(zone, permanent=True):
 
         salt '*' firewlld.list_icmp_block zone
     """
-    cmd = "--zone={0} --list-icmp-blocks".format(zone)
+    cmd = "--zone={} --list-icmp-blocks".format(zone)
 
     if permanent:
         cmd += " --permanent"
@@ -877,7 +870,7 @@ def get_interfaces(zone, permanent=True):
 
         salt '*' firewalld.get_interfaces zone
     """
-    cmd = "--zone={0} --list-interfaces".format(zone)
+    cmd = "--zone={} --list-interfaces".format(zone)
 
     if permanent:
         cmd += " --permanent"
@@ -900,7 +893,7 @@ def add_interface(zone, interface, permanent=True):
     if interface in get_interfaces(zone, permanent):
         log.info("Interface is already bound to zone.")
 
-    cmd = "--zone={0} --add-interface={1}".format(zone, interface)
+    cmd = "--zone={} --add-interface={}".format(zone, interface)
 
     if permanent:
         cmd += " --permanent"
@@ -923,7 +916,7 @@ def remove_interface(zone, interface, permanent=True):
     if interface not in get_interfaces(zone, permanent):
         log.info("Interface is not bound to zone.")
 
-    cmd = "--zone={0} --remove-interface={1}".format(zone, interface)
+    cmd = "--zone={} --remove-interface={}".format(zone, interface)
 
     if permanent:
         cmd += " --permanent"
@@ -943,7 +936,7 @@ def get_sources(zone, permanent=True):
 
         salt '*' firewalld.get_sources zone
     """
-    cmd = "--zone={0} --list-sources".format(zone)
+    cmd = "--zone={} --list-sources".format(zone)
 
     if permanent:
         cmd += " --permanent"
@@ -966,7 +959,7 @@ def add_source(zone, source, permanent=True):
     if source in get_sources(zone, permanent):
         log.info("Source is already bound to zone.")
 
-    cmd = "--zone={0} --add-source={1}".format(zone, source)
+    cmd = "--zone={} --add-source={}".format(zone, source)
 
     if permanent:
         cmd += " --permanent"
@@ -989,7 +982,7 @@ def remove_source(zone, source, permanent=True):
     if source not in get_sources(zone, permanent):
         log.info("Source is not bound to zone.")
 
-    cmd = "--zone={0} --remove-source={1}".format(zone, source)
+    cmd = "--zone={} --remove-source={}".format(zone, source)
 
     if permanent:
         cmd += " --permanent"
@@ -1009,7 +1002,7 @@ def get_rich_rules(zone, permanent=True):
 
         salt '*' firewalld.get_rich_rules zone
     """
-    cmd = "--zone={0} --list-rich-rules".format(zone)
+    cmd = "--zone={} --list-rich-rules".format(zone)
 
     if permanent:
         cmd += " --permanent"
@@ -1029,7 +1022,7 @@ def add_rich_rule(zone, rule, permanent=True):
 
         salt '*' firewalld.add_rich_rule zone 'rule'
     """
-    cmd = "--zone={0} --add-rich-rule='{1}'".format(zone, rule)
+    cmd = "--zone={} --add-rich-rule='{}'".format(zone, rule)
 
     if permanent:
         cmd += " --permanent"
@@ -1049,7 +1042,7 @@ def remove_rich_rule(zone, rule, permanent=True):
 
         salt '*' firewalld.remove_rich_rule zone 'rule'
     """
-    cmd = "--zone={0} --remove-rich-rule='{1}'".format(zone, rule)
+    cmd = "--zone={} --remove-rich-rule='{}'".format(zone, rule)
 
     if permanent:
         cmd += " --permanent"

@@ -1,11 +1,4 @@
-# -*- coding: utf-8 -*-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Salt Libs
 import salt.states.boto_kinesis as boto_kinesis
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -95,7 +88,7 @@ class BotoKinesisTestCase(TestCase, LoaderModuleMockMixin):
 
             with patch.dict(boto_kinesis.__opts__, {"test": True}):
                 # not present, test environment (dry run)
-                comt = "Kinesis stream {0} would be created".format(name)
+                comt = "Kinesis stream {} would be created".format(name)
                 ret.update({"comment": comt, "result": None})
                 self.assertDictEqual(
                     boto_kinesis.present(
@@ -168,21 +161,21 @@ class BotoKinesisTestCase(TestCase, LoaderModuleMockMixin):
             boto_kinesis.__salt__,
             {"boto_kinesis.exists": mock, "boto_kinesis.delete_stream": mock_bool},
         ):
-            comt = "Kinesis stream {0} does not exist".format(name)
+            comt = "Kinesis stream {} does not exist".format(name)
             ret.update({"comment": comt})
             self.assertDictEqual(boto_kinesis.absent(name), ret)
 
             with patch.dict(boto_kinesis.__opts__, {"test": True}):
-                comt = "Kinesis stream {0} would be deleted".format(name)
+                comt = "Kinesis stream {} would be deleted".format(name)
                 ret.update({"comment": comt, "result": None})
                 self.assertDictEqual(boto_kinesis.absent(name), ret)
 
             changes = {
-                "new": "Stream {0} deleted".format(name),
-                "old": "Stream {0} exists".format(name),
+                "new": "Stream {} deleted".format(name),
+                "old": "Stream {} exists".format(name),
             }
 
             with patch.dict(boto_kinesis.__opts__, {"test": False}):
-                comt = "Deleted stream {0}".format(name)
+                comt = "Deleted stream {}".format(name)
                 ret.update({"comment": comt, "result": True, "changes": changes})
                 self.assertDictEqual(boto_kinesis.absent(name), ret)

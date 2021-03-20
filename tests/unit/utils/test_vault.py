@@ -1,22 +1,16 @@
-# -*- coding: utf-8 -*-
 """
 Test case for the vault utils module
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import json
 import logging
 import os
 from copy import copy
 
-# Import Salt libs
 import salt.utils.vault as vault
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import ANY, MagicMock, Mock, mock_open, patch
-
-# Import Salt Testing libs
 from tests.support.unit import TestCase
 
 

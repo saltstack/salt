@@ -1,15 +1,9 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
 import salt.states.cloud as cloud
 import salt.utils.cloud
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -57,12 +51,12 @@ class CloudTestCase(TestCase, LoaderModuleMockMixin):
 
             self.assertDictEqual(cloud.present(name, cloud_provider, unless=""), ret)
 
-            comt = "Already present instance {0}".format(name)
+            comt = "Already present instance {}".format(name)
             ret.update({"comment": comt})
             self.assertDictEqual(cloud.present(name, cloud_provider), ret)
 
             with patch.dict(cloud.__opts__, {"test": True}):
-                comt = "Instance {0} needs to be created".format(name)
+                comt = "Instance {} needs to be created".format(name)
                 ret.update({"comment": comt, "result": None})
                 self.assertDictEqual(cloud.present(name, cloud_provider), ret)
 
@@ -109,17 +103,17 @@ class CloudTestCase(TestCase, LoaderModuleMockMixin):
 
             self.assertDictEqual(cloud.absent(name, unless=""), ret)
 
-            comt = "Already absent instance {0}".format(name)
+            comt = "Already absent instance {}".format(name)
             ret.update({"comment": comt})
             self.assertDictEqual(cloud.absent(name), ret)
 
             with patch.dict(cloud.__opts__, {"test": True}):
-                comt = "Instance {0} needs to be destroyed".format(name)
+                comt = "Instance {} needs to be destroyed".format(name)
                 ret.update({"comment": comt, "result": None})
                 self.assertDictEqual(cloud.absent(name), ret)
 
             with patch.dict(cloud.__opts__, {"test": False}):
-                comt = ("Destroyed instance {0}").format(name)
+                comt = ("Destroyed instance {}").format(name)
                 ret.update(
                     {"comment": comt, "result": True, "changes": {"cloud": "saltcloud"}}
                 )
@@ -163,24 +157,24 @@ class CloudTestCase(TestCase, LoaderModuleMockMixin):
 
             self.assertDictEqual(cloud.profile(name, profile, unless=""), ret)
 
-            comt = "Already present instance {0}".format(name)
+            comt = "Already present instance {}".format(name)
             ret.update({"comment": comt})
             self.assertDictEqual(cloud.profile(name, profile), ret)
 
             with patch.dict(cloud.__opts__, {"test": True}):
-                comt = "Instance {0} needs to be created".format(name)
+                comt = "Instance {} needs to be created".format(name)
                 ret.update({"comment": comt, "result": None})
                 self.assertDictEqual(cloud.profile(name, profile), ret)
 
             with patch.dict(cloud.__opts__, {"test": False}):
-                comt = ("Failed to create instance {0}" "using profile {1}").format(
+                comt = ("Failed to create instance {}" "using profile {}").format(
                     name, profile
                 )
                 ret.update({"comment": comt, "result": False})
                 self.assertDictEqual(cloud.profile(name, profile), ret)
 
             with patch.dict(cloud.__opts__, {"test": False}):
-                comt = ("Failed to create instance {0}" "using profile {1}").format(
+                comt = ("Failed to create instance {}" "using profile {}").format(
                     name, profile
                 )
                 ret.update({"comment": comt, "result": False})
@@ -208,17 +202,17 @@ class CloudTestCase(TestCase, LoaderModuleMockMixin):
                 ret.update({"comment": comt})
                 self.assertDictEqual(cloud.volume_present(name), ret)
 
-            comt = "Volume exists: {0}".format(name)
+            comt = "Volume exists: {}".format(name)
             ret.update({"comment": comt, "result": True})
             self.assertDictEqual(cloud.volume_present(name), ret)
 
             with patch.dict(cloud.__opts__, {"test": True}):
-                comt = "Volume {0} will be created.".format(name)
+                comt = "Volume {} will be created.".format(name)
                 ret.update({"comment": comt, "result": None})
                 self.assertDictEqual(cloud.volume_present(name), ret)
 
             with patch.dict(cloud.__opts__, {"test": False}):
-                comt = "Volume {0} was created".format(name)
+                comt = "Volume {} was created".format(name)
                 ret.update(
                     {
                         "comment": comt,
@@ -255,12 +249,12 @@ class CloudTestCase(TestCase, LoaderModuleMockMixin):
             self.assertDictEqual(cloud.volume_absent(name), ret)
 
             with patch.dict(cloud.__opts__, {"test": True}):
-                comt = "Volume {0} will be deleted.".format(name)
+                comt = "Volume {} will be deleted.".format(name)
                 ret.update({"comment": comt, "result": None})
                 self.assertDictEqual(cloud.volume_absent(name), ret)
 
             with patch.dict(cloud.__opts__, {"test": False}):
-                comt = "Volume {0} failed to delete.".format(name)
+                comt = "Volume {} failed to delete.".format(name)
                 ret.update({"comment": comt, "result": False})
                 self.assertDictEqual(cloud.volume_absent(name), ret)
 
@@ -301,15 +295,15 @@ class CloudTestCase(TestCase, LoaderModuleMockMixin):
                 ret.update({"name": server_name})
                 self.assertDictEqual(cloud.volume_attached(name, server_name), ret)
 
-            comt = "Volume {0} is already attached: True".format(disk_name)
+            comt = "Volume {} is already attached: True".format(disk_name)
             ret.update({"comment": comt, "result": True})
             self.assertDictEqual(cloud.volume_attached(name, server_name), ret)
 
-            comt = "Volume {0} does not exist".format(name)
+            comt = "Volume {} does not exist".format(name)
             ret.update({"comment": comt, "result": False})
             self.assertDictEqual(cloud.volume_attached(name, server_name), ret)
 
-            comt = "Server {0} does not exist".format(server_name)
+            comt = "Server {} does not exist".format(server_name)
             ret.update({"comment": comt, "result": False})
             self.assertDictEqual(cloud.volume_attached(name, server_name), ret)
 
@@ -318,12 +312,12 @@ class CloudTestCase(TestCase, LoaderModuleMockMixin):
                 cloud.__salt__, {"cloud.action": mock, "cloud.volume_attach": mock}
             ):
                 with patch.dict(cloud.__opts__, {"test": True}):
-                    comt = "Volume {0} will be will be attached.".format(name)
+                    comt = "Volume {} will be will be attached.".format(name)
                     ret.update({"comment": comt, "result": None})
                     self.assertDictEqual(cloud.volume_attached(name, server_name), ret)
 
                 with patch.dict(cloud.__opts__, {"test": False}):
-                    comt = "Volume {0} was created".format(name)
+                    comt = "Volume {} was created".format(name)
                     ret.update(
                         {
                             "comment": comt,
@@ -373,15 +367,15 @@ class CloudTestCase(TestCase, LoaderModuleMockMixin):
                 ret.update({"name": server_name})
                 self.assertDictEqual(cloud.volume_detached(name, server_name), ret)
 
-            comt = "Volume {0} is not currently attached to anything.".format(disk_name)
+            comt = "Volume {} is not currently attached to anything.".format(disk_name)
             ret.update({"comment": comt, "result": True})
             self.assertDictEqual(cloud.volume_detached(name, server_name), ret)
 
-            comt = "Volume {0} does not exist".format(name)
+            comt = "Volume {} does not exist".format(name)
             ret.update({"comment": comt})
             self.assertDictEqual(cloud.volume_detached(name, server_name), ret)
 
-            comt = "Server {0} does not exist".format(server_name)
+            comt = "Server {} does not exist".format(server_name)
             ret.update({"comment": comt})
             self.assertDictEqual(cloud.volume_detached(name, server_name), ret)
 
@@ -390,12 +384,12 @@ class CloudTestCase(TestCase, LoaderModuleMockMixin):
                 cloud.__salt__, {"cloud.action": mock, "cloud.volume_detach": mock}
             ):
                 with patch.dict(cloud.__opts__, {"test": True}):
-                    comt = "Volume {0} will be will be detached.".format(name)
+                    comt = "Volume {} will be will be detached.".format(name)
                     ret.update({"comment": comt, "result": None})
                     self.assertDictEqual(cloud.volume_detached(name, server_name), ret)
 
                 with patch.dict(cloud.__opts__, {"test": False}):
-                    comt = "Volume {0} was created".format(name)
+                    comt = "Volume {} was created".format(name)
                     ret.update(
                         {
                             "comment": comt,

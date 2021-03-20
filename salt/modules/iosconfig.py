@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Cisco IOS configuration manipulation helpers
 
@@ -8,10 +7,7 @@ This module provides a collection of helper functions for Cisco IOS style
 configuration manipulation. This module does not have external dependencies
 and can be used from any Proxy or regular Minion.
 """
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python stdlib
 import difflib
 
 import salt.utils.dictdiffer
@@ -126,7 +122,7 @@ def _print_config_text(tree, indentation=0):
     Return the config as text from a config tree.
     """
     config = ""
-    for key, value in six.iteritems(tree):
+    for key, value in tree.items():
         config += "{indent}{line}\n".format(indent=" " * indentation, line=key)
         if value:
             config += _print_config_text(value, indentation=indentation + 1)

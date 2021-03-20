@@ -75,7 +75,6 @@ See the `convert_yielded` function to extend this mechanism.
 
 """
 # pylint: skip-file
-from __future__ import absolute_import, division, print_function
 
 import collections
 import functools
@@ -370,13 +369,13 @@ class Return(Exception):
     statement can be used with no arguments instead.
     """
     def __init__(self, value=None):
-        super(Return, self).__init__()
+        super().__init__()
         self.value = value
         # Cython recognizes subclasses of StopIteration with a .args tuple.
         self.args = (value,)
 
 
-class WaitIterator(object):
+class WaitIterator:
     """Provides an iterator to yield the results of futures as they finish.
 
     Yielding a set of futures like this:
@@ -435,10 +434,10 @@ class WaitIterator(object):
                 "You must provide args or kwargs, not both")
 
         if kwargs:
-            self._unfinished = dict((f, k) for (k, f) in kwargs.items())
+            self._unfinished = {f: k for (k, f) in kwargs.items()}
             futures = list(kwargs.values())
         else:
-            self._unfinished = dict((f, i) for (i, f) in enumerate(args))
+            self._unfinished = {f: i for (i, f) in enumerate(args)}
             futures = args
 
         self._finished = collections.deque()
@@ -494,7 +493,7 @@ class WaitIterator(object):
         return self.next()
 
 
-class YieldPoint(object):
+class YieldPoint:
     """Base class for objects that may be yielded from the generator.
 
     .. deprecated:: 4.0
@@ -974,7 +973,7 @@ Usage: ``yield gen.moment``
 moment.set_result(None)
 
 
-class Runner(object):
+class Runner:
     """Internal implementation of `tornado.gen.engine`.
 
     Maintains information about pending callbacks and their results.
@@ -1010,13 +1009,13 @@ class Runner(object):
             self.pending_callbacks = set()
             self.results = {}
         if key in self.pending_callbacks:
-            raise KeyReuseError("key %r is already pending" % (key,))
+            raise KeyReuseError("key {!r} is already pending".format(key))
         self.pending_callbacks.add(key)
 
     def is_ready(self, key):
         """Returns true if a result is available for ``key``."""
         if self.pending_callbacks is None or key not in self.pending_callbacks:
-            raise UnknownKeyError("key %r is not pending" % (key,))
+            raise UnknownKeyError("key {!r} is not pending".format(key))
         return key in self.results
 
     def set_result(self, key, result):
@@ -1281,7 +1280,7 @@ def convert_yielded(yielded):
     elif isawaitable(yielded):
         return _wrap_awaitable(yielded)
     else:
-        raise BadYieldError("yielded unknown object %r" % (yielded,))
+        raise BadYieldError("yielded unknown object {!r}".format(yielded))
 
 
 if singledispatch is not None:

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage SQS Queues
 
@@ -57,16 +56,11 @@ passed in as a dict, or as a string to pull from pillars or minion config:
                 keyid: GKTADJGHEIQSXMKKRBJ08H
                 key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import difflib
 import logging
 
-# Import Salt libs
 import salt.utils.json
-
-# Import 3rd-party libs
 from salt.ext import six
 
 log = logging.getLogger(__name__)
@@ -131,12 +125,12 @@ def present(
         return ret
 
     if r["result"]:
-        ret["comment"].append("SQS queue {0} present.".format(name))
+        ret["comment"].append("SQS queue {} present.".format(name))
     else:
         if __opts__["test"]:
             ret["result"] = None
             ret["comment"].append(
-                "SQS queue {0} is set to be created.".format(name),
+                "SQS queue {} is set to be created.".format(name),
             )
             ret["changes"] = {"old": None, "new": name}
             return ret
@@ -152,11 +146,11 @@ def present(
         if "error" in r:
             ret["result"] = False
             ret["comment"].append(
-                "Failed to create SQS queue {0}: {1}".format(name, r["error"]),
+                "Failed to create SQS queue {}: {}".format(name, r["error"]),
             )
             return ret
 
-        ret["comment"].append("SQS queue {0} created.".format(name))
+        ret["comment"].append("SQS queue {} created.".format(name))
         ret["changes"]["old"] = None
         ret["changes"]["new"] = name
         # Return immediately, as the create call also set all attributes
@@ -175,24 +169,24 @@ def present(
     if "error" in r:
         ret["result"] = False
         ret["comment"].append(
-            "Failed to get queue attributes: {0}".format(r["error"]),
+            "Failed to get queue attributes: {}".format(r["error"]),
         )
         return ret
     current_attributes = r["result"]
 
     attrs_to_set = {}
-    for attr, val in six.iteritems(attributes):
+    for attr, val in attributes.items():
         _val = current_attributes.get(attr, None)
         if attr == "Policy":
             # Normalize by brute force
-            if isinstance(_val, six.string_types):
+            if isinstance(_val, str):
                 _val = salt.utils.json.loads(_val)
-            if isinstance(val, six.string_types):
+            if isinstance(val, str):
                 val = salt.utils.json.loads(val)
             if _val != val:
                 log.debug("Policies differ:\n%s\n%s", _val, val)
                 attrs_to_set[attr] = salt.utils.json.dumps(val, sort_keys=True)
-        elif six.text_type(_val) != six.text_type(val):
+        elif str(_val) != str(val):
             log.debug("Attributes differ:\n%s\n%s", _val, val)
             attrs_to_set[attr] = val
     attr_names = ", ".join(attrs_to_set)
@@ -221,7 +215,7 @@ def present(
     if __opts__["test"]:
         ret["result"] = None
         ret["comment"].append(
-            "Attribute(s) {0} set to be updated:\n{1}".format(
+            "Attribute(s) {} set to be updated:\n{}".format(
                 attr_names,
                 attributes_diff,
             )
@@ -240,12 +234,12 @@ def present(
     if "error" in r:
         ret["result"] = False
         ret["comment"].append(
-            "Failed to set queue attributes: {0}".format(r["error"]),
+            "Failed to set queue attributes: {}".format(r["error"]),
         )
         return ret
 
     ret["comment"].append(
-        "Updated SQS queue attribute(s) {0}.".format(attr_names),
+        "Updated SQS queue attribute(s) {}.".format(attr_names),
     )
     ret["changes"]["attributes"] = {"diff": attributes_diff}
     return ret
@@ -288,11 +282,11 @@ def absent(
     )
     if "error" in r:
         ret["result"] = False
-        ret["comment"] = six.text_type(r["error"])
+        ret["comment"] = str(r["error"])
         return ret
 
     if not r["result"]:
-        ret["comment"] = "SQS queue {0} does not exist in {1}.".format(
+        ret["comment"] = "SQS queue {} does not exist in {}.".format(
             name,
             region,
         )
@@ -300,7 +294,7 @@ def absent(
 
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "SQS queue {0} is set to be removed.".format(name)
+        ret["comment"] = "SQS queue {} is set to be removed.".format(name)
         ret["changes"] = {"old": name, "new": None}
         return ret
 
@@ -313,10 +307,10 @@ def absent(
     )
     if "error" in r:
         ret["result"] = False
-        ret["comment"] = six.text_type(r["error"])
+        ret["comment"] = str(r["error"])
         return ret
 
-    ret["comment"] = "SQS queue {0} was deleted.".format(name)
+    ret["comment"] = "SQS queue {} was deleted.".format(name)
     ret["changes"]["old"] = name
     ret["changes"]["new"] = None
     return ret

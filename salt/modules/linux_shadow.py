@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage the shadow file on Linux systems
 
@@ -8,16 +7,12 @@ Manage the shadow file on Linux systems
     *'shadow.info' is not available*), see :ref:`here
     <module-provider-override>`.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
 import functools
 import logging
-
-# Import python libs
 import os
 
-# Import salt libs
 import salt.utils.data
 import salt.utils.files
 import salt.utils.stringutils
@@ -385,7 +380,7 @@ def set_password(name, password, use_usermod=False, root=None):
         # ALT Linux uses tcb to store password hashes. More information found
         # in manpage (http://docs.altlinux.org/manpages/tcb.5.html)
         if __grains__["os"] == "ALT":
-            s_file = "/etc/tcb/{0}/shadow".format(name)
+            s_file = "/etc/tcb/{}/shadow".format(name)
         else:
             s_file = "/etc/shadow"
         if root:
@@ -396,9 +391,7 @@ def set_password(name, password, use_usermod=False, root=None):
             return ret
         lines = []
         user_found = False
-        lstchg = six.text_type(
-            (datetime.datetime.today() - datetime.datetime(1970, 1, 1)).days
-        )
+        lstchg = str((datetime.datetime.today() - datetime.datetime(1970, 1, 1)).days)
         with salt.utils.files.fopen(s_file, "rb") as fp_:
             for line in fp_:
                 line = salt.utils.stringutils.to_unicode(line)

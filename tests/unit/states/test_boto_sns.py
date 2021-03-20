@@ -1,14 +1,8 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
 import salt.states.boto_sns as boto_sns
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -37,17 +31,17 @@ class BotoSnsTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(
             boto_sns.__salt__, {"boto_sns.exists": mock, "boto_sns.create": mock_bool}
         ):
-            comt = "AWS SNS topic {0} present.".format(name)
+            comt = "AWS SNS topic {} present.".format(name)
             ret.update({"comment": comt})
             self.assertDictEqual(boto_sns.present(name), ret)
 
             with patch.dict(boto_sns.__opts__, {"test": True}):
-                comt = "AWS SNS topic {0} is set to be created.".format(name)
+                comt = "AWS SNS topic {} is set to be created.".format(name)
                 ret.update({"comment": comt, "result": None})
                 self.assertDictEqual(boto_sns.present(name), ret)
 
             with patch.dict(boto_sns.__opts__, {"test": False}):
-                comt = "Failed to create {0} AWS SNS topic".format(name)
+                comt = "Failed to create {} AWS SNS topic".format(name)
                 ret.update({"comment": comt, "result": False})
                 self.assertDictEqual(boto_sns.present(name), ret)
 
@@ -66,14 +60,14 @@ class BotoSnsTestCase(TestCase, LoaderModuleMockMixin):
         exists_mock = MagicMock(side_effect=[False, True, True, True, True, True, True])
         with patch.dict(boto_sns.__salt__, {"boto_sns.exists": exists_mock}):
             # tests topic already absent
-            comt = "AWS SNS topic {0} does not exist.".format(name)
+            comt = "AWS SNS topic {} does not exist.".format(name)
             ret.update({"comment": comt})
             self.assertDictEqual(boto_sns.absent(name), ret)
 
             with patch.dict(boto_sns.__opts__, {"test": True}):
                 # tests topic present, test option, unsubscribe is False
                 comt = (
-                    "AWS SNS topic {0} is set to be removed.  "
+                    "AWS SNS topic {} is set to be removed.  "
                     "0 subscription(s) will be removed.".format(name)
                 )
                 ret.update({"comment": comt, "result": None})
@@ -96,7 +90,7 @@ class BotoSnsTestCase(TestCase, LoaderModuleMockMixin):
                 ):
                     # tests topic present, 1 subscription, test option, unsubscribe is True
                     comt = (
-                        "AWS SNS topic {0} is set to be removed.  "
+                        "AWS SNS topic {} is set to be removed.  "
                         "1 subscription(s) will be removed.".format(name)
                     )
                     ret.update({"comment": comt, "result": None})
@@ -117,7 +111,7 @@ class BotoSnsTestCase(TestCase, LoaderModuleMockMixin):
                     ):
                         # tests topic present, unsubscribe flag True, unsubscribe succeeded,
                         # delete succeeded
-                        comt = "AWS SNS topic {0} deleted.".format(name)
+                        comt = "AWS SNS topic {} deleted.".format(name)
                         ret.update(
                             {
                                 "changes": {
@@ -165,6 +159,6 @@ class BotoSnsTestCase(TestCase, LoaderModuleMockMixin):
                         self.assertDictEqual(boto_sns.absent(name), ret)
 
                         # tests topic present, unsubscribe flag False, delete failed
-                        comt = "Failed to delete {0} AWS SNS topic.".format(name)
+                        comt = "Failed to delete {} AWS SNS topic.".format(name)
                         ret.update({"changes": {}, "result": False, "comment": comt})
                         self.assertDictEqual(boto_sns.absent(name), ret)

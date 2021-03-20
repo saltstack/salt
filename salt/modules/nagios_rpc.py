@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Check Host & Service status from Nagios via JSON RPC.
 
@@ -6,12 +5,9 @@ Check Host & Service status from Nagios via JSON RPC.
 
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import Salt libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 import salt.ext.six.moves.http_client
 import salt.utils.http
@@ -103,9 +99,9 @@ def _status_query(query, hostname, enumerate=None, service=None):
     elif result.get("status", None) == salt.ext.six.moves.http_client.UNAUTHORIZED:
         ret["error"] = "Authentication failed. Please check the configuration."
     elif result.get("status", None) == salt.ext.six.moves.http_client.NOT_FOUND:
-        ret["error"] = "URL {0} was not found.".format(config["url"])
+        ret["error"] = "URL {} was not found.".format(config["url"])
     else:
-        ret["error"] = "Results: {0}".format(result.text)
+        ret["error"] = "Results: {}".format(result.text)
 
     return ret
 

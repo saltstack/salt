@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :synopsis: Unit Tests for Windows PKI Module 'state.win_pki'
     :platform: Windows
@@ -6,13 +5,8 @@
     .. versionadded:: 2017.7.0
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
 import salt.states.win_pki as win_pki
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -48,7 +42,7 @@ class WinPkiTestCase(TestCase, LoaderModuleMockMixin):
         ret = {
             "name": kwargs["name"],
             "changes": {"old": None, "new": THUMBPRINT},
-            "comment": "Certificate '{0}' imported into store: {1}".format(
+            "comment": "Certificate '{}' imported into store: {}".format(
                 THUMBPRINT, STORE_PATH
             ),
             "result": True,
@@ -70,7 +64,7 @@ class WinPkiTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertEqual(win_pki.import_cert(**kwargs), ret)
             with patch.dict(win_pki.__opts__, {"test": True}):
                 ret["comment"] = (
-                    "Certificate '{0}' will be imported into store:" " {1}"
+                    "Certificate '{}' will be imported into store:" " {}"
                 ).format(THUMBPRINT, STORE_PATH)
                 ret["result"] = None
                 self.assertEqual(win_pki.import_cert(**kwargs), ret)
@@ -83,7 +77,7 @@ class WinPkiTestCase(TestCase, LoaderModuleMockMixin):
         ret = {
             "name": kwargs["name"],
             "changes": {"old": kwargs["thumbprint"], "new": None},
-            "comment": "Certificate '{0}' removed from store: {1}".format(
+            "comment": "Certificate '{}' removed from store: {}".format(
                 kwargs["thumbprint"], STORE_PATH
             ),
             "result": True,
@@ -98,7 +92,7 @@ class WinPkiTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertEqual(win_pki.remove_cert(**kwargs), ret)
             with patch.dict(win_pki.__opts__, {"test": True}):
                 ret["comment"] = (
-                    "Certificate '{0}' will be removed from store:" " {1}"
+                    "Certificate '{}' will be removed from store:" " {}"
                 ).format(kwargs["thumbprint"], STORE_PATH)
                 ret["result"] = None
                 self.assertEqual(win_pki.remove_cert(**kwargs), ret)

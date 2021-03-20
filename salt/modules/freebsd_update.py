@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Support for freebsd-update utility on FreeBSD.
 
@@ -9,12 +8,9 @@ Support for freebsd-update utility on FreeBSD.
 :platform:      FreeBSD
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 
-# Import salt libs
 import salt.utils.path
 from salt.exceptions import CommandNotFoundError
 from salt.ext import six
@@ -61,24 +57,24 @@ def _cmd(**kwargs):
 
     params = []
     if "basedir" in kwargs:
-        params.append("-b {0}".format(kwargs["basedir"]))
+        params.append("-b {}".format(kwargs["basedir"]))
     if "workdir" in kwargs:
-        params.append("-d {0}".format(kwargs["workdir"]))
+        params.append("-d {}".format(kwargs["workdir"]))
     if "conffile" in kwargs:
-        params.append("-f {0}".format(kwargs["conffile"]))
+        params.append("-f {}".format(kwargs["conffile"]))
     if "force" in kwargs:
         params.append("-F")
     if "key" in kwargs:
-        params.append("-k {0}".format(kwargs["key"]))
+        params.append("-k {}".format(kwargs["key"]))
     if "newrelease" in kwargs:
-        params.append("-r {0}".format(kwargs["newrelease"]))
+        params.append("-r {}".format(kwargs["newrelease"]))
     if "server" in kwargs:
-        params.append("-s {0}".format(kwargs["server"]))
+        params.append("-s {}".format(kwargs["server"]))
     if "address" in kwargs:
-        params.append("-t {0}".format(kwargs["address"]))
+        params.append("-t {}".format(kwargs["address"]))
 
     if params:
-        return "{0} {1}".format(update_cmd, " ".join(params))
+        return "{} {}".format(update_cmd, " ".join(params))
     return update_cmd
 
 
@@ -118,7 +114,7 @@ def _wrapper(orig, pre="", post="", err_=None, run_args=None, **kwargs):
 
     if "retcode" in res and res["retcode"] != 0:
         msg = " ".join([x for x in (res["stdout"], res["stderr"]) if x])
-        ret = 'Unable to run "{0}" with run_args="{1}". Error: {2}'.format(
+        ret = 'Unable to run "{}" with run_args="{}". Error: {}'.format(
             cmd_str, run_args, msg
         )
         log.error(ret)
@@ -199,7 +195,7 @@ def update(**kwargs):
             return ret
         if "stdout" in err_:
             stdout[mode] = err_["stdout"]
-    return "\n".join(["{0}: {1}".format(k, v) for (k, v) in six.iteritems(stdout)])
+    return "\n".join(["{}: {}".format(k, v) for (k, v) in stdout.items()])
 
 
 def ids(**kwargs):

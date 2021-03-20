@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 # pylint: skip-file
-from __future__ import absolute_import, division, print_function
 
 from salt.ext.tornado import gen
 from salt.ext.tornado.log import app_log
@@ -16,7 +15,7 @@ import logging
 
 class TestRequestHandler(RequestHandler):
     def __init__(self, app, request, io_loop):
-        super(TestRequestHandler, self).__init__(app, request)
+        super().__init__(app, request)
         self.io_loop = io_loop
 
     @asynchronous
@@ -62,7 +61,7 @@ class HTTPStackContextTest(AsyncHTTPTestCase):
 
 class StackContextTest(AsyncTestCase):
     def setUp(self):
-        super(StackContextTest, self).setUp()
+        super().setUp()
         self.active_contexts = []
 
     @contextlib.contextmanager

@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 # Copyright 2009 Facebook
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -40,7 +39,6 @@ the `Locale.translate` method will simply return the original string.
 """
 # pylint: skip-file
 
-from __future__ import absolute_import, division, print_function
 
 import codecs
 import csv
@@ -152,7 +150,7 @@ def load_translations(directory, encoding=None):
         if PY3:
             # python 3: csv.reader requires a file open in text mode.
             # Force utf8 to avoid dependence on $LANG environment variable.
-            f = open(full_path, "r", encoding=encoding)
+            f = open(full_path, encoding=encoding)
         else:
             # python 2: csv can only handle byte strings (in ascii-compatible
             # encodings), which we decode below. Transcode everything into
@@ -229,7 +227,7 @@ def get_supported_locales():
     return _supported_locales
 
 
-class Locale(object):
+class Locale:
     """Object representing a locale.
 
     After calling one of `load_translations` or `load_gettext_translations`,
@@ -275,7 +273,7 @@ class Locale(object):
 
     def __init__(self, code, translations):
         self.code = code
-        self.name = LOCALE_NAMES.get(code, {}).get("name", u"Unknown")
+        self.name = LOCALE_NAMES.get(code, {}).get("name", "Unknown")
         self.rtl = False
         for prefix in ["fa", "ar", "he"]:
             if self.code.startswith(prefix):
@@ -377,7 +375,7 @@ class Locale(object):
             str_time = "%d:%02d" % (local_date.hour, local_date.minute)
         elif self.code == "zh_CN":
             str_time = "%s%d:%02d" % (
-                (u'\u4e0a\u5348', u'\u4e0b\u5348')[local_date.hour >= 12],
+                ('\u4e0a\u5348', '\u4e0b\u5348')[local_date.hour >= 12],
                 local_date.hour % 12 or 12, local_date.minute)
         else:
             str_time = "%d:%02d %s" % (
@@ -423,7 +421,7 @@ class Locale(object):
             return ""
         if len(parts) == 1:
             return parts[0]
-        comma = u' \u0648 ' if self.code.startswith("fa") else u", "
+        comma = ' \u0648 ' if self.code.startswith("fa") else ", "
         return _("%(commas)s and %(last)s") % {
             "commas": comma.join(parts[:-1]),
             "last": parts[len(parts) - 1],
@@ -474,7 +472,7 @@ class GettextLocale(Locale):
             self.gettext = translations.gettext
         # self.gettext must exist before __init__ is called, since it
         # calls into self.translate
-        super(GettextLocale, self).__init__(code, translations)
+        super().__init__(code, translations)
 
     def translate(self, message, plural_message=None, count=None):
         if plural_message is not None:
@@ -505,8 +503,8 @@ class GettextLocale(Locale):
         """
         if plural_message is not None:
             assert count is not None
-            msgs_with_ctxt = ("%s%s%s" % (context, CONTEXT_SEPARATOR, message),
-                              "%s%s%s" % (context, CONTEXT_SEPARATOR, plural_message),
+            msgs_with_ctxt = ("{}{}{}".format(context, CONTEXT_SEPARATOR, message),
+                              "{}{}{}".format(context, CONTEXT_SEPARATOR, plural_message),
                               count)
             result = self.ngettext(*msgs_with_ctxt)
             if CONTEXT_SEPARATOR in result:
@@ -514,7 +512,7 @@ class GettextLocale(Locale):
                 result = self.ngettext(message, plural_message, count)
             return result
         else:
-            msg_with_ctxt = "%s%s%s" % (context, CONTEXT_SEPARATOR, message)
+            msg_with_ctxt = "{}{}{}".format(context, CONTEXT_SEPARATOR, message)
             result = self.gettext(msg_with_ctxt)
             if CONTEXT_SEPARATOR in result:
                 # Translation not found

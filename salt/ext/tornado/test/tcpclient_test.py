@@ -15,7 +15,6 @@
 # under the License.
 # pylint: skip-file
 
-from __future__ import absolute_import, division, print_function
 
 from contextlib import closing
 import os
@@ -36,7 +35,7 @@ AF1, AF2 = 1, 2
 
 class TestTCPServer(TCPServer):
     def __init__(self, family):
-        super(TestTCPServer, self).__init__()
+        super().__init__()
         self.streams = []
         self.queue = Queue()
         sockets = bind_sockets(None, 'localhost', family)
@@ -48,14 +47,14 @@ class TestTCPServer(TCPServer):
         self.queue.put(stream)
 
     def stop(self):
-        super(TestTCPServer, self).stop()
+        super().stop()
         for stream in self.streams:
             stream.close()
 
 
 class TCPClientTest(AsyncTestCase):
     def setUp(self):
-        super(TCPClientTest, self).setUp()
+        super().setUp()
         self.server = None
         self.client = TCPClient()
 
@@ -73,14 +72,14 @@ class TCPClientTest(AsyncTestCase):
     def tearDown(self):
         self.client.close()
         self.stop_server()
-        super(TCPClientTest, self).tearDown()
+        super().tearDown()
 
     def skipIfLocalhostV4(self):
         # The port used here doesn't matter, but some systems require it
         # to be non-zero if we do not also pass AI_PASSIVE.
         Resolver().resolve('localhost', 80, callback=self.stop)
         addrinfo = self.wait()
-        families = set(addr[0] for addr in addrinfo)
+        families = {addr[0] for addr in addrinfo}
         if socket.AF_INET6 not in families:
             self.skipTest("localhost does not resolve to ipv6")
 
@@ -181,7 +180,7 @@ class TestConnectorSplit(unittest.TestCase):
 
 
 class ConnectorTest(AsyncTestCase):
-    class FakeStream(object):
+    class FakeStream:
         def __init__(self):
             self.closed = False
 
@@ -189,7 +188,7 @@ class ConnectorTest(AsyncTestCase):
             self.closed = True
 
     def setUp(self):
-        super(ConnectorTest, self).setUp()
+        super().setUp()
         self.connect_futures = {}
         self.streams = {}
         self.addrinfo = [(AF1, 'a'), (AF1, 'b'),
@@ -200,7 +199,7 @@ class ConnectorTest(AsyncTestCase):
         # be closing any streams
         for stream in self.streams.values():
             self.assertFalse(stream.closed)
-        super(ConnectorTest, self).tearDown()
+        super().tearDown()
 
     def create_stream(self, af, addr):
         future = Future()

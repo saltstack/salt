@@ -1,17 +1,11 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: :email: `Mike Place <mp@saltstack.com>`
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt libs
 from salt import template
 from salt.ext.six.moves import StringIO
 from tests.support.mock import MagicMock
-
-# Import Salt Testing libs
 from tests.support.unit import TestCase
 
 

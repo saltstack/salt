@@ -1,5 +1,4 @@
 # pylint: skip-file
-from __future__ import absolute_import, division, print_function
 
 import functools
 import sys
@@ -118,7 +117,7 @@ class PathArgsHandler(TestWebSocketHandler):
 
 class CoroutineOnMessageHandler(TestWebSocketHandler):
     def initialize(self, close_future, compression_options=None):
-        super(CoroutineOnMessageHandler, self).initialize(close_future,
+        super().initialize(close_future,
                                                           compression_options)
         self.sleeping = 0
 
@@ -182,7 +181,7 @@ class WebSocketTest(WebSocketBaseTestCase):
         }))
 
     def tearDown(self):
-        super(WebSocketTest, self).tearDown()
+        super().tearDown()
         RequestHandler._template_loaders.clear()
 
     def test_http_request(self):
@@ -236,9 +235,9 @@ class WebSocketTest(WebSocketBaseTestCase):
     @gen_test
     def test_unicode_message(self):
         ws = yield self.ws_connect('/echo')
-        ws.write_message(u'hello \u00e9')
+        ws.write_message('hello \u00e9')
         response = yield ws.read_message()
-        self.assertEqual(response, u'hello \u00e9')
+        self.assertEqual(response, 'hello \u00e9')
         yield self.close(ws)
 
     @gen_test
@@ -468,7 +467,7 @@ class WebSocketNativeCoroutineTest(WebSocketBaseTestCase):
         self.assertEqual(res, 'hello2')
 
 
-class CompressionTestMixin(object):
+class CompressionTestMixin:
     MESSAGE = 'Hello world. Testing 123 123'
 
     def get_app(self):
@@ -540,7 +539,7 @@ class DefaultCompressionTest(CompressionTestMixin, WebSocketBaseTestCase):
         self.assertEqual(bytes_out, bytes_in + 12)
 
 
-class MaskFunctionMixin(object):
+class MaskFunctionMixin:
     # Subclasses should define self.mask(mask, data)
     def test_mask(self):
         self.assertEqual(self.mask(b'abcd', b''), b'')

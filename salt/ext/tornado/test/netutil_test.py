@@ -1,5 +1,4 @@
 # pylint: skip-file
-from __future__ import absolute_import, division, print_function
 
 import errno
 import os
@@ -35,7 +34,7 @@ else:
     from salt.ext.tornado.platform.twisted import TwistedResolver
 
 
-class _ResolverTestMixin(object):
+class _ResolverTestMixin:
     def test_localhost(self):
         self.resolver.resolve('localhost', 80, callback=self.stop)
         result = self.wait()
@@ -51,7 +50,7 @@ class _ResolverTestMixin(object):
 
 # It is impossible to quickly and consistently generate an error in name
 # resolution, so test this case separately, using mocks as needed.
-class _ResolverErrorTestMixin(object):
+class _ResolverErrorTestMixin:
     def test_bad_host(self):
         def handler(exc_typ, exc_val, exc_tb):
             self.stop(exc_val)
@@ -78,7 +77,7 @@ def _failing_getaddrinfo(*args):
 @skipIfNoNetwork
 class BlockingResolverTest(AsyncTestCase, _ResolverTestMixin):
     def setUp(self):
-        super(BlockingResolverTest, self).setUp()
+        super().setUp()
         self.resolver = BlockingResolver(io_loop=self.io_loop)
 
 
@@ -87,38 +86,38 @@ class BlockingResolverTest(AsyncTestCase, _ResolverTestMixin):
 # our default timeout.
 class BlockingResolverErrorTest(AsyncTestCase, _ResolverErrorTestMixin):
     def setUp(self):
-        super(BlockingResolverErrorTest, self).setUp()
+        super().setUp()
         self.resolver = BlockingResolver(io_loop=self.io_loop)
         self.real_getaddrinfo = socket.getaddrinfo
         socket.getaddrinfo = _failing_getaddrinfo
 
     def tearDown(self):
         socket.getaddrinfo = self.real_getaddrinfo
-        super(BlockingResolverErrorTest, self).tearDown()
+        super().tearDown()
 
 
 @skipIfNoNetwork
 @unittest.skipIf(futures is None, "futures module not present")
 class ThreadedResolverTest(AsyncTestCase, _ResolverTestMixin):
     def setUp(self):
-        super(ThreadedResolverTest, self).setUp()
+        super().setUp()
         self.resolver = ThreadedResolver(io_loop=self.io_loop)
 
     def tearDown(self):
         self.resolver.close()
-        super(ThreadedResolverTest, self).tearDown()
+        super().tearDown()
 
 
 class ThreadedResolverErrorTest(AsyncTestCase, _ResolverErrorTestMixin):
     def setUp(self):
-        super(ThreadedResolverErrorTest, self).setUp()
+        super().setUp()
         self.resolver = BlockingResolver(io_loop=self.io_loop)
         self.real_getaddrinfo = socket.getaddrinfo
         socket.getaddrinfo = _failing_getaddrinfo
 
     def tearDown(self):
         socket.getaddrinfo = self.real_getaddrinfo
-        super(ThreadedResolverErrorTest, self).tearDown()
+        super().tearDown()
 
 
 @skipIfNoNetwork
@@ -158,7 +157,7 @@ class ThreadedResolverImportTest(unittest.TestCase):
 @unittest.skipIf(pycares is None, "pycares module not present")
 class CaresResolverTest(AsyncTestCase, _ResolverTestMixin):
     def setUp(self):
-        super(CaresResolverTest, self).setUp()
+        super().setUp()
         self.resolver = CaresResolver(io_loop=self.io_loop)
 
 
@@ -170,7 +169,7 @@ class CaresResolverTest(AsyncTestCase, _ResolverTestMixin):
 class TwistedResolverTest(AsyncTestCase, _ResolverTestMixin,
                           _ResolverErrorTestMixin):
     def setUp(self):
-        super(TwistedResolverTest, self).setUp()
+        super().setUp()
         self.resolver = TwistedResolver(io_loop=self.io_loop)
 
 

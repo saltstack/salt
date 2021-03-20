@@ -1,19 +1,13 @@
-# -*- coding: utf-8 -*-
 """
 Unit tests for the boto_cloudfront state module.
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 import textwrap
 
-# Import Salt Libs
 import salt.config
 import salt.loader
 import salt.states.boto_cloudfront as boto_cloudfront
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -92,7 +86,7 @@ class BotoCloudfrontTestCase(TestCase, LoaderModuleMockMixin):
             __salt__={"boto_cloudfront.get_distribution": mock_get},
             __opts__={"test": True},
         ):
-            comment = "Distribution {0} set for creation.".format(self.name)
+            comment = "Distribution {} set for creation.".format(self.name)
             self.assertDictEqual(
                 boto_cloudfront.present(self.name, self.config, self.tags),
                 self.base_ret_with(
@@ -210,7 +204,7 @@ class BotoCloudfrontTestCase(TestCase, LoaderModuleMockMixin):
             __salt__={"boto_cloudfront.get_distribution": mock_get},
             __opts__={"test": True},
         ):
-            header = "Distribution {0} set for new config:".format(self.name)
+            header = "Distribution {} set for new config:".format(self.name)
             self.assertDictEqual(
                 boto_cloudfront.present(self.name, self.config, self.tags),
                 self.base_ret_with(
@@ -253,7 +247,7 @@ class BotoCloudfrontTestCase(TestCase, LoaderModuleMockMixin):
                 self.base_ret_with(
                     {
                         "result": True,
-                        "comment": "Updated distribution {0}.".format(self.name),
+                        "comment": "Updated distribution {}.".format(self.name),
                         "changes": {"diff": diff},
                     }
                 ),

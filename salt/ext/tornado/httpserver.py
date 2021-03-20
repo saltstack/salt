@@ -27,7 +27,6 @@ class except to start a server at the beginning of the process
 """
 # pylint: skip-file
 
-from __future__ import absolute_import, division, print_function
 
 import socket
 
@@ -233,7 +232,7 @@ class _CallableAdapter(httputil.HTTPMessageDelegate):
         self._chunks = None
 
 
-class _HTTPRequestContext(object):
+class _HTTPRequestContext:
     def __init__(self, stream, address, protocol, trusted_downstream=None):
         self.address = address
         # Save the socket's address family now so we know how to

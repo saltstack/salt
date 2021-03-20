@@ -21,7 +21,6 @@ have crept in over time.
 """
 # pylint: skip-file
 
-from __future__ import absolute_import, division, print_function
 
 import json
 import re
@@ -257,7 +256,7 @@ def recursive_unicode(obj):
     Supports lists, tuples, and dictionaries.
     """
     if isinstance(obj, dict):
-        return dict((recursive_unicode(k), recursive_unicode(v)) for (k, v) in obj.items())
+        return {recursive_unicode(k): recursive_unicode(v) for (k, v) in obj.items()}
     elif isinstance(obj, list):
         return list(recursive_unicode(i) for i in obj)
     elif isinstance(obj, tuple):
@@ -365,7 +364,7 @@ def linkify(text, shorten=False, extra_params="",
                     # have a status bar, such as Safari by default)
                     params += ' title="%s"' % href
 
-        return u'<a href="%s"%s>%s</a>' % (href, params, url)
+        return '<a href="{}"{}>{}</a>'.format(href, params, url)
 
     # First HTML-escape so that our strings are all safe.
     # The regex is modified to avoid character entites other than &amp; so

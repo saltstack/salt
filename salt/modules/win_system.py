@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module for managing Windows systems and getting Windows system information.
 Support for reboot, shutdown, join domain, rename
@@ -10,16 +9,13 @@ Support for reboot, shutdown, join domain, rename
     - win32net
     - wmi
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import ctypes
 import logging
 import platform
 import time
 from datetime import datetime
 
-# Import salt libs
 import salt.utils.functools
 import salt.utils.locales
 import salt.utils.platform
@@ -82,10 +78,10 @@ def _to_unicode(instr):
     When instr has a value of None, the return value of the function
     will also be None.
     """
-    if instr is None or isinstance(instr, six.text_type):
+    if instr is None or isinstance(instr, str):
         return instr
     else:
-        return six.text_type(instr, "utf8")
+        return str(instr, "utf8")
 
 
 def halt(timeout=5, in_seconds=False):
@@ -311,7 +307,7 @@ def shutdown(
     if only_on_pending_reboot and not get_pending_reboot():
         return False
 
-    if message and not isinstance(message, six.string_types):
+    if message and not isinstance(message, str):
         message = message.decode("utf-8")
     try:
         win32api.InitiateSystemShutdown(
@@ -534,15 +530,15 @@ def get_system_info():
     def byte_calc(val):
         val = float(val)
         if val < 2 ** 10:
-            return "{0:.3f}B".format(val)
+            return "{:.3f}B".format(val)
         elif val < 2 ** 20:
-            return "{0:.3f}KB".format(val / 2 ** 10)
+            return "{:.3f}KB".format(val / 2 ** 10)
         elif val < 2 ** 30:
-            return "{0:.3f}MB".format(val / 2 ** 20)
+            return "{:.3f}MB".format(val / 2 ** 20)
         elif val < 2 ** 40:
-            return "{0:.3f}GB".format(val / 2 ** 30)
+            return "{:.3f}GB".format(val / 2 ** 30)
         else:
-            return "{0:.3f}TB".format(val / 2 ** 40)
+            return "{:.3f}TB".format(val / 2 ** 40)
 
     # Lookup dicts for Win32_OperatingSystem
     os_type = {1: "Work Station", 2: "Domain Controller", 3: "Server"}
@@ -640,9 +636,7 @@ def get_system_info():
         ret["processor_cores"] = 0
         ret["processor_cores_enabled"] = 0
         ret["processor_manufacturer"] = processors[0].Manufacturer
-        ret["processor_max_clock_speed"] = (
-            six.text_type(processors[0].MaxClockSpeed) + "MHz"
-        )
+        ret["processor_max_clock_speed"] = str(processors[0].MaxClockSpeed) + "MHz"
         for processor in processors:
             ret["processors"] += 1
             ret["processors_logical"] += processor.NumberOfLogicalProcessors
@@ -805,16 +799,16 @@ def join_domain(
     status = get_domain_workgroup()
     if "Domain" in status:
         if status["Domain"] == domain:
-            return "Already joined to {0}".format(domain)
+            return "Already joined to {}".format(domain)
 
     if username and "\\" not in username and "@" not in username:
-        username = "{0}@{1}".format(username, domain)
+        username = "{}@{}".format(username, domain)
 
     if username and password is None:
         return "Must specify a password if you pass a username"
 
     # remove any escape characters
-    if isinstance(account_ou, six.string_types):
+    if isinstance(account_ou, str):
         account_ou = account_ou.split("\\")
         account_ou = "".join(account_ou)
 
@@ -956,11 +950,11 @@ def unjoin_domain(
     status = get_domain_workgroup()
     if "Workgroup" in status:
         if status["Workgroup"] == workgroup:
-            return "Already joined to {0}".format(workgroup)
+            return "Already joined to {}".format(workgroup)
 
     if username and "\\" not in username and "@" not in username:
         if domain:
-            username = "{0}@{1}".format(username, domain)
+            username = "{}@{}".format(username, domain)
         else:
             return "Must specify domain if not supplied in username"
 
@@ -1101,7 +1095,7 @@ def get_system_time():
     elif hours > 12:
         hours = hours - 12
         meridian = "PM"
-    return "{0:02d}:{1:02d}:{2:02d} {3}".format(hours, now[5], now[6], meridian)
+    return "{:02d}:{:02d}:{:02d} {}".format(hours, now[5], now[6], meridian)
 
 
 def set_system_time(newtime):
@@ -1240,7 +1234,7 @@ def get_system_date():
         salt '*' system.get_system_date
     """
     now = win32api.GetLocalTime()
-    return "{0:02d}/{1:02d}/{2:04d}".format(now[1], now[3], now[0])
+    return "{:02d}/{:02d}/{:04d}".format(now[1], now[3], now[0])
 
 
 def set_system_date(newdate):

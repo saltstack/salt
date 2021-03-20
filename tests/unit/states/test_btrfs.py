@@ -7,8 +7,6 @@ import pytest
 import salt.states.btrfs as btrfs
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf

@@ -1,19 +1,13 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Alexander Schwartz <alexander.schwartz@gmx.net>
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
-# Import Salt Libs
 import salt.states.archive as archive
 import salt.utils.platform
 from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -306,7 +300,7 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(os.path, "exists", MagicMock(return_value=True)):
             ret = archive.extracted(name, source=source, if_missing=if_missing)
             self.assertTrue(ret["result"], ret)
-            self.assertEqual(ret["comment"], "Path {0} exists".format(if_missing))
+            self.assertEqual(ret["comment"], "Path {} exists".format(if_missing))
 
     def test_clean_parent_conflict(self):
         """

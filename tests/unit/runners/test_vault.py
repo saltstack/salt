@@ -1,19 +1,12 @@
-# -*- coding: utf-8 -*-
 """
 Unit tests for the Vault runner
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
 import salt.runners.vault as vault
-
-# Import salt libs
 from salt.ext import six
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import ANY, MagicMock, Mock, call, patch
 from tests.support.unit import TestCase
@@ -69,7 +62,7 @@ class VaultTest(TestCase, LoaderModuleMockMixin):
 
         # The mappings dict is assembled in _get_policies, so emulate here
         mappings = {"minion": self.grains["id"], "grains": self.grains}
-        for case, correct_output in six.iteritems(cases):
+        for case, correct_output in cases.items():
             output = vault._expand_pattern_lists(
                 case, **mappings
             )  # pylint: disable=protected-access
@@ -85,14 +78,14 @@ class VaultTest(TestCase, LoaderModuleMockMixin):
         # For non-existing minions, or the master-minion, grains will be None
         cases = {
             "no-tokens-to-replace": ["no-tokens-to-replace"],
-            "single-dict:{minion}": ["single-dict:{0}".format(minion_id)],
+            "single-dict:{minion}": ["single-dict:{}".format(minion_id)],
             "single-list:{grains[roles]}": [],
         }
         with patch(
             "salt.utils.minions.get_minion_data",
             MagicMock(return_value=(None, None, None)),
         ):
-            for case, correct_output in six.iteritems(cases):
+            for case, correct_output in cases.items():
                 test_config = {"policies": [case]}
                 output = vault._get_policies(
                     minion_id, test_config
@@ -136,7 +129,7 @@ class VaultTest(TestCase, LoaderModuleMockMixin):
             "salt.utils.minions.get_minion_data",
             MagicMock(return_value=(None, self.grains, None)),
         ):
-            for case, correct_output in six.iteritems(cases):
+            for case, correct_output in cases.items():
                 test_config = {"policies": [case]}
                 output = vault._get_policies(
                     "test-minion", test_config

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Azure (ARM) Network Execution Module
 
@@ -47,7 +46,6 @@ Azure (ARM) Network Execution Module
 """
 
 # Python libs
-from __future__ import absolute_import
 
 import logging
 
@@ -187,9 +185,7 @@ def default_security_rule_get(name, security_group, resource_group, **kwargs):
             if default_rule["name"] == name:
                 result = default_rule
         if not result:
-            result = {
-                "error": "Unable to find {0} in {1}!".format(name, security_group)
-            }
+            result = {"error": "Unable to find {} in {}!".format(name, security_group)}
     except KeyError as exc:
         log.error("Unable to find %s in %s!", name, security_group)
         result = {"error": str(exc)}
@@ -368,7 +364,7 @@ def security_rule_create_or_update(
         # pylint: disable=eval-used
         if eval(params[0]):
             # pylint: disable=exec-used
-            exec("{0} = None".format(params[1]))
+            exec("{} = None".format(params[1]))
 
     netconn = __utils__["azurearm.get_client"]("network", **kwargs)
 
@@ -392,9 +388,7 @@ def security_rule_create_or_update(
             **kwargs
         )
     except TypeError as exc:
-        result = {
-            "error": "The object model could not be built. ({0})".format(str(exc))
-        }
+        result = {"error": "The object model could not be built. ({})".format(str(exc))}
         return result
 
     try:
@@ -412,7 +406,7 @@ def security_rule_create_or_update(
         result = {"error": str(exc)}
     except SerializationError as exc:
         result = {
-            "error": "The object model could not be parsed. ({0})".format(str(exc))
+            "error": "The object model could not be parsed. ({})".format(str(exc))
         }
 
     return result
@@ -528,9 +522,7 @@ def network_security_group_create_or_update(
             "network", "NetworkSecurityGroup", **kwargs
         )
     except TypeError as exc:
-        result = {
-            "error": "The object model could not be built. ({0})".format(str(exc))
-        }
+        result = {"error": "The object model could not be built. ({})".format(str(exc))}
         return result
 
     try:
@@ -547,7 +539,7 @@ def network_security_group_create_or_update(
         result = {"error": str(exc)}
     except SerializationError as exc:
         result = {
-            "error": "The object model could not be parsed. ({0})".format(str(exc))
+            "error": "The object model could not be parsed. ({})".format(str(exc))
         }
 
     return result
@@ -803,9 +795,7 @@ def subnet_create_or_update(
             **kwargs
         )
     except TypeError as exc:
-        result = {
-            "error": "The object model could not be built. ({0})".format(str(exc))
-        }
+        result = {"error": "The object model could not be built. ({})".format(str(exc))}
         return result
 
     try:
@@ -823,7 +813,7 @@ def subnet_create_or_update(
         result = {"error": str(exc)}
     except SerializationError as exc:
         result = {
-            "error": "The object model could not be parsed. ({0})".format(str(exc))
+            "error": "The object model could not be parsed. ({})".format(str(exc))
         }
 
     return result
@@ -979,9 +969,7 @@ def virtual_network_create_or_update(name, address_prefixes, resource_group, **k
             **kwargs
         )
     except TypeError as exc:
-        result = {
-            "error": "The object model could not be built. ({0})".format(str(exc))
-        }
+        result = {"error": "The object model could not be built. ({})".format(str(exc))}
         return result
 
     try:
@@ -998,7 +986,7 @@ def virtual_network_create_or_update(name, address_prefixes, resource_group, **k
         result = {"error": str(exc)}
     except SerializationError as exc:
         result = {
-            "error": "The object model could not be parsed. ({0})".format(str(exc))
+            "error": "The object model could not be parsed. ({})".format(str(exc))
         }
 
     return result
@@ -1322,9 +1310,7 @@ def load_balancer_create_or_update(name, resource_group, **kwargs):
             "network", "LoadBalancer", **kwargs
         )
     except TypeError as exc:
-        result = {
-            "error": "The object model could not be built. ({0})".format(str(exc))
-        }
+        result = {"error": "The object model could not be built. ({})".format(str(exc))}
         return result
 
     try:
@@ -1341,7 +1327,7 @@ def load_balancer_create_or_update(name, resource_group, **kwargs):
         result = {"error": str(exc)}
     except SerializationError as exc:
         result = {
-            "error": "The object model could not be parsed. ({0})".format(str(exc))
+            "error": "The object model could not be parsed. ({})".format(str(exc))
         }
 
     return result
@@ -1572,9 +1558,7 @@ def network_interface_create_or_update(
             "network", "NetworkInterface", ip_configurations=ip_configurations, **kwargs
         )
     except TypeError as exc:
-        result = {
-            "error": "The object model could not be built. ({0})".format(str(exc))
-        }
+        result = {"error": "The object model could not be built. ({})".format(str(exc))}
         return result
 
     try:
@@ -1591,7 +1575,7 @@ def network_interface_create_or_update(
         result = {"error": str(exc)}
     except SerializationError as exc:
         result = {
-            "error": "The object model could not be parsed. ({0})".format(str(exc))
+            "error": "The object model could not be parsed. ({})".format(str(exc))
         }
 
     return result
@@ -1961,9 +1945,7 @@ def public_ip_address_create_or_update(name, resource_group, **kwargs):
             "network", "PublicIPAddress", **kwargs
         )
     except TypeError as exc:
-        result = {
-            "error": "The object model could not be built. ({0})".format(str(exc))
-        }
+        result = {"error": "The object model could not be built. ({})".format(str(exc))}
         return result
 
     try:
@@ -1980,7 +1962,7 @@ def public_ip_address_create_or_update(name, resource_group, **kwargs):
         result = {"error": str(exc)}
     except SerializationError as exc:
         result = {
-            "error": "The object model could not be parsed. ({0})".format(str(exc))
+            "error": "The object model could not be parsed. ({})".format(str(exc))
         }
 
     return result
@@ -2172,9 +2154,7 @@ def route_filter_rule_create_or_update(
             **kwargs
         )
     except TypeError as exc:
-        result = {
-            "error": "The object model could not be built. ({0})".format(str(exc))
-        }
+        result = {"error": "The object model could not be built. ({})".format(str(exc))}
         return result
 
     try:
@@ -2195,7 +2175,7 @@ def route_filter_rule_create_or_update(
         result = {"error": message}
     except SerializationError as exc:
         result = {
-            "error": "The object model could not be parsed. ({0})".format(str(exc))
+            "error": "The object model could not be parsed. ({})".format(str(exc))
         }
 
     return result
@@ -2338,9 +2318,7 @@ def route_filter_create_or_update(name, resource_group, **kwargs):
             "network", "RouteFilter", **kwargs
         )
     except TypeError as exc:
-        result = {
-            "error": "The object model could not be built. ({0})".format(str(exc))
-        }
+        result = {"error": "The object model could not be built. ({})".format(str(exc))}
         return result
 
     try:
@@ -2357,7 +2335,7 @@ def route_filter_create_or_update(name, resource_group, **kwargs):
         result = {"error": str(exc)}
     except SerializationError as exc:
         result = {
-            "error": "The object model could not be parsed. ({0})".format(str(exc))
+            "error": "The object model could not be parsed. ({})".format(str(exc))
         }
 
     return result
@@ -2547,9 +2525,7 @@ def route_create_or_update(
             **kwargs
         )
     except TypeError as exc:
-        result = {
-            "error": "The object model could not be built. ({0})".format(str(exc))
-        }
+        result = {"error": "The object model could not be built. ({})".format(str(exc))}
         return result
 
     try:
@@ -2567,7 +2543,7 @@ def route_create_or_update(
         result = {"error": str(exc)}
     except SerializationError as exc:
         result = {
-            "error": "The object model could not be parsed. ({0})".format(str(exc))
+            "error": "The object model could not be parsed. ({})".format(str(exc))
         }
 
     return result
@@ -2710,9 +2686,7 @@ def route_table_create_or_update(name, resource_group, **kwargs):
             "network", "RouteTable", **kwargs
         )
     except TypeError as exc:
-        result = {
-            "error": "The object model could not be built. ({0})".format(str(exc))
-        }
+        result = {"error": "The object model could not be built. ({})".format(str(exc))}
         return result
 
     try:
@@ -2729,7 +2703,7 @@ def route_table_create_or_update(name, resource_group, **kwargs):
         result = {"error": str(exc)}
     except SerializationError as exc:
         result = {
-            "error": "The object model could not be parsed. ({0})".format(str(exc))
+            "error": "The object model could not be parsed. ({})".format(str(exc))
         }
 
     return result

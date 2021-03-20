@@ -1,17 +1,10 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.states.grafana as grafana
-
-# Import Salt Libs
 import salt.utils.json
 from salt.exceptions import SaltInvocationError
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -39,7 +32,7 @@ class GrafanaTestCase(TestCase, LoaderModuleMockMixin):
 
         comt1 = (
             "Dashboard myservice is set to be updated. The following rows "
-            "set to be updated: {0}".format(["systemhealth"])
+            "set to be updated: {}".format(["systemhealth"])
         )
         self.assertRaises(
             SaltInvocationError, grafana.dashboard_present, name, profile=False
@@ -80,7 +73,7 @@ class GrafanaTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(grafana.__opts__, {"test": True}):
                 self.assertRaises(SaltInvocationError, grafana.dashboard_present, name)
 
-                comt = "Dashboard {0} is set to be created.".format(name)
+                comt = "Dashboard {} is set to be created.".format(name)
                 ret.update({"comment": comt})
                 self.assertDictEqual(grafana.dashboard_present(name, True), ret)
 

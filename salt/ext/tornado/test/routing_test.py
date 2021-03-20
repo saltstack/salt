@@ -12,7 +12,6 @@
 # pylint: skip-file
 
 
-from __future__ import absolute_import, division, print_function
 
 from salt.ext.tornado.httputil import HTTPHeaders, HTTPMessageDelegate, HTTPServerConnectionDelegate, ResponseStartLine
 from salt.ext.tornado.routing import HostMatches, PathMatches, ReversibleRouter, Router, Rule, RuleRouter
@@ -104,7 +103,7 @@ SecondHandler = _get_named_handler("second_handler")
 
 class CustomRouter(ReversibleRouter):
     def __init__(self):
-        super(CustomRouter, self).__init__()
+        super().__init__()
         self.routes = {}
 
     def add_routes(self, routes):

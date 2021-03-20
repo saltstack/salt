@@ -1,6 +1,4 @@
-# -*- coding: utf-8 -*-
 # pylint: skip-file
-from __future__ import absolute_import, division, print_function
 
 import datetime
 import os
@@ -130,7 +128,7 @@ class OptionsTest(unittest.TestCase):
     def test_iter(self):
         options = self._sample_options()
         # OptionParsers always define 'help'.
-        self.assertEqual(set(['a', 'b', 'help']), set(iter(options)))
+        self.assertEqual({'a', 'b', 'help'}, set(iter(options)))
 
     def test_getitem(self):
         options = self._sample_options()
@@ -161,7 +159,7 @@ class OptionsTest(unittest.TestCase):
 
         frame = sys._getframe(0)
         this_file = frame.f_code.co_filename
-        self.assertEqual(set(['b_group', '', this_file]), options.groups())
+        self.assertEqual({'b_group', '', this_file}, options.groups())
 
         b_group_dict = options.group_dict('b_group')
         self.assertEqual({'b': 2}, b_group_dict)

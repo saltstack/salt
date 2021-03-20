@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Management of Pacemaker/Corosync clusters with PCS
 ==================================================
@@ -162,18 +161,13 @@ Create a cluster from scratch:
 
 .. versionadded:: 2016.3.0
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import logging
 import os
 
-# Import Salt libs
 import salt.utils.files
 import salt.utils.path
 import salt.utils.stringutils
-
-# Import 3rd-party libs
 from salt.ext import six
 
 log = logging.getLogger(__name__)
@@ -222,7 +216,7 @@ def _get_cibfile(cibname):
     """
     Get the full path of a cached CIB-file with the name of the CIB
     """
-    cibfile = os.path.join(_get_cibpath(), "{0}.{1}".format(cibname, "cib"))
+    cibfile = os.path.join(_get_cibpath(), "{}.{}".format(cibname, "cib"))
     log.trace("cibfile: %s", cibfile)
     return cibfile
 
@@ -231,7 +225,7 @@ def _get_cibfile_tmp(cibname):
     """
     Get the full path of a temporary CIB-file with the name of the CIB
     """
-    cibfile_tmp = "{0}.tmp".format(_get_cibfile(cibname))
+    cibfile_tmp = "{}.tmp".format(_get_cibfile(cibname))
     log.trace("cibfile_tmp: %s", cibfile_tmp)
     return cibfile_tmp
 
@@ -240,7 +234,7 @@ def _get_cibfile_cksum(cibname):
     """
     Get the full path of the file containing a checksum of a CIB-file with the name of the CIB
     """
-    cibfile_cksum = "{0}.cksum".format(_get_cibfile(cibname))
+    cibfile_cksum = "{}.cksum".format(_get_cibfile(cibname))
     log.trace("cibfile_cksum: %s", cibfile_cksum)
     return cibfile_cksum
 
@@ -279,7 +273,7 @@ def _item_present(
     item_create_required = True
 
     cibfile = None
-    if isinstance(cibname, six.string_types):
+    if isinstance(cibname, str):
         cibfile = _get_cibfile(cibname)
 
     if not isinstance(extra_args, (list, tuple)):
@@ -324,7 +318,7 @@ def _item_present(
     # constraints match on '(id:<id>)'
     elif item in ["constraint"]:
         for line in is_existing["stdout"].splitlines():
-            if "(id:{0})".format(item_id) in line:
+            if "(id:{})".format(item_id) in line:
                 item_create_required = False
 
     # item_id was provided,
@@ -334,15 +328,15 @@ def _item_present(
             item_create_required = False
 
     if not item_create_required:
-        ret["comment"] += "{0} {1} ({2}) is already existing\n".format(
-            six.text_type(item), six.text_type(item_id), six.text_type(item_type)
+        ret["comment"] += "{} {} ({}) is already existing\n".format(
+            str(item), str(item_id), str(item_type)
         )
         return ret
 
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] += "{0} {1} ({2}) is set to be created\n".format(
-            six.text_type(item), six.text_type(item_id), six.text_type(item_type)
+        ret["comment"] += "{} {} ({}) is set to be created\n".format(
+            str(item), str(item_id), str(item_type)
         )
         return ret
 
@@ -358,11 +352,11 @@ def _item_present(
     log.trace("Output of pcs.item_create: %s", item_create)
 
     if item_create["retcode"] in [0]:
-        ret["comment"] += "Created {0} {1} ({2})\n".format(item, item_id, item_type)
-        ret["changes"].update({item_id: {"old": "", "new": six.text_type(item_id)}})
+        ret["comment"] += "Created {} {} ({})\n".format(item, item_id, item_type)
+        ret["changes"].update({item_id: {"old": "", "new": str(item_id)}})
     else:
         ret["result"] = False
-        ret["comment"] += "Failed to create {0} {1} ({2})\n".format(
+        ret["comment"] += "Failed to create {} {} ({})\n".format(
             item, item_id, item_type
         )
 
@@ -416,11 +410,11 @@ def auth(name, nodes, pcsuser="hacluster", pcspasswd="hacluster", extra_args=Non
 
     for node in nodes:
         if node in authorized_dict and authorized_dict[node] == "Already authorized":
-            ret["comment"] += "Node {0} is already authorized\n".format(node)
+            ret["comment"] += "Node {} is already authorized\n".format(node)
         else:
             auth_required = True
             if __opts__["test"]:
-                ret["comment"] += "Node is set to authorize: {0}\n".format(node)
+                ret["comment"] += "Node is set to authorize: {}\n".format(node)
 
     if not auth_required:
         return ret
@@ -448,18 +442,18 @@ def auth(name, nodes, pcsuser="hacluster", pcspasswd="hacluster", extra_args=Non
 
     for node in nodes:
         if node in authorize_dict and authorize_dict[node] == "Authorized":
-            ret["comment"] += "Authorized {0}\n".format(node)
+            ret["comment"] += "Authorized {}\n".format(node)
             ret["changes"].update({node: {"old": "", "new": "Authorized"}})
         else:
             ret["result"] = False
             if node in authorized_dict:
                 ret[
                     "comment"
-                ] += "Authorization check for node {0} returned: {1}\n".format(
+                ] += "Authorization check for node {} returned: {}\n".format(
                     node, authorized_dict[node]
                 )
             if node in authorize_dict:
-                ret["comment"] += "Failed to authorize {0} with error {1}\n".format(
+                ret["comment"] += "Failed to authorize {} with error {}\n".format(
                     node, authorize_dict[node]
                 )
 
@@ -508,13 +502,13 @@ def cluster_setup(name, nodes, pcsclustername="pcscluster", extra_args=None):
             value = line.split(":")[1].strip()
             if key in ["Cluster Name"]:
                 if value in [pcsclustername]:
-                    ret["comment"] += "Cluster {0} is already set up\n".format(
+                    ret["comment"] += "Cluster {} is already set up\n".format(
                         pcsclustername
                     )
                 else:
                     setup_required = True
                     if __opts__["test"]:
-                        ret["comment"] += "Cluster {0} is set to set up\n".format(
+                        ret["comment"] += "Cluster {} is set to set up\n".format(
                             pcsclustername
                         )
 
@@ -547,16 +541,14 @@ def cluster_setup(name, nodes, pcsclustername="pcscluster", extra_args=None):
 
     for node in nodes:
         if node in setup_dict and setup_dict[node] in ["Succeeded", "Success"]:
-            ret["comment"] += "Set up {0}\n".format(node)
+            ret["comment"] += "Set up {}\n".format(node)
             ret["changes"].update({node: {"old": "", "new": "Setup"}})
         else:
             ret["result"] = False
-            ret["comment"] += "Failed to setup {0}\n".format(node)
+            ret["comment"] += "Failed to setup {}\n".format(node)
             if node in setup_dict:
-                ret["comment"] += "{0}: setup_dict: {1}\n".format(
-                    node, setup_dict[node]
-                )
-            ret["comment"] += six.text_type(setup)
+                ret["comment"] += "{}: setup_dict: {}\n".format(node, setup_dict[node])
+            ret["comment"] += str(setup)
 
     log.trace("ret: %s", ret)
 
@@ -609,7 +601,7 @@ def cluster_node_present(name, node, extra_args=None):
                         node_add_required = False
                         ret[
                             "comment"
-                        ] += "Node {0} is already member of the cluster\n".format(node)
+                        ] += "Node {} is already member of the cluster\n".format(node)
                     else:
                         current_nodes += value.split()
 
@@ -618,7 +610,7 @@ def cluster_node_present(name, node, extra_args=None):
 
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] += "Node {0} is set to be added to the cluster\n".format(node)
+        ret["comment"] += "Node {} is set to be added to the cluster\n".format(node)
         return ret
 
     if not isinstance(extra_args, (list, tuple)):
@@ -642,29 +634,29 @@ def cluster_node_present(name, node, extra_args=None):
         if current_node in node_add_dict:
             if node_add_dict[current_node] not in ["Corosync updated"]:
                 ret["result"] = False
-                ret["comment"] += "Failed to update corosync.conf on node {0}\n".format(
+                ret["comment"] += "Failed to update corosync.conf on node {}\n".format(
                     current_node
                 )
-                ret["comment"] += "{0}: node_add_dict: {1}\n".format(
+                ret["comment"] += "{}: node_add_dict: {}\n".format(
                     current_node, node_add_dict[current_node]
                 )
         else:
             ret["result"] = False
-            ret["comment"] += "Failed to update corosync.conf on node {0}\n".format(
+            ret["comment"] += "Failed to update corosync.conf on node {}\n".format(
                 current_node
             )
 
     if node in node_add_dict and node_add_dict[node] in ["Succeeded", "Success"]:
-        ret["comment"] += "Added node {0}\n".format(node)
+        ret["comment"] += "Added node {}\n".format(node)
         ret["changes"].update({node: {"old": "", "new": "Added"}})
     else:
         ret["result"] = False
-        ret["comment"] += "Failed to add node{0}\n".format(node)
+        ret["comment"] += "Failed to add node{}\n".format(node)
         if node in node_add_dict:
-            ret["comment"] += "{0}: node_add_dict: {1}\n".format(
+            ret["comment"] += "{}: node_add_dict: {}\n".format(
                 node, node_add_dict[node]
             )
-        ret["comment"] += six.text_type(node_add)
+        ret["comment"] += str(node_add)
 
     log.trace("ret: %s", ret)
 
@@ -729,7 +721,7 @@ def cib_present(name, cibname, scope=None, extra_args=None):
         ret["comment"] += "Failed to get live CIB\n"
         return ret
 
-    cib_hash_live = "{0}:{1}".format(
+    cib_hash_live = "{}:{}".format(
         cib_hash_form, __salt__["file.get_hash"](path=cibfile_tmp, form=cib_hash_form)
     )
     log.trace("cib_hash_live: %s", cib_hash_live)
@@ -751,10 +743,10 @@ def cib_present(name, cibname, scope=None, extra_args=None):
 
     if not cib_create_required:
         __salt__["file.remove"](cibfile_tmp)
-        ret["comment"] += "CIB {0} is already equal to the live CIB\n".format(cibname)
+        ret["comment"] += "CIB {} is already equal to the live CIB\n".format(cibname)
 
     if not cib_cksum_required:
-        ret["comment"] += "CIB {0} checksum is correct\n".format(cibname)
+        ret["comment"] += "CIB {} checksum is correct\n".format(cibname)
 
     if not cib_required:
         return ret
@@ -763,9 +755,9 @@ def cib_present(name, cibname, scope=None, extra_args=None):
         __salt__["file.remove"](cibfile_tmp)
         ret["result"] = None
         if cib_create_required:
-            ret["comment"] += "CIB {0} is set to be created/updated\n".format(cibname)
+            ret["comment"] += "CIB {} is set to be created/updated\n".format(cibname)
         if cib_cksum_required:
-            ret["comment"] += "CIB {0} checksum is set to be created/updated\n".format(
+            ret["comment"] += "CIB {} checksum is set to be created/updated\n".format(
                 cibname
             )
         return ret
@@ -774,23 +766,23 @@ def cib_present(name, cibname, scope=None, extra_args=None):
         __salt__["file.move"](cibfile_tmp, cibfile)
 
         if __salt__["file.check_hash"](path=cibfile, file_hash=cib_hash_live):
-            ret["comment"] += "Created/updated CIB {0}\n".format(cibname)
+            ret["comment"] += "Created/updated CIB {}\n".format(cibname)
             ret["changes"].update({"cibfile": cibfile})
         else:
             ret["result"] = False
-            ret["comment"] += "Failed to create/update CIB {0}\n".format(cibname)
+            ret["comment"] += "Failed to create/update CIB {}\n".format(cibname)
 
     if cib_cksum_required:
         _file_write(cibfile_cksum, cib_hash_live)
 
         if _file_read(cibfile_cksum) in [cib_hash_live]:
-            ret["comment"] += "Created/updated checksum {0} of CIB {1}\n".format(
+            ret["comment"] += "Created/updated checksum {} of CIB {}\n".format(
                 cib_hash_live, cibname
             )
             ret["changes"].update({"cibcksum": cib_hash_live})
         else:
             ret["result"] = False
-            ret["comment"] += "Failed to create/update checksum {0} CIB {1}\n".format(
+            ret["comment"] += "Failed to create/update checksum {} CIB {}\n".format(
                 cib_hash_live, cibname
             )
 
@@ -839,10 +831,10 @@ def cib_pushed(name, cibname, scope=None, extra_args=None):
 
     if not os.path.exists(cibfile):
         ret["result"] = False
-        ret["comment"] += "CIB-file {0} does not exist\n".format(cibfile)
+        ret["comment"] += "CIB-file {} does not exist\n".format(cibfile)
         return ret
 
-    cib_hash_cibfile = "{0}:{1}".format(
+    cib_hash_cibfile = "{}:{}".format(
         cib_hash_form, __salt__["file.get_hash"](path=cibfile, form=cib_hash_form)
     )
     log.trace("cib_hash_cibfile: %s", cib_hash_cibfile)
@@ -853,14 +845,14 @@ def cib_pushed(name, cibname, scope=None, extra_args=None):
     if not cib_push_required:
         ret[
             "comment"
-        ] += "CIB {0} is not changed since creation through pcs.cib_present\n".format(
+        ] += "CIB {} is not changed since creation through pcs.cib_present\n".format(
             cibname
         )
         return ret
 
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] += "CIB {0} is set to be pushed as the new live CIB\n".format(
+        ret["comment"] += "CIB {} is set to be pushed as the new live CIB\n".format(
             cibname
         )
         return ret
@@ -871,11 +863,11 @@ def cib_pushed(name, cibname, scope=None, extra_args=None):
     log.trace("Output of pcs.cib_push: %s", cib_push)
 
     if cib_push["retcode"] in [0]:
-        ret["comment"] += "Pushed CIB {0}\n".format(cibname)
+        ret["comment"] += "Pushed CIB {}\n".format(cibname)
         ret["changes"].update({"cibfile_pushed": cibfile})
     else:
         ret["result"] = False
-        ret["comment"] += "Failed to push CIB {0}\n".format(cibname)
+        ret["comment"] += "Failed to push CIB {}\n".format(cibname)
 
     log.trace("ret: %s", ret)
 
@@ -913,7 +905,7 @@ def prop_has_value(name, prop, value, extra_args=None, cibname=None):
     return _item_present(
         name=name,
         item="property",
-        item_id="{0}={1}".format(prop, value),
+        item_id="{}={}".format(prop, value),
         item_type=None,
         create="set",
         extra_args=extra_args,
@@ -953,7 +945,7 @@ def resource_defaults_to(name, default, value, extra_args=None, cibname=None):
     return _item_present(
         name=name,
         item="resource",
-        item_id="{0}={1}".format(default, value),
+        item_id="{}={}".format(default, value),
         item_type=None,
         show="defaults",
         create="defaults",
@@ -994,7 +986,7 @@ def resource_op_defaults_to(name, op_default, value, extra_args=None, cibname=No
     return _item_present(
         name=name,
         item="resource",
-        item_id="{0}={1}".format(op_default, value),
+        item_id="{}={}".format(op_default, value),
         item_type=None,
         show=["op", "defaults"],
         create=["op", "defaults"],

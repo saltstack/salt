@@ -1,16 +1,12 @@
-# -*- coding: utf-8 -*-
 """
 Configuration disposable regularly scheduled tasks for at.
 ==========================================================
 
 The at state can be add disposable regularly scheduled tasks for your system.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import logging
 
-# Import salt libs
 from salt.ext.six.moves import map
 
 log = logging.getLogger(__name__)
@@ -67,7 +63,7 @@ def present(name, timespec, tag=None, user=None, job=None, unique_tag=False):
     # quick return on test=True
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "job {0} added and will run on {1}".format(
+        ret["comment"] = "job {} added and will run on {}".format(
             job,
             timespec,
         )
@@ -88,9 +84,9 @@ def present(name, timespec, tag=None, user=None, job=None, unique_tag=False):
         luser = __salt__["user.info"](user)
         if not luser:
             ret["result"] = False
-            ret["comment"] = "user {0} does not exists".format(user)
+            ret["comment"] = "user {} does not exists".format(user)
             return ret
-        ret["comment"] = "job {0} added and will run as {1} on {2}".format(
+        ret["comment"] = "job {} added and will run as {} on {}".format(
             job,
             user,
             timespec,
@@ -102,7 +98,7 @@ def present(name, timespec, tag=None, user=None, job=None, unique_tag=False):
             runas=user,
         )
     else:
-        ret["comment"] = "job {0} added and will run on {1}".format(
+        ret["comment"] = "job {} added and will run on {}".format(
             job,
             timespec,
         )
@@ -182,7 +178,7 @@ def absent(name, jobid=None, **kwargs):
 
     # limit was never support
     if "limit" in kwargs:
-        ret["comment"] = "limit parameter not supported {0}".format(name)
+        ret["comment"] = "limit parameter not supported {}".format(name)
         ret["result"] = False
         return ret
 

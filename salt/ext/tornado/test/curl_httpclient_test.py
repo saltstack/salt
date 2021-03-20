@@ -1,6 +1,4 @@
-# coding: utf-8
 # pylint: skip-file
-from __future__ import absolute_import, division, print_function
 
 from hashlib import md5
 
@@ -56,10 +54,10 @@ class DigestAuthHandler(RequestHandler):
             assert param_dict['nonce'] == nonce
             assert param_dict['username'] == username
             assert param_dict['uri'] == self.request.path
-            h1 = md5(utf8('%s:%s:%s' % (username, realm, password))).hexdigest()
-            h2 = md5(utf8('%s:%s' % (self.request.method,
+            h1 = md5(utf8('{}:{}:{}'.format(username, realm, password))).hexdigest()
+            h2 = md5(utf8('{}:{}'.format(self.request.method,
                                      self.request.path))).hexdigest()
-            digest = md5(utf8('%s:%s:%s' % (h1, nonce, h2))).hexdigest()
+            digest = md5(utf8('{}:{}:{}'.format(h1, nonce, h2))).hexdigest()
             if digest == param_dict['response']:
                 self.write('ok')
             else:
@@ -84,7 +82,7 @@ class CustomFailReasonHandler(RequestHandler):
 @unittest.skipIf(pycurl is None, "pycurl module not present")
 class CurlHTTPClientTestCase(AsyncHTTPTestCase):
     def setUp(self):
-        super(CurlHTTPClientTestCase, self).setUp()
+        super().setUp()
         self.http_client = self.create_client()
 
     def get_app(self):
@@ -131,5 +129,5 @@ class CurlHTTPClientTestCase(AsyncHTTPTestCase):
     def test_failed_setup(self):
         self.http_client = self.create_client(max_clients=1)
         for i in range(5):
-            response = self.fetch(u'/ユニコード')
+            response = self.fetch('/ユニコード')
             self.assertIsNot(response.error, None)

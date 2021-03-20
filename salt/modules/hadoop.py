@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Support for hadoop
 
@@ -9,10 +8,7 @@ Support for hadoop
 
 
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import salt libs
 import salt.utils.path
 
 __authorized_modules__ = ["version", "namenode", "dfsadmin", "dfs", "fs"]

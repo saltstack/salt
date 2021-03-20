@@ -2,14 +2,10 @@
     :codeauthor: Rupesh Tare <rupesht@saltstack.com>
 """
 
-# Import Python libs
 
 import os.path
 
-# Import Salt Libs
 import salt.modules.linux_lvm as linux_lvm
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase

@@ -1,12 +1,4 @@
-# coding: utf-8
-
-# Import Python libs
-from __future__ import absolute_import, unicode_literals
-
-# Import Salt libs
 import salt.utils.locales as locales
-
-# Import 3rd-part libs
 from salt.ext.six.moves import reload_module
 from tests.support.mock import patch
 from tests.support.unit import TestCase

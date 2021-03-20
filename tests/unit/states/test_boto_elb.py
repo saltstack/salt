@@ -1,16 +1,10 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 
-# Import Salt Libs
 import salt.states.boto_elb as boto_elb
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -169,7 +163,7 @@ class BotoElbTestCase(TestCase, LoaderModuleMockMixin):
 
         mock_bool = MagicMock(return_value=False)
         with patch.dict(boto_elb.__salt__, {"boto_elb.exists": mock_bool}):
-            comt = "Could not find lb {0}".format(name)
+            comt = "Could not find lb {}".format(name)
             ret.update({"comment": comt})
             self.assertDictEqual(boto_elb.register_instances(name, instances), ret)
 
@@ -185,11 +179,11 @@ class BotoElbTestCase(TestCase, LoaderModuleMockMixin):
 
         mock = MagicMock(side_effect=[False, True])
         with patch.dict(boto_elb.__salt__, {"boto_elb.exists": mock}):
-            comt = "{0} ELB does not exist.".format(name)
+            comt = "{} ELB does not exist.".format(name)
             ret.update({"comment": comt})
             self.assertDictEqual(boto_elb.absent(name), ret)
 
             with patch.dict(boto_elb.__opts__, {"test": True}):
-                comt = "ELB {0} is set to be removed.".format(name)
+                comt = "ELB {} is set to be removed.".format(name)
                 ret.update({"comment": comt, "result": None})
                 self.assertDictEqual(boto_elb.absent(name), ret)

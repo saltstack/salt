@@ -1,7 +1,3 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import
-
 import logging
 
 from tests.support.mock import MagicMock, patch
@@ -31,7 +27,7 @@ log = logging.getLogger(__name__)
 )
 class SchedulerErrorTest(SchedulerTestsBase):
     def setUp(self):
-        super(SchedulerErrorTest, self).setUp()
+        super().setUp()
         self.schedule.opts["loop_interval"] = 1
 
         self.schedule.opts["grains"]["whens"] = {"tea time": "11/29/2017 12:00pm"}

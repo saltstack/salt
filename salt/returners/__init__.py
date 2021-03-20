@@ -1,11 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 Returners Directory
 
 :func:`get_returner_options` is a general purpose function that returners may
 use to fetch their configuration options.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
@@ -110,7 +108,7 @@ def _fetch_ret_config(ret):
         return None
     if "ret_config" not in ret:
         return ""
-    return six.text_type(ret["ret_config"])
+    return str(ret["ret_config"])
 
 
 def _fetch_option(cfg, ret_config, virtualname, attr_name):
@@ -124,9 +122,9 @@ def _fetch_option(cfg, ret_config, virtualname, attr_name):
     if isinstance(cfg, dict):
         c_cfg = cfg
     else:
-        c_cfg = cfg("{0}".format(virtualname), {})
+        c_cfg = cfg("{}".format(virtualname), {})
 
-    default_cfg_key = "{0}.{1}".format(virtualname, attr_name)
+    default_cfg_key = "{}.{}".format(virtualname, attr_name)
     if not ret_config:
         # Using the default configuration key
         if isinstance(cfg, dict):
@@ -138,9 +136,9 @@ def _fetch_option(cfg, ret_config, virtualname, attr_name):
             return c_cfg.get(attr_name, cfg(default_cfg_key))
 
     # Using ret_config to override the default configuration key
-    ret_cfg = cfg("{0}.{1}".format(ret_config, virtualname), {})
+    ret_cfg = cfg("{}.{}".format(ret_config, virtualname), {})
 
-    override_default_cfg_key = "{0}.{1}.{2}".format(
+    override_default_cfg_key = "{}.{}.{}".format(
         ret_config,
         virtualname,
         attr_name,
@@ -212,7 +210,7 @@ def _fetch_profile_opts(
     if not creds:
         return {}
 
-    return dict(
-        (pattr, creds.get("{0}.{1}".format(virtualname, profile_attrs[pattr])))
+    return {
+        pattr: creds.get("{}.{}".format(virtualname, profile_attrs[pattr]))
         for pattr in profile_attrs
-    )
+    }

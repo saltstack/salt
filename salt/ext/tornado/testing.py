@@ -11,7 +11,6 @@
 """
 # pylint: skip-file
 
-from __future__ import absolute_import, division, print_function
 
 try:
     from salt.ext.tornado import gen
@@ -121,7 +120,7 @@ def get_async_test_timeout():
         return 5
 
 
-class _TestMethodWrapper(object):
+class _TestMethodWrapper:
     """Wraps a test method to raise an error if it returns a value.
 
     This is mainly used to detect undecorated generators (if a test
@@ -214,7 +213,7 @@ class AsyncTestCase(unittest.TestCase):
                 self.stop()
     """
     def __init__(self, methodName='runTest'):
-        super(AsyncTestCase, self).__init__(methodName)
+        super().__init__(methodName)
         self.__stopped = False
         self.__running = False
         self.__failure = None
@@ -228,7 +227,7 @@ class AsyncTestCase(unittest.TestCase):
         setattr(self, methodName, _TestMethodWrapper(getattr(self, methodName)))
 
     def setUp(self):
-        super(AsyncTestCase, self).setUp()
+        super().setUp()
         self.io_loop = self.get_new_ioloop()
         self.io_loop.make_current()
 
@@ -243,7 +242,7 @@ class AsyncTestCase(unittest.TestCase):
             # in the same process with autoreload (because curl does not
             # set FD_CLOEXEC on its file descriptors)
             self.io_loop.close(all_fds=True)
-        super(AsyncTestCase, self).tearDown()
+        super().tearDown()
         # In case an exception escaped or the StackContext caught an exception
         # when there wasn't a wait() to re-raise it, do so here.
         # This is our last chance to raise an exception in a way that the
@@ -274,7 +273,7 @@ class AsyncTestCase(unittest.TestCase):
 
     def run(self, result=None):
         with ExceptionStackContext(self._handle_exception):
-            super(AsyncTestCase, self).run(result)
+            super().run(result)
         # As a last resort, if an exception escaped super.run() and wasn't
         # re-raised in tearDown, raise it here.  This will cause the
         # unittest run to fail messily, but that's better than silently
@@ -373,7 +372,7 @@ class AsyncHTTPTestCase(AsyncTestCase):
     ``stop()`` and ``wait()`` yourself.
     """
     def setUp(self):
-        super(AsyncHTTPTestCase, self).setUp()
+        super().setUp()
         sock, port = bind_unused_port()
         self.__port = port
 
@@ -424,7 +423,7 @@ class AsyncHTTPTestCase(AsyncTestCase):
 
     def get_url(self, path):
         """Returns an absolute url for the given path on the test server."""
-        return '%s://127.0.0.1:%s%s' % (self.get_protocol(),
+        return '{}://127.0.0.1:{}{}'.format(self.get_protocol(),
                                         self.get_http_port(), path)
 
     def tearDown(self):
@@ -434,7 +433,7 @@ class AsyncHTTPTestCase(AsyncTestCase):
         if (not IOLoop.initialized() or
                 self.http_client.io_loop is not IOLoop.instance()):
             self.http_client.close()
-        super(AsyncHTTPTestCase, self).tearDown()
+        super().tearDown()
 
 
 class AsyncHTTPSTestCase(AsyncHTTPTestCase):
@@ -583,14 +582,14 @@ class LogTrapTestCase(unittest.TestCase):
                 not isinstance(handler, logging.StreamHandler)):
             # Logging has been configured in a way we don't recognize,
             # so just leave it alone.
-            super(LogTrapTestCase, self).run(result)
+            super().run(result)
             return
         old_stream = handler.stream
         try:
             handler.stream = StringIO()
             gen_log.info("RUNNING TEST: " + str(self))
             old_error_count = len(result.failures) + len(result.errors)
-            super(LogTrapTestCase, self).run(result)
+            super().run(result)
             new_error_count = len(result.failures) + len(result.errors)
             if new_error_count != old_error_count:
                 old_stream.write(handler.stream.getvalue())

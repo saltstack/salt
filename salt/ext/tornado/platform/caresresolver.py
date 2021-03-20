@@ -1,5 +1,4 @@
 # pylint: skip-file
-from __future__ import absolute_import, division, print_function
 import pycares  # type: ignore
 import socket
 
@@ -62,7 +61,7 @@ class CaresResolver(Resolver):
             assert not callback_args.kwargs
             result, error = callback_args.args
             if error:
-                raise IOError('C-Ares returned error %s: %s while resolving %s' %
+                raise OSError('C-Ares returned error %s: %s while resolving %s' %
                               (error, pycares.errno.strerror(error), host))
             addresses = result.addresses
         addrinfo = []
@@ -74,7 +73,7 @@ class CaresResolver(Resolver):
             else:
                 address_family = socket.AF_UNSPEC
             if family != socket.AF_UNSPEC and family != address_family:
-                raise IOError('Requested socket family %d but got %d' %
+                raise OSError('Requested socket family %d but got %d' %
                               (family, address_family))
             addrinfo.append((address_family, (address, port)))
         raise gen.Return(addrinfo)

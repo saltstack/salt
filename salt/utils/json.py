@@ -1,20 +1,14 @@
-# -*- coding: utf-8 -*-
 """
 Functions to work with JSON
 """
 
-from __future__ import absolute_import, unicode_literals
 
-# Import Python libs
 import json  # future lint: blacklisted-module
 import logging
 import sys
 
-# Import Salt libs
 import salt.utils.data
 import salt.utils.stringutils
-
-# Import 3rd-party libs
 from salt.ext import six
 
 log = logging.getLogger(__name__)
@@ -100,7 +94,7 @@ def loads(s, **kwargs):
         if six.PY3 and isinstance(s, bytes):
             return json_module.loads(salt.utils.stringutils.to_unicode(s), **kwargs)
         else:
-            six.reraise(*sys.exc_info())
+            raise
 
 
 def dump(obj, fp, **kwargs):

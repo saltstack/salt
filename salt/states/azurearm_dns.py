@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Azure (ARM) DNS State Module
 
@@ -113,7 +112,6 @@ Optional provider parameters:
 """
 
 # Python libs
-from __future__ import absolute_import
 
 import logging
 
@@ -283,12 +281,12 @@ def zone_present(
 
         if not ret["changes"]:
             ret["result"] = True
-            ret["comment"] = "DNS zone {0} is already present.".format(name)
+            ret["comment"] = "DNS zone {} is already present.".format(name)
             return ret
 
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "DNS zone {0} would be updated.".format(name)
+            ret["comment"] = "DNS zone {} would be updated.".format(name)
             return ret
 
     else:
@@ -306,7 +304,7 @@ def zone_present(
         }
 
     if __opts__["test"]:
-        ret["comment"] = "DNS zone {0} would be created.".format(name)
+        ret["comment"] = "DNS zone {} would be created.".format(name)
         ret["result"] = None
         return ret
 
@@ -328,10 +326,10 @@ def zone_present(
 
     if "error" not in zone:
         ret["result"] = True
-        ret["comment"] = "DNS zone {0} has been created.".format(name)
+        ret["comment"] = "DNS zone {} has been created.".format(name)
         return ret
 
-    ret["comment"] = "Failed to create DNS zone {0}! ({1})".format(
+    ret["comment"] = "Failed to create DNS zone {}! ({})".format(
         name, zone.get("error")
     )
     return ret
@@ -367,11 +365,11 @@ def zone_absent(name, resource_group, connection_auth=None):
 
     if "error" in zone:
         ret["result"] = True
-        ret["comment"] = "DNS zone {0} was not found.".format(name)
+        ret["comment"] = "DNS zone {} was not found.".format(name)
         return ret
 
     elif __opts__["test"]:
-        ret["comment"] = "DNS zone {0} would be deleted.".format(name)
+        ret["comment"] = "DNS zone {} would be deleted.".format(name)
         ret["result"] = None
         ret["changes"] = {
             "old": zone,
@@ -385,11 +383,11 @@ def zone_absent(name, resource_group, connection_auth=None):
 
     if deleted:
         ret["result"] = True
-        ret["comment"] = "DNS zone {0} has been deleted.".format(name)
+        ret["comment"] = "DNS zone {} has been deleted.".format(name)
         ret["changes"] = {"old": zone, "new": {}}
         return ret
 
-    ret["comment"] = "Failed to delete DNS zone {0}!".format(name)
+    ret["comment"] = "Failed to delete DNS zone {}!".format(name)
     return ret
 
 
@@ -579,7 +577,7 @@ def record_set_present(
                     if not isinstance(record, dict):
                         ret[
                             "comment"
-                        ] = "{0} record information must be specified as a dictionary!".format(
+                        ] = "{} record information must be specified as a dictionary!".format(
                             record_str
                         )
                         return ret
@@ -590,7 +588,7 @@ def record_set_present(
                     if not isinstance(record, list):
                         ret[
                             "comment"
-                        ] = "{0} record information must be specified as a list of dictionaries!".format(
+                        ] = "{} record information must be specified as a list of dictionaries!".format(
                             record_str
                         )
                         return ret
@@ -601,21 +599,21 @@ def record_set_present(
                         for key in local[idx]:
                             local_val = local[idx][key]
                             remote_val = remote[idx].get(key)
-                            if isinstance(local_val, six.string_types):
+                            if isinstance(local_val, str):
                                 local_val = local_val.lower()
-                            if isinstance(remote_val, six.string_types):
+                            if isinstance(remote_val, str):
                                 remote_val = remote_val.lower()
                             if local_val != remote_val:
                                 ret["changes"] = {"new": {record_str: record}}
 
         if not ret["changes"]:
             ret["result"] = True
-            ret["comment"] = "Record set {0} is already present.".format(name)
+            ret["comment"] = "Record set {} is already present.".format(name)
             return ret
 
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "Record set {0} would be updated.".format(name)
+            ret["comment"] = "Record set {} would be updated.".format(name)
             return ret
 
     else:
@@ -638,7 +636,7 @@ def record_set_present(
                 ret["changes"]["new"][record] = eval(record)
 
     if __opts__["test"]:
-        ret["comment"] = "Record set {0} would be created.".format(name)
+        ret["comment"] = "Record set {} would be created.".format(name)
         ret["result"] = None
         return ret
 
@@ -670,10 +668,10 @@ def record_set_present(
 
     if "error" not in rec_set:
         ret["result"] = True
-        ret["comment"] = "Record set {0} has been created.".format(name)
+        ret["comment"] = "Record set {} has been created.".format(name)
         return ret
 
-    ret["comment"] = "Failed to create record set {0}! ({1})".format(
+    ret["comment"] = "Failed to create record set {}! ({})".format(
         name, rec_set.get("error")
     )
     return ret
@@ -712,13 +710,13 @@ def record_set_absent(name, zone_name, resource_group, connection_auth=None):
 
     if "error" in rec_set:
         ret["result"] = True
-        ret["comment"] = "Record set {0} was not found in zone {1}.".format(
+        ret["comment"] = "Record set {} was not found in zone {}.".format(
             name, zone_name
         )
         return ret
 
     elif __opts__["test"]:
-        ret["comment"] = "Record set {0} would be deleted.".format(name)
+        ret["comment"] = "Record set {} would be deleted.".format(name)
         ret["result"] = None
         ret["changes"] = {
             "old": rec_set,
@@ -732,9 +730,9 @@ def record_set_absent(name, zone_name, resource_group, connection_auth=None):
 
     if deleted:
         ret["result"] = True
-        ret["comment"] = "Record set {0} has been deleted.".format(name)
+        ret["comment"] = "Record set {} has been deleted.".format(name)
         ret["changes"] = {"old": rec_set, "new": {}}
         return ret
 
-    ret["comment"] = "Failed to delete record set {0}!".format(name)
+    ret["comment"] = "Failed to delete record set {}!".format(name)
     return ret

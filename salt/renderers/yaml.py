@@ -1,17 +1,13 @@
-# -*- coding: utf-8 -*-
 """
 YAML Renderer for Salt
 
 For YAML usage information see :ref:`Understanding YAML <yaml>`.
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 import warnings
 
-# Import salt libs
 import salt.utils.url
 import salt.utils.yamlloader as yamlloader_new
 import salt.utils.yamlloader_old as yamlloader_old
@@ -92,7 +88,7 @@ def render(yaml_data, saltenv="base", sls="", argline="", **kws):
             sure they're not dicts.
             """
             if isinstance(data, dict):
-                for key, value in six.iteritems(data):
+                for key, value in data.items():
                     if isinstance(key, dict):
                         raise SaltRenderError(
                             "Invalid YAML, possible double curly-brace"

@@ -1,16 +1,10 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Mike Place <mp@saltstack.com>
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt libs
 import salt.modules.cron as cron
 from salt.ext.six.moves import StringIO, builtins, range
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, call, mock_open, patch
 from tests.support.unit import TestCase
@@ -881,7 +875,7 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
                     (L + "# foo\n" "* * * * * ls\n"),
                     (
                         L
-                        + "# foo {0}:blah\n".format(cron.SALT_CRON_IDENTIFIER)
+                        + "# foo {}:blah\n".format(cron.SALT_CRON_IDENTIFIER)
                         + "* * * * * ls\n"
                     ),
                 ]

@@ -20,7 +20,6 @@
 """
 # pylint: skip-file
 
-from __future__ import absolute_import, division, print_function
 
 import re
 
@@ -39,7 +38,7 @@ class _QuietException(Exception):
         pass
 
 
-class _ExceptionLoggingContext(object):
+class _ExceptionLoggingContext:
     """Used with the ``with`` statement when calling delegate methods to
     log any exceptions with the given logger.  Any exceptions caught are
     converted to _QuietException
@@ -56,7 +55,7 @@ class _ExceptionLoggingContext(object):
             raise _QuietException
 
 
-class HTTP1ConnectionParameters(object):
+class HTTP1ConnectionParameters:
     """Parameters for `.HTTP1Connection` and `.HTTP1ServerConnection`.
     """
     def __init__(self, no_keep_alive=False, chunk_size=None,
@@ -335,7 +334,7 @@ class HTTP1Connection(httputil.HTTPConnection):
         lines = []
         if self.is_client:
             self._request_start_line = start_line
-            lines.append(utf8('%s %s HTTP/1.1' % (start_line[0], start_line[1])))
+            lines.append(utf8('{} {} HTTP/1.1'.format(start_line[0], start_line[1])))
             # Client requests with a non-empty body must have either a
             # Content-Length or a Transfer-Encoding.
             self._chunking_output = (
@@ -675,7 +674,7 @@ class _GzipMessageDelegate(httputil.HTTPMessageDelegate):
         return self._delegate.on_connection_close()
 
 
-class HTTP1ServerConnection(object):
+class HTTP1ServerConnection:
     """An HTTP/1.x server."""
     def __init__(self, stream, params=None, context=None):
         """

@@ -1,14 +1,8 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
 import salt.states.boto_route53 as boto_route53
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -42,20 +36,20 @@ class BotoRoute53TestCase(TestCase, LoaderModuleMockMixin):
             {"boto_route53.get_record": mock, "boto_route53.add_record": mock_bool},
         ):
             with patch.dict(boto_route53.__opts__, {"test": False}):
-                comt = "Failed to add {0} Route53 record.".format(name)
+                comt = "Failed to add {} Route53 record.".format(name)
                 ret.update({"comment": comt})
                 self.assertDictEqual(
                     boto_route53.present(name, value, zone, record_type), ret
                 )
 
             with patch.dict(boto_route53.__opts__, {"test": True}):
-                comt = "Route53 record {0} set to be added.".format(name)
+                comt = "Route53 record {} set to be added.".format(name)
                 ret.update({"comment": comt, "result": None})
                 self.assertDictEqual(
                     boto_route53.present(name, value, zone, record_type), ret
                 )
 
-                comt = "Route53 record {0} set to be updated.".format(name)
+                comt = "Route53 record {} set to be updated.".format(name)
                 ret.update({"comment": comt})
                 self.assertDictEqual(
                     boto_route53.present(name, value, zone, record_type), ret
@@ -80,11 +74,11 @@ class BotoRoute53TestCase(TestCase, LoaderModuleMockMixin):
 
         mock = MagicMock(side_effect=[False, True])
         with patch.dict(boto_route53.__salt__, {"boto_route53.get_record": mock}):
-            comt = "{0} does not exist.".format(name)
+            comt = "{} does not exist.".format(name)
             ret.update({"comment": comt})
             self.assertDictEqual(boto_route53.absent(name, zone, record_type), ret)
 
             with patch.dict(boto_route53.__opts__, {"test": True}):
-                comt = "Route53 record {0} set to be deleted.".format(name)
+                comt = "Route53 record {} set to be deleted.".format(name)
                 ret.update({"comment": comt, "result": None})
                 self.assertDictEqual(boto_route53.absent(name, zone, record_type), ret)

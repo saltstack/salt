@@ -1,21 +1,15 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Rahul Handay <rahulha@saltstack.com>
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
 import salt.modules.xapi_virt as xapi
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, mock_open, patch
 from tests.support.unit import TestCase
 
 
-class Mockxapi(object):
+class Mockxapi:
     """
     Mock xapi class
     """
@@ -23,7 +17,7 @@ class Mockxapi(object):
     def __init__(self):
         pass
 
-    class Session(object):
+    class Session:
         """
         Mock Session class
         """
@@ -31,7 +25,7 @@ class Mockxapi(object):
         def __init__(self, xapi_uri):
             pass
 
-        class xenapi(object):
+        class xenapi:
             """
             Mock xenapi class
             """
@@ -46,7 +40,7 @@ class Mockxapi(object):
                 """
                 return xapi_login, xapi_password
 
-            class session(object):
+            class session:
                 """
                 Mock session class
                 """

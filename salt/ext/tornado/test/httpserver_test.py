@@ -2,7 +2,6 @@
 # pylint: skip-file
 
 
-from __future__ import absolute_import, division, print_function
 from salt.ext.tornado import netutil
 from salt.ext.tornado.escape import json_decode, json_encode, utf8, _unicode, recursive_unicode, native_str
 from salt.ext.tornado import gen
@@ -85,7 +84,7 @@ class BaseSSLTest(AsyncHTTPSTestCase):
                              dict(protocol="https"))])
 
 
-class SSLTestMixin(object):
+class SSLTestMixin:
     def get_ssl_options(self):
         return dict(ssl_version=self.get_ssl_version(),  # type: ignore
                     **AsyncHTTPSTestCase.get_ssl_options())
@@ -232,19 +231,19 @@ class HTTPConnectionTest(AsyncHTTPTestCase):
             b"\r\n".join([
                 b"Content-Disposition: form-data; name=argument",
                 b"",
-                u"\u00e1".encode("utf-8"),
+                "\u00e1".encode(),
                 b"--1234567890",
-                u'Content-Disposition: form-data; name="files"; filename="\u00f3"'.encode("utf8"),
+                'Content-Disposition: form-data; name="files"; filename="\u00f3"'.encode(),
                 b"",
-                u"\u00fa".encode("utf-8"),
+                "\u00fa".encode(),
                 b"--1234567890--",
                 b"",
             ]))
         data = json_decode(response)
-        self.assertEqual(u"\u00e9", data["header"])
-        self.assertEqual(u"\u00e1", data["argument"])
-        self.assertEqual(u"\u00f3", data["filename"])
-        self.assertEqual(u"\u00fa", data["filebody"])
+        self.assertEqual("\u00e9", data["header"])
+        self.assertEqual("\u00e1", data["argument"])
+        self.assertEqual("\u00f3", data["filename"])
+        self.assertEqual("\u00fa", data["filebody"])
 
     def test_newlines(self):
         # We support both CRLF and bare LF as line separators.
@@ -326,7 +325,7 @@ class TypeCheckHandler(RequestHandler):
     def check_type(self, name, obj, expected_type):
         actual_type = type(obj)
         if expected_type != actual_type:
-            self.errors[name] = "expected %s, got %s" % (expected_type,
+            self.errors[name] = "expected {}, got {}".format(expected_type,
                                                          actual_type)
 
 
@@ -340,17 +339,17 @@ class HTTPServerTest(AsyncHTTPTestCase):
     def test_query_string_encoding(self):
         response = self.fetch("/echo?foo=%C3%A9")
         data = json_decode(response.body)
-        self.assertEqual(data, {u"foo": [u"\u00e9"]})
+        self.assertEqual(data, {"foo": ["\u00e9"]})
 
     def test_empty_query_string(self):
         response = self.fetch("/echo?foo=&foo=")
         data = json_decode(response.body)
-        self.assertEqual(data, {u"foo": [u"", u""]})
+        self.assertEqual(data, {"foo": ["", ""]})
 
     def test_empty_post_parameters(self):
         response = self.fetch("/echo", method="POST", body="foo=&bar=")
         data = json_decode(response.body)
-        self.assertEqual(data, {u"foo": [u""], u"bar": [u""]})
+        self.assertEqual(data, {"foo": [""], "bar": [""]})
 
     def test_types(self):
         headers = {"Cookie": "foo=bar"}
@@ -393,14 +392,14 @@ class HTTPServerRawTest(AsyncHTTPTestCase):
         ])
 
     def setUp(self):
-        super(HTTPServerRawTest, self).setUp()
+        super().setUp()
         self.stream = IOStream(socket.socket())
         self.stream.connect(('127.0.0.1', self.get_http_port()), self.stop)
         self.wait()
 
     def tearDown(self):
         self.stream.close()
-        super(HTTPServerRawTest, self).tearDown()
+        super().tearDown()
 
     def test_empty_request(self):
         self.stream.close()
@@ -440,7 +439,7 @@ bar
 """.replace(b"\n", b"\r\n"))
         read_stream_body(self.stream, self.stop)
         headers, response = self.wait()
-        self.assertEqual(json_decode(response), {u'foo': [u'bar']})
+        self.assertEqual(json_decode(response), {'foo': ['bar']})
 
     def test_chunked_request_uppercase(self):
         # As per RFC 2616 section 3.6, "Transfer-Encoding" header's value is
@@ -459,7 +458,7 @@ bar
 """.replace(b"\n", b"\r\n"))
         read_stream_body(self.stream, self.stop)
         headers, response = self.wait()
-        self.assertEqual(json_decode(response), {u'foo': [u'bar']})
+        self.assertEqual(json_decode(response), {'foo': ['bar']})
 
     def test_invalid_content_length(self):
         with ExpectLog(gen_log, '.*Only integer Content-Length is allowed'):
@@ -552,7 +551,7 @@ class SSLXHeaderTest(AsyncHTTPSTestCase, HandlerBaseTestCase):
         return Application([('/', XHeaderTest.Handler)])
 
     def get_httpserver_options(self):
-        output = super(SSLXHeaderTest, self).get_httpserver_options()
+        output = super().get_httpserver_options()
         output['xheaders'] = True
         return output
 
@@ -593,7 +592,7 @@ class UnixSocketTest(AsyncTestCase):
     an HTTP client, so we have to test this by hand.
     """
     def setUp(self):
-        super(UnixSocketTest, self).setUp()
+        super().setUp()
         self.tmpdir = tempfile.mkdtemp()
         self.sockfile = os.path.join(self.tmpdir, "test.sock")
         sock = netutil.bind_unix_socket(self.sockfile)
@@ -608,7 +607,7 @@ class UnixSocketTest(AsyncTestCase):
         self.stream.close()
         self.server.stop()
         shutil.rmtree(self.tmpdir)
-        super(UnixSocketTest, self).tearDown()
+        super().tearDown()
 
     def test_unix_socket(self):
         self.stream.write(b"GET /hello HTTP/1.0\r\n\r\n")
@@ -667,7 +666,7 @@ class KeepAliveTest(AsyncHTTPTestCase):
                             ('/finish_on_close', FinishOnCloseHandler)])
 
     def setUp(self):
-        super(KeepAliveTest, self).setUp()
+        super().setUp()
         self.http_version = b'HTTP/1.1'
 
     def tearDown(self):
@@ -678,7 +677,7 @@ class KeepAliveTest(AsyncHTTPTestCase):
 
         if hasattr(self, 'stream'):
             self.stream.close()
-        super(KeepAliveTest, self).tearDown()
+        super().tearDown()
 
     # The next few methods are a crude manual http client
     def connect(self):
@@ -801,7 +800,7 @@ class KeepAliveTest(AsyncHTTPTestCase):
         self.close()
 
 
-class GzipBaseTest(object):
+class GzipBaseTest:
     def get_app(self):
         return Application([('/', EchoHandler)])
 
@@ -816,7 +815,7 @@ class GzipBaseTest(object):
 
     def test_uncompressed(self):
         response = self.fetch('/', method='POST', body='foo=bar')
-        self.assertEquals(json_decode(response.body), {u'foo': [u'bar']})
+        self.assertEquals(json_decode(response.body), {'foo': ['bar']})
 
 
 class GzipTest(GzipBaseTest, AsyncHTTPTestCase):
@@ -825,7 +824,7 @@ class GzipTest(GzipBaseTest, AsyncHTTPTestCase):
 
     def test_gzip(self):
         response = self.post_gzip('foo=bar')
-        self.assertEquals(json_decode(response.body), {u'foo': [u'bar']})
+        self.assertEquals(json_decode(response.body), {'foo': ['bar']})
 
 
 class GzipUnsupportedTest(GzipBaseTest, AsyncHTTPTestCase):
@@ -957,11 +956,11 @@ class IdleTimeoutTest(AsyncHTTPTestCase):
         return dict(idle_connection_timeout=0.1)
 
     def setUp(self):
-        super(IdleTimeoutTest, self).setUp()
+        super().setUp()
         self.streams = []
 
     def tearDown(self):
-        super(IdleTimeoutTest, self).tearDown()
+        super().tearDown()
         for stream in self.streams:
             stream.close()
 

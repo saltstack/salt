@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 Helpers/utils for working with tornado asynchronous stuff
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import contextlib
 import logging
@@ -30,7 +28,7 @@ def current_ioloop(io_loop):
         orig_loop.make_current()
 
 
-class SyncWrapper(object):
+class SyncWrapper:
     """
     A wrapper to make Async classes synchronous
 

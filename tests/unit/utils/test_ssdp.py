@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: :email:`Bo Maryniuk <bo@suse.de>`
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
 
@@ -19,7 +17,7 @@ except ImportError:
     pytest = None
 
 
-class Mocks(object):
+class Mocks:
     def get_socket_mock(self, expected_ip, expected_hostname):
         """
         Get a mock of a socket
@@ -90,7 +88,7 @@ class SSDPBaseTestCase(TestCase, Mocks):
         Side effect
         :return:
         """
-        raise AttributeError("attribute error: {0}. {1}".format(args, kwargs))
+        raise AttributeError("attribute error: {}. {}".format(args, kwargs))
 
     @patch("salt.utils.ssdp._json", None)
     @patch("salt.utils.ssdp.asyncio", None)
@@ -462,7 +460,7 @@ class SSDPClientTestCase(TestCase, Mocks):
     Client-related test cases
     """
 
-    class Resource(object):
+    class Resource:
         """
         Fake network reader
         """
@@ -564,7 +562,7 @@ class SSDPClientTestCase(TestCase, Mocks):
             assert (
                 "Discovery master collection failure" in clnt.log.error.call_args[0][0]
             )
-            assert error_msg == six.text_type(clnt.log.error.call_args[0][1])
+            assert error_msg == str(clnt.log.error.call_args[0][1])
             assert not response
 
     def test_discover_no_masters(self):

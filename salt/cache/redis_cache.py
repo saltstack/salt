@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Redis
 =====
@@ -136,9 +135,7 @@ Cluster Configuration Example:
     cache.redis.separator: '@'
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import stdlib
 import logging
 
 from salt.exceptions import SaltCacheError
@@ -146,7 +143,6 @@ from salt.exceptions import SaltCacheError
 # Import salt
 from salt.ext.six.moves import range
 
-# Import third party libs
 try:
     import redis
     from redis.exceptions import ConnectionError as RedisConnectionError

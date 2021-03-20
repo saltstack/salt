@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
@@ -9,18 +8,12 @@
     Test salt's "hacked" logging
 """
 
-# Import python libs
-from __future__ import absolute_import
 
 import logging
 
 from salt._logging.handlers import StreamHandler
-
-# Import Salt libs
 from salt._logging.impl import SaltLoggingClass
 from salt.ext.six.moves import StringIO
-
-# Import Salt Testing libs
 from tests.support.case import TestCase
 from tests.support.helpers import TstSuiteLoggingHandler
 
@@ -45,10 +38,10 @@ class TestLog(TestCase):
             # Let's create another log instance to trigger salt's logging class
             # calculations.
             try:
-                SaltLoggingClass("{0}.with_digits".format(__name__))
+                SaltLoggingClass("{}.with_digits".format(__name__))
             except Exception as err:  # pylint: disable=broad-except
                 raise AssertionError(
-                    "No exception should have been raised: {0}".format(err)
+                    "No exception should have been raised: {}".format(err)
                 )
 
         # Remove the testing handler
@@ -64,10 +57,10 @@ class TestLog(TestCase):
             # Let's create another log instance to trigger salt's logging class
             # calculations.
             try:
-                SaltLoggingClass("{0}.without_digits".format(__name__))
+                SaltLoggingClass("{}.without_digits".format(__name__))
             except Exception as err:  # pylint: disable=broad-except
                 raise AssertionError(
-                    "No exception should have been raised: {0}".format(err)
+                    "No exception should have been raised: {}".format(err)
                 )
 
             # Remove the testing handler

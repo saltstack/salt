@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     salt.cli.spm
     ~~~~~~~~~~~~~
@@ -8,10 +7,7 @@
 .. versionadded:: 2015.8.0
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt libs
 import salt.spm
 import salt.utils.parsers as parsers
 from salt.utils.verify import verify_env, verify_log

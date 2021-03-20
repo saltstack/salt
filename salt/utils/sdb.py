@@ -5,10 +5,8 @@ For configuration options, see the docs for specific sdb
 modules.
 """
 
-# Import python libs
 import random
 
-# Import salt libs
 import salt.loader
 from salt.exceptions import SaltInvocationError
 from salt.ext.six import string_types

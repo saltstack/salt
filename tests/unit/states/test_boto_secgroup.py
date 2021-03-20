@@ -1,14 +1,6 @@
-# -*- coding: utf-8 -*-
-
-# import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Salt Libs
 import salt.states.boto_secgroup as boto_secgroup
 from salt.utils.odict import OrderedDict
 from tests.support.case import TestCase
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 
 

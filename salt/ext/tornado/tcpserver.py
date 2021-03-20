@@ -16,7 +16,6 @@
 
 """A non-blocking, single-threaded TCP server."""
 # pylint: skip-file
-from __future__ import absolute_import, division, print_function
 
 import errno
 import os
@@ -37,7 +36,7 @@ except ImportError:
     ssl = None
 
 
-class TCPServer(object):
+class TCPServer:
     r"""A non-blocking, single-threaded TCP server.
 
     To use `TCPServer`, define a subclass which overrides the `handle_stream`
@@ -268,7 +267,7 @@ class TCPServer(object):
                     return connection.close()
                 else:
                     raise
-            except socket.error as err:
+            except OSError as err:
                 # If the connection is closed immediately after it is created
                 # (as in a port scan), we can get one of several errors.
                 # wrap_socket makes an internal call to getpeername,

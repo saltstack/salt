@@ -1,18 +1,14 @@
-# -*- coding: utf-8 -*-
 """
 Manage DACLs on Windows
 
 :depends:   - winreg Python module
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
 import re
 
-# Import Salt libs
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 from salt.ext.six import string_types
@@ -24,7 +20,6 @@ from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 #       permissions if the minion is running as a user and not LOCALSYSTEM
 
 
-# Import third party libs
 try:
     import salt.ext.six.moves.winreg  # pylint: disable=redefined-builtin,no-name-in-module,import-error
     import win32security
@@ -40,7 +35,7 @@ log = logging.getLogger(__name__)
 __virtualname__ = "win_dacl"
 
 
-class daclConstants(object):
+class daclConstants:
     """
     DACL constants used throughout the module
     """
@@ -224,7 +219,7 @@ class daclConstants(object):
             except KeyError:
                 raise CommandExecutionError(
                     (
-                        'Invalid object type "{0}".  It should be one of the following:  {1}'
+                        'Invalid object type "{}".  It should be one of the following:  {}'
                     ).format(t, ", ".join(self.objectType))
                 )
         else:
@@ -238,9 +233,9 @@ class daclConstants(object):
             return self.hkeys_security[s]
         except KeyError:
             raise CommandExecutionError(
-                (
-                    'No HKEY named "{0}".  It should be one of the following:  {1}'
-                ).format(s, ", ".join(self.hkeys_security))
+                ('No HKEY named "{}".  It should be one of the following:  {}').format(
+                    s, ", ".join(self.hkeys_security)
+                )
             )
 
     def getPermissionBit(self, t, m):
@@ -254,7 +249,7 @@ class daclConstants(object):
                 return m
         except KeyError:
             raise CommandExecutionError(
-                ('No right "{0}".  It should be one of the following:  {1}').format(
+                ('No right "{}".  It should be one of the following:  {}').format(
                     m, ", ".join(self.rights[t])
                 )
             )
@@ -267,7 +262,7 @@ class daclConstants(object):
             return self.rights[t][m]["TEXT"]
         except KeyError:
             raise CommandExecutionError(
-                ('No right "{0}".  It should be one of the following:  {1}').format(
+                ('No right "{}".  It should be one of the following:  {}').format(
                     m, ", ".join(self.rights[t])
                 )
             )
@@ -280,7 +275,7 @@ class daclConstants(object):
             return self.validAceTypes[t]["BITS"]
         except KeyError:
             raise CommandExecutionError(
-                ('No ACE type "{0}".  It should be one of the following:  {1}').format(
+                ('No ACE type "{}".  It should be one of the following:  {}').format(
                     t, ", ".join(self.validAceTypes)
                 )
             )
@@ -293,7 +288,7 @@ class daclConstants(object):
             return self.validAceTypes[t]["TEXT"]
         except KeyError:
             raise CommandExecutionError(
-                ('No ACE type "{0}".  It should be one of the following:  {1}').format(
+                ('No ACE type "{}".  It should be one of the following:  {}').format(
                     t, ", ".join(self.validAceTypes)
                 )
             )
@@ -307,7 +302,7 @@ class daclConstants(object):
         except KeyError:
             raise CommandExecutionError(
                 (
-                    'No propagation type of "{0}".  It should be one of the following:  {1}'
+                    'No propagation type of "{}".  It should be one of the following:  {}'
                 ).format(p, ", ".join(self.validPropagations[t]))
             )
 
@@ -320,7 +315,7 @@ class daclConstants(object):
         except KeyError:
             raise CommandExecutionError(
                 (
-                    'No propagation type of "{0}".  It should be one of the following:  {1}'
+                    'No propagation type of "{}".  It should be one of the following:  {}'
                 ).format(p, ", ".join(self.validPropagations[t]))
             )
 
@@ -356,7 +351,7 @@ def _getUserSid(user):
             ret["result"] = False
             ret[
                 "comment"
-            ] = "Unable to obtain the binary security identifier for {0}.  The exception was {1}.".format(
+            ] = "Unable to obtain the binary security identifier for {}.  The exception was {}.".format(
                 user, e
             )
         else:
@@ -368,7 +363,7 @@ def _getUserSid(user):
                 ret["result"] = False
                 ret[
                     "comment"
-                ] = "Unable to lookup the account for the security identifier {0}.  The exception was {1}.".format(
+                ] = "Unable to lookup the account for the security identifier {}.  The exception was {}.".format(
                     user, e
                 )
     else:
@@ -380,7 +375,7 @@ def _getUserSid(user):
             ret["result"] = False
             ret[
                 "comment"
-            ] = "Unable to obtain the security identifier for {0}.  The exception was {1}.".format(
+            ] = "Unable to obtain the security identifier for {}.  The exception was {}.".format(
                 user, e
             )
     return ret
@@ -507,7 +502,7 @@ def add_ace(path, objectType, user, permission, acetype, propagation):
                     None,
                 )
                 acesAdded.append(
-                    ("{0} {1} {2} on {3}").format(
+                    ("{} {} {} on {}").format(
                         user,
                         dc.getAceTypeText(acetype),
                         dc.getPermissionText(objectTypeBit, permission),
@@ -518,7 +513,7 @@ def add_ace(path, objectType, user, permission, acetype, propagation):
             except Exception as e:  # pylint: disable=broad-except
                 ret[
                     "comment"
-                ] = "An error occurred attempting to add the ace.  The error was {0}".format(
+                ] = "An error occurred attempting to add the ace.  The error was {}".format(
                     e
                 )
                 ret["result"] = False
@@ -526,7 +521,7 @@ def add_ace(path, objectType, user, permission, acetype, propagation):
             if acesAdded:
                 ret["changes"]["Added ACEs"] = acesAdded
         else:
-            ret["comment"] = "Unable to obtain the DACL of {0}".format(path)
+            ret["comment"] = "Unable to obtain the DACL of {}".format(path)
     else:
         ret["comment"] = "An empty value was specified for a required item."
         ret["result"] = False
@@ -617,7 +612,7 @@ def rm_ace(path, objectType, user, permission=None, acetype=None, propagation=No
                     ret["result"] = True
                 except Exception as e:  # pylint: disable=broad-except
                     ret["result"] = False
-                    ret["comment"] = "Error removing ACE.  The error was {0}.".format(e)
+                    ret["comment"] = "Error removing ACE.  The error was {}.".format(e)
                     return ret
         else:
             ret["comment"] = "The specified ACE was not found on the path."
@@ -635,7 +630,7 @@ def _ace_to_text(ace, objectType):
         if userSid[1]:
             userSid = "{1}\\{0}".format(userSid[0], userSid[1])
         else:
-            userSid = "{0}".format(userSid[0])
+            userSid = "{}".format(userSid[0])
     except Exception:  # pylint: disable=broad-except
         userSid = win32security.ConvertSidToStringSid(ace[2])
     tPerm = ace[1]
@@ -657,9 +652,7 @@ def _ace_to_text(ace, objectType):
         if dc.validPropagations[objectType][x]["BITS"] == tProps:
             tProps = dc.validPropagations[objectType][x]["TEXT"]
             break
-    return ("{0} {1} {2} on {3} {4}").format(
-        userSid, tAceType, tPerm, tProps, tInherited
-    )
+    return ("{} {} {} on {} {}").format(userSid, tAceType, tPerm, tProps, tInherited)
 
 
 def _set_dacl_inheritance(path, objectType, inheritance=True, copy=True, clear=False):
@@ -747,7 +740,7 @@ def _set_dacl_inheritance(path, objectType, inheritance=True, copy=True, clear=F
             ret["result"] = False
             ret[
                 "comment"
-            ] = "Error attempting to set the inheritance.  The error was {0}.".format(e)
+            ] = "Error attempting to set the inheritance.  The error was {}.".format(e)
 
     return ret
 
@@ -835,9 +828,7 @@ def check_inheritance(path, objectType, user=None):
         ret["result"] = False
         ret[
             "comment"
-        ] = "Error obtaining the Security Descriptor or DACL of the path: {0}.".format(
-            e
-        )
+        ] = "Error obtaining the Security Descriptor or DACL of the path: {}.".format(e)
         return ret
 
     for counter in range(0, dacls.GetAceCount()):

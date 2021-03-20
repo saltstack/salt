@@ -17,7 +17,6 @@ the protocol (known as "draft 76") and are not compatible with this module.
 """
 # pylint: skip-file
 
-from __future__ import absolute_import, division, print_function
 # Author: Jacob Kristhammar, 2010
 
 import base64
@@ -140,7 +139,7 @@ class WebSocketHandler(tornado_web.RequestHandler):
        ``websocket_max_message_size``.
     """
     def __init__(self, application, request, **kwargs):
-        super(WebSocketHandler, self).__init__(application, request, **kwargs)
+        super().__init__(application, request, **kwargs)
         self.ws_connection = None
         self.close_code = None
         self.close_reason = None
@@ -444,11 +443,11 @@ class WebSocketHandler(tornado_web.RequestHandler):
         # connection (if it was established in the first place,
         # indicated by status code 101).
         if self.get_status() != 101 or self._on_close_called:
-            super(WebSocketHandler, self)._break_cycles()
+            super()._break_cycles()
 
     def send_error(self, *args, **kwargs):
         if self.stream is None:
-            super(WebSocketHandler, self).send_error(*args, **kwargs)
+            super().send_error(*args, **kwargs)
         else:
             # If we get an uncaught exception during the handshake,
             # we have no choice but to abruptly close the connection.
@@ -475,7 +474,7 @@ def _raise_not_supported_for_websockets(*args, **kwargs):
     raise RuntimeError("Method not supported for Web Sockets")
 
 
-class WebSocketProtocol(object):
+class WebSocketProtocol:
     """Base class for WebSocket protocol versions.
     """
     def __init__(self, handler):
@@ -514,7 +513,7 @@ class WebSocketProtocol(object):
         self.close()  # let the subclass cleanup
 
 
-class _PerMessageDeflateCompressor(object):
+class _PerMessageDeflateCompressor:
     def __init__(self, persistent, max_wbits, compression_options=None):
         if max_wbits is None:
             max_wbits = zlib.MAX_WBITS
@@ -550,7 +549,7 @@ class _PerMessageDeflateCompressor(object):
         return data[:-4]
 
 
-class _PerMessageDeflateDecompressor(object):
+class _PerMessageDeflateDecompressor:
     def __init__(self, persistent, max_wbits, compression_options=None):
         if max_wbits is None:
             max_wbits = zlib.MAX_WBITS
@@ -738,10 +737,10 @@ class WebSocketProtocol13(WebSocketProtocol):
 
     def _create_compressors(self, side, agreed_parameters, compression_options=None):
         # TODO: handle invalid parameters gracefully
-        allowed_keys = set(['server_no_context_takeover',
+        allowed_keys = {'server_no_context_takeover',
                             'client_no_context_takeover',
                             'server_max_window_bits',
-                            'client_max_window_bits'])
+                            'client_max_window_bits'}
         for key in agreed_parameters:
             if key not in allowed_keys:
                 raise ValueError("unsupported compression parameter %r" % key)
@@ -1080,7 +1079,7 @@ class WebSocketClientConnection(simple_httpclient._HTTPConnection):
                 'permessage-deflate; client_max_window_bits')
 
         self.tcp_client = TCPClient(io_loop=io_loop)
-        super(WebSocketClientConnection, self).__init__(
+        super().__init__(
             io_loop, None, request, lambda: None, self._on_http_response,
             104857600, self.tcp_client, 65536, 104857600)
 
@@ -1105,7 +1104,7 @@ class WebSocketClientConnection(simple_httpclient._HTTPConnection):
             self.connect_future.set_exception(StreamClosedError())
         self.on_message(None)
         self.tcp_client.close()
-        super(WebSocketClientConnection, self).on_connection_close()
+        super().on_connection_close()
 
     def _on_http_response(self, response):
         if not self.connect_future.done():
@@ -1117,7 +1116,7 @@ class WebSocketClientConnection(simple_httpclient._HTTPConnection):
 
     def headers_received(self, start_line, headers):
         if start_line.code != 101:
-            return super(WebSocketClientConnection, self).headers_received(
+            return super().headers_received(
                 start_line, headers)
 
         self.headers = headers

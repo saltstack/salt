@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Commands for working with travisci.
 
@@ -6,7 +5,6 @@ Commands for working with travisci.
 """
 
 # Import python libraries
-from __future__ import absolute_import, print_function, unicode_literals
 
 import base64
 
@@ -37,7 +35,7 @@ def __virtual__():
     if HAS_OPENSSL is False:
         return (
             False,
-            "The travisci module was unable to be loaded: Install pyOpenssl >= {0}".format(
+            "The travisci module was unable to be loaded: Install pyOpenssl >= {}".format(
                 OPENSSL_MIN_VER
             ),
         )
@@ -46,7 +44,7 @@ def __virtual__():
     if cur_version < min_version:
         return (
             False,
-            "The travisci module was unable to be loaded: Install pyOpenssl >= {0}".format(
+            "The travisci module was unable to be loaded: Install pyOpenssl >= {}".format(
                 OPENSSL_MIN_VER
             ),
         )
@@ -89,7 +87,7 @@ def verify_webhook(signature, body):
     payload = salt.utils.json.loads(parse_qs(body)["payload"][0])
 
     try:
-        OpenSSL.crypto.verify(certificate, signature, payload, six.text_type("sha1"))
+        OpenSSL.crypto.verify(certificate, signature, payload, "sha1")
     except OpenSSL.crypto.Error:
         return False
     return True

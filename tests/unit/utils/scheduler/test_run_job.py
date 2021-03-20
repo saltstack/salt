@@ -1,7 +1,3 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import
-
 import logging
 
 from tests.unit.utils.scheduler.base import SchedulerTestsBase
@@ -15,7 +11,7 @@ class SchedulerRunJobTest(SchedulerTestsBase):
     """
 
     def setUp(self):
-        super(SchedulerRunJobTest, self).setUp()
+        super().setUp()
         self.schedule.opts["loop_interval"] = 1
 
     def test_run_job(self):

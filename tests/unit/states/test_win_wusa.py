@@ -1,13 +1,5 @@
-# -*- coding: utf-8 -*-
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Salt Libs
 import salt.states.win_wusa as wusa
 from salt.exceptions import SaltInvocationError
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -41,11 +33,11 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
         mock_installed = MagicMock(return_value=True)
         with patch.dict(wusa.__salt__, {"wusa.is_installed": mock_installed}):
             returned = wusa.installed(
-                name=self.kb, source="salt://{0}.msu".format(self.kb)
+                name=self.kb, source="salt://{}.msu".format(self.kb)
             )
             expected = {
                 "changes": {},
-                "comment": "{0} already installed".format(self.kb),
+                "comment": "{} already installed".format(self.kb),
                 "name": self.kb,
                 "result": True,
             }
@@ -60,11 +52,11 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
             wusa.__salt__, {"wusa.is_installed": mock_installed}
         ), patch.dict(wusa.__opts__, {"test": True}):
             returned = wusa.installed(
-                name=self.kb, source="salt://{0}.msu".format(self.kb)
+                name=self.kb, source="salt://{}.msu".format(self.kb)
             )
             expected = {
                 "changes": {},
-                "comment": "{0} would be installed".format(self.kb),
+                "comment": "{} would be installed".format(self.kb),
                 "name": self.kb,
                 "result": None,
             }
@@ -81,11 +73,11 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
             {"wusa.is_installed": mock_installed, "cp.cache_file": mock_cache},
         ):
             returned = wusa.installed(
-                name=self.kb, source="salt://{0}.msu".format(self.kb)
+                name=self.kb, source="salt://{}.msu".format(self.kb)
             )
             expected = {
                 "changes": {},
-                "comment": "Unable to cache salt://{0}.msu from "
+                "comment": "Unable to cache salt://{}.msu from "
                 'saltenv "base"'.format(self.kb),
                 "name": self.kb,
                 "result": False,
@@ -97,7 +89,7 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
         test wusa.installed assuming success
         """
         mock_installed = MagicMock(side_effect=[False, True])
-        mock_cache = MagicMock(return_value="C:\\{0}.msu".format(self.kb))
+        mock_cache = MagicMock(return_value="C:\\{}.msu".format(self.kb))
         with patch.dict(
             wusa.__salt__,
             {
@@ -107,11 +99,11 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
             },
         ):
             returned = wusa.installed(
-                name=self.kb, source="salt://{0}.msu".format(self.kb)
+                name=self.kb, source="salt://{}.msu".format(self.kb)
             )
             expected = {
                 "changes": {"new": True, "old": False},
-                "comment": "{0} was installed. ".format(self.kb),
+                "comment": "{} was installed. ".format(self.kb),
                 "name": self.kb,
                 "result": True,
             }
@@ -122,7 +114,7 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
         test wusa.installed with a failure
         """
         mock_installed = MagicMock(side_effect=[False, False])
-        mock_cache = MagicMock(return_value="C:\\{0}.msu".format(self.kb))
+        mock_cache = MagicMock(return_value="C:\\{}.msu".format(self.kb))
         with patch.dict(
             wusa.__salt__,
             {
@@ -132,11 +124,11 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
             },
         ):
             returned = wusa.installed(
-                name=self.kb, source="salt://{0}.msu".format(self.kb)
+                name=self.kb, source="salt://{}.msu".format(self.kb)
             )
             expected = {
                 "changes": {},
-                "comment": "{0} failed to install. ".format(self.kb),
+                "comment": "{} failed to install. ".format(self.kb),
                 "name": self.kb,
                 "result": False,
             }
@@ -151,7 +143,7 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
             returned = wusa.uninstalled(name=self.kb)
             expected = {
                 "changes": {},
-                "comment": "{0} already uninstalled".format(self.kb),
+                "comment": "{} already uninstalled".format(self.kb),
                 "name": self.kb,
                 "result": True,
             }
@@ -168,7 +160,7 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
             returned = wusa.uninstalled(name=self.kb)
             expected = {
                 "changes": {},
-                "comment": "{0} would be uninstalled".format(self.kb),
+                "comment": "{} would be uninstalled".format(self.kb),
                 "name": self.kb,
                 "result": None,
             }
@@ -186,7 +178,7 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
             returned = wusa.uninstalled(name=self.kb)
             expected = {
                 "changes": {"new": False, "old": True},
-                "comment": "{0} was uninstalled".format(self.kb),
+                "comment": "{} was uninstalled".format(self.kb),
                 "name": self.kb,
                 "result": True,
             }
@@ -204,7 +196,7 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
             returned = wusa.uninstalled(name=self.kb)
             expected = {
                 "changes": {},
-                "comment": "{0} failed to uninstall".format(self.kb),
+                "comment": "{} failed to uninstall".format(self.kb),
                 "name": self.kb,
                 "result": False,
             }

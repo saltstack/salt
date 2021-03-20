@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 NAPALM YANG state
 =================
@@ -21,7 +20,6 @@ Please check Installation_ for complete details.
 .. _NAPALM: https://napalm.readthedocs.io
 .. _Installation: https://napalm.readthedocs.io/en/latest/installation.html
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
@@ -34,7 +32,6 @@ import salt.utils.yaml
 
 log = logging.getLogger(__file__)
 
-# Import third party libs
 try:
     # pylint: disable=unused-import
     import napalm_yang

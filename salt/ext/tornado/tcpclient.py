@@ -17,7 +17,6 @@
 """A non-blocking TCP connection factory.
 """
 # pylint: skip-file
-from __future__ import absolute_import, division, print_function
 
 import functools
 import socket
@@ -32,7 +31,7 @@ from salt.ext.tornado.platform.auto import set_close_exec
 _INITIAL_CONNECT_TIMEOUT = 0.3
 
 
-class _Connector(object):
+class _Connector:
     """A stateless implementation of the "Happy Eyeballs" algorithm.
 
     "Happy Eyeballs" is documented in RFC6555 as the recommended practice
@@ -136,7 +135,7 @@ class _Connector(object):
             self.io_loop.remove_timeout(self.timeout)
 
 
-class TCPClient(object):
+class TCPClient:
     """A non-blocking TCP connection factory.
 
     .. versionchanged:: 4.1
@@ -209,7 +208,7 @@ class TCPClient(object):
             # If the user requires binding also to a specific IP/port.
             try:
                 socket_obj.bind((source_ip_bind, source_port_bind))
-            except socket.error:
+            except OSError:
                 socket_obj.close()
                 # Fail loudly if unable to use the IP/port.
                 raise
@@ -217,7 +216,7 @@ class TCPClient(object):
             stream = IOStream(socket_obj,
                               io_loop=self.io_loop,
                               max_buffer_size=max_buffer_size)
-        except socket.error as e:
+        except OSError as e:
             fu = Future()
             fu.set_exception(e)
             return fu

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Return salt data via email
 
@@ -105,8 +104,6 @@ Also you need to create additional file ``/srv/salt/templates/email.j2`` with em
 This configuration enables Salt Master to send an email when accepting or rejecting minions keys.
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
@@ -116,8 +113,6 @@ from email.utils import formatdate
 import salt.loader
 import salt.returners
 import salt.utils.jid
-
-# Import Salt libs
 from salt.ext import six
 from salt.template import compile_template
 
@@ -191,7 +186,7 @@ def returner(ret):
 
     for field in fields:
         if field in ret:
-            subject += " {0}".format(ret[field])
+            subject += " {}".format(ret[field])
     subject = compile_template(
         ":string:", rend, renderer, blacklist, whitelist, input_data=subject, **ret
     )
@@ -219,18 +214,18 @@ def returner(ret):
     if gpgowner:
         if HAS_GNUPG:
             gpg = gnupg.GPG(
-                gnupghome=os.path.expanduser("~{0}/.gnupg".format(gpgowner)),
+                gnupghome=os.path.expanduser("~{}/.gnupg".format(gpgowner)),
                 options=["--trust-model always"],
             )
             encrypted_data = gpg.encrypt(content, to_addrs)
             if encrypted_data.ok:
                 log.debug("smtp_return: Encryption successful")
-                content = six.text_type(encrypted_data)
+                content = str(encrypted_data)
             else:
                 log.error(
                     "smtp_return: Encryption failed, only an error message will be sent"
                 )
-                content = "Encryption failed, the return data was not sent.\r\n\r\n{0}\r\n{1}".format(
+                content = "Encryption failed, the return data was not sent.\r\n\r\n{}\r\n{}".format(
                     encrypted_data.status, encrypted_data.stderr
                 )
         else:
@@ -241,7 +236,7 @@ def returner(ret):
         content = content.read()
 
     message = (
-        "From: {0}\r\n" "To: {1}\r\n" "Date: {2}\r\n" "Subject: {3}\r\n" "\r\n" "{4}"
+        "From: {}\r\n" "To: {}\r\n" "Date: {}\r\n" "Subject: {}\r\n" "\r\n" "{}"
     ).format(
         from_addr, ", ".join(to_addrs), formatdate(localtime=True), subject, content
     )

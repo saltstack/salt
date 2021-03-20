@@ -1,6 +1,5 @@
 # flake8: noqa
 # pylint: skip-file
-from __future__ import absolute_import, division, print_function
 from salt.ext.tornado.test.util import unittest
 
 

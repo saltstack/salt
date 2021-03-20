@@ -1,19 +1,11 @@
-# -*- coding: utf-8 -*-
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import random
 import string
 
-# Import Salt libs
 import salt.config
 import salt.loader
 import salt.states.boto_cloudwatch_event as boto_cloudwatch_event
 from salt.ext.six.moves import range
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
@@ -24,7 +16,6 @@ from tests.unit.modules.test_boto_cloudwatch_event import (
 )
 
 # pylint: disable=unused-import
-# Import 3rd-party libs
 try:
     import boto3
     from botocore.exceptions import ClientError

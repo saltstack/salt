@@ -1,10 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 This runner is used only for test purposes and servers no production purpose
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import time
 
 from salt.ext import six
@@ -17,7 +14,7 @@ def arg(*args, **kwargs):
 
     Kwargs will be filtered for 'private' keynames.
     """
-    kwargs = dict((k, v) for k, v in six.iteritems(kwargs) if not k.startswith("__"))
+    kwargs = {k: v for k, v in kwargs.items() if not k.startswith("__")}
 
     ret = {
         "args": args,
@@ -87,7 +84,7 @@ def stream():
     ret = True
     for i in range(1, 100):
         __jid_event__.fire_event(
-            {"message": "Runner is {0}% done".format(i)}, "progress"
+            {"message": "Runner is {}% done".format(i)}, "progress"
         )
         time.sleep(0.1)
     return ret

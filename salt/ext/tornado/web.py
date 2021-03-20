@@ -57,7 +57,6 @@ request.
 """
 # pylint: skip-file
 
-from __future__ import absolute_import, division, print_function
 
 import base64
 import binascii
@@ -152,7 +151,7 @@ May be overridden by passing a ``min_version`` keyword argument.
 """
 
 
-class RequestHandler(object):
+class RequestHandler:
     """Base class for HTTP request handlers.
 
     Subclasses must define at least one of the methods defined in the
@@ -166,7 +165,7 @@ class RequestHandler(object):
     _remove_control_chars_regex = re.compile(r"[\x00-\x08\x0e-\x1f]")
 
     def __init__(self, application, request, **kwargs):
-        super(RequestHandler, self).__init__()
+        super().__init__()
 
         self.application = application
         self.request = request
@@ -541,7 +540,7 @@ class RequestHandler(object):
         value = escape.native_str(value)
         if re.search(r"[\x00-\x20]", name + value):
             # Don't let us accidentally inject bad stuff
-            raise ValueError("Invalid cookie %r: %r" % (name, value))
+            raise ValueError("Invalid cookie {!r}: {!r}".format(name, value))
         if not hasattr(self, "_new_cookie"):
             self._new_cookie = Cookie.SimpleCookie()
         if name in self._new_cookie:
@@ -1479,8 +1478,8 @@ class RequestHandler(object):
             if self.request.method not in self.SUPPORTED_METHODS:
                 raise HTTPError(405)
             self.path_args = [self.decode_argument(arg) for arg in args]
-            self.path_kwargs = dict((k, self.decode_argument(v, name=k))
-                                    for (k, v) in kwargs.items())
+            self.path_kwargs = {k: self.decode_argument(v, name=k)
+                                    for (k, v) in kwargs.items()}
             # If XSRF cookies are turned on, reject form submissions without
             # the proper cookie
             if self.request.method not in ("GET", "HEAD", "OPTIONS") and \
@@ -1542,7 +1541,7 @@ class RequestHandler(object):
         self.application.log_request(self)
 
     def _request_summary(self):
-        return "%s %s (%s)" % (self.request.method, self.request.uri,
+        return "{} {} ({})".format(self.request.method, self.request.uri,
                                self.request.remote_ip)
 
     def _handle_request_exception(self, e):
@@ -1784,10 +1783,10 @@ class _ApplicationRouter(ReversibleRuleRouter):
     def __init__(self, application, rules=None):
         assert isinstance(application, Application)
         self.application = application
-        super(_ApplicationRouter, self).__init__(rules)
+        super().__init__(rules)
 
     def process_rule(self, rule):
-        rule = super(_ApplicationRouter, self).process_rule(rule)
+        rule = super().process_rule(rule)
 
         if isinstance(rule.target, (list, tuple)):
             rule.target = _ApplicationRouter(self.application, rule.target)
@@ -1798,11 +1797,11 @@ class _ApplicationRouter(ReversibleRuleRouter):
         if isclass(target) and issubclass(target, RequestHandler):
             return self.application.get_handler_delegate(request, target, **target_params)
 
-        return super(_ApplicationRouter, self).get_target_delegate(target, request, **target_params)
+        return super().get_target_delegate(target, request, **target_params)
 
 
 class Application(ReversibleRouter):
-    """A collection of request handlers that make up a web application.
+    r"""A collection of request handlers that make up a web application.
 
     Instances of this class are callable and can be passed directly to
     HTTPServer to serve the application::
@@ -1967,8 +1966,8 @@ class Application(ReversibleRouter):
 
     def _load_ui_methods(self, methods):
         if isinstance(methods, types.ModuleType):
-            self._load_ui_methods(dict((n, getattr(methods, n))
-                                       for n in dir(methods)))
+            self._load_ui_methods({n: getattr(methods, n)
+                                       for n in dir(methods)})
         elif isinstance(methods, list):
             for m in methods:
                 self._load_ui_methods(m)
@@ -1980,8 +1979,8 @@ class Application(ReversibleRouter):
 
     def _load_ui_modules(self, modules):
         if isinstance(modules, types.ModuleType):
-            self._load_ui_modules(dict((n, getattr(modules, n))
-                                       for n in dir(modules)))
+            self._load_ui_modules({n: getattr(modules, n)
+                                       for n in dir(modules)})
         elif isinstance(modules, list):
             for m in modules:
                 self._load_ui_modules(m)
@@ -2211,7 +2210,7 @@ class MissingArgumentError(HTTPError):
     .. versionadded:: 3.1
     """
     def __init__(self, arg_name):
-        super(MissingArgumentError, self).__init__(
+        super().__init__(
             400, 'Missing argument %s' % arg_name)
         self.arg_name = arg_name
 
@@ -2384,7 +2383,7 @@ class StaticFileHandler(RequestHandler):
                 # content, or when a suffix with length 0 is specified
                 self.set_status(416)  # Range Not Satisfiable
                 self.set_header("Content-Type", "text/plain")
-                self.set_header("Content-Range", "bytes */%s" % (size, ))
+                self.set_header("Content-Range", "bytes */{}".format(size))
                 return
             if start is not None and start < 0:
                 start += size
@@ -2438,7 +2437,7 @@ class StaticFileHandler(RequestHandler):
         version_hash = self._get_cached_version(self.absolute_path)
         if not version_hash:
             return None
-        return '"%s"' % (version_hash, )
+        return '"{}"'.format(version_hash)
 
     def set_headers(self):
         """Sets the content and caching headers on the response.
@@ -2705,7 +2704,7 @@ class StaticFileHandler(RequestHandler):
         if not version_hash:
             return url
 
-        return '%s?v=%s' % (url, version_hash)
+        return '{}?v={}'.format(url, version_hash)
 
     def parse_url_path(self, url_path):
         """Converts a static URL path into a filesystem path.
@@ -2777,7 +2776,7 @@ class FallbackHandler(RequestHandler):
         self._finished = True
 
 
-class OutputTransform(object):
+class OutputTransform:
     """A transform modifies the result of an HTTP request (e.g., GZip encoding)
 
     Applications are not expected to create their own OutputTransforms
@@ -2807,10 +2806,10 @@ class GZipContentEncoding(OutputTransform):
     """
     # Whitelist of compressible mime types (in addition to any types
     # beginning with "text/").
-    CONTENT_TYPES = set(["application/javascript", "application/x-javascript",
+    CONTENT_TYPES = {"application/javascript", "application/x-javascript",
                          "application/xml", "application/atom+xml",
                          "application/json", "application/xhtml+xml",
-                         "image/svg+xml"])
+                         "image/svg+xml"}
     # Python's GzipFile defaults to level 9, while most other gzip
     # tools (including gzip itself) default to 6, which is probably a
     # better CPU/size tradeoff.
@@ -2900,7 +2899,7 @@ def authenticated(method):
     return wrapper
 
 
-class UIModule(object):
+class UIModule:
     """A re-usable, modular UI unit on a page.
 
     UI modules often execute additional queries, and they can include
@@ -2992,7 +2991,7 @@ class TemplateModule(UIModule):
     any arguments to the template.
     """
     def __init__(self, handler):
-        super(TemplateModule, self).__init__(handler)
+        super().__init__(handler)
         # keep resources in both a list and a dict to preserve order
         self._resource_list = []
         self._resource_dict = {}
@@ -3044,7 +3043,7 @@ class TemplateModule(UIModule):
         return "".join(self._get_resources("html_body"))
 
 
-class _UIModuleNamespace(object):
+class _UIModuleNamespace:
     """Lazy namespace which creates UIModule proxies bound to a handler."""
     def __init__(self, handler, ui_modules):
         self.handler = handler

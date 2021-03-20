@@ -1,5 +1,4 @@
 # pylint: skip-file
-from __future__ import absolute_import, division, print_function
 
 import collections
 from contextlib import closing
@@ -125,7 +124,7 @@ class RespondInPrepareHandler(RequestHandler):
         self.finish("forbidden")
 
 
-class SimpleHTTPClientTestMixin(object):
+class SimpleHTTPClientTestMixin:
     def get_app(self):
         # callable objects to finish pending /trigger requests
         self.triggers = collections.deque()
@@ -179,14 +178,14 @@ class SimpleHTTPClientTestMixin(object):
             self.triggers.popleft()()
             self.wait(condition=lambda: (len(self.triggers) == 2 and
                                          len(seen) == 2))
-            self.assertEqual(set(seen), set([0, 1]))
+            self.assertEqual(set(seen), {0, 1})
             self.assertEqual(len(client.queue), 0)
 
             # Finish all the pending requests
             self.triggers.popleft()()
             self.triggers.popleft()()
             self.wait(condition=lambda: len(seen) == 4)
-            self.assertEqual(set(seen), set([0, 1, 2, 3]))
+            self.assertEqual(set(seen), {0, 1, 2, 3})
             self.assertEqual(len(self.triggers), 0)
 
     def test_redirect_connection_limit(self):
@@ -471,7 +470,7 @@ class SimpleHTTPClientTestMixin(object):
 
 class SimpleHTTPClientTestCase(SimpleHTTPClientTestMixin, AsyncHTTPTestCase):
     def setUp(self):
-        super(SimpleHTTPClientTestCase, self).setUp()
+        super().setUp()
         self.http_client = self.create_client()
 
     def create_client(self, **kwargs):
@@ -481,7 +480,7 @@ class SimpleHTTPClientTestCase(SimpleHTTPClientTestMixin, AsyncHTTPTestCase):
 
 class SimpleHTTPSClientTestCase(SimpleHTTPClientTestMixin, AsyncHTTPSTestCase):
     def setUp(self):
-        super(SimpleHTTPSClientTestCase, self).setUp()
+        super().setUp()
         self.http_client = self.create_client()
 
     def create_client(self, **kwargs):
@@ -529,12 +528,12 @@ class SimpleHTTPSClientTestCase(SimpleHTTPClientTestMixin, AsyncHTTPSTestCase):
 
 class CreateAsyncHTTPClientTestCase(AsyncTestCase):
     def setUp(self):
-        super(CreateAsyncHTTPClientTestCase, self).setUp()
+        super().setUp()
         self.saved = AsyncHTTPClient._save_configuration()
 
     def tearDown(self):
         AsyncHTTPClient._restore_configuration(self.saved)
-        super(CreateAsyncHTTPClientTestCase, self).tearDown()
+        super().tearDown()
 
     def test_max_clients(self):
         AsyncHTTPClient.configure(SimpleAsyncHTTPClient)
@@ -636,7 +635,7 @@ class HTTP204NoContentTestCase(AsyncHTTPTestCase):
 
 class HostnameMappingTestCase(AsyncHTTPTestCase):
     def setUp(self):
-        super(HostnameMappingTestCase, self).setUp()
+        super().setUp()
         self.http_client = SimpleAsyncHTTPClient(
             self.io_loop,
             hostname_mapping={
@@ -668,7 +667,7 @@ class ResolveTimeoutTestCase(AsyncHTTPTestCase):
             def resolve(self, *args, **kwargs):
                 pass
 
-        super(ResolveTimeoutTestCase, self).setUp()
+        super().setUp()
         self.http_client = SimpleAsyncHTTPClient(
             self.io_loop,
             resolver=BadResolver())

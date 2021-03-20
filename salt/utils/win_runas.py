@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Run processes as a different user in Windows
 """
-from __future__ import absolute_import, unicode_literals
 
 # Import Python Libraries
 import ctypes
@@ -10,10 +8,8 @@ import logging
 import os
 import time
 
-# Import Salt Libs
 from salt.exceptions import CommandExecutionError
 
-# Import Third Party Libs
 try:
     import psutil
 
@@ -116,7 +112,7 @@ def runas(cmdLine, username, password=None, cwd=None):
             session_id=0,
             privs=["SeTcbPrivilege"],
         )
-    except WindowsError:  # pylint: disable=undefined-variable
+    except OSError:  # pylint: disable=undefined-variable
         log.debug("Unable to impersonate SYSTEM user")
         impersonation_token = None
         win32api.CloseHandle(th)

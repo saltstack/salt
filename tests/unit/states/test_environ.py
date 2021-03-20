@@ -1,18 +1,9 @@
-# -*- coding: utf-8 -*-
-
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import os
 
 import salt.modules.environ as envmodule
 import salt.modules.reg
-
-# Import salt libs
 import salt.states.environ as envstate
 import salt.utils.platform
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf

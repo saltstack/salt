@@ -176,7 +176,6 @@ For more information on application-level routing see docs for `~.web.Applicatio
 """
 # pylint: skip-file
 
-from __future__ import absolute_import, division, print_function
 
 import re
 from functools import partial
@@ -361,10 +360,10 @@ class ReversibleRuleRouter(ReversibleRouter, RuleRouter):
 
     def __init__(self, rules=None):
         self.named_rules = {}  # type: typing.Dict[str]
-        super(ReversibleRuleRouter, self).__init__(rules)
+        super().__init__(rules)
 
     def process_rule(self, rule):
-        rule = super(ReversibleRuleRouter, self).process_rule(rule)
+        rule = super().process_rule(rule)
 
         if rule.name:
             if rule.name in self.named_rules:
@@ -388,7 +387,7 @@ class ReversibleRuleRouter(ReversibleRouter, RuleRouter):
         return None
 
 
-class Rule(object):
+class Rule:
     """A routing rule."""
 
     def __init__(self, matcher, target, target_kwargs=None, name=None):
@@ -427,7 +426,7 @@ class Rule(object):
                 self.target, self.target_kwargs, self.name)
 
 
-class Matcher(object):
+class Matcher:
     """Represents a matcher for request features."""
 
     def match(self, request):
@@ -520,9 +519,9 @@ class PathMatches(Matcher):
         # unnamed groups, we want to use either groups
         # or groupdict but not both.
         if self.regex.groupindex:
-            path_kwargs = dict(
-                (str(k), _unquote_or_none(v))
-                for (k, v) in match.groupdict().items())
+            path_kwargs = {
+                str(k): _unquote_or_none(v)
+                for (k, v) in match.groupdict().items()}
         else:
             path_args = [_unquote_or_none(s) for s in match.groups()]
 
@@ -602,7 +601,7 @@ class URLSpec(Rule):
           `~.web.Application.reverse_url`.
 
         """
-        super(URLSpec, self).__init__(PathMatches(pattern), handler, kwargs, name)
+        super().__init__(PathMatches(pattern), handler, kwargs, name)
 
         self.regex = self.matcher.regex
         self.handler_class = self.target

@@ -66,7 +66,6 @@ Example usage for Google OAuth:
 """
 # pylint: skip-file
 
-from __future__ import absolute_import, division, print_function
 
 import base64
 import binascii
@@ -136,7 +135,7 @@ def _auth_return_future(f):
     return wrapper
 
 
-class OpenIdMixin(object):
+class OpenIdMixin:
     """Abstract implementation of OpenID and Attribute Exchange.
 
     Class attributes:
@@ -181,8 +180,8 @@ class OpenIdMixin(object):
         The result of this method will generally be used to set a cookie.
         """
         # Verify the OpenID response via direct request to the OP
-        args = dict((k, v[-1]) for k, v in self.request.arguments.items())
-        args["openid.mode"] = u"check_authentication"
+        args = {k: v[-1] for k, v in self.request.arguments.items()}
+        args["openid.mode"] = "check_authentication"
         url = self._OPENID_ENDPOINT
         if http_client is None:
             http_client = self.get_auth_http_client()
@@ -210,7 +209,7 @@ class OpenIdMixin(object):
             ax_attrs = set(ax_attrs)
             required = []
             if "name" in ax_attrs:
-                ax_attrs -= set(["name", "firstname", "fullname", "lastname"])
+                ax_attrs -= {"name", "firstname", "fullname", "lastname"}
                 required += ["firstname", "fullname", "lastname"]
                 args.update({
                     "openid.ax.type.firstname":
@@ -249,13 +248,13 @@ class OpenIdMixin(object):
         ax_ns = None
         for name in self.request.arguments:
             if name.startswith("openid.ns.") and \
-                    self.get_argument(name) == u"http://openid.net/srv/ax/1.0":
+                    self.get_argument(name) == "http://openid.net/srv/ax/1.0":
                 ax_ns = name[10:]
                 break
 
         def get_ax_arg(uri):
             if not ax_ns:
-                return u""
+                return ""
             prefix = "openid." + ax_ns + ".type."
             ax_name = None
             for name in self.request.arguments.keys():
@@ -264,8 +263,8 @@ class OpenIdMixin(object):
                     ax_name = "openid." + ax_ns + ".value." + part
                     break
             if not ax_name:
-                return u""
-            return self.get_argument(ax_name, u"")
+                return ""
+            return self.get_argument(ax_name, "")
 
         email = get_ax_arg("http://axschema.org/contact/email")
         name = get_ax_arg("http://axschema.org/namePerson")
@@ -284,7 +283,7 @@ class OpenIdMixin(object):
         if name:
             user["name"] = name
         elif name_parts:
-            user["name"] = u" ".join(name_parts)
+            user["name"] = " ".join(name_parts)
         elif email:
             user["name"] = email.split("@")[0]
         if email:
@@ -307,7 +306,7 @@ class OpenIdMixin(object):
         return httpclient.AsyncHTTPClient()
 
 
-class OAuthMixin(object):
+class OAuthMixin:
     """Abstract implementation of OAuth 1.0 and 1.0a.
 
     See `TwitterMixin` below for an example implementation.
@@ -559,7 +558,7 @@ class OAuthMixin(object):
         return httpclient.AsyncHTTPClient()
 
 
-class OAuth2Mixin(object):
+class OAuth2Mixin:
     """Abstract implementation of OAuth 2.0.
 
     See `FacebookGraphMixin` or `GoogleOAuth2Mixin` below for example
@@ -809,7 +808,7 @@ class TwitterMixin(OAuthMixin):
     def _on_twitter_request(self, future, response):
         if response.error:
             future.set_exception(AuthError(
-                "Error response %s fetching %s" % (response.error,
+                "Error response {} fetching {}".format(response.error,
                                                    response.request.url)))
             return
         future.set_result(escape.json_decode(response.body))
@@ -978,8 +977,8 @@ class FacebookGraphMixin(OAuth2Mixin):
             "client_secret": client_secret,
         }
 
-        fields = set(['id', 'name', 'first_name', 'last_name',
-                      'locale', 'picture', 'link'])
+        fields = {'id', 'name', 'first_name', 'last_name',
+                      'locale', 'picture', 'link'}
         if extra_fields:
             fields.update(extra_fields)
 
@@ -1099,7 +1098,7 @@ def _oauth_signature(consumer_token, method, url, parameters={}, token=None):
     base_elems = []
     base_elems.append(method.upper())
     base_elems.append(normalized_url)
-    base_elems.append("&".join("%s=%s" % (k, _oauth_escape(str(v)))
+    base_elems.append("&".join("{}={}".format(k, _oauth_escape(str(v)))
                                for k, v in sorted(parameters.items())))
     base_string = "&".join(_oauth_escape(e) for e in base_elems)
 
@@ -1123,7 +1122,7 @@ def _oauth10a_signature(consumer_token, method, url, parameters={}, token=None):
     base_elems = []
     base_elems.append(method.upper())
     base_elems.append(normalized_url)
-    base_elems.append("&".join("%s=%s" % (k, _oauth_escape(str(v)))
+    base_elems.append("&".join("{}={}".format(k, _oauth_escape(str(v)))
                                for k, v in sorted(parameters.items())))
 
     base_string = "&".join(_oauth_escape(e) for e in base_elems)

@@ -1,5 +1,4 @@
 # pylint: skip-file
-from __future__ import absolute_import, division, print_function
 
 import contextlib
 import os
@@ -59,7 +58,7 @@ def _detect_ipv6():
     try:
         sock = socket.socket(socket.AF_INET6)
         sock.bind(('::1', 0))
-    except socket.error:
+    except OSError:
         return False
     finally:
         if sock is not None:

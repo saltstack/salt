@@ -3,7 +3,6 @@
 This only works in python 2.7+.
 """
 # pylint: skip-file
-from __future__ import absolute_import, division, print_function
 
 from salt.ext.tornado.test.runtests import all, main
 

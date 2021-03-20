@@ -1,6 +1,5 @@
 """Lowest-common-denominator implementations of platform functionality."""
 # pylint: skip-file
-from __future__ import absolute_import, division, print_function
 
 import errno
 import socket
@@ -16,7 +15,7 @@ def try_close(f):
     for i in range(10):
         try:
             f.close()
-        except IOError:
+        except OSError:
             # Yield to another thread
             time.sleep(1e-3)
         else:
@@ -64,7 +63,7 @@ class Waker(interface.Waker):
             try:
                 self.writer.connect(connect_address)
                 break    # success
-            except socket.error as detail:
+            except OSError as detail:
                 if (not hasattr(errno, 'WSAEADDRINUSE') or
                         errno_from_exception(detail) != errno.WSAEADDRINUSE):
                     # "Address already in use" is the only error
@@ -76,7 +75,7 @@ class Waker(interface.Waker):
                 if count >= 10:  # I've never seen it go above 2
                     a.close()
                     self.writer.close()
-                    raise socket.error("Cannot bind trigger!")
+                    raise OSError("Cannot bind trigger!")
                 # Close `a` and try again.  Note:  I originally put a short
                 # sleep() here, but it didn't appear to help or hurt.
                 a.close()
@@ -97,7 +96,7 @@ class Waker(interface.Waker):
     def wake(self):
         try:
             self.writer.send(b"x")
-        except (IOError, socket.error, ValueError):
+        except (OSError, ValueError):
             pass
 
     def consume(self):
@@ -106,7 +105,7 @@ class Waker(interface.Waker):
                 result = self.reader.recv(1024)
                 if not result:
                     break
-        except (IOError, socket.error):
+        except OSError:
             pass
 
     def close(self):

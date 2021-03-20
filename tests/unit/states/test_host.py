@@ -1,16 +1,10 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Rahul Handay <rahulha@saltstack.com>
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import Salt Libs
 import salt.states.host as host
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, call, patch
 from tests.support.unit import TestCase
@@ -65,9 +59,9 @@ class HostTestCase(TestCase, LoaderModuleMockMixin):
         ):
             ret = host.present(hostname, ip_str)
             assert ret["result"] is True
-            assert ret["comment"] == "Added host {0} ({1})".format(
-                hostname, ip_str
-            ), ret["comment"]
+            assert ret["comment"] == "Added host {} ({})".format(hostname, ip_str), ret[
+                "comment"
+            ]
             assert ret["changes"] == {"added": {ip_str: [hostname]}}, ret["changes"]
             expected = [call(ip_str, hostname)]
             assert add_host.mock_calls == expected, add_host.mock_calls
@@ -88,8 +82,8 @@ class HostTestCase(TestCase, LoaderModuleMockMixin):
         ):
             ret = host.present(hostname, ip_list)
             assert ret["result"] is True
-            assert "Added host {0} ({1})".format(hostname, ip_list[0]) in ret["comment"]
-            assert "Added host {0} ({1})".format(hostname, ip_list[1]) in ret["comment"]
+            assert "Added host {} ({})".format(hostname, ip_list[0]) in ret["comment"]
+            assert "Added host {} ({})".format(hostname, ip_list[1]) in ret["comment"]
             assert ret["changes"] == {
                 "added": {ip_list[0]: [hostname], ip_list[1]: [hostname]}
             }, ret["changes"]
@@ -117,9 +111,9 @@ class HostTestCase(TestCase, LoaderModuleMockMixin):
         ):
             ret = host.present(hostname, ip_str)
             assert ret["result"] is True
-            assert "Added host {0} ({1})".format(hostname, ip_str) in ret["comment"]
+            assert "Added host {} ({})".format(hostname, ip_str) in ret["comment"]
             assert (
-                "Host {0} present for IP address {1}".format(hostname, ip_list[0])
+                "Host {} present for IP address {}".format(hostname, ip_list[0])
                 in ret["warnings"][0]
             )
             assert ret["changes"] == {"added": {ip_str: [hostname]}}, ret["changes"]
@@ -140,10 +134,8 @@ class HostTestCase(TestCase, LoaderModuleMockMixin):
         ):
             ret = host.present(hostname, ip_str, clean=True)
             assert ret["result"] is True
-            assert "Added host {0} ({1})".format(hostname, ip_str) in ret["comment"]
-            assert (
-                "Removed host {0} ({1})".format(hostname, ip_list[0]) in ret["comment"]
-            )
+            assert "Added host {} ({})".format(hostname, ip_str) in ret["comment"]
+            assert "Removed host {} ({})".format(hostname, ip_list[0]) in ret["comment"]
             assert ret["changes"] == {
                 "added": {ip_str: [hostname]},
                 "removed": {ip_list[0]: [hostname]},
@@ -174,8 +166,8 @@ class HostTestCase(TestCase, LoaderModuleMockMixin):
         ):
             ret = host.present(hostname, ip_list)
             assert ret["result"] is True
-            assert "Added host {0} ({1})".format(hostname, ip_list[0]) in ret["comment"]
-            assert "Added host {0} ({1})".format(hostname, ip_list[1]) in ret["comment"]
+            assert "Added host {} ({})".format(hostname, ip_list[0]) in ret["comment"]
+            assert "Added host {} ({})".format(hostname, ip_list[1]) in ret["comment"]
             assert ret["changes"] == {
                 "added": {ip_list[0]: [hostname], ip_list[1]: [hostname]},
             }, ret["changes"]
@@ -196,9 +188,9 @@ class HostTestCase(TestCase, LoaderModuleMockMixin):
         ):
             ret = host.present(hostname, ip_list, clean=True)
             assert ret["result"] is True
-            assert "Added host {0} ({1})".format(hostname, ip_list[0]) in ret["comment"]
-            assert "Added host {0} ({1})".format(hostname, ip_list[1]) in ret["comment"]
-            assert "Removed host {0} ({1})".format(hostname, cur_ip) in ret["comment"]
+            assert "Added host {} ({})".format(hostname, ip_list[0]) in ret["comment"]
+            assert "Added host {} ({})".format(hostname, ip_list[1]) in ret["comment"]
+            assert "Removed host {} ({})".format(hostname, cur_ip) in ret["comment"]
             assert ret["changes"] == {
                 "added": {ip_list[0]: [hostname], ip_list[1]: [hostname]},
                 "removed": {cur_ip: [hostname]},
@@ -231,7 +223,7 @@ class HostTestCase(TestCase, LoaderModuleMockMixin):
         ):
             ret = host.present(hostname, ip_list)
             assert ret["result"] is True
-            assert "Added host {0} ({1})".format(hostname, ip_list[1]) in ret["comment"]
+            assert "Added host {} ({})".format(hostname, ip_list[1]) in ret["comment"]
             assert ret["changes"] == {"added": {ip_list[1]: [hostname]}}, ret["changes"]
             expected = [call(ip_list[1], hostname)]
             assert add_host.mock_calls == expected, add_host.mock_calls
@@ -250,8 +242,8 @@ class HostTestCase(TestCase, LoaderModuleMockMixin):
         ):
             ret = host.present(hostname, ip_list, clean=True)
             assert ret["result"] is True
-            assert "Added host {0} ({1})".format(hostname, ip_list[1]) in ret["comment"]
-            assert "Removed host {0} ({1})".format(hostname, cur_ip) in ret["comment"]
+            assert "Added host {} ({})".format(hostname, ip_list[1]) in ret["comment"]
+            assert "Removed host {} ({})".format(hostname, cur_ip) in ret["comment"]
             assert ret["changes"] == {
                 "added": {ip_list[1]: [hostname]},
                 "removed": {cur_ip: [hostname]},
@@ -278,7 +270,7 @@ class HostTestCase(TestCase, LoaderModuleMockMixin):
             assert ret["result"] is True
             assert (
                 ret["comment"]
-                == "Host {0} ({1}) already present".format(hostname, ip_str)
+                == "Host {} ({}) already present".format(hostname, ip_str)
                 in ret["comment"]
             )
             assert ret["changes"] == {}, ret["changes"]
@@ -307,11 +299,11 @@ class HostTestCase(TestCase, LoaderModuleMockMixin):
             ret = host.present(hostname, ip_list)
             assert ret["result"] is True
             assert (
-                "Host {0} ({1}) already present".format(hostname, ip_list[0])
+                "Host {} ({}) already present".format(hostname, ip_list[0])
                 in ret["comment"]
             )
             assert (
-                "Host {0} ({1}) already present".format(hostname, ip_list[1])
+                "Host {} ({}) already present".format(hostname, ip_list[1])
                 in ret["comment"]
             )
             assert ret["changes"] == {}, ret["changes"]
@@ -335,19 +327,19 @@ class HostTestCase(TestCase, LoaderModuleMockMixin):
             ret = host.present(self.hostname, self.ip_list, comment="A comment")
             assert ret["result"] is True
             assert (
-                "Added host {0} ({1})".format(self.hostname, self.ip_list[0])
+                "Added host {} ({})".format(self.hostname, self.ip_list[0])
                 in ret["comment"]
             )
             assert (
-                "Added host {0} ({1})".format(self.hostname, self.ip_list[1])
+                "Added host {} ({})".format(self.hostname, self.ip_list[1])
                 in ret["comment"]
             )
             assert (
-                "Set comment for host {0} (A comment)".format(self.ip_list[0])
+                "Set comment for host {} (A comment)".format(self.ip_list[0])
                 in ret["comment"]
             )
             assert (
-                "Set comment for host {0} (A comment)".format(self.ip_list[1])
+                "Set comment for host {} (A comment)".format(self.ip_list[1])
                 in ret["comment"]
             )
             assert ret["changes"] == {

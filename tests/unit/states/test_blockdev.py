@@ -1,17 +1,11 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
-# Import Salt Libs
 import salt.states.blockdev as blockdev
 import salt.utils.path
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, patch
 from tests.support.unit import TestCase
@@ -35,14 +29,12 @@ class BlockdevTestCase(TestCase, LoaderModuleMockMixin):
 
         ret = {"name": name, "result": True, "changes": {}, "comment": ""}
 
-        comt = ("Changes to {0} cannot be applied. " "Not a block device. ").format(
-            name
-        )
+        comt = ("Changes to {} cannot be applied. " "Not a block device. ").format(name)
         with patch.dict(blockdev.__salt__, {"file.is_blkdev": False}):
             ret.update({"comment": comt})
             self.assertDictEqual(blockdev.tuned(name), ret)
 
-        comt = "Changes to {0} will be applied ".format(name)
+        comt = "Changes to {} will be applied ".format(name)
         with patch.dict(blockdev.__salt__, {"file.is_blkdev": True}):
             ret.update({"comment": comt, "result": None})
             with patch.dict(blockdev.__opts__, {"test": True}):
@@ -61,7 +53,7 @@ class BlockdevTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(
             os.path, "exists", MagicMock(side_effect=[False, True, True, True, True])
         ):
-            comt = "{0} does not exist".format(name)
+            comt = "{} does not exist".format(name)
             ret.update({"comment": comt})
             self.assertDictEqual(blockdev.formatted(name), ret)
 
@@ -69,7 +61,7 @@ class BlockdevTestCase(TestCase, LoaderModuleMockMixin):
 
             # Test state return when block device is already in the correct state
             with patch.dict(blockdev.__salt__, {"cmd.run": mock_ext4}):
-                comt = "{0} already formatted with ext4".format(name)
+                comt = "{} already formatted with ext4".format(name)
                 ret.update({"comment": comt, "result": True})
                 self.assertDictEqual(blockdev.formatted(name), ret)
 
@@ -87,7 +79,7 @@ class BlockdevTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(
                 blockdev.__salt__, {"cmd.run": MagicMock(return_value="new-thing")}
             ):
-                comt = "Changes to {0} will be applied ".format(name)
+                comt = "Changes to {} will be applied ".format(name)
                 ret.update({"comment": comt, "result": None})
                 with patch.object(
                     salt.utils.path, "which", MagicMock(return_value=True)
@@ -103,7 +95,7 @@ class BlockdevTestCase(TestCase, LoaderModuleMockMixin):
                     "disk.format": MagicMock(return_value=True),
                 },
             ):
-                comt = "Failed to format {0}".format(name)
+                comt = "Failed to format {}".format(name)
                 ret.update({"comment": comt, "result": False})
                 with patch.object(
                     salt.utils.path, "which", MagicMock(return_value=True)

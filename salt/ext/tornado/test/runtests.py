@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # pylint: skip-file
 
-from __future__ import absolute_import, division, print_function
 import gc
 import locale  # system locale module, not tornado.locale
 import logging
@@ -66,9 +65,9 @@ def all():
 
 class TornadoTextTestRunner(unittest.TextTestRunner):
     def run(self, test):
-        result = super(TornadoTextTestRunner, self).run(test)
+        result = super().run(test)
         if result.skipped:
-            skip_reasons = set(reason for (test, reason) in result.skipped)
+            skip_reasons = {reason for (test, reason) in result.skipped}
             self.stream.write(textwrap.fill(
                 "Some tests were skipped because: %s" %
                 ", ".join(sorted(skip_reasons))))

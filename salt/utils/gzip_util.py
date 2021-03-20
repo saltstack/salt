@@ -1,19 +1,13 @@
-# -*- coding: utf-8 -*-
 """
     salt.utils.gzip
     ~~~~~~~~~~~~~~~
     Helper module for handling gzip consistently between 2.7+ and 2.6-
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import gzip
 
-# Import Salt libs
 import salt.utils.files
-
-# Import 3rd-party libs
 from salt.ext import six
 from salt.ext.six import BytesIO
 

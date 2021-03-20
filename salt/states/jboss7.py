@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage JBoss 7 Application Server via CLI interface
 
@@ -36,19 +35,14 @@ For the sake of brevity, examples for each state assume that jboss_config is con
 
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import re
 import time
 import traceback
 
-# Import Salt libs
 import salt.utils.dictdiffer as dictdiffer
 from salt.exceptions import CommandExecutionError
-
-# Import 3rd-party libs
 from salt.ext import six
 
 log = logging.getLogger(__name__)
@@ -189,7 +183,7 @@ def datasource_exists(
                 )
         else:
             raise CommandExecutionError(
-                "Unable to handle error: {0}".format(ds_result["failure-description"])
+                "Unable to handle error: {}".format(ds_result["failure-description"])
             )
 
     if ret["result"]:
@@ -257,7 +251,7 @@ def __get_ds_value(dct, key):
     elif dct[key] is None:
         return "undefined"
     else:
-        return six.text_type(dct[key])
+        return str(dct[key])
 
 
 def bindings_exist(name, jboss_config, bindings, profile=None):
@@ -300,7 +294,7 @@ def bindings_exist(name, jboss_config, bindings, profile=None):
 
     has_changed = False
     for key in bindings:
-        value = six.text_type(bindings[key])
+        value = str(bindings[key])
         query_result = __salt__["jboss7.read_simple_binding"](
             binding_name=key, jboss_config=jboss_config, profile=profile
         )
@@ -512,9 +506,9 @@ def __find_deployment(jboss_config, salt_source=None):
                 if result is not None:
                     success = False
                     comment = (
-                        "More than one deployment matches regular expression: {0}. \n"
+                        "More than one deployment matches regular expression: {}. \n"
                         "For deployments from Salt file system deployments on JBoss are searched to find one that matches regular expression in 'undeploy' parameter.\n"
-                        "Existing deployments: {1}".format(
+                        "Existing deployments: {}".format(
                             salt_source["undeploy"], ",".join(deployments)
                         )
                     )
@@ -584,7 +578,7 @@ def __get_artifact(salt_source):
 
             except Exception as e:  # pylint: disable=broad-except
                 log.debug(traceback.format_exc())
-                comment = "Unable to manage file: {0}".format(e)
+                comment = "Unable to manage file: {}".format(e)
 
         else:
             resolved_source = salt_source["target_file"]
@@ -655,7 +649,7 @@ def reloaded(name, jboss_config, timeout=60, interval=5):
             ret["result"] = False
             ret[
                 "comment"
-            ] = "Could not reload the configuration. Timeout ({0} s) exceeded. ".format(
+            ] = "Could not reload the configuration. Timeout ({} s) exceeded. ".format(
                 timeout
             )
             if not status["success"]:
@@ -664,7 +658,7 @@ def reloaded(name, jboss_config, timeout=60, interval=5):
                 )
             else:
                 ret["comment"] = __append_comment(
-                    ("Server is in {0} state".format(status["result"])), ret["comment"]
+                    ("Server is in {} state".format(status["result"])), ret["comment"]
                 )
     else:
         ret["result"] = False
@@ -677,10 +671,10 @@ def reloaded(name, jboss_config, timeout=60, interval=5):
 
 def __check_dict_contains(dct, dict_name, keys, comment="", result=True):
     for key in keys:
-        if key not in six.iterkeys(dct):
+        if key not in dct.keys():
             result = False
             comment = __append_comment(
-                "Missing {0} in {1}".format(key, dict_name), comment
+                "Missing {} in {}".format(key, dict_name), comment
             )
     return result, comment
 

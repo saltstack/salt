@@ -5,7 +5,6 @@
 # pylint: skip-file
 
 
-from __future__ import absolute_import, division, print_function
 from salt.ext.tornado.auth import OpenIdMixin, OAuthMixin, OAuth2Mixin, TwitterMixin, AuthError, GoogleOAuth2Mixin, FacebookGraphMixin
 from salt.ext.tornado.concurrent import Future
 from salt.ext.tornado.escape import json_decode
@@ -433,12 +432,12 @@ class AuthTest(AsyncHTTPTestCase):
         response.rethrow()
         parsed = json_decode(response.body)
         self.assertEqual(parsed,
-                         {u'access_token': {u'key': u'hjkl',
-                                            u'screen_name': u'foo',
-                                            u'secret': u'vbnm'},
-                          u'name': u'Foo',
-                          u'screen_name': u'foo',
-                          u'username': u'foo'})
+                         {'access_token': {'key': 'hjkl',
+                                            'screen_name': 'foo',
+                                            'secret': 'vbnm'},
+                          'name': 'Foo',
+                          'screen_name': 'foo',
+                          'username': 'foo'})
 
     def test_twitter_show_user(self):
         response = self.fetch('/twitter/client/show_user?name=somebody')
@@ -542,7 +541,7 @@ class GoogleOAuth2Test(AsyncHTTPTestCase):
     def test_google_login(self):
         response = self.fetch('/client/login')
         self.assertDictEqual({
-            u'name': u'Foo',
-            u'email': u'foo@example.com',
-            u'access_token': u'fake-access-token',
+            'name': 'Foo',
+            'email': 'foo@example.com',
+            'access_token': 'fake-access-token',
         }, json_decode(response.body))

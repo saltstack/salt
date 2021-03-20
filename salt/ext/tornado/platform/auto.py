@@ -24,7 +24,6 @@ Most code that needs access to this functionality should do e.g.::
 """
 # pylint: skip-file
 
-from __future__ import absolute_import, division, print_function
 
 import os
 

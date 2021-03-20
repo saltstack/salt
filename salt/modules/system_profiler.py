@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 System Profiler Module
 
@@ -9,7 +8,6 @@ information about package receipts and installed applications.
 
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import plistlib
 import subprocess
@@ -47,10 +45,7 @@ def _call_system_profiler(datatype):
     )
     (sysprofresults, sysprof_stderr) = p.communicate(input=None)
 
-    if six.PY2:
-        plist = plistlib.readPlistFromString(sysprofresults)
-    else:
-        plist = plistlib.readPlistFromBytes(sysprofresults)
+    plist = plistlib.readPlistFromBytes(sysprofresults)
 
     try:
         apps = plist[0]["_items"]
@@ -89,7 +84,7 @@ def receipts():
             )
         if "info" in details:
             try:
-                details["info"] = "{0}: {1}".format(
+                details["info"] = "{}: {}".format(
                     details["info"][0], details["info"][1].strftime("%Y-%m-%d %H:%M:%S")
                 )
             except (IndexError, AttributeError):
@@ -135,7 +130,7 @@ def applications():
             )
         if "info" in details:
             try:
-                details["info"] = "{0}: {1}".format(
+                details["info"] = "{}: {}".format(
                     details["info"][0], details["info"][1].strftime("%Y-%m-%d %H:%M:%S")
                 )
             except (IndexError, AttributeError):

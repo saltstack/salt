@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Return salt data via Slack using Incoming Webhooks
 
@@ -56,17 +55,12 @@ append '--return_config alternative' to the salt command.
     salt '*' test.ping --return slack_webhook --return_config alternative
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import json
-
-# Import Python libs
 import logging
 
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 import salt.ext.six.moves.http_client
-
-# Import Salt Libs
 import salt.returners
 import salt.utils.http
 import salt.utils.yaml
@@ -142,7 +136,7 @@ def _sprinkle(config_str):
     """
     parts = [x for sub in config_str.split("{") for x in sub.split("}")]
     for i in range(1, len(parts), 2):
-        parts[i] = six.text_type(__grains__.get(parts[i], ""))
+        parts[i] = str(__grains__.get(parts[i], ""))
     return "".join(parts)
 
 

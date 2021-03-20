@@ -1,26 +1,18 @@
-# -*- coding: utf-8 -*-
-
 """
 Tests for the supervisord state
 """
 
 # Import python lins
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import subprocess
 import time
 
-# Import salt libs
 import salt.utils.path
-
-# Import 3rd-party libs
 from salt.ext import six
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
-
-# Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
@@ -36,7 +28,7 @@ class SupervisordTest(ModuleCase, SaltReturnAssertsMixin):
     """
 
     def setUp(self):
-        super(SupervisordTest, self).setUp()
+        super().setUp()
 
         self.venv_test_dir = os.path.join(RUNTIME_VARS.TMP, "supervisortests")
         self.venv_dir = os.path.join(self.venv_test_dir, "venv")

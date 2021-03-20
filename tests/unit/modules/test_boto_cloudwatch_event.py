@@ -1,24 +1,15 @@
-# -*- coding: utf-8 -*-
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import random
 import string
 
-# Import Salt libs
 import salt.config
 import salt.loader
 import salt.modules.boto_cloudwatch_event as boto_cloudwatch_event
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
 
-# Import 3rd-party libs
 # pylint: disable=import-error,no-name-in-module,unused-import
 try:
     import boto
@@ -100,7 +91,7 @@ class BotoCloudWatchEventTestCaseBase(TestCase, LoaderModuleMockMixin):
         return {boto_cloudwatch_event: {"__utils__": utils}}
 
     def setUp(self):
-        super(BotoCloudWatchEventTestCaseBase, self).setUp()
+        super().setUp()
         boto_cloudwatch_event.__init__(self.opts)
         del self.opts
 
@@ -123,7 +114,7 @@ class BotoCloudWatchEventTestCaseBase(TestCase, LoaderModuleMockMixin):
         session_instance.client.return_value = self.conn
 
 
-class BotoCloudWatchEventTestCaseMixin(object):
+class BotoCloudWatchEventTestCaseMixin:
     pass
 
 

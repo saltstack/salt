@@ -1,11 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 ANSI escape code utilities, see
 http://www.ecma-international.org/publications/files/ECMA-ST/Ecma-048.pdf
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import 3rd-party libs
 from salt.ext import six
 
 graph_prefix = "\x1b["
@@ -94,7 +91,7 @@ codes = {
 }
 
 
-class TextFormat(object):
+class TextFormat:
     """
     ANSI Select Graphic Rendition (SGR) code escape sequence.
     """
@@ -134,9 +131,7 @@ class TextFormat(object):
                 '{0}Can you read this?{1}'
                 ).format(magenta_on_green, TextFormat('reset'))
         """
-        self.codes = [
-            codes[attr.lower()] for attr in attrs if isinstance(attr, six.string_types)
-        ]
+        self.codes = [codes[attr.lower()] for attr in attrs if isinstance(attr, str)]
 
         if kwargs.get("reset", True):
             self.codes[:0] = [codes["reset"]]
@@ -162,7 +157,7 @@ class TextFormat(object):
             self.codes.extend(*qualify_triple_int(kwargs["bg_rgb"]))
 
         # pylint: disable=string-substitution-usage-error
-        self.sequence = "%s%s%s" % (
+        self.sequence = "{}{}{}".format(
             graph_prefix,
             ";".join(self.codes),
             graph_suffix,
@@ -182,7 +177,7 @@ class TextFormat(object):
             'The answer is: {0}'.format(green_blink_text(42))
         """
         end = TextFormat("reset") if reset else ""
-        return "%s%s%s" % (self.sequence, text, end)  # pylint: disable=E1321
+        return "{}{}{}".format(self.sequence, text, end)  # pylint: disable=E1321
 
     def __str__(self):
         return self.sequence

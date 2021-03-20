@@ -197,7 +197,6 @@ if you need to include a literal ``{{``, ``{%``, or ``{#`` in the output.
 """
 # pylint: skip-file
 
-from __future__ import absolute_import, division, print_function
 
 import datetime
 import linecache
@@ -244,7 +243,7 @@ def filter_whitespace(mode, text):
         raise Exception("invalid whitespace mode %s" % mode)
 
 
-class Template(object):
+class Template:
     """A compiled template.
 
     We compile into Python from the given template_string. You can generate
@@ -376,7 +375,7 @@ class Template(object):
         return ancestors
 
 
-class BaseLoader(object):
+class BaseLoader:
     """Base class for template loaders.
 
     You must use a template loader to use template constructs like
@@ -436,7 +435,7 @@ class Loader(BaseLoader):
     """A template loader that loads from a single root directory.
     """
     def __init__(self, root_directory, **kwargs):
-        super(Loader, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.root = os.path.abspath(root_directory)
 
     def resolve_path(self, name, parent_path=None):
@@ -460,7 +459,7 @@ class Loader(BaseLoader):
 class DictLoader(BaseLoader):
     """A template loader that loads from a dictionary."""
     def __init__(self, dict, **kwargs):
-        super(DictLoader, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.dict = dict
 
     def resolve_path(self, name, parent_path=None):
@@ -475,7 +474,7 @@ class DictLoader(BaseLoader):
         return Template(self.dict[name], name=name, loader=self)
 
 
-class _Node(object):
+class _Node:
     def each_child(self):
         return ()
 
@@ -576,7 +575,7 @@ class _ApplyBlock(_Node):
             writer.write_line("_tt_append = _tt_buffer.append", self.line)
             self.body.generate(writer)
             writer.write_line("return _tt_utf8('').join(_tt_buffer)", self.line)
-        writer.write_line("_tt_append(_tt_utf8(%s(%s())))" % (
+        writer.write_line("_tt_append(_tt_utf8({}({}())))".format(
             self.method, method_name), self.line)
 
 
@@ -638,7 +637,7 @@ class _Expression(_Node):
 
 class _Module(_Expression):
     def __init__(self, expression, line):
-        super(_Module, self).__init__("_tt_modules." + expression, line,
+        super().__init__("_tt_modules." + expression, line,
                                       raw=True)
 
 
@@ -680,7 +679,7 @@ class ParseError(Exception):
         return '%s at %s:%d' % (self.message, self.filename, self.lineno)
 
 
-class _CodeWriter(object):
+class _CodeWriter:
     def __init__(self, file, named_blocks, loader, current_template):
         self.file = file
         self.named_blocks = named_blocks
@@ -694,7 +693,7 @@ class _CodeWriter(object):
         return self._indent
 
     def indent(self):
-        class Indenter(object):
+        class Indenter:
             def __enter__(_):
                 self._indent += 1
                 return self
@@ -709,7 +708,7 @@ class _CodeWriter(object):
         self.include_stack.append((self.current_template, line))
         self.current_template = template
 
-        class IncludeTemplate(object):
+        class IncludeTemplate:
             def __enter__(_):
                 return self
 
@@ -729,7 +728,7 @@ class _CodeWriter(object):
         print("    " * indent + line + line_comment, file=self.file)
 
 
-class _TemplateReader(object):
+class _TemplateReader:
     def __init__(self, name, text, whitespace):
         self.name = name
         self.text = text
@@ -879,10 +878,10 @@ def _parse(reader, template, in_block=None, in_loop=None):
 
         # Intermediate ("else", "elif", etc) blocks
         intermediate_blocks = {
-            "else": set(["if", "for", "while", "try"]),
-            "elif": set(["if"]),
-            "except": set(["try"]),
-            "finally": set(["try"]),
+            "else": {"if", "for", "while", "try"},
+            "elif": {"if"},
+            "except": {"try"},
+            "finally": {"try"},
         }
         allowed_parents = intermediate_blocks.get(operator)
         if allowed_parents is not None:
@@ -971,7 +970,7 @@ def _parse(reader, template, in_block=None, in_loop=None):
         elif operator in ("break", "continue"):
             if not in_loop:
                 reader.raise_parse_error("%s outside %s block" %
-                                         (operator, set(["for", "while"])))
+                                         (operator, {"for", "while"}))
             body.chunks.append(_Statement(contents, line))
             continue
 

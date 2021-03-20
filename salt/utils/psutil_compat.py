@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Version agnostic psutil hack to fully support both old (<2.0) and new (>=2.0)
 psutil versions.
@@ -10,13 +9,9 @@ Should be removed once support for psutil <2.0 is dropped. (eg RHEL 6)
 Built off of http://grodola.blogspot.com/2014/01/psutil-20-porting.html
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 # No exception handling, as we want ImportError if psutil doesn't exist
 import psutil  # pylint: disable=3rd-party-module-not-gated
-
-# Import Salt libs
 from salt.ext import six
 
 if psutil.version_info >= (2, 0):
@@ -113,7 +108,7 @@ else:
         "cwd": "getcwd",
     }
 
-    for new, old in six.iteritems(_PROCESS_FUNCTION_MAP):
+    for new, old in _PROCESS_FUNCTION_MAP.items():
         try:
             setattr(Process, new, psutil.Process.__dict__[old])
         except KeyError:

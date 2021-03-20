@@ -22,7 +22,6 @@ as well as some utility functions for interacting with the
 `concurrent.futures` package.
 """
 # pylint: skip-file
-from __future__ import absolute_import, division, print_function
 
 import functools
 import platform
@@ -61,7 +60,7 @@ class ReturnValueIgnoredError(Exception):
 # from the Trollius project, a backport of asyncio to Python 2.x - 3.x
 
 
-class _TracebackLogger(object):
+class _TracebackLogger:
     """Helper to log a traceback upon destruction if not cleared.
 
     This solves a nasty problem with Futures and Tasks that have an
@@ -135,7 +134,7 @@ class _TracebackLogger(object):
             )
 
 
-class Future(object):
+class Future:
     """Placeholder for an asynchronous result.
 
     A ``Future`` encapsulates the result of an asynchronous
@@ -369,7 +368,7 @@ def is_future(x):
     return isinstance(x, FUTURES)
 
 
-class DummyExecutor(object):
+class DummyExecutor:
     def submit(self, fn, *args, **kwargs):
         future = TracebackFuture()
         try:

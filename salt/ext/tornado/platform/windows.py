@@ -3,7 +3,6 @@
 # pylint: skip-file
 
 
-from __future__ import absolute_import, division, print_function
 import ctypes  # type: ignore
 import ctypes.wintypes  # type: ignore
 

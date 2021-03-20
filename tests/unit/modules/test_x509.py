@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # Author: Bo Maryniuk <bo@suse.de>
 #
@@ -15,8 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Import Salt Testing Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
 import os
@@ -111,7 +108,7 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
         :return:
         """
 
-        class FakeSubject(object):
+        class FakeSubject:
             """
             Class for faking x509'th subject.
             """

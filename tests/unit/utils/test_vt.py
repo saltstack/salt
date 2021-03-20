@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
@@ -9,8 +8,6 @@
     VirtualTerminal tests
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import functools
 import io
@@ -20,17 +17,12 @@ import subprocess
 import sys
 import time
 
-# Import Salt libs
 import salt.utils
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.vt
-
-# Import 3rd-party libs
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
-
-# Import Salt Testing libs
 from tests.support.paths import CODE_DIR
 from tests.support.unit import TestCase, skipIf
 
@@ -116,7 +108,7 @@ class VTTestCase(TestCase):
                 )
                 stdout, _ = proc.communicate()
                 return int(stdout.strip())
-            except (ValueError, OSError, IOError):
+            except (ValueError, OSError):
                 if salt.utils.platform.is_darwin():
                     # We're unable to findout how many PTY's are open
                     self.skipTest(
@@ -131,7 +123,7 @@ class VTTestCase(TestCase):
         for idx in range(0, nr_ptys + n_executions):
             try:
                 with salt.utils.vt.Terminal(
-                    'echo "Run {0}"'.format(idx),
+                    'echo "Run {}"'.format(idx),
                     shell=True,
                     stream_stdout=False,
                     stream_stderr=False,
@@ -140,7 +132,7 @@ class VTTestCase(TestCase):
                 try:
                     if current_pty_count() > (nr_ptys + (n_executions / 2)):
                         self.fail("VT is not cleaning up PTY's")
-                except (ValueError, OSError, IOError):
+                except (ValueError, OSError):
                     self.fail("Unable to find out how many PTY's are open")
             except Exception as exc:  # pylint: disable=broad-except
                 if "out of pty devices" in str(exc):
@@ -153,7 +145,7 @@ class VTTestCase(TestCase):
         for idx in range(0, nr_ptys + n_executions):
             try:
                 terminal = salt.utils.vt.Terminal(
-                    'echo "Run {0}"'.format(idx),
+                    'echo "Run {}"'.format(idx),
                     shell=True,
                     stream_stdout=False,
                     stream_stderr=False,
@@ -162,7 +154,7 @@ class VTTestCase(TestCase):
                 try:
                     if current_pty_count() > (nr_ptys + (n_executions / 2)):
                         self.fail("VT is not cleaning up PTY's")
-                except (ValueError, OSError, IOError):
+                except (ValueError, OSError):
                     self.fail("Unable to find out how many PTY's are open")
             except Exception as exc:  # pylint: disable=broad-except
                 if "out of pty devices" in str(exc):

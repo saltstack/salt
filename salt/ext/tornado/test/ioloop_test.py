@@ -2,7 +2,6 @@
 # pylint: skip-file
 
 
-from __future__ import absolute_import, division, print_function
 import contextlib
 import datetime
 import functools
@@ -29,7 +28,7 @@ except ImportError:
 class FakeTimeSelect(_Select):
     def __init__(self):
         self._time = 1000
-        super(FakeTimeSelect, self).__init__()
+        super().__init__()
 
     def time(self):
         return self._time
@@ -38,7 +37,7 @@ class FakeTimeSelect(_Select):
         self._time += t
 
     def poll(self, timeout):
-        events = super(FakeTimeSelect, self).poll(0)
+        events = super().poll(0)
         if events:
             return events
         self._time += timeout
@@ -54,7 +53,7 @@ class FakeTimeIOLoop(PollIOLoop):
     """
     def initialize(self):
         self.fts = FakeTimeSelect()
-        super(FakeTimeIOLoop, self).initialize(impl=self.fts,
+        super().initialize(impl=self.fts,
                                                time_func=self.fts.time)
 
     def sleep(self, t):
@@ -291,7 +290,7 @@ class TestIOLoop(AsyncTestCase):
         # Use a socket since they are supported by IOLoop on all platforms.
         # Unfortunately, sockets don't support the .closed attribute for
         # inspecting their close status, so we must use a wrapper.
-        class SocketWrapper(object):
+        class SocketWrapper:
             def __init__(self, sockobj):
                 self.sockobj = sockobj
                 self.closed = False
@@ -489,7 +488,7 @@ class TestIOLoopCurrent(unittest.TestCase):
 
 class TestIOLoopAddCallback(AsyncTestCase):
     def setUp(self):
-        super(TestIOLoopAddCallback, self).setUp()
+        super().setUp()
         self.active_contexts = []
 
     def add_callback(self, callback, *args, **kwargs):

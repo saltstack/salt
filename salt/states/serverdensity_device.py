@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Monitor Server with Server Density
 ==================================
@@ -47,15 +46,10 @@ Example:
       serverdensity_device.monitored
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import Salt libs
 import salt.utils.json
-
-# Import 3rd-party libs
 from salt.ext import six
 
 # TODO:
@@ -86,10 +80,10 @@ def _get_salt_params():
             sd_os = {"code": all_grains["kernel"].lower(), "name": all_grains["kernel"]}
         params["os"] = salt.utils.json.dumps(sd_os)
         params["cpuCores"] = all_stats["cpuinfo"]["cpu cores"]
-        params["installedRAM"] = six.text_type(
+        params["installedRAM"] = str(
             int(all_stats["meminfo"]["MemTotal"]["value"]) / 1024
         )
-        params["swapSpace"] = six.text_type(
+        params["swapSpace"] = str(
             int(all_stats["meminfo"]["SwapTotal"]["value"]) / 1024
         )
         params["privateIPs"] = salt.utils.json.dumps(all_grains["fqdn_ip4"])
@@ -173,7 +167,7 @@ def monitored(
 
     # override salt_params with given params
     if salt_params:
-        for key, value in six.iteritems(params):
+        for key, value in params.items():
             params_from_salt[key] = value
         params_to_use = params_from_salt
     else:

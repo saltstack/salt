@@ -1,18 +1,13 @@
-# -*- coding: utf-8 -*-
 """
 This module contains routines shared by the virt system.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import hashlib
 import logging
-
-# Import python libs
 import os
 import re
 import time
 
-# Import salt libs
 import salt.utils.files
 from salt.ext.six.moves.urllib import request
 
@@ -60,7 +55,7 @@ def check_remote(cmdline_path):
     return False
 
 
-class VirtKey(object):
+class VirtKey:
     """
     Used to manage key signing requests.
     """
@@ -81,7 +76,7 @@ class VirtKey(object):
         try:
             with salt.utils.files.fopen(self.path, "r") as fp_:
                 expiry = int(fp_.read())
-        except (OSError, IOError):
+        except OSError:
             log.error(
                 "Request to sign key for minion '%s' on hyper '%s' "
                 "denied: no authorization",

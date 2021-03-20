@@ -1,23 +1,17 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Rupesh Tare <rupesht@saltstack.com>
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
 import salt.modules.influxdb08mod as influx08
 from tests.support.mock import MagicMock, patch
-
-# Import Salt Testing Libs
 from tests.support.unit import TestCase
 
 DB_LIST = ["A", "B", "C"]
 USER_LIST = [{"name": "A"}, {"name": "B"}]
 
 
-class MockInfluxDBClient(object):
+class MockInfluxDBClient:
     def get_list_database(self):
         return DB_LIST
 

@@ -1,13 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 Control Apache Traffic Server
 =============================
 
 .. versionadded:: 2015.8.0
 """
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 
 def __virtual__():
@@ -204,7 +200,7 @@ def config(name, value):
     ret = {"name": name, "changes": {}, "result": None, "comment": ""}
 
     if __opts__["test"]:
-        ret["comment"] = "Configuring {0} to {1}".format(
+        ret["comment"] = "Configuring {} to {}".format(
             name,
             value,
         )
@@ -213,7 +209,7 @@ def config(name, value):
     __salt__["trafficserver.set_config"](name, value)
 
     ret["result"] = True
-    ret["comment"] = "Configured {0} to {1}".format(name, value)
+    ret["comment"] = "Configured {} to {}".format(name, value)
     return ret
 
 
@@ -349,11 +345,11 @@ def offline(name, path):
     ret = {"name": name, "changes": {}, "result": None, "comment": ""}
 
     if __opts__["test"]:
-        ret["comment"] = "Setting {0} to offline".format(path)
+        ret["comment"] = "Setting {} to offline".format(path)
         return ret
 
     __salt__["trafficserver.offline"](path)
 
     ret["result"] = True
-    ret["comment"] = "Set {0} as offline".format(path)
+    ret["comment"] = "Set {} as offline".format(path)
     return ret

@@ -1,7 +1,3 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import
-
 import logging
 
 import dateutil.parser as dateutil_parser
@@ -17,7 +13,7 @@ class SchedulerMaxRunningTest(SchedulerTestsBase):
     """
 
     def setUp(self):
-        super(SchedulerMaxRunningTest, self).setUp()
+        super().setUp()
         self.schedule.opts["loop_interval"] = 1
 
     def test_maxrunning_minion(self):

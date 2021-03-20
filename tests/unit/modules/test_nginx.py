@@ -1,12 +1,5 @@
-# -*- coding: utf-8 -*-
-
-# Import Pytohn libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 # Import Salt Module
 import salt.modules.nginx as nginx
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import Mock, patch
 from tests.support.unit import TestCase
@@ -17,7 +10,7 @@ server accepts handled requests
 Reading: 0 Writing: 7 Waiting: 0"""
 
 
-class MockUrllibStatus(object):
+class MockUrllibStatus:
     """Mock of urllib2 call for Nginx status"""
 
     def read(self):

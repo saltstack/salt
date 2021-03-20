@@ -1,5 +1,4 @@
 # pylint: skip-file
-from __future__ import absolute_import, division, print_function
 
 import gc
 import contextlib
@@ -30,7 +29,7 @@ except ImportError:
 
 class GenEngineTest(AsyncTestCase):
     def setUp(self):
-        super(GenEngineTest, self).setUp()
+        super().setUp()
         self.named_contexts = []
 
     def named_context(self, name):
@@ -640,7 +639,7 @@ class GenEngineTest(AsyncTestCase):
         # without waiting for garbage collection.
         @gen.engine
         def f():
-            class Foo(object):
+            class Foo:
                 pass
             arg = Foo()
             self.arg_ref = weakref.ref(arg)
@@ -660,10 +659,10 @@ class GenCoroutineTest(AsyncTestCase):
         # so we need explicit checks here to make sure the tests run all
         # the way through.
         self.finished = False
-        super(GenCoroutineTest, self).setUp()
+        super().setUp()
 
     def tearDown(self):
-        super(GenCoroutineTest, self).tearDown()
+        super().tearDown()
         assert self.finished
 
     def test_attributes(self):
@@ -1022,7 +1021,7 @@ class GenCoroutineTest(AsyncTestCase):
         # without waiting for garbage collection.
         @gen.coroutine
         def inner():
-            class Foo(object):
+            class Foo:
                 pass
             local_var = Foo()
             self.local_ref = weakref.ref(local_var)

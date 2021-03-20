@@ -15,7 +15,6 @@
 # under the License.
 """KQueue-based IOLoop implementation for BSD/Mac systems."""
 # pylint: skip-file
-from __future__ import absolute_import, division, print_function
 
 import select
 
@@ -24,7 +23,7 @@ from salt.ext.tornado.ioloop import IOLoop, PollIOLoop
 assert hasattr(select, 'kqueue'), 'kqueue not supported'
 
 
-class _KQueue(object):
+class _KQueue:
     """A kqueue-based event loop for BSD/Mac systems."""
     def __init__(self):
         self._kqueue = select.kqueue()
@@ -38,7 +37,7 @@ class _KQueue(object):
 
     def register(self, fd, events):
         if fd in self._active:
-            raise IOError("fd %s already registered" % fd)
+            raise OSError("fd %s already registered" % fd)
         self._control(fd, events, select.KQ_EV_ADD)
         self._active[fd] = events
 
@@ -89,4 +88,4 @@ class _KQueue(object):
 
 class KQueueIOLoop(PollIOLoop):
     def initialize(self, **kwargs):
-        super(KQueueIOLoop, self).initialize(impl=_KQueue(), **kwargs)
+        super().initialize(impl=_KQueue(), **kwargs)

@@ -1,5 +1,4 @@
 # pylint: skip-file
-from __future__ import absolute_import, division, print_function
 from salt.ext.tornado.concurrent import Future
 from salt.ext.tornado import gen
 from salt.ext.tornado import netutil
@@ -41,7 +40,7 @@ class HelloHandler(RequestHandler):
         self.write("Hello")
 
 
-class TestIOStreamWebMixin(object):
+class TestIOStreamWebMixin:
     def _make_client_iostream(self):
         raise NotImplementedError()
 
@@ -168,7 +167,7 @@ class TestIOStreamWebMixin(object):
             stream.read_bytes(1)
 
 
-class TestIOStreamMixin(object):
+class TestIOStreamMixin:
     def _make_server_iostream(self, connection, **kwargs):
         raise NotImplementedError()
 
@@ -903,7 +902,7 @@ class TestIOStreamSSLContext(TestIOStreamMixin, AsyncTestCase):
 class TestIOStreamStartTLS(AsyncTestCase):
     def setUp(self):
         try:
-            super(TestIOStreamStartTLS, self).setUp()
+            super().setUp()
             self.listener, self.port = bind_unused_port()
             self.server_stream = None
             self.server_accepted = Future()
@@ -924,7 +923,7 @@ class TestIOStreamStartTLS(AsyncTestCase):
         if self.client_stream is not None:
             self.client_stream.close()
         self.listener.close()
-        super(TestIOStreamStartTLS, self).tearDown()
+        super().tearDown()
 
     def accept(self, connection, address):
         if self.server_stream is not None:

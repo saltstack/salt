@@ -12,7 +12,6 @@
 # pylint: skip-file
 
 
-from __future__ import absolute_import, division, print_function
 from datetime import timedelta
 
 from salt.ext.tornado import gen, locks
@@ -23,7 +22,7 @@ from salt.ext.tornado.test.util import unittest, skipBefore35, exec_test
 
 class ConditionTest(AsyncTestCase):
     def setUp(self):
-        super(ConditionTest, self).setUp()
+        super().setUp()
         self.history = []
 
     def record_done(self, future, key):

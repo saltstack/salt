@@ -1,12 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 Connection library for Amazon IAM
 
 :depends: requests
 """
-from __future__ import absolute_import, unicode_literals
 
-# Import Python libs
 import logging
 import pprint
 import time

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Kapacitor state module.
 
@@ -17,8 +16,6 @@ Kapacitor state module.
 .. versionadded:: 2016.11.0
 """
 
-
-from __future__ import absolute_import, print_function, unicode_literals
 
 import difflib
 
@@ -79,7 +76,7 @@ def task_present(
     if not dbrps:
         dbrps = []
     if database and retention_policy:
-        dbrp = "{0}.{1}".format(database, retention_policy)
+        dbrp = "{}.{}".format(database, retention_policy)
         dbrps.append(dbrp)
     task_dbrps = [
         {"db": dbrp[0], "rp": dbrp[1]} for dbrp in (dbrp.split(".") for dbrp in dbrps)

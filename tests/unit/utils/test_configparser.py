@@ -1,12 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 tests.unit.utils.test_configparser
 ==================================
 
 Test the funcs in the custom parsers in salt.utils.configparser
 """
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 import errno
@@ -14,14 +11,10 @@ import logging
 import os
 
 import salt.utils.configparser
-
-# Import salt libs
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.stringutils
 from salt.ext import six
-
-# Import Salt Testing Libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
 

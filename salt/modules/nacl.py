@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 This module helps include encrypted passwords in pillars, grains and salt state files.
 
@@ -150,10 +149,7 @@ Optional small program to encrypt data without needing salt modules.
 
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt libs
 import salt.utils.nacl
 
 __virtualname__ = "nacl"

@@ -1,11 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 The networking module for Non-RH/Deb Linux distros
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt libs
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
@@ -48,7 +44,7 @@ def down(iface, iface_type=None):
     """
     # Slave devices are controlled by the master.
     if iface_type not in ["slave"]:
-        return __salt__["cmd.run"]("ip link set {0} down".format(iface))
+        return __salt__["cmd.run"]("ip link set {} down".format(iface))
     return None
 
 
@@ -95,7 +91,7 @@ def _ip_ifaces():
                 at_ = comps[0]
                 if len(comps) % 2 != 0:
                     last = comps.pop()
-                    comps[-1] += " {0}".format(last)
+                    comps[-1] += " {}".format(last)
                 ifi = iter(comps)
                 ret[if_][at_] = dict(list(zip(ifi, ifi)))
             else:
@@ -117,7 +113,7 @@ def up(iface, iface_type=None):
     """
     # Slave devices are controlled by the master.
     if iface_type not in ["slave"]:
-        return __salt__["cmd.run"]("ip link set {0} up".format(iface))
+        return __salt__["cmd.run"]("ip link set {} up".format(iface))
     return None
 
 
@@ -174,7 +170,7 @@ def _hex_to_octets(addr):
     """
     Convert hex fields from /proc/net/route to octects
     """
-    return "{0}:{1}:{2}:{3}".format(
+    return "{}:{}:{}:{}".format(
         int(addr[6:8], 16),
         int(addr[4:6], 16),
         int(addr[2:4], 16),

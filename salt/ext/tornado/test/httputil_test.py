@@ -1,9 +1,7 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 # pylint: skip-file
 
 
-from __future__ import absolute_import, division, print_function
 from salt.ext.tornado.httputil import url_concat, parse_multipart_form_data, HTTPHeaders, format_timestamp, HTTPServerRequest, parse_request_start_line, parse_cookie
 from salt.ext.tornado.escape import utf8, native_str
 from salt.ext.tornado.log import gen_log
@@ -274,13 +272,13 @@ Foo: even
         # and cpython's unicodeobject.c (which defines the implementation
         # of unicode_type.splitlines(), and uses a different list than TR13).
         newlines = [
-            u'\u001b',  # VERTICAL TAB
-            u'\u001c',  # FILE SEPARATOR
-            u'\u001d',  # GROUP SEPARATOR
-            u'\u001e',  # RECORD SEPARATOR
-            u'\u0085',  # NEXT LINE
-            u'\u2028',  # LINE SEPARATOR
-            u'\u2029',  # PARAGRAPH SEPARATOR
+            '\u001b',  # VERTICAL TAB
+            '\u001c',  # FILE SEPARATOR
+            '\u001d',  # GROUP SEPARATOR
+            '\u001e',  # RECORD SEPARATOR
+            '\u0085',  # NEXT LINE
+            '\u2028',  # LINE SEPARATOR
+            '\u2029',  # PARAGRAPH SEPARATOR
         ]
         for newline in newlines:
             # Try the utf8 and latin1 representations of each newline

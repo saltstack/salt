@@ -1,8 +1,6 @@
 import pytest
 import salt.modules.kubeadm as kubeadm
 from salt.exceptions import CommandExecutionError
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase

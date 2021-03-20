@@ -20,7 +20,6 @@ loops.
 """
 # pylint: skip-file
 
-from __future__ import absolute_import, division, print_function
 import functools
 
 import salt.ext.tornado.concurrent
@@ -43,7 +42,7 @@ except ImportError as e:
 
 class BaseAsyncIOLoop(IOLoop):
     def initialize(self, asyncio_loop, close_loop=False, **kwargs):
-        super(BaseAsyncIOLoop, self).initialize(**kwargs)
+        super().initialize(**kwargs)
         self.asyncio_loop = asyncio_loop
         self.close_loop = close_loop
         # Maps fd to (fileobj, handler function) pair (as in IOLoop.add_handler)
@@ -166,7 +165,7 @@ class AsyncIOMainLoop(BaseAsyncIOLoop):
     installing alternative IOLoops.
     """
     def initialize(self, **kwargs):
-        super(AsyncIOMainLoop, self).initialize(asyncio.get_event_loop(),
+        super().initialize(asyncio.get_event_loop(),
                                                 close_loop=False, **kwargs)
 
 
@@ -186,7 +185,7 @@ class AsyncIOLoop(BaseAsyncIOLoop):
     def initialize(self, **kwargs):
         loop = asyncio.new_event_loop()
         try:
-            super(AsyncIOLoop, self).initialize(loop, close_loop=True, **kwargs)
+            super().initialize(loop, close_loop=True, **kwargs)
         except Exception:
             # If initialize() does not succeed (taking ownership of the loop),
             # we have to close it.

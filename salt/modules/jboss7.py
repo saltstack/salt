@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module for managing JBoss AS 7 through the CLI interface.
 
@@ -22,17 +21,12 @@ Example:
 
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import re
 
-# Import Salt libs
 import salt.utils.dictdiffer as dictdiffer
 from salt.exceptions import SaltInvocationError
-
-# Import 3rd-party libs
 from salt.ext import six
 
 log = logging.getLogger(__name__)
@@ -210,7 +204,7 @@ def create_datasource(jboss_config, name, datasource_properties, profile=None):
 def __get_properties_assignment_string(datasource_properties, ds_resource_description):
     assignment_strings = []
     ds_attributes = ds_resource_description["attributes"]
-    for key, val in six.iteritems(datasource_properties):
+    for key, val in datasource_properties.items():
         assignment_strings.append(
             __get_single_assignment_string(key, val, ds_attributes)
         )
@@ -219,7 +213,7 @@ def __get_properties_assignment_string(datasource_properties, ds_resource_descri
 
 
 def __get_single_assignment_string(key, val, ds_attributes):
-    return "{0}={1}".format(key, __format_value(key, val, ds_attributes))
+    return "{}={}".format(key, __format_value(key, val, ds_attributes))
 
 
 def __format_value(key, value, ds_attributes):
@@ -234,16 +228,16 @@ def __format_value(key, value, ds_attributes):
                 return "false"
         else:
             raise Exception(
-                "Don't know how to convert {0} to BOOLEAN type".format(value)
+                "Don't know how to convert {} to BOOLEAN type".format(value)
             )
 
     elif type_ == "INT":
-        return six.text_type(value)
+        return str(value)
     elif type_ == "STRING":
-        return '"{0}"'.format(value)
+        return '"{}"'.format(value)
     else:
         raise Exception(
-            "Don't know how to format value {0} of type {1}".format(value, type_)
+            "Don't know how to format value {} of type {}".format(value, type_)
         )
 
 
@@ -298,7 +292,7 @@ def update_datasource(jboss_config, name, new_properties, profile=None):
             if not update_result["success"]:
                 ret["result"] = False
                 ret["comment"] = ret["comment"] + (
-                    "Could not update datasource property {0} with value {1},\n stdout: {2}\n".format(
+                    "Could not update datasource property {} with value {},\n stdout: {}\n".format(
                         key, new_properties[key], update_result["stdout"]
                     )
                 )

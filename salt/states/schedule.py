@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Management of the Salt scheduler
 ==============================================
@@ -97,7 +96,6 @@ Management of the Salt scheduler
     python-dateutil is installed on the minion.
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 
 def present(name, **kwargs):
@@ -229,7 +227,7 @@ def present(name, **kwargs):
                 new_item["enabled"] = True
 
         if new_item == current_schedule[name]:
-            ret["comment"].append("Job {0} in correct state".format(name))
+            ret["comment"].append("Job {} in correct state".format(name))
         else:
             if "test" in __opts__ and __opts__["test"]:
                 kwargs["test"] = True
@@ -243,7 +241,7 @@ def present(name, **kwargs):
                     ret["comment"] = result["comment"]
                     return ret
                 else:
-                    ret["comment"].append("Modifying job {0} in schedule".format(name))
+                    ret["comment"].append("Modifying job {} in schedule".format(name))
                     ret["changes"] = result["changes"]
     else:
         if "test" in __opts__ and __opts__["test"]:
@@ -257,7 +255,7 @@ def present(name, **kwargs):
                 ret["comment"] = result["comment"]
                 return ret
             else:
-                ret["comment"].append("Adding new job {0} to schedule".format(name))
+                ret["comment"].append("Adding new job {} to schedule".format(name))
 
     ret["comment"] = "\n".join(ret["comment"])
     return ret
@@ -289,9 +287,9 @@ def absent(name, **kwargs):
                 ret["comment"] = result["comment"]
                 return ret
             else:
-                ret["comment"].append("Removed job {0} from schedule".format(name))
+                ret["comment"].append("Removed job {} from schedule".format(name))
     else:
-        ret["comment"].append("Job {0} not present in schedule".format(name))
+        ret["comment"].append("Job {} not present in schedule".format(name))
 
     ret["comment"] = "\n".join(ret["comment"])
     return ret
@@ -324,9 +322,9 @@ def enabled(name, **kwargs):
                 ret["comment"] = result["comment"]
                 return ret
             else:
-                ret["comment"].append("Enabled job {0} from schedule".format(name))
+                ret["comment"].append("Enabled job {} from schedule".format(name))
     else:
-        ret["comment"].append("Job {0} not present in schedule".format(name))
+        ret["comment"].append("Job {} not present in schedule".format(name))
 
     ret["comment"] = "\n".join(ret["comment"])
     return ret
@@ -359,9 +357,9 @@ def disabled(name, **kwargs):
                 ret["comment"] = result["comment"]
                 return ret
             else:
-                ret["comment"].append("Disabled job {0} from schedule".format(name))
+                ret["comment"].append("Disabled job {} from schedule".format(name))
     else:
-        ret["comment"].append("Job {0} not present in schedule".format(name))
+        ret["comment"].append("Job {} not present in schedule".format(name))
 
     ret["comment"] = "\n".join(ret["comment"])
     return ret

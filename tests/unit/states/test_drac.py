@@ -1,14 +1,8 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
 import salt.states.drac as drac
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -37,12 +31,12 @@ class DracTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value=[name])
         with patch.dict(drac.__salt__, {"drac.list_users": mock}):
             with patch.dict(drac.__opts__, {"test": True}):
-                comt = "`{0}` already exists".format(name)
+                comt = "`{}` already exists".format(name)
                 ret.update({"comment": comt})
                 self.assertDictEqual(drac.present(name, password, permission), ret)
 
             with patch.dict(drac.__opts__, {"test": False}):
-                comt = "`{0}` already exists".format(name)
+                comt = "`{}` already exists".format(name)
                 ret.update({"comment": comt})
                 self.assertDictEqual(drac.present(name, password, permission), ret)
 
@@ -59,12 +53,12 @@ class DracTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value=[])
         with patch.dict(drac.__salt__, {"drac.list_users": mock}):
             with patch.dict(drac.__opts__, {"test": True}):
-                comt = "`{0}` does not exist".format(name)
+                comt = "`{}` does not exist".format(name)
                 ret.update({"comment": comt})
                 self.assertDictEqual(drac.absent(name), ret)
 
             with patch.dict(drac.__opts__, {"test": False}):
-                comt = "`{0}` does not exist".format(name)
+                comt = "`{}` does not exist".format(name)
                 ret.update({"comment": comt})
                 self.assertDictEqual(drac.absent(name), ret)
 

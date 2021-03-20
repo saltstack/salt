@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 This module is used to manage Wordpress installations
 
@@ -6,7 +5,6 @@ This module is used to manage Wordpress installations
 """
 
 # Import Python Modules
-from __future__ import absolute_import, print_function, unicode_literals
 
 import collections
 
@@ -44,7 +42,7 @@ def list_plugins(path, user):
         salt '*' wordpress.list_plugins /var/www/html apache
     """
     ret = []
-    resp = __salt__["cmd.shell"](("wp --path={0} plugin list").format(path), runas=user)
+    resp = __salt__["cmd.shell"](("wp --path={} plugin list").format(path), runas=user)
     for line in resp.split("\n")[1:]:
         ret.append(line.split("\t"))
     return [plugin.__dict__ for plugin in map(_get_plugins, ret)]
@@ -71,7 +69,7 @@ def show_plugin(name, path, user):
     """
     ret = {"name": name}
     resp = __salt__["cmd.shell"](
-        ("wp --path={0} plugin status {1}").format(path, name), runas=user
+        ("wp --path={} plugin status {}").format(path, name), runas=user
     ).split("\n")
     for line in resp:
         if "Status" in line:
@@ -105,7 +103,7 @@ def activate(name, path, user):
         # already active
         return None
     resp = __salt__["cmd.shell"](
-        ("wp --path={0} plugin activate {1}").format(path, name), runas=user
+        ("wp --path={} plugin activate {}").format(path, name), runas=user
     )
     if "Success" in resp:
         return True
@@ -138,7 +136,7 @@ def deactivate(name, path, user):
         # already inactive
         return None
     resp = __salt__["cmd.shell"](
-        ("wp --path={0} plugin deactivate {1}").format(path, name), runas=user
+        ("wp --path={} plugin deactivate {}").format(path, name), runas=user
     )
     if "Success" in resp:
         return True
@@ -164,7 +162,7 @@ def is_installed(path, user=None):
         salt '*' wordpress.is_installed /var/www/html apache
     """
     retcode = __salt__["cmd.retcode"](
-        ("wp --path={0} core is-installed").format(path), runas=user
+        ("wp --path={} core is-installed").format(path), runas=user
     )
     if retcode == 0:
         return True
@@ -205,12 +203,12 @@ def install(path, user, admin_user, admin_password, admin_email, title, url):
     """
     retcode = __salt__["cmd.retcode"](
         (
-            "wp --path={0} core install "
-            '--title="{1}" '
-            "--admin_user={2} "
-            "--admin_password='{3}' "
-            "--admin_email={4} "
-            "--url={5}"
+            "wp --path={} core install "
+            '--title="{}" '
+            "--admin_user={} "
+            "--admin_password='{}' "
+            "--admin_email={} "
+            "--url={}"
         ).format(path, title, admin_user, admin_password, admin_email, url),
         runas=user,
     )

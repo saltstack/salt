@@ -1,23 +1,17 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
-# Import Salt Libs
 import salt.states.ports as ports
 from salt.exceptions import SaltInvocationError
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
 
 
-class MockModule(object):
+class MockModule:
     """
     Mock of __module__
     """
@@ -25,7 +19,7 @@ class MockModule(object):
     __module__ = "A"
 
 
-class MockContext(object):
+class MockContext:
     """
     Mock of __context__
     """
@@ -33,7 +27,7 @@ class MockContext(object):
     __context__ = {"ports.install_error": "salt"}
 
 
-class MockSys(object):
+class MockSys:
     """
     Mock of sys
     """
@@ -65,7 +59,7 @@ class PortsTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(side_effect=SaltInvocationError)
         with patch.dict(ports.__salt__, {"ports.showconfig": mock}):
             comt = (
-                "Unable to get configuration for {0}. Port name may "
+                "Unable to get configuration for {}. Port name may "
                 "be invalid, or ports tree may need to be updated. "
                 "Error message: ".format(name)
             )
@@ -91,7 +85,7 @@ class PortsTestCase(TestCase, LoaderModuleMockMixin):
             mock_dict = MagicMock(return_value={"origin": {"origin": "salt"}})
             with patch.dict(ports.__salt__, {"pkg.list_pkgs": mock_dict}):
                 with patch.dict(ports.__opts__, {"test": True}):
-                    comt = "{0} will be installed".format(name)
+                    comt = "{} will be installed".format(name)
                     ret.update({"comment": comt, "result": None})
                     self.assertDictEqual(ports.installed(name), ret)
 

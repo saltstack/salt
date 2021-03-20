@@ -2,12 +2,9 @@
     :codeauthor: :email:`Christian McHugh <christian.mchugh@gmail.com>`
 """
 
-# Import Python Libs
 
 import salt.modules.zabbix as zabbix
 from salt.exceptions import SaltException
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase

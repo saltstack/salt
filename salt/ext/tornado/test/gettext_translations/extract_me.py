@@ -9,7 +9,6 @@
 # 4) Put the file in the proper location: $LANG/LC_MESSAGES
 # pylint: skip-file
 
-from __future__ import absolute_import, division, print_function
 _("school")
 pgettext("law", "right")
 pgettext("good", "right")

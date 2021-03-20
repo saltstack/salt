@@ -1,10 +1,8 @@
-# coding: utf-8
 """
 Test the RSA ANSI X9.31 signer and verifier
 """
 
 # python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import ctypes
 import ctypes.util

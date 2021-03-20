@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 InfluxDB - A distributed time series database
 
@@ -27,7 +26,6 @@ version 0.9+)
     would override ``user`` and ``password`` while still using the defaults for
     ``host`` and ``port``.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import collections
 import logging
@@ -368,11 +366,9 @@ def get_retention_policy(database, name, **client_args):
 
     try:
         return next(
-            (
-                p
-                for p in client.get_list_retention_policies(database)
-                if p.get("name") == name
-            )
+            p
+            for p in client.get_list_retention_policies(database)
+            if p.get("name") == name
         )
     except StopIteration:
         return {}
@@ -609,7 +605,7 @@ def get_continuous_query(database, name, **client_args):
     try:
         for db, cqs in client.query("SHOW CONTINUOUS QUERIES").items():
             if db[0] == database:
-                return next((cq for cq in cqs if cq.get("name") == name))
+                return next(cq for cq in cqs if cq.get("name") == name)
     except StopIteration:
         return {}
     return {}
@@ -679,7 +675,7 @@ def drop_continuous_query(database, name, **client_args):
     """
     client = _client(**client_args)
 
-    query = "DROP CONTINUOUS QUERY {0} ON {1}".format(name, database)
+    query = "DROP CONTINUOUS QUERY {} ON {}".format(name, database)
     client.query(query)
     return True
 

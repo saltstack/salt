@@ -1,17 +1,11 @@
-# -*- coding: utf-8 -*-
 """
     :synopsis: Unit Tests for Windows iis Module 'state.win_iis'
     :platform: Windows
     .. versionadded:: 2019.2.2
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
 import salt.states.win_iis as win_iis
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase

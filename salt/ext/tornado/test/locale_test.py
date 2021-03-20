@@ -1,5 +1,4 @@
 # pylint: skip-file
-from __future__ import absolute_import, division, print_function
 
 import datetime
 import os
@@ -36,7 +35,7 @@ class TranslationLoaderTest(unittest.TestCase):
             os.path.join(os.path.dirname(__file__), 'csv_translations'))
         locale = salt.ext.tornado.locale.get("fr_FR")
         self.assertTrue(isinstance(locale, salt.ext.tornado.locale.CSVLocale))
-        self.assertEqual(locale.translate("school"), u"\u00e9cole")
+        self.assertEqual(locale.translate("school"), "\u00e9cole")
 
     # tempfile.mkdtemp is not available on app engine.
     @skipOnAppEngine
@@ -56,7 +55,7 @@ class TranslationLoaderTest(unittest.TestCase):
                 salt.ext.tornado.locale.load_translations(tmpdir)
                 locale = salt.ext.tornado.locale.get('fr_FR')
                 self.assertIsInstance(locale, salt.ext.tornado.locale.CSVLocale)
-                self.assertEqual(locale.translate("school"), u"\u00e9cole")
+                self.assertEqual(locale.translate("school"), "\u00e9cole")
             finally:
                 shutil.rmtree(tmpdir)
 
@@ -66,20 +65,20 @@ class TranslationLoaderTest(unittest.TestCase):
             "tornado_test")
         locale = salt.ext.tornado.locale.get("fr_FR")
         self.assertTrue(isinstance(locale, salt.ext.tornado.locale.GettextLocale))
-        self.assertEqual(locale.translate("school"), u"\u00e9cole")
-        self.assertEqual(locale.pgettext("law", "right"), u"le droit")
-        self.assertEqual(locale.pgettext("good", "right"), u"le bien")
-        self.assertEqual(locale.pgettext("organization", "club", "clubs", 1), u"le club")
-        self.assertEqual(locale.pgettext("organization", "club", "clubs", 2), u"les clubs")
-        self.assertEqual(locale.pgettext("stick", "club", "clubs", 1), u"le b\xe2ton")
-        self.assertEqual(locale.pgettext("stick", "club", "clubs", 2), u"les b\xe2tons")
+        self.assertEqual(locale.translate("school"), "\u00e9cole")
+        self.assertEqual(locale.pgettext("law", "right"), "le droit")
+        self.assertEqual(locale.pgettext("good", "right"), "le bien")
+        self.assertEqual(locale.pgettext("organization", "club", "clubs", 1), "le club")
+        self.assertEqual(locale.pgettext("organization", "club", "clubs", 2), "les clubs")
+        self.assertEqual(locale.pgettext("stick", "club", "clubs", 1), "le b\xe2ton")
+        self.assertEqual(locale.pgettext("stick", "club", "clubs", 2), "les b\xe2tons")
 
 
 class LocaleDataTest(unittest.TestCase):
     def test_non_ascii_name(self):
         name = salt.ext.tornado.locale.LOCALE_NAMES['es_LA']['name']
         self.assertTrue(isinstance(name, unicode_type))
-        self.assertEqual(name, u'Espa\u00f1ol')
+        self.assertEqual(name, 'Espa\u00f1ol')
         self.assertEqual(utf8(name), b'Espa\xc3\xb1ol')
 
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 A module to manage software on Windows
 
@@ -37,8 +36,6 @@ old.
 
 """
 
-# Import python future libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import collections
 import datetime
@@ -61,16 +58,12 @@ import salt.utils.pkg
 import salt.utils.platform
 import salt.utils.versions
 import salt.utils.win_functions
-
-# Import salt libs
 from salt.exceptions import (
     CommandExecutionError,
     MinionError,
     SaltInvocationError,
     SaltRenderError,
 )
-
-# Import third party libs
 from salt.ext import six
 
 # pylint: disable=import-error,no-name-in-module
@@ -177,9 +170,9 @@ def latest_version(*names, **kwargs):
             # check, whether latest available version
             # is newer than latest installed version
             if compare_versions(
-                ver1=six.text_type(latest_available),
+                ver1=str(latest_available),
                 oper=">",
-                ver2=six.text_type(latest_installed),
+                ver2=str(latest_installed),
             ):
                 log.debug(
                     "Upgrade of %s from %s to %s is available",
@@ -434,11 +427,9 @@ def list_pkgs(
 
     ret = {}
     name_map = _get_name_map(saltenv)
-    for pkg_name, val_list in six.iteritems(
-        _get_reg_software(
-            include_components=include_components, include_updates=include_updates
-        )
-    ):
+    for pkg_name, val_list in _get_reg_software(
+        include_components=include_components, include_updates=include_updates
+    ).items():
         if pkg_name in name_map:
             key = name_map[pkg_name]
             for val in val_list:
@@ -502,14 +493,14 @@ def _get_reg_software(include_components=True, include_updates=True):
             return False
         if __utils__["reg.value_exists"](
             hive=hive,
-            key="{0}\\{1}".format(key, sub_key),
+            key="{}\\{}".format(key, sub_key),
             vname="SystemComponent",
             use_32bit_registry=use_32bit_registry,
         ):
             if (
                 __utils__["reg.read_value"](
                     hive=hive,
-                    key="{0}\\{1}".format(key, sub_key),
+                    key="{}\\{}".format(key, sub_key),
                     vname="SystemComponent",
                     use_32bit_registry=use_32bit_registry,
                 )["vdata"]
@@ -531,14 +522,14 @@ def _get_reg_software(include_components=True, include_updates=True):
         products_key = "Software\\Classes\\Installer\\Products\\{0}"
         if __utils__["reg.value_exists"](
             hive=hive,
-            key="{0}\\{1}".format(key, sub_key),
+            key="{}\\{}".format(key, sub_key),
             vname="WindowsInstaller",
             use_32bit_registry=use_32bit_registry,
         ):
             if (
                 __utils__["reg.read_value"](
                     hive=hive,
-                    key="{0}\\{1}".format(key, sub_key),
+                    key="{}\\{}".format(key, sub_key),
                     vname="WindowsInstaller",
                     use_32bit_registry=use_32bit_registry,
                 )["vdata"]
@@ -564,7 +555,7 @@ def _get_reg_software(include_components=True, include_updates=True):
         """
         if not __utils__["reg.value_exists"](
             hive=hive,
-            key="{0}\\{1}".format(key, sub_key),
+            key="{}\\{}".format(key, sub_key),
             vname="UninstallString",
             use_32bit_registry=use_32bit_registry,
         ):
@@ -585,14 +576,14 @@ def _get_reg_software(include_components=True, include_updates=True):
         skip_types = ["Hotfix", "Security Update", "Update Rollup"]
         if __utils__["reg.value_exists"](
             hive=hive,
-            key="{0}\\{1}".format(key, sub_key),
+            key="{}\\{}".format(key, sub_key),
             vname="ReleaseType",
             use_32bit_registry=use_32bit_registry,
         ):
             if (
                 __utils__["reg.read_value"](
                     hive=hive,
-                    key="{0}\\{1}".format(key, sub_key),
+                    key="{}\\{}".format(key, sub_key),
                     vname="ReleaseType",
                     use_32bit_registry=use_32bit_registry,
                 )["vdata"]
@@ -611,7 +602,7 @@ def _get_reg_software(include_components=True, include_updates=True):
         """
         if __utils__["reg.value_exists"](
             hive=hive,
-            key="{0}\\{1}".format(key, sub_key),
+            key="{}\\{}".format(key, sub_key),
             vname="ParentKeyName",
             use_32bit_registry=use_32bit_registry,
         ):
@@ -628,7 +619,7 @@ def _get_reg_software(include_components=True, include_updates=True):
         """
         d_name_regdata = __utils__["reg.read_value"](
             hive=hive,
-            key="{0}\\{1}".format(key, sub_key),
+            key="{}\\{}".format(key, sub_key),
             vname="DisplayName",
             use_32bit_registry=use_32bit_registry,
         )
@@ -647,7 +638,7 @@ def _get_reg_software(include_components=True, include_updates=True):
 
         d_vers_regdata = __utils__["reg.read_value"](
             hive=hive,
-            key="{0}\\{1}".format(key, sub_key),
+            key="{}\\{}".format(key, sub_key),
             vname="DisplayVersion",
             use_32bit_registry=use_32bit_registry,
         )
@@ -659,7 +650,7 @@ def _get_reg_software(include_components=True, include_updates=True):
             "REG_DWORD",
         ]:
             if isinstance(d_vers_regdata["vdata"], int):
-                d_vers = six.text_type(d_vers_regdata["vdata"])
+                d_vers = str(d_vers_regdata["vdata"])
             elif (
                 d_vers_regdata["vdata"] and d_vers_regdata["vdata"] != "(value not set)"
             ):  # Check for blank values
@@ -718,7 +709,7 @@ def _get_reg_software(include_components=True, include_updates=True):
     for sub_key in __utils__["reg.list_keys"](**kwargs):
         # If the key does not exist in userdata, skip it
         if not __utils__["reg.key_exists"](
-            hive=kwargs["hive"], key="{0}\\{1}".format(userdata_key, sub_key)
+            hive=kwargs["hive"], key="{}\\{}".format(userdata_key, sub_key)
         ):
             continue
         kwargs["sub_key"] = sub_key
@@ -1014,7 +1005,7 @@ def refresh_db(**kwargs):
         )
 
     # Cache repo-ng locally
-    log.info("Fetching *.sls files from {0}".format(repo_details.winrepo_source_dir))
+    log.info("Fetching *.sls files from {}".format(repo_details.winrepo_source_dir))
     try:
         __salt__["cp.cache_dir"](
             path=repo_details.winrepo_source_dir,
@@ -1033,7 +1024,7 @@ def _get_repo_details(saltenv):
     """
     Return repo details for the specified saltenv as a namedtuple
     """
-    contextkey = "winrepo._get_repo_details.{0}".format(saltenv)
+    contextkey = "winrepo._get_repo_details.{}".format(saltenv)
 
     if contextkey in __context__:
         (winrepo_source_dir, local_dest, winrepo_file) = __context__[contextkey]
@@ -1068,7 +1059,7 @@ def _get_repo_details(saltenv):
 
             raise CommandExecutionError(
                 "Attempting to delete files from a possibly unsafe location: "
-                "{0}".format(local_dest)
+                "{}".format(local_dest)
             )
 
         __context__[contextkey] = (winrepo_source_dir, local_dest, winrepo_file)
@@ -1078,7 +1069,7 @@ def _get_repo_details(saltenv):
     except OSError as exc:
         if exc.errno != errno.EEXIST:
             raise CommandExecutionError(
-                "Failed to create {0}: {1}".format(local_dest, exc)
+                "Failed to create {}: {}".format(local_dest, exc)
             )
 
     winrepo_age = -1
@@ -1089,7 +1080,7 @@ def _get_repo_details(saltenv):
     except OSError as exc:
         if exc.errno != errno.ENOENT:
             raise CommandExecutionError(
-                "Failed to get age of {0}: {1}".format(winrepo_file, exc)
+                "Failed to get age of {}: {}".format(winrepo_file, exc)
             )
     except AttributeError:
         # Shouldn't happen but log if it does
@@ -1155,7 +1146,7 @@ def genrepo(**kwargs):
 
         # Skip hidden directories (.git)
         if re.search(r"[\\/]\..*", root):
-            log.debug("Skipping files in directory: {0}".format(root))
+            log.debug("Skipping files in directory: {}".format(root))
             continue
 
         short_path = os.path.relpath(root, repo_details.local_dest)
@@ -1213,9 +1204,9 @@ def _repo_process_pkg_sls(filename, short_path_name, ret, successful_verbose):
     renderers = salt.loader.render(__opts__, __salt__)
 
     def _failed_compile(prefix_msg, error_msg):
-        log.error("{0} '{1}': {2} ".format(prefix_msg, short_path_name, error_msg))
+        log.error("{} '{}': {} ".format(prefix_msg, short_path_name, error_msg))
         ret.setdefault("errors", {})[short_path_name] = [
-            "{0}, {1} ".format(prefix_msg, error_msg)
+            "{}, {} ".format(prefix_msg, error_msg)
         ]
         return False
 
@@ -1235,18 +1226,18 @@ def _repo_process_pkg_sls(filename, short_path_name, ret, successful_verbose):
     if config and isinstance(config, dict):
         revmap = {}
         errors = []
-        for pkgname, version_list in six.iteritems(config):
+        for pkgname, version_list in config.items():
             if pkgname in ret["repo"]:
                 log.error(
                     "package '%s' within '%s' already defined, skipping",
                     pkgname,
                     short_path_name,
                 )
-                errors.append("package '{0}' already defined".format(pkgname))
+                errors.append("package '{}' already defined".format(pkgname))
                 break
-            for version_str, repodata in six.iteritems(version_list):
+            for version_str, repodata in version_list.items():
                 # Ensure version is a string/unicode
-                if not isinstance(version_str, six.string_types):
+                if not isinstance(version_str, str):
                     log.error(
                         "package '%s' within '%s', version number %s' "
                         "is not a string",
@@ -1255,7 +1246,7 @@ def _repo_process_pkg_sls(filename, short_path_name, ret, successful_verbose):
                         version_str,
                     )
                     errors.append(
-                        "package '{0}', version number {1} "
+                        "package '{}', version number {} "
                         "is not a string".format(pkgname, version_str)
                     )
                     continue
@@ -1269,8 +1260,8 @@ def _repo_process_pkg_sls(filename, short_path_name, ret, successful_verbose):
                         version_str,
                     )
                     errors.append(
-                        "package '{0}', repo data for "
-                        "version number {1} is not defined as a dictionary".format(
+                        "package '{}', repo data for "
+                        "version number {} is not defined as a dictionary".format(
                             pkgname, version_str
                         )
                     )
@@ -1297,10 +1288,10 @@ def _get_source_sum(source_hash, file_path, saltenv):
     ret = dict()
     schemes = ("salt", "http", "https", "ftp", "swift", "s3", "file")
     invalid_hash_msg = (
-        "Source hash '{0}' format is invalid. It must be in "
+        "Source hash '{}' format is invalid. It must be in "
         "the format <hash type>=<hash>"
     ).format(source_hash)
-    source_hash = six.text_type(source_hash)
+    source_hash = str(source_hash)
     source_hash_scheme = _urlparse(source_hash).scheme
 
     if source_hash_scheme in schemes:
@@ -1313,7 +1304,7 @@ def _get_source_sum(source_hash, file_path, saltenv):
 
         if not cached_hash_file:
             raise CommandExecutionError(
-                "Source hash file {0} not found".format(source_hash)
+                "Source hash file {} not found".format(source_hash)
             )
 
         ret = __salt__["file.extract_hash"](cached_hash_file, "", file_path)
@@ -1324,9 +1315,9 @@ def _get_source_sum(source_hash, file_path, saltenv):
         items = source_hash.split("=", 1)
 
         if len(items) != 2:
-            invalid_hash_msg = (
-                "{0}, or it must be a supported protocol" ": {1}"
-            ).format(invalid_hash_msg, ", ".join(schemes))
+            invalid_hash_msg = ("{}, or it must be a supported protocol" ": {}").format(
+                invalid_hash_msg, ", ".join(schemes)
+            )
             raise SaltInvocationError(invalid_hash_msg)
 
         ret["hash_type"], ret["hsum"] = [item.strip().lower() for item in items]
@@ -1340,7 +1331,7 @@ def _get_msiexec(use_msiexec):
     """
     if use_msiexec is False:
         return False, ""
-    if isinstance(use_msiexec, six.string_types):
+    if isinstance(use_msiexec, str):
         if os.path.isfile(use_msiexec):
             return True, use_msiexec
         else:
@@ -1543,7 +1534,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
 
     # Loop through each package
     changed = []
-    for pkg_name, options in six.iteritems(pkg_params):
+    for pkg_name, options in pkg_params.items():
 
         # Load package information for the package
         pkginfo = _get_package_info(pkg_name, saltenv=saltenv)
@@ -1551,15 +1542,15 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
         # Make sure pkginfo was found
         if not pkginfo:
             log.error("Unable to locate package %s", pkg_name)
-            ret[pkg_name] = "Unable to locate package {0}".format(pkg_name)
+            ret[pkg_name] = "Unable to locate package {}".format(pkg_name)
             continue
 
         version_num = options.get("version")
         #  Using the salt cmdline with version=5.3 might be interpreted
         #  as a float it must be converted to a string in order for
         #  string matching to work.
-        if not isinstance(version_num, six.string_types) and version_num is not None:
-            version_num = six.text_type(version_num)
+        if not isinstance(version_num, str) and version_num is not None:
+            version_num = str(version_num)
 
         # If the version was not passed, version_num will be None
         if not version_num:
@@ -1627,9 +1618,9 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                         exclude_pat="E@init.sls$",
                     )
                 except MinionError as exc:
-                    msg = "Failed to cache {0}".format(path)
+                    msg = "Failed to cache {}".format(path)
                     log.exception(msg, exc_info=exc)
-                    return "{0}\n{1}".format(msg, exc)
+                    return "{}\n{}".format(msg, exc)
 
             # Check to see if the cache_file is cached... if passed
             if cache_file and cache_file.startswith("salt:"):
@@ -1640,9 +1631,9 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                     try:
                         cached_file = __salt__["cp.cache_file"](cache_file, saltenv)
                     except MinionError as exc:
-                        msg = "Failed to cache {0}".format(cache_file)
+                        msg = "Failed to cache {}".format(cache_file)
                         log.exception(msg, exc_info=exc)
-                        return "{0}\n{1}".format(msg, exc)
+                        return "{}\n{}".format(msg, exc)
 
                 # Make sure the cached file is the same as the source
                 if __salt__["cp.hash_file"](cache_file, saltenv) != __salt__[
@@ -1651,9 +1642,9 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                     try:
                         cached_file = __salt__["cp.cache_file"](cache_file, saltenv)
                     except MinionError as exc:
-                        msg = "Failed to cache {0}".format(cache_file)
+                        msg = "Failed to cache {}".format(cache_file)
                         log.exception(msg, exc_info=exc)
-                        return "{0}\n{1}".format(msg, exc)
+                        return "{}\n{}".format(msg, exc)
 
                     # Check if the cache_file was cached successfully
                     if not cached_file:
@@ -1668,9 +1659,9 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                 try:
                     cached_pkg = __salt__["cp.cache_file"](installer, saltenv)
                 except MinionError as exc:
-                    msg = "Failed to cache {0}".format(installer)
+                    msg = "Failed to cache {}".format(installer)
                     log.exception(msg, exc_info=exc)
-                    return "{0}\n{1}".format(msg, exc)
+                    return "{}\n{}".format(msg, exc)
 
                 # Check if the installer was cached successfully
                 if not cached_pkg:
@@ -1689,9 +1680,9 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                     try:
                         cached_pkg = __salt__["cp.cache_file"](installer, saltenv)
                     except MinionError as exc:
-                        msg = "Failed to cache {0}".format(installer)
+                        msg = "Failed to cache {}".format(installer)
                         log.exception(msg, exc_info=exc)
-                        return "{0}\n{1}".format(msg, exc)
+                        return "{}\n{}".format(msg, exc)
 
                     # Check if the installer was cached successfully
                     if not cached_pkg:
@@ -1727,7 +1718,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
 
             if source_sum["hsum"] != cached_pkg_sum:
                 raise SaltInvocationError(
-                    "Source hash '{0}' does not match package hash '{1}'".format(
+                    "Source hash '{}' does not match package hash '{}'".format(
                         source_sum["hsum"], cached_pkg_sum
                     )
                 )
@@ -1737,7 +1728,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
 
         install_flags = pkginfo[version_num].get("install_flags", "")
         if options and options.get("extra_install_flags"):
-            install_flags = "{0} {1}".format(
+            install_flags = "{} {}".format(
                 install_flags, options.get("extra_install_flags", "")
             )
 
@@ -1747,17 +1738,17 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
         # Build cmd and arguments
         # cmd and arguments must be separated for use with the task scheduler
         cmd_shell = os.getenv(
-            "ComSpec", "{0}\\system32\\cmd.exe".format(os.getenv("WINDIR"))
+            "ComSpec", "{}\\system32\\cmd.exe".format(os.getenv("WINDIR"))
         )
         if use_msiexec:
-            arguments = '"{0}" /I "{1}"'.format(msiexec, cached_pkg)
+            arguments = '"{}" /I "{}"'.format(msiexec, cached_pkg)
             if pkginfo[version_num].get("allusers", True):
-                arguments = "{0} ALLUSERS=1".format(arguments)
+                arguments = "{} ALLUSERS=1".format(arguments)
         else:
-            arguments = '"{0}"'.format(cached_pkg)
+            arguments = '"{}"'.format(cached_pkg)
 
         if install_flags:
-            arguments = "{0} {1}".format(arguments, install_flags)
+            arguments = "{} {}".format(arguments, install_flags)
 
         # Install the software
         # Check Use Scheduler Option
@@ -1769,7 +1760,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                 force=True,
                 action_type="Execute",
                 cmd=cmd_shell,
-                arguments='/s /c "{0}"'.format(arguments),
+                arguments='/s /c "{}"'.format(arguments),
                 start_in=cache_path,
                 trigger_type="Once",
                 start_date="1975-01-01",
@@ -1817,7 +1808,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
         else:
             # Launch the command
             result = __salt__["cmd.run_all"](
-                '"{0}" /s /c "{1}"'.format(cmd_shell, arguments),
+                '"{}" /s /c "{}"'.format(cmd_shell, arguments),
                 cache_path,
                 output_loglevel="trace",
                 python_shell=False,
@@ -1959,14 +1950,14 @@ def remove(name=None, pkgs=None, **kwargs):
 
     # Loop through each package
     changed = []  # list of changed package names
-    for pkgname, version_num in six.iteritems(pkg_params):
+    for pkgname, version_num in pkg_params.items():
 
         # Load package information for the package
         pkginfo = _get_package_info(pkgname, saltenv=saltenv)
 
         # Make sure pkginfo was found
         if not pkginfo:
-            msg = "Unable to locate package {0}".format(pkgname)
+            msg = "Unable to locate package {}".format(pkgname)
             log.error(msg)
             ret[pkgname] = msg
             continue
@@ -1985,7 +1976,7 @@ def remove(name=None, pkgs=None, **kwargs):
             #  Using the salt cmdline with version=5.3 might be interpreted
             #  as a float it must be converted to a string in order for
             #  string matching to work.
-            version_num = six.text_type(version_num)
+            version_num = str(version_num)
 
         # At least one version of the software is installed.
         if version_num is None:
@@ -2006,7 +1997,7 @@ def remove(name=None, pkgs=None, **kwargs):
                     removal_targets.append(version_num)
                 else:
                     log.debug("%s %s not installed", pkgname, version_num)
-                    ret[pkgname] = {"current": "{0} not installed".format(version_num)}
+                    ret[pkgname] = {"current": "{} not installed".format(version_num)}
                     continue
             elif "latest" in pkginfo:
                 # we do not have version entry, assume software can self upgrade and use latest
@@ -2022,7 +2013,7 @@ def remove(name=None, pkgs=None, **kwargs):
                 "%s %s no definition to remove this version", pkgname, version_num
             )
             ret[pkgname] = {
-                "current": "{0} no definition, cannot removed".format(version_num)
+                "current": "{} no definition, cannot removed".format(version_num)
             }
             continue
 
@@ -2060,9 +2051,9 @@ def remove(name=None, pkgs=None, **kwargs):
                             path, saltenv, False, None, "E@init.sls$"
                         )
                     except MinionError as exc:
-                        msg = "Failed to cache {0}".format(path)
+                        msg = "Failed to cache {}".format(path)
                         log.exception(msg, exc_info=exc)
-                        return "{0}\n{1}".format(msg, exc)
+                        return "{}\n{}".format(msg, exc)
 
                 # Check to see if the uninstaller is cached
                 cached_pkg = __salt__["cp.is_cached"](uninstaller, saltenv)
@@ -2071,9 +2062,9 @@ def remove(name=None, pkgs=None, **kwargs):
                     try:
                         cached_pkg = __salt__["cp.cache_file"](uninstaller, saltenv)
                     except MinionError as exc:
-                        msg = "Failed to cache {0}".format(uninstaller)
+                        msg = "Failed to cache {}".format(uninstaller)
                         log.exception(msg, exc_info=exc)
-                        return "{0}\n{1}".format(msg, exc)
+                        return "{}\n{}".format(msg, exc)
 
                     # Check if the uninstaller was cached successfully
                     if not cached_pkg:
@@ -2091,9 +2082,9 @@ def remove(name=None, pkgs=None, **kwargs):
                         try:
                             cached_pkg = __salt__["cp.cache_file"](uninstaller, saltenv)
                         except MinionError as exc:
-                            msg = "Failed to cache {0}".format(uninstaller)
+                            msg = "Failed to cache {}".format(uninstaller)
                             log.exception(msg, exc_info=exc)
-                            return "{0}\n{1}".format(msg, exc)
+                            return "{}\n{}".format(msg, exc)
 
                         # Check if the installer was cached successfully
                         if not cached_pkg:
@@ -2112,14 +2103,14 @@ def remove(name=None, pkgs=None, **kwargs):
             # os.path.expandvars is not required as we run everything through cmd.exe /s /c
 
             if kwargs.get("extra_uninstall_flags"):
-                uninstall_flags = "{0} {1}".format(
+                uninstall_flags = "{} {}".format(
                     uninstall_flags, kwargs.get("extra_uninstall_flags", "")
                 )
 
             # Compute msiexec string
             use_msiexec, msiexec = _get_msiexec(pkginfo[target].get("msiexec", False))
             cmd_shell = os.getenv(
-                "ComSpec", "{0}\\system32\\cmd.exe".format(os.getenv("WINDIR"))
+                "ComSpec", "{}\\system32\\cmd.exe".format(os.getenv("WINDIR"))
             )
 
             # Build cmd and arguments
@@ -2127,12 +2118,12 @@ def remove(name=None, pkgs=None, **kwargs):
             if use_msiexec:
                 # Check if uninstaller is set to {guid}, if not we assume its a remote msi file.
                 # which has already been downloaded.
-                arguments = '"{0}" /X "{1}"'.format(msiexec, cached_pkg)
+                arguments = '"{}" /X "{}"'.format(msiexec, cached_pkg)
             else:
-                arguments = '"{0}"'.format(cached_pkg)
+                arguments = '"{}"'.format(cached_pkg)
 
             if uninstall_flags:
-                arguments = "{0} {1}".format(arguments, uninstall_flags)
+                arguments = "{} {}".format(arguments, uninstall_flags)
 
             # Uninstall the software
             changed.append(pkgname)
@@ -2145,7 +2136,7 @@ def remove(name=None, pkgs=None, **kwargs):
                     force=True,
                     action_type="Execute",
                     cmd=cmd_shell,
-                    arguments='/s /c "{0}"'.format(arguments),
+                    arguments='/s /c "{}"'.format(arguments),
                     start_in=cache_path,
                     trigger_type="Once",
                     start_date="1975-01-01",
@@ -2161,7 +2152,7 @@ def remove(name=None, pkgs=None, **kwargs):
             else:
                 # Launch the command
                 result = __salt__["cmd.run_all"](
-                    '"{0}" /s /c "{1}"'.format(cmd_shell, arguments),
+                    '"{}" /s /c "{}"'.format(cmd_shell, arguments),
                     output_loglevel="trace",
                     python_shell=False,
                     redirect_stderr=True,
@@ -2301,7 +2292,7 @@ def get_repo_data(saltenv="base"):
             except Exception as exc:  # pylint: disable=broad-except
                 log.exception(exc)
                 return {}
-    except IOError as exc:
+    except OSError as exc:
         log.error("Not able to read repo file")
         log.exception(exc)
         return {}
@@ -2314,8 +2305,7 @@ def _get_name_map(saltenv="base"):
     u_name_map = {}
     name_map = get_repo_data(saltenv).get("name_map", {})
 
-    if not six.PY2:
-        return name_map
+    return name_map
 
     for k in name_map:
         u_name_map[k] = name_map[k]
@@ -2351,7 +2341,7 @@ def _get_latest_pkg_version(pkginfo):
     'Not Found' if 'Not Found' is the only entry.
     """
     if len(pkginfo) == 1:
-        return next(six.iterkeys(pkginfo))
+        return next(iter(pkginfo.keys()))
     try:
         return sorted(pkginfo, key=cmp_to_key(_reverse_cmp_pkg_versions)).pop()
     except IndexError:
@@ -2383,9 +2373,9 @@ def compare_versions(ver1="", oper="==", ver2=""):
 
     # Support version being the special meaning of 'latest'
     if ver1 == "latest":
-        ver1 = six.text_type(sys.maxsize)
+        ver1 = str(sys.maxsize)
     if ver2 == "latest":
-        ver2 = six.text_type(sys.maxsize)
+        ver2 = str(sys.maxsize)
     # Support version being the special meaning of 'Not Found'
     if ver1 == "Not Found":
         ver1 = "0.0.0.0.0"

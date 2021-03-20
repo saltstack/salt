@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Dynamic roster from terraform current state
 ===========================================
@@ -54,13 +53,10 @@ examples.
 
 .. _Terraform Salt: https://github.com/dmacvicar/terraform-provider-salt
 """
-# Import Python libs
-from __future__ import absolute_import, unicode_literals
 
 import logging
 import os.path
 
-# Import Salt libs
 import salt.utils.files
 import salt.utils.json
 

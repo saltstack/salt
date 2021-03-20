@@ -1,17 +1,11 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
-# Import Python Libs
-from __future__ import absolute_import
 
 import os
 
-# Import Salt Libs
 import salt.modules.poudriere as poudriere
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, mock_open, patch
 from tests.support.unit import TestCase
@@ -47,9 +41,9 @@ class PoudriereTestCase(TestCase, LoaderModuleMockMixin):
         """
         temp_dir = os.path.join("tmp", "salt")
         conf_file = os.path.join("tmp", "salt", "salt-make.conf")
-        ret1 = "Could not create or find required directory {0}".format(temp_dir)
-        ret2 = "Looks like file {0} could not be created".format(conf_file)
-        ret3 = {"changes": "Created {0}".format(conf_file)}
+        ret1 = "Could not create or find required directory {}".format(temp_dir)
+        ret2 = "Looks like file {} could not be created".format(conf_file)
+        ret3 = {"changes": "Created {}".format(conf_file)}
         mock = MagicMock(return_value=temp_dir)
         mock_true = MagicMock(return_value=True)
         with patch.dict(

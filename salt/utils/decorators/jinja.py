@@ -1,17 +1,14 @@
-# -*- coding: utf-8 -*-
 """
 Jinja-specific decorators
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 # Ensure we're using the custom logging from Salt
 import salt.log.setup as logging
 
 log = logging.getLogger(__name__)
 
 
-class JinjaFilter(object):
+class JinjaFilter:
     """
     This decorator is used to specify that a function is to be loaded as a
     Jinja filter.
@@ -35,7 +32,7 @@ class JinjaFilter(object):
 jinja_filter = JinjaFilter
 
 
-class JinjaTest(object):
+class JinjaTest:
     """
     This decorator is used to specify that a function is to be loaded as a
     Jinja test.
@@ -59,7 +56,7 @@ class JinjaTest(object):
 jinja_test = JinjaTest
 
 
-class JinjaGlobal(object):
+class JinjaGlobal:
     """
     This decorator is used to specify that a function is to be loaded as a
     Jinja global.

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Use Azure Blob as a Pillar source.
 
@@ -37,8 +36,6 @@ The Azure Blob ext_pillar can be configured with the following parameters:
 :param blob_sync_on_update: Specifies if the cache is synced on update. Defaults to True.
 
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
@@ -49,15 +46,11 @@ from copy import deepcopy
 import salt.utils.files
 import salt.utils.hashutils
 
-# Import 3rd-party libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext import six
 from salt.ext.six.moves import filter
-
-# Import Salt libs
 from salt.pillar import Pillar
 
-# Import Azure libs
 HAS_LIBS = False
 try:
     from azure.storage.blob import BlobServiceClient
@@ -131,8 +124,8 @@ def ext_pillar(
     if blob_sync_on_update:
         # sync the containers to the local cache
         log.info("Syncing local pillar cache from Azure Blob...")
-        for saltenv, env_meta in six.iteritems(metadata):
-            for container, files in six.iteritems(_find_files(env_meta)):
+        for saltenv, env_meta in metadata.items():
+            for container, files in _find_files(env_meta).items():
                 for file_path in files:
                     cached_file_path = _get_cached_file_name(
                         container, saltenv, file_path
@@ -268,7 +261,7 @@ def _get_containers_cache_filename(container):
     if not os.path.exists(cache_dir):
         os.makedirs(cache_dir)
 
-    return os.path.join(cache_dir, "{0}-files.cache".format(container))
+    return os.path.join(cache_dir, "{}-files.cache".format(container))
 
 
 def _refresh_containers_cache_file(
@@ -377,7 +370,7 @@ def _find_files(metadata):
     """
     ret = {}
 
-    for container, data in six.iteritems(metadata):
+    for container, data in metadata.items():
         if container not in ret:
             ret[container] = []
 

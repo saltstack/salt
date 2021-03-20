@@ -1,14 +1,8 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
 import salt.states.boto_iam_role as boto_iam_role
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -105,7 +99,7 @@ class BotoIAMRoleTestCase(TestCase, LoaderModuleMockMixin):
             },
         ):
             with patch.dict(boto_iam_role.__opts__, {"test": False}):
-                comt = " Failed to create {0} IAM role.".format(name)
+                comt = " Failed to create {} IAM role.".format(name)
                 ret.update({"comment": comt})
                 self.assertDictEqual(boto_iam_role.present(name), ret)
 

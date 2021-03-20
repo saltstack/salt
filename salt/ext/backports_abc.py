@@ -31,8 +31,7 @@ def get_mro(cls):
 def old_style_mro(cls):
     yield cls
     for base in cls.__bases__:
-        for c in old_style_mro(base):
-            yield c
+        yield from old_style_mro(base)
 
 
 def mk_gen():

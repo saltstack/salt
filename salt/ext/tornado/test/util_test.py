@@ -1,6 +1,4 @@
-# coding: utf-8
 # pylint: skip-file
-from __future__ import absolute_import, division, print_function
 import re
 import sys
 import datetime
@@ -23,7 +21,7 @@ class RaiseExcInfoTest(unittest.TestCase):
         # doesn't have a "copy constructor"
         class TwoArgException(Exception):
             def __init__(self, a, b):
-                super(TwoArgException, self).__init__()
+                super().__init__()
                 self.a, self.b = a, b
 
         try:
@@ -135,7 +133,7 @@ class ConfigurableTest(unittest.TestCase):
 
 class UnicodeLiteralTest(unittest.TestCase):
     def test_unicode_escapes(self):
-        self.assertEqual(utf8(u'\u00e9'), b'\xc3\xa9')
+        self.assertEqual(utf8('\u00e9'), b'\xc3\xa9')
 
 
 class ExecInTest(unittest.TestCase):
@@ -191,7 +189,7 @@ class ImportObjectTest(unittest.TestCase):
         self.assertIs(import_object('tornado.escape.utf8'), utf8)
 
     def test_import_member_unicode(self):
-        self.assertIs(import_object(u'tornado.escape.utf8'), utf8)
+        self.assertIs(import_object('tornado.escape.utf8'), utf8)
 
     def test_import_module(self):
         self.assertIs(import_object('tornado.escape'), salt.ext.tornado.escape)
@@ -200,7 +198,7 @@ class ImportObjectTest(unittest.TestCase):
         # The internal implementation of __import__ differs depending on
         # whether the thing being imported is a module or not.
         # This variant requires a byte string in python 2.
-        self.assertIs(import_object(u'tornado.escape'), salt.ext.tornado.escape)
+        self.assertIs(import_object('tornado.escape'), salt.ext.tornado.escape)
 
 
 class ReUnescapeTest(unittest.TestCase):

@@ -1,20 +1,13 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Rahul Handay <rahulha@saltstack.com>
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.modules.pkg_resource as pkg_resource
-
-# Import Salt Libs
 import salt.utils.data
 import salt.utils.yaml
 import yaml
 from salt.ext import six
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -164,14 +157,9 @@ class PkgresTestCase(TestCase, LoaderModuleMockMixin):
             "foobar.something": "3:1.1-23.1",
             "foobar.": "3:1.1-23.1",
         }
-        if six.PY3:
-            self.assertCountEqual(
-                pkg_resource.format_pkg_list(packages, False, None), expected_pkg_list
-            )
-        else:
-            self.assertItemsEqual(
-                pkg_resource.format_pkg_list(packages, False, None), expected_pkg_list
-            )
+        self.assertCountEqual(
+            pkg_resource.format_pkg_list(packages, False, None), expected_pkg_list
+        )
 
     def test_format_pkg_list_with_attr(self):
         """
@@ -243,20 +231,12 @@ class PkgresTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(
             pkg_resource.__salt__, {"pkg.parse_arch": NAME_ARCH_MAPPING.get}
         ):
-            if six.PY3:
-                self.assertCountEqual(
-                    pkg_resource.format_pkg_list(
-                        packages, False, attr=["epoch", "release"]
-                    ),
-                    expected_pkg_list,
-                )
-            else:
-                self.assertItemsEqual(
-                    pkg_resource.format_pkg_list(
-                        packages, False, attr=["epoch", "release"]
-                    ),
-                    expected_pkg_list,
-                )
+            self.assertCountEqual(
+                pkg_resource.format_pkg_list(
+                    packages, False, attr=["epoch", "release"]
+                ),
+                expected_pkg_list,
+            )
 
     def test_stringify(self):
         """

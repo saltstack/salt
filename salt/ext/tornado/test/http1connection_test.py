@@ -1,5 +1,4 @@
 # pylint: skip-file
-from __future__ import absolute_import, division, print_function
 
 import socket
 
@@ -13,7 +12,7 @@ from salt.ext.tornado.testing import AsyncTestCase, bind_unused_port, gen_test
 
 class HTTP1ConnectionTest(AsyncTestCase):
     def setUp(self):
-        super(HTTP1ConnectionTest, self).setUp()
+        super().setUp()
         self.asyncSetUp()
 
     @gen_test

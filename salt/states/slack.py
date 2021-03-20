@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Send a message to Slack
 =======================
@@ -25,10 +24,7 @@ The api key can be specified in the master or minion configuration like below:
 
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt libs
 from salt.exceptions import SaltInvocationError
 
 
@@ -127,7 +123,7 @@ def post_message(name, **kwargs):
         return ret
 
     if __opts__["test"]:
-        ret["comment"] = "The following message is to be sent to Slack: {0}".format(
+        ret["comment"] = "The following message is to be sent to Slack: {}".format(
             kwargs.get("message")
         )
         ret["result"] = None
@@ -154,13 +150,13 @@ def post_message(name, **kwargs):
                 icon_emoji=kwargs.get("icon_emoji"),
             )
     except SaltInvocationError as sie:
-        ret["comment"] = "Failed to send message ({0}): {1}".format(sie, name)
+        ret["comment"] = "Failed to send message ({}): {}".format(sie, name)
     else:
         if isinstance(result, bool) and result:
             ret["result"] = True
-            ret["comment"] = "Sent message: {0}".format(name)
+            ret["comment"] = "Sent message: {}".format(name)
         else:
-            ret["comment"] = "Failed to send message ({0}): {1}".format(
+            ret["comment"] = "Failed to send message ({}): {}".format(
                 result["message"], name
             )
 

@@ -1,19 +1,10 @@
-# -*- coding: utf-8 -*-
-
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 from collections import namedtuple
 
 import salt.utils.args
-
-# Import Salt Libs
 from salt.exceptions import SaltInvocationError
 from salt.ext import six
 from tests.support.mock import DEFAULT, patch
-
-# Import Salt Testing Libs
 from tests.support.unit import TestCase
 
 log = logging.getLogger(__name__)
@@ -31,7 +22,7 @@ class ArgsTestCase(TestCase):
         cmd = salt.utils.args.condition_input(
             ["*", "foo.bar", 20141020201325675584], None
         )
-        self.assertIsInstance(cmd[2], six.text_type)
+        self.assertIsInstance(cmd[2], str)
 
     def test_clean_kwargs(self):
         self.assertDictEqual(salt.utils.args.clean_kwargs(foo="bar"), {"foo": "bar"})
@@ -42,7 +33,7 @@ class ArgsTestCase(TestCase):
         )
 
     def test_get_function_argspec(self):
-        class DummyClass(object):
+        class DummyClass:
             def __init__(self, first):
                 pass
 

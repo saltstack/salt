@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module for low-level interaction with JbossAS7 through CLI.
 
@@ -36,18 +35,13 @@ Example:
 
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import pprint
 import re
 import time
 
-# Import Salt libs
 from salt.exceptions import CommandExecutionError
-
-# Import 3rd-party libs
 from salt.ext import six
 
 log = logging.getLogger(__name__)
@@ -117,7 +111,7 @@ def run_operation(jboss_config, operation, fail_on_error=True, retries=1):
             cli_result["success"] = cli_result["outcome"] == "success"
         else:
             raise CommandExecutionError(
-                "Operation has returned unparseable output: {0}".format(
+                "Operation has returned unparseable output: {}".format(
                     cli_command_result["stdout"]
                 )
             )
@@ -160,13 +154,13 @@ def _call_cli(jboss_config, command, retries=1):
     command_segments = [
         jboss_config["cli_path"],
         "--connect",
-        '--controller="{0}"'.format(jboss_config["controller"]),
+        '--controller="{}"'.format(jboss_config["controller"]),
     ]
-    if "cli_user" in six.iterkeys(jboss_config):
-        command_segments.append('--user="{0}"'.format(jboss_config["cli_user"]))
-    if "cli_password" in six.iterkeys(jboss_config):
-        command_segments.append('--password="{0}"'.format(jboss_config["cli_password"]))
-    command_segments.append('--command="{0}"'.format(__escape_command(command)))
+    if "cli_user" in jboss_config.keys():
+        command_segments.append('--user="{}"'.format(jboss_config["cli_user"]))
+    if "cli_password" in jboss_config.keys():
+        command_segments.append('--password="{}"'.format(jboss_config["cli_password"]))
+    command_segments.append('--command="{}"'.format(__escape_command(command)))
     cli_script = " ".join(command_segments)
 
     cli_command_result = __salt__["cmd.run_all"](cli_script)
@@ -343,7 +337,7 @@ def __process_tokens_internal(tokens, start_at=0):
             log.debug("    TYPE: EXPRESSION")
             is_expression = True
         else:
-            raise CommandExecutionError("Unknown token! Token: {0}".format(token))
+            raise CommandExecutionError("Unknown token! Token: {}".format(token))
 
         token_no = token_no + 1
 
@@ -388,12 +382,7 @@ def __is_long(token):
 
 
 def __get_long(token):
-    if six.PY2:
-        # pylint: disable=incompatible-py3-code,undefined-variable
-        return long(token[0:-1])
-        # pylint: enable=incompatible-py3-code,undefined-variable
-    else:
-        return int(token[0:-1])
+    return int(token[0:-1])
 
 
 def __is_datatype(token):

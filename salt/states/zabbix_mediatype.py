@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Management of Zabbix mediatypes.
 
@@ -6,10 +5,7 @@ Management of Zabbix mediatypes.
 
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt libs
 from salt.ext import six
 
 
@@ -56,14 +52,14 @@ def present(name, mediatype, **kwargs):
     ret = {"name": name, "changes": {}, "result": False, "comment": ""}
 
     # Comment and change messages
-    comment_mediatype_created = "Mediatype {0} created.".format(name)
-    comment_mediatype_updated = "Mediatype {0} updated.".format(name)
-    comment_mediatype_notcreated = "Unable to create mediatype: {0}. ".format(name)
-    comment_mediatype_exists = "Mediatype {0} already exists.".format(name)
+    comment_mediatype_created = "Mediatype {} created.".format(name)
+    comment_mediatype_updated = "Mediatype {} updated.".format(name)
+    comment_mediatype_notcreated = "Unable to create mediatype: {}. ".format(name)
+    comment_mediatype_exists = "Mediatype {} already exists.".format(name)
     changes_mediatype_created = {
         name: {
-            "old": "Mediatype {0} does not exist.".format(name),
-            "new": "Mediatype {0} created.".format(name),
+            "old": "Mediatype {} does not exist.".format(name),
+            "new": "Mediatype {} created.".format(name),
         }
     }
 
@@ -72,7 +68,7 @@ def present(name, mediatype, **kwargs):
         if isinstance(kwargs["exec_params"], list):
             kwargs["exec_params"] = "\n".join(kwargs["exec_params"]) + "\n"
         else:
-            kwargs["exec_params"] = six.text_type(kwargs["exec_params"]) + "\n"
+            kwargs["exec_params"] = str(kwargs["exec_params"]) + "\n"
 
     mediatype_exists = __salt__["zabbix.mediatype_get"](name, **connection_args)
 
@@ -372,7 +368,7 @@ def present(name, mediatype, **kwargs):
             ret["changes"] = changes_mediatype_created
         else:
             ret["result"] = False
-            ret["comment"] = comment_mediatype_notcreated + six.text_type(
+            ret["comment"] = comment_mediatype_notcreated + str(
                 mediatype_create["error"]
             )
 
@@ -380,7 +376,7 @@ def present(name, mediatype, **kwargs):
     if error:
         ret["changes"] = {}
         ret["result"] = False
-        ret["comment"] = six.text_type(error)
+        ret["comment"] = str(error)
 
     return ret
 
@@ -411,13 +407,13 @@ def absent(name, **kwargs):
     ret = {"name": name, "changes": {}, "result": False, "comment": ""}
 
     # Comment and change messages
-    comment_mediatype_deleted = "Mediatype {0} deleted.".format(name)
-    comment_mediatype_notdeleted = "Unable to delete mediatype: {0}. ".format(name)
-    comment_mediatype_notexists = "Mediatype {0} does not exist.".format(name)
+    comment_mediatype_deleted = "Mediatype {} deleted.".format(name)
+    comment_mediatype_notdeleted = "Unable to delete mediatype: {}. ".format(name)
+    comment_mediatype_notexists = "Mediatype {} does not exist.".format(name)
     changes_mediatype_deleted = {
         name: {
-            "old": "Mediatype {0} exists.".format(name),
-            "new": "Mediatype {0} deleted.".format(name),
+            "old": "Mediatype {} exists.".format(name),
+            "new": "Mediatype {} deleted.".format(name),
         }
     }
 
@@ -451,7 +447,7 @@ def absent(name, **kwargs):
             ret["changes"] = changes_mediatype_deleted
         else:
             ret["result"] = False
-            ret["comment"] = comment_mediatype_notdeleted + six.text_type(
+            ret["comment"] = comment_mediatype_notdeleted + str(
                 mediatype_delete["error"]
             )
 

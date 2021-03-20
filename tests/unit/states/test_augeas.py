@@ -1,17 +1,11 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
     :codeauthor: Andrew Colin Kissa <andrew@topdog.za.net>
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
-# Import Salt Libs
 import salt.states.augeas as augeas
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, mock_open, patch
 from tests.support.unit import TestCase
@@ -99,7 +93,7 @@ class AugeasTestCase(TestCase, LoaderModuleMockMixin):
         """
         comt = (
             "Error: Changes should be prefixed with /files if no "
-            "context is provided, change: {0}".format(self.changes[0])
+            "context is provided, change: {}".format(self.changes[0])
         )
         self.ret.update({"comment": comt, "result": False})
 
@@ -209,7 +203,7 @@ class AugeasTestCase(TestCase, LoaderModuleMockMixin):
         filename_ = "/etc/services/service-name"
         comt = (
             "Error: Changes should be made to one file at a time, "
-            "detected changes to {0} and {1}".format(filename, filename_)
+            "detected changes to {} and {}".format(filename, filename_)
         )
         self.ret.update(dict(comment=comt, result=False))
 

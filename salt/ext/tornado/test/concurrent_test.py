@@ -14,7 +14,6 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 # pylint: skip-file
-from __future__ import absolute_import, division, print_function
 
 import gc
 import logging
@@ -217,7 +216,7 @@ class CapError(Exception):
     pass
 
 
-class BaseCapClient(object):
+class BaseCapClient:
     def __init__(self, port, io_loop):
         self.port = port
         self.io_loop = io_loop
@@ -294,9 +293,9 @@ class GeneratorCapClient(BaseCapClient):
         callback(self.process_response(data))
 
 
-class ClientTestMixin(object):
+class ClientTestMixin:
     def setUp(self):
-        super(ClientTestMixin, self).setUp()  # type: ignore
+        super().setUp()  # type: ignore
         self.server = CapServer(io_loop=self.io_loop)
         sock, port = bind_unused_port()
         self.server.add_sockets([sock])
@@ -304,7 +303,7 @@ class ClientTestMixin(object):
 
     def tearDown(self):
         self.server.stop()
-        super(ClientTestMixin, self).tearDown()  # type: ignore
+        super().tearDown()  # type: ignore
 
     def test_callback(self):
         self.client.capitalize("hello", callback=self.stop)
@@ -362,7 +361,7 @@ class GeneratorClientTest(ClientTestMixin, AsyncTestCase, LogTrapTestCase):
 class RunOnExecutorTest(AsyncTestCase):
     @gen_test
     def test_no_calling(self):
-        class Object(object):
+        class Object:
             def __init__(self, io_loop):
                 self.io_loop = io_loop
                 self.executor = futures.thread.ThreadPoolExecutor(1)
@@ -377,7 +376,7 @@ class RunOnExecutorTest(AsyncTestCase):
 
     @gen_test
     def test_call_with_no_args(self):
-        class Object(object):
+        class Object:
             def __init__(self, io_loop):
                 self.io_loop = io_loop
                 self.executor = futures.thread.ThreadPoolExecutor(1)
@@ -392,7 +391,7 @@ class RunOnExecutorTest(AsyncTestCase):
 
     @gen_test
     def test_call_with_io_loop(self):
-        class Object(object):
+        class Object:
             def __init__(self, io_loop):
                 self._io_loop = io_loop
                 self.executor = futures.thread.ThreadPoolExecutor(1)
@@ -407,7 +406,7 @@ class RunOnExecutorTest(AsyncTestCase):
 
     @gen_test
     def test_call_with_executor(self):
-        class Object(object):
+        class Object:
             def __init__(self, io_loop):
                 self.io_loop = io_loop
                 self.__executor = futures.thread.ThreadPoolExecutor(1)
@@ -422,7 +421,7 @@ class RunOnExecutorTest(AsyncTestCase):
 
     @gen_test
     def test_call_with_both(self):
-        class Object(object):
+        class Object:
             def __init__(self, io_loop):
                 self._io_loop = io_loop
                 self.__executor = futures.thread.ThreadPoolExecutor(1)

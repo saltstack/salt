@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 Functions for analyzing/parsing docstrings
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import re
@@ -18,7 +16,7 @@ def strip_rst(docs):
     """
     Strip/replace reStructuredText directives in docstrings
     """
-    for func, docstring in six.iteritems(docs):
+    for func, docstring in docs.items():
         log.debug("Stripping docstring for %s", func)
         if not docstring:
             continue

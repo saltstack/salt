@@ -1,27 +1,18 @@
-# -*- coding: utf-8 -*-
-
-# import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import os.path
 from collections import namedtuple
 
 import pkg_resources  # pylint: disable=3rd-party-module-not-gated
 
-# Import Salt Libs
 import salt.config
 import salt.loader
 import salt.utils.versions
 from salt.ext import six
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
 
-# import Python Third Party Libs
 # pylint: disable=import-error
 try:
     import salt.modules.boto_route53 as boto_route53
@@ -83,8 +74,8 @@ def _has_required_moto():
 @skipIf(HAS_MOTO is False, "The moto module must be installed.")
 @skipIf(
     _has_required_moto() is False,
-    "The moto module must be >= to {0} for "
-    "PY2 or {1} for PY3.".format(required_moto, required_moto_py3),
+    "The moto module must be >= to {} for "
+    "PY2 or {} for PY3.".format(required_moto, required_moto_py3),
 )
 class BotoRoute53TestCase(TestCase, LoaderModuleMockMixin):
     """
@@ -154,7 +145,7 @@ class BotoRoute53TestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(healthcheck, expected)
 
 
-class DummyConn(object):
+class DummyConn:
     """
     Simple object housing a mock to simulate Error conditions. Each keyword
     argument passed into this will be set as MagicMock with the keyword value
@@ -162,7 +153,7 @@ class DummyConn(object):
     """
 
     def __init__(self, **kwargs):
-        for key, val in six.iteritems(kwargs):
+        for key, val in kwargs.items():
             setattr(self, key, MagicMock(side_effect=val))
 
 

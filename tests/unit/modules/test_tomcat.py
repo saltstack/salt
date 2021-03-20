@@ -1,9 +1,3 @@
-# -*- coding: utf-8 -*-
-
-# Import future libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import 3rd-party libs
 from io import BytesIO, StringIO
 
 # Import salt module
@@ -16,8 +10,6 @@ from salt.ext.six.moves.urllib.request import (
     HTTPDigestAuthHandler as _HTTPDigestAuthHandler,
 )
 from salt.ext.six.moves.urllib.request import build_opener as _build_opener
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase

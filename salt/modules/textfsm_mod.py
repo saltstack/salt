@@ -17,8 +17,6 @@ inside the renderer (Jinja, Mako, Genshi, etc.).
 """
 
 import logging
-
-# Import python lib
 import os
 
 from salt.utils.files import fopen

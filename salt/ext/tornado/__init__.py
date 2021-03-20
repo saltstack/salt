@@ -17,7 +17,6 @@
 """The Tornado web server and tools."""
 # pylint: skip-file
 
-from __future__ import absolute_import, division, print_function
 
 # version is a human-readable version number.
 

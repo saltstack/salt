@@ -13,7 +13,6 @@
 # under the License.
 # pylint: skip-file
 
-from __future__ import absolute_import, division, print_function
 
 import collections
 
@@ -23,7 +22,7 @@ from salt.ext.tornado.concurrent import Future
 __all__ = ['Condition', 'Event', 'Semaphore', 'BoundedSemaphore', 'Lock']
 
 
-class _TimeoutGarbageCollector(object):
+class _TimeoutGarbageCollector:
     """Base class for objects that periodically clean up timed-out waiters.
 
     Avoids memory leak in a common pattern like:
@@ -105,11 +104,11 @@ class Condition(_TimeoutGarbageCollector):
     """
 
     def __init__(self):
-        super(Condition, self).__init__()
+        super().__init__()
         self.io_loop = ioloop.IOLoop.current()
 
     def __repr__(self):
-        result = '<%s' % (self.__class__.__name__, )
+        result = '<{}'.format(self.__class__.__name__)
         if self._waiters:
             result += ' waiters[%s]' % len(self._waiters)
         return result + '>'
@@ -149,7 +148,7 @@ class Condition(_TimeoutGarbageCollector):
         self.notify(len(self._waiters))
 
 
-class Event(object):
+class Event:
     """An event blocks coroutines until its internal flag is set to True.
 
     Similar to `threading.Event`.
@@ -195,7 +194,7 @@ class Event(object):
         self._future = Future()
 
     def __repr__(self):
-        return '<%s %s>' % (
+        return '<{} {}>'.format(
             self.__class__.__name__, 'set' if self.is_set() else 'clear')
 
     def is_set(self):
@@ -230,7 +229,7 @@ class Event(object):
             return gen.with_timeout(timeout, self._future)
 
 
-class _ReleasingContextManager(object):
+class _ReleasingContextManager:
     """Releases a Lock or Semaphore at the end of a "with" statement.
 
         with (yield semaphore.acquire()):
@@ -344,19 +343,19 @@ class Semaphore(_TimeoutGarbageCollector):
        Added ``async with`` support in Python 3.5.
     """
     def __init__(self, value=1):
-        super(Semaphore, self).__init__()
+        super().__init__()
         if value < 0:
             raise ValueError('semaphore initial value must be >= 0')
 
         self._value = value
 
     def __repr__(self):
-        res = super(Semaphore, self).__repr__()
-        extra = 'locked' if self._value == 0 else 'unlocked,value:{0}'.format(
+        res = super().__repr__()
+        extra = 'locked' if self._value == 0 else 'unlocked,value:{}'.format(
             self._value)
         if self._waiters:
-            extra = '{0},waiters:{1}'.format(extra, len(self._waiters))
-        return '<{0} [{1}]>'.format(res[1:-1], extra)
+            extra = '{},waiters:{}'.format(extra, len(self._waiters))
+        return '<{} [{}]>'.format(res[1:-1], extra)
 
     def release(self):
         """Increment the counter and wake one waiter."""
@@ -422,17 +421,17 @@ class BoundedSemaphore(Semaphore):
     is a sign of a bug.
     """
     def __init__(self, value=1):
-        super(BoundedSemaphore, self).__init__(value=value)
+        super().__init__(value=value)
         self._initial_value = value
 
     def release(self):
         """Increment the counter and wake one waiter."""
         if self._value >= self._initial_value:
             raise ValueError("Semaphore released too many times")
-        super(BoundedSemaphore, self).release()
+        super().release()
 
 
-class Lock(object):
+class Lock:
     """A lock for coroutines.
 
     A Lock begins unlocked, and `acquire` locks it immediately. While it is
@@ -474,7 +473,7 @@ class Lock(object):
         self._block = BoundedSemaphore(value=1)
 
     def __repr__(self):
-        return "<%s _block=%s>" % (
+        return "<{} _block={}>".format(
             self.__class__.__name__,
             self._block)
 

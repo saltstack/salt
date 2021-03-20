@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Simple returner for CouchDB. Optional configuration
 settings are listed below, along with sane defaults:
@@ -52,19 +51,14 @@ otherwise multi-minion targeting can lead to losing output:
 * other minions fail with ``{'error': 'HTTP Error 409: Conflict'}``
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import time
 
 import salt.returners
-
-# Import Salt libs
 import salt.utils.jid
 import salt.utils.json
 
-# Import 3rd-party libs
 # pylint: disable=no-name-in-module,import-error
 from salt.ext.six.moves.urllib.error import HTTPError
 from salt.ext.six.moves.urllib.request import HTTPHandler as _HTTPHandler
@@ -134,7 +128,7 @@ def _request(method, url, content_type=None, _data=None):
     try:
         handler = opener.open(request)
     except HTTPError as exc:
-        return {"error": "{0}".format(exc)}
+        return {"error": "{}".format(exc)}
     return salt.utils.json.loads(handler.read())
 
 

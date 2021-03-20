@@ -1,7 +1,3 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import os
 import random
@@ -105,8 +101,8 @@ def _has_required_boto():
 @skipIf(
     _has_required_boto() is False,
     (
-        "The boto3 module must be greater than or equal to version {0}, "
-        "and botocore must be greater than or equal to {1}".format(
+        "The boto3 module must be greater than or equal to version {}, "
+        "and botocore must be greater than or equal to {}".format(
             required_boto3_version, required_botocore_version
         )
     ),
@@ -122,7 +118,7 @@ class BotoLambdaTestCaseBase(TestCase, LoaderModuleMockMixin):
         return {boto_lambda: {"__utils__": utils}}
 
     def setUp(self):
-        super(BotoLambdaTestCaseBase, self).setUp()
+        super().setUp()
         boto_lambda.__init__(self.opts)
         del self.opts
         # Set up MagicMock to replace the boto3 session
@@ -144,14 +140,13 @@ class BotoLambdaTestCaseBase(TestCase, LoaderModuleMockMixin):
         self.addCleanup(delattr, self, "conn")
 
 
-class TempZipFile(object):
+class TempZipFile:
     def __enter__(self):
         with NamedTemporaryFile(
             suffix=".zip", prefix="salt_test_", delete=False
         ) as tmp:
             to_write = "###\n"
-            if six.PY3:
-                to_write = salt.utils.stringutils.to_bytes(to_write)
+            to_write = salt.utils.stringutils.to_bytes(to_write)
             tmp.write(to_write)
             self.zipfile = tmp.name
         return self.zipfile
@@ -160,7 +155,7 @@ class TempZipFile(object):
         os.remove(self.zipfile)
 
 
-class BotoLambdaTestCaseMixin(object):
+class BotoLambdaTestCaseMixin:
     pass
 
 
@@ -601,7 +596,7 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
 @skipIf(
     _has_required_boto() is False,
     "The boto3 module must be greater than"
-    " or equal to version {0}".format(required_boto3_version),
+    " or equal to version {}".format(required_boto3_version),
 )
 class BotoLambdaAliasTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin):
     """
@@ -777,7 +772,7 @@ class BotoLambdaAliasTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin):
 @skipIf(
     _has_required_boto() is False,
     "The boto3 module must be greater than"
-    " or equal to version {0}".format(required_boto3_version),
+    " or equal to version {}".format(required_boto3_version),
 )
 class BotoLambdaEventSourceMappingTestCase(
     BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin

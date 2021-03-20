@@ -17,7 +17,6 @@
 """Posix implementations of platform-specific functionality."""
 # pylint: skip-file
 
-from __future__ import absolute_import, division, print_function
 
 import fcntl
 import os
@@ -54,7 +53,7 @@ class Waker(interface.Waker):
     def wake(self):
         try:
             self.writer.write(b"x")
-        except (IOError, ValueError):
+        except (OSError, ValueError):
             pass
 
     def consume(self):
@@ -63,7 +62,7 @@ class Waker(interface.Waker):
                 result = self.reader.read()
                 if not result:
                     break
-        except IOError:
+        except OSError:
             pass
 
     def close(self):

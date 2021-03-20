@@ -1,9 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Tests for salt.utils.iam
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.utils.iam as iam
 from salt.ext import six

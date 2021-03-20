@@ -1,17 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 Tests for win_path states
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 
-# Import Salt Libs
 import salt.states.win_path as win_path
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, patch
 from tests.support.unit import TestCase
@@ -46,7 +40,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
                 # Test already absent
                 with patch.dict(win_path.__salt__, {"win_path.exists": _mock([False])}):
                     ret = copy.deepcopy(ret_base)
-                    ret["comment"] = "{0} is not in the PATH".format(NAME)
+                    ret["comment"] = "{} is not in the PATH".format(NAME)
                     ret["result"] = True
                     self.assertDictEqual(win_path.absent(NAME), ret)
 
@@ -55,7 +49,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
                     win_path.__salt__, {"win_path.exists": _mock([True, False])}
                 ):
                     ret = copy.deepcopy(ret_base)
-                    ret["comment"] = "Removed {0} from the PATH".format(NAME)
+                    ret["comment"] = "Removed {} from the PATH".format(NAME)
                     ret["changes"]["removed"] = NAME
                     ret["result"] = True
                     self.assertDictEqual(win_path.absent(NAME), ret)
@@ -65,7 +59,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
                     win_path.__salt__, {"win_path.exists": _mock([True, True])}
                 ):
                     ret = copy.deepcopy(ret_base)
-                    ret["comment"] = "Failed to remove {0} from the PATH".format(NAME)
+                    ret["comment"] = "Failed to remove {} from the PATH".format(NAME)
                     ret["result"] = False
                     self.assertDictEqual(win_path.absent(NAME), ret)
 
@@ -75,14 +69,14 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
                 # Test already absent
                 with patch.dict(win_path.__salt__, {"win_path.exists": _mock([False])}):
                     ret = copy.deepcopy(ret_base)
-                    ret["comment"] = "{0} is not in the PATH".format(NAME)
+                    ret["comment"] = "{} is not in the PATH".format(NAME)
                     ret["result"] = True
                     self.assertDictEqual(win_path.absent(NAME), ret)
 
                 # Test the test-mode return
                 with patch.dict(win_path.__salt__, {"win_path.exists": _mock([True])}):
                     ret = copy.deepcopy(ret_base)
-                    ret["comment"] = "{0} would be removed from the PATH".format(NAME)
+                    ret["comment"] = "{} would be removed from the PATH".format(NAME)
                     ret["result"] = None
                     self.assertDictEqual(win_path.absent(NAME), ret)
 
@@ -130,7 +124,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
                 "name": NAME,
                 "changes": {"index": {"old": None, "new": 3}},
                 "result": True,
-                "comment": "Added {0} to the PATH.".format(NAME),
+                "comment": "Added {} to the PATH.".format(NAME),
             },
         )
 
@@ -163,7 +157,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
                 "name": NAME,
                 "changes": {},
                 "result": False,
-                "comment": "Failed to add {0} to the PATH.".format(NAME),
+                "comment": "Failed to add {} to the PATH.".format(NAME),
             },
         )
 
@@ -197,7 +191,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
                 "changes": {},
                 "result": False,
                 "comment": "Encountered error: Global Thermonuclear War. "
-                "Failed to add {0} to the PATH.".format(NAME),
+                "Failed to add {} to the PATH.".format(NAME),
             },
         )
 
@@ -230,7 +224,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
                 "name": NAME,
                 "changes": {"index": {"old": 3, "new": 0}},
                 "result": True,
-                "comment": "Moved {0} from index 3 to 0.".format(NAME),
+                "comment": "Moved {} from index 3 to 0.".format(NAME),
             },
         )
 
@@ -265,7 +259,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
                 "name": NAME,
                 "changes": {"index": {"old": -2, "new": -1}},
                 "result": True,
-                "comment": "Moved {0} from index -2 to -1.".format(NAME),
+                "comment": "Moved {} from index -2 to -1.".format(NAME),
             },
         )
 
@@ -299,7 +293,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
                 "changes": {},
                 "result": False,
                 "comment": "Encountered error: Global Thermonuclear War. "
-                "Failed to move {0} from index 3 to 0.".format(NAME),
+                "Failed to move {} from index 3 to 0.".format(NAME),
             },
         )
 
@@ -335,7 +329,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
                 "changes": {},
                 "result": False,
                 "comment": "Encountered error: Global Thermonuclear War. "
-                "Failed to move {0} from index -2 to -1.".format(NAME),
+                "Failed to move {} from index -2 to -1.".format(NAME),
             },
         )
 
@@ -368,7 +362,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
                 "name": NAME,
                 "changes": {},
                 "result": False,
-                "comment": "Failed to move {0} from index 3 to 0.".format(NAME),
+                "comment": "Failed to move {} from index 3 to 0.".format(NAME),
             },
         )
 
@@ -403,7 +397,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
                 "name": NAME,
                 "changes": {},
                 "result": False,
-                "comment": "Failed to move {0} from index -2 to -1.".format(NAME),
+                "comment": "Failed to move {} from index -2 to -1.".format(NAME),
             },
         )
 
@@ -434,7 +428,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
                 "name": NAME,
                 "changes": {"index": {"old": 3, "new": 0}},
                 "result": None,
-                "comment": "{0} would be moved from index 3 to 0.".format(NAME),
+                "comment": "{} would be moved from index 3 to 0.".format(NAME),
             },
         )
 
@@ -465,7 +459,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
                 "name": NAME,
                 "changes": {"index": {"old": -2, "new": -1}},
                 "result": None,
-                "comment": "{0} would be moved from index -2 to -1.".format(NAME),
+                "comment": "{} would be moved from index -2 to -1.".format(NAME),
             },
         )
 
@@ -504,8 +498,8 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
                 "name": NAME,
                 "changes": {},
                 "result": True,
-                "comment": "{0} already exists in the PATH{1}.".format(
-                    NAME, " at index {0}".format(index) if index is not None else ""
+                "comment": "{} already exists in the PATH{}.".format(
+                    NAME, " at index {}".format(index) if index is not None else ""
                 ),
             },
         )

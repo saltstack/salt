@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
@@ -20,12 +19,9 @@
         http://stackoverflow.com/questions/6190331/
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 from collections.abc import Callable
 
-# Import 3rd-party libs
 from salt.ext import six
 
 try:
@@ -79,10 +75,10 @@ except (ImportError, AttributeError):
                 because their insertion order is arbitrary.
 
                 """
-                super(OrderedDict, self).__init__()  # pylint: disable=E1003
+                super().__init__()  # pylint: disable=E1003
                 if len(args) > 1:
                     raise TypeError(
-                        "expected at most 1 arguments, got {0}".format(len(args))
+                        "expected at most 1 arguments, got {}".format(len(args))
                     )
                 try:
                     self.__root
@@ -130,7 +126,7 @@ except (ImportError, AttributeError):
             def clear(self):
                 "od.clear() -> None.  Remove all items from od."
                 try:
-                    for node in six.itervalues(self.__map):
+                    for node in self.__map.values():
                         del node[:]
                     root = self.__root
                     root[:] = [root, root, None]
@@ -202,7 +198,7 @@ except (ImportError, AttributeError):
                 if len(args) > 2:
                     raise TypeError(
                         "update() takes at most 2 positional "
-                        "arguments ({0} given)".format(len(args))
+                        "arguments ({} given)".format(len(args))
                     )
                 elif not args:
                     raise TypeError("update() takes at least 1 argument (0 given)")
@@ -220,7 +216,7 @@ except (ImportError, AttributeError):
                 else:
                     for key, value in other:
                         self[key] = value
-                for key, value in six.iteritems(kwds):
+                for key, value in kwds.items():
                     self[key] = value
 
             __update = (
@@ -257,8 +253,8 @@ except (ImportError, AttributeError):
                 _repr_running[call_key] = 1
                 try:
                     if not self:
-                        return "{0}()".format(self.__class__.__name__)
-                    return "{0}('{1}')".format(
+                        return "{}()".format(self.__class__.__name__)
+                    return "{}('{}')".format(
                         self.__class__.__name__, list(self.items())
                     )
                 finally:
@@ -324,7 +320,7 @@ class DefaultOrderedDict(OrderedDict):
     def __init__(self, default_factory=None, *a, **kw):
         if default_factory is not None and not isinstance(default_factory, Callable):
             raise TypeError("first argument must be callable")
-        super(DefaultOrderedDict, self).__init__(*a, **kw)
+        super().__init__(*a, **kw)
         self.default_factory = default_factory
 
     def __getitem__(self, key):
@@ -358,6 +354,6 @@ class DefaultOrderedDict(OrderedDict):
         return type(self)(self.default_factory, copy.deepcopy(self.items()))
 
     def __repr__(self, _repr_running={}):  # pylint: disable=W0102
-        return "DefaultOrderedDict({0}, {1})".format(
-            self.default_factory, super(DefaultOrderedDict, self).__repr__()
+        return "DefaultOrderedDict({}, {})".format(
+            self.default_factory, super().__repr__()
         )

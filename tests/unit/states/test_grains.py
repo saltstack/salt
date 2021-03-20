@@ -1,27 +1,19 @@
-# -*- coding: utf-8 -*-
 """
 unit tests for the grains state
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import contextlib
-
-# Import Python libs
 import os
 
 import salt.modules.grains as grainsmod
 import salt.states.grains as grains
-
-# Import salt libs
 import salt.utils.files
 import salt.utils.stringutils
 import salt.utils.yaml
 from salt.ext import six
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-
-# Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
 

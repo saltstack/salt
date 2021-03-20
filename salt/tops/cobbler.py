@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Cobbler Tops
 ============
@@ -19,9 +18,7 @@ the Cobbler tops and Cobbler pillar modules.
 Module Documentation
 ====================
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 
 import salt.ext.six.moves.xmlrpc_client  # pylint: disable=E0611

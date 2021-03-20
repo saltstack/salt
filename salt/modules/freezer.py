@@ -1,12 +1,9 @@
-# -*- coding: utf-8 -*-
-
 """
 :maintainer:    Alberto Planas <aplanas@suse.com>
 :maturity:      new
 :depends:       None
 :platform:      Linux
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os

@@ -1,26 +1,20 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Rahul Handay <rahulha@saltstack.com>
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
-# Import Salt Libs
 import salt.config
 import salt.states.winrepo as winrepo
 import salt.utils.path
 from salt.syspaths import BASE_FILE_ROOTS_DIR
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
 
 
-class MockRunnerClient(object):
+class MockRunnerClient:
     """
     Mock RunnerClient class
     """
@@ -28,7 +22,7 @@ class MockRunnerClient(object):
     def __init__(self):
         pass
 
-    class RunnerClient(object):
+    class RunnerClient:
         """
         Mock RunnerClient class
         """
@@ -95,7 +89,7 @@ class WinrepoTestCase(TestCase, LoaderModuleMockMixin):
             "name": "salt",
             "changes": {},
             "result": False,
-            "comment": "{0} is missing".format(
+            "comment": "{} is missing".format(
                 os.sep.join([BASE_FILE_ROOTS_DIR, "win", "repo"])
             ),
         }

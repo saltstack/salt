@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # pylint: skip-file
 
-from __future__ import absolute_import, division, print_function
 
 from salt.ext.tornado import gen, ioloop
 from salt.ext.tornado.log import app_log
@@ -160,12 +159,12 @@ class SetUpTearDownTest(unittest.TestCase):
 
 class GenTest(AsyncTestCase):
     def setUp(self):
-        super(GenTest, self).setUp()
+        super().setUp()
         self.finished = False
 
     def tearDown(self):
         self.assertTrue(self.finished)
-        super(GenTest, self).tearDown()
+        super().tearDown()
 
     @gen_test
     def test_sync(self):

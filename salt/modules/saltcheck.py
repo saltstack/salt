@@ -297,7 +297,6 @@ Supported assertions
   ``saltcheck.run_highstate_tests`` are needed.
 """
 
-# Import Python libs
 
 import copy
 import logging
@@ -305,7 +304,6 @@ import multiprocessing
 import os
 import time
 
-# Import Salt libs
 import salt.client
 import salt.exceptions
 import salt.utils.data

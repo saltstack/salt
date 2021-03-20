@@ -16,14 +16,11 @@ reference the man page for ``sfdisk(8)``.
 """
 
 import logging
-
-# Import python libs
 import os
 import re
 import stat
 import string
 
-# Import Salt libs
 import salt.utils.path
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError

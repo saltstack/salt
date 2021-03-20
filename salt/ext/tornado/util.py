@@ -11,7 +11,6 @@ and `.Resolver`.
 """
 # pylint: skip-file
 
-from __future__ import absolute_import, division, print_function
 
 import array
 import atexit
@@ -100,7 +99,7 @@ class ObjectDict(_ObjectDictBase):
         self[name] = value
 
 
-class GzipDecompressor(object):
+class GzipDecompressor:
     """Streaming gzip decompressor.
 
     The interface is like that of `zlib.decompressobj` (without some of the
@@ -243,7 +242,7 @@ _re_unescape_pattern = re.compile(r'\\(.)', re.DOTALL)
 
 def re_unescape(s):
     # type: (str) -> str
-    """Unescape a string escaped by `re.escape`.
+    r"""Unescape a string escaped by `re.escape`.
 
     May raise ``ValueError`` for regular expressions which could not
     have been produced by `re.escape` (for example, strings containing
@@ -254,7 +253,7 @@ def re_unescape(s):
     return _re_unescape_pattern.sub(_re_unescape_replacement, s)
 
 
-class Configurable(object):
+class Configurable:
     """Base class for configurable interfaces.
 
     A configurable interface is an (abstract) class whose constructor
@@ -287,7 +286,7 @@ class Configurable(object):
         else:
             impl = cls
         init_kwargs.update(kwargs)
-        instance = super(Configurable, cls).__new__(impl)
+        instance = super().__new__(impl)
         # initialize vs __init__ chosen for compatibility with AsyncHTTPClient
         # singleton magic.  If we get rid of that we can switch to __init__
         # here too.
@@ -362,7 +361,7 @@ class Configurable(object):
         base.__impl_kwargs = saved[1]
 
 
-class ArgReplacer(object):
+class ArgReplacer:
     """Replaces one value in an ``args, kwargs`` pair.
 
     Inspects the function signature to find an argument by name

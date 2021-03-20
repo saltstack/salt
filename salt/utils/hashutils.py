@@ -1,10 +1,7 @@
-# encoding: utf-8
 """
 A collection of hashing and encoding utils.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import base64
 import hashlib
 import hmac
@@ -14,8 +11,6 @@ import random
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.stringutils
-
-# Import Salt libs
 from salt.ext import six
 from salt.utils.decorators.jinja import jinja_filter
 
@@ -76,12 +71,8 @@ def base64_decodestring(instr):
     """
     bvalue = salt.utils.stringutils.to_bytes(instr)
 
-    if six.PY3:
-        # Handle PY3
-        decoded = base64.decodebytes(bvalue)
-    else:
-        # Handle PY2
-        decoded = base64.decodestring(bvalue)
+    # Handle PY3
+    decoded = base64.decodebytes(bvalue)
 
     try:
         return salt.utils.stringutils.to_unicode(
@@ -106,9 +97,8 @@ def sha1_digest(instr):
     """
     Generate an sha1 hash of a given string.
     """
-    if six.PY3:
-        b = salt.utils.stringutils.to_bytes(instr)
-        return hashlib.sha1(b).hexdigest()
+    b = salt.utils.stringutils.to_bytes(instr)
+    return hashlib.sha1(b).hexdigest()
     return hashlib.sha1(instr).hexdigest()
 
 
@@ -167,9 +157,7 @@ def random_hash(size=9999999999, hash_type=None):
         hash_type = "md5"
     hasher = getattr(hashlib, hash_type)
     return hasher(
-        salt.utils.stringutils.to_bytes(
-            six.text_type(random.SystemRandom().randint(0, size))
-        )
+        salt.utils.stringutils.to_bytes(str(random.SystemRandom().randint(0, size)))
     ).hexdigest()
 
 
@@ -186,7 +174,7 @@ def get_hash(path, form="sha256", chunk_size=65536):
     """
     hash_type = hasattr(hashlib, form) and getattr(hashlib, form) or None
     if hash_type is None:
-        raise ValueError("Invalid hash type: {0}".format(form))
+        raise ValueError("Invalid hash type: {}".format(form))
 
     with salt.utils.files.fopen(path, "rb") as ifile:
         hash_obj = hash_type()
@@ -196,7 +184,7 @@ def get_hash(path, form="sha256", chunk_size=65536):
         return hash_obj.hexdigest()
 
 
-class DigestCollector(object):
+class DigestCollector:
     """
     Class to collect digest of the file tree.
     """
@@ -208,7 +196,7 @@ class DigestCollector(object):
         """
         self.__digest = hasattr(hashlib, form) and getattr(hashlib, form)() or None
         if self.__digest is None:
-            raise ValueError("Invalid hash type: {0}".format(form))
+            raise ValueError("Invalid hash type: {}".format(form))
         self.__buff = buff
 
     def add(self, path):

@@ -19,7 +19,6 @@ the server into multiple processes and managing subprocesses.
 """
 # pylint: skip-file
 
-from __future__ import absolute_import, division, print_function
 
 import errno
 import os
@@ -192,7 +191,7 @@ def task_id():
     return _task_id
 
 
-class Subprocess(object):
+class Subprocess:
     """Wraps ``subprocess.Popen`` with IOStream support.
 
     The constructor is the same as ``subprocess.Popen`` with the following

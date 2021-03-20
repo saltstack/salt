@@ -2,16 +2,12 @@
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
-# Import Python Libs
 
 import json
 
-# Import Salt Libs
 import salt.modules.nftables as nftables
 import salt.utils.files
 from salt.exceptions import CommandExecutionError
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, mock_open, patch
 from tests.support.unit import TestCase

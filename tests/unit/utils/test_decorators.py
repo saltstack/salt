@@ -1,15 +1,11 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Bo Maryniuk (bo@suse.de)
     unit.utils.decorators_test
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import inspect
 
-# Import Salt libs
 import salt.utils.decorators as decorators
 from salt.exceptions import CommandExecutionError, SaltConfigurationError
 from salt.version import SaltStackVersion
@@ -17,7 +13,7 @@ from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
 
 
-class DummyLogger(object):
+class DummyLogger:
     """
     Dummy logger accepts everything and simply logs
     """

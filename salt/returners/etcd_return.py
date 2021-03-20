@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Return data to an etcd server or cluster
 
@@ -64,12 +63,9 @@ create the profiles as specified above. Then add:
     etcd.returner_read_profile: my_etcd_read
     etcd.returner_write_profile: my_etcd_write
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 
-# Import salt libs
 import salt.utils.jid
 import salt.utils.json
 
@@ -134,7 +130,7 @@ def save_load(jid, load, minions=None):
     """
     Save the load to the specified jid
     """
-    log.debug("sdstack_etcd returner <save_load> called jid: {0}".format(jid))
+    log.debug("sdstack_etcd returner <save_load> called jid: {}".format(jid))
     write_profile = __opts__.get("etcd.returner_write_profile")
     client, path = _get_conn(__opts__, write_profile)
     if write_profile:
@@ -164,7 +160,7 @@ def get_load(jid):
     """
     Return the load data that marks a specified jid
     """
-    log.debug("sdstack_etcd returner <get_load> called jid: {0}".format(jid))
+    log.debug("sdstack_etcd returner <get_load> called jid: {}".format(jid))
     read_profile = __opts__.get("etcd.returner_read_profile")
     client, path = _get_conn(__opts__, read_profile)
     return salt.utils.json.loads(
@@ -176,7 +172,7 @@ def get_jid(jid):
     """
     Return the information returned when the specified job id was executed
     """
-    log.debug("sdstack_etcd returner <get_jid> called jid: {0}".format(jid))
+    log.debug("sdstack_etcd returner <get_jid> called jid: {}".format(jid))
     ret = {}
     client, path = _get_conn(__opts__)
     items = client.get("/".join((path, "jobs", jid)))
@@ -193,7 +189,7 @@ def get_fun(fun):
     """
     Return a dict of the last function called for all minions
     """
-    log.debug("sdstack_etcd returner <get_fun> called fun: {0}".format(fun))
+    log.debug("sdstack_etcd returner <get_fun> called fun: {}".format(fun))
     ret = {}
     client, path = _get_conn(__opts__)
     items = client.get("/".join((path, "minions")))

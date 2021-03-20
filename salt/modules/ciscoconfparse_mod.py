@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Execution module for `ciscoconfparse <http://www.pennington.net/py/ciscoconfparse/index.html>`_
 
@@ -19,8 +18,6 @@ See http://www.pennington.net/py/ciscoconfparse/index.html for further details.
 This module depends on the Python library with the same name,
 ``ciscoconfparse`` - to install execute: ``pip install ciscoconfparse``.
 """
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 from salt.exceptions import SaltException
 
@@ -63,7 +60,7 @@ def _get_ccp(config=None, config_path=None, saltenv="base"):
         config = __salt__["cp.get_file_str"](config_path, saltenv=saltenv)
         if config is False:
             raise SaltException("{} is not available".format(config_path))
-    if isinstance(config, six.string_types):
+    if isinstance(config, str):
         config = config.splitlines()
     ccp = ciscoconfparse.CiscoConfParse(config)
     return ccp

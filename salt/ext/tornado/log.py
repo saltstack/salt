@@ -29,7 +29,6 @@ These streams may be configured independently using the standard library's
 to a separate file for analysis.
 """
 # pylint: skip-file
-from __future__ import absolute_import, division, print_function
 
 import logging
 import logging.handlers
@@ -181,7 +180,7 @@ class LogFormatter(logging.Formatter):
             # byte strings whereever possible).
             record.message = _safe_unicode(message)
         except Exception as e:
-            record.message = "Bad message (%r): %r" % (e, record.__dict__)
+            record.message = "Bad message ({!r}): {!r}".format(e, record.__dict__)
 
         record.asctime = self.formatTime(record, self.datefmt)
 

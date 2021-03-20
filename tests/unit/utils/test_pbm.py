@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: :email:`Alexandru Bleotu <alexandru.bleotu@morganstanley.com>`
 
@@ -6,7 +5,6 @@
 """
 
 # Import python libraries
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
@@ -355,7 +353,7 @@ class GetStoragePoliciesTestCase(TestCase):
                     resourceType=pbm.profile.ResourceTypeEnum.STORAGE
                 )
             )
-            mock_obj.name = "fake_policy{0}".format(i)
+            mock_obj.name = "fake_policy{}".format(i)
             self.mock_policies.append(mock_obj)
         patches = (
             (

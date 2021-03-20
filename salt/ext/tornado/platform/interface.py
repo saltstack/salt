@@ -22,7 +22,6 @@ implementation from `tornado.platform.auto`.
 """
 # pylint: skip-file
 
-from __future__ import absolute_import, division, print_function
 
 
 def set_close_exec(fd):
@@ -30,7 +29,7 @@ def set_close_exec(fd):
     raise NotImplementedError()
 
 
-class Waker(object):
+class Waker:
     """A socket-like object that can wake another thread from ``select()``.
 
     The `~tornado.ioloop.IOLoop` will add the Waker's `fileno()` to

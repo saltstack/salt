@@ -22,7 +22,6 @@ This module has been tested with Twisted versions 11.0.0 and newer.
 """
 # pylint: skip-file
 
-from __future__ import absolute_import, division, print_function
 
 import datetime
 import functools
@@ -55,7 +54,7 @@ from salt.ext.tornado.util import timedelta_to_seconds
 
 
 @implementer(IDelayedCall)
-class TornadoDelayedCall(object):
+class TornadoDelayedCall:
     """DelayedCall object for Tornado."""
     def __init__(self, reactor, seconds, f, *args, **kw):
         self._reactor = reactor
@@ -320,19 +319,19 @@ class _TestReactor(TornadoReactor):
     """
     def __init__(self):
         # always use a new ioloop
-        super(_TestReactor, self).__init__(IOLoop())
+        super().__init__(IOLoop())
 
     def listenTCP(self, port, factory, backlog=50, interface=''):
         # default to localhost to avoid firewall prompts on the mac
         if not interface:
             interface = '127.0.0.1'
-        return super(_TestReactor, self).listenTCP(
+        return super().listenTCP(
             port, factory, backlog=backlog, interface=interface)
 
     def listenUDP(self, port, protocol, interface='', maxPacketSize=8192):
         if not interface:
             interface = '127.0.0.1'
-        return super(_TestReactor, self).listenUDP(
+        return super().listenUDP(
             port, protocol, interface=interface, maxPacketSize=maxPacketSize)
 
 
@@ -360,7 +359,7 @@ def install(io_loop=None):
 
 
 @implementer(IReadDescriptor, IWriteDescriptor)
-class _FD(object):
+class _FD:
     def __init__(self, fd, fileobj, handler):
         self.fd = fd
         self.fileobj = fileobj
@@ -413,7 +412,7 @@ class TwistedIOLoop(salt.ext.tornado.ioloop.IOLoop):
     installing alternative IOLoops.
     """
     def initialize(self, reactor=None, **kwargs):
-        super(TwistedIOLoop, self).initialize(**kwargs)
+        super().initialize(**kwargs)
         if reactor is None:
             import twisted.internet.reactor  # type: ignore
             reactor = twisted.internet.reactor
@@ -560,7 +559,7 @@ class TwistedResolver(Resolver):
                 try:
                     resolved.raiseException()
                 except twisted.names.error.DomainError as e:
-                    raise IOError(e)
+                    raise OSError(e)
             elif twisted.internet.abstract.isIPAddress(resolved):
                 resolved_family = socket.AF_INET
             elif twisted.internet.abstract.isIPv6Address(resolved):

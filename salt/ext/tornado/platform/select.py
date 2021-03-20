@@ -18,14 +18,13 @@
 Used as a fallback for systems that don't support epoll or kqueue.
 """
 # pylint: skip-file
-from __future__ import absolute_import, division, print_function
 
 import select
 
 from salt.ext.tornado.ioloop import IOLoop, PollIOLoop
 
 
-class _Select(object):
+class _Select:
     """A simple, select()-based IOLoop implementation for non-Linux systems"""
     def __init__(self):
         self.read_fds = set()
@@ -38,7 +37,7 @@ class _Select(object):
 
     def register(self, fd, events):
         if fd in self.read_fds or fd in self.write_fds or fd in self.error_fds:
-            raise IOError("fd %s already registered" % fd)
+            raise OSError("fd %s already registered" % fd)
         if events & IOLoop.READ:
             self.read_fds.add(fd)
         if events & IOLoop.WRITE:
@@ -74,4 +73,4 @@ class _Select(object):
 
 class SelectIOLoop(PollIOLoop):
     def initialize(self, **kwargs):
-        super(SelectIOLoop, self).initialize(impl=_Select(), **kwargs)
+        super().initialize(impl=_Select(), **kwargs)

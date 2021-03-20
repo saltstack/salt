@@ -23,7 +23,6 @@
 """
 # pylint: skip-file
 
-from __future__ import absolute_import, division, print_function
 
 import collections
 import heapq
@@ -55,7 +54,7 @@ def _set_timeout(future, timeout):
             lambda _: io_loop.remove_timeout(timeout_handle))
 
 
-class _QueueIterator(object):
+class _QueueIterator:
     def __init__(self, q):
         self.q = q
 
@@ -63,7 +62,7 @@ class _QueueIterator(object):
         return self.q.get()
 
 
-class Queue(object):
+class Queue:
     """Coordinate producer and consumer coroutines.
 
     If maxsize is 0 (the default) the queue size is unbounded.
@@ -282,14 +281,14 @@ class Queue(object):
             self._getters.popleft()
 
     def __repr__(self):
-        return '<%s at %s %s>' % (
+        return '<{} at {} {}>'.format(
             type(self).__name__, hex(id(self)), self._format())
 
     def __str__(self):
-        return '<%s %s>' % (type(self).__name__, self._format())
+        return '<{} {}>'.format(type(self).__name__, self._format())
 
     def _format(self):
-        result = 'maxsize=%r' % (self.maxsize, )
+        result = 'maxsize={!r}'.format(self.maxsize)
         if getattr(self, '_queue', None):
             result += ' queue=%r' % self._queue
         if self._getters:

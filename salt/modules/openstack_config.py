@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Modify, retrieve, or delete values from OpenStack configuration files.
 
@@ -8,15 +7,11 @@ Modify, retrieve, or delete values from OpenStack configuration files.
 :platform: linux
 
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import shlex
 
 import salt.exceptions
 import salt.utils.decorators.path
-
-# Import Salt libs
 from salt.ext import six
 
 try:
@@ -75,10 +70,10 @@ def set_(filename, section, parameter, value):
     filename = _quote(filename)
     section = _quote(section)
     parameter = _quote(parameter)
-    value = _quote(six.text_type(value))
+    value = _quote(str(value))
 
     result = __salt__["cmd.run_all"](
-        "openstack-config --set {0} {1} {2} {3}".format(
+        "openstack-config --set {} {} {} {}".format(
             filename, section, parameter, value
         ),
         python_shell=False,
@@ -117,7 +112,7 @@ def get(filename, section, parameter):
     parameter = _quote(parameter)
 
     result = __salt__["cmd.run_all"](
-        "openstack-config --get {0} {1} {2}".format(filename, section, parameter),
+        "openstack-config --get {} {} {}".format(filename, section, parameter),
         python_shell=False,
     )
 
@@ -153,7 +148,7 @@ def delete(filename, section, parameter):
     parameter = _quote(parameter)
 
     result = __salt__["cmd.run_all"](
-        "openstack-config --del {0} {1} {2}".format(filename, section, parameter),
+        "openstack-config --del {} {} {}".format(filename, section, parameter),
         python_shell=False,
     )
 

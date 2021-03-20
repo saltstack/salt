@@ -17,7 +17,6 @@
 """Miscellaneous network utility code."""
 # pylint: skip-file
 
-from __future__ import absolute_import, division, print_function
 
 import errno
 import os
@@ -95,10 +94,10 @@ else:
 # module-import time, the import lock is already held by the main thread,
 # leading to deadlock. Avoid it by caching the idna encoder on the main
 # thread now.
-u'foo'.encode('idna')
+'foo'.encode('idna')
 
 # For undiagnosed reasons, 'latin1' codec may also need to be preloaded.
-u'foo'.encode('latin1')
+b'foo'
 
 # These errnos indicate that a non-blocking operation must be retried
 # at a later time.  On most platforms they're the same value, but on
@@ -167,7 +166,7 @@ def bind_sockets(port, address=None, family=socket.AF_UNSPEC,
             continue
         try:
             sock = socket.socket(af, socktype, proto)
-        except socket.error as e:
+        except OSError as e:
             if errno_from_exception(e) == errno.EAFNOSUPPORT:
                 continue
             raise
@@ -263,7 +262,7 @@ def add_accept_handler(sock, callback, io_loop=None):
         for i in xrange(_DEFAULT_BACKLOG):
             try:
                 connection, address = sock.accept()
-            except socket.error as e:
+            except OSError as e:
                 # _ERRNO_WOULDBLOCK indicate we have accepted every
                 # connection that is available.
                 if errno_from_exception(e) in _ERRNO_WOULDBLOCK:
@@ -403,7 +402,7 @@ class BlockingResolver(ExecutorResolver):
     callback will not be run until the next `.IOLoop` iteration.
     """
     def initialize(self, io_loop=None):
-        super(BlockingResolver, self).initialize(io_loop=io_loop)
+        super().initialize(io_loop=io_loop)
 
 
 class ThreadedResolver(ExecutorResolver):
@@ -427,7 +426,7 @@ class ThreadedResolver(ExecutorResolver):
 
     def initialize(self, io_loop=None, num_threads=10):
         threadpool = ThreadedResolver._create_threadpool(num_threads)
-        super(ThreadedResolver, self).initialize(
+        super().initialize(
             io_loop=io_loop, executor=threadpool, close_executor=False)
 
     @classmethod

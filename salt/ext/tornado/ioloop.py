@@ -27,7 +27,6 @@ In addition to I/O events, the `IOLoop` can also schedule time-based events.
 """
 # pylint: skip-file
 
-from __future__ import absolute_import, division, print_function
 
 import collections
 import datetime
@@ -689,7 +688,7 @@ class PollIOLoop(IOLoop):
     `tornado.platform.select.SelectIOLoop` (all platforms).
     """
     def initialize(self, impl, time_func=None, **kwargs):
-        super(PollIOLoop, self).initialize(**kwargs)
+        super().initialize(**kwargs)
         self._impl = impl
         if hasattr(self._impl, 'fileno'):
             set_close_exec(self._impl.fileno())
@@ -888,7 +887,7 @@ class PollIOLoop(IOLoop):
                     try:
                         fd_obj, handler_func = self._handlers[fd]
                         handler_func(fd_obj, events)
-                    except (OSError, IOError) as e:
+                    except OSError as e:
                         if errno_from_exception(e) == errno.EPIPE:
                             # Happens when the client closes the connection
                             pass
@@ -953,7 +952,7 @@ class PollIOLoop(IOLoop):
             self.add_callback(callback, *args, **kwargs)
 
 
-class _Timeout(object):
+class _Timeout:
     """An IOLoop timeout, a UNIX timestamp and a callback"""
 
     # Reduce memory overhead when there are lots of pending callbacks
@@ -977,7 +976,7 @@ class _Timeout(object):
         return self.tdeadline <= other.tdeadline
 
 
-class PeriodicCallback(object):
+class PeriodicCallback:
     """Schedules the given callback to be called periodically.
 
     The callback is called every ``callback_time`` milliseconds.

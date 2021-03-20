@@ -11,7 +11,6 @@
 # under the License.
 # pylint: skip-file
 
-from __future__ import absolute_import, division, print_function
 
 from salt.ext.tornado import gen
 from salt.ext.tornado.testing import AsyncTestCase, gen_test

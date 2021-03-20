@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 A module to pull data from Cobbler via its API into the Pillar dictionary
 
@@ -24,9 +23,7 @@ modules.
 Module Documentation
 ====================
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 
 import salt.ext.six.moves.xmlrpc_client  # pylint: disable=E0611
@@ -61,7 +58,7 @@ def ext_pillar(minion_id, pillar, key=None, only=()):  # pylint: disable=W0613
         return {}
 
     if only:
-        result = dict((k, result[k]) for k in only if k in result)
+        result = {k: result[k] for k in only if k in result}
 
     if key:
         result = {key: result}

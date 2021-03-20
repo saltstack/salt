@@ -1,5 +1,4 @@
 # pylint: skip-file
-from __future__ import absolute_import, division, print_function
 from salt.ext.tornado.concurrent import Future
 from salt.ext.tornado import gen
 from salt.ext.tornado.escape import json_decode, utf8, to_unicode, recursive_unicode, native_str, to_basestring
@@ -124,7 +123,7 @@ class SecureCookieV1Test(unittest.TestCase):
                                  'foo', '1234', b'5678' + timestamp),
             sig)
         # tamper with the cookie
-        handler._cookies['foo'] = utf8('1234|5678%s|%s' % (
+        handler._cookies['foo'] = utf8('1234|5678{}|{}'.format(
             to_basestring(timestamp), to_basestring(sig)))
         # it gets rejected
         with ExpectLog(gen_log, "Cookie timestamp in future"):
@@ -191,7 +190,7 @@ class CookieTest(WebTestCase):
                 # Try setting cookies with different argument types
                 # to ensure that everything gets encoded correctly
                 self.set_cookie("str", "asdf")
-                self.set_cookie("unicode", u"qwer")
+                self.set_cookie("unicode", "qwer")
                 self.set_cookie("bytes", b"zxcv")
 
         class GetCookieHandler(RequestHandler):
@@ -202,8 +201,8 @@ class CookieTest(WebTestCase):
             def get(self):
                 # unicode domain and path arguments shouldn't break things
                 # either (see bug #285)
-                self.set_cookie("unicode_args", "blah", domain=u"foo.com",
-                                path=u"/foo")
+                self.set_cookie("unicode_args", "blah", domain="foo.com",
+                                path="/foo")
 
         class SetCookieSpecialCharHandler(RequestHandler):
             def get(self):
@@ -357,7 +356,7 @@ class AuthRedirectTest(WebTestCase):
         response = self.wait()
         self.assertEqual(response.code, 302)
         self.assertTrue(re.match(
-            'http://example.com/login\?next=http%3A%2F%2F127.0.0.1%3A[0-9]+%2Fabsolute',
+            r'http://example.com/login\?next=http%3A%2F%2F127.0.0.1%3A[0-9]+%2Fabsolute',
             response.headers['Location']), response.headers['Location'])
 
 
@@ -437,9 +436,9 @@ class RequestEncodingTest(WebTestCase):
     def test_group_encoding(self):
         # Path components and query arguments should be decoded the same way
         self.assertEqual(self.fetch_json('/group/%C3%A9?arg=%C3%A9'),
-                         {u"path": u"/group/%C3%A9",
-                          u"path_args": [u"\u00e9"],
-                          u"args": {u"arg": [u"\u00e9"]}})
+                         {"path": "/group/%C3%A9",
+                          "path_args": ["\u00e9"],
+                          "args": {"arg": ["\u00e9"]}})
 
     def test_slashes(self):
         # Slashes may be escaped to appear as a single "directory" in the path,
@@ -500,7 +499,7 @@ class TypeCheckHandler(RequestHandler):
     def check_type(self, name, obj, expected_type):
         actual_type = type(obj)
         if expected_type != actual_type:
-            self.errors[name] = "expected %s, got %s" % (expected_type,
+            self.errors[name] = "expected {}, got {}".format(expected_type,
                                                          actual_type)
 
 
@@ -644,7 +643,7 @@ class WSGISafeWebTest(WebTestCase):
                     cookie_secret=self.COOKIE_SECRET)
 
     def tearDown(self):
-        super(WSGISafeWebTest, self).tearDown()
+        super().tearDown()
         RequestHandler._template_loaders.clear()
 
     def get_handlers(self):
@@ -693,15 +692,15 @@ class WSGISafeWebTest(WebTestCase):
             response = self.fetch(req_url)
             response.rethrow()
             data = json_decode(response.body)
-            self.assertEqual(data, {u'path': [u'unicode', u'\u00e9'],
-                                    u'query': [u'unicode', u'\u00e9'],
+            self.assertEqual(data, {'path': ['unicode', '\u00e9'],
+                                    'query': ['unicode', '\u00e9'],
                                     })
 
         response = self.fetch("/decode_arg/%C3%A9?foo=%C3%A9")
         response.rethrow()
         data = json_decode(response.body)
-        self.assertEqual(data, {u'path': [u'bytes', u'c3a9'],
-                                u'query': [u'bytes', u'c3a9'],
+        self.assertEqual(data, {'path': ['bytes', 'c3a9'],
+                                'query': ['bytes', 'c3a9'],
                                 })
 
     def test_decode_argument_invalid_unicode(self):
@@ -720,8 +719,8 @@ class WSGISafeWebTest(WebTestCase):
             response = self.fetch(req_url)
             response.rethrow()
             data = json_decode(response.body)
-            self.assertEqual(data, {u'path': [u'unicode', u'1 + 1'],
-                                    u'query': [u'unicode', u'1 + 1'],
+            self.assertEqual(data, {'path': ['unicode', '1 + 1'],
+                                    'query': ['unicode', '1 + 1'],
                                     })
 
     def test_reverse_url(self):
@@ -731,7 +730,7 @@ class WSGISafeWebTest(WebTestCase):
                          '/decode_arg/42')
         self.assertEqual(self.app.reverse_url('decode_arg', b'\xe9'),
                          '/decode_arg/%E9')
-        self.assertEqual(self.app.reverse_url('decode_arg', u'\u00e9'),
+        self.assertEqual(self.app.reverse_url('decode_arg', '\u00e9'),
                          '/decode_arg/%C3%A9')
         self.assertEqual(self.app.reverse_url('decode_arg', '1 + 1'),
                          '/decode_arg/1%20%2B%201')
@@ -768,9 +767,9 @@ js_embed()
 
     def test_optional_path(self):
         self.assertEqual(self.fetch_json("/optional_path/foo"),
-                         {u"path": u"foo"})
+                         {"path": "foo"})
         self.assertEqual(self.fetch_json("/optional_path/"),
-                         {u"path": None})
+                         {"path": None})
 
     def test_multi_header(self):
         response = self.fetch("/multi_header")
@@ -998,7 +997,7 @@ class StaticFileTest(WebTestCase):
         # make sure the uncompressed file still has the correct type
         response = self.fetch("/static/sample.xml")
         self.assertTrue(response.headers.get("Content-Type")
-                        in set(("text/xml", "application/xml")))
+                        in {"text/xml", "application/xml"})
 
     def test_static_url(self):
         response = self.fetch("/static_url/robots.txt")
@@ -1273,13 +1272,13 @@ class CustomStaticFileTest(WebTestCase):
                 extension_index = path.rindex('.')
                 before_version = path[:extension_index]
                 after_version = path[(extension_index + 1):]
-                return '/static/%s.%s.%s' % (before_version, version_hash,
+                return '/static/{}.{}.{}'.format(before_version, version_hash,
                                              after_version)
 
             def parse_url_path(self, url_path):
                 extension_index = url_path.rindex('.')
                 version_index = url_path.rindex('.', 0, extension_index)
-                return '%s%s' % (url_path[:version_index],
+                return '{}{}'.format(url_path[:version_index],
                                  url_path[extension_index:])
 
             @classmethod
@@ -1409,7 +1408,7 @@ class NamedURLSpecGroupsTest(WebTestCase):
                 self.write(path)
 
         return [("/str/(?P<path>.*)", EchoHandler),
-                (u"/unicode/(?P<path>.*)", EchoHandler)]
+                ("/unicode/(?P<path>.*)", EchoHandler)]
 
     def test_named_urlspec_groups(self):
         response = self.fetch("/str/foo")
@@ -1734,12 +1733,12 @@ class UIMethodUIModuleTest(SimpleHandlerTestCase):
 
     def get_app_kwargs(self):
         def my_ui_method(handler, x):
-            return "In my_ui_method(%s) with handler value %s." % (
+            return "In my_ui_method({}) with handler value {}.".format(
                 x, handler.value())
 
         class MyModule(UIModule):
             def render(self, x):
-                return "In MyModule(%s) with handler value %s." % (
+                return "In MyModule({}) with handler value {}.".format(
                     x, self.handler.value())
 
         loader = DictLoader({
@@ -1750,7 +1749,7 @@ class UIMethodUIModuleTest(SimpleHandlerTestCase):
                     ui_modules={'MyModule': MyModule})
 
     def tearDown(self):
-        super(UIMethodUIModuleTest, self).tearDown()
+        super().tearDown()
         # TODO: fix template loader caching so this isn't necessary.
         RequestHandler._template_loaders.clear()
 
@@ -1821,7 +1820,7 @@ class SetLazyPropertiesTest(SimpleHandlerTestCase):
             raise NotImplementedError()
 
         def get(self):
-            self.write('Hello %s (%s)' % (self.current_user, self.locale.code))
+            self.write('Hello {} ({})'.format(self.current_user, self.locale.code))
 
     def test_set_properties(self):
         # Ensure that current_user can be assigned to normally for apps
@@ -1852,7 +1851,7 @@ class GetCurrentUserTest(WebTestCase):
                                 'WithoutUserModule': WithoutUserModule})
 
     def tearDown(self):
-        super(GetCurrentUserTest, self).tearDown()
+        super().tearDown()
         RequestHandler._template_loaders.clear()
 
     def get_handlers(self):
@@ -2101,7 +2100,7 @@ class StreamingRequestBodyTest(WebTestCase):
                 self.test = test
 
             def on_connection_close(self):
-                super(CloseDetectionHandler, self).on_connection_close()
+                super().on_connection_close()
                 self.test.close_future.set_result(None)
 
         return [('/stream_body', StreamingBodyHandler, dict(test=self)),
@@ -2200,7 +2199,7 @@ class BaseFlowControlHandler(RequestHandler):
         self.write(dict(methods=self.methods))
 
 
-class BaseStreamingRequestFlowControlTest(object):
+class BaseStreamingRequestFlowControlTest:
     def get_httpserver_options(self):
         # Use a small chunk size so flow control is relevant even though
         # all the data arrives at once.
@@ -2516,7 +2515,7 @@ class XSRFTest(SimpleHandlerTestCase):
         return dict(xsrf_cookies=True)
 
     def setUp(self):
-        super(XSRFTest, self).setUp()
+        super().setUp()
         self.xsrf_token = self.get_token()
 
     def get_token(self, old_token=None, version=None):
@@ -2633,7 +2632,7 @@ class XSRFTest(SimpleHandlerTestCase):
 
     def test_refresh_token(self):
         token = self.xsrf_token
-        tokens_seen = set([token])
+        tokens_seen = {token}
         # A user's token is stable over time.  Refreshing the page in one tab
         # might update the cookie while an older tab still has the old cookie
         # in its DOM.  Simulate this scenario by passing a constant token

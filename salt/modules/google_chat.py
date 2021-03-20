@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module for sending messages to google chat.
 
@@ -9,8 +8,6 @@ where you would like the message to be sent, see:
 
     https://developers.google.com/hangouts/chat/how-tos/webhooks
 """
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import json
 

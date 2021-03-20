@@ -1,5 +1,4 @@
 # pylint: skip-file
-from __future__ import absolute_import, division, print_function
 from wsgiref.validate import validator
 
 from salt.ext.tornado.escape import json_decode
@@ -53,7 +52,7 @@ class WSGIApplicationTest(AsyncHTTPTestCase):
 
     def test_path_quoting(self):
         response = self.fetch("/path/foo%20bar%C3%A9")
-        self.assertEqual(response.body, u"foo bar\u00e9".encode("utf-8"))
+        self.assertEqual(response.body, "foo bar\u00e9".encode())
 
     def test_types(self):
         headers = {"Cookie": "foo=bar"}

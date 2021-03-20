@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Connection module for Amazon CloudFront
 
@@ -50,17 +49,13 @@ Connection module for Amazon CloudFront
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import Salt libs
 import salt.ext.six as six
 import salt.utils.versions
 from salt.utils.odict import OrderedDict
 
-# Import third party libs
 try:
     # pylint: disable=unused-import
     import boto3
@@ -107,7 +102,7 @@ def _list_distributions(
             continue
         for partial_dist in distribution_list["Items"]:
             tags = conn.list_tags_for_resource(Resource=partial_dist["ARN"])
-            tags = dict((kv["Key"], kv["Value"]) for kv in tags["Tags"]["Items"])
+            tags = {kv["Key"]: kv["Value"] for kv in tags["Tags"]["Items"]}
 
             id_ = partial_dist["Id"]
             if "Name" not in tags:
@@ -261,13 +256,13 @@ def export_distributions(region=None, key=None, keyid=None, profile=None):
                 {"config": config},
                 {"tags": tags},
             ]
-            results["Manage CloudFront distribution {0}".format(name)] = {
+            results["Manage CloudFront distribution {}".format(name)] = {
                 "boto_cloudfront.present": distribution_sls_data,
             }
     except botocore.exceptions.ClientError as err:
         # Raise an exception, as this is meant to be user-invoked at the CLI
         # as opposed to being called from execution or state modules
-        six.reraise(*sys.exc_info())
+        raise
 
     dumper = __utils__["yaml.get_dumper"]("IndentedSafeOrderedDumper")
     return __utils__["yaml.dump"](
@@ -325,7 +320,7 @@ def create_distribution(
         if tags["Name"] != name:
             return {"error": "Must not pass `Name` in `tags` but as `name`"}
     tags["Name"] = name
-    tags = {"Items": [{"Key": k, "Value": v} for k, v in six.iteritems(tags)]}
+    tags = {"Items": [{"Key": k, "Value": v} for k, v in tags.items()]}
 
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
@@ -417,8 +412,7 @@ def update_distribution(
             if "new" in tags_diff:
                 tags_to_add = {
                     "Items": [
-                        {"Key": k, "Value": v}
-                        for k, v in six.iteritems(tags_diff["new"])
+                        {"Key": k, "Value": v} for k, v in tags_diff["new"].items()
                     ],
                 }
                 conn.tag_resource(

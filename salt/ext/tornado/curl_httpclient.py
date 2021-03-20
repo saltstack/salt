@@ -17,7 +17,6 @@
 """Non-blocking HTTP client implementation using pycurl."""
 # pylint: skip-file
 
-from __future__ import absolute_import, division, print_function
 
 import collections
 import functools
@@ -39,7 +38,7 @@ curl_log = logging.getLogger('tornado.curl_httpclient')
 
 class CurlAsyncHTTPClient(AsyncHTTPClient):
     def initialize(self, io_loop, max_clients=10, defaults=None):
-        super(CurlAsyncHTTPClient, self).initialize(io_loop, defaults=defaults)
+        super().initialize(io_loop, defaults=defaults)
         self._multi = pycurl.CurlMulti()
         self._multi.setopt(pycurl.M_TIMERFUNCTION, self._set_timeout)
         self._multi.setopt(pycurl.M_SOCKETFUNCTION, self._handle_socket)
@@ -73,7 +72,7 @@ class CurlAsyncHTTPClient(AsyncHTTPClient):
         for curl in self._curls:
             curl.close()
         self._multi.close()
-        super(CurlAsyncHTTPClient, self).close()
+        super().close()
 
     def fetch_impl(self, request, callback):
         self._requests.append((request, callback))
@@ -303,7 +302,7 @@ class CurlAsyncHTTPClient(AsyncHTTPClient):
             request.headers["Pragma"] = ""
 
         curl.setopt(pycurl.HTTPHEADER,
-                    ["%s: %s" % (native_str(k), native_str(v))
+                    ["{}: {}".format(native_str(k), native_str(v))
                      for k, v in request.headers.get_all()])
 
         curl.setopt(pycurl.HEADERFUNCTION,
@@ -343,7 +342,7 @@ class CurlAsyncHTTPClient(AsyncHTTPClient):
             curl.setopt(pycurl.PROXY, request.proxy_host)
             curl.setopt(pycurl.PROXYPORT, request.proxy_port)
             if request.proxy_username:
-                credentials = '%s:%s' % (request.proxy_username,
+                credentials = '{}:{}'.format(request.proxy_username,
                                          request.proxy_password)
                 curl.setopt(pycurl.PROXYUSERPWD, credentials)
 
@@ -390,7 +389,7 @@ class CurlAsyncHTTPClient(AsyncHTTPClient):
             "PUT": pycurl.UPLOAD,
             "HEAD": pycurl.NOBODY,
         }
-        custom_methods = set(["DELETE", "OPTIONS", "PATCH"])
+        custom_methods = {"DELETE", "OPTIONS", "PATCH"}
         for o in curl_options.values():
             curl.setopt(o, False)
         if request.method in curl_options:
@@ -436,7 +435,7 @@ class CurlAsyncHTTPClient(AsyncHTTPClient):
                 curl.setopt(pycurl.INFILESIZE, len(request.body or ''))
 
         if request.auth_username is not None:
-            userpwd = "%s:%s" % (request.auth_username, request.auth_password or '')
+            userpwd = "{}:{}".format(request.auth_username, request.auth_password or '')
 
             if request.auth_mode is None or request.auth_mode == "basic":
                 curl.setopt(pycurl.HTTPAUTH, pycurl.HTTPAUTH_BASIC)

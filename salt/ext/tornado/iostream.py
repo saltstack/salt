@@ -25,7 +25,6 @@ Contents:
 """
 # pylint: skip-file
 
-from __future__ import absolute_import, division, print_function
 
 import collections
 import errno
@@ -100,7 +99,7 @@ class StreamClosedError(IOError):
        Added the ``real_error`` attribute.
     """
     def __init__(self, real_error=None):
-        super(StreamClosedError, self).__init__('Stream is closed')
+        super().__init__('Stream is closed')
         self.real_error = real_error
 
 
@@ -118,7 +117,7 @@ class StreamBufferFullError(Exception):
     """
 
 
-class BaseIOStream(object):
+class BaseIOStream:
     """A utility class to write to and read from a non-blocking file or socket.
 
     We support a non-blocking ``write()`` and a family of ``read_*()`` methods.
@@ -737,7 +736,7 @@ class BaseIOStream(object):
         while True:
             try:
                 chunk = self.read_from_fd()
-            except (socket.error, IOError, OSError) as e:
+            except OSError as e:
                 if errno_from_exception(e) == errno.EINTR:
                     continue
                 # ssl.SSLError is a subclass of socket.error
@@ -875,7 +874,7 @@ class BaseIOStream(object):
                 if self._write_buffer_frozen:
                     self._unfreeze_write_buffer()
                 self._total_write_done_index += num_bytes
-            except (socket.error, IOError, OSError) as e:
+            except OSError as e:
                 if e.args[0] in _ERRNO_WOULDBLOCK:
                     self._got_empty_write(size)
                     break
@@ -1034,7 +1033,7 @@ class IOStream(BaseIOStream):
     def __init__(self, socket, *args, **kwargs):
         self.socket = socket
         self.socket.setblocking(False)
-        super(IOStream, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def fileno(self):
         return self.socket
@@ -1051,7 +1050,7 @@ class IOStream(BaseIOStream):
     def read_from_fd(self):
         try:
             chunk = self.socket.recv(self.read_chunk_size)
-        except socket.error as e:
+        except OSError as e:
             if e.args[0] in _ERRNO_WOULDBLOCK:
                 return None
             else:
@@ -1116,7 +1115,7 @@ class IOStream(BaseIOStream):
             future = self._connect_future = TracebackFuture()
         try:
             self.socket.connect(address)
-        except socket.error as e:
+        except OSError as e:
             # In non-blocking mode we expect connect() to raise an
             # exception with EINPROGRESS or EWOULDBLOCK.
             #
@@ -1248,7 +1247,7 @@ class IOStream(BaseIOStream):
             try:
                 self.socket.setsockopt(socket.IPPROTO_TCP,
                                        socket.TCP_NODELAY, 1 if value else 0)
-            except socket.error as e:
+            except OSError as e:
                 # Sometimes setsockopt will fail if the socket is closed
                 # at the wrong time.  This can happen with HTTPServer
                 # resetting the value to false between requests.
@@ -1273,7 +1272,7 @@ class SSLIOStream(IOStream):
         for `ssl.wrap_socket`
         """
         self._ssl_options = kwargs.pop('ssl_options', _client_ssl_defaults)
-        super(SSLIOStream, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self._ssl_accepting = True
         self._handshake_reading = False
         self._handshake_writing = False
@@ -1283,7 +1282,7 @@ class SSLIOStream(IOStream):
         # If the socket is already connected, attempt to start the handshake.
         try:
             self.socket.getpeername()
-        except socket.error:
+        except OSError:
             pass
         else:
             # Indirectly start the handshake, which will run on the next
@@ -1292,10 +1291,10 @@ class SSLIOStream(IOStream):
             self._add_io_state(self.io_loop.WRITE)
 
     def reading(self):
-        return self._handshake_reading or super(SSLIOStream, self).reading()
+        return self._handshake_reading or super().reading()
 
     def writing(self):
-        return self._handshake_writing or super(SSLIOStream, self).writing()
+        return self._handshake_writing or super().writing()
 
     def _got_empty_write(self, size):
         # With OpenSSL, if we couldn't write the entire buffer,
@@ -1333,7 +1332,7 @@ class SSLIOStream(IOStream):
                                 self.socket.fileno(), peer, err)
                 return self.close(exc_info=True)
             raise
-        except socket.error as err:
+        except OSError as err:
             # Some port scans (e.g. nmap in -sT mode) have been known
             # to cause do_handshake to raise EBADF and ENOTCONN, so make
             # those errors quiet as well.
@@ -1395,24 +1394,24 @@ class SSLIOStream(IOStream):
         if self._ssl_accepting:
             self._do_ssl_handshake()
             return
-        super(SSLIOStream, self)._handle_read()
+        super()._handle_read()
 
     def _handle_write(self):
         if self._ssl_accepting:
             self._do_ssl_handshake()
             return
-        super(SSLIOStream, self)._handle_write()
+        super()._handle_write()
 
     def connect(self, address, callback=None, server_hostname=None):
         self._server_hostname = server_hostname
         # Pass a dummy callback to super.connect(), which is slightly
         # more efficient than letting it return a Future we ignore.
-        super(SSLIOStream, self).connect(address, callback=lambda: None)
+        super().connect(address, callback=lambda: None)
         return self.wait_for_handshake(callback)
 
     def _handle_connect(self):
         # Call the superclass method to check for errors.
-        super(SSLIOStream, self)._handle_connect()
+        super()._handle_connect()
         if self.closed():
             return
         # When the connection is complete, wrap the socket for SSL
@@ -1502,7 +1501,7 @@ class SSLIOStream(IOStream):
                 return None
             else:
                 raise
-        except socket.error as e:
+        except OSError as e:
             if e.args[0] in _ERRNO_WOULDBLOCK:
                 return None
             else:
@@ -1515,7 +1514,7 @@ class SSLIOStream(IOStream):
     def _is_connreset(self, e):
         if isinstance(e, ssl.SSLError) and e.args[0] == ssl.SSL_ERROR_EOF:
             return True
-        return super(SSLIOStream, self)._is_connreset(e)
+        return super()._is_connreset(e)
 
 
 class PipeIOStream(BaseIOStream):
@@ -1529,7 +1528,7 @@ class PipeIOStream(BaseIOStream):
     def __init__(self, fd, *args, **kwargs):
         self.fd = fd
         _set_nonblocking(fd)
-        super(PipeIOStream, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def fileno(self):
         return self.fd
@@ -1548,7 +1547,7 @@ class PipeIOStream(BaseIOStream):
     def read_from_fd(self):
         try:
             chunk = os.read(self.fd, self.read_chunk_size)
-        except (IOError, OSError) as e:
+        except OSError as e:
             if errno_from_exception(e) in _ERRNO_WOULDBLOCK:
                 return None
             elif errno_from_exception(e) == errno.EBADF:

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 znc - An advanced IRC bouncer
 
@@ -6,16 +5,13 @@ znc - An advanced IRC bouncer
 
 Provides an interface to basic ZNC functionality
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import hashlib
 import logging
 import os.path
 import random
 import signal
 
-# Import salt libs
 import salt.utils.path
 from salt.ext.six.moves import range
 
@@ -73,7 +69,7 @@ def buildmod(*modules):
     # Check if module files are missing
     missing = [module for module in modules if not os.path.exists(module)]
     if missing:
-        return "Error: The file ({0}) does not exist.".format(", ".join(missing))
+        return "Error: The file ({}) does not exist.".format(", ".join(missing))
 
     cmd = ["znc-buildmod"]
     cmd.extend(modules)

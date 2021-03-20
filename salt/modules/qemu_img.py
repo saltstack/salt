@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Qemu-img Command Wrapper
 ========================
@@ -7,12 +6,9 @@ The qemu img command is wrapped for specific functions
 
 :depends: qemu-img
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import os
 
-# Import salt libs
 import salt.utils.path
 
 
@@ -45,7 +41,7 @@ def make_image(location, size, fmt):
     if not os.path.isdir(os.path.dirname(location)):
         return ""
     if not __salt__["cmd.retcode"](
-        "qemu-img create -f {0} {1} {2}M".format(fmt, location, size),
+        "qemu-img create -f {} {} {}M".format(fmt, location, size),
         python_shell=False,
     ):
         return location

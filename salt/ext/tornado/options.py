@@ -83,7 +83,6 @@ instances to define isolated sets of options, such as for subcommands.
 """
 # pylint: skip-file
 
-from __future__ import absolute_import, division, print_function
 
 import datetime
 import numbers
@@ -103,7 +102,7 @@ class Error(Exception):
     pass
 
 
-class OptionParser(object):
+class OptionParser:
     """A collection of options, a dictionary with object-like access.
 
     Normally accessed via static functions in the `tornado.options` module,
@@ -156,7 +155,7 @@ class OptionParser(object):
 
         .. versionadded:: 3.1
         """
-        return set(opt.group_name for opt in self._options.values())
+        return {opt.group_name for opt in self._options.values()}
 
     def group_dict(self, group):
         """The names and values of options in a group.
@@ -175,17 +174,17 @@ class OptionParser(object):
 
         .. versionadded:: 3.1
         """
-        return dict(
-            (opt.name, opt.value()) for name, opt in self._options.items()
-            if not group or group == opt.group_name)
+        return {
+            opt.name: opt.value() for name, opt in self._options.items()
+            if not group or group == opt.group_name}
 
     def as_dict(self):
         """The names and values of all options.
 
         .. versionadded:: 3.1
         """
-        return dict(
-            (opt.name, opt.value()) for name, opt in self._options.items())
+        return {
+            opt.name: opt.value() for name, opt in self._options.items()}
 
     def define(self, name, default=None, type=None, help=None, metavar=None,
                multiple=False, group=None, callback=None):
@@ -350,9 +349,9 @@ class OptionParser(object):
                 lines = textwrap.wrap(description, 79 - 35)
                 if len(prefix) > 30 or len(lines) == 0:
                     lines.insert(0, '')
-                print("  --%-30s %s" % (prefix, lines[0]), file=file)
+                print("  --{:<30} {}".format(prefix, lines[0]), file=file)
                 for line in lines[1:]:
-                    print("%-34s %s" % (' ', line), file=file)
+                    print("{:<34} {}".format(' ', line), file=file)
         print(file=file)
 
     def _help_callback(self, value):
@@ -386,7 +385,7 @@ class OptionParser(object):
         return _Mockable(self)
 
 
-class _Mockable(object):
+class _Mockable:
     """`mock.patch` compatible wrapper for `OptionParser`.
 
     As of ``mock`` version 1.0.1, when an object uses ``__getattr__``
@@ -415,7 +414,7 @@ class _Mockable(object):
         setattr(self._options, name, self._originals.pop(name))
 
 
-class _Option(object):
+class _Option:
     UNSET = object()
 
     def __init__(self, name, default=None, type=basestring_type, help=None,

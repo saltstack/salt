@@ -68,7 +68,6 @@ Here are a few rules of thumb for when it's necessary:
 """
 # pylint: skip-file
 
-from __future__ import absolute_import, division, print_function
 
 import sys
 import threading
@@ -88,7 +87,7 @@ class _State(threading.local):
 _state = _State()
 
 
-class StackContext(object):
+class StackContext:
     """Establishes the given context as a StackContext that will be transferred.
 
     Note that the parameter is a callable that returns a context
@@ -164,7 +163,7 @@ class StackContext(object):
             self.new_contexts = None
 
 
-class ExceptionStackContext(object):
+class ExceptionStackContext:
     """Specialization of StackContext for exception handling.
 
     The supplied ``exception_handler`` function will be called in the
@@ -212,7 +211,7 @@ class ExceptionStackContext(object):
             self.new_contexts = None
 
 
-class NullContext(object):
+class NullContext:
     """Resets the `StackContext`.
 
     Useful when creating a shared resource on demand (e.g. an

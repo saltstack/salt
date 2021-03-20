@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module for retrieving random information from Random.org
 
@@ -17,18 +16,13 @@ Module for retrieving random information from Random.org
           api_version: 1
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
 import salt.ext.six.moves.http_client
-
-# Import salt libs
 import salt.utils.http
 import salt.utils.json
 
-# Import 3rd-party libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext import six
 from salt.ext.six.moves.urllib.parse import urljoin as _urljoin
@@ -65,7 +59,7 @@ def _numeric(n):
     """
     Tell whether an argument is numeric
     """
-    return isinstance(n, six.integer_types + (float,))
+    return isinstance(n, (int,) + (float,))
 
 
 def _query(api_version=None, data=None):
@@ -84,7 +78,7 @@ def _query(api_version=None, data=None):
     ret = {"res": True}
 
     api_url = "https://api.random.org/"
-    base_url = _urljoin(api_url, "json-rpc/" + six.text_type(api_version) + "/invoke")
+    base_url = _urljoin(api_url, "json-rpc/" + str(api_version) + "/invoke")
 
     data = salt.utils.json.dumps(data)
 
@@ -145,7 +139,7 @@ def getUsage(api_key=None, api_version=None):
             return ret
 
     if isinstance(api_version, int):
-        api_version = six.text_type(api_version)
+        api_version = str(api_version)
 
     _function = RANDOM_ORG_FUNCTIONS.get(api_version).get("getUsage").get("method")
     data = {}
@@ -219,7 +213,7 @@ def generateIntegers(api_key=None, api_version=None, **kwargs):
     for item in ["number", "minimum", "maximum"]:
         if item not in kwargs:
             ret["res"] = False
-            ret["message"] = "Rquired argument, {0} is missing.".format(item)
+            ret["message"] = "Rquired argument, {} is missing.".format(item)
             return ret
 
     if not _numeric(kwargs["number"]) or not 1 <= kwargs["number"] <= 10000:
@@ -262,7 +256,7 @@ def generateIntegers(api_key=None, api_version=None, **kwargs):
         replacement = kwargs["replacement"]
 
     if isinstance(api_version, int):
-        api_version = six.text_type(api_version)
+        api_version = str(api_version)
 
     _function = (
         RANDOM_ORG_FUNCTIONS.get(api_version).get("generateIntegers").get("method")
@@ -345,7 +339,7 @@ def generateStrings(api_key=None, api_version=None, **kwargs):
     for item in ["number", "length", "characters"]:
         if item not in kwargs:
             ret["res"] = False
-            ret["message"] = "Required argument, {0} is missing.".format(item)
+            ret["message"] = "Required argument, {} is missing.".format(item)
             return ret
 
     if not _numeric(kwargs["number"]) or not 1 <= kwargs["number"] <= 10000:
@@ -364,7 +358,7 @@ def generateStrings(api_key=None, api_version=None, **kwargs):
         return ret
 
     if isinstance(api_version, int):
-        api_version = six.text_type(api_version)
+        api_version = str(api_version)
 
     if "replacement" not in kwargs:
         replacement = True
@@ -435,11 +429,11 @@ def generateUUIDs(api_key=None, api_version=None, **kwargs):
     for item in ["number"]:
         if item not in kwargs:
             ret["res"] = False
-            ret["message"] = "Required argument, {0} is missing.".format(item)
+            ret["message"] = "Required argument, {} is missing.".format(item)
             return ret
 
     if isinstance(api_version, int):
-        api_version = six.text_type(api_version)
+        api_version = str(api_version)
 
     if not _numeric(kwargs["number"]) or not 1 <= kwargs["number"] <= 1000:
         ret["res"] = False
@@ -516,7 +510,7 @@ def generateDecimalFractions(api_key=None, api_version=None, **kwargs):
     for item in ["number", "decimalPlaces"]:
         if item not in kwargs:
             ret["res"] = False
-            ret["message"] = "Required argument, {0} is missing.".format(item)
+            ret["message"] = "Required argument, {} is missing.".format(item)
             return ret
 
     if not isinstance(kwargs["number"], int) or not 1 <= kwargs["number"] <= 10000:
@@ -535,7 +529,7 @@ def generateDecimalFractions(api_key=None, api_version=None, **kwargs):
         replacement = kwargs["replacement"]
 
     if isinstance(api_version, int):
-        api_version = six.text_type(api_version)
+        api_version = str(api_version)
 
     _function = (
         RANDOM_ORG_FUNCTIONS.get(api_version)
@@ -610,7 +604,7 @@ def generateGaussians(api_key=None, api_version=None, **kwargs):
     for item in ["number", "mean", "standardDeviation", "significantDigits"]:
         if item not in kwargs:
             ret["res"] = False
-            ret["message"] = "Required argument, {0} is missing.".format(item)
+            ret["message"] = "Required argument, {} is missing.".format(item)
             return ret
 
     if not _numeric(kwargs["number"]) or not 1 <= kwargs["number"] <= 10000:
@@ -642,7 +636,7 @@ def generateGaussians(api_key=None, api_version=None, **kwargs):
         return ret
 
     if isinstance(api_version, int):
-        api_version = six.text_type(api_version)
+        api_version = str(api_version)
 
     _function = (
         RANDOM_ORG_FUNCTIONS.get(api_version).get("generateGaussians").get("method")
@@ -710,7 +704,7 @@ def generateBlobs(api_key=None, api_version=None, **kwargs):
     for item in ["number", "size"]:
         if item not in kwargs:
             ret["res"] = False
-            ret["message"] = "Required argument, {0} is missing.".format(item)
+            ret["message"] = "Required argument, {} is missing.".format(item)
             return ret
 
     if not _numeric(kwargs["number"]) or not 1 <= kwargs["number"] <= 100:
@@ -738,7 +732,7 @@ def generateBlobs(api_key=None, api_version=None, **kwargs):
         _format = "base64"
 
     if isinstance(api_version, int):
-        api_version = six.text_type(api_version)
+        api_version = str(api_version)
 
     _function = RANDOM_ORG_FUNCTIONS.get(api_version).get("generateBlobs").get("method")
     data = {}

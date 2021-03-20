@@ -1,12 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 Various user validation utilities
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
-
-# Import python libs
 import re
 
 from salt.ext import six
@@ -20,7 +16,7 @@ def valid_username(user):
     """
     Validates a username based on the guidelines in `useradd(8)`
     """
-    if not isinstance(user, six.string_types):
+    if not isinstance(user, str):
         return False
 
     if len(user) > 32:

@@ -30,7 +30,6 @@ provides WSGI support in two ways:
 """
 # pylint: skip-file
 
-from __future__ import absolute_import, division, print_function
 
 import sys
 from io import BytesIO
@@ -112,7 +111,7 @@ class _WSGIConnection(httputil.HTTPConnection):
         else:
             self._expected_content_remaining = None
         self.start_response(
-            '%s %s' % (start_line.code, start_line.reason),
+            '{} {}'.format(start_line.code, start_line.reason),
             [(native_str(k), native_str(v)) for (k, v) in headers.get_all()])
         if chunk is not None:
             self.write(chunk, callback)
@@ -142,7 +141,7 @@ class _WSGIConnection(httputil.HTTPConnection):
         self._finished = True
 
 
-class _WSGIRequestContext(object):
+class _WSGIRequestContext:
     def __init__(self, remote_ip, protocol):
         self.remote_ip = remote_ip
         self.protocol = protocol
@@ -151,7 +150,7 @@ class _WSGIRequestContext(object):
         return self.remote_ip
 
 
-class WSGIAdapter(object):
+class WSGIAdapter:
     """Converts a `tornado.web.Application` instance into a WSGI application.
 
     Example usage::
@@ -229,7 +228,7 @@ class WSGIAdapter(object):
         return connection._write_buffer
 
 
-class WSGIContainer(object):
+class WSGIContainer:
     r"""Makes a WSGI-compatible function runnable on Tornado's HTTP server.
 
     .. warning::
@@ -288,7 +287,7 @@ class WSGIContainer(object):
         status_code, reason = data["status"].split(' ', 1)
         status_code = int(status_code)
         headers = data["headers"]
-        header_set = set(k.lower() for (k, v) in headers)
+        header_set = {k.lower() for (k, v) in headers}
         body = escape.utf8(body)
         if status_code != 304:
             if "content-length" not in header_set:

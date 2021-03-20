@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 # pylint: skip-file
-from __future__ import absolute_import, division, print_function
 
 from salt.ext.tornado.escape import utf8, _unicode
 from salt.ext.tornado import gen
@@ -93,7 +92,7 @@ class SimpleAsyncHTTPClient(AsyncHTTPClient):
         .. versionchanged:: 4.2
            Added the ``max_body_size`` argument.
         """
-        super(SimpleAsyncHTTPClient, self).initialize(io_loop,
+        super().initialize(io_loop,
                                                       defaults=defaults)
         self.max_clients = max_clients
         self.queue = collections.deque()
@@ -116,7 +115,7 @@ class SimpleAsyncHTTPClient(AsyncHTTPClient):
         self.tcp_client = TCPClient(resolver=self.resolver, io_loop=io_loop)
 
     def close(self):
-        super(SimpleAsyncHTTPClient, self).close()
+        super().close()
         if self.own_resolver:
             self.resolver.close()
         self.tcp_client.close()
@@ -180,7 +179,7 @@ class SimpleAsyncHTTPClient(AsyncHTTPClient):
         request, callback, timeout_handle = self.waiting[key]
         self.queue.remove((key, request, callback))
 
-        error_message = "Timeout {0}".format(info) if info else "Timeout"
+        error_message = "Timeout {}".format(info) if info else "Timeout"
         timeout_response = HTTPResponse(
             request, 599, error=HTTPError(599, error_message),
             request_time=self.io_loop.time() - request.start_time)
@@ -189,7 +188,7 @@ class SimpleAsyncHTTPClient(AsyncHTTPClient):
 
 
 class _HTTPConnection(httputil.HTTPMessageDelegate):
-    _SUPPORTED_METHODS = set(["GET", "HEAD", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"])
+    _SUPPORTED_METHODS = {"GET", "HEAD", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"}
 
     def __init__(self, io_loop, client, request, release_callback,
                  final_callback, max_buffer_size, tcp_client,
@@ -303,7 +302,7 @@ class _HTTPConnection(httputil.HTTPMessageDelegate):
         :info string key: More detailed timeout information.
         """
         self._timeout = None
-        error_message = "Timeout {0}".format(info) if info else "Timeout"
+        error_message = "Timeout {}".format(info) if info else "Timeout"
         if self.final_callback is not None:
             raise HTTPError(599, error_message)
 
@@ -494,7 +493,7 @@ class _HTTPConnection(httputil.HTTPMessageDelegate):
             # Reassemble the start line.
             self.request.header_callback('%s %s %s\r\n' % first_line)
             for k, v in self.headers.get_all():
-                self.request.header_callback("%s: %s\r\n" % (k, v))
+                self.request.header_callback("{}: {}\r\n".format(k, v))
             self.request.header_callback('\r\n')
 
     def _should_follow_redirect(self):
