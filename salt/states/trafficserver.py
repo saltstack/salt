@@ -204,7 +204,10 @@ def config(name, value):
     ret = {"name": name, "changes": {}, "result": None, "comment": ""}
 
     if __opts__["test"]:
-        ret["comment"] = "Configuring {0} to {1}".format(name, value,)
+        ret["comment"] = "Configuring {0} to {1}".format(
+            name,
+            value,
+        )
         return ret
 
     __salt__["trafficserver.set_config"](name, value)

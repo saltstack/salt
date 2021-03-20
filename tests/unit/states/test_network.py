@@ -14,7 +14,7 @@ log = logging.getLogger(__name__)
 
 class MockNetwork:
     """
-        Mock network class
+    Mock network class
     """
 
     def __init__(self):
@@ -23,7 +23,7 @@ class MockNetwork:
     @staticmethod
     def interfaces():
         """
-            Mock interface method
+        Mock interface method
         """
         ifaces = {
             "salt": {"up": 1},
@@ -34,7 +34,7 @@ class MockNetwork:
 
 class MockGrains:
     """
-        Mock Grains class
+    Mock Grains class
     """
 
     def __init__(self):
@@ -43,14 +43,14 @@ class MockGrains:
     @staticmethod
     def grains(lis, bol):
         """
-            Mock grains method
+        Mock grains method
         """
         return {"A": "B"}
 
 
 class NetworkTestCase(TestCase, LoaderModuleMockMixin):
     """
-        Validate the network state
+    Validate the network state
     """
 
     def setup_loader_modules(self):
@@ -58,7 +58,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_managed(self):
         """
-            Test to ensure that the named interface is configured properly
+        Test to ensure that the named interface is configured properly
         """
         with patch("salt.states.network.salt.utils.network", MockNetwork()), patch(
             "salt.states.network.salt.loader", MockGrains()
@@ -151,7 +151,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_routes(self):
         """
-            Test to manage network interface static routes.
+        Test to manage network interface static routes.
         """
         ret = {"name": "salt", "changes": {}, "result": False, "comment": ""}
 
@@ -211,8 +211,8 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_system(self):
         """
-            Test to ensure that global network settings
-            are configured properly
+        Test to ensure that global network settings
+        are configured properly
         """
         ret = {"name": "salt", "changes": {}, "result": False, "comment": ""}
 

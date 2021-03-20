@@ -539,7 +539,8 @@ class Compiler:
                                                     'Illegal requisite "{}", '
                                                     "is SLS {}\n"
                                                 ).format(
-                                                    str(req_val), body["__sls__"],
+                                                    str(req_val),
+                                                    body["__sls__"],
                                                 )
                                             )
                                             continue
@@ -2469,7 +2470,10 @@ class State:
                         comment = (
                             'The state function "{0}" is currently disabled by "{1}", '
                             "to re-enable, run state.enable {1}."
-                        ).format(state_, pat,)
+                        ).format(
+                            state_,
+                            pat,
+                        )
                         _tag = _gen_tag(low)
                         disabled[_tag] = {
                             "changes": {},
@@ -2822,10 +2826,10 @@ class State:
             self.opts.get("state_events", True) or fire_event
         ):
             if not self.opts.get("master_uri"):
-                ev_func = lambda ret, tag, preload=None: salt.utils.event.get_master_event(
-                    self.opts, self.opts["sock_dir"], listen=False
-                ).fire_event(
-                    ret, tag
+                ev_func = (
+                    lambda ret, tag, preload=None: salt.utils.event.get_master_event(
+                        self.opts, self.opts["sock_dir"], listen=False
+                    ).fire_event(ret, tag)
                 )
             else:
                 ev_func = self.functions["event.fire_master"]
@@ -2833,11 +2837,13 @@ class State:
             ret = {"ret": chunk_ret}
             if fire_event is True:
                 tag = salt.utils.event.tagify(
-                    [self.jid, self.opts["id"], str(chunk_ret["name"])], "state_result",
+                    [self.jid, self.opts["id"], str(chunk_ret["name"])],
+                    "state_result",
                 )
             elif isinstance(fire_event, str):
                 tag = salt.utils.event.tagify(
-                    [self.jid, self.opts["id"], str(fire_event)], "state_result",
+                    [self.jid, self.opts["id"], str(fire_event)],
+                    "state_result",
                 )
             else:
                 tag = salt.utils.event.tagify(

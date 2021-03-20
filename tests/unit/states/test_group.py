@@ -18,7 +18,7 @@ from tests.support.unit import TestCase
 
 class GroupTestCase(TestCase, LoaderModuleMockMixin):
     """
-        Validate the group state
+    Validate the group state
     """
 
     def setup_loader_modules(self):
@@ -26,7 +26,7 @@ class GroupTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_present(self):
         """
-            Test to ensure that a group is present
+        Test to ensure that a group is present
         """
         ret = {"name": "salt", "changes": {}, "result": True, "comment": {}}
 
@@ -88,7 +88,7 @@ class GroupTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_absent(self):
         """
-            Test to ensure that the named group is absent
+        Test to ensure that the named group is absent
         """
         ret = {"name": "salt", "changes": {}, "result": True, "comment": {}}
         mock = MagicMock(side_effect=[True, True, True, False])

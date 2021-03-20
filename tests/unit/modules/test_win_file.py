@@ -39,7 +39,7 @@ class DummyStat:
 
 class WinFileTestCase(TestCase, LoaderModuleMockMixin):
     """
-        Test cases for salt.modules.win_file
+    Test cases for salt.modules.win_file
     """
 
     FAKE_RET = {"fake": "ret data"}

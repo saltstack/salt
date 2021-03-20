@@ -305,8 +305,10 @@ def gpg_agent(request, gpghome):
         gpg_agent_cmd = "gpg-agent --homedir {} --allow-preset-passphrase --max-cache-ttl 600 --daemon".format(
             gpghome
         )
-        echo_gpg_tty_cmd = "GPG_TTY=$(tty) ; export GPG_TTY ; echo $GPG_TTY=$(tty) > {}".format(
-            gpg_tty_info_path
+        echo_gpg_tty_cmd = (
+            "GPG_TTY=$(tty) ; export GPG_TTY ; echo $GPG_TTY=$(tty) > {}".format(
+                gpg_tty_info_path
+            )
         )
         subprocess.run(  # nosec
             "{}; {}".format(gpg_agent_cmd, echo_gpg_tty_cmd), shell=True, check=True

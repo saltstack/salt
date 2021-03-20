@@ -1205,28 +1205,34 @@ def security_rule_exists(
     else:
         member_string = ""
         if datafilter:
-            member_string += "<data-filtering><member>{}</member></data-filtering>".format(
-                datafilter
+            member_string += (
+                "<data-filtering><member>{}</member></data-filtering>".format(
+                    datafilter
+                )
             )
         if fileblock:
-            member_string += "<file-blocking><member>{}</member></file-blocking>".format(
-                fileblock
+            member_string += (
+                "<file-blocking><member>{}</member></file-blocking>".format(fileblock)
             )
         if spyware:
             member_string += "<spyware><member>{}</member></spyware>".format(spyware)
         if urlfilter:
-            member_string += "<url-filtering><member>{}</member></url-filtering>".format(
-                urlfilter
+            member_string += (
+                "<url-filtering><member>{}</member></url-filtering>".format(urlfilter)
             )
         if virus:
             member_string += "<virus><member>{}</member></virus>".format(virus)
         if vulnerability:
-            member_string += "<vulnerability><member>{}</member></vulnerability>".format(
-                vulnerability
+            member_string += (
+                "<vulnerability><member>{}</member></vulnerability>".format(
+                    vulnerability
+                )
             )
         if wildfire:
-            member_string += "<wildfire-analysis><member>{}</member></wildfire-analysis>".format(
-                wildfire
+            member_string += (
+                "<wildfire-analysis><member>{}</member></wildfire-analysis>".format(
+                    wildfire
+                )
             )
         if member_string != "":
             profile_string = "<profiles>{}</profiles>".format(member_string)

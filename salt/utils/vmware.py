@@ -262,7 +262,9 @@ def _get_service_instance(
         )
 
     log.trace(
-        "Connecting using the '%s' mechanism, with username '%s'", mechanism, username,
+        "Connecting using the '%s' mechanism, with username '%s'",
+        mechanism,
+        username,
     )
     default_msg = (
         "Could not connect to host '{}'. "

@@ -17,7 +17,7 @@ from tests.support.unit import TestCase
 
 class WinServermanagerTestCase(TestCase, LoaderModuleMockMixin):
     """
-        Validate the win_servermanager state
+    Validate the win_servermanager state
     """
 
     def setup_loader_modules(self):
@@ -25,7 +25,7 @@ class WinServermanagerTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_installed(self):
         """
-            Test to install the windows feature
+        Test to install the windows feature
         """
         mock_list = MagicMock(
             side_effect=[
@@ -88,7 +88,7 @@ class WinServermanagerTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_removed(self):
         """
-            Test to remove the windows feature
+        Test to remove the windows feature
         """
         mock_list = MagicMock(
             side_effect=[

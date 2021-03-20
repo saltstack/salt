@@ -320,12 +320,16 @@ class FactoryProcess:
             if stdout or stderr:
                 log_message += " Process Output:"
                 if stdout:
-                    log_message += "\n>>>>> STDOUT >>>>>\n{}\n<<<<< STDOUT <<<<<".format(
-                        stdout.strip()
+                    log_message += (
+                        "\n>>>>> STDOUT >>>>>\n{}\n<<<<< STDOUT <<<<<".format(
+                            stdout.strip()
+                        )
                     )
                 if stderr:
-                    log_message += "\n>>>>> STDERR >>>>>\n{}\n<<<<< STDERR <<<<<".format(
-                        stderr.strip()
+                    log_message += (
+                        "\n>>>>> STDERR >>>>>\n{}\n<<<<< STDERR <<<<<".format(
+                            stderr.strip()
+                        )
                     )
                 log_message += "\n"
             log.info(log_message)
@@ -395,7 +399,11 @@ class FactoryScriptBase(FactoryProcess):
             "%sRunning %r in CWD: %s ...", self.get_log_prefix(), cmdline, self.cwd
         )
 
-        terminal = self.init_terminal(cmdline, cwd=self.cwd, env=self.environ,)
+        terminal = self.init_terminal(
+            cmdline,
+            cwd=self.cwd,
+            env=self.environ,
+        )
         timmed_out = False
         while True:
             if timeout_expire < time.time():
@@ -503,7 +511,9 @@ class FactoryDaemonScriptBase(FactoryProcess):
         log.info("%sRunning %r...", self.get_log_prefix(), cmdline)
 
         self.init_terminal(
-            cmdline, env=self.environ, cwd=self.cwd,
+            cmdline,
+            env=self.environ,
+            cwd=self.cwd,
         )
         self._children.extend(psutil.Process(self.pid).children(recursive=True))
         return True

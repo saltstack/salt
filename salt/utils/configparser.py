@@ -52,7 +52,10 @@ class GitConfigParser(RawConfigParser, object):  # pylint: disable=undefined-var
 
     # pylint: disable=useless-super-delegation
     def __init__(
-        self, defaults=None, dict_type=_default_dict, allow_no_value=True,
+        self,
+        defaults=None,
+        dict_type=_default_dict,
+        allow_no_value=True,
     ):
         """
         Changes default value for allow_no_value from False to True

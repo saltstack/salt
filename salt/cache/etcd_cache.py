@@ -92,8 +92,7 @@ def __virtual__():
 
 
 def _init_client():
-    """Setup client and init datastore.
-    """
+    """Setup client and init datastore."""
     global client, path_prefix
     if client is not None:
         return

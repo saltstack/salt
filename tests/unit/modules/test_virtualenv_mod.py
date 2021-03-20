@@ -222,7 +222,9 @@ class VirtualenvTestCase(TestCase, LoaderModuleMockMixin):
             mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
             with patch.dict(virtualenv_mod.__salt__, {"cmd.run_all": mock}):
                 self.assertRaises(
-                    CommandExecutionError, virtualenv_mod.create, "/tmp/foo",
+                    CommandExecutionError,
+                    virtualenv_mod.create,
+                    "/tmp/foo",
                 )
             # <---- virtualenv binary not available --------------------------
 
@@ -277,7 +279,8 @@ class VirtualenvTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch.dict(virtualenv_mod.__salt__, {"cmd.run_all": mock}):
             virtualenv_mod.create(
-                "/tmp/foo", python=sys.executable,
+                "/tmp/foo",
+                python=sys.executable,
             )
             mock.assert_called_once_with(
                 ["virtualenv", "--python={0}".format(sys.executable), "/tmp/foo"],

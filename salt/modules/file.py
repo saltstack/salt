@@ -174,7 +174,8 @@ def _chattr_version():
     cmd = [tune2fs]
     result = __salt__["cmd.run"](cmd, ignore_retcode=True, python_shell=False)
     match = re.search(
-        r"tune2fs (?P<version>[0-9\.]+)", salt.utils.stringutils.to_str(result),
+        r"tune2fs (?P<version>[0-9\.]+)",
+        salt.utils.stringutils.to_str(result),
     )
     if match is None:
         version = None
@@ -587,7 +588,8 @@ def _cmp_attrs(path, attrs):
         new.add("e")
 
     return AttrChanges(
-        added="".join(new - old) or None, removed="".join(old - new) or None,
+        added="".join(new - old) or None,
+        removed="".join(old - new) or None,
     )
 
 
@@ -5072,11 +5074,15 @@ def check_perms(
                 else:
                     if diff_attrs.added:
                         chattr(
-                            name, operator="add", attributes=diff_attrs.added,
+                            name,
+                            operator="add",
+                            attributes=diff_attrs.added,
                         )
                     if diff_attrs.removed:
                         chattr(
-                            name, operator="remove", attributes=diff_attrs.removed,
+                            name,
+                            operator="remove",
+                            attributes=diff_attrs.removed,
                         )
                     cmp_attrs = _cmp_attrs(name, attrs)
                     if any(attr for attr in cmp_attrs):
@@ -5395,10 +5401,14 @@ def check_managed_changes(
             __clean_tmp(sfn)
             return False, comments
         if sfn and source and keep_mode:
-            if urllib.parse.urlparse(source).scheme in (
-                "salt",
-                "file",
-            ) or source.startswith("/"):
+            if (
+                urllib.parse.urlparse(source).scheme
+                in (
+                    "salt",
+                    "file",
+                )
+                or source.startswith("/")
+            ):
                 try:
                     mode = __salt__["cp.stat_file"](source, saltenv=saltenv, octal=True)
                 except Exception as exc:  # pylint: disable=broad-except

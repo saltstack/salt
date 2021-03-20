@@ -180,7 +180,10 @@ def bootstrap(
 
     if platform in ("rpm", "yum"):
         _bootstrap_yum(
-            root, pkgs=pkgs, exclude_pkgs=exclude_pkgs, epel_url=epel_url,
+            root,
+            pkgs=pkgs,
+            exclude_pkgs=exclude_pkgs,
+            epel_url=epel_url,
         )
     elif platform == "deb":
         _bootstrap_deb(
@@ -194,7 +197,10 @@ def bootstrap(
         )
     elif platform == "pacman":
         _bootstrap_pacman(
-            root, img_format=img_format, pkgs=pkgs, exclude_pkgs=exclude_pkgs,
+            root,
+            img_format=img_format,
+            pkgs=pkgs,
+            exclude_pkgs=exclude_pkgs,
         )
 
     if img_format != "dir":
@@ -285,7 +291,11 @@ def _populate_cache(platform, pkg_cache, mount_dir):
 
 
 def _bootstrap_yum(
-    root, pkg_confs="/etc/yum*", pkgs=None, exclude_pkgs=None, epel_url=EPEL_URL,
+    root,
+    pkg_confs="/etc/yum*",
+    pkgs=None,
+    exclude_pkgs=None,
+    epel_url=EPEL_URL,
 ):
     """
     Bootstrap an image using the yum tools
@@ -364,7 +374,13 @@ def _bootstrap_yum(
 
 
 def _bootstrap_deb(
-    root, arch, flavor, repo_url=None, static_qemu=None, pkgs=None, exclude_pkgs=None,
+    root,
+    arch,
+    flavor,
+    repo_url=None,
+    static_qemu=None,
+    pkgs=None,
+    exclude_pkgs=None,
 ):
     """
     Bootstrap an image using the Debian tools
@@ -452,7 +468,11 @@ def _bootstrap_deb(
 
 
 def _bootstrap_pacman(
-    root, pkg_confs="/etc/pacman*", img_format="dir", pkgs=None, exclude_pkgs=None,
+    root,
+    pkg_confs="/etc/pacman*",
+    img_format="dir",
+    pkgs=None,
+    exclude_pkgs=None,
 ):
     """
     Bootstrap an image using the pacman tools
@@ -618,7 +638,10 @@ def _tar(name, root, path=None, compress="bzip2"):
 
     tarfile = "{}/{}.tar.{}".format(path, name, ext)
     out = __salt__["archive.tar"](
-        options="{}pcf".format(compression), tarfile=tarfile, sources=".", dest=root,
+        options="{}pcf".format(compression),
+        tarfile=tarfile,
+        sources=".",
+        dest=root,
     )
 
 
@@ -642,7 +665,9 @@ def _untar(name, dest=None, path=None, compress="bz2"):
 
     tarfile = "{}/{}.tar.{}".format(path, name, ext)
     out = __salt__["archive.tar"](
-        options="{}xf".format(compression), tarfile=tarfile, dest=dest,
+        options="{}xf".format(compression),
+        tarfile=tarfile,
+        dest=dest,
     )
 
 

@@ -36,7 +36,7 @@ log = logging.getLogger(__name__)
 
 class MockState:
     """
-        Mock class
+    Mock class
     """
 
     def __init__(self):
@@ -44,7 +44,7 @@ class MockState:
 
     class State:
         """
-            Mock state class
+        Mock state class
         """
 
         flag = None
@@ -56,7 +56,7 @@ class MockState:
 
         def verify_data(self, data):
             """
-                Mock verify_data method
+            Mock verify_data method
             """
             if self.flag:
                 return True
@@ -66,34 +66,34 @@ class MockState:
         @staticmethod
         def call(data):
             """
-                Mock call method
+            Mock call method
             """
             return list
 
         @staticmethod
         def call_high(data, orchestration_jid=None):
             """
-                Mock call_high method
+            Mock call_high method
             """
             return True
 
         @staticmethod
         def call_template_str(data):
             """
-                Mock call_template_str method
+            Mock call_template_str method
             """
             return True
 
         @staticmethod
         def _mod_init(data):
             """
-                Mock _mod_init method
+            Mock _mod_init method
             """
             return True
 
         def verify_high(self, data):
             """
-                Mock verify_high method
+            Mock verify_high method
             """
             if self.flag:
                 return True
@@ -103,28 +103,28 @@ class MockState:
         @staticmethod
         def compile_high_data(data):
             """
-                Mock compile_high_data
+            Mock compile_high_data
             """
             return [{"__id__": "ABC"}]
 
         @staticmethod
         def call_chunk(data, data1, data2):
             """
-                Mock call_chunk method
+            Mock call_chunk method
             """
             return {"": "ABC"}
 
         @staticmethod
         def call_chunks(data):
             """
-                Mock call_chunks method
+            Mock call_chunks method
             """
             return True
 
         @staticmethod
         def call_listen(data, ret):
             """
-                Mock call_listen method
+            Mock call_listen method
             """
             return True
 
@@ -133,7 +133,7 @@ class MockState:
 
     class HighState:
         """
-            Mock HighState class
+        Mock HighState class
         """
 
         flag = False
@@ -145,7 +145,7 @@ class MockState:
 
         def render_state(self, sls, saltenv, mods, matches, local=False):
             """
-                Mock render_state method
+            Mock render_state method
             """
             if self.flag:
                 return {}, True
@@ -155,13 +155,13 @@ class MockState:
         @staticmethod
         def get_top():
             """
-                Mock get_top method
+            Mock get_top method
             """
             return "_top"
 
         def verify_tops(self, data):
             """
-                Mock verify_tops method
+            Mock verify_tops method
             """
             if self.flag:
                 return ["a", "b"]
@@ -171,48 +171,48 @@ class MockState:
         @staticmethod
         def top_matches(data):
             """
-                Mock top_matches method
+            Mock top_matches method
             """
             return ["a", "b", "c"]
 
         @staticmethod
         def push_active():
             """
-                Mock push_active method
+            Mock push_active method
             """
             return True
 
         @staticmethod
         def compile_highstate():
             """
-                Mock compile_highstate method
+            Mock compile_highstate method
             """
             return "A"
 
         @staticmethod
         def compile_state_usage():
             """
-                Mock compile_state_usage method
+            Mock compile_state_usage method
             """
             return "A"
 
         @staticmethod
         def pop_active():
             """
-                Mock pop_active method
+            Mock pop_active method
             """
             return True
 
         @staticmethod
         def compile_low_chunks():
             """
-                Mock compile_low_chunks method
+            Mock compile_low_chunks method
             """
             return [{"__id__": "ABC", "__sls__": "abc"}]
 
         def render_highstate(self, data):
             """
-                Mock render_highstate method
+            Mock render_highstate method
             """
             if self.flag:
                 return ["a", "b"], True
@@ -229,14 +229,14 @@ class MockState:
             orchestration_jid=None,
         ):
             """
-                Mock call_highstate method
+            Mock call_highstate method
             """
             return True
 
 
 class MockSerial:
     """
-        Mock Class
+    Mock Class
     """
 
     def __init__(self):
@@ -244,7 +244,7 @@ class MockSerial:
 
     class Serial:
         """
-            Mock Serial class
+        Mock Serial class
         """
 
         def __init__(self, data):
@@ -253,21 +253,21 @@ class MockSerial:
         @staticmethod
         def load(data):
             """
-                Mock load method
+            Mock load method
             """
             return {"A": "B"}
 
         @staticmethod
         def dump(data, data1):
             """
-                Mock dump method
+            Mock dump method
             """
             return True
 
 
 class MockTarFile:
     """
-        Mock tarfile class
+    Mock tarfile class
     """
 
     path = os.sep + "tmp"
@@ -278,35 +278,35 @@ class MockTarFile:
     @staticmethod
     def open(data, data1):
         """
-            Mock open method
+        Mock open method
         """
         return MockTarFile
 
     @staticmethod
     def getmembers():
         """
-            Mock getmembers method
+        Mock getmembers method
         """
         return [MockTarFile]
 
     @staticmethod
     def extractall(data):
         """
-            Mock extractall method
+        Mock extractall method
         """
         return True
 
     @staticmethod
     def close():
         """
-            Mock close method
+        Mock close method
         """
         return True
 
 
 class StateTestCase(TestCase, LoaderModuleMockMixin):
     """
-        Test case for salt.modules.state
+    Test case for salt.modules.state
     """
 
     def setup_loader_modules(self):
@@ -338,7 +338,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_running(self):
         """
-            Test of checking i fthe state function is already running
+        Test of checking i fthe state function is already running
         """
         self.assertEqual(state.running(True), [])
 
@@ -369,7 +369,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_low(self):
         """
-            Test of executing a single low data call
+        Test of executing a single low data call
         """
         mock = MagicMock(side_effect=[False, None, None])
         with patch.object(state, "_check_queue", mock):
@@ -389,7 +389,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_high(self):
         """
-            Test for checking the state system
+        Test for checking the state system
         """
         mock = MagicMock(side_effect=[False, None])
         with patch.object(state, "_check_queue", mock):
@@ -401,8 +401,8 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_template(self):
         """
-            Test of executing the information
-            stored in a template file on the minion
+        Test of executing the information
+        stored in a template file on the minion
         """
         mock = MagicMock(side_effect=[False, None, None])
         with patch.object(state, "_check_queue", mock):
@@ -416,8 +416,8 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_template_str(self):
         """
-            Test for Executing the information
-            stored in a string from an sls template
+        Test for Executing the information
+        stored in a string from an sls template
         """
         mock = MagicMock(side_effect=[False, None])
         with patch.object(state, "_check_queue", mock):
@@ -427,7 +427,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_apply_(self):
         """
-            Test to apply states
+        Test to apply states
         """
         mock = MagicMock(return_value=True)
         with patch.object(state, "sls", mock):
@@ -438,7 +438,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_test(self):
         """
-            Test to apply states in test mode
+        Test to apply states in test mode
         """
         with patch.dict(state.__opts__, {"test": False}):
             mock = MagicMock(return_value=True)
@@ -455,7 +455,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_list_disabled(self):
         """
-            Test to list disabled states
+        Test to list disabled states
         """
         mock = MagicMock(return_value=["A", "B", "C"])
         with patch.dict(state.__salt__, {"grains.get": mock}):
@@ -463,7 +463,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_enable(self):
         """
-            Test to Enable state function or sls run
+        Test to Enable state function or sls run
         """
         mock = MagicMock(return_value=["A", "B"])
         with patch.dict(state.__salt__, {"grains.get": mock}):
@@ -483,7 +483,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_disable(self):
         """
-            Test to disable state run
+        Test to disable state run
         """
         mock = MagicMock(return_value=["C", "D"])
         with patch.dict(state.__salt__, {"grains.get": mock}):
@@ -503,7 +503,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_clear_cache(self):
         """
-            Test to clear out cached state file
+        Test to clear out cached state file
         """
         mock = MagicMock(return_value=["A.cache.p", "B.cache.p", "C"])
         with patch.object(os, "listdir", mock):
@@ -515,7 +515,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_single(self):
         """
-            Test to execute single state function
+        Test to execute single state function
         """
         ret = {"pkg_|-name=vim_|-name=vim_|-installed": list}
         mock = MagicMock(side_effect=["A", None, None, None, None])
@@ -547,7 +547,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_show_top(self):
         """
-            Test to return the top data that the minion will use for a highstate
+        Test to return the top data that the minion will use for a highstate
         """
         mock = MagicMock(side_effect=["A", None, None])
         with patch.object(state, "_check_queue", mock):
@@ -561,7 +561,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_run_request(self):
         """
-            Test to Execute the pending state request
+        Test to Execute the pending state request
         """
         mock = MagicMock(
             side_effect=[{}, {"name": "A"}, {"name": {"mods": "A", "kwargs": {}}}]
@@ -579,7 +579,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_show_highstate(self):
         """
-            Test to retrieve the highstate data from the salt master
+        Test to retrieve the highstate data from the salt master
         """
         mock = MagicMock(side_effect=["A", None, None])
         with patch.object(state, "_check_queue", mock):
@@ -591,7 +591,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_show_lowstate(self):
         """
-            Test to list out the low data that will be applied to this minion
+        Test to list out the low data that will be applied to this minion
         """
         mock = MagicMock(side_effect=["A", None])
         with patch.object(state, "_check_queue", mock):
@@ -601,7 +601,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_show_state_usage(self):
         """
-            Test to list out the state usage that will be applied to this minion
+        Test to list out the state usage that will be applied to this minion
         """
 
         mock = MagicMock(side_effect=["A", None, None])
@@ -614,7 +614,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_show_states(self):
         """
-            Test to display the low data from a specific sls
+        Test to display the low data from a specific sls
         """
         mock = MagicMock(side_effect=["A", None])
         with patch.object(state, "_check_queue", mock):
@@ -638,8 +638,8 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_sls_id(self):
         """
-            Test to call a single ID from the
-            named module(s) and handle all requisites
+        Test to call a single ID from the
+        named module(s) and handle all requisites
         """
         mock = MagicMock(side_effect=["A", None, None, None])
         with patch.object(state, "_check_queue", mock):
@@ -662,7 +662,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_show_low_sls(self):
         """
-            Test to display the low data from a specific sls
+        Test to display the low data from a specific sls
         """
         mock = MagicMock(side_effect=["A", None, None])
         with patch.object(state, "_check_queue", mock):
@@ -680,7 +680,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_show_sls(self):
         """
-            Test to display the state data from a specific sls
+        Test to display the state data from a specific sls
         """
         mock = MagicMock(side_effect=["A", None, None, None])
         with patch.object(state, "_check_queue", mock):
@@ -703,7 +703,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_sls_exists(self):
         """
-            Test of sls_exists
+        Test of sls_exists
         """
         test_state = {}
         test_missing_state = []
@@ -717,7 +717,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_id_exists(self):
         """
-            Test of id_exists
+        Test of id_exists
         """
         test_state = [
             {
@@ -748,7 +748,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_top(self):
         """
-            Test to execute a specific top file
+        Test to execute a specific top file
         """
         ret = ["Pillar failed to render with the following messages:", "E"]
         mock = MagicMock(side_effect=["A", None, None, None])
@@ -784,8 +784,8 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_highstate(self):
         """
-            Test to retrieve the state data from the
-            salt master for the minion and execute it
+        Test to retrieve the state data from the
+        salt master for the minion and execute it
         """
         arg = "whitelist=sls1.sls"
         mock = MagicMock(side_effect=[True, False, False, False])
@@ -828,7 +828,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_clear_request(self):
         """
-            Test to clear out the state execution request without executing it
+        Test to clear out the state execution request without executing it
         """
         mock = MagicMock(return_value=True)
         with patch.object(salt.payload, "Serial", mock):
@@ -846,7 +846,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_check_request(self):
         """
-            Test to return the state request information
+        Test to return the state request information
         """
         with patch("salt.modules.state.salt.payload", MockSerial):
             mock = MagicMock(side_effect=[True, True, False])
@@ -861,7 +861,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_request(self):
         """
-            Test to request the local admin execute a state run
+        Test to request the local admin execute a state run
         """
         mock = MagicMock(return_value=True)
         with patch.object(state, "apply_", mock):
@@ -882,7 +882,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_sls(self):
         """
-            Test to execute a set list of state files from an environment
+        Test to execute a set list of state files from an environment
         """
         arg = "core,edit.vim dev"
         ret = ["Pillar failed to render with the following messages:", "E", "1"]
@@ -1042,7 +1042,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
 
     def sub_test_sls(self):
         """
-            Sub function of test_sls
+        Sub function of test_sls
         """
         mock = MagicMock(return_value=True)
         with patch.object(os.path, "join", mock):
@@ -1135,7 +1135,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_pkg(self):
         """
-            Test to execute a packaged state run
+        Test to execute a packaged state run
         """
         tar_file = os.sep + os.path.join("tmp", "state_pkg.tgz")
         mock = MagicMock(

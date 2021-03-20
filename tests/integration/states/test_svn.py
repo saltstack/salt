@@ -48,7 +48,10 @@ class SvnTest(ModuleCase, SaltReturnAssertsMixin):
         svn.latest
         """
         ret = self.run_state(
-            "svn.latest", name=self.name, rev=self.new_rev, target=self.target,
+            "svn.latest",
+            name=self.name,
+            rev=self.new_rev,
+            target=self.target,
         )
         self.assertSaltTrueReturn(ret)
         self.assertTrue(os.path.isdir(os.path.join(self.target, ".svn")))
@@ -77,7 +80,10 @@ class SvnTest(ModuleCase, SaltReturnAssertsMixin):
         if not os.path.isdir(self.target):
             os.mkdir(self.target)
         ret = self.run_state(
-            "svn.latest", name=self.name, rev=self.new_rev, target=self.target,
+            "svn.latest",
+            name=self.name,
+            rev=self.new_rev,
+            target=self.target,
         )
         self.assertSaltTrueReturn(ret)
         self.assertTrue(os.path.isdir(os.path.join(self.target, ".svn")))
@@ -96,7 +102,10 @@ class SvnTest(ModuleCase, SaltReturnAssertsMixin):
         assert out
 
         ret = self.run_state(
-            "svn.latest", name=self.name, rev=self.new_rev, target=self.target,
+            "svn.latest",
+            name=self.name,
+            rev=self.new_rev,
+            target=self.target,
         )
         self.assertSaltTrueReturn(ret)
         self.assertSaltStateChangesEqual(
@@ -116,7 +125,10 @@ class SvnTest(ModuleCase, SaltReturnAssertsMixin):
         )
         assert out
         ret = self.run_state(
-            "svn.latest", name=self.name, rev=self.new_rev, target=self.target,
+            "svn.latest",
+            name=self.name,
+            rev=self.new_rev,
+            target=self.target,
         )
         self.assertSaltTrueReturn(ret)
         self.assertSaltStateChangesEqual(ret, {})

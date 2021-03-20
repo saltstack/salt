@@ -73,7 +73,8 @@ def _get_secret_key(profile):
 
 def _generate_password(email):
     m = hmac.new(
-        base64.b64decode(_get_secret_key("splunk")), str([email, SERVICE_NAME]),
+        base64.b64decode(_get_secret_key("splunk")),
+        str([email, SERVICE_NAME]),
     )
     return base64.urlsafe_b64encode(m.digest()).strip().replace("=", "")
 

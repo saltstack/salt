@@ -7286,7 +7286,8 @@ def _write_regpol_data(
             "Version",
             int(
                 "{}{}".format(
-                    str(version_nums[0]).zfill(4), str(version_nums[1]).zfill(4),
+                    str(version_nums[0]).zfill(4),
+                    str(version_nums[1]).zfill(4),
                 ),
                 16,
             ),
@@ -7530,8 +7531,11 @@ def _writeAdminTemplateRegPolFile(
                                                     admPolicy,
                                                     this_list,
                                                 )
-                                                existing_data = _policyFileReplaceOrAppendList(
-                                                    disabled_list_strings, existing_data
+                                                existing_data = (
+                                                    _policyFileReplaceOrAppendList(
+                                                        disabled_list_strings,
+                                                        existing_data,
+                                                    )
                                                 )
                                         elif (
                                             etree.QName(child_item).localname
@@ -7710,8 +7714,10 @@ def _writeAdminTemplateRegPolFile(
                                                         None,
                                                         test_items=False,
                                                     )
-                                                existing_data = _policyFileReplaceOrAppendList(
-                                                    list_strings, existing_data
+                                                existing_data = (
+                                                    _policyFileReplaceOrAppendList(
+                                                        list_strings, existing_data
+                                                    )
                                                 )
                                             elif etree.QName(
                                                 child_item
@@ -7723,29 +7729,35 @@ def _writeAdminTemplateRegPolFile(
                                                 if base_policy_settings[adm_namespace][
                                                     admPolicy
                                                 ][child_item.attrib["id"]]:
-                                                    value_string = _checkValueItemParent(
-                                                        child_item,
-                                                        admPolicy,
-                                                        child_key,
-                                                        child_valuename,
-                                                        TRUE_VALUE_XPATH,
-                                                        None,
-                                                        check_deleted=False,
-                                                        test_item=False,
+                                                    value_string = (
+                                                        _checkValueItemParent(
+                                                            child_item,
+                                                            admPolicy,
+                                                            child_key,
+                                                            child_valuename,
+                                                            TRUE_VALUE_XPATH,
+                                                            None,
+                                                            check_deleted=False,
+                                                            test_item=False,
+                                                        )
                                                     )
                                                 else:
-                                                    value_string = _checkValueItemParent(
-                                                        child_item,
-                                                        admPolicy,
-                                                        child_key,
-                                                        child_valuename,
-                                                        FALSE_VALUE_XPATH,
-                                                        None,
-                                                        check_deleted=False,
-                                                        test_item=False,
+                                                    value_string = (
+                                                        _checkValueItemParent(
+                                                            child_item,
+                                                            admPolicy,
+                                                            child_key,
+                                                            child_valuename,
+                                                            FALSE_VALUE_XPATH,
+                                                            None,
+                                                            check_deleted=False,
+                                                            test_item=False,
+                                                        )
                                                     )
-                                                existing_data = _policyFileReplaceOrAppend(
-                                                    value_string, existing_data
+                                                existing_data = (
+                                                    _policyFileReplaceOrAppend(
+                                                        value_string, existing_data
+                                                    )
                                                 )
                                             elif (
                                                 etree.QName(child_item).localname
@@ -7778,8 +7790,11 @@ def _writeAdminTemplateRegPolFile(
                                                     "I have enabled value string of %s",
                                                     enabled_value_string,
                                                 )
-                                                existing_data = _policyFileReplaceOrAppend(
-                                                    enabled_value_string, existing_data
+                                                existing_data = (
+                                                    _policyFileReplaceOrAppend(
+                                                        enabled_value_string,
+                                                        existing_data,
+                                                    )
                                                 )
                                             elif (
                                                 etree.QName(child_item).localname
@@ -7799,28 +7814,34 @@ def _writeAdminTemplateRegPolFile(
                                                             ],
                                                         ).strip()
                                                     ):
-                                                        enabled_value_string = _checkValueItemParent(
-                                                            enum_item,
-                                                            child_item.attrib["id"],
-                                                            child_key,
-                                                            child_valuename,
-                                                            VALUE_XPATH,
-                                                            None,
-                                                            check_deleted=False,
-                                                            test_item=False,
+                                                        enabled_value_string = (
+                                                            _checkValueItemParent(
+                                                                enum_item,
+                                                                child_item.attrib["id"],
+                                                                child_key,
+                                                                child_valuename,
+                                                                VALUE_XPATH,
+                                                                None,
+                                                                check_deleted=False,
+                                                                test_item=False,
+                                                            )
                                                         )
-                                                        existing_data = _policyFileReplaceOrAppend(
-                                                            enabled_value_string,
-                                                            existing_data,
+                                                        existing_data = (
+                                                            _policyFileReplaceOrAppend(
+                                                                enabled_value_string,
+                                                                existing_data,
+                                                            )
                                                         )
                                                         if VALUE_LIST_XPATH(enum_item):
-                                                            enabled_list_strings = _checkListItem(
-                                                                enum_item,
-                                                                admPolicy,
-                                                                child_key,
-                                                                VALUE_LIST_XPATH,
-                                                                None,
-                                                                test_items=False,
+                                                            enabled_list_strings = (
+                                                                _checkListItem(
+                                                                    enum_item,
+                                                                    admPolicy,
+                                                                    child_key,
+                                                                    VALUE_LIST_XPATH,
+                                                                    None,
+                                                                    test_items=False,
+                                                                )
                                                             )
                                                             log.trace(
                                                                 "working with valueList portion of %s",
@@ -7854,10 +7875,12 @@ def _writeAdminTemplateRegPolFile(
                                                     "I have enabled value string of %s",
                                                     enabled_value_string,
                                                 )
-                                                existing_data = _policyFileReplaceOrAppend(
-                                                    enabled_value_string,
-                                                    existing_data,
-                                                    append_only=True,
+                                                existing_data = (
+                                                    _policyFileReplaceOrAppend(
+                                                        enabled_value_string,
+                                                        existing_data,
+                                                        append_only=True,
+                                                    )
                                                 )
     try:
         _write_regpol_data(
@@ -9814,9 +9837,9 @@ def set_(
                                                         policy_namespace
                                                     ][policy_name]
                                                 ):
-                                                    temp_element_name = child_item.attrib[
-                                                        "id"
-                                                    ]
+                                                    temp_element_name = (
+                                                        child_item.attrib["id"]
+                                                    )
                                                 else:
                                                     msg = (
                                                         'Element "{}" must be included'

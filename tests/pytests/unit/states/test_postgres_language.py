@@ -20,7 +20,8 @@ def test_present_existing():
     ret = {"name": name, "changes": {}, "result": False, "comment": ""}
     mock_language_list = MagicMock(return_value={"plpgsql": name})
     with patch.dict(
-        postgres_language.__salt__, {"postgres.language_list": mock_language_list},
+        postgres_language.__salt__,
+        {"postgres.language_list": mock_language_list},
     ):
         comt = "Language {} is already installed".format(name)
         ret.update({"comment": comt, "result": True})

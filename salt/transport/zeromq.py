@@ -85,11 +85,13 @@ def _get_master_uri(master_ip, master_port, source_ip=None, source_port=None):
             # The source:port syntax for ZeroMQ has been added in libzmq 4.1.6
             # which is included in the pyzmq wheels starting with 16.0.1.
             if source_ip and source_port:
-                master_uri = "tcp://{source_ip}:{source_port};{master_ip}:{master_port}".format(
-                    source_ip=ip_bracket(source_ip),
-                    source_port=source_port,
-                    master_ip=ip_bracket(master_ip),
-                    master_port=master_port,
+                master_uri = (
+                    "tcp://{source_ip}:{source_port};{master_ip}:{master_port}".format(
+                        source_ip=ip_bracket(source_ip),
+                        source_port=source_port,
+                        master_ip=ip_bracket(master_ip),
+                        master_port=master_port,
+                    )
                 )
             elif source_ip and not source_port:
                 master_uri = "tcp://{source_ip}:0;{master_ip}:{master_port}".format(
@@ -103,11 +105,13 @@ def _get_master_uri(master_ip, master_port, source_ip=None, source_port=None):
                     if ipaddress.ip_address(master_ip).version == 4
                     else ip_bracket("::")
                 )
-                master_uri = "tcp://{ip_any}:{source_port};{master_ip}:{master_port}".format(
-                    ip_any=ip_any,
-                    source_port=source_port,
-                    master_ip=ip_bracket(master_ip),
-                    master_port=master_port,
+                master_uri = (
+                    "tcp://{ip_any}:{source_port};{master_ip}:{master_port}".format(
+                        ip_any=ip_any,
+                        source_port=source_port,
+                        master_ip=ip_bracket(master_ip),
+                        master_port=master_port,
+                    )
                 )
         else:
             log.warning(
@@ -201,7 +205,10 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
                     key,
                     AsyncReqMessageClientPool(
                         result.opts,
-                        args=(result.opts, self.master_uri,),
+                        args=(
+                            result.opts,
+                            self.master_uri,
+                        ),
                         kwargs={"io_loop": self._io_loop},
                     ),
                 )
@@ -262,7 +269,10 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
         )
         self.message_client = AsyncReqMessageClientPool(
             self.opts,
-            args=(self.opts, self.master_uri,),
+            args=(
+                self.opts,
+                self.master_uri,
+            ),
             kwargs={"io_loop": self._io_loop},
         )
         self._closing = False
@@ -427,7 +437,9 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
         :param int timeout: The number of seconds on a response before failing
         """
         ret = yield self.message_client.send(
-            self._package_load(load), timeout=timeout, tries=tries,
+            self._package_load(load),
+            timeout=timeout,
+            tries=tries,
         )
 
         raise salt.ext.tornado.gen.Return(ret)
@@ -887,7 +899,11 @@ class ZeroMQReqServerChannel(
         elif req_fun == "send_private":
             stream.send(
                 self.serial.dumps(
-                    self._encrypt_private(ret, req_opts["key"], req_opts["tgt"],)
+                    self._encrypt_private(
+                        ret,
+                        req_opts["key"],
+                        req_opts["tgt"],
+                    )
                 )
             )
         else:
@@ -1366,7 +1382,10 @@ class AsyncReqMessageClient:
                     future.tries,
                 )
                 self.send(
-                    message, timeout=future.timeout, tries=future.tries, future=future,
+                    message,
+                    timeout=future.timeout,
+                    tries=future.tries,
+                    future=future,
                 )
 
             else:

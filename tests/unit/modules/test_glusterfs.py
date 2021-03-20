@@ -112,9 +112,9 @@ class GlusterResults:
                 ),
             }
             success_first_hostname_from_second_first_time = success_other
-            success_first_hostname_from_second_second_time = success_reverse_already_peer[
-                "hostname"
-            ]
+            success_first_hostname_from_second_second_time = (
+                success_reverse_already_peer["hostname"]
+            )
             success_first_ip_from_second_first_time = success_reverse_already_peer["ip"]
 
     class v37:
@@ -208,9 +208,9 @@ class GlusterResults:
                     ]
                 ),
             }
-            success_first_hostname_from_second_first_time = success_reverse_already_peer[
-                "hostname"
-            ]
+            success_first_hostname_from_second_first_time = (
+                success_reverse_already_peer["hostname"]
+            )
             success_first_ip_from_second_first_time = success_other
             success_first_ip_from_second_second_time = success_reverse_already_peer[
                 "ip"

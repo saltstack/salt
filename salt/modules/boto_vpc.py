@@ -196,7 +196,12 @@ def __init__(opts):
 
 
 def check_vpc(
-    vpc_id=None, vpc_name=None, region=None, key=None, keyid=None, profile=None,
+    vpc_id=None,
+    vpc_name=None,
+    region=None,
+    key=None,
+    keyid=None,
+    profile=None,
 ):
     """
     Check whether a VPC with the given name or id exists.
@@ -672,7 +677,13 @@ def _get_id(
 
 
 def get_id(
-    name=None, cidr=None, tags=None, region=None, key=None, keyid=None, profile=None,
+    name=None,
+    cidr=None,
+    tags=None,
+    region=None,
+    key=None,
+    keyid=None,
+    profile=None,
 ):
     """
     Given VPC properties, return the VPC id if a match is found.
@@ -883,7 +894,12 @@ def delete(
 
 
 def describe(
-    vpc_id=None, vpc_name=None, region=None, key=None, keyid=None, profile=None,
+    vpc_id=None,
+    vpc_name=None,
+    region=None,
+    key=None,
+    keyid=None,
+    profile=None,
 ):
     """
     Describe a VPC's properties. If no VPC ID/Name is spcified then describe the default VPC.

@@ -32,16 +32,16 @@ def __virtual__():
 
 def _hadoop_cmd(module, command, *args):
     """
-       Hadoop/hdfs command wrapper
+    Hadoop/hdfs command wrapper
 
-       As Hadoop command has been deprecated this module will default
-       to use hdfs command and fall back to hadoop if it is not found
+    As Hadoop command has been deprecated this module will default
+    to use hdfs command and fall back to hadoop if it is not found
 
-       In order to prevent random execution the module name is checked
+    In order to prevent random execution the module name is checked
 
-       Follows hadoop command template:
-          hadoop module -command args
-       E.g.: hadoop dfs -ls /
+    Follows hadoop command template:
+       hadoop module -command args
+    E.g.: hadoop dfs -ls /
     """
     tool = "hadoop"
     if salt.utils.path.which("hdfs"):

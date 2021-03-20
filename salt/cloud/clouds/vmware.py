@@ -191,7 +191,11 @@ def get_configured_provider():
     return config.is_provider_configured(
         __opts__,
         _get_active_provider_name() or __virtualname__,
-        ("url", "user", "password",),
+        (
+            "url",
+            "user",
+            "password",
+        ),
     )
 
 
@@ -432,8 +436,10 @@ def _edit_existing_network_adapter(
     else:
         # If switch type not specified or does not match, show error and return
         if not switch_type:
-            err_msg = "The switch type to be used by '{}' has not been specified".format(
-                network_adapter.deviceInfo.label
+            err_msg = (
+                "The switch type to be used by '{}' has not been specified".format(
+                    network_adapter.deviceInfo.label
+                )
             )
         else:
             err_msg = "Cannot create '{}'. Invalid/unsupported switch type '{}'".format(
@@ -519,8 +525,10 @@ def _add_new_network_adapter_helper(
     else:
         # If switch type not specified or does not match, show error and return
         if not switch_type:
-            err_msg = "The switch type to be used by '{}' has not been specified".format(
-                network_adapter_label
+            err_msg = (
+                "The switch type to be used by '{}' has not been specified".format(
+                    network_adapter_label
+                )
             )
         else:
             err_msg = "Cannot create '{}'. Invalid/unsupported switch type '{}'".format(
@@ -3151,8 +3159,10 @@ def create(vm_):
                 )
 
                 # get recommended datastores
-                recommended_datastores = si.content.storageResourceManager.RecommendDatastores(
-                    storageSpec=storage_spec
+                recommended_datastores = (
+                    si.content.storageResourceManager.RecommendDatastores(
+                        storageSpec=storage_spec
+                    )
                 )
 
                 # apply storage DRS recommendations
@@ -4369,7 +4379,9 @@ def add_host(kwargs=None, call=None):
             raise SaltCloudSystemExit("Specified datacenter does not exist.")
 
     spec = vim.host.ConnectSpec(
-        hostName=host_name, userName=host_user, password=host_password,
+        hostName=host_name,
+        userName=host_user,
+        password=host_password,
     )
 
     if host_ssl_thumbprint:

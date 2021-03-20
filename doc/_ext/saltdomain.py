@@ -222,7 +222,9 @@ class State(Directive):
 
         indextext = "{1} ({0}-formula)".format(formula, statename)
         inode = addnodes.index(
-            entries=[("single", indextext, "module-{}".format(statename), ""),]
+            entries=[
+                ("single", indextext, "module-{}".format(statename), ""),
+            ]
         )
 
         return [targetnode, inode]
@@ -245,7 +247,9 @@ class SaltDomain(python_domain.PythonDomain):
 
     object_types = python_domain.PythonDomain.object_types
     object_types.update(
-        {"state": ObjType(_("state"), "state"),}
+        {
+            "state": ObjType(_("state"), "state"),
+        }
     )
 
     directives = python_domain.PythonDomain.directives
@@ -261,12 +265,16 @@ class SaltDomain(python_domain.PythonDomain):
 
     roles = python_domain.PythonDomain.roles
     roles.update(
-        {"formula": SLSXRefRole(),}
+        {
+            "formula": SLSXRefRole(),
+        }
     )
 
     initial_data = python_domain.PythonDomain.initial_data
     initial_data.update(
-        {"formulas": {},}
+        {
+            "formulas": {},
+        }
     )
 
     indices = [

@@ -184,8 +184,10 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
         assert "Certificate" in ret[first_key]["changes"]
         assert "New" in ret[first_key]["changes"]["Certificate"]
         # check whether the second defined cert is considered to match the first one
-        second_key = "x509_|-second_test_crt_|-{}/pki/test.crt_|-certificate_managed".format(
-            RUNTIME_VARS.TMP
+        second_key = (
+            "x509_|-second_test_crt_|-{}/pki/test.crt_|-certificate_managed".format(
+                RUNTIME_VARS.TMP
+            )
         )
         assert second_key in ret
         assert "changes" in ret[second_key]

@@ -360,7 +360,8 @@ class BuildoutOnlineTestCase(Base):
                 "/d/distribute/distribute-0.6.43.tar.gz"
             )
             download_to(
-                url, os.path.join(cls.ppy_dis, "distribute-0.6.43.tar.gz"),
+                url,
+                os.path.join(cls.ppy_dis, "distribute-0.6.43.tar.gz"),
             )
 
             subprocess.check_call(

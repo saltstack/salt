@@ -388,9 +388,9 @@ def ext_pillar(minion_id, pillar, **kwargs):  # pylint: disable=W0613
                                         ] = customValue.value
                         type_specific_pillar_attribute = []
                         if type_name in type_specific_pillar_attributes:
-                            type_specific_pillar_attribute = type_specific_pillar_attributes[
-                                type_name
-                            ]
+                            type_specific_pillar_attribute = (
+                                type_specific_pillar_attributes[type_name]
+                            )
                         vmware_pillar[pillar_key] = dictupdate.update(
                             vmware_pillar[pillar_key],
                             _crawl_attribute(

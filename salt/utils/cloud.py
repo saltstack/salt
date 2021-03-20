@@ -1305,7 +1305,10 @@ def deploy_windows(
         local_path = "/".join(comps[:-1])
         installer = comps[-1]
         salt.utils.smb.put_file(
-            win_installer, "salttemp\\{}".format(installer), "C$", conn=smb_conn,
+            win_installer,
+            "salttemp\\{}".format(installer),
+            "C$",
+            conn=smb_conn,
         )
 
         if use_winrm:
@@ -1797,7 +1800,9 @@ def deploy_script(
                         **ssh_kwargs
                     )
                     # The deploy command is now our wrapper
-                    deploy_command = "'{}/environ-deploy-wrapper.sh'".format(tmp_dir,)
+                    deploy_command = "'{}/environ-deploy-wrapper.sh'".format(
+                        tmp_dir,
+                    )
                 if root_cmd(deploy_command, tty, sudo, **ssh_kwargs) != 0:
                     raise SaltCloudSystemExit(
                         "Executing the command '{}' failed".format(deploy_command)
@@ -2769,7 +2774,12 @@ def init_cachedir(base=None):
 
 # FIXME: This function seems used nowhere. Dead code?
 def request_minion_cachedir(
-    minion_id, opts=None, fingerprint="", pubkey=None, provider=None, base=None,
+    minion_id,
+    opts=None,
+    fingerprint="",
+    pubkey=None,
+    provider=None,
+    base=None,
 ):
     """
     Creates an entry in the requested/ cachedir. This means that Salt Cloud has
@@ -2803,7 +2813,10 @@ def request_minion_cachedir(
 
 
 def change_minion_cachedir(
-    minion_id, cachedir, data=None, base=None,
+    minion_id,
+    cachedir,
+    data=None,
+    base=None,
 ):
     """
     Changes the info inside a minion's cachedir entry. The type of cachedir
@@ -3427,7 +3440,12 @@ def userdata_template(opts, vm_, userdata):
         blacklist = opts["renderer_blacklist"]
         whitelist = opts["renderer_whitelist"]
         templated = salt.template.compile_template(
-            ":string:", rend, renderer, blacklist, whitelist, input_data=userdata,
+            ":string:",
+            rend,
+            renderer,
+            blacklist,
+            whitelist,
+            input_data=userdata,
         )
         if not isinstance(templated, str):
             # template renderers like "jinja" should return a StringIO

@@ -812,7 +812,8 @@ def _error_detail(data, item):
             )
         except TypeError:
             msg = "{}: {}".format(
-                item["errorDetail"]["code"], item["errorDetail"]["message"],
+                item["errorDetail"]["code"],
+                item["errorDetail"]["message"],
             )
     else:
         msg = item["errorDetail"]["message"]
@@ -1476,7 +1477,9 @@ def login(*registries):
                 username,
             )
             login_cmd = __salt__["cmd.run_all"](
-                cmd, python_shell=False, output_loglevel="quiet",
+                cmd,
+                python_shell=False,
+                output_loglevel="quiet",
             )
             results[registry] = login_cmd["retcode"] == 0
             if not results[registry]:
@@ -1556,7 +1559,9 @@ def logout(*registries):
                 cmd.append(registry)
             log.debug("Attempting to logout of docker registry '%s'", registry)
             logout_cmd = __salt__["cmd.run_all"](
-                cmd, python_shell=False, output_loglevel="quiet",
+                cmd,
+                python_shell=False,
+                output_loglevel="quiet",
             )
             results[registry] = logout_cmd["retcode"] == 0
             if not results[registry]:

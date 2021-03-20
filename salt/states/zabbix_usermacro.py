@@ -60,8 +60,8 @@ def present(name, value, hostid=None, **kwargs):
         comment_usermacro_updated = "Usermacro {0} updated on hostid {1}.".format(
             name, hostid
         )
-        comment_usermacro_notcreated = "Unable to create usermacro: {0} on hostid {1}. ".format(
-            name, hostid
+        comment_usermacro_notcreated = (
+            "Unable to create usermacro: {0} on hostid {1}. ".format(name, hostid)
         )
         comment_usermacro_exists = "Usermacro {0} already exists on hostid {1}.".format(
             name, hostid
@@ -211,11 +211,11 @@ def absent(name, hostid=None, **kwargs):
         comment_usermacro_deleted = "Usermacro {0} deleted from hostid {1}.".format(
             name, hostid
         )
-        comment_usermacro_notdeleted = "Unable to delete usermacro: {0} from hostid {1}.".format(
-            name, hostid
+        comment_usermacro_notdeleted = (
+            "Unable to delete usermacro: {0} from hostid {1}.".format(name, hostid)
         )
-        comment_usermacro_notexists = "Usermacro {0} does not exist on hostid {1}.".format(
-            name, hostid
+        comment_usermacro_notexists = (
+            "Usermacro {0} does not exist on hostid {1}.".format(name, hostid)
         )
         changes_usermacro_deleted = {
             name: {

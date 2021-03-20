@@ -64,7 +64,13 @@ def __virtual__():
 
 
 def present(
-    name, config, tags, region=None, key=None, keyid=None, profile=None,
+    name,
+    config,
+    tags,
+    region=None,
+    key=None,
+    keyid=None,
+    profile=None,
 ):
     """
     Ensure the CloudFront distribution is present.
@@ -111,12 +117,17 @@ def present(
     }
 
     res = __salt__["boto_cloudfront.get_distribution"](
-        name, region=region, key=key, keyid=keyid, profile=profile,
+        name,
+        region=region,
+        key=key,
+        keyid=keyid,
+        profile=profile,
     )
     if "error" in res:
         ret["result"] = False
         ret["comment"] = "Error checking distribution {0}: {1}".format(
-            name, res["error"],
+            name,
+            res["error"],
         )
         return ret
 
@@ -129,12 +140,19 @@ def present(
             return ret
 
         res = __salt__["boto_cloudfront.create_distribution"](
-            name, config, tags, region=region, key=key, keyid=keyid, profile=profile,
+            name,
+            config,
+            tags,
+            region=region,
+            key=key,
+            keyid=keyid,
+            profile=profile,
         )
         if "error" in res:
             ret["result"] = False
             ret["comment"] = "Error creating distribution {0}: {1}".format(
-                name, res["error"],
+                name,
+                res["error"],
             )
             return ret
 
@@ -152,7 +170,8 @@ def present(
             "tags": tags,
         }
         diffed_config = __utils__["dictdiffer.deep_diff"](
-            full_config_old, full_config_new,
+            full_config_old,
+            full_config_new,
         )
 
         def _yaml_safe_dump(attrs):
@@ -175,7 +194,9 @@ def present(
         any_changes = bool("old" in diffed_config or "new" in diffed_config)
         if not any_changes:
             ret["result"] = True
-            ret["comment"] = "Distribution {0} has correct config.".format(name,)
+            ret["comment"] = "Distribution {0} has correct config.".format(
+                name,
+            )
             return ret
 
         if __opts__["test"]:
@@ -187,12 +208,19 @@ def present(
             return ret
 
         res = __salt__["boto_cloudfront.update_distribution"](
-            name, config, tags, region=region, key=key, keyid=keyid, profile=profile,
+            name,
+            config,
+            tags,
+            region=region,
+            key=key,
+            keyid=keyid,
+            profile=profile,
         )
         if "error" in res:
             ret["result"] = False
             ret["comment"] = "Error updating distribution {0}: {1}".format(
-                name, res["error"],
+                name,
+                res["error"],
             )
             return ret
 

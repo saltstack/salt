@@ -113,10 +113,10 @@ Module       Image                  Running-Version(pri:alt)           New-Versi
     def __init__(self, *args, **kwargs):
 
         """
-         ckimage - current kickstart image
-         cimage - current system image
-         nkimage - new kickstart image
-         nimage - new system image
+        ckimage - current kickstart image
+        cimage - current system image
+        nkimage - new kickstart image
+        nimage - new system image
         """
 
         self.ckimage = kwargs.get("ckimage", None)

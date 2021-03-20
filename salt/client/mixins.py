@@ -409,7 +409,9 @@ class SyncClientMixin:
                     data["return"] = str(ex)
                 else:
                     data["return"] = "Exception occurred in {} {}: {}".format(
-                        self.client, fun, traceback.format_exc(),
+                        self.client,
+                        fun,
+                        traceback.format_exc(),
                     )
                 data["success"] = False
 

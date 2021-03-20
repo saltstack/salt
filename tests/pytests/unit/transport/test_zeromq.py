@@ -166,7 +166,9 @@ def test_zeromq_async_pub_channel_publish_port(temp_salt_master):
     assert str(opts["publish_port"]) in patch_socket.mock_calls[0][1][0]
 
 
-def test_zeromq_async_pub_channel_filtering_decode_message_no_match(temp_salt_master,):
+def test_zeromq_async_pub_channel_filtering_decode_message_no_match(
+    temp_salt_master,
+):
     """
     test AsyncZeroMQPubChannel _decode_messages when
     zmq_filtering enabled and minion does not match

@@ -150,7 +150,12 @@ def present(
         return ret
 
     result_create_pipeline = __salt__["boto_datapipeline.create_pipeline"](
-        name, name, region=region, key=key, keyid=keyid, profile=profile,
+        name,
+        name,
+        region=region,
+        key=key,
+        keyid=keyid,
+        profile=profile,
     )
     if "error" in result_create_pipeline:
         ret["result"] = False
@@ -179,7 +184,11 @@ def present(
         if _immutable_fields_error(result_pipeline_definition):
             # If update not possible, delete and retry
             result_delete_pipeline = __salt__["boto_datapipeline.delete_pipeline"](
-                pipeline_id, region=region, key=key, keyid=keyid, profile=profile,
+                pipeline_id,
+                region=region,
+                key=key,
+                keyid=keyid,
+                profile=profile,
             )
             if "error" in result_delete_pipeline:
                 ret["result"] = False
@@ -189,7 +198,12 @@ def present(
                 return ret
 
             result_create_pipeline = __salt__["boto_datapipeline.create_pipeline"](
-                name, name, region=region, key=key, keyid=keyid, profile=profile,
+                name,
+                name,
+                region=region,
+                key=key,
+                keyid=keyid,
+                profile=profile,
             )
             if "error" in result_create_pipeline:
                 ret["result"] = False
@@ -226,7 +240,11 @@ def present(
             return ret
 
     result_activate_pipeline = __salt__["boto_datapipeline.activate_pipeline"](
-        pipeline_id, region=region, key=key, keyid=keyid, profile=profile,
+        pipeline_id,
+        region=region,
+        key=key,
+        keyid=keyid,
+        profile=profile,
     )
     if "error" in result_activate_pipeline:
         ret["result"] = False
@@ -311,7 +329,11 @@ def _pipeline_present_with_definition(
         that contains a dict with region, key and keyid.
     """
     result_pipeline_id = __salt__["boto_datapipeline.pipeline_id_from_name"](
-        name, region=region, key=key, keyid=keyid, profile=profile,
+        name,
+        region=region,
+        key=key,
+        keyid=keyid,
+        profile=profile,
     )
     if "error" in result_pipeline_id:
         return False, {}
@@ -573,7 +595,11 @@ def absent(name, region=None, key=None, keyid=None, profile=None):
     ret = {"name": name, "result": True, "comment": "", "changes": {}}
 
     result_pipeline_id = __salt__["boto_datapipeline.pipeline_id_from_name"](
-        name, region=region, key=key, keyid=keyid, profile=profile,
+        name,
+        region=region,
+        key=key,
+        keyid=keyid,
+        profile=profile,
     )
     if "error" not in result_pipeline_id:
         pipeline_id = result_pipeline_id["result"]
@@ -583,7 +609,11 @@ def absent(name, region=None, key=None, keyid=None, profile=None):
             return ret
         else:
             __salt__["boto_datapipeline.delete_pipeline"](
-                pipeline_id, region=region, key=key, keyid=keyid, profile=profile,
+                pipeline_id,
+                region=region,
+                key=key,
+                keyid=keyid,
+                profile=profile,
             )
             ret["changes"]["old"] = {"pipeline_id": pipeline_id}
             ret["changes"]["new"] = None

@@ -649,13 +649,13 @@ def get_ha_config():
 
 def get_ha_link():
     """
-    Show high-availability link-monitoring state.
+     Show high-availability link-monitoring state.
 
-    CLI Example:
+     CLI Example:
 
-   .. code-block:: bash
+    .. code-block:: bash
 
-        salt '*' panos.get_ha_link
+         salt '*' panos.get_ha_link
 
     """
     query = {
@@ -1525,7 +1525,10 @@ def get_zones(vsys="1"):
 
 
 def install_antivirus(
-    version=None, latest=False, synch=False, skip_commit=False,
+    version=None,
+    latest=False,
+    synch=False,
+    skip_commit=False,
 ):
     """
     Install anti-virus packages.

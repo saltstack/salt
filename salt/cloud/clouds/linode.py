@@ -179,7 +179,10 @@ def get_configured_provider():
     return config.is_provider_configured(
         __opts__,
         _get_active_provider_name() or __virtualname__,
-        ("apikey", "password",),
+        (
+            "apikey",
+            "password",
+        ),
     )
 
 
@@ -495,7 +498,9 @@ class LinodeAPI:
 
     def list_nodes_select(self, call):
         return __utils__["cloud.list_nodes_select"](
-            self.list_nodes_full(), __opts__["query.selection"], call,
+            self.list_nodes_full(),
+            __opts__["query.selection"],
+            call,
         )
 
 
@@ -1016,7 +1021,12 @@ class LinodeAPIv4(LinodeAPI):
         return (public, private)
 
     def _poll(
-        self, description, getter, condition, timeout=None, poll_interval=None,
+        self,
+        description,
+        getter,
+        condition,
+        timeout=None,
+        poll_interval=None,
     ):
         """
         Return true in handler to signal complete.

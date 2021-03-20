@@ -1016,7 +1016,8 @@ class Single:
         Deploy salt-thin
         """
         self.shell.send(
-            self.thin, os.path.join(self.thin_dir, "salt-thin.tgz"),
+            self.thin,
+            os.path.join(self.thin_dir, "salt-thin.tgz"),
         )
         self.deploy_ext()
         return True
@@ -1027,7 +1028,8 @@ class Single:
         """
         if self.mods.get("file"):
             self.shell.send(
-                self.mods["file"], os.path.join(self.thin_dir, "salt-ext_mods.tgz"),
+                self.mods["file"],
+                os.path.join(self.thin_dir, "salt-ext_mods.tgz"),
             )
         return True
 

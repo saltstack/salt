@@ -59,7 +59,7 @@ def status(jboss_config, host=None, server_config=None):
 
         salt '*' jboss7.status '{"cli_path": "integration.modules.sysmod.SysModuleTest.test_valid_docs", "controller": "10.11.12.13:9999", "cli_user": "jbossadm", "cli_password": "jbossadm"}'
 
-       """
+    """
     log.debug("======================== MODULE FUNCTION: jboss7.status")
     if host is None and server_config is None:
         operation = ":read-attribute(name=server-state)"
@@ -92,7 +92,7 @@ def stop_server(jboss_config, host=None):
 
         salt '*' jboss7.stop_server '{"cli_path": "integration.modules.sysmod.SysModuleTest.test_valid_docs", "controller": "10.11.12.13:9999", "cli_user": "jbossadm", "cli_password": "jbossadm"}'
 
-       """
+    """
     log.debug("======================== MODULE FUNCTION: jboss7.stop_server")
     if host is None:
         operation = ":shutdown"
@@ -131,7 +131,7 @@ def reload_(jboss_config, host=None):
 
         salt '*' jboss7.reload '{"cli_path": "integration.modules.sysmod.SysModuleTest.test_valid_docs", "controller": "10.11.12.13:9999", "cli_user": "jbossadm", "cli_password": "jbossadm"}'
 
-       """
+    """
     log.debug("======================== MODULE FUNCTION: jboss7.reload")
     if host is None:
         operation = ":reload"
@@ -313,8 +313,10 @@ def __get_datasource_resource_description(jboss_config, name, profile=None):
         profile,
     )
 
-    operation = '/subsystem=datasources/data-source="{name}":read-resource-description'.format(
-        name=name
+    operation = (
+        '/subsystem=datasources/data-source="{name}":read-resource-description'.format(
+            name=name
+        )
     )
     if profile is not None:
         operation = '/profile="{profile}"'.format(profile=profile) + operation
@@ -339,7 +341,7 @@ def read_datasource(jboss_config, name, profile=None):
     .. code-block:: bash
 
         salt '*' jboss7.read_datasource '{"cli_path": "integration.modules.sysmod.SysModuleTest.test_valid_docs", "controller": "10.11.12.13:9999", "cli_user": "jbossadm", "cli_password": "jbossadm"}'
-       """
+    """
     log.debug(
         "======================== MODULE FUNCTION: jboss7.read_datasource, name=%s",
         name,
@@ -401,7 +403,7 @@ def update_simple_binding(jboss_config, binding_name, value, profile=None):
     .. code-block:: bash
 
         salt '*' jboss7.update_simple_binding '{"cli_path": "integration.modules.sysmod.SysModuleTest.test_valid_docs", "controller": "10.11.12.13:9999", "cli_user": "jbossadm", "cli_password": "jbossadm"}' my_binding_name my_binding_value
-       """
+    """
     log.debug(
         "======================== MODULE FUNCTION: jboss7.update_simple_binding, binding_name=%s, value=%s, profile=%s",
         binding_name,
@@ -432,7 +434,7 @@ def read_simple_binding(jboss_config, binding_name, profile=None):
         .. code-block:: bash
 
         salt '*' jboss7.read_simple_binding '{"cli_path": "integration.modules.sysmod.SysModuleTest.test_valid_docs", "controller": "10.11.12.13:9999", "cli_user": "jbossadm", "cli_password": "jbossadm"}' my_binding_name
-       """
+    """
     log.debug(
         "======================== MODULE FUNCTION: jboss7.read_simple_binding, %s",
         binding_name,
@@ -509,7 +511,7 @@ def remove_datasource(jboss_config, name, profile=None):
     .. code-block:: bash
 
         salt '*' jboss7.remove_datasource '{"cli_path": "integration.modules.sysmod.SysModuleTest.test_valid_docs", "controller": "10.11.12.13:9999", "cli_user": "jbossadm", "cli_password": "jbossadm"}' my_datasource_name
-       """
+    """
     log.debug(
         "======================== MODULE FUNCTION: jboss7.remove_datasource, name=%s, profile=%s",
         name,
@@ -539,7 +541,7 @@ def deploy(jboss_config, source_file):
     .. code-block:: bash
 
         salt '*' jboss7.deploy '{"cli_path": "integration.modules.sysmod.SysModuleTest.test_valid_docs", "controller": "10.11.12.13:9999", "cli_user": "jbossadm", "cli_password": "jbossadm"}' /opt/deploy_files/my_deploy
-       """
+    """
     log.debug(
         "======================== MODULE FUNCTION: jboss7.deploy, source_file=%s",
         source_file,
@@ -563,7 +565,7 @@ def list_deployments(jboss_config):
 
          salt '*' jboss7.list_deployments '{"cli_path": "integration.modules.sysmod.SysModuleTest.test_valid_docs", "controller": "10.11.12.13:9999", "cli_user": "jbossadm", "cli_password": "jbossadm"}'
 
-       """
+    """
     log.debug("======================== MODULE FUNCTION: jboss7.list_deployments")
     command_result = __salt__["jboss7_cli.run_command"](jboss_config, "deploy")
     deployments = []
@@ -587,7 +589,7 @@ def undeploy(jboss_config, deployment):
     .. code-block:: bash
 
         salt '*' jboss7.undeploy '{"cli_path": "integration.modules.sysmod.SysModuleTest.test_valid_docs", "controller": "10.11.12.13:9999", "cli_user": "jbossadm", "cli_password": "jbossadm"}' my_deployment
-       """
+    """
     log.debug(
         "======================== MODULE FUNCTION: jboss7.undeploy, deployment=%s",
         deployment,

@@ -520,7 +520,9 @@ def list_nodes_select(call=None):
         salt-cloud -S my-proxmox-config
     """
     return salt.utils.cloud.list_nodes_select(
-        list_nodes_full(), __opts__["query.selection"], call,
+        list_nodes_full(),
+        __opts__["query.selection"],
+        call,
     )
 
 
@@ -566,7 +568,9 @@ def _reconfigure_clone(vm_, vmid):
         if re.match(r"^(ide|sata|scsi)(\d+)$", setting):
             postParams = {setting: vm_[setting]}
             query(
-                "post", "nodes/{}/qemu/{}/config".format(vm_["host"], vmid), postParams,
+                "post",
+                "nodes/{}/qemu/{}/config".format(vm_["host"], vmid),
+                postParams,
             )
 
         elif re.match(r"^net(\d+)$", setting):
@@ -589,7 +593,9 @@ def _reconfigure_clone(vm_, vmid):
             # Convert the dictionary back into a string list
             postParams = {setting: _dictionary_to_stringlist(new_setting)}
             query(
-                "post", "nodes/{}/qemu/{}/config".format(vm_["host"], vmid), postParams,
+                "post",
+                "nodes/{}/qemu/{}/config".format(vm_["host"], vmid),
+                postParams,
             )
 
 
@@ -702,7 +708,11 @@ def create(vm_):
     ssh_username = config.get_cloud_config_value(
         "ssh_username", vm_, __opts__, default="root"
     )
-    ssh_password = config.get_cloud_config_value("password", vm_, __opts__,)
+    ssh_password = config.get_cloud_config_value(
+        "password",
+        vm_,
+        __opts__,
+    )
 
     ret["ip_address"] = ip_address
     ret["username"] = ssh_username

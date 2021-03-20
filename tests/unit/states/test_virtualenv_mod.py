@@ -19,7 +19,7 @@ from tests.support.unit import TestCase
 
 class VirtualenvModTestCase(TestCase, LoaderModuleMockMixin):
     """
-        Validate the virtualenv_mod state
+    Validate the virtualenv_mod state
     """
 
     def setup_loader_modules(self):
@@ -27,7 +27,7 @@ class VirtualenvModTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_managed(self):
         """
-            Test to create a virtualenv and optionally manage it with pip
+        Test to create a virtualenv and optionally manage it with pip
         """
         ret = {"name": "salt", "changes": {}, "result": False, "comment": ""}
         ret.update({"comment": "Virtualenv was not detected on this system"})

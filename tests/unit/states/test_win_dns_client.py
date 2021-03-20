@@ -17,7 +17,7 @@ from tests.support.unit import TestCase
 
 class WinDnsClientTestCase(TestCase, LoaderModuleMockMixin):
     """
-        Validate the win_dns_client state
+    Validate the win_dns_client state
     """
 
     def setup_loader_modules(self):
@@ -25,7 +25,7 @@ class WinDnsClientTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_dns_exists(self):
         """
-            Test to configure the DNS server list in the specified interface
+        Test to configure the DNS server list in the specified interface
         """
         ret = {"name": "salt", "changes": {}, "result": False, "comment": ""}
         with patch.dict(win_dns_client.__opts__, {"test": False}):
@@ -95,7 +95,7 @@ class WinDnsClientTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_dns_dhcp(self):
         """
-            Test to configure the DNS server list from DHCP Server
+        Test to configure the DNS server list from DHCP Server
         """
         ret = {"name": "salt", "changes": {}, "result": True, "comment": ""}
         mock = MagicMock(side_effect=["dhcp", "salt", "salt"])
@@ -130,7 +130,7 @@ class WinDnsClientTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_primary_suffix(self):
         """
-            Test to configure the global primary DNS suffix of a DHCP client.
+        Test to configure the global primary DNS suffix of a DHCP client.
         """
         ret = {"name": "salt", "changes": {}, "result": False, "comment": ""}
         ret.update({"comment": "'updates' must be a boolean value"})

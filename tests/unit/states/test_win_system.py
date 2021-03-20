@@ -11,7 +11,7 @@ from tests.support.unit import TestCase
 
 class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
     """
-        Validate the win_system state
+    Validate the win_system state
     """
 
     def setup_loader_modules(self):
@@ -19,7 +19,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_computer_desc(self):
         """
-            Test to manage the computer's description field
+        Test to manage the computer's description field
         """
         ret = {"name": "salt", "changes": {}, "result": True, "comment": ""}
         mock = MagicMock(side_effect=["salt", "stack", "stack"])
@@ -52,7 +52,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_computer_name(self):
         """
-            Test to manage the computer's name
+        Test to manage the computer's name
         """
         ret = {"name": "salt", "changes": {}, "result": True, "comment": ""}
         mock = MagicMock(return_value="salt")

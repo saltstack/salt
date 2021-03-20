@@ -65,7 +65,13 @@ STATE_APPLY_RET = {
 }
 
 
-def _mocked_func_named(name, names=("Fred", "Swen",)):
+def _mocked_func_named(
+    name,
+    names=(
+        "Fred",
+        "Swen",
+    ),
+):
     """
     Mocked function with named defaults.
 
@@ -327,7 +333,10 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
             0,
             "a",
             "",
-            (1, 2,),
+            (
+                1,
+                2,
+            ),
             (),
             [1, 2],
             [],

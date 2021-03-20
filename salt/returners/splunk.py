@@ -80,7 +80,8 @@ def _send_splunk(event, index_override=None, sourcetype_override=None):
     # Get Splunk Options
     opts = _get_options()
     log.info(
-        "Options: %s", salt.utils.json.dumps(opts),
+        "Options: %s",
+        salt.utils.json.dumps(opts),
     )
     http_event_collector_key = opts["token"]
     http_event_collector_host = opts["indexer"]
@@ -107,7 +108,8 @@ def _send_splunk(event, index_override=None, sourcetype_override=None):
     # Add the event
     payload.update({"event": event})
     log.info(
-        "Payload: %s", salt.utils.json.dumps(payload),
+        "Payload: %s",
+        salt.utils.json.dumps(payload),
     )
     # Fire it off
     splunk_event.sendEvent(payload)

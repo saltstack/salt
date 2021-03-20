@@ -18,7 +18,7 @@ class LicenseTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_installed(self):
         """
-            Test to see if the given license key is installed
+        Test to see if the given license key is installed
         """
         mock = MagicMock(return_value="Partial Product Key: ABCDE")
         with patch.dict(win_license.__salt__, {"cmd.run": mock}):
@@ -28,7 +28,7 @@ class LicenseTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_installed_diff(self):
         """
-            Test to see if the given license key is installed when the key is different
+        Test to see if the given license key is installed when the key is different
         """
         mock = MagicMock(return_value="Partial Product Key: 12345")
         with patch.dict(win_license.__salt__, {"cmd.run": mock}):
@@ -38,7 +38,7 @@ class LicenseTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_install(self):
         """
-            Test installing the given product key
+        Test installing the given product key
         """
         mock = MagicMock()
         with patch.dict(win_license.__salt__, {"cmd.run": mock}):
@@ -50,7 +50,7 @@ class LicenseTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_uninstall(self):
         """
-            Test uninstalling the given product key
+        Test uninstalling the given product key
         """
         mock = MagicMock()
         with patch.dict(win_license.__salt__, {"cmd.run": mock}):
@@ -59,7 +59,7 @@ class LicenseTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_activate(self):
         """
-            Test activating the current product key
+        Test activating the current product key
         """
         mock = MagicMock()
         with patch.dict(win_license.__salt__, {"cmd.run": mock}):
@@ -68,7 +68,7 @@ class LicenseTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_licensed(self):
         """
-            Test checking if the minion is licensed
+        Test checking if the minion is licensed
         """
         mock = MagicMock(return_value="License Status: Licensed")
         with patch.dict(win_license.__salt__, {"cmd.run": mock}):
@@ -77,7 +77,7 @@ class LicenseTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_info(self):
         """
-            Test getting the info about the current license key
+        Test getting the info about the current license key
         """
         expected = {
             "description": "Prof",

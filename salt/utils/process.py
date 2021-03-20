@@ -546,7 +546,10 @@ class ProcessManager:
         # create a nicer name for the debug log
         if name is None:
             if isinstance(tgt, types.FunctionType):
-                name = "{}.{}".format(tgt.__module__, tgt.__name__,)
+                name = "{}.{}".format(
+                    tgt.__module__,
+                    tgt.__name__,
+                )
             else:
                 name = "{}{}.{}".format(
                     tgt.__module__,

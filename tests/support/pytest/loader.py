@@ -42,7 +42,10 @@ class LoaderModuleMock:
     )
     # These dunders might exist at the module global scope
     salt_module_dunders_optional = attr.ib(
-        init=True, repr=False, kw_only=True, default=("__proxy__",),
+        init=True,
+        repr=False,
+        kw_only=True,
+        default=("__proxy__",),
     )
     # These dunders might exist at the function global scope
     salt_module_dunder_attributes = attr.ib(
@@ -110,7 +113,10 @@ class LoaderModuleMock:
                 func(*args, **kwargs)
             except Exception as exc:  # pylint: disable=broad-except
                 log.error(
-                    "Failed to run finalizer %s: %s", func_repr, exc, exc_info=True,
+                    "Failed to run finalizer %s: %s",
+                    func_repr,
+                    exc,
+                    exc_info=True,
                 )
 
     def addfinalizer(self, func, *args, **kwargs):
@@ -154,13 +160,15 @@ class LoaderModuleMock:
                 if key in ("__init__", "__virtual__"):
                     raise RuntimeError(
                         "No need to patch {!r}. Passed loader module dict: {}".format(
-                            key, self.setup_loader_modules,
+                            key,
+                            self.setup_loader_modules,
                         )
                     )
                 elif key not in allowed_salt_dunders:
                     raise RuntimeError(
                         "Don't know how to handle {!r}. Passed loader module dict: {}".format(
-                            key, self.setup_loader_modules,
+                            key,
+                            self.setup_loader_modules,
                         )
                     )
                 elif key in salt_dunder_dicts and not hasattr(module, key):

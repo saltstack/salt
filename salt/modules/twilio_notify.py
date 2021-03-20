@@ -68,7 +68,8 @@ def _get_twilio(profile):
     """
     creds = __salt__["config.option"](profile)
     client = TwilioRestClient(
-        creds.get("twilio.account_sid"), creds.get("twilio.auth_token"),
+        creds.get("twilio.account_sid"),
+        creds.get("twilio.auth_token"),
     )
 
     return client

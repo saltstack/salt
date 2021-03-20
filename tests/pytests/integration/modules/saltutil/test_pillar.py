@@ -75,7 +75,9 @@ def test_pillar_refresh(
         start_time = time.time()
 
         ret = salt_call_cli.run(
-            "--retcode-passthrough", "saltutil.refresh_pillar", wait=sync_refresh,
+            "--retcode-passthrough",
+            "saltutil.refresh_pillar",
+            wait=sync_refresh,
         )
         assert ret.exitcode == 0
 

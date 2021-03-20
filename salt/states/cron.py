@@ -670,9 +670,10 @@ def file(
             ret["result"] = True
             ret["changes"] = ret["changes"]
         else:
-            ret["comment"] = (
-                "Unable to update user {0} crontab {1}."
-                " Error: {2}".format(user, cron_path, cron_ret["stderr"])
+            ret[
+                "comment"
+            ] = "Unable to update user {0} crontab {1}." " Error: {2}".format(
+                user, cron_path, cron_ret["stderr"]
             )
             ret["result"] = False
             ret["changes"] = {}

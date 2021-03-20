@@ -330,7 +330,10 @@ class TestAsyncEventPublisher(AsyncTestCase):
             os.makedirs(self.sock_dir)
         self.addCleanup(shutil.rmtree, self.sock_dir, ignore_errors=True)
         self.opts = {"sock_dir": self.sock_dir}
-        self.publisher = salt.utils.event.AsyncEventPublisher(self.opts, self.io_loop,)
+        self.publisher = salt.utils.event.AsyncEventPublisher(
+            self.opts,
+            self.io_loop,
+        )
         self.event = salt.utils.event.get_event(
             "minion", opts=self.opts, io_loop=self.io_loop
         )

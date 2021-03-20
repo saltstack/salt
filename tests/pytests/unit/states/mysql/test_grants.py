@@ -25,7 +25,8 @@ def test_present():
     mock_str = MagicMock(return_value="salt")
     mock_none = MagicMock(return_value=None)
     with patch.dict(
-        mysql_grants.__salt__, {"mysql.grant_exists": mock, "mysql.grant_add": mock_t},
+        mysql_grants.__salt__,
+        {"mysql.grant_exists": mock, "mysql.grant_add": mock_t},
     ):
         comt = "Grant None on None to None@localhost is already present"
         ret.update({"comment": comt})

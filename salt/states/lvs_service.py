@@ -18,7 +18,10 @@ def __virtual__():
 
 
 def present(
-    name, protocol=None, service_address=None, scheduler="wlc",
+    name,
+    protocol=None,
+    service_address=None,
+    scheduler="wlc",
 ):
     """
     Ensure that the named service is present.

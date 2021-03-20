@@ -208,7 +208,8 @@ def test_absent():
     mock = MagicMock(side_effect=[True, True, False])
     mock1 = MagicMock(return_value=False)
     with patch.dict(
-        user.__salt__, {"user.info": mock, "user.delete": mock1, "group.info": mock1},
+        user.__salt__,
+        {"user.info": mock, "user.delete": mock1, "group.info": mock1},
     ):
         with patch.dict(user.__opts__, {"test": True}):
             ret.update({"comment": "User salt set for removal"})

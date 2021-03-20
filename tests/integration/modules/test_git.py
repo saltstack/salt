@@ -391,7 +391,9 @@ class GitModuleTest(ModuleCase):
             self.assertTrue(
                 "'cwd' argument required unless global=True"
                 in self.run_function(
-                    "git.config_set", ["foo.single"], value=cfg_local["foo.single"][0],
+                    "git.config_set",
+                    ["foo.single"],
+                    value=cfg_local["foo.single"][0],
                 )
             )
             log.debug("Set single local value")
@@ -512,7 +514,11 @@ class GitModuleTest(ModuleCase):
 
             log.debug("Unset a single local value")
             self.assertTrue(
-                self.run_function("git.config_unset", ["foo.single"], cwd=self.repo,)
+                self.run_function(
+                    "git.config_unset",
+                    ["foo.single"],
+                    cwd=self.repo,
+                )
             )
             log.debug("Unset an entire local multivar")
             self.assertTrue(
@@ -894,7 +900,10 @@ class GitModuleTest(ModuleCase):
             worktree_path2 = worktree_path2.replace("\\", "/")
 
         # Add the worktrees
-        ret = self.run_function("git.worktree_add", [self.repo, worktree_path],)
+        ret = self.run_function(
+            "git.worktree_add",
+            [self.repo, worktree_path],
+        )
         self.assertTrue(worktree_add_prefix in ret)
         self.assertTrue(worktree_basename in ret)
         ret = self.run_function("git.worktree_add", [self.repo, worktree_path2])

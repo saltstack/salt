@@ -1477,9 +1477,10 @@ class _Swagger(object):
 
             ret = _log_changes(ret, "delete_api", delete_api_response)
         else:
-            ret["comment"] = (
-                "api already absent for swagger file: "
-                "{0}, desc: {1}".format(self.rest_api_name, self.info_json)
+            ret[
+                "comment"
+            ] = "api already absent for swagger file: " "{0}, desc: {1}".format(
+                self.rest_api_name, self.info_json
             )
 
         return ret
@@ -1610,13 +1611,12 @@ class _Swagger(object):
                     ret["result"] = False
                     ret["abort"] = True
                     if "error" in update_model_schema_response:
-                        ret["comment"] = (
-                            "Failed to update existing model {0} with schema {1}, "
-                            "error: {2}".format(
-                                model,
-                                _dict_to_json_pretty(schema),
-                                update_model_schema_response["error"]["message"],
-                            )
+                        ret[
+                            "comment"
+                        ] = "Failed to update existing model {0} with schema {1}, " "error: {2}".format(
+                            model,
+                            _dict_to_json_pretty(schema),
+                            update_model_schema_response["error"]["message"],
                         )
                     return ret
 
@@ -1635,13 +1635,12 @@ class _Swagger(object):
                     ret["result"] = False
                     ret["abort"] = True
                     if "error" in create_model_response:
-                        ret["comment"] = (
-                            "Failed to create model {0}, schema {1}, "
-                            "error: {2}".format(
-                                model,
-                                _dict_to_json_pretty(schema),
-                                create_model_response["error"]["message"],
-                            )
+                        ret[
+                            "comment"
+                        ] = "Failed to create model {0}, schema {1}, " "error: {2}".format(
+                            model,
+                            _dict_to_json_pretty(schema),
+                            create_model_response["error"]["message"],
                         )
                     return ret
 

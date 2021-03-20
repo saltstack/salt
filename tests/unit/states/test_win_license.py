@@ -18,7 +18,7 @@ class LicenseTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_activate(self):
         """
-            Test activating the given product key
+        Test activating the given product key
         """
         expected = {
             "changes": {},
@@ -53,7 +53,7 @@ class LicenseTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_installed_not_activated(self):
         """
-            Test activating the given product key when the key is installed but not activated
+        Test activating the given product key when the key is installed but not activated
         """
         expected = {
             "changes": {},
@@ -88,7 +88,7 @@ class LicenseTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_installed_activated(self):
         """
-            Test activating the given product key when its already activated
+        Test activating the given product key when its already activated
         """
         expected = {
             "changes": {},
@@ -123,7 +123,7 @@ class LicenseTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_installed_install_fail(self):
         """
-            Test activating the given product key when the install fails
+        Test activating the given product key when the install fails
         """
         expected = {
             "changes": {},
@@ -158,7 +158,7 @@ class LicenseTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_installed_activate_fail(self):
         """
-            Test activating the given product key when the install fails
+        Test activating the given product key when the install fails
         """
         expected = {
             "changes": {},

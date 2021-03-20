@@ -551,7 +551,10 @@ def setup_multiprocessing_logging_listener(opts, queue=None):
     __MP_MAINPROCESS_ID = os.getpid()
     __MP_LOGGING_QUEUE_PROCESS = multiprocessing.Process(
         target=__process_multiprocessing_logging_queue,
-        args=(opts, queue or get_multiprocessing_logging_queue(),),
+        args=(
+            opts,
+            queue or get_multiprocessing_logging_queue(),
+        ),
     )
     __MP_LOGGING_QUEUE_PROCESS.daemon = True
     __MP_LOGGING_QUEUE_PROCESS.start()
@@ -901,7 +904,9 @@ def __global_logging_exception_handler(
         )
     except Exception:  # pylint: disable=broad-except
         msg = "{}\n{}: {}\n(UNABLE TO FORMAT TRACEBACK)".format(
-            msg, exc_type.__name__, exc_value,
+            msg,
+            exc_type.__name__,
+            exc_value,
         )
     try:
         _logger.error(msg)

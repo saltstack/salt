@@ -320,9 +320,10 @@ def managed(
             else:
                 if not __salt__["ip.enable"](name):
                     ret["result"] = False
-                    ret["comment"] = (
-                        "Failed to enable interface '{0}' to "
-                        "make changes".format(name)
+                    ret[
+                        "comment"
+                    ] = "Failed to enable interface '{0}' to " "make changes".format(
+                        name
                     )
                     return ret
 
@@ -338,9 +339,10 @@ def managed(
         old = __salt__["ip.get_interface"](name)
         if not old:
             ret["result"] = False
-            ret["comment"] = (
-                "Unable to get current configuration for "
-                "interface '{0}'".format(name)
+            ret[
+                "comment"
+            ] = "Unable to get current configuration for " "interface '{0}'".format(
+                name
             )
             return ret
 

@@ -18,7 +18,7 @@ log = logging.getLogger(__name__)
 
 def func(name):
     """
-        Mock func method
+    Mock func method
     """
     return name
 
@@ -173,7 +173,8 @@ def test_running():
     with patch.object(service, "_available", tmock):
         with patch.dict(service.__opts__, {"test": False}):
             with patch.dict(
-                service.__salt__, {"service.enabled": tmock, "service.status": tmock},
+                service.__salt__,
+                {"service.enabled": tmock, "service.status": tmock},
             ):
                 assert service.running("salt") == ret[1]
 

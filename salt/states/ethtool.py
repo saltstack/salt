@@ -210,9 +210,10 @@ def ring(name, **kwargs):
                 return ret
             if new:
                 ret["result"] = None
-                ret["comment"] = (
-                    "Device {0} ring parameters are set to be "
-                    "updated:\n{1}".format(name, "\n".join(diff))
+                ret[
+                    "comment"
+                ] = "Device {0} ring parameters are set to be " "updated:\n{1}".format(
+                    name, "\n".join(diff)
                 )
                 return ret
 
@@ -290,9 +291,10 @@ def offload(name, **kwargs):
                 return ret
             if new:
                 ret["result"] = None
-                ret["comment"] = (
-                    "Device {0} offload settings are set to be "
-                    "updated:\n{1}".format(name, "\n".join(diff))
+                ret[
+                    "comment"
+                ] = "Device {0} offload settings are set to be " "updated:\n{1}".format(
+                    name, "\n".join(diff)
                 )
                 return ret
 

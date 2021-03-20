@@ -17,7 +17,7 @@ from tests.support.unit import TestCase
 
 class Mockxapi(object):
     """
-        Mock xapi class
+    Mock xapi class
     """
 
     def __init__(self):
@@ -25,7 +25,7 @@ class Mockxapi(object):
 
     class Session(object):
         """
-            Mock Session class
+        Mock Session class
         """
 
         def __init__(self, xapi_uri):
@@ -33,7 +33,7 @@ class Mockxapi(object):
 
         class xenapi(object):
             """
-                Mock xenapi class
+            Mock xenapi class
             """
 
             def __init__(self):
@@ -42,13 +42,13 @@ class Mockxapi(object):
             @staticmethod
             def login_with_password(xapi_login, xapi_password):
                 """
-                    Mock login_with_password method
+                Mock login_with_password method
                 """
                 return xapi_login, xapi_password
 
             class session(object):
                 """
-                    Mock session class
+                Mock session class
                 """
 
                 def __init__(self):
@@ -57,14 +57,14 @@ class Mockxapi(object):
                 @staticmethod
                 def logout():
                     """
-                        Mock logout method
+                    Mock logout method
                     """
                     return Mockxapi()
 
 
 class XapiTestCase(TestCase, LoaderModuleMockMixin):
     """
-        Test cases for salt.modules.xapi
+    Test cases for salt.modules.xapi
     """
 
     def setup_loader_modules(self):
@@ -72,14 +72,14 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_list_domains(self):
         """
-            Test to return a list of domain names on the minion
+        Test to return a list of domain names on the minion
         """
         with patch.object(xapi, "_get_xapi_session", MagicMock()):
             self.assertListEqual(xapi.list_domains(), [])
 
     def test_vm_info(self):
         """
-            Test to return detailed information about the vms
+        Test to return detailed information about the vms
         """
         with patch.object(xapi, "_get_xapi_session", MagicMock()):
             mock = MagicMock(return_value=False)
@@ -88,7 +88,7 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_vm_state(self):
         """
-            Test to return list of all the vms and their state.
+        Test to return list of all the vms and their state.
         """
         with patch.object(xapi, "_get_xapi_session", MagicMock()):
             mock = MagicMock(return_value={"power_state": "1"})
@@ -99,7 +99,7 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_get_nics(self):
         """
-            Test to return info about the network interfaces of a named vm
+        Test to return info about the network interfaces of a named vm
         """
         ret = {"Stack": {"device": "ETH0", "mac": "Stack", "mtu": 1}}
         with patch.object(xapi, "_get_xapi_session", MagicMock()):
@@ -115,7 +115,7 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_get_macs(self):
         """
-            Test to return a list off MAC addresses from the named vm
+        Test to return a list off MAC addresses from the named vm
         """
         mock = MagicMock(side_effect=[None, ["a", "b", "c"]])
         with patch.object(xapi, "get_nics", mock):
@@ -125,7 +125,7 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_get_disks(self):
         """
-            Test to return the disks of a named vm
+        Test to return the disks of a named vm
         """
         with patch.object(xapi, "_get_xapi_session", MagicMock()):
             mock = MagicMock(side_effect=[False, ["a", "b", "c"]])
@@ -136,7 +136,7 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_setmem(self):
         """
-            Test to changes the amount of memory allocated to VM.
+        Test to changes the amount of memory allocated to VM.
         """
         with patch.object(xapi, "_get_xapi_session", MagicMock()):
             mock = MagicMock(side_effect=[False, ["a", "b", "c"]])
@@ -153,7 +153,7 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_setvcpus(self):
         """
-            Test to changes the amount of vcpus allocated to VM.
+        Test to changes the amount of vcpus allocated to VM.
         """
         with patch.object(xapi, "_get_xapi_session", MagicMock()):
             mock = MagicMock(side_effect=[False, ["a", "b", "c"]])
@@ -170,7 +170,7 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_vcpu_pin(self):
         """
-            Test to Set which CPUs a VCPU can use.
+        Test to Set which CPUs a VCPU can use.
         """
         with patch.object(xapi, "_get_xapi_session", MagicMock()):
             mock = MagicMock(side_effect=[False, ["a", "b", "c"]])
@@ -188,8 +188,8 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_freemem(self):
         """
-            Test to return an int representing the amount of memory
-            that has not been given to virtual machines on this node
+        Test to return an int representing the amount of memory
+        that has not been given to virtual machines on this node
         """
         mock = MagicMock(return_value={"free_memory": 1024})
         with patch.object(xapi, "node_info", mock):
@@ -197,8 +197,8 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_freecpu(self):
         """
-            Test to return an int representing the number
-            of unallocated cpus on this hypervisor
+        Test to return an int representing the number
+        of unallocated cpus on this hypervisor
         """
         mock = MagicMock(return_value={"free_cpus": 1024})
         with patch.object(xapi, "node_info", mock):
@@ -206,7 +206,7 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_full_info(self):
         """
-            Test to return the node_info, vm_info and freemem
+        Test to return the node_info, vm_info and freemem
         """
         mock = MagicMock(return_value="salt")
         with patch.object(xapi, "node_info", mock):
@@ -218,7 +218,7 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_shutdown(self):
         """
-            Test to send a soft shutdown signal to the named vm
+        Test to send a soft shutdown signal to the named vm
         """
         with patch.object(xapi, "_get_xapi_session", MagicMock()):
             mock = MagicMock(side_effect=[False, ["a", "b", "c"]])
@@ -235,7 +235,7 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_pause(self):
         """
-            Test to pause the named vm
+        Test to pause the named vm
         """
         with patch.object(xapi, "_get_xapi_session", MagicMock()):
             mock = MagicMock(side_effect=[False, ["a", "b", "c"]])
@@ -252,7 +252,7 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_resume(self):
         """
-            Test to resume the named vm
+        Test to resume the named vm
         """
         with patch.object(xapi, "_get_xapi_session", MagicMock()):
             mock = MagicMock(side_effect=[False, ["a", "b", "c"]])
@@ -269,7 +269,7 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_start(self):
         """
-            Test to reboot a domain via ACPI request
+        Test to reboot a domain via ACPI request
         """
         mock = MagicMock(return_value=True)
         with patch.object(xapi, "start", mock):
@@ -277,7 +277,7 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_reboot(self):
         """
-            Test to reboot a domain via ACPI request
+        Test to reboot a domain via ACPI request
         """
         with patch.object(xapi, "_get_xapi_session", MagicMock()):
             mock = MagicMock(side_effect=[False, ["a", "b", "c"]])
@@ -294,8 +294,8 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_reset(self):
         """
-            Test to reset a VM by emulating the
-            reset button on a physical machine
+        Test to reset a VM by emulating the
+        reset button on a physical machine
         """
         with patch.object(xapi, "_get_xapi_session", MagicMock()):
             mock = MagicMock(side_effect=[False, ["a", "b", "c"]])
@@ -312,7 +312,7 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_migrate(self):
         """
-            Test to migrates the virtual machine to another hypervisor
+        Test to migrates the virtual machine to another hypervisor
         """
         with patch.object(xapi, "_get_xapi_session", MagicMock()):
             mock = MagicMock(side_effect=[False, ["a", "b", "c"]])
@@ -329,8 +329,8 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_stop(self):
         """
-            Test to Hard power down the virtual machine,
-            this is equivalent to pulling the power
+        Test to Hard power down the virtual machine,
+        this is equivalent to pulling the power
         """
         with patch.object(xapi, "_get_xapi_session", MagicMock()):
             mock = MagicMock(side_effect=[False, ["a", "b", "c"]])
@@ -347,8 +347,8 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_is_hyper(self):
         """
-            Test to returns a bool whether or not
-            this node is a hypervisor of any kind
+        Test to returns a bool whether or not
+        this node is a hypervisor of any kind
         """
         with patch.dict(xapi.__grains__, {"virtual_subtype": "Dom0"}):
             self.assertFalse(xapi.is_hyper())
@@ -372,7 +372,7 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_vm_cputime(self):
         """
-            Test to Return cputime used by the vms
+        Test to Return cputime used by the vms
         """
         ret = {"1": {"cputime_percent": 0, "cputime": 1}}
         with patch.object(xapi, "_get_xapi_session", MagicMock()):
@@ -390,14 +390,14 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_vm_netstats(self):
         """
-            Test to return combined network counters used by the vms
+        Test to return combined network counters used by the vms
         """
         with patch.object(xapi, "_get_xapi_session", MagicMock()):
             self.assertDictEqual(xapi.vm_netstats(""), {})
 
     def test_vm_diskstats(self):
         """
-            Test to return disk usage counters used by the vms
+        Test to return disk usage counters used by the vms
         """
         with patch.object(xapi, "_get_xapi_session", MagicMock()):
             self.assertDictEqual(xapi.vm_diskstats(""), {})

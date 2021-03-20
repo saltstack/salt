@@ -66,7 +66,10 @@ class TestMsgpack(TestCase):
         False,
         (),
         ((),),
-        ((), None,),
+        (
+            (),
+            None,
+        ),
         {None: 0},
         (1 << 23),
     ]
@@ -377,7 +380,8 @@ class TestMsgpack(TestCase):
             b"\xca" + struct.pack(">f", 1.0), pack_func(1.0, use_single_float=True)
         )
         self.assertEqual(
-            b"\xcb" + struct.pack(">d", 1.0), pack_func(1.0, use_single_float=False),
+            b"\xcb" + struct.pack(">d", 1.0),
+            pack_func(1.0, use_single_float=False),
         )
 
     def _test_odict(self, pack_func, unpack_func):

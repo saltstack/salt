@@ -66,7 +66,11 @@ def get_configured_provider():
     return config.is_provider_configured(
         __opts__,
         _get_active_provider_name() or __virtualname__,
-        ("user", "password", "url",),
+        (
+            "user",
+            "password",
+            "url",
+        ),
     )
 
 
@@ -148,7 +152,9 @@ def list_nodes_select(call=None):
     Return a list of the VMs that are on the provider, with select fields
     """
     return salt.utils.cloud.list_nodes_select(
-        list_nodes_full(), __opts__["query.selection"], call,
+        list_nodes_full(),
+        __opts__["query.selection"],
+        call,
     )
 
 

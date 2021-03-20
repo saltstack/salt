@@ -244,7 +244,11 @@ def prep_trans_tar(
                         fn = filename[
                             len(file_client.get_cachedir(cache_dest)) :
                         ].strip("/")
-                        tgt = os.path.join(env_root, short, fn,)
+                        tgt = os.path.join(
+                            env_root,
+                            short,
+                            fn,
+                        )
                         tgt_dir = os.path.dirname(tgt)
                         if not os.path.isdir(tgt_dir):
                             os.makedirs(tgt_dir)

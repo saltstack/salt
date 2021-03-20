@@ -68,7 +68,8 @@ class WheelClient(
         if interface == "0.0.0.0":
             interface = "127.0.0.1"
         master_uri = "tcp://{}:{}".format(
-            salt.utils.zeromq.ip_bracket(interface), str(self.opts["ret_port"]),
+            salt.utils.zeromq.ip_bracket(interface),
+            str(self.opts["ret_port"]),
         )
         with salt.transport.client.ReqChannel.factory(
             self.opts, crypt="clear", master_uri=master_uri, usage="master_call"

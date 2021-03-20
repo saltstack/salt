@@ -318,8 +318,10 @@ def _get_gpg_key_resources(keyid, env, use_passphrase, gnupghome, runas):
                     )
 
         if local_uids:
-            define_gpg_name = "--define='%_signature gpg' --define='%_gpg_name {}'".format(
-                local_uids[0]
+            define_gpg_name = (
+                "--define='%_signature gpg' --define='%_gpg_name {}'".format(
+                    local_uids[0]
+                )
             )
 
         # need to update rpm with public key

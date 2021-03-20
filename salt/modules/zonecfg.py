@@ -253,7 +253,10 @@ def create(zone, brand, zonepath, force=False):
 
     _dump_cfg(cfg_file)
     res = __salt__["cmd.run_all"](
-        "zonecfg -z {zone} -f {cfg}".format(zone=zone, cfg=cfg_file,)
+        "zonecfg -z {zone} -f {cfg}".format(
+            zone=zone,
+            cfg=cfg_file,
+        )
     )
     ret["status"] = res["retcode"] == 0
     ret["message"] = res["stdout"] if ret["status"] else res["stderr"]
@@ -292,7 +295,10 @@ def create_from_template(zone, template):
     # create from template
     _dump_cfg(template)
     res = __salt__["cmd.run_all"](
-        "zonecfg -z {zone} create -t {tmpl} -F".format(zone=zone, tmpl=template,)
+        "zonecfg -z {zone} create -t {tmpl} -F".format(
+            zone=zone,
+            tmpl=template,
+        )
     )
     ret["status"] = res["retcode"] == 0
     ret["message"] = res["stdout"] if ret["status"] else res["stderr"]
@@ -320,7 +326,11 @@ def delete(zone):
     ret = {"status": True}
 
     # delete zone
-    res = __salt__["cmd.run_all"]("zonecfg -z {zone} delete -F".format(zone=zone,))
+    res = __salt__["cmd.run_all"](
+        "zonecfg -z {zone} delete -F".format(
+            zone=zone,
+        )
+    )
     ret["status"] = res["retcode"] == 0
     ret["message"] = res["stdout"] if ret["status"] else res["stderr"]
     if ret["message"] == "":
@@ -352,7 +362,8 @@ def export(zone, path=None):
     # export zone
     res = __salt__["cmd.run_all"](
         "zonecfg -z {zone} export{path}".format(
-            zone=zone, path=" -f {0}".format(path) if path else "",
+            zone=zone,
+            path=" -f {0}".format(path) if path else "",
         )
     )
     ret["status"] = res["retcode"] == 0
@@ -385,7 +396,10 @@ def import_(zone, path):
     # create from file
     _dump_cfg(path)
     res = __salt__["cmd.run_all"](
-        "zonecfg -z {zone} -f {path}".format(zone=zone, path=path,)
+        "zonecfg -z {zone} -f {path}".format(
+            zone=zone,
+            path=path,
+        )
     )
     ret["status"] = res["retcode"] == 0
     ret["message"] = res["stdout"] if ret["status"] else res["stderr"]
@@ -437,7 +451,10 @@ def _property(methode, zone, key, value):
     if cfg_file:
         _dump_cfg(cfg_file)
         res = __salt__["cmd.run_all"](
-            "zonecfg -z {zone} -f {path}".format(zone=zone, path=cfg_file,)
+            "zonecfg -z {zone} -f {path}".format(
+                zone=zone,
+                path=cfg_file,
+            )
         )
         ret["status"] = res["retcode"] == 0
         ret["message"] = res["stdout"] if ret["status"] else res["stderr"]
@@ -470,7 +487,12 @@ def set_property(zone, key, value):
 
         salt '*' zonecfg.set_property deathscythe cpu-shares 100
     """
-    return _property("set", zone, key, value,)
+    return _property(
+        "set",
+        zone,
+        key,
+        value,
+    )
 
 
 def clear_property(zone, key):
@@ -488,7 +510,12 @@ def clear_property(zone, key):
 
         salt '*' zonecfg.clear_property deathscythe cpu-shares
     """
-    return _property("clear", zone, key, None,)
+    return _property(
+        "clear",
+        zone,
+        key,
+        None,
+    )
 
 
 def _resource(methode, zone, resource_type, resource_selector, **kwargs):
@@ -565,7 +592,10 @@ def _resource(methode, zone, resource_type, resource_selector, **kwargs):
     if cfg_file:
         _dump_cfg(cfg_file)
         res = __salt__["cmd.run_all"](
-            "zonecfg -z {zone} -f {path}".format(zone=zone, path=cfg_file,)
+            "zonecfg -z {zone} -f {path}".format(
+                zone=zone,
+                path=cfg_file,
+            )
         )
         ret["status"] = res["retcode"] == 0
         ret["message"] = res["stdout"] if ret["status"] else res["stderr"]
@@ -666,7 +696,10 @@ def remove_resource(zone, resource_type, resource_key, resource_value):
     if cfg_file:
         _dump_cfg(cfg_file)
         res = __salt__["cmd.run_all"](
-            "zonecfg -z {zone} -f {path}".format(zone=zone, path=cfg_file,)
+            "zonecfg -z {zone} -f {path}".format(
+                zone=zone,
+                path=cfg_file,
+            )
         )
         ret["status"] = res["retcode"] == 0
         ret["message"] = res["stdout"] if ret["status"] else res["stderr"]
@@ -700,7 +733,11 @@ def info(zone, show_all=False):
     ret = {}
 
     # dump zone
-    res = __salt__["cmd.run_all"]("zonecfg -z {zone} info".format(zone=zone,))
+    res = __salt__["cmd.run_all"](
+        "zonecfg -z {zone} info".format(
+            zone=zone,
+        )
+    )
     if res["retcode"] == 0:
         # parse output
         resname = None

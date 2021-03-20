@@ -696,7 +696,9 @@ class SlackClient:
             except (StopIteration, AttributeError):
                 outputter = None
             return salt.output.string_format(
-                {x: y["return"] for x, y in data.items()}, out=outputter, opts=__opts__,
+                {x: y["return"] for x, y in data.items()},
+                out=outputter,
+                opts=__opts__,
             )
         except Exception as exc:  # pylint: disable=broad-except
             import pprint
@@ -826,11 +828,13 @@ class SlackClient:
                     this_job = outstanding[jid]
                     channel = self.sc.server.channels.find(this_job["channel"])
                     return_text = self.format_return_text(result, function)
-                    return_prefix = "@{}'s job `{}` (id: {}) (target: {}) returned".format(
-                        this_job["user_name"],
-                        this_job["cmdline"],
-                        jid,
-                        this_job["target"],
+                    return_prefix = (
+                        "@{}'s job `{}` (id: {}) (target: {}) returned".format(
+                            this_job["user_name"],
+                            this_job["cmdline"],
+                            jid,
+                            this_job["target"],
+                        )
                     )
                     channel.send_message(return_prefix)
                     ts = time.time()
@@ -901,7 +905,11 @@ class SlackClient:
             # according to https://github.com/saltstack/salt-api/issues/164, tgt_type has changed to expr_form
             with salt.client.LocalClient() as local:
                 job_id = local.cmd_async(
-                    str(target), cmd, arg=args, kwarg=kwargs, tgt_type=str(tgt_type),
+                    str(target),
+                    cmd,
+                    arg=args,
+                    kwarg=kwargs,
+                    tgt_type=str(tgt_type),
                 )
             log.info("ret from local.cmd_async is %s", job_id)
         return job_id

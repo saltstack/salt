@@ -439,8 +439,10 @@ def _v2_the_path(path, pfilter, ptype="data"):
     """
     possible_types = ["data", "metadata", "destroy"]
     assert ptype in possible_types
-    msg = "Path {} already contains {} in the right place - saltstack duct tape?".format(
-        path, ptype
+    msg = (
+        "Path {} already contains {} in the right place - saltstack duct tape?".format(
+            path, ptype
+        )
     )
 
     path = path.rstrip("/").lstrip("/")

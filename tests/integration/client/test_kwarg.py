@@ -91,7 +91,10 @@ class StdTest(ModuleCase):
     @pytest.mark.slow_test
     def test_full_return_kwarg(self):
         ret = self.client.cmd(
-            "minion", "test.ping", full_return=True, timeout=self.TIMEOUT,
+            "minion",
+            "test.ping",
+            full_return=True,
+            timeout=self.TIMEOUT,
         )
         for mid, data in ret.items():
             self.assertIn("retcode", data)

@@ -127,7 +127,8 @@ class PillarModuleTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(pillarmod.__pillar__, {"foo": "bar"}):
 
             self.assertEqual(
-                pillarmod.get(key="foo", default=None, merge=True), "bar",
+                pillarmod.get(key="foo", default=None, merge=True),
+                "bar",
             )
 
     def test_pillar_get_int_key(self):
@@ -137,7 +138,8 @@ class PillarModuleTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(pillarmod.__pillar__, {12345: "luggage_code"}):
 
             self.assertEqual(
-                pillarmod.get(key=12345, default=None, merge=True), "luggage_code",
+                pillarmod.get(key=12345, default=None, merge=True),
+                "luggage_code",
             )
 
         with patch.dict(

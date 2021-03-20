@@ -2408,7 +2408,12 @@ def test_vcenter_connection(service_instance=None):
 @depends(HAS_PYVMOMI)
 @ignores_kwargs("credstore")
 def system_info(
-    host, username, password, protocol=None, port=None, verify_ssl=True,
+    host,
+    username,
+    password,
+    protocol=None,
+    port=None,
+    verify_ssl=True,
 ):
     """
     Return system information about a VMware environment.
@@ -6060,11 +6065,15 @@ def _apply_cluster_dict(cluster_spec, cluster_dict, vsan_spec=None, vsan_61=True
                 vim.ClusterFailoverResourcesAdmissionControlPolicy,
             ):
 
-                das_config.admissionControlPolicy = vim.ClusterFailoverResourcesAdmissionControlPolicy(
-                    cpuFailoverResourcesPercent=adm_pol_dict["cpu_failover_percent"],
-                    memoryFailoverResourcesPercent=adm_pol_dict[
-                        "memory_failover_percent"
-                    ],
+                das_config.admissionControlPolicy = (
+                    vim.ClusterFailoverResourcesAdmissionControlPolicy(
+                        cpuFailoverResourcesPercent=adm_pol_dict[
+                            "cpu_failover_percent"
+                        ],
+                        memoryFailoverResourcesPercent=adm_pol_dict[
+                            "memory_failover_percent"
+                        ],
+                    )
                 )
         if "default_vm_settings" in ha_dict:
             vm_set_dict = ha_dict["default_vm_settings"]
@@ -8116,7 +8125,8 @@ def add_host_to_dvs(
         )
         pnic_backing = vim.dvs.HostMember.PnicBacking(pnicSpec=[dvs_pnic_spec])
         dvs_hostmember_config_spec = vim.dvs.HostMember.ConfigSpec(
-            host=host_ref, operation="add",
+            host=host_ref,
+            operation="add",
         )
         dvs_config = vim.DVSConfigSpec(
             configVersion=dvs.config.configVersion, host=[dvs_hostmember_config_spec]

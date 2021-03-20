@@ -1922,9 +1922,10 @@ def get_table(
                     ret["table"][table]["args"] = args
                     ret["table"][table]["command"] = data.GET_CMD
     except ConnectClosedError:
-        ret["message"] = (
-            "Got ConnectClosedError exception. Connection lost "
-            "with {}".format(str(conn))
+        ret[
+            "message"
+        ] = "Got ConnectClosedError exception. Connection lost " "with {}".format(
+            str(conn)
         )
         ret["out"] = False
         _restart_connection()

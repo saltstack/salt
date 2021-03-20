@@ -17,7 +17,7 @@ from tests.support.unit import TestCase
 
 class WinNetworkTestCase(TestCase, LoaderModuleMockMixin):
     """
-        Validate the nftables state
+    Validate the nftables state
     """
 
     def setup_loader_modules(self):

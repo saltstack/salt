@@ -22,7 +22,7 @@ from tests.support.unit import TestCase
 
 class MockRunnerClient(object):
     """
-        Mock RunnerClient class
+    Mock RunnerClient class
     """
 
     def __init__(self):
@@ -30,18 +30,18 @@ class MockRunnerClient(object):
 
     class RunnerClient(object):
         """
-            Mock RunnerClient class
+        Mock RunnerClient class
         """
 
         def __init__(self, master_config):
             """
-                init method
+            init method
             """
 
         @staticmethod
         def cmd(arg1, arg2):
             """
-                Mock cmd method
+            Mock cmd method
             """
             # TODO: Figure out how to have this return an empty dict or a dict
             # TODO: with expected data

@@ -446,7 +446,8 @@ class NetapiSSHClientAuthTest(SSHCase):
             else:
                 hashed_password = salt.utils.pycrypto.gen_hash(password=self.USERA_PWD)
             add_pwd = self.mod_case.run_function(
-                "shadow.set_password", [self.USERA, hashed_password],
+                "shadow.set_password",
+                [self.USERA, hashed_password],
             )
             self.assertTrue(add_pwd)
         except AssertionError:

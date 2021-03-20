@@ -67,7 +67,10 @@ def present(name, timespec, tag=None, user=None, job=None, unique_tag=False):
     # quick return on test=True
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "job {0} added and will run on {1}".format(job, timespec,)
+        ret["comment"] = "job {0} added and will run on {1}".format(
+            job,
+            timespec,
+        )
         return ret
 
     # quick return if unique_tag and job exists
@@ -88,12 +91,26 @@ def present(name, timespec, tag=None, user=None, job=None, unique_tag=False):
             ret["comment"] = "user {0} does not exists".format(user)
             return ret
         ret["comment"] = "job {0} added and will run as {1} on {2}".format(
-            job, user, timespec,
+            job,
+            user,
+            timespec,
         )
-        res = __salt__["at.at"](timespec, job, tag=tag, runas=user,)
+        res = __salt__["at.at"](
+            timespec,
+            job,
+            tag=tag,
+            runas=user,
+        )
     else:
-        ret["comment"] = "job {0} added and will run on {1}".format(job, timespec,)
-        res = __salt__["at.at"](timespec, job, tag=tag,)
+        ret["comment"] = "job {0} added and will run on {1}".format(
+            job,
+            timespec,
+        )
+        res = __salt__["at.at"](
+            timespec,
+            job,
+            tag=tag,
+        )
 
     # set ret['changes']
     if "jobs" in res and len(res["jobs"]) > 0:

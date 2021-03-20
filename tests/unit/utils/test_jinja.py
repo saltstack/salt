@@ -975,14 +975,23 @@ class TestCustomExtensions(TestCase):
 
         rendered = env.from_string("{{ data }}").render(data=data)
         self.assertEqual(
-            rendered, "{'foo': {'bar': 'baz', 'qux': 42}}",
+            rendered,
+            "{'foo': {'bar': 'baz', 'qux': 42}}",
         )
 
         rendered = env.from_string("{{ data }}").render(
-            data=[OrderedDict(foo="bar",), OrderedDict(baz=42,)]
+            data=[
+                OrderedDict(
+                    foo="bar",
+                ),
+                OrderedDict(
+                    baz=42,
+                ),
+            ]
         )
         self.assertEqual(
-            rendered, "[{'foo': 'bar'}, {'baz': 42}]",
+            rendered,
+            "[{'foo': 'bar'}, {'baz': 42}]",
         )
 
     def test_set_dict_key_value(self):
@@ -1024,7 +1033,8 @@ class TestCustomExtensions(TestCase):
             ),
         )
         self.assertEqual(
-            rendered, "{'bar': {'baz': {'qux': 1, 'quux': 3}}}",
+            rendered,
+            "{'bar': {'baz': {'qux': 1, 'quux': 3}}}",
         )
 
         # Test incorrect usage
@@ -1066,7 +1076,8 @@ class TestCustomExtensions(TestCase):
             ),
         )
         self.assertEqual(
-            rendered, "{'bar': {'baz': [1, 2, 42]}}",
+            rendered,
+            "{'bar': {'baz': [1, 2, 42]}}",
         )
 
     def test_extend_dict_key_value(self):
@@ -1089,7 +1100,8 @@ class TestCustomExtensions(TestCase):
             ),
         )
         self.assertEqual(
-            rendered, "{'bar': {'baz': [1, 2, 42, 43]}}",
+            rendered,
+            "{'bar': {'baz': [1, 2, 42, 43]}}",
         )
         # Edge cases
         rendered = render_jinja_tmpl(

@@ -131,9 +131,10 @@ def _talk2modjk(name, lbn, target, action, profile="default", tgt_type="glob"):
         return ret
     if status["errors"]:
         ret["result"] = False
-        ret["comment"] = (
-            "the following balancers could not find the "
-            "worker {0}: {1}".format(name, status["errors"])
+        ret[
+            "comment"
+        ] = "the following balancers could not find the " "worker {0}: {1}".format(
+            name, status["errors"]
         )
         return ret
     if not status["wrong_state"]:

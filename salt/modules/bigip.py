@@ -1601,8 +1601,10 @@ def create_virtual(
                 elif vlans["disabled"]:
                     payload["vlans-disabled"] = True
             except Exception:  # pylint: disable=broad-except
-                return "Error: Unable to Parse vlans dictionary: \n\tvlans={vlans}".format(
-                    vlans=vlans
+                return (
+                    "Error: Unable to Parse vlans dictionary: \n\tvlans={vlans}".format(
+                        vlans=vlans
+                    )
                 )
         elif vlans == "none":
             payload["vlans"] = "none"
@@ -1888,8 +1890,10 @@ def modify_virtual(
                 elif vlans["disabled"]:
                     payload["vlans-disabled"] = True
             except Exception:  # pylint: disable=broad-except
-                return "Error: Unable to Parse vlans dictionary: \n\tvlans={vlans}".format(
-                    vlans=vlans
+                return (
+                    "Error: Unable to Parse vlans dictionary: \n\tvlans={vlans}".format(
+                        vlans=vlans
+                    )
                 )
         elif vlans == "none":
             payload["vlans"] = "none"
@@ -1967,7 +1971,11 @@ def delete_virtual(hostname, username, password, name):
 
 
 def list_monitor(
-    hostname, username, password, monitor_type, name=None,
+    hostname,
+    username,
+    password,
+    monitor_type,
+    name=None,
 ):
     """
     A function to connect to a bigip device and list an existing monitor.  If no name is provided than all
@@ -2163,7 +2171,11 @@ def delete_monitor(hostname, username, password, monitor_type, name):
 
 
 def list_profile(
-    hostname, username, password, profile_type, name=None,
+    hostname,
+    username,
+    password,
+    profile_type,
+    name=None,
 ):
     """
     A function to connect to a bigip device and list an existing profile.  If no name is provided than all

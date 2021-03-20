@@ -10,7 +10,7 @@ class KeychainTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_install_cert(self):
         """
-            Test installing a certificate into the macOS keychain
+        Test installing a certificate into the macOS keychain
         """
         mock = MagicMock()
         with patch.dict(keychain.__salt__, {"cmd.run": mock}):
@@ -22,7 +22,7 @@ class KeychainTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_install_cert_extras(self):
         """
-            Test installing a certificate into the macOS keychain with extras
+        Test installing a certificate into the macOS keychain with extras
         """
         mock = MagicMock()
         with patch.dict(keychain.__salt__, {"cmd.run": mock}), patch(
@@ -42,7 +42,7 @@ class KeychainTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_uninstall_cert(self):
         """
-            Test uninstalling a certificate from the macOS keychain
+        Test uninstalling a certificate from the macOS keychain
         """
         mock = MagicMock()
         with patch.dict(keychain.__salt__, {"cmd.run": mock}):
@@ -53,7 +53,7 @@ class KeychainTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_list_certs(self):
         """
-            Test listing available certificates in a keychain
+        Test listing available certificates in a keychain
         """
         expected = ["com.apple.systemdefault", "com.apple.kerberos.kdc"]
         mock = MagicMock(
@@ -71,7 +71,7 @@ class KeychainTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_get_friendly_name(self):
         """
-            Test getting the friendly name of a certificate
+        Test getting the friendly name of a certificate
         """
         expected = "ID Installer Salt"
         mock = MagicMock(return_value="friendlyName: ID Installer Salt")
@@ -87,7 +87,7 @@ class KeychainTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_get_default_keychain(self):
         """
-            Test getting the default keychain
+        Test getting the default keychain
         """
         mock = MagicMock()
         with patch.dict(keychain.__salt__, {"cmd.run": mock}):
@@ -98,7 +98,7 @@ class KeychainTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_set_default_keychain(self):
         """
-            Test setting the default keychain
+        Test setting the default keychain
         """
         mock = MagicMock()
         with patch.dict(keychain.__salt__, {"cmd.run": mock}):
@@ -110,7 +110,7 @@ class KeychainTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_unlock_keychain(self):
         """
-            Test unlocking the keychain
+        Test unlocking the keychain
         """
         mock = MagicMock()
         with patch.dict(keychain.__salt__, {"cmd.run": mock}):

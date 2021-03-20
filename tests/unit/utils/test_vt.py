@@ -37,7 +37,7 @@ from tests.support.unit import TestCase, skipIf
 
 def stdout_fileno_available():
     """
-        Tests if sys.stdout.fileno is available in this testing environment
+    Tests if sys.stdout.fileno is available in this testing environment
     """
     try:
         sys.stdout.fileno()
@@ -48,11 +48,11 @@ def stdout_fileno_available():
 
 def fixStdOutErrFileNoIfNeeded(func):
     """
-        Decorator that sets stdout and stderr to their original objects if
-        sys.stdout.fileno() doesn't work and restores them after running the
-        decorated function. This doesn't check if the original objects actually
-        work. If they don't then the test environment is too broken to test
-        the VT.
+    Decorator that sets stdout and stderr to their original objects if
+    sys.stdout.fileno() doesn't work and restores them after running the
+    decorated function. This doesn't check if the original objects actually
+    work. If they don't then the test environment is too broken to test
+    the VT.
     """
 
     @functools.wraps(func)
@@ -276,8 +276,8 @@ class VTTestCase(TestCase):
     @fixStdOutErrFileNoIfNeeded
     def test_split_multibyte_characters_unicode(self):
         """
-            Tests that the vt correctly handles multibyte characters that are
-            split between blocks of transmitted data.
+        Tests that the vt correctly handles multibyte characters that are
+        split between blocks of transmitted data.
         """
         block_size = 1024
         encoding = "utf-8"
@@ -343,9 +343,9 @@ class VTTestCase(TestCase):
     @fixStdOutErrFileNoIfNeeded
     def test_split_multibyte_characters_shiftjis(self):
         """
-            Tests that the vt correctly handles multibyte characters that are
-            split between blocks of transmitted data.
-            Uses shift-jis encoding to make sure code doesn't assume unicode.
+        Tests that the vt correctly handles multibyte characters that are
+        split between blocks of transmitted data.
+        Uses shift-jis encoding to make sure code doesn't assume unicode.
         """
         block_size = 1024
         encoding = "shift-jis"

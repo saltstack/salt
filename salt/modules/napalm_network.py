@@ -124,8 +124,7 @@ def _safe_commit_config(loaded_result, napalm_device):
 
 
 def _safe_dicard_config(loaded_result, napalm_device):
-    """
-    """
+    """"""
     log.debug("Discarding the config")
     log.debug(loaded_result)
     _discarded = discard_config(inherit_napalm_device=napalm_device)

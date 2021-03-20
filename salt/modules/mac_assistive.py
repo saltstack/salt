@@ -64,15 +64,12 @@ def install(app_id, enable=True):
     )
     client_type = _client_type(app_id)
     enable_str = "1" if enable else "0"
-    cmd = (
-        'sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db" '
-        "\"INSERT or REPLACE INTO access VALUES('kTCCServiceAccessibility','{}',{},{},1,NULL{}{})\"".format(
-            app_id,
-            client_type,
-            enable_str,
-            ",NULL" if ge_el_capitan else "",
-            ",NULL,NULL,NULL,NULL,''" if ge_mojave else "",
-        )
+    cmd = 'sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db" ' "\"INSERT or REPLACE INTO access VALUES('kTCCServiceAccessibility','{}',{},{},1,NULL{}{})\"".format(
+        app_id,
+        client_type,
+        enable_str,
+        ",NULL" if ge_el_capitan else "",
+        ",NULL,NULL,NULL,NULL,''" if ge_mojave else "",
     )
 
     call = __salt__["cmd.run_all"](cmd, output_loglevel="debug", python_shell=False)

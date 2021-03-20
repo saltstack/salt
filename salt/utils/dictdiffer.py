@@ -109,42 +109,42 @@ def recursive_diff(past_dict, current_dict, ignore_missing_keys=True):
 
 class RecursiveDictDiffer(DictDiffer):
     """
-    Calculates a recursive diff between the current_dict and the past_dict
-    creating a diff in the format
+        Calculates a recursive diff between the current_dict and the past_dict
+        creating a diff in the format
 
-    {'new': new_value, 'old': old_value}
+        {'new': new_value, 'old': old_value}
 
-    It recursively searches differences in common keys whose values are
-    dictionaries creating a diff dict in the format
+        It recursively searches differences in common keys whose values are
+        dictionaries creating a diff dict in the format
 
-    {'common_key' : {'new': new_value, 'old': old_value}
+        {'common_key' : {'new': new_value, 'old': old_value}
 
-    The class overrides all DictDiffer methods, returning lists of keys and
-    subkeys using the . notation (i.e 'common_key1.common_key2.changed_key')
+        The class overrides all DictDiffer methods, returning lists of keys and
+        subkeys using the . notation (i.e 'common_key1.common_key2.changed_key')
 
-    The class provides access to:
-        (1) the added, removed, changes keys and subkeys (using the . notation)
-               ``added``, ``removed``, ``changed`` methods
-        (2) the diffs in the format above (diff property)
-                ``diffs`` property
-        (3) a dict with the new changed values only (new_values property)
-                ``new_values`` property
-        (4) a dict with the old changed values only (old_values property)
-                ``old_values`` property
-        (5) a string representation of the changes in the format:
-                ``changes_str`` property
+        The class provides access to:
+            (1) the added, removed, changes keys and subkeys (using the . notation)
+                   ``added``, ``removed``, ``changed`` methods
+            (2) the diffs in the format above (diff property)
+                    ``diffs`` property
+            (3) a dict with the new changed values only (new_values property)
+                    ``new_values`` property
+            (4) a dict with the old changed values only (old_values property)
+                    ``old_values`` property
+            (5) a string representation of the changes in the format:
+                    ``changes_str`` property
 
-    Note:
-        The <_null_> value is a reserved value
+        Note:
+            The <_null_> value is a reserved value
 
-.. code-block:: text
+    .. code-block:: text
 
-            common_key1:
-              common_key2:
-                changed_key1 from '<old_str>' to '<new_str>'
-                changed_key2 from '[<old_elem1>, ..]' to '[<new_elem1>, ..]'
-            common_key3:
-              changed_key3 from <old_int> to <new_int>
+                common_key1:
+                  common_key2:
+                    changed_key1 from '<old_str>' to '<new_str>'
+                    changed_key2 from '[<old_elem1>, ..]' to '[<new_elem1>, ..]'
+                common_key3:
+                  changed_key3 from <old_int> to <new_int>
 
     """
 

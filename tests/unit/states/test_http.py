@@ -16,7 +16,7 @@ from tests.support.unit import TestCase
 
 class HttpTestCase(TestCase, LoaderModuleMockMixin):
     """
-        Validate the HTTP state
+    Validate the HTTP state
     """
 
     def setup_loader_modules(self):
@@ -24,7 +24,7 @@ class HttpTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_query(self):
         """
-            Test to perform an HTTP query and statefully return the result
+        Test to perform an HTTP query and statefully return the result
         """
         ret = [
             {
@@ -52,7 +52,7 @@ class HttpTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_query_pcre_statustype(self):
         """
-            Test to perform an HTTP query with a regex used to match the status code and statefully return the result
+        Test to perform an HTTP query with a regex used to match the status code and statefully return the result
         """
         testurl = "salturl"
         http_result = {"text": "This page returned a 201 status code", "status": "201"}
@@ -79,7 +79,7 @@ class HttpTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_query_stringstatustype(self):
         """
-            Test to perform an HTTP query with a string status code and statefully return the result
+        Test to perform an HTTP query with a string status code and statefully return the result
         """
         testurl = "salturl"
         http_result = {"text": "This page returned a 201 status code", "status": "201"}
@@ -106,7 +106,7 @@ class HttpTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_query_liststatustype(self):
         """
-            Test to perform an HTTP query with a list of status codes and statefully return the result
+        Test to perform an HTTP query with a list of status codes and statefully return the result
         """
         testurl = "salturl"
         http_result = {"text": "This page returned a 201 status code", "status": "201"}

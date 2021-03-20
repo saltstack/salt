@@ -175,7 +175,10 @@ def _hex_to_octets(addr):
     Convert hex fields from /proc/net/route to octects
     """
     return "{0}:{1}:{2}:{3}".format(
-        int(addr[6:8], 16), int(addr[4:6], 16), int(addr[2:4], 16), int(addr[0:2], 16),
+        int(addr[6:8], 16),
+        int(addr[4:6], 16),
+        int(addr[2:4], 16),
+        int(addr[0:2], 16),
     )
 
 

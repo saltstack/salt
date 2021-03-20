@@ -914,7 +914,9 @@ def linux_interfaces():
         )
     elif ifconfig_path:
         cmd = subprocess.Popen(
-            [ifconfig_path, "-a"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            [ifconfig_path, "-a"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
         ).communicate()[0]
         ifaces = _interfaces_ifconfig(salt.utils.stringutils.to_str(cmd))
     return ifaces
@@ -1057,7 +1059,9 @@ def junos_interfaces():
     """
     ifconfig_path = salt.utils.path.which("ifconfig")
     cmd = subprocess.Popen(
-        [ifconfig_path, "-a"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+        [ifconfig_path, "-a"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
     ).communicate()[0]
     return _junos_interfaces_ifconfig(salt.utils.stringutils.to_str(cmd))
 
@@ -1074,7 +1078,9 @@ def netbsd_interfaces():
 
     ifconfig_path = salt.utils.path.which("ifconfig")
     cmd = subprocess.Popen(
-        [ifconfig_path, "-a"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+        [ifconfig_path, "-a"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
     ).communicate()[0]
     return _netbsd_interfaces_ifconfig(salt.utils.stringutils.to_str(cmd))
 
@@ -1218,7 +1224,9 @@ def _hw_addr_aix(iface):
     cmd = subprocess.Popen(
         ["grep", "Hardware Address"],
         stdin=subprocess.Popen(
-            ["entstat", "-d", iface], stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            ["entstat", "-d", iface],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
         ).stdout,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,

@@ -47,10 +47,15 @@ def send_msg(name, recipient, profile):
     """
     ret = {"name": name, "changes": {}, "result": None, "comment": ""}
     if __opts__["test"]:
-        ret["comment"] = "Need to send message to {0}: {1}".format(recipient, name,)
+        ret["comment"] = "Need to send message to {0}: {1}".format(
+            recipient,
+            name,
+        )
         return ret
     __salt__["xmpp.send_msg_multi"](
-        message=name, recipients=[recipient], profile=profile,
+        message=name,
+        recipients=[recipient],
+        profile=profile,
     )
     ret["result"] = True
     ret["comment"] = "Sent message to {0}: {1}".format(recipient, name)
@@ -93,7 +98,10 @@ def send_msg_multi(name, profile, recipients=None, rooms=None):
         return ret
 
     __salt__["xmpp.send_msg_multi"](
-        message=name, recipients=recipients, rooms=rooms, profile=profile,
+        message=name,
+        recipients=recipients,
+        rooms=rooms,
+        profile=profile,
     )
     ret["result"] = True
     ret["comment"] = "Sent message to" + comment

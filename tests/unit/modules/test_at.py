@@ -240,7 +240,7 @@ class AtTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_atc(self):
         """
-            Tests for atc
+        Tests for atc
         """
         with patch.object(at, "_cmd", return_value=None):
             self.assertEqual(at.atc(101), "'at.atc' is not available.")

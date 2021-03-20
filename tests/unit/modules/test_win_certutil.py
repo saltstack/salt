@@ -18,7 +18,7 @@ class CertUtilTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_get_serial(self):
         """
-            Test getting the serial number from a certificate
+        Test getting the serial number from a certificate
         """
         expected = "180720d39cd2db3244ba037417241e90"
         mock = MagicMock(
@@ -38,7 +38,7 @@ class CertUtilTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_get_serials(self):
         """
-            Test getting all the serial numbers from a store
+        Test getting all the serial numbers from a store
         """
         expected = [
             "180720d39cd2db3244ba037417241e90",
@@ -63,7 +63,7 @@ class CertUtilTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_add_store(self):
         """
-            Test adding a certificate to a specific store
+        Test adding a certificate to a specific store
         """
         cmd_mock = MagicMock(
             return_value=(
@@ -85,7 +85,7 @@ class CertUtilTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_del_store(self):
         """
-            Test removing a certificate to a specific store
+        Test removing a certificate to a specific store
         """
         with patch("salt.modules.win_certutil.get_cert_serial") as cert_serial_mock:
             cmd_mock = MagicMock(

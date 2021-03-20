@@ -191,7 +191,8 @@ def get_client(client_type, **kwargs):
 
     if client_type == "subscription":
         client = Client(
-            credentials=credentials, base_url=cloud_env.endpoints.resource_manager,
+            credentials=credentials,
+            base_url=cloud_env.endpoints.resource_manager,
         )
     else:
         client = Client(

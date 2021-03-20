@@ -14,7 +14,7 @@ from tests.support.unit import TestCase
 
 class PowerCfgTestCase(TestCase, LoaderModuleMockMixin):
     """
-        Validate the powercfg state
+    Validate the powercfg state
     """
 
     def setup_loader_modules(self):

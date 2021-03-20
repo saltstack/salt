@@ -15,7 +15,8 @@ log = logging.getLogger(__name__)
 
 
 @skipIf(
-    HAS_DATEUTIL_PARSER is False, "The 'dateutil.parser' library is not available",
+    HAS_DATEUTIL_PARSER is False,
+    "The 'dateutil.parser' library is not available",
 )
 class SchedulerSkipTest(SchedulerTestsBase):
     """

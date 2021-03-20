@@ -406,7 +406,8 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             try:
                 mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
                 minion = salt.minion.Minion(
-                    mock_opts, io_loop=salt.ext.tornado.ioloop.IOLoop(),
+                    mock_opts,
+                    io_loop=salt.ext.tornado.ioloop.IOLoop(),
                 )
                 minion.schedule = salt.utils.schedule.Schedule(
                     mock_opts, {}, returners={}

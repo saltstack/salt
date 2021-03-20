@@ -116,7 +116,8 @@ class SyncWrapper(object):
         def wrap(*args, **kwargs):
             results = []
             thread = threading.Thread(
-                target=self._target, args=(key, args, kwargs, results, self.io_loop),
+                target=self._target,
+                args=(key, args, kwargs, results, self.io_loop),
             )
             thread.start()
             thread.join()

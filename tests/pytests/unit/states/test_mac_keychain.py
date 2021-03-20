@@ -241,7 +241,9 @@ def test_install_cert_salt_fileserver():
         list_mock.assert_called_once_with("/Library/Keychains/System.keychain")
         friendly_mock.assert_called_once_with("/tmp/path/to/cert.p12", "passw0rd")
         install_mock.assert_called_once_with(
-            "/tmp/path/to/cert.p12", "passw0rd", "/Library/Keychains/System.keychain",
+            "/tmp/path/to/cert.p12",
+            "passw0rd",
+            "/Library/Keychains/System.keychain",
         )
         assert out == expected
 

@@ -81,11 +81,15 @@ def test_valid_docs(salt_call_cli):
         elif isinstance(docstring, dict) and not example_regex.search(docstring):
             missing_example.add(fun)
 
-        missing_docstring_error = "The following functions do not have a docstring: {}".format(
-            ",".join([repr(func) for func in sorted(missing_docstring)])
+        missing_docstring_error = (
+            "The following functions do not have a docstring: {}".format(
+                ",".join([repr(func) for func in sorted(missing_docstring)])
+            )
         )
         assert not missing_docstring, missing_docstring_error
-        missing_example_error = "The following functions do not have a CLI example: {}".format(
-            ",".join([repr(func) for func in sorted(missing_example)])
+        missing_example_error = (
+            "The following functions do not have a CLI example: {}".format(
+                ",".join([repr(func) for func in sorted(missing_example)])
+            )
         )
         assert not missing_example, missing_example_error

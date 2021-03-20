@@ -216,7 +216,10 @@ def state_tree_prod(tmp_path_factory):
 
 @pytest.fixture(scope="module")
 def minion_opts(
-    salt_factories, minion_id, state_tree, state_tree_prod,
+    salt_factories,
+    minion_id,
+    state_tree,
+    state_tree_prod,
 ):
     config_overrides = {
         "file_client": "local",
@@ -224,7 +227,8 @@ def minion_opts(
         "features": {"enable_slsvars_fixes": True},
     }
     factory = salt_factories.get_salt_minion_daemon(
-        minion_id, config_overrides=config_overrides,
+        minion_id,
+        config_overrides=config_overrides,
     )
     return factory.config.copy()
 

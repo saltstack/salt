@@ -1191,7 +1191,9 @@ class EventPublisher(salt.utils.process.SignalHandlingProcess):
             )
 
             self.puller = salt.transport.ipc.IPCMessageServer(
-                epull_uri, io_loop=self.io_loop, payload_handler=self.handle_publish,
+                epull_uri,
+                io_loop=self.io_loop,
+                payload_handler=self.handle_publish,
             )
 
             # Start the master event publisher

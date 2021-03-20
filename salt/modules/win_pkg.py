@@ -2039,7 +2039,8 @@ def remove(name=None, pkgs=None, **kwargs):
             # If still no uninstaller found, fail
             if not uninstaller:
                 log.error(
-                    "No installer or uninstaller configured for package %s", pkgname,
+                    "No installer or uninstaller configured for package %s",
+                    pkgname,
                 )
                 ret[pkgname] = {"no uninstaller defined": target}
                 continue

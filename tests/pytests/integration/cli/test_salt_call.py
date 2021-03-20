@@ -304,7 +304,11 @@ def test_syslog_file_not_found(salt_minion, salt_call_cli):
             with salt.utils.files.fopen(os.path.join(config_dir, "minion"), "w") as fh_:
                 fh_.write(salt.utils.yaml.dump(minion_config, default_flow_style=False))
             ret = salt_call_cli.run(
-                "--config-dir", config_dir, "--log-level=debug", "cmd.run", "echo foo",
+                "--config-dir",
+                config_dir,
+                "--log-level=debug",
+                "cmd.run",
+                "echo foo",
             )
             if sys.version_info >= (3, 5, 4):
                 assert ret.exitcode == 0

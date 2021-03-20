@@ -210,7 +210,10 @@ class BotoRoute53RetryTestCase(TestCase, LoaderModuleMockMixin):
         # Retryable error (max retries reached)
         conn = DummyConn(get_zone=[self._retryable_error, self._retryable_error])
         with patch.object(boto_route53, "_get_conn", MagicMock(return_value=conn)):
-            result = boto_route53.zone_exists("foo", error_retries=2,)
+            result = boto_route53.zone_exists(
+                "foo",
+                error_retries=2,
+            )
             assert conn.get_zone.call_count == 2
             assert result is False
 
@@ -242,7 +245,10 @@ class BotoRoute53RetryTestCase(TestCase, LoaderModuleMockMixin):
             create_health_check=[self._retryable_error, self._retryable_error]
         )
         with patch.object(boto_route53, "_get_conn", MagicMock(return_value=conn)):
-            result = boto_route53.create_healthcheck("foo", error_retries=2,)
+            result = boto_route53.create_healthcheck(
+                "foo",
+                error_retries=2,
+            )
             assert conn.create_health_check.call_count == 2
             assert result is False
 
@@ -267,7 +273,12 @@ class BotoRoute53RetryTestCase(TestCase, LoaderModuleMockMixin):
         # Retryable error (max retries reached)
         conn = DummyConn(get_zone=[self._retryable_error, self._retryable_error])
         with patch.object(boto_route53, "_get_conn", MagicMock(return_value=conn)):
-            result = boto_route53.get_record("foo", "bar", "baz", error_retries=2,)
+            result = boto_route53.get_record(
+                "foo",
+                "bar",
+                "baz",
+                error_retries=2,
+            )
             assert conn.get_zone.call_count == 2
             assert not result
 
@@ -304,7 +315,13 @@ class BotoRoute53RetryTestCase(TestCase, LoaderModuleMockMixin):
         zone.id = "foo"
         conn = DummyConn(get_zone=[zone])
         with patch.object(boto_route53, "_get_conn", MagicMock(return_value=conn)):
-            result = boto_route53.add_record("a", "b", "c", "d", error_retries=2,)
+            result = boto_route53.add_record(
+                "a",
+                "b",
+                "c",
+                "d",
+                error_retries=2,
+            )
             assert zone.add_record.call_count == 2
             assert not result
 
@@ -339,7 +356,13 @@ class BotoRoute53RetryTestCase(TestCase, LoaderModuleMockMixin):
         zone = DummyConn(find_records=[self._retryable_error, self._retryable_error])
         conn = DummyConn(get_zone=[zone])
         with patch.object(boto_route53, "_get_conn", MagicMock(return_value=conn)):
-            result = boto_route53.update_record("a", "b", "c", "d", error_retries=2,)
+            result = boto_route53.update_record(
+                "a",
+                "b",
+                "c",
+                "d",
+                error_retries=2,
+            )
             assert zone.find_records.call_count == 2
             assert not result
 
@@ -375,7 +398,13 @@ class BotoRoute53RetryTestCase(TestCase, LoaderModuleMockMixin):
         zone = DummyConn(find_records=[self._retryable_error, self._retryable_error])
         conn = DummyConn(get_zone=[zone])
         with patch.object(boto_route53, "_get_conn", MagicMock(return_value=conn)):
-            result = boto_route53.delete_record("a", "b", "c", "d", error_retries=2,)
+            result = boto_route53.delete_record(
+                "a",
+                "b",
+                "c",
+                "d",
+                error_retries=2,
+            )
             assert zone.find_records.call_count == 2
             assert not result
 

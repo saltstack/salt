@@ -1002,11 +1002,10 @@ def instance_present(
         if r[0].get("instance_id"):
             if r[0]["instance_id"] != instance_id:
                 ret["result"] = False
-                ret["comment"] = (
-                    "EIP {} is already associated with instance "
-                    "{}.".format(
-                        public_ip if public_ip else allocation_id, r[0]["instance_id"]
-                    )
+                ret[
+                    "comment"
+                ] = "EIP {} is already associated with instance " "{}.".format(
+                    public_ip if public_ip else allocation_id, r[0]["instance_id"]
                 )
                 return ret
         else:
@@ -1229,9 +1228,10 @@ def instance_absent(
             )
         except CommandExecutionError as e:
             ret["result"] = None
-            ret["comment"] = (
-                "Couldn't determine current status of instance "
-                "{}.".format(instance_name or name)
+            ret[
+                "comment"
+            ] = "Couldn't determine current status of instance " "{}.".format(
+                instance_name or name
             )
             return ret
 
@@ -1435,8 +1435,10 @@ def volume_absent(
         ret["comment"] = "Volume matching criteria not found, assuming already absent"
         return ret
     if len(vols) > 1:
-        msg = "More than one volume matched criteria, can't continue in state {}".format(
-            name
+        msg = (
+            "More than one volume matched criteria, can't continue in state {}".format(
+                name
+            )
         )
         log.error(msg)
         ret["comment"] = msg
@@ -2076,12 +2078,11 @@ def private_ips_absent(
 
         else:
             # Testing mode, show that there were ips to remove
-            ret["comment"] = (
-                "ips on eni: {}\n"
-                "ips that would be removed: {}\n".format(
-                    "\n\t- " + "\n\t- ".join(ret["changes"]["old"]),
-                    "\n\t- " + "\n\t- ".join(ips_to_remove),
-                )
+            ret[
+                "comment"
+            ] = "ips on eni: {}\n" "ips that would be removed: {}\n".format(
+                "\n\t- " + "\n\t- ".join(ret["changes"]["old"]),
+                "\n\t- " + "\n\t- ".join(ips_to_remove),
             )
             ret["changes"] = {}
             ret["result"] = None

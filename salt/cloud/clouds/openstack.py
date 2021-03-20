@@ -477,7 +477,9 @@ def list_nodes_select(conn=None, call=None):
             "The list_nodes_select function must be called with -f or --function."
         )
     return __utils__["cloud.list_nodes_select"](
-        list_nodes(conn, "function"), __opts__["query.selection"], call,
+        list_nodes(conn, "function"),
+        __opts__["query.selection"],
+        call,
     )
 
 

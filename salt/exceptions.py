@@ -308,7 +308,8 @@ class SaltRenderError(SaltException):
                 self.buffer, self.line_num, marker=marker
             )
             exc_str += "; line {}\n\n{}".format(
-                self.line_num, salt.utils.stringutils.to_unicode(self.context),
+                self.line_num,
+                salt.utils.stringutils.to_unicode(self.context),
             )
         super().__init__(exc_str)
 

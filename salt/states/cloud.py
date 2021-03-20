@@ -128,7 +128,11 @@ def present(name, cloud_provider, onlyif=None, unless=None, opts=None, **kwargs)
         ret["result"] = False
         ret["comment"] = (
             "Failed to create instance {0}" "using profile {1}: {2}"
-        ).format(name, profile, info["Error"],)
+        ).format(
+            name,
+            profile,
+            info["Error"],
+        )
     else:
         ret["result"] = False
         ret["comment"] = (
@@ -192,7 +196,8 @@ def absent(name, onlyif=None, unless=None):
     elif "Error" in info:
         ret["result"] = False
         ret["comment"] = ("Failed to destroy instance {0}: {1}").format(
-            name, info["Error"],
+            name,
+            info["Error"],
         )
     else:
         ret["result"] = False
@@ -268,7 +273,10 @@ def profile(name, profile, onlyif=None, unless=None, opts=None, **kwargs):
     if info and not error:
         node_info = info.get(name)
         ret["result"] = True
-        default_msg = "Created instance {0} using profile {1}".format(name, profile,)
+        default_msg = "Created instance {0} using profile {1}".format(
+            name,
+            profile,
+        )
         # some providers support changes
         if "changes" in node_info:
             ret["changes"] = node_info["changes"]
@@ -280,11 +288,16 @@ def profile(name, profile, onlyif=None, unless=None, opts=None, **kwargs):
         ret["result"] = False
         ret["comment"] = (
             "Failed to create instance {0}" " using profile {1}: {2}"
-        ).format(name, profile, "{0}\n{1}\n".format(main_error, name_error).strip(),)
+        ).format(
+            name,
+            profile,
+            "{0}\n{1}\n".format(main_error, name_error).strip(),
+        )
     else:
         ret["result"] = False
         ret["comment"] = ("Failed to create instance {0}" "using profile {1}").format(
-            name, profile,
+            name,
+            profile,
         )
     return ret
 

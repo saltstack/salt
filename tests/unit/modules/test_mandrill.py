@@ -77,5 +77,6 @@ class MandrillModuleTest(TestCase, LoaderModuleMockMixin):
             )
         except TypeError as no_async:
             self.assertEqual(
-                str(no_async), "send() got an unexpected keyword argument 'async'",
+                str(no_async),
+                "send() got an unexpected keyword argument 'async'",
             )

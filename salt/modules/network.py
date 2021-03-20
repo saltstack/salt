@@ -1407,12 +1407,16 @@ def mod_hostname(hostname):
 
     if hostname_cmd.endswith("hostnamectl"):
         result = __salt__["cmd.run_all"](
-            "{} set-hostname {}".format(hostname_cmd, hostname,)
+            "{} set-hostname {}".format(
+                hostname_cmd,
+                hostname,
+            )
         )
         if result["retcode"] != 0:
             log.debug(
                 "{} was unable to set hostname. Error: {}".format(
-                    hostname_cmd, result["stderr"],
+                    hostname_cmd,
+                    result["stderr"],
                 )
             )
             return False
@@ -1472,8 +1476,10 @@ def mod_hostname(hostname):
         if __grains__["lsb_distrib_id"] == "nilrt":
             str_hostname = __utils__["stringutils.to_str"](hostname)
             nirtcfg_cmd = "/usr/local/natinst/bin/nirtcfg"
-            nirtcfg_cmd += " --set section=SystemSettings,token='Host_Name',value='{}'".format(
-                str_hostname
+            nirtcfg_cmd += (
+                " --set section=SystemSettings,token='Host_Name',value='{}'".format(
+                    str_hostname
+                )
             )
             if __salt__["cmd.run_all"](nirtcfg_cmd)["retcode"] != 0:
                 raise CommandExecutionError(
@@ -1809,13 +1815,17 @@ def default_route(family=None):
     if __grains__["kernel"] == "Linux":
         default_route["inet"] = ["0.0.0.0", "default"]
         default_route["inet6"] = ["::/0", "default"]
-    elif __grains__["os"] in [
-        "FreeBSD",
-        "NetBSD",
-        "OpenBSD",
-        "MacOS",
-        "Darwin",
-    ] or __grains__["kernel"] in ("SunOS", "AIX"):
+    elif (
+        __grains__["os"]
+        in [
+            "FreeBSD",
+            "NetBSD",
+            "OpenBSD",
+            "MacOS",
+            "Darwin",
+        ]
+        or __grains__["kernel"] in ("SunOS", "AIX")
+    ):
         default_route["inet"] = ["default"]
         default_route["inet6"] = ["default"]
     else:

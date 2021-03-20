@@ -225,7 +225,9 @@ class DataTestCase(TestCase):
         self.assertEqual(
             "it worked",
             salt.utils.data.traverse_dict_and_list(
-                {"foo": {1234: "it worked"}}, "foo:1234", "it didn't work",
+                {"foo": {1234: "it worked"}},
+                "foo:1234",
+                "it didn't work",
             ),
         )
         # Make sure that we properly return the default value when the initial
@@ -234,7 +236,9 @@ class DataTestCase(TestCase):
         self.assertEqual(
             "default",
             salt.utils.data.traverse_dict_and_list(
-                {"foo": {"baz": "didn't work"}}, "foo:bar", "default",
+                {"foo": {"baz": "didn't work"}},
+                "foo:bar",
+                "default",
             ),
         )
 
@@ -498,7 +502,11 @@ class DataTestCase(TestCase):
         # Test binary blob
         self.assertEqual(salt.utils.data.decode(BYTES, keep=True, to_str=True), BYTES)
         self.assertRaises(
-            UnicodeDecodeError, salt.utils.data.decode, BYTES, keep=False, to_str=True,
+            UnicodeDecodeError,
+            salt.utils.data.decode,
+            BYTES,
+            keep=False,
+            to_str=True,
         )
 
     def test_decode_fallback(self):

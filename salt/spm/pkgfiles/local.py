@@ -142,7 +142,11 @@ def install_file(package, formula_tar, member, formula_def, conn=None):
         if node_type in ("master", "minion"):
             # Module files are distributed via extmods directory
             member.name = new_name.name.replace("{0}/_".format(package), "")
-            out_path = os.path.join(salt.syspaths.CACHE_DIR, node_type, "extmods",)
+            out_path = os.path.join(
+                salt.syspaths.CACHE_DIR,
+                node_type,
+                "extmods",
+            )
         else:
             # Module files are distributed via _modules, _states, etc
             member.name = new_name.name.replace("{0}/".format(package), "")

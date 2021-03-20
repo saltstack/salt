@@ -123,7 +123,8 @@ class TestVaultSDB(LoaderModuleMockMixin, TestCase):
             self.assertEqual(vault.get("sdb://myvault/path/to/foo/bar"), "test")
 
         self.assertEqual(
-            mock_vault.call_args_list, [call("GET", "v1/sdb://myvault/path/to/foo")],
+            mock_vault.call_args_list,
+            [call("GET", "v1/sdb://myvault/path/to/foo")],
         )
 
     def test_get_v2(self):
@@ -164,7 +165,8 @@ class TestVaultSDB(LoaderModuleMockMixin, TestCase):
         ), patch.dict(vault.__utils__, {"vault.is_v2": mock_version}):
             self.assertEqual(vault.get("sdb://myvault/path/to/foo?bar"), "test")
         self.assertEqual(
-            mock_vault.call_args_list, [call("GET", "v1/sdb://myvault/path/to/foo")],
+            mock_vault.call_args_list,
+            [call("GET", "v1/sdb://myvault/path/to/foo")],
         )
 
     def test_get_missing(self):

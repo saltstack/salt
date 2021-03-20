@@ -64,7 +64,8 @@ class CPModuleTest(ModuleCase):
 
     @with_tempfile()
     @skipIf(
-        salt.utils.platform.is_windows(), "This test hangs on Windows on Py3",
+        salt.utils.platform.is_windows(),
+        "This test hangs on Windows on Py3",
     )
     def test_get_file_templated_paths(self, tgt):
         """
@@ -394,7 +395,10 @@ class CPModuleTest(ModuleCase):
         """
         cp.cache_master
         """
-        ret = self.run_function("cp.cache_master", [tgt],)
+        ret = self.run_function(
+            "cp.cache_master",
+            [tgt],
+        )
         for path in ret:
             self.assertTrue(os.path.exists(path))
 
@@ -517,7 +521,9 @@ class CPModuleTest(ModuleCase):
         with temp_state_file("top.sls", top_sls), temp_state_file(
             "core.sls", core_state
         ):
-            ret = self.run_function("cp.list_states",)
+            ret = self.run_function(
+                "cp.list_states",
+            )
             self.assertIn("core", ret)
             self.assertIn("top", ret)
 

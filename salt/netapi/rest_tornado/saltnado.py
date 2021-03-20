@@ -428,7 +428,8 @@ class BaseSaltAPIHandler(salt.ext.tornado.web.RequestHandler):  # pylint: disabl
         if not hasattr(self.application, "event_listener"):
             log.debug("init a listener")
             self.application.event_listener = EventListener(
-                self.application.mod_opts, self.application.opts,
+                self.application.mod_opts,
+                self.application.opts,
             )
 
         if not hasattr(self, "saltclients"):

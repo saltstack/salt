@@ -133,7 +133,10 @@ def test_remove():
     with patch.dict(alternatives.__grains__, {"os_family": "RedHat"}):
         mock = MagicMock(return_value={"retcode": 0, "stdout": "salt"})
         with patch.dict(alternatives.__salt__, {"cmd.run_all": mock}):
-            solution = alternatives.remove("better-world", "/usr/bin/better-world",)
+            solution = alternatives.remove(
+                "better-world",
+                "/usr/bin/better-world",
+            )
             assert "salt" == solution
             mock.assert_called_once_with(
                 ["alternatives", "--remove", "better-world", "/usr/bin/better-world"],
@@ -143,7 +146,10 @@ def test_remove():
     with patch.dict(alternatives.__grains__, {"os_family": "Debian"}):
         mock = MagicMock(return_value={"retcode": 0, "stdout": "salt"})
         with patch.dict(alternatives.__salt__, {"cmd.run_all": mock}):
-            solution = alternatives.remove("better-world", "/usr/bin/better-world",)
+            solution = alternatives.remove(
+                "better-world",
+                "/usr/bin/better-world",
+            )
             assert "salt" == solution
             mock.assert_called_once_with(
                 [
@@ -160,7 +166,10 @@ def test_remove():
             return_value={"retcode": 1, "stdout": "salt-out", "stderr": "salt-err"}
         )
         with patch.dict(alternatives.__salt__, {"cmd.run_all": mock}):
-            solution = alternatives.remove("better-world", "/usr/bin/better-world",)
+            solution = alternatives.remove(
+                "better-world",
+                "/usr/bin/better-world",
+            )
             assert "salt-err" == solution
             mock.assert_called_once_with(
                 ["alternatives", "--remove", "better-world", "/usr/bin/better-world"],

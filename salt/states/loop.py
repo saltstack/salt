@@ -219,16 +219,18 @@ def until_no_eval(
         )
         if cmp_res:
             ret["result"] = True
-            ret["comment"] = (
-                "Call provided the expected results in {} attempts"
-                "".format(current_attempt)
+            ret[
+                "comment"
+            ] = "Call provided the expected results in {} attempts" "".format(
+                current_attempt
             )
             break
         time.sleep(period)
     else:
-        ret["comment"] = (
-            "Call did not produce the expected result after {} attempts"
-            "".format(current_attempt)
+        ret[
+            "comment"
+        ] = "Call did not produce the expected result after {} attempts" "".format(
+            current_attempt
         )
         log.debug(
             "%s:until_no_eval:\n" "\t\tResults of all attempts: %s",

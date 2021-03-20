@@ -956,7 +956,10 @@ class TestEventListener(AsyncTestCase):
                 )
                 self._finished = False  # fit to event_listener's behavior
                 event_future = event_listener.get_event(
-                    self, tag="evt", callback=self.stop, timeout=1,
+                    self,
+                    tag="evt",
+                    callback=self.stop,
+                    timeout=1,
                 )  # get an event future
                 me.fire_event({"data": "foo"}, "evt")  # fire an event we do want
                 self.wait()
@@ -976,7 +979,10 @@ class TestEventListener(AsyncTestCase):
             )
             self._finished = False  # fit to event_listener's behavior
             event_future = event_listener.get_event(
-                self, tag="evt1", callback=self.stop, timeout=1,
+                self,
+                tag="evt1",
+                callback=self.stop,
+                timeout=1,
             )  # get an event future
             self.wait()
             self.assertTrue(event_future.done())

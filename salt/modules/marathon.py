@@ -63,7 +63,9 @@ def apps():
         salt marathon-minion-id marathon.apps
     """
     response = salt.utils.http.query(
-        "{0}/v2/apps".format(_base_url()), decode_type="json", decode=True,
+        "{0}/v2/apps".format(_base_url()),
+        decode_type="json",
+        decode=True,
     )
     return {"apps": [app["id"] for app in response["dict"]["apps"]]}
 
@@ -92,7 +94,9 @@ def app(id):
         salt marathon-minion-id marathon.app my-app
     """
     response = salt.utils.http.query(
-        "{0}/v2/apps/{1}".format(_base_url(), id), decode_type="json", decode=True,
+        "{0}/v2/apps/{1}".format(_base_url(), id),
+        decode_type="json",
+        decode=True,
     )
     return response["dict"]
 
@@ -163,7 +167,9 @@ def info():
         salt marathon-minion-id marathon.info
     """
     response = salt.utils.http.query(
-        "{0}/v2/info".format(_base_url()), decode_type="json", decode=True,
+        "{0}/v2/info".format(_base_url()),
+        decode_type="json",
+        decode=True,
     )
     return response["dict"]
 

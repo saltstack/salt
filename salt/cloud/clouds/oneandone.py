@@ -448,7 +448,9 @@ def list_nodes_select(conn=None, call=None):
         conn = get_conn()
 
     return salt.utils.cloud.list_nodes_select(
-        list_nodes_full(conn, "function"), __opts__["query.selection"], call,
+        list_nodes_full(conn, "function"),
+        __opts__["query.selection"],
+        call,
     )
 
 

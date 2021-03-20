@@ -351,7 +351,9 @@ def present(
         # import pool
         if config["import"]:
             mod_res = __salt__["zpool.import"](
-                name, force=config["force"], dir=config["import_dirs"],
+                name,
+                force=config["force"],
+                dir=config["import_dirs"],
             )
 
             ret["result"] = mod_res["imported"]

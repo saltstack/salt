@@ -284,7 +284,8 @@ class GPGTestCase(TestCase, LoaderModuleMockMixin, AdaptedConfigurationTestCaseM
                         MagicMock(return_value=key_dir),
                     ):
                         with patch(
-                            "salt.utils.atomicfile.atomic_open", MagicMock(),
+                            "salt.utils.atomicfile.atomic_open",
+                            MagicMock(),
                         ) as atomic_open_mock:
                             self.assertEqual(gpg.render(crypted), expected)
                             gpg_call = call(

@@ -389,7 +389,8 @@ class TestSignalHandlingProcess(TestCase):
 
         # Create a second process that should not respond to SIGINT or SIGTERM
         proc2 = multiprocessing.Process(
-            target=self.run_forever_target, args=(self.run_forever_sub_target, evt),
+            target=self.run_forever_target,
+            args=(self.run_forever_sub_target, evt),
         )
         proc2.start()
 

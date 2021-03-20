@@ -98,10 +98,12 @@ def test__save_password_in_keyring(create_class):
         "fake_password_c8231",
     )
     stored_pw = keyring.get_password(
-        "salt.cloud.provider.test_case_provider", "fake_username",
+        "salt.cloud.provider.test_case_provider",
+        "fake_username",
     )
     keyring.delete_password(
-        "salt.cloud.provider.test_case_provider", "fake_username",
+        "salt.cloud.provider.test_case_provider",
+        "fake_username",
     )
     assert stored_pw == "fake_password_c8231"
 

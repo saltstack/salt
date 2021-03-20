@@ -127,7 +127,8 @@ def _create_table():
     # warning on CREATE TABLE
     query = """SELECT COUNT(TABLE_NAME) FROM information_schema.tables
         WHERE table_schema = '{}' AND table_name = '{}'""".format(
-        _mysql_kwargs["db"], _table_name,
+        _mysql_kwargs["db"],
+        _table_name,
     )
     cur, _ = run_query(client, query)
     r = cur.fetchone()
@@ -149,8 +150,7 @@ def _create_table():
 
 
 def _init_client():
-    """Initialize connection and create table if needed
-    """
+    """Initialize connection and create table if needed"""
     if client is not None:
         return
 

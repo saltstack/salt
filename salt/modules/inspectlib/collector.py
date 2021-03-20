@@ -257,7 +257,10 @@ class Inspector(EnvLoader):
         for p_type, p_list in (
             ("f", files),
             ("d", directories),
-            ("l", links,),
+            (
+                "l",
+                links,
+            ),
         ):
             for p_obj in p_list:
                 stats = os.stat(p_obj)
@@ -415,7 +418,12 @@ class Inspector(EnvLoader):
             all_links.extend(e_links)
 
         return self._get_unmanaged_files(
-            self._get_managed_files(), (all_files, all_dirs, all_links,)
+            self._get_managed_files(),
+            (
+                all_files,
+                all_dirs,
+                all_links,
+            ),
         )
 
     def _prepare_full_scan(self, **kwargs):

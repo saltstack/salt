@@ -235,7 +235,10 @@ def createsuperuser(
         salt '*' django.createsuperuser <settings_module> user user@example.com
     """
     args = ["noinput"]
-    kwargs = dict(email=email, username=username,)
+    kwargs = dict(
+        email=email,
+        username=username,
+    )
     if database:
         kwargs["database"] = database
     return command(

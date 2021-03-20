@@ -162,7 +162,11 @@ class TextFormat(object):
             self.codes.extend(*qualify_triple_int(kwargs["bg_rgb"]))
 
         # pylint: disable=string-substitution-usage-error
-        self.sequence = "%s%s%s" % (graph_prefix, ";".join(self.codes), graph_suffix,)
+        self.sequence = "%s%s%s" % (
+            graph_prefix,
+            ";".join(self.codes),
+            graph_suffix,
+        )
         # pylint: enable=string-substitution-usage-error
 
     def __call__(self, text, reset=True):

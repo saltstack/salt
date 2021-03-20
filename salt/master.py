@@ -376,7 +376,8 @@ class FileserverUpdate(salt.utils.process.SignalHandlingProcess):
     # process so that a register_after_fork() equivalent will work on Windows.
     def __setstate__(self, state):
         self.__init__(
-            state["opts"], log_queue=state["log_queue"],
+            state["opts"],
+            log_queue=state["log_queue"],
         )
 
     def __getstate__(self):
@@ -506,7 +507,8 @@ class FileserverUpdate(salt.utils.process.SignalHandlingProcess):
 
         for interval in self.buckets:
             self.update_threads[interval] = threading.Thread(
-                target=self.update_fileserver, args=(interval, self.buckets[interval]),
+                target=self.update_fileserver,
+                args=(interval, self.buckets[interval]),
             )
             self.update_threads[interval].start()
 
@@ -1167,7 +1169,10 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
                 )
                 os.nice(self.opts["mworker_niceness"])
 
-        self.clear_funcs = ClearFuncs(self.opts, self.key,)
+        self.clear_funcs = ClearFuncs(
+            self.opts,
+            self.key,
+        )
         self.aes_funcs = AESFuncs(self.opts)
         salt.utils.crypt.reinit_crypto()
         self.__bind()
@@ -2142,7 +2147,9 @@ class ClearFuncs(TransportMethods):
         except Exception as exc:  # pylint: disable=broad-except
             log.error("Exception occurred while introspecting %s: %s", fun, exc)
             data["return"] = "Exception occurred in wheel {}: {}: {}".format(
-                fun, exc.__class__.__name__, exc,
+                fun,
+                exc.__class__.__name__,
+                exc,
             )
             data["success"] = False
             self.event.fire_event(data, tagify([jid, "ret"], "wheel"))

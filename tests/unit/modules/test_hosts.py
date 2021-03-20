@@ -217,7 +217,12 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
                         self.write(line)
 
             expected = (
-                "\n".join(("2.2.2.2 bar.barbar bar", "3.3.3.3 asdf.asdfadsf asdf",))
+                "\n".join(
+                    (
+                        "2.2.2.2 bar.barbar bar",
+                        "3.3.3.3 asdf.asdfadsf asdf",
+                    )
+                )
                 + "\n"
             )
 

@@ -240,7 +240,8 @@ class AsyncRemotePillar(RemotePillarMixin):
             load["ext"] = self.ext
         try:
             ret_pillar = yield self.channel.crypted_transfer_decode_dictentry(
-                load, dictkey="pillar",
+                load,
+                dictkey="pillar",
             )
         except Exception:  # pylint: disable=broad-except
             log.exception("Exception getting pillar:")
@@ -327,7 +328,8 @@ class RemotePillar(RemotePillarMixin):
         if self.ext:
             load["ext"] = self.ext
         ret_pillar = self.channel.crypted_transfer_decode_dictentry(
-            load, dictkey="pillar",
+            load,
+            dictkey="pillar",
         )
 
         if not isinstance(ret_pillar, dict):
@@ -819,7 +821,9 @@ class Pillar:
                     continue
             for match, data in body.items():
                 if self.matchers["confirm_top.confirm_top"](
-                    match, data, self.opts.get("nodegroups", {}),
+                    match,
+                    data,
+                    self.opts.get("nodegroups", {}),
                 ):
                     if saltenv not in matches:
                         matches[saltenv] = env_matches = []
@@ -940,7 +944,10 @@ class Pillar:
                                     else:
                                         include_parts = sls.split(".")[:-1]
                                     sub_sls = ".".join(include_parts + [sub_sls[1:]])
-                                matches = fnmatch.filter(self.avail[saltenv], sub_sls,)
+                                matches = fnmatch.filter(
+                                    self.avail[saltenv],
+                                    sub_sls,
+                                )
                                 matched_pstates.extend(matches)
                             except KeyError:
                                 errors.extend(
@@ -1151,7 +1158,10 @@ class Pillar:
                     ext = self._external_pillar_data(pillar, val, key)
                 except Exception as exc:  # pylint: disable=broad-except
                     errors.append(
-                        "Failed to load ext_pillar {}: {}".format(key, exc.__str__(),)
+                        "Failed to load ext_pillar {}: {}".format(
+                            key,
+                            exc.__str__(),
+                        )
                     )
                     log.error(
                         "Exception caught loading ext_pillar '%s':\n%s",

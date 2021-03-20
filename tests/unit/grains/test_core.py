@@ -730,7 +730,10 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             "oscodename": "AlmaLinux 8",
             "osfullname": "AlmaLinux",
             "osrelease": "8.3",
-            "osrelease_info": (8, 3,),
+            "osrelease_info": (
+                8,
+                3,
+            ),
             "osmajorrelease": 8,
             "osfinger": "AlmaLinux-8",
         }
@@ -1087,7 +1090,8 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                             grains = core._virtual({"kernel": "Linux"})
                             self.assertEqual(grains.get("virtual_subtype"), "Docker")
                             self.assertEqual(
-                                grains.get("virtual"), "container",
+                                grains.get("virtual"),
+                                "container",
                             )
 
     @skipIf(salt.utils.platform.is_windows(), "System is Windows")
@@ -1109,7 +1113,8 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                         grains = core._virtual({"kernel": "Linux"})
                         self.assertEqual(grains.get("virtual_subtype"), "LXC")
                         self.assertEqual(
-                            grains.get("virtual"), "container",
+                            grains.get("virtual"),
+                            "container",
                         )
 
     @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
@@ -1174,7 +1179,8 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             ):
                 grains = core._virtual({"kernel": "SunOS"})
                 self.assertEqual(
-                    grains.get("virtual"), "zone",
+                    grains.get("virtual"),
+                    "zone",
                 )
 
     @skipIf(salt.utils.platform.is_windows(), "System is Windows")
@@ -1206,7 +1212,8 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             return False
 
         with patch.dict(
-            core.__salt__, {"cmd.run_all": MagicMock(side_effect=_cmd_all_side_effect)},
+            core.__salt__,
+            {"cmd.run_all": MagicMock(side_effect=_cmd_all_side_effect)},
         ):
             with patch(
                 "salt.utils.path.which", MagicMock(side_effect=_which_side_effect)
@@ -1214,7 +1221,8 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                 with patch("os.path.isdir", MagicMock(side_effect=_isdir_side_effect)):
                     grains = core._virtual({"kernel": "SunOS"})
                     self.assertEqual(
-                        grains.get("virtual"), "zone",
+                        grains.get("virtual"),
+                        "zone",
                     )
 
     def test_if_virtual_subtype_exists_virtual_should_fallback_to_virtual(self):
@@ -1238,7 +1246,8 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                 isdir=MagicMock(side_effect=lambda x: x == "/proc"),
             ):
                 with patch.multiple(
-                    os, stat=MagicMock(side_effect=mockstat),
+                    os,
+                    stat=MagicMock(side_effect=mockstat),
                 ):
                     grains = core._virtual({"kernel": "Linux"})
                     assert grains.get("virtual_subtype") is not None
@@ -1346,8 +1355,8 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
 
         def _check_type(key, value, ip4_empty, ip6_empty):
             """
-                check type and other checks
-                """
+            check type and other checks
+            """
             assert isinstance(value, list)
 
             if "4" in key:
@@ -1360,9 +1369,13 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(
             salt.utils.network, "ip_addrs", MagicMock(return_value=net_ip4_mock)
         ), patch.object(
-            salt.utils.network, "ip_addrs6", MagicMock(return_value=net_ip6_mock),
+            salt.utils.network,
+            "ip_addrs6",
+            MagicMock(return_value=net_ip6_mock),
         ), patch.object(
-            core.socket, "getaddrinfo", side_effect=_getaddrinfo,
+            core.socket,
+            "getaddrinfo",
+            side_effect=_getaddrinfo,
         ):
             get_fqdn = core.ip_fqdn()
             ret_keys = ["fqdn_ip4", "fqdn_ip6", "ipv4", "ipv6"]
@@ -1743,7 +1756,8 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                     },
                 ):
                     with patch(
-                        "salt.utils.files.fopen", mock_open(read_data="嗨".encode()),
+                        "salt.utils.files.fopen",
+                        mock_open(read_data="嗨".encode()),
                     ):
                         osdata = {
                             "kernel": "Linux",
@@ -1873,7 +1887,11 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
 
         # mock tzname[0].decode()
         decode = Mock(return_value="CST_FAKE")
-        tzname2 = (Mock(decode=decode,),)
+        tzname2 = (
+            Mock(
+                decode=decode,
+            ),
+        )
 
         with patch.object(core, "datetime", datetime=datetime) as datetime_module:
             with patch.object(

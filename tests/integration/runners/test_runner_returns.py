@@ -37,7 +37,10 @@ class RunnerReturnsTest(ShellCase):
                 raise
 
         self.conf = tempfile.NamedTemporaryFile(
-            mode="w", suffix=".conf", dir=self.master_d_dir, delete=False,
+            mode="w",
+            suffix=".conf",
+            dir=self.master_d_dir,
+            delete=False,
         )
 
     def tearDown(self):

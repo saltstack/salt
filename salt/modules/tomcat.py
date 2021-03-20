@@ -645,7 +645,13 @@ def passwd(passwd, user="", alg="sha1", realm=None):
     digest = hasattr(hashlib, alg) and getattr(hashlib, alg) or None
     if digest:
         if realm:
-            digest.update("{}:{}:{}".format(user, realm, passwd,))
+            digest.update(
+                "{}:{}:{}".format(
+                    user,
+                    realm,
+                    passwd,
+                )
+            )
         else:
             digest.update(passwd)
 

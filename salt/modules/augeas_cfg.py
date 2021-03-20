@@ -238,9 +238,10 @@ def execute(context=None, lens=None, commands=(), load_path=None):
             # if command.split fails arg will not be set
             if "arg" not in locals():
                 arg = command
-            ret["error"] = (
-                "Invalid formatted command, "
-                "see debug log for details: {0}".format(arg)
+            ret[
+                "error"
+            ] = "Invalid formatted command, " "see debug log for details: {0}".format(
+                arg
             )
             return ret
 

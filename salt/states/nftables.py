@@ -286,9 +286,10 @@ def append(name, family="ipv4", **kwargs):
         if "save" in kwargs:
             if kwargs["save"]:
                 __salt__["nftables.save"](filename=None, family=family)
-                ret["comment"] = (
-                    "Set and Saved nftables rule for {} to: "
-                    "{} for {}".format(name, command.strip(), family)
+                ret[
+                    "comment"
+                ] = "Set and Saved nftables rule for {} to: " "{} for {}".format(
+                    name, command.strip(), family
                 )
         return ret
     else:
@@ -360,9 +361,10 @@ def insert(name, family="ipv4", **kwargs):
         if "save" in kwargs:
             if kwargs["save"]:
                 __salt__["nftables.save"](filename=None, family=family)
-                ret["comment"] = (
-                    "Set and Saved nftables rule for {} to: "
-                    "{} for {}".format(name, command.strip(), family)
+                ret[
+                    "comment"
+                ] = "Set and Saved nftables rule for {} to: " "{} for {}".format(
+                    name, command.strip(), family
                 )
         return ret
     else:
@@ -438,9 +440,10 @@ def delete(name, family="ipv4", **kwargs):
         if "save" in kwargs:
             if kwargs["save"]:
                 __salt__["nftables.save"](filename=None, family=family)
-                ret["comment"] = (
-                    "Deleted and Saved nftables rule for {} for {}"
-                    "{}".format(name, command.strip(), family)
+                ret[
+                    "comment"
+                ] = "Deleted and Saved nftables rule for {} for {}" "{}".format(
+                    name, command.strip(), family
                 )
         return ret
     else:

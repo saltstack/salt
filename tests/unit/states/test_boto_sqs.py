@@ -63,7 +63,11 @@ class BotoSqsTestCase(TestCase, LoaderModuleMockMixin):
             },
         ):
             with patch.dict(boto_sqs.__opts__, {"test": False}):
-                comt = ["Failed to create SQS queue {0}: create error".format(name,)]
+                comt = [
+                    "Failed to create SQS queue {0}: create error".format(
+                        name,
+                    )
+                ]
                 ret = base_ret.copy()
                 ret.update({"result": False, "comment": comt})
                 self.assertDictEqual(boto_sqs.present(name), ret)
@@ -99,7 +103,9 @@ class BotoSqsTestCase(TestCase, LoaderModuleMockMixin):
 
                 comt = [
                     "SQS queue mysqs present.",
-                    "Attribute(s) DelaySeconds set to be updated:\n{0}".format(diff,),
+                    "Attribute(s) DelaySeconds set to be updated:\n{0}".format(
+                        diff,
+                    ),
                 ]
                 ret.update({"comment": comt, "changes": {"attributes": {"diff": diff}}})
                 self.assertDictEqual(boto_sqs.present(name, attributes), ret)

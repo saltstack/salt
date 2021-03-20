@@ -424,7 +424,11 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         )
 
         # Run the state to clone the repo we just created
-        ret = self.run_state("git.latest", name=name, target=target,)
+        ret = self.run_state(
+            "git.latest",
+            name=name,
+            target=target,
+        )
         self.assertSaltTrueReturn(ret)
 
         # Add another commit
@@ -439,7 +443,11 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
 
         # Run the state again. It should pass, if it doesn't then there was
         # a problem checking whether or not the change is a fast-forward.
-        ret = self.run_state("git.latest", name=name, target=target,)
+        ret = self.run_state(
+            "git.latest",
+            name=name,
+            target=target,
+        )
         self.assertSaltTrueReturn(ret)
 
     @with_tempdir(create=False)
@@ -943,7 +951,10 @@ class LocalRepoGitTest(ModuleCase, SaltReturnAssertsMixin):
         # Run git.latest state. This should successfully clone and fail with a
         # specific error in the comment field.
         ret = self.run_state(
-            "git.latest", name=self.repo, target=self.target, rev="develop",
+            "git.latest",
+            name=self.repo,
+            target=self.target,
+            rev="develop",
         )
         self.assertSaltFalseReturn(ret)
         self.assertEqual(
@@ -965,7 +976,10 @@ class LocalRepoGitTest(ModuleCase, SaltReturnAssertsMixin):
         # Run git.latest state again. This should fail again, with a different
         # error in the comment field, and should not change anything.
         ret = self.run_state(
-            "git.latest", name=self.repo, target=self.target, rev="develop",
+            "git.latest",
+            name=self.repo,
+            target=self.target,
+            rev="develop",
         )
         self.assertSaltFalseReturn(ret)
         self.assertEqual(

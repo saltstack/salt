@@ -27,7 +27,10 @@ class LxdImageTestCase(ModuleCase, SaltReturnAssertsMixin):
         assert ret[name]["changes"]["aliases"] == ['Added alias "images:centos/7"']
 
     def test_03__delete_image(self):
-        ret = self.run_state("lxd_image.absent", name="images:centos/7",)
+        ret = self.run_state(
+            "lxd_image.absent",
+            name="images:centos/7",
+        )
         name = "lxd_image_|-images:centos/7_|-images:centos/7_|-absent"
         self.assertSaltTrueReturn(ret)
         assert name in ret

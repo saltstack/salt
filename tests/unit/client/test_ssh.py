@@ -177,8 +177,7 @@ class SSHSingleTests(TestCase):
         }
 
     def test_single_opts(self):
-        """ Sanity check for ssh.Single options
-        """
+        """Sanity check for ssh.Single options"""
 
         single = ssh.Single(
             self.opts,

@@ -286,12 +286,11 @@ def present(
         ElasticsearchVersion
     ):  # future lint: disable=blacklisted-function
         ret["result"] = False
-        ret["comment"] = (
-            "Failed to update domain: version cannot be modified "
-            "from {0} to {1}.".format(
-                _status.get("ElasticsearchVersion"),
-                str(ElasticsearchVersion),  # future lint: disable=blacklisted-function
-            )
+        ret[
+            "comment"
+        ] = "Failed to update domain: version cannot be modified " "from {0} to {1}.".format(
+            _status.get("ElasticsearchVersion"),
+            str(ElasticsearchVersion),  # future lint: disable=blacklisted-function
         )
         return ret
     _describe = __salt__["boto_elasticsearch_domain.describe"](

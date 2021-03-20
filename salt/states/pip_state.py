@@ -76,7 +76,11 @@ def pip_has_internal_exceptions_mod(ver):
     """
     True when the pip version has the `pip._internal.exceptions` module
     """
-    return salt.utils.versions.compare(ver1=ver, oper=">=", ver2="10.0",)
+    return salt.utils.versions.compare(
+        ver1=ver,
+        oper=">=",
+        ver2="10.0",
+    )
 
 
 def pip_has_exceptions_mod(ver):

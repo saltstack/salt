@@ -2414,7 +2414,10 @@ def _disabled(funs):
                     err = (
                         'The state file "{0}" is currently disabled by "{1}", '
                         "to re-enable, run state.enable {1}."
-                    ).format(state, _state,)
+                    ).format(
+                        state,
+                        _state,
+                    )
                     ret.append(err)
                     continue
             else:
@@ -2422,7 +2425,9 @@ def _disabled(funs):
                     err = (
                         'The state file "{0}" is currently disabled, '
                         "to re-enable, run state.enable {0}."
-                    ).format(_state,)
+                    ).format(
+                        _state,
+                    )
                     ret.append(err)
                     continue
     return ret

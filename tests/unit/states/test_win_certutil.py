@@ -18,7 +18,7 @@ class CertUtilTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_add_serial(self):
         """
-            Test adding a certificate to specified certificate store
+        Test adding a certificate to specified certificate store
         """
         expected = {
             "changes": {"added": "/path/to/cert.cer"},
@@ -51,7 +51,7 @@ class CertUtilTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_add_serial_missing(self):
         """
-            Test adding a certificate to specified certificate store when the file doesn't exist
+        Test adding a certificate to specified certificate store when the file doesn't exist
         """
         expected = {
             "changes": {},
@@ -82,7 +82,7 @@ class CertUtilTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_add_serial_exists(self):
         """
-            Test adding a certificate to specified certificate store when the cert already exists
+        Test adding a certificate to specified certificate store when the cert already exists
         """
         expected = {
             "changes": {},
@@ -113,7 +113,7 @@ class CertUtilTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_add_serial_fail(self):
         """
-            Test adding a certificate when the add fails
+        Test adding a certificate when the add fails
         """
         expected = {
             "changes": {},
@@ -146,7 +146,7 @@ class CertUtilTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_del_serial(self):
         """
-            Test deleting a certificate from a specified certificate store
+        Test deleting a certificate from a specified certificate store
         """
         expected = {
             "changes": {"removed": "/path/to/cert.cer"},
@@ -179,7 +179,7 @@ class CertUtilTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_del_serial_missing(self):
         """
-            Test deleting a certificate to specified certificate store when the file doesn't exist
+        Test deleting a certificate to specified certificate store when the file doesn't exist
         """
         expected = {
             "changes": {},
@@ -210,7 +210,7 @@ class CertUtilTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_del_serial_doesnt_exists(self):
         """
-            Test deleting a certificate to specified certificate store when the cert doesn't exists
+        Test deleting a certificate to specified certificate store when the cert doesn't exists
         """
         expected = {
             "changes": {},
@@ -241,7 +241,7 @@ class CertUtilTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_del_serial_fail(self):
         """
-            Test deleting a certificate from the store when the delete fails
+        Test deleting a certificate from the store when the delete fails
         """
         expected = {
             "changes": {},

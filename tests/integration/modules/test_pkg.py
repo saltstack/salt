@@ -108,8 +108,10 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
                 name = "SaltStack repo for RHEL/CentOS {}".format(
                     grains["osmajorrelease"]
                 )
-                baseurl = "http://repo.saltstack.com/yum/redhat/{}/x86_64/latest/".format(
-                    grains["osmajorrelease"]
+                baseurl = (
+                    "http://repo.saltstack.com/yum/redhat/{}/x86_64/latest/".format(
+                        grains["osmajorrelease"]
+                    )
                 )
                 gpgkey = "https://repo.saltstack.com/yum/rhel{}/SALTSTACK-GPG-KEY.pub".format(
                     grains["osmajorrelease"]

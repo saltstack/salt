@@ -126,8 +126,8 @@ def _kname(obj):
 
 
 def _is_dns_subdomain(name):
-    """ Check that name is DNS subdomain: One or more lowercase rfc1035/rfc1123
-    labels separated by '.' with a maximum length of 253 characters """
+    """Check that name is DNS subdomain: One or more lowercase rfc1035/rfc1123
+    labels separated by '.' with a maximum length of 253 characters"""
 
     dns_subdomain = re.compile(r"""^[a-z0-9\.-]{1,253}$""")
     if dns_subdomain.match(name):
@@ -139,10 +139,10 @@ def _is_dns_subdomain(name):
 
 
 def _is_port_name(name):
-    """ Check that name is IANA service: An alphanumeric (a-z, and 0-9) string,
+    """Check that name is IANA service: An alphanumeric (a-z, and 0-9) string,
     with a maximum length of 15 characters, with the '-' character allowed
     anywhere except the first or the last character or adjacent to another '-'
-    character, it must contain at least a (a-z) character """
+    character, it must contain at least a (a-z) character"""
 
     port_name = re.compile("""^[a-z0-9]{1,15}$""")
     if port_name.match(name):
@@ -152,10 +152,10 @@ def _is_port_name(name):
 
 
 def _is_dns_label(name):
-    """ Check that name is DNS label: An alphanumeric (a-z, and 0-9) string,
+    """Check that name is DNS label: An alphanumeric (a-z, and 0-9) string,
     with a maximum length of 63 characters, with the '-' character allowed
     anywhere except the first or last character, suitable for use as a hostname
-    or segment in a domain name """
+    or segment in a domain name"""
 
     dns_label = re.compile(r"""^[a-z0-9][a-z0-9\.-]{1,62}$""")
     if dns_label.match(name):

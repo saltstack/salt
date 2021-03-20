@@ -41,7 +41,11 @@ def get_users(profile="pagerduty", subdomain=None, api_key=None):
     """
 
     return _list_items(
-        "users", "id", profile=profile, subdomain=subdomain, api_key=api_key,
+        "users",
+        "id",
+        profile=profile,
+        subdomain=subdomain,
+        api_key=api_key,
     )
 
 
@@ -57,7 +61,11 @@ def get_services(profile="pagerduty", subdomain=None, api_key=None):
     """
 
     return _list_items(
-        "services", "id", profile=profile, subdomain=subdomain, api_key=api_key,
+        "services",
+        "id",
+        profile=profile,
+        subdomain=subdomain,
+        api_key=api_key,
     )
 
 
@@ -73,7 +81,11 @@ def get_schedules(profile="pagerduty", subdomain=None, api_key=None):
     """
 
     return _list_items(
-        "schedules", "id", profile=profile, subdomain=subdomain, api_key=api_key,
+        "schedules",
+        "id",
+        profile=profile,
+        subdomain=subdomain,
+        api_key=api_key,
     )
 
 

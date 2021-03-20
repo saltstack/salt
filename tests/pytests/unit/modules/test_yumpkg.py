@@ -97,9 +97,11 @@ def test_list_pkgs():
         "virt-what_|-(none)_|-1.13_|-8.el7_|-x86_64_|-(none)_|-1487838486",
     ]
     with patch.dict(yumpkg.__grains__, {"osarch": "x86_64"}), patch.dict(
-        yumpkg.__salt__, {"cmd.run": MagicMock(return_value=os.linesep.join(rpm_out))},
+        yumpkg.__salt__,
+        {"cmd.run": MagicMock(return_value=os.linesep.join(rpm_out))},
     ), patch.dict(yumpkg.__salt__, {"pkg_resource.add_pkg": _add_data}), patch.dict(
-        yumpkg.__salt__, {"pkg_resource.format_pkg_list": pkg_resource.format_pkg_list},
+        yumpkg.__salt__,
+        {"pkg_resource.format_pkg_list": pkg_resource.format_pkg_list},
     ), patch.dict(
         yumpkg.__salt__, {"pkg_resource.stringify": MagicMock()}
     ), patch.dict(
@@ -151,9 +153,11 @@ def test_list_pkgs_no_context():
         "virt-what_|-(none)_|-1.13_|-8.el7_|-x86_64_|-(none)_|-1487838486",
     ]
     with patch.dict(yumpkg.__grains__, {"osarch": "x86_64"}), patch.dict(
-        yumpkg.__salt__, {"cmd.run": MagicMock(return_value=os.linesep.join(rpm_out))},
+        yumpkg.__salt__,
+        {"cmd.run": MagicMock(return_value=os.linesep.join(rpm_out))},
     ), patch.dict(yumpkg.__salt__, {"pkg_resource.add_pkg": _add_data}), patch.dict(
-        yumpkg.__salt__, {"pkg_resource.format_pkg_list": pkg_resource.format_pkg_list},
+        yumpkg.__salt__,
+        {"pkg_resource.format_pkg_list": pkg_resource.format_pkg_list},
     ), patch.dict(
         yumpkg.__salt__, {"pkg_resource.stringify": MagicMock()}
     ), patch.dict(
@@ -196,9 +200,11 @@ def test_list_pkgs_with_attr():
         "virt-what_|-(none)_|-1.13_|-8.el7_|-x86_64_|-(none)_|-1487838486",
     ]
     with patch.dict(yumpkg.__grains__, {"osarch": "x86_64"}), patch.dict(
-        yumpkg.__salt__, {"cmd.run": MagicMock(return_value=os.linesep.join(rpm_out))},
+        yumpkg.__salt__,
+        {"cmd.run": MagicMock(return_value=os.linesep.join(rpm_out))},
     ), patch.dict(yumpkg.__salt__, {"pkg_resource.add_pkg": _add_data}), patch.dict(
-        yumpkg.__salt__, {"pkg_resource.format_pkg_list": pkg_resource.format_pkg_list},
+        yumpkg.__salt__,
+        {"pkg_resource.format_pkg_list": pkg_resource.format_pkg_list},
     ), patch.dict(
         yumpkg.__salt__, {"pkg_resource.stringify": MagicMock()}
     ), patch.dict(
@@ -322,9 +328,11 @@ def test_list_pkgs_with_attr_multiple_versions():
         "virt-what_|-(none)_|-1.10_|-2.el7_|-x86_64_|-(none)_|-1387838486",
     ]
     with patch.dict(yumpkg.__grains__, {"osarch": "x86_64"}), patch.dict(
-        yumpkg.__salt__, {"cmd.run": MagicMock(return_value=os.linesep.join(rpm_out))},
+        yumpkg.__salt__,
+        {"cmd.run": MagicMock(return_value=os.linesep.join(rpm_out))},
     ), patch.dict(yumpkg.__salt__, {"pkg_resource.add_pkg": _add_data}), patch.dict(
-        yumpkg.__salt__, {"pkg_resource.format_pkg_list": pkg_resource.format_pkg_list},
+        yumpkg.__salt__,
+        {"pkg_resource.format_pkg_list": pkg_resource.format_pkg_list},
     ), patch.dict(
         yumpkg.__salt__, {"pkg_resource.stringify": MagicMock()}
     ), patch.dict(
@@ -823,7 +831,10 @@ def test_refresh_db_with_options():
             {"cmd.run_all": yum_call, "config.get": MagicMock(return_value=False)},
         ):
             yumpkg.refresh_db(
-                check_update=True, enablerepo="good", disablerepo="bad", branch="foo",
+                check_update=True,
+                enablerepo="good",
+                disablerepo="bad",
+                branch="foo",
             )
             assert yum_call.call_count == 2
             yum_call.assert_any_call(
@@ -893,7 +904,10 @@ def test_refresh_db_with_options():
             {"cmd.run_all": yum_call, "config.get": MagicMock(return_value=False)},
         ):
             yumpkg.refresh_db(
-                check_update=False, enablerepo="good", disablerepo="bad", branch="foo",
+                check_update=False,
+                enablerepo="good",
+                disablerepo="bad",
+                branch="foo",
             )
             assert yum_call.call_count == 1
             yum_call.assert_called_once_with(
@@ -1653,7 +1667,10 @@ def test_get_repo_with_existent_repo(list_repos_var):
         yumpkg, "list_repos", autospec=True, return_value=list_repos_var
     )
     patch_parse_repo_file = patch.object(
-        yumpkg, "_parse_repo_file", autospec=True, return_value=parse_repo_file_return,
+        yumpkg,
+        "_parse_repo_file",
+        autospec=True,
+        return_value=parse_repo_file_return,
     )
 
     with patch_list_repos, patch_parse_repo_file:

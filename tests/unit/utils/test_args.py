@@ -64,7 +64,10 @@ class ArgsTestCase(TestCase):
 
         # Callable class instance
         expected_argspec = _ArgSpec(
-            args=["first"], varargs=None, keywords=None, defaults=None,
+            args=["first"],
+            varargs=None,
+            keywords=None,
+            defaults=None,
         )
         ret = salt.utils.args.get_function_argspec(dummy_class)
         self.assertEqual(ret, expected_argspec)
@@ -91,7 +94,10 @@ class ArgsTestCase(TestCase):
 
         # Function with both varargs and keywords
         expected_argspec = _ArgSpec(
-            args=[], varargs="args", keywords="kwargs", defaults=None,
+            args=[],
+            varargs="args",
+            keywords="kwargs",
+            defaults=None,
         )
         ret = salt.utils.args.get_function_argspec(dummy_func_varargs_keywords)
         self.assertEqual(ret, expected_argspec)
@@ -101,7 +107,10 @@ class ArgsTestCase(TestCase):
         # this case, but we're testing for the behavior we expect, which is
         # that the first argument is popped off of the args.
         expected_argspec = _ArgSpec(
-            args=["second", "third"], varargs=None, keywords=None, defaults=None,
+            args=["second", "third"],
+            varargs=None,
+            keywords=None,
+            defaults=None,
         )
         ret = salt.utils.args.get_function_argspec(
             dummy_func_nodefault, is_class_method=True

@@ -155,11 +155,13 @@ def _diff(state_data, resource_object):
                     )
                     break
                 if user1["user"]["id"] != user2["user"]["id"]:
-                    objects_differ = "layer {0} user at member_order {1} {2} != {3}".format(
-                        layer["name"],
-                        user1["member_order"],
-                        user1["user"]["id"],
-                        user2["user"]["id"],
+                    objects_differ = (
+                        "layer {0} user at member_order {1} {2} != {3}".format(
+                            layer["name"],
+                            user1["member_order"],
+                            user1["user"]["id"],
+                            user2["user"]["id"],
+                        )
                     )
                     break
     if objects_differ:

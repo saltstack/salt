@@ -706,7 +706,9 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
         """
         with patch.object(mysql, "plugin_status", MagicMock(return_value="ACTIVE")):
             self._test_call(
-                mysql.plugin_remove, "UNINSTALL PLUGIN auth_socket", "auth_socket",
+                mysql.plugin_remove,
+                "UNINSTALL PLUGIN auth_socket",
+                "auth_socket",
             )
 
     def test_plugin_status(self):

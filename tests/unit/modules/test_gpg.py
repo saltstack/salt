@@ -557,7 +557,9 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
                     ret = gpg.export_key("xxxxxxxxxxxxxxxx")
                     self.assertEqual(ret, GPG_TEST_PUB_KEY)
                     gnupg_export_keys.assert_called_with(
-                        ["xxxxxxxxxxxxxxxx"], False, expect_passphrase=False,
+                        ["xxxxxxxxxxxxxxxx"],
+                        False,
+                        expect_passphrase=False,
                     )
 
     @skipIf(not HAS_GPG, "GPG Module Unavailable")
@@ -670,7 +672,9 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
                     ret = gpg.export_key("xxxxxxxxxxxxxxxx", use_passphrase=True)
                     self.assertEqual(ret, GPG_TEST_PUB_KEY)
                     gnupg_export_keys.assert_called_with(
-                        ["xxxxxxxxxxxxxxxx"], False, passphrase=GPG_TEST_KEY_PASSPHRASE,
+                        ["xxxxxxxxxxxxxxxx"],
+                        False,
+                        passphrase=GPG_TEST_KEY_PASSPHRASE,
                     )
 
     @pytest.mark.slow_test

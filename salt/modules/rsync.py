@@ -84,67 +84,67 @@ def rsync(
     saltenv="base",
 ):
     """
-    .. versionchanged:: 2016.3.0
-        Return data now contains just the output of the rsync command, instead
-        of a dictionary as returned from :py:func:`cmd.run_all
-        <salt.modules.cmdmod.run_all>`.
+     .. versionchanged:: 2016.3.0
+         Return data now contains just the output of the rsync command, instead
+         of a dictionary as returned from :py:func:`cmd.run_all
+         <salt.modules.cmdmod.run_all>`.
 
-    Rsync files from src to dst
+     Rsync files from src to dst
 
-    src
-        The source location where files will be rsynced from.
+     src
+         The source location where files will be rsynced from.
 
-    dst
-        The destination location where files will be rsynced to.
+     dst
+         The destination location where files will be rsynced to.
 
-    delete : False
-        Whether to enable the rsync `--delete` flag, which
-        will delete extraneous files from dest dirs
+     delete : False
+         Whether to enable the rsync `--delete` flag, which
+         will delete extraneous files from dest dirs
 
-    force : False
-        Whether to enable the rsync `--force` flag, which
-        will force deletion of dirs even if not empty.
+     force : False
+         Whether to enable the rsync `--force` flag, which
+         will force deletion of dirs even if not empty.
 
-    update : False
-        Whether to enable the rsync `--update` flag, which
-        forces rsync to skip any files which exist on the
-        destination and have a modified time that is newer
-        than the source file.
+     update : False
+         Whether to enable the rsync `--update` flag, which
+         forces rsync to skip any files which exist on the
+         destination and have a modified time that is newer
+         than the source file.
 
-    passwordfile
-        A file that contains a password for accessing an
-        rsync daemon.  The file should contain just the
-        password.
+     passwordfile
+         A file that contains a password for accessing an
+         rsync daemon.  The file should contain just the
+         password.
 
-    exclude
-        Whether to enable the rsync `--exclude` flag, which
-        will exclude files matching a PATTERN.
+     exclude
+         Whether to enable the rsync `--exclude` flag, which
+         will exclude files matching a PATTERN.
 
-    excludefrom
-        Whether to enable the rsync `--excludefrom` flag, which
-        will read exclude patterns from a file.
+     excludefrom
+         Whether to enable the rsync `--excludefrom` flag, which
+         will read exclude patterns from a file.
 
-    dryrun : False
-        Whether to enable the rsync `--dry-run` flag, which
-        will perform a trial run with no changes made.
+     dryrun : False
+         Whether to enable the rsync `--dry-run` flag, which
+         will perform a trial run with no changes made.
 
-    rsh
-        Whether to enable the rsync `--rsh` flag, to
-        specify the remote shell to use.
+     rsh
+         Whether to enable the rsync `--rsh` flag, to
+         specify the remote shell to use.
 
-    additional_opts
-        Any additional rsync options, should be specified as a list.
+     additional_opts
+         Any additional rsync options, should be specified as a list.
 
-   saltenv
-           Specify a salt fileserver environment to be used.
+    saltenv
+            Specify a salt fileserver environment to be used.
 
-    CLI Example:
+     CLI Example:
 
-    .. code-block:: bash
+     .. code-block:: bash
 
-        salt '*' rsync.rsync /path/to/src /path/to/dest delete=True update=True passwordfile=/etc/pass.crt exclude=exclude/dir
-        salt '*' rsync.rsync /path/to/src delete=True excludefrom=/xx.ini
-        salt '*' rsync.rsync /path/to/src delete=True exclude='[exclude1/dir,exclude2/dir]' additional_opts='["--partial", "--bwlimit=5000"]'
+         salt '*' rsync.rsync /path/to/src /path/to/dest delete=True update=True passwordfile=/etc/pass.crt exclude=exclude/dir
+         salt '*' rsync.rsync /path/to/src delete=True excludefrom=/xx.ini
+         salt '*' rsync.rsync /path/to/src delete=True exclude='[exclude1/dir,exclude2/dir]' additional_opts='["--partial", "--bwlimit=5000"]'
     """
     if not src:
         src = __salt__["config.option"]("rsync.src")

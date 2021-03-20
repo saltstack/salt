@@ -806,7 +806,10 @@ def get_ca_bundle(opts=None):
 
 
 def update_ca_bundle(
-    target=None, source=None, opts=None, merge_files=None,
+    target=None,
+    source=None,
+    opts=None,
+    merge_files=None,
 ):
     """
     Attempt to update the CA bundle file from a URL

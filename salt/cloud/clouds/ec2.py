@@ -2332,7 +2332,11 @@ def query_instance(vm_=None, call=None):
 
 
 def wait_for_instance(
-    vm_=None, data=None, ip_address=None, display_ssh_output=True, call=None,
+    vm_=None,
+    data=None,
+    ip_address=None,
+    display_ssh_output=True,
+    call=None,
 ):
     """
     Wait for an instance upon creation from the EC2 API, to become available
@@ -3704,7 +3708,9 @@ def list_nodes_select(call=None):
     Return a list of the VMs that are on the provider, with select fields
     """
     return salt.utils.cloud.list_nodes_select(
-        list_nodes_full(get_location()), __opts__["query.selection"], call,
+        list_nodes_full(get_location()),
+        __opts__["query.selection"],
+        call,
     )
 
 
@@ -4810,7 +4816,11 @@ def describe_snapshots(kwargs=None, call=None):
 
 
 def get_console_output(
-    name=None, location=None, instance_id=None, call=None, kwargs=None,
+    name=None,
+    location=None,
+    instance_id=None,
+    call=None,
+    kwargs=None,
 ):
     """
     Show the console output from the instance.
@@ -4859,7 +4869,10 @@ def get_console_output(
 
 
 def get_password_data(
-    name=None, kwargs=None, instance_id=None, call=None,
+    name=None,
+    kwargs=None,
+    instance_id=None,
+    call=None,
 ):
     """
     Return password data for a Windows instance.

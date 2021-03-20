@@ -1402,7 +1402,9 @@ class OutputOptionsMixIn(metaclass=MixInMeta):
             dest="output",
             help=(
                 "Print the output from the '{}' command using the "
-                "specified outputter.".format(self.get_prog_name(),)
+                "specified outputter.".format(
+                    self.get_prog_name(),
+                )
             ),
         )
         group.add_option(

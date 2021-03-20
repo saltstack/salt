@@ -762,8 +762,10 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                 ERROR_CONTENT, "describe_reserved_elasticsearch_instance_offerings"
             ),
         ):
-            result = boto3_elasticsearch.describe_reserved_elasticsearch_instance_offerings(
-                reserved_elasticsearch_instance_offering_id="foo", **CONN_PARAMETERS
+            result = (
+                boto3_elasticsearch.describe_reserved_elasticsearch_instance_offerings(
+                    reserved_elasticsearch_instance_offering_id="foo", **CONN_PARAMETERS
+                )
             )
             self.assertFalse(result["result"])
             self.assertEqual(
@@ -1135,10 +1137,12 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                 ERROR_CONTENT, "purchase_reserved_elasticsearch_instance_offering"
             ),
         ):
-            result = boto3_elasticsearch.purchase_reserved_elasticsearch_instance_offering(
-                reserved_elasticsearch_instance_offering_id="foo",
-                reservation_name="bar",
-                **CONN_PARAMETERS
+            result = (
+                boto3_elasticsearch.purchase_reserved_elasticsearch_instance_offering(
+                    reserved_elasticsearch_instance_offering_id="foo",
+                    reservation_name="bar",
+                    **CONN_PARAMETERS
+                )
             )
             self.assertFalse(result["result"])
             self.assertEqual(

@@ -156,7 +156,9 @@ class ProxyMinionTestCase(TestCase):
                 )
             )
         opts = salt.config.proxy_config(
-            str(conf_file), minion_id=proxyid, cache_minion_id=False,
+            str(conf_file),
+            minion_id=proxyid,
+            cache_minion_id=False,
         )
         self.assertIn("schedule", opts)
         self.assertIn("test_job", opts["schedule"])

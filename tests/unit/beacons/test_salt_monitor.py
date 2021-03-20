@@ -17,7 +17,18 @@ TEST_CONFIG = [
     },
     {
         "config": [
-            {"salt_fun": [{"cmd.run": {"args": ["echo hello world",]}}, "test.version"]}
+            {
+                "salt_fun": [
+                    {
+                        "cmd.run": {
+                            "args": [
+                                "echo hello world",
+                            ]
+                        }
+                    },
+                    "test.version",
+                ]
+            }
         ],  # *args behaves weird on list with single string, does it happen in yaml?
         "expected_validate": (True, "valid config"),
         "expected_beacon": [
@@ -35,7 +46,9 @@ TEST_CONFIG = [
                 "salt_fun": [
                     {
                         "cmd.run": {
-                            "args": ["echo hello world",],
+                            "args": [
+                                "echo hello world",
+                            ],
                             "kwargs": [{"shell": "ps"}],
                         }
                     }

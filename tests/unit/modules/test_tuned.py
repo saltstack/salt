@@ -127,8 +127,7 @@ No SMBIOS nor DMI entry point found, sorry.
             )
 
     def test_none(self):
-        """
-        """
+        """"""
         ret = {
             "pid": 12345,
             "retcode": 1,

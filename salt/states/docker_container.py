@@ -191,7 +191,8 @@ def _resolve_image(ret, image, client_timeout):
             # Image not pulled locally, so try pulling it
             try:
                 pull_result = __salt__["docker.pull"](
-                    image, client_timeout=client_timeout,
+                    image,
+                    client_timeout=client_timeout,
                 )
             except Exception as exc:  # pylint: disable=broad-except
                 raise CommandExecutionError(
@@ -1848,7 +1849,9 @@ def running(
 
         if not skip_comparison:
             container_changes = __salt__["docker.compare_containers"](
-                name, temp_container_name, ignore="Hostname",
+                name,
+                temp_container_name,
+                ignore="Hostname",
             )
             if container_changes:
                 if _check_diff(container_changes):
@@ -2280,9 +2283,10 @@ def run(
                 pass
             else:
                 ret["result"] = False if failhard and retcode != 0 else True
-                ret["comment"] = (
-                    "Container ran and exited with a return code of "
-                    "{0}".format(retcode)
+                ret[
+                    "comment"
+                ] = "Container ran and exited with a return code of " "{0}".format(
+                    retcode
                 )
 
     if remove:

@@ -440,7 +440,8 @@ def test_system_version_osx():
     """
 
     with patch(
-        "platform.mac_ver", MagicMock(return_value=("10.15.2", ("", "", ""), "x86_64")),
+        "platform.mac_ver",
+        MagicMock(return_value=("10.15.2", ("", "", ""), "x86_64")),
     ):
         versions = [item for item in system_information()]
         version = ("version", "10.15.2 x86_64")

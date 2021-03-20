@@ -223,7 +223,8 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                 mock_kubernetes_lib.config.load_kube_config = Mock()
                 config = kubernetes._setup_conn()
                 self.assertEqual(
-                    self.settings("kubernetes.kubeconfig"), config["kubeconfig"],
+                    self.settings("kubernetes.kubeconfig"),
+                    config["kubeconfig"],
                 )
 
     def test_setup_kubeconfig_data_overwrite(self):
@@ -306,5 +307,6 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
             2: 2,
         }
         self.assertEqual(
-            {"unicode": "1", "2": "2"}, func(data),
+            {"unicode": "1", "2": "2"},
+            func(data),
         )

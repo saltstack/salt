@@ -338,10 +338,14 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             # Make sure we're calling a virtualenv and python
             # program that the user has access too.
             venv_kwargs["venv_bin"] = self._win_user_where(
-                username, "PassWord1!", "virtualenv",
+                username,
+                "PassWord1!",
+                "virtualenv",
             )
             venv_kwargs["python"] = self._win_user_where(
-                username, "PassWord1!", "python",
+                username,
+                "PassWord1!",
+                "python",
             )
         else:
             uid = self.run_function("file.user_to_uid", [username])
@@ -400,10 +404,14 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             # Make sure we're calling a virtualenv and python
             # program that the user has access too.
             venv_kwargs["venv_bin"] = self._win_user_where(
-                username, "PassWord1!", "virtualenv",
+                username,
+                "PassWord1!",
+                "virtualenv",
             )
             venv_kwargs["python"] = self._win_user_where(
-                username, "PassWord1!", "python",
+                username,
+                "PassWord1!",
+                "python",
             )
         else:
             uid = self.run_function("file.user_to_uid", [username])

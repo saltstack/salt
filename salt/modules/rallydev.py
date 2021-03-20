@@ -203,7 +203,10 @@ def update_item(name, id_, field=None, value=None, postdata=None):
         )
 
     status, result = _query(
-        action=name, command=id_, method="POST", data=salt.utils.json.dumps(postdata),
+        action=name,
+        command=id_,
+        method="POST",
+        data=salt.utils.json.dumps(postdata),
     )
     return result
 

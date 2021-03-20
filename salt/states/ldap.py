@@ -528,4 +528,6 @@ def _toset(thing):
     try:
         return OrderedSet(str(x) for x in thing)
     except TypeError:
-        return OrderedSet(str(thing),)
+        return OrderedSet(
+            str(thing),
+        )

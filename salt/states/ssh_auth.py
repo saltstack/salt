@@ -363,9 +363,10 @@ def present(
         ] = "The authorized host key {0} for user {1} was " "updated".format(name, user)
         return ret
     elif data == "no change":
-        ret["comment"] = (
-            "The authorized host key {0} is already present "
-            "for user {1}".format(name, user)
+        ret[
+            "comment"
+        ] = "The authorized host key {0} is already present " "for user {1}".format(
+            name, user
         )
     elif data == "new":
         ret["changes"][name] = "New"

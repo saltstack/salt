@@ -426,7 +426,8 @@ def set_proxy_bypass(domains, network_service="Ethernet"):
     """
     servers_str = " ".join(domains)
     cmd = "networksetup -setproxybypassdomains {0} {1}".format(
-        network_service, servers_str,
+        network_service,
+        servers_str,
     )
     out = __salt__["cmd.run"](cmd)
 

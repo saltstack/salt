@@ -73,7 +73,8 @@ def iter_entry_points(group, name=None):
 def name_and_version_from_entry_point(entry_point):
     if USE_IMPORTLIB_METADATA_STDLIB or USE_IMPORTLIB_METADATA:
         return types.SimpleNamespace(
-            name=entry_point.dist.metadata["name"], version=entry_point.dist.version,
+            name=entry_point.dist.metadata["name"],
+            version=entry_point.dist.version,
         )
     elif USE_PKG_RESOURCES:
         return types.SimpleNamespace(

@@ -18,7 +18,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_capability_installed(self):
         """
-            Test capability installed state
+        Test capability installed state
         """
         expected = {
             "comment": "Installed Capa2",
@@ -49,7 +49,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_capability_installed_failure(self):
         """
-            Test installing a capability which fails with DISM
+        Test installing a capability which fails with DISM
         """
         expected = {
             "comment": "Failed to install Capa2: Failed",
@@ -80,7 +80,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_capability_installed_installed(self):
         """
-            Test installing a capability already installed
+        Test installing a capability already installed
         """
         expected = {
             "comment": "The capability Capa2 is already installed",
@@ -109,7 +109,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_capability_removed(self):
         """
-            Test capability removed state
+        Test capability removed state
         """
         expected = {
             "comment": "Removed Capa2",
@@ -138,7 +138,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_capability_removed_failure(self):
         """
-            Test removing a capability which fails with DISM
+        Test removing a capability which fails with DISM
         """
         expected = {
             "comment": "Failed to remove Capa2: Failed",
@@ -167,7 +167,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_capability_removed_removed(self):
         """
-            Test removing a capability already removed
+        Test removing a capability already removed
         """
         expected = {
             "comment": "The capability Capa2 is already removed",
@@ -195,7 +195,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_feature_installed(self):
         """
-            Test installing a feature with DISM
+        Test installing a feature with DISM
         """
         expected = {
             "comment": "Installed Feat2",
@@ -223,7 +223,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_feature_installed_failure(self):
         """
-            Test installing a feature which fails with DISM
+        Test installing a feature which fails with DISM
         """
         expected = {
             "comment": "Failed to install Feat2: Failed",
@@ -251,7 +251,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_feature_installed_installed(self):
         """
-            Test installing a feature already installed
+        Test installing a feature already installed
         """
         expected = {
             "comment": "The feature Feat1 is already installed",
@@ -276,7 +276,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_feature_removed(self):
         """
-            Test removing a feature with DISM
+        Test removing a feature with DISM
         """
         expected = {
             "comment": "Removed Feat2",
@@ -305,7 +305,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_feature_removed_failure(self):
         """
-            Test removing a feature which fails with DISM
+        Test removing a feature which fails with DISM
         """
         expected = {
             "comment": "Failed to remove Feat2: Failed",
@@ -334,7 +334,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_feature_removed_removed(self):
         """
-            Test removing a feature already removed
+        Test removing a feature already removed
         """
         expected = {
             "comment": "The feature Feat2 is already removed",
@@ -362,7 +362,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_package_installed(self):
         """
-            Test installing a package with DISM
+        Test installing a package with DISM
         """
         expected = {
             "comment": "Installed Pack2",
@@ -394,7 +394,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_package_installed_failure(self):
         """
-            Test installing a package which fails with DISM
+        Test installing a package which fails with DISM
         """
         expected = {
             "comment": "Failed to install Pack2: Failed",
@@ -426,7 +426,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_package_installed_installed(self):
         """
-            Test installing a package already installed
+        Test installing a package already installed
         """
         expected = {
             "comment": "The package Pack2 is already installed: Pack2",
@@ -458,7 +458,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_package_removed(self):
         """
-            Test removing a package with DISM
+        Test removing a package with DISM
         """
         expected = {
             "comment": "Removed Pack2",
@@ -490,7 +490,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_package_removed_failure(self):
         """
-            Test removing a package which fails with DISM
+        Test removing a package which fails with DISM
         """
         expected = {
             "comment": "Failed to remove Pack2: Failed",
@@ -522,7 +522,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_package_removed_removed(self):
         """
-            Test removing a package already removed
+        Test removing a package already removed
         """
         expected = {
             "comment": "The package Pack2 is already removed",

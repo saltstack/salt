@@ -749,7 +749,8 @@ def runner(name, **kwargs):
     success = out.get("success", True)
     ret = {"name": name, "changes": {"return": runner_return}, "result": success}
     ret["comment"] = "Runner function '{}' {}.".format(
-        name, "executed" if success else "failed",
+        name,
+        "executed" if success else "failed",
     )
 
     ret["__orchestration__"] = True
@@ -991,7 +992,8 @@ def wheel(name, **kwargs):
     success = out.get("success", True)
     ret = {"name": name, "changes": {"return": wheel_return}, "result": success}
     ret["comment"] = "Wheel function '{}' {}.".format(
-        name, "executed" if success else "failed",
+        name,
+        "executed" if success else "failed",
     )
 
     ret["__orchestration__"] = True

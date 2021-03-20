@@ -123,7 +123,8 @@ class LazyLoaderTest(TestCase):
         # results in a KeyError, the decorator is broken.
         self.assertTrue(
             isinstance(
-                self.loader[self.module_name + ".loaded"], salt.loader.LoadedFunc,
+                self.loader[self.module_name + ".loaded"],
+                salt.loader.LoadedFunc,
             )
         )
         # Make sure depends correctly kept a function from loading
@@ -403,7 +404,10 @@ class LazyLoaderVirtualDisabledTest(TestCase):
     @pytest.mark.slow_test
     def test_virtual(self):
         self.assertTrue(
-            isinstance(self.loader["test_virtual.ping"], salt.loader.LoadedFunc,)
+            isinstance(
+                self.loader["test_virtual.ping"],
+                salt.loader.LoadedFunc,
+            )
         )
 
 

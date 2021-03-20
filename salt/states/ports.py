@@ -149,9 +149,10 @@ def installed(name, options=None):
         bad_opts = [x for x in options if x not in default_options]
         if bad_opts:
             ret["result"] = False
-            ret["comment"] = (
-                "The following options are not available for "
-                "{0}: {1}".format(name, ", ".join(bad_opts))
+            ret[
+                "comment"
+            ] = "The following options are not available for " "{0}: {1}".format(
+                name, ", ".join(bad_opts)
             )
             return ret
 

@@ -375,7 +375,8 @@ class HostTestCase(TestCase, LoaderModuleMockMixin):
     def test_host_present_should_return_True_if_test_and_no_changes(self):
         expected = {
             "comment": "Host {} ({}) already present".format(
-                self.hostname, self.ip_list[0],
+                self.hostname,
+                self.ip_list[0],
             ),
             "changes": {},
             "name": self.hostname,
@@ -401,7 +402,12 @@ class HostTestCase(TestCase, LoaderModuleMockMixin):
         expected = {
             "comment": "\n".join(
                 ["Host {} ({}) already present", "Host {} ({}) would be added"]
-            ).format(self.hostname, self.ip_list[0], self.hostname, self.ip_list[1],),
+            ).format(
+                self.hostname,
+                self.ip_list[0],
+                self.hostname,
+                self.ip_list[1],
+            ),
             "changes": {"added": {self.ip_list[1]: [self.hostname]}},
             "name": self.hostname,
             "result": None,
@@ -425,7 +431,12 @@ class HostTestCase(TestCase, LoaderModuleMockMixin):
         expected = {
             "comment": "\n".join(
                 ["Host {} ({}) already present", "Host {} ({}) would be removed"]
-            ).format(self.hostname, self.ip_list[0], self.hostname, self.ip_list[1],),
+            ).format(
+                self.hostname,
+                self.ip_list[0],
+                self.hostname,
+                self.ip_list[1],
+            ),
             "changes": {"removed": {self.ip_list[1]: [self.hostname]}},
             "name": self.hostname,
             "result": None,

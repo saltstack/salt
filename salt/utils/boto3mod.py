@@ -312,6 +312,5 @@ def ordered(obj):
 
 
 def json_objs_equal(left, right):
-    """ Compare two parsed JSON objects, given non-ordering in JSON objects
-    """
+    """Compare two parsed JSON objects, given non-ordering in JSON objects"""
     return ordered(left) == ordered(right)

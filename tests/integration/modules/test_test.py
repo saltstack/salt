@@ -67,14 +67,25 @@ class TestModuleTest(ModuleCase, AdaptedConfigurationTestCaseMixin):
         """
         test.fib
         """
-        self.assertEqual(self.run_function("test.fib", ["20"],)[0], 6765)
+        self.assertEqual(
+            self.run_function(
+                "test.fib",
+                ["20"],
+            )[0],
+            6765,
+        )
 
     @pytest.mark.slow_test
     def test_collatz(self):
         """
         test.collatz
         """
-        self.assertEqual(self.run_function("test.collatz", ["40"],)[0][-1], 2)
+        self.assertEqual(
+            self.run_function("test.collatz", ["40"],)[
+                0
+            ][-1],
+            2,
+        )
 
     @pytest.mark.slow_test
     def test_outputter(self):

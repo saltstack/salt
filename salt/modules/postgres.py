@@ -1285,7 +1285,9 @@ def _role_cmd_args(
             )
         )
     if isinstance(valid_until, str) and bool(valid_until):
-        escaped_valid_until = "'{}'".format(valid_until.replace("'", "''"),)
+        escaped_valid_until = "'{}'".format(
+            valid_until.replace("'", "''"),
+        )
     skip_superuser = False
     if bool(db_role) and bool(superuser) == bool(db_role["superuser"]):
         skip_superuser = True

@@ -20,7 +20,7 @@ from tests.support.unit import TestCase
 
 class WinPathTestCase(TestCase, LoaderModuleMockMixin):
     """
-        Test cases for salt.modules.win_path
+    Test cases for salt.modules.win_path
     """
 
     def setup_loader_modules(self):

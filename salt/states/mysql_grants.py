@@ -259,9 +259,10 @@ def absent(
         else:
             err = _get_mysql_error()
             if err is not None:
-                ret["comment"] = (
-                    "Unable to revoke grant {0} on {1} for "
-                    "{2}@{3} ({4})".format(grant, database, user, host, err)
+                ret[
+                    "comment"
+                ] = "Unable to revoke grant {0} on {1} for " "{2}@{3} ({4})".format(
+                    grant, database, user, host, err
                 )
                 ret["result"] = False
                 return ret

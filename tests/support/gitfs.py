@@ -375,10 +375,12 @@ def webserver_pillar_tests_prep_authenticated(request, webserver_pillar_tests_pr
         password=request.cls.password,
         port=request.cls.nginx_port,
     )
-    url_extra_repo = "http://{username}:{password}@127.0.0.1:{port}/extra_repo.git".format(
-        username=request.cls.username,
-        password=request.cls.password,
-        port=request.cls.nginx_port,
+    url_extra_repo = (
+        "http://{username}:{password}@127.0.0.1:{port}/extra_repo.git".format(
+            username=request.cls.username,
+            password=request.cls.password,
+            port=request.cls.nginx_port,
+        )
     )
     request.cls.ext_opts["url"] = url
     request.cls.ext_opts["url_extra_repo"] = url_extra_repo
@@ -476,7 +478,11 @@ class GitPillarTestBase(GitTestBase, LoaderModuleMockMixin):
                 git_opts=self.git_opts,
             )
             self.run_function(
-                "git.push", [self.admin_repo], remote="origin", ref=branch, user=user,
+                "git.push",
+                [self.admin_repo],
+                remote="origin",
+                ref=branch,
+                user=user,
             )
 
         with salt.utils.files.fopen(

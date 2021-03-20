@@ -350,7 +350,7 @@ class WrapRenderTestCase(TestCase):
         )
 
     def test_generate_sls_context__one_level_repeating(self):
-        """ generate_sls_context - Basic one level with name same as dir
+        """generate_sls_context - Basic one level with name same as dir
 
         (Issue #56410)
         """
@@ -409,7 +409,7 @@ class WrapRenderTestCase(TestCase):
         )
 
     def test_generate_sls_context__two_level_repeating(self):
-        """ generate_sls_context - Basic two level with name same as dir
+        """generate_sls_context - Basic two level with name same as dir
 
         (Issue #56410)
         """
@@ -452,8 +452,7 @@ class WrapRenderTestCase(TestCase):
 
     @skipIf(sys.platform == "win32", "Backslash not possible under windows")
     def test_generate_sls_context__backslash_in_path(self):
-        """ generate_sls_context - Handle backslash in path on non-windows
-        """
+        """generate_sls_context - Handle backslash in path on non-windows"""
         self._test_generated_sls_context(
             "/tmp/foo/foo\\foo.sls",
             "foo.foo\\foo",

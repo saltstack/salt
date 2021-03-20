@@ -49,7 +49,10 @@ class ZookeeperTestCase(ModuleCase, SaltReturnAssertsMixin):
     @pytest.mark.slow_test
     def test_zookeeper_present(self):
         ret = self.run_state(
-            "zookeeper.present", name="/test/name", value="testuser", makepath=True,
+            "zookeeper.present",
+            name="/test/name",
+            value="testuser",
+            makepath=True,
         )
         self.assertSaltTrueReturn(ret)
 
@@ -74,14 +77,23 @@ class ZookeeperTestCase(ModuleCase, SaltReturnAssertsMixin):
     @pytest.mark.slow_test
     def test_zookeeper_absent(self):
         self.run_state(
-            "zookeeper.present", name="/test/name", value="testuser", makepath=True,
+            "zookeeper.present",
+            name="/test/name",
+            value="testuser",
+            makepath=True,
         )
-        ret = self.run_state("zookeeper.absent", name="/test/name",)
+        ret = self.run_state(
+            "zookeeper.absent",
+            name="/test/name",
+        )
         self.assertSaltTrueReturn(ret)
         self.assertTrue(
             bool(ret["zookeeper_|-/test/name_|-/test/name_|-absent"]["changes"])
         )
-        ret = self.run_state("zookeeper.absent", name="/test/name",)
+        ret = self.run_state(
+            "zookeeper.absent",
+            name="/test/name",
+        )
         self.assertFalse(
             bool(ret["zookeeper_|-/test/name_|-/test/name_|-absent"]["changes"])
         )
@@ -105,7 +117,10 @@ class ZookeeperTestCase(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltFalseReturn(ret)
 
         ret = self.run_state(
-            "zookeeper.present", name="/test/name", value="testuser", makepath=True,
+            "zookeeper.present",
+            name="/test/name",
+            value="testuser",
+            makepath=True,
         )
 
         ret = self.run_state(

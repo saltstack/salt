@@ -18,7 +18,7 @@ from tests.support.unit import TestCase
 
 class SaltcloudmodTestCase(TestCase, LoaderModuleMockMixin):
     """
-        Test cases for salt.modules.saltcloudmod
+    Test cases for salt.modules.saltcloudmod
     """
 
     def setup_loader_modules(self):
@@ -29,7 +29,7 @@ class SaltcloudmodTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_create(self):
         """
-            Test if create the named vm
+        Test if create the named vm
         """
         mock = MagicMock(return_value="""{"foo": "bar"}""")
         with patch.dict(saltcloudmod.__salt__, {"cmd.run_stdout": mock}):
