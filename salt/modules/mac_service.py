@@ -20,20 +20,22 @@ This module has support for services in the following locations.
     path and a ``runas`` user is NOT specified, the current console user will
     be used to properly interact with the service.
 
+.. note::
+    As of the 3002 release, if a service name of ``salt-minion`` is passed this
+    module will convert it over to it's macOS equivalent name, in this case
+    to ``com.saltstack.salt.minion``. This is true for ``salt-master``
+    ``salt-api``, and ``salt-syndic`` as well.
+
 """
 
-# Import python libs
 import logging
 import os
 
-# Import salt libs
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
-
-# Import 3rd party libs
 from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Define the module's virtual name
@@ -44,6 +46,13 @@ __func_alias__ = {
 }
 
 log = logging.getLogger(__name__)
+
+SALT_MAC_SERVICES = {
+    "salt-minion": "com.saltstack.salt.minion",
+    "salt-master": "com.saltstack.salt.master",
+    "salt-api": "com.saltstack.salt.api",
+    "salt-syndic": "com.saltstack.salt.syndic",
+}
 
 
 def __virtual__():
@@ -120,7 +129,9 @@ def _get_service(name):
     :rtype: dict
     """
     services = __utils__["mac_utils.available_services"]()
-    name = name.lower()
+    # fix the name differences between platforms
+    # salt-minion becomes com.saltstack.salt.minion
+    name = SALT_MAC_SERVICES.get(name, name).lower()
 
     service = _name_in_services(name, services)
 

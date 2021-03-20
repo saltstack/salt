@@ -1,17 +1,12 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import random
 import string
 from copy import deepcopy
 
+import pytest
 import salt.loader
 import salt.states.boto_s3_bucket as boto_s3_bucket
-from salt.ext import six
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 from salt.utils.versions import LooseVersion
-from tests.support.helpers import slowTest
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
@@ -208,7 +203,7 @@ if _has_required_boto():
 @skipIf(
     _has_required_boto() is False,
     "The boto3 module must be greater than"
-    " or equal to version {0}".format(required_boto3_version),
+    " or equal to version {}".format(required_boto3_version),
 )
 class BotoS3BucketStateTestCaseBase(TestCase, LoaderModuleMockMixin):
     conn = None
@@ -276,7 +271,7 @@ class BotoS3BucketTestCase(BotoS3BucketStateTestCaseBase, BotoS3BucketTestCaseMi
     TestCase for salt.modules.boto_s3_bucket state.module
     """
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_present_when_bucket_does_not_exist(self):
         """
         Tests present on a bucket that does not exist.
@@ -284,7 +279,7 @@ class BotoS3BucketTestCase(BotoS3BucketStateTestCaseBase, BotoS3BucketTestCaseMi
         self.conn.head_bucket.side_effect = [not_found_error, None]
         self.conn.list_buckets.return_value = deepcopy(list_ret)
         self.conn.create_bucket.return_value = bucket_ret
-        for key, value in six.iteritems(config_ret):
+        for key, value in config_ret.items():
             getattr(self.conn, key).return_value = deepcopy(value)
         with patch.dict(
             self.funcs,
@@ -300,10 +295,10 @@ class BotoS3BucketTestCase(BotoS3BucketStateTestCaseBase, BotoS3BucketTestCaseMi
             config_ret["get_bucket_location"],
         )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_present_when_bucket_exists_no_mods(self):
         self.conn.list_buckets.return_value = deepcopy(list_ret)
-        for key, value in six.iteritems(config_ret):
+        for key, value in config_ret.items():
             getattr(self.conn, key).return_value = deepcopy(value)
         with patch.dict(
             self.funcs,
@@ -316,10 +311,10 @@ class BotoS3BucketTestCase(BotoS3BucketStateTestCaseBase, BotoS3BucketTestCaseMi
         self.assertTrue(result["result"])
         self.assertEqual(result["changes"], {})
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_present_when_bucket_exists_all_mods(self):
         self.conn.list_buckets.return_value = deepcopy(list_ret)
-        for key, value in six.iteritems(config_ret):
+        for key, value in config_ret.items():
             getattr(self.conn, key).return_value = deepcopy(value)
         with patch.dict(
             self.funcs,
@@ -334,7 +329,7 @@ class BotoS3BucketTestCase(BotoS3BucketStateTestCaseBase, BotoS3BucketTestCaseMi
         self.assertTrue(result["result"])
         self.assertNotEqual(result["changes"], {})
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_present_with_failure(self):
         self.conn.head_bucket.side_effect = [not_found_error, None]
         self.conn.list_buckets.return_value = deepcopy(list_ret)

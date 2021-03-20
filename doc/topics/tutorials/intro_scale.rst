@@ -144,7 +144,7 @@ be doubled after each attempt to reconnect (ZeroMQ default behavior).
 
 Lets say the generated random value is 11 seconds (or 11000ms).
 
-.. code-block:: bash
+.. code-block:: console
 
     reconnect 1: wait 11 seconds
     reconnect 2: wait 22 seconds

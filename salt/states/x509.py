@@ -46,15 +46,16 @@ the mine where it can be easily retrieved by other minions.
 
 .. code-block:: yaml
 
-    salt-minion:
-      service.running:
-        - enable: True
-        - watch:
-          - file: /etc/salt/minion.d/x509.conf
-
     /etc/salt/minion.d/x509.conf:
       file.managed:
         - source: salt://x509.conf
+
+    restart-salt-minion:
+      cmd.run:
+        - name: 'salt-call service.restart salt-minion'
+        - bg: True
+        - onchanges:
+          - file: /etc/salt/minion.d/x509.conf
 
     /etc/pki:
       file.directory
@@ -62,9 +63,8 @@ the mine where it can be easily retrieved by other minions.
     /etc/pki/issued_certs:
       file.directory
 
-    /etc/pki/ca.crt:
+    /etc/pki/ca.key:
       x509.private_key_managed:
-        - name: /etc/pki/ca.key
         - bits: 4096
         - backup: True
 
@@ -177,7 +177,6 @@ import os
 import re
 
 import salt.exceptions
-import salt.utils.versions
 
 try:
     from M2Crypto.RSA import RSAError
@@ -429,6 +428,9 @@ def _certificate_info_matches(cert_info, required_cert_info, check_serial=False)
 
     diff = []
     for k, v in required_cert_info.items():
+        # cert info comes as byte string
+        if isinstance(v, str):
+            v = salt.utils.stringutils.to_bytes(v)
         try:
             if v != cert_info[k]:
                 if k == "Subject Hash":
@@ -568,9 +570,7 @@ def _certificate_file_managed(ret, file_args):
     return ret
 
 
-def certificate_managed(
-    name, days_remaining=90, append_certs=None, managed_private_key=None, **kwargs
-):
+def certificate_managed(name, days_remaining=90, append_certs=None, **kwargs):
     """
     Manage a Certificate
 
@@ -587,10 +587,6 @@ def certificate_managed(
     append_certs:
         A list of certificates to be appended to the managed file.
         They must be valid PEM files, otherwise an error will be thrown.
-
-    managed_private_key:
-        Has no effect since v2016.11 and will be removed in Salt Aluminium.
-        Use a separate x509.private_key_managed call instead.
 
     kwargs:
         Any arguments supported by :py:func:`x509.create_certificate
@@ -656,13 +652,6 @@ def certificate_managed(
     ):
         raise salt.exceptions.SaltInvocationError(
             "public_key, signing_private_key, or csr must be specified."
-        )
-
-    if managed_private_key:
-        salt.utils.versions.warn_until(
-            "Aluminium",
-            "Passing 'managed_private_key' to x509.certificate_managed has no effect and "
-            "will be removed Salt Aluminium. Use a separate x509.private_key_managed call instead.",
         )
 
     ret = {"name": name, "result": False, "changes": {}, "comment": ""}

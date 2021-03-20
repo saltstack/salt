@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
@@ -6,8 +5,6 @@
     tests.integration.states.pip_state
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
-
-from __future__ import absolute_import, print_function, unicode_literals
 
 import errno
 import glob
@@ -25,15 +22,11 @@ import salt.utils.win_dacl
 import salt.utils.win_functions
 import salt.utils.win_runas
 from salt.exceptions import CommandExecutionError
-from salt.ext import six
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
-    destructiveTest,
     patched_environ,
     requires_system_grains,
-    skip_if_not_root,
-    slowTest,
     with_system_user,
     with_tempdir,
 )
@@ -49,7 +42,7 @@ except ImportError:
     HAS_PWD = False
 
 
-class VirtualEnv(object):
+class VirtualEnv:
     def __init__(self, test, venv_dir):
         self.venv_dir = venv_dir
         self.test = test
@@ -122,7 +115,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
                 pass
         return self.run_function("virtualenv.create", [path], **kwargs)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_pip_installed_removed(self):
         """
         Tests installed and removed states
@@ -130,14 +123,14 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
         name = "pudb"
         if name in self.run_function("pip.list"):
             self.skipTest(
-                "{0} is already installed, uninstall to run this test".format(name)
+                "{} is already installed, uninstall to run this test".format(name)
             )
         ret = self.run_state("pip.installed", name=name)
         self.assertSaltTrueReturn(ret)
         ret = self.run_state("pip.removed", name=name)
         self.assertSaltTrueReturn(ret)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_pip_installed_removed_venv(self):
         venv_dir = os.path.join(RUNTIME_VARS.TMP, "pip_installed_removed")
         with VirtualEnv(self, venv_dir):
@@ -147,7 +140,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             ret = self.run_state("pip.removed", name=name, bin_env=venv_dir)
             self.assertSaltTrueReturn(ret)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_pip_installed_errors(self):
         venv_dir = os.path.join(RUNTIME_VARS.TMP, "pip-installed-errors")
         self.addCleanup(shutil.rmtree, venv_dir, ignore_errors=True)
@@ -170,7 +163,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             ret = self.run_function("state.sls", mods="pip-installed-errors")
             self.assertSaltTrueReturn(ret)
 
-    @skipIf(six.PY3, "Issue is specific to carbon module, which is PY2-only")
+    @skipIf(True, "Issue is specific to carbon module, which is PY2-only")
     @skipIf(salt.utils.platform.is_windows(), "Carbon does not install in Windows")
     @requires_system_grains
     def test_pip_installed_weird_install(self, grains=None):
@@ -184,7 +177,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
         ographite = "/opt/graphite"
         if os.path.isdir(ographite):
             self.skipTest(
-                "You already have '{0}'. This test would overwrite this "
+                "You already have '{}'. This test would overwrite this "
                 "directory".format(ographite)
             )
         try:
@@ -212,7 +205,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
 
             # We cannot use assertInSaltComment here because we need to skip
             # some of the state return parts
-            for key in six.iterkeys(ret):
+            for key in ret.keys():
                 self.assertTrue(ret[key]["result"])
                 if ret[key]["name"] != "carbon < 1.1":
                     continue
@@ -254,7 +247,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             )
             self.assertInSaltComment(msg, ret)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_issue_2028_pip_installed_state(self):
         ret = self.run_function("state.sls", mods="issue-2028-pip-installed")
 
@@ -268,7 +261,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
         self.assertTrue(os.path.isfile(pep8_bin))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_issue_2087_missing_pip(self):
         venv_dir = os.path.join(RUNTIME_VARS.TMP, "issue-2087-missing-pip")
 
@@ -326,13 +319,13 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
                     "the --mirrors arg has been deprecated and removed in pip==7.0.0"
                 )
 
-    @destructiveTest
-    @skip_if_not_root
+    @pytest.mark.destructive_test
     @with_system_user(
         "issue-6912", on_existing="delete", delete=True, password="PassWord1!"
     )
     @with_tempdir()
-    @slowTest
+    @pytest.mark.slow_test
+    @pytest.mark.skip_if_not_root
     def test_issue_6912_wrong_owner(self, temp_dir, username):
         # Setup virtual environment directory to be used throughout the test
         venv_dir = os.path.join(temp_dir, "6912-wrong-owner")
@@ -360,7 +353,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
         )
         if venv_create.get("retcode", 1) > 0:
             self.skipTest(
-                "Failed to create testcase virtual environment: {0}"
+                "Failed to create testcase virtual environment: {}"
                 "".format(venv_create)
             )
 
@@ -387,14 +380,14 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
                 elif salt.utils.platform.is_windows():
                     self.assertEqual(salt.utils.win_dacl.get_owner(path), username)
 
-    @destructiveTest
-    @skip_if_not_root
+    @pytest.mark.destructive_test
     @skipIf(salt.utils.platform.is_darwin(), "Test is flaky on macosx")
     @with_system_user(
         "issue-6912", on_existing="delete", delete=True, password="PassWord1!"
     )
     @with_tempdir()
-    @slowTest
+    @pytest.mark.slow_test
+    @pytest.mark.skip_if_not_root
     def test_issue_6912_wrong_owner_requirements_file(self, temp_dir, username):
         # Setup virtual environment directory to be used throughout the test
         venv_dir = os.path.join(temp_dir, "6912-wrong-owner")
@@ -422,7 +415,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
         )
         if venv_create.get("retcode", 1) > 0:
             self.skipTest(
-                "failed to create testcase virtual environment: {0}"
+                "failed to create testcase virtual environment: {}"
                 "".format(venv_create)
             )
 
@@ -456,8 +449,8 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
                 elif salt.utils.platform.is_windows():
                     self.assertEqual(salt.utils.win_dacl.get_owner(path), username)
 
-    @destructiveTest
-    @slowTest
+    @pytest.mark.destructive_test
+    @pytest.mark.slow_test
     def test_issue_6833_pip_upgrade_pip(self):
         # Create the testing virtualenv
         if sys.platform == "win32":
@@ -528,7 +521,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
         self.assertSaltStateChangesEqual(ret, {"pip==20.0.1": "Installed"})
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_pip_installed_specific_env(self):
         # Create the testing virtualenv
         venv_dir = os.path.join(RUNTIME_VARS.TMP, "pip-installed-specific-env")
@@ -584,10 +577,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             if os.path.isfile(requirements_file):
                 os.unlink(requirements_file)
 
-    @skipIf(
-        salt.utils.platform.is_darwin() and six.PY2, "This test hangs on OS X on Py2"
-    )
-    @slowTest
+    @pytest.mark.slow_test
     def test_22359_pip_installed_unless_does_not_trigger_warnings(self):
         # This test case should be moved to a format_call unit test specific to
         # the state internal keywords
@@ -595,7 +585,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
         venv_create = self._create_virtualenv(venv_dir)
         if venv_create.get("retcode", 1) > 0:
             self.skipTest(
-                "Failed to create testcase virtual environment: {0}".format(venv_create)
+                "Failed to create testcase virtual environment: {}".format(venv_create)
             )
 
         false_cmd = RUNTIME_VARS.SHELL_FALSE_PATH
@@ -610,7 +600,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
                 timeout=600,
             )
             self.assertSaltTrueReturn(ret)
-            self.assertNotIn("warnings", next(six.itervalues(ret)))
+            self.assertNotIn("warnings", next(iter(ret.values())))
         finally:
             if os.path.isdir(venv_dir):
                 shutil.rmtree(venv_dir, ignore_errors=True)
@@ -620,7 +610,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
         "Old version of virtualenv too old for python3.6",
     )
     @skipIf(salt.utils.platform.is_windows(), "Carbon does not install in Windows")
-    @slowTest
+    @pytest.mark.slow_test
     def test_46127_pip_env_vars(self):
         """
         Test that checks if env_vars passed to pip.installed are also passed
@@ -631,7 +621,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
         ographite = "/opt/graphite"
         if os.path.isdir(ographite):
             self.skipTest(
-                "You already have '{0}'. This test would overwrite this "
+                "You already have '{}'. This test would overwrite this "
                 "directory".format(ographite)
             )
         try:
@@ -656,7 +646,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             # throw an error.
             ret = self.run_function("state.sls", mods="issue-46127-pip-env-vars")
             self.assertSaltTrueReturn(ret)
-            for key in six.iterkeys(ret):
+            for key in ret.keys():
                 self.assertTrue(ret[key]["result"])
                 if ret[key]["name"] != "carbon < 1.3":
                     continue
@@ -672,7 +662,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertSaltTrueReturn(ret)
             # We cannot use assertInSaltComment here because we need to skip
             # some of the state return parts
-            for key in six.iterkeys(ret):
+            for key in ret.keys():
                 self.assertTrue(ret[key]["result"])
                 # As we are re-running the formula, some states will not be run
                 # and "name" may or may not be present, so we use .get() pattern
@@ -694,7 +684,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
 @pytest.mark.windows_whitelisted
 class PipStateInRequisiteTest(ModuleCase, SaltReturnAssertsMixin):
     @with_tempdir()
-    @slowTest
+    @pytest.mark.slow_test
     def test_issue_54755(self, tmpdir):
         """
         Verify github issue 54755 is resolved. This only fails when there is no

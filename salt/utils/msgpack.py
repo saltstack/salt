@@ -1,14 +1,10 @@
 """
 Functions to work with MessagePack
 """
-
-# Import Python libs
-
 import logging
 
 log = logging.getLogger(__name__)
 
-# Import 3rd party libs
 HAS_MSGPACK = False
 try:
     import msgpack
@@ -88,15 +84,26 @@ def _sanitize_msgpack_unpack_kwargs(kwargs):
     return _sanitize_msgpack_kwargs(kwargs)
 
 
+def _add_msgpack_unpack_kwargs(kwargs):
+    """
+    Add any msgpack unpack kwargs here.
+
+    max_buffer_size: will make sure the buffer is set to a minimum
+    of 100MiB in versions >=6 and <1.0
+    """
+    assert isinstance(kwargs, dict)
+    if version >= (0, 6, 0) and version < (1, 0, 0):
+        kwargs["max_buffer_size"] = 100 * 1024 * 1024
+    return _sanitize_msgpack_unpack_kwargs(kwargs)
+
+
 class Unpacker(msgpack.Unpacker):
     """
     Wraps the msgpack.Unpacker and removes non-relevant arguments
     """
 
     def __init__(self, *args, **kwargs):
-        msgpack.Unpacker.__init__(
-            self, *args, **_sanitize_msgpack_unpack_kwargs(kwargs)
-        )
+        msgpack.Unpacker.__init__(self, *args, **_add_msgpack_unpack_kwargs(kwargs))
 
 
 def pack(o, stream, **kwargs):

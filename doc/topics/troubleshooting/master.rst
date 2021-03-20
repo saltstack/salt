@@ -47,7 +47,7 @@ The salt-master needs at least 2 sockets per host that connects to it, one for
 the Publisher and one for response port. Thus, large installations may, upon
 scaling up the number of minions accessing a given master, encounter:
 
-.. code-block:: bash
+.. code-block:: console
 
     12:45:29,289 [salt.master    ][INFO    ] Starting Salt worker process 38
     Too many open files
@@ -188,7 +188,7 @@ profiling graphs could use `gprof2dot`_, `graphviz`_ and this batch file:
 .. _`gprof2dot`: https://pypi.org/project/gprof2dot
 .. _`graphviz`: https://graphviz.gitlab.io
 
-.. code-block:: bash
+.. code-block:: batch
 
     ::
     :: Converts callgrind* profiler output to *.pdf, via *.dot

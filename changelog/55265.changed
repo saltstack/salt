@@ -1,2 +1,0 @@
-Changed the lvm.lv_present state to accept a resizefs switch. So, when
-the logical volume is resized, the filesystem will be resized too.

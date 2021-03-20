@@ -125,6 +125,8 @@ For this example to work, you would need to have defined the grain
 Writing Grains
 ==============
 
+.. include:: ../../_incl/grains_passwords.rst
+
 The grains are derived by executing all of the "public" functions (i.e. those
 which do not begin with an underscore) found in the modules located in the
 Salt's core grains code, followed by those in any custom grains modules. The
@@ -217,7 +219,7 @@ grain data structure. For example, consider this custom grain file:
 
 The output of this example renders like so:
 
-.. code-block:: bash
+.. code-block:: console
 
     # salt-call --local grains.items
     local:
@@ -235,7 +237,7 @@ the function will be rendered twice by Salt in the items output: once for the
 ``my_custom_grain`` call itself, and again when it is called in the ``main``
 function:
 
-.. code-block:: bash
+.. code-block:: console
 
     # salt-call --local grains.items
     local:

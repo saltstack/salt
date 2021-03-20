@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module for sending messages to Slack
 
@@ -16,20 +15,15 @@ Module for sending messages to Slack
           api_key: peWcBiMOS9HrZG15peWcBiMOS9HrZG15
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
 import salt.ext.six.moves.http_client
-
-# Import Salt libs
 import salt.utils.json
 import salt.utils.slack
 from salt.exceptions import SaltInvocationError
 from salt.ext.six.moves import range
 
-# Import 3rd-party libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
 from salt.ext.six.moves.urllib.parse import urljoin as _urljoin
@@ -172,15 +166,22 @@ def find_user(name, api_key=None):
     return False
 
 
-def post_message(channel, message, from_name, api_key=None, icon=None):
+def post_message(
+    channel, message, from_name, api_key=None, icon=None, attachments=None, blocks=None,
+):
     """
     Send a message to a Slack channel.
+
+    .. versionchanged:: 3003
+        Added `attachments` and `blocks` kwargs
 
     :param channel:     The channel name, either will work.
     :param message:     The message to send to the Slack channel.
     :param from_name:   Specify who the message is from.
     :param api_key:     The Slack api key, if not specified in the configuration.
     :param icon:        URL to an image to use as the icon for this message
+    :param attachments: Any attachments to be sent with the message.
+    :param blocks:      Any blocks to be sent with the message.
     :return:            Boolean if message was sent successfully.
 
     CLI Example:
@@ -205,7 +206,7 @@ def post_message(channel, message, from_name, api_key=None, icon=None):
             channel,
             channel,
         )
-        channel = "#{0}".format(channel)
+        channel = "#{}".format(channel)
 
     if not from_name:
         log.error("from_name is a required option.")
@@ -216,7 +217,13 @@ def post_message(channel, message, from_name, api_key=None, icon=None):
     if not from_name:
         log.error("from_name is a required option.")
 
-    parameters = {"channel": channel, "username": from_name, "text": message}
+    parameters = {
+        "channel": channel,
+        "username": from_name,
+        "text": message,
+        "attachments": attachments or [],
+        "blocks": blocks or [],
+    }
 
     if icon is not None:
         parameters["icon_url"] = icon
@@ -251,7 +258,7 @@ def call_hook(
     Send message to Slack incoming webhook.
 
     :param message:     The topic of message.
-    :param attachment:  The message to send to the Slacke WebHook.
+    :param attachment:  The message to send to the Slack WebHook.
     :param color:       The color of border of left side
     :param short:       An optional flag indicating whether the value is short
                         enough to be displayed side-by-side with other values.

@@ -45,7 +45,7 @@ Functions to interact with Hashicorp Vault.
 
     verify
         For details please see
-        http://docs.python-requests.org/en/master/user/advanced/#ssl-cert-verification
+        https://requests.readthedocs.io/en/master/user/advanced/#ssl-cert-verification
 
         .. versionadded:: 2018.3.0
 
@@ -160,7 +160,6 @@ Functions to interact with Hashicorp Vault.
 
 .. _vault-setup:
 """
-# Import Python libs
 import logging
 import os
 
