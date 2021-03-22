@@ -22,7 +22,7 @@ from docker.errors import DockerException  # isort:skip
 # pylint: enable=3rd-party-module-not-gated
 
 pytestmark = [
-    pytest.mark.run_slow,
+    pytest.mark.slow_test,
     pytest.mark.skip_if_binaries_missing("docker"),
 ]
 

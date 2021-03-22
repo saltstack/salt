@@ -3014,3 +3014,27 @@ def resolve_capabilities(pkgs, refresh=False, root=None, **kwargs):
         else:
             ret.append(name)
     return ret
+
+
+def services_need_restart(root=None, **kwargs):
+    """
+    .. versionadded:: 3003
+
+    List services that use files which have been changed by the
+    package manager. It might be needed to restart them.
+
+    root
+        operate on a different root directory.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pkg.services_need_restart
+    """
+    cmd = ["ps", "-sss"]
+
+    zypper_output = __zypper__(root=root).nolock.call(*cmd)
+    services = zypper_output.split()
+
+    return services
