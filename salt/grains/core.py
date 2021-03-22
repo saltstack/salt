@@ -1634,6 +1634,8 @@ _OS_FAMILY_MAP = {
     "AIX": "AIX",
     "TurnKey": "Debian",
     "Pop": "Debian",
+    "Softiron": "Debian",
+    "SoftIron": "Debian",
 }
 
 # Matches any possible format:
