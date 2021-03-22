@@ -8,13 +8,20 @@ rem Make sure the script is run as Admin
 echo Administrative permissions required. Detecting permissions ...
 echo ---------------------------------------------------------------------
 net session >nul 2>&1
-if %errorLevel%==0 (
+if errorlevel 1 (
     echo Success: Administrative permissions confirmed.
 ) else (
     echo Failure: This script must be run as Administrator
     goto eof
 )
 echo.
+
+:: Remove environment variables
+    echo %0 :: Removing Environment Variables ...
+    echo ---------------------------------------------------------------------
+    if defined PyDir (
+        reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment" /F /V "PyDir"
+    )
 
 :CheckPython27
 if exist "\Python27" goto RemovePython27
