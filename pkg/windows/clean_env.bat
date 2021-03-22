@@ -16,13 +16,6 @@ if %errorLevel%==0 (
 )
 echo.
 
-:: Remove environment variables
-    echo %0 :: Removing Environment Variables ...
-    echo ---------------------------------------------------------------------
-    if defined PyDir (
-        reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment" /F /V "PyDir"
-    )
-
 :CheckPython27
 if exist "\Python27" goto RemovePython27
 
