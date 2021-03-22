@@ -1,10 +1,11 @@
-@Library('salt@master-1.9') _
+@Library('salt@master-1.10') _
 
 runTestSuite(
-    ami_image_id: 'ami-095abce041f0323d2',
+    ami_image_id: 'ami-0eb32b3297dc438d0',
     concurrent_builds: 1,
-    distro_name: 'ubuntu',
-    distro_version: '1604',
+    distro_name: 'debian',
+    distro_version: '10',
+    distro_arch: 'amd64',
     env: env,
     golden_images_branch: 'master',
     jenkins_slave_label: 'kitchen-slave',
