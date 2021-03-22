@@ -160,9 +160,9 @@ goto eof
     msiexec.exe /x {3B53E5B7-CFC4-401C-80E9-FF7591C58741} /quiet /qn
 
     rem wipe the Python directory
-    echo %0 :: Removing the C:\Python37 Directory ...
+    echo %0 :: Removing the C:\Python38 Directory ...
     echo ---------------------------------------------------------------------
-    rd /s /q "C:\Python37"
+    rd /s /q "C:\Python38"
     if %errorLevel%==0 (
         echo Successful
     ) else (
