@@ -35,12 +35,12 @@ pyasn1==0.4.8
 pycparser==2.19
 pycryptodomex==3.9.7
 pycurl==7.43.0.5
-pymssql==2.1.4
+pymssql==2.1.5
 pymysql==0.9.3
 pyopenssl==19.0.0
 python-dateutil==2.8.0
 python-gnupg==0.4.4
-pythonnet==2.3.0
+pythonnet==2.5.2
 pytz==2019.3              # via tempora
 pywin32==227
 pyyaml==5.4.1
