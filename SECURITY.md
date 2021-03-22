@@ -124,6 +124,6 @@ mailing list. This list is low-traffic.
 Reference the following documentation to ensure Salt best practices are being
 implemented in your infrastructure:
 
-- [Docs: Hardening Salt](https://docs.saltproject.io/en/latest/topics/hardening.html)
-- [Docs: Salt Best Practices](https://docs.saltproject.io/en/latest/topics/best_practices.html)
+- [Docs: Hardening Salt](https://docs.saltproject.io/en/master/topics/hardening.html)
+- [Docs: Salt Best Practices](https://docs.saltproject.io/en/master/topics/best_practices.html)
 - [Blog: How I Hardened My Salt Environment](https://saltproject.io/blog/how-i-hardened-my-salt-environment/)

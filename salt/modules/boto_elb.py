@@ -43,16 +43,12 @@ Connection module for Amazon ELB
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
 
-
 import logging
 import time
 
 import salt.utils.json
 import salt.utils.odict as odict
 import salt.utils.versions
-
-log = logging.getLogger(__name__)
-
 
 try:
     import boto
@@ -67,6 +63,8 @@ try:
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
+
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -86,7 +84,7 @@ def exists(name, region=None, key=None, keyid=None, profile=None):
     """
     Check to see if an ELB exists.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -110,7 +108,7 @@ def get_all_elbs(region=None, key=None, keyid=None, profile=None):
     """
     Return all load balancers associated with an account
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -129,7 +127,7 @@ def list_elbs(region=None, key=None, keyid=None, profile=None):
     """
     Return names of all load balancers associated with an account
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -146,7 +144,7 @@ def get_elb_config(name, region=None, key=None, keyid=None, profile=None):
     """
     Get an ELB configuration.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -212,7 +210,7 @@ def listener_dict_to_tuple(listener):
     Convert an ELB listener dict into a listener tuple used by certain parts of
     the AWS ELB API.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -321,7 +319,7 @@ def create_listeners(name, listeners, region=None, key=None, keyid=None, profile
     """
     Create listeners on an ELB.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -353,7 +351,7 @@ def delete_listeners(name, ports, region=None, key=None, keyid=None, profile=Non
     """
     Delete listeners on an ELB.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -383,7 +381,7 @@ def apply_security_groups(
     """
     Apply security groups to ELB.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -409,7 +407,7 @@ def enable_availability_zones(
     """
     Enable availability zones for ELB.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -434,7 +432,7 @@ def disable_availability_zones(
     """
     Disable availability zones for ELB.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -462,7 +460,7 @@ def attach_subnets(name, subnets, region=None, key=None, keyid=None, profile=Non
     """
     Attach ELB to subnets.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -490,7 +488,7 @@ def detach_subnets(name, subnets, region=None, key=None, keyid=None, profile=Non
     """
     Detach ELB from subnets.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -518,7 +516,7 @@ def get_attributes(name, region=None, key=None, keyid=None, profile=None):
     """
     Check to see if attributes are set on an ELB.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -662,7 +660,7 @@ def get_health_check(name, region=None, key=None, keyid=None, profile=None):
     """
     Get the health check configured for this ELB.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -736,7 +734,7 @@ def register_instances(
     - ``True``: instance(s) registered successfully
     - ``False``: instance(s) failed to be registered
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -781,7 +779,7 @@ def deregister_instances(
     - ``False``: instance(s) failed to be deregistered
     - ``None``: instance(s) not valid or not registered, no action taken
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -834,7 +832,7 @@ def set_instances(
     """
     Set the instances assigned to an ELB to exactly the list given
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -867,7 +865,7 @@ def get_instance_health(
     """
     Get a list of instances and their health state
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -909,7 +907,7 @@ def create_policy(
 
     .. versionadded:: 2016.3.0
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -944,7 +942,7 @@ def delete_policy(name, policy_name, region=None, key=None, keyid=None, profile=
 
     .. versionadded:: 2016.3.0
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -977,7 +975,7 @@ def set_listener_policy(
 
     .. versionadded:: 2016.3.0
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: Bash
 
@@ -1011,7 +1009,9 @@ def set_backend_policy(
     """
     Set the policies of an ELB backend server.
 
-    CLI example:
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_elb.set_backend_policy myelb 443 "[policy1,policy2]"
     """

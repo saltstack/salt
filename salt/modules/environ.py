@@ -150,7 +150,6 @@ def setenv(
         this will be ignored. Note: This will only take affect on applications
         opened after this has been set.
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -204,7 +203,6 @@ def get(key, default=""):
     default
         If the key is not found in the environment, return this value.
         Default: ''
-
 
     CLI Example:
 

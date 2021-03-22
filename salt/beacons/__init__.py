@@ -278,7 +278,9 @@ class Beacon:
         """
         Return available beacon functions
         """
-        validate_str = "{}.validate".format(name)
+        beacon_name = next(item.get("beacon_module", name) for item in beacon_data)
+
+        validate_str = "{}.validate".format(beacon_name)
         # Run the validate function if it's available,
         # otherwise there is a warning about it being missing
         if validate_str in self.beacons:
@@ -288,7 +290,7 @@ class Beacon:
         else:
             vcomment = (
                 "Beacon {} does not have a validate"
-                " function, skipping validation.".format(name)
+                " function, skipping validation.".format(beacon_name)
             )
             valid = True
 

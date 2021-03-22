@@ -11,11 +11,10 @@ Module to manage filesystem snapshots with snapper
 :maturity:      new
 :platform:      Linux
 """
-
-
 import difflib
 import logging
 import os
+import subprocess
 import time
 
 import salt.utils.files
@@ -153,7 +152,7 @@ def list_snapshots(config="root"):
     """
     List available snapshots
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -174,7 +173,7 @@ def get_snapshot(number=0, config="root"):
     """
     Get detailed information about a given snapshot
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -195,7 +194,7 @@ def list_configs():
     """
     List all available configs
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -222,7 +221,7 @@ def set_config(name="root", **kwargs):
     """
     Set configuration values
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -288,7 +287,7 @@ def get_config(name="root"):
     """
     Retrieves all values from a given configuration
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -323,7 +322,7 @@ def create_config(
         Extra Snapper configuration opts dictionary. It will override the values provided
         by the given template (if any).
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -397,7 +396,7 @@ def create_snapshot(
 
     Returns the number of the created snapshot.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -455,7 +454,7 @@ def delete_snapshot(snapshots_ids=None, config="root"):
     snapshots_ids
         List of the snapshots IDs to be deleted.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -509,7 +508,7 @@ def modify_snapshot(
     userdata
         Change the userdata dictionary of the snapshot. (dict)
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -556,7 +555,12 @@ def _is_text_file(filename):
     """
     Checks if a file is a text file
     """
-    type_of_file = os.popen("file -bi {}".format(filename), "r").read()
+    type_of_file = subprocess.run(
+        ["file", "-bi", filename],
+        check=False,
+        stdout=subprocess.STDOUT,
+        universal_newlines=True,
+    ).stdout
     return type_of_file.startswith("text")
 
 
@@ -650,7 +654,7 @@ def status(config="root", num_pre=None, num_post=None):
     num_post
         last snapshot ID to compare. Default is 0 (current state)
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -694,7 +698,7 @@ def changed_files(config="root", num_pre=None, num_post=None):
     num_post
         last snapshot ID to compare. Default is 0 (current state)
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 

@@ -1,6 +1,6 @@
 """
-    unit.loader
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    tests.unit.test_loader
+    ~~~~~~~~~~~~~~~~~~~~~~
 
     Test Salt's loader
 """
