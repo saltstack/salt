@@ -42,7 +42,7 @@ python-dateutil==2.8.0
 python-gnupg==0.4.4
 pythonnet==2.5.2
 pytz==2019.3              # via tempora
-pywin32==227
+pywin32==300
 pyyaml==5.4.1
 pyzmq==19.0.0
 requests==2.25.1
