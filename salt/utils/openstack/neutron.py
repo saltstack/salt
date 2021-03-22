@@ -103,10 +103,16 @@ class SaltNeutron(NeutronShell):
         Set up neutron credentials
         """
         salt.utils.versions.warn_until(
-            "Aluminium",
+            "Sulfur",
             (
-                "The neutron module has been deprecated and will be removed in {version}.  "
-                "Please update to using the neutronng module"
+                "The neutron module has been deprecated and will be removed in {version}."
+                "This includes"
+                "* salt.utils.openstack.neutron"
+                "* salt.modules.neutron"
+                "* salt.pillar.neutron"
+                "Please migrate to neutronng."
+                "salt.modules.neutron -> salt.modules.neutronng"
+                "salt.pillar.neutron -> salt.pillar.neutronng"
             ),
         )
         if not HAS_NEUTRON:
