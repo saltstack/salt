@@ -83,18 +83,18 @@ Function Get-Settings {
 
         # DLL's for 64 bit Windows
         $64bitDLLs = @{
-            "Libeay"     = "libeay32.dll"
-            "SSLeay"     = "ssleay32.dll"
-            "OpenSSLLic" = "OpenSSL_License.txt"
+            "Libeay"     = "openssl/1.1.1j/libeay32.dll"
+            "SSLeay"     = "openssl/1.1.1j/ssleay32.dll"
+            "OpenSSLLic" = "openssl/1.1.1j/OpenSSL_License.txt"
             "Libsodium"  = "libsodium/1.0.18/libsodium.dll"
         }
         $ini.Add("64bitDLLs", $64bitDLLs)
 
         # DLL's for 32 bit Windows
         $32bitDLLs = @{
-            "Libeay"     = "libeay32.dll"
-            "SSLeay"     = "ssleay32.dll"
-            "OpenSSLLic" = "OpenSSL_License.txt"
+            "Libeay"     = "openssl/1.1.1j/libeay32.dll"
+            "SSLeay"     = "openssl/1.1.1j/ssleay32.dll"
+            "OpenSSLLic" = "openssl/1.1.1j/OpenSSL_License.txt"
             "Libsodium"  = "libsodium/1.0.18/libsodium.dll"
         }
         $ini.Add("32bitDLLs", $32bitDLLs)
