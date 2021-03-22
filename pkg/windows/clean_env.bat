@@ -8,7 +8,7 @@ rem Make sure the script is run as Admin
 echo Administrative permissions required. Detecting permissions ...
 echo ---------------------------------------------------------------------
 net session >nul 2>&1
-if errorlevel 1 (
+if %errorLevel%==0 (
     echo Success: Administrative permissions confirmed.
 ) else (
     echo Failure: This script must be run as Administrator
