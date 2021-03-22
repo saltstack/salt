@@ -320,6 +320,31 @@ def create(vm_):
         automount=vm_.get("automount", None),
     )
 
+    __utils__["cloud.fire_event"](
+        "event",
+        "requesting instance",
+        "salt/cloud/{0}/requesting".format(name),
+        args=__utils__["cloud.filter_event"](
+            "requesting", vm_, ["name", "profile", "provider", "driver"]
+        ),
+        sock_dir=__opts__["sock_dir"],
+        transport=__opts__["transport"],
+    )
+
+    while True:
+        server = client.servers.get_by_id(response.server.id)
+
+        if server.status == "running":
+            log.info("Server {0} is up running now.".format(server.name))
+            break
+        else:
+            log.info(
+                "Waiting for server {0} to be running: {1}".format(
+                    server.name, server.status
+                )
+            )
+            time.sleep(1)
+
     # Bootstrap if ssh keys are configured
     server = response.server
     vm_.update(
@@ -330,6 +355,15 @@ def create(vm_):
                 "private_key", vm_, __opts__, search_global=False, default=None
             ),
         }
+    )
+
+    __utils__["cloud.fire_event"](
+        "event",
+        "waiting for ssh",
+        "salt/cloud/{0}/waiting_for_ssh".format(name),
+        sock_dir=__opts__["sock_dir"],
+        args={"ip_address": vm_["ssh_host"]},
+        transport=__opts__["transport"],
     )
 
     ret = __utils__["cloud.bootstrap"](vm_, __opts__)
