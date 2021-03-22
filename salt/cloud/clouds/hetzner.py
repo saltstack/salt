@@ -309,7 +309,7 @@ def create(vm_):
     # Get the networks
     networks = vm_.get("networks", None)
     if networks:
-        networks = [vol for vol in client.networks.get_all() if vol in networks] 
+        networks = [vol for vol in client.networks.get_all() if vol in networks]
 
     # Create the machine
     response = client.servers.create(
