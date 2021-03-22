@@ -73,3 +73,24 @@ class GitTestCase(TestCase, LoaderModuleMockMixin):
             )
             assert result["result"] is True, result
             git_diff.assert_not_called()
+
+    def test_latest_without_target(self):
+        """
+        Test latest when called without passing target
+        """
+        name = "https://foo.com/bar/baz.git"
+        self.assertRaises(TypeError, git_state.latest, name)
+
+    def test_detached_without_target(self):
+        """
+        Test detached when called without passing target
+        """
+        name = "https://foo.com/bar/baz.git"
+        self.assertRaises(TypeError, git_state.detached, name)
+
+    def test_cloned_without_target(self):
+        """
+        Test cloned when called without passing target
+        """
+        name = "https://foo.com/bar/baz.git"
+        self.assertRaises(TypeError, git_state.cloned, name)

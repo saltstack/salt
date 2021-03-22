@@ -1,22 +1,16 @@
-# -*- coding: utf-8 -*-
 """
 The match module allows for match routines to be run and determine target specs
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-import collections
 import copy
-
-# Import python libs
 import inspect
 import logging
 import sys
+from collections.abc import Mapping
 
-# Import salt libs
 import salt.loader
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import SaltException
-from salt.ext import six
 
 __func_alias__ = {"list_": "list"}
 
@@ -39,18 +33,16 @@ def compound(tgt, minion_id=None):
         salt '*' match.compound 'L@cheese,foo and *'
     """
     if minion_id is not None:
-        opts = copy.copy(__opts__)
-        if not isinstance(minion_id, six.string_types):
-            minion_id = six.text_type(minion_id)
-        opts["id"] = minion_id
-    else:
-        opts = __opts__
-    matchers = salt.loader.matchers(opts)
+        if not isinstance(minion_id, str):
+            minion_id = str(minion_id)
+    matchers = salt.loader.matchers(__opts__)
     try:
-        return matchers["compound_match.match"](tgt)
+        ret = matchers["compound_match.match"](tgt, opts=__opts__, minion_id=minion_id)
     except Exception as exc:  # pylint: disable=broad-except
         log.exception(exc)
-        return False
+        ret = False
+
+    return ret
 
 
 def ipcidr(tgt):
@@ -243,15 +235,11 @@ def list_(tgt, minion_id=None):
         salt '*' match.list 'server1,server2'
     """
     if minion_id is not None:
-        opts = copy.copy(__opts__)
-        if not isinstance(minion_id, six.string_types):
-            minion_id = six.text_type(minion_id)
-        opts["id"] = minion_id
-    else:
-        opts = __opts__
-    matchers = salt.loader.matchers(opts)
+        if not isinstance(minion_id, str):
+            minion_id = str(minion_id)
+    matchers = salt.loader.matchers(__opts__)
     try:
-        return matchers["list_match.match"](tgt, opts=__opts__)
+        return matchers["list_match.match"](tgt, opts=__opts__, minion_id=minion_id)
     except Exception as exc:  # pylint: disable=broad-except
         log.exception(exc)
         return False
@@ -273,15 +261,11 @@ def pcre(tgt, minion_id=None):
         salt '*' match.pcre '.*'
     """
     if minion_id is not None:
-        opts = copy.copy(__opts__)
-        if not isinstance(minion_id, six.string_types):
-            minion_id = six.text_type(minion_id)
-        opts["id"] = minion_id
-    else:
-        opts = __opts__
-    matchers = salt.loader.matchers(opts)
+        if not isinstance(minion_id, str):
+            minion_id = str(minion_id)
+    matchers = salt.loader.matchers(__opts__)
     try:
-        return matchers["pcre_match.match"](tgt, opts=__opts__)
+        return matchers["pcre_match.match"](tgt, opts=__opts__, minion_id=minion_id)
     except Exception as exc:  # pylint: disable=broad-except
         log.exception(exc)
         return False
@@ -303,16 +287,12 @@ def glob(tgt, minion_id=None):
         salt '*' match.glob '*'
     """
     if minion_id is not None:
-        opts = copy.copy(__opts__)
-        if not isinstance(minion_id, six.string_types):
-            minion_id = six.text_type(minion_id)
-        opts["id"] = minion_id
-    else:
-        opts = __opts__
-    matchers = salt.loader.matchers(opts)
+        if not isinstance(minion_id, str):
+            minion_id = str(minion_id)
+    matchers = salt.loader.matchers(__opts__)
 
     try:
-        return matchers["glob_match.match"](tgt, opts=__opts__)
+        return matchers["glob_match.match"](tgt, opts=__opts__, minion_id=minion_id)
     except Exception as exc:  # pylint: disable=broad-except
         log.exception(exc)
         return False
@@ -345,7 +325,7 @@ def filter_by(
         {% set roles = salt['match.filter_by']({
             'web*': ['app', 'caching'],
             'db*': ['db'],
-        }, default='web*') %}
+        }, minion_id=grains['id'], default='web*') %}
 
         # Make the filtered data available to Pillar:
         roles: {{ roles | yaml() }}
@@ -358,7 +338,7 @@ def filter_by(
         params = (key, minion_id) if minion_id else (key,)
         if expr_funcs[tgt_type](*params):
             if merge:
-                if not isinstance(merge, collections.Mapping):
+                if not isinstance(merge, Mapping):
                     raise SaltException(
                         "filter_by merge argument must be a dictionary."
                     )

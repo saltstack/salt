@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage accounts in Samba's passdb using pdbedit
 
@@ -8,20 +7,14 @@ Manage accounts in Samba's passdb using pdbedit
 
 .. versionadded:: 2017.7.0
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import binascii
 import hashlib
 import logging
-
-# Import Python libs
 import re
 
 import salt.modules.cmdmod
 import salt.utils.path
-
-# Import Salt libs
-from salt.ext import six
 
 try:
     from shlex import quote as _quote_args  # pylint: disable=e0611
@@ -49,16 +42,20 @@ def __virtual__():
     if not salt.utils.path.which("pdbedit"):
         return (False, "pdbedit command is not available")
 
-    # NOTE: check version is >= 4.8.x
+    # NOTE: check version is >= 4.5.x
     ver = salt.modules.cmdmod.run("pdbedit -V")
-    ver_regex = re.compile(r"^Version\s(\d+)\.(\d+)\.(\d+)$")
+    ver_regex = re.compile(r"^Version\s(\d+)\.(\d+)\.(\d+).*$")
     ver_match = ver_regex.match(ver)
     if not ver_match:
         return (False, "pdbedit -V returned an unknown version format")
 
-    if not (int(ver_match.group(1)) >= 4 and int(ver_match.group(2)) >= 8):
-        return (False, "pdbedit is to old, 4.8.0 or newer is required")
+    if not (int(ver_match.group(1)) >= 4 and int(ver_match.group(2)) >= 5):
+        return (False, "pdbedit is to old, 4.5.0 or newer is required")
 
+    try:
+        hashlib.new("md4", "".encode("utf-16le"))
+    except ValueError:
+        return (False, "Hash type md4 unsupported")
     return __virtualname__
 
 
@@ -361,9 +358,9 @@ def modify(
             if (
                 val is not None
                 and key in current
-                and not current[key].endswith(six.text_type(val))
+                and not current[key].endswith(str(val))
             ):
-                changes[key] = six.text_type(val)
+                changes[key] = str(val)
         elif key in ["account flags"]:
             if val is not None:
                 if val.startswith("["):

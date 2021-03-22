@@ -45,11 +45,13 @@ def present(name, provider):
     """
     ret = {"name": name, "result": True, "comment": "", "changes": {}}
 
-    is_present = list(
-        __salt__["cloud.action"]("queues_exists", provider=provider, name=name)[
-            provider
-        ].values()
-    )[0]
+    is_present = next(
+        iter(
+            __salt__["cloud.action"]("queues_exists", provider=provider, name=name)[
+                provider
+            ].values()
+        )
+    )
 
     if not is_present:
         if __opts__["test"]:
@@ -88,11 +90,13 @@ def absent(name, provider):
     """
     ret = {"name": name, "result": True, "comment": "", "changes": {}}
 
-    is_present = list(
-        __salt__["cloud.action"]("queues_exists", provider=provider, name=name)[
-            provider
-        ].values()
-    )[0]
+    is_present = next(
+        iter(
+            __salt__["cloud.action"]("queues_exists", provider=provider, name=name)[
+                provider
+            ].values()
+        )
+    )
 
     if is_present:
         if __opts__["test"]:

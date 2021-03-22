@@ -1,19 +1,15 @@
-# -*- coding: utf-8 -*-
 """
 Tests for the spm info utility
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import shutil
 
 import pytest
 from tests.support.case import SPMCase
-from tests.support.helpers import destructiveTest
-from tests.support.unit import skipIf
 
 
-@destructiveTest
 @pytest.mark.windows_whitelisted
+@pytest.mark.destructive_test
 class SPMInfoTest(SPMCase):
     """
     Validate the spm info command
@@ -23,7 +19,7 @@ class SPMInfoTest(SPMCase):
         self.config = self._spm_config()
         self._spm_build_files(self.config)
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_spm_info(self):
         """
         test spm build

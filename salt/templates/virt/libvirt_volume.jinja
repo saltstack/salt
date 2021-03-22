@@ -1,17 +1,39 @@
-<volume>
-  <name>{{ name }}/{{ filename }}</name>
-  <key>{{ name }}/{{ volname }}</key>
+<volume{% if type %} type='{{ type }}'{% endif %}>
+  <name>{{ name }}</name>
   <source>
   </source>
   <capacity unit='KiB'>{{ size }}</capacity>
-  <allocation unit='KiB'>0</allocation>
+  <allocation unit='KiB'>{{ allocation }}</allocation>
   <target>
-    <path>{{ pool }}{{ name }}/{{ filename }}</path>
-    <format type='{{ disktype }}'/>
+    {%- if format %}
+    <format type='{{ format }}'/>
+    {%- endif %}
+    {%- if target.permissions -%}
     <permissions>
-      <mode>00</mode>
-      <owner>0</owner>
-      <group>0</group>
+      {%- if target.permissions.get('mode') %}
+      <mode>{{ target.permissions.mode }}</mode>
+      {%- endif %}
+      {%- if target.permissions.get('owner') %}
+      <owner>{{ target.permissions.owner }}</owner>
+      {%- endif %}
+      {%- if target.permissions.get('group') %}
+      <group>{{ target.permissions.group }}</group>
+      {%- endif %}
+      {%- if target.permissions.get('label') %}
+      <label>{{ target.permissions.label }}</label>
+      {%- endif %}
     </permissions>
+    {%- endif %}
+    {%- if target.nocow %}
+    <nocow/>
+    {%- endif %}
   </target>
+  {%- if backingStore %}
+  <backingStore>
+    <path>{{ backingStore.path }}</path>
+    {%- if backingStore.format %}
+    <format type='{{ backingStore.format }}'/>
+    {%- endif %}
+  </backingStore>
+  {%- endif %}
 </volume>

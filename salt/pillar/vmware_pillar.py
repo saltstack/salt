@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Pillar data from vCenter or an ESXi host
 
@@ -142,17 +141,11 @@ Optionally, the following keyword arguments can be passed to the ext_pillar for 
             part of the pillar regardless of this setting.
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 
-# Import salt libs
 import salt.utils.dictupdate as dictupdate
 import salt.utils.vmware
-
-# Import 3rd-party libs
-from salt.ext import six
 
 try:
     # pylint: disable=no-name-in-module
@@ -329,10 +322,11 @@ def ext_pillar(minion_id, pillar, **kwargs):  # pylint: disable=W0613
     if "property_types" in kwargs:
         for prop_type in kwargs["property_types"]:
             if isinstance(prop_type, dict):
-                property_types.append(getattr(vim, prop_type.keys()[0]))
-                if isinstance(prop_type[prop_type.keys()[0]], list):
+                next_prop_type_key = next(iter(prop_type))
+                property_types.append(getattr(vim, next_prop_type_key))
+                if isinstance(prop_type[next_prop_type_key], list):
                     pillar_attributes = (
-                        pillar_attributes + prop_type[prop_type.keys()[0]]
+                        pillar_attributes + prop_type[next_prop_type_key]
                     )
                 else:
                     log.warning(
@@ -369,7 +363,12 @@ def ext_pillar(minion_id, pillar, **kwargs):  # pylint: disable=W0613
         vmware_pillar[pillar_key] = {}
         try:
             _conn = salt.utils.vmware.get_service_instance(
-                host, username, password, protocol, port
+                host,
+                username,
+                password,
+                protocol,
+                port,
+                verify_ssl=kwargs.get("verify_ssl", True),
             )
             if _conn:
                 data = None
@@ -409,12 +408,10 @@ def ext_pillar(minion_id, pillar, **kwargs):  # pylint: disable=W0613
                 )
         except RuntimeError:
             log.error(
-                (
-                    "A runtime error occurred in the vmware_pillar, "
-                    "this is likely caused by an infinite recursion in "
-                    "a requested attribute.  Verify your requested attributes "
-                    "and reconfigure the pillar."
-                )
+                "A runtime error occurred in the vmware_pillar, "
+                "this is likely caused by an infinite recursion in "
+                "a requested attribute.  Verify your requested attributes "
+                "and reconfigure the pillar."
             )
 
         return vmware_pillar
@@ -434,7 +431,7 @@ def _recurse_config_to_dict(t_data):
             return t_list
         elif isinstance(t_data, dict):
             t_dict = {}
-            for k, v in six.iteritems(t_data):
+            for k, v in t_data.items():
                 t_dict[k] = _recurse_config_to_dict(v)
             return t_dict
         else:

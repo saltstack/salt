@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Support for Tomcat
 
@@ -60,22 +59,17 @@ Also configure a user in the conf/tomcat-users.xml file:
      Tomcat Version:
          Apache Tomcat/7.0.37
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import glob
 import hashlib
 import logging
-
-# Import python libs
 import os
 import re
 import tempfile
 
-# Import Salt libs
 import salt.utils.data
 import salt.utils.stringutils
 
-# Import 3rd-party libs
 # pylint: disable=no-name-in-module,import-error
 from salt.ext.six import string_types as _string_types
 from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
@@ -233,11 +227,11 @@ def _wget(cmd, opts=None, url="http://localhost:8080/manager", timeout=180):
     if url[-1] != "/":
         url += "/"
     url6 = url
-    url += "text/{0}".format(cmd)
-    url6 += "{0}".format(cmd)
+    url += "text/{}".format(cmd)
+    url6 += "{}".format(cmd)
     if opts:
-        url += "?{0}".format(_urlencode(opts))
-        url6 += "?{0}".format(_urlencode(opts))
+        url += "?{}".format(_urlencode(opts))
+        url6 += "?{}".format(_urlencode(opts))
 
     # Make the HTTP request
     _install_opener(auth)
@@ -274,7 +268,7 @@ def _simple_cmd(cmd, app, url="http://localhost:8080/manager", timeout=180):
         opts = {"path": app, "version": ls(url)[app]["version"]}
         return "\n".join(_wget(cmd, opts, url, timeout=timeout)["msg"])
     except Exception:  # pylint: disable=broad-except
-        return "FAIL - No context exists for path {0}".format(app)
+        return "FAIL - No context exists for path {}".format(app)
 
 
 # Functions
@@ -582,10 +576,10 @@ def deploy_war(
         salt '*' tomcat.deploy_war /tmp/application.war /api yes http://localhost:8080/manager
     """
     # Decide the location to copy the war for the deployment
-    tfile = "salt.{0}".format(os.path.basename(war))
+    tfile = "salt.{}".format(os.path.basename(war))
     if temp_war_location is not None:
         if not os.path.isdir(temp_war_location):
-            return 'Error - "{0}" is not a directory'.format(temp_war_location)
+            return 'Error - "{}" is not a directory'.format(temp_war_location)
         tfile = os.path.join(temp_war_location, tfile)
     else:
         tfile = os.path.join(tempfile.gettempdir(), tfile)
@@ -606,7 +600,7 @@ def deploy_war(
 
     # Prepare options
     opts = {
-        "war": "file:{0}".format(tfile),
+        "war": "file:{}".format(tfile),
         "path": context,
     }
 
@@ -651,7 +645,7 @@ def passwd(passwd, user="", alg="sha1", realm=None):
     digest = hasattr(hashlib, alg) and getattr(hashlib, alg) or None
     if digest:
         if realm:
-            digest.update("{0}:{1}:{2}".format(user, realm, passwd,))
+            digest.update("{}:{}:{}".format(user, realm, passwd,))
         else:
             digest.update(passwd)
 
@@ -721,14 +715,12 @@ def signal(signal=None):
     if signal not in valid_signals:
         return
 
-    cmd = "{0}/bin/catalina.sh {1}".format(__catalina_home(), valid_signals[signal])
+    cmd = "{}/bin/catalina.sh {}".format(__catalina_home(), valid_signals[signal])
     __salt__["cmd.run"](cmd)
 
 
 if __name__ == "__main__":
-    """
-    Allow testing from the CLI
-    """  # pylint: disable=W0105
+    # Allow testing from the CLI
     __opts__ = {}
     __grains__ = {}
     __pillar__ = {

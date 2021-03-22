@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 etcd Database Module
 
@@ -32,8 +31,6 @@ is hosting the etcd database and ``etcd.port`` refers to the port on that host.
 
 """
 
-# import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
@@ -74,8 +71,7 @@ def get(key, service=None, profile=None):  # pylint: disable=W0613
     Get a value from the etcd service
     """
     client = _get_conn(profile)
-    result = client.get(key)
-    return result.value
+    return client.get(key)
 
 
 def delete(key, service=None, profile=None):  # pylint: disable=W0613

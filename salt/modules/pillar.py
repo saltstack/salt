@@ -1,18 +1,12 @@
-# -*- coding: utf-8 -*-
 """
 Extract the pillar data for this minion
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
-import collections
-
-# Import third party libs
 import copy
 import logging
 import os
+from collections.abc import Mapping
 
-# Import salt libs
 import salt.pillar
 import salt.utils.crypt
 import salt.utils.data
@@ -22,7 +16,6 @@ import salt.utils.odict
 import salt.utils.yaml
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import CommandExecutionError
-from salt.ext import six
 
 __proxyenabled__ = ["*"]
 
@@ -148,7 +141,7 @@ def get(
             ret = salt.utils.data.traverse_dict_and_list(
                 pillar_dict, key, {}, delimiter
             )
-            if isinstance(ret, collections.Mapping):
+            if isinstance(ret, Mapping):
                 default = copy.deepcopy(default)
                 return salt.utils.dictupdate.update(
                     default, ret, merge_lists=opt_merge_lists
@@ -189,7 +182,7 @@ def get(
 
     ret = salt.utils.data.traverse_dict_and_list(pillar_dict, key, default, delimiter)
     if ret is KeyError:
-        raise KeyError("Pillar key not found: {0}".format(key))
+        raise KeyError("Pillar key not found: {}".format(key))
 
     return ret
 
@@ -270,17 +263,16 @@ def items(*args, **kwargs):
             )
         except Exception as exc:  # pylint: disable=broad-except
             raise CommandExecutionError(
-                "Failed to decrypt pillar override: {0}".format(exc)
+                "Failed to decrypt pillar override: {}".format(exc)
             )
 
     pillar = salt.pillar.get_pillar(
         __opts__,
-        __grains__,
+        dict(__grains__),
         __opts__["id"],
         pillar_override=pillar_override,
         pillarenv=pillarenv,
     )
-
     return pillar.compile_pillar()
 
 
@@ -297,13 +289,11 @@ def _obfuscate_inner(var):
     In the special case of mapping types, keys are not obfuscated
     """
     if isinstance(var, (dict, salt.utils.odict.OrderedDict)):
-        return var.__class__(
-            (key, _obfuscate_inner(val)) for key, val in six.iteritems(var)
-        )
+        return var.__class__((key, _obfuscate_inner(val)) for key, val in var.items())
     elif isinstance(var, (list, set, tuple)):
         return type(var)(_obfuscate_inner(v) for v in var)
     else:
-        return "<{0}>".format(var.__class__.__name__)
+        return "<{}>".format(var.__class__.__name__)
 
 
 def obfuscate(*args):
@@ -452,7 +442,7 @@ def raw(key=None):
     if key:
         ret = __pillar__.get(key, {})
     else:
-        ret = __pillar__
+        ret = dict(__pillar__)
 
     return ret
 
@@ -509,7 +499,7 @@ def ext(external, pillar=None):
         salt '*' pillar.ext "{'git': ['master https://github.com/myuser/myrepo']}"
         salt '*' pillar.ext "{'git': [{'mybranch https://github.com/myuser/myrepo': [{'env': 'base'}]}]}"
     '''
-    if isinstance(external, six.string_types):
+    if isinstance(external, str):
         external = salt.utils.yaml.safe_load(external)
     pillar_obj = salt.pillar.get_pillar(
         __opts__,
@@ -546,10 +536,10 @@ def keys(key, delimiter=DEFAULT_TARGET_DELIM):
     ret = salt.utils.data.traverse_dict_and_list(__pillar__, key, KeyError, delimiter)
 
     if ret is KeyError:
-        raise KeyError("Pillar key not found: {0}".format(key))
+        raise KeyError("Pillar key not found: {}".format(key))
 
     if not isinstance(ret, dict):
-        raise ValueError("Pillar value in key {0} is not a dict".format(key))
+        raise ValueError("Pillar value in key {} is not a dict".format(key))
 
     return list(ret)
 

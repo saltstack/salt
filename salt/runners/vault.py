@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 :maintainer:    SaltStack
 :maturity:      new
@@ -7,27 +6,23 @@
 Runner functions supporting the Vault modules. Configuration instructions are
 documented in the execution module docs.
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import base64
 import json
 import logging
 import string
+import time
 
 import requests
-
-# Import Salt libs
 import salt.crypt
 import salt.exceptions
-
-# Import 3rd-party libs
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
 
-def generate_token(minion_id, signature, impersonated_by_master=False):
+def generate_token(
+    minion_id, signature, impersonated_by_master=False, ttl=None, uses=None
+):
     """
     Generate a Vault token for minion minion_id
 
@@ -41,6 +36,12 @@ def generate_token(minion_id, signature, impersonated_by_master=False):
     impersonated_by_master
         If the master needs to create a token on behalf of the minion, this is
         True. This happens when the master generates minion pillars.
+
+    ttl
+        Ticket time to live in seconds, 1m minutes, or 2h hrs
+
+    uses
+        Number of times a token can be used
     """
     log.debug(
         "Token generation request for %s (impersonated by master: %s)",
@@ -48,16 +49,23 @@ def generate_token(minion_id, signature, impersonated_by_master=False):
         impersonated_by_master,
     )
     _validate_signature(minion_id, signature, impersonated_by_master)
-
     try:
-        config = __opts__["vault"]
+        config = __opts__.get("vault", {})
         verify = config.get("verify", None)
+        # Allow disabling of minion provided values via the master
+        allow_minion_override = config["auth"].get("allow_minion_override", False)
+        # This preserves the previous behavior of default TTL and 1 use
+        if not allow_minion_override or uses is None:
+            uses = config["auth"].get("uses", 1)
+        if not allow_minion_override or ttl is None:
+            ttl = config["auth"].get("ttl", None)
+        storage_type = config["auth"].get("token_backend", "session")
 
         if config["auth"]["method"] == "approle":
             if _selftoken_expired():
                 log.debug("Vault token expired. Recreating one")
                 # Requesting a short ttl token
-                url = "{0}/v1/auth/approle/login".format(config["url"])
+                url = "{}/v1/auth/approle/login".format(config["url"])
 
                 payload = {"role_id": config["auth"]["role_id"]}
                 if "secret_id" in config["auth"]:
@@ -76,9 +84,12 @@ def generate_token(minion_id, signature, impersonated_by_master=False):
         }
         payload = {
             "policies": _get_policies(minion_id, config),
-            "num_uses": 1,
+            "num_uses": uses,
             "meta": audit_data,
         }
+
+        if ttl is not None:
+            payload["explicit_max_ttl"] = str(ttl)
 
         if payload["policies"] == []:
             return {"error": "No policies matched minion"}
@@ -90,13 +101,21 @@ def generate_token(minion_id, signature, impersonated_by_master=False):
             return {"error": response.reason}
 
         auth_data = response.json()["auth"]
-        return {
+        ret = {
             "token": auth_data["client_token"],
+            "lease_duration": auth_data["lease_duration"],
+            "renewable": auth_data["renewable"],
+            "issued": int(round(time.time())),
             "url": config["url"],
             "verify": verify,
+            "token_backend": storage_type,
         }
+        if uses >= 0:
+            ret["uses"] = uses
+
+        return ret
     except Exception as e:  # pylint: disable=broad-except
-        return {"error": six.text_type(e)}
+        return {"error": str(e)}
 
 
 def unseal():
@@ -155,15 +174,15 @@ def _validate_signature(minion_id, signature, impersonated_by_master):
     """
     pki_dir = __opts__["pki_dir"]
     if impersonated_by_master:
-        public_key = "{0}/master.pub".format(pki_dir)
+        public_key = "{}/master.pub".format(pki_dir)
     else:
-        public_key = "{0}/minions/{1}".format(pki_dir, minion_id)
+        public_key = "{}/minions/{}".format(pki_dir, minion_id)
 
     log.trace("Validating signature for %s", minion_id)
     signature = base64.b64decode(signature)
     if not salt.crypt.verify_signature(public_key, minion_id, signature):
         raise salt.exceptions.AuthenticationError(
-            "Could not validate token request from {0}".format(minion_id)
+            "Could not validate token request from {}".format(minion_id)
         )
     log.trace("Signature ok")
 
@@ -220,21 +239,21 @@ def _expand_pattern_lists(pattern, **mappings):
     """
     expanded_patterns = []
     f = string.Formatter()
-    """
-    This function uses a string.Formatter to get all the formatting tokens from
-    the pattern, then recursively replaces tokens whose expanded value is a
-    list. For a list with N items, it will create N new pattern strings and
-    then continue with the next token. In practice this is expected to not be
-    very expensive, since patterns will typically involve a handful of lists at
-    most.
-    """  # pylint: disable=W0105
+
+    # This function uses a string.Formatter to get all the formatting tokens from
+    # the pattern, then recursively replaces tokens whose expanded value is a
+    # list. For a list with N items, it will create N new pattern strings and
+    # then continue with the next token. In practice this is expected to not be
+    # very expensive, since patterns will typically involve a handful of lists at
+    # most.
+
     for (_, field_name, _, _) in f.parse(pattern):
         if field_name is None:
             continue
         (value, _) = f.get_field(field_name, None, mappings)
         if isinstance(value, list):
             token = "{{{0}}}".format(field_name)
-            expanded = [pattern.replace(token, six.text_type(elem)) for elem in value]
+            expanded = [pattern.replace(token, str(elem)) for elem in value]
             for expanded_item in expanded:
                 result = _expand_pattern_lists(expanded_item, **mappings)
                 expanded_patterns += result
@@ -248,7 +267,7 @@ def _selftoken_expired():
     """
     try:
         verify = __opts__["vault"].get("verify", None)
-        url = "{0}/v1/auth/token/lookup-self".format(__opts__["vault"]["url"])
+        url = "{}/v1/auth/token/lookup-self".format(__opts__["vault"]["url"])
         if "token" not in __opts__["vault"]["auth"]:
             return True
         headers = {"X-Vault-Token": __opts__["vault"]["auth"]["token"]}
@@ -258,7 +277,7 @@ def _selftoken_expired():
         return False
     except Exception as e:  # pylint: disable=broad-except
         raise salt.exceptions.CommandExecutionError(
-            "Error while looking up self token : {0}".format(six.text_type(e))
+            "Error while looking up self token : {}".format(str(e))
         )
 
 

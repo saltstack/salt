@@ -1,7 +1,3 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import
-
 import pytest
 import salt.utils.platform
 from tests.support.case import ModuleCase
@@ -15,7 +11,7 @@ class WinServermanagerTest(ModuleCase):
     Test for salt.modules.win_servermanager
     """
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_list_available(self):
         """
         Test list available features to install

@@ -1,9 +1,6 @@
-# -*- coding: utf-8 -*-
-
 """
 Test the ssh module
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import shutil
@@ -13,9 +10,7 @@ import salt.utils.files
 import salt.utils.platform
 from salt.ext.tornado.httpclient import HTTPClient
 from tests.support.case import ModuleCase
-from tests.support.helpers import skip_if_binaries_missing
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import skipIf
 
 GITHUB_FINGERPRINT = "9d:38:5b:83:a9:17:52:92:56:1a:5e:c4:d4:81:8e:0a:ca:51:a2:64:f1:74:20:11:2e:f8:8a:c3:a1:39:49:8f"
 
@@ -30,8 +25,8 @@ def check_status():
         return False
 
 
-@skip_if_binaries_missing(["ssh", "ssh-keygen"], check_all=True)
 @pytest.mark.windows_whitelisted
+@pytest.mark.skip_if_binaries_missing("ssh", "ssh-keygen", check_all=True)
 class SSHModuleTest(ModuleCase):
     """
     Test the ssh module
@@ -49,7 +44,7 @@ class SSHModuleTest(ModuleCase):
         """
         if not check_status():
             self.skipTest("External source, github.com is down")
-        super(SSHModuleTest, self).setUp()
+        super().setUp()
         if not os.path.isdir(self.subsalt_dir):
             os.makedirs(self.subsalt_dir)
 
@@ -63,10 +58,10 @@ class SSHModuleTest(ModuleCase):
         """
         if os.path.isdir(self.subsalt_dir):
             shutil.rmtree(self.subsalt_dir)
-        super(SSHModuleTest, self).tearDown()
+        super().tearDown()
         del self.key
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_auth_keys(self):
         """
         test ssh.auth_keys
@@ -90,10 +85,10 @@ class SSHModuleTest(ModuleCase):
             self.assertEqual(key_data["fingerprint"], GITHUB_FINGERPRINT)
         except AssertionError as exc:
             raise AssertionError(
-                "AssertionError: {0}. Function returned: {1}".format(exc, ret)
+                "AssertionError: {}. Function returned: {}".format(exc, ret)
             )
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_bad_enctype(self):
         """
         test to make sure that bad key encoding types don't generate an
@@ -112,7 +107,7 @@ class SSHModuleTest(ModuleCase):
         # user will get an indicator of what went wrong.
         self.assertEqual(len(list(ret.items())), 0)  # Zero keys found
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_get_known_host_entries(self):
         """
         Check that known host information is returned from ~/.ssh/config
@@ -129,10 +124,10 @@ class SSHModuleTest(ModuleCase):
             self.assertEqual(ret["fingerprint"], GITHUB_FINGERPRINT)
         except AssertionError as exc:
             raise AssertionError(
-                "AssertionError: {0}. Function returned: {1}".format(exc, ret)
+                "AssertionError: {}. Function returned: {}".format(exc, ret)
             )
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_recv_known_host_entries(self):
         """
         Check that known host information is returned from remote host
@@ -145,10 +140,10 @@ class SSHModuleTest(ModuleCase):
             self.assertEqual(ret[0]["fingerprint"], GITHUB_FINGERPRINT)
         except AssertionError as exc:
             raise AssertionError(
-                "AssertionError: {0}. Function returned: {1}".format(exc, ret)
+                "AssertionError: {}. Function returned: {}".format(exc, ret)
             )
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_check_known_host_add(self):
         """
         Check known hosts by its fingerprint. File needs to be updated
@@ -158,7 +153,7 @@ class SSHModuleTest(ModuleCase):
         ret = self.run_function("ssh.check_known_host", arg, **kwargs)
         self.assertEqual(ret, "add")
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_check_known_host_update(self):
         """
         ssh.check_known_host update verification
@@ -177,7 +172,7 @@ class SSHModuleTest(ModuleCase):
         ret = self.run_function("ssh.check_known_host", arg, **dict(kwargs, key="YQ=="))
         self.assertEqual(ret, "update")
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_check_known_host_exists(self):
         """
         Verify check_known_host_exists
@@ -198,7 +193,7 @@ class SSHModuleTest(ModuleCase):
         )
         self.assertEqual(ret, "exists")
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_rm_known_host(self):
         """
         ssh.rm_known_host
@@ -217,7 +212,7 @@ class SSHModuleTest(ModuleCase):
         ret = self.run_function("ssh.check_known_host", arg, **kwargs)
         self.assertEqual(ret, "add")
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_set_known_host(self):
         """
         ssh.set_known_host
@@ -232,7 +227,7 @@ class SSHModuleTest(ModuleCase):
             self.assertEqual(ret["new"][0]["fingerprint"], GITHUB_FINGERPRINT)
         except AssertionError as exc:
             raise AssertionError(
-                "AssertionError: {0}. Function returned: {1}".format(exc, ret)
+                "AssertionError: {}. Function returned: {}".format(exc, ret)
             )
         # check that item does exist
         ret = self.run_function(
@@ -244,7 +239,7 @@ class SSHModuleTest(ModuleCase):
             self.assertEqual(ret["fingerprint"], GITHUB_FINGERPRINT)
         except AssertionError as exc:
             raise AssertionError(
-                "AssertionError: {0}. Function returned: {1}".format(exc, ret)
+                "AssertionError: {}. Function returned: {}".format(exc, ret)
             )
         # add the same item once again
         ret = self.run_function(
@@ -254,5 +249,5 @@ class SSHModuleTest(ModuleCase):
             self.assertEqual(ret["status"], "exists")
         except AssertionError as exc:
             raise AssertionError(
-                "AssertionError: {0}. Function returned: {1}".format(exc, ret)
+                "AssertionError: {}. Function returned: {}".format(exc, ret)
             )

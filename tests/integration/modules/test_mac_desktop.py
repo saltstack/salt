@@ -1,34 +1,19 @@
-# -*- coding: utf-8 -*-
 """
 Integration tests for the mac_desktop execution module.
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import 3rd-party libs
-from salt.ext import six
-
-# Import Salt Testing Libs
+import pytest
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, skip_if_not_root
-from tests.support.unit import skipIf
+from tests.support.helpers import runs_on
 
 
-@destructiveTest
-@skip_if_not_root
+@pytest.mark.destructive_test
+@runs_on(kernel="Darwin")
+@pytest.mark.skip_if_not_root
 class MacDesktopTestCase(ModuleCase):
     """
     Integration tests for the mac_desktop module.
     """
-
-    def setUp(self):
-        """
-        Sets up test requirements.
-        """
-        os_grain = self.run_function("grains.item", ["kernel"])
-        if os_grain["kernel"] not in "Darwin":
-            self.skipTest("Test not applicable to '{kernel}' kernel".format(**os_grain))
 
     def test_get_output_volume(self):
         """
@@ -37,18 +22,16 @@ class MacDesktopTestCase(ModuleCase):
         ret = self.run_function("desktop.get_output_volume")
         self.assertIsNotNone(ret)
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_set_output_volume(self):
         """
         Tests the return of set_output_volume.
         """
         current_vol = self.run_function("desktop.get_output_volume")
         to_set = 10
-        if current_vol == six.text_type(to_set):
+        if current_vol == str(to_set):
             to_set += 2
-        new_vol = self.run_function(
-            "desktop.set_output_volume", [six.text_type(to_set)]
-        )
+        new_vol = self.run_function("desktop.set_output_volume", [str(to_set)])
         check_vol = self.run_function("desktop.get_output_volume")
         self.assertEqual(new_vol, check_vol)
 
@@ -67,7 +50,7 @@ class MacDesktopTestCase(ModuleCase):
         """
         self.assertTrue(self.run_function("desktop.lock"))
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_say(self):
         """
         Tests the return of the say function.

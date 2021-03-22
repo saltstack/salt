@@ -1,16 +1,6 @@
-# -*- coding: utf-8 -*-
-
-# Import Python libs
-from __future__ import absolute_import
-
-import os
-
-# Import module
 import salt.modules.baredoc as baredoc
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.runtests import RUNTIME_VARS
-
-# Import Salt Testing Libs
 from tests.support.unit import TestCase
 
 
@@ -22,10 +12,8 @@ class BaredocTest(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {
             baredoc: {
-                "__opts__": {
-                    "extension_modules": os.path.join(RUNTIME_VARS.CODE_DIR, "salt"),
-                },
-                "__grains__": {"saltpath": os.path.join(RUNTIME_VARS.CODE_DIR, "salt")},
+                "__opts__": {"extension_modules": RUNTIME_VARS.SALT_CODE_DIR},
+                "__grains__": {"saltpath": RUNTIME_VARS.SALT_CODE_DIR},
             }
         }
 
@@ -74,3 +62,33 @@ class BaredocTest(TestCase, LoaderModuleMockMixin):
         ret = baredoc.list_modules("mdata")
         assert "put" in ret["mdata"][2]
         assert "keyname" in ret["mdata"][2]["put"]
+
+    def test_baredoc_state_docs(self):
+        ret = baredoc.state_docs()
+        assert "XML Manager" in ret["xml"]
+        assert "zabbix_usergroup" in ret
+
+    def test_baredoc_state_docs_single_arg(self):
+        ret = baredoc.state_docs("xml")
+        assert "XML Manager" in ret["xml"]
+        ret = baredoc.state_docs("xml.value_present")
+        assert "Manages a given XML file" in ret["xml.value_present"]
+
+    def test_baredoc_state_docs_multiple_args(self):
+        ret = baredoc.state_docs("zabbix_hostgroup.present", "xml")
+        assert "Ensures that the host group exists" in ret["zabbix_hostgroup.present"]
+        assert "XML Manager" in ret["xml"]
+        assert "Manages a given XML file" in ret["xml.value_present"]
+
+    def test_baredoc_module_docs(self):
+        ret = baredoc.module_docs()
+        assert "A module for testing" in ret["saltcheck"]
+
+    def test_baredoc_module_docs_single_arg(self):
+        ret = baredoc.module_docs("saltcheck")
+        assert "A module for testing" in ret["saltcheck"]
+
+    def test_baredoc_module_docs_multiple_args(self):
+        ret = baredoc.module_docs("saltcheck", "xml.get_value")
+        assert "A module for testing" in ret["saltcheck"]
+        assert "Returns the value of the matched xpath element" in ret["xml.get_value"]

@@ -2,15 +2,12 @@
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
 import salt.modules.chef as chef
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
 
 
@@ -20,10 +17,12 @@ class ChefTestCase(TestCase, LoaderModuleMockMixin):
     """
 
     def setup_loader_modules(self):
-        patcher = patch("salt.utils.path.which", MagicMock(return_value=True))
-        patcher.start()
-        self.addCleanup(patcher.stop)
-        return {chef: {"_exec_cmd": MagicMock(return_value={})}}
+        return {
+            chef: {
+                "_exec_cmd": MagicMock(return_value={}),
+                "__opts__": {"cachedir": RUNTIME_VARS.TMP},
+            }
+        }
 
     # 'client' function tests: 1
 
@@ -31,7 +30,7 @@ class ChefTestCase(TestCase, LoaderModuleMockMixin):
         """
         Test if it execute a chef client run and return a dict
         """
-        with patch.dict(chef.__opts__, {"cachedir": r"c:\salt\var\cache\salt\minion"}):
+        with patch("salt.utils.path.which", MagicMock(return_value=True)):
             self.assertDictEqual(chef.client(), {})
 
     # 'solo' function tests: 1
@@ -40,5 +39,5 @@ class ChefTestCase(TestCase, LoaderModuleMockMixin):
         """
         Test if it execute a chef solo run and return a dict
         """
-        with patch.dict(chef.__opts__, {"cachedir": r"c:\salt\var\cache\salt\minion"}):
+        with patch("salt.utils.path.which", MagicMock(return_value=True)):
             self.assertDictEqual(chef.solo("/dev/sda1"), {})

@@ -98,7 +98,7 @@ def present(name, ip, comment="", clean=False):  # pylint: disable=C0103
     comment
         A comment to include for the host entry
 
-        .. versionadded:: Sodium
+        .. versionadded:: 3001
 
     clean
         Remove any entries which don't match those configured in the ``ip``

@@ -1,4 +1,3 @@
-# Changelog
 All notable changes to Salt will be documented in this file.
 
 This changelog follows [keepachangelog](https://keepachangelog.com/en/1.0.0/) format, and is intended for human consumption.
@@ -6,27 +5,1041 @@ This changelog follows [keepachangelog](https://keepachangelog.com/en/1.0.0/) fo
 This project versioning is _similar_ to [Semantic Versioning](https://semver.org), and is documented in [SEP 14](https://github.com/saltstack/salt-enhancement-proposals/pull/20/files).
 Versions are `MAJOR.PATCH`.
 
-## 3001 - Sodium
-## 3001 - Sodium [yyyy-mm-dd]
+# Changelog
 
-### Removed
+Salt 3003 (2021-03-05)
+======================
 
-### Deprecated
+Removed
+-------
 
-### Changed
+- removed the arg `managed_private_key` from 'salt.states.x509.certificate_managed' (#59247)
+- Drop support for python 3.5 on Windows (#59479)
+
+
+Deprecated
+----------
+
+- Added deprecation warning for grains.get_or_set_hash (#59425)
+
+
+Changed
+-------
+
+- Change `brew cask --list` to `brew list --cask` (#58381)
+- Store git sha in salt/_version.py when installing from a tag so it can be found if needed later. (#59137)
+- Changed package manager detection in yumpkg module (#59201)
+- Updating the pkg beacon to fire the events when there are upgrades to packages, but also when watched packages are installed or removed. Breaking out the logic for listing pkgs from context into a separate function to aid in testing. Updating tests to ensure context is not used when use_context option to list_pkgs is False. (#59463)
+
+
+Fixed
+-----
+
+- Fix incorrect documentation for pillar_source_merging_strategy (#26396)
+- Don't iterate through cloud map errors (#34033)
+- Supress noisy warnings when very old pyzmq is used. (#50327)
+- Fixed glusterfs version parsing for pre-4.0 (#50707)
+- Prevent traceback when trying to list reactors when none are configured. (#53334)
+- Fixed zabbix_host.present to accept all Zabbix host properties (#53838)
+- Binaries for the salt installer package for OSX are now signed and the installer
+  package is notarized (#54513)
+- Guard boto3_elasticsearch loading properly (#55848)
+- Use a capitalized string version of the value of `NodeState` instead (#56589)
+- Adding missing error case to the validation for service beacon. (#56623)
+- The GCE cloud driver only works with apache-libcloud>=2.5.0, prior versions have authentication issues (#56862)
+- zypperpkg add_lock and remove_lock examples do not work (#56922)
+- Compare bytes to bytes so we don't overwrite a correct value (#57212)
+- Fixing expand_repo_def in aptpkg module to include the architecture in the line attribute when it is passed in. (#57600)
+- When passing arguments pass them as keyword arguments so that we can be sure the right value is going where. (#58006, #58579, #59075)
+- Improve module whitelist logic for file backends (#58041)
+- Fix behavior for "onlyif/unless" state conditionals when multiple declarations (#58085)
+- Ensure data is a valid keyword argument for the event.wait function. (#58182)
+- Do not raise "StreamClosedError" traceback on the master logs but only log it (#58301)
+- Fixed issue with win_timezone when dst is turned off. This was causing the
+  minion not to start
+  Use default timezone offset in scheduler when correct timezone cannot be determined (#58379)
+- Pop!_OS 20.04 and 20.10 now support using pkg.* / aptpkg.* (#58395)
+- Restoring functionallity of the textfsm module when using textfsm_path argument (#58499)
+- Invalidate file list cache when cache file has a future last modified time (#58529)
+- Fix issue with setting permissions in combination with the win_perms_reset
+  option (#58541)
+- Adds support for Powershell 7. It is specified by passing shell="pwsh". Only
+  valid if Powershell 7 is installed on the system. (#58598)
+- Fixed the zabbix.host_create call on zabbix_host.present to include the
+  optional parameter visible_name. Now working as documented. (#58602)
+- Fixed some bugs to allow zabbix_host.present to update a host already 
+  existent on Zabbix server:
+
+  - Added checks before "pop" the elements "bulk" and "details" from
+    hostinterfaces_get's response. Without that, the interface comparison
+    didn't works with Zabbix >= 5.0
+  - Fixed the "inventory" comparison. It failed when both current and new
+    inventory were missing.
+  - Rewrite of the update_interfaces routine to really "update" the 
+    interfaces and not trying to delete and recreate all interfaces, 
+    which almost always gives errors as interfaces with linked items
+    can't be deleted. (#58603)
+- Added the "details" mandatory object with the properly default values
+  when creating a SNMP hostinterface in Zabbix 5.0 (#58620)
+- Fixing an issue preventing running pillar.get against pillar values with integers as pillar keys. (#58714)
+- Adding a new option to pass client_flags to MySQL connections, for example passing the option to support multiple statements in queries. (#58718)
+- Fixed two performance bugs in the sysctl.present state.  Their impact is
+  especially great on FreeBSD machines with large amounts of RAM. (#58732)
+- Fixed an issue when pillar files are included in the `top.sls` and then later included in another pillar file. (#58736)
+- Left over py2 code was causing windows encoding to misbehave (#58749)
+- Return result=None from module.run state to indicate that changes would be made
+  Return result=False from module.run state when called with no functions (#58752)
+- Fix duplicate IP addresses in fqdn_ip4 and fqdn_ip6 grains (#58799)
+- Rename `salt.renderers.toml` to `salt.renderers.tomlmod` which fixes the import error issues as described in #58822
+  Do note that, the renderer is still called `toml`. (#58822)
+- Fixing unhold in yumpkg. Removing unnecessary code and relying on the code that handles dicts later. Adding tests when pkg.installed is called with hold=False. (#58883)
+- Converts the given "grant" to upper case before compare to "ALL".
+  This fixes a problem granting "all privileges" to a MySQL user. (#58933)
+- Strip trailing "/" from repo.uri when comparing repos in "apktpkg.mod_repo" (#58962)
+- When we are checking requisites, run reconcile_procs just on those requisite states not all running states. (#58976)
+- Allow the gpg module to use export_key, delete_key and create_key without a passphrase in GnuPG >= 2.1 (#58980)
+- Updated the documentation, handling and error messages for what size units are allowed by "size" parameter in lvm.lv_present (#58985)
+- Fixing the two failing tests when running on Photon OS. Python 3 installed on Photon OS does not support MD4 hashing, so don't load pdbedit module and skip the test_generate_nt_hash test. Default unmask for files and directories results in them having only user and group permissions so update the test_directory_max_depth test. (#58991)
+- Fixes to netmiko module and proxy module to handle situations where the device is unreachable during the initial connection phase. (#59011)
+- Correct comment when updating postrges users and groups.
+  Errors reported when removing postgres groups.
+  Partial group membership changes in postgres groups. (#59034)
+- Fixed an error when running svn.latest in test mode and using the trust_failures
+  option. (#59069)
+- Fixes to storing schedule items in pillar, when refreshing pillar only update the schedule items if something has changed. (#59104)
+- Fixed timezone module to work in Slackware Linux (#59130)
+- Enforces pywinrm to be version 0.3.0 or higher and upgrade to latest (#59138)
+- Fix a race condition in the ldx module which sometimes caused devices not to be created during container creation. (#59145)
+- Fix issue where passed smb port was being passed to the smb connection when
+  deploying Windows with salt-cloud (#59153)
+- Fixed an error when running on CentOS Stream 8. (#59161)
+- Fix event publish retry when using TCP transport (#59162)
+- Fix docs for `auth_timeout` (#59175)
+- virt.update doesn't update the definition if efi=True and a loader is already set (#59188)
+- Fixed salt.modules.solaris_shadow failing on bytes-like object is require, not 'str'. (#59191)
+- Added support for io2 volumes in ec2 cloud (#59218)
+- When checking if the mode had changed in the file state module, only do so if the passed mode is not None. (#59276)
+- Fixing _sanitze_comments to use sqlparse instead of re.sub. (#59336)
+- Allow use of query parameters in cmd.script source url (#59362)
+- Access user from global group if local group fails to find user. (#59412)
+- Detect and fix grub.xen path (#59484)
+- Stop raising `StopIteration` on generators (#59512)
+- Fix minion race conditions handling SIGTERM signal when loading modules (#59524)
+- Support new output of systemd systemctl list-unit-files in the following modules systemd_service.get_enabled, systemd_service.get_disabled and systemd_service.get_static (#59526)
+- Fix pkg.upgrade with -U arg on FreeBSD, -L flag was deprecated long time. (#59565)
+- Fixing the virtual function for the netimiko module to allow it to run outside of a proxy minion. Adding additional tests. (#59635)
+- Allow "extra_filerefs" as sanitized kwargs for SSH client.
+  Fix regression on "cmd.run" when passing tuples as cmd. (#59664)
+
+
+Added
+-----
+
+- Adding the ability to clear and show the pillar cache enabled when pillar_cache is True. (#37080)
+- SCRAM-SHA-256 support for PostgreSQL passwords.
+  Pass encrypted=scram-sha-256 to the postgres_user.present (or postgres_group.present) state. (#51271)
+- The yumpkg module has been updated to support VMWare's Photon OS, which uses tdnf (a C implementation of dnf).  "VMware Photon OS" has been added to the "RedHat" `os_family` map as part of this change. (#51912)
+- The pkgrepo state now supports VMware Photon OS. (#52550)
+- Added firewallgroups to Vultr Salt Cloud provider (#53677)
+- Added arbitrary kwarg support for tojson filter. (#56012)
+- Add salt monitor beacon to execute salt execution module functions. (#56461)
+- Allow the nameservers to be populated from systemd-resolve. (#57618)
+- Adding reactor_niceness to the default minion configuration. (#57701)
+- CPU model, topology and NUMA node tuning (#57880)
+- Added ``pkg.services_need_restart`` which lists system services that should be restarted after package management operations. (#58261)
+- Allow handling special first boot definition on virtual machine (#58589)
+- Added vgcreate custom parameters to module call: addtag, alloc, autobackup, metadatatype, zero (#58747)
+- Enhance console and serial support in virt module (#58844)
+- Salt's versions report `salt --versions-report` now includes all installed salt extensions into its versions report. (#58938)
+- Support loading entrypoints by passing a module instead of a function. (#58939)
+- Added shadow.gen_password for BSD operating systems. (#59140)
+- Add more network and PCI/USB host devices passthrough support to virt module and states (#59143)
+- Add interface channels management support to rh_ip module. (#59147)
+- Add new minion option return_retry_tries for dynamic return retry tries (#59236)
+- Added salt-cloud support for Hetzner Cloud via the ``hcloud`` library of the provider. (#59301)
+- "AlmaLinux" has been added to the "RedHat" `os_family` map (#59404)
+- Added `blocks` and `attachments` params to the `slack_notify.post_message` function (#59428)
+- Added tcp_reconnect_backoff minion config option for specifying reconnection backoff time for TCP transport (#59431)
+- Added ``swapusage`` beacon to complement the existing ``memusage`` beacon. (#59460)
+- The `salt-run` CLI now accepts `--jid` (#59527)
+- Add bytes option for FreeBSD pkg-stats(8) module. (#59540)
+- Adding mod_beacon function to pkg, service, and file state modules. This function will act similar to the mod_watch function. This will allow supported functions in those state modules to automatically add associated beacons to monitor for changes to the respective resources in the state file and fire events to the event bus when changes occur. (#59559)
+- Add -B flag to FreeBSD pkgng.check() to regenerate the library dependency
+  metadata for a package by extracting library requirement information from the
+  binary ELF files in the package. (#59569)
+
+
+Salt 3002.5 (2021-02-25)
+========================
+
+Fixed
+-----
+
+- Tests and fix for CVE-2021-25283
+
+
+Salt 3002.4 (2021-02-05)
+========================
+
+Fixed
+-----
+
+- Fix runners that broke when patching for CVE-2021-25281
+- Fix issue with runners in SSE
+
+Salt 3002.3 (2021-01-25)
+========================
+
+Fixed
+-----
+
+- CVE-2020-28243 - Fix local privilege escalation in the restartcheck module. (CVE-2020-28243)
+- CVE-2020-28972 - Ensure authentication to vcenter, vsphere, and esxi server
+  validates the SSL/TLS certificate by default. If you want to skip SSL verification
+  you can use `verify_ssl: False`. (CVE-2020-28972)
+- CVE-2020-35662 - Ensure the asam runner, qingcloud, splunk returner, panos
+  proxy, cimc proxy, zenoss module, esxi module, vsphere module, glassfish
+  module, bigip module, and keystone module validate SSL by default. If you want
+  to skip SSL verification you can use `verify_ssl: False`. (CVE-2020-35662)
+- CVE-2021-25281 - Fix salt-api so it honors eauth credentials for the
+  wheel_async client. (CVE-2021-25281)
+- CVE-2021-25282 - Fix the salt.wheel.pillar_roots.write method so it is not
+  vulnerable to directory traversal. (CVE-2021-25282)
+- CVE-2021-25283 - Fix the jinja render to protect against server side template
+  injection attacks. (CVE-2021-25283)
+- CVE-2021-25284 - Fix cmdmod so it will not log credentials to log levels info
+  and error. (CVE-2021-25284)
+- CVE-2021-3144 - Fix eauth tokens can be used once after expiration. (CVE-2021-3144)
+- CVE-2021-3148 - Fix a command injection in the Salt-API when using the Salt-SSH client. (CVE-2021-3148)
+- CVE-2021-3197 - Fix ssh client to remove ProxyCommand from arguments provided
+  by cli and netapi. (CVE-2021-3197)
+
+Salt 3002.2 (2020-11-16)
+========================
+
+Fixed
+-----
+
+- Change dict check to isinstance instead of type() for key_values in file.keyvalue. (#57758)
+- Fail when func_ret is False when using the new module.run syntax. (#57768)
+- Fix comparison of certificate values (#58296)
+- When using ssh_pre_flight if there is a failure, fail on retcode not stderr. (#58439)
+- Fix use of unauthd cached vmware service instance (#58691)
+- Removing use of undefined varilable in utils/slack.py. (#58753)
+- Restored the ability to specify the amount of extents for a Logical
+  Volume as a percentage. (#58759)
+- Ensuring that the version check function is run a second time in all the user related functions incase the user being managed is the connection user and the password has been updated. (#58773)
+- Allow bytes in gpg renderer (#58794)
+- Fix issue where win_wua module fails to load when BITS is set to Manual (#58848)
+- Ensure that elasticsearch.index_exists is available before loading the elasticsearch returner. (#58851)
+- Log a different object when debugging if we're using disk cache vs memory cache. The disk cache pillar class has the dict object but the cache pillar object which is used with the memory cache does not include a _dict obeject because it is a dict already. (#58861)
+- Do not generate grains for every job run on Windows minions. This makes Windows
+  conform more to the way posix OSes work today. (#58904)
+- Fixes salt-ssh authentication when using tty (#58922)
+- Revert LazyLoader finalizer. Removed the weakref.finalizer code. On some occasions, the finalized would run when trying to load a new module, firing a race condition. (#58947)
+
+
+Salt 3002.1 (2020-10-26)
+========================
+
+Fixed
+-----
+
+- Prevent shell injections in netapi ssh client (cve-2020-16846)
+- Prevent creating world readable private keys with the tls execution module. (cve-2020-17490)
+- Properly validate eauth credentials and tokens along with their ACLs.
+  Prior to this change eauth was not properly validated when calling
+  Salt ssh via the salt-api. Any value for 'eauth' or 'token' would allow a user
+  to bypass authentication and make calls to Salt ssh. (CVE-2020-25592)
+
+Salt 3002 (2020-10-19)
+======================
+
+Removed
+-------
+
+- removed boto_vpc.describe_route_table please use boto_vpc.describe_route_tables (#58636)
+- removed show_ipv4 arg from all functions in from salt.runners.manage (#58638)
+- removed kwargs from mandrill.send if you use "async" please use "asynchronous" (#58640)
+- removed salt/modules/mac_brew_pkg.__fix_cask_namespace (#58641)
+- zfs.mount Passing '-a' as name is deprecated please just pass 'None' (#58642)
+- Remove include_localhost kwarg for connected_ids method in salt/utils/minions.py (#58224)
+- deprecated opts default argument of none and removed deprecation warnings (#58635)
+
+
+Deprecated
+----------
+
+- The `ssh` parameter of `virt.migrate` has been deprecated. Use a libvirt URI `target` value instead. Both `virt.migrate_non_shared` and `virt.migrate_non_shared_inc` have been deprecated. Use the `copy_storage` parameter with `virt.migrate` instead. (#57947)
+
+
+Changed
+-------
+
+- Allow to specify a custom port for Proxmox connection (#50620)
+- Changed the lvm.lv_present state to accept a resizefs switch. So, when
+  the logical volume is resized, the filesystem will be resized too. (#55265)
+- Change the ``enable_fqdns_grains`` setting to default to ``False`` on proxy minions
+  as it is generally not needed and just slows down start up time.. (#57676)
+- Adds network teaming support to ``network.managed`` state for RHEL-based
+  distros. Removes ``ip.get_bond`` and ``ip.build_bond`` for the same, as is
+  redundant and not needed for any current RHEL/CentOS/Fedora/etc. release. (#57775)
+- The ``serializer`` argument has been added to the :py:func:`file.serialize
+  <salt.states.file.serialize>` state, as an alternative to ``formatter``. This
+  brings it more in line with the ``serializer_opts`` and ``deserializer_opts``
+  arguments. ``formatter`` is still supported, but using both ``serializer`` and
+  ``formatter`` will cause the state to fail. (#57858)
+
+Fixed
+-----
+
+- `file.read` exec module function no longer fails on binary data. (#58033)
+- Remove py2 support from winrepo execution module and runner (#58596)
+- Create ini file if does not exist when using ini.options_present state module. (#34236)
+- Added an bool "strict" argument to sdb.get module to force module to fail if the sdb uri is not correct. (#39163)
+- Fixed issue with postgres.has_privilege breaking on ALL. (#48465)
+- check for azurearm username in config before adding username and password to the virtual machine properties (#49063)
+- Fixes service.status to return True/False instead of empty strings or PIDs of the service. This brings macOS into parity with the other service modules. (#49237)
+- fix frequent rest_tornado non-fatal tracebacks (#49572)
+- Do not use reverse DNS of the target used in salt-ssh. Use the target the user provides. (#49840)
+- Fixes startup issue where it tried to load the kernalparams grain on Windows (#49901)
+- Fixed error in nilrt_ip.get_interfaces_details when loading config. (#50416)
+- Doesn't remove underscore when sanitizing hostname in network salt util (#50527)
+- permit the use of int/float type for the version in:
+   - the state postgres_cluster.present
+   - the state postgres_cluster.absent
+   - the module postgres.cluster_create
+   - the module postgres.cluster_remove (#50899)
+- Cleaned up a trackback in lvm.pv_present when the disk doesn't exist. (#52363)
+- Fixed UnboundLocalError when using win_network.connect (#53371)
+- Add accept_ra 2 option to modules.debian_ip (#54067)
+- salt.runner test mode support (#54382)
+- Fixed mkpart to allow the creation of a partition without filesystem (#54456)
+- Fixes bogus warning message when an empty list is used for an environment in a
+  topfile. This allows `[]` to be used as a placeholder in a topfile without
+  needing to comment everything out as a workaround. (#54882)
+- win_certutil state will no longer fail on non-English systems upon successful additions and deletions of a certificate. (#55024)
+- Fixed file.directory state always showing mode change for symlinks. (#55878)
+- check for a docker error that the swarm already exists when calling swarm.swarm_init on an existing docker swarm (#55949)
+- Fixing stalekey engine so it deletes the keys when they are a list. (#55977)
+- An invalid _schedule.conf configuration file is renamed to _schedule.confYAMLError.
+  This avoids disabling the minion and busy polling the CPU on Windows. (#56216, #58177)
+- Proper calculation of tpldir and related context parameters (#56410)
+- Make gpg.encrypt examples work (#56646)
+- Artifactory encoding of headers fixed for py3 (#56660)
+- Fixed handling of extents extended attribute in file.managed state. (#57189)
+- Remove buggy start parameter from virt.pool_running docstring (#57275)
+- Fixed saltcheck rendering of map.jinja files from saltenv (#57327)
+- Fix for `virt.get_profiles` resolves an error that appears due to new parameters introduced with `_disk_profile()` (#57431)
+- Accept nested namespaces in spacewalk.api runner function. (#57442)
+- virt.init fix the disk target names (#57477)
+- Fix volume name for disk-typed pools in virt.defined (#57497)
+- Fixes an issue with filesystems options ordering which kept already
+  applied NFS fstab entries being updated. (#57520)
+- Do not allow python2 to be added to salt-ssh tar since Salt deprecated Python 2. (#57647)
+- Fixed exception on loading custom zipped modules. (#57674)
+- corrected support for app_id or local vault configurations (#57705)
+- Fix the registration of libvirt pool and nodedev events (#57746)
+- Pass cmd.run state arguments to unless and onlyif when they exist (#57760)
+- The 2004 release of Windows 10 introduced a bug in the InstallationBehavior COM
+  object where you can no longer get properties from that object. Calls to this
+  object are now wrapped in a try/except block with sane defaults when it fails to
+  read attributes.
+
+  Additionally, some pre-flight checks have been added to the win_wua module to
+  make sure Windows Update can actually run. (#57762)
+- Changed get_repo in yumpkg.py to use "repo" as first parameter.
+  This fixes #57778, a bug were every run of pkgrepo.managed state were
+  marked as changed because the get_repo did fail to detect a previously
+  applied run. (#57778)
+- Raise SaltClientError in parse_host_port insted of ValueError so it is caught and handled properly when the minion is connecting to the master. (#57789)
+- Fixed issue with the return dictionary from the workgroup() function in the
+  salt.states.win_system module. This resulted in a windows-based minion logging
+  an error and could also interfere with a highstate being applied. (#57790)
+- Fixes broken block_device_mapping and block_device_mapping_v2 type checks in
+  the OpenStack cloud driver. Salt was looking for a dict and the shade library
+  was looking for a list of dicts. This made it impossible to use those params. (#57802)
+- Fixed incorrect parsing of ``Set-Cookie`` response headers. (#57829)
+- When using yumpkg, report stdout when stderr is redirected to stdout. (#57862)
+- Fixes an issue on macOS where if you try and restart the macOS using serivce.restart salt-minion it would fail because the service names are different on macOS. (#57878)
+- Fixes an issue on macOS where salt would take extra time to run on a service.dead call and the service is missing. (#57907)
+- Fixes an issue where a disabled macOS and Windows service would fail to start with service.running. (#57908)
+- Use "use_bin_type" to differentiate between bytes and str when writing cache
+  for pillar and grains. (#57918)
+- Set the comment to "No minions responded" if salt.function fails to find any
+  minions (#57920)
+- Fix issue with `__utils__` usage in the `__virtual__` functions on a few of the
+  execution modules. (#57948)
+- remove encoding kwarg for both pack(b)/unpack(b) in msgpack for versions >=1.0.0
+  https://github.com/msgpack/msgpack-python/blob/master/ChangeLog.rst#100 (#57965)
+- Replace deprecated `cgi.escape()` with `html.escape()` after it was removed from Python 3.8. (#57983)
+- Fix btrfs state decorator, that produces exceptions when creating subvolumes. (#58012)
+- Fix kubeadm token_list when the list of tokens is empty (#58116)
+- Add a fix for the mac_service modules where it would fail to load in some new services and crash on Big Sur. (#58143)
+- Fix blank tplfile context parameter when loading top level sls files (#58249)
+- Do not include init directory in sls context parameters if explicitly specified (#58250)
+- Fixing pillar caching when pillar environments are involved. (#58274)
+- Make proxy_config read in the proxy specific configuration which is typically found in /etc/salt/proxy.d/minionid/. (#58307)
+- Add timeout kwarg docs for service.running and service.dead (#58311)
+- Return empty dict on win_pdh.get_counters rather than raising exception when no data are available (#58327)
+- Leave boot parameters untouched if boot parameter is set to None in virt.update (#58331)
+- Convert disks of volume type to file or block disks on Xen (#58333)
+- Apparently Apple is using both "10.16" and "11" for versioning Big Sur,
+  depending on where you look. The mac_softwareupdate module uses a different
+  regex depending on OS version, and the determination was based on the
+  osrelease_info grain. This results in a Big Sur machine not using the correct
+  regex; osrelease_info[1] is 0 for Big Sur.
+
+  This change simply adds an additional clause to the if statement to handle
+  osmajorrelease > 10. (#58340)
+- Fixed zmq salt-call hang!
+
+  Some objects from the 3rd party module zmq fail to deconstruct if left to the GC when Python exits.
+  This is because the objects get destroyed out of order.
+  This only happens on some platforms like ubuntu 20.04 and some versions of FreeBSD.
+  We fixed this hang by deconstructing all zmq objects in the right order before we exit salt-call. (#58364)
+- Reactor runner functions will now ensure reactor system is available before attempting to run and error out if it is not available. (#58384)
+- Fix enpoint typos (#58416)
+- Make sure we repopulate ``__utils__`` on Windows when a job is run from the scheduler. (#58437)
+- Adding a check when a source is an HTTP or FTP URL to do a query to ensure the URL is valid before returning, then we know if we need to move onto to the next source in the list or not. (#58441)
+- Improved documentation for the LGPO state module (#58521)
+- Remove old documented pending reboot key (#58530)
+- On macOS, skip GUI dialog for Developer Command Line Tools when importing gitfs util. (#58575)
+- Fixing a use case when multiple inotify beacons are defined but when notifications are fired the configuration from the first beacon are used. (#58655)
+
+
+Added
+-----
+
+- Salt Api
+  ========
+
+  salt-api will now work on Windows platforms with limited support. You will be
+  able to configure the ``rest_cherrypy`` module, without ``pam`` external
+  authentication and without ssl support.
+
+  Example configuration:
+
+  .. code-block:: yaml
+      external_auth:
+        auto:
+          saltuser:
+            -.*
+      rest_cherrypy:
+        host: 127.0.0.1
+        port: 8000 (#49949)
+- Added `execution_timeout` support to `chocolatey.installed` state (#50449)
+- Add new verify_ssl option to file modules. This allows a user to not validate the server certificate for HTTPS source and source hash's. (#52663)
+- Added list target type support to the `scan` salt-ssh roster. (#52675)
+- Added pvresize and lvextend to linux_lvm (#56089)
+- Added COPR option to states.pkgrepo (#57258)
+- Add "get_return" key for onlyif and unless requisites to parse deep module results (#57470)
+- Allow setting VM boot devices order in virt.running and virt.defined states (#57544)
+- Added grains to show the LVM Volume Groups and their Logical Volumes. (#57629)
+- Memory Tuning Support which allows much greater control of memory allocation (#57639)
+- Add output filter to saltcheck to only display test failures (#57788)
+- ### Description
+  Add profile block and profiling of import_* jinja calls.
+
+  ### Example
+  ```sls
+  # cat /srv/salt/example.sls
+  {%- profile as 'local data' %}
+    {%- set local_data = {'counter': 0} %}
+    {%- for i in range(313377) %}
+      {%- do local_data.update({'counter': i}) %}
+    {%- endfor %}
+  {%- endprofile %}
+
+  test:
+    cmd.run:
+      - name: |-
+          printf 'local data: %s' '{{ local_data['counter'] }}'
+  ```
+
+  ### Motivation
+
+  When working with a very large codebase, it becomes more important to trace
+  inefficiencies in state and pillar render times.  The `profile` jinja block
+  enables the user to get finely detailed information on the most time consuming
+  jinja expressions in the codebase.
+
+  Especially as the codebase grows and the amount of minions increases, tracking
+  down expensive expressions becomes imperative otherwise the resource burden for
+  even just maintaining highstate becomes unmanageable. (#57849)
+- - Added an execution module for running idem exec modules
+  - Added a state module for running idem states (#57969)
+- - Added the ability for states to return `sub_state_run`s -- results frome external state engines (#57993)
+- Added salt-cloud support for Linode APIv4 via the ``api_version`` provider configuration parameter. (#58093)
+- Added support to manage services in Slackware Linux. (#58206)
+- Added list_sources to chocolatey module to have an overview of the repositories present on the minions.
+  Added source_added to chocolatey state in order to add repositories to chocolatey. (#58588)
+- Adding tests for changes to virtual function for netmiko module. Adding tests for netmiko proxy minion module. (#58609)
+- Added features config option for feature flags. Added a feature flag
+  `enable_slsvars_fixes` to enable fixes to tpldir, tplfile and sls_path.
+  This flag will be deprecated in the Phosphorus release when this functionality
+  becomes the default. (#58652)
+
+Salt 3001.6 (2021-02-09)
+========================
+
+Fixed
+-----
+
+- Fix runners that broke when patching for CVE-2021-25281
+- Fix issue with runners in SSE
+
+Salt 3001.5
+===========
+
+Fixed
+-----
+
+- CVE-2020-28243 - Fix local privilege escalation in the restartcheck module. (CVE-2020-28243)
+- CVE-2020-28972 - Ensure authentication to vcenter, vsphere, and esxi server
+  validates the SSL/TLS certificate by default. If you want to skip SSL verification
+  you can use `verify_ssl: False`. (CVE-2020-28972)
+- CVE-2020-35662 - Ensure the asam runner, qingcloud, splunk returner, panos
+  proxy, cimc proxy, zenoss module, esxi module, vsphere module, glassfish
+  module, bigip module, and keystone module validate SSL by default. If you want
+  to skip SSL verification you can use `verify_ssl: False`. (CVE-2020-35662)
+- CVE-2021-25281 - Fix salt-api so it honors eauth credentials for the
+  wheel_async client. (CVE-2021-25281)
+- CVE-2021-25282 - Fix the salt.wheel.pillar_roots.write method so it is not
+  vulnerable to directory traversal. (CVE-2021-25282)
+- CVE-2021-25283 - Fix the jinja render to protect against server side template
+  injection attacks. (CVE-2021-25283)
+- CVE-2021-25284 - Fix cmdmod so it will not log credentials to log levels info
+  and error. (CVE-2021-25284)
+- CVE-2021-3144 - Fix eauth tokens can be used once after expiration. (CVE-2021-3144)
+- CVE-2021-3148 - Fix a command injection in the Salt-API when using the Salt-SSH client. (CVE-2021-3148)
+- CVE-2021-3197 - Fix ssh client to remove ProxyCommand from arguments provided
+  by cli and netapi. (CVE-2021-3197)
+
+
+Salt 3001.4
+===========
+
+Fixed
+-----
+
+- Fixes salt-ssh authentication when using tty (#58922)
+
+Salt 3001.3
+===========
+
+Fixed
+-----
+
+- Properly validate eauth credentials and tokens along with their ACLs.
+  Prior to this change eauth was not properly validated when calling
+  Salt ssh via the salt-api. Any value for 'eauth' or 'token' would allow a user
+  to bypass authentication and make calls to Salt ssh. (CVE-2020-25592)
+
+Salt 3001.2
+===========
+
+Fixed
+-----
+
+- Prevent shell injections in netapi ssh client (cve-2020-16846)
+- Prevent creating world readable private keys with the tls execution module. (cve-2020-17490)
+
+Salt 3001.1 (2020-07-27)
+========================
+
+Changed
+-------
+
+- Change the ``enable_fqdns_grains`` setting to default to ``False`` on Windows
+  to address some issues with slowness. (#56296, #57529)
+- Handle the UCRT libraries the same way they are handled in the Python 3
+  installer (#57594)
+- Changes the 'SSDs' grain name to 'ssds' as all grains needs to be
+  resolved in lowered case. (#57612)
+- Updated requirement to psutil 5.6.7 due to vulnerability in psutil 5.6.6. (#58018)
+- Updated requirement to PyYAML 5.3.1 due to vulnerability in PyYAML 5.2.1. (#58019)
+
+
+Fixed
+-----
+
+- When running scheduled jobs from a proxy minion with multiprocessing turned off (default) a recursive error occurs as __pub_fun_args is repeated over and over again in the kwargs element in the data dictionary.  Now we make a copy of data['kwargs'] instead of using a reference. (#57941)
+- The `x509.certificate_managed` state no longer triggers a change because of sorting issues if the certificate being evaluated was previously generated under Python 2. (#56556)
+- Added support to lo ip alias in network.managed state by checking if lo inet data
+  from network.interfaces contains label with the name of managed interface.
+  Return status True if match found. (#56901)
+- Redact passwords in the return when setting credentials using
+  ``win_iis.container_setting`` (#57285)
+- Fixes issue with cmd.powershell. Some powershell commands do not return
+  anything in stdout. This causes the JSON parser to fail because an empty string
+  is not valid JSON. This changes an empty string to `{}` which is valid JSON and
+  will not cause the JSON loader to stacktrace. (#57493)
+- Improves performance. Profiling `test.ping` on Windows shows that 13 of 17
+  seconds are wasted when the esxi grain loads vsphere before noting that
+  the OS is not a esxi host. (#57529)
+- Fixed permissions issue with certain pip/virtualenv states/modules when configured for non-root user. (#57550)
+- Allow running nox sessions either using our `nox-py2 fork <https://github.com/s0undt3ch/nox/tree/hotfix/py2-release>`_ or upstream `nox <https://github.com/theacodes/nox>`_. (#57583)
+- Fixes issue with lgpo.get when there are unicode characters in the hostname (#57591)
+- Fixes issue with virtual block devices, like loopbacks and LVMs, wrongly
+  populating the "disks" or "ssds" grains. (#57612)
+- Due to some optimization the `virtual` grain was never updated on illumos. Move the fallback in prtdiag output parsing outside the loop that now gets skipped due to the command exiting non-zero. (#57714)
+- Grains module delkey and delval methods now support the force option. This is
+  needed for deleting grains with complex (nested) values. (#57718)
+- Moving import salt.modules.vsphere into `__virtual__` so we have access to test proxytype in opts,
+  previously this was causing a traceback when run on proxy minion as `__opts__` does not exist
+  outside of any functions. Introducing a new utils function, is_proxytype, to check that the
+  device is a proxy minion and also that the proxy type matches. (#57743)
+- Fixed fail_with_changes in the test state to use the comment argument when passed. (#57766)
+- Adds a fix so salt can run on the latest macOS version Big Sur. (#57787)
+- Fixes UnpackValueError when using GPG cache by using atomic open. (#57798)
+- The ``gid_from_name`` argument was removed from the ``user.present`` state in
+  version 3001, with no deprecation path. It has been restored and put on a
+  proper deprecation path. (#57843)
+- Fixes dictionary being changed during iteration. (#57845)
+- Fixed bug with distro version breaking osrelease on Centos 7. (#57781)
+- Fixed macOS build scripts. (#57973)
+- Fixed Salt-API startup failure. (#57975)
+- Fixed CSR handling in x509 module (#54867)
+- Re-allow x509 to manage a certificate based on a CSR
+
+
+Added
+-----
+
+- Added docs demonstrating how to apply an MSI patch with winrepo (#32780)
+
+
+Salt 3001 (2020-06-17)
+======================
+
+Removed
+-------
+
+- Removed long-deprecated `repo` option from pip state. (#51060)
+- Removed noisy debug logging from config.get. (#54205)
+- Removed needless dbus warnings from snapper module. (#56286)
+- Removed obsolete MSI functionality from version tools. (#56352)
+- Removed deprecated virt functionality. (#56514)
+- Dropped requirement for enum34 dependency. (#57108)
+- On macOS pkg.installed (using brew) no longer swaps `caskroom/cask/` for `homebrew/cask/` when using outdated package names. (#57361)
+- napalm_network.load_template module - removed deprecated arguments
+  template_user, template_attrs, template_group, template_mode, and native NAPALM
+  template support. Use Salt's rendering pipeline instead. (#57362)
+- selinux.fcontext_add_or_delete_policy module removed - use selinux.fcontext_add_policy or selinux.fcontext_delete_pollicy instead. (#57363)
+- Deprecated `refresh_db` removed from pkgrepo state. Use `refresh` instead. (#57366)
+- Deprecated internal functions salt.utils.locales.sdecode and .sdecode_if_string removed. Use salt.utils.data.decode instead. (#57367)
+- Removed deprecated misc. internal Salt functions. See https://github.com/saltstack/salt/issues/57368 for more info. (#57368)
+- Remove salt/utils/vt.py duplication from filename map. (#57004)
+
+
+Changed
+-------
+
+- `file.rename` no longer returns False when `force:False`. (#49843)
+- Brought localclient command line args functionality into line with regular `salt` calls. (#56853)
+- Updated requisites documentation. (#49962)
+- Changed eauth "not enabled" log message level from debug to warning. (#50946)
+-  (#52546)
+- Refactored x509.certificate_managed to be easier to use. (#52935)
+- Don't log error when running "alternatives --display" on nonexistant target (#53911)
+- Improved logging for user auth issues. (#53990)
+- No longer emit extra logs when checking `alternatives.display` and `.check_exists`. (#53991)
+- Use lazy loading to get SLS data from master - significantly improves `state.apply` times when using gitfs with many branches. (#54468)
+- Changed Salt icon for Windows. (#56194)
+- Update `libnacl` to 1.7.1 (#56350)
+- Now require pycryptodomex for crypto on all platforms. (#56625)
+- Updated to sphinx 3.0.1 when building docs. (#56671)
+- Now `__salt__` is automatically refreshed when a package is `pip` installed, allowing pip installing a dependency and using that dependency in the same state run. (#56867)
+- Use pygit2>=1.2.0 for Python>=3.8. (#56905)
+- Now provides a more meaningful error for `win_groupadd` for unmapped accounts. (#56921)
+- Significantly improve call times by only checking one frame in `depends`. (#57062)
+- Salt scripts shebang now specifies `python3`. (#57083)
+- Upgraded dependency to use boto3>=1.13.5. (#57161)
+- Changed to consistent file location handling across APIs for Juniper network devices. (#57399)
+- Use Python's hashlib (sha256) instead of shelling out (SipHash24) to generate server_id. (#57415)
+- Update `formulas.rst` with new IRC channel and links to IRC logs (#51628)
+
+
+Fixed
+-----
+
+- `pkgrepo.managed` now checks for a changed `key_url`. (#4438)
+- Allow passing extra args to `file.rename`. (#29001)
+- Fixed issue with overeager recursion detection. (#37646)
+- Correctly set DNS search domain in VMware virtual machine. (#37709)
+- Fixed trim_output logic in archive.extracted state (#40491)
+- Updated documentation on `service` state. (#40819)
+- Changed error message on `postgres_database.absent` to report correct error when database is in use. (#42833)
+- Fixed issue in `sysctl` when kernel parameters were adjusted via grub. (#45195)
+- Added termination protection option to salt-cloud ec2. (#45496)
+- Refactored `debian_ip` module. (#46388)
+- Log error when reactor tasks go to a full queue instead of silently fail. (#46431)
+- Fixed issue with failure on comments in MySQL files. (#47488)
+- Properly handle multibyte characters that span blocks of data. (#48473)
+- Fixed failure in `user.present` when `gid_from_name` is True. Argument was removed and replaced by the `usergroup` argument. (#48640)
+- Properly obtain hostname (#48906)
+- Fixed `nilrt_ip` disabled function. (#48971)
+- Fixed static configuration in nilrt_ip module. (#48990)
+- Added missing ARPCHECK option to rh7_eth template. (#49074)
+- Fixed to use the correct LetsEncrypt path on FreeBSD. (#49129)
+- Updated docs for netapi logs - log.access_file and log.error_file. (#49247)
+- Retry proxmox queries instead of failing immediately. (#49485)
+- Fixed AMD GPU vendor detection. (#56837)
+- Fixed `aptpkg.normalize_name` to respect architecture. (#49637)
+- Add error message for proxmox failures. (#49562)
+- Fixed nilrt_ip.enable/disable idempotency. (#56795)
+- Fixed issue with file.line doing a partial comparison to determine replacement need, instead compare actual content of lines. (#49855)
+- Return actual error message to user or hex code for `win_task.create_task_from_xml`. (#49981)
+- Use minion name as ssh_host for saltify cloud provider. (#50135)
+- Fixed misconfiguration of syndic. (#50139)
+- Re-added `onfail_all`, fixed onfail always triggering with other reqs, and onfail and onchanges not working when both present. (#50264)
+- Fixed broken scaleway cloud module. (#50334)
+- Fixed issue not cleaning up schedule and beacons. (#50505)
+- Fixed opkg install/remove to return potential changes, rather than always an empty dictionary. (#50516)
+- Fixed `pycrypto.gen_hash` to use strongest available `algorithm` by default. (#50544)
+- Fixed error leaving an empty first line on `.ini` file edits. (#50614)
+- Fixes error in tcp transport publish port default value. (#50646)
+- Changed internal functionality for deprecated Python `inspect.formatargspec`. (#50911)
+- Allows clone_from setting in proxmox salt-cloud to be able to be an integer. (#51001)
+- Stopped reading Windows registry value that might not be there. (#51095)
+- Fixed complaint about unused variables. (#51196)
+- salt-ssh no longer ignores pillar argument on `state.sls_id`. (#51353)
+- Stop treating MSI as a hard dependency. (#51470)
+- Fixed error handling for route53 to ignore `SignatureDoesNotMatch` errors (which cannot be retried). (#51572)
+- Fixed `extract_hash` to use the correct value. (#51670)
+- Fixed hard failure if `chocolately.installed` is for a non-existent package. (#51700)
+- `fail_with` and `succeed_with` now correctly use `comment` argument. (#51821)
+- Updated `is_enabled` to allow optional arguments. (#51823)
+- Fixed issue producing an error trying to resolve the unresolvable Capability SIDs. (#51868)
+- Additional fixes for using cron state with non-root Minion (#51872)
+- Fixed proxy module for Windows by using `__utils__` instead of `__salt__` for code that accesses the registry. (#52013)
+- Added support for parsing Gluster cli banner. (#52318)
+- Fixed failure to require `target` argument in git states. (#52364)
+- Fixed issue failing hard on uninstalled win updates. (#52387)
+- Fixed issue with `artifactory` not correctly evaluating `has_classifier` first. (#52517)
+- Fixed compound matches with nodegroups. (#52678)
+- Removed some noisy logging that have a tendency to fill up the logs on larger installations. (#52763)
+- Use `__utils__` for all registry calls. (#52992)
+- Added syndic log rotation to RPM. (#53040)
+- Use correct output in `zpool.present` when `test=true`. (#53145)
+- Fix s3fs cache byte/str mismatch (#53244)
+- Fixed `win_system` module to skip unavailable system info. (#53287)
+- Ignore invalid product_name files. (#53326)
+- Fixed error with `pkg.list_pkgs` to explicitly set `utf-8` encoding when writing, to match when reading. (#53340)
+- Fixed issue with encoding/decoding on circular references, discovered with iptables when `state_aggregate` was enabled. (#53353)
+- No longer fail when `blkid -o export` does not provide `TYPE` output. (#53447)
+- Fixed `guesseed` -> `guessed` typo in `archive` state. (#53480)
+- Fixed error with incorrect import statement masking real import error. (#53508)
+- Added some error handling around missing results from external returners. (#53517)
+- Changed to match repo paramter against repo name on `salt-run git_pillar.update`, so remote name can be used instead of full remote URL. (#56605)
+- Changed returner function error message to be useful/less misleading. (#53628)
+- Fixed `utils.user` to use correct `chugid` and `umask`. (#53681)
+- Fixed SmartOS grains under Python 3. (#53740)
+- Fixed error when trying to delete more than one key using `ini.options_absent`. (#53874)
+- Fixed error with cmd.run when run in a chroot environment. (#53992)
+- Fixed Zabbix configuration.import to use the correct values for the API version. (#54020)
+- Fixed salt key management with eauth. (#54078)
+- Fixed broken sdb.get_or_set_hash when using Hashicorp's Vault. (#54199)
+- Fixed `mac_softwareupdate.list_available` for Catalina. (#54220)
+- Fixed bug blocking `user.present` `createhome` on macOS. (#54288)
+- Fixed `postfix.show_queue` issue where queue_id, size, timestamp, sender, and recipient must exist before trying to append them. (#54298)
+- Fixed issue erroneously adding ssh_interface to DigitalOcean. (#54373)
+- Fixed issue not using correct package keys from group info on group install on yum. (#54458)
+- Fixed issue breaking state output on `test=true` with retry. (#54501)
+- Ignore absent filter.lfs in gitconfig. (#54817)
+- Changed to use Salt's CaseInsensitiveDict, so it can be msgpack serialized. (#54899)
+- Fixed trying to set too large a queue on AIX. (#54912)
+- Fixed issue when Vultr API returns "not supported" as default password during VM setup. (#54933)
+- Fixed issue with Jinja renderer ignoring argline. (#55124)
+- Fixed osrelease grain for MS Hyper-V 2019 by providing a default year. (#55212)
+- Fixed napalm support in bgp and net runners. (#55222)
+- Fixed Indefinitely code in win_task. (#55273)
+- Fixed `file.replace` idempotency. (#55297)
+- Fix incorrectly reported fileserver changes. (#55304)
+- Fixed XML RPC-REPLy error in Junos by passing `huge_tree`. (#55318)
+- Fixed error trying to treat binary files as text when doing spm install under Python 3. (#55330)
+- Correctly determine if Debian repo should be skipped. (#55402)
+- Set a hard dependency on `distro` module, for Python 3.8. (#55410)
+- Fixed `config_data` parameter when compiling DSC via `win_dsc` module. (#55425)
+- Fixed Solaris virtual grain to return better info instead of always LDOM. (#55444)
+- Documentation on syncing custom modules slightly inaccurate and missing info on sync to master (#55514)
+- Fixed crashes in ansiblegate on Python 3 minions. (#55585)
+- Fixed traceback on `http.query` when errors with the URL. (#55586)
+- Fixed failure to cache gpg data when `gpg_cache=True`. (#55772)
+- Added `__prerequired__` to the state runtime keywords filter, to prevent failures on `file.replace`. (#55775)
+- Fixed several Junos-related issues. (#55824)
+- Fixed Vault KV version 2 support. (#55842)
+- Removed remaning `pchanges` occurrences from state modules. (#55934)
+- Fixed issues in Slack webhook returner. (#55968)
+- Fixed onlyif/unless requisites being ignored in some cases. (#55974)
+- Fixed `skip_files_list_verify` when `keep_source=False` in `archive.extracted` state. (#55975)
+- Fixed `seed.apply` not waiting for the disk to be free. (#56002)
+- Fixed issue that ignored `trim_output` argument intermittently. (#56041)
+- Fixed `shadow.set_password` failing to set password when user isn't in `/etc/shadow`. (#56044)
+- Fixed failure in `user` state when moving the user's default group into the `groups` arg. (#56061)
+- Fixed issue incorrectly parsing YAML on command line. (#56067)
+- Fixed Azure VM creation when using Python3. (#56091)
+- Reverted `slspath` changes that broke a lot of states without proper deprecation. (#56119)
+- Lack of FQDN for host no longer blocks master startup. (#56179)
+- Pillar data is correctly included from `init.sls` file. (#56186)
+- Fixed `check_password` for newer RabbitMQ versions. (#56193)
+- Fixed timeout parameter not being passed to cmd_subset and cmd_batch, and misnamed (sub -> subset) parameter. (#56203)
+- Added support for virtualenv>=20.0.0 `--version` strings. (#56205)
+- No longer ignore slots on states when `parallel: true`. (#56221)
+- Fix deprecation warnings for imports from collections. (#56225)
+- Fixed Napalm beacons failing under Python 3. (#56243)
+- Fixed failure in tomcat module. (#56269)
+- Added salt-api log file to log rotation to prevent filling up the disk. (#56274)
+- Fixed issue using undocumented abbreviation on zypper - now uses the full option. (#56278)
+- Fixed issue parsing new `restorecon` output. (#56287)
+- Fixed failure for returner only working via cli and not LocalClient. (#56322)
+- Fixed version issues with empty minor string. (#56358)
+- Upgraded psutil dependency to 5.6.6 due to CVE-2019-18874. (#56363)
+- Fixed vendored tornado to use `salt.ext.backports_abc`. (#56369)
+- Fixed x509 module incorrectly writing error messages as the cert. (#56372)
+- Fixed error doing a `pip install salt` on Windows. (#56376)
+- Fixed AzureRM `create_object_model` util. (#56379)
+- Fixed issue `toxml` error in `virt.cpu_baseline`. (#56383)
+- Fixed issue with exeption being raised on `virt._get_domain` when there's no VM. (#56392)
+- Fixed crash in `aptpkg` on long description strings. (#56396)
+- Fixed keyword mismatch with `cassandra_cql` and `cassandra_cql_return`. (#56328)
+- Now uses the correct zero value for LockoutDuration in `win_lgpo`. (#56406)
+- Fixed issue reporting incorrect Salt version. (#56415)
+- Corrected documentation for `docker_image.load`. (#56420)
+- Fixed `defaults.merge` documentation. (#56432)
+- Fixed error always reporting changes with custom index-url for pip. (#56433)
+- Matching int keys within nested dictionaries now works. (#56444)
+- Fixed failure to support annotated tags when using pygit2. (#56451)
+- Better handle virt.pool_rebuild in virt.pool_running and virt.pool_defined states (#56454)
+- Fixed gitpython Windows requirements. (#56455)
+- Added `grains_cache_expiration` to minion conf documentation. (#56458)
+- Fixed incorrect handling of `renew=force` by `acme.cert` function. (#56462)
+- Fixed issue with incorrect msgpack version string check. (#56463)
+- Fixed infinite recursion in `pkg.group_info`. (#56476)
+- Fixed failure to sanitize grains for salt-ssh executions. (#56491)
+- Relax version requirements for pdbedit, also handle Debian branding in the version string. (#56553)
+- Fixed indentation error on `cmd.run` orchestration output. (#56554)
+- Fixed issue with getting incorrect SELinux context. (#56557)
+- Fixed bug updating boot parameters with `virt`. (#56562)
+- Correctly handle `pymysql.err.InternalError` in `mysql` module. (#56570)
+- Fixed `panos` commit example in docs. (#56581)
+- Fixed issue with `salt.utils.functools.call_functions` not checking for expected arguments. (#56584)
+- Fixed a broken statement when using arbitrary `kwargs` in mine.value. (#56593)
+- Fixed support for booting VMs with UEFI on virt. (#56613)
+- Fixed postgres.db_remove() execution function if db is still in use. (#56631)
+- Updated old redirects and http->https fixes in docs. (#56655)
+- Renamed `salt/utils/docker/` to `salt/utils/dockermod/` to avoid clashes with the `docker` package from pypi. (#56669)
+- Changed behavior to implicitly ignore package epochs and just use the latest one. (#56681)
+- Avoid throwing exception for missing security group in boto under test mode. (#56695)
+- Fix some function prompts in myssql module. (#56719)
+- Add appropriate comment for `svn export` state. (#56757)
+- Updated default master config file and updated the docs (#56053)
+- Workaround upstream bug in jinja2 indent filter. (#56833)
+- Fixed issue when raid.destroy is called but zero-superblock is not executed (#56838)
+- Allow correct failure information to show up when calling `win_interfaces` (#56844)
+- Add a note about service.running (#56846)
+- Updated Windows installer scripts to use Python 3.7.4. (#56873)
+- Nullsoft Salt Install now uninstalls MSI installed salt. (#56883)
+- Fallback to ASCII sorting when pillar keys are integers. (#56909)
+- Fixed `hwaddr` and `macaddr` not being added to RedHat network config, even if they were provided. (#56910)
+- Fixed literal comparisons. (#56931)
+- Fixed `win_system` `rawunicodeescape` errors. (#56940)
+- Fixed `ps.top` failures with newer `psutil` library. (#56942)
+- Provides better stacktrace in `win_pkg` return. (#56955)
+- Fixed `reg.present` to respect `(Default)` REG_SZ value of an empty string. (#56959)
+- OpenStack driver can now attach to multiple networks, also now respects provided `conn`. (#56960)
+- Fixed literal comparsion in `user` state. (#56972)
+- Additional fixes for using cron state with non-root Minion (#56973)
+- Added ARPCHECK to the template for RHEL8 networking. (#57047)
+- Fixed `aptpkg` to use `force-confnew` on it's own, and `force-confold` with `force-confdef`. (#57051)
+- Fixed acme.certs state to return /etc/letsencrypt/live subdirectories (#57056)
+- Fixed error with `fileserver.update` failing with `gitfs` backend was `git`, and `fileserver.clear_file_list_cache` not clearing gitfs cache when the backend was *not* `git`. (#57063)
+- Fixed LazyLoader crashing when using ssh client via salt-api. (#57119)
+- Publisher ACL doc fixes (#48915)
+- Fixed `acl.present` to properly detect changes for default ACLs and recursive folders. (#57147)
+- Fixed Minion/Minon typo in docs. (#57181)
+- Fix UnicodeDecodeError when apply file.managed with binary contents in test mode. (#57184)
+- Ensure errors are returned for missing pillars. (#57208)
+- Fix `ps.top` failures on macOS when iterating over zombie processes. (#57216)
+- Add vcredist_2013 (specifically msvcr120.dll) for OpenSSL/M2Crypto support on Windows. Fixes x509 module support. (#57266)
+- Fix systemd invocation on latest Linux Arch version. (#57299)
+- Updated rpm_lowpkg.version_cmp log messages and unit tests (#57347)
+- Added rotation for proxy logs. (#57353)
+- Fixed `win_system.join_domain` failures. (#57360)
+- Fixed `template_vars` functionality on Junos. (#57388)
+- Filter out aliases/duplicates from zypperpkg for <=SLE12SP4. (#57392)
+- Fix issue with finding the real python executable during tests (#56686)
+- Fix broken link regarding the 1024 character limit for YAML keys (#56540)
+- Fix grain.delkey grains.delval for nested keys (#54819)
+
+
+Added
+-----
+
+- Added support for list in `include_pat/exclude_pat` in `file.recurse`. (#2747)
+- Added `validate` to tls module. (#7424)
+- Pillar relative includes. (#8875)
+- Added silent recurse option to `file.directory` state. (#44553)
+- Added bhvye support to virt. (#47619)
+- Added `kernelparams` grain for Linux. (#48501)
+- Added `systempath` PATH grain. (#49049)
+- Added appoptics returner. (#49066)
+- Added ability to use the minion's region if specified. (#49097)
+- Added reactor tuning documentation. (#49214)
+- Added support for ipaddr/ipv6ipaddrs, loopback devices, dns_nameservers/dns_serach lists or strings, and multiple addresses per interface. (#49355)
+- Added slsutil.banner for creating managed by salt message in files, and `slsutil.boolstr` for converting Pillar bool values to appropriate string representation. (#49396)
+- Added `normalize_name` to `pkgin` module. (#49469)
+- Added ability to use regex pattern with `ps.pgrep`. (#49565)
+- Added `merge` option to `match.filter_by`. (#49845)
+- Added ability to disable requisites during state runs. (#49955)
+- Add a reactor "leader", especially useful for multimaster hot-hot environments. (#50053)
+- Added `method_call` Jinja filter to help reduce boilerplate. (#50152)
+- Added ability for async pillar refresh. (#56881)
+- Added `shutdown_host` to vmware cloud. (#50177)
+- Added `drbd.status` module. (#50410)
+- Added `file.keyvalue` state. (#50627)
+- Added JID lookup message in case minion times out. (#50704)
+- Niceness control options added to the master config, for POSIX platforms. (#50905)
+- Added `serial_type` to virt module. (#50930)
+- Added RPC process documentation. (#50954)
+- Added advanced initdb option support to `postgres_cluster.present`. (#50998)
+- Added support for GCE accellerators in Salt Cloud. (#51033)
+- Added `broadcast` address to `network.convert_cidr` return. (#51521)
+- Added options for gitfs and git_pillar fallback branch. (#51971)
+- Add `fat` as a valid `fs_type` for `parted` module. (#52016)
+- Added support for comments in the host state/module. (#52185)
+- Added offline bootstrap for Chocolatey. (#52233)
+- Added support for listing all active running jobs on the master. (#52241)
+- Added ability to get expected cache location. (#52305)
+- Added ability to pass a timeout value to beacons. (#52314)
+- Added support for `btrfs property` command. (#52699)
+- Added ability to get minion's network information. (#53100)
+- Added support for `not_before` and `not_after` for x509 certificates. (#53148)
+- Added support for extra modules that will be loaded before checking the rest of the path. (#53167)
+- Added initial execution module to kubeadm. (#53345)
+- Added firstboot function to `systemd_service`. (#53381)
+- Added ability to pass arbitrary kwargs to zypper pkg. (#53693)
+- Added options for multi-use tokens for vault. (#54094)
+- Added devinfo module to get hardware information. (#54267)
+- Adds versionlock plugin detection for yum/dnf. (#54798)
+- Improved nxos support. (#54931)
+- Added root and no_recommends parameters for Zypper and RPM. (#54954)
+- Added `token` parameter in `blkid`. (#54964)
+- Added `cron.get_entry`. (#54985)
+- Added support for newer monit versions. (#55140)
+- Added btrfs and xfs as valid fstypes for parted and mkfs. (#55209)
+- Added functionality for `cmd.run_all` to accept a list when using powershell. (#55213)
+- Added Azure Blob Storage as an optional external pillar. (#55493)
+- Added ability to turn off FQDNs grains with `enable_fqdns_grains: False`. (#55581)
+- Added `virt.*defined` states. (#55814)
+- Add towncrier tool to the Salt project to help manage CHANGELOG.md file. (#55836)
+- Added Pull Request requirements to documentation (#55862)
+- Add selinux support to file.managed (#40703)
+- Added hold and unhold support for `mac_brew_pkg`. (#55978)
+- States/modules added for managing Helm. (#56081)
+- Added parallel run support for saltcheck. (#56097)
+- Added multiple asserts against module output for saltcheck. (#56101)
+- Added `state.test` as an alias for `state.apply ... test=True`. (#56298)
+- Added default argumetn to `vault.read_secret` and `vault.list_secrets`. (#56311)
+- Added `fromrepo` to `pkg.upgrade` for `pkgng`. (#56368)
+- Added IP filtering by network. (#56394)
+- Added more information for `__virtual__` failures. (#56395)
+- Added logout functionality to docker. (#56439)
+- Added ability to fetch master public key from minion. (#56449)
+- Added `pending_reboot` grain for Windows systems. (#56489)
+- Added support for forcing refresh in zypper. (#56519)
+- Added `refresh_pillar` arg to `grains.setval`. (#56573)
+- Added new roster option `ssh_pre_flight`. (#56488)
+- Added ability to minions to read pillar files from local filesystem, and get commands from remote master. (#56611)
+- Added support for rendering toml states. (#56615)
+- Added `set_path` option for salt-ssh shim. (#56627)
+- Added `win_wua.installed` to check a list of updates that apply to the current Windows build. (#56640)
+- Added ability to compare package versions in Jinja templates. (#56678)
+- Add `auto_detect` feature for `ssh_ext_alternatives`. (#56894)
+- Add ability to display sys.doc style outputs but without actually loading the module. (#56902)
+- Added plist serializer. (#56954)
+- Added support for onedir/pop-build Salt in the `pip` module. (#56988)
+- Add support for disks volumes in virt.running state (#57005)
+- Add virt.all_capabilities helper function (#57009)
+- supervisord.status_bool method (#57049)
+- Added support for msgpack versions>=1.0 (#57122)
+- Added Python 2 deprecation FAQ (#57273)
+- Added support for # of hashing rounds when using pycrypto. (#57355)
+- `fetchonly` parameter added for `pkg.upgrade` when using `pkgng` (FreeBSD). (#57371)
+- Added `efi` parameter to virt module, so `uefi` firmware can be auto selected. (#57397)
+- [#56637](https://github.com/saltstack/salt/pull/56637) - Add ``win_wua.installed`` to the ``win_wua`` execution module
+- Clarify how to get the master fingerprint (#54699)
+
+Salt 3000.8 (2021-02-09)
+========================
+
+Fixed
+-----
+
+- Fix runners that broke when patching for CVE-2021-25281
+- Fix issue with runners in SSE
+
+Salt 3000.7
+===========
+
+Fixed
+-----
+
+- CVE-2020-28243 - Fix local privilege escalation in the restartcheck module. (CVE-2020-28243)
+- CVE-2020-28972 - Ensure authentication to vcenter, vsphere, and esxi server
+  validates the SSL/TLS certificate by default. If you want to skip SSL verification
+  you can use `verify_ssl: False`. (CVE-2020-28972)
+- CVE-2020-35662 - Ensure the asam runner, qingcloud, splunk returner, panos
+  proxy, cimc proxy, zenoss module, esxi module, vsphere module, glassfish
+  module, bigip module, and keystone module validate SSL by default. If you want
+  to skip SSL verification you can use `verify_ssl: False`. (CVE-2020-35662)
+- CVE-2021-25281 - Fix salt-api so it honors eauth credentials for the
+  wheel_async client. (CVE-2021-25281)
+- CVE-2021-25282 - Fix the salt.wheel.pillar_roots.write method so it is not
+  vulnerable to directory traversal. (CVE-2021-25282)
+- CVE-2021-25283 - Fix the jinja render to protect against server side template
+  injection attacks. (CVE-2021-25283)
+- CVE-2021-25284 - Fix cmdmod so it will not log credentials to log levels info
+  and error. (CVE-2021-25284)
+- CVE-2021-3144 - Fix eauth tokens can be used once after expiration. (CVE-2021-3144)
+- CVE-2021-3148 - Fix a command injection in the Salt-API when using the Salt-SSH client. (CVE-2021-3148)
+- CVE-2021-3197 - Fix ssh client to remove ProxyCommand from arguments provided
+  by cli and netapi. (CVE-2021-3197)
+
+Salt 3000.6
+===========
+
+Fixed
+-----
+
+- Fixes salt-ssh authentication when using tty (#58922)
+
+Salt 3000.5
+===========
+
+Fixed
+-----
+
+- Properly validate eauth credentials and tokens along with their ACLs.
+  Prior to this change eauth was not properly validated when calling
+  Salt ssh via the salt-api. Any value for 'eauth' or 'token' would allow a user
+  to bypass authentication and make calls to Salt ssh. (CVE-2020-25592)
+
+Salt 3000.4
+===========
+
+Fixed
+-----
+
+- Prevent shell injections in netapi ssh client (cve-2020-16846)
+- Prevent creating world readable private keys with the tls execution module. (cve-2020-17490)
+
+### 3000.3
 
 ### Fixed
-- [#51872](https://github.com/saltstack/salt/issues/51872) - Additional fixes for using cron state with non-root Minion - [@Oloremo](https://github.com/Oloremo)
-- [#40491](https://github.com/saltstack/salt/issues/40491) - Fixed trim_output logic in archive.extracted state - [@Oloremo](https://github.com/Oloremo)
+- [#57100](https://github.com/saltstack/salt/pull/57100) - Address Issues in CVE Release
 
-### Added
-- [#56637](https://github.com/saltstack/salt/pull/56637) - Add ``win_wua.installed`` to the ``win_wua`` execution module
-
-## 3000.1
-
-### Removed
-
-### Deprecated
 
 ### Changed
 - [#56751](https://github.com/saltstack/salt/pull/56751) - Backport 49981
@@ -50,6 +1063,13 @@ Versions are `MAJOR.PATCH`.
 
 ### Changed
 - [#56730](https://github.com/saltstack/salt/pull/56730) - Backport #52992
+### 3000.2
+
+### Fixed
+- [#56987](https://github.com/saltstack/salt/pull/56987) - CVE fix
+
+
+### 3000.1
 
 ### Fixed
 
@@ -86,7 +1106,7 @@ Versions are `MAJOR.PATCH`.
 
 ### Added
 
-## 3000 - Neon [2020-02-10]
+### 3000 - Neon [2020-02-10]
 
 ### Removed
 
@@ -329,11 +1349,11 @@ Versions are `MAJOR.PATCH`.
 
 ### Changed
 
-- [#54758](https://github.com/saltstack/salt/issues/54758) - Missing sls file during `state.show_states` displays message instead of failing - [@Ch3LL](https://github.com/Ch3LL) 
+- [#54758](https://github.com/saltstack/salt/issues/54758) - Missing sls file during `state.show_states` displays message instead of failing - [@Ch3LL](https://github.com/Ch3LL)
 
 ### Fixed
 
-- [#54521](https://github.com/saltstack/salt/issues/54521) - `failhard` during orchestration now fails as expected - [@mattp-](https://github.com/mattp-) / [@Oloremo](https://github.com/Oloremo)  
+- [#54521](https://github.com/saltstack/salt/issues/54521) - `failhard` during orchestration now fails as expected - [@mattp-](https://github.com/mattp-) / [@Oloremo](https://github.com/Oloremo)
 - [#54741](https://github.com/saltstack/salt/issues/54741) - `schedule.run_job` without time element now works as expected - [@garethgreenaway](https://github.com/garethgreenaway)
 - [#54755](https://github.com/saltstack/salt/issues/54755) - Pip state ensures pip was imported before trying to remove - [@dwoz](https://github.com/dwoz)
 - [#54760](https://github.com/saltstack/salt/issues/54760) - Fix `salt-cloud -Q` for OpenStack driver - [@vdloo](https://github.com/vdloo) / [@Akm0d](https://github.com/Akm0d)
@@ -351,4 +1371,4 @@ Versions are `MAJOR.PATCH`.
 ## [2019.2.1] - 2019-09-25 [YANKED]
 
 
-- See [old release notes](https://docs.saltstack.com/en/latest/topics/releases/2019.2.1.html) 
+- See [old release notes](https://docs.saltstack.com/en/latest/topics/releases/2019.2.1.html)

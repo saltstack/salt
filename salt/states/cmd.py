@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Execution of arbitrary commands
 ===============================
@@ -20,7 +19,7 @@ no disk space:
 
 .. code-block:: yaml
 
-    '> /var/log/messages/:
+    '> /var/log/messages/':
       cmd.run:
         - unless: echo 'foo' > /tmp/.test && rm -f /tmp/.test
 
@@ -46,7 +45,8 @@ run if **any** of the files do not exist:
 
 .. note::
 
-    The ``creates`` option was added to version 2014.7.0
+    The ``creates`` option was added to the cmd state in version 2014.7.0,
+    and made a global requisite in 3001.
 
 Sometimes when running a command that starts up a daemon, the init script
 doesn't return properly which causes Salt to wait indefinitely for a response.
@@ -231,19 +231,16 @@ To use it, one may pass it like this. Example:
 
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 import logging
 import os
 
-# Import salt libs
 import salt.utils.args
 import salt.utils.functools
 import salt.utils.json
+import salt.utils.platform
 from salt.exceptions import CommandExecutionError, SaltRenderError
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -316,110 +313,15 @@ def _failout(state, msg):
 
 
 def _is_true(val):
-    if val and six.text_type(val).lower() in ("true", "yes", "1"):
+    if val and str(val).lower() in ("true", "yes", "1"):
         return True
-    elif six.text_type(val).lower() in ("false", "no", "0"):
+    elif str(val).lower() in ("false", "no", "0"):
         return False
-    raise ValueError("Failed parsing boolean value: {0}".format(val))
-
-
-def mod_run_check(cmd_kwargs, onlyif, unless, creates):
-    """
-    Execute the onlyif and unless logic.
-    Return a result dict if:
-    * onlyif failed (onlyif != 0)
-    * unless succeeded (unless == 0)
-    else return True
-    """
-    # never use VT for onlyif/unless executions because this will lead
-    # to quote problems
-    cmd_kwargs = copy.deepcopy(cmd_kwargs)
-    cmd_kwargs["use_vt"] = False
-    cmd_kwargs["bg"] = False
-
-    if onlyif is not None:
-        if isinstance(onlyif, six.string_types):
-            cmd = __salt__["cmd.retcode"](
-                onlyif, ignore_retcode=True, python_shell=True, **cmd_kwargs
-            )
-            log.debug("Last command return code: {0}".format(cmd))
-            if cmd != 0:
-                return {
-                    "comment": "onlyif condition is false",
-                    "skip_watch": True,
-                    "result": True,
-                }
-        elif isinstance(onlyif, list):
-            for entry in onlyif:
-                cmd = __salt__["cmd.retcode"](
-                    entry, ignore_retcode=True, python_shell=True, **cmd_kwargs
-                )
-                log.debug("Last command '{0}' return code: {1}".format(entry, cmd))
-                if cmd != 0:
-                    return {
-                        "comment": "onlyif condition is false: {0}".format(entry),
-                        "skip_watch": True,
-                        "result": True,
-                    }
-        elif not isinstance(onlyif, six.string_types):
-            if not onlyif:
-                log.debug("Command not run: onlyif did not evaluate to string_type")
-                return {
-                    "comment": "onlyif condition is false",
-                    "skip_watch": True,
-                    "result": True,
-                }
-
-    if unless is not None:
-        if isinstance(unless, six.string_types):
-            cmd = __salt__["cmd.retcode"](
-                unless, ignore_retcode=True, python_shell=True, **cmd_kwargs
-            )
-            log.debug("Last command return code: {0}".format(cmd))
-            if cmd == 0:
-                return {
-                    "comment": "unless condition is true",
-                    "skip_watch": True,
-                    "result": True,
-                }
-        elif isinstance(unless, list):
-            cmd = []
-            for entry in unless:
-                cmd.append(
-                    __salt__["cmd.retcode"](
-                        entry, ignore_retcode=True, python_shell=True, **cmd_kwargs
-                    )
-                )
-                log.debug("Last command return code: {0}".format(cmd))
-            if all([c == 0 for c in cmd]):
-                return {
-                    "comment": "unless condition is true",
-                    "skip_watch": True,
-                    "result": True,
-                }
-        elif not isinstance(unless, six.string_types):
-            if unless:
-                log.debug("Command not run: unless did not evaluate to string_type")
-                return {
-                    "comment": "unless condition is true",
-                    "skip_watch": True,
-                    "result": True,
-                }
-
-    if isinstance(creates, six.string_types) and os.path.exists(creates):
-        return {"comment": "{0} exists".format(creates), "result": True}
-    elif isinstance(creates, list) and all([os.path.exists(path) for path in creates]):
-        return {"comment": "All files in creates exist", "result": True}
-
-    # No reason to stop, return True
-    return True
+    raise ValueError("Failed parsing boolean value: {}".format(val))
 
 
 def wait(
     name,
-    onlyif=None,
-    unless=None,
-    creates=None,
     cwd=None,
     root=None,
     runas=None,
@@ -444,14 +346,6 @@ def wait(
     name
         The command to execute, remember that the command will execute with the
         path and permissions of the salt-minion.
-
-    onlyif
-        A command to run as a check, run the named command only if the command
-        passed to the ``onlyif`` option returns true
-
-    unless
-        A command to run as a check, only run the named command if the command
-        passed to the ``unless`` option returns false
 
     cwd
         The current working directory to execute the command in, defaults to
@@ -506,6 +400,11 @@ def wait(
                 - name: ls -l /
                 - env:
                   - PATH: {{ [current_path, '/my/special/bin']|join(':') }}
+
+        .. note::
+            When using environment variables on Window's, case-sensitivity
+            matters, i.e. Window's uses `Path` as opposed to `PATH` for other
+            systems.
 
     umask
          The umask (in octal) to use when running the command.
@@ -562,8 +461,6 @@ def wait_script(
     name,
     source=None,
     template=None,
-    onlyif=None,
-    unless=None,
     cwd=None,
     runas=None,
     shell=None,
@@ -593,14 +490,6 @@ def wait_script(
     name
         The command to execute, remember that the command will execute with the
         path and permissions of the salt-minion.
-
-    onlyif
-        A command to run as a check, run the named command only if the command
-        passed to the ``onlyif`` option returns true
-
-    unless
-        A command to run as a check, only run the named command if the command
-        passed to the ``unless`` option returns false
 
     cwd
         The current working directory to execute the command in, defaults to
@@ -652,6 +541,11 @@ def wait_script(
                 - env:
                   - PATH: {{ [current_path, '/my/special/bin']|join(':') }}
 
+        .. note::
+            When using environment variables on Window's, case-sensitivity
+            matters, i.e. Window's uses `Path` as opposed to `PATH` for other
+            systems.
+
     umask
          The umask (in octal) to use when running the command.
 
@@ -694,9 +588,6 @@ def wait_script(
 
 def run(
     name,
-    onlyif=None,
-    unless=None,
-    creates=None,
     cwd=None,
     root=None,
     runas=None,
@@ -720,14 +611,6 @@ def run(
     name
         The command to execute, remember that the command will execute with the
         path and permissions of the salt-minion.
-
-    onlyif
-        A command to run as a check, run the named command only if the command
-        passed to the ``onlyif`` option returns a zero exit status
-
-    unless
-        A command to run as a check, only run the named command if the command
-        passed to the ``unless`` option returns a non-zero exit status
 
     cwd
         The current working directory to execute the command in, defaults to
@@ -782,6 +665,11 @@ def run(
                 - name: ls -l /
                 - env:
                   - PATH: {{ [current_path, '/my/special/bin']|join(':') }}
+
+        .. note::
+            When using environment variables on Window's, case-sensitivity
+            matters, i.e. Window's uses `Path` as opposed to `PATH` for other
+            systems.
 
     prepend_path
         $PATH segment to prepend (trailing ':' not necessary) to $PATH. This is
@@ -906,18 +794,13 @@ def run(
         }
     )
 
-    cret = mod_run_check(cmd_kwargs, onlyif, unless, creates)
-    if isinstance(cret, dict):
-        ret.update(cret)
-        return ret
-
     if __opts__["test"] and not test_name:
         ret["result"] = None
-        ret["comment"] = 'Command "{0}" would have been executed'.format(name)
+        ret["comment"] = 'Command "{}" would have been executed'.format(name)
         return _reinterpreted_state(ret) if stateful else ret
 
     if cwd and not os.path.isdir(cwd):
-        ret["comment"] = ('Desired working directory "{0}" ' "is not available").format(
+        ret["comment"] = ('Desired working directory "{}" ' "is not available").format(
             cwd
         )
         return ret
@@ -929,12 +812,12 @@ def run(
             cmd=name, timeout=timeout, python_shell=True, **cmd_kwargs
         )
     except Exception as err:  # pylint: disable=broad-except
-        ret["comment"] = six.text_type(err)
+        ret["comment"] = str(err)
         return ret
 
     ret["changes"] = cmd_all
     ret["result"] = not bool(cmd_all["retcode"])
-    ret["comment"] = 'Command "{0}" run'.format(name)
+    ret["comment"] = 'Command "{}" run'.format(name)
 
     # Ignore timeout errors if asked (for nohups) and treat cmd as a success
     if ignore_timeout:
@@ -956,11 +839,9 @@ def script(
     name,
     source=None,
     template=None,
-    onlyif=None,
-    unless=None,
-    creates=None,
     cwd=None,
     runas=None,
+    password=None,
     shell=None,
     env=None,
     stateful=False,
@@ -991,20 +872,38 @@ def script(
         Either "cmd arg1 arg2 arg3..." (cmd is not used) or a source
         "salt://...".
 
-    onlyif
-        Run the named command only if the command passed to the ``onlyif``
-        option returns true
-
-    unless
-        Run the named command only if the command passed to the ``unless``
-        option returns false
-
     cwd
         The current working directory to execute the command in, defaults to
         /root
 
     runas
-        The name of the user to run the command as
+        Specify an alternate user to run the command. The default
+        behavior is to run as the user under which Salt is running. If running
+        on a Windows minion you must also use the ``password`` argument, and
+        the target user account must be in the Administrators group.
+
+        .. note::
+
+            For Window's users, specifically Server users, it may be necessary
+            to specify your runas user using the User Logon Name instead of the
+            legacy logon name. Traditionally, logons would be in the following
+            format.
+
+                ``Domain/user``
+
+            In the event this causes issues when executing scripts, use the UPN
+            format which looks like the following.
+
+                ``user@domain.local``
+
+            More information <https://github.com/saltstack/salt/issues/55080>
+
+    password
+
+    .. versionadded:: 3000
+
+        Windows only. Required when specifying ``runas``. This
+        parameter will be ignored on non-Windows platforms.
 
     shell
         The shell to use for execution. The default is set in grains['shell']
@@ -1048,6 +947,11 @@ def script(
                 - name: ls -l /
                 - env:
                   - PATH: {{ [current_path, '/my/special/bin']|join(':') }}
+
+        .. note::
+            When using environment variables on Window's, case-sensitivity
+            matters, i.e. Window's uses `Path` as opposed to `PATH` for other
+            systems.
 
     saltenv : ``base``
         The Salt environment to use
@@ -1143,6 +1047,10 @@ def script(
         )
         return ret
 
+    if runas and salt.utils.platform.is_windows() and not password:
+        ret["commnd"] = "Must supply a password if runas argument is used on Windows."
+        return ret
+
     tmpctx = defaults if defaults else {}
     if context:
         tmpctx.update(context)
@@ -1151,10 +1059,9 @@ def script(
     cmd_kwargs.update(
         {
             "runas": runas,
+            "password": password,
             "shell": shell or __grains__["shell"],
             "env": env,
-            "onlyif": onlyif,
-            "unless": unless,
             "cwd": cwd,
             "template": template,
             "umask": umask,
@@ -1182,18 +1089,13 @@ def script(
     if not cmd_kwargs.get("args", None) and len(name.split()) > 1:
         cmd_kwargs.update({"args": name.split(" ", 1)[1]})
 
-    cret = mod_run_check(run_check_cmd_kwargs, onlyif, unless, creates)
-    if isinstance(cret, dict):
-        ret.update(cret)
-        return ret
-
     if __opts__["test"] and not test_name:
         ret["result"] = None
-        ret["comment"] = "Command '{0}' would have been " "executed".format(name)
+        ret["comment"] = "Command '{}' would have been " "executed".format(name)
         return _reinterpreted_state(ret) if stateful else ret
 
     if cwd and not os.path.isdir(cwd):
-        ret["comment"] = ('Desired working directory "{0}" ' "is not available").format(
+        ret["comment"] = ('Desired working directory "{}" ' "is not available").format(
             cwd
         )
         return ret
@@ -1201,8 +1103,8 @@ def script(
     # Wow, we passed the test, run this sucker!
     try:
         cmd_all = __salt__["cmd.script"](source, python_shell=True, **cmd_kwargs)
-    except (CommandExecutionError, SaltRenderError, IOError) as err:
-        ret["comment"] = six.text_type(err)
+    except (CommandExecutionError, SaltRenderError, OSError) as err:
+        ret["comment"] = str(err)
         return ret
 
     ret["changes"] = cmd_all
@@ -1211,11 +1113,11 @@ def script(
     else:
         ret["result"] = not bool(cmd_all["retcode"])
     if ret.get("changes", {}).get("cache_error"):
-        ret["comment"] = "Unable to cache script {0} from saltenv " "'{1}'".format(
+        ret["comment"] = "Unable to cache script {} from saltenv " "'{}'".format(
             source, __env__
         )
     else:
-        ret["comment"] = "Command '{0}' run".format(name)
+        ret["comment"] = "Command '{}' run".format(name)
     if stateful:
         ret = _reinterpreted_state(ret)
     if __opts__["test"] and cmd_all["retcode"] == 0 and ret["changes"]:
@@ -1228,9 +1130,6 @@ def call(
     func,
     args=(),
     kws=None,
-    onlyif=None,
-    unless=None,
-    creates=None,
     output_loglevel="debug",
     hide_output=False,
     use_vt=False,
@@ -1240,13 +1139,6 @@ def call(
     Invoke a pre-defined Python function with arguments specified in the state
     declaration. This function is mainly used by the
     :mod:`salt.renderers.pydsl` renderer.
-
-    The interpretation of ``onlyif`` and ``unless`` arguments are identical to
-    those of :mod:`cmd.run <salt.states.cmd.run>`, and all other
-    arguments(``cwd``, ``runas``, ...) allowed by :mod:`cmd.run
-    <salt.states.cmd.run>` are allowed here, except that their effects apply
-    only to the commands specified in `onlyif` and `unless` rather than to the
-    function to be invoked.
 
     In addition, the ``stateful`` argument has no effects here.
 
@@ -1281,11 +1173,6 @@ def call(
         "umask": kwargs.get("umask"),
     }
 
-    cret = mod_run_check(cmd_kwargs, onlyif, unless, creates)
-    if isinstance(cret, dict):
-        ret.update(cret)
-        return ret
-
     if not kws:
         kws = {}
     result = func(*args, **kws)
@@ -1296,7 +1183,7 @@ def call(
         # result must be JSON serializable else we get an error
         ret["changes"] = {"retval": result}
         ret["result"] = True if result is None else bool(result)
-        if isinstance(result, six.string_types):
+        if isinstance(result, str):
             ret["comment"] = result
         return ret
 
@@ -1306,9 +1193,6 @@ def wait_call(
     func,
     args=(),
     kws=None,
-    onlyif=None,
-    unless=None,
-    creates=None,
     stateful=False,
     use_vt=False,
     output_loglevel="debug",

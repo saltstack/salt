@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Beacon to monitor certificate expiration dates from files on the filesystem.
 
@@ -8,22 +7,11 @@ Beacon to monitor certificate expiration dates from files on the filesystem.
 :maturity: new
 :depends: OpenSSL
 """
-
-# Import Python libs
-from __future__ import absolute_import, unicode_literals
-
 import logging
 from datetime import datetime
 
-# pylint: enable=import-error,no-name-in-module,redefined-builtin,3rd-party-module-not-gated
 import salt.utils.files
 
-# Import salt libs
-# pylint: disable=import-error,no-name-in-module,redefined-builtin,3rd-party-module-not-gated
-from salt.ext.six.moves import map as _map
-from salt.ext.six.moves import range as _range
-
-# Import Third Party Libs
 try:
     from OpenSSL import crypto
 
@@ -50,7 +38,7 @@ def validate(config):
     Validate the beacon configuration
     """
     _config = {}
-    list(_map(_config.update, config))
+    list(map(_config.update, config))
 
     # Configuration for cert_info beacon should be a list of dicts
     if not isinstance(config, list):
@@ -91,7 +79,7 @@ def beacon(config):
     CryptoError = crypto.Error  # pylint: disable=invalid-name
 
     _config = {}
-    list(_map(_config.update, config))
+    list(map(_config.update, config))
 
     global_notify_days = _config.get("notify_days", DEFAULT_NOTIFY_DAYS)
 
@@ -100,18 +88,20 @@ def beacon(config):
 
         if isinstance(cert_path, dict):
             try:
-                notify_days = cert_path[cert_path.keys()[0]].get(
+                next_cert_path = next(iter(cert_path))
+                notify_days = cert_path[next_cert_path].get(
                     "notify_days", global_notify_days
                 )
-                cert_path = cert_path.keys()[0]
-            except IndexError as exc:
+            except StopIteration as exc:
                 log.error("Unable to load certificate %s (%s)", cert_path, exc)
                 continue
+            else:
+                cert_path = next_cert_path
 
         try:
             with salt.utils.files.fopen(cert_path) as fp_:
                 cert = crypto.load_certificate(crypto.FILETYPE_PEM, fp_.read())
-        except (IOError, CryptoError) as exc:
+        except (OSError, CryptoError) as exc:
             log.error("Unable to load certificate %s (%s)", cert_path, exc)
             continue
 
@@ -128,7 +118,7 @@ def beacon(config):
                 notify_days,
             )
             extensions = []
-            for ext in _range(0, cert.get_extension_count()):
+            for ext in range(0, cert.get_extension_count()):
                 extensions.append(
                     {
                         "ext_name": cert.get_extension(ext)
@@ -143,7 +133,7 @@ def beacon(config):
                     "cert_path": cert_path,
                     "issuer": ",".join(
                         [
-                            '{0}="{1}"'.format(
+                            '{}="{}"'.format(
                                 t[0].decode(encoding="UTF-8"),
                                 t[1].decode(encoding="UTF-8"),
                             )
@@ -166,7 +156,7 @@ def beacon(config):
                     ),
                     "subject": ",".join(
                         [
-                            '{0}="{1}"'.format(
+                            '{}="{}"'.format(
                                 t[0].decode(encoding="UTF-8"),
                                 t[1].decode(encoding="UTF-8"),
                             )

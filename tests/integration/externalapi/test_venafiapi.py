@@ -1,25 +1,20 @@
-# -*- coding: utf-8 -*-
 """
 Tests for the salt-run command
 """
-# Import Python libs
-from __future__ import absolute_import
 
 import functools
 import random
 import string
 import tempfile
 
+import pytest
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 from cryptography.x509.oid import NameOID
 from salt.ext.six import text_type
 from salt.ext.six.moves import range
-
-# Import Salt Testing libs
 from tests.support.case import ShellCase
-from tests.support.unit import skipIf
 
 
 def _random_name(prefix=""):
@@ -48,9 +43,9 @@ class VenafiTest(ShellCase):
     """
 
     @with_random_name
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_request(self, name):
-        cn = "{0}.example.com".format(name)
+        cn = "{}.example.com".format(name)
 
         # Provide python27 compatibility
         if not isinstance(cn, text_type):
@@ -90,7 +85,7 @@ class VenafiTest(ShellCase):
         assert pkey_public_key_pem == cert_public_key_pem
 
     @with_random_name
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_sign(self, name):
 
         csr_pem = """-----BEGIN CERTIFICATE REQUEST-----

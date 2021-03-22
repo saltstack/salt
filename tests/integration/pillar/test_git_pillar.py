@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Integration tests for git_pillar
 
@@ -64,16 +63,12 @@ https://github.com/git/git/commit/6bc0cb5
 https://github.com/unbit/uwsgi/commit/ac1e354
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import random
 import string
 
-# Import Salt libs
+import pytest
 import salt.utils.path
 import salt.utils.platform
-from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES as VIRTUALENV_NAMES
 from salt.utils.gitfs import (
     GITPYTHON_MINVER,
@@ -82,20 +77,18 @@ from salt.utils.gitfs import (
     LIBGIT2_VERSION,
     PYGIT2_MINVER,
     PYGIT2_VERSION,
+    FileserverConfigError,
 )
-
-# Import Salt Testing libs
-from tests.support.gitfs import (
+from tests.support.gitfs import (  # pylint: disable=unused-import
     PASSWORD,
     USERNAME,
     GitPillarHTTPTestBase,
     GitPillarSSHTestBase,
+    ssh_pillar_tests_prep,
+    webserver_pillar_tests_prep,
+    webserver_pillar_tests_prep_authenticated,
 )
-from tests.support.helpers import (
-    destructiveTest,
-    requires_system_grains,
-    skip_if_not_root,
-)
+from tests.support.helpers import requires_system_grains
 from tests.support.unit import skipIf
 
 # Check for requisite components
@@ -115,7 +108,7 @@ HAS_VIRTUALENV = bool(salt.utils.path.which_bin(VIRTUALENV_NAMES))
 
 
 def _rand_key_name(length):
-    return "id_rsa_{0}".format(
+    return "id_rsa_{}".format(
         "".join(random.choice(string.ascii_letters) for _ in range(length))
     )
 
@@ -124,18 +117,13 @@ def _windows_or_mac():
     return salt.utils.platform.is_windows() or salt.utils.platform.is_darwin()
 
 
-class GitPythonMixin(object):
+class GitPythonMixin:
     """
     GitPython doesn't support anything fancy in terms of authentication
     options, so all of the tests for GitPython can be re-used via this mixin.
     """
 
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_single_source(self):
         """
         Test using a single ext_pillar repo
@@ -165,12 +153,7 @@ class GitPythonMixin(object):
             },
         )
 
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_multiple_sources_master_dev_no_merge_lists(self):
         """
         Test using two ext_pillar dirs. Since all git_pillar repos are merged
@@ -207,12 +190,7 @@ class GitPythonMixin(object):
             },
         )
 
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_multiple_sources_dev_master_no_merge_lists(self):
         """
         Test using two ext_pillar dirs. Since all git_pillar repos are merged
@@ -249,12 +227,7 @@ class GitPythonMixin(object):
             },
         )
 
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_multiple_sources_master_dev_merge_lists(self):
         """
         Test using two ext_pillar dirs. Since all git_pillar repos are merged
@@ -291,12 +264,7 @@ class GitPythonMixin(object):
             },
         )
 
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_multiple_sources_dev_master_merge_lists(self):
         """
         Test using two ext_pillar dirs. Since all git_pillar repos are merged
@@ -333,12 +301,7 @@ class GitPythonMixin(object):
             },
         )
 
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_multiple_sources_with_pillarenv(self):
         """
         Test using pillarenv to restrict results to those from a single branch
@@ -370,12 +333,7 @@ class GitPythonMixin(object):
             },
         )
 
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_includes_enabled(self):
         """
         Test with git_pillar_includes enabled. The top_only branch references
@@ -410,12 +368,7 @@ class GitPythonMixin(object):
             },
         )
 
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_includes_disabled(self):
         """
         Test with git_pillar_includes enabled. The top_only branch references
@@ -456,12 +409,7 @@ class GitPythonMixin(object):
             },
         )
 
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_includes_enabled_solves___env___with_mountpoint(self):
         """
         Test with git_pillar_includes enabled and using "__env__" as the branch
@@ -500,12 +448,7 @@ class GitPythonMixin(object):
             },
         )
 
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_root_parameter(self):
         """
         Test root parameter
@@ -529,12 +472,7 @@ class GitPythonMixin(object):
         )
         self.assertEqual(ret, expected)
 
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_mountpoint_parameter(self):
         """
         Test mountpoint parameter
@@ -558,12 +496,7 @@ class GitPythonMixin(object):
         )
         self.assertEqual(ret, expected)
 
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_root_and_mountpoint_parameters(self):
         """
         Test root and mountpoint parameters
@@ -588,12 +521,7 @@ class GitPythonMixin(object):
         )
         self.assertEqual(ret, expected)
 
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_all_saltenvs(self):
         """
         Test all_saltenvs parameter.
@@ -628,12 +556,7 @@ class GitPythonMixin(object):
             },
         )
 
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_all_saltenvs_base(self):
         """
         Test all_saltenvs parameter with base pillarenv.
@@ -667,6 +590,7 @@ class GitPythonMixin(object):
             },
         )
 
+    @pytest.mark.slow_test
     def test_fallback(self):
         """
         Test fallback parameter.
@@ -702,12 +626,68 @@ class GitPythonMixin(object):
             },
         )
 
+    @pytest.mark.slow_test
+    def test_base(self):
+        """
+        Test per-remote base parameter.
+        """
+        ret = self.get_pillar(
+            """\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: gitpython
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            ext_pillar:
+              - git:
+                - __env__ {url_extra_repo}:
+                  - base: master
+                - __env__ {url}:
+                  - mountpoint: nowhere
+                  - base: dev
+            """
+        )
+        self.assertEqual(
+            ret,
+            {
+                "branch": "dev",
+                "motd": "The force will be with you. Always.",
+                "mylist": ["dev"],
+                "mydict": {
+                    "dev": True,
+                    "nested_list": ["dev"],
+                    "nested_dict": {"dev": True},
+                },
+            },
+        )
 
-@destructiveTest
+    def test_base_failhard(self):
+        """
+        Test per-remote base parameter to fail hard when branch is not __env__.
+        """
+        with self.assertRaises(FileserverConfigError) as excinfo:
+            self.get_pillar(
+                """\
+                file_ignore_regex: []
+                file_ignore_glob: []
+                git_pillar_provider: gitpython
+                cachedir: {cachedir}
+                extension_modules: {extmods}
+                ext_pillar:
+                  - git:
+                    - master {url}:
+                      - base: foo
+                """
+            )
+        self.assertEqual(excinfo.exception.strerror, "Failed to load git_pillar")
+
+
 @skipIf(_windows_or_mac(), "minion is windows or mac")
-@skip_if_not_root
-@skipIf(not HAS_GITPYTHON, "GitPython >= {0} required".format(GITPYTHON_MINVER))
+@skipIf(not HAS_GITPYTHON, "GitPython >= {} required".format(GITPYTHON_MINVER))
 @skipIf(not HAS_SSHD, "sshd not present")
+@pytest.mark.usefixtures("ssh_pillar_tests_prep")
+@pytest.mark.destructive_test
+@pytest.mark.skip_if_not_root
 class TestGitPythonSSH(GitPillarSSHTestBase, GitPythonMixin):
     """
     Test git_pillar with GitPython using SSH authentication
@@ -720,10 +700,11 @@ class TestGitPythonSSH(GitPillarSSHTestBase, GitPythonMixin):
 
 
 @skipIf(_windows_or_mac(), "minion is windows or mac")
-@skip_if_not_root
-@skipIf(not HAS_GITPYTHON, "GitPython >= {0} required".format(GITPYTHON_MINVER))
+@skipIf(not HAS_GITPYTHON, "GitPython >= {} required".format(GITPYTHON_MINVER))
 @skipIf(not HAS_NGINX, "nginx not present")
 @skipIf(not HAS_VIRTUALENV, "virtualenv not present")
+@pytest.mark.usefixtures("webserver_pillar_tests_prep")
+@pytest.mark.skip_if_not_root
 class TestGitPythonHTTP(GitPillarHTTPTestBase, GitPythonMixin):
     """
     Test git_pillar with GitPython using unauthenticated HTTP
@@ -731,10 +712,11 @@ class TestGitPythonHTTP(GitPillarHTTPTestBase, GitPythonMixin):
 
 
 @skipIf(_windows_or_mac(), "minion is windows or mac")
-@skip_if_not_root
-@skipIf(not HAS_GITPYTHON, "GitPython >= {0} required".format(GITPYTHON_MINVER))
+@skipIf(not HAS_GITPYTHON, "GitPython >= {} required".format(GITPYTHON_MINVER))
 @skipIf(not HAS_NGINX, "nginx not present")
 @skipIf(not HAS_VIRTUALENV, "virtualenv not present")
+@pytest.mark.usefixtures("webserver_pillar_tests_prep_authenticated")
+@pytest.mark.skip_if_not_root
 class TestGitPythonAuthenticatedHTTP(TestGitPythonHTTP, GitPythonMixin):
     """
     Test git_pillar with GitPython using authenticated HTTP
@@ -743,34 +725,16 @@ class TestGitPythonAuthenticatedHTTP(TestGitPythonHTTP, GitPythonMixin):
     username = USERNAME
     password = PASSWORD
 
-    @classmethod
-    def setUpClass(cls):
-        """
-        Create start the webserver
-        """
-        super(TestGitPythonAuthenticatedHTTP, cls).setUpClass()
-        # Override the URL set up in the parent class to encode the
-        # username/password into it.
-        cls.url = "http://{username}:{password}@127.0.0.1:{port}/repo.git".format(
-            username=cls.username, password=cls.password, port=cls.nginx_port
-        )
-        cls.url_extra_repo = "http://{username}:{password}@127.0.0.1:{port}/extra_repo.git".format(
-            username=cls.username, password=cls.password, port=cls.nginx_port
-        )
-        cls.ext_opts["url"] = cls.url
-        cls.ext_opts["url_extra_repo"] = cls.url_extra_repo
-        cls.ext_opts["username"] = cls.username
-        cls.ext_opts["password"] = cls.password
 
-
-@destructiveTest
 @skipIf(_windows_or_mac(), "minion is windows or mac")
-@skip_if_not_root
 @skipIf(
     not HAS_PYGIT2,
-    "pygit2 >= {0} and libgit2 >= {1} required".format(PYGIT2_MINVER, LIBGIT2_MINVER),
+    "pygit2 >= {} and libgit2 >= {} required".format(PYGIT2_MINVER, LIBGIT2_MINVER),
 )
 @skipIf(not HAS_SSHD, "sshd not present")
+@pytest.mark.usefixtures("ssh_pillar_tests_prep")
+@pytest.mark.destructive_test
+@pytest.mark.skip_if_not_root
 class TestPygit2SSH(GitPillarSSHTestBase):
     """
     Test git_pillar with pygit2 using SSH authentication
@@ -784,14 +748,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
     username = USERNAME
     passphrase = PASSWORD
 
-    @requires_system_grains
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    def test_single_source(self, grains):
+    @pytest.mark.slow_test
+    def test_single_source(self):
         """
         Test using a single ext_pillar repo
         """
@@ -839,10 +797,6 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         )
         self.assertEqual(ret, expected)
 
-        if grains["os_family"] == "Debian":
-            # passphrase-protected currently does not work here
-            return
-
         # Test with passphrase-protected key and global credential options
         ret = self.get_pillar(
             """\
@@ -879,14 +833,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         )
         self.assertEqual(ret, expected)
 
-    @requires_system_grains
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    def test_multiple_sources_master_dev_no_merge_lists(self, grains):
+    @pytest.mark.slow_test
+    def test_multiple_sources_master_dev_no_merge_lists(self):
         """
         Test using two ext_pillar dirs. Since all git_pillar repos are merged
         into a single dictionary, ordering matters.
@@ -945,10 +893,6 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         )
         self.assertEqual(ret, expected)
 
-        if grains["os_family"] == "Debian":
-            # passphrase-protected currently does not work here
-            return
-
         # Test with passphrase-protected key and global credential options
         ret = self.get_pillar(
             """\
@@ -992,14 +936,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         )
         self.assertEqual(ret, expected)
 
-    @requires_system_grains
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    def test_multiple_sources_dev_master_no_merge_lists(self, grains):
+    @pytest.mark.slow_test
+    def test_multiple_sources_dev_master_no_merge_lists(self):
         """
         Test using two ext_pillar dirs. Since all git_pillar repos are merged
         into a single dictionary, ordering matters.
@@ -1058,10 +996,6 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         )
         self.assertEqual(ret, expected)
 
-        if grains["os_family"] == "Debian":
-            # passphrase-protected currently does not work here
-            return
-
         # Test with passphrase-protected key and global credential options
         ret = self.get_pillar(
             """\
@@ -1105,14 +1039,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         )
         self.assertEqual(ret, expected)
 
-    @requires_system_grains
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    def test_multiple_sources_master_dev_merge_lists(self, grains):
+    @pytest.mark.slow_test
+    def test_multiple_sources_master_dev_merge_lists(self):
         """
         Test using two ext_pillar dirs. Since all git_pillar repos are merged
         into a single dictionary, ordering matters.
@@ -1171,10 +1099,6 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         )
         self.assertEqual(ret, expected)
 
-        if grains["os_family"] == "Debian":
-            # passphrase-protected currently does not work here
-            return
-
         # Test with passphrase-protected key and global credential options
         ret = self.get_pillar(
             """\
@@ -1218,14 +1142,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         )
         self.assertEqual(ret, expected)
 
-    @requires_system_grains
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    def test_multiple_sources_dev_master_merge_lists(self, grains):
+    @pytest.mark.slow_test
+    def test_multiple_sources_dev_master_merge_lists(self):
         """
         Test using two ext_pillar dirs. Since all git_pillar repos are merged
         into a single dictionary, ordering matters.
@@ -1284,10 +1202,6 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         )
         self.assertEqual(ret, expected)
 
-        if grains["os_family"] == "Debian":
-            # passphrase-protected currently does not work here
-            return
-
         # Test with passphrase-protected key and global credential options
         ret = self.get_pillar(
             """\
@@ -1331,14 +1245,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         )
         self.assertEqual(ret, expected)
 
-    @requires_system_grains
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    def test_multiple_sources_with_pillarenv(self, grains):
+    @pytest.mark.slow_test
+    def test_multiple_sources_with_pillarenv(self):
         """
         Test using pillarenv to restrict results to those from a single branch
         """
@@ -1392,10 +1300,6 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         )
         self.assertEqual(ret, expected)
 
-        if grains["os_family"] == "Debian":
-            # passphrase-protected currently does not work here
-            return
-
         # Test with passphrase-protected key and global credential options
         ret = self.get_pillar(
             """\
@@ -1439,14 +1343,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         )
         self.assertEqual(ret, expected)
 
-    @requires_system_grains
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    def test_includes_enabled(self, grains):
+    @pytest.mark.slow_test
+    def test_includes_enabled(self):
         """
         Test with git_pillar_includes enabled. The top_only branch references
         an SLS file from the master branch, so we should see the
@@ -1503,10 +1401,6 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         )
         self.assertEqual(ret, expected)
 
-        if grains["os_family"] == "Debian":
-            # passphrase-protected currently does not work here
-            return
-
         # Test with passphrase-protected key and global credential options
         ret = self.get_pillar(
             """\
@@ -1550,14 +1444,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         )
         self.assertEqual(ret, expected)
 
-    @requires_system_grains
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    def test_includes_disabled(self, grains):
+    @pytest.mark.slow_test
+    def test_includes_disabled(self):
         """
         Test with git_pillar_includes enabled. The top_only branch references
         an SLS file from the master branch, but since includes are disabled it
@@ -1621,10 +1509,6 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         )
         self.assertEqual(ret, expected)
 
-        if grains["os_family"] == "Debian":
-            # passphrase-protected currently does not work here
-            return
-
         # Test with passphrase-protected key and global credential options
         ret = self.get_pillar(
             """\
@@ -1670,12 +1554,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         )
         self.assertEqual(ret, expected)
 
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_includes_enabled_solves___env___with_mountpoint(self):
         """
         Test with git_pillar_includes enabled and using "__env__" as the branch
@@ -1716,14 +1595,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
             },
         )
 
-    @requires_system_grains
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    def test_root_parameter(self, grains):
+    @pytest.mark.slow_test
+    def test_root_parameter(self):
         """
         Test root parameter
         """
@@ -1771,10 +1644,6 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         )
         self.assertEqual(ret, expected)
 
-        if grains["os_family"] == "Debian":
-            # passphrase-protected currently does not work here
-            return
-
         # Test with passphrase-protected key and global credential options
         ret = self.get_pillar(
             """\
@@ -1820,14 +1689,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         )
         self.assertEqual(ret, expected)
 
-    @requires_system_grains
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    def test_mountpoint_parameter(self, grains):
+    @pytest.mark.slow_test
+    def test_mountpoint_parameter(self):
         """
         Test mountpoint parameter
         """
@@ -1875,10 +1738,6 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         )
         self.assertEqual(ret, expected)
 
-        if grains["os_family"] == "Debian":
-            # passphrase-protected currently does not work here
-            return
-
         # Test with passphrase-protected key and global credential options
         ret = self.get_pillar(
             """\
@@ -1924,14 +1783,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         )
         self.assertEqual(ret, expected)
 
-    @requires_system_grains
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    def test_root_and_mountpoint_parameters(self, grains):
+    @pytest.mark.slow_test
+    def test_root_and_mountpoint_parameters(self):
         """
         Test root and mountpoint parameters
         """
@@ -1981,10 +1834,6 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         )
         self.assertEqual(ret, expected)
 
-        if grains["os_family"] == "Debian":
-            # passphrase-protected currently does not work here
-            return
-
         # Test with passphrase-protected key and global credential options
         ret = self.get_pillar(
             """\
@@ -2032,14 +1881,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         )
         self.assertEqual(ret, expected)
 
-    @requires_system_grains
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    def test_all_saltenvs(self, grains):
+    @pytest.mark.slow_test
+    def test_all_saltenvs(self):
         """
         Test all_saltenvs parameter.
         """
@@ -2098,10 +1941,6 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         )
         self.assertEqual(ret, expected)
 
-        if grains["os_family"] == "Debian":
-            # passphrase-protected currently does not work here
-            return
-
         # Test with passphrase-protected key and global credential options
         ret = self.get_pillar(
             """\
@@ -2149,14 +1988,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         )
         self.assertEqual(ret, expected)
 
-    @requires_system_grains
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    def test_all_saltenvs_base(self, grains):
+    @pytest.mark.slow_test
+    def test_all_saltenvs_base(self):
         """
         Test all_saltenvs parameter.
         """
@@ -2213,10 +2046,6 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         )
         self.assertEqual(ret, expected)
 
-        if grains["os_family"] == "Debian":
-            # passphrase-protected currently does not work here
-            return
-
         # Test with passphrase-protected key and global credential options
         ret = self.get_pillar(
             """\
@@ -2262,8 +2091,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         )
         self.assertEqual(ret, expected)
 
-    @requires_system_grains
-    def test_fallback(self, grains):
+    @pytest.mark.slow_test
+    def test_fallback(self):
         """
         Test fallback parameter.
         """
@@ -2324,10 +2153,6 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         )
         self.assertEqual(ret, expected)
 
-        if grains["os_family"] == "Debian":
-            # passphrase-protected currently does not work here
-            return
-
         # Test with passphrase-protected key and global credential options
         ret = self.get_pillar(
             """\
@@ -2377,26 +2202,153 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         )
         self.assertEqual(ret, expected)
 
+    @pytest.mark.slow_test
+    @requires_system_grains
+    def test_base(self, grains):
+        """
+        Test per-remote base parameter.
+        """
+        expected = {
+            "branch": "dev",
+            "motd": "The force will be with you. Always.",
+            "mylist": ["dev"],
+            "mydict": {
+                "dev": True,
+                "nested_list": ["dev"],
+                "nested_dict": {"dev": True},
+            },
+        }
+        # Test with passphraseless key and global credential options
+        ret = self.get_pillar(
+            """\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            git_pillar_pubkey: {pubkey_nopass}
+            git_pillar_privkey: {privkey_nopass}
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            ext_pillar:
+              - git:
+                - __env__ {url_extra_repo}:
+                  - base: master
+                - __env__ {url}:
+                  - mountpoint: nowhere
+                  - base: dev
+            """
+        )
+        self.assertEqual(ret, expected)
+
+        # Test with passphraseless key and per-repo credential options
+        ret = self.get_pillar(
+            """\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            ext_pillar:
+              - git:
+                - __env__ {url_extra_repo}:
+                  - base: master
+                  - pubkey: {pubkey_nopass}
+                  - privkey: {privkey_nopass}
+                - __env__ {url}:
+                  - mountpoint: nowhere
+                  - base: dev
+                  - pubkey: {pubkey_nopass}
+                  - privkey: {privkey_nopass}
+            """
+        )
+        self.assertEqual(ret, expected)
+
+        if grains["os_family"] == "Debian":
+            # passphrase-protected currently does not work here
+            return
+
+        # Test with passphrase-protected key and global credential options
+        ret = self.get_pillar(
+            """\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            git_pillar_pubkey: {pubkey_withpass}
+            git_pillar_privkey: {privkey_withpass}
+            git_pillar_passphrase: {passphrase}
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            ext_pillar:
+              - git:
+                - __env__ {url_extra_repo}:
+                  - base: master
+                - __env__ {url}:
+                  - mountpoint: nowhere
+                  - base: dev
+            """
+        )
+        self.assertEqual(ret, expected)
+
+        # Test with passphrase-protected key and per-repo credential options
+        ret = self.get_pillar(
+            """\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            ext_pillar:
+              - git:
+                - __env__ {url_extra_repo}:
+                  - base: master
+                  - pubkey: {pubkey_nopass}
+                  - privkey: {privkey_nopass}
+                  - passphrase: {passphrase}
+                - __env__ {url}:
+                  - mountpoint: nowhere
+                  - base: dev
+                  - pubkey: {pubkey_nopass}
+                  - privkey: {privkey_nopass}
+                  - passphrase: {passphrase}
+            """
+        )
+        self.assertEqual(ret, expected)
+
+    def test_base_failhard(self):
+        """
+        Test per-remote base parameter to fail hard when branch is not __env__.
+        """
+        with self.assertRaises(FileserverConfigError) as excinfo:
+            self.get_pillar(
+                """\
+                file_ignore_regex: []
+                file_ignore_glob: []
+                git_pillar_provider: gitpython
+                cachedir: {cachedir}
+                extension_modules: {extmods}
+                ext_pillar:
+                  - git:
+                    - master {url}:
+                      - base: foo
+                """
+            )
+        self.assertEqual(excinfo.exception.strerror, "Failed to load git_pillar")
+
 
 @skipIf(_windows_or_mac(), "minion is windows or mac")
-@skip_if_not_root
 @skipIf(
     not HAS_PYGIT2,
-    "pygit2 >= {0} and libgit2 >= {1} required".format(PYGIT2_MINVER, LIBGIT2_MINVER),
+    "pygit2 >= {} and libgit2 >= {} required".format(PYGIT2_MINVER, LIBGIT2_MINVER),
 )
 @skipIf(not HAS_NGINX, "nginx not present")
 @skipIf(not HAS_VIRTUALENV, "virtualenv not present")
+@pytest.mark.usefixtures("webserver_pillar_tests_prep")
+@pytest.mark.skip_if_not_root
 class TestPygit2HTTP(GitPillarHTTPTestBase):
     """
     Test git_pillar with pygit2 using SSH authentication
     """
 
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_single_source(self):
         """
         Test using a single ext_pillar repo
@@ -2425,12 +2377,7 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
         )
         self.assertEqual(ret, expected)
 
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_multiple_sources_master_dev_no_merge_lists(self):
         """
         Test using two ext_pillar dirs. Since all git_pillar repos are merged
@@ -2466,12 +2413,7 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
         )
         self.assertEqual(ret, expected)
 
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_multiple_sources_dev_master_no_merge_lists(self):
         """
         Test using two ext_pillar dirs. Since all git_pillar repos are merged
@@ -2507,12 +2449,7 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
         )
         self.assertEqual(ret, expected)
 
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_multiple_sources_master_dev_merge_lists(self):
         """
         Test using two ext_pillar dirs. Since all git_pillar repos are merged
@@ -2548,12 +2485,7 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
         )
         self.assertEqual(ret, expected)
 
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_multiple_sources_dev_master_merge_lists(self):
         """
         Test using two ext_pillar dirs. Since all git_pillar repos are merged
@@ -2589,12 +2521,7 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
         )
         self.assertEqual(ret, expected)
 
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_multiple_sources_with_pillarenv(self):
         """
         Test using pillarenv to restrict results to those from a single branch
@@ -2625,12 +2552,7 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
         )
         self.assertEqual(ret, expected)
 
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_includes_enabled(self):
         """
         Test with git_pillar_includes enabled. The top_only branch references
@@ -2664,12 +2586,7 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
         )
         self.assertEqual(ret, expected)
 
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_includes_disabled(self):
         """
         Test with git_pillar_includes enabled. The top_only branch references
@@ -2709,12 +2626,7 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
         )
         self.assertEqual(ret, expected)
 
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_includes_enabled_solves___env___with_mountpoint(self):
         """
         Test with git_pillar_includes enabled and using "__env__" as the branch
@@ -2753,12 +2665,7 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
             },
         )
 
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_root_parameter(self):
         """
         Test root parameter
@@ -2782,12 +2689,7 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
         )
         self.assertEqual(ret, expected)
 
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_mountpoint_parameter(self):
         """
         Test mountpoint parameter
@@ -2811,12 +2713,7 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
         )
         self.assertEqual(ret, expected)
 
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_root_and_mountpoint_parameters(self):
         """
         Test root and mountpoint parameters
@@ -2841,12 +2738,7 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
         )
         self.assertEqual(ret, expected)
 
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_all_saltenvs(self):
         """
         Test all_saltenvs parameter.
@@ -2881,12 +2773,7 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
             },
         )
 
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_all_saltenvs_base(self):
         """
         Test all_saltenvs parameter with base pillarenv.
@@ -2920,6 +2807,7 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
             },
         )
 
+    @pytest.mark.slow_test
     def test_fallback(self):
         """
         Test fallback parameter.
@@ -2955,15 +2843,71 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
             },
         )
 
+    @pytest.mark.slow_test
+    def test_base(self):
+        """
+        Test per-remote base parameter.
+        """
+        ret = self.get_pillar(
+            """\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            ext_pillar:
+              - git:
+                - __env__ {url_extra_repo}:
+                  - base: master
+                - __env__ {url}:
+                  - mountpoint: nowhere
+                  - base: dev
+            """
+        )
+        self.assertEqual(
+            ret,
+            {
+                "branch": "dev",
+                "motd": "The force will be with you. Always.",
+                "mylist": ["dev"],
+                "mydict": {
+                    "dev": True,
+                    "nested_list": ["dev"],
+                    "nested_dict": {"dev": True},
+                },
+            },
+        )
+
+    def test_base_failhard(self):
+        """
+        Test per-remote base parameter to fail hard when branch is not __env__.
+        """
+        with self.assertRaises(FileserverConfigError) as excinfo:
+            self.get_pillar(
+                """\
+                file_ignore_regex: []
+                file_ignore_glob: []
+                git_pillar_provider: pygit2
+                cachedir: {cachedir}
+                extension_modules: {extmods}
+                ext_pillar:
+                  - git:
+                    - master {url}:
+                      - base: foo
+                """
+            )
+        self.assertEqual(excinfo.exception.strerror, "Failed to load git_pillar")
+
 
 @skipIf(_windows_or_mac(), "minion is windows or mac")
-@skip_if_not_root
 @skipIf(
     not HAS_PYGIT2,
-    "pygit2 >= {0} and libgit2 >= {1} required".format(PYGIT2_MINVER, LIBGIT2_MINVER),
+    "pygit2 >= {} and libgit2 >= {} required".format(PYGIT2_MINVER, LIBGIT2_MINVER),
 )
 @skipIf(not HAS_NGINX, "nginx not present")
 @skipIf(not HAS_VIRTUALENV, "virtualenv not present")
+@pytest.mark.usefixtures("webserver_pillar_tests_prep_authenticated")
+@pytest.mark.skip_if_not_root
 class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
     """
     Test git_pillar with pygit2 using SSH authentication
@@ -2972,15 +2916,10 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
     possible) in the TestGitPythonSSH class.
     """
 
-    user = USERNAME
+    username = USERNAME
     password = PASSWORD
 
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_single_source(self):
         """
         Test using a single ext_pillar repo
@@ -3001,7 +2940,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
             file_ignore_regex: []
             file_ignore_glob: []
             git_pillar_provider: pygit2
-            git_pillar_user: {user}
+            git_pillar_user: {username}
             git_pillar_password: {password}
             git_pillar_insecure_auth: True
             cachedir: {cachedir}
@@ -3024,19 +2963,14 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
             ext_pillar:
               - git:
                 - master {url}:
-                  - user: {user}
+                  - user: {username}
                   - password: {password}
                   - insecure_auth: True
             """
         )
         self.assertEqual(ret, expected)
 
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_multiple_sources_master_dev_no_merge_lists(self):
         """
         Test using two ext_pillar dirs. Since all git_pillar repos are merged
@@ -3062,7 +2996,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
             file_ignore_regex: []
             file_ignore_glob: []
             git_pillar_provider: pygit2
-            git_pillar_user: {user}
+            git_pillar_user: {username}
             git_pillar_password: {password}
             git_pillar_insecure_auth: True
             cachedir: {cachedir}
@@ -3088,23 +3022,18 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
             ext_pillar:
               - git:
                 - master {url}:
-                  - user: {user}
+                  - user: {username}
                   - password: {password}
                   - insecure_auth: True
                 - dev {url}:
-                  - user: {user}
+                  - user: {username}
                   - password: {password}
                   - insecure_auth: True
             """
         )
         self.assertEqual(ret, expected)
 
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_multiple_sources_dev_master_no_merge_lists(self):
         """
         Test using two ext_pillar dirs. Since all git_pillar repos are merged
@@ -3130,7 +3059,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
             file_ignore_regex: []
             file_ignore_glob: []
             git_pillar_provider: pygit2
-            git_pillar_user: {user}
+            git_pillar_user: {username}
             git_pillar_password: {password}
             git_pillar_insecure_auth: True
             cachedir: {cachedir}
@@ -3156,23 +3085,18 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
             ext_pillar:
               - git:
                 - dev {url}:
-                  - user: {user}
+                  - user: {username}
                   - password: {password}
                   - insecure_auth: True
                 - master {url}:
-                  - user: {user}
+                  - user: {username}
                   - password: {password}
                   - insecure_auth: True
             """
         )
         self.assertEqual(ret, expected)
 
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_multiple_sources_master_dev_merge_lists(self):
         """
         Test using two ext_pillar dirs. Since all git_pillar repos are merged
@@ -3198,7 +3122,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
             file_ignore_regex: []
             file_ignore_glob: []
             git_pillar_provider: pygit2
-            git_pillar_user: {user}
+            git_pillar_user: {username}
             git_pillar_password: {password}
             git_pillar_insecure_auth: True
             cachedir: {cachedir}
@@ -3224,23 +3148,18 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
             ext_pillar:
               - git:
                 - master {url}:
-                  - user: {user}
+                  - user: {username}
                   - password: {password}
                   - insecure_auth: True
                 - dev {url}:
-                  - user: {user}
+                  - user: {username}
                   - password: {password}
                   - insecure_auth: True
             """
         )
         self.assertEqual(ret, expected)
 
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_multiple_sources_dev_master_merge_lists(self):
         """
         Test using two ext_pillar dirs. Since all git_pillar repos are merged
@@ -3266,7 +3185,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
             file_ignore_regex: []
             file_ignore_glob: []
             git_pillar_provider: pygit2
-            git_pillar_user: {user}
+            git_pillar_user: {username}
             git_pillar_password: {password}
             git_pillar_insecure_auth: True
             cachedir: {cachedir}
@@ -3292,23 +3211,18 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
             ext_pillar:
               - git:
                 - dev {url}:
-                  - user: {user}
+                  - user: {username}
                   - password: {password}
                   - insecure_auth: True
                 - master {url}:
-                  - user: {user}
+                  - user: {username}
                   - password: {password}
                   - insecure_auth: True
             """
         )
         self.assertEqual(ret, expected)
 
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_multiple_sources_with_pillarenv(self):
         """
         Test using pillarenv to restrict results to those from a single branch
@@ -3329,7 +3243,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
             file_ignore_regex: []
             file_ignore_glob: []
             git_pillar_provider: pygit2
-            git_pillar_user: {user}
+            git_pillar_user: {username}
             git_pillar_password: {password}
             git_pillar_insecure_auth: True
             cachedir: {cachedir}
@@ -3355,23 +3269,18 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
             ext_pillar:
               - git:
                 - master {url}:
-                  - user: {user}
+                  - user: {username}
                   - password: {password}
                   - insecure_auth: True
                 - dev {url}:
-                  - user: {user}
+                  - user: {username}
                   - password: {password}
                   - insecure_auth: True
             """
         )
         self.assertEqual(ret, expected)
 
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_includes_enabled(self):
         """
         Test with git_pillar_includes enabled. The top_only branch references
@@ -3395,7 +3304,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
             file_ignore_regex: []
             file_ignore_glob: []
             git_pillar_provider: pygit2
-            git_pillar_user: {user}
+            git_pillar_user: {username}
             git_pillar_password: {password}
             git_pillar_insecure_auth: True
             cachedir: {cachedir}
@@ -3409,12 +3318,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
         )
         self.assertEqual(ret, expected)
 
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_mountpoint_parameter(self):
         """
         Test mountpoint parameter
@@ -3426,7 +3330,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
             file_ignore_regex: []
             file_ignore_glob: []
             git_pillar_provider: pygit2
-            git_pillar_user: {user}
+            git_pillar_user: {username}
             git_pillar_password: {password}
             git_pillar_insecure_auth: True
             cachedir: {cachedir}
@@ -3441,12 +3345,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
         )
         self.assertEqual(ret, expected)
 
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_root_parameter(self):
         """
         Test root parameter
@@ -3458,7 +3357,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
             file_ignore_regex: []
             file_ignore_glob: []
             git_pillar_provider: pygit2
-            git_pillar_user: {user}
+            git_pillar_user: {username}
             git_pillar_password: {password}
             git_pillar_insecure_auth: True
             cachedir: {cachedir}
@@ -3485,11 +3384,11 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
               - git:
                 - master {url}:
                   - root: subdir
-                  - user: {user}
+                  - user: {username}
                   - password: {password}
                   - insecure_auth: True
                 - top_only {url}:
-                  - user: {user}
+                  - user: {username}
                   - password: {password}
                   - insecure_auth: True
                   - env: base
@@ -3497,12 +3396,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
         )
         self.assertEqual(ret, expected)
 
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_includes_disabled(self):
         """
         Test with git_pillar_includes enabled. The top_only branch references
@@ -3532,7 +3426,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
             file_ignore_glob: []
             git_pillar_provider: pygit2
             git_pillar_includes: False
-            git_pillar_user: {user}
+            git_pillar_user: {username}
             git_pillar_password: {password}
             git_pillar_insecure_auth: True
             cachedir: {cachedir}
@@ -3558,11 +3452,11 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
             ext_pillar:
               - git:
                 - master {url}:
-                  - user: {user}
+                  - user: {username}
                   - password: {password}
                   - insecure_auth: True
                 - top_only {url}:
-                  - user: {user}
+                  - user: {username}
                   - password: {password}
                   - insecure_auth: True
                   - env: base
@@ -3570,12 +3464,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
         )
         self.assertEqual(ret, expected)
 
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_includes_enabled_solves___env___with_mountpoint(self):
         """
         Test with git_pillar_includes enabled and using "__env__" as the branch
@@ -3589,7 +3478,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
             file_ignore_regex: []
             file_ignore_glob: []
             git_pillar_provider: pygit2
-            git_pillar_user: {user}
+            git_pillar_user: {username}
             git_pillar_password: {password}
             git_pillar_insecure_auth: True
             cachedir: {cachedir}
@@ -3598,13 +3487,13 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
               - git:
                 - __env__ {url_extra_repo}:
                   - name: gitinfo
-                  - user: {user}
+                  - user: {username}
                   - password: {password}
                   - insecure_auth: True
                 - __env__ {url}:
                   - name: webinfo
                   - mountpoint: nowhere
-                  - user: {user}
+                  - user: {username}
                   - password: {password}
                   - insecure_auth: True
             """
@@ -3623,12 +3512,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
             },
         )
 
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_root_and_mountpoint_parameters(self):
         """
         Test root and mountpoint parameters
@@ -3640,7 +3524,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
             file_ignore_regex: []
             file_ignore_glob: []
             git_pillar_provider: pygit2
-            git_pillar_user: {user}
+            git_pillar_user: {username}
             git_pillar_password: {password}
             git_pillar_insecure_auth: True
             cachedir: {cachedir}
@@ -3656,12 +3540,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
         )
         self.assertEqual(ret, expected)
 
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_all_saltenvs(self):
         """
         Test all_saltenvs parameter.
@@ -3671,7 +3550,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
             file_ignore_regex: []
             file_ignore_glob: []
             git_pillar_provider: pygit2
-            git_pillar_user: {user}
+            git_pillar_user: {username}
             git_pillar_password: {password}
             git_pillar_insecure_auth: True
             cachedir: {cachedir}
@@ -3699,12 +3578,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
             },
         )
 
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_all_saltenvs_base(self):
         """
         Test all_saltenvs parameter with base pillarenv.
@@ -3714,7 +3588,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
             file_ignore_regex: []
             file_ignore_glob: []
             git_pillar_provider: pygit2
-            git_pillar_user: {user}
+            git_pillar_user: {username}
             git_pillar_password: {password}
             git_pillar_insecure_auth: True
             cachedir: {cachedir}
@@ -3741,6 +3615,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
             },
         )
 
+    @pytest.mark.slow_test
     def test_fallback(self):
         """
         Test fallback parameter.
@@ -3750,7 +3625,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
             file_ignore_regex: []
             file_ignore_glob: []
             git_pillar_provider: pygit2
-            git_pillar_user: {user}
+            git_pillar_user: {username}
             git_pillar_password: {password}
             git_pillar_insecure_auth: True
             cachedir: {cachedir}
@@ -3778,3 +3653,64 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
                 },
             },
         )
+
+    @pytest.mark.slow_test
+    def test_base(self):
+        """
+        Test per-remote base parameter.
+        """
+        ret = self.get_pillar(
+            """\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            git_pillar_user: {username}
+            git_pillar_password: {password}
+            git_pillar_insecure_auth: True
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            ext_pillar:
+              - git:
+                - __env__ {url_extra_repo}:
+                  - base: master
+                - __env__ {url}:
+                  - mountpoint: nowhere
+                  - base: dev
+            """
+        )
+        self.assertEqual(
+            ret,
+            {
+                "branch": "dev",
+                "motd": "The force will be with you. Always.",
+                "mylist": ["dev"],
+                "mydict": {
+                    "dev": True,
+                    "nested_list": ["dev"],
+                    "nested_dict": {"dev": True},
+                },
+            },
+        )
+
+    def test_base_failhard(self):
+        """
+        Test per-remote base parameter to fail hard when branch is not __env__.
+        """
+        with self.assertRaises(FileserverConfigError) as excinfo:
+            self.get_pillar(
+                """\
+                file_ignore_regex: []
+                file_ignore_glob: []
+                git_pillar_provider: pygit2
+                git_pillar_user: {username}
+                git_pillar_password: {password}
+                git_pillar_insecure_auth: True
+                cachedir: {cachedir}
+                extension_modules: {extmods}
+                ext_pillar:
+                  - git:
+                    - master {url}:
+                      - base: foo
+                """
+            )
+        self.assertEqual(excinfo.exception.strerror, "Failed to load git_pillar")

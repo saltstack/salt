@@ -14,6 +14,7 @@ import posixpath
 import re
 import string
 import struct
+from collections.abc import Iterable
 
 # Import Salt libs
 import salt.utils.args
@@ -24,15 +25,6 @@ from salt.exceptions import CommandNotFoundError
 # Import 3rd-party libs
 from salt.ext import six
 from salt.utils.decorators.jinja import jinja_filter
-
-try:
-    from collections.abc import Iterable
-except ImportError:
-    # pylint: disable=no-name-in-module
-    from collections import Iterable
-
-    # pylint: enable=no-name-in-module
-
 
 try:
     import win32file

@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 An engine that listens for libvirt events and resends them to the salt event bus.
 
@@ -35,7 +33,7 @@ CALLBACK_DEFS constant. If the filters list contains ``all``, all
 events will be relayed.
 
 Be aware that the list of events increases with libvirt versions, for example
-network events have been added in libvirt 1.2.1.
+network events have been added in libvirt 1.2.1 and storage events in 2.0.0.
 
 Running the engine on non-root
 ------------------------------
@@ -65,17 +63,10 @@ A polkit rule like the following one will allow `salt` user to connect to libvir
 .. versionadded:: 2019.2.0
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
+import urllib.parse
 
-# Import salt libs
 import salt.utils.event
-
-# pylint: disable=no-name-in-module,import-error
-from salt.ext.six.moves.urllib.parse import urlparse
-
-# pylint: enable=no-name-in-module,import-error
 
 log = logging.getLogger(__name__)
 
@@ -140,8 +131,14 @@ CALLBACK_DEFS = {
         ("block_threshold", None),
     ),
     "network": (("lifecycle", None),),
-    "pool": (("lifecycle", None), ("refresh", None)),
-    "nodedev": (("lifecycle", None), ("update", None)),
+    "pool": (
+        ("lifecycle", "VIR_STORAGE_POOL_EVENT_ID_LIFECYCLE"),
+        ("refresh", "VIR_STORAGE_POOL_EVENT_ID_REFRESH"),
+    ),
+    "nodedev": (
+        ("lifecycle", "VIR_NODE_DEVICE_EVENT_ID_LIFECYCLE"),
+        ("update", "VIR_NODE_DEVICE_EVENT_ID_UPDATE"),
+    ),
     "secret": (("lifecycle", None), ("value_changed", None)),
 }
 
@@ -192,7 +189,7 @@ def _get_domain_event_detail(event, detail):
     if event_name == "unknown":
         return event_name, "unknown"
 
-    prefix = "VIR_DOMAIN_EVENT_{0}_".format(event_name.upper())
+    prefix = "VIR_DOMAIN_EVENT_{}_".format(event_name.upper())
     detail_name = _get_libvirt_enum_string(prefix, detail)
 
     return event_name, detail_name
@@ -214,7 +211,7 @@ def _salt_send_event(opaque, conn, data):
 
     # Prepare the connection URI to fit in the tag
     # qemu+ssh://user@host:1234/system -> qemu+ssh/user@host:1234/system
-    uri = urlparse(conn.getURI())
+    uri = urllib.parse.urlparse(conn.getURI())
     uri_tag = [uri.scheme]
     if uri.netloc:
         uri_tag.append(uri.netloc)
@@ -337,7 +334,7 @@ def _domain_event_graphics_cb(
         """
         return {
             "family": _get_libvirt_enum_string(
-                "{0}_ADDRESS_".format(prefix), addr["family"]
+                "{}_ADDRESS_".format(prefix), addr["family"]
             ),
             "node": addr["node"],
             "service": addr["service"],
@@ -683,14 +680,14 @@ def _register_callback(cnx, tag_prefix, obj, event, real_id):
     """
     libvirt_name = real_id
     if real_id is None:
-        libvirt_name = "VIR_{0}_EVENT_ID_{1}".format(obj, event).upper()
+        libvirt_name = "VIR_{}_EVENT_ID_{}".format(obj, event).upper()
 
     if not hasattr(libvirt, libvirt_name):
         log.warning('Skipping "%s/%s" events: libvirt too old', obj, event)
         return None
 
     libvirt_id = getattr(libvirt, libvirt_name)
-    callback_name = "_{0}_event_{1}_cb".format(obj, event)
+    callback_name = "_{}_event_{}_cb".format(obj, event)
     callback = globals().get(callback_name, None)
     if callback is None:
         log.error("Missing function %s in engine", callback_name)
@@ -756,7 +753,6 @@ def start(uri=None, tag_prefix="salt/engines/libvirt_events", filters=None):
         exit_loop = False
         while not exit_loop:
             exit_loop = libvirt.virEventRunDefaultImpl() < 0
-            log.debug("=== in the loop exit_loop %s ===", exit_loop)
 
     except Exception as err:  # pylint: disable=broad-except
         log.exception(err)

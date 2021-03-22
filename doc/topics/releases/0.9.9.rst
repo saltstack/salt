@@ -162,8 +162,8 @@ This addition to the LocalClient api can be used like so:
 
     import salt.client
 
-    client = salt.client.LocalClient('/etc/salt/master')
-    ret = client.cmd('*', 'cmd.run', ['ls -l'], kwarg={'cwd': '/etc'})
+    client = salt.client.LocalClient("/etc/salt/master")
+    ret = client.cmd("*", "cmd.run", ["ls -l"], kwarg={"cwd": "/etc"})
 
 This update has been added to all cmd methods in the LocalClient class.
 

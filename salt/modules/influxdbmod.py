@@ -31,8 +31,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import collections
 import logging
+from collections.abc import Sequence
 
-# Import salt libs
 import salt.utils.json
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 
@@ -714,7 +714,7 @@ def query(database, query, **client_args):
     client = _client(**client_args)
     _result = client.query(query, database=database)
 
-    if isinstance(_result, collections.Sequence):
+    if isinstance(_result, Sequence):
         return [
             _pull_query_results(_query_result)
             for _query_result in _result

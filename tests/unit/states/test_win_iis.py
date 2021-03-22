@@ -143,3 +143,145 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
         ), patch.dict(win_iis.__opts__, {"test": False}):
             actual_ret = win_iis.webconfiguration_settings(name, settings)
         self.assertEqual(expected_ret, actual_ret)
+
+    def test_container_settings_password_redacted(self):
+        name = "IIS:\\"
+        container = "AppPools"
+        settings = {
+            "processModel.userName": "Administrator",
+            "processModel.password": "Sup3rS3cr3tP@ssW0rd",
+            "processModel.identityType": "SpecificUser",
+        }
+        old_settings = {
+            "processModel.userName": "Administrator",
+            "processModel.password": "0ldP@ssW0rd1!",
+            "processModel.identityType": "SpecificUser",
+        }
+        current_settings = {
+            "processModel.userName": "Administrator",
+            "processModel.password": "Sup3rS3cr3tP@ssW0rd",
+            "processModel.identityType": "SpecificUser",
+        }
+
+        new_settings = current_settings
+        expected_ret = {
+            "name": name,
+            "changes": {
+                "processModel.password": {
+                    "new": "XXX-REDACTED-XXX",
+                    "old": "XXX-REDACTED-XXX",
+                }
+            },
+            "comment": "Set settings to contain the provided values.",
+            "result": True,
+        }
+        with patch.dict(
+            win_iis.__salt__,
+            {
+                "win_iis.get_container_setting": MagicMock(
+                    side_effect=[old_settings, current_settings, new_settings]
+                ),
+                "win_iis.set_container_setting": MagicMock(return_value=True),
+            },
+        ), patch.dict(win_iis.__opts__, {"test": False}):
+            actual_ret = win_iis.container_setting(
+                name=name, container=container, settings=settings
+            )
+        self.assertEqual(expected_ret, actual_ret)
+
+    def test_container_settings_password_redacted_test_true(self):
+        name = "IIS:\\"
+        container = "AppPools"
+        settings = {
+            "processModel.userName": "Administrator",
+            "processModel.password": "Sup3rS3cr3tP@ssW0rd",
+            "processModel.identityType": "SpecificUser",
+        }
+        old_settings = {
+            "processModel.userName": "Administrator",
+            "processModel.password": "0ldP@ssW0rd1!",
+            "processModel.identityType": "SpecificUser",
+        }
+        current_settings = {
+            "processModel.userName": "Administrator",
+            "processModel.password": "Sup3rS3cr3tP@ssW0rd",
+            "processModel.identityType": "SpecificUser",
+        }
+        new_settings = current_settings
+        expected_ret = {
+            "name": name,
+            "changes": {
+                "processModel.password": {
+                    "new": "XXX-REDACTED-XXX",
+                    "old": "XXX-REDACTED-XXX",
+                }
+            },
+            "comment": "Settings will be changed.",
+            "result": None,
+        }
+        with patch.dict(
+            win_iis.__salt__,
+            {
+                "win_iis.get_container_setting": MagicMock(
+                    side_effect=[old_settings, current_settings, new_settings]
+                ),
+                "win_iis.set_container_setting": MagicMock(return_value=True),
+            },
+        ), patch.dict(win_iis.__opts__, {"test": True}):
+            actual_ret = win_iis.container_setting(
+                name=name, container=container, settings=settings
+            )
+        self.assertEqual(expected_ret, actual_ret)
+
+    def test_container_settings_password_redacted_failures(self):
+        name = "IIS:\\"
+        container = "AppPools"
+        settings = {
+            "processModel.userName": "Administrator",
+            "processModel.password": "Sup3rS3cr3tP@ssW0rd",
+            "processModel.identityType": "SpecificUser",
+        }
+        old_settings = {
+            "processModel.userName": "Spongebob",
+            "processModel.password": "0ldP@ssW0rd1!",
+            "processModel.identityType": "SpecificUser",
+        }
+        current_settings = {
+            "processModel.userName": "Administrator",
+            "processModel.password": "0ldP@ssW0rd1!",
+            "processModel.identityType": "SpecificUser",
+        }
+
+        new_settings = old_settings
+        expected_ret = {
+            "name": name,
+            "changes": {
+                "changes": {
+                    "processModel.userName": {
+                        "new": "Administrator",
+                        "old": "Spongebob",
+                    }
+                },
+                "failures": {
+                    "processModel.password": {
+                        "new": "XXX-REDACTED-XXX",
+                        "old": "XXX-REDACTED-XXX",
+                    }
+                },
+            },
+            "comment": "Some settings failed to change.",
+            "result": False,
+        }
+        with patch.dict(
+            win_iis.__salt__,
+            {
+                "win_iis.get_container_setting": MagicMock(
+                    side_effect=[old_settings, current_settings, new_settings]
+                ),
+                "win_iis.set_container_setting": MagicMock(return_value=True),
+            },
+        ), patch.dict(win_iis.__opts__, {"test": False}):
+            actual_ret = win_iis.container_setting(
+                name=name, container=container, settings=settings
+            )
+        self.assertEqual(expected_ret, actual_ret)

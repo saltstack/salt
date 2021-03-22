@@ -143,6 +143,93 @@ If (Test-Path "$($ini[$bitPaths]['NSISDir'])\NSIS.exe") {
 }
 
 #------------------------------------------------------------------------------
+# Check for installation of NSIS NxS Unzip Plug-in
+#------------------------------------------------------------------------------
+Write-Output " - Checking for NSIS NxS Unzip (ansi) Plug-in installation . . ."
+If (Test-Path "$( $ini[$bitPaths]['NSISPluginsDirA'] )\nsisunz.dll") {
+    # Found NSIS NxS Unzip Plug-in, do nothing
+    Write-Output " - NSIS NxS Unzip Plugin (ansi) Found . . ."
+} Else
+{
+    # NSIS NxS Unzip Plug-in (ansi) not found, install
+    Write-Output " - NSIS NxS Unzip Plugin (ansi) Not Found . . ."
+    # Ansi Plugin
+    Write-Output " - Downloading $( $ini['Prerequisites']['NSISPluginUnzipA'] ) . . ."
+    $file = "$( $ini['Prerequisites']['NSISPluginUnzipA'] )"
+    $url  = "$( $ini['Settings']['SaltRepo'] )/$file"
+    $file = "$( $ini['Settings']['DownloadDir'] )\$file"
+    DownloadFileWithProgress $url $file
+
+    # Extract Ansi Zip file
+    Write-Output " - Extracting . . ."
+    Expand-ZipFile $file $ini['Settings']['DownloadDir']
+
+    # Copy dll to plugins directory
+    Write-Output " - Copying dll to plugins directory . . ."
+    Move-Item "$( $ini['Settings']['DownloadDir'] )\nsisunz\Release\nsisunz.dll" "$( $ini[$bitPaths]['NSISPluginsDirA'] )\nsisunz.dll" -Force
+
+    # Remove temp files
+    Remove-Item "$( $ini['Settings']['DownloadDir'] )\nsisunz" -Force -Recurse
+    Remove-Item "$file" -Force
+}
+
+Write-Output " - Checking for NSIS NxS Unzip (unicode) Plug-in installation . . ."
+If (Test-Path "$( $ini[$bitPaths]['NSISPluginsDirU'] )\nsisunz.dll") {
+    # Found NSIS NxS Unzip Plug-in (unicode), do nothing
+    Write-Output " - NSIS NxS Unzip Plugin (unicode) Found . . ."
+} Else {
+    # Unicode Plugin
+    Write-Output " - Downloading $( $ini['Prerequisites']['NSISPluginUnzipU'] ) . . ."
+    $file = "$( $ini['Prerequisites']['NSISPluginUnzipU'] )"
+    $url  = "$( $ini['Settings']['SaltRepo'] )/$file"
+    $file = "$( $ini['Settings']['DownloadDir'] )\$file"
+    DownloadFileWithProgress $url $file
+
+    # Extract Unicode Zip file
+    Write-Output " - Extracting . . ."
+    Expand-ZipFile $file $ini['Settings']['DownloadDir']
+
+    # Copy dll to plugins directory
+    Write-Output " - Copying dll to plugins directory . . ."
+    Move-Item "$( $ini['Settings']['DownloadDir'] )\NSISunzU\Plugin unicode\nsisunz.dll" "$( $ini[$bitPaths]['NSISPluginsDirU'] )\nsisunz.dll" -Force
+
+    # Remove temp files
+    Remove-Item "$( $ini['Settings']['DownloadDir'] )\NSISunzU" -Force -Recurse
+    Remove-Item "$file" -Force
+}
+
+#------------------------------------------------------------------------------
+# Check for installation of EnVar Plugin for NSIS
+#------------------------------------------------------------------------------
+Write-Output " - Checking for EnVar Plugin of NSIS installation  . . ."
+If ( (Test-Path "$($ini[$bitPaths]['NSISPluginsDirA'])\EnVar.dll") -and (Test-Path "$($ini[$bitPaths]['NSISPluginsDirU'])\EnVar.dll") ) {
+    # Found EnVar Plugin for NSIS, do nothing
+    Write-Output " - EnVar Plugin for NSIS Found . . ."
+} Else {
+    # EnVar Plugin for NSIS not found, install
+    Write-Output " - EnVar Plugin for NSIS Not Found . . ."
+    Write-Output " - Downloading $($ini['Prerequisites']['NSISPluginEnVar']) . . ."
+    $file = "$($ini['Prerequisites']['NSISPluginEnVar'])"
+    $url  = "$($ini['Settings']['SaltRepo'])/$file"
+    $file = "$($ini['Settings']['DownloadDir'])\$file"
+    DownloadFileWithProgress $url $file
+
+    # Extract Zip File
+    Write-Output " - Extracting . . ."
+    Expand-ZipFile $file "$($ini['Settings']['DownloadDir'])\nsisenvar"
+
+    # Copy dlls to plugins directory (both ANSI and Unicode)
+    Write-Output " - Copying dlls to plugins directory . . ."
+    Move-Item "$( $ini['Settings']['DownloadDir'] )\nsisenvar\Plugins\x86-ansi\EnVar.dll" "$( $ini[$bitPaths]['NSISPluginsDirA'] )\EnVar.dll" -Force
+    Move-Item "$( $ini['Settings']['DownloadDir'] )\nsisenvar\Plugins\x86-unicode\EnVar.dll" "$( $ini[$bitPaths]['NSISPluginsDirU'] )\EnVar.dll" -Force
+
+    # Remove temp files
+    Remove-Item "$( $ini['Settings']['DownloadDir'] )\nsisenvar" -Force -Recurse
+    Remove-Item "$file" -Force
+
+}
+
+#------------------------------------------------------------------------------
 # Check for installation of Microsoft Visual C++ Build Tools
 #------------------------------------------------------------------------------
 Write-Output " - Checking for Microsoft Visual C++ Build Tools installation . . ."
@@ -168,18 +255,35 @@ If (Test-Path "$($ini[$bitPaths]['VCppBuildToolsDir'])\vcbuildtools.bat") {
 # Install Python
 #------------------------------------------------------------------------------
 Write-Output " - Checking for Python 3 installation . . ."
-If (Test-Path "$($ini['Settings']['PythonDir'])\python.exe") {
-    # Found Python 3.5, do nothing
+If (Test-Path "$($ini['Settings']['Python3Dir'])\python.exe") {
+    # Found Python 3, do nothing
     Write-Output " - Python 3 Found . . ."
 } Else {
-    Write-Output " - Downloading $($ini[$bitPrograms]['Python']) . . ."
-    $file = "$($ini[$bitPrograms]['Python'])"
+    Write-Output " - Downloading $($ini[$bitPrograms]['Python3']) . . ."
+    $file = "$($ini[$bitPrograms]['Python3'])"
     $url  = "$($ini['Settings']['SaltRepo'])/$bitFolder/$file"
     $file = "$($ini['Settings']['DownloadDir'])\$bitFolder\$file"
     DownloadFileWithProgress $url $file
 
-    Write-Output " - $script_name :: Installing $($ini[$bitPrograms]['Python']) . . ."
-    $p    = Start-Process $file -ArgumentList "/Quiet InstallAllUsers=1 TargetDir=`"$($ini['Settings']['PythonDir'])`" Include_doc=0 Include_tcltk=0 Include_test=0 Include_launcher=1 PrependPath=1 Shortcuts=0" -Wait -NoNewWindow -PassThru
+    Write-Output " - $script_name :: Installing $($ini[$bitPrograms]['Python3']) . . ."
+    $p    = Start-Process $file -ArgumentList "/Quiet InstallAllUsers=1 TargetDir=`"$($ini['Settings']['Python3Dir'])`" Include_doc=0 Include_tcltk=0 Include_test=0 Include_launcher=1 PrependPath=1 Shortcuts=0" -Wait -NoNewWindow -PassThru
+}
+
+#------------------------------------------------------------------------------
+# Install VCRedist
+#------------------------------------------------------------------------------
+If (Test-Path "$($ini[$bitPrograms]['VCRedistReg'])") {
+    # Found VCRedist 2013, do nothing
+    Write-Output " - VCRedist 2013 Found . . ."
+} Else {
+    Write-Output " - Downloading $($ini[$bitPrograms]['VCRedist']) . . ."
+    $file = "$($ini[$bitPrograms]['VCRedist'])"
+    $url  = "$($ini['Settings']['SaltRepo'])/$bitFolder/$file"
+    $file = "$($ini['Settings']['DownloadDir'])\$bitFolder\$file"
+    DownloadFileWithProgress $url $file
+
+    Write-Output " - $script_name :: Installing $($ini[$bitPrograms]['VCRedist']) . . ."
+    $p    = Start-Process $file -ArgumentList "/install /quiet /norestart" -Wait -NoNewWindow -PassThru
 }
 
 #------------------------------------------------------------------------------
@@ -187,8 +291,8 @@ If (Test-Path "$($ini['Settings']['PythonDir'])\python.exe") {
 #------------------------------------------------------------------------------
 Write-Output " - Updating Environment Variables . . ."
 $Path = (Get-ItemProperty -Path 'Registry::HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\Session Manager\Environment' -Name PATH).Path
-If (!($Path.ToLower().Contains("$($ini['Settings']['ScriptsDir'])".ToLower()))) {
-    $newPath  = "$($ini['Settings']['ScriptsDir']);$Path"
+If (!($Path.ToLower().Contains("$($ini['Settings']['Scripts3Dir'])".ToLower()))) {
+    $newPath  = "$($ini['Settings']['Scripts3Dir']);$Path"
     Set-ItemProperty -Path 'Registry::HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\Session Manager\Environment' -Name PATH -Value $newPath
     $env:Path = $newPath
 }
@@ -197,18 +301,10 @@ If (!($Path.ToLower().Contains("$($ini['Settings']['ScriptsDir'])".ToLower()))) 
 # Update PIP and SetupTools
 #==============================================================================
 Write-Output " ----------------------------------------------------------------"
-Write-Output " - $script_name :: Updating PIP and SetupTools . . ."
+Write-Output " - $script_name :: Updating PIP, SetupTools, and Wheel . . ."
 Write-Output " ----------------------------------------------------------------"
-Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['PythonDir'])\python.exe -m pip --disable-pip-version-check --no-cache-dir install -r $($script_path)\req_pip.txt" "python pip"
+Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['Python3Dir'])\python.exe -m pip --disable-pip-version-check --no-cache-dir install -U pip setuptools wheel" "update pip"
 
-
-#==============================================================================
-# Install windows specific pypi resources using pip
-#==============================================================================
-Write-Output " ----------------------------------------------------------------"
-Write-Output " - $script_name :: Installing windows specific pypi resources using pip . . ."
-Write-Output " ----------------------------------------------------------------"
-Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['PythonDir'])\python.exe -m pip --disable-pip-version-check --no-cache-dir install -r $($script_path)\req_win.txt" "pip install"
 
 #==============================================================================
 # Install pypi resources using pip
@@ -217,10 +313,10 @@ If ($NoPipDependencies -eq $false) {
   Write-Output " ----------------------------------------------------------------"
   Write-Output " - $script_name :: Installing pypi resources using pip . . ."
   Write-Output " ----------------------------------------------------------------"
-  Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['PythonDir'])\python.exe -m pip --disable-pip-version-check --no-cache-dir install -r $($script_path)\req.txt" "pip install"
+  Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['Python3Dir'])\python.exe -m pip --disable-pip-version-check --no-cache-dir install -r $($ini['Settings']['SrcDir'])\requirements\static\pkg\py$($ini['Settings']['PyVerMajor']).$($ini['Settings']['PyVerMinor'])\windows.txt" "pip install"
 }
 
-If (Test-Path "$($ini['Settings']['SitePkgsDir'])\pywin32_system32" -PathType Container )
+If (Test-Path "$($ini['Settings']['SitePkgs3Dir'])\pywin32_system32" -PathType Container )
 {
     #==============================================================================
     # Cleaning Up PyWin32
@@ -232,20 +328,20 @@ If (Test-Path "$($ini['Settings']['SitePkgsDir'])\pywin32_system32" -PathType Co
     # Move DLL's to Python Root
     # The dlls have to be in Python directory and the site-packages\win32 directory
     Write-Output " - $script_name :: Moving PyWin32 DLLs . . ."
-    Copy-Item "$( $ini['Settings']['SitePkgsDir'] )\pywin32_system32\*.dll" "$( $ini['Settings']['PythonDir'] )" -Force
-    Move-Item "$( $ini['Settings']['SitePkgsDir'] )\pywin32_system32\*.dll" "$( $ini['Settings']['SitePkgsDir'] )\win32" -Force
+    Copy-Item "$( $ini['Settings']['SitePkgs3Dir'] )\pywin32_system32\*.dll" "$( $ini['Settings']['Python3Dir'] )" -Force
+    Move-Item "$( $ini['Settings']['SitePkgs3Dir'] )\pywin32_system32\*.dll" "$( $ini['Settings']['SitePkgs3Dir'] )\win32" -Force
 
     # Create gen_py directory
     Write-Output " - $script_name :: Creating gen_py Directory . . ."
-    New-Item -Path "$( $ini['Settings']['SitePkgsDir'] )\win32com\gen_py" -ItemType Directory -Force | Out-Null
+    New-Item -Path "$( $ini['Settings']['SitePkgs3Dir'] )\win32com\gen_py" -ItemType Directory -Force | Out-Null
 
     # Remove pywin32_system32 directory
     Write-Output " - $script_name :: Removing pywin32_system32 Directory . . ."
-    Remove-Item "$( $ini['Settings']['SitePkgsDir'] )\pywin32_system32"
+    Remove-Item "$( $ini['Settings']['SitePkgs3Dir'] )\pywin32_system32"
 
     # Remove PyWin32 PostInstall and testall Scripts
     Write-Output " - $script_name :: Removing PyWin32 scripts . . ."
-    Remove-Item "$( $ini['Settings']['ScriptsDir'] )\pywin32_*" -Force -Recurse
+    Remove-Item "$( $ini['Settings']['Scripts3Dir'] )\pywin32_*" -Force -Recurse
 }
 
 #==============================================================================
@@ -261,7 +357,7 @@ ForEach($key in $ini[$bitDLLs].Keys) {
     $url  = "$($ini['Settings']['SaltRepo'])/$bitFolder/$file"
     $file = "$($ini['Settings']['DownloadDir'])\$bitFolder\$file"
     DownloadFileWithProgress $url $file
-    Copy-Item $file  -destination $($ini['Settings']['PythonDir'])
+    Copy-Item $file  -destination $($ini['Settings']['Python3Dir'])
 }
 
 #------------------------------------------------------------------------------

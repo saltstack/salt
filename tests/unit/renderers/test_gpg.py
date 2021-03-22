@@ -1,21 +1,18 @@
-# -*- coding: utf-8 -*-
-
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
+import os
+from subprocess import PIPE
 from textwrap import dedent
 
-# Import Salt libs
 import salt.renderers.gpg as gpg
 from salt.exceptions import SaltRenderError
-
-# Import Salt Testing libs
-from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import MagicMock, patch
+from tests.support.mixins import (
+    AdaptedConfigurationTestCaseMixin,
+    LoaderModuleMockMixin,
+)
+from tests.support.mock import MagicMock, Mock, call, patch
 from tests.support.unit import TestCase
 
 
-class GPGTestCase(TestCase, LoaderModuleMockMixin):
+class GPGTestCase(TestCase, LoaderModuleMockMixin, AdaptedConfigurationTestCaseMixin):
     """
     unit test GPG renderer
     """
@@ -46,11 +43,11 @@ class GPGTestCase(TestCase, LoaderModuleMockMixin):
         multisecret = "password is {0} and salt is {0}".format(secret)
         multicrypted = "password is {0} and salt is {0}".format(crypted)
 
-        class GPGDecrypt(object):
+        class GPGDecrypt:
             def communicate(self, *args, **kwargs):
                 return [secret, None]
 
-        class GPGNotDecrypt(object):
+        class GPGNotDecrypt:
             def communicate(self, *args, **kwargs):
                 return [None, "decrypt error"]
 
@@ -106,6 +103,19 @@ class GPGTestCase(TestCase, LoaderModuleMockMixin):
                     "salt.renderers.gpg._decrypt_object", MagicMock(return_value=secret)
                 ):
                     self.assertEqual(gpg.render(crypted), secret)
+
+    def test_render_bytes(self):
+        """
+        test rendering bytes
+        """
+        key_dir = "/etc/salt/gpgkeys"
+        binfo = b"User more salt."
+
+        with patch("salt.renderers.gpg._get_gpg_exec", MagicMock(return_value=True)):
+            with patch(
+                "salt.renderers.gpg._get_key_dir", MagicMock(return_value=key_dir)
+            ):
+                self.assertEqual(gpg.render(binfo), binfo.decode())
 
     def test_multi_render(self):
         key_dir = "/etc/salt/gpgkeys"
@@ -193,3 +203,113 @@ class GPGTestCase(TestCase, LoaderModuleMockMixin):
                         gpg.render(crypted, translate_newlines=True, encoding="utf-8"),
                         expected,
                     )
+
+    def test_render_without_cache(self):
+        key_dir = "/etc/salt/gpgkeys"
+        secret = "Use more salt."
+        expected = "\n".join([secret] * 3)
+        crypted = dedent(
+            """\
+            -----BEGIN PGP MESSAGE-----
+            !@#$%^&*()_+
+            -----END PGP MESSAGE-----
+            -----BEGIN PGP MESSAGE-----
+            !@#$%^&*()_+
+            -----END PGP MESSAGE-----
+            -----BEGIN PGP MESSAGE-----
+            !@#$%^&*()_+
+            -----END PGP MESSAGE-----
+        """
+        )
+
+        with patch("salt.renderers.gpg.Popen") as popen_mock:
+            popen_mock.return_value = Mock(
+                communicate=lambda *args, **kwargs: (secret, None),
+            )
+            with patch(
+                "salt.renderers.gpg._get_gpg_exec",
+                MagicMock(return_value="/usr/bin/gpg"),
+            ):
+                with patch(
+                    "salt.renderers.gpg._get_key_dir", MagicMock(return_value=key_dir)
+                ):
+                    self.assertEqual(gpg.render(crypted), expected)
+                    gpg_call = call(
+                        [
+                            "/usr/bin/gpg",
+                            "--homedir",
+                            "/etc/salt/gpgkeys",
+                            "--status-fd",
+                            "2",
+                            "--no-tty",
+                            "-d",
+                        ],
+                        shell=False,
+                        stderr=PIPE,
+                        stdin=PIPE,
+                        stdout=PIPE,
+                    )
+                    popen_mock.assert_has_calls([gpg_call] * 3)
+
+    def test_render_with_cache(self):
+        key_dir = "/etc/salt/gpgkeys"
+        secret = "Use more salt."
+        expected = "\n".join([secret] * 3)
+        crypted = dedent(
+            """\
+            -----BEGIN PGP MESSAGE-----
+            !@#$%^&*()_+
+            -----END PGP MESSAGE-----
+            -----BEGIN PGP MESSAGE-----
+            !@#$%^&*()_+
+            -----END PGP MESSAGE-----
+            -----BEGIN PGP MESSAGE-----
+            !@#$%^&*()_+
+            -----END PGP MESSAGE-----
+        """
+        )
+
+        minion_opts = self.get_temp_config("minion", gpg_cache=True)
+        with patch.dict(gpg.__opts__, minion_opts):
+            with patch("salt.renderers.gpg.Popen") as popen_mock:
+                popen_mock.return_value = Mock(
+                    communicate=lambda *args, **kwargs: (secret, None),
+                )
+                with patch(
+                    "salt.renderers.gpg._get_gpg_exec",
+                    MagicMock(return_value="/usr/bin/gpg"),
+                ):
+                    with patch(
+                        "salt.renderers.gpg._get_key_dir",
+                        MagicMock(return_value=key_dir),
+                    ):
+                        with patch(
+                            "salt.utils.atomicfile.atomic_open", MagicMock(),
+                        ) as atomic_open_mock:
+                            self.assertEqual(gpg.render(crypted), expected)
+                            gpg_call = call(
+                                [
+                                    "/usr/bin/gpg",
+                                    "--homedir",
+                                    "/etc/salt/gpgkeys",
+                                    "--status-fd",
+                                    "2",
+                                    "--no-tty",
+                                    "-d",
+                                ],
+                                shell=False,
+                                stderr=PIPE,
+                                stdin=PIPE,
+                                stdout=PIPE,
+                            )
+                            popen_mock.assert_has_calls([gpg_call] * 1)
+                            atomic_open_mock.assert_has_calls(
+                                [
+                                    call(
+                                        os.path.join(
+                                            minion_opts["cachedir"], "gpg_cache"
+                                        ),
+                                        "wb+",
+                                    )
+                                ]
+                            )
