@@ -323,7 +323,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "requesting instance",
-        "salt/cloud/{0}/requesting".format(name),
+        "salt/cloud/{}/requesting".format(name),
         args=__utils__["cloud.filter_event"](
             "requesting", vm_, ["name", "profile", "provider", "driver"]
         ),
@@ -335,11 +335,11 @@ def create(vm_):
         server = client.servers.get_by_id(response.server.id)
 
         if server.status == "running":
-            log.info("Server {0} is up running now.".format(server.name))
+            log.info("Server {} is up running now.".format(server.name))
             break
         else:
             log.info(
-                "Waiting for server {0} to be running: {1}".format(
+                "Waiting for server {} to be running: {}".format(
                     server.name, server.status
                 )
             )
@@ -360,7 +360,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "waiting for ssh",
-        "salt/cloud/{0}/waiting_for_ssh".format(name),
+        "salt/cloud/{}/waiting_for_ssh".format(name),
         sock_dir=__opts__["sock_dir"],
         args={"ip_address": vm_["ssh_host"]},
         transport=__opts__["transport"],
