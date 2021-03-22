@@ -1,8 +1,6 @@
 import pytest
 
 import salt.cloud.clouds.openstack as openstack
-
-# from tests.support.helpers import TstSuiteLoggingHandler
 from tests.support.mock import call, patch
 
 
@@ -159,6 +157,3 @@ def test_preferred_ip_function_returns_expected(
         result = openstack.preferred_ip("fnord", example_ips)
 
     assert result is expected
-
-
-# fill out all of these tests, refactor some and then also add a changelog entry
