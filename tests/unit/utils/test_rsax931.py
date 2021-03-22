@@ -173,6 +173,7 @@ class RSAX931Test(TestCase):
     @patch.object(salt.utils.platform, "is_darwin", lambda: True)
     @patch.object(platform, "mac_ver", lambda: ("10.14.2", (), ""))
     @patch.object(glob, "glob", lambda _: [])
+    @patch.object(sys, "platform", "macosx")
     def test_find_libcrypto_with_system_before_catalina(self):
         """
         Test _find_libcrypto on a pre-Catalina macOS host by simulating not
@@ -183,6 +184,7 @@ class RSAX931Test(TestCase):
 
     @patch.object(salt.utils.platform, "is_darwin", lambda: True)
     @patch.object(platform, "mac_ver", lambda: ("10.15.2", (), ""))
+    @patch.object(sys, "platform", "macosx")
     def test_find_libcrypto_darwin_catalina(self):
         """
         Test _find_libcrypto on a macOS Catalina host where there are no custom
@@ -207,6 +209,7 @@ class RSAX931Test(TestCase):
 
     @patch.object(salt.utils.platform, "is_darwin", lambda: True)
     @patch.object(platform, "mac_ver", lambda: ("11.2.2", (), ""))
+    @patch.object(sys, "platform", "macosx")
     def test_find_libcrypto_darwin_bigsur_packaged(self):
         """
         Test _find_libcrypto on a Darwin-like macOS host where there isn't a
