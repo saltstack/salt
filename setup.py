@@ -504,7 +504,11 @@ class DownloadWindowsDlls(Command):
         url = "https://repo.saltstack.com/windows/dependencies/{bits}/{fname}"
         dest = os.path.join(os.path.dirname(sys.executable), "{fname}")
         with indent_log():
-            for fname in ("libsodium/1.0.18/libsodium.dll",):
+            for fname in (
+                "ssleay32.dll",
+                "libeay32.dll",
+                "libsodium/1.0.18/libsodium.dll",
+            ):
                 # See if the library is already on the system
                 if find_library(fname):
                     continue
