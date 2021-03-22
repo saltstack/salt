@@ -52,16 +52,9 @@ if Defined x (
 :: Define Variables
 @echo Defining Variables...
 @echo ----------------------------------------------------------------------
-if %Python%==3 (
-    Set "PyDir=C:\Python37"
-    Set "PyVerMajor=3"
-    Set "PyVerMinor=7"
-) else (
-    :: Placeholder for future version
-    :: Set "PyDir=C:\Python4"
-    :: Set "PyVerMajor=0"
-    :: Set "PyVerMinor=0"
-)
+if %PyDir%=="" (Set "PyDir=C:\Python38")
+if %PyVerMajor%=="" (Set "PyVerMajor=3")
+if %PyVerMinor%=="" (Set "PyVerMinor=8")
 
 :: Verify the Python Installation
 If not Exist "%PyDir%\python.exe" (
