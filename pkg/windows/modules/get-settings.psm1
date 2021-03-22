@@ -77,7 +77,7 @@ Function Get-Settings {
         $32bitPrograms = @{
             "Python3"     = "python-3.8.8.exe"
             "VCRedist"    = "vcredist_x86_2013.exe"
-            "VCRedistReg" = "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\{8122DAB1-ED4D-3676-BB0A-CA368196543E}"
+            "VCRedistReg" = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{8122DAB1-ED4D-3676-BB0A-CA368196543E}"
         }
         $ini.Add("32bitPrograms", $32bitPrograms)
 
