@@ -501,19 +501,17 @@ class DownloadWindowsDlls(Command):
                 yield
 
         platform_bits, _ = platform.architecture()
-        url = "https://repo.saltstack.com/windows/dependencies/{bits}/{fname}.dll"
-        dest = os.path.join(os.path.dirname(sys.executable), "{fname}.dll")
+        url = "https://repo.saltstack.com/windows/dependencies/{bits}/{fname}"
+        dest = os.path.join(os.path.dirname(sys.executable), "{fname}")
         with indent_log():
-            for fname in ("libeay32", "ssleay32", "libsodium"):
+            for fname in ("libsodium/1.0.18/libsodium.dll",):
                 # See if the library is already on the system
                 if find_library(fname):
                     continue
                 furl = url.format(bits=platform_bits[:2], fname=fname)
-                fdest = dest.format(fname=fname)
+                fdest = dest.format(fname=fname.split("/")[-1])
                 if not os.path.exists(fdest):
-                    log.info(
-                        "Downloading {}.dll to {} from {}".format(fname, fdest, furl)
-                    )
+                    log.info("Downloading {} to {} from {}".format(fname, fdest, furl))
                     try:
                         from contextlib import closing
 
@@ -528,7 +526,7 @@ class DownloadWindowsDlls(Command):
                                             wfh.flush()
                             else:
                                 log.error(
-                                    "Failed to download {}.dll to {} from {}".format(
+                                    "Failed to download {} to {} from {}".format(
                                         fname, fdest, furl
                                     )
                                 )
@@ -545,7 +543,7 @@ class DownloadWindowsDlls(Command):
                                     wfh.flush()
                         else:
                             log.error(
-                                "Failed to download {}.dll to {} from {}".format(
+                                "Failed to download {} to {} from {}".format(
                                     fname, fdest, furl
                                 )
                             )
