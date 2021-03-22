@@ -2,7 +2,6 @@
     Unit tests for the salt.modules.state module
 """
 
-import pytest
 import salt.loader_context
 import salt.modules.state
 from tests.support.mock import patch
