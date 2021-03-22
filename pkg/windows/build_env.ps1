@@ -361,7 +361,7 @@ ForEach($key in $ini[$bitDLLs].Keys) {
     $url  = "$($ini['Settings']['SaltRepo'])/$bitFolder/$file"
     $file = "$($ini['Settings']['DownloadDir'])\$bitFolder\$file"
     DownloadFileWithProgress $url $file
-    Copy-Item $file  -destination $($ini['Settings']['Python3Dir'])
+    Copy-Item $file -destination $($ini['Settings']['Python3Dir'])
 }
 
 #------------------------------------------------------------------------------
