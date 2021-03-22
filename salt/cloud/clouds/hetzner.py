@@ -89,6 +89,7 @@ def _public_network_to_dict(net):
         "ipv6": getattr(net.ipv6, "ip", None),
     }
 
+
 def _private_network_to_dict(net):
     return {
         "ipv4": getattr(net.ip, "ip", None),
@@ -308,7 +309,7 @@ def create(vm_):
     # Get the networks
     networks = vm_.get("networks", None)
     if networks:
-        networks = [vol for vol in client.networks.get_all() if vol in networks]
+        networks = [vol for vol in client.networks.get_all() if vol in networks] 
 
     # Create the machine
     response = client.servers.create(
