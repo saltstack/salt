@@ -1,6 +1,6 @@
-import io
 import tempfile
 
+import salt.utils.files
 from salt.modules import x509 as x509_mod
 from salt.states import x509
 from tests.support.helpers import dedent
@@ -105,7 +105,7 @@ class X509FipsTestCase(TestCase, LoaderModuleMockMixin):
         """
         )
         fp, name = tempfile.mkstemp()
-        with open(name, "w") as fd:
+        with salt.utils.files.open(name, "w") as fd:
             fd.write(test_key)
             fd.write(test_cert)
         ret = x509.private_key_managed(name)
