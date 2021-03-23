@@ -43,10 +43,8 @@ import salt.utils.stringutils
 import salt.utils.thin
 import salt.utils.url
 import salt.utils.verify
-from salt.ext import six
-from salt.ext.six.moves import input  # pylint: disable=import-error,redefined-builtin
 from salt.template import compile_template
-from salt.utils.platform import is_windows
+from salt.utils.platform import is_junos, is_windows
 from salt.utils.process import Process
 from salt.utils.zeromq import zmq
 
@@ -190,13 +188,15 @@ EOF'''.format(
     ]
 )
 
-if not is_windows():
+if not is_windows() and not is_junos():
     shim_file = os.path.join(os.path.dirname(__file__), "ssh_py_shim.py")
     if not os.path.exists(shim_file):
         # On esky builds we only have the .pyc file
         shim_file += "c"
     with salt.utils.files.fopen(shim_file) as ssh_py_shim:
         SSH_PY_SHIM = ssh_py_shim.read()
+else:
+    SSH_PY_SHIM = None
 
 log = logging.getLogger(__name__)
 
@@ -829,6 +829,8 @@ class SSH:
                 self.event.fire_event(
                     data, salt.utils.event.tagify([jid, "ret", host], "job")
                 )
+        if self.event is not None:
+            self.event.destroy()
         if self.opts.get("static"):
             salt.output.display_output(sret, outputter, self.opts)
         if final_exit:
@@ -1058,7 +1060,7 @@ class Single:
                 )
             else:
                 stdout, stderr, retcode = self.run_ssh_pre_flight()
-                if stderr:
+                if retcode != 0:
                     log.error(
                         "Error running ssh_pre_flight script {}".format(
                             self.ssh_pre_file
@@ -1378,9 +1380,7 @@ ARGS = {arguments}\n'''.format(
         except OSError:
             pass
 
-        ret = self.execute_script(
-            script=target_shim_file, extension=extension, pre_dir="$HOME/"
-        )
+        ret = self.execute_script(script=target_shim_file, extension=extension)
 
         return ret
 

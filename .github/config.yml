@@ -12,11 +12,11 @@ newIssueWelcomeComment: >
   resources including:
 
     - [Community Wiki](https://github.com/saltstack/community/wiki)
-    - [Salt’s Contributor Guide](https://docs.saltstack.com/en/latest/topics/development/contributing.html)
+    - [Salt’s Contributor Guide](https://docs.saltproject.io/en/master/topics/development/contributing.html)
     - [Join our Community Slack](https://saltstackcommunity.herokuapp.com/)
     - [IRC on Freenode](https://webchat.freenode.net/#salt)
     - [SaltStack YouTube channel](https://www.youtube.com/user/SaltStack)
-    - [SaltStackInc Twitch channel](https://www.twitch.tv/saltstackinc)
+    - [SaltStackInc Twitch channel](https://www.twitch.tv/saltprojectoss)
 
   There are lots of ways to get involved in our community. Every month, there are around a dozen
   opportunities to meet with other contributors and the Salt Core team and collaborate in real
@@ -38,11 +38,11 @@ newPRWelcomeComment: >
   resources including:
 
     - [Community Wiki](https://github.com/saltstack/community/wiki)
-    - [Salt’s Contributor Guide](https://docs.saltstack.com/en/latest/topics/development/contributing.html)
+    - [Salt’s Contributor Guide](https://docs.saltproject.io/en/master/topics/development/contributing.html)
     - [Join our Community Slack](https://saltstackcommunity.herokuapp.com/)
     - [IRC on Freenode](https://webchat.freenode.net/#salt)
     - [SaltStack YouTube channel](https://www.youtube.com/user/SaltStack)
-    - [SaltStackInc Twitch channel](https://www.twitch.tv/saltstackinc)
+    - [SaltStackInc Twitch channel](https://www.twitch.tv/saltprojectoss)
 
   There are lots of ways to get involved in our community. Every month, there are around a dozen
   opportunities to meet with other contributors and the Salt Core team and collaborate in real
