@@ -1,2 +1,0 @@
-When instantiating the loader grab values of grains and pillars if
-they are NamedLoaderContext instances.

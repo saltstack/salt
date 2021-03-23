@@ -12,7 +12,9 @@ Salt 3003 (2021-03-05)
 
 Removed
 -------
-
+- Removed the deprecated glance state and execution module in favor of the glance_image
+  state module and the glanceng execution module. (#59079)
+- Removing the _ext_nodes deprecation warning and alias to the master_tops function.  This change will break compatibility with a Salt master running versions 2017.7.8 and older and Salt minions running versions 3003 and newer. (#59804)
 - removed the arg `managed_private_key` from 'salt.states.x509.certificate_managed' (#59247)
 - Drop support for python 3.5 on Windows (#59479)
 
@@ -38,6 +40,9 @@ Changed
 Fixed
 -----
 
+- When instantiating the loader grab values of grains and pillars if
+  they are NamedLoaderContext instances. (#59773)
+- Fixed installation on Apple Silicon Macs by checking $HOMEBREW_PREFIX for `libcrypto` instead of assuming /usr/local. (#59808)
 - Fix incorrect documentation for pillar_source_merging_strategy (#26396)
 - Don't iterate through cloud map errors (#34033)
 - Supress noisy warnings when very old pyzmq is used. (#50327)
@@ -138,6 +143,7 @@ Fixed
 Added
 -----
 
+- Added "fips_mode" config option to master and minion configs. (#59427)
 - Adding the ability to clear and show the pillar cache enabled when pillar_cache is True. (#37080)
 - SCRAM-SHA-256 support for PostgreSQL passwords.
   Pass encrypted=scram-sha-256 to the postgres_user.present (or postgres_group.present) state. (#51271)
