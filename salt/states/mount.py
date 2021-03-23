@@ -189,21 +189,59 @@ def mounted(
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
+    # REMOVEME: test debugging
+    done = False
+    test = os.environ.get("PYTEST_CURRENT_TEST")
+    # END REMOVEME: test debugging
+
     update_mount_cache = False
 
     if not name:
         ret["result"] = False
         ret["comment"] = "Must provide name to mount.mounted"
+        # REMOVEME: test debugging
+        if (
+            test
+            in (
+                "tests/pytests/unit/states/test_mount.py::test_when_os_is_solaris_and_opts_is_defaults_then_opts_should_be_replaced_with_hyphen (call)",
+                "tests/pytests/unit/states/test_mount.py::test_if_test_mode_and_solaris_in_os_grains_then_set_vfstab_should_be_used (call)",
+            )
+            and not done
+        ):
+            raise Exception("Test {} was executed but never hit the right place")
+        # END REMOVEME: test debugging
         return ret
 
     if not device:
         ret["result"] = False
         ret["comment"] = "Must provide device to mount.mounted"
+        # REMOVEME: test debugging
+        if (
+            test
+            in (
+                "tests/pytests/unit/states/test_mount.py::test_when_os_is_solaris_and_opts_is_defaults_then_opts_should_be_replaced_with_hyphen (call)",
+                "tests/pytests/unit/states/test_mount.py::test_if_test_mode_and_solaris_in_os_grains_then_set_vfstab_should_be_used (call)",
+            )
+            and not done
+        ):
+            raise Exception("Test {} was executed but never hit the right place")
+        # END REMOVEME: test debugging
         return ret
 
     if not fstype:
         ret["result"] = False
         ret["comment"] = "Must provide fstype to mount.mounted"
+        # REMOVEME: test debugging
+        if (
+            test
+            in (
+                "tests/pytests/unit/states/test_mount.py::test_when_os_is_solaris_and_opts_is_defaults_then_opts_should_be_replaced_with_hyphen (call)",
+                "tests/pytests/unit/states/test_mount.py::test_if_test_mode_and_solaris_in_os_grains_then_set_vfstab_should_be_used (call)",
+            )
+            and not done
+        ):
+            raise Exception("Test {} was executed but never hit the right place")
+        # END REMOVEME: test debugging
         return ret
 
     if device_name_regex is None:
@@ -282,6 +320,17 @@ def mounted(
         if res["retcode"] > 0:
             ret["comment"] = "Unable to find device with label {}.".format(_label)
             ret["result"] = False
+            # REMOVEME: test debugging
+            if (
+                test
+                in (
+                    "tests/pytests/unit/states/test_mount.py::test_when_os_is_solaris_and_opts_is_defaults_then_opts_should_be_replaced_with_hyphen (call)",
+                    "tests/pytests/unit/states/test_mount.py::test_if_test_mode_and_solaris_in_os_grains_then_set_vfstab_should_be_used (call)",
+                )
+                and not done
+            ):
+                raise Exception("Test {} was executed but never hit the right place")
+            # END REMOVEME: test debugging
             return ret
         else:
             # output is a list of entries like this:
@@ -475,6 +524,19 @@ def mounted(
                             ] = "Remount would be forced because options ({}) changed".format(
                                 opt
                             )
+                            # REMOVEME: test debugging
+                            if (
+                                test
+                                in (
+                                    "tests/pytests/unit/states/test_mount.py::test_when_os_is_solaris_and_opts_is_defaults_then_opts_should_be_replaced_with_hyphen (call)",
+                                    "tests/pytests/unit/states/test_mount.py::test_if_test_mode_and_solaris_in_os_grains_then_set_vfstab_should_be_used (call)",
+                                )
+                                and not done
+                            ):
+                                raise Exception(
+                                    "Test {} was executed but never hit the right place"
+                                )
+                            # END REMOVEME: test debugging
                             return ret
                         else:
                             # Some file systems require umounting and mounting if options change
@@ -499,6 +561,19 @@ def mounted(
                                     ret["comment"] = "Unable to unmount {}: {}.".format(
                                         real_name, unmount_result
                                     )
+                                    # REMOVEME: test debugging
+                                    if (
+                                        test
+                                        in (
+                                            "tests/pytests/unit/states/test_mount.py::test_when_os_is_solaris_and_opts_is_defaults_then_opts_should_be_replaced_with_hyphen (call)",
+                                            "tests/pytests/unit/states/test_mount.py::test_if_test_mode_and_solaris_in_os_grains_then_set_vfstab_should_be_used (call)",
+                                        )
+                                        and not done
+                                    ):
+                                        raise Exception(
+                                            "Test {} was executed but never hit the right place"
+                                        )
+                                    # END REMOVEME: test debugging
                                     return ret
                             else:
                                 ret["changes"]["umount"] = (
@@ -533,6 +608,19 @@ def mounted(
                                 " options ({})"
                                 "changed".format(",".join(_missing))
                             )
+                            # REMOVEME: test debugging
+                            if (
+                                test
+                                in (
+                                    "tests/pytests/unit/states/test_mount.py::test_when_os_is_solaris_and_opts_is_defaults_then_opts_should_be_replaced_with_hyphen (call)",
+                                    "tests/pytests/unit/states/test_mount.py::test_if_test_mode_and_solaris_in_os_grains_then_set_vfstab_should_be_used (call)",
+                                )
+                                and not done
+                            ):
+                                raise Exception(
+                                    "Test {} was executed but never hit the right place"
+                                )
+                            # END REMOVEME: test debugging
                             return ret
                         else:
                             # Some file systems require umounting and mounting if options change
@@ -557,6 +645,19 @@ def mounted(
                                     ret["comment"] = "Unable to unmount {}: {}.".format(
                                         real_name, unmount_result
                                     )
+                                    # REMOVEME: test debugging
+                                    if (
+                                        test
+                                        in (
+                                            "tests/pytests/unit/states/test_mount.py::test_when_os_is_solaris_and_opts_is_defaults_then_opts_should_be_replaced_with_hyphen (call)",
+                                            "tests/pytests/unit/states/test_mount.py::test_if_test_mode_and_solaris_in_os_grains_then_set_vfstab_should_be_used (call)",
+                                        )
+                                        and not done
+                                    ):
+                                        raise Exception(
+                                            "Test {} was executed but never hit the right place"
+                                        )
+                                    # END REMOVEME: test debugging
                                     return ret
                             else:
                                 ret["changes"]["umount"] = (
@@ -616,6 +717,19 @@ def mounted(
                     if real_name in active:
                         ret["comment"] = "Unable to unmount"
                         ret["result"] = None
+                        # REMOVEME: test debugging
+                        if (
+                            test
+                            in (
+                                "tests/pytests/unit/states/test_mount.py::test_when_os_is_solaris_and_opts_is_defaults_then_opts_should_be_replaced_with_hyphen (call)",
+                                "tests/pytests/unit/states/test_mount.py::test_if_test_mode_and_solaris_in_os_grains_then_set_vfstab_should_be_used (call)",
+                            )
+                            and not done
+                        ):
+                            raise Exception(
+                                "Test {} was executed but never hit the right place"
+                            )
+                        # END REMOVEME: test debugging
                         return ret
                     update_mount_cache = True
             else:
@@ -634,11 +748,37 @@ def mounted(
                     ret[
                         "comment"
                     ] = "{} does not exist and would not be created".format(name)
+                # REMOVEME: test debugging
+                if (
+                    test
+                    in (
+                        "tests/pytests/unit/states/test_mount.py::test_when_os_is_solaris_and_opts_is_defaults_then_opts_should_be_replaced_with_hyphen (call)",
+                        "tests/pytests/unit/states/test_mount.py::test_if_test_mode_and_solaris_in_os_grains_then_set_vfstab_should_be_used (call)",
+                    )
+                    and not done
+                ):
+                    raise Exception(
+                        "Test {} was executed but never hit the right place"
+                    )
+                # END REMOVEME: test debugging
                 return ret
 
             if not os.path.exists(name) and not mkmnt:
                 ret["result"] = False
                 ret["comment"] = "Mount directory is not present"
+                # REMOVEME: test debugging
+                if (
+                    test
+                    in (
+                        "tests/pytests/unit/states/test_mount.py::test_when_os_is_solaris_and_opts_is_defaults_then_opts_should_be_replaced_with_hyphen (call)",
+                        "tests/pytests/unit/states/test_mount.py::test_if_test_mode_and_solaris_in_os_grains_then_set_vfstab_should_be_used (call)",
+                    )
+                    and not done
+                ):
+                    raise Exception(
+                        "Test {} was executed but never hit the right place"
+                    )
+                # END REMOVEME: test debugging
                 return ret
 
             out = __salt__["mount.mount"](name, device, mkmnt, fstype, opts, user=user)
@@ -648,6 +788,19 @@ def mounted(
                 # Failed to (re)mount, the state has failed!
                 ret["comment"] = out
                 ret["result"] = False
+                # REMOVEME: test debugging
+                if (
+                    test
+                    in (
+                        "tests/pytests/unit/states/test_mount.py::test_when_os_is_solaris_and_opts_is_defaults_then_opts_should_be_replaced_with_hyphen (call)",
+                        "tests/pytests/unit/states/test_mount.py::test_if_test_mode_and_solaris_in_os_grains_then_set_vfstab_should_be_used (call)",
+                    )
+                    and not done
+                ):
+                    raise Exception(
+                        "Test {} was executed but never hit the right place"
+                    )
+                # END REMOVEME: test debugging
                 return ret
             elif real_name in active:
                 # (Re)mount worked!
@@ -703,6 +856,12 @@ def mounted(
                     match_on=match_on,
                 )
             elif "Solaris" in __grains__["os"]:
+                test = os.environ.get("PYTEST_CURRENT_TEST")
+                assert (
+                    not test
+                    or test
+                    == "tests/pytests/unit/states/test_mount.py::test_if_test_mode_and_solaris_in_os_grains_then_set_vfstab_should_be_used (call)"
+                ), test
                 out = __salt__["mount.set_vfstab"](
                     name,
                     device,
@@ -759,6 +918,19 @@ def mounted(
                     ret["comment"] = "{}. {}".format(ret["comment"], comment)
                 else:
                     ret["comment"] = comment
+                # REMOVEME: test debugging
+                if (
+                    test
+                    in (
+                        "tests/pytests/unit/states/test_mount.py::test_when_os_is_solaris_and_opts_is_defaults_then_opts_should_be_replaced_with_hyphen (call)",
+                        "tests/pytests/unit/states/test_mount.py::test_if_test_mode_and_solaris_in_os_grains_then_set_vfstab_should_be_used (call)",
+                    )
+                    and not done
+                ):
+                    raise Exception(
+                        "Test {} was executed but never hit the right place"
+                    )
+                # END REMOVEME: test debugging
                 return ret
 
         else:
@@ -774,6 +946,14 @@ def mounted(
                 out = __salt__["mount.set_vfstab"](
                     name, device, fstype, opts, config=config, match_on=match_on
                 )
+                # REMOVEME: test debugging
+                assert (
+                    not test
+                    or test
+                    == "tests/pytests/unit/states/test_mount.py::test_when_os_is_solaris_and_opts_is_defaults_then_opts_should_be_replaced_with_hyphen (call)"
+                ), test
+                done = True
+                # END REMOVEME: test debugging
             else:
                 out = __salt__["mount.set_fstab"](
                     name,
@@ -790,6 +970,18 @@ def mounted(
             cache_result = __salt__["mount.write_mount_cache"](
                 real_name, device, mkmnt=mkmnt, fstype=fstype, mount_opts=opts
             )
+
+        # REMOVEME: test debugging
+        if (
+            test
+            in (
+                "tests/pytests/unit/states/test_mount.py::test_when_os_is_solaris_and_opts_is_defaults_then_opts_should_be_replaced_with_hyphen (call)",
+                "tests/pytests/unit/states/test_mount.py::test_if_test_mode_and_solaris_in_os_grains_then_set_vfstab_should_be_used (call)",
+            )
+            and not done
+        ):
+            raise Exception("Test {} was executed but never hit the right place")
+        # END REMOVEME: test debugging
 
         if out == "present":
             ret["comment"] += ". Entry already exists in the fstab."
