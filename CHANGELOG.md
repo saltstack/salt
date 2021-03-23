@@ -12,6 +12,7 @@ Salt 3003 (2021-03-05)
 
 Removed
 -------
+
 - Removed the deprecated glance state and execution module in favor of the glance_image
   state module and the glanceng execution module. (#59079)
 - Removing the _ext_nodes deprecation warning and alias to the master_tops function.  This change will break compatibility with a Salt master running versions 2017.7.8 and older and Salt minions running versions 3003 and newer. (#59804)
