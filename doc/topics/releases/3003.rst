@@ -4,8 +4,6 @@
 Salt 3003 Release Notes - Codename Aluminium
 ============================================
 
-Salt 3003 is an *unreleased* upcoming feature release.
-
 New Features
 ============
 
@@ -22,6 +20,8 @@ previous storage methods.
 Removed
 -------
 
+- Removed the deprecated glance state and execution module in favor of the glance_image
+  state module and the glanceng execution module. (#59079)
 - removed the arg `managed_private_key` from 'salt.states.x509.certificate_managed' (#59247)
 - Drop support for python 3.5 on Windows (#59479)
 
@@ -51,6 +51,8 @@ Fixed
 -----
 
 - The Google Cloud Engine salt-cloud provider now requires `apache-libcloud>=2.5.0`. Service account authentication is broken on older versions.
+- Ensure that zypper is called with only one --no-refresh parameter (#51382)
+- Don't create spicevmc channel for Xen virtual machines (#59416)
 - Fix incorrect documentation for pillar_source_merging_strategy (#26396)
 - Don't iterate through cloud map errors (#34033)
 - Supress noisy warnings when very old pyzmq is used. (#50327)
