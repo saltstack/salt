@@ -28,12 +28,6 @@ from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
 
 try:
-    import pytest
-except ImportError as import_error:
-    pytest = None
-
-
-try:
     import M2Crypto  # pylint: disable=unused-import
 
     HAS_M2CRYPTO = True
@@ -97,7 +91,6 @@ c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
 }
 
 
-@skipIf(not bool(pytest), False)
 class X509TestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {x509: {"__opts__": {"fips_mode": False}}}
@@ -464,7 +457,6 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
         assert "MD5 Finger Print" in ret
 
 
-@skipIf(not bool(pytest), False)
 class X509FipsTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {x509: {"__opts__": {"fips_mode": True}}}
