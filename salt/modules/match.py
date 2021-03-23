@@ -325,7 +325,7 @@ def filter_by(
         {% set roles = salt['match.filter_by']({
             'web*': ['app', 'caching'],
             'db*': ['db'],
-        }, default='web*') %}
+        }, minion_id=grains['id'], default='web*') %}
 
         # Make the filtered data available to Pillar:
         roles: {{ roles | yaml() }}
