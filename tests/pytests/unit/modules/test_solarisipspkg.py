@@ -1,12 +1,8 @@
 import logging
 
+import pytest
 import salt.modules.solarisipspkg as solarisipspkg
 from tests.support.mock import MagicMock, call, patch
-
-try:
-    import pytest
-except ImportError:
-    pytest = None
 
 log = logging.getLogger(__name__)
 
