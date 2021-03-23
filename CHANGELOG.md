@@ -25,9 +25,6 @@ Deprecated
 
 - Added deprecation warning for grains.get_or_set_hash (#59425)
 
-Salt 3002.6 (2021-03-10)
-========================
-
 Changed
 -------
 
@@ -35,7 +32,6 @@ Changed
 - Store git sha in salt/_version.py when installing from a tag so it can be found if needed later. (#59137)
 - Changed package manager detection in yumpkg module (#59201)
 - Updating the pkg beacon to fire the events when there are upgrades to packages, but also when watched packages are installed or removed. Breaking out the logic for listing pkgs from context into a separate function to aid in testing. Updating tests to ensure context is not used when use_context option to list_pkgs is False. (#59463)
-- Store git sha in salt/_version.py when installing from a tag so it can be found if needed later. (#59137)
 
 
 Fixed
@@ -177,6 +173,19 @@ Added
 - Add -B flag to FreeBSD pkgng.check() to regenerate the library dependency
   metadata for a package by extracting library requirement information from the
   binary ELF files in the package. (#59569)
+
+
+Salt 3002.6 (2021-03-10)
+========================
+
+Changed
+-------
+
+- Store git sha in salt/_version.py when installing from a tag so it can be found if needed later. (#59137)
+
+Fixed
+-----
+
 - Fix argument injection bug in restartcheck.restartcheck. This change hardens
   the fix for CVE-2020-28243. (#200)
 - Allow "extra_filerefs" as sanitized kwargs for SSH client.
