@@ -1,20 +1,12 @@
-# -*- coding: utf-8 -*-
 """
 Neutron class
 """
 
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals, with_statement
-
 import logging
 
 import salt.utils.versions
-
-# Import salt libs
 from salt import exceptions
-
-# Import third party libs
 from salt.ext import six
 
 # pylint: disable=import-error
@@ -73,7 +65,7 @@ def sanitize_neutronclient(kwargs):
         "auth",
     )
     ret = {}
-    for var in six.iterkeys(kwargs):
+    for var in kwargs.keys():
         if var in variables:
             ret[var] = kwargs[var]
 
