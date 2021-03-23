@@ -525,6 +525,46 @@ def sync_returners(
     return ret
 
 
+def sync_netapi(
+    saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist=None
+):
+    """
+    .. versionadded:: 3003
+
+    Sync netapi from ``salt://_netapi`` to the minion
+
+    saltenv
+        The fileserver environment from which to sync. To sync from more than
+        one environment, pass a comma-separated list.
+
+        If not passed, then all environments configured in the :ref:`top files
+        <states-top>` will be checked for netapi to sync. If no top files
+        are found, then the ``base`` environment will be synced.
+
+    refresh : True
+        If ``True``, refresh the available execution modules on the minion.
+        This refresh will be performed even if no new netapis are synced. Set
+        to ``False`` to prevent this refresh.
+
+    extmod_whitelist : None
+        comma-separated list of modules to sync
+
+    extmod_blacklist : None
+        comma-separated list of modules to blacklist based on type
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' saltutil.sync_netapi
+        salt '*' saltutil.sync_netapi saltenv=dev
+    """
+    ret = _sync("netapi", saltenv, extmod_whitelist, extmod_blacklist)
+    if refresh:
+        refresh_modules()
+    return ret
+
+
 def sync_proxymodules(
     saltenv=None, refresh=False, extmod_whitelist=None, extmod_blacklist=None
 ):

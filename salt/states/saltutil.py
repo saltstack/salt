@@ -183,6 +183,20 @@ def sync_modules(name, **kwargs):
     return _sync_single(name, "modules", **kwargs)
 
 
+def sync_netapi(name, **kwargs):
+    """
+    Performs the same task as saltutil.sync_netapi module
+    See :mod:`saltutil module for full list of options <salt.modules.saltutil>`
+
+    .. code-block:: yaml
+
+        sync_everything:
+          saltutil.sync_netapi:
+            - refresh: True
+    """
+    return _sync_single(name, "netapi", **kwargs)
+
+
 def sync_output(name, **kwargs):
     """
     Performs the same task as saltutil.sync_output module
