@@ -298,12 +298,12 @@ def create(vm_):
     # Get the volumes
     volumes = vm_.get("volumes", None)
     if volumes:
-        volumes = [vol for vol in client.volumes.get_all() if volin volumes]
+        volumes = [vol for vol in client.volumes.get_all() if vol.name in volumes]
 
     # Get the networks
     networks = vm_.get("networks", None)
     if networks:
-        networks = [net for net in client.networks.get_all() if net in networks]
+        networks = [net for net in client.networks.get_all() if net.name in networks]
 
     # Create the machine
     response = client.servers.create(
