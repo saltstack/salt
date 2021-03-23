@@ -4,6 +4,7 @@ Manage the context a module loaded by Salt's loader
 import collections.abc
 import contextlib
 import contextvars
+import copy
 
 DEFAULT_CTX_VAR = "loader_ctxvar"
 
@@ -111,6 +112,10 @@ class NamedLoaderContext(collections.abc.MutableMapping):
 
     def __getattr__(self, name):
         return getattr(self.value(), name)
+
+    def __deepcopy__(self, memo):
+        default = copy.deepcopy(self.default)
+        return self.__class__(self.name, self.loader_context, default)
 
     def missing_fun_string(self, name):
         return self.loader().missing_fun_string(name)
