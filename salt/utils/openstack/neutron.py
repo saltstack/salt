@@ -106,7 +106,7 @@ class SaltNeutron(NeutronShell):
             "Sulfur",
             (
                 "The neutron module has been deprecated and will be removed in {version}."
-                "This includes "
+                "This includes"
                 "* salt.utils.openstack.neutron"
                 "* salt.modules.neutron"
                 "* salt.pillar.neutron"
