@@ -85,8 +85,11 @@ def get_path():
         )["vdata"]
     ).split(";")
 
+    # If the final element happens to be an empty value, normalize_dir treats this
+    # as a valid path and inserts a period (.) so clean the list before that happens
+    ret = ret[:-1] if ret[-1] == "" else ret
     # Trim ending backslash
-    return ret
+    return list(map(_normalize_dir, ret))
 
 
 def exists(path):
