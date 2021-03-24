@@ -2,7 +2,7 @@
     tests.pytests.unit.beacons.test_diskusage
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    disk usage beacon test cases
+    Disk usage beacon test cases
 """
 from collections import namedtuple
 
