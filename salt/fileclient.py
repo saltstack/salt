@@ -1404,15 +1404,7 @@ class RemoteClient(Client):
         """
         Return the metadata derived from the master_tops system
         """
-        log.debug(
-            "The _ext_nodes master function has been renamed to _master_tops. "
-            "To ensure compatibility when using older Salt masters we will "
-            "continue to invoke the function as _ext_nodes until the "
-            "3002 release."
-        )
-        # TODO: Change back to _master_tops
-        # for 3002 release
-        load = {"cmd": "_ext_nodes", "id": self.opts["id"], "opts": self.opts}
+        load = {"cmd": "_master_tops", "id": self.opts["id"], "opts": self.opts}
         if self.auth:
             load["tok"] = self.auth.gen_token(b"salt")
         return self.channel.send(load)
