@@ -1568,12 +1568,25 @@ def __dict_to_service_spec(spec):
         if key == "ports":
             spec_obj.ports = []
             for port in value:
-                kube_port = kubernetes.client.V1ServicePort()
                 if isinstance(port, dict):
+                    # https://github.com/kubernetes-client/python/issues/1199
+                    kube_port = None
+                    for port_key, port_value in port.items():
+                        if port_key == "port":
+                            kube_port = kubernetes.client.V1ServicePort(port=port_value)
+                            setattr(kube_port, port_key, port_value)
+
+                    if kube_port == None:
+                        raise CommandExecutionError(
+                            "port not found in {0}".format(port)
+                        )
+
                     for port_key, port_value in port.items():
                         if hasattr(kube_port, port_key):
                             setattr(kube_port, port_key, port_value)
                 else:
+                    # https://github.com/kubernetes-client/python/issues/1199
+                    kube_port = kubernetes.client.V1ServicePort(port=port)
                     kube_port.port = port
                 spec_obj.ports.append(kube_port)
         elif hasattr(spec_obj, key):
