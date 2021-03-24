@@ -13,12 +13,12 @@ def append_to_XMLDesc(mocked, fragment):
     mocked.XMLDesc.return_value = ET.tostring(xml_doc)
 
 
-def assert_xml_equals(expected, actual):
+def assert_xml_equals(actual, expected):
     """
     Assert that two ElementTree nodes are equal
     """
-    assert xmlutil.to_dict(xmlutil.strip_spaces(expected), True) == xmlutil.to_dict(
-        xmlutil.strip_spaces(actual), True
+    assert xmlutil.to_dict(xmlutil.strip_spaces(actual), True) == xmlutil.to_dict(
+        xmlutil.strip_spaces(expected), True
     )
 
 

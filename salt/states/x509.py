@@ -321,7 +321,7 @@ def private_key_managed(
         name, bits=bits, passphrase=passphrase, new=new, overwrite=overwrite
     ):
         file_args["contents"] = __salt__["x509.get_pem_entry"](
-            name, pem_type="RSA PRIVATE KEY"
+            name, pem_type="(?:RSA )?PRIVATE KEY"
         )
     else:
         new_key = True
@@ -399,12 +399,13 @@ def _certificate_info_matches(cert_info, required_cert_info, check_serial=False)
     ignored_keys = [
         "Not Before",
         "Not After",
-        "MD5 Finger Print",
         "SHA1 Finger Print",
         "SHA-256 Finger Print",
         # The integrity of the issuer is checked elsewhere
         "Issuer Public Key",
     ]
+    if __opts__["fips_mode"] is False:
+        ignored_keys.append("MD5 Finger Print")
     for key in ignored_keys:
         cert_info.pop(key, None)
         required_cert_info.pop(key, None)
