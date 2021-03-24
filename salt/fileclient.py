@@ -1,18 +1,19 @@
 """
 Classes that manage file clients
 """
-
 import contextlib
 import errno
-import ftplib
+import ftplib  # nosec
+import http.server
 import logging
 import os
 import shutil
 import string
+import urllib.error
+import urllib.parse
 
 import salt.client
 import salt.crypt
-import salt.ext.six.moves.BaseHTTPServer as BaseHTTPServer
 import salt.fileserver
 import salt.loader
 import salt.payload
@@ -30,19 +31,12 @@ import salt.utils.templates
 import salt.utils.url
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError
-
-# pylint: disable=no-name-in-module,import-error
-from salt.ext import six
-from salt.ext.six.moves.urllib.error import HTTPError, URLError
-from salt.ext.six.moves.urllib.parse import urlparse, urlunparse
 from salt.ext.tornado.httputil import (
     HTTPHeaders,
     HTTPInputError,
     parse_response_start_line,
 )
 from salt.utils.openstack.swift import SaltSwift
-
-# pylint: enable=no-name-in-module,import-error
 
 log = logging.getLogger(__name__)
 MAX_FILENAME_LENGTH = 255
@@ -67,7 +61,7 @@ def decode_dict_keys_to_str(src):
     This is necessary because Python 3 makes a distinction
     between these types.
     """
-    if not six.PY3 or not isinstance(src, dict):
+    if not isinstance(src, dict):
         return src
 
     output = {}
@@ -353,7 +347,7 @@ class Client:
         Return the expected cache location for the specified URL and
         environment.
         """
-        proto = urlparse(url).scheme
+        proto = urllib.parse.urlparse(url).scheme
 
         if proto == "":
             # Local file path
@@ -475,7 +469,7 @@ class Client:
         """
         Get a single file from a URL.
         """
-        url_data = urlparse(url)
+        url_data = urllib.parse.urlparse(url)
         url_scheme = url_data.scheme
         url_path = os.path.join(url_data.netloc, url_data.path).rstrip(os.sep)
 
@@ -583,7 +577,7 @@ class Client:
                 )
         if url_data.scheme == "ftp":
             try:
-                ftp = ftplib.FTP()
+                ftp = ftplib.FTP()  # nosec
                 ftp_port = url_data.port
                 if not ftp_port:
                     ftp_port = 21
@@ -633,7 +627,7 @@ class Client:
             at_sign_pos = netloc.rfind("@")
             if at_sign_pos != -1:
                 netloc = netloc[at_sign_pos + 1 :]
-            fixed_url = urlunparse(
+            fixed_url = urllib.parse.urlunparse(
                 (
                     url_data.scheme,
                     netloc,
@@ -772,15 +766,15 @@ class Client:
                 destfp = None
                 salt.utils.files.rename(dest_tmp, dest)
                 return dest
-        except HTTPError as exc:
+        except urllib.error.HTTPError as exc:
             raise MinionError(
                 "HTTP error {0} reading {1}: {3}".format(
                     exc.code,
                     url,
-                    *BaseHTTPServer.BaseHTTPRequestHandler.responses[exc.code]
+                    *http.server.BaseHTTPRequestHandler.responses[exc.code]
                 )
             )
-        except URLError as exc:
+        except urllib.error.URLError as exc:
             raise MinionError("Error reading {}: {}".format(url, exc.reason))
         finally:
             if destfp is not None:
@@ -804,7 +798,7 @@ class Client:
             kwargs.pop("env")
 
         kwargs["saltenv"] = saltenv
-        url_data = urlparse(url)
+        url_data = urllib.parse.urlparse(url)
         sfn = self.cache_file(url, saltenv, cachedir=cachedir)
         if not sfn or not os.path.exists(sfn):
             return ""
@@ -839,7 +833,7 @@ class Client:
         """
         Return the extrn_filepath for a given url
         """
-        url_data = urlparse(url)
+        url_data = urllib.parse.urlparse(url)
         if salt.utils.platform.is_windows():
             netloc = salt.utils.path.sanitize_win_path(url_data.netloc)
         else:
@@ -1265,7 +1259,7 @@ class RemoteClient(Client):
                     data = salt.utils.gzip_util.uncompress(data["data"])
                 else:
                     data = data["data"]
-                if six.PY3 and isinstance(data, str):
+                if isinstance(data, str):
                     data = data.encode()
                 fn_.write(data)
             except (TypeError, KeyError) as exc:
@@ -1309,44 +1303,28 @@ class RemoteClient(Client):
         List the files on the master
         """
         load = {"saltenv": saltenv, "prefix": prefix, "cmd": "_file_list"}
-        return (
-            salt.utils.data.decode(self.channel.send(load))
-            if six.PY2
-            else self.channel.send(load)
-        )
+        return self.channel.send(load)
 
     def file_list_emptydirs(self, saltenv="base", prefix=""):
         """
         List the empty dirs on the master
         """
         load = {"saltenv": saltenv, "prefix": prefix, "cmd": "_file_list_emptydirs"}
-        return (
-            salt.utils.data.decode(self.channel.send(load))
-            if six.PY2
-            else self.channel.send(load)
-        )
+        return self.channel.send(load)
 
     def dir_list(self, saltenv="base", prefix=""):
         """
         List the dirs on the master
         """
         load = {"saltenv": saltenv, "prefix": prefix, "cmd": "_dir_list"}
-        return (
-            salt.utils.data.decode(self.channel.send(load))
-            if six.PY2
-            else self.channel.send(load)
-        )
+        return self.channel.send(load)
 
     def symlink_list(self, saltenv="base", prefix=""):
         """
         List symlinked files and dirs on the master
         """
         load = {"saltenv": saltenv, "prefix": prefix, "cmd": "_symlink_list"}
-        return (
-            salt.utils.data.decode(self.channel.send(load))
-            if six.PY2
-            else self.channel.send(load)
-        )
+        return self.channel.send(load)
 
     def __hash_and_stat_file(self, path, saltenv="base"):
         """
@@ -1406,54 +1384,30 @@ class RemoteClient(Client):
         Return a list of the files in the file server's specified environment
         """
         load = {"saltenv": saltenv, "cmd": "_file_list"}
-        return (
-            salt.utils.data.decode(self.channel.send(load))
-            if six.PY2
-            else self.channel.send(load)
-        )
+        return self.channel.send(load)
 
     def envs(self):
         """
         Return a list of available environments
         """
         load = {"cmd": "_file_envs"}
-        return (
-            salt.utils.data.decode(self.channel.send(load))
-            if six.PY2
-            else self.channel.send(load)
-        )
+        return self.channel.send(load)
 
     def master_opts(self):
         """
         Return the master opts data
         """
         load = {"cmd": "_master_opts"}
-        return (
-            salt.utils.data.decode(self.channel.send(load))
-            if six.PY2
-            else self.channel.send(load)
-        )
+        return self.channel.send(load)
 
     def master_tops(self):
         """
         Return the metadata derived from the master_tops system
         """
-        log.debug(
-            "The _ext_nodes master function has been renamed to _master_tops. "
-            "To ensure compatibility when using older Salt masters we will "
-            "continue to invoke the function as _ext_nodes until the "
-            "3002 release."
-        )
-        # TODO: Change back to _master_tops
-        # for 3002 release
-        load = {"cmd": "_ext_nodes", "id": self.opts["id"], "opts": self.opts}
+        load = {"cmd": "_master_tops", "id": self.opts["id"], "opts": self.opts}
         if self.auth:
             load["tok"] = self.auth.gen_token(b"salt")
-        return (
-            salt.utils.data.decode(self.channel.send(load))
-            if six.PY2
-            else self.channel.send(load)
-        )
+        return self.channel.send(load)
 
 
 class FSClient(RemoteClient):

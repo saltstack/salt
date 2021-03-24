@@ -75,13 +75,20 @@ def __virtual__():
     return __virtualname__
 
 
+def _get_active_provider_name():
+    try:
+        return __active_provider_name__.value()
+    except AttributeError:
+        return __active_provider_name__
+
+
 def get_configured_provider():
     """
     Return the first configured instance.
     """
     return config.is_provider_configured(
         __opts__,
-        __active_provider_name__ or __virtualname__,
+        _get_active_provider_name() or __virtualname__,
         ("access_key_id", "secret_access_key", "zone", "key_filename"),
     )
 
@@ -134,6 +141,14 @@ def query(params=None):
         "secret_access_key", get_configured_provider(), __opts__, search_global=False
     )
 
+    verify_ssl = config.get_cloud_config_value(
+        "verify_ssl",
+        get_configured_provider(),
+        __opts__,
+        default=True,
+        search_global=False,
+    )
+
     # public interface parameters
     real_parameters = {
         "access_key_id": access_key_id,
@@ -164,7 +179,7 @@ def query(params=None):
     # print('parameters:')
     # pprint.pprint(real_parameters)
 
-    request = requests.get(path, params=real_parameters, verify=False)
+    request = requests.get(path, params=real_parameters, verify=verify_ssl)
 
     # print('url:')
     # print(request.url)
@@ -499,7 +514,7 @@ def list_nodes_full(call=None):
 
         result[node["instance_id"]] = node
 
-    provider = __active_provider_name__ or "qingcloud"
+    provider = _get_active_provider_name() or "qingcloud"
     if ":" in provider:
         comps = provider.split(":")
         provider = comps[0]
@@ -648,7 +663,7 @@ def create(vm_):
             vm_["profile"]
             and config.is_profile_configured(
                 __opts__,
-                __active_provider_name__ or "qingcloud",
+                _get_active_provider_name() or "qingcloud",
                 vm_["profile"],
                 vm_=vm_,
             )

@@ -2277,6 +2277,20 @@ states is cluttering the logs. Set it to True to ignore them.
 
     state_output_diff: False
 
+.. conf_minion:: state_output_profile
+
+``state_output_profile``
+------------------------
+
+Default: ``True``
+
+The ``state_output_profile`` setting changes whether profile information
+will be shown for each state run.
+
+.. code-block:: yaml
+
+    state_output_profile: True
+
 .. conf_minion:: autoload_dynamic_modules
 
 ``autoload_dynamic_modules``
@@ -3304,7 +3318,7 @@ should be logged as the minion starts up and initially connects to the
 master. If not, check for debug log level and that the necessary version of
 ZeroMQ is installed.
 
-.. conf_minion:: failhard
+.. conf_minion:: tcp_authentication_retries
 
 ``tcp_authentication_retries``
 ------------------------------
@@ -3319,6 +3333,18 @@ reauthenticate. The tcp transport should try to connect with a new connection
 if the old one times out on reauthenticating.
 
 `-1` for infinite tries.
+
+.. conf_minion:: tcp_reconnect_backoff
+
+``tcp_reconnect_backoff``
+------------------------------
+
+Default: ``1``
+
+The time in seconds to wait before attempting another connection with salt master
+when the previous connection fails while on TCP transport.
+
+.. conf_minion:: failhard
 
 ``failhard``
 ------------

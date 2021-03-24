@@ -24,7 +24,7 @@ log = logging.getLogger(__name__)
 __salt__ = None
 
 
-def __virtual__():  # pylint: disable=expected-2-blank-lines-found-0
+def __virtual__():
     try:
         global __salt__  # pylint: disable=global-statement
         if not __salt__:
@@ -204,6 +204,9 @@ def del_cache():
 
 
 def write_cache(connection):
+    """
+    Write the vault token to cache
+    """
     # If uses is 1 and unlimited_use_token is not true, then this is a single use token and should not be cached
     # In that case, we still want to cache the vault metadata lookup information for paths, so continue on
     if (
@@ -421,8 +424,11 @@ def _wrapped_token_valid():
 def is_v2(path):
     """
     Determines if a given secret path is kv version 1 or 2
+
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' vault.is_v2 "secret/my/secret"
     """
     ret = {"v2": False, "data": path, "metadata": path, "delete": path, "type": None}
@@ -448,8 +454,11 @@ def is_v2(path):
 def _v2_the_path(path, pfilter, ptype="data"):
     """
     Given a path, a filter, and a path type, properly inject 'data' or 'metadata' into the path
+
     CLI Example:
+
     .. code-block:: python
+
         _v2_the_path('dev/secrets/fu/bar', 'dev/secrets', 'data') => 'dev/secrets/data/fu/bar'
     """
     possible_types = ["data", "metadata", "destroy"]
@@ -483,8 +492,11 @@ def _v2_the_path(path, pfilter, ptype="data"):
 def _get_secret_path_metadata(path):
     """
     Given a path, query vault to determine mount point, type, and version
+
     CLI Example:
+
     .. code-block:: python
+
         _get_secret_path_metadata('dev/secrets/fu/bar')
     """
     ckey = "vault_secret_path_metadata"

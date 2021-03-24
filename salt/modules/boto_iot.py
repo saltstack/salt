@@ -611,7 +611,6 @@ def set_default_policy_version(
     Returns {changed: true} if the policy version was set
     {changed: False} if the policy version was not set.
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -674,7 +673,6 @@ def attach_principal_policy(
 
     Returns {attached: true} if the policy was attached
     {attached: False} if the policy was not attached.
-
 
     CLI Example:
 

@@ -1,5 +1,5 @@
-salt.modules.wordpress module
-=============================
+salt.modules.wordpress
+======================
 
 .. automodule:: salt.modules.wordpress
     :members:
