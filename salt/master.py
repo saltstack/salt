@@ -1204,7 +1204,6 @@ class AESFuncs(TransportMethods):
     expose_methods = (
         "verify_minion",
         "_master_tops",
-        "_ext_nodes",
         "_master_opts",
         "_mine_get",
         "_mine",
@@ -1428,9 +1427,6 @@ class AESFuncs(TransportMethods):
         if load is False:
             return {}
         return self.masterapi._master_tops(load, skip_verify=True)
-
-    # Needed so older minions can request master_tops
-    _ext_nodes = _master_tops
 
     def _master_opts(self, load):
         """
