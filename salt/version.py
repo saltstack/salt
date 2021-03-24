@@ -96,8 +96,8 @@ class SaltStackVersion:
         "Aluminium": (3003,),
         "Silicon": (MAX_SIZE - 95, 0),
         "Phosphorus": (MAX_SIZE - 94, 0),
+        "Sulfur": (MAX_SIZE - 93, 0),
         # pylint: disable=E8265
-        #'Sulfur'       : (MAX_SIZE - 93, 0),
         #'Chlorine'     : (MAX_SIZE - 92, 0),
         #'Argon'        : (MAX_SIZE - 91, 0),
         #'Potassium'    : (MAX_SIZE - 90, 0),

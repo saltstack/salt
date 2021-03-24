@@ -93,3 +93,24 @@ def test_loaders_create_named_loader_contexts(loader_dir):
     module_name = func.func.__module__
     module = sys.modules[module_name]
     assert isinstance(module.__context__, salt.loader_context.NamedLoaderContext)
+
+
+def test_loaders_convert_context_to_values(loader_dir):
+    """
+    LazyLoaders convert NamedLoaderContexts to values when instantiated.
+    """
+    loader_context = salt.loader_context.LoaderContext()
+    grains_default = {
+        "os": "linux",
+    }
+    grains = salt.loader_context.NamedLoaderContext(
+        "grains", loader_context, grains_default
+    )
+    opts = {
+        "optimization_order": [0, 1, 2],
+        "grains": grains,
+    }
+    loader_1 = salt.loader.LazyLoader([loader_dir], opts,)
+    assert loader_1.opts["grains"] == grains_default
+    # The loader's opts is a copy
+    assert opts["grains"] == grains
