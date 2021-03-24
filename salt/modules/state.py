@@ -425,7 +425,7 @@ def _check_queue(queue, kwargs):
 
 def _get_initial_pillar(opts):
     return (
-        __pillar__
+        __pillar__.value()
         if __opts__.get("__cli", None) == "salt-call"
         and opts["pillarenv"] == __opts__["pillarenv"]
         else None
