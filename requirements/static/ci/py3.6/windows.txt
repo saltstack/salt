@@ -54,7 +54,7 @@ jaraco.classes==3.2.1
 jaraco.collections==3.2.0
 jaraco.functools==2.0
 jaraco.text==3.5.0
-jinja2==2.10.1
+jinja2==2.11.3
 jmespath==0.9.4
 jsondiff==1.2.0           # via moto
 jsonpatch==1.28           # via cfn-lint

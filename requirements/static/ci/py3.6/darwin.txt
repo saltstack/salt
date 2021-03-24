@@ -139,7 +139,7 @@ iniconfig==1.0.1          # via pytest
 ipaddress==1.0.22         # via kubernetes
 isodate==0.6.0            # via msrest
 jaraco.functools==2.0
-jinja2==2.10.1
+jinja2==2.11.3
 jmespath==0.9.4
 jsondiff==1.2.0           # via moto
 jsonpatch==1.28           # via cfn-lint

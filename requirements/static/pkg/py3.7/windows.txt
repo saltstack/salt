@@ -19,7 +19,7 @@ jaraco.classes==3.2.1     # via jaraco.collections
 jaraco.collections==3.2.0  # via cherrypy
 jaraco.functools==2.0     # via cheroot, jaraco.text, tempora
 jaraco.text==3.5.0        # via jaraco.collections
-jinja2==2.10.1
+jinja2==2.11.3
 libnacl==1.7.2
 lxml==4.6.2
 mako==1.1.4

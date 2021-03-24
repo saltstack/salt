@@ -22,7 +22,7 @@ idna==2.8
 imagesize==1.2.0          # via sphinx
 immutables==0.14
 jaraco.functools==2.0
-jinja2==2.10.1
+jinja2==2.11.3
 markupsafe==1.1.1
 more-itertools==5.0.0
 msgpack==1.0.2
