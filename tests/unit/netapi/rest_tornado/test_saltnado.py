@@ -20,9 +20,26 @@ class TestJobNotRunning(tornado.testing.AsyncTestCase):
             "gather_job_timeout": 10.001,
         }
         self.handler = saltnado.SaltAPIHandler(self.mock, self.mock)
+        self.handler._write_buffer = []
+        self.handler._transforms = []
+        self.handler.lowstate = []
+        self.handler.content_type = "text/plain"
+        self.handler.dumper = lambda x: x
         f = tornado.gen.Future()
         f.set_result({"jid": f, "minions": []})
         self.handler.saltclients.update({"local": lambda *args, **kwargs: f})
+
+    @tornado.testing.gen_test
+    def test_when_disbatch_has_already_finished_then_writing_return_should_not_fail(
+        self,
+    ):
+        self.handler.finish()
+        result = yield self.handler.disbatch()
+
+    @tornado.testing.gen_test
+    def test_when_disbatch_has_already_finished_then_finishing_should_not_fail(self):
+        self.handler.finish()
+        result = yield self.handler.disbatch()
 
     @tornado.testing.gen_test
     def test_when_event_times_out_and_minion_is_not_running_result_should_be_True(self):
@@ -414,6 +431,48 @@ class TestGetMinionReturns(tornado.testing.AsyncTestCase):
 
         are_done = [event.done() for event in events]
         assert all(are_done)
+
+    @tornado.testing.gen_test
+    def test_when_an_event_times_out_then_we_should_not_enter_an_infinite_loop(self):
+        # NOTE: this test will enter an infinite loop if the code is broken. I
+        # was not able to figure out a way to ensure that the test exits with
+        # failure rather than stalling forever. That is because the
+        # TimeoutException happens first and then tornado will never yield
+        # control to another coroutine. Like a coroutine to remove the future
+        # with the TimeoutException. It is also not possible to clear the
+        # TimeoutException.
+
+        events = [
+            tornado.gen.Future(),
+            tornado.gen.Future(),
+            tornado.gen.Future(),
+            tornado.gen.Future(),
+            tornado.gen.Future(),
+        ]
+
+        # Arguably any event would work, but 3 isn't the first, so it
+        # gives us a little more confidence that this test is testing
+        # correctly
+        events[3].set_exception(saltnado.TimeoutException())
+        times_out_later = tornado.gen.Future()
+        # 0.5s should be long enough that the test gets through doing other
+        # things before hitting this timeout, which will cancel all the
+        # in-flight futures.
+        self.io_loop.call_later(0.5, lambda: times_out_later.set_result(None))
+        yield self.handler.get_minion_returns(
+            events=events,
+            is_finished=tornado.gen.Future(),
+            is_timed_out=times_out_later,
+            min_wait_time=tornado.gen.Future(),
+            minions={"one": False, "two": False},
+        )
+
+        # Technically we don't /need/ to check that all events are done,
+        # but it's incorrect to exit the function without ensuring all
+        # futures are canceled.
+        are_done = [event.done() for event in events]
+        assert all(are_done)
+        assert times_out_later.done()
 
     @tornado.testing.gen_test
     def test_when_is_timed_out_any_other_futures_should_be_canceled(self):
