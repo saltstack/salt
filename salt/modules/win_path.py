@@ -150,6 +150,10 @@ def add(path, index=None, **kwargs):
         salt.utils.args.invalid_kwargs(kwargs)
 
     path = _normalize_dir(path)
+    # Due to path normalization causing issues with empty strings,
+    # back out here as we don't allow Path entries to be empty
+    if path == ".":
+        return False
     path_str = salt.utils.stringutils.to_str(path)
     system_path = get_path()
 
