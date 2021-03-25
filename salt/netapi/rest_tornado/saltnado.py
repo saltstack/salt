@@ -956,8 +956,11 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
                 ret.append("Unexpected exception while handling request: {}".format(ex))
                 log.error("Unexpected exception while handling request:", exc_info=True)
 
-        self.write(self.serialize({"return": ret}))
-        self.finish()
+        try:
+            self.write(self.serialize({"return": ret}))
+            self.finish()
+        except RuntimeError:
+            pass  # Do we need any logging here?
 
     @salt.ext.tornado.gen.coroutine
     def get_minion_returns(
@@ -997,8 +1000,6 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
                     continue
 
                 f_result = f.result()
-                if f in events:
-                    events.remove(f)
                 # if this is a start, then we need to add it to the pile
                 if f_result["tag"].endswith("/new"):
                     for minion_id in f_result["data"]["minions"]:
@@ -1015,6 +1016,9 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
 
             except TimeoutException:
                 pass
+            finally:
+                if f in events:
+                    events.remove(f)
 
     @salt.ext.tornado.gen.coroutine
     def _disbatch_local(self, chunk):
