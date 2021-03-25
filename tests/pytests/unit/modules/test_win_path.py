@@ -55,6 +55,15 @@ def test_exists():
         assert (win_path.exists("c:\\mystuff")) is False
 
 
+def test_util_reg():
+    """
+    Test to check if registry comes back clean when get_path is called
+    """
+    mock = MagicMock(return_value={"vdata": ""})
+    with patch.dict(win_path.__utils__, {"reg.read_value": mock}):
+        assert win_path.get_path() == []
+
+
 def test_add(pathsep):
     """
     Test to add the directory to the SYSTEM path
@@ -86,6 +95,10 @@ def test_add(pathsep):
 
     def _path_matches(path):
         return salt.utils.stringutils.to_str(pathsep.join(path))
+
+    # Test an empty reg update
+    ret, env, mock_set = _run("")
+    assert ret is False
 
     # Test a successful reg update
     ret, env, mock_set = _run("c:\\salt", retval=True)
