@@ -16,12 +16,9 @@ def test_start_shutdown():
         try:
             # testing environment will fail if we use default pidfile
             # overwrite sys.argv so salt-api does not use testing args
-            with patch.object(
-                sys, "argv", [sys.argv[0], "--pid-file", pidfile, "--log-file", logfile]
-            ):
+            with patch.object(sys, "argv", [sys.argv[0], "--pid-file", pidfile]):
                 api.start()
                 assert os.path.isfile(pidfile)
-                assert os.path.isfile(logfile)
                 api.shutdown()
         finally:
             try:
