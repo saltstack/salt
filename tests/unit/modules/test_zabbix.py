@@ -2,6 +2,7 @@
     :codeauthor: :email:`Christian McHugh <christian.mchugh@gmail.com>`
 """
 
+import salt.modules.config as config
 import salt.modules.zabbix as zabbix
 from salt.exceptions import SaltException
 from tests.support.mixins import LoaderModuleMockMixin
@@ -140,7 +141,15 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
     """
 
     def setup_loader_modules(self):
-        return {zabbix: {"__salt__": {"cmd.which_bin": lambda _: "zabbix_server"}}}
+        return {
+            zabbix: {
+                "__salt__": {
+                    "cmd.which_bin": lambda _: "zabbix_server",
+                    "config.get": config.get,
+                }
+            },
+            config: {"__opts__": {}},
+        }
 
     def test_get_object_id_by_params(self):
         """
@@ -226,36 +235,55 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(zabbix, "_login", return_value=CONN_ARGS):
                 self.assertEqual(zabbix.apiinfo_version(**CONN_ARGS), module_return)
 
-    def test__login_getting_parameters_from_config(self):
+    def test__login_getting_nested_parameters_from_config(self):
         """
-        Test get the connection data from pillar
+        Test get the connection data as nested parameters from config
         """
         query_return = {"jsonrpc": "2.0", "result": "3.4.5", "id": 1}
-        config_get_return = [
-            "testuser",
-            "password",
-            "http://fake_url/zabbix/api_jsonrpc.php",
-        ]
+        fake_connection_data = {
+            "zabbix": {
+                "user": "testuser",
+                "password": "password",
+                "url": "http://fake_url/zabbix/api_jsonrpc.php",
+            }
+        }
         login_return = {
             "url": "http://fake_url/zabbix/api_jsonrpc.php",
             "auth": "3.4.5",
         }
-        mock_config_get_return = MagicMock(side_effect=config_get_return)
 
         with patch.object(zabbix, "_query", return_value=query_return):
-            with patch.dict(zabbix.__salt__, {"config.get": mock_config_get_return}):
+            with patch.dict(zabbix.__pillar__, fake_connection_data):
+                self.assertEqual(zabbix._login(), login_return)
+
+    def test__login_getting_flat_parameters_from_config(self):
+        """
+        Test get the connection data as flat parameters from config
+        """
+        query_return = {"jsonrpc": "2.0", "result": "3.4.5", "id": 1}
+        fake_connection_data = {
+            "zabbix.user": "testuser",
+            "zabbix.password": "password",
+            "zabbix.url": "http://fake_url/zabbix/api_jsonrpc.php",
+        }
+        login_return = {
+            "url": "http://fake_url/zabbix/api_jsonrpc.php",
+            "auth": "3.4.5",
+        }
+
+        with patch.object(zabbix, "_query", return_value=query_return):
+            with patch.dict(zabbix.__pillar__, fake_connection_data):
                 self.assertEqual(zabbix._login(), login_return)
 
     def test__login_getting_empty_parameters_from_config(self):
         """
-        Test get the connection data from pillar with an empty response
+        Test get the connection data from config with an empty response
         """
         query_return = {"jsonrpc": "2.0", "result": "3.4.5", "id": 1}
-        config_get_return = [None, None, None]
-        mock_config_get_return = MagicMock(side_effect=config_get_return)
+        fake_connection_data = {}
 
         with patch.object(zabbix, "_query", return_value=query_return):
-            with patch.dict(zabbix.__salt__, {"config.get": mock_config_get_return}):
+            with patch.dict(zabbix.__pillar__, fake_connection_data):
                 with self.assertRaises(SaltException) as login_exception:
                     ret = zabbix._login()
                     self.assertEqual(
