@@ -1558,6 +1558,7 @@ _OS_NAME_MAP = {
     "linuxmint": "Mint",
     "neon": "KDE neon",
     "pop": "Pop",
+    "alibabaclo": "Alinux",
 }
 
 # Map the 'os' grain to the 'os_family' grain
@@ -1634,6 +1635,7 @@ _OS_FAMILY_MAP = {
     "AIX": "AIX",
     "TurnKey": "Debian",
     "Pop": "Debian",
+    "Alinux": "RedHat",
 }
 
 # Matches any possible format:

@@ -952,6 +952,7 @@ VALID_OPTS = immutabletypes.freeze(
         "disabled_requisites": (str, list),
         # Feature flag config
         "features": dict,
+        "fips_mode": bool,
     }
 )
 
@@ -1254,6 +1255,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "ssh_merge_pillar": True,
         "disabled_requisites": [],
         "reactor_niceness": None,
+        "fips_mode": False,
     }
 )
 
@@ -1590,6 +1592,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "minion_data_cache_events": True,
         "enable_ssh_minions": False,
         "netapi_allow_raw_shell": False,
+        "fips_mode": False,
     }
 )
 
