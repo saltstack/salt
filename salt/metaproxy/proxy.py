@@ -51,8 +51,6 @@ from salt.exceptions import (
     SaltInvocationError,
     SaltSystemExit,
 )
-from salt.ext import six
-from salt.ext.six.moves import range
 from salt.minion import ProxyMinion
 from salt.utils.event import tagify
 from salt.utils.process import SignalHandlingProcess, default_signals
@@ -551,7 +549,7 @@ def thread_return(cls, minion_instance, opts, data):
             ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
         except Exception:  # pylint: disable=broad-except
             msg = "The minion function caused an exception"
-            log.warning(msg, exc_info_on_loglevel=True)
+            log.warning(msg, exc_info=True)
             salt.utils.error.fire_exception(
                 salt.exceptions.MinionError(msg), opts, job=data
             )
@@ -757,8 +755,6 @@ def handle_decoded_payload(self, data):
     differently.
     """
     # Ensure payload is unicode. Disregard failure to decode binary blobs.
-    if six.PY2:
-        data = salt.utils.data.decode(data, keep=True)
     if "user" in data:
         log.info(
             "User %s Executing command %s with jid %s",

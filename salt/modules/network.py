@@ -18,7 +18,7 @@ import salt.utils.platform
 import salt.utils.validate.net
 from salt._compat import ipaddress
 from salt.exceptions import CommandExecutionError
-from salt.ext.six.moves import range
+
 
 log = logging.getLogger(__name__)
 
@@ -349,7 +349,7 @@ def _netstat_bsd():
         netinfo = _netinfo_openbsd()
     elif __grains__["kernel"] in ("FreeBSD", "NetBSD"):
         netinfo = _netinfo_freebsd_netbsd()
-    for idx in range(len(ret)):
+    for idx, _ in enumerate(ret):
         local = ret[idx]["local-address"]
         remote = ret[idx]["remote-address"]
         proto = ret[idx]["proto"]
@@ -1000,8 +1000,8 @@ def traceroute(host):
                         "hostname": traceline[1],
                         "ip": traceline[2],
                     }
-                    for idx in range(0, len(delays)):
-                        result["ms{}".format(idx + 1)] = delays[idx]
+                    for idx, delay in enumerate(delays):
+                        result["ms{}".format(idx + 1)] = delay
             except IndexError:
                 result = {}
 
@@ -1861,7 +1861,9 @@ def get_route(ip):
     .. versionchanged:: 2016.11.4
         Added support for AIX
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' network.get_route 10.10.10.10
     """

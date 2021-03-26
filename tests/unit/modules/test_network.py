@@ -1,5 +1,6 @@
 import logging
 import os.path
+import shutil
 import socket
 
 import salt.config
@@ -121,7 +122,20 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
         """
         Test for Performs a traceroute to a 3rd party host
         """
-        with patch("salt.utils.path.which", MagicMock(return_value="traceroute")):
+
+        def patched_which(binary):
+            binary_path = shutil.which(binary)
+            if binary_path:
+                # The path exists, just return it
+                return binary_path
+            if binary == "traceroute":
+                # The path doesn't exist but we mock it on the test.
+                # Return the binary name
+                return binary
+            # The binary does not exist
+            return binary_path
+
+        with patch("salt.utils.path.which", patched_which):
             with patch.dict(network.__salt__, {"cmd.run": MagicMock(return_value="")}):
                 self.assertListEqual(network.traceroute("gentoo.org"), [])
 

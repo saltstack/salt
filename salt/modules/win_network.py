@@ -7,8 +7,6 @@ import hashlib
 import re
 import socket
 
-# Import 3rd party libraries
-import salt.ext.six as six  # pylint: disable=W0611
 import salt.utils.network
 import salt.utils.platform
 import salt.utils.validate.net
@@ -37,7 +35,7 @@ except ImportError:
 
 
 try:
-    import wmi  # pylint: disable=W0611
+    import wmi  # pylint: disable=import-error
 except ImportError:
     HAS_DEPENDENCIES = False
 
@@ -255,7 +253,9 @@ def get_route(ip):
 
     .. versionadded:: 2016.11.5
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' network.get_route 10.10.10.10
     """

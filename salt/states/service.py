@@ -56,20 +56,19 @@ set the reload value to True:
     :ref:`Requisites <requisites>` documentation.
 
 """
-# Import Python libs
 
+import logging
 import time
 
-# Import Salt libs
 import salt.utils.data
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError
-
-# Import 3rd-party libs
 from salt.utils.args import get_function_argspec as _argspec
 from salt.utils.systemd import booted
 
 SYSTEMD_ONLY = ("no_block", "unmask", "unmask_runtime")
+
+log = logging.getLogger(__name__)
 
 __virtualname__ = "service"
 
@@ -560,7 +559,7 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
         ret["changes"][name] = after_toggle_status
 
     if after_toggle_status:
-        ret["comment"] = "Started Service {}".format(name)
+        ret["comment"] = "Started service {}".format(name)
     else:
         ret["comment"] = "Service {} failed to start".format(name)
         ret["result"] = False
@@ -1040,3 +1039,57 @@ def mod_watch(
         else "Failed to {} the service".format(verb)
     )
     return ret
+
+
+def mod_beacon(name, **kwargs):
+    """
+    Create a beacon to monitor a service based on a beacon state argument.
+
+    .. note::
+        This state exists to support special handling of the ``beacon``
+        state argument for supported state functions. It should not be called directly.
+    """
+    ret = {"name": name, "changes": {}, "result": True, "comment": ""}
+
+    sfun = kwargs.pop("sfun", None)
+    supported_funcs = ["running", "dead"]
+
+    if sfun in supported_funcs:
+        if kwargs.get("beacon"):
+            beacon_module = "service"
+
+            data = {}
+            _beacon_data = kwargs.get("beacon_data", {})
+
+            data["onchangeonly"] = _beacon_data.get("onchangeonly", True)
+            data["delay"] = _beacon_data.get("delay", 0)
+            data["emitatstartup"] = _beacon_data.get("emitatstartup", False)
+            data["uncleanshutdown"] = _beacon_data.get("emitatstartup", None)
+
+            beacon_name = "beacon_{}_{}".format(beacon_module, name)
+
+            beacon_kwargs = {
+                "name": beacon_name,
+                "services": {name: data},
+                "interval": _beacon_data.get("interval", 60),
+                "beacon_module": beacon_module,
+            }
+
+            ret = __states__["beacon.present"](**beacon_kwargs)
+            return ret
+        else:
+            return {
+                "name": name,
+                "changes": {},
+                "comment": "Not adding beacon.",
+                "result": True,
+            }
+    else:
+        return {
+            "name": name,
+            "changes": {},
+            "comment": "service.{} does not work with the beacon state function".format(
+                sfun
+            ),
+            "result": False,
+        }

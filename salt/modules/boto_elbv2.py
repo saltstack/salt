@@ -39,17 +39,11 @@ Connection module for Amazon ALB
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
 
-# Import Python libs
 import logging
 
-# Import Salt libs
 import salt.utils.boto3mod
 import salt.utils.versions
 
-log = logging.getLogger(__name__)
-
-
-# Import third-party libs
 try:
     # pylint: disable=unused-import
     import boto3
@@ -64,6 +58,8 @@ try:
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
+
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -131,7 +127,8 @@ def create_target_group(
     returns
         (bool) - True on success, False on failure.
 
-    CLI example:
+    CLI Example:
+
     .. code-block:: bash
 
         salt myminion boto_elbv2.create_target_group learn1give1 protocol=HTTP port=54006 vpc_id=vpc-deadbeef
@@ -183,7 +180,7 @@ def delete_target_group(name, region=None, key=None, keyid=None, profile=None):
     returns
         (bool) - True on success, False on failure.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -217,7 +214,7 @@ def target_group_exists(name, region=None, key=None, keyid=None, profile=None):
     """
     Check to see if an target group exists.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -246,7 +243,7 @@ def describe_target_health(
     """
     Get the curret health check status for targets in a target group.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -284,7 +281,7 @@ def register_targets(name, targets, region=None, key=None, keyid=None, profile=N
     - ``True``: instance(s) registered successfully
     - ``False``: instance(s) failed to be registered
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -321,7 +318,7 @@ def deregister_targets(name, targets, region=None, key=None, keyid=None, profile
     - ``True``: instance(s) deregistered successfully
     - ``False``: instance(s) failed to be deregistered
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 

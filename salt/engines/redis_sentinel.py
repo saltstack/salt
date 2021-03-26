@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 An engine that reads messages from the redis sentinel pubsub and sends reactor
 events based on the channels they are subscribed to.
 
-.. versionadded: 2016.3.0
+.. versionadded:: 2016.3.0
 
 :configuration:
 
@@ -25,17 +24,10 @@ events based on the channels they are subscribed to.
 :depends: redis
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 
-# Import salt libs
 import salt.client
-from salt.ext import six
-from salt.ext.six.moves import zip
 
-# Import third party libs
 try:
     import redis
 except ImportError:
@@ -44,8 +36,6 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 __virtualname__ = "redis"
-
-log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -56,7 +46,7 @@ def __virtual__():
     )
 
 
-class Listener(object):
+class Listener:
     def __init__(self, host=None, port=None, channels=None, tag=None):
         if host is None:
             host = "localhost"
@@ -66,7 +56,7 @@ class Listener(object):
             channels = ["*"]
         if tag is None:
             tag = "salt/engine/redis_sentinel"
-        super(Listener, self).__init__()
+        super().__init__()
         self.tag = tag
         self.redis = redis.StrictRedis(host=host, port=port, decode_responses=True)
         self.pubsub = self.redis.pubsub()
@@ -77,7 +67,7 @@ class Listener(object):
 
     def work(self, item):
         ret = {"channel": item["channel"]}
-        if isinstance(item["data"], six.integer_types):
+        if isinstance(item["data"], int):
             ret["code"] = item["data"]
         elif item["channel"] == "+switch-master":
             ret.update(
@@ -99,7 +89,7 @@ class Listener(object):
                 "channel": item["channel"],
                 "data": item["data"],
             }
-        self.fire_master(ret, "{0}/{1}".format(self.tag, item["channel"]))
+        self.fire_master(ret, "{}/{}".format(self.tag, item["channel"]))
 
     def run(self):
         log.debug("Start Listener")
@@ -111,9 +101,9 @@ class Listener(object):
 def start(hosts, channels, tag=None):
     if tag is None:
         tag = "salt/engine/redis_sentinel"
-    local = salt.client.LocalClient()
-    ips = local.cmd(
-        hosts["matching"], "network.ip_addrs", [hosts["interface"]]
-    ).values()
+    with salt.client.LocalClient() as local:
+        ips = local.cmd(
+            hosts["matching"], "network.ip_addrs", [hosts["interface"]]
+        ).values()
     client = Listener(host=ips.pop()[0], port=hosts["port"], channels=channels, tag=tag)
     client.run()
