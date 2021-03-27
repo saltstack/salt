@@ -638,9 +638,9 @@ class Pillar:
         """
         Pull the file server environments out of the master options
         """
-        envs = {"base"}
-        if "pillar_roots" in self.opts:
-            envs.update(list(self.opts["pillar_roots"]))
+        envs = list(dict.fromkeys(self.opts["pillar_roots"]))
+        if "base" not in envs:
+            envs.append("base")
         return envs
 
     def get_tops(self):
