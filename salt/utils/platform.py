@@ -3,6 +3,7 @@ Functions for identifying which platform a machine is
 """
 
 import os
+import platform
 import subprocess
 import sys
 
@@ -203,4 +204,4 @@ def is_aarch64():
     """
     Simple function to return if host is AArch64 or not
     """
-    return sys.platform.startswith("aarch64")
+    return platform.machine().startswith("aarch64")
