@@ -267,10 +267,7 @@ def _write_cron_lines(user, lines):
     """
     lines = [salt.utils.stringutils.to_str(_l) for _l in lines]
     path = salt.utils.files.mkstemp()
-    if _check_instance_uid_match("root") or __grains__.get("os_family") in (
-        "Solaris",
-        "AIX",
-    ):
+    if __grains__.get("os_family") in ("Solaris", "AIX"):
         # In some cases crontab command should be executed as user rather than root
         with salt.utils.files.fpopen(
             path, "w+", uid=__salt__["file.user_to_uid"](user), mode=0o600
@@ -279,6 +276,16 @@ def _write_cron_lines(user, lines):
         ret = __salt__["cmd.run_all"](
             _get_cron_cmdstr(path), runas=user, python_shell=False
         )
+    # If Salt is running from same user as requested in cron module we don't need any user switch
+    elif _check_instance_uid_match(user):
+        with salt.utils.files.fpopen(path, "w+", mode=0o600) as fp_:
+            fp_.writelines(lines)
+        ret = __salt__["cmd.run_all"](_get_cron_cmdstr(path), python_shell=False)
+    # If Salt is running from root user it could modify any user's crontab
+    elif _check_instance_uid_match("root"):
+        with salt.utils.files.fpopen(path, "w+", mode=0o600) as fp_:
+            fp_.writelines(lines)
+        ret = __salt__["cmd.run_all"](_get_cron_cmdstr(path, user), python_shell=False)
     else:
         with salt.utils.files.fpopen(path, "w+", mode=0o600) as fp_:
             fp_.writelines(lines)
