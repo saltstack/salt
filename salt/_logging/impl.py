@@ -132,18 +132,16 @@ class SaltColorLogRecord(SaltLogRecord):
     def __init__(self, *args, **kwargs):
         SaltLogRecord.__init__(self, *args, **kwargs)
 
-        # Make sure the name is not a None object so it will format correctly
-        if self.name is None:
-            self.name = ""
-
         reset = TextFormat("reset")
         clevel = LOG_COLORS["levels"].get(self.levelname, reset)
         cmsg = LOG_COLORS["msgs"].get(self.levelname, reset)
 
-        self.colorname = "{}[{:<17}]{}".format(LOG_COLORS["name"], self.name, reset)
-        self.colorlevel = "{}[{:<8}]{}".format(clevel, self.levelname, reset)
+        self.colorname = "{}[{:<17}]{}".format(
+            LOG_COLORS["name"], str(self.name), reset
+        )
+        self.colorlevel = "{}[{:<8}]{}".format(clevel, str(self.levelname), reset)
         self.colorprocess = "{}[{:>5}]{}".format(
-            LOG_COLORS["process"], self.process, reset
+            LOG_COLORS["process"], str(self.process), reset
         )
         self.colormsg = "{}{}{}".format(cmsg, self.getMessage(), reset)
 
