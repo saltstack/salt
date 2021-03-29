@@ -11,8 +11,6 @@ import re
 import sys
 import types
 
-import salt.ext.six as six
-
 # Let's define these custom logging levels before importing the salt._logging.mixins
 # since they will be used there
 PROFILE = logging.PROFILE = 15
