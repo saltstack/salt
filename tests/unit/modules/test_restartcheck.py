@@ -381,3 +381,50 @@ class RestartcheckTestCase(TestCase, LoaderModuleMockMixin):
                     "Found 1 processes using old versions of upgraded files", ret
                 )
             self.assertFalse(os.path.exists(create_file))
+
+    def test_valid_command_b(self):
+        """
+        test for CVE-2020-28243
+        """
+        create_file = os.path.join(RUNTIME_VARS.TMP, "created_file")
+
+        patch_kernel = patch(
+            "salt.modules.restartcheck._kernel_versions_redhat",
+            return_value=["3.10.0-1127.el7.x86_64"],
+        )
+        services = {
+            "NetworkManager": {"ExecMainPID": 123},
+            "auditd": {"ExecMainPID": 456},
+            "crond": {"ExecMainPID": 789},
+        }
+
+        patch_salt = patch.dict(
+            restartcheck.__salt__,
+            {
+                "cmd.run": MagicMock(
+                    return_value="Linux localhost.localdomain 3.10.0-1127.el7.x86_64"
+                ),
+                "service.get_running": MagicMock(return_value=list(services.keys())),
+                "service.show": MagicMock(side_effect=list(services.values())),
+                "pkg.owner": MagicMock(return_value=""),
+                "service.available": MagicMock(return_value=True),
+            },
+        )
+
+        patch_deleted = patch(
+            "salt.modules.restartcheck._deleted_files",
+            MagicMock(return_value=[("--admindir tmp dpkg", 123, "/root/ (deleted)")]),
+        )
+
+        patch_readlink = patch("os.readlink", return_value="--admindir tmp dpkg")
+
+        popen_mock = MagicMock()
+        popen_mock.return_value.stdout.readline.side_effect = ["/usr/bin\n", ""]
+        patch_popen = patch("subprocess.Popen", popen_mock)
+
+        patch_grains = patch.dict(restartcheck.__grains__, {"os_family": "RedHat"})
+        with patch_kernel, patch_salt, patch_deleted, patch_readlink, patch_grains, patch_popen:
+            ret = restartcheck.restartcheck()
+            self.assertIn("Found 1 processes using old versions of upgraded files", ret)
+            args, kwargs = popen_mock.call_args
+            assert args[0] == ["repoquery", "-l", "--admindir tmp dpkg"]
