@@ -349,7 +349,7 @@ class SaltLoggingClass(
         except NameError:
             salt_system_encoding = "utf-8"
 
-        if isinstance(msg, str) and not isinstance(msg, str):
+        if isinstance(msg, bytes):
             try:
                 _msg = msg.decode(salt_system_encoding, "replace")
             except UnicodeDecodeError:
@@ -359,7 +359,7 @@ class SaltLoggingClass(
 
         _args = []
         for item in args:
-            if isinstance(item, str) and not isinstance(item, str):
+            if isinstance(item, bytes):
                 try:
                     _args.append(item.decode(salt_system_encoding, "replace"))
                 except UnicodeDecodeError:
