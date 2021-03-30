@@ -689,3 +689,197 @@ def test_audit():
         pkg_cmd.assert_called_with(
             ["pkg", "audit", "-F"], output_loglevel="trace", python_shell=False,
         )
+
+
+def test_version():
+    """
+    Test pkgng.version
+    """
+    version = "2.0.6"
+    mock = MagicMock(return_value=version)
+    with patch.dict(pkgng.__salt__, {"pkg_resource.version": mock}):
+
+        assert pkgng.version(*["mutt"]) == version
+        assert not pkgng.version(*["mutt"]) == "2.0.10"
+
+
+def test_refresh_db_without_forced_flag():
+    """
+    Test pkgng.refresh_db with force=False
+    """
+    pkg_cmd = MagicMock(return_value=0)
+    with patch("salt.utils.pkg.clear_rtag", MagicMock()):
+        with patch.dict(pkgng.__salt__, {"cmd.retcode": pkg_cmd}):
+
+            result = pkgng.refresh_db()
+            assert result is True
+            pkg_cmd.assert_called_with(
+                ["pkg", "update"], python_shell=False,
+            )
+
+
+def test_refresh_db_with_forced_flag():
+    """
+    Test pkgng.refresh_db with force=True
+    """
+    pkg_cmd = MagicMock(return_value=0)
+    with patch("salt.utils.pkg.clear_rtag", MagicMock()):
+        with patch.dict(pkgng.__salt__, {"cmd.retcode": pkg_cmd}):
+
+            result = pkgng.refresh_db(force=True)
+            assert result is True
+            pkg_cmd.assert_called_with(
+                ["pkg", "update", "-f"], python_shell=False,
+            )
+
+
+def test_fetch_with_default_flag():
+    """
+    Test pkgng.fetch with default options
+    """
+
+    targets = "mutt"
+    pkg_cmd = MagicMock(return_value=targets)
+    patches = {
+        "cmd.run": pkg_cmd,
+        "pkg_resource.stringify": MagicMock(),
+        "pkg_resource.parse_targets": MagicMock(return_value=targets),
+    }
+    with patch.dict(pkgng.__salt__, patches):
+        pkgs = pkgng.fetch(targets)
+        assert pkgs == targets
+    pkg_cmd.assert_called_once_with(
+        ["pkg", "fetch", "-y", "-g", "mutt"],
+        output_loglevel="trace",
+        python_shell=False,
+    )
+
+
+def test_fetch_with_dependency_flag():
+    """
+    Test pkgng.fetch with enabled dependency flag
+    """
+
+    targets = "mutt"
+    pkg_cmd = MagicMock(return_value=targets)
+    patches = {
+        "cmd.run": pkg_cmd,
+        "pkg_resource.stringify": MagicMock(),
+        "pkg_resource.parse_targets": MagicMock(return_value=targets),
+    }
+    with patch.dict(pkgng.__salt__, patches):
+        pkgs = pkgng.fetch(targets, depends=True)
+        assert pkgs == targets
+    pkg_cmd.assert_called_once_with(
+        ["pkg", "fetch", "-y", "-gd", "mutt"],
+        output_loglevel="trace",
+        python_shell=False,
+    )
+
+
+def test_fetch_with_regex_flag():
+    """
+    Test pkgng.fetch with enabled regex flag
+    """
+
+    targets = "mutt"
+    pkg_cmd = MagicMock(return_value=targets)
+    patches = {
+        "cmd.run": pkg_cmd,
+        "pkg_resource.stringify": MagicMock(),
+        "pkg_resource.parse_targets": MagicMock(return_value=targets),
+    }
+    with patch.dict(pkgng.__salt__, patches):
+        pkgs = pkgng.fetch(targets, regex=True)
+        assert pkgs == targets
+    pkg_cmd.assert_called_once_with(
+        ["pkg", "fetch", "-y", "-gx", "mutt"],
+        output_loglevel="trace",
+        python_shell=False,
+    )
+
+
+def test_fetch_with_fromrepo_flag():
+    """
+    Test pkgng.fetch with enabled fromrepo flag
+    """
+
+    targets = "mutt"
+    pkg_cmd = MagicMock(return_value=targets)
+    patches = {
+        "cmd.run": pkg_cmd,
+        "pkg_resource.stringify": MagicMock(),
+        "pkg_resource.parse_targets": MagicMock(return_value=targets),
+    }
+    with patch.dict(pkgng.__salt__, patches):
+        pkgs = pkgng.fetch(targets, fromrepo="FreeBSD-poudriere")
+        assert pkgs == targets
+    pkg_cmd.assert_called_once_with(
+        ["pkg", "fetch", "-y", "-r", "FreeBSD-poudriere", "-g", "mutt"],
+        output_loglevel="trace",
+        python_shell=False,
+    )
+
+
+def test_fetch_with_localcache_flag():
+    """
+    Test pkgng.fetch with enabled localcache flag
+    """
+
+    targets = "mutt"
+    pkg_cmd = MagicMock(return_value=targets)
+    patches = {
+        "cmd.run": pkg_cmd,
+        "pkg_resource.stringify": MagicMock(),
+        "pkg_resource.parse_targets": MagicMock(return_value=targets),
+    }
+    with patch.dict(pkgng.__salt__, patches):
+        pkgs = pkgng.fetch(targets, local=True)
+        assert pkgs == targets
+    pkg_cmd.assert_called_once_with(
+        ["pkg", "fetch", "-y", "-gL", "mutt"],
+        output_loglevel="trace",
+        python_shell=False,
+    )
+
+
+def test_which_with_default_flags():
+    """
+    Test pkgng.which
+    """
+    which_cmd = MagicMock(
+        return_value={
+            "stdout": ("/usr/local/bin/mutt was installed by package mutt-2.0.6"),
+            "retcode": 0,
+        }
+    )
+    with patch.dict(pkgng.__salt__, {"cmd.run": which_cmd}):
+
+        result = pkgng.which("/usr/local/bin/mutt")
+        assert result
+        which_cmd.assert_called_with(
+            ["pkg", "which", "/usr/local/bin/mutt"],
+            output_loglevel="trace",
+            python_shell=False,
+        )
+
+
+def test_which_with_origin_flag():
+    """
+    Test pkgng.which with enabled origin flag
+    """
+    which_cmd = MagicMock(
+        return_value={
+            "stdout": ("/usr/local/bin/mutt was installed by package mail/mutt"),
+            "retcode": 0,
+        }
+    )
+    with patch.dict(pkgng.__salt__, {"cmd.run": which_cmd}):
+
+        result = pkgng.which("/usr/local/bin/mutt", origin=True)
+        assert result
+        which_cmd.assert_called_with(
+            ["pkg", "which", "-o", "/usr/local/bin/mutt"],
+            output_loglevel="trace",
+            python_shell=False,
+        )
