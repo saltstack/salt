@@ -322,8 +322,8 @@ def get_dependencies():
 
 def preferred_ip(vm_, ips):
     """
-    Return either an ipv4' (default) or 'ipv6' address depending on 'protocol' option.
-    The list of IPs is filtered by ignore_cidr() to remove any unreachable private addresses.
+    Return either an 'ipv4' (default) or 'ipv6' address depending on 'protocol' option.
+    The list of 'ipv4' IPs is filtered by ignore_cidr() to remove any unreachable private addresses.
     """
     proto = config.get_cloud_config_value(
         "protocol", vm_, __opts__, default="ipv4", search_global=False
