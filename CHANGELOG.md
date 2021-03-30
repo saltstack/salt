@@ -13,6 +13,9 @@ Salt 3003 (2021-03-05)
 Removed
 -------
 
+- Removed the deprecated glance state and execution module in favor of the glance_image
+  state module and the glanceng execution module. (#59079)
+- Removing the _ext_nodes deprecation warning and alias to the master_tops function.  This change will break compatibility with a Salt master running versions 2017.7.8 and older and Salt minions running versions 3003 and newer. (#59804)
 - removed the arg `managed_private_key` from 'salt.states.x509.certificate_managed' (#59247)
 - Drop support for python 3.5 on Windows (#59479)
 
@@ -21,7 +24,6 @@ Deprecated
 ----------
 
 - Added deprecation warning for grains.get_or_set_hash (#59425)
-
 
 Changed
 -------
@@ -35,6 +37,9 @@ Changed
 Fixed
 -----
 
+- When instantiating the loader grab values of grains and pillars if
+  they are NamedLoaderContext instances. (#59773)
+- Fixed installation on Apple Silicon Macs by checking $HOMEBREW_PREFIX for `libcrypto` instead of assuming /usr/local. (#59808)
 - Fix incorrect documentation for pillar_source_merging_strategy (#26396)
 - Don't iterate through cloud map errors (#34033)
 - Supress noisy warnings when very old pyzmq is used. (#50327)
@@ -135,6 +140,7 @@ Fixed
 Added
 -----
 
+- Added "fips_mode" config option to master and minion configs. (#59427)
 - Adding the ability to clear and show the pillar cache enabled when pillar_cache is True. (#37080)
 - SCRAM-SHA-256 support for PostgreSQL passwords.
   Pass encrypted=scram-sha-256 to the postgres_user.present (or postgres_group.present) state. (#51271)
@@ -167,6 +173,24 @@ Added
 - Add -B flag to FreeBSD pkgng.check() to regenerate the library dependency
   metadata for a package by extracting library requirement information from the
   binary ELF files in the package. (#59569)
+
+
+Salt 3002.6 (2021-03-10)
+========================
+
+Changed
+-------
+
+- Store git sha in salt/_version.py when installing from a tag so it can be found if needed later. (#59137)
+
+Fixed
+-----
+
+- Fix argument injection bug in restartcheck.restartcheck. This change hardens
+  the fix for CVE-2020-28243. (#200)
+- Allow "extra_filerefs" as sanitized kwargs for SSH client.
+  Fix regression on "cmd.run" when passing tuples as cmd. (#59664)
+- Allow all ssh kwargs as sanitized kwargs for SSH client. (#59748)
 
 
 Salt 3002.5 (2021-02-25)
@@ -479,6 +503,18 @@ Added
   `enable_slsvars_fixes` to enable fixes to tpldir, tplfile and sls_path.
   This flag will be deprecated in the Phosphorus release when this functionality
   becomes the default. (#58652)
+
+Salt 3001.7 (2021-03-10)
+========================
+
+Fixed
+-----
+
+- Fix argument injection bug in restartcheck.restartcheck. This change hardens
+  the fix for CVE-2020-28243. (#200)
+- Allow "extra_filerefs" as sanitized kwargs for SSH client.
+  Fix regression on "cmd.run" when passing tuples as cmd. (#59664)
+- Allow all ssh kwargs as sanitized kwargs for SSH client. (#59748)
 
 Salt 3001.6 (2021-02-09)
 ========================
@@ -970,6 +1006,18 @@ Added
 - Added `efi` parameter to virt module, so `uefi` firmware can be auto selected. (#57397)
 - [#56637](https://github.com/saltstack/salt/pull/56637) - Add ``win_wua.installed`` to the ``win_wua`` execution module
 - Clarify how to get the master fingerprint (#54699)
+
+Salt 3000.9 (2021-03-10)
+========================
+
+Fixed
+-----
+
+- Allow "extra_filerefs" as sanitized kwargs for SSH client.
+  Fix regression on "cmd.run" when passing tuples as cmd. (#59664)
+- Allow all ssh kwargs as sanitized kwargs for SSH client. (#59748)
+- Fix argument injection bug in restartcheck.restartcheck. This change hardens
+  the fix for CVE-2020-28243.
 
 Salt 3000.8 (2021-02-09)
 ========================

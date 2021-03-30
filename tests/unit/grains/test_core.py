@@ -678,6 +678,35 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         self._run_os_grains_tests(None, _os_release_map, expectation)
 
     @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
+    def test_alinux2_os_grains(self):
+        """
+        Test if OS grains are parsed correctly in Alibaba Cloud Linux
+        """
+        _os_release_map = {
+            "os_release_file": {
+                "NAME": "Alibaba Cloud Linux (Aliyun Linux)",
+                "VERSION": "2.1903 LTS (Hunting Beagle)",
+                "VERSION_ID": "2.1903",
+                "PRETTY_NAME": "Alibaba Cloud Linux (Aliyun Linux) 2.1903 LTS (Hunting Beagle)",
+                "ID": "alinux",
+                "ANSI_COLOR": "0;31",
+            },
+            "_linux_distribution": ("alinux", "2.1903", "LTS"),
+        }
+
+        expectation = {
+            "os": "Alinux",
+            "os_family": "RedHat",
+            "oscodename": "Alibaba Cloud Linux (Aliyun Linux) 2.1903 LTS (Hunting Beagle)",
+            "osfullname": "Alibaba Cloud Linux (Aliyun Linux)",
+            "osrelease": "2.1903",
+            "osrelease_info": (2, 1903),
+            "osmajorrelease": 2,
+            "osfinger": "Alibaba Cloud Linux (Aliyun Linux)-2",
+        }
+        self._run_os_grains_tests(None, _os_release_map, expectation)
+
+    @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
     def test_centos_stream_8_os_grains(self):
         """
         Test if OS grains are parsed correctly in Centos 8
@@ -704,6 +733,27 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             "osrelease_info": (8,),
             "osmajorrelease": 8,
             "osfinger": "CentOS Stream-8",
+        }
+        self._run_os_grains_tests(None, _os_release_map, expectation)
+
+    @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
+    def test_mendel_os_grains(self):
+        """
+        Test if OS grains are parsed correctly in Mendel Linux
+        """
+        _os_release_map = {
+            "_linux_distribution": ("Mendel", "10.0", "eagle"),
+        }
+
+        expectation = {
+            "os": "Mendel",
+            "os_family": "Debian",
+            "oscodename": "eagle",
+            "osfullname": "Mendel",
+            "osrelease": "10.0",
+            "osrelease_info": (10, 0),
+            "osmajorrelease": 10,
+            "osfinger": "Mendel-10",
         }
         self._run_os_grains_tests(None, _os_release_map, expectation)
 

@@ -200,6 +200,7 @@ class BadTestModuleNamesTestCase(TestCase):
             "unit.utils.scheduler.test_run_job",
             "unit.utils.scheduler.test_schedule",
             "unit.utils.scheduler.test_skip",
+            "unit.auth.test_auth",
         )
         errors = []
 
