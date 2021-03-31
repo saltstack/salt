@@ -74,6 +74,13 @@ class JinjaTestCase(TestCase):
         expected = Markup('foo:\n      "bar"')
         assert result == expected, result
 
+    def test_tojson_should_ascii_sort_keys_when_told(self):
+        data = {"z": "zzz", "y": "yyy", "x": "xxx"}
+        expected = '{"x": "xxx", "y": "yyy", "z": "zzz"}'
+
+        actual = tojson(data, sort_keys=True)
+        assert actual == expected
+
 
 class MockFileClient:
     """

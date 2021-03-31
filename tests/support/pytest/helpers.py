@@ -533,6 +533,212 @@ def shell_test_false():
     return "/bin/false"
 
 
+@attr.s(kw_only=True, frozen=True)
+class FakeSaltExtension:
+    tmp_path_factory = attr.ib(repr=False)
+    name = attr.ib()
+    pkgname = attr.ib(init=False)
+    srcdir = attr.ib(init=False)
+
+    @srcdir.default
+    def _srcdir(self):
+        return self.tmp_path_factory.mktemp("src", numbered=True)
+
+    @pkgname.default
+    def _pkgname(self):
+        replace_chars = ("-", " ")
+        name = self.name
+        for char in replace_chars:
+            name = name.replace(char, "_")
+        return name
+
+    def __attrs_post_init__(self):
+        self._laydown_files()
+
+    def _laydown_files(self):
+        if not self.srcdir.exists():
+            self.srcdir.mkdir()
+        setup_py = self.srcdir.joinpath("setup.py")
+        if not setup_py.exists():
+            setup_py.write_text(
+                textwrap.dedent(
+                    """\
+            import setuptools
+
+            if __name__ == "__main__":
+                setuptools.setup()
+            """
+                )
+            )
+        setup_cfg = self.srcdir.joinpath("setup.cfg")
+        if not setup_cfg.exists():
+            setup_cfg.write_text(
+                textwrap.dedent(
+                    """\
+            [metadata]
+            name = {0}
+            version = 1.0
+            description = Salt Extension Test
+            author = Pedro
+            author_email = pedro@algarvio.me
+            keywords = salt-extension
+            url = http://saltstack.com
+            license = Apache Software License 2.0
+            classifiers =
+                Programming Language :: Python
+                Programming Language :: Cython
+                Programming Language :: Python :: 3
+                Programming Language :: Python :: 3 :: Only
+                Development Status :: 4 - Beta
+                Intended Audience :: Developers
+                License :: OSI Approved :: Apache Software License
+            platforms = any
+
+            [options]
+            zip_safe = False
+            include_package_data = True
+            packages = find:
+            python_requires = >= 3.5
+            setup_requires =
+              wheel
+              setuptools>=50.3.2
+
+            [options.entry_points]
+            salt.loader=
+              module_dirs = {1}
+              runner_dirs = {1}.loader:get_runner_dirs
+              wheel_dirs = {1}.loader:get_new_style_entry_points
+            """.format(
+                        self.name, self.pkgname
+                    )
+                )
+            )
+
+        extension_package_dir = self.srcdir / self.pkgname
+        if not extension_package_dir.exists():
+            extension_package_dir.mkdir()
+            extension_package_dir.joinpath("__init__.py").write_text("")
+            extension_package_dir.joinpath("loader.py").write_text(
+                textwrap.dedent(
+                    """\
+            import pathlib
+
+            PKG_ROOT = pathlib.Path(__file__).resolve().parent
+
+            def get_module_dirs():
+                return [str(PKG_ROOT / "modules")]
+
+            def get_runner_dirs():
+                return [str(PKG_ROOT / "runners1"), str(PKG_ROOT / "runners2")]
+
+            def get_new_style_entry_points():
+                return {"wheel": [str(PKG_ROOT / "the_wheel_modules")]}
+            """
+                )
+            )
+
+            runners1_dir = extension_package_dir / "runners1"
+            runners1_dir.mkdir()
+            runners1_dir.joinpath("__init__.py").write_text("")
+            runners1_dir.joinpath("foobar1.py").write_text(
+                textwrap.dedent(
+                    """\
+            __virtualname__ = "foobar"
+
+            def __virtual__():
+                return True
+
+            def echo1(string):
+                return string
+            """
+                )
+            )
+
+            runners2_dir = extension_package_dir / "runners2"
+            runners2_dir.mkdir()
+            runners2_dir.joinpath("__init__.py").write_text("")
+            runners2_dir.joinpath("foobar2.py").write_text(
+                textwrap.dedent(
+                    """\
+            __virtualname__ = "foobar"
+
+            def __virtual__():
+                return True
+
+            def echo2(string):
+                return string
+            """
+                )
+            )
+
+            modules_dir = extension_package_dir / "modules"
+            modules_dir.mkdir()
+            modules_dir.joinpath("__init__.py").write_text("")
+            modules_dir.joinpath("foobar1.py").write_text(
+                textwrap.dedent(
+                    """\
+            __virtualname__ = "foobar"
+
+            def __virtual__():
+                return True
+
+            def echo1(string):
+                return string
+            """
+                )
+            )
+            modules_dir.joinpath("foobar2.py").write_text(
+                textwrap.dedent(
+                    """\
+            __virtualname__ = "foobar"
+
+            def __virtual__():
+                return True
+
+            def echo2(string):
+                return string
+            """
+                )
+            )
+
+            wheel_dir = extension_package_dir / "the_wheel_modules"
+            wheel_dir.mkdir()
+            wheel_dir.joinpath("__init__.py").write_text("")
+            wheel_dir.joinpath("foobar1.py").write_text(
+                textwrap.dedent(
+                    """\
+            __virtualname__ = "foobar"
+
+            def __virtual__():
+                return True
+
+            def echo1(string):
+                return string
+            """
+                )
+            )
+            wheel_dir.joinpath("foobar2.py").write_text(
+                textwrap.dedent(
+                    """\
+            __virtualname__ = "foobar"
+
+            def __virtual__():
+                return True
+
+            def echo2(string):
+                return string
+            """
+                )
+            )
+
+    def __enter__(self):
+        self._laydown_files()
+        return self
+
+    def __exit__(self, *_):
+        shutil.rmtree(str(self.srcdir), ignore_errors=True)
+
+
 # Only allow star importing the functions defined in this module
 __all__ = [
     name

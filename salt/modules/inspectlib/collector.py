@@ -492,14 +492,19 @@ class Inspector(EnvLoader):
 
         self._prepare_full_scan(**kwargs)
 
-        os.system(
-            "nice -{} python {} {} {} {} & > /dev/null".format(
-                priority,
+        subprocess.run(
+            [
+                "nice",
+                "-{}".format(priority),
+                "python",
                 __file__,
                 os.path.dirname(self.pidfile),
                 os.path.dirname(self.dbfile),
                 mode,
-            )
+            ],
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
         )
 
     def export(self, description, local=False, path="/tmp", format="qcow2"):
