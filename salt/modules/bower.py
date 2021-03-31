@@ -8,11 +8,9 @@ available.
 
 """
 
-# Import python libs
 import logging
 import shlex
 
-# Import salt libs
 import salt.utils.json
 import salt.utils.path
 from salt.exceptions import CommandExecutionError
@@ -144,7 +142,6 @@ def uninstall(pkg, dir, runas=None, env=None):
         Environment variables to set when invoking Bower. Uses the same ``env``
         format as the :py:func:`cmd.run <salt.modules.cmdmod.run>` execution
         function.
-
 
     CLI Example:
 

@@ -1542,6 +1542,7 @@ _OS_NAME_MAP = {
     "oracleserv": "OEL",
     "cloudserve": "CloudLinux",
     "cloudlinux": "CloudLinux",
+    "almalinux": "AlmaLinux",
     "pidora": "Fedora",
     "scientific": "ScientificLinux",
     "synology": "Synology",
@@ -1557,6 +1558,8 @@ _OS_NAME_MAP = {
     "linuxmint": "Mint",
     "neon": "KDE neon",
     "pop": "Pop",
+    "alibabaclo": "Alinux",
+    "mendel": "Mendel",
 }
 
 # Map the 'os' grain to the 'os_family' grain
@@ -1575,6 +1578,7 @@ _OS_FAMILY_MAP = {
     "Scientific": "RedHat",
     "Amazon": "RedHat",
     "CloudLinux": "RedHat",
+    "AlmaLinux": "RedHat",
     "OVS": "RedHat",
     "OEL": "RedHat",
     "XCP": "RedHat",
@@ -1632,6 +1636,8 @@ _OS_FAMILY_MAP = {
     "AIX": "AIX",
     "TurnKey": "Debian",
     "Pop": "Debian",
+    "Alinux": "RedHat",
+    "Mendel": "Debian",
 }
 
 # Matches any possible format:

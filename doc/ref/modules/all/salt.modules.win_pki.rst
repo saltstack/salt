@@ -1,5 +1,5 @@
-salt.modules.win_pki module
-===========================
+salt.modules.win_pki
+====================
 
 .. automodule:: salt.modules.win_pki
     :members:

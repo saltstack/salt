@@ -36,7 +36,7 @@ the following syntax is used:
 in the SLS file. If you need to guarantee order of execution, consider using
 requisites.
 
-.. include:: ../../_incl/_incl/sls_filename_cant_contain_period.rst
+.. include:: ../../_incl/sls_filename_cant_contain_period.rst
 
 Relative Include
 ================

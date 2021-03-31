@@ -1,7 +1,7 @@
 """
 Tests for salt.modules.zpool
 
-:codeauthor:    Nitin Madhok <nmadhok@clemson.edu>, Jorge Schrauwen <sjorge@blackdot.be>
+:codeauthor:    Nitin Madhok <nmadhok@g.clemson.edu>, Jorge Schrauwen <sjorge@blackdot.be>
 :maintainer:    Jorge Schrauwen <sjorge@blackdot.be>
 :maturity:      new
 :depends:       salt.utils.zfs

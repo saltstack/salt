@@ -1,5 +1,5 @@
-salt.proxy.esxdatacenter module
-===============================
+salt.proxy.esxdatacenter
+========================
 
 .. automodule:: salt.proxy.esxdatacenter
     :members:

@@ -9,12 +9,11 @@ import salt.modules.linux_shadow
 import salt.utils.files
 import salt.utils.platform
 from tests.support.case import ModuleCase
-from tests.support.helpers import flaky, random_string
-from tests.support.unit import skipIf
+from tests.support.helpers import random_string
 
 
 @pytest.mark.skip_if_not_root
-@skipIf(not salt.utils.platform.is_linux(), "These tests can only be run on linux")
+@pytest.mark.skip_unless_on_linux
 class ShadowModuleTest(ModuleCase):
     """
     Validate the linux shadow system module
@@ -133,7 +132,7 @@ class ShadowModuleTest(ModuleCase):
         # User does not exist (set_inactdays return None is user does not exist)
         self.assertFalse(self.run_function("shadow.set_mindays", [self._no_user, 12]))
 
-    @flaky
+    @pytest.mark.flaky(max_runs=4)
     @pytest.mark.destructive_test
     @pytest.mark.slow_test
     def test_lock_password(self):

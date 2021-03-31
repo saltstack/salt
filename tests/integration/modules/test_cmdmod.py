@@ -10,7 +10,6 @@ import salt.utils.user
 from tests.support.case import ModuleCase
 from tests.support.helpers import dedent
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import skipIf
 
 AVAILABLE_PYTHON_EXECUTABLE = salt.utils.path.which_bin(
     ["python", "python2", "python2.6", "python2.7"]
@@ -196,6 +195,16 @@ class CMDModuleTest(ModuleCase):
         self.assertEqual(ret["stdout"], args)
 
     @pytest.mark.slow_test
+    def test_script_query_string(self):
+        """
+        cmd.script
+        """
+        args = "saltines crackers biscuits=yes"
+        script = "salt://script.py?saltenv=base"
+        ret = self.run_function("cmd.script", [script, args])
+        self.assertEqual(ret["stdout"], args)
+
+    @pytest.mark.slow_test
     def test_script_retcode(self):
         """
         cmd.script_retcode
@@ -341,7 +350,7 @@ class CMDModuleTest(ModuleCase):
         self.assertEqual(result, expected_result)
 
     @pytest.mark.skip_if_not_root
-    @skipIf(salt.utils.platform.is_windows(), "skip windows, requires password")
+    @pytest.mark.skip_on_windows(reason="Skip on Windows, requires password")
     def test_quotes_runas(self):
         """
         cmd.run with quoted command
@@ -357,7 +366,7 @@ class CMDModuleTest(ModuleCase):
 
     @pytest.mark.destructive_test
     @pytest.mark.skip_if_not_root
-    @skipIf(salt.utils.platform.is_windows(), "skip windows, uses unix commands")
+    @pytest.mark.skip_on_windows(reason="Skip on Windows, uses unix commands")
     @pytest.mark.slow_test
     def test_avoid_injecting_shell_code_as_root(self):
         """
@@ -379,7 +388,7 @@ class CMDModuleTest(ModuleCase):
 
     @pytest.mark.destructive_test
     @pytest.mark.skip_if_not_root
-    @skipIf(salt.utils.platform.is_windows(), "skip windows, uses unix commands")
+    @pytest.mark.skip_on_windows(reason="Skip on Windows, uses unix commands")
     @pytest.mark.slow_test
     def test_cwd_runas(self):
         """
@@ -403,7 +412,7 @@ class CMDModuleTest(ModuleCase):
 
     @pytest.mark.destructive_test
     @pytest.mark.skip_if_not_root
-    @skipIf(not salt.utils.platform.is_darwin(), "applicable to MacOS only")
+    @pytest.mark.skip_unless_on_darwin(reason="Applicable to MacOS only")
     @pytest.mark.slow_test
     def test_runas_env(self):
         """
@@ -421,7 +430,7 @@ class CMDModuleTest(ModuleCase):
 
     @pytest.mark.destructive_test
     @pytest.mark.skip_if_not_root
-    @skipIf(not salt.utils.platform.is_darwin(), "applicable to MacOS only")
+    @pytest.mark.skip_unless_on_darwin(reason="Applicable to MacOS only")
     @pytest.mark.slow_test
     def test_runas_complex_command_bad_cwd(self):
         """
@@ -449,7 +458,7 @@ class CMDModuleTest(ModuleCase):
         self.assertNotIn("You have failed the test", cmd_result["stderr"])
         self.assertNotEqual(0, cmd_result["retcode"])
 
-    @skipIf(salt.utils.platform.is_windows(), "minion is windows")
+    @pytest.mark.skip_on_windows(reason="Minion is Windows")
     @pytest.mark.skip_if_not_root
     @pytest.mark.destructive_test
     @pytest.mark.slow_test
@@ -463,7 +472,7 @@ class CMDModuleTest(ModuleCase):
             ).splitlines()
         self.assertIn("USER={}".format(self.runas_usr), out)
 
-    @skipIf(not salt.utils.path.which_bin("sleep"), "sleep cmd not installed")
+    @pytest.mark.skip_if_binaries_missing("sleep", message="sleep cmd not installed")
     def test_timeout(self):
         """
         cmd.run trigger timeout
@@ -473,7 +482,7 @@ class CMDModuleTest(ModuleCase):
         )
         self.assertTrue("Timed out" in out)
 
-    @skipIf(not salt.utils.path.which_bin("sleep"), "sleep cmd not installed")
+    @pytest.mark.skip_if_binaries_missing("sleep", message="sleep cmd not installed")
     def test_timeout_success(self):
         """
         cmd.run sufficient timeout to succeed
@@ -534,7 +543,7 @@ class CMDModuleTest(ModuleCase):
         cmd = self.run_function("cmd.run", ["whoami"])
         self.assertEqual(user.lower(), cmd.lower())
 
-    @skipIf(not salt.utils.platform.is_windows(), "minion is not windows")
+    @pytest.mark.skip_unless_on_windows(reason="Minion is not Windows")
     @pytest.mark.slow_test
     def test_windows_env_handling(self):
         """
@@ -546,30 +555,8 @@ class CMDModuleTest(ModuleCase):
         self.assertIn("abc=123", out)
         self.assertIn("ABC=456", out)
 
-    @skipIf(not salt.utils.platform.is_windows(), "minion is not windows")
-    def test_windows_cmd_powershell_list(self):
-        """
-        Ensure that cmd.run_all supports running shell='cmd' with cmd passed
-        as a list
-        """
-        out = self.run_function(
-            "cmd.run_all", cmd=["echo", "salt"], python_shell=False, shell="powershell"
-        )
-        self.assertEqual(out["stdout"], "salt")
-
-    @skipIf(not salt.utils.platform.is_windows(), "minion is not windows")
-    def test_windows_cmd_powershell_string(self):
-        """
-        Ensure that cmd.run_all supports running shell='cmd' with cmd passed
-        as a string
-        """
-        out = self.run_function(
-            "cmd.run_all", cmd="echo salt", python_shell=False, shell="powershell"
-        )
-        self.assertEqual(out["stdout"], "salt")
-
     @pytest.mark.slow_test
-    @skipIf(not salt.utils.platform.is_windows(), "minion is not windows")
+    @pytest.mark.skip_unless_on_windows(reason="Minion is not Windows")
     def test_windows_powershell_script_args(self):
         """
         Ensure that powershell processes inline script in args
@@ -580,4 +567,20 @@ class CMDModuleTest(ModuleCase):
         )
         script = "salt://issue-56195/test.ps1"
         ret = self.run_function("cmd.script", [script], args=args, shell="powershell")
+        self.assertEqual(ret["stdout"], val)
+
+    @pytest.mark.slow_test
+    @pytest.mark.skip_unless_on_windows(reason="Minion is not Windows")
+    @pytest.mark.skip_if_binaries_missing("pwsh")
+    def test_windows_powershell_script_args_pwsh(self):
+        """
+        Ensure that powershell processes inline script in args with powershell
+        core
+        """
+        val = "i like cheese"
+        args = '-SecureString (ConvertTo-SecureString -String "{}" -AsPlainText -Force) -ErrorAction Stop'.format(
+            val
+        )
+        script = "salt://issue-56195/test.ps1"
+        ret = self.run_function("cmd.script", [script], args=args, shell="pwsh")
         self.assertEqual(ret["stdout"], val)

@@ -1234,7 +1234,9 @@ def from_filenames_collection_modifyitems(config, items):
     for path in from_filenames_paths:
         if path.as_posix().startswith("tests/"):
             if path.name == "conftest.py":
-                # This is not a test module
+                # This is not a test module, but consider any test_*.py files in child directories
+                for match in path.parent.rglob("test_*.py"):
+                    test_module_paths.add(match)
                 continue
             # Tests in the listing don't require additional matching and will be added to the
             # list of tests to run
