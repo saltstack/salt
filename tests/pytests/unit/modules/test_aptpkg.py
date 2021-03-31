@@ -14,7 +14,11 @@ import textwrap
 import pytest
 import salt.modules.aptpkg as aptpkg
 import salt.modules.pkg_resource as pkg_resource
-from salt.exceptions import CommandExecutionError, SaltInvocationError
+from salt.exceptions import (
+    CommandExecutionError,
+    CommandNotFoundError,
+    SaltInvocationError,
+)
 from tests.support.mock import MagicMock, Mock, call, patch
 
 try:
@@ -785,6 +789,8 @@ def test_normalize_name():
         assert result == "foo", result
         result = aptpkg.normalize_name("foo:any")
         assert result == "foo", result
+        result = aptpkg.normalize_name("foo:all")
+        assert result == "foo", result
         result = aptpkg.normalize_name("foo:i386")
         assert result == "foo:i386", result
 
@@ -1071,3 +1077,31 @@ def test_call_apt_dpkg_lock():
             # We should attempt to call the cmd 5 times
             assert cmd_mock.call_count == 5
             cmd_mock.has_calls(expected_calls)
+
+
+def test_services_need_restart_checkrestart_missing():
+    """Test that the user is informed about the required dependency."""
+
+    with patch("salt.utils.path.which_bin", Mock(return_value=None)):
+        with pytest.raises(CommandNotFoundError):
+            aptpkg.services_need_restart()
+
+
+@patch("salt.utils.path.which_bin", Mock(return_value="/usr/sbin/checkrestart"))
+def test_services_need_restart():
+    """
+    Test that checkrestart output is parsed correctly
+    """
+    cr_output = """
+PROCESSES: 24
+PROGRAMS: 17
+PACKAGES: 8
+SERVICE:rsyslog,385,/usr/sbin/rsyslogd
+SERVICE:cups-daemon,390,/usr/sbin/cupsd
+    """
+
+    with patch.dict(aptpkg.__salt__, {"cmd.run_stdout": Mock(return_value=cr_output)}):
+        assert sorted(aptpkg.services_need_restart()) == [
+            "cups-daemon",
+            "rsyslog",
+        ]

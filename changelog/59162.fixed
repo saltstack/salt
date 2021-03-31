@@ -1,1 +1,0 @@
-Fix event publish retry when using TCP transport

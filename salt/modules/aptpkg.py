@@ -37,7 +37,12 @@ import salt.utils.stringutils
 import salt.utils.systemd
 import salt.utils.versions
 import salt.utils.yaml
-from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationError
+from salt.exceptions import (
+    CommandExecutionError,
+    CommandNotFoundError,
+    MinionError,
+    SaltInvocationError,
+)
 from salt.modules.cmdmod import _parse_env
 
 log = logging.getLogger(__name__)
@@ -207,7 +212,7 @@ def normalize_name(name):
         pkgname = name
         pkgarch = __grains__["osarch"]
 
-    return pkgname if pkgarch in (__grains__["osarch"], "any") else name
+    return pkgname if pkgarch in (__grains__["osarch"], "all", "any") else name
 
 
 def parse_arch(name):
@@ -3009,3 +3014,38 @@ def list_downloaded(root=None, **kwargs):
                 ).isoformat(),
             }
     return ret
+
+
+def services_need_restart(**kwargs):
+    """
+    .. versionadded:: 3003
+
+    List services that use files which have been changed by the
+    package manager. It might be needed to restart them.
+
+    Requires checkrestart from the debian-goodies package.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pkg.services_need_restart
+    """
+    if not salt.utils.path.which_bin(["checkrestart"]):
+        raise CommandNotFoundError(
+            "'checkrestart' is needed. It is part of the 'debian-goodies' "
+            "package which can be installed from official repositories."
+        )
+
+    cmd = ["checkrestart", "--machine", "--package"]
+    services = set()
+
+    cr_output = __salt__["cmd.run_stdout"](cmd, python_shell=False)
+    for line in cr_output.split("\n"):
+        if not line.startswith("SERVICE:"):
+            continue
+        end_of_name = line.find(",")
+        service = line[8:end_of_name]  # skip "SERVICE:"
+        services.add(service)
+
+    return list(services)
