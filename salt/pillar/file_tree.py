@@ -254,11 +254,9 @@ def _construct_pillar(
                         whitelist=renderer_whitelist,
                     )
                 if salt.utils.stringio.is_readable(data):
-                    pillar_node[file_name] = salt.utils.stringutils.to_unicode(
-                        data.getvalue()
-                    )
+                    pillar_node[file_name] = data.getvalue()
                 else:
-                    pillar_node[file_name] = salt.utils.stringutils.to_unicode(data)
+                    pillar_node[file_name] = data
 
     return pillar
 

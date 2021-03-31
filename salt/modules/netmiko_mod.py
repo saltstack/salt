@@ -226,13 +226,13 @@ def __virtual__():
             False,
             "The netmiko execution module requires netmiko library to be installed.",
         )
-    if salt.utils.platform.is_proxy() and __opts__["proxy"]["proxytype"] == "netmiko":
-        return __virtualname__
-    else:
+    if salt.utils.platform.is_proxy() and __opts__["proxy"]["proxytype"] != "netmiko":
         return (
             False,
-            "Not a proxy or a proxy of type netmiko.",
+            "Not a proxy minion of type netmiko.",
         )
+
+    return __virtualname__
 
 
 # -----------------------------------------------------------------------------
@@ -576,9 +576,8 @@ def send_config(
     config_commands = [line for line in file_str.splitlines() if line.strip()]
     kwargs = clean_kwargs(**kwargs)
     if "netmiko.conn" in __proxy__:
-        if __proxy__["netmiko.conn"]().is_alive():
-            conn = __proxy__["netmiko.conn"]()
-        else:
+        conn = __proxy__["netmiko.conn"]()
+        if not conn or not conn.is_alive():
             conn, _ = _prepare_connection(**__proxy__["netmiko.args"]())
     else:
         conn, kwargs = _prepare_connection(**kwargs)
