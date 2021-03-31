@@ -1851,7 +1851,9 @@ def get_route(ip):
     .. versionchanged:: 2016.11.4
         Added support for AIX
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' network.get_route 10.10.10.10
     """

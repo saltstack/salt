@@ -1,15 +1,6 @@
-# -*- coding: utf-8 -*-
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import salt.modules.mac_xattr as xattr
 import salt.utils.mac_utils
-
-# Import Salt Libs
 from salt.exceptions import CommandExecutionError
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase

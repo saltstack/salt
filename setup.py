@@ -134,9 +134,7 @@ SALT_LINUX_LOCKED_REQS = [
     )
 ]
 SALT_OSX_REQS = SALT_BASE_REQUIREMENTS + [
-    os.path.abspath(SETUP_DIRNAME),
-    "requirements",
-    "darwin.txt",
+    os.path.join(os.path.abspath(SETUP_DIRNAME), "requirements", "darwin.txt")
 ]
 SALT_OSX_LOCKED_REQS = [
     # OSX packages already defined locked requirements
@@ -150,9 +148,7 @@ SALT_OSX_LOCKED_REQS = [
     )
 ]
 SALT_WINDOWS_REQS = SALT_BASE_REQUIREMENTS + [
-    os.path.abspath(SETUP_DIRNAME),
-    "requirements",
-    "windows.txt",
+    os.path.join(os.path.abspath(SETUP_DIRNAME), "requirements", "windows.txt")
 ]
 SALT_WINDOWS_LOCKED_REQS = [
     # Windows packages already defined locked requirements
@@ -689,25 +685,25 @@ class TestCommand(Command):
         """
 
     def run(self):
-        from subprocess import Popen
+        # This should either be removed or migrated to use nox
+        import subprocess
 
         self.run_command("build")
         build_cmd = self.get_finalized_command("build_ext")
         runner = os.path.abspath("tests/runtests.py")
-        test_cmd = sys.executable + " {}".format(runner)
+        test_cmd = [sys.executable, runner]
         if self.runtests_opts:
-            test_cmd += " {}".format(self.runtests_opts)
+            test_cmd.extend(self.runtests_opts.split())
 
         print("running test")
-        test_process = Popen(
+        ret = subprocess.run(
             test_cmd,
-            shell=True,
             stdout=sys.stdout,
             stderr=sys.stderr,
             cwd=build_cmd.build_lib,
+            check=False,
         )
-        test_process.communicate()
-        sys.exit(test_process.returncode)
+        sys.exit(ret.returncode)
 
 
 class Clean(clean):

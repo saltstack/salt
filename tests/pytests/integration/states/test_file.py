@@ -2,7 +2,6 @@
 Tests for the file state
 """
 import pytest
-from tests.support.helpers import slowTest
 
 
 @pytest.fixture(scope="module")
@@ -42,7 +41,7 @@ def pillar_tree(base_env_pillar_tree_root_dir, salt_minion, salt_call_cli):
         assert ret.json is True
 
 
-@slowTest
+@pytest.mark.slow_test
 def test_verify_ssl_skip_verify_false(salt_call_cli, tmpdir, ssl_webserver):
     """
     test verify_ssl when its False and True when managing

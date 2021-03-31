@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Support for scheduling celery tasks. The worker is independent of salt and thus can run in a different
 virtualenv or on a different python version, as long as broker, backend and serializer configurations match.
@@ -8,20 +7,14 @@ the salt celery execution module.
 .. note::
     A new app (and thus new connections) is created for each task execution
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
-import sys
 
-# Import salt libs
 from salt.exceptions import SaltInvocationError
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
 
-# Import third party libs
 try:
     from celery import Celery
     from celery.exceptions import TimeoutError  # pylint: disable=no-name-in-module
@@ -56,7 +49,6 @@ def run_task(
 ):
     """
     Execute celery tasks. For celery specific parameters see celery documentation.
-
 
     CLI Example:
 
@@ -127,5 +119,5 @@ def run_task(
                         "Waiting for the result of a celery task execution timed out."
                     )
                     if raise_timeout:
-                        six.reraise(*sys.exc_info())
+                        raise
                     return False

@@ -1,12 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 Tests for the win_pkg module
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Salt Libs
 import salt.modules.config as config
 import salt.modules.pkg_resource as pkg_resource
 import salt.modules.win_pkg as win_pkg
@@ -14,11 +9,6 @@ import salt.utils.data
 import salt.utils.platform
 import salt.utils.win_reg as win_reg
 from salt.exceptions import MinionError
-
-# Import 3rd Party Libs
-from salt.ext import six
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
@@ -77,7 +67,7 @@ class WinPkgInstallTestCase(TestCase, LoaderModuleMockMixin):
         result = win_pkg._get_reg_software()
         self.assertTrue(isinstance(result, dict))
         found_python = False
-        search = "Python 2" if six.PY2 else "Python 3"
+        search = "Python 3"
         for key in result:
             if search in key:
                 found_python = True
