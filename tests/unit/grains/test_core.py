@@ -186,6 +186,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             "motherboard",
             "serialnumber",
             "timezone",
+            "uuid",
             "manufacturer",
             "kernelversion",
             "osservicepack",
@@ -733,6 +734,27 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             "osrelease_info": (8,),
             "osmajorrelease": 8,
             "osfinger": "CentOS Stream-8",
+        }
+        self._run_os_grains_tests(None, _os_release_map, expectation)
+
+    @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
+    def test_mendel_os_grains(self):
+        """
+        Test if OS grains are parsed correctly in Mendel Linux
+        """
+        _os_release_map = {
+            "_linux_distribution": ("Mendel", "10.0", "eagle"),
+        }
+
+        expectation = {
+            "os": "Mendel",
+            "os_family": "Debian",
+            "oscodename": "eagle",
+            "osfullname": "Mendel",
+            "osrelease": "10.0",
+            "osrelease_info": (10, 0),
+            "osmajorrelease": 10,
+            "osfinger": "Mendel-10",
         }
         self._run_os_grains_tests(None, _os_release_map, expectation)
 
