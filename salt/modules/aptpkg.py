@@ -37,7 +37,12 @@ import salt.utils.stringutils
 import salt.utils.systemd
 import salt.utils.versions
 import salt.utils.yaml
-from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationError
+from salt.exceptions import (
+    CommandExecutionError,
+    CommandNotFoundError,
+    MinionError,
+    SaltInvocationError,
+)
 from salt.modules.cmdmod import _parse_env
 
 log = logging.getLogger(__name__)
@@ -207,7 +212,7 @@ def normalize_name(name):
         pkgname = name
         pkgarch = __grains__["osarch"]
 
-    return pkgname if pkgarch in (__grains__["osarch"], "any") else name
+    return pkgname if pkgarch in (__grains__["osarch"], "all", "any") else name
 
 
 def parse_arch(name):
@@ -1275,6 +1280,21 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
     return ret
 
 
+def _list_pkgs_from_context(versions_as_list, removed, purge_desired):
+    """
+    Use pkg list from __context__
+    """
+    if removed:
+        ret = copy.deepcopy(__context__["pkg.list_pkgs"]["removed"])
+    else:
+        ret = copy.deepcopy(__context__["pkg.list_pkgs"]["purge_desired"])
+        if not purge_desired:
+            ret.update(__context__["pkg.list_pkgs"]["installed"])
+    if not versions_as_list:
+        __salt__["pkg_resource.stringify"](ret)
+    return ret
+
+
 def list_pkgs(
     versions_as_list=False, removed=False, purge_desired=False, **kwargs
 ):  # pylint: disable=W0613
@@ -1298,7 +1318,6 @@ def list_pkgs(
             Packages in this state now correctly show up in the output of this
             function.
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -1310,16 +1329,8 @@ def list_pkgs(
     removed = salt.utils.data.is_true(removed)
     purge_desired = salt.utils.data.is_true(purge_desired)
 
-    if "pkg.list_pkgs" in __context__:
-        if removed:
-            ret = copy.deepcopy(__context__["pkg.list_pkgs"]["removed"])
-        else:
-            ret = copy.deepcopy(__context__["pkg.list_pkgs"]["purge_desired"])
-            if not purge_desired:
-                ret.update(__context__["pkg.list_pkgs"]["installed"])
-        if not versions_as_list:
-            __salt__["pkg_resource.stringify"](ret)
-        return ret
+    if "pkg.list_pkgs" in __context__ and kwargs.get("use_context", True):
+        return _list_pkgs_from_context(versions_as_list, removed, purge_desired)
 
     ret = {"installed": {}, "removed": {}, "purge_desired": {}}
     cmd = [
@@ -2425,7 +2436,7 @@ def mod_repo(repo, saltenv="base", **kwargs):
         # has already been modified on a previous run.
         repo_matches = (
             source.type == repo_type
-            and source.uri == repo_uri
+            and source.uri.rstrip("/") == repo_uri.rstrip("/")
             and source.dist == repo_dist
         )
         kw_matches = source.dist == kw_dist and source.type == kw_type
@@ -2552,6 +2563,15 @@ def expand_repo_def(**kwargs):
     for kwarg in _MODIFY_OK:
         if kwarg in kwargs:
             setattr(source_entry, kwarg, kwargs[kwarg])
+
+    source_list = sourceslist.SourcesList()
+    source_entry = source_list.add(
+        type=source_entry.type,
+        uri=source_entry.uri,
+        dist=source_entry.dist,
+        orig_comps=getattr(source_entry, "comps", []),
+        architectures=getattr(source_entry, "architectures", []),
+    )
 
     sanitized["file"] = source_entry.file
     sanitized["comps"] = getattr(source_entry, "comps", [])
@@ -2821,7 +2841,6 @@ def show(*names, **kwargs):
         If ``True``, the apt cache will be refreshed first. By default, no
         refresh is performed.
 
-
     CLI Examples:
 
     .. code-block:: bash
@@ -2898,7 +2917,7 @@ def info_installed(*names, **kwargs):
 
         .. versionadded:: 2016.11.3
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -2970,7 +2989,7 @@ def list_downloaded(root=None, **kwargs):
     root
         operate on a different root directory.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -2995,3 +3014,38 @@ def list_downloaded(root=None, **kwargs):
                 ).isoformat(),
             }
     return ret
+
+
+def services_need_restart(**kwargs):
+    """
+    .. versionadded:: 3003
+
+    List services that use files which have been changed by the
+    package manager. It might be needed to restart them.
+
+    Requires checkrestart from the debian-goodies package.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pkg.services_need_restart
+    """
+    if not salt.utils.path.which_bin(["checkrestart"]):
+        raise CommandNotFoundError(
+            "'checkrestart' is needed. It is part of the 'debian-goodies' "
+            "package which can be installed from official repositories."
+        )
+
+    cmd = ["checkrestart", "--machine", "--package"]
+    services = set()
+
+    cr_output = __salt__["cmd.run_stdout"](cmd, python_shell=False)
+    for line in cr_output.split("\n"):
+        if not line.startswith("SERVICE:"):
+            continue
+        end_of_name = line.find(",")
+        service = line[8:end_of_name]  # skip "SERVICE:"
+        services.add(service)
+
+    return list(services)

@@ -1,1 +1,0 @@
-Store git sha in salt/_version.py when installing from a tag so it can be found if needed later.

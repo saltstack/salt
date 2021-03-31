@@ -186,6 +186,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             "motherboard",
             "serialnumber",
             "timezone",
+            "uuid",
             "manufacturer",
             "kernelversion",
             "osservicepack",
@@ -678,6 +679,35 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         self._run_os_grains_tests(None, _os_release_map, expectation)
 
     @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
+    def test_alinux2_os_grains(self):
+        """
+        Test if OS grains are parsed correctly in Alibaba Cloud Linux
+        """
+        _os_release_map = {
+            "os_release_file": {
+                "NAME": "Alibaba Cloud Linux (Aliyun Linux)",
+                "VERSION": "2.1903 LTS (Hunting Beagle)",
+                "VERSION_ID": "2.1903",
+                "PRETTY_NAME": "Alibaba Cloud Linux (Aliyun Linux) 2.1903 LTS (Hunting Beagle)",
+                "ID": "alinux",
+                "ANSI_COLOR": "0;31",
+            },
+            "_linux_distribution": ("alinux", "2.1903", "LTS"),
+        }
+
+        expectation = {
+            "os": "Alinux",
+            "os_family": "RedHat",
+            "oscodename": "Alibaba Cloud Linux (Aliyun Linux) 2.1903 LTS (Hunting Beagle)",
+            "osfullname": "Alibaba Cloud Linux (Aliyun Linux)",
+            "osrelease": "2.1903",
+            "osrelease_info": (2, 1903),
+            "osmajorrelease": 2,
+            "osfinger": "Alibaba Cloud Linux (Aliyun Linux)-2",
+        }
+        self._run_os_grains_tests(None, _os_release_map, expectation)
+
+    @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
     def test_centos_stream_8_os_grains(self):
         """
         Test if OS grains are parsed correctly in Centos 8
@@ -704,6 +734,56 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             "osrelease_info": (8,),
             "osmajorrelease": 8,
             "osfinger": "CentOS Stream-8",
+        }
+        self._run_os_grains_tests(None, _os_release_map, expectation)
+
+    @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
+    def test_mendel_os_grains(self):
+        """
+        Test if OS grains are parsed correctly in Mendel Linux
+        """
+        _os_release_map = {
+            "_linux_distribution": ("Mendel", "10.0", "eagle"),
+        }
+
+        expectation = {
+            "os": "Mendel",
+            "os_family": "Debian",
+            "oscodename": "eagle",
+            "osfullname": "Mendel",
+            "osrelease": "10.0",
+            "osrelease_info": (10, 0),
+            "osmajorrelease": 10,
+            "osfinger": "Mendel-10",
+        }
+        self._run_os_grains_tests(None, _os_release_map, expectation)
+
+    @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
+    def test_almalinux_8_os_grains(self):
+        """
+        Test if OS grains are parsed correctly in AlmaLinux 8
+        """
+        _os_release_map = {
+            "os_release_file": {
+                "NAME": "AlmaLinux",
+                "VERSION_ID": "8.3",
+                "PRETTY_NAME": "AlmaLinux 8",
+                "ID": "almalinux",
+                "ANSI_COLOR": "0;31",
+                "CPE_NAME": "cpe:/o:almalinux:almalinux:8.3",
+            },
+            "_linux_distribution": ("almaLinux", "8.3", ""),
+        }
+
+        expectation = {
+            "os": "AlmaLinux",
+            "os_family": "RedHat",
+            "oscodename": "AlmaLinux 8",
+            "osfullname": "AlmaLinux",
+            "osrelease": "8.3",
+            "osrelease_info": (8, 3,),
+            "osmajorrelease": 8,
+            "osfinger": "AlmaLinux-8",
         }
         self._run_os_grains_tests(None, _os_release_map, expectation)
 
@@ -755,6 +835,46 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             "osfinger": "Ubuntu-17.10",
         }
         self._run_os_grains_tests("ubuntu-17.10", _os_release_map, expectation)
+
+    @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
+    def test_pop_focal_os_grains(self):
+        """
+        Test if OS grains are parsed correctly in Pop!_OS 20.04 "Focal Fossa"
+        """
+        _os_release_map = {
+            "_linux_distribution": ("Pop", "20.04", "focal"),
+        }
+        expectation = {
+            "os": "Pop",
+            "os_family": "Debian",
+            "oscodename": "focal",
+            "osfullname": "Pop",
+            "osrelease": "20.04",
+            "osrelease_info": (20, 4),
+            "osmajorrelease": 20,
+            "osfinger": "Pop-20",
+        }
+        self._run_os_grains_tests("pop-20.04", _os_release_map, expectation)
+
+    @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
+    def test_pop_groovy_os_grains(self):
+        """
+        Test if OS grains are parsed correctly in Pop!_OS 20.10 "Groovy Gorilla"
+        """
+        _os_release_map = {
+            "_linux_distribution": ("Pop", "20.10", "groovy"),
+        }
+        expectation = {
+            "os": "Pop",
+            "os_family": "Debian",
+            "oscodename": "groovy",
+            "osfullname": "Pop",
+            "osrelease": "20.10",
+            "osrelease_info": (20, 10),
+            "osmajorrelease": 20,
+            "osfinger": "Pop-20",
+        }
+        self._run_os_grains_tests("pop-20.10", _os_release_map, expectation)
 
     @skipIf(not salt.utils.platform.is_windows(), "System is not Windows")
     def test_windows_platform_data(self):

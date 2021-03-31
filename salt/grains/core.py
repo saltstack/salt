@@ -1387,6 +1387,7 @@ def _windows_platform_data():
     #    serialnumber
     #    osfullname
     #    timezone
+    #    uuid
     #    windowsdomain
     #    windowsdomaintype
     #    motherboard.productname
@@ -1406,6 +1407,8 @@ def _windows_platform_data():
         biosinfo = wmi_c.Win32_BIOS()[0]
         # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394498(v=vs.85).aspx
         timeinfo = wmi_c.Win32_TimeZone()[0]
+        # https://docs.microsoft.com/en-us/windows/win32/cimwin32prov/win32-computersystemproduct
+        csproductinfo = wmi_c.Win32_ComputerSystemProduct()[0]
 
         # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394072(v=vs.85).aspx
         motherboard = {"product": None, "serial": None}
@@ -1443,6 +1446,7 @@ def _windows_platform_data():
             "serialnumber": _clean_value("serialnumber", biosinfo.SerialNumber),
             "osfullname": _clean_value("osfullname", osinfo.Caption),
             "timezone": _clean_value("timezone", timeinfo.Description),
+            "uuid": _clean_value("uuid", csproductinfo.UUID.lower()),
             "windowsdomain": _clean_value("windowsdomain", net_info["Domain"]),
             "windowsdomaintype": _clean_value(
                 "windowsdomaintype", net_info["DomainType"]
@@ -1542,6 +1546,7 @@ _OS_NAME_MAP = {
     "oracleserv": "OEL",
     "cloudserve": "CloudLinux",
     "cloudlinux": "CloudLinux",
+    "almalinux": "AlmaLinux",
     "pidora": "Fedora",
     "scientific": "ScientificLinux",
     "synology": "Synology",
@@ -1556,6 +1561,9 @@ _OS_NAME_MAP = {
     "slesexpand": "RES",
     "linuxmint": "Mint",
     "neon": "KDE neon",
+    "pop": "Pop",
+    "alibabaclo": "Alinux",
+    "mendel": "Mendel",
 }
 
 # Map the 'os' grain to the 'os_family' grain
@@ -1574,6 +1582,7 @@ _OS_FAMILY_MAP = {
     "Scientific": "RedHat",
     "Amazon": "RedHat",
     "CloudLinux": "RedHat",
+    "AlmaLinux": "RedHat",
     "OVS": "RedHat",
     "OEL": "RedHat",
     "XCP": "RedHat",
@@ -1581,6 +1590,7 @@ _OS_FAMILY_MAP = {
     "XenServer": "RedHat",
     "RES": "RedHat",
     "Sangoma": "RedHat",
+    "VMware Photon OS": "RedHat",
     "Mandrake": "Mandriva",
     "ESXi": "VMware",
     "Mint": "Debian",
@@ -1629,6 +1639,9 @@ _OS_FAMILY_MAP = {
     "Funtoo": "Gentoo",
     "AIX": "AIX",
     "TurnKey": "Debian",
+    "Pop": "Debian",
+    "Alinux": "RedHat",
+    "Mendel": "Debian",
 }
 
 # Matches any possible format:

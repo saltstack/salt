@@ -479,8 +479,19 @@ def create_key(
             return ret
         else:
             create_params["passphrase"] = gpg_passphrase
+    else:
+        create_params["no_protection"] = True
 
     input_data = gpg.gen_key_input(**create_params)
+
+    # This includes "%no-protection" in the input file for
+    # passphraseless key generation in GnuPG >= 2.1 when the
+    # python-gnupg library doesn't do that.
+    if "No-Protection: True" in input_data:
+        temp_data = input_data.splitlines()
+        temp_data.remove("No-Protection: True")
+        temp_data.insert(temp_data.index("%commit"), "%no-protection")
+        input_data = "\n".join(temp_data) + "\n"
 
     key = gpg.gen_key(input_data)
     if key.fingerprint:
@@ -493,7 +504,12 @@ def create_key(
 
 
 def delete_key(
-    keyid=None, fingerprint=None, delete_secret=False, user=None, gnupghome=None
+    keyid=None,
+    fingerprint=None,
+    delete_secret=False,
+    user=None,
+    gnupghome=None,
+    use_passphrase=True,
 ):
     """
     Get a key from the GPG keychain
@@ -515,6 +531,12 @@ def delete_key(
 
     gnupghome
         Specify the location where GPG keyring and related files are stored.
+
+    use_passphrase
+        Whether to use a passphrase with the signing key. Passphrase is received
+        from Pillar.
+
+        .. versionadded: 3003
 
     CLI Example:
 
@@ -543,21 +565,37 @@ def delete_key(
 
     gpg = _create_gpg(user, gnupghome)
     key = get_key(keyid, fingerprint, user)
+
+    def __delete_key(fingerprint, secret, use_passphrase):
+        if use_passphrase:
+            gpg_passphrase = __salt__["pillar.get"]("gpg_passphrase")
+            if not gpg_passphrase:
+                ret["res"] = False
+                ret["message"] = "gpg_passphrase not available in pillar."
+                return ret
+            else:
+                out = gpg.delete_keys(fingerprint, secret, passphrase=gpg_passphrase)
+        else:
+            out = gpg.delete_keys(fingerprint, secret, expect_passphrase=False)
+        return out
+
     if key:
         fingerprint = key["fingerprint"]
         skey = get_secret_key(keyid, fingerprint, user)
-        if skey and not delete_secret:
-            ret["res"] = False
-            ret[
-                "message"
-            ] = "Secret key exists, delete first or pass delete_secret=True."
-            return ret
-        elif skey and delete_secret and str(gpg.delete_keys(fingerprint, True)) == "ok":
-            # Delete the secret key
-            ret["message"] = "Secret key for {} deleted\n".format(fingerprint)
+        if skey:
+            if not delete_secret:
+                ret["res"] = False
+                ret[
+                    "message"
+                ] = "Secret key exists, delete first or pass delete_secret=True."
+                return ret
+            else:
+                if str(__delete_key(fingerprint, True, use_passphrase)) == "ok":
+                    # Delete the secret key
+                    ret["message"] = "Secret key for {} deleted\n".format(fingerprint)
 
         # Delete the public key
-        if str(gpg.delete_keys(fingerprint)) == "ok":
+        if str(__delete_key(fingerprint, False, use_passphrase)) == "ok":
             ret["message"] += "Public key for {} deleted".format(fingerprint)
         ret["res"] = True
         return ret
@@ -768,7 +806,9 @@ def import_key(text=None, filename=None, user=None, gnupghome=None):
     return ret
 
 
-def export_key(keyids=None, secret=False, user=None, gnupghome=None):
+def export_key(
+    keyids=None, secret=False, user=None, gnupghome=None, use_passphrase=False
+):
     """
     Export a key from the GPG keychain
 
@@ -789,6 +829,12 @@ def export_key(keyids=None, secret=False, user=None, gnupghome=None):
     gnupghome
         Specify the location where GPG keyring and related files are stored.
 
+    use_passphrase
+        Whether to use a passphrase with the signing key. Passphrase is received
+        from Pillar.
+
+        .. versionadded: 3003
+
     CLI Example:
 
     .. code-block:: bash
@@ -804,7 +850,15 @@ def export_key(keyids=None, secret=False, user=None, gnupghome=None):
 
     if isinstance(keyids, str):
         keyids = keyids.split(",")
-    return gpg.export_keys(keyids, secret)
+
+    if use_passphrase:
+        gpg_passphrase = __salt__["pillar.get"]("gpg_passphrase")
+        if not gpg_passphrase:
+            raise SaltInvocationError("gpg_passphrase not available in pillar.")
+        ret = gpg.export_keys(keyids, secret, passphrase=gpg_passphrase)
+    else:
+        ret = gpg.export_keys(keyids, secret, expect_passphrase=False)
+    return ret
 
 
 @_restore_ownership
