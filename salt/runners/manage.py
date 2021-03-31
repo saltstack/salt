@@ -694,7 +694,6 @@ def bootstrap(
 
         .. versionadded:: 2016.11.0
 
-
     CLI Example:
 
     .. code-block:: bash

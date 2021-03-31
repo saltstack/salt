@@ -2,7 +2,7 @@
 An engine that reads messages from the salt event bus and pushes
 them onto a logstash endpoint.
 
-.. versionadded: 2015.8.0
+.. versionadded:: 2015.8.0
 
 :configuration:
 

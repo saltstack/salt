@@ -2,14 +2,9 @@
     :codeauthor: Rahul Handay <rahulha@saltstack.com>
 """
 
-# Import Python Libs
-
 import logging
 
-# Import Salt Libs
 import salt.states.network as network
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase

@@ -3,8 +3,6 @@ import salt.utils.path
 import salt.utils.platform
 import salt.utils.systemd
 from tests.support.case import ModuleCase
-from tests.support.helpers import flaky
-from tests.support.unit import skipIf
 
 
 @pytest.mark.destructive_test
@@ -72,7 +70,7 @@ class ServiceModuleTest(ModuleCase):
                 self.run_function("service.disable", [self.service_name])
         del self.service_name
 
-    @flaky
+    @pytest.mark.flaky(max_runs=4)
     @pytest.mark.slow_test
     def test_service_status_running(self):
         """
@@ -176,7 +174,7 @@ class ServiceModuleTest(ModuleCase):
         else:
             self.assertNotIn(srv_name, self.run_function("service.get_disabled"))
 
-    @skipIf(not salt.utils.platform.is_windows(), "Windows Only Test")
+    @pytest.mark.skip_unless_on_windows
     @pytest.mark.slow_test
     def test_service_get_service_name(self):
         """

@@ -3,6 +3,7 @@ Functions for identifying which platform a machine is
 """
 
 import os
+import platform
 import subprocess
 import sys
 
@@ -196,3 +197,11 @@ def is_photonos():
         x.strip('"').strip("'") for x in linux_distribution()
     ]
     return osname == "VMware Photon OS"
+
+
+@real_memoize
+def is_aarch64():
+    """
+    Simple function to return if host is AArch64 or not
+    """
+    return platform.machine().startswith("aarch64")

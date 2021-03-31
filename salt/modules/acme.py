@@ -2,7 +2,7 @@
 ACME / Let's Encrypt module
 ===========================
 
-.. versionadded: 2016.3
+.. versionadded:: 2016.3
 
 This module currently looks for certbot script in the $PATH as
 - certbot,
@@ -172,7 +172,7 @@ def cert(
     :return: Dictionary with 'result' True/False/None, 'comment' and certificate's
         expiry date ('not_after')
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -297,7 +297,7 @@ def certs():
     """
     Return a list of active certificates
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -321,7 +321,7 @@ def info(name):
         the certificate information, the information will be retrieved as one
         big text block under the key ``text`` using the openssl cli.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -354,7 +354,7 @@ def expires(name):
     :rtype: str
     :return: Expiry date in ISO format.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
