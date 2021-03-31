@@ -1,15 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 Support for poudriere
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
-
-# Import python libs
 import os
 
-# Import salt libs
 import salt.utils.files
 import salt.utils.path
 import salt.utils.stringutils
@@ -88,22 +83,22 @@ def make_pkgng_aware(jname):
     if not os.path.isdir(cdir):
         os.makedirs(cdir)
         if os.path.isdir(cdir):
-            ret["changes"] = "Created poudriere make file dir {0}".format(cdir)
+            ret["changes"] = "Created poudriere make file dir {}".format(cdir)
         else:
-            return "Could not create or find required directory {0}".format(cdir)
+            return "Could not create or find required directory {}".format(cdir)
 
     # Added args to file
     __salt__["file.write"](
-        "{0}-make.conf".format(os.path.join(cdir, jname)), "WITH_PKGNG=yes"
+        "{}-make.conf".format(os.path.join(cdir, jname)), "WITH_PKGNG=yes"
     )
 
     if os.path.isfile(os.path.join(cdir, jname) + "-make.conf"):
-        ret["changes"] = "Created {0}".format(
-            os.path.join(cdir, "{0}-make.conf".format(jname))
+        ret["changes"] = "Created {}".format(
+            os.path.join(cdir, "{}-make.conf".format(jname))
         )
         return ret
     else:
-        return "Looks like file {0} could not be created".format(
+        return "Looks like file {} could not be created".format(
             os.path.join(cdir, jname + "-make.conf")
         )
 
@@ -128,7 +123,7 @@ def parse_config(config_file=None):
                 ret[key] = val
         return ret
 
-    return "Could not find {0} on file system".format(config_file)
+    return "Could not find {} on file system".format(config_file)
 
 
 def version():
@@ -194,9 +189,9 @@ def create_jail(name, arch, version="9.0-RELEASE"):
 
     # Check if the jail is there
     if is_jail(name):
-        return "{0} already exists".format(name)
+        return "{} already exists".format(name)
 
-    cmd = "poudriere jails -c -j {0} -v {1} -a {2}".format(name, version, arch)
+    cmd = "poudriere jails -c -j {} -v {} -a {}".format(name, version, arch)
     __salt__["cmd.run"](cmd)
 
     # Make jail pkgng aware
@@ -204,9 +199,9 @@ def create_jail(name, arch, version="9.0-RELEASE"):
 
     # Make sure the jail was created
     if is_jail(name):
-        return "Created jail {0}".format(name)
+        return "Created jail {}".format(name)
 
-    return "Issue creating jail {0}".format(name)
+    return "Issue creating jail {}".format(name)
 
 
 def update_jail(name):
@@ -220,11 +215,11 @@ def update_jail(name):
         salt '*' poudriere.update_jail freebsd:10:x86:64
     """
     if is_jail(name):
-        cmd = "poudriere jail -u -j {0}".format(name)
+        cmd = "poudriere jail -u -j {}".format(name)
         ret = __salt__["cmd.run"](cmd)
         return ret
     else:
-        return "Could not find jail {0}".format(name)
+        return "Could not find jail {}".format(name)
 
 
 def delete_jail(name):
@@ -238,31 +233,49 @@ def delete_jail(name):
         salt '*' poudriere.delete_jail 90amd64
     """
     if is_jail(name):
-        cmd = "poudriere jail -d -j {0}".format(name)
+        cmd = "poudriere jail -d -j {}".format(name)
         __salt__["cmd.run"](cmd)
 
         # Make sure jail is gone
         if is_jail(name):
             return "Looks like there was an issue deleteing jail \
-            {0}".format(
+            {}".format(
                 name
             )
     else:
         # Could not find jail.
-        return "Looks like jail {0} has not been created".format(name)
+        return "Looks like jail {} has not been created".format(name)
 
     # clean up pkgng make info in config dir
-    make_file = os.path.join(_config_dir(), "{0}-make.conf".format(name))
+    make_file = os.path.join(_config_dir(), "{}-make.conf".format(name))
     if os.path.isfile(make_file):
         try:
             os.remove(make_file)
-        except (IOError, OSError):
+        except OSError:
             return (
-                'Deleted jail "{0}" but was unable to remove jail make ' "file"
+                'Deleted jail "{}" but was unable to remove jail make ' "file"
             ).format(name)
         __salt__["file.remove"](make_file)
 
-    return "Deleted jail {0}".format(name)
+    return "Deleted jail {}".format(name)
+
+
+def info_jail(name):
+    """
+    Show information on `name` poudriere jail
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' poudriere.info_jail head-amd64
+    """
+    if is_jail(name):
+        cmd = "poudriere jail -i -j {}".format(name)
+        ret = __salt__["cmd.run"](cmd).splitlines()
+        return ret
+    else:
+        return "Could not find jail {}".format(name)
 
 
 def create_ports_tree():
@@ -287,7 +300,7 @@ def update_ports_tree(ports_tree):
     """
     _check_config_exists()
     if ports_tree:
-        cmd = "poudriere ports -u -p {0}".format(ports_tree)
+        cmd = "poudriere ports -u -p {}".format(ports_tree)
     else:
         cmd = "poudriere ports -u"
     ret = __salt__["cmd.run"](cmd)
@@ -309,15 +322,15 @@ def bulk_build(jail, pkg_file, keep=False):
     """
     # make sure `pkg file` and jail is on file system
     if not os.path.isfile(pkg_file):
-        return "Could not find file {0} on filesystem".format(pkg_file)
+        return "Could not find file {} on filesystem".format(pkg_file)
     if not is_jail(jail):
-        return "Could not find jail {0}".format(jail)
+        return "Could not find jail {}".format(jail)
 
     # Generate command
     if keep:
-        cmd = "poudriere bulk -k -f {0} -j {1}".format(pkg_file, jail)
+        cmd = "poudriere bulk -k -f {} -j {}".format(pkg_file, jail)
     else:
-        cmd = "poudriere bulk -f {0} -j {1}".format(pkg_file, jail)
+        cmd = "poudriere bulk -f {} -j {}".format(pkg_file, jail)
 
     # Bulk build this can take some time, depending on pkg_file ... hours
     res = __salt__["cmd.run"](cmd)
@@ -326,5 +339,5 @@ def bulk_build(jail, pkg_file, keep=False):
         if "packages built" in line:
             return line
     return (
-        "There may have been an issue building packages dumping output: " "{0}"
+        "There may have been an issue building packages dumping output: " "{}"
     ).format(res)
