@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Salt returner to return highstate stats to Librato
 
@@ -30,17 +29,12 @@ by adding more tags to the submission.
 
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
 import salt.returners
-
-# Import Salt libs
 import salt.utils.jid
 
-# Import third party libs
 try:
     import librato
 
