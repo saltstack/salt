@@ -11,8 +11,6 @@ import os
 import shutil
 
 import salt.returners.postgres_local_cache as postgres_local_cache
-import salt.utils.data
-import salt.utils.stringutils
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
