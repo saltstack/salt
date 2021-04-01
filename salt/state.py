@@ -15,6 +15,7 @@ The data sent to the state calls is as follows:
 import copy
 import datetime
 import fnmatch
+import imp
 import logging
 import os
 import random
@@ -47,15 +48,10 @@ import salt.utils.url
 # Explicit late import to avoid circular import. DO NOT MOVE THIS.
 import salt.utils.yamlloader as yamlloader
 from salt.exceptions import CommandExecutionError, SaltRenderError, SaltReqTimeoutError
-
-# pylint: disable=import-error,no-name-in-module,redefined-builtin
-from salt.ext.six.moves import map, range, reload_module
 from salt.serializers.msgpack import deserialize as msgpack_deserialize
 from salt.serializers.msgpack import serialize as msgpack_serialize
 from salt.template import compile_template, compile_template_str
 from salt.utils.odict import DefaultOrderedDict, OrderedDict
-
-# pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 log = logging.getLogger(__name__)
 
@@ -1201,7 +1197,7 @@ class State:
             # process 'site-packages', the 'site' module needs to be reloaded in
             # order for the newly installed package to be importable.
             try:
-                reload_module(site)
+                imp.reload(site)
             except RuntimeError:
                 log.error(
                     "Error encountered during module reload. Modules were not reloaded."

@@ -10,7 +10,6 @@ import os
 import salt.utils.files
 import salt.utils.odict as odict
 import salt.utils.stringutils
-from salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)
 

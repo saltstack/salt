@@ -1,19 +1,11 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
+import urllib.error
 
-# Import Salt Libs
 import salt.modules.apache as apache
-from salt.ext.six.moves.urllib.error import (  # pylint: disable=import-error,no-name-in-module
-    URLError,
-)
 from salt.utils.odict import OrderedDict
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, mock_open, patch
 from tests.support.unit import TestCase
@@ -191,7 +183,7 @@ class ApacheTestCase(TestCase, LoaderModuleMockMixin):
         """
         Test if return get error from the Apache server-status
         """
-        mock = MagicMock(side_effect=URLError("error"))
+        mock = MagicMock(side_effect=urllib.error.URLError("error"))
         with patch.object(apache, "_urlopen", mock):
             mock = MagicMock(return_value="")
             with patch.dict(apache.__salt__, {"config.get": mock}):

@@ -17,9 +17,6 @@ import salt.utils.stringutils
 import salt.utils.yaml
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import SaltException
-from salt.ext import six
-from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
-from salt.ext.six.moves import zip  # pylint: disable=redefined-builtin
 from salt.utils.decorators.jinja import jinja_filter
 from salt.utils.odict import OrderedDict
 
@@ -890,15 +887,9 @@ def subdict_match(
     """
 
     def _match(target, pattern, regex_match=False, exact_match=False):
-        # The reason for using six.text_type first and _then_ using
-        # to_unicode as a fallback is because we want to eventually have
-        # unicode types for comparison below. If either value is numeric then
-        # six.text_type will turn it into a unicode string. However, if the
-        # value is a PY2 str type with non-ascii chars, then the result will be
-        # a UnicodeDecodeError. In those cases, we simply use to_unicode to
-        # decode it to unicode. The reason we can't simply use to_unicode to
-        # begin with is that (by design) to_unicode will raise a TypeError if a
-        # non-string/bytestring/bytearray value is passed.
+        # XXX: A lot of this logic is here because of supporting PY2 and PY3,
+        # now that we only support PY3 we should probably re-visit what's going
+        # on here.
         try:
             target = str(target).lower()
         except UnicodeDecodeError:
@@ -1193,7 +1184,7 @@ def mysql_to_dict(data, key):
         if line.startswith("+"):
             continue
         comps = line.split("|")
-        for comp in range(len(comps)):
+        for comp in range(len(comps)):  # pylint: disable=C0200
             comps[comp] = comps[comp].strip()
         if len(headers) > 1:
             index = len(headers) - 1
@@ -1252,9 +1243,7 @@ def stringify(data):
     """
     ret = []
     for item in data:
-        if six.PY2 and isinstance(item, str):
-            item = salt.utils.stringutils.to_unicode(item)
-        elif not isinstance(item, str):
+        if not isinstance(item, str):
             item = str(item)
         ret.append(item)
     return ret

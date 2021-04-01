@@ -1,7 +1,4 @@
-# coding: utf-8
-
 # Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 # Salt libs
 import salt.beacons.smartos_imgadm as imgadm

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # Author: Bo Maryniuk <bo@suse.de>
 #
@@ -19,7 +18,6 @@
 Salt Service Discovery Protocol.
 JSON-based service discovery protocol, used by minions to find running Master.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 import datetime
@@ -62,7 +60,7 @@ class TimeStampException(Exception):
     pass
 
 
-class SSDPBase(object):
+class SSDPBase:
     """
     Salt Service Discovery Protocol.
     """
@@ -190,7 +188,7 @@ class SSDPFactory(SSDPBase):
                 )
                 if self.disable_hidden:
                     self._sendto(
-                        "{0}:E:{1}".format(self.signature, "Invalid timestamp"), addr
+                        "{}:E:{}".format(self.signature, "Invalid timestamp"), addr
                     )
                 return
 
@@ -199,7 +197,7 @@ class SSDPFactory(SSDPBase):
             ):
                 if self.disable_hidden:
                     self._sendto(
-                        "{0}:E:{1}".format(self.signature, "Timestamp is too old"), addr
+                        "{}:E:{}".format(self.signature, "Timestamp is too old"), addr
                     )
                 self.log.debug("Received outdated package from %s:%s", *addr)
                 return
@@ -220,7 +218,7 @@ class SSDPFactory(SSDPBase):
             if self.disable_hidden:
                 self._sendto(
                     salt.utils.stringutils.to_bytes(
-                        "{0}:E:{1}".format(self.signature, "Invalid packet signature"),
+                        "{}:E:{}".format(self.signature, "Invalid packet signature"),
                         addr,
                     )
                 )
@@ -290,7 +288,7 @@ class SSDPDiscoveryServer(SSDPBase):
                         )
                     )
                     if not infos:
-                        raise socket.error("getaddrinfo() returned empty list")
+                        raise OSError("getaddrinfo() returned empty list")
                     for fam, _, pro, _, address in infos:
                         key = (fam, pro)
                         if key not in addr_infos:
@@ -321,7 +319,7 @@ class SSDPDiscoveryServer(SSDPBase):
                         loop.sock_connect(sock, remote_address)
                     )
                     r_addr = remote_address
-            except socket.error as exc:
+            except OSError as exc:
                 if sock is not None:
                     sock.close()
                 exceptions.append(exc)

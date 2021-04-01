@@ -7,8 +7,6 @@ use to fetch their configuration options.
 
 import logging
 
-from salt.ext import six
-
 log = logging.getLogger(__name__)
 
 

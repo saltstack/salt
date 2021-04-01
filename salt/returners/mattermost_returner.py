@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Return salt data via mattermost
 
@@ -43,24 +42,12 @@ To override individual configuration items, append --return_kwargs '{'key:': 'va
 
     salt '*' test.ping --return mattermost --return_kwargs '{'channel': '#random'}'
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import logging
 
-# pylint: disable=import-error,no-name-in-module,redefined-builtin
-import salt.ext.six.moves.http_client
-
-# Import Salt Libs
 import salt.returners
 import salt.utils.json
 import salt.utils.mattermost
-
-# Import 3rd-party libs
-from salt.ext import six
-
-# pylint: enable=import-error,no-name-in-module,redefined-builtin
-
 
 log = logging.getLogger(__name__)
 
@@ -114,11 +101,11 @@ def returner(ret):
     returns = ret.get("return")
 
     message = (
-        "id: {0}\r\n"
-        "function: {1}\r\n"
-        "function args: {2}\r\n"
-        "jid: {3}\r\n"
-        "return: {4}\r\n"
+        "id: {}\r\n"
+        "function: {}\r\n"
+        "function args: {}\r\n"
+        "jid: {}\r\n"
+        "return: {}\r\n"
     ).format(
         ret.get("id"), ret.get("fun"), ret.get("fun_args"), ret.get("jid"), returns
     )
@@ -145,9 +132,9 @@ def event_return(events):
     for event in events:
         log.debug("Event: %s", event)
         log.debug("Event data: %s", event["data"])
-        message = "tag: {0}\r\n".format(event["tag"])
-        for key, value in six.iteritems(event["data"]):
-            message += "{0}: {1}\r\n".format(key, value)
+        message = "tag: {}\r\n".format(event["tag"])
+        for key, value in event["data"].items():
+            message += "{}: {}\r\n".format(key, value)
         result = post_message(channel, message, username, api_url, hook)
         if not result:
             is_ok = False
@@ -176,7 +163,7 @@ def post_message(channel, message, username, api_url, hook):
     result = salt.utils.mattermost.query(
         api_url=api_url,
         hook=hook,
-        data=str("payload={0}").format(salt.utils.json.dumps(parameters)),
+        data="payload={}".format(salt.utils.json.dumps(parameters)),
     )  # future lint: disable=blacklisted-function
 
     log.debug("result %s", result)

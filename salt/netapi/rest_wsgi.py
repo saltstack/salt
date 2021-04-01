@@ -1,4 +1,3 @@
-# encoding: utf-8
 """
 A minimalist REST API for Salt
 ==============================
@@ -121,13 +120,11 @@ Usage examples
 :status 401: authentication required
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import errno
 import logging
 import os
 
-# Import salt libs
 import salt
 import salt.netapi
 import salt.utils.json
@@ -164,7 +161,7 @@ class HTTPError(Exception):
 
     def __init__(self, code, message):
         self.code = code
-        Exception.__init__(self, "{0}: {1}".format(code, message))
+        Exception.__init__(self, "{}: {}".format(code, message))
 
 
 def mkdir_p(path):
