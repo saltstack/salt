@@ -975,6 +975,7 @@ class MasterMinion:
         self.whitelist = whitelist
         self.mk_returners = returners
         self.mk_states = states
+
         self.mk_rend = rend
         self.mk_matcher = matcher
         self.gen_modules(initial_load=True)

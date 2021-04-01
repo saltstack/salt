@@ -1895,6 +1895,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         ) as validate_opts_mock:
             config = salt.config.minion_config(fpath, role="master")
             apply_sdb_mock.assert_not_called()
+
             validate_opts_mock.assert_not_called()
         self.assertEqual(config["__role"], "master")
 
