@@ -88,8 +88,6 @@ class PostgresLocalCacheTestCase(TestCase, LoaderModuleMockMixin):
         """
         Tests that the returner function
         """
-        return_val = "Trüe"
-
         load = {
             "tgt_type": "glob",
             "fun_args": [],
