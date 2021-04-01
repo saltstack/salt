@@ -1012,6 +1012,7 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
     def _handle_signals(self, signum, sigframe):
         for channel in getattr(self, "req_channels", ()):
             channel.close()
+        self.clear_funcs.destroy()
         super()._handle_signals(signum, sigframe)
 
     def __bind(self):
@@ -1203,7 +1204,6 @@ class AESFuncs(TransportMethods):
     expose_methods = (
         "verify_minion",
         "_master_tops",
-        "_ext_nodes",
         "_master_opts",
         "_mine_get",
         "_mine",
@@ -1427,9 +1427,6 @@ class AESFuncs(TransportMethods):
         if load is False:
             return {}
         return self.masterapi._master_tops(load, skip_verify=True)
-
-    # Needed so older minions can request master_tops
-    _ext_nodes = _master_tops
 
     def _master_opts(self, load):
         """
@@ -1961,6 +1958,12 @@ class AESFuncs(TransportMethods):
         # Encrypt the return
         return ret, {"fun": "send"}
 
+    def destroy(self):
+        self.masterapi.destroy()
+        if self.local is not None:
+            self.local.destroy()
+            self.local = None
+
 
 class ClearFuncs(TransportMethods):
     """
@@ -2056,7 +2059,7 @@ class ClearFuncs(TransportMethods):
             fun = clear_load.pop("fun")
             runner_client = salt.runner.RunnerClient(self.opts)
             return runner_client.asynchronous(
-                fun, clear_load.get("kwarg", {}), username
+                fun, clear_load.get("kwarg", {}), username, local=True
             )
         except Exception as exc:  # pylint: disable=broad-except
             log.error("Exception occurred while introspecting %s: %s", fun, exc)
@@ -2501,3 +2504,11 @@ class ClearFuncs(TransportMethods):
         Send the load back to the sender.
         """
         return clear_load
+
+    def destroy(self):
+        if self.masterapi is not None:
+            self.masterapi.destroy()
+            self.masterapi = None
+        if self.local is not None:
+            self.local.destroy()
+            self.local = None

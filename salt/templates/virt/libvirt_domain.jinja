@@ -1,342 +1,336 @@
 {%- import 'libvirt_disks.jinja' as libvirt_disks -%}
+{%- from 'libvirt_macros.jinja' import opt_attribute as opt_attribute -%}
 {%- macro opt_attribute(obj, name, conv=none) %}
 {%- if obj.get(name) is not none %} {{ name }}='{{ obj[name] if conv is none else conv(obj[name]) }}'{% endif -%}
 {%- endmacro %}
 {%- import 'libvirt_chardevs.jinja' as libvirt_chardevs -%}
 <domain type='{{ hypervisor }}'>
-        <name>{{ name }}</name>
-        {%- if cpu %}
-            <vcpu {{ opt_attribute(cpu, 'placement') }} {{ opt_attribute(cpu, 'cpuset') }} {{ opt_attribute(cpu, 'current') }}>{{ cpu.get('maximum', '') }}</vcpu>
-        {%- endif %}
-        {%- if cpu.get('vcpus') %}
-            <vcpus>
-            {%- for vcpu_id in cpu["vcpus"].keys() %}
-            <vcpu id='{{ vcpu_id }}' {{ opt_attribute(cpu.vcpus[vcpu_id], 'enabled', yesno) }} {{ opt_attribute(cpu.vcpus[vcpu_id], 'hotpluggable', yesno) }} {{ opt_attribute(cpu.vcpus[vcpu_id], 'order') }}/>
-            {%- endfor %}
-            </vcpus>
-        {%- endif %}
-         {%- if cpu %}
-          <cpu {{ opt_attribute(cpu, 'match') }} {{ opt_attribute(cpu, 'mode') }} {{ opt_attribute(cpu, 'check') }} >
-            {%- if cpu.model %}
-            <model {{ opt_attribute(cpu.model, 'fallback') }} {{ opt_attribute(cpu.model, 'vendor_id') }}>{{ cpu.model.get('name', '') }}</model>
-            {%- endif %}
-            {%- if cpu.vendor %}
-            <vendor>{{ cpu.get('vendor', '') }}</vendor>
-            {%- endif %}
-            {%- if cpu.topology %}
-            <topology {{ opt_attribute(cpu.topology, 'sockets') }} {{ opt_attribute(cpu.topology, 'dies') }} {{ opt_attribute(cpu.topology, 'cores') }} {{ opt_attribute(cpu.topology, 'threads') }}/>
-            {%- endif %}
-            {%- if cpu.cache %}
-            <cache {{ opt_attribute(cpu.cache, 'level') }} {{ opt_attribute(cpu.cache, 'mode') }}/>
-            {%- endif %}
-            {%- if cpu.features %}
-            {%- for k, v in cpu.features.items() %}
-            <feature policy='{{ v }}' name='{{ k }}'/>
-            {%- endfor %}
-            {%- endif %}
-            {%- if cpu.numa %}
-            <numa>
-            {%- for numa_id in cpu.numa.keys() %}
-            {%- if cpu.numa.get(numa_id) %}
-            <cell id='{{ numa_id }}' {{ opt_attribute(cpu.numa[numa_id], 'cpus') }} {{ opt_attribute(cpu.numa[numa_id], 'memory', to_kib) }} {{ opt_attribute(cpu.numa[numa_id], 'discard', yesno) }} {{ opt_attribute(cpu.numa[numa_id], 'memAccess') }}>
-                {%- if cpu.numa[numa_id].distances %}
-                    <distances>
-                    {%- for sibling_id in cpu.numa[numa_id].distances %}
-                    <sibling id='{{ sibling_id }}' value='{{ cpu.numa[numa_id].distances[sibling_id] }}'/>
-                    {%- endfor %}
-                    </distances>
-                {%- endif %}
-            </cell>
-            {%- endif %}
-            {%- endfor %}
-            </numa>
-            {%- endif %}
-          </cpu>
-          {%- if cpu.iothreads %}
-          <iothreads>{{ cpu.iothreads }}</iothreads>
-          {%- endif %}
-        {%- endif %}
-        {%- if cpu.tuning %}
-         <cputune>
-            {%- if cpu.tuning.vcpupin %}
-                {%- for vcpu_id, cpuset in cpu.tuning.vcpupin.items() %}
-                <vcpupin vcpu='{{ vcpu_id }}' cpuset='{{ cpuset }}'/>
-                {%- endfor %}
-            {%- endif %}
-            {%- if cpu.tuning.emulatorpin %}
-                <emulatorpin cpuset="{{ cpu.tuning.emulatorpin }}"/>
-            {%- endif %}
-            {%- if cpu.tuning.iothreadpin %}
-                {%- for thread_id, cpuset in cpu.tuning.iothreadpin.items() %}
-                <iothreadpin iothread='{{ thread_id }}' cpuset='{{ cpuset }}'/>
-                {%- endfor %}
-            {%- endif %}
-            {%- if cpu.tuning.shares %}
-                <shares>{{ cpu.tuning.shares }}</shares>
-            {%- endif %}
-            {%- if cpu.tuning.period %}
-                <period>{{ cpu.tuning.period }}</period>
-            {%- endif %}
-            {%- if cpu.tuning.quota %}
-                <quota>{{ cpu.tuning.quota }}</quota>
-            {%- endif %}
-            {%- if cpu.tuning.global_period %}
-                <global_period>{{ cpu.tuning.global_period }}</global_period>
-            {%- endif %}
-            {%- if cpu.tuning.global_quota %}
-                <global_quota>{{ cpu.tuning.global_quota }}</global_quota>
-            {%- endif %}
-            {%- if cpu.tuning.emulator_period %}
-                <emulator_period>{{ cpu.tuning.emulator_period }}</emulator_period>
-            {%- endif %}
-            {%- if cpu.tuning.emulator_quota %}
-                <emulator_quota>{{ cpu.tuning.emulator_quota }}</emulator_quota>
-            {%- endif %}
-            {%- if cpu.tuning.iothread_period %}
-                <iothread_period>{{ cpu.tuning.iothread_period }}</iothread_period>
-            {%- endif %}
-            {%- if cpu.tuning.iothread_quota %}
-                <iothread_quota>{{ cpu.tuning.iothread_quota }}</iothread_quota>
-            {%- endif %}
-            {%- if cpu.tuning.vcpusched %}
-                {%- for sched in cpu.tuning.vcpusched %}
-                <vcpusched scheduler='{{ sched.scheduler }}'
-                    {%- if sched.get("vcpus") %} vcpus='{{ sched.get("vcpus") }}'{% endif -%}
-                    {%- if sched.get("priority") is not none %} priority='{{ sched.get("priority") }}'{% endif -%}
-                />
-                {%- endfor %}
-            {%- endif %}
-            {%- if cpu.tuning.iothreadsched %}
-                {%- for sched in cpu.tuning.iothreadsched %}
-                <iothreadsched scheduler='{{ sched.scheduler }}'
-                    {%- if sched.get("iothreads") %} iothreads='{{ sched.get("iothreads") }}'{% endif -%}
-                    {%- if sched.get("priority") is not none %} priority='{{ sched.get("priority") }}'{% endif -%}
-                />
-                {%- endfor %}
-            {%- endif %}
-            {%- if cpu.tuning.emulatorsched %}
-                <emulatorsched scheduler='{{ cpu.tuning.emulatorsched.scheduler }}'
-                    {%- if cpu.tuning.emulatorsched.get("priority") is not none %} priority='{{ cpu.tuning.emulatorsched.get("priority") }}'{% endif -%}
-                />
-            {%- endif %}
-            {%- if cpu.tuning.cachetune %}
-                {%- for k, v in cpu.tuning.cachetune.items() %}
-                <cachetune vcpus='{{ k }}'>
-                    {%- for e, atrs in v.items() %}
-                        {%- if e is number and atrs %}
-                             <cache id='{{ e }}' {%- for atr, val in atrs.items() %} {{ atr }}='{{ val }}' {%- endfor %} />
-                        {%- elif e is not number %}
-                             {%- for atr, val in atrs.items() %}
-                             <monitor level='{{ val }}' vcpus='{{ atr }}'/>
-                             {%- endfor %}
-                        {%- endif %}
-                    {%- endfor %}
-                </cachetune>
-                {%- endfor %}
-            {%- endif %}
-            {%- if cpu.tuning.memorytune %}
-                {%- for vcpus, nodes in cpu.tuning.memorytune.items() %}
-                <memorytune vcpus='{{ vcpus}}'>
-                    {%- for id, bandwidth in nodes.items() %}
-                         <node id='{{ id }}' bandwidth='{{ bandwidth }}'/>
-                    {%- endfor %}
-                </memorytune>
-                {%- endfor %}
-            {%- endif %}
-         </cputune>
-        {%- endif %}
-        {%- if mem.max %}
-        <maxMemory {{ opt_attribute(mem, 'slots') }} unit='KiB'>{{ to_kib(mem.max) }}</maxMemory>
-        {%- endif %}
-        {%- if mem.boot %}
-        <memory unit='KiB'>{{ to_kib(mem.boot) }}</memory>
-        {%- endif %}
-        {%- if mem.current %}
-        <currentMemory unit='KiB'>{{ to_kib(mem.current) }}</currentMemory>
-        {%- endif %}
-        {%- if mem %}
-        <memtune>
-            {%- if 'hard_limit' in mem and mem.hard_limit %}
-                <hard_limit unit="KiB">{{ to_kib(mem.hard_limit) }}</hard_limit>
-            {%- endif %}
-            {%- if 'soft_limit' in mem and mem.soft_limit %}
-                <soft_limit unit="KiB">{{ to_kib(mem.soft_limit) }}</soft_limit>
-            {%- endif %}
-            {%- if 'swap_hard_limit' in mem and mem.swap_hard_limit %}
-                <swap_hard_limit unit="KiB">{{ to_kib(mem.swap_hard_limit) }}</swap_hard_limit>
-            {%- endif %}
-            {%- if 'min_guarantee' in mem and mem.min_guarantee %}
-                <min_guarantee unit="KiB">{{ to_kib(mem.min_guarantee) }}</min_guarantee>
-            {%- endif %}
-        </memtune>
-        {%- endif %}
-        {%- if numatune %}
-        <numatune>
-            {%- if 'memory' in numatune and numatune.memory %}
-                <memory mode='{{ numatune.memory.mode }}'
-                    {%- if numatune.memory.nodeset %} nodeset='{{ numatune.memory.nodeset }}'{%- endif %}
-                />
-            {%- endif %}
-            {%- if 'memnodes' in numatune and numatune.memnodes %}
-                {%- for cell_id in numatune['memnodes'] %}
-                <memnode cellid='{{ cell_id }}' mode='{{ numatune.memnodes[cell_id].mode }}' nodeset='{{ numatune.memnodes[cell_id].nodeset }}'/>
-                {%- endfor %}
-            {%- endif %}
-        </numatune>
-        {%- endif %}
-        {%- if mem %}
-        <memoryBacking>
-            {%- if mem.hugepages %}
-            <hugepages>
-            {%- for page in mem.hugepages %}
-            <page size="{{ to_kib(page.get("size")) }}" unit="KiB"
-                {%- if page.get("nodeset") or page.get("nodeset") == 0 %} nodeset='{{ page.get("nodeset") }}'{% endif -%}
-            />
-            {%- endfor %}
-            </hugepages>
-            {%- if mem.nosharepages %}
-            <nosharepages/>
-            {%- endif %}
-            {%- if mem.locked %}
-            <locked/>
-            {%- endif %}
-            {%- if mem.source %}
-            <source type="{{ mem.source }}"/>
-            {%- endif %}
-            {%- if mem.access %}
-            <access mode="{{ mem.access }}"/>
-            {%- endif %}
-            {%- if mem.allocation %}
-            <allocation mode="{{ mem.allocation }}"/>
-            {%- endif %}
-            {%- if mem.discard %}
-            <discard/>
-            {%- endif %}
-          {%- endif %}
-        </memoryBacking>
-        {%- endif %}
-        <os {{ boot.os_attrib }}>
-                <type arch='{{ arch }}'>{{ os_type }}</type>
-                {% if boot %}
-                  {% if 'kernel' in boot %}
-                    <kernel>{{ boot.kernel }}</kernel>
-                  {% endif %}
-                  {% if 'initrd' in boot %}
-                    <initrd>{{ boot.initrd }}</initrd>
-                  {% endif %}
-                  {% if 'cmdline' in boot %}
-                    <cmdline>{{ boot.cmdline }}</cmdline>
-                  {% endif %}
-                  {% if 'loader' in boot %}
-                    <loader readonly='yes' type='pflash'>{{ boot.loader }}</loader>
-                  {% endif %}
-                  {% if 'nvram' in boot %}
-                    <nvram template='{{boot.nvram}}'></nvram>
-                  {% endif %}
-                {% endif %}
-                {% for dev in boot_dev %}
-                <boot dev='{{ dev }}' />
-                {% endfor %}
-        </os>
-{%- if clock %}
-        <clock offset="{{ clock.offset }}"{{ opt_attribute(clock, "adjustment") }}{{ opt_attribute(clock, "timezone") }}>
-    {%- for timer_name in clock.timers %}
-    {%- set timer = clock.timers[timer_name] %}
-            <timer name='{{ timer_name }}'{{ opt_attribute(timer, "track") }}{{ opt_attribute(timer, "tickpolicy") }}{{ opt_attribute(timer, "frequency") }}{{ opt_attribute(timer, "mode") }}{{ opt_attribute(timer, "present", yesno) }}>
-        {%- if "threshold" in timer or "slew" in timer or "limit" in timer %}
-                <catchup{{ opt_attribute(timer, "slew") }}{{ opt_attribute(timer, "threshold") }}{{ opt_attribute(timer, "limit") }}/>
-        {%- endif %}
-            </timer>
+  <name>{{ name }}</name>
+{%- if cpu %}
+  <vcpu {{ opt_attribute(cpu, 'placement') }} {{ opt_attribute(cpu, 'cpuset') }} {{ opt_attribute(cpu, 'current') }}>{{ cpu.get('maximum', '') }}</vcpu>
+{%- endif %}
+{%- if cpu.get('vcpus') %}
+  <vcpus>
+  {%- for vcpu_id in cpu["vcpus"].keys() %}
+    <vcpu id='{{ vcpu_id }}' {{ opt_attribute(cpu.vcpus[vcpu_id], 'enabled', yesno) }} {{ opt_attribute(cpu.vcpus[vcpu_id], 'hotpluggable', yesno) }} {{ opt_attribute(cpu.vcpus[vcpu_id], 'order') }}/>
+  {%- endfor %}
+  </vcpus>
+{%- endif %}
+{%- if cpu %}
+  <cpu {{ opt_attribute(cpu, 'match') }} {{ opt_attribute(cpu, 'mode') }} {{ opt_attribute(cpu, 'check') }}>
+  {%- if cpu.model %}
+    <model {{ opt_attribute(cpu.model, 'fallback') }} {{ opt_attribute(cpu.model, 'vendor_id') }}>{{ cpu.model.get('name', '') }}</model>
+  {%- endif %}
+  {%- if cpu.vendor %}
+    <vendor>{{ cpu.get('vendor', '') }}</vendor>
+  {%- endif %}
+  {%- if cpu.topology %}
+    <topology {{ opt_attribute(cpu.topology, 'sockets') }} {{ opt_attribute(cpu.topology, 'dies') }} {{ opt_attribute(cpu.topology, 'cores') }} {{ opt_attribute(cpu.topology, 'threads') }}/>
+  {%- endif %}
+  {%- if cpu.cache %}
+    <cache {{ opt_attribute(cpu.cache, 'level') }} {{ opt_attribute(cpu.cache, 'mode') }}/>
+  {%- endif %}
+  {%- if cpu.features %}
+    {%- for k, v in cpu.features.items() %}
+    <feature policy='{{ v }}' name='{{ k }}'/>
     {%- endfor %}
-        </clock>
+  {%- endif %}
+  {%- if cpu.numa %}
+    <numa>
+    {%- for numa_id in cpu.numa.keys() %}
+      {%- if cpu.numa.get(numa_id) %}
+      <cell id='{{ numa_id }}' {{ opt_attribute(cpu.numa[numa_id], 'cpus') }} {{ opt_attribute(cpu.numa[numa_id], 'memory', to_kib) }} {{ opt_attribute(cpu.numa[numa_id], 'discard', yesno) }} {{ opt_attribute(cpu.numa[numa_id], 'memAccess') }}>
+        {%- if cpu.numa[numa_id].distances %}
+        <distances>
+          {%- for sibling_id in cpu.numa[numa_id].distances %}
+          <sibling id='{{ sibling_id }}' value='{{ cpu.numa[numa_id].distances[sibling_id] }}'/>
+          {%- endfor %}
+        </distances>
+        {%- endif %}
+      </cell>
+      {%- endif %}
+    {%- endfor %}
+    </numa>
+  {%- endif %}
+  </cpu>
+  {%- if cpu.iothreads %}
+  <iothreads>{{ cpu.iothreads }}</iothreads>
+  {%- endif %}
 {%- endif %}
-        <on_reboot>{{ on_reboot }}</on_reboot>
-        <devices>
-                {% for disk in disks %}
-                <disk type='{{ disk.type }}' device='{{ disk.device }}'>
-                        {% if disk.type == 'file' and 'source_file' in disk -%}
-                        <source file='{{ disk.source_file }}' />
-                        {% endif %}
-                        {% if disk.type == 'block' -%}
-                        <source dev='{{ disk.source_file }}' />
-                        {% endif %}
-                        {% if disk.type == 'volume' and 'pool' in disk -%}
-                        <source pool='{{ disk.pool }}' volume='{{ disk.volume }}' />
-                        {% endif %}
-                        {%- if disk.type == 'network' %}{{ libvirt_disks.network_source(disk) }}{%- endif %}
-                        <target dev='{{ disk.target_dev }}' bus='{{ disk.disk_bus }}' />
-                        {% if disk.address -%}
-                        <address type='drive' controller='0' bus='0' target='0' unit='{{ disk.index }}' />
-                        {% endif %}
-                        {% if disk.driver -%}
-                        <driver name='qemu' type='{{ disk.format}}' cache='none' io='{{ disk.io }}'/>
-                        {% endif %}
-                </disk>
-                {% endfor %}
-
-                {% if controller_model %}
-                <controller type='scsi' index='0' model='{{ controller_model }}' />
-                {% endif %}
-
-                {% for nic in nics %}
-                <interface type='{{ nic.type }}'>
-                    <source {{ nic.type }}='{{ nic.source }}'/>
-                    {% if nic.get('mac') -%}
-                    <mac address='{{ nic.mac }}'/>
-                    {%- endif %}
-                    {% if nic.model %}<model type='{{ nic.model }}'/>{% endif %}
-                </interface>
-                {% endfor %}
-                {% if graphics %}
-                <graphics type='{{ graphics.type }}'
-                          {% if graphics.listen.address %}
-                          listen='{{ graphics.listen.address }}'
-                          {% endif %}
-                          {% if graphics.port %}
-                          port='{{ graphics.port }}'
-                          {% endif %}
-                          {% if graphics.type == 'spice' and graphics.tls_port %}
-                          tlsPort='{{ graphics.tls_port }}'
-                          {% endif %}
-                          autoport='{{ 'no' if graphics.port or graphics.tls_port else 'yes' }}'>
-                    <listen type='{{ graphics.listen.type }}'
-                            {% if graphics.listen.address %}
-                            address='{{ graphics.listen.address }}'
-                            {% endif %}/>
-                </graphics>
-
-                  {% if graphics.type == "spice" -%}
-                  <channel type='spicevmc'>
-                    <target type='virtio' name='com.redhat.spice.0'/>
-                  </channel>
-                  {%- endif %}
-                {% endif %}
-
-                {%- for serial in serials %}
-                <serial type='{{ serial.type }}'>
-                  {{ libvirt_chardevs.chardev(serial) }}
-                </serial>
-                {%- endfor %}
-
-                {%- for console in consoles %}
-                <console type='{{ console.type }}'>
-                  {{ libvirt_chardevs.chardev(console) }}
-                </console>
-                {% endfor %}
+{%- if cpu.tuning %}
+  <cputune>
+  {%- if cpu.tuning.vcpupin %}
+    {%- for vcpu_id, cpuset in cpu.tuning.vcpupin.items() %}
+    <vcpupin vcpu='{{ vcpu_id }}' cpuset='{{ cpuset }}'/>
+    {%- endfor %}
+  {%- endif %}
+  {%- if cpu.tuning.emulatorpin %}
+    <emulatorpin cpuset="{{ cpu.tuning.emulatorpin }}"/>
+  {%- endif %}
+  {%- if cpu.tuning.iothreadpin %}
+    {%- for thread_id, cpuset in cpu.tuning.iothreadpin.items() %}
+    <iothreadpin iothread='{{ thread_id }}' cpuset='{{ cpuset }}'/>
+    {%- endfor %}
+  {%- endif %}
+  {%- if cpu.tuning.shares %}
+    <shares>{{ cpu.tuning.shares }}</shares>
+  {%- endif %}
+  {%- if cpu.tuning.period %}
+    <period>{{ cpu.tuning.period }}</period>
+  {%- endif %}
+  {%- if cpu.tuning.quota %}
+    <quota>{{ cpu.tuning.quota }}</quota>
+  {%- endif %}
+  {%- if cpu.tuning.global_period %}
+    <global_period>{{ cpu.tuning.global_period }}</global_period>
+  {%- endif %}
+  {%- if cpu.tuning.global_quota %}
+    <global_quota>{{ cpu.tuning.global_quota }}</global_quota>
+  {%- endif %}
+  {%- if cpu.tuning.emulator_period %}
+    <emulator_period>{{ cpu.tuning.emulator_period }}</emulator_period>
+  {%- endif %}
+  {%- if cpu.tuning.emulator_quota %}
+    <emulator_quota>{{ cpu.tuning.emulator_quota }}</emulator_quota>
+  {%- endif %}
+  {%- if cpu.tuning.iothread_period %}
+    <iothread_period>{{ cpu.tuning.iothread_period }}</iothread_period>
+  {%- endif %}
+  {%- if cpu.tuning.iothread_quota %}
+    <iothread_quota>{{ cpu.tuning.iothread_quota }}</iothread_quota>
+  {%- endif %}
+  {%- if cpu.tuning.vcpusched %}
+    {%- for sched in cpu.tuning.vcpusched %}
+    <vcpusched scheduler='{{ sched.scheduler }}'{{ opt_attribute(sched, "vcpus") }}{{ opt_attribute(sched, "priority") }}/>
+    {%- endfor %}
+  {%- endif %}
+  {%- if cpu.tuning.iothreadsched %}
+    {%- for sched in cpu.tuning.iothreadsched %}
+    <iothreadsched scheduler='{{ sched.scheduler }}'{{ opt_attribute(sched, "iothreads") }}{{ opt_attribute(sched, "priority") }}/>
+    {%- endfor %}
+  {%- endif %}
+  {%- if cpu.tuning.emulatorsched %}
+    <emulatorsched scheduler='{{ cpu.tuning.emulatorsched.scheduler }}'{{ opt_attribute(cpu.tuning.emulatorsched, "priority") }}/>
+  {%- endif %}
+  {%- if cpu.tuning.cachetune %}
+    {%- for k, v in cpu.tuning.cachetune.items() %}
+    <cachetune vcpus='{{ k }}'>
+      {%- for e, atrs in v.items() %}
+        {%- if e is number and atrs %}
+      <cache id='{{ e }}' {%- for atr, val in atrs.items() %} {{ atr }}='{{ val }}' {%- endfor %} />
+        {%- elif e is not number %}
+           {%- for atr, val in atrs.items() %}
+      <monitor level='{{ val }}' vcpus='{{ atr }}'/>
+           {%- endfor %}
+        {%- endif %}
+      {%- endfor %}
+    </cachetune>
+    {%- endfor %}
+  {%- endif %}
+  {%- if cpu.tuning.memorytune %}
+    {%- for vcpus, nodes in cpu.tuning.memorytune.items() %}
+    <memorytune vcpus='{{ vcpus}}'>
+      {%- for id, bandwidth in nodes.items() %}
+      <node id='{{ id }}' bandwidth='{{ bandwidth }}'/>
+      {%- endfor %}
+    </memorytune>
+    {%- endfor %}
+  {%- endif %}
+  </cputune>
+{%- endif %}
+{%- if mem.max %}
+  <maxMemory {{ opt_attribute(mem, 'slots') }} unit='KiB'>{{ to_kib(mem.max) }}</maxMemory>
+{%- endif %}
+{%- if mem.boot %}
+  <memory unit='KiB'>{{ to_kib(mem.boot) }}</memory>
+{%- endif %}
+{%- if mem.current %}
+  <currentMemory unit='KiB'>{{ to_kib(mem.current) }}</currentMemory>
+{%- endif %}
+{%- if mem %}
+  <memtune>
+  {%- if 'hard_limit' in mem and mem.hard_limit %}
+    <hard_limit unit="KiB">{{ to_kib(mem.hard_limit) }}</hard_limit>
+  {%- endif %}
+  {%- if 'soft_limit' in mem and mem.soft_limit %}
+    <soft_limit unit="KiB">{{ to_kib(mem.soft_limit) }}</soft_limit>
+  {%- endif %}
+  {%- if 'swap_hard_limit' in mem and mem.swap_hard_limit %}
+    <swap_hard_limit unit="KiB">{{ to_kib(mem.swap_hard_limit) }}</swap_hard_limit>
+  {%- endif %}
+  {%- if 'min_guarantee' in mem and mem.min_guarantee %}
+    <min_guarantee unit="KiB">{{ to_kib(mem.min_guarantee) }}</min_guarantee>
+  {%- endif %}
+  </memtune>
+{%- endif %}
+{%- if numatune %}
+  <numatune>
+  {%- if 'memory' in numatune and numatune.memory %}
+    <memory mode='{{ numatune.memory.mode }}'{{ opt_attribute(numatune.memory, "nodeset") }}/>
+  {%- endif %}
+  {%- if 'memnodes' in numatune and numatune.memnodes %}
+    {%- for cell_id in numatune['memnodes'] %}
+    <memnode cellid='{{ cell_id }}' mode='{{ numatune.memnodes[cell_id].mode }}' nodeset='{{ numatune.memnodes[cell_id].nodeset }}'/>
+    {%- endfor %}
+  {%- endif %}
+  </numatune>
+{%- endif %}
+{%- if mem %}
+  <memoryBacking>
+  {%- if mem.hugepages %}
+    <hugepages>
+    {%- for page in mem.hugepages %}
+      <page size="{{ to_kib(page.get("size")) }}" unit="KiB"{{ opt_attribute(page, "nodeset" )}}/>
+    {%- endfor %}
+    </hugepages>
+    {%- if mem.nosharepages %}
+    <nosharepages/>
+    {%- endif %}
+    {%- if mem.locked %}
+    <locked/>
+    {%- endif %}
+    {%- if mem.source %}
+    <source type="{{ mem.source }}"/>
+    {%- endif %}
+    {%- if mem.access %}
+    <access mode="{{ mem.access }}"/>
+    {%- endif %}
+    {%- if mem.allocation %}
+    <allocation mode="{{ mem.allocation }}"/>
+    {%- endif %}
+    {%- if mem.discard %}
+    <discard/>
+    {%- endif %}
+  {%- endif %}
+  </memoryBacking>
+{%- endif %}
+  <os {{ boot.os_attrib }}>
+    <type arch='{{ arch }}'>{{ os_type }}</type>
+{%- if boot %}
+  {%- if 'kernel' in boot %}
+    <kernel>{{ boot.kernel }}</kernel>
+  {%- endif %}
+  {%- if 'initrd' in boot %}
+    <initrd>{{ boot.initrd }}</initrd>
+  {%- endif %}
+  {%- if 'cmdline' in boot %}
+    <cmdline>{{ boot.cmdline }}</cmdline>
+  {%- endif %}
+  {%- if 'loader' in boot %}
+    <loader readonly='yes' type='pflash'>{{ boot.loader }}</loader>
+  {%- endif %}
+  {%- if 'nvram' in boot %}
+    <nvram template='{{boot.nvram}}'></nvram>
+  {%- endif %}
+{%- endif %}
+{%- for dev in boot_dev %}
+    <boot dev='{{ dev }}' />
+{%- endfor %}
+  </os>
+{%- if clock %}
+  <clock offset="{{ clock.offset }}"{{ opt_attribute(clock, "adjustment") }}{{ opt_attribute(clock, "timezone") }}>
+  {%- for timer_name in clock.timers %}
+    {%- set timer = clock.timers[timer_name] %}
+    <timer name='{{ timer_name }}'{{ opt_attribute(timer, "track") }}{{ opt_attribute(timer, "tickpolicy") }}{{ opt_attribute(timer, "frequency") }}{{ opt_attribute(timer, "mode") }}{{ opt_attribute(timer, "present", yesno) }}>
+    {%- if "threshold" in timer or "slew" in timer or "limit" in timer %}
+      <catchup{{ opt_attribute(timer, "slew") }}{{ opt_attribute(timer, "threshold") }}{{ opt_attribute(timer, "limit") }}/>
+    {%- endif %}
+    </timer>
+  {%- endfor %}
+  </clock>
+{%- endif %}
+  <on_reboot>{{ on_reboot }}</on_reboot>
+  <devices>
+{%- for disk in disks %}
+    <disk type='{{ disk.type }}' device='{{ disk.device }}'>
+  {%- if disk.type == 'file' and 'source_file' in disk -%}
+      <source file='{{ disk.source_file }}' />
+  {%- endif %}
+  {%- if disk.type == 'block' -%}
+      <source dev='{{ disk.source_file }}' />
+  {%- endif %}
+  {%- if disk.type == 'volume' and 'pool' in disk -%}
+      <source pool='{{ disk.pool }}' volume='{{ disk.volume }}' />
+  {%- endif %}
+  {%- if disk.type == 'network' %}{{ libvirt_disks.network_source(disk) }}{%- endif %}
+      <target dev='{{ disk.target_dev }}' bus='{{ disk.disk_bus }}' />
+    {%- if disk.address -%}
+      <address type='drive' controller='0' bus='0' target='0' unit='{{ disk.index }}' />
+    {%- endif %}
+    {%- if disk.driver -%}
+      <driver name='qemu' type='{{ disk.format}}' cache='none' io='{{ disk.io }}'{{ opt_attribute(disk, "iothread") }}/>
+  {%- endif %}
+    </disk>
+{%- endfor %}
+{%- if controller_model %}
+    <controller type='scsi' index='0' model='{{ controller_model }}' />
+{%- endif %}
+{%- for nic in nics %}
+    <interface type='{{ nic.type }}'>
+      <source {{ nic.type }}='{{ nic.source }}'/>
+  {%- if nic.get('mac') -%}
+      <mac address='{{ nic.mac }}'/>
+  {%- endif %}
+  {%- if nic.model %}<model type='{{ nic.model }}'/>{% endif %}
+    </interface>
+{%- endfor %}
+{%- if graphics %}
+    <graphics type='{{ graphics.type }}'{{ opt_attribute(graphics, "port") }}
+  {%- if graphics.listen.address %}
+      listen='{{ graphics.listen.address }}'
+  {%- endif %}
+  {%- if graphics.type == 'spice' and graphics.tls_port %}
+      tlsPort='{{ graphics.tls_port }}'
+  {%- endif %}
+      autoport='{{ yesno(not graphics.port and not graphics.tls_port) }}'>
+      <listen type='{{ graphics.listen.type }}'{{ opt_attribute(graphics.listen, "address") }}/>
+    </graphics>
+  {%- if graphics.type == "spice" and hypervisor in ["qemu", "kvm"] %}
+    <channel type='spicevmc'>
+      <target type='virtio' name='com.redhat.spice.0'/>
+    </channel>
+  {%- endif %}
+{%- endif %}
+{%- for serial in serials %}
+    <serial type='{{ serial.type }}'>
+      {{ libvirt_chardevs.chardev(serial) }}
+    </serial>
+{%- endfor %}
+{%- for console in consoles %}
+    <console type='{{ console.type }}'>
+      {{ libvirt_chardevs.chardev(console) }}
+    </console>
+{%- endfor %}
 {%- if hypervisor in ["qemu", "kvm"] %}
-        <channel type='unix'>
-            <target type='virtio' name='org.qemu.guest_agent.0'/>
-        </channel>
+    <channel type='unix'>
+      <target type='virtio' name='org.qemu.guest_agent.0'/>
+    </channel>
 {%- endif %}
-        </devices>
-        <features>
-                <acpi />
-                <apic />
-                <pae />
+{%- for hostdev in hostdevs %}
+    <hostdev mode='subsystem' type='{{ hostdev["type"] }}'{% if hostdev["type"] == "pci" %} managed='yes'{% endif %}>
+      <source>
+  {%- if hostdev["type"] == "usb" %}
+        <vendor id='{{ hostdev["vendor"] }}'/>
+        <product id='{{ hostdev["product"] }}'/>
+  {%- elif hostdev["type"] == "pci" %}
+        <address
+          domain='{{ hostdev["domain"] }}'
+          bus='{{ hostdev["bus"] }}'
+          slot='{{ hostdev["slot"] }}'
+          function='{{ hostdev["function"] }}'/>
+  {%- endif %}
+      </source>
+    </hostdev>
+{%- endfor %}
+  </devices>
+  <features>
+    <acpi />
+    <apic />
+    <pae />
 {%- if hypervisor_features.get("kvm-hint-dedicated") %}
-                <kvm>
-                  <hint-dedicated state="on"/>
-                </kvm>
+    <kvm>
+      <hint-dedicated state="on"/>
+    </kvm>
 {%- endif %}
-        </features>
+  </features>
 </domain>

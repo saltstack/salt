@@ -2,7 +2,7 @@
 An engine that reads messages from the redis sentinel pubsub and sends reactor
 events based on the channels they are subscribed to.
 
-.. versionadded: 2016.3.0
+.. versionadded:: 2016.3.0
 
 :configuration:
 
@@ -23,7 +23,6 @@ events based on the channels they are subscribed to.
 
 :depends: redis
 """
-
 
 import logging
 
@@ -102,9 +101,9 @@ class Listener:
 def start(hosts, channels, tag=None):
     if tag is None:
         tag = "salt/engine/redis_sentinel"
-    local = salt.client.LocalClient()
-    ips = local.cmd(
-        hosts["matching"], "network.ip_addrs", [hosts["interface"]]
-    ).values()
+    with salt.client.LocalClient() as local:
+        ips = local.cmd(
+            hosts["matching"], "network.ip_addrs", [hosts["interface"]]
+        ).values()
     client = Listener(host=ips.pop()[0], port=hosts["port"], channels=channels, tag=tag)
     client.run()

@@ -5,7 +5,7 @@ connected for a certain period of time.
 
 Requires that the :conf_master:`minion_data_cache` option be enabled.
 
-.. versionadded: 2017.7.0
+.. versionadded:: 2017.7.0
 
 :configuration:
 
@@ -44,9 +44,9 @@ def _get_keys():
     """
     Get the keys
     """
-    keys = salt.key.get_key(__opts__)
-    minions = keys.all_keys()
-    return minions["minions"]
+    with salt.key.get_key(__opts__) as keys:
+        minions = keys.all_keys()
+        return minions["minions"]
 
 
 def _delete_keys(stale_keys, minions):

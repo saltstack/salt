@@ -5,8 +5,8 @@ salt-ssh testing
 import os
 import shutil
 
+import pytest
 from tests.support.case import SSHCase
-from tests.support.helpers import slowTest
 from tests.support.runtests import RUNTIME_VARS
 
 
@@ -19,7 +19,7 @@ class SSHTest(SSHCase):
         thin_dir = self.run_function("config.get", ["thin_dir"], wipe=False)
         self.addCleanup(shutil.rmtree, thin_dir, ignore_errors=True)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_ping(self):
         """
         Test a simple ping
@@ -27,7 +27,7 @@ class SSHTest(SSHCase):
         ret = self.run_function("test.ping")
         self.assertTrue(ret, "Ping did not return true")
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_thin_dir(self):
         """
         test to make sure thin_dir is created
@@ -38,7 +38,7 @@ class SSHTest(SSHCase):
         os.path.exists(os.path.join(thin_dir, "salt-call"))
         os.path.exists(os.path.join(thin_dir, "running_data"))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_set_path(self):
         """
         test setting the path env variable
@@ -51,7 +51,7 @@ class SSHTest(SSHCase):
         ret = self.run_function("environ.get", ["PATH"], roster_file=roster)
         assert path in ret
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_tty(self):
         """
         test using tty

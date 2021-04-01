@@ -2,14 +2,12 @@
 The top level interface used to translate configuration data back to the
 correct cloud modules
 """
-
 import copy
 import glob
 import logging
 import multiprocessing
 import os
 import signal
-import sys
 import time
 import traceback
 from itertools import groupby
@@ -40,7 +38,7 @@ try:
     import Cryptodome.Random
 except ImportError:
     try:
-        import Crypto.Random
+        import Crypto.Random  # nosec
     except ImportError:
         pass  # pycrypto < 2.1
 
@@ -1250,19 +1248,18 @@ class Cloud:
                         salt.config.master_config(os.path.join(conf_path, "master"))
                     )
 
-                    client = salt.client.get_local_client(mopts=mopts_)
-
-                    ret = client.cmd(
-                        vm_["name"],
-                        "saltutil.sync_{}".format(self.opts["sync_after_install"]),
-                        timeout=self.opts["timeout"],
-                    )
-                    if ret:
-                        log.info(
-                            "Synchronized the following dynamic modules: "
-                            "  {}".format(ret)
+                    with salt.client.get_local_client(mopts=mopts_) as client:
+                        ret = client.cmd(
+                            vm_["name"],
+                            "saltutil.sync_{}".format(self.opts["sync_after_install"]),
+                            timeout=self.opts["timeout"],
                         )
-                        break
+                        if ret:
+                            log.info(
+                                "Synchronized the following dynamic modules: "
+                                "  {}".format(ret)
+                            )
+                            break
         except KeyError as exc:
             log.exception(
                 "Failed to create VM %s. Configuration value %s needs " "to be set",
@@ -1277,12 +1274,12 @@ class Cloud:
             opt_map = False
         if self.opts["parallel"] and self.opts["start_action"] and not opt_map:
             log.info("Running %s on %s", self.opts["start_action"], vm_["name"])
-            client = salt.client.get_local_client(mopts=self.opts)
-            action_out = client.cmd(
-                vm_["name"],
-                self.opts["start_action"],
-                timeout=self.opts["timeout"] * 60,
-            )
+            with salt.client.get_local_client(mopts=self.opts) as client:
+                action_out = client.cmd(
+                    vm_["name"],
+                    self.opts["start_action"],
+                    timeout=self.opts["timeout"] * 60,
+                )
             output["ret"] = action_out
         return output
 
@@ -1665,6 +1662,8 @@ class Map(Cloud):
     def delete_map(self, query=None):
         query_map = self.interpolated_map(query=query)
         for alias, drivers in query_map.copy().items():
+            if alias == "Errors":
+                continue
             for driver, vms in drivers.copy().items():
                 for vm_name, vm_details in vms.copy().items():
                     if vm_details == "Absent":
@@ -2242,15 +2241,15 @@ class Map(Cloud):
                     log.info(
                         "Running %s on %s", self.opts["start_action"], ", ".join(group)
                     )
-                    client = salt.client.get_local_client()
-                    out.update(
-                        client.cmd(
-                            ",".join(group),
-                            self.opts["start_action"],
-                            timeout=self.opts["timeout"] * 60,
-                            tgt_type="list",
+                    with salt.client.get_local_client() as client:
+                        out.update(
+                            client.cmd(
+                                ",".join(group),
+                                self.opts["start_action"],
+                                timeout=self.opts["timeout"] * 60,
+                                tgt_type="list",
+                            )
                         )
-                    )
                 for obj in output_multip:
                     next(iter(obj.values()))["ret"] = out[next(iter(obj.keys()))]
                     output.update(obj)

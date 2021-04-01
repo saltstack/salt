@@ -1316,3 +1316,36 @@ def show_next_fire_time(name, **kwargs):
     else:
         ret["comment"] = "next fire time not available."
     return ret
+
+
+def job_status(name):
+    """
+    Show the information for a particular job.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' schedule.job_status
+
+    """
+
+    schedule = {}
+    try:
+        with salt.utils.event.get_event("minion", opts=__opts__) as event_bus:
+            res = __salt__["event.fire"](
+                {"func": "job_status", "name": name, "fire_event": True},
+                "manage_schedule",
+            )
+            if res:
+                event_ret = event_bus.get_event(
+                    tag="/salt/minion/minion_schedule_job_status_complete", wait=30
+                )
+                return event_ret.get("data", {})
+    except KeyError:
+        # Effectively a no-op, since we can't really return without an event system
+        ret = {}
+        ret["comment"] = "Event module not available. Schedule list failed."
+        ret["result"] = True
+        log.debug("Event module not available. Schedule list failed.")
+        return ret

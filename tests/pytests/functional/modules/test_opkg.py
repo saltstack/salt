@@ -8,14 +8,12 @@ from tests.support.mock import patch
 pytestmark = pytest.mark.skip_if_binaries_missing("stat", "md5sum", "uname")
 
 
-@pytest.fixture(autouse=True)
-def setup_loader():
-    setup_loader_modules = {
+@pytest.fixture
+def configure_loader_modules():
+    return {
         opkg: {"__salt__": {"cmd.shell": cmd.shell, "cmd.run_stdout": cmd.run_stdout}},
         cmd: {},
     }
-    with pytest.helpers.loader_mock(setup_loader_modules) as loader_mock:
-        yield loader_mock
 
 
 def test_conf_d_path_does_not_exist_not_created_by_restart_check(tmp_path):

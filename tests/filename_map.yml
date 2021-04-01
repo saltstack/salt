@@ -6,32 +6,32 @@
   - unit.utils.test_versions
 
 setup.py:
-  - unit.setup.test_man
-  - unit.setup.test_install
+  - pytests.scenarios.setup.test_man
+  - pytests.scenarios.setup.test_install
 
 salt/modules/(apkpkg|aptpkg|ebuildpkg|dpkg_lowpkg|freebsdpkg|mac_brew_pkg|mac_ports_pkg|openbsdpkg|opkg|pacmanpkg|pkgin|pkgng|pkg_resource|rpm_lowpkg|solarisipspkg|solarispkg|win_pkg|xbpspkg|yumpkg|zypperpkg)\.py:
-  - unit.states.test_pkg
+  - pytests.unit.states.test_pkg
   - integration.modules.test_pkg
   - integration.states.test_pkg
   - integration.states.test_pkgrepo
 
 salt/modules/(mac_user|useradd|pw_user|solaris_user|win_useradd)\.py:
-  - unit.states.test_user
+  - pytests.unit.states.test_user
   - integration.states.test_user
 
 salt/modules/(aix_group|groupadd|mac_group|pw_group|solaris_group|win_groupadd)\.py:
   - unit.states.test_group
 
 salt/modules/(debian_service|freebsdservice|gentoo_service|launchctl_service|mac_service|netbsdservice|openbsdrcctl_service|openbsdservice|rh_service|runit|linux_service|smf_service|systemd_service|upstart_service|win_service)\.py:
-  - unit.states.test_service
+  - pytests.unit.states.test_service
   - integration.modules.test_service
   - integration.states.test_service
 
 salt/modules/*apache.py:
-  - unit.states.test_apache
-  - unit.states.test_apache_conf
-  - unit.states.test_apache_module
-  - unit.states.test_apache_site
+  - pytests.unit.states.apache.test_apache
+  - pytests.unit.states.apache.test_conf
+  - pytests.unit.states.apache.test_module
+  - pytests.unit.states.apache.test_site
 
 salt/modules/augeas_cfg.py:
   - unit.states.test_augeas
@@ -43,50 +43,49 @@ salt/modules/cp.py:
   - integration.states.test_file
 
 salt/modules/dockermod.py:
-  - unit.states.test_docker_image
-  - unit.states.test_docker_volume
+  - pytests.unit.states.test_docker_image
+  - pytests.unit.states.test_docker_volume
   - unit.utils.test_dockermod
-  - integration.states.test_docker_container
+  - pytests.functional.states.test_docker_container
   - integration.states.test_docker_network
 
 salt/modules/file.py:
   - pytests.integration.states.test_cron
 
 salt/modules/influxdb08mod.py:
-  - unit.states.test_influxdb08_database
-  - unit.states.test_influxdb08_user
+  - pytests.unit.states.test_influxdb08_database
+  - pytests.unit.states.test_influxdb08_user
 
 salt/modules/mysql.py:
-  - unit.states.test_mysql_user
-  - unit.states.test_mysql_query
-  - unit.states.test_mysql_grants
+  - pytests.unit.states.mysql.test_user
+  - pytests.unit.states.mysql.test_query
+  - pytests.unit.states.mysql.test_grants
 
 salt/modules/openvswitch.py:
-  - unit.states.test_openvswitch_port
+  - pytests.unit.states.test_openvswitch_port
 
 salt/(states|modules)/.*postgres.py:
-  - unit.states.test_postgres
-  - unit.states.test_postgres_cluster
-  - unit.states.test_postgres_database
-  - unit.states.test_postgres_extension
-  - unit.states.test_postgres_group
-  - unit.states.test_postgres_initdb
-  - unit.states.test_postgres_language
-  - unit.states.test_postgres_privileges
-  - unit.states.test_postgres_schema
-  - unit.states.test_postgres_user
+  - pytests.unit.states.postgresql.test_cluster
+  - pytests.unit.states.postgresql.test_database
+  - pytests.unit.states.postgresql.test_extension
+  - pytests.unit.states.postgresql.test_group
+  - pytests.unit.states.postgresql.test_initdb
+  - pytests.unit.states.postgresql.test_language
+  - pytests.unit.states.postgresql.test_privileges
+  - pytests.unit.states.postgresql.test_schema
+  - pytests.unit.states.postgresql.test_user
 
 salt/modules/rabbitmq.py:
-  - unit.states.test_rabbitmq_cluster
-  - unit.states.test_rabbitmq_plugin
-  - unit.states.test_rabbitmq_policy
-  - unit.states.test_rabbitmq_vhost
+  - pytests.unit.states.rabbitmq.test_cluster
+  - pytests.unit.states.rabbitmq.test_plugin
+  - pytests.unit.states.rabbitmq.test_policy
+  - pytests.unit.states.rabbitmq.test_vhost
   - integration.states.test_rabbitmq_user
   - integration.states.test_rabbitmq_vhost
 
 salt/modules/ssh.py:
-  - unit.states.test_ssh_auth
-  - unit.states.test_ssh_known_hosts
+  - pytests.unit.states.test_ssh_auth
+  - pytests.unit.states.test_ssh_known_hosts
 
 salt/auth/*:
   - pytests.integration.cli.test_salt_auth
@@ -107,7 +106,6 @@ salt/cli/key.py:
   - pytests.integration.cli.test_salt_key
 
 salt/cli/salt.py:
-  - integration.cli.test_grains
   - integration.shell.test_enabled
   - pytests.integration.cli.test_salt
   - pytests.integration.cli.test_matcher
@@ -118,13 +116,19 @@ salt/client/*:
   - integration.client.test_standard
 
 salt/cloud/*:
-  - integration.shell.test_cloud
+  - pytests.functional.cli.test_salt_cloud
 
 salt/cloud/__init__.py:
-  - integration.cloud.test_cloud
+  - pytests.functional.cli.test_salt_cloud
 
 salt/grains/*:
   - integration.grains.test_custom
+
+salt/matchers/*:
+  - integration.states.test_match
+  - pytests.integration.cli.test_matcher
+  - pytests.unit.modules.test_match
+  - unit.matchers.test_confirm_top
 
 salt/proxy/*:
   - pytests.integration.proxy.test_shell
@@ -149,7 +153,7 @@ salt/utils/minions.py:
   - pytests.integration.cli.test_matcher
 
 salt/utils/reactor.py:
-  - integration.reactor.test_reactor
+  - pytests.integration.reactor.test_reactor
 
 salt/cli/daemons.py:
   - pytests.integration.cli.test_salt_master
@@ -160,7 +164,7 @@ salt/cli/daemons.py:
 salt/(client/ssh/.+|cli/ssh\.py):
   - integration.cli.test_custom_module
   - integration.ssh.test_deploy
-  - integration.ssh.test_grains
+  - pytests.integration.ssh.test_grains
   - integration.ssh.test_jinja_filters
   - integration.ssh.test_master
   - integration.ssh.test_mine
@@ -184,7 +188,7 @@ salt/minion.py:
   - pytests.integration.modules.test_pillar
 
 salt/modules/*_sysctl.py:
-  - unit.states.test_sysctl
+  - pytests.unit.states.test_sysctl
   - integration.modules.test_sysctl
 
 salt/netapi/rest_cherrypy/*:
@@ -214,7 +218,7 @@ salt/runners/venafiapi.py:
   - integration.externalapi.test_venafiapi
 
 salt/serializers/*:
-  - unit.serializers.test_serializers
+  - pytests.unit.serializers.test_serializers
 
 salt/(cli/spm\.py|spm/.+):
   - unit.test_spm
@@ -243,8 +247,7 @@ salt/utils/schedule.py:
 
 salt/utils/vt.py:
   - integration.cli.test_custom_module
-  - integration.cli.test_grains
-  - integration.ssh.test_grains
+  - pytests.integration.ssh.test_grains
   - integration.ssh.test_jinja_filters
   - integration.ssh.test_mine
   - pytests.integration.ssh.test_pillar

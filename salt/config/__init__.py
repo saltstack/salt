@@ -372,6 +372,8 @@ VALID_OPTS = immutabletypes.freeze(
         "state_output": str,
         # Tells the highstate outputter to only report diffs of states that changed
         "state_output_diff": bool,
+        # Tells the highstate outputter whether profile information will be shown for each state run
+        "state_output_profile": bool,
         # When true, states run in the order defined in an SLS file, unless requisites re-order them
         "state_auto_order": bool,
         # Fire events as state chunks are processed by the state compiler
@@ -418,8 +420,11 @@ VALID_OPTS = immutabletypes.freeze(
         # Tells the minion to choose a bounded, random interval to have zeromq attempt to reconnect
         # in the event of a disconnect event
         "recon_randomize": bool,
+        # Configures retry interval, randomized between timer and timer_max if timer_max > 0
         "return_retry_timer": int,
         "return_retry_timer_max": int,
+        # Configures amount of return retries
+        "return_retry_tries": int,
         # Specify one or more returners in which all events will be sent to. Requires that the returners
         # in question have an event_return(event) function!
         "event_return": (list, str),
@@ -905,6 +910,8 @@ VALID_OPTS = immutabletypes.freeze(
         # Number of times to try to auth with the master on a reconnect with the
         # tcp transport
         "tcp_authentication_retries": int,
+        # Backoff interval in seconds for minion reconnect with tcp transport
+        "tcp_reconnect_backoff": float,
         # Permit or deny allowing minions to request revoke of its own key
         "allow_minion_key_revoke": bool,
         # File chunk size for salt-cp
@@ -945,6 +952,7 @@ VALID_OPTS = immutabletypes.freeze(
         "disabled_requisites": (str, list),
         # Feature flag config
         "features": dict,
+        "fips_mode": bool,
     }
 )
 
@@ -1120,6 +1128,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "tcp_pub_port": 4510,
         "tcp_pull_port": 4511,
         "tcp_authentication_retries": 5,
+        "tcp_reconnect_backoff": 1,
         "log_file": os.path.join(salt.syspaths.LOGS_DIR, "minion"),
         "log_level": "warning",
         "log_level_logfile": None,
@@ -1142,6 +1151,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "state_verbose": True,
         "state_output": "full",
         "state_output_diff": False,
+        "state_output_profile": True,
         "state_auto_order": True,
         "state_events": False,
         "state_aggregate": False,
@@ -1165,6 +1175,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "recon_randomize": True,
         "return_retry_timer": 5,
         "return_retry_timer_max": 10,
+        "return_retry_tries": 3,
         "random_reauth_delay": 10,
         "winrepo_source_dir": "salt://win/repo-ng/",
         "winrepo_dir": os.path.join(salt.syspaths.BASE_FILE_ROOTS_DIR, "win", "repo"),
@@ -1243,6 +1254,8 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "schedule": {},
         "ssh_merge_pillar": True,
         "disabled_requisites": [],
+        "reactor_niceness": None,
+        "fips_mode": False,
     }
 )
 
@@ -1473,6 +1486,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "state_verbose": True,
         "state_output": "full",
         "state_output_diff": False,
+        "state_output_profile": True,
         "state_auto_order": True,
         "state_events": False,
         "state_aggregate": False,
@@ -1578,6 +1592,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "minion_data_cache_events": True,
         "enable_ssh_minions": False,
         "netapi_allow_raw_shell": False,
+        "fips_mode": False,
     }
 )
 

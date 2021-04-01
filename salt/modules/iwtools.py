@@ -1,14 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 Support for Wireless Tools for Linux
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 
-# Import Salt libs
 import salt.utils.path
 from salt.exceptions import SaltInvocationError
 
@@ -33,16 +28,18 @@ def scan(iface, style=None):
 
     CLI Examples:
 
+    .. code-block:: bash
+
         salt minion iwtools.scan wlp3s0
         salt minion iwtools.scan wlp3s0 list
     """
     if not _valid_iface(iface):
         raise SaltInvocationError("The interface specified is not valid")
 
-    out = __salt__["cmd.run"]("iwlist {0} scan".format(iface))
+    out = __salt__["cmd.run"]("iwlist {} scan".format(iface))
     if "Network is down" in out:
-        __salt__["cmd.run"]("ip link set {0} up".format(iface))
-        out = __salt__["cmd.run"]("iwlist {0} scan".format(iface))
+        __salt__["cmd.run"]("ip link set {} up".format(iface))
+        out = __salt__["cmd.run"]("iwlist {} scan".format(iface))
     ret = {}
     tmp = {}
     for line in out.splitlines():
@@ -81,6 +78,8 @@ def set_mode(iface, mode):
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt minion iwtools.set_mode wlp3s0 Managed
     """
     if not _valid_iface(iface):
@@ -97,12 +96,12 @@ def set_mode(iface, mode):
     )
     if mode not in valid_modes:
         raise SaltInvocationError(
-            "One of the following modes must be specified: {0}".format(
+            "One of the following modes must be specified: {}".format(
                 ", ".join(valid_modes)
             )
         )
     __salt__["ip.down"](iface)
-    out = __salt__["cmd.run"]("iwconfig {0} mode {1}".format(iface, mode))
+    out = __salt__["cmd.run"]("iwconfig {} mode {}".format(iface, mode))
     __salt__["ip.up"](iface)
 
     return mode
@@ -123,6 +122,8 @@ def list_interfaces(style=None):
     List all of the wireless interfaces
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt minion iwtools.list_interfaces
     """

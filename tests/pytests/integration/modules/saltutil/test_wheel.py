@@ -7,7 +7,6 @@ import pathlib
 import shutil
 
 import pytest
-from tests.support.helpers import slowTest
 
 pytestmark = [pytest.mark.windows_whitelisted]
 
@@ -39,7 +38,7 @@ def refresh_pillar(salt_cli, salt_minion, salt_sub_minion):
     assert ret.json[salt_sub_minion.id] is True
 
 
-@slowTest
+@pytest.mark.slow_test
 def test_wheel_just_function(salt_call_cli, salt_minion, salt_sub_minion):
     """
     Tests using the saltutil.wheel function when passing only a function.
@@ -51,7 +50,7 @@ def test_wheel_just_function(salt_call_cli, salt_minion, salt_sub_minion):
     assert salt_sub_minion.id in ret.json["return"]
 
 
-@slowTest
+@pytest.mark.slow_test
 def test_wheel_with_arg(salt_call_cli):
     """
     Tests using the saltutil.wheel function when passing a function and an arg.
@@ -61,7 +60,7 @@ def test_wheel_with_arg(salt_call_cli):
     assert ret.json["return"] == {}
 
 
-@slowTest
+@pytest.mark.slow_test
 def test_wheel_no_arg_raise_error(salt_call_cli):
     """
     Tests using the saltutil.wheel function when passing a function that requires
@@ -71,7 +70,7 @@ def test_wheel_no_arg_raise_error(salt_call_cli):
     assert ret.exitcode == 0
 
 
-@slowTest
+@pytest.mark.slow_test
 def test_wheel_with_kwarg(salt_call_cli):
     """
     Tests using the saltutil.wheel function when passing a function and a kwarg.

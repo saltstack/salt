@@ -1,9 +1,4 @@
-# Import Python libs
-
-# Import salt modules
 import salt.modules.mac_softwareupdate as mac_softwareupdate
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch
 from tests.support.unit import TestCase

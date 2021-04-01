@@ -1,7 +1,7 @@
 """
 An engine that reads messages from Slack and can act on them
 
-.. versionadded: 2016.3.0
+.. versionadded:: 2016.3.0
 
 :depends: `slackclient <https://pypi.org/project/slackclient/>`_ Python module
 
@@ -165,8 +165,6 @@ import salt.utils.json
 import salt.utils.slack
 import salt.utils.yaml
 
-log = logging.getLogger(__name__)
-
 try:
     import slackclient
 
@@ -174,6 +172,7 @@ try:
 except ImportError:
     HAS_SLACKCLIENT = False
 
+log = logging.getLogger(__name__)
 
 __virtualname__ = "slack"
 
@@ -895,15 +894,15 @@ class SlackClient:
 
         # Default to trying to run as a client module.
         else:
-            local = salt.client.LocalClient()
             log.debug(
                 "Command %s will run via local.cmd_async, targeting %s", cmd, target
             )
             log.debug("Running %s, %s, %s, %s, %s", target, cmd, args, kwargs, tgt_type)
             # according to https://github.com/saltstack/salt-api/issues/164, tgt_type has changed to expr_form
-            job_id = local.cmd_async(
-                str(target), cmd, arg=args, kwarg=kwargs, tgt_type=str(tgt_type),
-            )
+            with salt.client.LocalClient() as local:
+                job_id = local.cmd_async(
+                    str(target), cmd, arg=args, kwarg=kwargs, tgt_type=str(tgt_type),
+                )
             log.info("ret from local.cmd_async is %s", job_id)
         return job_id
 
