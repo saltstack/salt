@@ -186,6 +186,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             "motherboard",
             "serialnumber",
             "timezone",
+            "uuid",
             "manufacturer",
             "kernelversion",
             "osservicepack",
