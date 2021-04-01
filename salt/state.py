@@ -233,7 +233,7 @@ def find_name(name, state, high):
     Note: if `state` is sls, then we are looking for all IDs that match the given SLS
     """
     ext_id = []
-    if name in high:
+    if name in high and state in high[name]:
         ext_id.append((name, state))
     # if we are requiring an entire SLS, then we need to add ourselves to everything in that SLS
     elif state == "sls":
@@ -1625,7 +1625,14 @@ class State:
         for ext_chunk in ext:
             for name, body in ext_chunk.items():
                 if name not in high:
-                    state_type = next(x for x in body if not x.startswith("__"))
+                    high_state_type = None
+                else:
+                    high_state_type = next(
+                        x for x in high.get(name) if not x.startswith("__")
+                    )
+                state_type = next(x for x in body if not x.startswith("__"))
+
+                if not high_state_type or high_state_type != state_type:
                     # Check for a matching 'name' override in high data
                     ids = find_name(name, state_type, high)
                     if len(ids) != 1:
