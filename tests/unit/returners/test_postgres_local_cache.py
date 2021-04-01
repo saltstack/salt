@@ -112,7 +112,7 @@ class PostgresLocalCacheTestCase(TestCase, LoaderModuleMockMixin):
             postgres_local_cache.returner(load)
 
             return_val = None
-            search_string = salt.utils.stringutils.to_str("return")
+            search_string = "return"
             for call in connect_mock.mock_calls:
                 for arg in call.args:
                     if isinstance(arg, tuple):
