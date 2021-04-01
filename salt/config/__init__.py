@@ -2223,6 +2223,7 @@ def mminion_config(path, overrides, ignore_config_errors=True):
     opts = minion_config(path, ignore_config_errors=ignore_config_errors, role="master")
     opts.update(overrides)
     apply_sdb(opts)
+
     _validate_opts(opts)
     opts["grains"] = salt.loader.grains(opts)
     opts["pillar"] = {}
