@@ -15,7 +15,7 @@ VERSION_LIMIT = MAX_SIZE - 200
 #
 # ALL major version bumps, new release codenames, MUST be defined in the SaltStackVersion.NAMES dictionary, i.e.:
 #
-#    class SaltStackVersion(object):
+#    class SaltStackVersion:
 #
 #        NAMES = {
 #            'Hydrogen': (2014, 1),   # <- This is the tuple to bump versions

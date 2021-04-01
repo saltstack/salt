@@ -55,7 +55,6 @@ import logging
 import salt.utils.compat
 import salt.utils.json
 import salt.utils.versions
-from salt.ext.six import string_types
 
 log = logging.getLogger(__name__)
 
@@ -317,7 +316,7 @@ def create_policy(
 
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        if not isinstance(policyDocument, string_types):
+        if not isinstance(policyDocument, str):
             policyDocument = salt.utils.json.dumps(policyDocument)
         policy = conn.create_policy(
             policyName=policyName, policyDocument=policyDocument
@@ -443,7 +442,7 @@ def create_policy_version(
 
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        if not isinstance(policyDocument, string_types):
+        if not isinstance(policyDocument, str):
             policyDocument = salt.utils.json.dumps(policyDocument)
         policy = conn.create_policy_version(
             policyName=policyName,

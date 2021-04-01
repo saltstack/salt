@@ -113,7 +113,6 @@ import sys
 
 import salt.utils.jid
 import salt.utils.json
-import salt.utils.stringutils
 
 try:
     import psycopg2
@@ -232,8 +231,7 @@ def returner(load):
     sql = """INSERT INTO salt_returns
             (fun, jid, return, id, success)
             VALUES (%s, %s, %s, %s, %s)"""
-    ret = str(load["return"])
-    job_ret = {"return": ret}
+    job_ret = {"return": str(str(load["return"]), "utf-8", "replace")}
     if "retcode" in load:
         job_ret["retcode"] = load["retcode"]
     if "success" in load:

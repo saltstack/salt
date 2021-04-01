@@ -87,7 +87,6 @@ import salt.utils.files
 import salt.utils.json
 import salt.utils.versions
 from salt.exceptions import SaltInvocationError
-from salt.ext.six.moves import range  # pylint: disable=import-error
 
 log = logging.getLogger(__name__)
 

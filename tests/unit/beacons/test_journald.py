@@ -1,7 +1,4 @@
-# coding: utf-8
-
 # Python libs
-from __future__ import absolute_import
 
 import datetime
 import logging
@@ -26,28 +23,28 @@ _STUB_JOURNALD_ENTRY = {
     ),
     "_AUDIT_LOGINUID": 1000,
     "SYSLOG_FACILITY": 10,
-    "_SYSTEMD_SLICE": u"system.slice",
+    "_SYSTEMD_SLICE": "system.slice",
     "_GID": 0,
     "__REALTIME_TIMESTAMP": datetime.datetime(2017, 6, 27, 20, 8, 16, 468468),
     "_AUDIT_SESSION": 351,
     "PRIORITY": 6,
-    "_TRANSPORT": u"syslog",
-    "_HOSTNAME": u"hostname",
-    "_CAP_EFFECTIVE": u"3fffffffff",
-    "_SYSTEMD_UNIT": u"ssh.service",
+    "_TRANSPORT": "syslog",
+    "_HOSTNAME": "hostname",
+    "_CAP_EFFECTIVE": "3fffffffff",
+    "_SYSTEMD_UNIT": "ssh.service",
     "_MACHINE_ID": UUID("14fab5bb-228d-414b-bdf4-cbc62cb7ba54"),
     "_PID": 15091,
-    "SYSLOG_IDENTIFIER": u"sshd",
+    "SYSLOG_IDENTIFIER": "sshd",
     "_SOURCE_REALTIME_TIMESTAMP": datetime.datetime(2017, 6, 27, 20, 8, 16, 468454),
-    "_SYSTEMD_CGROUP": u"/system.slice/ssh.service",
+    "_SYSTEMD_CGROUP": "/system.slice/ssh.service",
     "__CURSOR": "s=7711ee01b03446309383870171dd5839;i=a74e;b=ad3915a590084feca635140606525497;m=571f43f8 dd;t=552fc7ed1cdf4;x=4ca0a3d4f1905736",
-    "_COMM": u"sshd",
-    "_CMDLINE": u"sshd: gareth [priv]",
-    "_SYSTEMD_INVOCATION_ID": u"38a5d5aad292426d93bfaab72a69c2ab",
-    "_EXE": u"/usr/sbin/sshd",
+    "_COMM": "sshd",
+    "_CMDLINE": "sshd: gareth [priv]",
+    "_SYSTEMD_INVOCATION_ID": "38a5d5aad292426d93bfaab72a69c2ab",
+    "_EXE": "/usr/sbin/sshd",
     "_UID": 0,
     "SYSLOG_PID": 15091,
-    "MESSAGE": u"pam_unix(sshd:session): session opened for user username by (uid=0)",
+    "MESSAGE": "pam_unix(sshd:session): session opened for user username by (uid=0)",
 }
 
 

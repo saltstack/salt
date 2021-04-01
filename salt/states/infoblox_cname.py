@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Infoblox CNAME management.
 
@@ -9,9 +8,6 @@ functions accept api_opts:
     api_username:  [default to pillar value]
     api_password:  [default to pillar value]
 """
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 
 def present(name=None, data=None, ensure_data=True, **api_opts):
@@ -63,7 +59,7 @@ def present(name=None, data=None, ensure_data=True, **api_opts):
             ret["result"] = False
             ret[
                 "comment"
-            ] = "** please update the name: {0} to equal the updated data name {1}".format(
+            ] = "** please update the name: {} to equal the updated data name {}".format(
                 name, data["name"]
             )
             return ret
@@ -101,7 +97,7 @@ def present(name=None, data=None, ensure_data=True, **api_opts):
 
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "would attempt to create infoblox record {0}".format(
+        ret["comment"] = "would attempt to create infoblox record {}".format(
             data["name"]
         )
         return ret

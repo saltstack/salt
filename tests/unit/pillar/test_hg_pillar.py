@@ -1,8 +1,5 @@
-# -*- coding: utf-8 -*-
 """test for pillar hg_pillar.py"""
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import shutil
@@ -10,12 +7,8 @@ import subprocess
 import tempfile
 
 import salt.pillar.hg_pillar as hg_pillar
-
-# Import Salt Libs
 import salt.utils.files
 import salt.utils.yaml
-
-# Import Salt Testing libs
 from tests.support.mixins import (
     AdaptedConfigurationTestCaseMixin,
     LoaderModuleMockMixin,
@@ -91,6 +84,6 @@ class HgPillarTestCase(
     def test_base(self):
         "check hg repo is imported correctly"
         mypillar = hg_pillar.ext_pillar(
-            "*", None, "file://{0}".format(self.hg_repo_path)
+            "*", None, "file://{}".format(self.hg_repo_path)
         )
         self.assertEqual(PILLAR_CONTENT, mypillar)

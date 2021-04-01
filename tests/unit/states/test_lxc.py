@@ -1,15 +1,9 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
 import salt.states.lxc as lxc
 import salt.utils.versions
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -65,7 +59,7 @@ class LxcTestCase(TestCase, LoaderModuleMockMixin):
                     lxc.present(name, running=True, clone_from=True), ret
                 )
 
-                comt = "Container '{0}' would be stopped".format(name)
+                comt = "Container '{}' would be stopped".format(name)
                 ret.update({"comment": comt, "result": None})
                 self.assertDictEqual(
                     lxc.present(name, running=False, clone_from=True), ret
@@ -95,17 +89,17 @@ class LxcTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(side_effect=[False, True, True])
         mock_des = MagicMock(return_value={"state": True})
         with patch.dict(lxc.__salt__, {"lxc.exists": mock, "lxc.destroy": mock_des}):
-            comt = "Container '{0}' does not exist".format(name)
+            comt = "Container '{}' does not exist".format(name)
             ret.update({"comment": comt})
             self.assertDictEqual(lxc.absent(name), ret)
 
             with patch.dict(lxc.__opts__, {"test": True}):
-                comt = "Container '{0}' would be destroyed".format(name)
+                comt = "Container '{}' would be destroyed".format(name)
                 ret.update({"comment": comt, "result": None})
                 self.assertDictEqual(lxc.absent(name), ret)
 
             with patch.dict(lxc.__opts__, {"test": False}):
-                comt = "Container '{0}' was destroyed".format(name)
+                comt = "Container '{}' was destroyed".format(name)
                 ret.update(
                     {"comment": comt, "result": True, "changes": {"state": True}}
                 )
@@ -126,7 +120,7 @@ class LxcTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(
             lxc.__salt__, {"lxc.exists": mock, "lxc.state": mock_t, "lxc.start": mock}
         ):
-            comt = "Container '{0}' does not exist".format(name)
+            comt = "Container '{}' does not exist".format(name)
             ret.update({"comment": comt})
             self.assertDictEqual(lxc.running(name), ret)
 
@@ -163,7 +157,7 @@ class LxcTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value={"state": {"new": "stop"}})
         mock_t = MagicMock(side_effect=["frozen", "stopped", "stopped"])
         with patch.dict(lxc.__salt__, {"lxc.freeze": mock, "lxc.state": mock_t}):
-            comt = "Container '{0}' is already frozen".format(name)
+            comt = "Container '{}' is already frozen".format(name)
             ret.update({"comment": comt})
             self.assertDictEqual(lxc.frozen(name), ret)
 
@@ -196,11 +190,11 @@ class LxcTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value={"state": {"new": "stop"}})
         mock_t = MagicMock(side_effect=[None, "stopped", "frozen", "frozen"])
         with patch.dict(lxc.__salt__, {"lxc.stop": mock, "lxc.state": mock_t}):
-            comt = "Container '{0}' does not exist".format(name)
+            comt = "Container '{}' does not exist".format(name)
             ret.update({"comment": comt})
             self.assertDictEqual(lxc.stopped(name), ret)
 
-            comt = "Container '{0}' is already stopped".format(name)
+            comt = "Container '{}' is already stopped".format(name)
             ret.update({"comment": comt, "result": True})
             self.assertDictEqual(lxc.stopped(name), ret)
 
@@ -242,7 +236,7 @@ class LxcTestCase(TestCase, LoaderModuleMockMixin):
         """
         name = "web01"
 
-        comment = "{0} lxc.conf will be edited".format(name)
+        comment = "{} lxc.conf will be edited".format(name)
 
         ret = {"name": name, "result": True, "comment": comment, "changes": {}}
 

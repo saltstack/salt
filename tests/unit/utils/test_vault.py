@@ -1,7 +1,6 @@
 """
 Test case for the vault utils module
 """
-
 import json
 import logging
 import os

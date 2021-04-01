@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     tests.integration.returners.test_noop_return
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -7,15 +6,11 @@
 
         https://github.com/saltstack/salt/pull/54731
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
 # Import 3rd-party tests
 import salt.ext.six as six
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.helpers import TstSuiteLoggingHandler
 from tests.support.unit import skipIf

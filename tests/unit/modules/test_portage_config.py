@@ -1,28 +1,22 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Ryan Lewis (ryansname@gmail.com)
 
     tests.unit.modules.portage_flags
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import re
 
-# Import salt libs
 import salt.modules.portage_config as portage_config
 import salt.utils.files
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-
-# Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
 
 
 class PortageConfigTestCase(TestCase, LoaderModuleMockMixin):
-    class DummyAtom(object):
+    class DummyAtom:
         def __init__(self):
             self.cp = None
             self.repo = None

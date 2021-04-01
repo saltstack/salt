@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage the Windows System PATH
 
@@ -6,21 +5,15 @@ Note that not all Windows applications will rehash the PATH environment variable
 Only the ones that listen to the WM_SETTINGCHANGE message
 http://support.microsoft.com/kb/104011
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import logging
 import os
 
-# Import Salt libs
 import salt.utils.args
 import salt.utils.data
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.win_functions
-
-# Import 3rd-party libs
-from salt.ext.six.moves import map
 
 try:
     HAS_WIN32 = True
@@ -119,7 +112,7 @@ def exists(path):
 
 
 def _update_local_path(local_path):
-    os.environ[str("PATH")] = PATHSEP.join(
+    os.environ["PATH"] = PATHSEP.join(
         local_path
     )  # future lint: disable=blacklisted-function
 

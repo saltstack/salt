@@ -34,7 +34,6 @@ import salt.loader_context
 import salt.utils.stringutils
 import salt.utils.versions
 from salt.exceptions import SaltInvocationError
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 from salt.loader import minion_mods
 
 # pylint: disable=import-error

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Digicert Pillar Certificates
 
@@ -13,7 +12,6 @@ section of your ``master`` configuration file:
     ext_pillar:
       - digicert: True
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 

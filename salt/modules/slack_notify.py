@@ -17,18 +17,11 @@ Module for sending messages to Slack
 
 
 import logging
+import urllib.parse
 
-import salt.ext.six.moves.http_client
 import salt.utils.json
 import salt.utils.slack
 from salt.exceptions import SaltInvocationError
-from salt.ext.six.moves import range
-
-# pylint: disable=import-error,no-name-in-module,redefined-builtin
-from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
-from salt.ext.six.moves.urllib.parse import urljoin as _urljoin
-
-# pylint: enable=import-error,no-name-in-module
 
 log = logging.getLogger(__name__)
 
@@ -131,7 +124,7 @@ def find_room(name, api_key=None):
     if ret["res"]:
         rooms = ret["message"]
         if rooms:
-            for room in range(0, len(rooms)):
+            for room in range(0, len(rooms)):  # pylint: disable=C0200
                 if rooms[room]["name"] == name:
                     return rooms[room]
     return False
@@ -160,7 +153,7 @@ def find_user(name, api_key=None):
     if ret["res"]:
         users = ret["message"]
         if users:
-            for user in range(0, len(users)):
+            for user in range(0, len(users)):  # pylint: disable=C0200
                 if users[user]["name"] == name:
                     return users[user]
     return False
@@ -234,7 +227,7 @@ def post_message(
         api_key=api_key,
         method="POST",
         header_dict={"Content-Type": "application/x-www-form-urlencoded"},
-        data=_urlencode(parameters),
+        data=urllib.parse.urlencode(parameters),
         opts=__opts__,
     )
 
@@ -279,7 +272,7 @@ def call_hook(
     if not identifier:
         identifier = _get_hook_id()
 
-    url = _urljoin(base_url, identifier)
+    url = urllib.parse.urljoin(base_url, identifier)
 
     if not message:
         log.error("message is required option")
@@ -309,7 +302,7 @@ def call_hook(
     if icon_emoji:
         payload["icon_emoji"] = icon_emoji
 
-    data = _urlencode({"payload": salt.utils.json.dumps(payload)})
+    data = urllib.parse.urlencode({"payload": salt.utils.json.dumps(payload)})
     result = salt.utils.http.query(url, method="POST", data=data, status=True)
 
     if result["status"] <= 201:

@@ -1,13 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 Display salt-key output
 =======================
 
 The ``salt-key`` command makes use of this outputter to format its output.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import salt libs
 import salt.output
 import salt.utils.color
 import salt.utils.data
@@ -40,19 +37,19 @@ def output(data, **kwargs):  # pylint: disable=unused-argument
         }
 
         trans = {
-            pend: "{0}{1}Unaccepted Keys:{2}".format(
+            pend: "{}{}Unaccepted Keys:{}".format(
                 " " * ident, color["LIGHT_RED"], color["ENDC"]
             ),
-            acc: "{0}{1}Accepted Keys:{2}".format(
+            acc: "{}{}Accepted Keys:{}".format(
                 " " * ident, color["LIGHT_GREEN"], color["ENDC"]
             ),
-            den: "{0}{1}Denied Keys:{2}".format(
+            den: "{}{}Denied Keys:{}".format(
                 " " * ident, color["LIGHT_MAGENTA"], color["ENDC"]
             ),
-            rej: "{0}{1}Rejected Keys:{2}".format(
+            rej: "{}{}Rejected Keys:{}".format(
                 " " * ident, color["LIGHT_BLUE"], color["ENDC"]
             ),
-            "local": "{0}{1}Local Keys:{2}".format(
+            "local": "{}{}Local Keys:{}".format(
                 " " * ident, color["LIGHT_MAGENTA"], color["ENDC"]
             ),
         }
@@ -69,16 +66,16 @@ def output(data, **kwargs):  # pylint: disable=unused-argument
         }
 
         trans = {
-            pend: "{0}{1}Unaccepted Keys:{2}".format(
+            pend: "{}{}Unaccepted Keys:{}".format(
                 " " * ident, color["LIGHT_RED"], color["ENDC"]
             ),
-            acc: "{0}{1}Accepted Keys:{2}".format(
+            acc: "{}{}Accepted Keys:{}".format(
                 " " * ident, color["LIGHT_GREEN"], color["ENDC"]
             ),
-            rej: "{0}{1}Rejected Keys:{2}".format(
+            rej: "{}{}Rejected Keys:{}".format(
                 " " * ident, color["LIGHT_BLUE"], color["ENDC"]
             ),
-            "local": "{0}{1}Local Keys:{2}".format(
+            "local": "{}{}Local Keys:{}".format(
                 " " * ident, color["LIGHT_MAGENTA"], color["ENDC"]
             ),
         }
@@ -86,16 +83,16 @@ def output(data, **kwargs):  # pylint: disable=unused-argument
     ret = ""
 
     for status in sorted(data):
-        ret += "{0}\n".format(trans[status])
+        ret += "{}\n".format(trans[status])
         for key in sorted(data[status]):
             key = salt.utils.data.decode(key)
             skey = salt.output.strip_esc_sequence(key) if strip_colors else key
             if isinstance(data[status], list):
-                ret += "{0}{1}{2}{3}\n".format(
+                ret += "{}{}{}{}\n".format(
                     " " * ident, cmap[status], skey, color["ENDC"]
                 )
             if isinstance(data[status], dict):
-                ret += "{0}{1}{2}:  {3}{4}\n".format(
+                ret += "{}{}{}:  {}{}\n".format(
                     " " * ident, cmap[status], skey, data[status][key], color["ENDC"]
                 )
     return ret

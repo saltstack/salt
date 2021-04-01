@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Linux File Access Control Lists
 
@@ -53,17 +52,12 @@ Ensure a Linux ACL list does not exist
          - perms: rwx
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
 
 import salt.utils.path
 from salt.exceptions import CommandExecutionError
-
-# Import salt libs
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -111,7 +105,7 @@ def present(name, acl_type, acl_name="", perms="", recurse=False, force=False):
     _octal_lookup = {0: "-", 1: "r", 2: "w", 4: "x"}
 
     if not os.path.exists(name):
-        ret["comment"] = "{0} does not exist".format(name)
+        ret["comment"] = "{} does not exist".format(name)
         ret["result"] = False
         return ret
 
@@ -144,7 +138,7 @@ def present(name, acl_type, acl_name="", perms="", recurse=False, force=False):
             user = [
                 i
                 for i in _current_perms[_acl_type]
-                if next(six.iterkeys(i)) == _search_name
+                if next(iter(i.keys())) == _search_name
             ].pop()
         except (AttributeError, IndexError, StopIteration, KeyError):
             user = None
@@ -202,7 +196,7 @@ def present(name, acl_type, acl_name="", perms="", recurse=False, force=False):
                     ret.update(
                         {
                             "comment": "Updated permissions will be applied for "
-                            "{0}: {1} -> {2}".format(acl_name, new_perms, perms),
+                            "{}: {} -> {}".format(acl_name, new_perms, perms),
                             "result": None,
                             "changes": changes,
                         }
@@ -224,8 +218,7 @@ def present(name, acl_type, acl_name="", perms="", recurse=False, force=False):
                     )
                     ret.update(
                         {
-                            "comment": "Updated permissions for "
-                            "{0}".format(acl_name),
+                            "comment": "Updated permissions for " "{}".format(acl_name),
                             "result": True,
                             "changes": changes,
                         }
@@ -234,7 +227,7 @@ def present(name, acl_type, acl_name="", perms="", recurse=False, force=False):
                     ret.update(
                         {
                             "comment": "Error updating permissions for "
-                            "{0}: {1}".format(acl_name, exc.strerror),
+                            "{}: {}".format(acl_name, exc.strerror),
                             "result": False,
                         }
                     )
@@ -247,7 +240,7 @@ def present(name, acl_type, acl_name="", perms="", recurse=False, force=False):
                 ret.update(
                     {
                         "comment": "New permissions will be applied for "
-                        "{0}: {1}".format(acl_name, perms),
+                        "{}: {}".format(acl_name, perms),
                         "result": None,
                         "changes": changes,
                     }
@@ -264,8 +257,7 @@ def present(name, acl_type, acl_name="", perms="", recurse=False, force=False):
                 )
                 ret.update(
                     {
-                        "comment": "Applied new permissions for "
-                        "{0}".format(acl_name),
+                        "comment": "Applied new permissions for " "{}".format(acl_name),
                         "result": True,
                         "changes": changes,
                     }
@@ -273,8 +265,8 @@ def present(name, acl_type, acl_name="", perms="", recurse=False, force=False):
             except CommandExecutionError as exc:
                 ret.update(
                     {
-                        "comment": "Error updating permissions for {0}: "
-                        "{1}".format(acl_name, exc.strerror),
+                        "comment": "Error updating permissions for {}: "
+                        "{}".format(acl_name, exc.strerror),
                         "result": False,
                     }
                 )
@@ -308,7 +300,7 @@ def absent(name, acl_type, acl_name="", perms="", recurse=False):
     ret = {"name": name, "result": True, "changes": {}, "comment": ""}
 
     if not os.path.exists(name):
-        ret["comment"] = "{0} does not exist".format(name)
+        ret["comment"] = "{} does not exist".format(name)
         ret["result"] = False
         return ret
 
@@ -341,7 +333,7 @@ def absent(name, acl_type, acl_name="", perms="", recurse=False):
             user = [
                 i
                 for i in _current_perms[_acl_type]
-                if next(six.iterkeys(i)) == _search_name
+                if next(iter(i.keys())) == _search_name
             ].pop()
         except (AttributeError, IndexError, StopIteration, KeyError):
             user = None
@@ -406,7 +398,7 @@ def list_present(name, acl_type, acl_names=None, perms="", recurse=False, force=
     _octal = {"r": 4, "w": 2, "x": 1, "-": 0}
     _octal_perms = sum([_octal.get(i, i) for i in perms])
     if not os.path.exists(name):
-        ret["comment"] = "{0} does not exist".format(name)
+        ret["comment"] = "{} does not exist".format(name)
         ret["result"] = False
         return ret
 
@@ -467,7 +459,7 @@ def list_present(name, acl_type, acl_names=None, perms="", recurse=False, force=
         try:
             users = {}
             for i in _current_perms[_acl_type]:
-                if i and next(six.iterkeys(i)) in _search_names:
+                if i and next(iter(i.keys())) in _search_names:
                     users.update(i)
         except (AttributeError, KeyError):
             users = None
@@ -491,7 +483,7 @@ def list_present(name, acl_type, acl_names=None, perms="", recurse=False, force=
                                 "old": {
                                     "acl_name": ", ".join(acl_names),
                                     "acl_type": acl_type,
-                                    "perms": six.text_type(users[search_name]["octal"]),
+                                    "perms": str(users[search_name]["octal"]),
                                 },
                             }
                         )
@@ -499,9 +491,9 @@ def list_present(name, acl_type, acl_names=None, perms="", recurse=False, force=
                             ret.update(
                                 {
                                     "comment": "Updated permissions will be applied for "
-                                    "{0}: {1} -> {2}".format(
+                                    "{}: {} -> {}".format(
                                         acl_names,
-                                        six.text_type(users[search_name]["octal"]),
+                                        str(users[search_name]["octal"]),
                                         perms,
                                     ),
                                     "result": None,
@@ -527,7 +519,7 @@ def list_present(name, acl_type, acl_names=None, perms="", recurse=False, force=
                             ret.update(
                                 {
                                     "comment": "Updated permissions for "
-                                    "{0}".format(acl_names),
+                                    "{}".format(acl_names),
                                     "result": True,
                                     "changes": changes,
                                 }
@@ -536,7 +528,7 @@ def list_present(name, acl_type, acl_names=None, perms="", recurse=False, force=
                             ret.update(
                                 {
                                     "comment": "Error updating permissions for "
-                                    "{0}: {1}".format(acl_names, exc.strerror),
+                                    "{}: {}".format(acl_names, exc.strerror),
                                     "result": False,
                                 }
                             )
@@ -553,7 +545,7 @@ def list_present(name, acl_type, acl_names=None, perms="", recurse=False, force=
                         ret.update(
                             {
                                 "comment": "New permissions will be applied for "
-                                "{0}: {1}".format(acl_names, perms),
+                                "{}: {}".format(acl_names, perms),
                                 "result": None,
                                 "changes": changes,
                             }
@@ -579,7 +571,7 @@ def list_present(name, acl_type, acl_names=None, perms="", recurse=False, force=
                         ret.update(
                             {
                                 "comment": "Applied new permissions for "
-                                "{0}".format(", ".join(acl_names)),
+                                "{}".format(", ".join(acl_names)),
                                 "result": True,
                                 "changes": changes,
                             }
@@ -587,8 +579,8 @@ def list_present(name, acl_type, acl_names=None, perms="", recurse=False, force=
                     except CommandExecutionError as exc:
                         ret.update(
                             {
-                                "comment": "Error updating permissions for {0}: "
-                                "{1}".format(acl_names, exc.strerror),
+                                "comment": "Error updating permissions for {}: "
+                                "{}".format(acl_names, exc.strerror),
                                 "result": False,
                             }
                         )
@@ -606,7 +598,7 @@ def list_present(name, acl_type, acl_names=None, perms="", recurse=False, force=
                 ret.update(
                     {
                         "comment": "New permissions will be applied for "
-                        "{0}: {1}".format(acl_names, perms),
+                        "{}: {}".format(acl_names, perms),
                         "result": None,
                         "changes": changes,
                     }
@@ -630,7 +622,7 @@ def list_present(name, acl_type, acl_names=None, perms="", recurse=False, force=
                 ret.update(
                     {
                         "comment": "Applied new permissions for "
-                        "{0}".format(", ".join(acl_names)),
+                        "{}".format(", ".join(acl_names)),
                         "result": True,
                         "changes": changes,
                     }
@@ -638,8 +630,8 @@ def list_present(name, acl_type, acl_names=None, perms="", recurse=False, force=
             except CommandExecutionError as exc:
                 ret.update(
                     {
-                        "comment": "Error updating permissions for {0}: "
-                        "{1}".format(acl_names, exc.strerror),
+                        "comment": "Error updating permissions for {}: "
+                        "{}".format(acl_names, exc.strerror),
                         "result": False,
                     }
                 )
@@ -679,7 +671,7 @@ def list_absent(name, acl_type, acl_names=None, recurse=False):
     ret = {"name": name, "result": True, "changes": {}, "comment": ""}
 
     if not os.path.exists(name):
-        ret["comment"] = "{0} does not exist".format(name)
+        ret["comment"] = "{} does not exist".format(name)
         ret["result"] = False
         return ret
 
@@ -710,7 +702,7 @@ def list_absent(name, acl_type, acl_names=None, recurse=False):
         try:
             users = {}
             for i in _current_perms[_acl_type]:
-                if i and next(six.iterkeys(i)) in _search_names:
+                if i and next(iter(i.keys())) in _search_names:
                     users.update(i)
         except (AttributeError, KeyError):
             users = None

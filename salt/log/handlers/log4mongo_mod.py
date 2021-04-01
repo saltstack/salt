@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     Log4Mongo Logging Handler
     =========================
@@ -34,18 +33,13 @@
         This work was inspired by the Salt logging handlers for LogStash and
         Sentry and by the log4mongo Python implementation.
 """
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import socket
 
-# Import salt libs
-from salt.ext import six
 from salt.log.mixins import NewStyleClassMixIn
 from salt.log.setup import LOG_LEVELS
 
-# Import third party libs
 try:
     from log4mongo.handlers import MongoHandler, MongoFormatter
 
@@ -84,7 +78,7 @@ def setup_handlers():
         }
 
         config_opts = {}
-        for config_opt, arg_name in six.iteritems(config_fields):
+        for config_opt, arg_name in config_fields.items():
             config_opts[arg_name] = __opts__[handler_id].get(config_opt)
 
         config_opts["level"] = LOG_LEVELS[

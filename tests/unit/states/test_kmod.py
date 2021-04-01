@@ -1,14 +1,8 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
 import salt.states.kmod as kmod
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -33,14 +27,14 @@ class KmodTestCase(TestCase, LoaderModuleMockMixin):
 
         mock_mod_list = MagicMock(return_value=[name])
         with patch.dict(kmod.__salt__, {"kmod.mod_list": mock_mod_list}):
-            comment = "Kernel module {0} is already present".format(name)
+            comment = "Kernel module {} is already present".format(name)
             ret.update({"comment": comment})
             self.assertDictEqual(kmod.present(name), ret)
 
         mock_mod_list = MagicMock(return_value=[])
         with patch.dict(kmod.__salt__, {"kmod.mod_list": mock_mod_list}):
             with patch.dict(kmod.__opts__, {"test": True}):
-                comment = "Kernel module {0} is set to be loaded".format(name)
+                comment = "Kernel module {} is set to be loaded".format(name)
                 ret.update({"comment": comment, "result": None})
                 self.assertDictEqual(kmod.present(name), ret)
 
@@ -56,7 +50,7 @@ class KmodTestCase(TestCase, LoaderModuleMockMixin):
             },
         ):
             with patch.dict(kmod.__opts__, {"test": False}):
-                comment = "Loaded kernel module {0}".format(name)
+                comment = "Loaded kernel module {}".format(name)
                 ret.update(
                     {"comment": comment, "result": True, "changes": {name: "loaded"}}
                 )
@@ -136,7 +130,7 @@ class KmodTestCase(TestCase, LoaderModuleMockMixin):
         mock_mod_list = MagicMock(return_value=[name])
         with patch.dict(kmod.__salt__, {"kmod.mod_list": mock_mod_list}):
             with patch.dict(kmod.__opts__, {"test": True}):
-                comment = "Kernel module {0} is set to be removed".format(name)
+                comment = "Kernel module {} is set to be removed".format(name)
                 ret.update({"comment": comment, "result": None})
                 self.assertDictEqual(kmod.absent(name), ret)
 
@@ -146,7 +140,7 @@ class KmodTestCase(TestCase, LoaderModuleMockMixin):
             kmod.__salt__, {"kmod.mod_list": mock_mod_list, "kmod.remove": mock_remove}
         ):
             with patch.dict(kmod.__opts__, {"test": False}):
-                comment = "Removed kernel module {0}".format(name)
+                comment = "Removed kernel module {}".format(name)
                 ret.update(
                     {"comment": comment, "result": True, "changes": {name: "removed"}}
                 )
@@ -155,7 +149,7 @@ class KmodTestCase(TestCase, LoaderModuleMockMixin):
         mock_mod_list = MagicMock(return_value=[])
         with patch.dict(kmod.__salt__, {"kmod.mod_list": mock_mod_list}):
             with patch.dict(kmod.__opts__, {"test": True}):
-                comment = "Kernel module {0} is already removed".format(name)
+                comment = "Kernel module {} is already removed".format(name)
                 ret.update({"comment": comment, "result": True, "changes": {}})
                 self.assertDictEqual(kmod.absent(name), ret)
 
@@ -208,7 +202,7 @@ class KmodTestCase(TestCase, LoaderModuleMockMixin):
         mock_mod_list = MagicMock(return_value=[])
         with patch.dict(kmod.__salt__, {"kmod.mod_list": mock_mod_list}):
             with patch.dict(kmod.__opts__, {"test": True}):
-                comment = "Kernel modules {0} are already removed".format(
+                comment = "Kernel modules {} are already removed".format(
                     ", ".join(mods)
                 )
                 ret.update({"comment": comment, "result": True, "changes": {}})

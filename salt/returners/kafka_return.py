@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 Return data to a Kafka topic
 
@@ -23,13 +21,11 @@ To use the kafka returner, append `--return kafka` to the Salt command, eg;
     salt '*' test.ping --return kafka
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
 import salt.utils.json
 
-# Import third-party libs
 try:
     from confluent_kafka import Producer
 

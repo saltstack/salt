@@ -1,20 +1,15 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Anthony Shaw <anthonyshaw@apache.org>
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.states.libcloud_dns as libcloud_dns
 from salt.modules.libcloud_dns import _simple_record, _simple_zone
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase
 
 
-class DNSTestZone(object):
+class DNSTestZone:
     def __init__(self, id, domain):
         self.id = id
         self.type = "master"
@@ -23,7 +18,7 @@ class DNSTestZone(object):
         self.extra = {}
 
 
-class DNSTestRecord(object):
+class DNSTestRecord:
     def __init__(self, id, name, record_type, data):
         self.id = id
         self.name = name

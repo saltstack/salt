@@ -2,13 +2,12 @@
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
+import io
 
 import salt.modules.hosts as hosts
 import salt.utils.data
 import salt.utils.platform
 import salt.utils.stringutils
-from salt.ext import six
-from salt.ext.six.moves import StringIO
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, mock_open, patch
 from tests.support.unit import TestCase
@@ -144,7 +143,7 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
                 )
             ]
 
-            class TmpStringIO(StringIO):
+            class TmpStringIO(io.StringIO):
                 def __init__(self, fn, mode="r"):
                     self.mode = mode
                     initial_value = data[0]
@@ -169,11 +168,11 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
                     # module
                     if self.getvalue():
                         data[0] = self.getvalue()
-                    StringIO.close(self)
+                    io.StringIO.close(self)
 
                 def read(self, *args):
                     ret = super().read(*args)
-                    if six.PY3 and "b" in self.mode:
+                    if "b" in self.mode:
                         return salt.utils.stringutils.to_bytes(ret)
                     else:
                         return ret
@@ -196,7 +195,7 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
 
                 def readlines(self):
                     ret = super().readlines()
-                    if six.PY3 and "b" in self.mode:
+                    if "b" in self.mode:
                         return salt.utils.data.encode(ret)
                     else:
                         return ret

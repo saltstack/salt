@@ -141,7 +141,6 @@ import logging
 from salt.exceptions import SaltCacheError
 
 # Import salt
-from salt.ext.six.moves import range
 
 try:
     import redis

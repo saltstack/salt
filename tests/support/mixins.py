@@ -15,6 +15,7 @@ import logging
 import multiprocessing
 import os
 import pprint
+import queue
 import subprocess
 import tempfile
 import time
@@ -30,9 +31,6 @@ import salt.utils.process
 import salt.utils.stringutils
 import salt.utils.yaml
 import salt.version
-from salt.ext import six
-from salt.ext.six.moves import zip
-from salt.ext.six.moves.queue import Empty
 from salt.utils.immutabletypes import freeze
 from salt.utils.verify import verify_env
 from saltfactories.utils import random_string
@@ -414,9 +412,9 @@ class LoaderModuleMockMixin(metaclass=_FixLoaderModuleMockMixinMroOrder):
 
 class XMLEqualityMixin:
     def assertEqualXML(self, e1, e2):
-        if six.PY3 and isinstance(e1, bytes):
+        if isinstance(e1, bytes):
             e1 = e1.decode("utf-8")
-        if six.PY3 and isinstance(e2, bytes):
+        if isinstance(e2, bytes):
             e2 = e2.decode("utf-8")
         if isinstance(e1, str):
             e1 = etree.XML(e1)
@@ -655,7 +653,7 @@ class SaltMinionEventAssertsMixin:
         while True:
             try:
                 event = self.q.get(False)
-            except Empty:
+            except queue.Empty:
                 time.sleep(sleep_time)
                 if time.time() - start >= timeout:
                     break

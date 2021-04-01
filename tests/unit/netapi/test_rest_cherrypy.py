@@ -1,13 +1,7 @@
-# Import Python libs
-
-# Import 3rd-party libs
 from urllib.parse import urlencode
 
-# Import Salt libs
 import salt.utils.json
 import salt.utils.yaml
-
-# Import Salt libs
 from tests.support.cherrypy_testclasses import BaseToolsTest
 
 

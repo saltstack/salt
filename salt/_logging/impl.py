@@ -4,8 +4,6 @@
 
     Salt's logging implementation classes/functionality
 """
-
-
 import logging
 import re
 import sys
@@ -29,8 +27,6 @@ from salt._logging.mixins import NewStyleClassMixin  # isort:skip
 from salt.exceptions import LoggingRuntimeError  # isort:skip
 from salt.utils.ctx import RequestContext  # isort:skip
 from salt.utils.textformat import TextFormat  # isort:skip
-
-# from salt.ext.six.moves.urllib.parse import urlparse  # pylint: disable=import-error,no-name-in-module
 
 LOG_LEVELS = {
     "all": logging.NOTSET,

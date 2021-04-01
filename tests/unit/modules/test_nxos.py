@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Mike Wiebe <@mikewiebe>
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.modules.cp as cp_module
 import salt.modules.file as file_module

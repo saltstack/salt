@@ -83,14 +83,12 @@ salt-call from the GuestShell environment as follows.
     salt '*' nxos.cmd get_user username=admin
 """
 
-# Import python stdlib
 import ast
 import difflib
 import logging
 import re
 from socket import error as socket_error
 
-# Import Salt libs
 import salt.utils.nxos
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError, NxosError, SaltInvocationError

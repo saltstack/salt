@@ -1,18 +1,11 @@
-# -*- coding: utf-8 -*-
-
 """
 Unit tests for AWS KMS Decryption Renderer.
 """
 # pylint: disable=protected-access
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt libs
 import salt.exceptions
 import salt.renderers.aws_kms as aws_kms
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
