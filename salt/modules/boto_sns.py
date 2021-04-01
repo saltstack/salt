@@ -76,7 +76,9 @@ def get_all_topics(region=None, key=None, keyid=None, profile=None):
     """
     Returns a list of the all topics..
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_sns.get_all_topics
     """
@@ -110,7 +112,9 @@ def exists(name, region=None, key=None, keyid=None, profile=None):
     """
     Check to see if an SNS topic exists.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_sns.exists mytopic region=us-east-1
     """
@@ -261,7 +265,9 @@ def get_arn(name, region=None, key=None, keyid=None, profile=None):
     """
     Returns the full ARN for a given topic name.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_sns.get_arn mytopic
     """

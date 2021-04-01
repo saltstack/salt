@@ -1,28 +1,24 @@
-# -*- coding: utf-8 -*-
 """
 Many aspects of the salt payload need to be managed, from the return of
 encrypted keys to general payload dynamics and packaging, these happen
 in here
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
+import collections.abc
 import datetime
 import gc
 
 # import sys  # Use if sys is commented out below
 import logging
 
-# Import salt libs
+import salt.loader_context
 import salt.log
 import salt.transport.frame
 import salt.utils.immutabletypes as immutabletypes
 import salt.utils.msgpack
 import salt.utils.stringutils
 from salt.exceptions import SaltDeserializationError, SaltReqTimeoutError
-
-# Import third party libs
 from salt.ext import six
 from salt.utils.data import CaseInsensitiveDict
 
@@ -63,7 +59,7 @@ def format_payload(enc, **kwargs):
     return package(payload)
 
 
-class Serial(object):
+class Serial:
     """
     Create a serialization object, this object manages all message
     serialization in Salt
@@ -72,7 +68,7 @@ class Serial(object):
     def __init__(self, opts):
         if isinstance(opts, dict):
             self.serial = opts.get("serial", "msgpack")
-        elif isinstance(opts, six.string_types):
+        elif isinstance(opts, str):
             self.serial = opts
         else:
             self.serial = "msgpack"
@@ -154,10 +150,7 @@ class Serial(object):
         data = fn_.read()
         fn_.close()
         if data:
-            if six.PY3:
-                return self.loads(data, encoding="utf-8")
-            else:
-                return self.loads(data)
+            return self.loads(data, encoding="utf-8")
 
     def dumps(self, msg, use_bin_type=False):
         """
@@ -171,10 +164,10 @@ class Serial(object):
         """
 
         def ext_type_encoder(obj):
-            if isinstance(obj, six.integer_types):
+            if isinstance(obj, int):
                 # msgpack can't handle the very long Python longs for jids
                 # Convert any very long longs to strings
-                return six.text_type(obj)
+                return str(obj)
             elif isinstance(obj, (datetime.datetime, datetime.date)):
                 # msgpack doesn't support datetime.datetime and datetime.date datatypes.
                 # So here we have converted these types to custom datatype
@@ -192,6 +185,8 @@ class Serial(object):
                 # msgpack can't handle set so translate it to tuple
                 return tuple(obj)
             elif isinstance(obj, CaseInsensitiveDict):
+                return dict(obj)
+            elif isinstance(obj, collections.abc.MutableMapping):
                 return dict(obj)
             # Nothing known exceptions found. Let msgpack raise its own.
             return obj
@@ -218,7 +213,7 @@ class Serial(object):
                 # The isinstance checks in this if/elif chain need to be
                 # kept in sync with the above recursion check.
                 if isinstance(obj, dict):
-                    for key, value in six.iteritems(obj.copy()):
+                    for key, value in obj.copy().items():
                         obj[key] = verylong_encoder(value, context)
                     return dict(obj)
                 elif isinstance(obj, (list, tuple)):
@@ -228,8 +223,8 @@ class Serial(object):
                     return obj
                 # A value of an Integer object is limited from -(2^63) upto (2^64)-1 by MessagePack
                 # spec. Here we care only of JIDs that are positive integers.
-                if isinstance(obj, six.integer_types) and obj >= pow(2, 64):
-                    return six.text_type(obj)
+                if isinstance(obj, int) and obj >= pow(2, 64):
+                    return str(obj)
                 else:
                     return obj
 
@@ -242,17 +237,14 @@ class Serial(object):
         """
         Serialize the correct data into the named file object
         """
-        if six.PY2:
-            fn_.write(self.dumps(msg))
-        else:
-            # When using Python 3, write files in such a way
-            # that the 'bytes' and 'str' types are distinguishable
-            # by using "use_bin_type=True".
-            fn_.write(self.dumps(msg, use_bin_type=True))
+        # When using Python 3, write files in such a way
+        # that the 'bytes' and 'str' types are distinguishable
+        # by using "use_bin_type=True".
+        fn_.write(self.dumps(msg, use_bin_type=True))
         fn_.close()
 
 
-class SREQ(object):
+class SREQ:
     """
     Create a generic interface to wrap salt zeromq req calls.
     """
@@ -348,7 +340,7 @@ class SREQ(object):
             if tried >= tries:
                 self.clear_socket()
                 raise SaltReqTimeoutError(
-                    "SaltReqTimeoutError: after {0} seconds, ran {1} "
+                    "SaltReqTimeoutError: after {} seconds, ran {} "
                     "tries".format(timeout * tried, tried)
                 )
         return self.serial.loads(self.socket.recv())

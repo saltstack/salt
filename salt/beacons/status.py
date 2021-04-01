@@ -87,8 +87,6 @@ markers for specific list items:
     to check the minion log for errors after configuring this beacon.
 
 """
-
-
 import datetime
 import logging
 

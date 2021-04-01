@@ -2,13 +2,11 @@
 Support for DEB packages
 """
 
-# Import python libs
 import datetime
 import logging
 import os
 import re
 
-# Import salt libs
 import salt.utils.args
 import salt.utils.data
 import salt.utils.files
@@ -393,7 +391,7 @@ def info(*packages, **kwargs):
 
         .. versionadded:: 2016.11.3
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 

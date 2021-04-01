@@ -11,6 +11,7 @@ from pathlib import Path
 
 import jinja2
 import jinja2.ext
+import jinja2.sandbox
 import salt.utils.data
 import salt.utils.dateutils
 import salt.utils.files
@@ -453,17 +454,15 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
         opt_jinja_env_helper(opt_jinja_env, "jinja_env")
 
     if opts.get("allow_undefined", False):
-        jinja_env = jinja2.Environment(**env_args)
+        jinja_env = jinja2.sandbox.SandboxedEnvironment(**env_args)
     else:
-        jinja_env = jinja2.Environment(undefined=jinja2.StrictUndefined, **env_args)
+        jinja_env = jinja2.sandbox.SandboxedEnvironment(
+            undefined=jinja2.StrictUndefined, **env_args
+        )
 
-    tojson_filter = jinja_env.filters.get("tojson")
     indent_filter = jinja_env.filters.get("indent")
     jinja_env.tests.update(JinjaTest.salt_jinja_tests)
     jinja_env.filters.update(JinjaFilter.salt_jinja_filters)
-    if tojson_filter is not None:
-        # Use the existing tojson filter, if present (jinja2 >= 2.9)
-        jinja_env.filters["tojson"] = tojson_filter
     if salt.utils.jinja.JINJA_VERSION >= LooseVersion("2.11"):
         # Use the existing indent filter on Jinja versions where it's not broken
         jinja_env.filters["indent"] = indent_filter
@@ -506,6 +505,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     except (
         jinja2.exceptions.TemplateRuntimeError,
         jinja2.exceptions.TemplateSyntaxError,
+        jinja2.exceptions.SecurityError,
     ) as exc:
         trace = traceback.extract_tb(sys.exc_info()[2])
         line, out = _get_jinja_error(trace, context=decoded_context)
