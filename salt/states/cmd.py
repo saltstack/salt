@@ -444,26 +444,26 @@ def wait(
         interactively to the console and the logs.
         This is experimental.
 
-    success_retcodes: This parameter will be allow a list of
+    success_retcodes: This parameter will allow a list of
         non-zero return codes that should be considered a success.  If the
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
       .. versionadded:: 2019.2.0
 
-    success_stdout: This parameter will be allow a list of
+    success_stdout: This parameter will allow a list of
         strings that when found in standard out should be considered a success.
         If stdout returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Silicon
+      .. versionadded:: 3004
 
-    success_stderr: This parameter will be allow a list of
+    success_stderr: This parameter will allow a list of
         strings that when found in standard error should be considered a success.
         If stderr returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Silicon
+      .. versionadded:: 3004
     """
     # Ignoring our arguments is intentional.
     return {"name": name, "changes": {}, "result": True, "comment": ""}
@@ -594,26 +594,26 @@ def wait_script(
 
         .. versionadded:: 2018.3.0
 
-    success_retcodes: This parameter will be allow a list of
+    success_retcodes: This parameter will allow a list of
         non-zero return codes that should be considered a success.  If the
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
       .. versionadded:: 2019.2.0
 
-    success_stdout: This parameter will be allow a list of
+    success_stdout: This parameter will allow a list of
         strings that when found in standard out should be considered a success.
         If stdout returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Silicon
+      .. versionadded:: 3004
 
-    success_stderr: This parameter will be allow a list of
+    success_stderr: This parameter will allow a list of
         strings that when found in standard error should be considered a success.
         If stderr returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Silicon
+      .. versionadded:: 3004
     """
     # Ignoring our arguments is intentional.
     return {"name": name, "changes": {}, "result": True, "comment": ""}
@@ -764,26 +764,26 @@ def run(
 
         .. versionadded:: 2016.3.6
 
-    success_retcodes: This parameter will be allow a list of
+    success_retcodes: This parameter will allow a list of
         non-zero return codes that should be considered a success.  If the
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
       .. versionadded:: 2019.2.0
 
-    success_stdout: This parameter will be allow a list of
+    success_stdout: This parameter will allow a list of
         strings that when found in standard out should be considered a success.
         If stdout returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Silicon
+      .. versionadded:: 3004
 
-    success_stderr: This parameter will be allow a list of
+    success_stderr: This parameter will allow a list of
         strings that when found in standard error should be considered a success.
         If stderr returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Silicon
+      .. versionadded:: 3004
 
     .. note::
 
@@ -1065,26 +1065,26 @@ def script(
 
         .. versionadded:: 2018.3.0
 
-    success_retcodes: This parameter will be allow a list of
+    success_retcodes: This parameter will allow a list of
         non-zero return codes that should be considered a success.  If the
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
       .. versionadded:: 2019.2.0
 
-    success_stdout: This parameter will be allow a list of
+    success_stdout: This parameter will allow a list of
         strings that when found in standard out should be considered a success.
         If stdout returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Silicon
+      .. versionadded:: 3004
 
-    success_stderr: This parameter will be allow a list of
+    success_stderr: This parameter will allow a list of
         strings that when found in standard error should be considered a success.
         If stderr returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Silicon
+      .. versionadded:: 3004
     """
     test_name = None
     if not isinstance(stateful, list):

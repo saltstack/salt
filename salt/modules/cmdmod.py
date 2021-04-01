@@ -1185,26 +1185,26 @@ def run(
         Be absolutely certain that you have sanitized your input prior to using
         python_shell=True
 
-    :param list success_retcodes: This parameter will be allow a list of
+    :param list success_retcodes: This parameter will allow a list of
         non-zero return codes that should be considered a success.  If the
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
       .. versionadded:: 2019.2.0
 
-    :param list success_stdout: This parameter will be allow a list of
+    :param list success_stdout: This parameter will allow a list of
         strings that when found in standard out should be considered a success.
         If stdout returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Silicon
+      .. versionadded:: 3004
 
-    :param list success_stderr: This parameter will be allow a list of
+    :param list success_stderr: This parameter will allow a list of
         strings that when found in standard error should be considered a success.
         If stderr returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Silicon
+      .. versionadded:: 3004
 
     :param bool stdin_raw_newlines: False
         If ``True``, Salt will not automatically convert the characters ``\\n``
@@ -1467,26 +1467,26 @@ def shell(
         processing! Be absolutely sure that you have properly sanitized the
         command passed to this function and do not use untrusted inputs.
 
-    :param list success_retcodes: This parameter will be allow a list of
+    :param list success_retcodes: This parameter will allow a list of
         non-zero return codes that should be considered a success.  If the
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
       .. versionadded:: 2019.2.0
 
-    :param list success_stdout: This parameter will be allow a list of
+    :param list success_stdout: This parameter will allow a list of
         strings that when found in standard out should be considered a success.
         If stdout returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Silicon
+      .. versionadded:: 3004
 
-    :param list success_stderr: This parameter will be allow a list of
+    :param list success_stderr: This parameter will allow a list of
         strings that when found in standard error should be considered a success.
         If stderr returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Silicon
+      .. versionadded:: 3004
 
     :param bool stdin_raw_newlines: False
         If ``True``, Salt will not automatically convert the characters ``\\n``
@@ -1719,26 +1719,26 @@ def run_stdout(
     :param bool use_vt: Use VT utils (saltstack) to stream the command output
         more interactively to the console and the logs. This is experimental.
 
-    :param list success_retcodes: This parameter will be allow a list of
+    :param list success_retcodes: This parameter will allow a list of
         non-zero return codes that should be considered a success.  If the
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
       .. versionadded:: 2019.2.0
 
-    :param list success_stdout: This parameter will be allow a list of
+    :param list success_stdout: This parameter will allow a list of
         strings that when found in standard out should be considered a success.
         If stdout returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Silicon
+      .. versionadded:: 3004
 
-    :param list success_stderr: This parameter will be allow a list of
+    :param list success_stderr: This parameter will allow a list of
         strings that when found in standard error should be considered a success.
         If stderr returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Silicon
+      .. versionadded:: 3004
 
     :param bool stdin_raw_newlines: False
         If ``True``, Salt will not automatically convert the characters ``\\n``
@@ -1953,26 +1953,26 @@ def run_stderr(
     :param bool use_vt: Use VT utils (saltstack) to stream the command output
         more interactively to the console and the logs. This is experimental.
 
-    :param list success_retcodes: This parameter will be allow a list of
+    :param list success_retcodes: This parameter will allow a list of
         non-zero return codes that should be considered a success.  If the
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
       .. versionadded:: 2019.2.0
 
-    :param list success_stdout: This parameter will be allow a list of
+    :param list success_stdout: This parameter will allow a list of
         strings that when found in standard out should be considered a success.
         If stdout returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Silicon
+      .. versionadded:: 3004
 
-    :param list success_stderr: This parameter will be allow a list of
+    :param list success_stderr: This parameter will allow a list of
         strings that when found in standard error should be considered a success.
         If stderr returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Silicon
+      .. versionadded:: 3004
 
     :param bool stdin_raw_newlines: False
         If ``True``, Salt will not automatically convert the characters ``\\n``
@@ -2230,26 +2230,26 @@ def run_all(
 
         .. versionadded:: 2016.3.6
 
-    :param list success_retcodes: This parameter will be allow a list of
+    :param list success_retcodes: This parameter will allow a list of
         non-zero return codes that should be considered a success.  If the
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
       .. versionadded:: 2019.2.0
 
-    :param list success_stdout: This parameter will be allow a list of
+    :param list success_stdout: This parameter will allow a list of
         strings that when found in standard out should be considered a success.
         If stdout returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Silicon
+      .. versionadded:: 3004
 
-    :param list success_stderr: This parameter will be allow a list of
+    :param list success_stderr: This parameter will allow a list of
         strings that when found in standard error should be considered a success.
         If stderr returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Silicon
+      .. versionadded:: 3004
 
     :param bool stdin_raw_newlines: False
         If ``True``, Salt will not automatically convert the characters ``\\n``
@@ -2455,26 +2455,26 @@ def retcode(
     :rtype: None
     :returns: Return Code as an int or None if there was an exception.
 
-    :param list success_retcodes: This parameter will be allow a list of
+    :param list success_retcodes: This parameter will allow a list of
         non-zero return codes that should be considered a success.  If the
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
       .. versionadded:: 2019.2.0
 
-    :param list success_stdout: This parameter will be allow a list of
+    :param list success_stdout: This parameter will allow a list of
         strings that when found in standard out should be considered a success.
         If stdout returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Silicon
+      .. versionadded:: 3004
 
-    :param list success_stderr: This parameter will be allow a list of
+    :param list success_stderr: This parameter will allow a list of
         strings that when found in standard error should be considered a success.
         If stderr returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Silicon
+      .. versionadded:: 3004
 
     :param bool stdin_raw_newlines: False
         If ``True``, Salt will not automatically convert the characters ``\\n``
@@ -2754,26 +2754,26 @@ def script(
     :param bool use_vt: Use VT utils (saltstack) to stream the command output
         more interactively to the console and the logs. This is experimental.
 
-    :param list success_retcodes: This parameter will be allow a list of
+    :param list success_retcodes: This parameter will allow a list of
         non-zero return codes that should be considered a success.  If the
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
       .. versionadded:: 2019.2.0
 
-    :param list success_stdout: This parameter will be allow a list of
+    :param list success_stdout: This parameter will allow a list of
         strings that when found in standard out should be considered a success.
         If stdout returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Silicon
+      .. versionadded:: 3004
 
-    :param list success_stderr: This parameter will be allow a list of
+    :param list success_stderr: This parameter will allow a list of
         strings that when found in standard error should be considered a success.
         If stderr returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Silicon
+      .. versionadded:: 3004
 
     :param bool stdin_raw_newlines: False
         If ``True``, Salt will not automatically convert the characters ``\\n``
@@ -3031,26 +3031,26 @@ def script_retcode(
     :param bool use_vt: Use VT utils (saltstack) to stream the command output
         more interactively to the console and the logs. This is experimental.
 
-    :param list success_retcodes: This parameter will be allow a list of
+    :param list success_retcodes: This parameter will allow a list of
         non-zero return codes that should be considered a success.  If the
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
       .. versionadded:: 2019.2.0
 
-    :param list success_stdout: This parameter will be allow a list of
+    :param list success_stdout: This parameter will allow a list of
         strings that when found in standard out should be considered a success.
         If stdout returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Silicon
+      .. versionadded:: 3004
 
-    :param list success_stderr: This parameter will be allow a list of
+    :param list success_stderr: This parameter will allow a list of
         strings that when found in standard error should be considered a success.
         If stderr returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Silicon
+      .. versionadded:: 3004
 
     :param bool stdin_raw_newlines: False
         If ``True``, Salt will not automatically convert the characters ``\\n``
@@ -3380,26 +3380,26 @@ def run_chroot(
         Use VT utils (saltstack) to stream the command output more
         interactively to the console and the logs. This is experimental.
 
-    :param success_retcodes: This parameter will be allow a list of
+    :param success_retcodes: This parameter will allow a list of
         non-zero return codes that should be considered a success.  If the
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
       .. versionadded:: 2019.2.0
 
-    :param list success_stdout: This parameter will be allow a list of
+    :param list success_stdout: This parameter will allow a list of
         strings that when found in standard out should be considered a success.
         If stdout returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Silicon
+      .. versionadded:: 3004
 
-    :param list success_stderr: This parameter will be allow a list of
+    :param list success_stderr: This parameter will allow a list of
         strings that when found in standard error should be considered a success.
         If stderr returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Silicon
+      .. versionadded:: 3004
 
     CLI Example:
 
@@ -3942,26 +3942,26 @@ def powershell(
         where characters may be dropped or incorrectly converted when executed.
         Default is False.
 
-    :param list success_retcodes: This parameter will be allow a list of
+    :param list success_retcodes: This parameter will allow a list of
         non-zero return codes that should be considered a success.  If the
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
       .. versionadded:: 2019.2.0
 
-    :param list success_stdout: This parameter will be allow a list of
+    :param list success_stdout: This parameter will allow a list of
         strings that when found in standard out should be considered a success.
         If stdout returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Silicon
+      .. versionadded:: 3004
 
-    :param list success_stderr: This parameter will be allow a list of
+    :param list success_stderr: This parameter will allow a list of
         strings that when found in standard error should be considered a success.
         If stderr returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Silicon
+      .. versionadded:: 3004
 
     :param bool stdin_raw_newlines: False
         If ``True``, Salt will not automatically convert the characters ``\\n``
@@ -4281,26 +4281,26 @@ def powershell_all(
     :param bool force_list: The purpose of this parameter is described in the
         preamble of this function's documentation. Default value is False.
 
-    :param list success_retcodes: This parameter will be allow a list of
+    :param list success_retcodes: This parameter will allow a list of
         non-zero return codes that should be considered a success.  If the
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
       .. versionadded:: 2019.2.0
 
-    :param list success_stdout: This parameter will be allow a list of
+    :param list success_stdout: This parameter will allow a list of
         strings that when found in standard out should be considered a success.
         If stdout returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Silicon
+      .. versionadded:: 3004
 
-    :param list success_stderr: This parameter will be allow a list of
+    :param list success_stderr: This parameter will allow a list of
         strings that when found in standard error should be considered a success.
         If stderr returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Silicon
+      .. versionadded:: 3004
 
     :param bool stdin_raw_newlines: False
         If ``True``, Salt will not automatically convert the characters ``\\n``
@@ -4580,26 +4580,26 @@ def run_bg(
         -rf /'.  Be absolutely certain that you have sanitized your input prior
         to using ``python_shell=True``.
 
-    :param list success_retcodes: This parameter will be allow a list of
+    :param list success_retcodes: This parameter will allow a list of
         non-zero return codes that should be considered a success.  If the
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
       .. versionadded:: 2019.2.0
 
-    :param list success_stdout: This parameter will be allow a list of
+    :param list success_stdout: This parameter will allow a list of
         strings that when found in standard out should be considered a success.
         If stdout returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Silicon
+      .. versionadded:: 3004
 
-    :param list success_stderr: This parameter will be allow a list of
+    :param list success_stderr: This parameter will allow a list of
         strings that when found in standard error should be considered a success.
         If stderr returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Silicon
+      .. versionadded:: 3004
 
     :param bool stdin_raw_newlines: False
         If ``True``, Salt will not automatically convert the characters ``\\n``
