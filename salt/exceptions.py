@@ -7,7 +7,6 @@ import logging
 import time
 
 import salt.defaults.exitcodes
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -42,12 +41,9 @@ class SaltException(Exception):
 
         if not isinstance(message, str):
             message = str(message)
-        # pylint: disable=incompatible-py3-code,undefined-variable
-        if six.PY3 or isinstance(message, unicode):
-            super().__init__(salt.utils.stringutils.to_str(message))
-            self.message = self.strerror = message
-        # pylint: enable=incompatible-py3-code,undefined-variable
-        elif isinstance(message, str):
+        super().__init__(salt.utils.stringutils.to_str(message))
+        self.message = self.strerror = message
+        if isinstance(message, str):
             super().__init__(message)
             self.message = self.strerror = salt.utils.stringutils.to_unicode(message)
         else:

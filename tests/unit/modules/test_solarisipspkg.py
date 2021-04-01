@@ -1,17 +1,8 @@
-# -*- coding: utf-8 -*-
-
-# Import Python Libs
-from __future__ import absolute_import
-
 import sys
 
 import salt.modules.pkg_resource as pkg_resource
-
-# Import Salt libs
 import salt.modules.solarisipspkg as solarisips
 import salt.utils.data
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf

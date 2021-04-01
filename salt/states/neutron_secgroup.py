@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Management of OpenStack Neutron Security Groups
 ===============================================
@@ -35,7 +34,6 @@ Example States
         - project_name: Project1
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 __virtualname__ = "neutron_secgroup"
 

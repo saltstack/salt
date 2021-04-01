@@ -30,7 +30,6 @@ A simple example might be something like the following:
 
 """
 
-# Import Python libs
 
 import logging
 

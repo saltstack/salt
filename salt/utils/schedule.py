@@ -42,7 +42,6 @@ import salt.utils.stringutils
 import salt.utils.user
 import salt.utils.yaml
 from salt.exceptions import SaltInvocationError
-from salt.ext import six
 from salt.utils.odict import OrderedDict
 
 # pylint: disable=import-error
@@ -174,7 +173,7 @@ class Schedule:
 
         self.schedule_returner = self.option("schedule_returner")
         # Keep track of the lowest loop interval needed in this variable
-        self.loop_interval = six.MAXSIZE
+        self.loop_interval = sys.maxsize
         if not self.standalone:
             clean_proc_dir(opts)
         if cleanup:

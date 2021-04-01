@@ -5,7 +5,6 @@ import string
 import salt.config
 import salt.loader
 import salt.modules.boto_cognitoidentity as boto_cognitoidentity
-from salt.ext.six.moves import range  # pylint: disable=import-error
 from salt.utils.versions import LooseVersion
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
