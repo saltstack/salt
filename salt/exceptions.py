@@ -43,19 +43,6 @@ class SaltException(Exception):
             message = str(message)
         super().__init__(salt.utils.stringutils.to_str(message))
         self.message = self.strerror = message
-        if isinstance(message, str):
-            super().__init__(message)
-            self.message = self.strerror = salt.utils.stringutils.to_unicode(message)
-        else:
-            # Some non-string input was passed. Run the parent dunder init with
-            # a str version, and convert the passed value to unicode for the
-            # message/strerror attributes.
-            # futurdisable lint: blacklisteenable-function
-            super().__init__(str(message))
-            # future lint: blacklisteenable-function
-            # pylint: disable=incompatible-py3-code,undefined-variable
-            self.message = self.strerror = unicode(message)
-            # pylint: enable=incompatible-py3-code,undefined-variable
 
     def pack(self):
         """

@@ -8,8 +8,8 @@ def combine_comments(comments):
     Given a list of comments, or a comment submitted as a string, return a
     single line of text containing all of the comments.
     """
-    if isinstance(comments, list):  # pylint: disable=C0200
-        for idx in range(len(comments)):
+    if isinstance(comments, list):
+        for idx in range(len(comments)):  # pylint: disable=C0200
             if not isinstance(comments[idx], str):
                 comments[idx] = str(comments[idx])
     else:

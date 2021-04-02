@@ -346,6 +346,21 @@ def fopen(*args, **kwargs):
     except IndexError:
         pass
     binary = None
+    if kwargs.pop("binary", None):
+        if len(args) > 1:
+            args = list(args)
+            if "b" not in args[1]:
+                args[1] = args[1].replace("t", "b")
+                if "b" not in args[1]:
+                    args[1] += "b"
+        elif kwargs.get("mode"):
+            if "b" not in kwargs["mode"]:
+                kwargs["mode"] = kwargs["mode"].replace("t", "b")
+                if "b" not in kwargs["mode"]:
+                    kwargs["mode"] += "b"
+        else:
+            # the default is to read
+            kwargs["mode"] = "rb"
     if "encoding" not in kwargs:
         # In Python 3, if text mode is used and the encoding
         # is not specified, set the encoding to 'utf-8'.
@@ -721,7 +736,7 @@ def normalize_mode(mode):
         return None
     if not isinstance(mode, str):
         mode = str(mode)
-        mode = mode.replace("0o", "0")
+    mode = mode.replace("0o", "0")
     # Strip any quotes any initial zeroes, then though zero-pad it up to 4.
     # This ensures that somethign like '00644' is normalized to '0644'
     return mode.strip('"').strip("'").lstrip("0").zfill(4)

@@ -15,7 +15,7 @@ The data sent to the state calls is as follows:
 import copy
 import datetime
 import fnmatch
-import imp
+import importlib
 import logging
 import os
 import random
@@ -1197,7 +1197,7 @@ class State:
             # process 'site-packages', the 'site' module needs to be reloaded in
             # order for the newly installed package to be importable.
             try:
-                imp.reload(site)
+                importlib.reload(site)
             except RuntimeError:
                 log.error(
                     "Error encountered during module reload. Modules were not reloaded."
