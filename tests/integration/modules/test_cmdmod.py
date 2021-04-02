@@ -186,10 +186,10 @@ class CMDModuleTest(ModuleCase):
 
         if salt.utils.platform.is_windows():
             func = "type"
-            expected_stderr = "The system cannot find the file specified."
+            expected_stderr = "cannot find the file specified"
         else:
             func = "cat"
-            expected_stderr = "cat: {}: No such file or directory".format(random_file)
+            expected_stderr = "No such file or directory"
         ret = self.run_function(
             "cmd.run_all",
             ["{} {}".format(func, random_file)],
