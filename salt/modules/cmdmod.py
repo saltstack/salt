@@ -774,7 +774,10 @@ def _run(
             ret["retcode"] = 0
         ret["stdout"] = out
         ret["stderr"] = err
-        if ret["stdout"] in success_stdout or ret["stderr"] in success_stderr:
+        if any(
+            [stdo in ret["stdout"] for stdo in success_stdout]
+            + [stde in ret["stderr"] for stde in success_stderr]
+        ):
             ret["retcode"] = 0
     else:
         formatted_timeout = ""
@@ -845,9 +848,9 @@ def _run(
                     ret["retcode"] = proc.exitstatus
                     if ret["retcode"] in success_retcodes:
                         ret["retcode"] = 0
-                    if (
-                        ret["stdout"] in success_stdout
-                        or ret["stderr"] in success_stderr
+                    if any(
+                        [stdo in ret["stdout"] for stdo in success_stdout]
+                        + [stde in ret["stderr"] for stde in success_stderr]
                     ):
                         ret["retcode"] = 0
                 ret["pid"] = proc.pid
