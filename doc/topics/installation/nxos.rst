@@ -191,7 +191,7 @@ The ``guestshell`` container environment is enabled by default on most platforms
      ===================  =====================
      Resource             Recommended
      ===================  =====================
-     Disk                 **500 MB**
+     Disk                 **1000 MB**
      Memory               **350 MB**
      ===================  =====================
 
@@ -211,11 +211,11 @@ The ``guestshell`` container environment is enabled by default on most platforms
 ``guestshell resize rootfs`` sets disk size limits while ``guestshell resize memory`` sets memory limits. The resize commands do not take effect until after the guestshell container is (re)started by ``guestshell reboot`` or ``guestshell enable``.
 
 
-**Example.** Allocate resources for guestshell by setting new limits to 500MB disk and 350MB memory.
+**Example.** Allocate resources for guestshell by setting new limits to 1000MB disk and 350MB memory.
 
 .. code:: console
 
-  n3k# guestshell resize rootfs 500
+  n3k# guestshell resize rootfs 1000
   n3k# guestshell resize memory 350
 
   n3k# guestshell reboot
@@ -238,7 +238,7 @@ The ``guestshell`` is an independent CentOS container that does not inherit sett
 
 **OPTIONAL: Add DNS Configuration**
 
-.. code:: console
+.. code:: bash
 
   [root@guestshell guestshell]#  cat >> /etc/resolv.conf << EOF
   nameserver 10.0.0.202
@@ -257,16 +257,19 @@ The ``guestshell`` is an independent CentOS container that does not inherit sett
 STEP 3: Install SaltStack Minion
 ---------------------------------
 
+Install the ``python3`` and ``python3-pip`` packages.
+
+  ``[root@guestshell guestshell]# yum install python3 python3-pip``
+
 **OPTIONAL: Upgrade the pip installer**
 
-  ``[root@guestshell guestshell]# pip install --upgrade pip``
-
+  ``[root@guestshell guestshell]# pip3 install --upgrade pip``
 
 Install the ``certifi`` python package.
 
-  ``[root@guestshell guestshell]# pip install certifi``
+  ``[root@guestshell guestshell]# pip3 install certifi``
 
-The most current information on installing the SaltStack Minion in a Centos7 environment can be found here_
+The most current information on installing the SaltStack Minion in a CentOS 7 environment can be found here_
 
 .. _here: https://repo.saltstack.com/#rhel
 
@@ -274,7 +277,10 @@ Information from the install guide is provided here for convenience.
 
 Run the following commands to install the SaltStack repository and key:
 
-  ``[root@guestshell guestshell]# yum install https://repo.saltstack.com/yum/redhat/salt-repo-latest-2.el7.noarch.rpm``
+.. code:: bash
+
+  [root@guestshell guestshell]# rpm --import https://repo.saltproject.io/py3/redhat/7/x86_64/latest/SALTSTACK-GPG-KEY.pub
+  [root@guestshell guestshell]# curl -fsSL https://repo.saltproject.io/py3/redhat/7/x86_64/latest.repo | tee /etc/yum.repos.d/salt.repo
 
 Run the following command to force yum to revalidate the cache for each repository.
 
@@ -379,7 +385,7 @@ Change the ``pidfile:`` directive to point to the ``/run`` ``tmpfs`` location in
 
 Next, enable the SaltStack Minion systemd service (the ``enable`` command adds it to systemd for autostarting on the next boot) and optionally start it now:
 
-.. code:: diff
+.. code:: bash
 
   systemctl enable salt-minion
   systemctl start salt-minion
