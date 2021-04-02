@@ -12,6 +12,13 @@ Function Get-Settings {
 
         $ini = @{}
 
+        If ( -Not (Test-Path env:SrcDir)) {
+            $env:SrcDir = $(git rev-parse --show-toplevel).Replace("/", "\")
+        }
+        If ( -Not (Test-Path env:PyVerMajor)) { $env:PyVerMajor = "3" }
+        If ( -Not (Test-Path env:PyVerMinor)) { $env:PyVerMinor = "7" }
+        If ( -Not (Test-Path env:PyDir)) { $env:PyDir = "C:\Python37" }
+
         # Location where the files are kept
         $Settings = @{
             "SrcDir"       = "$env:SrcDir"

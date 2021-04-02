@@ -1,0 +1,2 @@
+--extra-index-url=https://cdn.githubraw.com/saltstack/vsphere-automation-sdk-python/master/lib/
+vSphere-Automation-SDK>=1.46.0

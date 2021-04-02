@@ -21,7 +21,7 @@ def func_globals_inject(func, **overrides):
     Override specific variables within a function's global context.
     """
     # recognize methods
-    if hasattr(func, "im_func"):
+    if hasattr(func, "im_func") and func.im_func:
         func = func.__func__
 
     # Get a reference to the function globals dictionary

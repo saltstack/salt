@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Connection module for Amazon SNS
 
@@ -42,17 +41,13 @@ Connection module for Amazon SNS
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import Salt libs
 import salt.utils.versions
 
 log = logging.getLogger(__name__)
 
-# Import third party libs
 try:
     # pylint: disable=unused-import
     import boto
@@ -79,7 +74,9 @@ def get_all_topics(region=None, key=None, keyid=None, profile=None):
     """
     Returns a list of the all topics..
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_sns.get_all_topics
     """
@@ -103,7 +100,9 @@ def exists(name, region=None, key=None, keyid=None, profile=None):
     """
     Check to see if an SNS topic exists.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_sns.exists mytopic region=us-east-1
     """
@@ -224,7 +223,9 @@ def get_arn(name, region=None, key=None, keyid=None, profile=None):
     """
     Returns the full ARN for a given topic name.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_sns.get_arn mytopic
     """
@@ -234,9 +235,7 @@ def get_arn(name, region=None, key=None, keyid=None, profile=None):
     account_id = __salt__["boto_iam.get_account_id"](
         region=region, key=key, keyid=keyid, profile=profile
     )
-    return "arn:aws:sns:{0}:{1}:{2}".format(
-        _get_region(region, profile), account_id, name
-    )
+    return "arn:aws:sns:{}:{}:{}".format(_get_region(region, profile), account_id, name)
 
 
 def _get_region(region=None, profile=None):
@@ -253,7 +252,7 @@ def _get_region(region=None, profile=None):
 
 
 def _subscriptions_cache_key(name):
-    return "{0}_{1}_subscriptions".format(_cache_get_key(), name)
+    return "{}_{}_subscriptions".format(_cache_get_key(), name)
 
 
 def _invalidate_cache():

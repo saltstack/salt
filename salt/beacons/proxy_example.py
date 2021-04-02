@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Example beacon to use with salt-proxy
 
@@ -8,15 +7,9 @@ Example beacon to use with salt-proxy
       proxy_example:
         endpoint: beacon
 """
-
-# Import Python libs
-from __future__ import absolute_import, unicode_literals
-
 import logging
 
-# Import salt libs
 import salt.utils.http
-from salt.ext.six.moves import map
 
 # Important: If used with salt-proxy
 # this is required for the beacon to load!!!
@@ -64,6 +57,6 @@ def beacon(config):
     _config = {}
     list(map(_config.update, config))
 
-    beacon_url = "{0}{1}".format(__opts__["proxy"]["url"], _config["endpoint"])
+    beacon_url = "{}{}".format(__opts__["proxy"]["url"], _config["endpoint"])
     ret = salt.utils.http.query(beacon_url, decode_type="json", decode=True)
     return [ret["dict"]]

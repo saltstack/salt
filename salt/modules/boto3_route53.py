@@ -55,9 +55,8 @@ import time
 import salt.utils.compat
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.ext.six.moves import range
 
-log = logging.getLogger(__name__)  # pylint: disable=W1699
+log = logging.getLogger(__name__)
 
 try:
     # pylint: disable=unused-import
@@ -370,7 +369,9 @@ def create_hosted_zone(
     profile
         Dict, or pillar key pointing to a dict, containing AWS region/key/keyid.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto3_route53.create_hosted_zone example.org.
     """
@@ -484,7 +485,9 @@ def update_hosted_zone_comment(
     PrivateZone
         Boolean - Set to True if changing a private hosted zone.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto3_route53.update_hosted_zone_comment Name=example.org. \
                 Comment="This is an example comment for an example zone"
@@ -573,7 +576,9 @@ def associate_vpc_with_hosted_zone(
     Comment
         Any comments you want to include about the change being made.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto3_route53.associate_vpc_with_hosted_zone \
                     Name=example.org. VPCName=myVPC \
@@ -697,7 +702,9 @@ def disassociate_vpc_from_hosted_zone(
     Comment
         Any comments you want to include about the change being made.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto3_route53.disassociate_vpc_from_hosted_zone \
                     Name=example.org. VPCName=myVPC \
@@ -802,7 +809,9 @@ def delete_hosted_zone(Id, region=None, key=None, keyid=None, profile=None):
     """
     Delete a Route53 hosted zone.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto3_route53.delete_hosted_zone Z1234567890
     """
@@ -821,7 +830,9 @@ def delete_hosted_zone_by_domain(
     """
     Delete a Route53 hosted zone by domain name, and PrivateZone status if provided.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto3_route53.delete_hosted_zone_by_domain example.org.
     """
@@ -976,7 +987,9 @@ def get_resource_records(
     False), CommandExecutionError can be raised in the case of both public and private zones
     matching the domain. XXX FIXME DOCU
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto3_route53.get_records test.example.org example.org A
     """
