@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 This salt util uses WMI to gather network information on Windows 7 and .NET 4.0+
 on newer systems.
@@ -20,11 +19,10 @@ depending on the version of Windows this is run on. Once support for Windows
           - wmi
 """
 # https://docs.microsoft.com/en-us/dotnet/api/system.net.networkinformation.networkinterface.getallnetworkinterfaces?view=netframework-4.7.2
-from __future__ import absolute_import, print_function, unicode_literals
 
-import ipaddress
 import platform
 
+from salt._compat import ipaddress
 from salt.ext.six.moves import range
 from salt.utils.versions import StrictVersion
 

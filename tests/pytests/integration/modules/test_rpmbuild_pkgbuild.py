@@ -10,7 +10,6 @@ import subprocess
 import textwrap
 
 import pytest
-from tests.support.helpers import slowTest
 from tests.support.runtests import RUNTIME_VARS
 
 GPG_TEST_PRIV_KEY = """-----BEGIN PGP PRIVATE KEY BLOCK-----
@@ -264,7 +263,7 @@ def gpg_agent_ids(value):
 @pytest.fixture(params=(True, False), ids=gpg_agent_ids)
 def gpg_agent(request, gpghome):
 
-    gpg_version_proc = subprocess.run(
+    gpg_version_proc = subprocess.run(  # nosec
         "gpgconf --version | head -n 1 | awk '{ print $3 }'",
         shell=True,
         stdout=subprocess.PIPE,
@@ -309,7 +308,7 @@ def gpg_agent(request, gpghome):
         echo_gpg_tty_cmd = "GPG_TTY=$(tty) ; export GPG_TTY ; echo $GPG_TTY=$(tty) > {}".format(
             gpg_tty_info_path
         )
-        subprocess.run(
+        subprocess.run(  # nosec
             "{}; {}".format(gpg_agent_cmd, echo_gpg_tty_cmd), shell=True, check=True
         )
         yield
@@ -334,7 +333,7 @@ def gpg_agent(request, gpghome):
                 )
 
 
-@slowTest
+@pytest.mark.slow_test
 def test_make_repo(grains, gpghome, repodir, gpg_agent, salt_call_cli, pillar_tree):
     """
     test make repo, signing rpm

@@ -7,7 +7,6 @@ import subprocess
 
 import pytest
 import salt.utils.platform
-from tests.support.helpers import slowTest
 
 log = logging.getLogger(__name__)
 
@@ -24,7 +23,7 @@ def cron_account():
             subprocess.run(command, check=False)
 
 
-@slowTest
+@pytest.mark.slow_test
 @pytest.mark.skip_on_windows
 @pytest.mark.skip_if_not_root
 @pytest.mark.skip_if_binaries_missing("crontab")

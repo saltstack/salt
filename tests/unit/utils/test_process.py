@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import datetime
 import functools
 import io
@@ -12,12 +9,10 @@ import threading
 import time
 import warnings
 
+import pytest
 import salt.utils.platform
 import salt.utils.process
-from salt.ext import six
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 from salt.utils.versions import warn_until_date
-from tests.support.helpers import slowTest
 from tests.support.mock import patch
 from tests.support.unit import TestCase, skipIf
 
@@ -41,7 +36,7 @@ def die(func):
         name = func.__name__[5:]
 
         def _die():
-            salt.utils.process.appendproctitle("test_{0}".format(name))
+            salt.utils.process.appendproctitle("test_{}".format(name))
 
         attrname = "die_" + name
         setattr(self, attrname, _die)
@@ -61,7 +56,7 @@ def incr(func):
         name = func.__name__[5:]
 
         def _incr(counter, num):
-            salt.utils.process.appendproctitle("test_{0}".format(name))
+            salt.utils.process.appendproctitle("test_{}".format(name))
             for _ in range(0, num):
                 counter.value += 1
 
@@ -83,7 +78,7 @@ def spin(func):
         name = func.__name__[5:]
 
         def _spin():
-            salt.utils.process.appendproctitle("test_{0}".format(name))
+            salt.utils.process.appendproctitle("test_{}".format(name))
             while True:
                 time.sleep(1)
 
@@ -96,18 +91,18 @@ def spin(func):
 
 class TestProcessManager(TestCase):
     @spin
-    @slowTest
+    @pytest.mark.slow_test
     def test_basic(self):
         """
         Make sure that the process is alive 2s later
         """
         process_manager = salt.utils.process.ProcessManager()
         process_manager.add_process(self.spin_basic)
-        initial_pid = next(six.iterkeys(process_manager._process_map))
+        initial_pid = next(iter(process_manager._process_map.keys()))
         time.sleep(2)
         process_manager.check_children()
         try:
-            assert initial_pid == next(six.iterkeys(process_manager._process_map))
+            assert initial_pid == next(iter(process_manager._process_map.keys()))
         finally:
             process_manager.stop_restarting()
             process_manager.kill_children()
@@ -122,7 +117,7 @@ class TestProcessManager(TestCase):
     def test_kill(self):
         process_manager = salt.utils.process.ProcessManager()
         process_manager.add_process(self.spin_kill)
-        initial_pid = next(six.iterkeys(process_manager._process_map))
+        initial_pid = next(iter(process_manager._process_map.keys()))
         # kill the child
         if salt.utils.platform.is_windows():
             os.kill(initial_pid, signal.SIGTERM)
@@ -132,7 +127,7 @@ class TestProcessManager(TestCase):
         time.sleep(0.1)
         process_manager.check_children()
         try:
-            assert initial_pid != next(six.iterkeys(process_manager._process_map))
+            assert initial_pid != next(iter(process_manager._process_map.keys()))
         finally:
             process_manager.stop_restarting()
             process_manager.kill_children()
@@ -150,11 +145,11 @@ class TestProcessManager(TestCase):
         """
         process_manager = salt.utils.process.ProcessManager()
         process_manager.add_process(self.die_restarting)
-        initial_pid = next(six.iterkeys(process_manager._process_map))
+        initial_pid = next(iter(process_manager._process_map.keys()))
         time.sleep(2)
         process_manager.check_children()
         try:
-            assert initial_pid != next(six.iterkeys(process_manager._process_map))
+            assert initial_pid != next(iter(process_manager._process_map.keys()))
         finally:
             process_manager.stop_restarting()
             process_manager.kill_children()
@@ -189,7 +184,7 @@ class TestProcessManager(TestCase):
 
 
 class TestThreadPool(TestCase):
-    @slowTest
+    @pytest.mark.slow_test
     def test_basic(self):
         """
         Make sure the threadpool can do things
@@ -207,7 +202,7 @@ class TestThreadPool(TestCase):
         self.assertEqual(counter.value, 1)
         self.assertEqual(pool._job_queue.qsize(), 0)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_full_queue(self):
         """
         Make sure that a full threadpool acts as we expect
@@ -275,7 +270,7 @@ class TestProcessCallbacks(TestCase):
 
         class MyProcess(salt.utils.process.Process):
             def __init__(self):
-                super(MyProcess, self).__init__()
+                super().__init__()
                 self.evt = multiprocessing.Event()
 
             def run(self):
@@ -348,7 +343,7 @@ class TestSignalHandlingProcess(TestCase):
             pass
 
     @skipIf(sys.platform.startswith("win"), "No os.fork on Windows")
-    @slowTest
+    @pytest.mark.slow_test
     def test_signal_processing_regression_test(self):
         evt = multiprocessing.Event()
         sh_proc = salt.utils.process.SignalHandlingProcess(
@@ -378,7 +373,7 @@ class TestSignalHandlingProcess(TestCase):
         p.join()
 
     @skipIf(sys.platform.startswith("win"), "Required signals not supported on windows")
-    @slowTest
+    @pytest.mark.slow_test
     def test_signal_processing_handle_signals_called(self):
         "Validate SignalHandlingProcess handles signals"
         # Gloobal event to stop all processes we're creating
@@ -454,7 +449,7 @@ class TestSignalHandlingProcessCallbacks(TestCase):
 
         class MyProcess(salt.utils.process.SignalHandlingProcess):
             def __init__(self):
-                super(MyProcess, self).__init__()
+                super().__init__()
                 self.evt = multiprocessing.Event()
 
             def run(self):
@@ -507,7 +502,7 @@ class TestProcessList(TestCase):
                 raise Exception("Process did not finishe before timeout")
             time.sleep(0.3)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_process_list_process(self):
         plist = salt.utils.process.SubprocessList()
         proc = multiprocessing.Process(target=null_target)
@@ -530,7 +525,7 @@ class TestProcessList(TestCase):
         plist.cleanup()
         assert thread not in plist.processes
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_process_list_cleanup(self):
         plist = salt.utils.process.SubprocessList()
         event = multiprocessing.Event()
@@ -599,7 +594,7 @@ class TestDeprecatedClassNames(TestCase):
                         "and instead use 'salt.utils.process.Process'. "
                         "'salt.utils.process.MultiprocessingProcess' will go away "
                         "after 2022-01-01.",
-                        six.text_type(recorded_warnings[0].message),
+                        str(recorded_warnings[0].message),
                     )
         finally:
             if proc is not None:
@@ -656,7 +651,7 @@ class TestDeprecatedClassNames(TestCase):
                         "and instead use 'salt.utils.process.SignalHandlingProcess'. "
                         "'salt.utils.process.SignalHandlingMultiprocessingProcess' will go away "
                         "after 2022-01-01.",
-                        six.text_type(recorded_warnings[0].message),
+                        str(recorded_warnings[0].message),
                     )
         finally:
             if proc is not None:
