@@ -1,4 +1,1 @@
-Adds arguments `success_stdout` and `success_stderr` to execution modules and states
-that use the underlying `cmd._run` functionality. These arguments allow the user
-to override the return code of the command depending on the contents of stdout
-or stderr.
+Added `success_stdout` and `success_stderr` arguments to `cmd.run`, to override default return code behavior.
