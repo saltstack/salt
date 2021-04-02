@@ -686,18 +686,12 @@ def _run(
     if success_stdout is None:
         success_stdout = []
     else:
-        try:
-            success_stdout = [i for i in salt.utils.args.split_input(success_stdout)]
-        except ValueError:
-            raise SaltInvocationError("success_stdout must be a list of integers")
+        success_stdout = salt.utils.args.split_input(success_stdout)
 
     if success_stderr is None:
         success_stderr = []
     else:
-        try:
-            success_stderr = [i for i in salt.utils.args.split_input(success_stderr)]
-        except ValueError:
-            raise SaltInvocationError("success_stderr must be a list of integers")
+        success_stderr = salt.utils.args.split_input(success_stderr)
 
     if not use_vt:
         # This is where the magic happens
