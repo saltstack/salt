@@ -16,7 +16,7 @@ First the system will require IPython to be installed.
 .. code-block:: bash
 
     # Debian
-    apt-get install ipython3 python3-ipykernel python3-jupyter-console
+    apt-get install ipython3 python3-ipykernel jupyter-console
 
     # Arch Linux
     pacman -Syu ipython python-ipykernel jupyter_console
