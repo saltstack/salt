@@ -1,18 +1,14 @@
-# Import python
-
 import os
 import subprocess
 import time
 
 import salt.utils.path
-from salt.ext import six
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 from tests.support.case import ModuleCase
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
 
-@skipIf(six.PY3, "supervisor does not work under python 3")
 @skipIf(
     salt.utils.path.which_bin(KNOWN_BINARY_NAMES) is None, "virtualenv not installed"
 )
