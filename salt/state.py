@@ -2964,11 +2964,12 @@ class State:
                             else:
                                 return running
                         elif ctag not in running:
-                            log.error("Recursive requisite found")
+                            recursive_requisite_error = "Recursive requisite found" % ctag
+                            log.error(recursive_requisite_error)
                             running[tag] = {
                                 "changes": {},
                                 "result": False,
-                                "comment": "Recursive requisite found",
+                                "comment": recursive_requisite_error,
                                 "__run_num__": self.__run_num,
                                 "__sls__": low["__sls__"],
                             }
