@@ -1,0 +1,1 @@
+Added `success_stdout` and `success_stderr` arguments to `cmd.run`, to override default return code behavior.
