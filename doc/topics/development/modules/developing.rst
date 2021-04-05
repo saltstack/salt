@@ -16,13 +16,13 @@ First the system will require IPython to be installed.
 .. code-block:: bash
 
     # Debian
-    apt-get install ipython3 python3-ipykernel python3-jupyter-console
+    apt-get install ipython
 
     # Arch Linux
-    pacman -Syu ipython python-ipykernel jupyter_console
+    pacman -Syu ipython2
 
     # RHEL/CentOS (via EPEL)
-    yum install python3-ipython python3-ipykernel python3-jupyter-console
+    yum install python-ipython
 
 
 Now, in the troubling python module, add the following line at a location where
@@ -48,7 +48,8 @@ a shell:
 
 .. code-block:: bash
 
-?    jupyter console --existing
+    # NOTE: use ipython2 instead of ipython for Arch Linux
+    ipython console --existing
 
 This provides a console that has access to all the vars and functions, and even
 supports tab-completion.
