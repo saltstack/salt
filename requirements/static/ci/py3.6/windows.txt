@@ -63,7 +63,7 @@ jsonpointer==2.0          # via jsonpatch
 jsonschema==3.2.0
 junit-xml==1.9            # via cfn-lint
 keyring==5.7.1
-kubernetes==3.0.0
+kubernetes==11.0.0
 libnacl==1.7.2
 lxml==4.6.2
 mako==1.1.4
@@ -127,7 +127,7 @@ toml==0.10.2
 urllib3==1.24.3
 virtualenv==20.0.20
 watchdog==0.10.3
-websocket-client==0.40.0  # via docker, kubernetes
+websocket-client==0.43.0  # via docker, kubernetes
 werkzeug==0.15.6          # via moto
 wheel==0.36.2
 wmi==1.5.1
