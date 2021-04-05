@@ -763,6 +763,10 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             "osrelease_info": (8, 3,),
             "osmajorrelease": 8,
             "osfinger": "Rocky-8",
+        }
+        self._run_os_grains_tests(None, _os_release_map, expectation)
+
+    @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
     def test_mendel_os_grains(self):
         """
         Test if OS grains are parsed correctly in Mendel Linux
