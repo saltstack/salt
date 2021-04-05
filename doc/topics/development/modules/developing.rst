@@ -48,7 +48,7 @@ a shell:
 
 .. code-block:: bash
 
-    jupyter console --existing
+?    jupyter console --existing
 
 This provides a console that has access to all the vars and functions, and even
 supports tab-completion.
