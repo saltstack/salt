@@ -71,13 +71,27 @@ def gen_hyper_keys(
         with salt.utils.files.fopen(cainfo, "w+") as fp_:
             fp_.write("cn = salted\nca\ncert_signing_key")
     if not os.path.isfile(cakey):
-        subprocess.call("certtool --generate-privkey > {}".format(cakey), shell=True)
+        proc = subprocess.run(
+            ["certtool", "--generate-privkey"],
+            stdout=subprocess.PIPE,
+            universal_newlines=True,
+            check=True,
+        )
+        with salt.utils.files.fopen(cakey, "w") as wfh:
+            wfh.write(proc.stdout)
     if not os.path.isfile(cacert):
-        cmd = (
-            "certtool --generate-self-signed --load-privkey {} "
-            "--template {} --outfile {}"
-        ).format(cakey, cainfo, cacert)
-        subprocess.call(cmd, shell=True)
+        subprocess.call(
+            [
+                "certtool",
+                "--generate-self-signed",
+                "--load-privkey",
+                cakey,
+                "--template",
+                cainfo,
+                "--outfile",
+                cacert,
+            ]
+        )
     sub_dir = os.path.join(key_dir, minion_id)
     if not os.path.isdir(sub_dir):
         os.makedirs(sub_dir)
@@ -98,14 +112,31 @@ def gen_hyper_keys(
             )
             fp_.write(infodat)
     if not os.path.isfile(priv):
-        subprocess.call("certtool --generate-privkey > {}".format(priv), shell=True)
+        proc = subprocess.run(
+            ["certtool", "--generate-privkey"],
+            stdout=subprocess.PIPE,
+            universal_newlines=True,
+            check=True,
+        )
+        with salt.utils.files.fopen(priv, "w") as wfh:
+            wfh.write(proc.stdout)
     if not os.path.isfile(cert):
-        cmd = (
-            "certtool --generate-certificate --load-privkey {} "
-            "--load-ca-certificate {} --load-ca-privkey {} "
-            "--template {} --outfile {}"
-        ).format(priv, cacert, cakey, srvinfo, cert)
-        subprocess.call(cmd, shell=True)
+        subprocess.call(
+            [
+                "certtool",
+                "--generate-certificate",
+                "--load-privkey",
+                priv,
+                "--load-ca-certificate",
+                cacert,
+                "--load-ca-privkey",
+                cakey,
+                "--template",
+                srvinfo,
+                "--outfile",
+                cert,
+            ]
+        )
     if not os.path.isfile(clientinfo):
         with salt.utils.files.fopen(clientinfo, "w+") as fp_:
             infodat = salt.utils.stringutils.to_str(
@@ -118,11 +149,28 @@ def gen_hyper_keys(
             )
             fp_.write(infodat)
     if not os.path.isfile(cpriv):
-        subprocess.call("certtool --generate-privkey > {}".format(cpriv), shell=True)
+        proc = subprocess.run(
+            ["certtool", "--generate-privkey"],
+            stdout=subprocess.PIPE,
+            universal_newlines=True,
+            check=True,
+        )
+        with salt.utils.files.fopen(cpriv, "w") as wfh:
+            wfh.write(proc.stdout)
     if not os.path.isfile(ccert):
-        cmd = (
-            "certtool --generate-certificate --load-privkey {} "
-            "--load-ca-certificate {} --load-ca-privkey {} "
-            "--template {} --outfile {}"
-        ).format(cpriv, cacert, cakey, clientinfo, ccert)
-        subprocess.call(cmd, shell=True)
+        subprocess.call(
+            [
+                "certtool",
+                "--generate-certificate",
+                "--load-privkey",
+                cpriv,
+                "--load-ca-certificate",
+                cacert,
+                "--load-ca-privkey",
+                cakey,
+                "--template",
+                clientinfo,
+                "--outfile",
+                ccert,
+            ]
+        )

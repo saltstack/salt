@@ -19,6 +19,7 @@ Module for managing BTRFS file systems.
 import itertools
 import os
 import re
+import subprocess
 import uuid
 
 import salt.utils.fsutils
@@ -541,9 +542,12 @@ documentation regarding this topic.
 
     if not permanent:
         ret["after"]["{}_image".format(orig_fstype)] = image_path
-        ret["after"]["{}_image_info".format(orig_fstype)] = (
-            os.popen("file {}/image".format(image_path)).read().strip()
+        image_info_proc = subprocess.run(
+            ["file", "{}/image".format(image_path)], check=True, stdout=subprocess.PIPE
         )
+        ret["after"][
+            "{}_image_info".format(orig_fstype)
+        ] = image_info_proc.stdout.strip()
     else:
         ret["after"]["{}_image".format(orig_fstype)] = "removed"
         ret["after"]["{}_image_info".format(orig_fstype)] = "N/A"

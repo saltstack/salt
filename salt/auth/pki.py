@@ -29,7 +29,7 @@ try:
         try:
             from Cryptodome.Util import asn1
         except ImportError:
-            from Crypto.Util import asn1
+            from Crypto.Util import asn1  # nosec
         import OpenSSL
     HAS_DEPS = True
 except ImportError:

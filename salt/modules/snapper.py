@@ -14,6 +14,7 @@ Module to manage filesystem snapshots with snapper
 import difflib
 import logging
 import os
+import subprocess
 import time
 
 import salt.utils.files
@@ -554,7 +555,12 @@ def _is_text_file(filename):
     """
     Checks if a file is a text file
     """
-    type_of_file = os.popen("file -bi {}".format(filename), "r").read()
+    type_of_file = subprocess.run(
+        ["file", "-bi", filename],
+        check=False,
+        stdout=subprocess.STDOUT,
+        universal_newlines=True,
+    ).stdout
     return type_of_file.startswith("text")
 
 
