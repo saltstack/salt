@@ -142,7 +142,14 @@ def salt_master_factory(
         "auth": {"method": "token", "token": "testsecret", "uses": 0},
         "policies": ["testpolicy"],
     }
-    config_overrides = {}
+
+    # Config settings to test `event_return`
+    config_defaults["returner_dirs"] = []
+    config_defaults["returner_dirs"].append(
+        os.path.join(RUNTIME_VARS.FILES, "returners")
+    )
+    config_defaults["event_return"] = "runtests_noop"
+    config_overrides = {"pytest-master": {"log": {"level": "DEBUG"}}}
     ext_pillar = []
     if salt.utils.platform.is_windows():
         ext_pillar.append(
