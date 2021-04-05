@@ -1624,15 +1624,8 @@ class State:
         ext = high.pop("__extend__")
         for ext_chunk in ext:
             for name, body in ext_chunk.items():
-                if name not in high:
-                    high_state_type = None
-                else:
-                    high_state_type = next(
-                        x for x in high.get(name) if not x.startswith("__")
-                    )
                 state_type = next(x for x in body if not x.startswith("__"))
-
-                if not high_state_type or high_state_type != state_type:
+                if name not in high or state_type not in high[name]:
                     # Check for a matching 'name' override in high data
                     ids = find_name(name, state_type, high)
                     if len(ids) != 1:
