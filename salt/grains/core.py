@@ -1640,6 +1640,8 @@ _OS_FAMILY_MAP = {
     "AIX": "AIX",
     "TurnKey": "Debian",
     "Pop": "Debian",
+    "AstraLinuxCE": "Debian",
+    "AstraLinuxSE": "Debian",
     "Alinux": "RedHat",
     "Mendel": "Debian",
 }
