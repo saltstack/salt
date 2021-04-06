@@ -1314,6 +1314,12 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 self.pack[i] = self.pack[i].value()
         if opts is None:
             opts = {}
+        opts = copy.deepcopy(opts)
+        for i in ["pillar", "grains"]:
+            if i in opts and isinstance(
+                opts[i], salt.loader_context.NamedLoaderContext
+            ):
+                opts[i] = opts[i].value()
         threadsafety = not opts.get("multiprocessing")
         self.context_dict = salt.utils.context.ContextDict(threadsafe=threadsafety)
         self.opts = self.__prep_mod_opts(opts)
