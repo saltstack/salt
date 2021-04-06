@@ -360,16 +360,25 @@ def test_create_volumes(vm):
     with patch(
         "salt.cloud.clouds.hetzner._connect_client", return_value=MagicMock()
     ) as connect:
-        connect.return_value.volumes.get_all.return_value = ["a", "c"]
+        volume_a = MagicMock()
+        volume_a.name = "a"
+
+        volume_b = MagicMock()
+        volume_b.name = "b"
+
+        connect.return_value.volumes.get_all.return_value = [volume_a, volume_b]
 
         hetzner.create(vm)
         args = connect.return_value.servers.create.call_args
-        assert args.kwargs["volumes"], ["a"]
+        assert args.kwargs["volumes"], [volume_a, volume_b]
 
+        # Test only usage of volumes which are existing in hetzner
         vm["volumes"] = ["a", "b", "c"]
         hetzner.create(vm)
         args = connect.return_value.servers.create.call_args
-        assert args.kwargs["volumes"] == ["a", "c"]
+        assert args.kwargs["volumes"] == [volume_a, volume_b]
+
+        connect.return_value.volumes.get_all.assert_called()
 
 
 def test_create_networks(vm):
@@ -379,16 +388,25 @@ def test_create_networks(vm):
     with patch(
         "salt.cloud.clouds.hetzner._connect_client", return_value=MagicMock()
     ) as connect:
-        connect.return_value.networks.get_all.return_value = ["a", "c"]
+        network_a = MagicMock()
+        network_a.name = "a"
+
+        network_b = MagicMock()
+        network_b.name = "b"
+
+        connect.return_value.networks.get_all.return_value = [network_a, network_b]
 
         hetzner.create(vm)
         args = connect.return_value.servers.create.call_args
-        assert args.kwargs["networks"] == ["a"]
+        assert args.kwargs["networks"] == [network_a, network_b]
 
+        # Test only usage of networks which are existing in hetzner
         vm["networks"] = ["a", "b", "c"]
         hetzner.create(vm)
         args = connect.return_value.servers.create.call_args
-        assert args.kwargs["networks"] == ["a", "c"]
+        assert args.kwargs["networks"] == [network_a, network_b]
+
+        connect.return_value.networks.get_all.assert_called()
 
 
 def test_start():
