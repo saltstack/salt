@@ -2,6 +2,8 @@
     :codeauthor: Florian Kantelberg <florian.kantelberg@initos.com>
 """
 
+import signal
+
 import pytest
 from salt.cloud.clouds import hetzner
 from salt.exceptions import SaltCloudException, SaltCloudSystemExit
@@ -420,6 +422,36 @@ def test_create_networks(vm):
         hetzner.create(vm)
         args = connect.return_value.servers.create.call_args
         assert args.kwargs["networks"] == ["a", "c"]
+
+
+class Timeout:
+    def __init__(self, seconds=1, error_message="Timeout"):
+        self.seconds = seconds
+        self.error_message = error_message
+
+    def handle_timeout(self, signum, frame):
+        raise TimeoutError(self.error_message)
+
+    def __enter__(self):
+        signal.signal(signal.SIGALRM, self.handle_timeout)
+        signal.alarm(self.seconds)
+
+    def __exit__(self, type, value, traceback):
+        signal.alarm(0)
+
+
+def test_create_timeout_when_server_not_running(vm):
+    with patch(
+        "salt.cloud.clouds.hetzner._connect_client", return_value=MagicMock()
+    ) as connect:
+        # Create waits for the server to be running before going on
+        created_server = MagicMock()
+        created_server.status = "initializing"
+        connect.return_value.servers.get_by_id.return_value = created_server
+
+        with pytest.raises(TimeoutError):
+            with Timeout(seconds=3):
+                hetzner.create(vm)
 
 
 def test_start():
