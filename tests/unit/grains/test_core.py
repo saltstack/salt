@@ -186,6 +186,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             "motherboard",
             "serialnumber",
             "timezone",
+            "uuid",
             "manufacturer",
             "kernelversion",
             "osservicepack",
@@ -678,6 +679,35 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         self._run_os_grains_tests(None, _os_release_map, expectation)
 
     @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
+    def test_alinux2_os_grains(self):
+        """
+        Test if OS grains are parsed correctly in Alibaba Cloud Linux
+        """
+        _os_release_map = {
+            "os_release_file": {
+                "NAME": "Alibaba Cloud Linux (Aliyun Linux)",
+                "VERSION": "2.1903 LTS (Hunting Beagle)",
+                "VERSION_ID": "2.1903",
+                "PRETTY_NAME": "Alibaba Cloud Linux (Aliyun Linux) 2.1903 LTS (Hunting Beagle)",
+                "ID": "alinux",
+                "ANSI_COLOR": "0;31",
+            },
+            "_linux_distribution": ("alinux", "2.1903", "LTS"),
+        }
+
+        expectation = {
+            "os": "Alinux",
+            "os_family": "RedHat",
+            "oscodename": "Alibaba Cloud Linux (Aliyun Linux) 2.1903 LTS (Hunting Beagle)",
+            "osfullname": "Alibaba Cloud Linux (Aliyun Linux)",
+            "osrelease": "2.1903",
+            "osrelease_info": (2, 1903),
+            "osmajorrelease": 2,
+            "osfinger": "Alibaba Cloud Linux (Aliyun Linux)-2",
+        }
+        self._run_os_grains_tests(None, _os_release_map, expectation)
+
+    @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
     def test_centos_stream_8_os_grains(self):
         """
         Test if OS grains are parsed correctly in Centos 8
@@ -704,6 +734,27 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             "osrelease_info": (8,),
             "osmajorrelease": 8,
             "osfinger": "CentOS Stream-8",
+        }
+        self._run_os_grains_tests(None, _os_release_map, expectation)
+
+    @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
+    def test_mendel_os_grains(self):
+        """
+        Test if OS grains are parsed correctly in Mendel Linux
+        """
+        _os_release_map = {
+            "_linux_distribution": ("Mendel", "10.0", "eagle"),
+        }
+
+        expectation = {
+            "os": "Mendel",
+            "os_family": "Debian",
+            "oscodename": "eagle",
+            "osfullname": "Mendel",
+            "osrelease": "10.0",
+            "osrelease_info": (10, 0),
+            "osmajorrelease": 10,
+            "osfinger": "Mendel-10",
         }
         self._run_os_grains_tests(None, _os_release_map, expectation)
 
@@ -824,6 +875,46 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             "osfinger": "Pop-20",
         }
         self._run_os_grains_tests("pop-20.10", _os_release_map, expectation)
+
+    @skipIf(not salt.utils.platform.is_linux(), "System is not Linux based")
+    def test_astralinuxce_os_grains(self):
+        """
+        Test that OS grains are parsed correctly for Astra Linux Orel
+        """
+        _os_release_map = {
+            "_linux_distribution": ("AstraLinuxCE", "2.12.40", "orel"),
+        }
+        expectation = {
+            "os": "AstraLinuxCE",
+            "os_family": "Debian",
+            "oscodename": "orel",
+            "osfullname": "AstraLinuxCE",
+            "osrelease": "2.12.40",
+            "osrelease_info": (2, 12, 40),
+            "osmajorrelease": 2,
+            "osfinger": "AstraLinuxCE-2",
+        }
+        self._run_os_grains_tests(None, _os_release_map, expectation)
+
+    @skipIf(not salt.utils.platform.is_linux(), "System is not Linux based")
+    def test_astralinuxse_os_grains(self):
+        """
+        Test that OS grains are parsed correctly for Astra Linux Smolensk
+        """
+        _os_release_map = {
+            "_linux_distribution": ("AstraLinuxSE", "1.6", "smolensk"),
+        }
+        expectation = {
+            "os": "AstraLinuxSE",
+            "os_family": "Debian",
+            "oscodename": "smolensk",
+            "osfullname": "AstraLinuxSE",
+            "osrelease": "1.6",
+            "osrelease_info": (1, 6),
+            "osmajorrelease": 1,
+            "osfinger": "AstraLinuxSE-1",
+        }
+        self._run_os_grains_tests(None, _os_release_map, expectation)
 
     @skipIf(not salt.utils.platform.is_windows(), "System is not Windows")
     def test_windows_platform_data(self):

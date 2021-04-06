@@ -133,7 +133,7 @@ Dictionaries should be initialized using `{}` instead of `dict()`.
 
 See here_ for an in-depth discussion of this topic.
 
-.. _here: https://doughellmann.com/blog/2012/11/12/the-performance-impact-of-using-dict-instead-of-in-cpython-2-7-2/
+.. _here: https://doughellmann.com/posts/the-performance-impact-of-using-dict-instead-of-in-cpython-2-7-2/
 
 
 Imports

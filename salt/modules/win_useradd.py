@@ -1,6 +1,5 @@
-# -*- coding: utf-8 -*-
 """
-Module for managing Windows Users
+Module for managing Windows Users.
 
 .. important::
     If you feel that Salt should be using this module to manage users on a
@@ -22,14 +21,11 @@ Module for managing Windows Users
 .. note::
     This currently only works with local user accounts, not domain accounts
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import time
 from datetime import datetime
 
-# Import Salt libs
 import salt.utils.args
 import salt.utils.dateutils
 import salt.utils.platform
@@ -93,10 +89,10 @@ def _to_unicode(instr):
     Returns:
         str: Unicode type string
     """
-    if instr is None or isinstance(instr, six.text_type):
+    if instr is None or isinstance(instr, str):
         return instr
     else:
-        return six.text_type(instr, "utf-8")
+        return str(instr, "utf-8")
 
 
 def add(
@@ -175,7 +171,7 @@ def add(
         log.error("nbr: %s", exc.winerror)
         log.error("ctx: %s", exc.funcname)
         log.error("msg: %s", exc.strerror)
-        return False
+        return exc.strerror
 
     update(name=name, homedrive=homedrive, profile=profile, fullname=fullname)
 
@@ -255,7 +251,7 @@ def update(
     .. code-block:: bash
 
         salt '*' user.update bob password=secret profile=C:\\Users\\Bob
-                 home=\\server\homeshare\bob homedrive=U:
+                 home=\\server\\homeshare\\bob homedrive=U:
     """
     # pylint: enable=anomalous-backslash-in-string
     if six.PY2:
@@ -277,7 +273,7 @@ def update(
         log.error("nbr: %s", exc.winerror)
         log.error("ctx: %s", exc.funcname)
         log.error("msg: %s", exc.strerror)
-        return False
+        return exc.strerror
 
     # Check parameters to update
     # Update the user object with new settings
@@ -302,7 +298,7 @@ def update(
             try:
                 dt_obj = salt.utils.dateutils.date_cast(expiration_date)
             except (ValueError, RuntimeError):
-                return "Invalid Date/Time Format: {0}".format(expiration_date)
+                return "Invalid Date/Time Format: {}".format(expiration_date)
             user_info["acct_expires"] = time.mktime(dt_obj.timetuple())
     if expired is not None:
         if expired:
@@ -336,7 +332,7 @@ def update(
         log.error("nbr: %s", exc.winerror)
         log.error("ctx: %s", exc.funcname)
         log.error("msg: %s", exc.strerror)
-        return False
+        return exc.strerror
 
     return True
 
@@ -376,7 +372,7 @@ def delete(name, purge=False, force=False):
         log.error("nbr: %s", exc.winerror)
         log.error("ctx: %s", exc.funcname)
         log.error("msg: %s", exc.strerror)
-        return False
+        return exc.strerror
 
     # Check if the user is logged in
     # Return a list of logged in users
@@ -414,7 +410,7 @@ def delete(name, purge=False, force=False):
                 log.error("nbr: %s", exc.winerror)
                 log.error("ctx: %s", exc.funcname)
                 log.error("msg: %s", exc.strerror)
-                return False
+                return exc.strerror
         else:
             log.error("User %s is currently logged in.", name)
             return False
@@ -433,7 +429,7 @@ def delete(name, purge=False, force=False):
                 log.error("nbr: %s", exc.winerror)
                 log.error("ctx: %s", exc.funcname)
                 log.error("msg: %s", exc.strerror)
-                return False
+                return exc.strerror
 
     # And finally remove the user account
     try:
@@ -443,7 +439,7 @@ def delete(name, purge=False, force=False):
         log.error("nbr: %s", exc.winerror)
         log.error("ctx: %s", exc.funcname)
         log.error("msg: %s", exc.strerror)
-        return False
+        return exc.strerror
 
     return True
 
@@ -529,7 +525,7 @@ def addgroup(name, group):
     if group in user["groups"]:
         return True
 
-    cmd = 'net localgroup "{0}" {1} /add'.format(group, name)
+    cmd = 'net localgroup "{}" {} /add'.format(group, name)
     ret = __salt__["cmd.run_all"](cmd, python_shell=True)
 
     return ret["retcode"] == 0
@@ -568,7 +564,7 @@ def removegroup(name, group):
     if group not in user["groups"]:
         return True
 
-    cmd = 'net localgroup "{0}" {1} /delete'.format(group, name)
+    cmd = 'net localgroup "{}" {} /delete'.format(group, name)
     ret = __salt__["cmd.run_all"](cmd, python_shell=True)
 
     return ret["retcode"] == 0
@@ -709,14 +705,14 @@ def chgroups(name, groups, append=True):
         for group in ugrps:
             group = _cmd_quote(group).lstrip("'").rstrip("'")
             if group not in groups:
-                cmd = 'net localgroup "{0}" {1} /delete'.format(group, name)
+                cmd = 'net localgroup "{}" {} /delete'.format(group, name)
                 __salt__["cmd.run_all"](cmd, python_shell=True)
 
     for group in groups:
         if group in ugrps:
             continue
         group = _cmd_quote(group).lstrip("'").rstrip("'")
-        cmd = 'net localgroup "{0}" {1} /add'.format(group, name)
+        cmd = 'net localgroup "{}" {} /add'.format(group, name)
         out = __salt__["cmd.run_all"](cmd, python_shell=True)
         if out["retcode"] != 0:
             log.error(out["stdout"])
@@ -853,7 +849,7 @@ def _get_userprofile_from_registry(user, sid):
     """
     profile_dir = __utils__["reg.read_value"](
         "HKEY_LOCAL_MACHINE",
-        "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList\\{0}".format(sid),
+        "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList\\{}".format(sid),
         "ProfileImagePath",
     )["vdata"]
     log.debug('user %s with sid=%s profile is located at "%s"', user, sid, profile_dir)
@@ -987,12 +983,12 @@ def rename(name, new_name):
     # Load information for the current name
     current_info = info(name)
     if not current_info:
-        raise CommandExecutionError("User '{0}' does not exist".format(name))
+        raise CommandExecutionError("User '{}' does not exist".format(name))
 
     # Look for an existing user with the new name
     new_info = info(new_name)
     if new_info:
-        raise CommandExecutionError("User '{0}' already exists".format(new_name))
+        raise CommandExecutionError("User '{}' already exists".format(new_name))
 
     # Rename the user account
     # Connect to WMI
@@ -1003,7 +999,7 @@ def rename(name, new_name):
         try:
             user = c.Win32_UserAccount(Name=name)[0]
         except IndexError:
-            raise CommandExecutionError("User '{0}' does not exist".format(name))
+            raise CommandExecutionError("User '{}' does not exist".format(name))
 
         # Rename the user
         result = user.Rename(new_name)[0]
@@ -1025,7 +1021,7 @@ def rename(name, new_name):
                 10: "Internal error",
             }
             raise CommandExecutionError(
-                "There was an error renaming '{0}' to '{1}'. Error: {2}".format(
+                "There was an error renaming '{}' to '{}'. Error: {}".format(
                     name, new_name, error_dict[result]
                 )
             )
