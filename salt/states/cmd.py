@@ -333,6 +333,8 @@ def wait(
     hide_output=False,
     use_vt=False,
     success_retcodes=None,
+    success_stdout=None,
+    success_stderr=None,
     **kwargs
 ):
     """
@@ -442,12 +444,26 @@ def wait(
         interactively to the console and the logs.
         This is experimental.
 
-    success_retcodes: This parameter will be allow a list of
+    success_retcodes: This parameter will allow a list of
         non-zero return codes that should be considered a success.  If the
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
       .. versionadded:: 2019.2.0
+
+    success_stdout: This parameter will allow a list of
+        strings that when found in standard out should be considered a success.
+        If stdout returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: 3004
+
+    success_stderr: This parameter will allow a list of
+        strings that when found in standard error should be considered a success.
+        If stderr returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: 3004
     """
     # Ignoring our arguments is intentional.
     return {"name": name, "changes": {}, "result": True, "comment": ""}
@@ -470,6 +486,9 @@ def wait_script(
     use_vt=False,
     output_loglevel="debug",
     hide_output=False,
+    success_retcodes=None,
+    success_stdout=None,
+    success_stderr=None,
     **kwargs
 ):
     """
@@ -575,12 +594,26 @@ def wait_script(
 
         .. versionadded:: 2018.3.0
 
-    success_retcodes: This parameter will be allow a list of
+    success_retcodes: This parameter will allow a list of
         non-zero return codes that should be considered a success.  If the
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
       .. versionadded:: 2019.2.0
+
+    success_stdout: This parameter will allow a list of
+        strings that when found in standard out should be considered a success.
+        If stdout returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: 3004
+
+    success_stderr: This parameter will allow a list of
+        strings that when found in standard error should be considered a success.
+        If stderr returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: 3004
     """
     # Ignoring our arguments is intentional.
     return {"name": name, "changes": {}, "result": True, "comment": ""}
@@ -602,6 +635,8 @@ def run(
     ignore_timeout=False,
     use_vt=False,
     success_retcodes=None,
+    success_stdout=None,
+    success_stderr=None,
     **kwargs
 ):
     """
@@ -729,12 +764,26 @@ def run(
 
         .. versionadded:: 2016.3.6
 
-    success_retcodes: This parameter will be allow a list of
+    success_retcodes: This parameter will allow a list of
         non-zero return codes that should be considered a success.  If the
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
       .. versionadded:: 2019.2.0
+
+    success_stdout: This parameter will allow a list of
+        strings that when found in standard out should be considered a success.
+        If stdout returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: 3004
+
+    success_stderr: This parameter will allow a list of
+        strings that when found in standard error should be considered a success.
+        If stderr returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: 3004
 
     .. note::
 
@@ -791,6 +840,8 @@ def run(
             "output_loglevel": output_loglevel,
             "hide_output": hide_output,
             "success_retcodes": success_retcodes,
+            "success_stdout": success_stdout,
+            "success_stderr": success_stderr,
         }
     )
 
@@ -853,6 +904,8 @@ def script(
     defaults=None,
     context=None,
     success_retcodes=None,
+    success_stdout=None,
+    success_stderr=None,
     **kwargs
 ):
     """
@@ -1012,13 +1065,26 @@ def script(
 
         .. versionadded:: 2018.3.0
 
-    success_retcodes: This parameter will be allow a list of
+    success_retcodes: This parameter will allow a list of
         non-zero return codes that should be considered a success.  If the
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
       .. versionadded:: 2019.2.0
 
+    success_stdout: This parameter will allow a list of
+        strings that when found in standard out should be considered a success.
+        If stdout returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: 3004
+
+    success_stderr: This parameter will allow a list of
+        strings that when found in standard error should be considered a success.
+        If stderr returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: 3004
     """
     test_name = None
     if not isinstance(stateful, list):
@@ -1048,7 +1114,7 @@ def script(
         return ret
 
     if runas and salt.utils.platform.is_windows() and not password:
-        ret["commnd"] = "Must supply a password if runas argument is used on Windows."
+        ret["comment"] = "Must supply a password if runas argument is used on Windows."
         return ret
 
     tmpctx = defaults if defaults else {}
@@ -1072,6 +1138,8 @@ def script(
             "context": tmpctx,
             "saltenv": __env__,
             "success_retcodes": success_retcodes,
+            "success_stdout": success_stdout,
+            "success_stderr": success_stderr,
         }
     )
 
