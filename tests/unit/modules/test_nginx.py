@@ -25,11 +25,13 @@ class NginxTestCase(TestCase, LoaderModuleMockMixin):
         patcher = patch("salt.utils.path.which", Mock(return_value="/usr/bin/nginx"))
         patcher.start()
         self.addCleanup(patcher.stop)
-        return {nginx: {"_urlopen": Mock(return_value=MockUrllibStatus())}}
+        return {}
 
     def test_nginx_status(self):
-        result = nginx.status()
-        nginx._urlopen.assert_called_once_with("http://127.0.0.1/status")
+        mock = Mock(return_value=MockUrllibStatus())
+        with patch("urllib.request.urlopen", mock):
+            result = nginx.status()
+        mock.assert_called_once_with("http://127.0.0.1/status")
         self.assertEqual(
             result,
             {
@@ -44,6 +46,8 @@ class NginxTestCase(TestCase, LoaderModuleMockMixin):
         )
 
     def test_nginx_status_with_arg(self):
+        mock = Mock(return_value=MockUrllibStatus())
         other_path = "http://localhost/path"
-        result = nginx.status(other_path)
-        nginx._urlopen.assert_called_once_with(other_path)
+        with patch("urllib.request.urlopen", mock):
+            result = nginx.status(other_path)
+        mock.assert_called_once_with(other_path)

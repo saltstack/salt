@@ -231,7 +231,8 @@ def returner(load):
     sql = """INSERT INTO salt_returns
             (fun, jid, return, id, success)
             VALUES (%s, %s, %s, %s, %s)"""
-    job_ret = {"return": str(str(load["return"]), "utf-8", "replace")}
+    ret = str(load["return"])
+    job_ret = {"return": ret}
     if "retcode" in load:
         job_ret["retcode"] = load["retcode"]
     if "success" in load:
