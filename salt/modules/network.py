@@ -1456,10 +1456,9 @@ def mod_hostname(hostname):
                     # fmt: off
                     fh_.write(
                         __utils__["stringutils.to_str"](
-                            "HOSTNAME={}{}{}\n".format(
-                                __utils__["stringutils.dequote"](hostname),
-                                quote_type,
-                                __utils__["stringutils.dequote"](hostname),
+                            "HOSTNAME={quote}{hostname}{quote}\n".format(
+                                quote=quote_type,
+                                hostname=__utils__["stringutils.dequote"](hostname),
                             )
                         )
                     )

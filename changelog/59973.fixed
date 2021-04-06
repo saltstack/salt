@@ -1,0 +1,1 @@
+Fixed module network.mod_hostname for RHEL dists where `HOSTNAME` in `/etc/sysconfig/network` was incorrectly set.
