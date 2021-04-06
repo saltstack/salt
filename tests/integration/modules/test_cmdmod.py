@@ -1,4 +1,5 @@
 import os
+import random
 import sys
 import tempfile
 from contextlib import contextmanager
@@ -173,6 +174,31 @@ class CMDModuleTest(ModuleCase):
         )
 
         self.assertEqual(ret, 0)
+
+    @pytest.mark.slow_test
+    def test_run_all_with_success_stderr(self):
+        """
+        cmd.run with success_retcodes
+        """
+        random_file = "{}{}{}".format(
+            RUNTIME_VARS.TMP_ROOT_DIR, os.path.sep, random.random()
+        )
+
+        if salt.utils.platform.is_windows():
+            func = "type"
+            expected_stderr = "cannot find the file specified"
+        else:
+            func = "cat"
+            expected_stderr = "No such file or directory"
+        ret = self.run_function(
+            "cmd.run_all",
+            ["{} {}".format(func, random_file)],
+            success_stderr=[expected_stderr],
+            python_shell=True,
+        )
+
+        self.assertTrue("retcode" in ret)
+        self.assertEqual(ret.get("retcode"), 0)
 
     @pytest.mark.slow_test
     def test_blacklist_glob(self):
