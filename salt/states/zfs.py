@@ -412,8 +412,10 @@ def _dataset_present(
         volume_size = __utils__["zfs.from_size"](volume_size)
     if properties:
         properties = __utils__["zfs.from_auto_dict"](properties)
+        propnames = ",".join(properties.keys())
     elif properties is None:
         properties = {}
+        propnames = ""
 
     ## log configuration
     log.debug(
@@ -450,6 +452,7 @@ def _dataset_present(
         ## NOTE: fetch current volume properties
         properties_current = __salt__["zfs.get"](
             name,
+            properties=propnames,
             type=dataset_type,
             fields="value",
             depth=0,
