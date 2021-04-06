@@ -92,7 +92,7 @@ def _public_network_to_dict(net):
 
 def _private_network_to_dict(net):
     return {
-        "ipv4": getattr(net.ip, "ip", None),
+        "ip": getattr(net.ip, "ip", None),
     }
 
 
