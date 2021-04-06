@@ -184,7 +184,7 @@ class ApacheTestCase(TestCase, LoaderModuleMockMixin):
         Test if return get error from the Apache server-status
         """
         mock = MagicMock(side_effect=urllib.error.URLError("error"))
-        with patch.object(apache, "_urlopen", mock):
+        with patch("urllib.request.urlopen", mock):
             mock = MagicMock(return_value="")
             with patch.dict(apache.__salt__, {"config.get": mock}):
                 assert apache.server_status() == "error"

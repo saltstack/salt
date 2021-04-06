@@ -4,12 +4,10 @@ lack of support for reading NTFS links.
 """
 
 
-import errno
 import logging
 import os
 import posixpath
 import re
-import struct
 from collections.abc import Iterable
 
 import salt.utils.args
@@ -20,7 +18,6 @@ from salt.utils.decorators.jinja import jinja_filter
 
 try:
     import win32file
-    from pywintypes import error as pywinerror
 
     HAS_WIN32FILE = True
 except ImportError:
@@ -33,108 +30,14 @@ def islink(path):
     """
     Equivalent to os.path.islink()
     """
-    if not salt.utils.platform.is_windows():
-        return os.path.islink(path)
-
-    if not HAS_WIN32FILE:
-        log.error("Cannot check if %s is a link, missing required modules", path)
-
-    if not _is_reparse_point(path):
-        return False
-
-    # check that it is a symlink reparse point (in case it is something else,
-    # like a mount point)
-    reparse_data = _get_reparse_data(path)
-
-    # sanity check - this should not happen
-    if not reparse_data:
-        # not a reparse point
-        return False
-
-    # REPARSE_DATA_BUFFER structure - see
-    # http://msdn.microsoft.com/en-us/library/ff552012.aspx
-
-    # parse the structure header to work out which type of reparse point this is
-    header_parser = struct.Struct("L")
-    (ReparseTag,) = header_parser.unpack(reparse_data[: header_parser.size])
-    # http://msdn.microsoft.com/en-us/library/windows/desktop/aa365511.aspx
-    if not ReparseTag & 0xA000FFFF == 0xA000000C:
-        return False
-    else:
-        return True
+    return os.path.islink(path)
 
 
 def readlink(path):
     """
     Equivalent to os.readlink()
     """
-    if not salt.utils.platform.is_windows():
-        return os.readlink(path)
-
-    if not HAS_WIN32FILE:
-        log.error("Cannot read %s, missing required modules", path)
-
-    reparse_data = _get_reparse_data(path)
-
-    if not reparse_data:
-        # Reproduce *NIX behavior when os.readlink is performed on a path that
-        # is not a symbolic link.
-        raise OSError(errno.EINVAL, "Invalid argument: '{}'".format(path))
-
-    # REPARSE_DATA_BUFFER structure - see
-    # http://msdn.microsoft.com/en-us/library/ff552012.aspx
-
-    # parse the structure header to work out which type of reparse point this is
-    header_parser = struct.Struct("L")
-    (ReparseTag,) = header_parser.unpack(reparse_data[: header_parser.size])
-    # http://msdn.microsoft.com/en-us/library/windows/desktop/aa365511.aspx
-    if not ReparseTag & 0xA000FFFF == 0xA000000C:
-        raise OSError(
-            errno.EINVAL,
-            "{0} is not a symlink, but another type of reparse point "
-            "(0x{0:X}).".format(ReparseTag),
-        )
-
-    # parse as a symlink reparse point structure (the structure for other
-    # reparse points is different)
-    data_parser = struct.Struct("LHHHHHHL")
-    (
-        ReparseTag,
-        ReparseDataLength,
-        Reserved,
-        SubstituteNameOffset,
-        SubstituteNameLength,
-        PrintNameOffset,
-        PrintNameLength,
-        Flags,
-    ) = data_parser.unpack(reparse_data[: data_parser.size])
-
-    path_buffer_offset = data_parser.size
-    absolute_substitute_name_offset = path_buffer_offset + SubstituteNameOffset
-    target_bytes = reparse_data[
-        absolute_substitute_name_offset : absolute_substitute_name_offset
-        + SubstituteNameLength
-    ]
-    target = target_bytes.decode("UTF-16")
-
-    if target.startswith("\\??\\"):
-        target = target[4:]
-
-    try:
-        # comes out in 8.3 form; convert it to LFN to make it look nicer
-        target = win32file.GetLongPathName(target)
-    except pywinerror as exc:
-        # If target is on a UNC share, the decoded target will be in the format
-        # "UNC\hostanme\sharename\additional\subdirs\under\share". So, in
-        # these cases, return the target path in the proper UNC path format.
-        if target.startswith("UNC\\"):
-            return re.sub(r"^UNC\\+", r"\\\\", target)
-        # if file is not found (i.e. bad symlink), return it anyway like on *nix
-        if exc.winerror == 2:
-            return target
-        raise
-
-    return target
+    return os.readlink(path)
 
 
 def _is_reparse_point(path):
