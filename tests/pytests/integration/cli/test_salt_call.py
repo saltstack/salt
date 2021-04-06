@@ -59,20 +59,18 @@ def test_json_out_indent(salt_call_cli, indent):
     assert ret.stdout == expected_output
 
 
-def test_local_sls_call(salt_call_cli, base_env_state_tree_root_dir):
+def test_local_sls_call(salt_master, salt_call_cli):
     sls_contents = """
     regular-module:
       module.run:
         - name: test.echo
         - text: hello
     """
-    with pytest.helpers.temp_file(
-        "saltcalllocal.sls", sls_contents, base_env_state_tree_root_dir
-    ):
+    with salt_master.state_tree.base.temp_file("saltcalllocal.sls", sls_contents):
         ret = salt_call_cli.run(
             "--local",
             "--file-root",
-            base_env_state_tree_root_dir,
+            str(salt_master.state_tree.base.paths[0]),
             "state.sls",
             "saltcalllocal",
         )
@@ -216,9 +214,7 @@ def test_42116_cli_pillar_override(salt_call_cli):
     )
 
 
-def test_pillar_items_masterless(
-    salt_minion, salt_call_cli, base_env_pillar_tree_root_dir
-):
+def test_pillar_items_masterless(salt_minion, salt_call_cli):
     """
     Test to ensure we get expected output
     from pillar.items with salt-call
@@ -238,11 +234,9 @@ def test_pillar_items_masterless(
       - Bedevere
       - Robin
     """
-    top_tempfile = pytest.helpers.temp_file(
-        "top.sls", top_file, base_env_pillar_tree_root_dir
-    )
-    basic_tempfile = pytest.helpers.temp_file(
-        "basic.sls", basic_pillar_file, base_env_pillar_tree_root_dir
+    top_tempfile = salt_minion.pillar_tree.base.temp_file("top.sls", top_file)
+    basic_tempfile = salt_minion.pillar_tree.base.temp_file(
+        "basic.sls", basic_pillar_file
     )
 
     with top_tempfile, basic_tempfile:
@@ -256,7 +250,7 @@ def test_pillar_items_masterless(
         assert ret.json["monty"] == "python"
 
 
-def test_masterless_highstate(salt_call_cli, base_env_state_tree_root_dir, tmp_path):
+def test_masterless_highstate(salt_minion, salt_call_cli, tmp_path):
     """
     test state.highstate in masterless mode
     """
@@ -279,9 +273,9 @@ def test_masterless_highstate(salt_call_cli, base_env_state_tree_root_dir, tmp_p
 
     expected_id = str(testfile)
 
-    with pytest.helpers.temp_file(
-        "top.sls", top_sls, base_env_state_tree_root_dir
-    ), pytest.helpers.temp_file("core.sls", core_state, base_env_state_tree_root_dir):
+    with salt_minion.state_tree.base.temp_file(
+        "top.sls", top_sls
+    ), salt_minion.state_tree.base.temp_file("core.sls", core_state):
         ret = salt_call_cli.run("--local", "state.highstate")
         assert ret.exitcode == 0
         state_run_dict = next(iter(ret.json.values()))
