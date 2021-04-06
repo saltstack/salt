@@ -257,6 +257,12 @@ def test_create(images, sizes, vm):
         "salt.cloud.clouds.hetzner._connect_client", return_value=MagicMock()
     ) as connect:
         with patch("salt.cloud.clouds.hetzner.wait_until", return_value=True) as wait:
+
+            # Create waits for the server to be running before going on
+            created_server = MagicMock()
+            created_server.status = "running"
+            connect.return_value.servers.get_by_id.return_value = created_server
+
             with pytest.raises(SaltCloudException):
                 hetzner.create({})
 
@@ -290,6 +296,11 @@ def test_create_location(vm):
     with patch(
         "salt.cloud.clouds.hetzner._connect_client", return_value=MagicMock()
     ) as connect:
+        # Create waits for the server to be running before going on
+        created_server = MagicMock()
+        created_server.status = "running"
+        connect.return_value.servers.get_by_id.return_value = created_server
+
         hetzner.create(vm)
         connect.return_value.servers.create.assert_called_once()
         connect.return_value.locations.get_by_name.assert_called_once_with("abc")
@@ -314,6 +325,11 @@ def test_ssh_keys(vm):
     with patch(
         "salt.cloud.clouds.hetzner._connect_client", return_value=MagicMock()
     ) as connect:
+        # Create waits for the server to be running before going on
+        created_server = MagicMock()
+        created_server.status = "running"
+        connect.return_value.servers.get_by_id.return_value = created_server
+
         hetzner.create(vm)
         connect.return_value.ssh_keys.get_by_name.assert_called_once_with("me")
 
@@ -337,6 +353,11 @@ def test_create_datacenter(vm):
     with patch(
         "salt.cloud.clouds.hetzner._connect_client", return_value=MagicMock()
     ) as connect:
+        # Create waits for the server to be running before going on
+        created_server = MagicMock()
+        created_server.status = "running"
+        connect.return_value.servers.get_by_id.return_value = created_server
+
         hetzner.create(vm)
         connect.return_value.servers.create.assert_called_once()
         connect.return_value.datacenters.get_by_name.assert_called_once_with("abc")
@@ -360,6 +381,11 @@ def test_create_volumes(vm):
     with patch(
         "salt.cloud.clouds.hetzner._connect_client", return_value=MagicMock()
     ) as connect:
+        # Create waits for the server to be running before going on
+        created_server = MagicMock()
+        created_server.status = "running"
+        connect.return_value.servers.get_by_id.return_value = created_server
+
         connect.return_value.volumes.get_all.return_value = ["a", "c"]
 
         hetzner.create(vm)
@@ -379,6 +405,11 @@ def test_create_networks(vm):
     with patch(
         "salt.cloud.clouds.hetzner._connect_client", return_value=MagicMock()
     ) as connect:
+        # Create waits for the server to be running before going on
+        created_server = MagicMock()
+        created_server.status = "running"
+        connect.return_value.servers.get_by_id.return_value = created_server
+
         connect.return_value.networks.get_all.return_value = ["a", "c"]
 
         hetzner.create(vm)
