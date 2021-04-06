@@ -106,6 +106,10 @@ HAS_SSHD = bool(salt.utils.path.which("sshd"))
 HAS_NGINX = bool(salt.utils.path.which("nginx"))
 HAS_VIRTUALENV = bool(salt.utils.path.which_bin(VIRTUALENV_NAMES))
 
+pytestmark = [
+    pytest.mark.skip_on_aarch64(reason="libgit2-dev on aarch64 Ubuntu-20 is outdated"),
+]
+
 
 def _rand_key_name(length):
     return "id_rsa_{}".format(
