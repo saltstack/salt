@@ -1,21 +1,26 @@
 """
-Integration tests for the etcd modules
+Integration tests for salt-ssh py_versions
 """
-
 import logging
-import os
+import shutil
 import subprocess
-import tempfile
 
 import pytest
-import salt.utils.files
+from saltfactories.factories.daemons.container import ContainerFactory
+from saltfactories.utils import random_string
 from saltfactories.utils.ports import get_unused_localhost_port
-from tests.support.helpers import dedent
-from tests.support.runtests import RUNTIME_VARS
+
+docker = pytest.importorskip("docker")
+from docker.errors import (  # isort:skip pylint: disable=3rd-party-module-not-gated
+    DockerException,
+)
+
 
 log = logging.getLogger(__name__)
 
-pytestmark = [pytest.mark.skip_if_binaries_missing("dockerd")]
+pytestmark = [
+    pytest.mark.skip_if_binaries_missing("dockerd"),
+]
 
 
 class Keys:
@@ -23,43 +28,53 @@ class Keys:
     Temporary ssh key pair
     """
 
-    def __init__(self, priv_path=None):
-        if priv_path is None:
-            priv_path = tempfile.mktemp()
+    def __init__(self, tmp_path_factory):
+        priv_path = tmp_path_factory.mktemp(".ssh") / "key"
         self.priv_path = priv_path
 
     def generate(self):
-        subprocess.run(["ssh-keygen", "-q", "-N", "", "-f", self.priv_path], check=True)
+        subprocess.run(
+            ["ssh-keygen", "-q", "-N", "", "-f", str(self.priv_path)], check=True
+        )
 
     @property
     def pub_path(self):
-        return "{}.pub".format(self.priv_path)
+        return self.priv_path.with_name("{}.pub".format(self.priv_path.name))
 
     @property
     def pub(self):
-        with salt.utils.files.fopen(self.pub_path, "r") as fp:
-            return fp.read()
+        return self.pub_path.read_text()
 
     @property
     def priv(self):
-        with salt.utils.files.fopen(self.priv_path, "r") as fp:
-            return fp.read()
+        return self.priv_path.read_text()
 
     def __enter__(self):
         self.generate()
         return self
 
-    def __exit__(self, *args, **kwargs):
-        os.remove(self.pub_path)
-        os.remove(self.priv_path)
+    def __exit__(self, *_):
+        shutil.rmtree(str(self.priv_path.parent), ignore_errors=True)
 
 
 @pytest.fixture(scope="module")
-def ssh_keys():
+def docker_client():
+    try:
+        client = docker.from_env()
+    except DockerException:
+        pytest.skip("Failed to get a connection to docker running on the system")
+    connectable = ContainerFactory.client_connectable(client)
+    if connectable is not True:  # pragma: nocover
+        pytest.skip(connectable)
+    return client
+
+
+@pytest.fixture(scope="module")
+def ssh_keys(tmp_path_factory):
     """
     Temporary ssh key fixture
     """
-    with Keys() as keys:
+    with Keys(tmp_path_factory) as keys:
         yield keys
 
 
@@ -72,15 +87,11 @@ def ssh_port():
 
 
 @pytest.fixture(scope="module")
-def ssh_roster(ssh_port, ssh_keys, master_id):
+def salt_ssh_roster_file(ssh_port, ssh_keys, salt_master):
     """
     Temporary roster for ssh docker container
     """
-    roster_path = os.path.join(RUNTIME_VARS.TMP, master_id, "conf", "roster")
-    with salt.utils.files.fopen(roster_path) as fp:
-        orig_roster = fp.read()
-    roster = orig_roster + dedent(
-        """
+    roster = """
     pyvertest:
       host: localhost
       user: centos
@@ -90,71 +101,53 @@ def ssh_roster(ssh_port, ssh_keys, master_id):
         - StrictHostKeyChecking=no
         - UserKnownHostsFile=/dev/null
     """.format(
-            ssh_port, ssh_keys.priv_path
-        )
+        ssh_port, ssh_keys.priv_path
     )
-    with salt.utils.files.fopen(roster_path, "w") as fp:
-        fp.write(roster)
-    try:
-        yield roster_path
-    finally:
-        with salt.utils.files.fopen(roster_path, "w") as fp:
-            fp.write(orig_roster)
+    with pytest.helpers.temp_file(
+        "py_versions_roster", roster, salt_master.config_dir
+    ) as roster_file:
+        yield roster_file
 
 
-@pytest.fixture(scope="module", autouse=True)
-def ssh_docker_container(salt_call_cli, ssh_port, ssh_keys):
+@pytest.fixture(scope="module")
+def ssh_docker_container(salt_factories, docker_client, ssh_port, ssh_keys):
     """
     Temporary docker container with python 3.6 and ssh enabled
     """
-    container_started = False
-    try:
-        ret = salt_call_cli.run(
-            "state.single", "docker_image.present", name="dwoz1/cicd", tag="ssh"
-        )
-        assert ret.exitcode == 0
-        assert ret.json
-        state_run = next(iter(ret.json.values()))
-        assert state_run["result"] is True
-        ret = salt_call_cli.run(
-            "state.single",
-            "docker_container.running",
-            name="ssh1",
-            image="dwoz1/cicd:ssh",
-            port_bindings='"{}:22"'.format(ssh_port),
-            environment={"SSH_USER": "centos", "SSH_AUTHORIZED_KEYS": ssh_keys.pub},
-            cap_add="IPC_LOCK",
-            timeout=300,
-        )
-        assert ret.exitcode == 0
-        assert ret.json
-        state_run = next(iter(ret.json.values()))
-        assert state_run["result"] is True
-        container_started = True
-        yield
-    finally:
-        if container_started:
-            ret = salt_call_cli.run(
-                "state.single", "docker_container.stopped", name="ssh1"
-            )
-            assert ret.exitcode == 0
-            assert ret.json
-            state_run = next(iter(ret.json.values()))
-            assert state_run["result"] is True
-            ret = salt_call_cli.run(
-                "state.single", "docker_container.absent", name="ssh1"
-            )
-            assert ret.exitcode == 0
-            assert ret.json
-            state_run = next(iter(ret.json.values()))
-            assert state_run["result"] is True
+    container = salt_factories.get_container(
+        random_string("ssh-py_versions-"),
+        "dwoz1/cicd:ssh",
+        docker_client=docker_client,
+        check_ports=[ssh_port],
+        container_run_kwargs={
+            "ports": {"22/tcp": ssh_port},
+            "environment": {"SSH_USER": "centos", "SSH_AUTHORIZED_KEYS": ssh_keys.pub},
+            "cap_add": "IPC_LOCK",
+        },
+    )
+    with container.started() as factory:
+        yield factory
+
+
+@pytest.fixture(scope="module")
+def salt_ssh_cli(salt_master, salt_ssh_roster_file, ssh_keys, ssh_docker_container):
+    assert salt_master.is_running()
+    assert ssh_docker_container.is_running()
+    return salt_master.get_salt_ssh_cli(
+        default_timeout=180,
+        roster_file=salt_ssh_roster_file,
+        target_host="localhost",
+        client_key=str(ssh_keys.priv_path),
+        base_script_args=["--ignore-host-keys"],
+    )
 
 
 @pytest.mark.slow_test
-def test_py36_target(salt_ssh_cli, ssh_roster):
+def test_py36_target(salt_ssh_cli):
     """
     Test that a python >3.6 master can salt ssh to a <3.6 target
     """
     ret = salt_ssh_cli.run("test.ping", minion_tgt="pyvertest")
     assert ret.exitcode == 0
     assert ret.json
+    assert ret.json is True
