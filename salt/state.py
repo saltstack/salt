@@ -2798,6 +2798,8 @@ class State:
             status = "onchanges"
         elif "change" in fun_stats:
             status = "change"
+        elif "onfail" in fun_stats:
+            status = "onfail"
         else:
             status = "met"
 
