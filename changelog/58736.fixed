@@ -1,1 +1,0 @@
-Fixed an issue when pillar files are included in the `top.sls` and then later included in another pillar file.

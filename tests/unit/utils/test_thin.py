@@ -1330,16 +1330,13 @@ class SSHThinTestCase(TestCase):
         # This was previously an integration test and is now here, as a unit test.
         # Should actually be a functional test
         with VirtualEnv() as venv:
-            salt.utils.thin.gen_thin(venv.venv_dir)
-            thin_dir = os.path.join(venv.venv_dir, "thin")
-            thin_archive = os.path.join(thin_dir, "thin.tgz")
-            tar = tarfile.open(thin_archive)
-            tar.extractall(thin_dir)
+            salt.utils.thin.gen_thin(str(venv.venv_dir))
+            thin_dir = venv.venv_dir / "thin"
+            thin_archive = thin_dir / "thin.tgz"
+            tar = tarfile.open(str(thin_archive))
+            tar.extractall(str(thin_dir))
             tar.close()
             ret = venv.run(
-                venv.venv_python,
-                os.path.join(thin_dir, "salt-call"),
-                "--version",
-                check=False,
+                venv.venv_python, str(thin_dir / "salt-call"), "--version", check=False,
             )
             assert ret.exitcode == 0, ret

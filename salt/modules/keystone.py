@@ -12,6 +12,7 @@ Module for handling openstack keystone calls.
         keystone.tenant: admin
         keystone.tenant_id: f80919baedab48ec8931f200c65a50df
         keystone.auth_url: 'http://127.0.0.1:5000/v2.0/'
+        keystone.verify_ssl: True
 
     OR (for token based authentication)
 
@@ -31,6 +32,7 @@ Module for handling openstack keystone calls.
           keystone.tenant: admin
           keystone.tenant_id: f80919baedab48ec8931f200c65a50df
           keystone.auth_url: 'http://127.0.0.1:5000/v2.0/'
+          keystone.verify_ssl: True
 
         openstack2:
           keystone.user: admin
@@ -38,6 +40,7 @@ Module for handling openstack keystone calls.
           keystone.tenant: admin
           keystone.tenant_id: f80919baedab48ec8931f200c65a50df
           keystone.auth_url: 'http://127.0.0.2:5000/v2.0/'
+          keystone.verify_ssl: True
 
     With this configuration in place, any of the keystone functions can make use
     of a configuration profile by declaring it explicitly.
@@ -117,6 +120,7 @@ def _get_kwargs(profile=None, **connection_args):
     endpoint = get("endpoint", "http://127.0.0.1:35357/v2.0")
     user_domain_name = get("user_domain_name", "Default")
     project_domain_name = get("project_domain_name", "Default")
+    verify_ssl = get("verify_ssl", True)
     if token:
         kwargs = {"token": token, "endpoint": endpoint}
     else:
@@ -133,6 +137,7 @@ def _get_kwargs(profile=None, **connection_args):
         #   this ensures it's only passed in when defined
         if insecure:
             kwargs["insecure"] = True
+    kwargs["verify_ssl"] = verify_ssl
     return kwargs
 
 
@@ -150,7 +155,7 @@ def api_version(profile=None, **connection_args):
     auth_url = kwargs.get("auth_url", kwargs.get("endpoint", None))
     try:
         return salt.utils.http.query(
-            auth_url, decode=True, decode_type="json", verify_ssl=False
+            auth_url, decode=True, decode_type="json", verify_ssl=kwargs["verify_ssl"]
         )["dict"]["version"]["id"]
     except KeyError:
         return None
@@ -167,7 +172,7 @@ def auth(profile=None, **connection_args):
         salt '*' keystone.auth
     """
     __utils__["versions.warn_until"](
-        "Sodium",
+        "Phosphorus",
         (
             "The keystone module has been deprecated and will be removed in {version}.  "
             "Please update to using the keystoneng module"
@@ -392,7 +397,7 @@ def endpoint_list(profile=None, **connection_args):
             value: getattr(endpoint, value)
             for value in dir(endpoint)
             if not value.startswith("_")
-            and isinstance(getattr(endpoint, value), ((str,), dict, bool))
+            and isinstance(getattr(endpoint, value), (str, dict, bool))
         }
     return ret
 
@@ -559,7 +564,7 @@ def role_list(profile=None, **connection_args):
             value: getattr(role, value)
             for value in dir(role)
             if not value.startswith("_")
-            and isinstance(getattr(role, value), ((str,), dict, bool))
+            and isinstance(getattr(role, value), (str, dict, bool))
         }
     return ret
 
@@ -628,7 +633,7 @@ def service_get(service_id=None, name=None, profile=None, **connection_args):
         value: getattr(service, value)
         for value in dir(service)
         if not value.startswith("_")
-        and isinstance(getattr(service, value), ((str,), dict, bool))
+        and isinstance(getattr(service, value), (str, dict, bool))
     }
     return ret
 
@@ -650,7 +655,7 @@ def service_list(profile=None, **connection_args):
             value: getattr(service, value)
             for value in dir(service)
             if not value.startswith("_")
-            and isinstance(getattr(service, value), ((str,), dict, bool))
+            and isinstance(getattr(service, value), (str, dict, bool))
         }
     return ret
 
@@ -800,7 +805,7 @@ def tenant_get(tenant_id=None, name=None, profile=None, **connection_args):
         value: getattr(tenant, value)
         for value in dir(tenant)
         if not value.startswith("_")
-        and isinstance(getattr(tenant, value), ((str,), dict, bool))
+        and isinstance(getattr(tenant, value), (str, dict, bool))
     }
     return ret
 
@@ -858,7 +863,7 @@ def tenant_list(profile=None, **connection_args):
             value: getattr(tenant, value)
             for value in dir(tenant)
             if not value.startswith("_")
-            and isinstance(getattr(tenant, value), ((str,), dict, bool))
+            and isinstance(getattr(tenant, value), (str, dict, bool))
         }
     return ret
 
@@ -933,7 +938,7 @@ def tenant_update(
         value: getattr(updated, value)
         for value in dir(updated)
         if not value.startswith("_")
-        and isinstance(getattr(updated, value), ((str,), dict, bool))
+        and isinstance(getattr(updated, value), (str, dict, bool))
     }
 
 
@@ -1029,7 +1034,7 @@ def user_list(profile=None, **connection_args):
             value: getattr(user, value, None)
             for value in dir(user)
             if not value.startswith("_")
-            and isinstance(getattr(user, value, None), ((str,), dict, bool))
+            and isinstance(getattr(user, value, None), (str, dict, bool))
         }
         tenant_id = getattr(user, "tenantId", None)
         if tenant_id:
@@ -1069,7 +1074,7 @@ def user_get(user_id=None, name=None, profile=None, **connection_args):
         value: getattr(user, value, None)
         for value in dir(user)
         if not value.startswith("_")
-        and isinstance(getattr(user, value, None), ((str,), dict, bool))
+        and isinstance(getattr(user, value, None), (str, dict, bool))
     }
 
     tenant_id = getattr(user, "tenantId", None)
@@ -1499,7 +1504,7 @@ tenant_id=7167a092ece84bae8cead4bf9d15bb3b
                 value: getattr(role, value)
                 for value in dir(role)
                 if not value.startswith("_")
-                and isinstance(getattr(role, value), ((str,), dict, bool))
+                and isinstance(getattr(role, value), (str, dict, bool))
             }
     else:
         for role in kstone.roles.roles_for_user(user=user_id, tenant=tenant_id):

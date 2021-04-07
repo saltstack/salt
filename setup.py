@@ -685,25 +685,25 @@ class TestCommand(Command):
         """
 
     def run(self):
-        from subprocess import Popen
+        # This should either be removed or migrated to use nox
+        import subprocess
 
         self.run_command("build")
         build_cmd = self.get_finalized_command("build_ext")
         runner = os.path.abspath("tests/runtests.py")
-        test_cmd = sys.executable + " {}".format(runner)
+        test_cmd = [sys.executable, runner]
         if self.runtests_opts:
-            test_cmd += " {}".format(self.runtests_opts)
+            test_cmd.extend(self.runtests_opts.split())
 
         print("running test")
-        test_process = Popen(
+        ret = subprocess.run(
             test_cmd,
-            shell=True,
             stdout=sys.stdout,
             stderr=sys.stderr,
             cwd=build_cmd.build_lib,
+            check=False,
         )
-        test_process.communicate()
-        sys.exit(test_process.returncode)
+        sys.exit(ret.returncode)
 
 
 class Clean(clean):
@@ -1013,9 +1013,30 @@ class SaltDistribution(distutils.dist.Distribution):
         with open(SALT_LONG_DESCRIPTION_FILE, encoding="utf-8") as f:
             self.long_description = f.read()
         self.long_description_content_type = "text/x-rst"
+        self.python_requires = ">=3.5"
+        self.classifiers = [
+            "Programming Language :: Python",
+            "Programming Language :: Cython",
+            "Programming Language :: Python :: 3",
+            "Programming Language :: Python :: 3 :: Only",
+            "Programming Language :: Python :: 3.5",
+            "Programming Language :: Python :: 3.6",
+            "Programming Language :: Python :: 3.7",
+            "Programming Language :: Python :: 3.8",
+            "Programming Language :: Python :: 3.9",
+            "Development Status :: 5 - Production/Stable",
+            "Environment :: Console",
+            "Intended Audience :: Developers",
+            "Intended Audience :: Information Technology",
+            "Intended Audience :: System Administrators",
+            "License :: OSI Approved :: Apache Software License",
+            "Operating System :: POSIX :: Linux",
+            "Topic :: System :: Clustering",
+            "Topic :: System :: Distributed Computing",
+        ]
         self.author = "Thomas S Hatch"
         self.author_email = "thatch45@gmail.com"
-        self.url = "http://saltstack.org"
+        self.url = "https://saltproject.io"
         self.cmdclass.update(
             {
                 "test": TestCommand,
@@ -1072,28 +1093,6 @@ class SaltDistribution(distutils.dist.Distribution):
         return modules
 
     # ----- Static Data -------------------------------------------------------------------------------------------->
-    @property
-    def _property_classifiers(self):
-        return [
-            "Programming Language :: Python",
-            "Programming Language :: Cython",
-            "Programming Language :: Python :: 3",
-            "Programming Language :: Python :: 3 :: Only",
-            "Programming Language :: Python :: 3.5",
-            "Programming Language :: Python :: 3.6",
-            "Programming Language :: Python :: 3.7",
-            "Programming Language :: Python :: 3.8",
-            "Development Status :: 5 - Production/Stable",
-            "Environment :: Console",
-            "Intended Audience :: Developers",
-            "Intended Audience :: Information Technology",
-            "Intended Audience :: System Administrators",
-            "License :: OSI Approved :: Apache Software License",
-            "Operating System :: POSIX :: Linux",
-            "Topic :: System :: Clustering",
-            "Topic :: System :: Distributed Computing",
-        ]
-
     @property
     def _property_dependency_links(self):
         return [

@@ -10,7 +10,7 @@ from salt._compat import ipaddress
 log = logging.getLogger(__name__)
 
 
-def match(tgt, opts=None):
+def match(tgt, opts=None, minion_id=None):
     """
     Matches based on IP address or CIDR notation
     """
