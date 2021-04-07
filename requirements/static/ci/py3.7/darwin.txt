@@ -113,6 +113,7 @@ click==7.0                # via geomet
 clustershell==1.8.1
 colorama==0.4.3           # via ciscoconfparse
 contextlib2==0.6.0.post1
+contextvars==2.4
 croniter==0.3.29 ; sys_platform != "win32"
 cryptography==3.3.2
 decorator==4.4.2          # via networkx
@@ -132,6 +133,7 @@ gitdb==4.0.5
 gitpython==3.1.12
 google-auth==1.6.3        # via kubernetes
 idna==2.8
+immutables==0.15
 importlib-metadata==0.23  # via jsonschema, pluggy, pytest, virtualenv
 iniconfig==1.0.1          # via pytest
 ipaddress==1.0.22         # via kubernetes
