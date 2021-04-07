@@ -465,7 +465,13 @@ class SSHThinTestCase(TestCase):
         ]
         if salt.utils.thin.has_immutables:
             base_tops.extend(["immutables"])
-        tops = [_.rsplit(os.sep, 1)[-1] for _ in thin.get_tops()]
+        tops = []
+        for top in thin.get_tops(extra_mods="foo,bar"):
+            if top.find("/") != -1:
+                spl = "/"
+            else:
+                spl = os.sep
+            tops.append(top.rsplit(spl, 1)[-1])
         assert len(tops) == len(base_tops)
         assert sorted(tops) == sorted(base_tops), sorted(tops)
 
@@ -555,17 +561,20 @@ class SSHThinTestCase(TestCase):
         if salt.utils.thin.has_immutables:
             base_tops.extend(["immutables"])
         libs = salt.utils.thin.find_site_modules("contextvars")
-        builtins = sys.version_info.major == 3 and "builtins" or "__builtin__"
         foo = {"__file__": os.sep + os.path.join("custom", "foo", "__init__.py")}
         bar = {"__file__": os.sep + os.path.join("custom", "bar")}
         with patch("salt.utils.thin.find_site_modules", MagicMock(side_effect=[libs])):
             with patch(
-                "{}.__import__".format(builtins),
+                "builtins.__import__",
                 MagicMock(side_effect=[type("foo", (), foo), type("bar", (), bar)]),
             ):
-                tops = [
-                    _.rsplit(os.sep, 1)[-1] for _ in thin.get_tops(extra_mods="foo,bar")
-                ]
+                tops = []
+                for top in thin.get_tops(extra_mods="foo,bar"):
+                    if top.find("/") != -1:
+                        spl = "/"
+                    else:
+                        spl = os.sep
+                    tops.append(top.rsplit(spl, 1)[-1])
         self.assertEqual(len(tops), len(base_tops))
         self.assertListEqual(sorted(tops), sorted(base_tops))
 
@@ -655,10 +664,9 @@ class SSHThinTestCase(TestCase):
         if salt.utils.thin.has_immutables:
             base_tops.extend(["immutables"])
         libs = salt.utils.thin.find_site_modules("contextvars")
-        builtins = sys.version_info.major == 3 and "builtins" or "__builtin__"
         with patch("salt.utils.thin.find_site_modules", MagicMock(side_effect=[libs])):
             with patch(
-                "{}.__import__".format(builtins),
+                "builtins.__import__",
                 MagicMock(
                     side_effect=[
                         type("salt", (), {"__file__": "/custom/foo.so"}),
@@ -666,9 +674,13 @@ class SSHThinTestCase(TestCase):
                     ]
                 ),
             ):
-                tops = [
-                    _.rsplit(os.sep, 1)[-1] for _ in thin.get_tops(so_mods="foo,bar")
-                ]
+                tops = []
+                for top in thin.get_tops(so_mods="foo,bar"):
+                    if top.find("/") != -1:
+                        spl = "/"
+                    else:
+                        spl = os.sep
+                    tops.append(top.rsplit(spl, 1)[-1])
         assert len(tops) == len(base_tops)
         assert sorted(tops) == sorted(base_tops)
 
