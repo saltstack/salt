@@ -341,13 +341,13 @@ def team_present(
     members_no_mfa = __salt__["github.list_members_without_mfa"](profile=profile)
 
     members_lower = {}
-    for member_name, info in members or {}.items():
+    for member_name, info in members.items() or {}.items():
         members_lower[member_name.lower()] = info
 
     member_change = False
     current_members = __salt__["github.list_team_members"](name, profile=profile)
 
-    for member, member_info in members or {}.items():
+    for member, member_info in members.items() or {}.items():
         log.info("Checking member %s in team %s", member, name)
 
         if member.lower() not in current_members:
