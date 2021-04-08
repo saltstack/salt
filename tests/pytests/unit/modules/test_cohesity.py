@@ -2,15 +2,10 @@
     :codeauthor: Naveena <naveena.maplelabs@cohesity.com>
 """
 
-# Import Python Libs
-from __future__ import absolute_import, unicode_literals, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Testing Libs
-from tests.support.mock import MagicMock, patch
-)
-
-# Import Salt Libs
 import salt.modules.cohesity as cohesity
+from tests.support.mock import MagicMock, patch
 
 
 def test_register_vcenter(self):
