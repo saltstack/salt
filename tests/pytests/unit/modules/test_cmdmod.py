@@ -643,6 +643,8 @@ def test_run_chroot_runas():
         shell="/bin/sh",
         stdin=None,
         success_retcodes=None,
+        success_stdout=None,
+        success_stderr=None,
         template=None,
         timeout=None,
         umask=None,
