@@ -1,0 +1,1 @@
+Fixed fileclient cachedir path switching from master to minion due to incorrect MasterMinion configuration
