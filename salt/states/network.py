@@ -649,7 +649,10 @@ def managed(name, enabled=True, **kwargs):
             present_slaves = __salt__["cmd.run"](
                 ["cat", "/sys/class/net/{}/bonding/slaves".format(name)]
             ).split()
-            desired_slaves = kwargs["slaves"].split()
+            if isinstance(kwargs["slaves"], str):
+                desired_slaves = kwargs["slaves"].split()
+            else:
+                desired_slaves = kwargs["slaves"]
             missing_slaves = set(desired_slaves) - set(present_slaves)
 
             # Enslave only slaves missing in master
