@@ -1,0 +1,3 @@
+Fix an issue with the LGPO module when the gpt.ini file contains unix style line
+endings (/n). This was happening on a Windows Server 2019 instance created in
+Google Cloud Platform (GCP).
