@@ -10,12 +10,14 @@ def loop_interval(schedule):
     schedule.opts["loop_interval"] = 1
 
 
-def test_get_schedule(schedule, loop_interval):
+def test_get_schedule(setup_teardown_vars):
     """
     verify that the _get_schedule function works
     when remove_hidden is True and schedule data
     contains enabled key
     """
+    schedule = setup_teardown_vars["schedule"]
+
     job_name = "test_get_schedule"
     job = {
         "schedule": {

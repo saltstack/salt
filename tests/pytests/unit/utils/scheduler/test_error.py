@@ -26,10 +26,11 @@ pytestmark = pytest.mark.skipif(
 
 
 @pytest.mark.skipif(not HAS_CRONITER, reason="Cannot find croniter python module")
-def test_eval_cron_invalid(schedule, loop_interval):
+def test_eval_cron_invalid(setup_teardown_vars):
     """
     verify that scheduled job runs
     """
+    schedule = setup_teardown_vars["schedule"]
     job = {"schedule": {"job1": {"function": "test.ping", "cron": "0 16 29 13 *"}}}
 
     # Add the job to the scheduler
@@ -43,11 +44,12 @@ def test_eval_cron_invalid(schedule, loop_interval):
     assert ret["_error"] == "Invalid cron string. Ignoring job job1."
 
 
-def test_eval_when_invalid_date(schedule, loop_interval):
+def test_eval_when_invalid_date(setup_teardown_vars):
     """
     verify that scheduled job does not run
     and returns the right error
     """
+    schedule = setup_teardown_vars["schedule"]
     run_time = dateutil.parser.parse("11/29/2017 4:00pm")
 
     job = {"schedule": {"job1": {"function": "test.ping", "when": "13/29/2017 1:00pm"}}}
@@ -61,11 +63,12 @@ def test_eval_when_invalid_date(schedule, loop_interval):
     assert ret["_error"] == "Invalid date string 13/29/2017 1:00pm. Ignoring job job1."
 
 
-def test_eval_whens_grain_not_dict(schedule, loop_interval):
+def test_eval_whens_grain_not_dict(setup_teardown_vars):
     """
     verify that scheduled job does not run
     and returns the right error
     """
+    schedule = setup_teardown_vars["schedule"]
     schedule.opts["grains"]["whens"] = {"tea time": "11/29/2017 12:00pm"}
 
     run_time = dateutil.parser.parse("11/29/2017 4:00pm")
@@ -83,11 +86,12 @@ def test_eval_whens_grain_not_dict(schedule, loop_interval):
     assert ret["_error"] == 'Grain "whens" must be a dict. Ignoring job job1.'
 
 
-def test_eval_once_invalid_datestring(schedule, loop_interval):
+def test_eval_once_invalid_datestring(setup_teardown_vars):
     """
     verify that scheduled job does not run
     and returns the right error
     """
+    schedule = setup_teardown_vars["schedule"]
     job = {
         "schedule": {"job1": {"function": "test.ping", "once": "2017-13-13T13:00:00"}}
     }
@@ -107,11 +111,12 @@ def test_eval_once_invalid_datestring(schedule, loop_interval):
     assert ret["_error"] == _expected
 
 
-def test_eval_skip_during_range_invalid_date(schedule, loop_interval):
+def test_eval_skip_during_range_invalid_date(setup_teardown_vars):
     """
     verify that scheduled job does not run
     and returns the right error
     """
+    schedule = setup_teardown_vars["schedule"]
 
     job = {
         "schedule": {
@@ -141,11 +146,12 @@ def test_eval_skip_during_range_invalid_date(schedule, loop_interval):
     assert ret["_error"] == _expected
 
 
-def test_eval_skip_during_range_end_before_start(schedule, loop_interval):
+def test_eval_skip_during_range_end_before_start(setup_teardown_vars):
     """
     verify that scheduled job does not run
     and returns the right error
     """
+    schedule = setup_teardown_vars["schedule"]
 
     job = {
         "schedule": {
@@ -177,11 +183,12 @@ def test_eval_skip_during_range_end_before_start(schedule, loop_interval):
     assert ret["_error"] == _expected
 
 
-def test_eval_skip_during_range_not_dict(schedule, loop_interval):
+def test_eval_skip_during_range_not_dict(setup_teardown_vars):
     """
     verify that scheduled job does not run
     and returns the right error
     """
+    schedule = setup_teardown_vars["schedule"]
 
     job = {
         "schedule": {

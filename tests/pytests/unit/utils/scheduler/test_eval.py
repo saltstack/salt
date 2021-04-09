@@ -36,10 +36,12 @@ pytestmark = [
 
 
 @pytest.mark.slow_test
-def test_eval(schedule, loop_interval):
+def test_eval(setup_teardown_vars):
     """
     verify that scheduled job runs
     """
+    schedule = setup_teardown_vars["schedule"]
+
     job_name = "test_eval"
     job = {
         "schedule": {job_name: {"function": "test.ping", "when": "11/29/2017 4:00pm"}}
@@ -62,10 +64,12 @@ def test_eval(schedule, loop_interval):
 
 
 @pytest.mark.slow_test
-def test_eval_multiple_whens(schedule, loop_interval):
+def test_eval_multiple_whens(setup_teardown_vars):
     """
     verify that scheduled job runs
     """
+    schedule = setup_teardown_vars["schedule"]
+
     job_name = "test_eval_multiple_whens"
     job = {
         "schedule": {
@@ -98,10 +102,12 @@ def test_eval_multiple_whens(schedule, loop_interval):
 
 
 @pytest.mark.slow_test
-def test_eval_whens(schedule, loop_interval):
+def test_eval_whens(setup_teardown_vars):
     """
     verify that scheduled job runs
     """
+    schedule = setup_teardown_vars["schedule"]
+
     schedule.opts["grains"]["whens"] = {"tea time": "11/29/2017 12:00pm"}
 
     job_name = "test_eval_whens"
@@ -118,10 +124,12 @@ def test_eval_whens(schedule, loop_interval):
 
 
 @pytest.mark.slow_test
-def test_eval_loop_interval(schedule, loop_interval):
+def test_eval_loop_interval(setup_teardown_vars):
     """
     verify that scheduled job runs
     """
+    schedule = setup_teardown_vars["schedule"]
+
     job_name = "test_eval_loop_interval"
     job = {
         "schedule": {job_name: {"function": "test.ping", "when": "11/29/2017 4:00pm"}}
@@ -143,10 +151,12 @@ def test_eval_loop_interval(schedule, loop_interval):
 
 
 @pytest.mark.slow_test
-def test_eval_multiple_whens_loop_interval(schedule, loop_interval):
+def test_eval_multiple_whens_loop_interval(setup_teardown_vars):
     """
     verify that scheduled job runs
     """
+    schedule = setup_teardown_vars["schedule"]
+
     job_name = "test_eval_multiple_whens_loop_interval"
     job = {
         "schedule": {
@@ -187,10 +197,12 @@ def test_eval_multiple_whens_loop_interval(schedule, loop_interval):
 
 
 @pytest.mark.slow_test
-def test_eval_once(schedule, loop_interval):
+def test_eval_once(setup_teardown_vars):
     """
     verify that scheduled job runs
     """
+    schedule = setup_teardown_vars["schedule"]
+
     job_name = "test_once"
     job = {
         "schedule": {job_name: {"function": "test.ping", "once": "2017-12-13T13:00:00"}}
@@ -208,10 +220,12 @@ def test_eval_once(schedule, loop_interval):
 
 
 @pytest.mark.slow_test
-def test_eval_once_loop_interval(schedule, loop_interval):
+def test_eval_once_loop_interval(setup_teardown_vars):
     """
     verify that scheduled job runs
     """
+    schedule = setup_teardown_vars["schedule"]
+
     job_name = "test_eval_once_loop_interval"
     job = {
         "schedule": {job_name: {"function": "test.ping", "once": "2017-12-13T13:00:00"}}
@@ -235,10 +249,12 @@ def test_eval_once_loop_interval(schedule, loop_interval):
 
 
 @skipIf(not HAS_CRONITER, "Cannot find croniter python module")
-def test_eval_cron(schedule, loop_interval):
+def test_eval_cron(setup_teardown_vars):
     """
     verify that scheduled job runs
     """
+    schedule = setup_teardown_vars["schedule"]
+
     job_name = "test_eval_cron"
     job = {"schedule": {job_name: {"function": "test.ping", "cron": "0 16 29 11 *"}}}
 
@@ -254,10 +270,12 @@ def test_eval_cron(schedule, loop_interval):
 
 
 @skipIf(not HAS_CRONITER, "Cannot find croniter python module")
-def test_eval_cron_loop_interval(schedule, loop_interval):
+def test_eval_cron_loop_interval(setup_teardown_vars):
     """
     verify that scheduled job runs
     """
+    schedule = setup_teardown_vars["schedule"]
+
     job_name = "test_eval_cron_loop_interval"
     job = {"schedule": {job_name: {"function": "test.ping", "cron": "0 16 29 11 *"}}}
     # Randomn second loop interval
@@ -276,11 +294,13 @@ def test_eval_cron_loop_interval(schedule, loop_interval):
 
 
 @pytest.mark.slow_test
-def test_eval_until(schedule, loop_interval):
+def test_eval_until(setup_teardown_vars):
     """
     verify that scheduled job is skipped once the current
     time reaches the specified until time
     """
+    schedule = setup_teardown_vars["schedule"]
+
     job_name = "test_eval_until"
     job = {
         "schedule": {
@@ -329,11 +349,13 @@ def test_eval_until(schedule, loop_interval):
 
 
 @pytest.mark.slow_test
-def test_eval_after(schedule, loop_interval):
+def test_eval_after(setup_teardown_vars):
     """
     verify that scheduled job is skipped until after the specified
     time has been reached.
     """
+    schedule = setup_teardown_vars["schedule"]
+
     job_name = "test_eval_after"
     job = {
         "schedule": {
@@ -382,10 +404,12 @@ def test_eval_after(schedule, loop_interval):
 
 
 @pytest.mark.slow_test
-def test_eval_enabled(schedule, loop_interval):
+def test_eval_enabled(setup_teardown_vars):
     """
     verify that scheduled job does not run
     """
+    schedule = setup_teardown_vars["schedule"]
+
     job_name = "test_eval_enabled"
     job = {
         "schedule": {
@@ -405,12 +429,14 @@ def test_eval_enabled(schedule, loop_interval):
 
 
 @pytest.mark.slow_test
-def test_eval_enabled_key(schedule, loop_interval):
+def test_eval_enabled_key(setup_teardown_vars):
     """
     verify that scheduled job runs
     when the enabled key is in place
     https://github.com/saltstack/salt/issues/47695
     """
+    schedule = setup_teardown_vars["schedule"]
+
     job_name = "test_eval_enabled_key"
     job = {
         "schedule": {
@@ -435,10 +461,12 @@ def test_eval_enabled_key(schedule, loop_interval):
     assert ret["_last_run"] == run_time2
 
 
-def test_eval_disabled(schedule, loop_interval):
+def test_eval_disabled(setup_teardown_vars):
     """
     verify that scheduled job does not run
     """
+    schedule = setup_teardown_vars["schedule"]
+
     job_name = "test_eval_disabled"
     job = {
         "schedule": {
@@ -461,10 +489,12 @@ def test_eval_disabled(schedule, loop_interval):
     assert ret == job["schedule"][job_name]
 
 
-def test_eval_global_disabled_job_enabled(schedule, loop_interval):
+def test_eval_global_disabled_job_enabled(setup_teardown_vars):
     """
     verify that scheduled job does not run
     """
+    schedule = setup_teardown_vars["schedule"]
+
     job_name = "test_eval_global_disabled"
     job = {
         "schedule": {
@@ -492,10 +522,12 @@ def test_eval_global_disabled_job_enabled(schedule, loop_interval):
 
 
 @pytest.mark.slow_test
-def test_eval_run_on_start(schedule, loop_interval):
+def test_eval_run_on_start(setup_teardown_vars):
     """
     verify that scheduled job is run when minion starts
     """
+    schedule = setup_teardown_vars["schedule"]
+
     job_name = "test_eval_run_on_start"
     job = {
         "schedule": {
@@ -519,10 +551,12 @@ def test_eval_run_on_start(schedule, loop_interval):
 
 
 @pytest.mark.slow_test
-def test_eval_splay(schedule, loop_interval):
+def test_eval_splay(setup_teardown_vars):
     """
     verify that scheduled job runs with splayed time
     """
+    schedule = setup_teardown_vars["schedule"]
+
     job_name = "job_eval_splay"
     job = {
         "schedule": {
@@ -547,10 +581,12 @@ def test_eval_splay(schedule, loop_interval):
 
 
 @pytest.mark.slow_test
-def test_eval_splay_range(schedule, loop_interval):
+def test_eval_splay_range(setup_teardown_vars):
     """
     verify that scheduled job runs with splayed time
     """
+    schedule = setup_teardown_vars["schedule"]
+
     job_name = "job_eval_splay_range"
     job = {
         "schedule": {
@@ -579,10 +615,12 @@ def test_eval_splay_range(schedule, loop_interval):
 
 
 @pytest.mark.slow_test
-def test_eval_splay_global(schedule, loop_interval):
+def test_eval_splay_global(setup_teardown_vars):
     """
     verify that scheduled job runs with splayed time
     """
+    schedule = setup_teardown_vars["schedule"]
+
     job_name = "job_eval_splay_global"
     job = {
         "schedule": {
@@ -608,10 +646,12 @@ def test_eval_splay_global(schedule, loop_interval):
 
 
 @pytest.mark.slow_test
-def test_eval_seconds(schedule, loop_interval):
+def test_eval_seconds(setup_teardown_vars):
     """
     verify that scheduled job run mutiple times with seconds
     """
+    schedule = setup_teardown_vars["schedule"]
+
     with patch.dict(schedule.opts, {"run_schedule_jobs_in_background": False}):
         job_name = "job_eval_seconds"
         job = {"schedule": {job_name: {"function": "test.ping", "seconds": "30"}}}
@@ -667,10 +707,12 @@ def test_eval_seconds(schedule, loop_interval):
 
 
 @pytest.mark.slow_test
-def test_eval_minutes(schedule, loop_interval):
+def test_eval_minutes(setup_teardown_vars):
     """
     verify that scheduled job run mutiple times with minutes
     """
+    schedule = setup_teardown_vars["schedule"]
+
     with patch.dict(schedule.opts, {"run_schedule_jobs_in_background": False}):
         job_name = "job_eval_minutes"
         job = {"schedule": {job_name: {"function": "test.ping", "minutes": "30"}}}
@@ -720,10 +762,12 @@ def test_eval_minutes(schedule, loop_interval):
 
 
 @pytest.mark.slow_test
-def test_eval_hours(schedule, loop_interval):
+def test_eval_hours(setup_teardown_vars):
     """
     verify that scheduled job run mutiple times with hours
     """
+    schedule = setup_teardown_vars["schedule"]
+
     with patch.dict(schedule.opts, {"run_schedule_jobs_in_background": False}):
         job_name = "job_eval_hours"
         job = {"schedule": {job_name: {"function": "test.ping", "hours": "2"}}}
@@ -775,10 +819,12 @@ def test_eval_hours(schedule, loop_interval):
 
 
 @pytest.mark.slow_test
-def test_eval_days(schedule, loop_interval):
+def test_eval_days(setup_teardown_vars):
     """
     verify that scheduled job run mutiple times with days
     """
+    schedule = setup_teardown_vars["schedule"]
+
     job_name = "job_eval_days"
     job = {
         "schedule": {job_name: {"function": "test.ping", "days": "2", "dry_run": True}}
@@ -845,10 +891,12 @@ def test_eval_days(schedule, loop_interval):
 
 
 @pytest.mark.slow_test
-def test_eval_when_splay(schedule, loop_interval):
+def test_eval_when_splay(setup_teardown_vars):
     """
     verify that scheduled job runs
     """
+    schedule = setup_teardown_vars["schedule"]
+
     job_name = "test_eval_when_splay"
     splay = 300
     job = {
@@ -891,10 +939,12 @@ def test_eval_when_splay(schedule, loop_interval):
         assert ret["_next_fire_time"] is None
 
 
-def test_eval_when_splay_in_past(schedule, loop_interval):
+def test_eval_when_splay_in_past(setup_teardown_vars):
     """
     verify that scheduled job runs
     """
+    schedule = setup_teardown_vars["schedule"]
+
     job_name = "test_eval_when_splay_in_past"
     splay = 300
     job = {
