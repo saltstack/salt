@@ -1096,7 +1096,7 @@ def get(*dataset, **kwargs):
         comma-separated list of types to display, where type is one of
         filesystem, snapshot, volume, bookmark, or all.
 
-        .. versionedited:: Silicon
+        .. versionchanged:: Silicon
 
         type is ignored on Solaris 10 and 11 since not a valid parameter on those platforms
 
