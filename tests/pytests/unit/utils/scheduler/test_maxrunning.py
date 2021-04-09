@@ -22,10 +22,11 @@ pytestmark = [
 ]
 
 
-def test_maxrunning_minion(schedule, loop_interval):
+def test_maxrunning_minion(setup_teardown_vars):
     """
     verify that scheduled job runs
     """
+    schedule = setup_teardown_vars["schedule"]
     schedule.opts["__role"] = "minion"
 
     job = {
@@ -74,10 +75,11 @@ def test_maxrunning_minion(schedule, loop_interval):
     assert not ret["run"]
 
 
-def test_maxrunning_master(schedule, loop_interval):
+def test_maxrunning_master(setup_teardown_vars):
     """
     verify that scheduled job runs
     """
+    schedule = setup_teardown_vars["schedule"]
     schedule.opts["__role"] = "master"
 
     job = {
