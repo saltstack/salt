@@ -1,0 +1,1 @@
+DPkg::Post-Invoke {"/usr/bin/dpkgnotify";};
