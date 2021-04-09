@@ -525,12 +525,22 @@ def test_modify(sock_dir):
                 assert "new" in ret["changes"]["job1"]
                 assert "old" in ret["changes"]["job1"]
 
-                assert (
-                    ret["changes"]["job1"]["new"] == expected1["changes"]["job1"]["new"]
-                )
-                assert (
-                    ret["changes"]["job1"]["old"] == expected1["changes"]["job1"]["old"]
-                )
+                for key in [
+                    "maxrunning",
+                    "function",
+                    "seconds",
+                    "jid_include",
+                    "name",
+                    "enabled",
+                ]:
+                    assert (
+                        ret["changes"]["job1"]["new"][key]
+                        == expected1["changes"]["job1"]["new"][key]
+                    )
+                    assert (
+                        ret["changes"]["job1"]["old"][key]
+                        == expected1["changes"]["job1"]["old"][key]
+                    )
 
                 assert ret["comment"] == expected1["comment"]
                 assert ret["result"] == expected1["result"]
@@ -557,12 +567,22 @@ def test_modify(sock_dir):
                 assert "new" in ret["changes"]["job1"]
                 assert "old" in ret["changes"]["job1"]
 
-                assert (
-                    ret["changes"]["job1"]["new"] == expected4["changes"]["job1"]["new"]
-                )
-                assert (
-                    ret["changes"]["job1"]["old"] == expected4["changes"]["job1"]["old"]
-                )
+                for key in [
+                    "maxrunning",
+                    "function",
+                    "seconds",
+                    "jid_include",
+                    "name",
+                    "enabled",
+                ]:
+                    assert (
+                        ret["changes"]["job1"]["new"][key]
+                        == expected4["changes"]["job1"]["new"][key]
+                    )
+                    assert (
+                        ret["changes"]["job1"]["old"][key]
+                        == expected4["changes"]["job1"]["old"][key]
+                    )
 
                 assert ret["comment"] == expected4["comment"]
                 assert ret["result"] == expected4["result"]
