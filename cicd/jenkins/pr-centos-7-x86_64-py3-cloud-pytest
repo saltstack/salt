@@ -9,7 +9,7 @@ runTestSuite(
     env: env,
     golden_images_branch: 'master',
     jenkins_slave_label: 'kitchen-slave',
-    kitchen_platforms_file: '/var/jenkins/workspace/nox-cloud-platforms.yml',
+    kitchen_platforms_file: '/var/jenkins/workspace/cloud-platforms.yml',
     nox_env_name: 'pytest-cloud',
     nox_passthrough_opts: '',
     python_version: 'py3',
