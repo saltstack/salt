@@ -188,7 +188,7 @@ def test_eval_multiple_whens_loop_interval(setup_teardown_vars):
     ret = schedule.job_status(job_name)
     assert ret["_last_run"] == run_time1
 
-    time.sleep(2)
+    time.sleep(5)
 
     # Evaluate 1 second at the run time
     schedule.eval(now=run_time2)
