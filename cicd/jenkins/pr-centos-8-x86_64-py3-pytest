@@ -1,10 +1,11 @@
-@Library('salt@master-1.9') _
+@Library('salt@master-1.10') _
 
 runTestSuite(
     ami_image_id: 'ami-0d482e88fbf35072c',
     concurrent_builds: 1,
     distro_name: 'centos',
     distro_version: '8',
+    distro_arch: 'x86-64',
     env: env,
     golden_images_branch: 'master',
     jenkins_slave_label: 'kitchen-slave',
