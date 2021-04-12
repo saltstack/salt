@@ -103,7 +103,6 @@ def test_eval_multiple_whens(schedule):
     # Give the job a chance to finish
     time.sleep(5)
 
-    log.info("=== in test_eval_multiple_whens - ret %s ===", ret)
     assert ret["_last_run"] == run_time2
 
 
@@ -202,7 +201,6 @@ def test_eval_multiple_whens_loop_interval(schedule):
     time.sleep(5)
 
     ret = schedule.job_status(job_name)
-    log.info("=== in test_eval_multiple_whens_loop_interval - ret %s ===", ret)
     assert ret["_last_run"] == run_time2
 
 
@@ -333,9 +331,11 @@ def test_eval_until(schedule):
     run_time = dateutil.parser.parse("11/29/2017 3:00pm")
     schedule.eval(now=run_time)
     ret = schedule.job_status(job_name)
-    assert ret["_last_run"] == run_time
 
-    time.sleep(2)
+    # Give the job a chance to finish
+    time.sleep(5)
+
+    assert ret["_last_run"] == run_time
 
     # eval at 4:00pm, will run.
     run_time = dateutil.parser.parse("11/29/2017 4:00pm")
@@ -343,12 +343,17 @@ def test_eval_until(schedule):
     ret = schedule.job_status(job_name)
     assert ret["_last_run"] == run_time
 
-    time.sleep(2)
+    # Give the job a chance to finish
+    time.sleep(5)
 
     # eval at 5:00pm, will not run
     run_time = dateutil.parser.parse("11/29/2017 5:00pm")
     schedule.eval(now=run_time)
     ret = schedule.job_status(job_name)
+
+    # Give the job a chance to finish
+    time.sleep(5)
+
     assert ret["_skip_reason"] == "until_passed"
     assert ret["_skipped_time"] == run_time
 
@@ -848,36 +853,46 @@ def test_eval_days(schedule):
     last_run_time = run_time - datetime.timedelta(days=1)
     schedule.eval(now=run_time)
     ret = schedule.job_status(job_name)
+
+    # Give the job a chance to finish
+    time.sleep(5)
+
     assert ret["_last_run"] == last_run_time
     assert ret["_next_fire_time"] == next_run_time
-
-    time.sleep(2)
 
     # eval at 11/27/2017 2:00:00pm, will run.
     run_time = dateutil.parser.parse("11/27/2017 2:00:00pm")
     next_run_time = run_time + datetime.timedelta(days=2)
     schedule.eval(now=run_time)
     ret = schedule.job_status(job_name)
+
+    # Give the job a chance to finish
+    time.sleep(5)
+
     assert ret["_last_run"] == run_time
     assert ret["_next_fire_time"] == next_run_time
-
-    time.sleep(2)
 
     # eval at 11/28/2017 2:00:00pm, will not run.
     run_time = dateutil.parser.parse("11/28/2017 2:00:00pm")
     last_run_time = run_time - datetime.timedelta(days=1)
     schedule.eval(now=run_time)
     ret = schedule.job_status(job_name)
+
+    # Give the job a chance to finish
+    time.sleep(5)
+
     assert ret["_last_run"] == last_run_time
     assert ret["_next_fire_time"] == next_run_time
-
-    time.sleep(2)
 
     # eval at 11/29/2017 2:00:00pm, will run.
     run_time = dateutil.parser.parse("11/29/2017 2:00:00pm")
     next_run_time = run_time + datetime.timedelta(days=2)
     schedule.eval(now=run_time)
     ret = schedule.job_status(job_name)
+
+    # Give the job a chance to finish
+    time.sleep(5)
+
     assert ret["_last_run"] == run_time
     assert ret["_next_fire_time"] == next_run_time
 
