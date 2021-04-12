@@ -37,6 +37,7 @@ def configure_loader_modules():
     return zfs_obj
 
 
+@pytest.mark.skip_unless_on_sunos(reason="test to ensure no -t only applies to Solaris")
 def test_get_success_solaris():
     """
     Tests zfs get success
