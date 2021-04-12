@@ -124,12 +124,8 @@ def targets(tgt, tgt_type="glob", **kwargs):
     Return the targets from the ansible inventory_file
     Default: /etc/salt/roster
     """
-    inventory = __runner__["salt.cmd"](
-        "cmd.run_all",
-        "ansible-inventory -i {} --list".format(get_roster_file(__opts__)),
-    )
-    __context__["inventory"] = __utils__["json.loads"](
-        __utils__["stringutils.to_str"](inventory["stdout"])
+    __context__["inventory"] = __utils__["ansible.targets"](
+        inventory=get_roster_file(__opts__), **kwargs
     )
 
     if tgt_type == "glob":
@@ -145,7 +141,8 @@ def _get_hosts_from_group(group):
     inventory = __context__["inventory"]
     hosts = [host for host in inventory[group].get("hosts", [])]
     for child in inventory[group].get("children", []):
-        if child != "ungrouped":
+        child_info = _get_hosts_from_group(child)
+        if child_info not in hosts:
             hosts.extend(_get_hosts_from_group(child))
     return hosts
 

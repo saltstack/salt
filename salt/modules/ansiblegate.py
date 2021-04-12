@@ -369,3 +369,11 @@ def playbooks(
     if "retcode" in ret:
         __context__["retcode"] = retdata["retcode"] = ret["retcode"]
     return retdata
+
+
+def targets(**kwargs):
+    """
+    Return the targets from the ansible inventory_file
+    Default: /etc/salt/roster
+    """
+    return __utils__["ansible.targets"](**kwargs)
