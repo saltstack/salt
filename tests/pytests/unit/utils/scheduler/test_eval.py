@@ -98,6 +98,11 @@ def test_eval_multiple_whens(setup_teardown_vars):
     # Evaluate run time2
     schedule.eval(now=run_time2)
     ret = schedule.job_status(job_name)
+
+    # Give the job a chance to finish
+    time.sleep(2)
+
+    log.info("=== in test_eval_multiple_whens - ret %s ===", ret)
     assert ret["_last_run"] == run_time2
 
 
