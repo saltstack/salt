@@ -26,7 +26,7 @@ def job1():
 
 @pytest.fixture
 def sock_dir(tmp_path):
-    return str(tmp_path, "test-socks")
+    return str(tmp_path / "test-socks")
 
 
 @pytest.fixture
