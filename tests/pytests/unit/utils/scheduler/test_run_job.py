@@ -3,11 +3,10 @@ import logging
 log = logging.getLogger(__name__)
 
 
-def test_run_job(setup_teardown_vars):
+def test_run_job(schedule):
     """
     verify that scheduled job runs
     """
-    schedule = setup_teardown_vars["schedule"]
     job_name = "test_run_job"
     job = {"schedule": {job_name: {"function": "test.ping"}}}
     # Add the job to the scheduler

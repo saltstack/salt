@@ -566,8 +566,7 @@ def modify(name, **kwargs):
     _new.update(kwargs)
 
     # Remove test from kwargs, it's not a valid schedule option
-    if "test" in _new:
-        del _new["test"]
+    _new.pop("test", None)
 
     if "result" in _new and not _new["result"]:
         return _new

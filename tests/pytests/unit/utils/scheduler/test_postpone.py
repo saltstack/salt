@@ -22,11 +22,10 @@ pytestmark = [
 
 
 @pytest.mark.slow_test
-def test_postpone(setup_teardown_vars):
+def test_postpone(schedule):
     """
     verify that scheduled job is postponed until the specified time.
     """
-    schedule = setup_teardown_vars["schedule"]
     job = {"schedule": {"job1": {"function": "test.ping", "when": "11/29/2017 4pm"}}}
 
     # 11/29/2017 4pm
