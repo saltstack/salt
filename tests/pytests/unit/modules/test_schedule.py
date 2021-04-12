@@ -3,7 +3,6 @@
 """
 
 import logging
-import os
 
 import pytest
 import salt.modules.schedule as schedule
@@ -13,20 +12,21 @@ from tests.support.mock import MagicMock, patch
 
 log = logging.getLogger(__name__)
 
-JOB1 = {
-    "function": "test.ping",
-    "maxrunning": 1,
-    "name": "job1",
-    "jid_include": True,
-    "enabled": True,
-}
+
+@pytest.fixture
+def job1():
+    return {
+        "function": "test.ping",
+        "maxrunning": 1,
+        "name": "job1",
+        "jid_include": True,
+        "enabled": True,
+    }
 
 
 @pytest.fixture
-def sock_dir():
-    with pytest.helpers.temp_directory() as tempdir:
-        sock_dir = os.path.join(tempdir, "test-socks")
-        return sock_dir
+def sock_dir(tmp_path):
+    return str(tmp_path, "test-socks")
 
 
 @pytest.fixture
@@ -35,8 +35,6 @@ def configure_loader_modules():
 
 
 # 'purge' function tests: 1
-
-
 @pytest.mark.slow_test
 def test_purge(sock_dir):
     """
@@ -54,8 +52,6 @@ def test_purge(sock_dir):
 
 
 # 'delete' function tests: 1
-
-
 @pytest.mark.slow_test
 def test_delete(sock_dir):
     """
@@ -74,8 +70,6 @@ def test_delete(sock_dir):
 
 
 # 'build_schedule_item' function tests: 1
-
-
 def test_build_schedule_item(sock_dir):
     """
     Test if it build a schedule job.
@@ -174,16 +168,16 @@ def test_add(sock_dir):
 
 
 @pytest.mark.slow_test
-def test_run_job(sock_dir):
+def test_run_job(sock_dir, job1):
     """
     Test if it run a scheduled job on the minion immediately.
     """
     with patch.dict(
-        schedule.__opts__, {"schedule": {"job1": JOB1}, "sock_dir": sock_dir}
+        schedule.__opts__, {"schedule": {"job1": job1}, "sock_dir": sock_dir}
     ):
         mock = MagicMock(return_value=True)
         with patch.dict(schedule.__salt__, {"event.fire": mock}):
-            _ret_value = {"complete": True, "schedule": {"job1": JOB1}}
+            _ret_value = {"complete": True, "schedule": {"job1": job1}}
             with patch.object(SaltEvent, "get_event", return_value=_ret_value):
                 assert schedule.run_job("job1") == {
                     "comment": "Scheduling Job job1 on minion.",
@@ -284,7 +278,7 @@ def test_disable(sock_dir):
 
 
 @pytest.mark.slow_test
-def test_move(sock_dir):
+def test_move(sock_dir, job1):
     """
     Test if it move scheduled job to another minion or minions.
     """
@@ -292,11 +286,11 @@ def test_move(sock_dir):
     comm2 = "the following minions return False"
     comm3 = "Moved Job job1 from schedule."
     with patch.dict(
-        schedule.__opts__, {"schedule": {"job1": JOB1}, "sock_dir": sock_dir}
+        schedule.__opts__, {"schedule": {"job1": job1}, "sock_dir": sock_dir}
     ):
         mock = MagicMock(return_value=True)
         with patch.dict(schedule.__salt__, {"event.fire": mock}):
-            _ret_value = {"complete": True, "schedule": {"job1": JOB1}}
+            _ret_value = {"complete": True, "schedule": {"job1": job1}}
             with patch.object(SaltEvent, "get_event", return_value=_ret_value):
                 mock = MagicMock(return_value={})
                 with patch.dict(schedule.__salt__, {"publish.publish": mock}):
@@ -332,9 +326,9 @@ def test_move(sock_dir):
     with patch.dict(schedule.__opts__, {"schedule": mock, "sock_dir": sock_dir}):
         mock = MagicMock(return_value=True)
         with patch.dict(schedule.__salt__, {"event.fire": mock}):
-            _ret_value = {"complete": True, "schedule": {"job1": JOB1}}
+            _ret_value = {"complete": True, "schedule": {"job1": job1}}
             with patch.object(SaltEvent, "get_event", return_value=_ret_value):
-                with patch.dict(schedule.__pillar__, {"schedule": {"job1": JOB1}}):
+                with patch.dict(schedule.__pillar__, {"schedule": {"job1": job1}}):
                     mock = MagicMock(return_value={})
                     with patch.dict(schedule.__salt__, {"publish.publish": mock}):
                         assert schedule.move("job1", "minion1") == {
@@ -365,7 +359,7 @@ def test_move(sock_dir):
 
 
 @pytest.mark.slow_test
-def test_copy(sock_dir):
+def test_copy(sock_dir, job1):
     """
     Test if it copy scheduled job to another minion or minions.
     """
@@ -373,11 +367,11 @@ def test_copy(sock_dir):
     comm2 = "the following minions return False"
     comm3 = "Copied Job job1 from schedule to minion(s)."
     with patch.dict(
-        schedule.__opts__, {"schedule": {"job1": JOB1}, "sock_dir": sock_dir}
+        schedule.__opts__, {"schedule": {"job1": job1}, "sock_dir": sock_dir}
     ):
         mock = MagicMock(return_value=True)
         with patch.dict(schedule.__salt__, {"event.fire": mock}):
-            _ret_value = {"complete": True, "schedule": {"job1": {"job1": JOB1}}}
+            _ret_value = {"complete": True, "schedule": {"job1": {"job1": job1}}}
             with patch.object(SaltEvent, "get_event", return_value=_ret_value):
                 mock = MagicMock(return_value={})
                 with patch.dict(schedule.__salt__, {"publish.publish": mock}):
@@ -411,12 +405,12 @@ def test_copy(sock_dir):
 
     mock = MagicMock(side_effect=[{}, {"job1": {}}])
     with patch.dict(schedule.__opts__, {"schedule": mock, "sock_dir": sock_dir}):
-        with patch.dict(schedule.__pillar__, {"schedule": {"job1": JOB1}}):
+        with patch.dict(schedule.__pillar__, {"schedule": {"job1": job1}}):
             mock = MagicMock(return_value=True)
             with patch.dict(schedule.__salt__, {"event.fire": mock}):
                 _ret_value = {
                     "complete": True,
-                    "schedule": {"job1": {"job1": JOB1}},
+                    "schedule": {"job1": {"job1": job1}},
                 }
                 with patch.object(SaltEvent, "get_event", return_value=_ret_value):
 

@@ -27,11 +27,10 @@ log = logging.getLogger(__name__)
 # pylint: disable=too-many-public-methods,invalid-name
 # delete_job tests
 @pytest.mark.slow_test
-def test_delete_job_exists(setup_teardown_vars):
+def test_delete_job_exists(schedule):
     """
     Tests ensuring the job exists and deleting it
     """
-    schedule = setup_teardown_vars["schedule"]
     schedule.opts.update({"schedule": {"foo": "bar"}, "pillar": {}})
     assert "foo" in schedule.opts["schedule"]
 
@@ -40,11 +39,10 @@ def test_delete_job_exists(setup_teardown_vars):
 
 
 @pytest.mark.slow_test
-def test_delete_job_in_pillar(setup_teardown_vars):
+def test_delete_job_in_pillar(schedule):
     """
     Tests ignoring deletion job from pillar
     """
-    schedule = setup_teardown_vars["schedule"]
     schedule.opts.update({"pillar": {"schedule": {"foo": "bar"}}, "schedule": {}})
     assert "foo" in schedule.opts["pillar"]["schedule"]
     schedule.delete_job("foo")
@@ -53,11 +51,10 @@ def test_delete_job_in_pillar(setup_teardown_vars):
 
 
 @pytest.mark.slow_test
-def test_delete_job_intervals(setup_teardown_vars):
+def test_delete_job_intervals(schedule):
     """
     Tests removing job from intervals
     """
-    schedule = setup_teardown_vars["schedule"]
     schedule.opts.update({"pillar": {}, "schedule": {}})
     schedule.intervals = {"foo": "bar"}
     schedule.delete_job("foo")
@@ -65,11 +62,10 @@ def test_delete_job_intervals(setup_teardown_vars):
 
 
 @pytest.mark.slow_test
-def test_delete_job_prefix(setup_teardown_vars):
+def test_delete_job_prefix(schedule):
     """
     Tests ensuring jobs exists and deleting them by prefix
     """
-    schedule = setup_teardown_vars["schedule"]
     schedule.opts.update(
         {"schedule": {"foobar": "bar", "foobaz": "baz", "fooboo": "boo"}, "pillar": {}}
     )
@@ -81,11 +77,10 @@ def test_delete_job_prefix(setup_teardown_vars):
 
 
 @pytest.mark.slow_test
-def test_delete_job_prefix_in_pillar(setup_teardown_vars):
+def test_delete_job_prefix_in_pillar(schedule):
     """
     Tests ignoring deletion jobs by prefix from pillar
     """
-    schedule = setup_teardown_vars["schedule"]
     schedule.opts.update(
         {
             "pillar": {"schedule": {"foobar": "bar", "foobaz": "baz", "fooboo": "boo"}},
@@ -98,30 +93,27 @@ def test_delete_job_prefix_in_pillar(setup_teardown_vars):
 
 
 # add_job tests
-def test_add_job_data_not_dict(setup_teardown_vars):
+def test_add_job_data_not_dict(schedule):
     """
     Tests if data is a dictionary
     """
-    schedule = setup_teardown_vars["schedule"]
     data = "foo"
     pytest.raises(ValueError, Schedule.add_job, schedule, data)
 
 
-def test_add_job_multiple_jobs(setup_teardown_vars):
+def test_add_job_multiple_jobs(schedule):
     """
     Tests if more than one job is scheduled at a time
     """
-    schedule = setup_teardown_vars["schedule"]
     data = {"key1": "value1", "key2": "value2"}
     pytest.raises(ValueError, Schedule.add_job, schedule, data)
 
 
 @pytest.mark.slow_test
-def test_add_job(setup_teardown_vars):
+def test_add_job(schedule):
     """
     Tests adding a job to the schedule
     """
-    schedule = setup_teardown_vars["schedule"]
     data = {"foo": {"bar": "baz"}}
     ret = copy.deepcopy(schedule.opts)
     ret.update(
@@ -142,22 +134,20 @@ def test_add_job(setup_teardown_vars):
 
 # enable_job tests
 @pytest.mark.slow_test
-def test_enable_job(setup_teardown_vars):
+def test_enable_job(schedule):
     """
     Tests enabling a job
     """
-    schedule = setup_teardown_vars["schedule"]
     schedule.opts.update({"schedule": {"name": {"enabled": "foo"}}})
     Schedule.enable_job(schedule, "name")
     assert schedule.opts["schedule"]["name"]["enabled"]
 
 
 @pytest.mark.slow_test
-def test_enable_job_pillar(setup_teardown_vars):
+def test_enable_job_pillar(schedule):
     """
     Tests ignoring enable a job from pillar
     """
-    schedule = setup_teardown_vars["schedule"]
     schedule.opts.update({"pillar": {"schedule": {"name": {"enabled": False}}}})
     Schedule.enable_job(schedule, "name", persist=False)
     assert not schedule.opts["pillar"]["schedule"]["name"]["enabled"]
@@ -165,22 +155,20 @@ def test_enable_job_pillar(setup_teardown_vars):
 
 # disable_job tests
 @pytest.mark.slow_test
-def test_disable_job(setup_teardown_vars):
+def test_disable_job(schedule):
     """
     Tests disabling a job
     """
-    schedule = setup_teardown_vars["schedule"]
     schedule.opts.update({"schedule": {"name": {"enabled": "foo"}}, "pillar": {}})
     Schedule.disable_job(schedule, "name")
     assert not schedule.opts["schedule"]["name"]["enabled"]
 
 
 @pytest.mark.slow_test
-def test_disable_job_pillar(setup_teardown_vars):
+def test_disable_job_pillar(schedule):
     """
     Tests ignoring disable a job in pillar
     """
-    schedule = setup_teardown_vars["schedule"]
     schedule.opts.update(
         {"pillar": {"schedule": {"name": {"enabled": True}}}, "schedule": {}}
     )
@@ -190,11 +178,10 @@ def test_disable_job_pillar(setup_teardown_vars):
 
 # modify_job tests
 @pytest.mark.slow_test
-def test_modify_job(setup_teardown_vars):
+def test_modify_job(schedule):
     """
     Tests modifying a job in the scheduler
     """
-    schedule = setup_teardown_vars["schedule"]
     schedule_dict = {"foo": "bar"}
     schedule.opts.update({"schedule": {"name": "baz"}, "pillar": {}})
     ret = copy.deepcopy(schedule.opts)
@@ -203,11 +190,10 @@ def test_modify_job(setup_teardown_vars):
     assert schedule.opts == ret
 
 
-def test_modify_job_not_exists(setup_teardown_vars):
+def test_modify_job_not_exists(schedule):
     """
     Tests modifying a job in the scheduler if jobs not exists
     """
-    schedule = setup_teardown_vars["schedule"]
     schedule_dict = {"foo": "bar"}
     schedule.opts.update({"schedule": {}, "pillar": {}})
     ret = copy.deepcopy(schedule.opts)
@@ -216,11 +202,10 @@ def test_modify_job_not_exists(setup_teardown_vars):
     assert schedule.opts == ret
 
 
-def test_modify_job_pillar(setup_teardown_vars):
+def test_modify_job_pillar(schedule):
     """
     Tests ignoring modification of job from pillar
     """
-    schedule = setup_teardown_vars["schedule"]
     schedule_dict = {"foo": "bar"}
     schedule.opts.update({"schedule": {}, "pillar": {"schedule": {"name": "baz"}}})
     ret = copy.deepcopy(schedule.opts)
@@ -228,16 +213,12 @@ def test_modify_job_pillar(setup_teardown_vars):
     assert schedule.opts == ret
 
 
-maxDiff = None
-
-
 # enable_schedule tests
 @pytest.mark.slow_test
-def test_enable_schedule(setup_teardown_vars):
+def test_enable_schedule(schedule):
     """
     Tests enabling the scheduler
     """
-    schedule = setup_teardown_vars["schedule"]
     with patch(
         "salt.utils.schedule.Schedule.persist", MagicMock(return_value=None)
     ) as persist_mock:
@@ -250,11 +231,10 @@ def test_enable_schedule(setup_teardown_vars):
 
 # disable_schedule tests
 @pytest.mark.slow_test
-def test_disable_schedule(setup_teardown_vars):
+def test_disable_schedule(schedule):
     """
     Tests disabling the scheduler
     """
-    schedule = setup_teardown_vars["schedule"]
     with patch(
         "salt.utils.schedule.Schedule.persist", MagicMock(return_value=None)
     ) as persist_mock:
@@ -266,12 +246,11 @@ def test_disable_schedule(setup_teardown_vars):
 
 
 # reload tests
-def test_reload_update_schedule_key(setup_teardown_vars):
+def test_reload_update_schedule_key(schedule):
     """
     Tests reloading the schedule from saved schedule where both the
     saved schedule and schedule.opts contain a schedule key
     """
-    schedule = setup_teardown_vars["schedule"]
     saved = {"schedule": {"foo": "bar"}}
     ret = copy.deepcopy(schedule.opts)
     ret.update({"schedule": {"foo": "bar", "hello": "world"}})
@@ -280,12 +259,11 @@ def test_reload_update_schedule_key(setup_teardown_vars):
     assert schedule.opts == ret
 
 
-def test_reload_update_schedule_no_key(setup_teardown_vars):
+def test_reload_update_schedule_no_key(schedule):
     """
     Tests reloading the schedule from saved schedule that does not
     contain a schedule key but schedule.opts does
     """
-    schedule = setup_teardown_vars["schedule"]
     saved = {"foo": "bar"}
     ret = copy.deepcopy(schedule.opts)
     ret.update({"schedule": {"foo": "bar", "hello": "world"}})
@@ -294,12 +272,11 @@ def test_reload_update_schedule_no_key(setup_teardown_vars):
     assert schedule.opts == ret
 
 
-def test_reload_no_schedule_in_opts(setup_teardown_vars):
+def test_reload_no_schedule_in_opts(schedule):
     """
     Tests reloading the schedule from saved schedule that does not
     contain a schedule key and neither does schedule.opts
     """
-    schedule = setup_teardown_vars["schedule"]
     saved = {"foo": "bar"}
     ret = copy.deepcopy(schedule.opts)
     ret["schedule"] = {"foo": "bar"}
@@ -308,12 +285,11 @@ def test_reload_no_schedule_in_opts(setup_teardown_vars):
     assert schedule.opts == ret
 
 
-def test_reload_schedule_in_saved_but_not_opts(setup_teardown_vars):
+def test_reload_schedule_in_saved_but_not_opts(schedule):
     """
     Tests reloading the schedule from saved schedule that contains
     a schedule key, but schedule.opts does not
     """
-    schedule = setup_teardown_vars["schedule"]
     saved = {"schedule": {"foo": "bar"}}
     ret = copy.deepcopy(schedule.opts)
     ret["schedule"] = {"foo": "bar"}
@@ -323,29 +299,26 @@ def test_reload_schedule_in_saved_but_not_opts(setup_teardown_vars):
 
 
 # eval tests
-def test_eval_schedule_is_not_dict(setup_teardown_vars):
+def test_eval_schedule_is_not_dict(schedule):
     """
     Tests eval if the schedule is not a dictionary
     """
-    schedule = setup_teardown_vars["schedule"]
     schedule.opts.update({"schedule": "", "pillar": {"schedule": {}}})
     pytest.raises(ValueError, Schedule.eval, schedule)
 
 
-def test_eval_schedule_is_not_dict_in_pillar(setup_teardown_vars):
+def test_eval_schedule_is_not_dict_in_pillar(schedule):
     """
     Tests eval if the schedule from pillar is not a dictionary
     """
-    schedule = setup_teardown_vars["schedule"]
     schedule.opts.update({"schedule": {}, "pillar": {"schedule": ""}})
     pytest.raises(ValueError, Schedule.eval, schedule)
 
 
-def test_eval_schedule_time(setup_teardown_vars):
+def test_eval_schedule_time(schedule):
     """
     Tests eval if the schedule setting time is in the future
     """
-    schedule = setup_teardown_vars["schedule"]
     schedule.opts.update({"pillar": {"schedule": {}}})
     schedule.opts.update(
         {"schedule": {"testjob": {"function": "test.true", "seconds": 60}}}
@@ -355,11 +328,10 @@ def test_eval_schedule_time(setup_teardown_vars):
     assert schedule.opts["schedule"]["testjob"]["_next_fire_time"] > now
 
 
-def test_eval_schedule_time_eval(setup_teardown_vars):
+def test_eval_schedule_time_eval(schedule):
     """
     Tests eval if the schedule setting time is in the future plus splay
     """
-    schedule = setup_teardown_vars["schedule"]
     schedule.opts.update({"pillar": {"schedule": {}}})
     schedule.opts.update(
         {"schedule": {"testjob": {"function": "test.true", "seconds": 60, "splay": 5}}}
@@ -372,11 +344,10 @@ def test_eval_schedule_time_eval(setup_teardown_vars):
 
 
 @pytest.mark.skipif(not _CRON_SUPPORTED, reason="croniter module not installed")
-def test_eval_schedule_cron(setup_teardown_vars):
+def test_eval_schedule_cron(schedule):
     """
     Tests eval if the schedule is defined with cron expression
     """
-    schedule = setup_teardown_vars["schedule"]
     schedule.opts.update({"pillar": {"schedule": {}}})
     schedule.opts.update(
         {"schedule": {"testjob": {"function": "test.true", "cron": "* * * * *"}}}
@@ -387,11 +358,10 @@ def test_eval_schedule_cron(setup_teardown_vars):
 
 
 @pytest.mark.skipif(not _CRON_SUPPORTED, reason="croniter module not installed")
-def test_eval_schedule_cron_splay(setup_teardown_vars):
+def test_eval_schedule_cron_splay(schedule):
     """
     Tests eval if the schedule is defined with cron expression plus splay
     """
-    schedule = setup_teardown_vars["schedule"]
     schedule.opts.update({"pillar": {"schedule": {}}})
     schedule.opts.update(
         {
@@ -408,11 +378,10 @@ def test_eval_schedule_cron_splay(setup_teardown_vars):
 
 
 @pytest.mark.slow_test
-def test_handle_func_schedule_minion_blackout(setup_teardown_vars):
+def test_handle_func_schedule_minion_blackout(schedule):
     """
     Tests eval if the schedule from pillar is not a dictionary
     """
-    schedule = setup_teardown_vars["schedule"]
     schedule.opts.update({"pillar": {"schedule": {}}})
     schedule.opts.update({"grains": {"minion_blackout": True}})
 
@@ -438,12 +407,11 @@ def test_handle_func_schedule_minion_blackout(setup_teardown_vars):
             assert log_mock.exception.called
 
 
-def test_handle_func_check_data(setup_teardown_vars):
+def test_handle_func_check_data(schedule):
     """
     Tests handle_func to ensure that __pub_fun_args is not
     being duplicated in the value of kwargs in data.
     """
-    schedule = setup_teardown_vars["schedule"]
 
     data = {
         "function": "test.arg",
@@ -473,12 +441,11 @@ def test_handle_func_check_data(setup_teardown_vars):
             assert "__pub_fun_args" not in data["kwargs"]
 
 
-def test_handle_func_check_dicts(setup_teardown_vars):
+def test_handle_func_check_dicts(schedule):
     """
     Tests that utils, functions, and returners dicts are not
     empty after handle_func has run on Windows.
     """
-    schedule = setup_teardown_vars["schedule"]
 
     data = {
         "function": "test.arg",
@@ -503,6 +470,6 @@ def test_handle_func_check_dicts(setup_teardown_vars):
             schedule.utils = {}
             schedule.handle_func(False, "test.arg", data)
 
-            assert {} != schedule.functions
-            assert {} != schedule.returners
-            assert {} != schedule.utils
+            assert schedule.functions != {}
+            assert schedule.returners != {}
+            assert schedule.utils != {}
