@@ -950,7 +950,7 @@ class Schedule:
 
         """
 
-        log.warning("==== evaluating schedule now %s =====", now)
+        log.trace("==== evaluating schedule now %s =====", now)
 
         jids = []
         loop_interval = self.opts["loop_interval"]
