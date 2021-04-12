@@ -558,8 +558,7 @@ def modify(name, **kwargs):
 
     # Remove the auto generated _seconds value
     if "_seconds" in _current:
-        _current["seconds"] = _current["_seconds"]
-        del _current["_seconds"]
+        _current["seconds"] = _current.pop("_seconds")
 
     # Copy _current _new, then update values from kwargs
     _new = pycopy.deepcopy(_current)
