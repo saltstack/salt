@@ -19,11 +19,10 @@ pytestmark = pytest.mark.skipif(
 
 
 @pytest.mark.slow_test
-def test_skip(setup_teardown_vars):
+def test_skip(schedule):
     """
     verify that scheduled job is skipped at the specified time
     """
-    schedule = setup_teardown_vars["schedule"]
     job_name = "test_skip"
     job = {
         "schedule": {
@@ -61,11 +60,10 @@ def test_skip(setup_teardown_vars):
 
 
 @pytest.mark.slow_test
-def test_skip_during_range(setup_teardown_vars):
+def test_skip_during_range(schedule):
     """
     verify that scheduled job is skipped during the specified range
     """
-    schedule = setup_teardown_vars["schedule"]
     job_name = "test_skip_during_range"
     job = {
         "schedule": {
@@ -103,11 +101,10 @@ def test_skip_during_range(setup_teardown_vars):
     assert ret["_last_run"] == run_time
 
 
-def test_skip_during_range_invalid_datestring(setup_teardown_vars):
+def test_skip_during_range_invalid_datestring(schedule):
     """
     verify that scheduled job is not not and returns the right error string
     """
-    schedule = setup_teardown_vars["schedule"]
     run_time = dateutil.parser.parse("11/29/2017 2:30pm")
 
     job_name1 = "skip_during_range_invalid_datestring1"
@@ -165,11 +162,10 @@ def test_skip_during_range_invalid_datestring(setup_teardown_vars):
 
 
 @pytest.mark.slow_test
-def test_skip_during_range_global(setup_teardown_vars):
+def test_skip_during_range_global(schedule):
     """
     verify that scheduled job is skipped during the specified range
     """
-    schedule = setup_teardown_vars["schedule"]
     job_name = "skip_during_range_global"
     job = {
         "schedule": {
@@ -205,11 +201,10 @@ def test_skip_during_range_global(setup_teardown_vars):
 
 
 @pytest.mark.slow_test
-def test_run_after_skip_range(setup_teardown_vars):
+def test_run_after_skip_range(schedule):
     """
     verify that scheduled job is skipped during the specified range
     """
-    schedule = setup_teardown_vars["schedule"]
     job_name = "skip_run_after_skip_range"
     job = {
         "schedule": {
@@ -244,11 +239,10 @@ def test_run_after_skip_range(setup_teardown_vars):
 
 
 @pytest.mark.slow_test
-def test_run_seconds_skip(setup_teardown_vars):
+def test_run_seconds_skip(schedule):
     """
     verify that scheduled job is skipped during the specified range
     """
-    schedule = setup_teardown_vars["schedule"]
     job_name = "run_seconds_skip"
     job = {"schedule": {job_name: {"function": "test.ping", "seconds": "10"}}}
 
