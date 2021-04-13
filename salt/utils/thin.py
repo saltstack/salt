@@ -411,7 +411,7 @@ def get_tops(extra_mods="", so_mods=""):
         contextvars = modules[0]
     else:
         contextvars = py_contextvars
-    log.warn("Using contextvars %r", contextvars)
+    log.debug("Using contextvars %r", contextvars)
     mods.append(contextvars)
     if has_immutables:
         mods.append(immutables)
