@@ -522,9 +522,11 @@ def _ip_route_linux():
     ret = []
     cmd = "ip -4 route show table main"
     out = __salt__["cmd.run"](cmd, python_shell=True)
-    ip_route_linux_pattern = r"^(?P<unreachable>unreachable)?\s*(?P<network>" \
-                             r"default|\S+)\s*(via)?\s*(?P<gateway>\S+)?\s+" \
-                             r"(dev)?\s+(?P<interface>\S+).*"
+    ip_route_linux_pattern = (
+            r"^(?P<unreachable>unreachable)?\s*(?P<network>"
+            r"default|\S+)\s*(via)?\s*(?P<gateway>\S+)?\s+"
+            r"(dev)?\s+(?P<interface>\S+).*"
+    )
     p = re.compile(ip_route_linux_pattern)
     for line in out.splitlines():
         line = p.search(line)
@@ -610,7 +612,7 @@ def _ip_route_linux():
         else:
             ip_interface = line.group("interface")
             ip_gateway = line.group("gateway")
-            if line.group('gateway') is None:
+            if line.group("gateway") is None:
                 flags = "U"
             else:
                 flags = "UG"
