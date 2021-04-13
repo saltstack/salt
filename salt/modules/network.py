@@ -522,43 +522,48 @@ def _ip_route_linux():
     ret = []
     cmd = "ip -4 route show table main"
     out = __salt__["cmd.run"](cmd, python_shell=True)
+    ip_route_linux_pattern = r"^(?P<unreachable>unreachable)?\s*(?P<network>" \
+                             r"default|\S+)\s*(via)?\s*(?P<gateway>\S+)?\s+" \
+                             r"(dev)?\s+(?P<interface>\S+).*"
+    p = re.compile(ip_route_linux_pattern)
     for line in out.splitlines():
-        comps = line.split()
-
+        line = p.search(line)
+        if line is None:
+            continue
         # need to fake similar output to that provided by netstat
         # to maintain output format
-        if comps[0] == "unreachable":
+        if line.group("unreachable") == "unreachable":
             continue
 
-        if comps[0] == "default":
-            ip_interface = ""
-            if comps[3] == "dev":
-                ip_interface = comps[4]
-
+        if line.group("network") == "default":
+            ip_interface = line.group("interface")
             ret.append(
                 {
                     "addr_family": "inet",
                     "destination": "0.0.0.0",
-                    "gateway": comps[2],
+                    "gateway": line.group("gateway"),
                     "netmask": "0.0.0.0",
                     "flags": "UG",
-                    "interface": ip_interface,
+                    "interface": ip_interface if ip_interface else "",
                 }
             )
         else:
-            address_mask = convert_cidr(comps[0])
-            ip_interface = ""
-            if comps[1] == "dev":
-                ip_interface = comps[2]
+            address_mask = convert_cidr(line.group("network"))
+            ip_interface = line.group("interface")
+            ip_gateway = line.group("gateway")
+            if line.group("gateway"):
+                flags = "UG"
+            else:
+                flags = "U"
 
             ret.append(
                 {
                     "addr_family": "inet",
                     "destination": address_mask["network"],
-                    "gateway": "0.0.0.0",
+                    "gateway": ip_gateway if ip_gateway else "0.0.0.0",
                     "netmask": address_mask["netmask"],
-                    "flags": "U",
-                    "interface": ip_interface,
+                    "flags": flags,
+                    "interface": ip_interface if ip_interface else "",
                 }
             )
 
@@ -566,35 +571,32 @@ def _ip_route_linux():
     cmd = "ip -6 route show table all"
     out = __salt__["cmd.run"](cmd, python_shell=True)
     for line in out.splitlines():
-        comps = line.split()
-
+        line = p.search(line)
+        if line is None:
+            continue
         # need to fake similar output to that provided by netstat
         # to maintain output format
-        if comps[0] == "unreachable":
+        if line.group("unreachable") == "unreachable":
             continue
 
-        if comps[0] == "default":
-            ip_interface = ""
-            if comps[3] == "dev":
-                ip_interface = comps[4]
+        if line.group("network") == "default":
+            ip_interface = line.group("interface")
+            ip_gateway = line.group("gateway")
 
             ret.append(
                 {
                     "addr_family": "inet6",
                     "destination": "::/0",
-                    "gateway": comps[2],
+                    "gateway": ip_gateway,
                     "netmask": "",
                     "flags": "UG",
-                    "interface": ip_interface,
+                    "interface": ip_interface if ip_interface else "",
                 }
             )
 
-        elif comps[0] == "local":
-            ip_interface = ""
-            if comps[2] == "dev":
-                ip_interface = comps[3]
-
-            local_address = comps[1] + "/128"
+        elif line.group("network") == "local":
+            ip_interface = line.group("interface")
+            local_address = line.group("gateway") + "/128"
             ret.append(
                 {
                     "addr_family": "inet6",
@@ -602,23 +604,26 @@ def _ip_route_linux():
                     "gateway": "::",
                     "netmask": "",
                     "flags": "U",
-                    "interface": ip_interface,
+                    "interface": ip_interface if ip_interface else "",
                 }
             )
         else:
-            address_mask = convert_cidr(comps[0])
-            ip_interface = ""
-            if comps[1] == "dev":
-                ip_interface = comps[2]
+            address_mask = convert_cidr(line.group("network"))
+            ip_interface = line.group("interface")
+            ip_gateway = line.group("gateway")
+            if line.group('gateway') is None:
+                flags = "U"
+            else:
+                flags = "UG"
 
             ret.append(
                 {
                     "addr_family": "inet6",
-                    "destination": comps[0],
-                    "gateway": "::",
+                    "destination": line.group("network"),
+                    "gateway": ip_gateway if ip_gateway else "::",
                     "netmask": "",
-                    "flags": "U",
-                    "interface": ip_interface,
+                    "flags": flags,
+                    "interface": ip_interface if ip_interface else "",
                 }
             )
     return ret
