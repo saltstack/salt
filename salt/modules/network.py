@@ -523,9 +523,9 @@ def _ip_route_linux():
     cmd = "ip -4 route show table main"
     out = __salt__["cmd.run"](cmd, python_shell=True)
     ip_route_linux_pattern = (
-            r"^(?P<unreachable>unreachable)?\s*(?P<network>"
-            r"default|\S+)\s*(via)?\s*(?P<gateway>\S+)?\s+"
-            r"(dev)?\s+(?P<interface>\S+).*"
+        r"^(?P<unreachable>unreachable)?\s*(?P<network>"
+        r"default|\S+)\s*(via)?\s*(?P<gateway>\S+)?\s+"
+        r"(dev)?\s+(?P<interface>\S+).*"
     )
     p = re.compile(ip_route_linux_pattern)
     for line in out.splitlines():
