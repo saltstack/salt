@@ -57,7 +57,13 @@ def sdb_get(uri, opts, utils=None, strict=False):
     query = uri[indx + 1 :]
 
     loaded_db = salt.loader.sdb(opts, fun, utils=utils)
-    return loaded_db[fun](query, profile=profile)
+    sdb_value = loaded_db[fun](query, profile=profile)
+    if isinstance(sdb_value, bytes):
+        try:
+            return sdb_value.decode()
+        except: # pylint: disable=bare-except
+            pass
+    return sdb_value 
 
 
 def sdb_set(uri, value, opts, utils=None):
