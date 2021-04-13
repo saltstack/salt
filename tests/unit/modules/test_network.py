@@ -1,20 +1,13 @@
-# -*- coding: utf-8 -*-
-
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import os.path
+import shutil
 import socket
 
-# Import Salt Libs
 import salt.config
 import salt.modules.network as network
 import salt.utils.path
 from salt._compat import ipaddress
 from salt.exceptions import CommandExecutionError
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, mock_open, patch
 from tests.support.unit import TestCase, skipIf
@@ -36,6 +29,22 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
             network: {"__utils__": utils},
         }
 
+    @patch("salt.utils.platform.is_windows")
+    def test___virtual__is_windows_true(self, mock_is_windows):
+        mock_is_windows.return_value = True
+        result = network.__virtual__()
+        expected = (
+            False,
+            "The network execution module cannot be loaded on Windows: use win_network instead.",
+        )
+        self.assertEqual(result, expected)
+
+    @patch("salt.utils.platform.is_windows")
+    def test___virtual__is_windows_false(self, mock_is_windows):
+        mock_is_windows.return_value = False
+        result = network.__virtual__()
+        self.assertEqual(result, True)
+
     def test_wol_bad_mac(self):
         """
         tests network.wol with bad mac
@@ -50,7 +59,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
         mac = "080027136977"
         bcast = "255.255.255.255 7"
 
-        class MockSocket(object):
+        class MockSocket:
             def __init__(self, *args, **kwargs):
                 pass
 
@@ -113,7 +122,20 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
         """
         Test for Performs a traceroute to a 3rd party host
         """
-        with patch("salt.utils.path.which", MagicMock(return_value="traceroute")):
+
+        def patched_which(binary):
+            binary_path = shutil.which(binary)
+            if binary_path:
+                # The path exists, just return it
+                return binary_path
+            if binary == "traceroute":
+                # The path doesn't exist but we mock it on the test.
+                # Return the binary name
+                return binary
+            # The binary does not exist
+            return binary_path
+
+        with patch("salt.utils.path.which", patched_which):
             with patch.dict(network.__salt__, {"cmd.run": MagicMock(return_value="")}):
                 self.assertListEqual(network.traceroute("gentoo.org"), [])
 

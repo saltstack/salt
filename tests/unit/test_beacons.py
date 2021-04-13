@@ -1,19 +1,13 @@
-# -*- coding: utf-8 -*-
 """
 unit tests for the beacon_module parameter
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import Salt Libs
 import salt.beacons as beacons
 import salt.config
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import patch
+from tests.support.mock import MagicMock, call, patch
 from tests.support.unit import TestCase
 
 log = logging.getLogger(__name__)
@@ -41,9 +35,9 @@ class BeaconsTestCase(TestCase, LoaderModuleMockMixin):
             ]
         }
         with patch.dict(beacons.__opts__, mock_opts):
-            ret = salt.beacons.Beacon(mock_opts, []).process(
-                mock_opts["beacons"], mock_opts["grains"]
-            )
+            beacon = salt.beacons.Beacon(mock_opts, [])
+            ret = beacon.process(mock_opts["beacons"], mock_opts["grains"])
+
             _expected = [
                 {
                     "tag": "salt/beacon/minion/watch_apache/",
@@ -52,3 +46,20 @@ class BeaconsTestCase(TestCase, LoaderModuleMockMixin):
                 }
             ]
             self.assertEqual(ret, _expected)
+
+            # Ensure that "beacon_name" is available in the call to the beacon function
+            name = "ps.beacon"
+            mocked = {name: MagicMock(return_value=_expected)}
+            mocked[name].__globals__ = {}
+            calls = [
+                call(
+                    [
+                        {"processes": {"apache2": "stopped"}},
+                        {"beacon_module": "ps"},
+                        {"_beacon_name": "watch_apache"},
+                    ]
+                )
+            ]
+            with patch.object(beacon, "beacons", mocked) as patched:
+                beacon.process(mock_opts["beacons"], mock_opts["grains"])
+                patched[name].assert_has_calls(calls)

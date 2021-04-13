@@ -1,19 +1,14 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import
-
 import pytest
 import salt.utils.path
 import salt.utils.platform
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest
 from tests.support.sminion import create_sminion
 from tests.support.unit import skipIf
 
 
 @skipIf(not salt.utils.platform.is_windows(), "Tests for only Windows")
-@destructiveTest
 @pytest.mark.windows_whitelisted
+@pytest.mark.destructive_test
 class ChocolateyModuleTest(ModuleCase):
     """
     Validate Chocolatey module
@@ -31,3 +26,7 @@ class ChocolateyModuleTest(ModuleCase):
     def test_list_(self):
         ret = self.run_function("chocolatey.list", narrow="adobereader", exact=True)
         self.assertTrue("adobereader" in ret)
+
+    def test_list_sources(self):
+        ret = self.run_function("chocolatey.list_sources")
+        self.assertTrue("chocolatey" in ret.keys())

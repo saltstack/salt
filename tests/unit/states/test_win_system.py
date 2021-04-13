@@ -1,15 +1,9 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Rahul Handay <rahulha@saltstack.com>
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
 import salt.states.win_system as win_system
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -152,3 +146,51 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
             )
 
             self.assertDictEqual(win_system.hostname("SALT"), ret)
+
+    def test_workgroup(self):
+        ret = {"name": "salt", "changes": {}, "result": True, "comment": ""}
+
+        mock = MagicMock(return_value={"Workgroup": "WORKGROUP"})
+        with patch.dict(win_system.__salt__, {"system.get_domain_workgroup": mock}):
+            mock = MagicMock(return_value=True)
+            with patch.dict(win_system.__salt__, {"system.set_domain_workgroup": mock}):
+                with patch.dict(win_system.__opts__, {"test": True}):
+                    ret.update(
+                        {
+                            "comment": "Computer will be joined to workgroup 'WERKGROUP'",
+                            "name": "WERKGROUP",
+                            "result": None,
+                        }
+                    )
+                    self.assertDictEqual(win_system.workgroup("WERKGROUP"), ret)
+
+        mock = MagicMock(return_value={"Workgroup": "WORKGROUP"})
+        with patch.dict(win_system.__salt__, {"system.get_domain_workgroup": mock}):
+            mock = MagicMock(return_value=True)
+            with patch.dict(win_system.__salt__, {"system.set_domain_workgroup": mock}):
+                with patch.dict(win_system.__opts__, {"test": False}):
+                    ret.update(
+                        {
+                            "comment": "Workgroup is already set to 'WORKGROUP'",
+                            "name": "WORKGROUP",
+                            "result": True,
+                        }
+                    )
+                    self.assertDictEqual(win_system.workgroup("WORKGROUP"), ret)
+
+        mock = MagicMock(
+            side_effect=[{"Workgroup": "WORKGROUP"}, {"Workgroup": "WERKGROUP"}]
+        )
+        with patch.dict(win_system.__salt__, {"system.get_domain_workgroup": mock}):
+            mock = MagicMock(return_value=True)
+            with patch.dict(win_system.__salt__, {"system.set_domain_workgroup": mock}):
+                with patch.dict(win_system.__opts__, {"test": False}):
+                    ret.update(
+                        {
+                            "comment": "The workgroup has been changed from 'WORKGROUP' to 'WERKGROUP'",
+                            "name": "WERKGROUP",
+                            "changes": {"new": "WERKGROUP", "old": "WORKGROUP"},
+                            "result": True,
+                        }
+                    )
+                    self.assertDictEqual(win_system.workgroup("WERKGROUP"), ret)

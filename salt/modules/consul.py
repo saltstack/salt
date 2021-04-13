@@ -5,18 +5,15 @@ https://www.consul.io
 
 """
 
-# Import Python Libs
 
 import base64
+import http.client
 import logging
+import urllib
 
-# Import salt libs
 import salt.utils.http
 import salt.utils.json
 from salt.exceptions import SaltInvocationError
-
-# Import 3rd-party libs
-from salt.ext.six.moves import http_client, urllib
 
 log = logging.getLogger(__name__)
 
@@ -93,13 +90,13 @@ def _query(
         opts=__opts__,
     )
 
-    if result.get("status", None) == http_client.OK:
+    if result.get("status", None) == http.client.OK:
         ret["data"] = result.get("dict", result)
         ret["res"] = True
-    elif result.get("status", None) == http_client.NO_CONTENT:
+    elif result.get("status", None) == http.client.NO_CONTENT:
         ret["data"] = "No content available."
         ret["res"] = False
-    elif result.get("status", None) == http_client.NOT_FOUND:
+    elif result.get("status", None) == http.client.NOT_FOUND:
         ret["data"] = "Key not found."
         ret["res"] = False
     elif result.get("error", None):
@@ -1073,7 +1070,7 @@ def agent_service_register(consul_url=None, token=None, **kwargs):
             if "Interval" in check_dd:
                 del check_dd["Interval"]  # not required, so ignore it
 
-        if check_dd > 0:
+        if check_dd:
             data["Check"] = check_dd  # if empty, ignore it
 
     function = "agent/service/register"
@@ -1364,10 +1361,10 @@ def session_destroy(consul_url=None, token=None, session=None, **kwargs):
     )
     if res["res"]:
         ret["res"] = True
-        ret["message"] = "Destroyed Service {}.".format(session)
+        ret["message"] = "Destroyed Session {}.".format(session)
     else:
         ret["res"] = False
-        ret["message"] = "Unable to destroy service {}.".format(session)
+        ret["message"] = "Unable to destroy session {}.".format(session)
     return ret
 
 

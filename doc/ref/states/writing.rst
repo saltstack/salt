@@ -66,11 +66,12 @@ A well-written state function will follow these steps:
 
    .. code-block:: python
 
-       ret = {"name": name, "result": False, "changes": {}, "comment": ""}
+       def myfunc():
+           ret = {"name": name, "result": False, "changes": {}, "comment": ""}
 
-       if foo and bar:
-           ret["comment"] = "Only one of foo and bar is permitted"
-           return ret
+           if foo and bar:
+               ret["comment"] = "Only one of foo and bar is permitted"
+               return ret
 
 2. Check if changes need to be made. This is best done with an
    information-gathering function in an accompanying :ref:`execution module
@@ -87,10 +88,11 @@ A well-written state function will follow these steps:
 
    .. code-block:: python
 
-       if result:
-           ret["result"] = True
-           ret["comment"] = "{0} is already installed".format(name)
-           return ret
+       def myfunc():
+           if result:
+               ret["result"] = True
+               ret["comment"] = "{0} is already installed".format(name)
+               return ret
 
 4. If step 2 found that changes *do* need to be made, then check to see if the
    state was being run in test mode (i.e. with ``test=True``). If so, then exit
@@ -99,11 +101,12 @@ A well-written state function will follow these steps:
 
    .. code-block:: python
 
-       if __opts__["test"]:
-           ret["result"] = None
-           ret["comment"] = "{0} would be installed".format(name)
-           ret["changes"] = result
-           return ret
+       def myfunc():
+           if __opts__["test"]:
+               ret["result"] = None
+               ret["comment"] = "{0} would be installed".format(name)
+               ret["changes"] = result
+               return ret
 
 5. Make the desired changes. This should again be done using a function from an
    accompanying execution module. If the result of that function is enough to
@@ -132,13 +135,14 @@ A well-written state function will follow these steps:
 
    .. code-block:: python
 
-       if ret["changes"]:
-           ret["comment"] = "{0} failed to install".format(name)
-       else:
-           ret["result"] = True
-           ret["comment"] = "{0} was installed".format(name)
+       def myfunc():
+           if ret["changes"]:
+               ret["comment"] = "{0} failed to install".format(name)
+           else:
+               ret["result"] = True
+               ret["comment"] = "{0} was installed".format(name)
 
-       return ret
+           return ret
 
 Using Custom State Modules
 ==========================
@@ -259,6 +263,45 @@ A State Module must return a dict containing the following keys/values:
 
     States should not return data which cannot be serialized such as frozensets.
 
+Sub State Runs
+--------------
+
+Some states can return multiple state runs from an external engine.
+State modules that extend tools like Puppet, Chef, Ansible, and idem can run multiple external
+states and then return their results individually in the "sub_state_run" portion of their return
+as long as their individual state runs are formatted like salt states with low and high data.
+
+For example, the idem state module can execute multiple idem states
+via it's runtime and report the status of all those runs by attaching them to "sub_state_run" in it's state return.
+These sub_state_runs will be formatted and printed alongside other salt states.
+
+Example:
+
+.. code-block:: python
+
+    state_return = {
+        "name": None,  # The parent state name
+        "result": None,  # The overall status of the external state engine run
+        "comment": None,  # Comments on the overall external state engine run
+        "changes": {},  # An empty dictionary, each sub state run has it's own changes to report
+        "sub_state_run": [
+            {
+                "changes": {},  # A dictionary describing the changes made in the external state run
+                "result": None,  # The external state run name
+                "comment": None,  # Comment on the external state run
+                "duration": None,  # Optional, the duration in seconds of the external state run
+                "start_time": None,  # Optional, the timestamp of the external state run's start time
+                "low": {
+                    "name": None,  # The name of the state from the external state run
+                    "state": None,  # Name of the external state run
+                    "__id__": None,  # ID of the external state run
+                    "fun": None,  # The Function name from the external state run
+                },
+            }
+        ],
+    }
+
+
 Test State
 ==========
 
@@ -268,11 +311,12 @@ run. An example of such a check could look like this:
 
 .. code-block:: python
 
-    # Return comment of changes if test.
-    if __opts__["test"]:
-        ret["result"] = None
-        ret["comment"] = "State Foo will execute with param {0}".format(bar)
-        return ret
+    def myfunc():
+        # Return comment of changes if test.
+        if __opts__["test"]:
+            ret["result"] = None
+            ret["comment"] = "State Foo will execute with param {0}".format(bar)
+            return ret
 
 Make sure to test and return before performing any real actions on the minion.
 

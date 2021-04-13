@@ -86,7 +86,7 @@ function ensures that a software package is installed via the system's native
 package manager. The ``service.running`` state module function ensures that a
 given system daemon is running.
 
-Finally, on line five, is the word ``require``. This is called a Requisite
+Finally, on line four, is the word ``require``. This is called a Requisite
 Statement, and it makes sure that the Apache service is only started after
 a successful installation of the apache package.
 
@@ -171,7 +171,7 @@ this:
 So the httpd.conf is just a file in the apache directory, and is referenced
 directly.
 
-.. include:: ../../_incl/_incl/sls_filename_cant_contain_period.rst
+.. include:: ../../_incl/sls_filename_cant_contain_period.rst
 
 But when using more than one single SLS file, more components can be added to
 the toolkit. Consider this SSH example:

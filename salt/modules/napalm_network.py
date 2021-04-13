@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 NAPALM Network
 ==============
@@ -20,8 +19,6 @@ Dependencies
 """
 
 # Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import datetime
 import logging
 import time
@@ -30,9 +27,6 @@ import salt.utils.files
 import salt.utils.napalm
 import salt.utils.templates
 import salt.utils.versions
-
-# Import Salt libs
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -104,7 +98,7 @@ def _filter_dict(input_dict, search_key, search_value):
 
     output_dict = dict()
 
-    for key, key_list in six.iteritems(input_dict):
+    for key, key_list in input_dict.items():
         key_list_filtered = _filter_list(key_list, search_key, search_value)
         if key_list_filtered:
             output_dict[key] = key_list_filtered
@@ -203,7 +197,7 @@ def _config_logic(
 
     current_jid = kwargs.get("__pub_jid")
     if not current_jid:
-        current_jid = "{0:%Y%m%d%H%M%S%f}".format(datetime.datetime.now())
+        current_jid = "{:%Y%m%d%H%M%S%f}".format(datetime.datetime.now())
 
     loaded_result["already_configured"] = False
 
@@ -613,7 +607,7 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
             file or pillar as ``textfsm_index_file``.
 
     saltenv: ``base``
-        Salt fileserver envrionment from which to retrieve the file.
+        Salt fileserver environment from which to retrieve the file.
         Ignored if ``textfsm_path`` is not a ``salt://`` URL.
 
         .. versionadded:: 2018.3.0
@@ -788,7 +782,7 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
                 processed_command_output = command_output
                 processed_cli_outputs[
                     "comment"
-                ] += "\nUnable to process the output from {0}: {1}.".format(
+                ] += "\nUnable to process the output from {}: {}.".format(
                     command, processed_cli_output["comment"]
                 )
                 log.error(processed_cli_outputs["comment"])
@@ -816,7 +810,7 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
                 processed_command_output = command_output
                 processed_cli_outputs[
                     "comment"
-                ] += "\nUnable to process the output from {0}: {1}".format(
+                ] += "\nUnable to process the output from {}: {}".format(
                     command, processed_cli_output["comment"]
                 )
                 log.error(processed_cli_outputs["comment"])
@@ -1979,7 +1973,7 @@ def load_template(
             defaults=defaults,
             saltenv=saltenv,
         )
-        if not isinstance(_rendered, six.string_types):
+        if not isinstance(_rendered, str):
             if "result" in _rendered:
                 _loaded["result"] = _rendered["result"]
             else:
@@ -1999,7 +1993,7 @@ def load_template(
             template_hash_name = [None] * len(template_name)
         if (
             template_hash
-            and isinstance(template_hash, six.string_types)
+            and isinstance(template_hash, str)
             and not (
                 template_hash.startswith("salt://")
                 or template_hash.startswith("file://")
@@ -2011,7 +2005,7 @@ def load_template(
             template_hash = [template_hash]
         elif (
             template_hash
-            and isinstance(template_hash, six.string_types)
+            and isinstance(template_hash, str)
             and (
                 template_hash.startswith("salt://")
                 or template_hash.startswith("file://")
@@ -2044,9 +2038,7 @@ def load_template(
                 saltenv=saltenv,
                 skip_verify=skip_verify,
             )
-            if not isinstance(_managed, (list, tuple)) and isinstance(
-                _managed, six.string_types
-            ):
+            if not isinstance(_managed, (list, tuple)) and isinstance(_managed, str):
                 _loaded["comment"] += _managed
                 _loaded["result"] = False
             elif isinstance(_managed, (list, tuple)) and not len(_managed) > 0:
