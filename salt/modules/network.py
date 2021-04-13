@@ -608,7 +608,6 @@ def _ip_route_linux():
                 }
             )
         else:
-            address_mask = convert_cidr(line.group("network"))
             ip_interface = line.group("interface")
             ip_gateway = line.group("gateway")
             if line.group('gateway') is None:
