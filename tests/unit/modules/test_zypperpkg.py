@@ -136,7 +136,7 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(zypper.__zypper__.call("foo"), stdout_xml_snippet)
             self.assertEqual(len(sniffer.calls), 1)
 
-            zypper.__zypper__.call("bar")
+            zypper.__zypper__.call("--no-refresh", "bar")
             self.assertEqual(len(sniffer.calls), 2)
             self.assertEqual(
                 sniffer.calls[0]["args"][0],
@@ -2030,3 +2030,17 @@ pattern() = package-c"""
         with patch.dict(zypper.__context__, context):
             zypper._clean_cache()
             self.assertEqual(zypper.__context__, {"pkg.other_data": None})
+
+    def test_services_need_restart(self):
+        """
+        Test that zypper ps is used correctly to list services that need to
+        be restarted.
+        """
+        expected = ["salt-minion", "firewalld"]
+        zypper_output = "salt-minion\nfirewalld"
+        zypper_mock = Mock()
+        zypper_mock(root=None).nolock.call = Mock(return_value=zypper_output)
+
+        with patch("salt.modules.zypperpkg.__zypper__", zypper_mock):
+            assert zypper.services_need_restart() == expected
+            zypper_mock(root=None).nolock.call.assert_called_with("ps", "-sss")

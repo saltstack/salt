@@ -11,6 +11,12 @@
 #              .pkg file will then be created based on the contents of
 #              /opt/salt. The pkg will be signed and notarized
 #
+#              This script must be run with sudo. In order for the environment
+#              variables to be available in sudo you need to pass the `-E`
+#              option. For example:
+#
+#              sudo -E ./build.sh 3003
+#
 # Requirements:
 #     - Xcode Command Line Tools (xcode-select --install)
 #
@@ -31,7 +37,7 @@
 #         The following will build Salt v3001 with an optimized python and
 #         stage all files in /tmp/custom_pkg:
 #
-#         ./build.sh v3001 false /tmp/custom_pkg
+#         sudo -E ./build.sh 3001 false /tmp/custom_pkg
 #
 # This script uses the following scripts:
 #
@@ -77,6 +83,10 @@
 #         export DEV_INSTALL_CERT="Developer ID Installer: Salt Stack, Inc. (AB123ABCD1)"
 #         export APPLE_ACCT="username@domain.com"
 #         export APP_SPEC_PWD="abcd-efgh-ijkl-mnop"
+#
+#         Don't forget to run sudo with the `-E` option so that the environment
+#         variables are passed to the `package.sh`, `notarize.sh`, and
+#         `sign_binaries.sh` scripts under the sudo environment.
 #
 ################################################################################
 

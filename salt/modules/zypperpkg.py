@@ -33,6 +33,7 @@ import salt.utils.pkg
 import salt.utils.pkg.rpm
 import salt.utils.stringutils
 import salt.utils.systemd
+import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationError
 from salt.utils.versions import LooseVersion
 
@@ -293,7 +294,7 @@ class _Zypper:
         self.__called = True
         if self.__xml:
             self.__cmd.append("--xmlout")
-        if not self.__refresh:
+        if not self.__refresh and "--no-refresh" not in args:
             self.__cmd.append("--no-refresh")
         if self.__root:
             self.__cmd.extend(["--root", self.__root])
@@ -2076,9 +2077,70 @@ def clean_locks(root=None):
     return out
 
 
-def remove_lock(packages, root=None, **kwargs):  # pylint: disable=unused-argument
+def unhold(name=None, pkgs=None, **kwargs):
     """
+    .. versionadded:: 3003
+
+    Remove a package hold.
+
+    name
+        A package name to unhold, or a comma-separated list of package names to
+        unhold.
+
+    pkgs
+        A list of packages to unhold.  The ``name`` parameter will be ignored if
+        this option is passed.
+
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.unhold <package name>
+        salt '*' pkg.unhold <package1>,<package2>,<package3>
+        salt '*' pkg.unhold pkgs='["foo", "bar"]'
+    """
+    ret = {}
+    if not name and not pkgs:
+        raise CommandExecutionError("Name or packages must be specified.")
+
+    targets = []
+    if pkgs:
+        for pkg in salt.utils.data.repack_dictlist(pkgs):
+            targets.append(pkg)
+    else:
+        targets.append(name)
+
+    locks = list_locks()
+    removed = []
+    missing = []
+
+    for target in targets:
+        ret[target] = {"name": target, "changes": {}, "result": True, "comment": ""}
+        if locks.get(target):
+            removed.append(target)
+            ret[target]["changes"]["new"] = ""
+            ret[target]["changes"]["old"] = "hold"
+            ret[target]["comment"] = "Package {} is no longer held.".format(target)
+        else:
+            missing.append(target)
+            ret[target]["comment"] = "Package {} was already unheld.".format(target)
+
+    if removed:
+        __zypper__.call("rl", *removed)
+
+    return ret
+
+
+def remove_lock(name, root=None, **kwargs):
+    """
+    .. deprecated:: 3003
+        This function is deprecated. Please use ``unhold()`` instead.
+
     Remove specified package lock.
+
+    name
+        A package name, or a comma-separated list of package names.
 
     root
         operate on a different root directory.
@@ -2089,12 +2151,14 @@ def remove_lock(packages, root=None, **kwargs):  # pylint: disable=unused-argume
 
         salt '*' pkg.remove_lock <package name>
         salt '*' pkg.remove_lock <package1>,<package2>,<package3>
-        salt '*' pkg.remove_lock pkgs='["foo", "bar"]'
     """
 
+    salt.utils.versions.warn_until(
+        "Phosphorus", "This function is deprecated. Please use unhold() instead."
+    )
     locks = list_locks(root)
     try:
-        packages = list(__salt__["pkg_resource.parse_targets"](packages)[0].keys())
+        packages = list(__salt__["pkg_resource.parse_targets"](name)[0].keys())
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
@@ -2112,8 +2176,66 @@ def remove_lock(packages, root=None, **kwargs):  # pylint: disable=unused-argume
     return {"removed": len(removed), "not_found": missing}
 
 
-def add_lock(packages, root=None, **kwargs):  # pylint: disable=unused-argument
+def hold(name=None, pkgs=None, **kwargs):
     """
+    .. versionadded:: 3003
+
+    Add a package hold.  Specify one of ``name`` and ``pkgs``.
+
+    name
+        A package name to hold, or a comma-separated list of package names to
+        hold.
+
+    pkgs
+        A list of packages to hold.  The ``name`` parameter will be ignored if
+        this option is passed.
+
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.hold <package name>
+        salt '*' pkg.hold <package1>,<package2>,<package3>
+        salt '*' pkg.hold pkgs='["foo", "bar"]'
+    """
+    ret = {}
+    if not name and not pkgs:
+        raise CommandExecutionError("Name or packages must be specified.")
+
+    targets = []
+    if pkgs:
+        for pkg in salt.utils.data.repack_dictlist(pkgs):
+            targets.append(pkg)
+    else:
+        targets.append(name)
+
+    locks = list_locks()
+    added = []
+
+    for target in targets:
+        ret[target] = {"name": target, "changes": {}, "result": True, "comment": ""}
+        if not locks.get(target):
+            added.append(target)
+            ret[target]["changes"]["new"] = "hold"
+            ret[target]["changes"]["old"] = ""
+            ret[target]["comment"] = "Package {} is now being held.".format(target)
+        else:
+            ret[target]["comment"] = "Package {} is already set to be held.".format(
+                target
+            )
+
+    if added:
+        __zypper__.call("al", *added)
+
+    return ret
+
+
+def add_lock(name, root=None, **kwargs):
+    """
+    .. deprecated:: 3003
+        This function is deprecated. Please use ``hold()`` instead.
+
     Add a package lock. Specify packages to lock by exact name.
 
     root
@@ -2125,12 +2247,14 @@ def add_lock(packages, root=None, **kwargs):  # pylint: disable=unused-argument
 
         salt '*' pkg.add_lock <package name>
         salt '*' pkg.add_lock <package1>,<package2>,<package3>
-        salt '*' pkg.add_lock pkgs='["foo", "bar"]'
     """
+    salt.utils.versions.warn_until(
+        "Phosphorus", "This function is deprecated. Please use hold() instead."
+    )
     locks = list_locks(root)
     added = []
     try:
-        packages = list(__salt__["pkg_resource.parse_targets"](packages)[0].keys())
+        packages = list(__salt__["pkg_resource.parse_targets"](name)[0].keys())
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
@@ -2890,3 +3014,27 @@ def resolve_capabilities(pkgs, refresh=False, root=None, **kwargs):
         else:
             ret.append(name)
     return ret
+
+
+def services_need_restart(root=None, **kwargs):
+    """
+    .. versionadded:: 3003
+
+    List services that use files which have been changed by the
+    package manager. It might be needed to restart them.
+
+    root
+        operate on a different root directory.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pkg.services_need_restart
+    """
+    cmd = ["ps", "-sss"]
+
+    zypper_output = __zypper__(root=root).nolock.call(*cmd)
+    services = zypper_output.split()
+
+    return services

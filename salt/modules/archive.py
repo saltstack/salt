@@ -203,12 +203,12 @@ def list_(
             else:
                 if not salt.utils.path.which("tar"):
                     raise CommandExecutionError("'tar' command not available")
-                if decompress_cmd is not None:
+                if decompress_cmd is not None and isinstance(decompress_cmd, str):
                     # Guard against shell injection
                     try:
-                        decompress_cmd = " ".join(
-                            [shlex.quote(x) for x in shlex.split(decompress_cmd)]
-                        )
+                        decompress_cmd = [
+                            shlex.quote(x) for x in shlex.split(decompress_cmd)
+                        ]
                     except AttributeError:
                         raise CommandExecutionError("Invalid CLI options")
                 else:
@@ -221,12 +221,11 @@ def list_(
                         )
                         == 0
                     ):
-                        decompress_cmd = "xz --decompress --stdout"
+                        decompress_cmd = ["xz", "--decompress", "--stdout"]
 
                 if decompress_cmd:
                     decompressed = subprocess.Popen(
-                        "{} {}".format(decompress_cmd, shlex.quote(cached)),
-                        shell=True,
+                        decompress_cmd + [shlex.quote(cached)],
                         stdout=subprocess.PIPE,
                         stderr=subprocess.PIPE,
                     )

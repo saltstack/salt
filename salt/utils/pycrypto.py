@@ -14,9 +14,9 @@ try:
         from M2Crypto.Rand import rand_bytes as get_random_bytes
     except ImportError:
         try:
-            from Cryptodome.Random import get_random_bytes  # pylint: disable=E0611
+            from Cryptodome.Random import get_random_bytes
         except ImportError:
-            from Crypto.Random import get_random_bytes  # pylint: disable=E0611
+            from Crypto.Random import get_random_bytes  # nosec
     HAS_RANDOM = True
 except ImportError:
     HAS_RANDOM = False
