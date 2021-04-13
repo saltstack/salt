@@ -61,9 +61,9 @@ def sdb_get(uri, opts, utils=None, strict=False):
     if isinstance(sdb_value, bytes):
         try:
             return sdb_value.decode()
-        except: # pylint: disable=bare-except
+        except:  # pylint: disable=bare-except
             pass
-    return sdb_value 
+    return sdb_value
 
 
 def sdb_set(uri, value, opts, utils=None):
