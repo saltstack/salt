@@ -89,7 +89,7 @@ def test_ip_route_linux_ipv4(expected_routes):
 
 def test_netstat_route_linux_ipv4(expected_routes):
     """
-    Tests that _ip_route_linux can parse ipv4 routes appropriately
+    Tests that _netstat_route_linux can parse ipv4 routes appropriately
     """
     netstat_output = [
         "0.0.0.0         100.64.24.145   0.0.0.0         UG        0 0          0 eth0",
