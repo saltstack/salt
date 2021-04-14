@@ -380,3 +380,67 @@ def targets(**kwargs):
     Default: /etc/salt/roster
     """
     return __utils__["ansible.targets"](**kwargs)
+
+
+def discover_playbooks(path, playbook_extension=None, syntax_check=False):
+    """
+    Discover Ansible playbooks stored under the given path.
+
+    This will search for files matching with the playbook file extension under the given
+    root path and will also look for files inside the first level of directories in this path.
+
+    The return of this function would be a dict like this:
+
+    {
+        "my_ansible_playbook.yml": {
+            "fullpath": "/home/foobar/playbooks/my_ansible_playbook.yml"
+        },
+        "another_playbook.yml": {
+            "fullpath": "/home/foobar/playbooks/another_playbook.yml"
+        },
+        "lamp_simple/site.yml": {
+            "fullpath": "/home/foobar/playbooks/lamp_simple/site.yml"
+        },
+        "lamp_proxy/site.yml": {
+            "fullpath": "/home/foobar/playbooks/lamp_proxy/site.yml"
+        },
+    }
+
+    :param path: Path to discover playbooks from.
+    :param playbook_extension: File extension of playbooks file to search for. Default: "yml"
+    :param syntax_check: Skip playbooks that do not pass "ansible-playbook --syntax-check" validation. Default: False
+    """
+
+    if not playbook_extension:
+       playbook_extension = "yml"
+    if not os.path.isabs(path):
+        raise CommandExecutionError("The given path is not an absolute path: {}".format(path))
+    if not os.path.isdir(path):
+        raise CommandExecutionError("The given path is not a directory: {}".format(path))
+
+    ret = {}
+    try:
+        # Check files in the given path
+        for _f in os.listdir(path):
+            _path = os.path.join(path, _f)
+            if os.path.isfile(_path) and _path.endswith("." + playbook_extension):
+                ret[_f] = {"fullpath": _path}
+            elif os.path.isdir(_path):
+                # Check files in the 1st level of subdirectories
+                for _f2 in os.listdir(_path):
+                    _path2 = os.path.join(_path, _f2)
+                    if os.path.isfile(_path2) and _path2.endswith("." + playbook_extension):
+                        ret[os.path.join(_f, _f2)] = {"fullpath": _path2}
+    except Exception as exc:
+        raise CommandExecutionError("There was an exception while discovering playbooks: {}".format(exc))
+
+    # Run syntax check validation
+    if syntax_check:
+        check_command = ["ansible-playbook", "--syntax-check"]
+        try:
+            for pb in list(ret):
+               if __salt__["cmd.retcode"](check_command + [ret[pb]]):
+                   del ret[pb]
+        except Exception as exc:
+            raise CommandExecutionError("There was an exception while checking syntax of playbooks: {}".format(exc))
+    return ret
