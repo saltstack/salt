@@ -365,7 +365,10 @@ def playbooks(
     }
     ret = __salt__["cmd.run_all"](**cmd_kwargs)
     log.debug("Ansible Playbook Return: %s", ret)
-    retdata = json.loads(ret["stdout"])
+    try:
+        retdata = json.loads(ret["stdout"])
+    except ValueError:
+        retdata = ret
     if "retcode" in ret:
         __context__["retcode"] = retdata["retcode"] = ret["retcode"]
     return retdata
