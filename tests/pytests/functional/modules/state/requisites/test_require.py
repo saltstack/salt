@@ -609,3 +609,52 @@ def test_parallel_state_with_requires(state, state_tree):
         # they'll run in parallel so we should be below 30 seconds
         # confirm that the total runtime is below 30s
         assert (end_time - start_time) < 30
+
+
+def test_issue_59922_conflict_in_name_and_id_for_require_in(state, state_tree):
+    """
+    Make sure that state_type is always honored while compiling down require_in to
+
+    corresponding require statement.
+    """
+    sls_contents = """
+    X:
+      test.succeed_without_changes:
+        - name: A
+
+    A:
+      cmd.run:
+        - name: echo A
+
+    B:
+      cmd.run:
+        - name: echo B
+        - require_in:
+          - test: A
+    """
+    expected_result = {
+        "cmd_|-A_|-echo A_|-run": {
+            "__run_num__": 2,
+            "comment": 'Command "echo A" run',
+            "result": True,
+            "changes": True,
+        },
+        "test_|-X_|-A_|-succeed_without_changes": {
+            "__run_num__": 1,
+            "comment": "Success!",
+            "result": True,
+            "changes": False,
+        },
+        "cmd_|-B_|-echo B_|-run": {
+            "__run_num__": 0,
+            "comment": 'Command "echo B" run',
+            "result": True,
+            "changes": True,
+        },
+    }
+    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+        ret = state.sls("requisite")
+        result = normalize_ret(ret)
+        ret = pytest.helpers.state_return(ret)
+        ret.assert_return_non_empty_state_type()
+        assert result == expected_result
