@@ -18,14 +18,6 @@ def expected_config_stuff():
         yield vm
 
 
-def test_when_not_HAS_NETADDR_then_ignore_cidr_should_be_False():
-
-    with patch("salt.cloud.clouds.openstack.HAS_NETADDR", False):
-        result = openstack.ignore_cidr("fnord", "fnord")
-
-    assert result is False
-
-
 def test_when_getting_cloud_config_values_expected_args_should_be_provided():
     expected_vm = "whatever"
     expected_calls = call(
