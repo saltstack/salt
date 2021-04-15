@@ -1,10 +1,10 @@
 @Library('salt@master-1.10') _
 
 runTestSuite(
-    ami_image_id: 'ami-09161d9a15fbe9316',
+    ami_image_id: 'ami-010d00c6807e733ba',
     concurrent_builds: 1,
     distro_name: 'freebsd',
-    distro_version: '122',
+    distro_version: '130',
     distro_arch: 'amd64',
     env: env,
     golden_images_branch: 'master',
