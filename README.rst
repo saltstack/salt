@@ -114,7 +114,7 @@ team and collaborate in real time. The best way to keep track is by subscribing
 to the **Salt Project Community Events Calendar** on the main
 `<https://saltproject.io>`_ website.
 
-If you have additional questions, email us at core@saltstack.com or reach out
+If you have additional questions, email us at saltproject@vmware.com or reach out
 directly to the Community Manager, Janae Andrus via Slack. We’d be glad to
 have you join our community!
 
