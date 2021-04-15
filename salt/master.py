@@ -782,22 +782,13 @@ class Master(SMaster):
 
             # Fire up SSDP discovery publisher
             if self.opts["discovery"]:
-                if salt.utils.ssdp.SSDPDiscoveryServer.is_available():
-                    self.process_manager.add_process(
-                        salt.utils.ssdp.SSDPDiscoveryServer(
-                            port=self.opts["discovery"]["port"],
-                            listen_ip=self.opts["interface"],
-                            answer={
-                                "mapping": self.opts["discovery"].get("mapping", {})
-                            },
-                        ).run
-                    )
-                else:
-                    log.error("Unable to load SSDP: asynchronous IO is not available.")
-                    if sys.version_info.major == 2:
-                        log.error(
-                            'You are using Python 2, please install "trollius" module to enable SSDP discovery.'
-                        )
+                self.process_manager.add_process(
+                    salt.utils.ssdp.SSDPDiscoveryServer(
+                        port=self.opts["discovery"]["port"],
+                        interface_ip=self.opts["interface"],
+                        answer={"mapping": self.opts["discovery"].get("mapping", {})},
+                    ).run
+                )
 
         # Install the SIGINT/SIGTERM handlers if not done so far
         if signal.getsignal(signal.SIGINT) is signal.SIG_DFL:

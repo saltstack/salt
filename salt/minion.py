@@ -834,26 +834,35 @@ class MinionBase:
             self.opts["master"] == DEFAULT_MINION_OPTS["master"]
             and self.opts["discovery"] is not False
         ):
-            master_discovery_client = salt.utils.ssdp.SSDPDiscoveryClient()
+            master_discovery_client = salt.utils.ssdp.SSDPDiscoveryClient(
+                interface_ip=self.opts.get("source_address")
+            )
             masters = {}
             for att in range(self.opts["discovery"].get("attempts", 3)):
                 try:
                     att += 1
-                    log.info("Attempting %s time(s) to discover masters", att)
+                    log.info(
+                        "Discover masters: attempt %s of %s",
+                        att,
+                        self.opts["discovery"].get("attempts", 3),
+                    )
                     masters.update(master_discovery_client.discover())
                     if not masters:
                         time.sleep(self.opts["discovery"].get("pause", 5))
                     else:
                         break
+                except TimeoutError:
+                    log.error("Service discovery timed out")
+                    time.sleep(self.opts["discovery"].get("pause", 5))
                 except Exception as err:  # pylint: disable=broad-except
-                    log.error("SSDP discovery failure: %s", err)
+                    log.error("Service discovery failure: %s", err)
                     break
 
             if masters:
                 policy = self.opts.get("discovery", {}).get("match", "any")
                 if policy not in ["any", "all"]:
                     log.error(
-                        'SSDP configuration matcher failure: unknown value "%s". '
+                        'Service discovery match failed: unknown value "%s". '
                         'Should be "any" or "all"',
                         policy,
                     )
@@ -869,7 +878,7 @@ class MinionBase:
                                 ]
                             )
                             if policy == "any" and bool(cnt) or cnt == len(mapping):
-                                self.opts["master"] = proto_data["master"]
+                                self.opts["master"] = proto_data.get("master", addr)
                                 return
 
     def _return_retry_timer(self):

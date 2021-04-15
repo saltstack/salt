@@ -1,6 +1,5 @@
-# -*- coding: utf-8 -*-
 #
-# Author: Bo Maryniuk <bo@suse.de>
+# Author: Bo Maryniuk <bo@suse.de>, Zane Mingee <zmingee@gmail.com>
 #
 # Copyright 2017 SUSE LLC
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,52 +18,55 @@
 Salt Service Discovery Protocol.
 JSON-based service discovery protocol, used by minions to find running Master.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
+import asyncio
 import copy
 import datetime
+import itertools
 import logging
 import random
 import socket
 import time
 
 import salt.utils.json
+import salt.utils.network
 import salt.utils.stringutils
 
-try:
-    from salt.utils.odict import OrderedDict
-except ImportError:
-    from collections import OrderedDict
 
-_json = salt.utils.json.import_json()
-if not hasattr(_json, "dumps"):
-    _json = None
+class BaseSSDPException(Exception):
+    message = None
 
-try:
-    import asyncio
-
-    asyncio.ported = False
-except ImportError:
-    try:
-        # Python 2 doesn't have asyncio
-        import trollius as asyncio
-
-        asyncio.ported = True
-    except ImportError:
-        asyncio = None
+    def __init__(self, message=None):
+        super().__init__(message or self.message)
 
 
-class TimeOutException(Exception):
-    pass
+class InvalidIPAddress(BaseSSDPException):
+    """Invalid interface IP address"""
+
+    message = "Invalid IP Address"
 
 
-class TimeStampException(Exception):
-    pass
+class InvalidMessage(BaseSSDPException):
+    """Invalid message"""
+
+    message = "Invalid message"
 
 
-class SSDPBase(object):
+class InvalidSignature(BaseSSDPException):
+    """Invalid message signature"""
+
+    message = "Invalid signature"
+
+
+class InvalidTimestamp(BaseSSDPException):
+    """Invalid message timestamp"""
+
+    message = "Invalid timestamp"
+
+
+class SSDPBase:
     """
-    Salt Service Discovery Protocol.
+    Salt Service Discovery Protocol base class.
     """
 
     log = logging.getLogger(__name__)
@@ -73,89 +75,75 @@ class SSDPBase(object):
     SIGNATURE = "signature"
     ANSWER = "answer"
     PORT = "port"
-    LISTEN_IP = "listen_ip"
+    INTERFACE_IP = "interface_ip"
     TIMEOUT = "timeout"
 
     # Default values
     DEFAULTS = {
         SIGNATURE: "__salt_master_service",
-        PORT: 4520,
-        LISTEN_IP: "0.0.0.0",
-        TIMEOUT: 3,
         ANSWER: {},
+        PORT: 4520,
+        INTERFACE_IP: "0.0.0.0",
+        TIMEOUT: 3,
     }
 
-    @staticmethod
-    def _is_available():
-        """
-        Return True if the USSDP dependencies are satisfied.
-        :return:
-        """
-        return bool(asyncio and _json)
-
-    @staticmethod
-    def get_self_ip():
-        """
-        Find out localhost outside IP.
-
-        :return:
-        """
-        sck = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        try:
-            sck.connect(("1.255.255.255", 1))  # Does not needs to be reachable
-            ip_addr = sck.getsockname()[0]
-        except Exception:  # pylint: disable=broad-except
-            ip_addr = socket.gethostbyname(socket.gethostname())
-        finally:
-            sck.close()
-        return ip_addr
+    def __init__(self, **config):
+        self._config = copy.deepcopy(config)
 
 
-class SSDPFactory(SSDPBase):
+class SSDPProtocol(SSDPBase, asyncio.DatagramProtocol):
     """
-    Socket protocol factory.
+    :py:class:`asyncio.DatagramProtocol` implementing the Salt Service
+    Discovery Protocol.
     """
 
     def __init__(self, **config):
-        """
-        Initialize
-
-        :param config:
-        """
-        for attr in (self.SIGNATURE, self.ANSWER):
-            setattr(self, attr, config.get(attr, self.DEFAULTS[attr]))
-        self.disable_hidden = False
+        super().__init__(**config)
+        self.signature = self._config.get(self.SIGNATURE, self.DEFAULTS[self.SIGNATURE])
+        self.answer = self._config.get(self.ANSWER, self.DEFAULTS[self.ANSWER])
+        self.hidden = True
         self.transport = None
-        self.my_ip = socket.gethostbyname(socket.gethostname())
 
-    def __call__(self, *args, **kwargs):
+    def _validate_message(self, message):
         """
-        Return instance on Factory call.
-        :param args:
-        :param kwargs:
+        Validate broadcast message
+
+        :param str message: broadcast message
         :return:
         """
-        return self
+        if not message.startswith(self.signature):
+            raise InvalidSignature
+
+        try:
+            timestamp = float(message[len(self.signature) :])
+        except (TypeError, ValueError) as err:
+            raise InvalidTimestamp from err
+
+        if datetime.datetime.fromtimestamp(timestamp) < (
+            datetime.datetime.now() - datetime.timedelta(seconds=20)
+        ):
+            raise InvalidTimestamp
 
     def connection_made(self, transport):
         """
-        On connection.
+        Handle connection
 
-        :param transport:
+        :param transport: socket connection transport
+        :type transport: :py:class:`asyncio.DatagramProtocol`
         :return:
         """
         self.transport = transport
 
     def _sendto(self, data, addr=None, attempts=10):
         """
-        On multi-master environments, running on the same machine,
-        transport sending to the destination can be allowed only at once.
-        Since every machine will immediately respond, high chance to
-        get sending fired at the same time, which will result to a PermissionError
-        at socket level. We are attempting to send it in a different time.
+        On multi-master environments, running on the same machine, transport
+        sending to the destination can be allowed only at once.  Since every
+        machine will immediately respond, high chance to get sending fired at
+        the same time, which will result to a PermissionError at socket level.
+        We are attempting to send it in a different time.
 
-        :param data:
-        :param addr:
+        :param bytes data: data to send to peer
+        :param addr: IP address and port of peer
         :return:
         """
         tries = 0
@@ -164,320 +152,282 @@ class SSDPFactory(SSDPBase):
         while tries < attempts:
             try:
                 self.transport.sendto(data, addr=addr)
-                self.log.debug("Sent successfully")
+                self.log.debug("Service discovery message sent successfully")
                 return
             except AttributeError as ex:
-                self.log.debug("Permission error: %s", ex)
+                self.log.error("Permission error: %s", ex)
                 time.sleep(slp)
                 tries += 1
                 slp += slp_time()
 
     def datagram_received(self, data, addr):
         """
-        On datagram receive.
+        Process datagram
 
-        :param data:
-        :param addr:
+        :param data: bytes object containing the incoming data
+        :param addr: address of the peer sending the data
         :return:
         """
         message = salt.utils.stringutils.to_unicode(data)
-        if message.startswith(self.signature):
-            try:
-                timestamp = float(message[len(self.signature) :])
-            except (TypeError, ValueError):
-                self.log.debug(
-                    "Received invalid timestamp in package from %s:%s", *addr
-                )
-                if self.disable_hidden:
-                    self._sendto(
-                        "{0}:E:{1}".format(self.signature, "Invalid timestamp"), addr
-                    )
-                return
 
-            if datetime.datetime.fromtimestamp(timestamp) < (
-                datetime.datetime.now() - datetime.timedelta(seconds=20)
-            ):
-                if self.disable_hidden:
-                    self._sendto(
-                        "{0}:E:{1}".format(self.signature, "Timestamp is too old"), addr
-                    )
-                self.log.debug("Received outdated package from %s:%s", *addr)
-                return
-
-            self.log.debug('Received "%s" from %s:%s', message, *addr)
-            self._sendto(
-                salt.utils.stringutils.to_bytes(
-                    str(
-                        "{0}:@:{1}"
-                    ).format(  # future lint: disable=blacklisted-function
-                        self.signature,
-                        salt.utils.json.dumps(self.answer, _json_module=_json),
-                    )
-                ),
-                addr,
+        try:
+            self._validate_message(message)
+        except BaseSSDPException as err:
+            self.log.error(
+                "Service discovery message validation failed: %s:%s - %s",
+                *addr,
+                err.message
             )
-        else:
-            if self.disable_hidden:
-                self._sendto(
-                    salt.utils.stringutils.to_bytes(
-                        "{0}:E:{1}".format(self.signature, "Invalid packet signature"),
-                        addr,
-                    )
-                )
-            self.log.debug("Received bad signature from %s:%s", *addr)
+            if not self.hidden:
+                self._sendto("{}:E:{}".format(self.signature, err.message), addr)
+            return
+
+        self.log.debug("Service discovery received message: %s:%s - %s", *addr, message)
+
+        resp = "{}:@:{}".format(self.signature, salt.utils.json.dumps(self.answer))
+
+        self._sendto(salt.utils.stringutils.to_bytes(resp), addr)
 
 
 class SSDPDiscoveryServer(SSDPBase):
     """
-    Discovery service publisher.
-
+    Service discovery publisher
     """
 
-    @staticmethod
-    def is_available():
-        """
-        Return availability of the Server.
-        :return:
-        """
-        return SSDPBase._is_available()
-
     def __init__(self, **config):
-        """
-        Initialize.
+        super().__init__(**config)
+        self.answer = self._config.get(self.ANSWER, {})
+        self.timeout = self._config.get(self.TIMEOUT, self.DEFAULTS[self.TIMEOUT])
+        self.interface_ip = self._config.get(
+            self.INTERFACE_IP, self.DEFAULTS[self.INTERFACE_IP]
+        )
+        self.port = self._config.get(self.PORT, self.DEFAULTS[self.PORT])
 
-        :param config:
-        """
-        self._config = copy.deepcopy(config)
-        if self.ANSWER not in self._config:
-            self._config[self.ANSWER] = {}
-        self._config[self.ANSWER].update({"master": self.get_self_ip()})
+        self._socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        self._socket.settimeout(self.timeout)
 
-    @staticmethod
-    def create_datagram_endpoint(
-        loop,
-        protocol_factory,
-        local_addr=None,
-        remote_addr=None,
-        family=0,
-        proto=0,
-        flags=0,
-    ):
-        """
-        Create datagram connection.
-
-        Based on code from Python 3.5 version, this method is used
-        only in Python 2.7+ versions, since Trollius library did not
-        ported UDP packets broadcast.
-        """
-        if not (local_addr or remote_addr):
-            if not family:
-                raise ValueError("unexpected address family")
-            addr_pairs_info = (((family, proto), (None, None)),)
+        if not salt.utils.network.is_ipv4(self.interface_ip):
+            self.log.error(
+                "Service discovery interface IP family must be IPv4 for broadcast support"
+            )
+            raise InvalidIPAddress
+        if salt.utils.network.is_ip_filter(self.interface_ip, "public"):
+            self.log.error(
+                "Service discovery interface IP must not be public or global"
+            )
+            raise InvalidIPAddress
+        if salt.utils.network.is_ip_filter(self.interface_ip, "loopback"):
+            self.log.warning("Service discovery will listen on loopback interface")
+            self.answer.update({"master": self.interface_ip})
+            self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+            self._socket.bind((self.interface_ip, self.port))
+        elif self.interface_ip == "0.0.0.0":
+            self.log.warning("Service discovery will listen on all interfaces")
+            self._socket.bind(("", self.port))
         else:
-            addr_infos = OrderedDict()
-            for idx, addr in ((0, local_addr), (1, remote_addr)):
-                if addr is not None:
-                    assert (
-                        isinstance(addr, tuple) and len(addr) == 2
-                    ), "2-tuple is expected"
-                    infos = yield asyncio.coroutines.From(
-                        loop.getaddrinfo(
-                            *addr,
-                            family=family,
-                            type=socket.SOCK_DGRAM,
-                            proto=proto,
-                            flags=flags
-                        )
-                    )
-                    if not infos:
-                        raise socket.error("getaddrinfo() returned empty list")
-                    for fam, _, pro, _, address in infos:
-                        key = (fam, pro)
-                        if key not in addr_infos:
-                            addr_infos[key] = [None, None]
-                        addr_infos[key][idx] = address
-            addr_pairs_info = [
-                (key, addr_pair)
-                for key, addr_pair in addr_infos.items()
-                if not (
-                    (local_addr and addr_pair[0] is None)
-                    or (remote_addr and addr_pair[1] is None)
-                )
-            ]
-            if not addr_pairs_info:
-                raise ValueError("can not get address information")
-        exceptions = []
-        for ((family, proto), (local_address, remote_address)) in addr_pairs_info:
-            sock = r_addr = None
-            try:
-                sock = socket.socket(family=family, type=socket.SOCK_DGRAM, proto=proto)
-                for opt in [socket.SO_REUSEADDR, socket.SO_BROADCAST]:
-                    sock.setsockopt(socket.SOL_SOCKET, opt, 1)
-                sock.setblocking(False)
-                if local_addr:
-                    sock.bind(local_address)
-                if remote_addr:
-                    yield asyncio.coroutines.From(
-                        loop.sock_connect(sock, remote_address)
-                    )
-                    r_addr = remote_address
-            except socket.error as exc:
-                if sock is not None:
-                    sock.close()
-                exceptions.append(exc)
-            except Exception:  # pylint: disable=broad-except
-                if sock is not None:
-                    sock.close()
-                raise
+            self.answer.update({"master": self.interface_ip})
+            interfaces = iter(
+                interface["inet"]
+                for (name, interface) in salt.utils.network.interfaces().items()
+                if interface["up"]
+            )
+            addresses = {
+                address["address"]: address.get("broadcast")
+                for address in itertools.chain.from_iterable(interfaces)
+            }
+
+            if addresses.get(self.interface_ip):
+                broadcast_ip = addresses[self.interface_ip]
+                self._socket.bind((broadcast_ip, self.port))
             else:
-                break
-        else:
-            raise exceptions[0]
-
-        protocol = protocol_factory()
-        waiter = asyncio.futures.Future(loop=loop)
-        transport = loop._make_datagram_transport(sock, protocol, r_addr, waiter)
-        try:
-            yield asyncio.coroutines.From(waiter)
-        except Exception:  # pylint: disable=broad-except
-            transport.close()
-            raise
-        raise asyncio.coroutines.Return(transport, protocol)
+                self.log.error("Interface IP not found or does not support broadcast")
+                raise InvalidIPAddress
 
     def run(self):
         """
-        Run server.
+        Run service discovery publisher
+
         :return:
         """
-        listen_ip = self._config.get(self.LISTEN_IP, self.DEFAULTS[self.LISTEN_IP])
-        port = self._config.get(self.PORT, self.DEFAULTS[self.PORT])
         self.log.info(
-            "Starting service discovery listener on udp://%s:%s", listen_ip, port
+            "Start service discovery publisher: udp://%s:%s",
+            self.interface_ip,
+            self.port,
         )
+
         loop = asyncio.get_event_loop()
-        protocol = SSDPFactory(answer=self._config[self.ANSWER])
-        if asyncio.ported:
-            transport, protocol = loop.run_until_complete(
-                SSDPDiscoveryServer.create_datagram_endpoint(
-                    loop, protocol, local_addr=(listen_ip, port)
-                )
-            )
-        else:
-            transport, protocol = loop.run_until_complete(
-                loop.create_datagram_endpoint(
-                    protocol, local_addr=(listen_ip, port), allow_broadcast=True
-                )
-            )
+        coro = loop.create_datagram_endpoint(
+            lambda: SSDPProtocol(answer=self.answer), sock=self._socket
+        )
+        transport, protocol = loop.run_until_complete(coro)
+
         try:
             loop.run_forever()
         finally:
-            self.log.info("Stopping service discovery listener.")
+            self.log.info("Stop service discovery publisher")
             transport.close()
             loop.close()
 
 
 class SSDPDiscoveryClient(SSDPBase):
     """
-    Class to discover Salt Master via UDP broadcast.
+    Service discovery client
     """
 
-    @staticmethod
-    def is_available():
-        """
-        Return availability of the Client
-        :return:
-        """
-        return SSDPBase._is_available()
-
     def __init__(self, **config):
-        """
-        Initialize
-        """
-        self._config = config
+        super().__init__(**config)
+        self.signature = self._config.get(self.SIGNATURE, self.DEFAULTS[self.SIGNATURE])
+        self.timeout = self._config.get(self.TIMEOUT, self.DEFAULTS[self.TIMEOUT])
+        self.interface_ip = (
+            self._config.get(self.INTERFACE_IP) or self.DEFAULTS[self.INTERFACE_IP]
+        )
+        self.port = self._config.get(self.PORT, self.DEFAULTS[self.PORT])
+
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        self._socket.settimeout(
-            self._config.get(self.TIMEOUT, self.DEFAULTS[self.TIMEOUT])
-        )
+        self._socket.settimeout(self.timeout)
 
-        for attr in [self.SIGNATURE, self.TIMEOUT, self.PORT]:
-            setattr(self, attr, self._config.get(attr, self.DEFAULTS[attr]))
+        self.broadcast_ip = None
+        self.broadcast_ips = None
+        if not salt.utils.network.is_ipv4(self.interface_ip):
+            self.log.error(
+                "Service discovery interface IP family must be IPv4 for broadcast support"
+            )
+            raise InvalidIPAddress
+        if salt.utils.network.is_ip_filter(self.interface_ip, "public"):
+            self.log.error(
+                "Service discovery interface IP must not be public or global"
+            )
+            raise InvalidIPAddress
+        if salt.utils.network.is_ip_filter(self.interface_ip, "loopback"):
+            self.log.warning("Service discovery will broadcast on loopback interface")
+            self.broadcast_ip = self.interface_ip
+            self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+        else:
+            interfaces = iter(
+                interface["inet"]
+                for (name, interface) in salt.utils.network.interfaces().items()
+                if interface["up"]
+            )
+            addresses = [
+                (address["address"], address["broadcast"])
+                for address in itertools.chain.from_iterable(interfaces)
+                if address.get("broadcast")
+            ]
+
+            if self.interface_ip == "0.0.0.0":
+                self.log.warning("Service discovery will broadcast on all interfaces")
+                self.broadcast_ips = [
+                    address[1]
+                    for address in addresses
+                    if not salt.utils.network.is_ip_filter(address[0], "public")
+                ]
+            else:
+                self.broadcast_ip = next(
+                    (
+                        address[1]
+                        for address in addresses
+                        if address[0] == self.interface_ip
+                    ),
+                    None,
+                )
+
+        if not (self.broadcast_ip or self.broadcast_ips):
+            self.log.error("Interface IP not found or does not support broadcast")
+            raise InvalidIPAddress
+
+    def _validate_message(self, message):
+        """
+        Validate broadcast response message
+
+        :param str message: response message
+        :return:
+        """
+        if not message.startswith(self.signature):
+            raise InvalidSignature
+
+        if ":E:" in message:
+            err = message.split(":E:")[-1]
+            if err == "Invalid timestamp":
+                raise InvalidTimestamp
+
+            raise InvalidMessage(err)
 
     def _query(self):
         """
-        Query the broadcast for defined services.
+        Send broadcast datagram
+
         :return:
         """
         query = salt.utils.stringutils.to_bytes(
             "{}{}".format(self.signature, time.time())
         )
-        self._socket.sendto(query, ("<broadcast>", self.port))
 
-        return query
+        if self.broadcast_ip is None:
+            for broadcast_ip in self.broadcast_ips:
+                self.log.debug("Send query: %s:%s - %s", broadcast_ip, self.port, query)
+                self._socket.sendto(query, (broadcast_ip, self.port))
+        else:
+            self.log.debug(
+                "Send query: %s:%s - %s", self.broadcast_ip, self.port, query
+            )
+            self._socket.sendto(query, (self.broadcast_ip, self.port))
 
-    def _collect_masters_map(self, response):
-        """
-        Collect masters map from the network.
-        :return:
-        """
+        response = {}
         while True:
+            buffer = bytearray(1024)
             try:
-                data, addr = self._socket.recvfrom(0x400)
-                if data:
-                    if addr not in response:
-                        response[addr] = []
-                    response[addr].append(data)
-                else:
-                    break
-            except Exception as err:  # pylint: disable=broad-except
-                self.log.error("Discovery master collection failure: %s", err)
+                nbytes, addr = self._socket.recvfrom_into(buffer, 1024)
+            except socket.timeout:
+                if not response:
+                    self.log.error("Service discovery did not find master")
+                    raise TimeoutError
                 break
+            except Exception:  # pylint: disable=broad-except
+                self.log.exception("Unknown error occurred")
+                break
+            else:
+                if not nbytes:
+                    break
+                if addr[0] not in response:
+                    response[addr[0]] = []
+                response[addr[0]].append(
+                    salt.utils.stringutils.to_str(buffer.rstrip(b"\x00"))
+                )
+
+        return response
 
     def discover(self):
         """
-        Gather the information of currently declared servers.
+        Discover service discovery publishers
 
-        :return:
+        :return: Discovered masters
+        :rtype: dict
         """
-        response = {}
         masters = {}
-        self.log.info("Looking for a server discovery")
-        self._query()
-        self._collect_masters_map(response)
-        if not response:
-            msg = "No master has been discovered."
-            self.log.info(msg)
-        else:
-            for addr, descriptions in response.items():
-                for (
-                    data
-                ) in descriptions:  # Several masters can run at the same machine.
-                    msg = salt.utils.stringutils.to_unicode(data)
-                    if msg.startswith(self.signature):
-                        msg = msg.split(self.signature)[-1]
-                        self.log.debug(
-                            "Service announcement at '%s:%s'. Response: '%s'",
-                            addr[0],
-                            addr[1],
-                            msg,
-                        )
-                        if ":E:" in msg:
-                            err = msg.split(":E:")[-1]
-                            self.log.error(
-                                "Error response from the service publisher at %s: %s",
-                                addr,
-                                err,
-                            )
-                            if "timestamp" in err:
-                                self.log.error(
-                                    "Publisher sent shifted timestamp from %s", addr
-                                )
-                        else:
-                            if addr not in masters:
-                                masters[addr] = []
-                            masters[addr].append(
-                                salt.utils.json.loads(
-                                    msg.split(":@:")[-1], _json_module=_json
-                                )
-                            )
+        self.log.info("Start service discovery")
+        response = self._query()
+
+        for addr, datagrams in response.items():
+            for data in datagrams:
+                message = salt.utils.stringutils.to_unicode(data)
+
+                try:
+                    self._validate_message(message)
+                except InvalidTimestamp as err:
+                    self.log.error("Service discovery timestamp is invalid: %s", addr)
+                    continue
+                except BaseSSDPException as err:
+                    self.log.error(
+                        "Service discovery message validation failed: %s - %s",
+                        addr,
+                        err.message,
+                    )
+                    continue
+
+                if addr not in masters:
+                    masters[addr] = []
+                masters[addr].append(salt.utils.json.loads(message.split(":@:")[-1]))
+
         return masters
