@@ -3481,6 +3481,145 @@ Sets ZeroMQ TCP keepalive interval. May be used to tune issues with minion disco
     tcp_keepalive_intvl': -1
 
 
+Auto-Discovery Settings
+=======================
+
+.. versionadded:: 2018.3.0
+
+These options control how auto-discovery functions.
+
+.. versionchanged:: 3003
+    This module now uses :conf_minion:`source_address` to control what
+    broadcast address to use.
+
+.. warning::
+
+    Auto-discovery depends on IP broadcast and as such is not supported by
+    IPv6.
+
+.. note::
+
+    When :conf_minion:`source_address` is set to ``127.0.0.1``, a unicast
+    datagram is sent to ``127.0.0.1``, as broadcast may or may not be supported
+    by some loopback devices.
+
+.. note::
+
+    When :conf_minion:`source_address` is set to ``0.0.0.0``, a broadcast
+    datagram is sent on all interface.
+
+.. conf_minion:: discovery
+
+``discovery``
+-------------
+
+Default: ``False``
+
+Set as ``True`` to enable auto-discovery. Optionally provide sub-options for
+further configuration.
+
+.. code-block:: yaml
+
+    discovery: true
+
+.. conf_minion:: discovery.port
+
+``discovery.port``
+------------------
+
+Default: `4520`
+
+Sub-option for :conf_minion:`discovery` to change auto-discovery port.
+
+.. code-block:: yaml
+
+    discovery:
+      port: 1234
+
+.. conf_minion:: discovery.mapping
+
+``discovery.mapping``
+---------------------
+
+Default: ``{}``
+
+Sub-option for :conf_minion:`discovery` containing an arbitrary set of
+key/value pairs, which the Minion configuration can target.
+
+.. code-block:: yaml
+
+    discovery:
+      mapping:
+        environment: production
+        project_id: 12345
+
+.. conf_minion:: discovery.match
+
+``discovery.match``
+-------------------
+
+Default: ``any``
+
+Sub-option for :conf_minion:`discovery` to control how the values configured in
+:conf_minion:`discovery.mapping` are matched. If set to ``all``, then all of
+the key/value pairs in the Minion's :conf_minion:`discovery.mapping` must match
+a given Master. If set to ``any`` (the default), then any match to a key/value
+mapping will constitute a match.
+
+.. code-block:: yaml
+
+    discovery:
+      match: all
+      mapping:
+        environment: production
+        project_id: 12345
+
+.. conf_minion:: discovery.attempts
+
+``discovery.attempts``
+----------------------
+
+Default: ``3``
+
+Sub-option for :conf_minion:`discovery` to specify how many broadcast requests
+should be sent to the network, waiting for any Master response. Each attempt
+takes a couple of seconds, so raising this value may result in a slower Minion
+startup.
+
+.. note::
+
+    On a properly-configured network, autodiscovery should succeed on the
+    first attempt. By default, this value is set to 3.
+
+.. conf_minion:: discovery.pause
+
+``discovery.pause``
+-------------------
+
+Default: ``5``
+
+Sub-option for :conf_minion:`discovery` to configure the interval in seconds
+between attempts.
+
+.. conf_minion:: discovery.fibre_channel_grains
+
+``discovery.fibre_channel_grains``
+----------------------------------
+
+Default: ``False``
+
+Enables the ``fc_wwn`` grain.
+
+.. conf_minion:: discovery.iscsi_grains
+
+``discovery.iscsi_grains``
+--------------------------
+
+Default: ``False``
+
+Enables the ``iscsi_iqn`` grain.
+
+
 Frozen Build Update Settings
 ============================
 

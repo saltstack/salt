@@ -5533,6 +5533,79 @@ Sets ZeroMQ TCP keepalive interval. May be used to tune issues with minion disco
     tcp_keepalive_intvl': -1
 
 
+Auto-Discovery Settings
+=======================
+
+.. versionadded:: 2018.3.0
+
+These options control how auto-discovery functions.
+
+.. versionchanged:: 3003
+    This module now uses :conf_master:`interface` to control what interface on
+    which to listen for broadcast datagrams.
+
+.. warning::
+
+    Auto-discovery depends on IP broadcast and as such is not supported by
+    IPv6
+
+.. note::
+
+    When :conf_master:`interface` is set to ``127.0.0.1``, the Master will
+    listen for a unicast datagram on ``127.0.0.1``, as broadcast may or may not
+    be supported by some loopback devices.
+
+.. note::
+
+    When :conf_minion:`interface` is set to ``0.0.0.0``, the Master will listen
+    for a broadcast datagram on all interfaces.
+
+.. conf_master:: discovery
+
+``discovery``
+-------------
+
+Default: ``False``
+
+Set as ``True`` to enable auto-discovery. Optionally provide sub-options for
+further configuration.
+
+.. code-block:: yaml
+
+    discovery: true
+
+.. conf_master:: discovery.port
+
+``discovery.port``
+------------------
+
+Default: `4520`
+
+Sub-option for :conf_master:`discovery` to change auto-discovery port.
+
+.. code-block:: yaml
+
+    discovery:
+      port: 1234
+
+.. conf_master:: discovery.mapping
+
+``discovery.mapping``
+---------------------
+
+Default: ``{}``
+
+Sub-option for :conf_master:``discovery`` containing an arbitrary set of
+key/value pairs, which the Minion configuration can target.
+
+.. code-block:: yaml
+
+    discovery:
+      mapping:
+        environment: production
+        project_id: 12345
+
+
 .. _winrepo-master-config-opts:
 
 Windows Software Repo Settings
