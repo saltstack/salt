@@ -340,8 +340,10 @@ def ignore_cidr(vm_, ip):
     from ipaddress import ip_address, ip_network
 
     cidrs = config.get_cloud_config_value(
-        "ignore_cidr", vm_, __opts__, default="", search_global=False
+        "ignore_cidr", vm_, __opts__, default=[], search_global=False
     )
+    if isinstance(cidrs, str):
+        cidrs = [cidrs]
     for cidr in cidrs or []:
         if ip_address(ip) in ip_network(cidr):
             log.warning("IP '{}' found within '{}'; ignoring it.".format(ip, cidr))
