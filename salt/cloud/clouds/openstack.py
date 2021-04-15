@@ -253,13 +253,6 @@ try:
 except ImportError:
     HAS_SHADE = (False, "Install pypi module shade >= 1.19.0")
 
-# Import netaddr IP matching
-try:
-    from netaddr import all_matching_cidrs
-
-    HAS_NETADDR = True
-except ImportError:
-    HAS_NETADDR = False
 
 log = logging.getLogger(__name__)
 __virtualname__ = "openstack"
@@ -312,11 +305,7 @@ def get_dependencies():
     elif hasattr(HAS_SHADE, "__len__") and not HAS_SHADE[0]:
         log.warning(HAS_SHADE[1])
         return False
-    deps = {
-        "shade": HAS_SHADE[0],
-        "os_client_config": HAS_SHADE[0],
-        "netaddr": HAS_NETADDR,
-    }
+    deps = {"shade": HAS_SHADE[0], "os_client_config": HAS_SHADE[0]}
     return config.check_driver_dependencies(__virtualname__, deps)
 
 
@@ -346,19 +335,17 @@ def preferred_ip(vm_, ips):
 
 def ignore_cidr(vm_, ip):
     """
-    Return True if we are to ignore the specified IP. Compatible with IPv4.
+    Return True if we are to ignore the specified IP.
     """
-    if HAS_NETADDR is False:
-        log.error("Error: netaddr is not installed")
-        # If we cannot check, assume all is ok
-        return False
+    from ipaddress import ip_address, ip_network
 
-    cidr = config.get_cloud_config_value(
+    cidrs = config.get_cloud_config_value(
         "ignore_cidr", vm_, __opts__, default="", search_global=False
     )
-    if cidr and all_matching_cidrs(ip, [cidr]):
-        log.warning("IP '{}' found within '{}'; ignoring it.".format(ip, cidr))
-        return True
+    for cidr in cidrs or []:
+        if ip_address(ip) in ip_network(cidr):
+            log.warning("IP '{}' found within '{}'; ignoring it.".format(ip, cidr))
+            return True
 
     return False
 
@@ -519,7 +506,7 @@ def list_nodes_select(conn=None, call=None):
             "The list_nodes_select function must be called with -f or --function."
         )
     return __utils__["cloud.list_nodes_select"](
-        list_nodes(conn, "function"), __opts__["query.selection"], call,
+        list_nodes(conn, "function"), __opts__["query.selection"], call
     )
 
 
