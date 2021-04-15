@@ -28,11 +28,23 @@ def test_when_getting_cloud_config_values_expected_args_should_be_provided():
 @pytest.mark.parametrize(
     "comment,example_ip,ignored_cidr,expected",
     [
-        ("ip is in ignore_cidr", "203.0.113.1", "203.0.113.0/24", True),
-        ("ip is not in ignore_cidr", "192.0.2.1", "203.0.113.0/24", False),
+        ("ip is in ignore_cidr string", "203.0.113.1", "203.0.113.0/24", True),
+        ("ip is not in ignore_cidr string", "192.0.2.1", "203.0.113.0/24", False),
         ("ignore_cidr is empty", "192.0.2.1", "", False),
         ("ignore_cidr is False", "192.0.2.1", False, False),
         ("ignore_cidr is None", "192.0.2.1", None, False),
+        (
+            "ip is in ignore_cidr list",
+            "192.0.2.1",
+            ["192.0.2.0/24", "203.0.113.0/24"],
+            True,
+        ),
+        (
+            "ip is not in ignore_cidr list",
+            "192.0.2.1",
+            ["198.51.100.0/24", "203.0.113.0/24"],
+            False,
+        ),
     ],
 )
 def test_when_ignore_cidr_is_configured_and_ip_is_provided_result_is_expected(
