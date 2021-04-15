@@ -342,7 +342,7 @@ def ignore_cidr(vm_, ip):
     cidrs = config.get_cloud_config_value(
         "ignore_cidr", vm_, __opts__, default=[], search_global=False
     )
-    if isinstance(cidrs, str):
+    if cidrs and isinstance(cidrs, str):
         cidrs = [cidrs]
     for cidr in cidrs or []:
         if ip_address(ip) in ip_network(cidr):
