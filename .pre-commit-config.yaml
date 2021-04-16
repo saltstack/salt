@@ -150,6 +150,7 @@ repos:
           - --platform=darwin
           - --include=requirements/darwin.txt
           - --include=requirements/pyobjc.txt
+          - --passthrough-line-from-input=^pyobjc(.*)$
           - requirements/static/pkg/darwin.in
 
       - id: pip-tools-compile
@@ -163,6 +164,7 @@ repos:
           - --platform=darwin
           - --include=requirements/darwin.txt
           - --include=requirements/pyobjc.txt
+          - --passthrough-line-from-input=^pyobjc(.*)$
           - requirements/static/pkg/darwin.in
 
       - id: pip-tools-compile
@@ -176,6 +178,7 @@ repos:
           - --platform=darwin
           - --include=requirements/darwin.txt
           - --include=requirements/pyobjc.txt
+          - --passthrough-line-from-input=^pyobjc(.*)$
           - requirements/static/pkg/darwin.in
 
       - id: pip-tools-compile
@@ -189,6 +192,7 @@ repos:
           - --platform=darwin
           - --include=requirements/darwin.txt
           - --include=requirements/pyobjc.txt
+          - --passthrough-line-from-input=^pyobjc(.*)$
           - requirements/static/pkg/darwin.in
 
       - id: pip-tools-compile
@@ -202,6 +206,7 @@ repos:
           - --platform=darwin
           - --include=requirements/darwin.txt
           - --include=requirements/pyobjc.txt
+          - --passthrough-line-from-input=^pyobjc(.*)$
           - requirements/static/pkg/darwin.in
 
 
