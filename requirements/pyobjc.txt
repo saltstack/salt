@@ -1,7 +1,6 @@
 # pyobjc requirements for darwin
 # This may need to be updated from time to time as new frameworks are added to
 # newer releases of macOS
-
 pyobjc==6.2.2
 pyobjc-core==6.2.2
 pyobjc-framework-AVFoundation==6.2.2
