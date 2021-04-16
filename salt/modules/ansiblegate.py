@@ -393,16 +393,20 @@ def discover_playbooks(path, playbook_extension=None, syntax_check=False):
 
     {
         "my_ansible_playbook.yml": {
-            "fullpath": "/home/foobar/playbooks/my_ansible_playbook.yml"
+            "fullpath": "/home/foobar/playbooks/my_ansible_playbook.yml",
+            "custom_inventory": "/home/foobar/playbooks/hosts",
         },
         "another_playbook.yml": {
-            "fullpath": "/home/foobar/playbooks/another_playbook.yml"
+            "fullpath": "/home/foobar/playbooks/another_playbook.yml",
+            "custom_inventory": "/home/foobar/playbooks/hosts",
         },
         "lamp_simple/site.yml": {
-            "fullpath": "/home/foobar/playbooks/lamp_simple/site.yml"
+            "fullpath": "/home/foobar/playbooks/lamp_simple/site.yml",
+            "custom_inventory": "/home/foobar/playbooks/lamp_simple/hosts",
         },
         "lamp_proxy/site.yml": {
-            "fullpath": "/home/foobar/playbooks/lamp_proxy/site.yml"
+            "fullpath": "/home/foobar/playbooks/lamp_proxy/site.yml",
+            "custom_inventory": "/home/foobar/playbooks/lamp_proxy/hosts",
         },
     }
 
@@ -425,12 +429,18 @@ def discover_playbooks(path, playbook_extension=None, syntax_check=False):
             _path = os.path.join(path, _f)
             if os.path.isfile(_path) and _path.endswith("." + playbook_extension):
                 ret[_f] = {"fullpath": _path}
+                # Check for custom inventory "hosts" file
+                if os.path.isfile(os.path.join(path, "hosts")):
+                    ret[_f].update({"custom_inventory": os.path.join(path, "hosts")})
             elif os.path.isdir(_path):
                 # Check files in the 1st level of subdirectories
                 for _f2 in os.listdir(_path):
                     _path2 = os.path.join(_path, _f2)
                     if os.path.isfile(_path2) and _path2.endswith("." + playbook_extension):
                         ret[os.path.join(_f, _f2)] = {"fullpath": _path2}
+                        # Check for custom inventory "hosts" file
+                        if os.path.isfile(os.path.join(_path, "hosts")):
+                            ret[os.path.join(_f, _f2)].update({"custom_inventory": os.path.join(_path, "hosts")})
     except Exception as exc:
         raise CommandExecutionError("There was an exception while discovering playbooks: {}".format(exc))
 
