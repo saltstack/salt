@@ -30,51 +30,41 @@ def managed(name, passphrase, entries, force_remove=False):
     """
     Create or manage a java keystore.
 
-    name
-        The path to the keystore file
-
-    passphrase
-        The password to the keystore
-
-    entries
-        A list containing an alias, certificate, and optional private_key.
+    :param name: The path to the keystore file
+    :param passphrase: The password to the keystore
+    :param entries: A list containing an alias, certificate, and optional private_key.
         The certificate and private_key can be a file or a string
 
         .. code-block:: yaml
 
-            - entries:
-              - alias: hostname2
-                certificate: /path/to/cert.crt
-                private_key: /path/to/key.key
-              - alias: stringhost
-                certificate: |
-                  -----BEGIN CERTIFICATE-----
-                  MIICEjCCAXsCAg36MA0GCSqGSIb3DQEBBQUAMIGbMQswCQYDVQQGEwJKUDEOMAwG
-                  ...
-                  2VguKv4SWjRFoRkIfIlHX0qVviMhSlNy2ioFLy7JcPZb+v3ftDGywUqcBiVDoea0
-                  -----END CERTIFICATE-----
+          - entries:
+            - alias: hostname2
+              certificate: /path/to/cert.crt
+              private_key: /path/to/key.key
+            - alias: stringhost
+              certificate: |
+                -----BEGIN CERTIFICATE-----
+                MIICEjCCAXsCAg36MA0GCSqGSIb3DQEBBQUAMIGbMQswCQYDVQQGEwJKUDEOMAwG
+                2VguKv4SWjRFoRkIfIlHX0qVviMhSlNy2ioFLy7JcPZb+v3ftDGywUqcBiVDoea0
+                -----END CERTIFICATE-----
+    :param force_remove: If True will cause the state to remove any entries found in the keystore
+        which are not defined in the state. The default is False.  Example:
 
-    force_remove
-        If True will cause the state to remove any entries found in the keystore which are not
-        defined in the state. The default is False.
+        .. code-block:: yaml
 
-    Example
-
-    .. code-block:: yaml
-
-        define_keystore:
-          keystore.managed:
-            - name: /path/to/keystore
-            - passphrase: changeit
-            - force_remove: True
-            - entries:
-              - alias: hostname1
-                certificate: /path/to/cert.crt
-              - alias: remotehost
-                certificate: /path/to/cert2.crt
-                private_key: /path/to/key2.key
-              - alias: pillarhost
-                certificate: {{ salt.pillar.get('path:to:cert') }}
+          define_keystore:
+            keystore.managed:
+              - name: /path/to/keystore
+              - passphrase: changeit
+              - force_remove: True
+              - entries:
+                - alias: hostname1
+                  certificate: /path/to/cert.crt
+                - alias: remotehost
+                  certificate: /path/to/cert2.crt
+                  private_key: /path/to/key2.key
+                - alias: pillarhost
+                  certificate: {{ salt.pillar.get('path:to:cert') }}
     """
     ret = {"changes": {}, "comment": "", "name": name, "result": True}
 
@@ -98,10 +88,19 @@ def managed(name, passphrase, entries, force_remove=False):
             existing_entry = __salt__["keystore.list"](name, passphrase, entry["alias"])
             if existing_entry:
                 existing_sha1 = existing_entry[0]["sha1"]
-                new_sha1 = __salt__["x509.read_certificate"](entry["certificate"])[
-                    "SHA1 Finger Print"
-                ]
-                if existing_sha1 == new_sha1:
+                try:
+                    new_sha1 = __salt__["x509.read_certificate"](entry["certificate"])[
+                        "SHA1 Finger Print"
+                    ]
+                except (KeyError, TypeError) as err:
+                    log.debug(
+                        "Unable to obtain SHA1 finger print from entry's certificate"
+                    )
+                    new_sha1 = __salt__["keystore.get_sha1"](entry["certificate"])
+
+                if existing_sha1.decode(__salt_system_encoding__) == new_sha1.decode(
+                    __salt_system_encoding__
+                ):
                     update_entry = False
 
         if update_entry:
