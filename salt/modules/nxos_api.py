@@ -402,7 +402,7 @@ def config(
         if file_str is False:
             raise CommandExecutionError("Source file {} not found".format(config_file))
     elif commands:
-        if isinstance(commands, ((str,), str)):
+        if isinstance(commands, str):
             commands = [commands]
         file_str = "\n".join(commands)
         # unify all the commands in a single file, to render them in a go
