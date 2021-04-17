@@ -4,15 +4,10 @@ Manage PHP pecl extensions.
 
 import logging
 import re
+import shlex
 
 import salt.utils.data
 import salt.utils.path
-
-try:
-    from shlex import quote as _cmd_quote  # pylint: disable=E0611
-except ImportError:
-    from pipes import quote as _cmd_quote
-
 
 __func_alias__ = {"list_": "list"}
 
@@ -73,15 +68,15 @@ def install(pecls, defaults=False, force=False, preferred_state="stable"):
     """
     if isinstance(pecls, str):
         pecls = [pecls]
-    preferred_state = "-d preferred_state={}".format(_cmd_quote(preferred_state))
+    preferred_state = "-d preferred_state={}".format(shlex.quote(preferred_state))
     if force:
         return _pecl(
-            "{} install -f {}".format(preferred_state, _cmd_quote(" ".join(pecls))),
+            "{} install -f {}".format(preferred_state, shlex.quote(" ".join(pecls))),
             defaults=defaults,
         )
     else:
         _pecl(
-            "{} install {}".format(preferred_state, _cmd_quote(" ".join(pecls))),
+            "{} install {}".format(preferred_state, shlex.quote(" ".join(pecls))),
             defaults=defaults,
         )
         if not isinstance(pecls, list):
@@ -119,7 +114,7 @@ def uninstall(pecls):
     """
     if isinstance(pecls, str):
         pecls = [pecls]
-    return _pecl("uninstall {}".format(_cmd_quote(" ".join(pecls))))
+    return _pecl("uninstall {}".format(shlex.quote(" ".join(pecls))))
 
 
 def update(pecls):
@@ -137,7 +132,7 @@ def update(pecls):
     """
     if isinstance(pecls, str):
         pecls = [pecls]
-    return _pecl("install -U {}".format(_cmd_quote(" ".join(pecls))))
+    return _pecl("install -U {}".format(shlex.quote(" ".join(pecls))))
 
 
 def list_(channel=None):
@@ -154,7 +149,7 @@ def list_(channel=None):
     pecls = {}
     command = "list"
     if channel:
-        command = "{} -c {}".format(command, _cmd_quote(channel))
+        command = "{} -c {}".format(command, shlex.quote(channel))
     lines = _pecl(command).splitlines()
     lines = (l for l in lines if pecl_channel_pat.match(l))
 
