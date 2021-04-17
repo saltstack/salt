@@ -93,8 +93,8 @@ def _publish(
 
             if not matching_master_uris:
                 raise SaltInvocationError(
-                    "Could not find match for {} in \
-                list of configured masters {} when using `via_master` option".format(
+                    "Could not find match for {} in list of configured "
+                    "masters {} when using `via_master` option".format(
                         via_master, __opts__["master_uri_list"]
                     )
                 )

@@ -293,7 +293,7 @@ def nameservers(ns, host=None, admin_username=None, admin_password=None, module=
 
     for i in range(1, len(ns) + 1):
         if not __execute_cmd(
-            "config -g cfgLanNetworking -o " "cfgDNSServer{} {}".format(i, ns[i - 1]),
+            "config -g cfgLanNetworking -o cfgDNSServer{} {}".format(i, ns[i - 1]),
             host=host,
             admin_username=admin_username,
             admin_password=admin_password,
@@ -325,14 +325,14 @@ def syslog(
         salt dell dracr.syslog 0.0.0.0 False
     """
     if enable and __execute_cmd(
-        "config -g cfgRemoteHosts -o " "cfgRhostsSyslogEnable 1",
+        "config -g cfgRemoteHosts -o cfgRhostsSyslogEnable 1",
         host=host,
         admin_username=admin_username,
         admin_password=admin_password,
         module=None,
     ):
         return __execute_cmd(
-            "config -g cfgRemoteHosts -o " "cfgRhostsSyslogServer1 {}".format(server),
+            "config -g cfgRemoteHosts -o cfgRhostsSyslogServer1 {}".format(server),
             host=host,
             admin_username=admin_username,
             admin_password=admin_password,
@@ -362,13 +362,13 @@ def email_alerts(action, host=None, admin_username=None, admin_password=None):
 
     if action:
         return __execute_cmd(
-            "config -g cfgEmailAlert -o " "cfgEmailAlertEnable -i 1 1",
+            "config -g cfgEmailAlert -o cfgEmailAlertEnable -i 1 1",
             host=host,
             admin_username=admin_username,
             admin_password=admin_password,
         )
     else:
-        return __execute_cmd("config -g cfgEmailAlert -o " "cfgEmailAlertEnable -i 1 0")
+        return __execute_cmd("config -g cfgEmailAlert -o cfgEmailAlertEnable -i 1 0")
 
 
 def list_users(host=None, admin_username=None, admin_password=None, module=None):
@@ -434,7 +434,7 @@ def delete_user(
 
     if uid:
         return __execute_cmd(
-            "config -g cfgUserAdmin -o " 'cfgUserAdminUserName -i {} ""'.format(uid),
+            "config -g cfgUserAdmin -o cfgUserAdminUserName -i {} ".format(uid),
             host=host,
             admin_username=admin_username,
             admin_password=admin_password,
@@ -487,8 +487,9 @@ def change_password(
 
     if uid:
         return __execute_cmd(
-            "config -g cfgUserAdmin -o "
-            "cfgUserAdminPassword -i {} {}".format(uid, password),
+            "config -g cfgUserAdmin -o cfgUserAdminPassword -i {} {}".format(
+                uid, password
+            ),
             host=host,
             admin_username=admin_username,
             admin_password=admin_password,
@@ -598,8 +599,7 @@ def create_user(
 
     # Create user account first
     if not __execute_cmd(
-        "config -g cfgUserAdmin -o "
-        "cfgUserAdminUserName -i {} {}".format(uid, username),
+        "config -g cfgUserAdmin -o cfgUserAdminUserName -i {} {}".format(uid, username),
         host=host,
         admin_username=admin_username,
         admin_password=admin_password,
@@ -621,7 +621,7 @@ def create_user(
 
     # Enable users admin
     if not __execute_cmd(
-        "config -g cfgUserAdmin -o " "cfgUserAdminEnable -i {} 1".format(uid)
+        "config -g cfgUserAdmin -o cfgUserAdminEnable -i {} 1".format(uid)
     ):
         delete_user(username, uid)
         return False
@@ -681,8 +681,9 @@ def set_permissions(
             permission += int(privileges[perm], 16)
 
     return __execute_cmd(
-        "config -g cfgUserAdmin -o "
-        "cfgUserAdminPrivilege -i {} 0x{:08X}".format(uid, permission),
+        "config -g cfgUserAdmin -o cfgUserAdminPrivilege -i {} 0x{:08X}".format(
+            uid, permission
+        ),
         host=host,
         admin_username=admin_username,
         admin_password=admin_password,
@@ -702,7 +703,7 @@ def set_snmp(community, host=None, admin_username=None, admin_password=None):
         salt dell dracr.set_snmp public
     """
     return __execute_cmd(
-        "config -g cfgOobSnmp -o " "cfgOobSnmpAgentCommunity {}".format(community),
+        "config -g cfgOobSnmp -o cfgOobSnmpAgentCommunity {}".format(community),
         host=host,
         admin_username=admin_username,
         admin_password=admin_password,

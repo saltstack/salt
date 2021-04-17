@@ -205,7 +205,7 @@ def acl(username):
             found = False
             for d in auth_dict[a.user_fk.username]:
                 if isinstance(d, dict):
-                    if a.minion_or_fn_matcher in d.keys():
+                    if a.minion_or_fn_matcher in d:
                         auth_dict[a.user_fk.username][a.minion_or_fn_matcher].append(
                             a.minion_fn
                         )

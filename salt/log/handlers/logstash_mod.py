@@ -331,7 +331,7 @@ class LogstashFormatter(logging.Formatter, NewStyleClassMixIn):
                 message_dict["@fields"][key] = value
                 continue
 
-            if isinstance(value, ((str,), bool, dict, float, int, list)):
+            if isinstance(value, (str, bool, dict, float, int, list)):
                 message_dict["@fields"][key] = value
                 continue
 
@@ -393,7 +393,7 @@ class LogstashFormatter(logging.Formatter, NewStyleClassMixIn):
                 message_dict[key] = value
                 continue
 
-            if isinstance(value, ((str,), bool, dict, float, int, list)):
+            if isinstance(value, (str, bool, dict, float, int, list)):
                 message_dict[key] = value
                 continue
 

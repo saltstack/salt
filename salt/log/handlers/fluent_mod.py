@@ -236,9 +236,7 @@ class MessageFormatter(logging.Formatter, NewStyleClassMixIn):
                 continue
 
             # pylint: disable=incompatible-py3-code
-            if isinstance(
-                value, ((str,), bool, dict, float, int, list, types.NoneType)
-            ):
+            if isinstance(value, (str, bool, dict, float, int, list, types.NoneType)):
                 val = value
             # pylint: enable=incompatible-py3-code
             else:
@@ -289,9 +287,7 @@ class MessageFormatter(logging.Formatter, NewStyleClassMixIn):
                 continue
 
             # pylint: disable=incompatible-py3-code
-            if isinstance(
-                value, ((str,), bool, dict, float, int, list, types.NoneType)
-            ):
+            if isinstance(value, (str, bool, dict, float, int, list, types.NoneType)):
                 val = value
             # pylint: enable=incompatible-py3-code
             else:
@@ -363,7 +359,7 @@ class MessageFormatter(logging.Formatter, NewStyleClassMixIn):
                 message_dict["@fields"][key] = value
                 continue
 
-            if isinstance(value, ((str,), bool, dict, float, int, list)):
+            if isinstance(value, (str, bool, dict, float, int, list)):
                 message_dict["@fields"][key] = value
                 continue
 
@@ -428,7 +424,7 @@ class MessageFormatter(logging.Formatter, NewStyleClassMixIn):
                 message_dict[key] = value
                 continue
 
-            if isinstance(value, ((str,), bool, dict, float, int, list)):
+            if isinstance(value, (str, bool, dict, float, int, list)):
                 message_dict[key] = value
                 continue
 
