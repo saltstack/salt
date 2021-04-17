@@ -159,6 +159,4 @@ def output(ret, **kwargs):
         return "\n".join(lines)
     except UnicodeDecodeError:
         # output contains binary data that can't be decoded
-        return "\n".join(  # future lint: disable=blacklisted-function
-            [salt.utils.stringutils.to_str(x) for x in lines]
-        )
+        return "\n".join([salt.utils.stringutils.to_str(x) for x in lines])

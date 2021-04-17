@@ -971,7 +971,7 @@ def lsa_logon_user(
                 ctypes.byref(quotas),
                 ctypes.byref(substatus),
             )
-        except OSError:  # pylint: disable=undefined-variable
+        except OSError:
             if substatus.value:
                 raise ctypes.WinError(substatus.to_error())
             raise
@@ -1151,9 +1151,7 @@ def CreateProcessWithTokenW(
     )
     if ret == 0:
         winerr = win32api.GetLastError()
-        # pylint: disable=undefined-variable
-        exc = WindowsError(win32api.FormatMessage(winerr))
-        # pylint: enable=undefined-variable
+        exc = OSError(win32api.FormatMessage(winerr))
         exc.winerror = winerr
         raise exc
     return process_info
@@ -1242,11 +1240,9 @@ def impersonate_sid(sid, session_id=None, privs=None):
         tok = dup_token(tok)
         elevate_token(tok)
         if win32security.ImpersonateLoggedOnUser(tok) == 0:
-            # pylint: disable=undefined-variable
             raise OSError("Impersonation failure")
-            # pylint: enable=undefined-variable
         return tok
-    raise OSError("Impersonation failure")  # pylint: disable=undefined-variable
+    raise OSError("Impersonation failure")
 
 
 def dup_token(th):
@@ -1279,9 +1275,7 @@ def elevate_token(th):
 
     # Enable the privileges
     if win32security.AdjustTokenPrivileges(th, 0, enable_privs) == 0:
-        # pylint: disable=undefined-variable
         raise OSError(win32api.FormatMessage(win32api.GetLastError()))
-        # pylint: enable=undefined-variable
 
 
 def make_inheritable(token):

@@ -489,8 +489,9 @@ def snapshot_id_to_name(name, snap_id, strict=False, runas=None):
     # Raise or return the result
     if not snap_name and strict:
         raise SaltInvocationError(
-            'Could not find a snapshot name for snapshot ID "{}" of VM '
-            '"{}"'.format(snap_id, name)
+            'Could not find a snapshot name for snapshot ID "{}" of VM "{}"'.format(
+                snap_id, name
+            )
         )
     return salt.utils.data.decode(snap_name)
 
@@ -544,7 +545,7 @@ def snapshot_name_to_id(name, snap_name, strict=False, runas=None):
     elif len(named_ids) == 1:
         return named_ids[0]
     else:
-        multi_msg = 'Multiple snapshots for VM "{}" have name ' '"{}"'.format(
+        multi_msg = 'Multiple snapshots for VM "{}" have name "{}"'.format(
             name, snap_name
         )
         if strict:

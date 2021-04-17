@@ -156,14 +156,14 @@ def run(*args, **kwargs):
 
     # new args tuple to filter out agent/apply for _Puppet.arguments()
     buildargs = ()
-    for arg in range(len(args)):  # pylint: disable=C0200
+    for arg in args:
         # based on puppet documentation action must come first. making the same
         # assertion. need to ensure the list of supported cmds here matches
         # those defined in _Puppet.arguments()
-        if args[arg] in ["agent", "apply"]:
-            puppet.subcmd = args[arg]
+        if arg in ["agent", "apply"]:
+            puppet.subcmd = arg
         else:
-            buildargs += (args[arg],)
+            buildargs += (arg,)
     # args will exist as an empty list even if none have been provided
     puppet.arguments(buildargs)
 

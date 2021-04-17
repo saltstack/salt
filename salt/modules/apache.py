@@ -12,6 +12,7 @@ Support for Apache
 import io
 import logging
 import re
+import urllib.error
 import urllib.request
 
 import salt.utils.data

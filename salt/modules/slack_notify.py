@@ -124,9 +124,9 @@ def find_room(name, api_key=None):
     if ret["res"]:
         rooms = ret["message"]
         if rooms:
-            for room in range(0, len(rooms)):  # pylint: disable=C0200
-                if rooms[room]["name"] == name:
-                    return rooms[room]
+            for room in rooms:
+                if room["name"] == name:
+                    return room
     return False
 
 
@@ -153,9 +153,9 @@ def find_user(name, api_key=None):
     if ret["res"]:
         users = ret["message"]
         if users:
-            for user in range(0, len(users)):  # pylint: disable=C0200
-                if users[user]["name"] == name:
-                    return users[user]
+            for user in users:
+                if user["name"] == name:
+                    return user
     return False
 
 
