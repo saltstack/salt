@@ -51,7 +51,7 @@ def _numeric(n):
     """
     Tell whether an argument is numeric
     """
-    return isinstance(n, (int,) + (float,))
+    return isinstance(n, (int, float))
 
 
 def _query(api_version=None, data=None):

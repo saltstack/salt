@@ -244,10 +244,10 @@ def export_distributions(region=None, key=None, keyid=None, profile=None):
             results["Manage CloudFront distribution {}".format(name)] = {
                 "boto_cloudfront.present": distribution_sls_data,
             }
-    except botocore.exceptions.ClientError as err:  # pylint: disable=W0706
+    except botocore.exceptions.ClientError as exc:
         # Raise an exception, as this is meant to be user-invoked at the CLI
         # as opposed to being called from execution or state modules
-        raise
+        log.trace("Boto client error: {}", exc)
 
     dumper = __utils__["yaml.get_dumper"]("IndentedSafeOrderedDumper")
     return __utils__["yaml.dump"](results, default_flow_style=False, Dumper=dumper,)

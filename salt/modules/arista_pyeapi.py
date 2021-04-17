@@ -512,7 +512,7 @@ def config(
         log.debug("Fetched from %s", config_file)
         log.debug(file_str)
     elif commands:
-        if isinstance(commands, ((str,), str)):
+        if isinstance(commands, str):
             commands = [commands]
         file_str = "\n".join(commands)
         # unify all the commands in a single file, to render them in a go

@@ -1007,8 +1007,9 @@ def signal(signal=None):
     # Give a friendly error message for invalid signals
     # TODO: Fix this logic to be reusable and used by apache.signal
     if signal not in valid_signals:
-        msg = valid_signals[:-1] + ("or {}".format(valid_signals[-1]),)
-        return "{} is an invalid signal. Try: one of: {}".format(signal, ", ".join(msg))
+        return "{} is an invalid signal. Try: one of: {} or {}".format(
+            signal, ", ".join(valid_signals[:-1]), valid_signals[-1]
+        )
 
     cmd = "{} {}".format(__opts__["solr.init_script"], signal)
     __salt__["cmd.run"](cmd, python_shell=False)
