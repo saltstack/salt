@@ -87,7 +87,11 @@ def __virtual__():
     """
     Set the virtual pkg module if the os is supported by pkgin
     """
-    supported = ["NetBSD", "SunOS", "DragonFly", "Minix", "Darwin", "SmartOS"]
+    supported = [
+        "NetBSD", "DragonFly", "Minix",
+        "Darwin", "SunOS", "SmartOS",
+        "OmniOS",
+    ]
 
     if __grains__["os"] in supported and _check_pkgin():
         return __virtualname__
