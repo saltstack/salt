@@ -123,7 +123,7 @@ class HandleFileCopy:
                         fp.write(template_string)
                     return self._cached_file
 
-                # continue for else part
+            # continue for else part
             self._cached_file = salt.utils.files.mkstemp()
             __salt__["cp.get_template"](
                 self._file_path, self._cached_file, **self._kwargs
