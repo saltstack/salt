@@ -277,7 +277,7 @@ def banner(
     :param title: The first field of the comment block. This field appears
         centered at the top of the box.
     :param text: The second filed of the comment block. This field appears
-        left-justifed at the bottom of the box.
+        left-justified at the bottom of the box.
     :param newline: Boolean value to indicate whether the comment block should
         end with a newline. Default is ``False``.
 
@@ -392,7 +392,7 @@ def boolstr(value, true="true", false="false"):
     Convert a boolean value into a string. This function is
     intended to be used from within file templates to provide
     an easy way to take boolean values stored in Pillars or
-    Grains, and write them out in the apprpriate syntax for
+    Grains, and write them out in the appropriate syntax for
     a particular file template.
 
     :param value: The boolean value to be converted
