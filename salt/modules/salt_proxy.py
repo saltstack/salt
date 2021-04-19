@@ -79,7 +79,7 @@ def _is_proxy_running(proxyname):
     """
     Check if proxy for this name is running
     """
-    cmd = 'ps ax | grep "salt-proxy --proxyid={0}" | grep -v grep'.format(
+    cmd = 'ps axw | grep "salt-proxy --proxyid={0}" | grep -v grep'.format(
         salt.ext.six.moves.shlex_quote(proxyname)
     )
     cmdout = __salt__["cmd.run_all"](cmd, timeout=5, python_shell=True)
