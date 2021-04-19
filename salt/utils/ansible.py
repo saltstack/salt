@@ -10,15 +10,6 @@ import salt.utils.path
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
 
-CONVERSION = {
-    "ansible_ssh_host": "host",
-    "ansible_ssh_port": "port",
-    "ansible_ssh_user": "user",
-    "ansible_ssh_pass": "passwd",
-    "ansible_sudo_pass": "sudo",
-    "ansible_ssh_private_key_file": "priv",
-}
-
 __virtualname__ = "ansible"
 
 log = logging.getLogger(__name__)
