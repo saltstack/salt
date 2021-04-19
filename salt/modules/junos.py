@@ -1261,7 +1261,7 @@ def install_config(path=None, **kwargs):
             log.error(message)
             ret["message"] = message
             ret["out"] = False
-        except Exception as exception:  # pylint: disable=broad-except
+        except Exception as exc:  # pylint: disable=broad-except
             ret["message"] = "install_config failed due to exception: '{}'".format(
                 exception
             )
