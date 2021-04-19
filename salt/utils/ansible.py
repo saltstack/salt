@@ -40,13 +40,13 @@ def targets(inventory="/etc/ansible/hosts", **kwargs):
     if not os.path.isfile(inventory):
         raise CommandExecutionError("Inventory file not found: {}".format(inventory))
 
-    extra_cmd = ""
-    if kwargs.get("export", False):
-        extra_cmd += "--export "
-    if kwargs.get("yaml", False):
-        extra_cmd += "--yaml "
+    extra_cmd = []
+    if "export" in kwargs:
+        extra_cmd.append("--export")
+    if "yaml" in kwargs:
+        extra_cmd.append("--yaml")
     inv = __salt__["cmd.run"](
-        "ansible-inventory -i {} --list {}".format(inventory, extra_cmd)
+        "ansible-inventory -i {} --list {}".format(inventory, " ".join(extra_cmd))
     )
     if kwargs.get("yaml", False):
         return salt.utils.stringutils.to_str(inv)
