@@ -105,7 +105,7 @@ Also, check out some of our community resources including:
 * `Salt Project Community Wiki <https://github.com/saltstack/community/wiki>`_
 * `Salt Project Community Slack <https://saltstackcommunity.herokuapp.com/>`_
 * `Salt Project: IRC on Freenode <https://webchat.freenode.net/#salt>`_
-* `Salt Project YouTube channel <https://www.youtube.com/user/SaltStack>`_
+* `Salt Project YouTube channel <https://www.youtube.com/channel/UCpveTIucFx9ljGelW63-BWg>`_
 * `Salt Project Twitch channel <https://www.twitch.tv/saltprojectoss>`_
 
 There are lots of ways to get involved in our community. Every month, there are
@@ -114,7 +114,7 @@ team and collaborate in real time. The best way to keep track is by subscribing
 to the **Salt Project Community Events Calendar** on the main
 `<https://saltproject.io>`_ website.
 
-If you have additional questions, email us at core@saltstack.com or reach out
+If you have additional questions, email us at saltproject@vmware.com or reach out
 directly to the Community Manager, Janae Andrus via Slack. We’d be glad to
 have you join our community!
 
