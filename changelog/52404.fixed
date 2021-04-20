@@ -1,0 +1,1 @@
+In Python 3 dictionaries do not have ordering defined, which may result in an exception when sorting ASG tags. This fix aims to resolve that issue.
