@@ -4,6 +4,8 @@ import pytest
 import salt.modules.ansiblegate as ansiblegate
 import salt.utils.json
 from tests.support.mock import ANY, MagicMock, patch
+import salt.config
+import salt.loader
 
 pytestmark = [
     pytest.mark.skip_on_windows(reason="Not supported on Windows"),
@@ -12,7 +14,7 @@ pytestmark = [
 
 @pytest.fixture
 def configure_loader_modules():
-    return {ansiblegate: {}}
+    return {ansiblegate: {"__utils__": {}}}
 
 
 def test_ansible_module_help():
@@ -133,3 +135,50 @@ def test_ansible_playbooks_return_retcode():
     ):
         ret = ansiblegate.playbooks("fake-playbook.yml")
         assert "retcode" in ret
+
+
+def test_ansible_targets():
+    """
+    Test ansible.targets execution module function.
+    :return:
+    """
+    ansible_inventory_ret = """
+{
+    "_meta": {
+        "hostvars": {
+            "uyuni-stable-ansible-centos7-1.tf.local": {
+                "ansible_ssh_private_key_file": "/etc/ansible/my_ansible_private_key"
+            },
+            "uyuni-stable-ansible-centos7-2.tf.local": {
+                "ansible_ssh_private_key_file": "/etc/ansible/my_ansible_private_key"
+            }
+        }
+    },
+    "all": {
+        "children": [
+            "ungrouped"
+        ]
+    },
+    "ungrouped": {
+        "hosts": [
+            "uyuni-stable-ansible-centos7-1.tf.local",
+            "uyuni-stable-ansible-centos7-2.tf.local"
+        ]
+    }
+}
+    """
+    ansible_inventory_mock = MagicMock(return_value=ansible_inventory_ret)
+    with patch("salt.utils.path.which", MagicMock(return_value=True)):
+        opts = salt.config.DEFAULT_MINION_OPTS.copy()
+        utils = salt.loader.utils(opts, whitelist=["ansible"])
+        with patch("salt.modules.cmdmod.run", ansible_inventory_mock), patch.dict(
+            ansible.__utils__, utils), patch(
+            "os.path.isfile", MagicMock(return_value=True)
+        ):
+            ret = ansible.targets()
+            assert ansible_inventory_mock.call_args
+            assert "_meta" in ret
+            assert "uyuni-stable-ansible-centos7-1.tf.local" in ret["_meta"]["hostvars"]
+            assert "ansible_ssh_private_key_file" in ret["_meta"]["hostvars"]["uyuni-stable-ansible-centos7-1.tf.local"]
+            assert "all" in ret
+            assert len(ret["ungrouped"]["hosts"]) == 2

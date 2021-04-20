@@ -8,6 +8,7 @@ import os
 import salt.utils.json
 import salt.utils.path
 import salt.utils.stringutils
+import salt.modules.cmdmod
 from salt.exceptions import CommandExecutionError
 
 __virtualname__ = "ansible"
@@ -45,7 +46,7 @@ def targets(inventory="/etc/ansible/hosts", **kwargs):
         extra_cmd.append("--export")
     if "yaml" in kwargs:
         extra_cmd.append("--yaml")
-    inv = __salt__["cmd.run"](
+    inv = salt.modules.cmdmod.run(
         "ansible-inventory -i {} --list {}".format(inventory, " ".join(extra_cmd))
     )
     if kwargs.get("yaml", False):
