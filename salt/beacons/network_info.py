@@ -1,19 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 Beacon to monitor statistics from ethernet adapters
 
 .. versionadded:: 2015.5.0
 """
-
-# Import Python libs
-from __future__ import absolute_import, unicode_literals
-
 import logging
 
-from salt.ext.six.moves import map
-
-# Import third party libs
-# pylint: disable=import-error
 try:
     import salt.utils.psutil_compat as psutil
 
@@ -21,8 +12,6 @@ try:
 except ImportError:
     HAS_PSUTIL = False
 
-
-# pylint: enable=import-error
 
 log = logging.getLogger(__name__)
 

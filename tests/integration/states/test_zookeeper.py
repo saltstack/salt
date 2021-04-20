@@ -1,20 +1,13 @@
-# -*- coding: utf-8 -*-
 """
 Integration tests for the zookeeper states
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 
-# Import Salt Libs
+import pytest
 import salt.utils.path
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, slowTest
 from tests.support.mixins import SaltReturnAssertsMixin
-
-# Import Salt Testing Libs
 from tests.support.unit import skipIf
 
 try:
@@ -27,9 +20,9 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
-@destructiveTest
 @skipIf(not salt.utils.path.which("dockerd"), "Docker not installed")
 @skipIf(not HAS_KAZOO, "kazoo python library not installed")
+@pytest.mark.destructive_test
 class ZookeeperTestCase(ModuleCase, SaltReturnAssertsMixin):
     """
     Test zookeeper states
@@ -53,7 +46,7 @@ class ZookeeperTestCase(ModuleCase, SaltReturnAssertsMixin):
         self.run_state("docker_container.absent", name=self.container_name)
         self.run_state("docker_image.absent", name="docker.io/zookeeper", force=True)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_zookeeper_present(self):
         ret = self.run_state(
             "zookeeper.present", name="/test/name", value="testuser", makepath=True,
@@ -78,7 +71,7 @@ class ZookeeperTestCase(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_zookeeper_absent(self):
         self.run_state(
             "zookeeper.present", name="/test/name", value="testuser", makepath=True,
@@ -93,7 +86,7 @@ class ZookeeperTestCase(ModuleCase, SaltReturnAssertsMixin):
             bool(ret["zookeeper_|-/test/name_|-/test/name_|-absent"]["changes"])
         )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_zookeeper_acls(self):
         ret = self.run_state(
             "zookeeper.acls",

@@ -9,8 +9,6 @@ import re
 import salt.loader
 import salt.utils.event
 import salt.utils.minion
-from salt.exceptions import CommandExecutionError
-from salt.ext.six.moves import map
 
 log = logging.getLogger(__name__)
 
@@ -280,7 +278,9 @@ class Beacon:
         """
         Return available beacon functions
         """
-        validate_str = "{}.validate".format(name)
+        beacon_name = next(item.get("beacon_module", name) for item in beacon_data)
+
+        validate_str = "{}.validate".format(beacon_name)
         # Run the validate function if it's available,
         # otherwise there is a warning about it being missing
         if validate_str in self.beacons:
@@ -290,7 +290,7 @@ class Beacon:
         else:
             vcomment = (
                 "Beacon {} does not have a validate"
-                " function, skipping validation.".format(name)
+                " function, skipping validation.".format(beacon_name)
             )
             valid = True
 
@@ -496,13 +496,13 @@ class Beacon:
         Reset the beacons to defaults
         """
         self.opts["beacons"] = {}
-        evt = salt.utils.event.get_event("minion", opts=self.opts)
-        evt.fire_event(
-            {
-                "complete": True,
-                "comment": "Beacons have been reset",
-                "beacons": self.opts["beacons"],
-            },
-            tag="/salt/minion/minion_beacon_reset_complete",
-        )
+        with salt.utils.event.get_event("minion", opts=self.opts) as evt:
+            evt.fire_event(
+                {
+                    "complete": True,
+                    "comment": "Beacons have been reset",
+                    "beacons": self.opts["beacons"],
+                },
+                tag="/salt/minion/minion_beacon_reset_complete",
+            )
         return True

@@ -1,1 +1,0 @@
-Fail when func_ret is False when using the new module.run syntax.

@@ -380,6 +380,7 @@ def dump(device, args=None):
     Return all contents of dumpe2fs for a specified device
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' disk.dump /dev/sda1
@@ -413,6 +414,7 @@ def resize2fs(device):
     Resizes the filesystem.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' disk.resize2fs /dev/sda1
@@ -579,6 +581,7 @@ def hdparms(disks, args=None):
     .. versionadded:: 2016.3.0
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' disk.hdparms /dev/sda
@@ -918,7 +921,7 @@ def _iostat_aix(interval, count, disks):
     """
     AIX support to gather and return (averaged) IO stats.
     """
-    log.debug("DGM disk iostat entry")
+    log.debug("AIX disk iostat entry")
 
     if disks is None:
         iostat_cmd = "iostat -dD {} {} ".format(interval, count)

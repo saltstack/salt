@@ -5,6 +5,7 @@ import logging
 import os
 import textwrap
 
+import pytest
 import salt.config
 import salt.minion
 import salt.syspaths
@@ -17,9 +18,8 @@ from salt.exceptions import (
     SaltCloudConfigError,
     SaltConfigurationError,
 )
-from salt.ext import six
 from salt.syspaths import CONFIG_DIR
-from tests.support.helpers import patched_environ, slowTest, with_tempdir, with_tempfile
+from tests.support.helpers import patched_environ, with_tempdir, with_tempfile
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, Mock, patch
 from tests.support.runtests import RUNTIME_VARS
@@ -265,9 +265,9 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
     @with_tempfile()
     def test_proper_path_joining(self, fpath):
-        temp_config = "root_dir: /\n" "key_logfile: key\n"
+        temp_config = "root_dir: /\nkey_logfile: key\n"
         if salt.utils.platform.is_windows():
-            temp_config = "root_dir: c:\\\n" "key_logfile: key\n"
+            temp_config = "root_dir: c:\\\nkey_logfile: key\n"
         with salt.utils.files.fopen(fpath, "w") as fp_:
             fp_.write(temp_config)
 
@@ -542,7 +542,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         assert ret == {"base": expected}
 
     @with_tempdir()
-    @slowTest
+    @pytest.mark.slow_test
     def test_master_id_function(self, tempdir):
         master_config = os.path.join(tempdir, "master")
 
@@ -615,7 +615,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         )
 
     @with_tempdir()
-    @slowTest
+    @pytest.mark.slow_test
     def test_minion_id_function(self, tempdir):
         minion_config = os.path.join(tempdir, "minion")
 
@@ -635,7 +635,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         self.assertEqual(config["id"], "hello_world")
 
     @with_tempdir()
-    @slowTest
+    @pytest.mark.slow_test
     def test_minion_id_lowercase(self, tempdir):
         """
         This tests that setting `minion_id_lowercase: True` does lower case
@@ -661,7 +661,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         self.assertEqual(config["id"], "king_bob")
 
     @with_tempdir()
-    @slowTest
+    @pytest.mark.slow_test
     def test_minion_id_remove_domain_string_positive(self, tempdir):
         """
         This tests that the values of `minion_id_remove_domain` is suppressed from a generated minion id,
@@ -687,7 +687,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         self.assertEqual(config["id"], "king_bob")
 
     @with_tempdir()
-    @slowTest
+    @pytest.mark.slow_test
     def test_minion_id_remove_domain_string_negative(self, tempdir):
         """
         See above
@@ -710,7 +710,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         self.assertEqual(config["id"], "king_bob.foo.org")
 
     @with_tempdir()
-    @slowTest
+    @pytest.mark.slow_test
     def test_minion_id_remove_domain_bool_true(self, tempdir):
         """
         See above
@@ -732,7 +732,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         self.assertEqual(config["id"], "king_bob")
 
     @with_tempdir()
-    @slowTest
+    @pytest.mark.slow_test
     def test_minion_id_remove_domain_bool_false(self, tempdir):
         """
         See above
@@ -790,18 +790,10 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         self.assertEqual(syndic_opts["id"], "syndic")
         self.assertEqual(syndic_opts["pki_dir"], os.path.join(root_dir, "pki"))
         # the rest is configured master side
-        if RUNTIME_VARS.PYTEST_SESSION is False:
-            # Pytest assigns ports dynamically
-            self.assertEqual(syndic_opts["master_port"], 54506)
-            self.assertEqual(syndic_opts["master"], "localhost")
-            self.assertEqual(
-                syndic_opts["sock_dir"], os.path.join(root_dir, "syndic_sock")
-            )
-        else:
-            self.assertEqual(syndic_opts["master"], "127.0.0.1")
-            self.assertEqual(
-                syndic_opts["sock_dir"], os.path.join(root_dir, "run", "minion")
-            )
+        self.assertEqual(syndic_opts["master"], "127.0.0.1")
+        self.assertEqual(
+            syndic_opts["sock_dir"], os.path.join(root_dir, "run", "minion")
+        )
         self.assertEqual(syndic_opts["cachedir"], os.path.join(root_dir, "cache"))
         self.assertEqual(
             syndic_opts["log_file"], os.path.join(root_dir, "logs", "syndic.log")
@@ -889,7 +881,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         tally = self._get_tally(salt.config.master_config)
         # pylint: enable=no-value-for-parameter
         non_unicode = tally.get("non_unicode", [])
-        self.assertEqual(len(non_unicode), 8 if six.PY2 else 0, non_unicode)
+        self.assertEqual(len(non_unicode), 0, non_unicode)
         self.assertTrue(tally["unicode"] > 0)
 
     def test_conf_file_strings_are_unicode_for_minion(self):
@@ -1893,6 +1885,43 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             ret = salt.config.apply_minion_config(defaults=defaults)
             self.assertNotIn("environment", ret)
             self.assertEqual(ret["saltenv"], "foo")
+
+    @with_tempfile()
+    def test_minion_config_role_master(self, fpath):
+        with salt.utils.files.fopen(fpath, "w") as wfh:
+            wfh.write("root_dir: /\n" "key_logfile: key\n")
+        with patch("salt.config.apply_sdb") as apply_sdb_mock, patch(
+            "salt.config._validate_opts"
+        ) as validate_opts_mock:
+            config = salt.config.minion_config(fpath, role="master")
+            apply_sdb_mock.assert_not_called()
+
+            validate_opts_mock.assert_not_called()
+        self.assertEqual(config["__role"], "master")
+
+    @with_tempfile()
+    def test_mminion_config_cache_path(self, fpath):
+        cachedir = os.path.abspath("/path/to/master/cache")
+        overrides = {}
+
+        with salt.utils.files.fopen(fpath, "w") as wfh:
+            wfh.write(
+                "root_dir: /\n" "key_logfile: key\n" "cachedir: {}".format(cachedir)
+            )
+        config = salt.config.mminion_config(fpath, overrides)
+        self.assertEqual(config["__role"], "master")
+        self.assertEqual(config["cachedir"], cachedir)
+
+    @with_tempfile()
+    def test_mminion_config_cache_path_overrides(self, fpath):
+        cachedir = os.path.abspath("/path/to/master/cache")
+        overrides = {"cachedir": cachedir}
+
+        with salt.utils.files.fopen(fpath, "w") as wfh:
+            wfh.write("root_dir: /\n" "key_logfile: key\n")
+        config = salt.config.mminion_config(fpath, overrides)
+        self.assertEqual(config["__role"], "master")
+        self.assertEqual(config["cachedir"], cachedir)
 
 
 class APIConfigTestCase(DefaultConfigsBase, TestCase):

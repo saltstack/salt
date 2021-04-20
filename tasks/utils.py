@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     tasks.utils
     ~~~~~~~~~~~
@@ -11,8 +10,12 @@ import sys
 try:
     from blessings import Terminal
 
-    terminal = Terminal()
-    HAS_BLESSINGS = True
+    try:
+        terminal = Terminal()
+        HAS_BLESSINGS = True
+    except Exception:  # pylint: disable=broad-except
+        terminal = None
+        HAS_BLESSINGS = False
 except ImportError:
     terminal = None
     HAS_BLESSINGS = False
