@@ -3,9 +3,11 @@
 import pytest
 import salt.modules.ansiblegate as ansiblegate
 import salt.utils.json
-from tests.support.mock import ANY, MagicMock, patch
 import salt.config
 import salt.loader
+from tests.support.mock import ANY, MagicMock, patch
+from tests.support.runtests import RUNTIME_VARS
+
 
 pytestmark = [
     pytest.mark.skip_on_windows(reason="Not supported on Windows"),
@@ -172,9 +174,9 @@ def test_ansible_targets():
         opts = salt.config.DEFAULT_MINION_OPTS.copy()
         utils = salt.loader.utils(opts, whitelist=["ansible"])
         with patch("salt.modules.cmdmod.run", ansible_inventory_mock), patch.dict(
-            ansible.__utils__, utils
+            ansiblegate.__utils__, utils
         ), patch("os.path.isfile", MagicMock(return_value=True)):
-            ret = ansible.targets()
+            ret = ansiblegate.targets()
             assert ansible_inventory_mock.call_args
             assert "_meta" in ret
             assert "uyuni-stable-ansible-centos7-1.tf.local" in ret["_meta"]["hostvars"]
@@ -184,3 +186,45 @@ def test_ansible_targets():
             )
             assert "all" in ret
             assert len(ret["ungrouped"]["hosts"]) == 2
+
+
+def test_ansible_discover_playbooks_single_path():
+    playbooks_dir = os.path.join(
+        RUNTIME_VARS.TESTS_DIR, "unit/files/playbooks/example_playbooks/"
+    )
+    ret = ansiblegate.discover_playbooks(playbooks_dir)
+    assert playbooks_dir in ret
+    assert ret[playbooks_dir]["playbook1.yml"] == {
+        "fullpath": os.path.join(playbooks_dir, "playbook1.yml")
+    }
+    assert ret[playbooks_dir]["example-playbook2/site.yml"] == {
+        "fullpath": os.path.join(playbooks_dir, "example-playbook2/site.yml"),
+        "custom_inventory": os.path.join(playbooks_dir, "example-playbook2/hosts"),
+    }
+
+
+def test_ansible_discover_playbooks_single_path_using_parameters():
+    playbooks_dir = os.path.join(
+        RUNTIME_VARS.TESTS_DIR, "unit/files/playbooks/example_playbooks/"
+    )
+    ret = ansiblegate.discover_playbooks(
+        playbooks_dir, playbook_extension="foobar", hosts_filename="deadbeaf"
+    )
+    assert playbooks_dir in ret
+    assert ret[playbooks_dir] == {}
+
+
+def test_ansible_discover_playbooks_multiple_locations():
+    playbooks_dir = os.path.join(
+        RUNTIME_VARS.TESTS_DIR, "unit/files/playbooks/example_playbooks/"
+    )
+    ret = ansiblegate.discover_playbooks(locations=[playbooks_dir, "/tmp/foobar"])
+    assert playbooks_dir in ret
+    assert "/tmp/foobar" in ret
+    assert ret[playbooks_dir]["playbook1.yml"] == {
+        "fullpath": os.path.join(playbooks_dir, "playbook1.yml")
+    }
+    assert ret[playbooks_dir]["example-playbook2/site.yml"] == {
+        "fullpath": os.path.join(playbooks_dir, "example-playbook2/site.yml"),
+        "custom_inventory": os.path.join(playbooks_dir, "example-playbook2/hosts"),
+    }
