@@ -1,14 +1,10 @@
-# -*- coding: utf-8 -*-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 
-# Import Salt libs
+import salt.modules.cmdmod
 import salt.utils.json
 import salt.utils.path
 import salt.utils.stringutils
-import salt.modules.cmdmod
 from salt.exceptions import CommandExecutionError
 
 __virtualname__ = "ansible"
@@ -28,6 +24,10 @@ def __virtual__():  # pylint: disable=expected-2-blank-lines-found-0
                 salt.utils.path.which("ansible-inventory") and __virtualname__,
                 "Install `ansible` to use inventory",
             )
+        return (
+            salt.utils.path.which("ansible-inventory") and __virtualname__,
+            "Install `ansible` to use inventory",
+        )
     except Exception as e:  # pylint: disable=broad-except
         log.error("Could not load __salt__: %s", e)
         return False

@@ -382,11 +382,13 @@ def targets(**kwargs):
     return __utils__["ansible.targets"](**kwargs)
 
 
-def discover_playbooks(path=None,
-                       locations=None,
-                       playbook_extension=None,
-                       hosts_filename=None,
-                       syntax_check=False):
+def discover_playbooks(
+    path=None,
+    locations=None,
+    playbook_extension=None,
+    hosts_filename=None,
+    syntax_check=False,
+):
     """
     Discover Ansible playbooks stored under the given path or from multiple paths (locations)
 
@@ -430,27 +432,39 @@ def discover_playbooks(path=None,
     """
 
     if not path and not locations:
-        raise CommandExecutionError("You have to specify either 'path' or 'locations' arguments")
+        raise CommandExecutionError(
+            "You have to specify either 'path' or 'locations' arguments"
+        )
 
     if path and locations:
-        raise CommandExecutionError("You cannot specify 'path' and 'locations' at the same time")
+        raise CommandExecutionError(
+            "You cannot specify 'path' and 'locations' at the same time"
+        )
 
     if not playbook_extension:
-       playbook_extension = "yml"
+        playbook_extension = "yml"
     if not hosts_filename:
-       hosts_filename = "hosts"
+        hosts_filename = "hosts"
 
     if path:
         if not os.path.isabs(path):
-            raise CommandExecutionError("The given path is not an absolute path: {}".format(path))
+            raise CommandExecutionError(
+                "The given path is not an absolute path: {}".format(path)
+            )
         if not os.path.isdir(path):
-            raise CommandExecutionError("The given path is not a directory: {}".format(path))
-        return {path: _explore_path(path, playbook_extension, hosts_filename, syntax_check)}
+            raise CommandExecutionError(
+                "The given path is not a directory: {}".format(path)
+            )
+        return {
+            path: _explore_path(path, playbook_extension, hosts_filename, syntax_check)
+        }
 
     if locations:
         all_ret = {}
         for location in locations:
-            all_ret[location] = _explore_path(location, playbook_extension, hosts_filename, syntax_check)
+            all_ret[location] = _explore_path(
+                location, playbook_extension, hosts_filename, syntax_check
+            )
         return all_ret
 
 
@@ -472,26 +486,42 @@ def _explore_path(path, playbook_extension, hosts_filename, syntax_check):
                 ret[_f] = {"fullpath": _path}
                 # Check for custom inventory file
                 if os.path.isfile(os.path.join(path, hosts_filename)):
-                    ret[_f].update({"custom_inventory": os.path.join(path, hosts_filename)})
+                    ret[_f].update(
+                        {"custom_inventory": os.path.join(path, hosts_filename)}
+                    )
             elif os.path.isdir(_path):
                 # Check files in the 1st level of subdirectories
                 for _f2 in os.listdir(_path):
                     _path2 = os.path.join(_path, _f2)
-                    if os.path.isfile(_path2) and _path2.endswith("." + playbook_extension):
+                    if os.path.isfile(_path2) and _path2.endswith(
+                        "." + playbook_extension
+                    ):
                         ret[os.path.join(_f, _f2)] = {"fullpath": _path2}
                         # Check for custom inventory file
                         if os.path.isfile(os.path.join(_path, hosts_filename)):
-                            ret[os.path.join(_f, _f2)].update({"custom_inventory": os.path.join(_path, hosts_filename)})
+                            ret[os.path.join(_f, _f2)].update(
+                                {
+                                    "custom_inventory": os.path.join(
+                                        _path, hosts_filename
+                                    )
+                                }
+                            )
     except Exception as exc:
-        raise CommandExecutionError("There was an exception while discovering playbooks: {}".format(exc))
+        raise CommandExecutionError(
+            "There was an exception while discovering playbooks: {}".format(exc)
+        )
 
     # Run syntax check validation
     if syntax_check:
         check_command = ["ansible-playbook", "--syntax-check"]
         try:
             for pb in list(ret):
-               if __salt__["cmd.retcode"](check_command + [ret[pb]]):
-                   del ret[pb]
+                if __salt__["cmd.retcode"](check_command + [ret[pb]]):
+                    del ret[pb]
         except Exception as exc:
-            raise CommandExecutionError("There was an exception while checking syntax of playbooks: {}".format(exc))
+            raise CommandExecutionError(
+                "There was an exception while checking syntax of playbooks: {}".format(
+                    exc
+                )
+            )
     return ret

@@ -172,13 +172,15 @@ def test_ansible_targets():
         opts = salt.config.DEFAULT_MINION_OPTS.copy()
         utils = salt.loader.utils(opts, whitelist=["ansible"])
         with patch("salt.modules.cmdmod.run", ansible_inventory_mock), patch.dict(
-            ansible.__utils__, utils), patch(
-            "os.path.isfile", MagicMock(return_value=True)
-        ):
+            ansible.__utils__, utils
+        ), patch("os.path.isfile", MagicMock(return_value=True)):
             ret = ansible.targets()
             assert ansible_inventory_mock.call_args
             assert "_meta" in ret
             assert "uyuni-stable-ansible-centos7-1.tf.local" in ret["_meta"]["hostvars"]
-            assert "ansible_ssh_private_key_file" in ret["_meta"]["hostvars"]["uyuni-stable-ansible-centos7-1.tf.local"]
+            assert (
+                "ansible_ssh_private_key_file"
+                in ret["_meta"]["hostvars"]["uyuni-stable-ansible-centos7-1.tf.local"]
+            )
             assert "all" in ret
             assert len(ret["ungrouped"]["hosts"]) == 2
