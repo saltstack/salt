@@ -1,1 +1,0 @@
-Use contextvars libary from site-packages if it is intalled. Fixes salt ssh for targets with python <=3.6
