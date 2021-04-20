@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 
 Send json response data to Splunk via the HTTP Event Collector
@@ -11,29 +10,22 @@ Requires the following config values to be specified in config or pillar:
       indexer: <hostname/IP of Splunk indexer>
       sourcetype: <Destination sourcetype for data>
       index: <Destination index for data>
+      verify_ssl: true
 
 Run a test by using ``salt-call test.ping --return splunk``
 
 Written by Scott Pack (github.com/scottjpack)
 
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import socket
 import time
 
 import requests
-
-# Import salt libs
 import salt.utils.json
 
-# Import 3rd-party libs
-from salt.ext import six
-
 _max_content_bytes = 100000
-http_event_collector_SSL_verify = False
 http_event_collector_debug = False
 
 log = logging.getLogger(__name__)
@@ -62,6 +54,9 @@ def _get_options():
         indexer = __salt__["config.get"]("splunk_http_forwarder:indexer")
         sourcetype = __salt__["config.get"]("splunk_http_forwarder:sourcetype")
         index = __salt__["config.get"]("splunk_http_forwarder:index")
+        verify_ssl = __salt__["config.get"](
+            "splunk_http_forwarder:verify_ssl", default=True
+        )
     except Exception:  # pylint: disable=broad-except
         log.error("Splunk HTTP Forwarder parameters not present in config.")
         return None
@@ -70,6 +65,7 @@ def _get_options():
         "indexer": indexer,
         "sourcetype": sourcetype,
         "index": index,
+        "verify_ssl": verify_ssl,
     }
     return splunk_opts
 
@@ -84,14 +80,16 @@ def _send_splunk(event, index_override=None, sourcetype_override=None):
     # Get Splunk Options
     opts = _get_options()
     log.info(
-        str("Options: %s"),  # future lint: disable=blacklisted-function
-        salt.utils.json.dumps(opts),
+        "Options: %s", salt.utils.json.dumps(opts),
     )
     http_event_collector_key = opts["token"]
     http_event_collector_host = opts["indexer"]
+    http_event_collector_verify_ssl = opts["verify_ssl"]
     # Set up the collector
     splunk_event = http_event_collector(
-        http_event_collector_key, http_event_collector_host
+        http_event_collector_key,
+        http_event_collector_host,
+        verify_ssl=http_event_collector_verify_ssl,
     )
     # init the payload
     payload = {}
@@ -109,8 +107,7 @@ def _send_splunk(event, index_override=None, sourcetype_override=None):
     # Add the event
     payload.update({"event": event})
     log.info(
-        str("Payload: %s"),  # future lint: disable=blacklisted-function
-        salt.utils.json.dumps(payload),
+        "Payload: %s", salt.utils.json.dumps(payload),
     )
     # Fire it off
     splunk_event.sendEvent(payload)
@@ -120,7 +117,7 @@ def _send_splunk(event, index_override=None, sourcetype_override=None):
 # Thanks to George Starcher for the http_event_collector class (https://github.com/georgestarcher/)
 
 
-class http_event_collector(object):
+class http_event_collector:
     def __init__(
         self,
         token,
@@ -129,11 +126,13 @@ class http_event_collector(object):
         http_event_port="8088",
         http_event_server_ssl=True,
         max_bytes=_max_content_bytes,
+        verify_ssl=True,
     ):
         self.token = token
         self.batchEvents = []
         self.maxByteLength = max_bytes
         self.currentByteLength = 0
+        self.verify_ssl = verify_ssl
 
         # Set host to specified value or default to localhostname if no value provided
         if host:
@@ -164,7 +163,7 @@ class http_event_collector(object):
 
         # If eventtime in epoch not passed as optional argument use current system time in epoch
         if not eventtime:
-            eventtime = six.text_type(int(time.time()))
+            eventtime = str(int(time.time()))
 
         # Fill in local hostname if not manually populated
         if "host" not in payload:
@@ -179,7 +178,7 @@ class http_event_collector(object):
             self.server_uri,
             data=salt.utils.json.dumps(data),
             headers=headers,
-            verify=http_event_collector_SSL_verify,
+            verify=self.verify_ssl,
         )
 
         # Print debug info if flag set
@@ -207,7 +206,7 @@ class http_event_collector(object):
 
         # If eventtime in epoch not passed as optional argument use current system time in epoch
         if not eventtime:
-            eventtime = six.text_type(int(time.time()))
+            eventtime = str(int(time.time()))
 
         # Update time value on payload if need to use system time
         data = {"time": eventtime}
@@ -224,7 +223,7 @@ class http_event_collector(object):
                 self.server_uri,
                 data=" ".join(self.batchEvents),
                 headers=headers,
-                verify=http_event_collector_SSL_verify,
+                verify=self.verify_ssl,
             )
             self.batchEvents = []
             self.currentByteLength = 0

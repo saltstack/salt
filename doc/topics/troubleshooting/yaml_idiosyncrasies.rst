@@ -105,6 +105,53 @@ dictionary, whereas in the first example, it's the start of a new dictionary.
 That's the distinction. ``context`` is a common example because it is a keyword
 arg for many functions, and should contain a dictionary.
 
+Multi-line Strings
+------------------
+
+Similarly, when a multi-line string is nested within a list item (such as when
+using the ``contents`` argument for a :py:func:`file.managed
+<salt.states.file.managed>` state), the indentation must be doubled. Take for
+example the following state:
+
+.. code-block:: yaml
+
+    /tmp/foo.txt:
+      file.managed:
+        - contents: |
+          foo
+          bar
+          baz
+
+This is invalid YAML, and will result in a rather cryptic error when you try to
+run the state:
+
+.. code-block:: text
+
+    myminion:
+        Data failed to compile:
+    ----------
+        Rendering SLS 'base:test' failed: could not find expected ':'; line 5
+
+    ---
+    /tmp/foo.txt:
+      file.managed:
+        - contents: |
+          foo
+          bar    <======================
+          baz
+
+    ---
+
+The correct indentation would be as follows:
+
+.. code-block:: yaml
+
+    /tmp/foo.txt:
+      file.managed:
+        - contents: |
+            foo
+            bar
+            baz
 
 True/False, Yes/No, On/Off
 ==========================

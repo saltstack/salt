@@ -1,14 +1,12 @@
-# -*- coding: utf-8 -*-
 """
 Test for ssh_pre_flight roster option
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
+import pytest
 import salt.utils.files
 from tests.support.case import SSHCase
-from tests.support.helpers import slowTest
 from tests.support.runtests import RUNTIME_VARS
 
 
@@ -18,7 +16,7 @@ class SSHPreFlightTest(SSHCase):
     """
 
     def setUp(self):
-        super(SSHPreFlightTest, self).setUp()
+        super().setUp()
         self.roster = os.path.join(RUNTIME_VARS.TMP, "pre_flight_roster")
         self.data = {
             "ssh_pre_flight": os.path.join(RUNTIME_VARS.TMP, "ssh_pre_flight.sh")
@@ -31,20 +29,20 @@ class SSHPreFlightTest(SSHCase):
         self.custom_roster(self.roster, self.data)
 
         with salt.utils.files.fopen(self.data["ssh_pre_flight"], "w") as fp_:
-            fp_.write("touch {0}".format(self.test_script))
+            fp_.write("touch {}".format(self.test_script))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_ssh_pre_flight(self):
         """
         test ssh when ssh_pre_flight is set
         ensure the script runs successfully
         """
         self._create_roster()
-        ret = self.run_function("test.ping", roster_file=self.roster)
+        assert self.run_function("test.ping", roster_file=self.roster)
 
         assert os.path.exists(self.test_script)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_ssh_run_pre_flight(self):
         """
         test ssh when --pre-flight is passed to salt-ssh
@@ -55,10 +53,25 @@ class SSHPreFlightTest(SSHCase):
         self.run_function("test.ping", wipe=False)
         assert not os.path.exists(self.test_script)
 
-        ret = self.run_function(
+        assert self.run_function(
             "test.ping", ssh_opts="--pre-flight", roster_file=self.roster, wipe=False
         )
         assert os.path.exists(self.test_script)
+
+    @pytest.mark.slow_test
+    def test_ssh_run_pre_flight_failure(self):
+        """
+        test ssh_pre_flight when there is a failure
+        in the script.
+        """
+        self._create_roster()
+        with salt.utils.files.fopen(self.data["ssh_pre_flight"], "w") as fp_:
+            fp_.write("exit 2")
+
+        ret = self.run_function(
+            "test.ping", ssh_opts="--pre-flight", roster_file=self.roster, wipe=False
+        )
+        assert ret["retcode"] == 2
 
     def tearDown(self):
         """

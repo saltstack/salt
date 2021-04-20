@@ -1,16 +1,10 @@
-# -*- coding: utf-8 -*-
 """
     tests.unit.xmlutil_test
     ~~~~~~~~~~~~~~~~~~~~
 """
-from __future__ import absolute_import, print_function, unicode_literals
+import xml.etree.ElementTree as ET
 
 import salt.utils.xmlutil as xml
-
-# Import Salt libs
-from salt._compat import ElementTree as ET
-
-# Import Salt Testing libs
 from tests.support.unit import TestCase
 
 

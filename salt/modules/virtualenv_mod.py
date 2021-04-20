@@ -56,9 +56,6 @@ def virtualenv_ver(venv_bin, user=None, **kwargs):
         version = getattr(virtualenv, "__version__", None)
         if not version:
             version = virtualenv.virtualenv_version
-        virtualenv_version_info = tuple(
-            [int(i) for i in version.split("rc")[0].split(".")]
-        )
     except ImportError:
         # Unable to import?? Let's parse the version from the console
         version_cmd = [venv_bin, "--version"]
@@ -71,10 +68,12 @@ def virtualenv_ver(venv_bin, user=None, **kwargs):
                 "Returned data: {1}".format(version_cmd, ret)
             )
         # 20.0.0 virtualenv changed the --version output. find version number
-        ver = "".join(
+        version = "".join(
             [x for x in ret["stdout"].strip().split() if re.search(r"^\d.\d*", x)]
         )
-        virtualenv_version_info = tuple([int(i) for i in ver.split("rc")[0].split(".")])
+    virtualenv_version_info = tuple(
+        [int(i) for i in re.sub(r"(rc|\+ds).*$", "", version).split(".")]
+    )
     return virtualenv_version_info
 
 

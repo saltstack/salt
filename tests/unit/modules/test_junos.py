@@ -1,26 +1,18 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Rajvi Dhimar <rajvidhimar95@gmail.com>
 """
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
-# Import salt modules
 import salt.modules.junos as junos
-from salt.ext import six
-
-# Import test libs
 from tests.support.mixins import LoaderModuleMockMixin, XMLEqualityMixin
 from tests.support.mock import ANY, MagicMock, PropertyMock, call, mock_open, patch
 from tests.support.unit import TestCase, skipIf
 
-# Import 3rd-party libs
 try:
     from lxml import etree
 except ImportError:
-    from salt._compat import ElementTree as etree
+    import xml.etree.ElementTree as etree
 
 try:
     from jnpr.junos.utils.config import Config
@@ -43,6 +35,8 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
                 "__proxy__": {
                     "junos.conn": self.make_connect,
                     "junos.get_serialized_facts": self.get_facts,
+                    "junos.reboot_active": MagicMock(return_value=True),
+                    "junos.reboot_clear": MagicMock(return_value=True),
                 },
                 "__salt__": {
                     "cp.get_template": self.mock_cp,
@@ -51,8 +45,10 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
                     "slsutil.renderer": MagicMock(
                         return_value="set system host-name dummy"
                     ),
+                    "event.fire_master": MagicMock(return_value=None),
                 },
-            }
+                "_restart_connection": MagicMock(return_value=None),
+            },
         }
 
     def mock_cp(self, *args, **kwargs):
@@ -169,7 +165,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
         }
         return facts
 
-    def test_timeout_decorator(self):
+    def test__timeout_decorator(self):
         with patch(
             "jnpr.junos.Device.timeout", new_callable=PropertyMock
         ) as mock_timeout:
@@ -178,8 +174,22 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             def function(x):
                 return x
 
-            decorator = junos.timeoutDecorator(function)
+            decorator = junos._timeout_decorator(function)
             decorator("Test Mock", dev_timeout=10)
+            calls = [call(), call(10), call(30)]
+            mock_timeout.assert_has_calls(calls)
+
+    def test__timeout_cleankwargs_decorator(self):
+        with patch(
+            "jnpr.junos.Device.timeout", new_callable=PropertyMock
+        ) as mock_timeout:
+            mock_timeout.return_value = 30
+
+            def function(x):
+                return x
+
+            decorator = junos._timeout_decorator_cleankwargs(function)
+            decorator("Test Mock", dev_timeout=10, __pub_args="abc")
             calls = [call(), call(10), call(30)]
             mock_timeout.assert_has_calls(calls)
 
@@ -1111,7 +1121,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
                 "__pub_ret": "",
             }
             ret = dict()
-            ret["message"] = 'Could not poweroff/reboot beacause "Test exception"'
+            ret["message"] = 'Could not poweroff/reboot because "Test exception"'
             ret["out"] = False
             self.assertEqual(junos.shutdown(**args), ret)
 
@@ -1260,6 +1270,49 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
                 ret["out"] = True
                 self.assertEqual(junos.install_config("salt://actual/path/config"), ret)
                 mock_load.assert_called_with(path="test/path/config", format="text")
+
+    def test_install_config_cache_not_exists(self):
+        with patch.dict(
+            junos.__salt__,
+            {
+                "cp.is_cached": MagicMock(return_value=None),
+                "file.rmdir": MagicMock(return_value="True"),
+            },
+        ):
+            with patch("jnpr.junos.utils.config.Config.commit") as mock_commit, patch(
+                "jnpr.junos.utils.config.Config.commit_check"
+            ) as mock_commit_check, patch(
+                "jnpr.junos.utils.config.Config.diff"
+            ) as mock_diff, patch(
+                "jnpr.junos.utils.config.Config.load"
+            ) as mock_load, patch(
+                "salt.utils.files.safe_rm"
+            ) as mock_safe_rm, patch(
+                "salt.utils.files.mkstemp"
+            ) as mock_mkstemp, patch(
+                "tempfile.mkdtemp"
+            ) as mock_mkdtemp, patch(
+                "os.path.isfile"
+            ) as mock_isfile, patch(
+                "os.path.getsize"
+            ) as mock_getsize:
+                mock_isfile.return_value = True
+                mock_getsize.return_value = 10
+                mock_mkstemp.return_value = "test/path/config"
+                mock_diff.return_value = "diff"
+                mock_commit_check.return_value = True
+                mock_mkdtemp.return_value = "/tmp/argr5351afd"
+
+                ret = dict()
+                ret["message"] = "Successfully loaded and committed!"
+                ret["out"] = True
+                self.assertEqual(
+                    junos.install_config(
+                        "salt://actual/path/config", template_vars=True
+                    ),
+                    ret,
+                )
+                mock_mkstemp.assert_called_with()
 
     def test_install_config_replace(self):
         with patch.dict(
@@ -1796,7 +1849,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
         ) as mock_getsize:
             mock_getsize.return_value = 10
             mock_isfile.return_value = True
-            mock_install.return_value = True
+            mock_install.return_value = True, "installed"
             ret = dict()
             ret["out"] = True
             ret["message"] = "Installed the os."
@@ -1812,10 +1865,12 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
         ) as mock_getsize:
             mock_getsize.return_value = 10
             mock_isfile.return_value = True
-            mock_install.return_value = False
+            mock_install.return_value = False, "because we are testing failure"
             ret = dict()
             ret["out"] = False
-            ret["message"] = "Installation failed."
+            ret[
+                "message"
+            ] = "Installation failed. Reason: because we are testing failure"
             self.assertEqual(junos.install_os("path"), ret)
 
     def test_install_os_with_reboot_arg(self):
@@ -1830,7 +1885,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
         ) as mock_getsize:
             mock_getsize.return_value = 10
             mock_isfile.return_value = True
-            mock_install.return_value = True
+            mock_install.return_value = True, "installed"
             args = {
                 "__pub_user": "root",
                 "__pub_arg": [{"reboot": True}],
@@ -1874,7 +1929,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
         ) as mock_getsize:
             mock_getsize.return_value = 10
             mock_isfile.return_value = True
-            mock_install.return_value = True
+            mock_install.return_value = True, "installed"
             mock_reboot.side_effect = self.raise_exception
             args = {
                 "__pub_user": "root",
@@ -1903,7 +1958,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
         ) as mock_getsize:
             mock_getsize.return_value = 10
             mock_isfile.return_value = True
-            mock_install.return_value = True
+            mock_install.return_value = True, "installed"
             ret = dict()
             ret["out"] = True
             ret["message"] = "Installed the os."
@@ -1924,7 +1979,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
         ) as mock_getsize:
             mock_getsize.return_value = 10
             mock_isfile.return_value = True
-            mock_install.return_value = True
+            mock_install.return_value = True, "installed"
             ret = dict()
             ret["out"] = True
             ret["message"] = "Installed the os."
@@ -1941,7 +1996,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
         ) as mock_getsize:
             mock_getsize.return_value = 10
             mock_isfile.return_value = True
-            mock_install.return_value = True
+            mock_install.return_value = True, "installed"
             ret = dict()
             ret["out"] = True
             ret["message"] = "Installed the os."
@@ -2419,14 +2474,14 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             self.assertEqual(ret, ret_exp)
 
     def test_get_table_api_error(self):
-        table = str("sample")
+        table = "sample"
         file = "inventory.yml"
         ret_exp = {
             "out": False,
             "hostname": "1.1.1.1",
             "tablename": "sample",
             "message": "Uncaught exception during get API call - please report:"
-            " '{}'".format(six.text_type(table)),
+            " '{}'".format(str(table)),
         }
         with patch("jnpr.junos.device.Device.execute") as mock_execute:
             ret = junos.get_table(table, file)

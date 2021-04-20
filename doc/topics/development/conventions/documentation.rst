@@ -97,7 +97,7 @@ code and can contain special formatting. For example:
 .. code-block:: python
 
     def my_function(value):
-        '''
+        """
         Upper-case the given value
 
         Usage:
@@ -110,7 +110,7 @@ code and can contain special formatting. For example:
 
         :param value: a string
         :return: a copy of ``value`` that has been upper-cased
-        '''
+        """
         return value.upper()
 
 Specify a release for additions or changes
@@ -122,13 +122,13 @@ denotes what Salt release will be affected. For example:
 .. code-block:: python
 
     def my_function(value):
-        '''
+        """
         Upper-case the given value
 
         .. versionadded:: 2014.7.0
 
         <...snip...>
-        '''
+        """
         return value.upper()
 
 For changes to a function:
@@ -136,14 +136,14 @@ For changes to a function:
 .. code-block:: python
 
     def my_function(value, strip=False):
-        '''
+        """
         Upper-case the given value
 
         .. versionchanged:: 2016.3.0
             Added a flag to also strip whitespace from the string.
 
         <...snip...>
-        '''
+        """
         if strip:
             return value.upper().strip()
         return value.upper()
@@ -296,62 +296,3 @@ cross-referenced using two custom roles, ``conf_master``, and ``conf_minion``.
 
     The :conf_minion:`minion ID <id>` setting is a unique identifier for a
     single minion.
-
-
-.. _docs-ref-fixes:
-
-Documentation Changes and Fixes
-===============================
-
-Documentation changes and fixes should be made against the earliest supported
-release branch that the update applies to. The practice of updating a release
-branch instead of making all documentation changes against Salt's main, default
-branch, ``master``, is necessary in order for the docs to be as up-to-date as
-possible when the docs are built.
-
-The workflow mentioned above is also in line with the recommendations outlined
-in Salt's :ref:`contributing` page. You can read more about how to choose where
-to submit documentation fixes by reading the :ref:`which-salt-branch` section.
-
-For an explanation of how to submit changes against various branches, see the
-:ref:`github-pull-request` section. Specifically, see the section describing
-how to ``Create a new branch`` and the steps that follow.
-
-
-.. _docs-building:
-
-Building the documentation
-==========================
-
-1.  Install Sphinx using a system package manager or pip. The package name is
-    often of the form ``python-sphinx``. There are no other dependencies.
-
-2.  Build the documentation using the provided Makefile or ``.bat`` file on
-    Windows.
-
-    .. code-block:: bash
-
-        cd /path/to/salt/doc
-        make html
-
-3.  The generated documentation will be written to the ``doc/_build/<format>``
-    directory.
-
-4.  A useful method of viewing the HTML documentation locally is to start
-    Python's built-in HTTP server:
-
-    Python 3:
-    
-    .. code-block:: bash
-		    
-        cd /path/to/salt/doc/_build/html
-	python3 -m http.server
-
-    Python 2:
-    
-    .. code-block:: bash
-		    
-        cd /path/to/salt/doc/_build/html
-        python -m SimpleHTTPServer
-
-    Then pull up the documentation in a web browser at http://localhost:8000/.

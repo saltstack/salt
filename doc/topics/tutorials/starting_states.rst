@@ -86,7 +86,7 @@ function ensures that a software package is installed via the system's native
 package manager. The ``service.running`` state module function ensures that a
 given system daemon is running.
 
-Finally, on line five, is the word ``require``. This is called a Requisite
+Finally, on line four, is the word ``require``. This is called a Requisite
 Statement, and it makes sure that the Apache service is only started after
 a successful installation of the apache package.
 
@@ -171,7 +171,7 @@ this:
 So the httpd.conf is just a file in the apache directory, and is referenced
 directly.
 
-.. include:: ../../_incl/_incl/sls_filename_cant_contain_period.rst
+.. include:: ../../_incl/sls_filename_cant_contain_period.rst
 
 But when using more than one single SLS file, more components can be added to
 the toolkit. Consider this SSH example:
@@ -484,12 +484,12 @@ This example shows a very basic Python SLS file:
 
     #!py
 
+
     def run():
-        '''
+        """
         Install the django package
-        '''
-        return {'include': ['python'],
-                'django': {'pkg': ['installed']}}
+        """
+        return {"include": ["python"], "django": {"pkg": ["installed"]}}
 
 This is a very simple example; the first line has an SLS shebang that
 tells Salt to not use the default renderer, but to use the ``py`` renderer.
@@ -504,8 +504,8 @@ renderer, the above example can be written more succinctly as:
 
     #!pydsl
 
-    include('python', delayed=True)
-    state('django').pkg.installed()
+    include("python", delayed=True)
+    state("django").pkg.installed()
 
 The :mod:`pyobjects<salt.renderers.pyobjects>` renderer
 provides an `"Pythonic"`_ object based approach for building the state data.
@@ -515,7 +515,7 @@ The above example could be written as:
 
     #!pyobjects
 
-    include('python')
+    include("python")
     Pkg.installed("django")
 
 

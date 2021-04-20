@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Execution module for Cisco NX OS Switches.
 
@@ -83,7 +82,6 @@ salt-call from the GuestShell environment as follows.
     salt '*' nxos.cmd <function>
     salt '*' nxos.cmd get_user username=admin
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python stdlib
 import ast
@@ -96,7 +94,6 @@ from socket import error as socket_error
 import salt.utils.nxos
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError, NxosError, SaltInvocationError
-from salt.ext import six
 from salt.utils.args import clean_kwargs
 from salt.utils.pycrypto import gen_hash
 from salt.utils.versions import warn_until
@@ -200,7 +197,7 @@ def check_role(username, role, **kwargs):
 
 def cmd(command, *args, **kwargs):
     """
-    NOTE: This function is preserved for backwards compatibilty.  This allows
+    NOTE: This function is preserved for backwards compatibility.  This allows
     commands to be executed using either of the following syntactic forms.
 
     salt '*' nxos.cmd <function>
@@ -263,7 +260,7 @@ def get_roles(username, **kwargs):
     user = get_user(username)
     if not user:
         return []
-    command = "show user-account {0}".format(username)
+    command = "show user-account {}".format(username)
     info = show(command, **kwargs)
     if isinstance(info, list):
         info = info[0]
@@ -283,7 +280,7 @@ def get_user(username, **kwargs):
 
         salt '*' nxos.get_user username=admin
     """
-    command = 'show run | include "^username {0} password 5 "'.format(username)
+    command = 'show run | include "^username {} password 5 "'.format(username)
     info = show(command, **kwargs)
     if isinstance(info, list):
         info = info[0]
@@ -348,8 +345,8 @@ def sendline(command, method="cli_show_ascii", **kwargs):
     smethods = ["cli_show_ascii", "cli_show", "cli_conf"]
     if method not in smethods:
         msg = """
-        INPUT ERROR: Second argument 'method' must be one of {0}
-        Value passed: {1}
+        INPUT ERROR: Second argument 'method' must be one of {}
+        Value passed: {}
         Hint: White space separated commands should be wrapped by double quotes
         """.format(
             smethods, method
@@ -395,7 +392,7 @@ def show(commands, raw_text=True, **kwargs):
     if not isinstance(raw_text, bool):
         msg = """
         INPUT ERROR: Second argument 'raw_text' must be either True or False
-        Value passed: {0}
+        Value passed: {}
         Hint: White space separated show commands should be wrapped by double quotes
         """.format(
             raw_text
@@ -569,7 +566,7 @@ def config(
         if file_str is False:
             raise CommandExecutionError("Source file {} not found".format(config_file))
     elif commands:
-        if isinstance(commands, (six.string_types, six.text_type)):
+        if isinstance(commands, str):
             commands = [commands]
         file_str = "\n".join(commands)
         # unify all the commands in a single file, to render them in a go
@@ -669,7 +666,7 @@ def remove_user(username, **kwargs):
 
         salt '*' nxos.remove_user username=daniel
     """
-    user_line = "no username {0}".format(username)
+    user_line = "no username {}".format(username)
     kwargs = clean_kwargs(**kwargs)
     return config(user_line, **kwargs)
 
@@ -686,7 +683,7 @@ def replace(old_value, new_value, full_match=False, **kwargs):
         salt '*' nxos.replace 'TESTSTRINGHERE' 'NEWTESTSTRINGHERE'
     """
     if full_match is False:
-        matcher = re.compile("^.*{0}.*$".format(re.escape(old_value)), re.MULTILINE)
+        matcher = re.compile("^.*{}.*$".format(re.escape(old_value)), re.MULTILINE)
         repl = re.compile(re.escape(old_value))
     else:
         matcher = re.compile(old_value, re.MULTILINE)
@@ -747,7 +744,7 @@ def set_password(
         Configure crypt_salt setting
         Default: None
 
-    alogrithm
+    algorithm
         Encryption algorithm
         Default: sha256
 
@@ -772,9 +769,9 @@ def set_password(
         )
     else:
         hashed_pass = password
-    password_line = "username {0} password 5 {1}".format(username, hashed_pass)
+    password_line = "username {} password 5 {}".format(username, hashed_pass)
     if role is not None:
-        password_line += " role {0}".format(role)
+        password_line += " role {}".format(role)
     kwargs = clean_kwargs(**kwargs)
     return config(password_line, **kwargs)
 
@@ -798,7 +795,7 @@ def set_role(username, role, **kwargs):
 
         salt '*' nxos.set_role username=daniel role=vdc-admin.
     """
-    role_line = "username {0} role {1}".format(username, role)
+    role_line = "username {} role {}".format(username, role)
     kwargs = clean_kwargs(**kwargs)
     return config(role_line, **kwargs)
 
@@ -822,7 +819,7 @@ def unset_role(username, role, **kwargs):
 
         salt '*' nxos.unset_role username=daniel role=vdc-admin
     """
-    role_line = "no username {0} role {1}".format(username, role)
+    role_line = "no username {} role {}".format(username, role)
     kwargs = clean_kwargs(**kwargs)
     return config(role_line, **kwargs)
 

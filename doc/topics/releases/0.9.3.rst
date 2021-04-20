@@ -110,12 +110,12 @@ write Salt States in pure Python:
 
     #!py
 
+
     def run():
-        '''
+        """
         Install the python-mako package
-        '''
-        return {'include': ['python'],
-                'python-mako': {'pkg': ['installed']}}
+        """
+        return {"include": ["python"], "python-mako": {"pkg": ["installed"]}}
 
 This renderer is used by making a run function that returns the Highstate data
 structure. Any capabilities of Python can be used in pure Python sls modules.
