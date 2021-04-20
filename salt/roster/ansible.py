@@ -132,8 +132,13 @@ def targets(tgt, tgt_type="glob", **kwargs):
         hosts = [
             host for host in _get_hosts_from_group("all") if fnmatch.fnmatch(host, tgt)
         ]
+    elif tgt_type == "list":
+        hosts = [host for host in _get_hosts_from_group("all") if host in tgt]
     elif tgt_type == "nodegroup":
         hosts = _get_hosts_from_group(tgt)
+    else:
+        hosts = []
+
     return {host: _get_hostvars(host) for host in hosts}
 
 
