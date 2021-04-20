@@ -1,5 +1,5 @@
 """
-A module for testing the logic of states and highstates
+A module for testing the logic of states and highstates on salt minions
 
 :codeauthor:    William Cannon <william.cannon@gmail.com>
 :maturity:      new
