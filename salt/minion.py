@@ -3715,10 +3715,16 @@ def _metaproxy_call(opts, fn_name):
         metaproxy_name = opts["metaproxy"]
     except KeyError:
         metaproxy_name = "proxy"
-        log.error(
-            "No metaproxy key found in opts for id %s. Defaulting to standard proxy minion",
-            opts["id"],
-        )
+        if salt.utils.platform.is_junos():
+            log.debug(
+                "No metaproxy key found in opts for id %s, unused on junos. Defaulting to standard proxy minion",
+                opts["id"],
+            )
+        else:
+            log.error(
+                "No metaproxy key found in opts for id %s. Defaulting to standard proxy minion",
+                opts["id"],
+            )
 
     metaproxy_fn = metaproxy_name + "." + fn_name
     return metaproxy[metaproxy_fn]
