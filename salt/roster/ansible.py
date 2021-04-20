@@ -139,6 +139,8 @@ def targets(tgt, tgt_type="glob", **kwargs):
 
 def _get_hosts_from_group(group):
     inventory = __context__["inventory"]
+    if not group in inventory:
+        return []
     hosts = [host for host in inventory[group].get("hosts", [])]
     for child in inventory[group].get("children", []):
         child_info = _get_hosts_from_group(child)
