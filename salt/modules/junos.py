@@ -1263,7 +1263,7 @@ def install_config(path=None, **kwargs):
             ret["out"] = False
         except Exception as exc:  # pylint: disable=broad-except
             ret["message"] = "install_config failed due to exception: '{}'".format(
-                exception
+                exc
             )
             ret["out"] = False
 
