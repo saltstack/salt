@@ -11,26 +11,11 @@ __virtualname__ = "ansible"
 
 log = logging.getLogger(__name__)
 
-# Load the __salt__ dunder if not already loaded (when called from utils-module)
-__salt__ = None
-
 
 def __virtual__():  # pylint: disable=expected-2-blank-lines-found-0
-    try:
-        global __salt__  # pylint: disable=global-statement
-        if not __salt__:
-            __salt__ = salt.loader.minion_mods(__opts__)
-            return (
-                salt.utils.path.which("ansible-inventory") and __virtualname__,
-                "Install `ansible` to use inventory",
-            )
-        return (
-            salt.utils.path.which("ansible-inventory") and __virtualname__,
-            "Install `ansible` to use inventory",
-        )
-    except Exception as e:  # pylint: disable=broad-except
-        log.error("Could not load __salt__: %s", e)
-        return False
+    if salt.utils.path.which("ansible-inventory"):
+        return __virtualname__
+    return (False, "Install `ansible` to use inventory")
 
 
 def targets(inventory="/etc/ansible/hosts", **kwargs):
