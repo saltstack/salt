@@ -376,8 +376,24 @@ def playbooks(
 
 def targets(**kwargs):
     """
-    Return the targets from the ansible inventory_file
-    Default: /etc/salt/roster
+    Return the inventory from an Ansible inventory_file
+
+    :param inventory:
+        The inventory file to read the inventory from. Default: "/etc/ansible/hosts"
+
+    :param yaml:
+        Return the inventory as yaml output. Default: False
+
+    :param export:
+        Return inventory as export format. Default: False
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'ansiblehost' ansible.targets
+        salt 'ansiblehost' ansible.targets inventory=my_custom_inventory
+
     """
     return __utils__["ansible.targets"](**kwargs)
 
@@ -397,38 +413,60 @@ def discover_playbooks(
 
     The return of this function would be a dict like this:
 
-    {
-        "/home/foobar/": {
-            "my_ansible_playbook.yml": {
-                "fullpath": "/home/foobar/playbooks/my_ansible_playbook.yml",
-                "custom_inventory": "/home/foobar/playbooks/hosts",
-            },
-            "another_playbook.yml": {
-                "fullpath": "/home/foobar/playbooks/another_playbook.yml",
-                "custom_inventory": "/home/foobar/playbooks/hosts",
-            },
-            "lamp_simple/site.yml": {
-                "fullpath": "/home/foobar/playbooks/lamp_simple/site.yml",
-                "custom_inventory": "/home/foobar/playbooks/lamp_simple/hosts",
-            },
-            "lamp_proxy/site.yml": {
-                "fullpath": "/home/foobar/playbooks/lamp_proxy/site.yml",
-                "custom_inventory": "/home/foobar/playbooks/lamp_proxy/hosts",
-            },
-        },
-        "/srv/playbooks/": {
-            "example_playbook/example.yml": {
-                "fullpath": "/srv/playbooks/example_playbook/example.yml",
-                "custom_inventory": "/srv/playbooks/example_playbook/hosts",
-            },
-        }
-    }
+    .. code-block:: python
 
-    :param path: Path to discover playbooks from.
-    :param locations: List of paths to discover playbooks from.
-    :param playbook_extension: File extension of playbooks file to search for. Default: "yml"
-    :param hosts_filename: Filename of custom playbook inventory to search for. Default: "hosts"
-    :param syntax_check: Skip playbooks that do not pass "ansible-playbook --syntax-check" validation. Default: False
+        {
+            "/home/foobar/": {
+                "my_ansible_playbook.yml": {
+                    "fullpath": "/home/foobar/playbooks/my_ansible_playbook.yml",
+                    "custom_inventory": "/home/foobar/playbooks/hosts"
+                },
+                "another_playbook.yml": {
+                    "fullpath": "/home/foobar/playbooks/another_playbook.yml",
+                    "custom_inventory": "/home/foobar/playbooks/hosts"
+                },
+                "lamp_simple/site.yml": {
+                    "fullpath": "/home/foobar/playbooks/lamp_simple/site.yml",
+                    "custom_inventory": "/home/foobar/playbooks/lamp_simple/hosts"
+                },
+                "lamp_proxy/site.yml": {
+                    "fullpath": "/home/foobar/playbooks/lamp_proxy/site.yml",
+                    "custom_inventory": "/home/foobar/playbooks/lamp_proxy/hosts"
+                }
+            },
+            "/srv/playbooks/": {
+                "example_playbook/example.yml": {
+                    "fullpath": "/srv/playbooks/example_playbook/example.yml",
+                    "custom_inventory": "/srv/playbooks/example_playbook/hosts"
+                }
+            }
+        }
+
+    :param path:
+        Path to discover playbooks from.
+
+    :param locations:
+        List of paths to discover playbooks from.
+
+    :param playbook_extension:
+        File extension of playbooks file to search for. Default: "yml"
+
+    :param hosts_filename:
+        Filename of custom playbook inventory to search for. Default: "hosts"
+
+    :param syntax_check:
+        Skip playbooks that do not pass "ansible-playbook --syntax-check" validation. Default: False
+
+    :return:
+        The discovered playbooks under the given paths
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'ansiblehost' ansible.discover_playbooks path=/srv/playbooks/
+        salt 'ansiblehost' ansible.discover_playbooks locations='["/srv/playbooks/", "/srv/foobar"]'
+
     """
 
     if not path and not locations:
