@@ -7,6 +7,7 @@ USE_IMPORTLIB_METADATA_STDLIB = USE_IMPORTLIB_METADATA = USE_PKG_RESOURCES = Fal
 log = logging.getLogger(__name__)
 
 log.debug(f"DGM entrypoints sys.version_info '{sys.version_info}'")
+print(f"DGM entrypoints sys.version_info '{sys.version_info}'")
 
 if sys.version_info >= (3, 10):
     # Python 3.10 will include a fix in importlib.metadata which allows us to
@@ -41,6 +42,12 @@ else:
             log.debug(
                 fr"DGM entrypoints importlib_metadata.version\(importlib_metadata_version\)  '{dgm_importlib_metadata_version}' "
             )
+            print(
+                f"DGM entrypoints sys.version_info '{sys.version_info}', dgm_importlib_metadata_version '{dgm_importlib_metadata_version}' "
+            )
+            print(
+                fr"DGM entrypoints importlib_metadata.version\(importlib_metadata_version\)  '{dgm_importlib_metadata_version}' "
+            )
 
             if dgm_importlib_metadata_version:
                 importlib_metadata_version = [
@@ -53,12 +60,18 @@ else:
                 log.debug(
                     "DGM entrypoints importlib_metadata_version, value is '{importlib_metadata_version}'"
                 )
+                print(
+                    "DGM entrypoints importlib_metadata_version, value is '{importlib_metadata_version}'"
+                )
                 if tuple(importlib_metadata_version) >= (3, 3, 0):
                     # Version 3.3.0 of importlib_metadata includes a fix which allows us to
                     # get the distribution of a loaded entry-point
                     USE_IMPORTLIB_METADATA = True
             else:
                 log.debug(
+                    "DGM entrypoints dgm_importlib_metadata_version is none or some such , value is '{dgm_importlib_metadata}', since did not get ImportError and using latest can assume good"
+                )
+                print(
                     "DGM entrypoints dgm_importlib_metadata_version is none or some such , value is '{dgm_importlib_metadata}', since did not get ImportError and using latest can assume good"
                 )
                 USE_IMPORTLIB_METADATA = True
