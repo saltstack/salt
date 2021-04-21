@@ -450,21 +450,10 @@ def test_filesystem_present(utils_patch):
     }
 
     mock_exists = MagicMock(return_value=True)
-    mock_get = MagicMock(
-        return_value=OrderedDict([("myzpool/filesystem", OrderedDict([]),)])
-    )
     with patch.dict(zfs.__salt__, {"zfs.exists": mock_exists}), patch.dict(
-        zfs.__salt__, {"zfs.get": mock_get}
-    ), patch.dict(zfs.__utils__, utils_patch):
+        zfs.__utils__, utils_patch
+    ):
         assert ret == zfs.filesystem_present("myzpool/filesystem")
-    mock_get.assert_called_with(
-        "myzpool/filesystem",
-        depth=0,
-        properties="",
-        fields="value",
-        parsable=True,
-        type="filesystem",
-    )
 
 
 def test_filesystem_present_new(utils_patch):
@@ -626,7 +615,7 @@ def test_volume_present(utils_patch):
     mock_get.assert_called_with(
         "myzpool/volume",
         depth=0,
-        properties="",
+        properties="volsize",
         fields="value",
         parsable=True,
         type="volume",
@@ -641,7 +630,7 @@ def test_volume_present_new(utils_patch):
         "name": "myzpool/volume",
         "result": True,
         "comment": "volume myzpool/volume was created",
-        "changes": {"myzpool/volume": "created"},
+        "changes": {"myzpool/volume": {"volsize": 1073741824}},
     }
 
     mock_exists = MagicMock(return_value=False)
@@ -688,7 +677,7 @@ def test_volume_present_update(utils_patch):
     mock_get.assert_called_with(
         "myzpool/volume",
         depth=0,
-        properties="compression",
+        properties="compression,volsize",
         fields="value",
         parsable=True,
         type="volume",
