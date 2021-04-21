@@ -110,7 +110,6 @@ class HandleFileCopy:
                 master_hash = __salt__["cp.hash_file"](self._file_path)
                 proxy_hash = __salt__["file.get_hash"](local_cache_path)
                 # check if hash is same, else copy newly
-                mhash = master_hash.get("hsum")
                 if master_hash.get("hsum") == proxy_hash:
                     self._cached_file = salt.utils.files.mkstemp()
                     # local copy is a template, hence need to render
