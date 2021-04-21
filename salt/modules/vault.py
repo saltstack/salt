@@ -55,6 +55,8 @@ Functions to interact with Hashicorp Vault.
 
         For detail please see:
         https://www.vaultproject.io/docs/enterprise/namespaces
+        
+        .. versionadded:: 3004
 
     role_name
         Role name for minion tokens created. If omitted, minion tokens will be
