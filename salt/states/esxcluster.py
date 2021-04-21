@@ -128,7 +128,7 @@ def cluster_configured(name, cluster_config):
         Complex datastructure following the ESXClusterConfigSchema.
         Valid example is:
 
-    .. code-block::yaml
+    .. code-block:: yaml
 
         drs:
             default_vm_behavior: fullyAutomated

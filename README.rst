@@ -14,9 +14,9 @@
    :alt: Salt Project Slack Community
    :target: https://saltstackcommunity.herokuapp.com/
 
-.. image:: https://img.shields.io/twitch/status/saltstackinc
+.. image:: https://img.shields.io/twitch/status/saltprojectoss
    :alt: Salt Project Twitch Channel
-   :target: https://www.twitch.tv/saltstackinc
+   :target: https://www.twitch.tv/saltprojectoss
 
 .. image:: https://img.shields.io/reddit/subreddit-subscribers/saltstack?style=social
    :alt: Salt Project subreddit
@@ -62,7 +62,7 @@ Salt is tested and packaged to run on CentOS, Debian, RHEL, Ubuntu, MacOS,
 Windows, and more. Download Salt and get started now.
 
 * `<https://repo.saltproject.io/>`_
-* `Installation Instructions <https://docs.saltproject.io/en/latest/topics/installation/index.html>`_
+* `Installation Instructions <https://docs.saltproject.io/en/master/topics/installation/index.html>`_
 
 Salt Project Documentation
 ==========================
@@ -72,7 +72,7 @@ documentation, and contributing to Salt.
 
 * `Getting Started with Salt <https://docs.saltproject.io/en/getstarted/>`_
 * `Latest Salt Documentation`_
-* `Salt’s Contributor Guide <https://docs.saltproject.io/en/latest/topics/development/contributing.html>`_
+* `Salt’s Contributor Guide <https://docs.saltproject.io/en/master/topics/development/contributing.html>`_
 
 Security Advisories
 ===================
@@ -105,8 +105,8 @@ Also, check out some of our community resources including:
 * `Salt Project Community Wiki <https://github.com/saltstack/community/wiki>`_
 * `Salt Project Community Slack <https://saltstackcommunity.herokuapp.com/>`_
 * `Salt Project: IRC on Freenode <https://webchat.freenode.net/#salt>`_
-* `Salt Project YouTube channel <https://www.youtube.com/user/SaltStack>`_
-* `Salt Project Twitch channel <https://www.twitch.tv/saltstackinc>`_
+* `Salt Project YouTube channel <https://www.youtube.com/channel/UCpveTIucFx9ljGelW63-BWg>`_
+* `Salt Project Twitch channel <https://www.twitch.tv/saltprojectoss>`_
 
 There are lots of ways to get involved in our community. Every month, there are
 around a dozen opportunities to meet with other contributors and the Salt Core
@@ -114,7 +114,7 @@ team and collaborate in real time. The best way to keep track is by subscribing
 to the **Salt Project Community Events Calendar** on the main
 `<https://saltproject.io>`_ website.
 
-If you have additional questions, email us at core@saltstack.com or reach out
+If you have additional questions, email us at saltproject@vmware.com or reach out
 directly to the Community Manager, Janae Andrus via Slack. We’d be glad to
 have you join our community!
 

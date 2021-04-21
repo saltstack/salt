@@ -1,2 +1,0 @@
-Fixed two performance bugs in the sysctl.present state.  Their impact is
-especially great on FreeBSD machines with large amounts of RAM.

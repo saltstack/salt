@@ -73,7 +73,16 @@ def __virtual__():
     except Exception:  # pylint: disable=broad-except
         return (False, "Module yumpkg: no yum based system detected")
 
-    enabled = ("amazon", "xcp", "xenserver", "virtuozzolinux", "virtuozzo")
+    enabled = (
+        "amazon",
+        "xcp",
+        "xenserver",
+        "virtuozzolinux",
+        "virtuozzo",
+        "issabel pbx",
+        "openeuler",
+    )
+
     if os_family == "redhat" or os_grain in enabled:
         if _yum() is None:
             return (False, "DNF nor YUM found")
@@ -404,7 +413,7 @@ def _get_yum_config():
                     conf[opt] = cp.get("main", opt)
         else:
             log.warning(
-                "Could not find [main] section in %s, using internal " "defaults", fn
+                "Could not find [main] section in %s, using internal defaults", fn
             )
 
     return conf
@@ -1060,7 +1069,7 @@ def list_downloaded(**kwargs):
 
     List prefetched packages downloaded by Yum in the local disk.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -1094,7 +1103,7 @@ def info_installed(*names, **kwargs):
     :param all_versions:
         Include information for all versions of the packages installed on the minion.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -1691,9 +1700,7 @@ def install(
         holds = list_holds(full=False)
     except SaltInvocationError:
         holds = []
-        log.debug(
-            "Failed to get holds, versionlock plugin is probably not " "installed"
-        )
+        log.debug("Failed to get holds, versionlock plugin is probably not installed")
     unhold_prevented = []
 
     @contextlib.contextmanager
@@ -1849,7 +1856,6 @@ def upgrade(
 
         {'<package>':  {'old': '<old-version>',
                         'new': '<new-version>'}}
-
 
     CLI Example:
 
@@ -2353,7 +2359,7 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
                 else:
                     ret[target][
                         "comment"
-                    ] = "Package {} was unable to be " "unheld.".format(target)
+                    ] = "Package {} was unable to be unheld.".format(target)
         else:
             ret[target].update(result=True)
             ret[target]["comment"] = "Package {} is not being held.".format(target)
@@ -2380,7 +2386,6 @@ def list_holds(pattern=__HOLD_PATTERN, full=True):
     full : True
         Show the full hold definition including version and epoch. Set to
         ``False`` to return just the name of the package(s) being held.
-
 
     CLI Example:
 
@@ -3215,7 +3220,7 @@ def download(*packages, **kwargs):
         ``yum-utils`` will already be installed on the minion if the package
         was installed from the Fedora / EPEL repositories.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -3286,7 +3291,7 @@ def diff(*paths, **kwargs):
     :param path: Full path to the installed file
     :return: Difference string or raises and exception if examined file is binary.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -3324,10 +3329,17 @@ def _get_patches(installed_only=False):
 
     cmd = [_yum(), "--quiet", "updateinfo", "list", "all"]
     ret = __salt__["cmd.run_stdout"](cmd, python_shell=False)
+    parsing_errors = False
+
     for line in salt.utils.itertools.split(ret, os.linesep):
-        inst, advisory_id, sev, pkg = re.match(
-            r"([i|\s]) ([^\s]+) +([^\s]+) +([^\s]+)", line
-        ).groups()
+        try:
+            inst, advisory_id, sev, pkg = re.match(
+                r"([i|\s]) ([^\s]+) +([^\s]+) +([^\s]+)", line
+            ).groups()
+        except Exception:  # pylint: disable=broad-except
+            parsing_errors = True
+            continue
+
         if advisory_id not in patches:
             patches[advisory_id] = {
                 "installed": True if inst == "i" else False,
@@ -3337,6 +3349,13 @@ def _get_patches(installed_only=False):
             patches[advisory_id]["summary"].append(pkg)
             if inst != "i":
                 patches[advisory_id]["installed"] = False
+
+    if parsing_errors:
+        log.warning(
+            "Skipped some unexpected output while running '{}' to list patches. Please check output".format(
+                " ".join(cmd)
+            )
+        )
 
     if installed_only:
         patches = {k: v for k, v in patches.items() if v["installed"]}
@@ -3379,3 +3398,40 @@ def list_installed_patches(**kwargs):
         salt '*' pkg.list_installed_patches
     """
     return _get_patches(installed_only=True)
+
+
+def services_need_restart(**kwargs):
+    """
+    .. versionadded:: 3003
+
+    List services that use files which have been changed by the
+    package manager. It might be needed to restart them.
+
+    Requires systemd.
+
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pkg.services_need_restart
+    """
+    if _yum() != "dnf":
+        raise CommandExecutionError("dnf is required to list outdated services.")
+    if not salt.utils.systemd.booted(__context__):
+        raise CommandExecutionError("systemd is required to list outdated services.")
+
+    cmd = ["dnf", "--quiet", "needs-restarting"]
+    dnf_output = __salt__["cmd.run_stdout"](cmd, python_shell=False)
+    if not dnf_output:
+        return []
+
+    services = set()
+    for line in dnf_output.split("\n"):
+        pid, has_delim, _ = line.partition(":")
+        if has_delim:
+            service = salt.utils.systemd.pid_to_service(pid.strip())
+            if service:
+                services.add(service)
+
+    return list(services)

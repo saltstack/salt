@@ -100,6 +100,7 @@ def stop(name, sig=None):
 def restart(name, sig=None):
     """
     Restart the specified service with rest_sample
+
     CLI Example:
 
     .. code-block:: bash

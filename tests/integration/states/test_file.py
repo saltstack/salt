@@ -62,6 +62,10 @@ TEST_SYSTEM_GROUP = "test_system_group"
 
 DEFAULT_ENDING = salt.utils.stringutils.to_bytes(os.linesep)
 
+pytestmark = [
+    pytest.mark.skip_on_freebsd(reason="These tests timeout on FreeBSD"),
+]
+
 
 def _test_managed_file_mode_keep_helper(testcase, local=False):
     """
@@ -2644,16 +2648,12 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             result = self.run_function("state.sls", mods="issue-8947")
             if not isinstance(result, dict):
                 raise AssertionError(
-                    (
-                        "Something went really wrong while testing this sls:" " {}"
-                    ).format(repr(result))
+                    "Something went really wrong while testing this sls: {!r}".format(
+                        result
+                    )
                 )
-            # difflib produces different output on python 2.6 than on >=2.7
-            if sys.version_info < (2, 7):
-                diff = "---  \n+++  \n@@ -1,1 +1,3 @@\n"
-            else:
-                diff = "--- \n+++ \n@@ -1 +1,3 @@\n"
-            diff += ("+첫 번째 행{0}" " 한국어 시험{0}" "+마지막 행{0}").format(os.linesep)
+            diff = "--- \n+++ \n@@ -1 +1,3 @@\n"
+            diff += "+첫 번째 행{0}" " 한국어 시험{0}" "+마지막 행{0}".format(os.linesep)
 
             ret = {x.split("_|-")[1]: y for x, y in result.items()}
 
@@ -2676,18 +2676,16 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                 import subprocess
                 import win32api
 
-                p = subprocess.Popen(
-                    salt.utils.stringutils.to_str(
-                        "type {}".format(win32api.GetShortPathName(test_file))
-                    ),
-                    shell=True,
+                proc = subprocess.run(
+                    ["type", win32api.GetShortPathName(test_file)],
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
+                    check=True,
+                    # type is an shell internal command
+                    shell=True,  # nosec
                 )
-                p.poll()
-                out = p.stdout.read()
                 self.assertEqual(
-                    out.decode("utf-8"),
+                    proc.stdout.decode("utf-8"),
                     os.linesep.join((korean_2, korean_1, korean_3)) + os.linesep,
                 )
             else:

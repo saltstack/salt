@@ -6,7 +6,7 @@ SmartOS Metadata grain provider
 :depends:       salt.utils, salt.module.cmdmod
 :platform:      SmartOS
 
-.. versionadded:: nitrogen
+.. versionadded:: 2017.7.0
 
 """
 

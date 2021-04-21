@@ -1,6 +1,8 @@
 """
 Tests for salt.loader_context
 """
+import copy
+
 import salt.loader
 import salt.loader_context
 
@@ -31,3 +33,15 @@ def test_named_loader_default():
     # The loader's value is the same object as default
     assert named_context.value() is default
     assert named_context["foo"] == "bar"
+
+
+def test_named_loader_context_deepcopy():
+    loader_context = salt.loader_context.LoaderContext()
+    default_data = {"foo": "bar"}
+    named_context = salt.loader_context.NamedLoaderContext(
+        "__test__", loader_context, default_data
+    )
+    coppied = copy.deepcopy(named_context)
+    assert coppied.name == named_context.name
+    assert id(coppied.loader_context) == id(named_context.loader_context)
+    assert id(coppied.default) != id(named_context.default)

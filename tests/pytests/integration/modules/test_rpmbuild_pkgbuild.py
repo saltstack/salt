@@ -263,7 +263,7 @@ def gpg_agent_ids(value):
 @pytest.fixture(params=(True, False), ids=gpg_agent_ids)
 def gpg_agent(request, gpghome):
 
-    gpg_version_proc = subprocess.run(
+    gpg_version_proc = subprocess.run(  # nosec
         "gpgconf --version | head -n 1 | awk '{ print $3 }'",
         shell=True,
         stdout=subprocess.PIPE,
@@ -308,7 +308,7 @@ def gpg_agent(request, gpghome):
         echo_gpg_tty_cmd = "GPG_TTY=$(tty) ; export GPG_TTY ; echo $GPG_TTY=$(tty) > {}".format(
             gpg_tty_info_path
         )
-        subprocess.run(
+        subprocess.run(  # nosec
             "{}; {}".format(gpg_agent_cmd, echo_gpg_tty_cmd), shell=True, check=True
         )
         yield
