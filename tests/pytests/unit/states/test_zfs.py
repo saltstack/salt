@@ -508,12 +508,12 @@ def test_filesystem_present_properties(utils_patch):
     ), patch.dict(zfs.__utils__, utils_patch):
         assert ret == zfs.filesystem_present(
             "myzpool/filesystem",
-            properties=OrderedDict([("type", "filesystem"), ("compression", "lz4")]),
+            properties={"type": "filesystem", "compression": "lz4"},
         )
     mock_get.assert_called_with(
         "myzpool/filesystem",
         depth=0,
-        properties="type,compression",
+        properties="compression,type",
         fields="value",
         parsable=True,
         type="filesystem",

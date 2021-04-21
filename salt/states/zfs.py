@@ -415,7 +415,9 @@ def _dataset_present(
         ## NOTE: add volsize to properties
         volume_size = __utils__["zfs.from_size"](volume_size)
         properties.update({"volsize": volume_size})
-    propnames = ",".join(properties.keys())
+    # The sorted isn't necessary for proper behavior, but it helps for the unit
+    # tests.
+    propnames = ",".join(sorted(properties.keys()))
 
     ## log configuration
     log.debug(
