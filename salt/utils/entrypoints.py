@@ -32,7 +32,8 @@ else:
             ###                # get the distribution of a loaded entry-point
             ###                USE_IMPORTLIB_METADATA = True
 
-            dgm_importlib_metadata_version = importlib_metadata.version(
+            ## dgm_importlib_metadata_version = importlib_metadata.version(
+            dgm_importlib_metadata_version = importlib.metadata.version(
                 "importlib_metadata"
             )
 
