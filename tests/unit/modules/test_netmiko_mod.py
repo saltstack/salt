@@ -3,7 +3,7 @@ import logging
 
 import salt.modules.netmiko_mod as netmiko_mod
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import patch
+from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
 
 log = logging.getLogger(__name__)
@@ -63,22 +63,51 @@ class NetmikoTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret.get("config_commands"), ["ls", "echo hello world"])
         self.assertEqual(ret.get("config_mode_command"), "config config-sess")
 
+        with patch.dict(
+            netmiko_mod.__proxy__, {"netmiko.conn": MagicMock(return_value=None)}
+        ):
+            _, ret = netmiko_mod.send_config(
+                config_commands=["ls", "echo hello world"],
+                config_mode_command="config config-sess",
+            )
+            self.assertEqual(ret.get("config_commands"), ["ls", "echo hello world"])
+            self.assertEqual(ret.get("config_mode_command"), "config config-sess")
+
     def test_virtual(self):
+        _expected = (
+            False,
+            "The netmiko execution module requires netmiko library to be installed.",
+        )
+        with patch("salt.utils.platform.is_proxy", return_value=True, autospec=True):
+            with patch.dict(netmiko_mod.__opts__, {"proxy": {"proxytype": "netmiko"}}):
+                with patch.object(netmiko_mod, "HAS_NETMIKO", False):
+                    ret = netmiko_mod.__virtual__()
+                    self.assertTrue(ret)
+
+        _expected = (
+            False,
+            "The netmiko execution module requires netmiko library to be installed.",
+        )
+        with patch("salt.utils.platform.is_proxy", return_value=False, autospec=True):
+            with patch.dict(netmiko_mod.__opts__, {"proxy": {"proxytype": "esxi"}}):
+                with patch.object(netmiko_mod, "HAS_NETMIKO", False):
+                    ret = netmiko_mod.__virtual__()
+                    self.assertTrue(ret)
+
         with patch("salt.utils.platform.is_proxy", return_value=True, autospec=True):
             with patch.dict(netmiko_mod.__opts__, {"proxy": {"proxytype": "netmiko"}}):
                 with patch.object(netmiko_mod, "HAS_NETMIKO", True):
                     ret = netmiko_mod.__virtual__()
                     self.assertTrue(ret)
 
-        _expected = (False, "Not a proxy or a proxy of type netmiko.")
+        _expected = (False, "Not a proxy minion of type netmiko.")
         with patch("salt.utils.platform.is_proxy", return_value=True, autospec=True):
             with patch.dict(netmiko_mod.__opts__, {"proxy": {"proxytype": "esxi"}}):
                 with patch.object(netmiko_mod, "HAS_NETMIKO", True):
                     ret = netmiko_mod.__virtual__()
                     self.assertEqual(ret, _expected)
 
-        _expected = (False, "Not a proxy or a proxy of type netmiko.")
         with patch("salt.utils.platform.is_proxy", return_value=False, autospec=True):
             with patch.object(netmiko_mod, "HAS_NETMIKO", True):
                 ret = netmiko_mod.__virtual__()
-                self.assertEqual(ret, _expected)
+                self.assertEqual(ret, "netmiko")

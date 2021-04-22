@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage SVN repositories
 =======================
@@ -17,17 +16,11 @@ requisite to a pkg.installed state for the package which provides subversion
       svn.latest:
         - target: /tmp/swallow
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 import os
 
-# Import salt libs
 from salt import exceptions
-
-# Import 3rd party libs
-from salt.ext import six
 from salt.states.git import _fail, _neutral_test
 
 log = logging.getLogger(__name__)
@@ -108,12 +101,12 @@ def latest(
 
     if os.path.exists(target) and not os.path.isdir(target):
         return _fail(
-            ret, 'The path "{0}" exists and is not ' "a directory.".format(target)
+            ret, 'The path "{}" exists and is not ' "a directory.".format(target)
         )
 
     if __opts__["test"]:
         if rev:
-            new_rev = six.text_type(rev)
+            new_rev = str(rev)
         else:
             new_rev = "HEAD"
 
@@ -134,7 +127,7 @@ def latest(
             svn_cmd = "svn.diff"
         except exceptions.CommandExecutionError:
             return _fail(
-                ret, ("{0} exists but is not a svn working copy.").format(target)
+                ret, ("{} exists but is not a svn working copy.").format(target)
             )
 
         current_rev = current_info[0]["Revision"]
@@ -144,8 +137,11 @@ def latest(
         if trust:
             opts += ("--trust-server-cert",)
 
+        if trust_failures:
+            opts += ("--trust-server-cert-failures", trust_failures)
+
         out = __salt__[svn_cmd](cwd, target, user, username, password, *opts)
-        return _neutral_test(ret, ("{0}").format(out))
+        return _neutral_test(ret, ("{}").format(out))
     try:
         current_info = __salt__["svn.info"](
             cwd, target, user=user, username=username, password=password, fmt="dict"
@@ -155,7 +151,7 @@ def latest(
         pass
 
     if rev:
-        opts += ("-r", six.text_type(rev))
+        opts += ("-r", str(rev))
 
     if force:
         opts += ("--force",)
@@ -182,7 +178,7 @@ def latest(
             fmt="dict",
         )[0]["Revision"]
         if current_rev != new_rev:
-            ret["changes"]["revision"] = "{0} => {1}".format(current_rev, new_rev)
+            ret["changes"]["revision"] = "{} => {}".format(current_rev, new_rev)
 
     else:
         out = __salt__[svn_cmd](cwd, name, basename, user, username, password, *opts)
@@ -270,17 +266,17 @@ def export(
 
     if not overwrite and os.path.exists(target) and not os.path.isdir(target):
         return _fail(
-            ret, 'The path "{0}" exists and is not ' "a directory.".format(target)
+            ret, 'The path "{}" exists and is not ' "a directory.".format(target)
         )
     if __opts__["test"]:
         if not os.path.exists(target):
             return _neutral_test(
-                ret, ("{0} doesn't exist and is set to be checked out.").format(target)
+                ret, ("{} doesn't exist and is set to be checked out.").format(target)
             )
         svn_cmd = "svn.list"
         rev = "HEAD"
         out = __salt__[svn_cmd](cwd, target, user, username, password, *opts)
-        return _neutral_test(ret, ("{0}").format(out))
+        return _neutral_test(ret, ("{}").format(out))
 
     if not rev:
         rev = "HEAD"

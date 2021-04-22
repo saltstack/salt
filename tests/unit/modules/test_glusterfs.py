@@ -1,32 +1,26 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
     :codeauthor: Joe Julian <me@joejulian.name>
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
 import salt.modules.glusterfs as glusterfs
 from salt.exceptions import SaltInvocationError
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
 
 
-class GlusterResults(object):
+class GlusterResults:
     """ This class holds the xml results from gluster cli transactions """
 
-    class v34(object):
+    class v34:
         """ This is for version 3.4 results """
 
-        class list_peers(object):
+        class list_peers:
             """ results from "peer status" """
 
-        class peer_probe(object):
+        class peer_probe:
             fail_cant_connect = fail_bad_hostname = "\n".join(
                 [
                     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>',
@@ -123,8 +117,8 @@ class GlusterResults(object):
             ]
             success_first_ip_from_second_first_time = success_reverse_already_peer["ip"]
 
-    class v37(object):
-        class peer_probe(object):
+    class v37:
+        class peer_probe:
             fail_cant_connect = fail_bad_hostname = "\n".join(
                 [
                     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>',
@@ -222,6 +216,26 @@ class GlusterResults(object):
                 "ip"
             ]
 
+
+#  gluster --version output collected in the wild.
+version_output_362 = """
+glusterfs 3.6.2 built on Jan 22 2015 12:59:57
+Repository revision: git://git.gluster.com/glusterfs.git
+Copyright (c) 2006-2011 Gluster Inc. <http://www.gluster.com>
+GlusterFS comes with ABSOLUTELY NO WARRANTY.
+You may redistribute copies of GlusterFS under the terms of the GNU General Public License
+   """
+
+version_output_61 = """
+glusterfs 6.1
+Repository revision: git://git.gluster.org/glusterfs.git
+Copyright (c) 2006-2016 Red Hat, Inc. <https://www.gluster.org/>
+GlusterFS comes with ABSOLUTELY NO WARRANTY.
+It is licensed to you under your choice of the GNU Lesser
+General Public License, version 3 or any later version (LGPLv3
+or later), or the GNU General Public License, version 2 (GPLv2),
+in all cases as published by the Free Software Foundation.
+"""
 
 xml_peer_present = """
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -487,6 +501,33 @@ class GlusterfsTestCase(TestCase, LoaderModuleMockMixin):
     maxDiff = None
 
     # 'peer_status' function tests: 1
+
+    def test__get_version(self):
+        """
+        Test parsing of gluster --version.
+        """
+        mock_version = MagicMock(return_value="foo")
+        with patch.dict(glusterfs.__salt__, {"cmd.run": mock_version}):
+            self.assertEqual(glusterfs._get_version(), (3, 6), msg="default behaviour")
+
+        mock_version = MagicMock(return_value=version_output_362)
+        with patch.dict(glusterfs.__salt__, {"cmd.run": mock_version}):
+            self.assertEqual(glusterfs._get_version(), (3, 6, 2))
+
+        mock_version = MagicMock(return_value=version_output_61)
+        with patch.dict(glusterfs.__salt__, {"cmd.run": mock_version}):
+            self.assertEqual(glusterfs._get_version(), (6, 1))
+
+        more_versions = {
+            "6.0": (6, 0),
+            "4.1.10": (4, 1, 10),
+            "5.13": (5, 13),
+            "10.0": (10, 0),
+        }
+        for v in more_versions:
+            mock_version = MagicMock(return_value="glusterfs {}".format(v))
+            with patch.dict(glusterfs.__salt__, {"cmd.run": mock_version}):
+                self.assertEqual(glusterfs._get_version(), more_versions[v])
 
     def test_peer_status(self):
         """

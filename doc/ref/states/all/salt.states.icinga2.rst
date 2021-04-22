@@ -1,5 +1,5 @@
-salt.states.icinga2 module
-==========================
+salt.states.icinga2
+===================
 
 .. automodule:: salt.states.icinga2
     :members:

@@ -13,14 +13,11 @@ Refer to :mod:`junos <salt.proxy.junos>` for information on connecting to junos 
 
 """
 
-# Import Python libraries
-
 import copy
 import json
 import logging
 import os
 import re
-import tempfile
 from functools import wraps
 
 import salt.utils.args
@@ -34,7 +31,7 @@ import yaml
 try:
     from lxml import etree
 except ImportError:
-    from salt._compat import ElementTree as etree
+    import xml.etree.ElementTree as etree
 
 
 # Juniper interface libraries
@@ -114,51 +111,34 @@ class HandleFileCopy:
                 proxy_hash = __salt__["file.get_hash"](local_cache_path)
                 # check if hash is same, else copy newly
                 if master_hash.get("hsum") == proxy_hash:
-                    # kwargs will have values when path is a template
-                    if self._kwargs:
-                        self._cached_file = salt.utils.files.mkstemp()
-                        # local copy is a template, hence need to render
-                        with salt.utils.files.fopen(self._cached_file, "w") as fp:
-                            template_string = __salt__["slsutil.renderer"](
-                                path=local_cache_path,
-                                default_renderer="jinja",
-                                **self._kwargs
-                            )
-                            fp.write(template_string)
-                        return self._cached_file
-                    else:
-                        return local_cache_path
-                # continue for else part
-            if self._kwargs:
-                self._cached_file = salt.utils.files.mkstemp()
-                __salt__["cp.get_template"](
-                    self._file_path, self._cached_file, **self._kwargs
-                )
-            else:
-                self._cached_folder = tempfile.mkdtemp()
-                log.debug(
-                    "Caching file {} at {}".format(self._file_path, self._cached_folder)
-                )
-                self._cached_file = __salt__["cp.get_file"](
-                    self._file_path, self._cached_folder
-                )
+                    self._cached_file = salt.utils.files.mkstemp()
+                    # local copy is a template, hence need to render
+                    with salt.utils.files.fopen(self._cached_file, "w") as fp:
+                        template_string = __salt__["slsutil.renderer"](
+                            path=local_cache_path,
+                            default_renderer="jinja",
+                            **self._kwargs,
+                        )
+                        fp.write(template_string)
+                    return self._cached_file
+
+            # continue for else part
+            self._cached_file = salt.utils.files.mkstemp()
+            __salt__["cp.get_template"](
+                self._file_path, self._cached_file, **self._kwargs
+            )
             if self._cached_file != "":
                 return self._cached_file
         else:
             # check for local location of file
             if __salt__["file.file_exists"](self._file_path):
-                if self._kwargs:
-                    self._cached_file = salt.utils.files.mkstemp()
-                    with salt.utils.files.fopen(self._cached_file, "w") as fp:
-                        template_string = __salt__["slsutil.renderer"](
-                            path=self._file_path,
-                            default_renderer="jinja",
-                            **self._kwargs
-                        )
-                        fp.write(template_string)
-                    return self._cached_file
-                else:
-                    return self._file_path
+                self._cached_file = salt.utils.files.mkstemp()
+                with salt.utils.files.fopen(self._cached_file, "w") as fp:
+                    template_string = __salt__["slsutil.renderer"](
+                        path=self._file_path, default_renderer="jinja", **self._kwargs
+                    )
+                    fp.write(template_string)
+                return self._cached_file
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
         if self._cached_file is not None:
@@ -169,7 +149,7 @@ class HandleFileCopy:
             log.debug("Deleted cached folder: {}".format(self._cached_folder))
 
 
-def timeoutDecorator(function):
+def _timeout_decorator(function):
     @wraps(function)
     def wrapper(*args, **kwargs):
         if "dev_timeout" in kwargs or "timeout" in kwargs:
@@ -190,7 +170,7 @@ def timeoutDecorator(function):
     return wrapper
 
 
-def timeoutDecorator_cleankwargs(function):
+def _timeout_decorator_cleankwargs(function):
     @wraps(function)
     def wrapper(*args, **kwargs):
         if "dev_timeout" in kwargs or "timeout" in kwargs:
@@ -257,8 +237,7 @@ def _restart_connection():
     log.debug("Junos exception occurred, restarted {} (junos proxy)!".format(minion_id))
 
 
-## @timeoutDecorator
-@timeoutDecorator_cleankwargs
+@_timeout_decorator_cleankwargs
 def facts_refresh():
     """
     Reload the facts dictionary from the device. Usually only needed if,
@@ -315,7 +294,7 @@ def facts():
     return ret
 
 
-@timeoutDecorator
+@_timeout_decorator
 def rpc(cmd=None, dest=None, **kwargs):
     """
     This function executes the RPC provided as arguments on the junos device.
@@ -433,7 +412,7 @@ def rpc(cmd=None, dest=None, **kwargs):
     return ret
 
 
-@timeoutDecorator
+@_timeout_decorator
 def set_hostname(hostname=None, **kwargs):
     """
     Set the device's hostname
@@ -525,7 +504,7 @@ def set_hostname(hostname=None, **kwargs):
     return ret
 
 
-@timeoutDecorator
+@_timeout_decorator
 def commit(**kwargs):
     """
     To commit the changes loaded in the candidate configuration.
@@ -624,7 +603,7 @@ def commit(**kwargs):
     return ret
 
 
-@timeoutDecorator
+@_timeout_decorator
 def rollback(**kwargs):
     """
     Roll back the last committed configuration changes and commit
@@ -742,7 +721,7 @@ def rollback(**kwargs):
     return ret
 
 
-@timeoutDecorator
+@_timeout_decorator
 def diff(**kwargs):
     """
     Returns the difference between the candidate and the current configuration
@@ -795,7 +774,7 @@ def diff(**kwargs):
     return ret
 
 
-@timeoutDecorator
+@_timeout_decorator
 def ping(dest_ip=None, **kwargs):
     """
     Send a ping RPC to a device
@@ -860,7 +839,7 @@ def ping(dest_ip=None, **kwargs):
     return ret
 
 
-@timeoutDecorator
+@_timeout_decorator
 def cli(command=None, **kwargs):
     """
     Executes the CLI commands and returns the output in specified format. \
@@ -934,7 +913,7 @@ def cli(command=None, **kwargs):
     return ret
 
 
-@timeoutDecorator
+@_timeout_decorator
 def shutdown(**kwargs):
     """
     Shut down (power off) or reboot a device running Junos OS. This includes
@@ -1010,7 +989,7 @@ def shutdown(**kwargs):
     return ret
 
 
-@timeoutDecorator
+@_timeout_decorator
 def install_config(path=None, **kwargs):
     """
     Installs the given configuration file into the candidate configuration.
@@ -1264,7 +1243,7 @@ def install_config(path=None, **kwargs):
                 except Exception as exception:  # pylint: disable=broad-except
                     ret[
                         "message"
-                    ] = 'Could not write into diffs_file due to: "{}"'.format(exception)
+                    ] = "Could not write into diffs_file due to: '{}'".format(exception)
                     ret["out"] = False
 
         except ValueError as ex:
@@ -1281,12 +1260,14 @@ def install_config(path=None, **kwargs):
             log.error(message)
             ret["message"] = message
             ret["out"] = False
+        except Exception as exc:  # pylint: disable=broad-except
+            ret["message"] = "install_config failed due to exception: '{}'".format(exc)
+            ret["out"] = False
 
         return ret
 
 
-## @timeoutDecorator
-@timeoutDecorator_cleankwargs
+@_timeout_decorator_cleankwargs
 def zeroize():
     """
     Resets the device to default factory settings
@@ -1318,7 +1299,7 @@ def zeroize():
     return ret
 
 
-@timeoutDecorator
+@_timeout_decorator
 def install_os(path=None, **kwargs):
     """
     Installs the given image on the device. After the installation is complete
@@ -1374,7 +1355,7 @@ def install_os(path=None, **kwargs):
 
     .. note::
         Any additional keyword arguments specified are passed down to PyEZ sw.install() as is.
-        Please refer to below URl for PyEZ sw.install() documentaion:
+        Please refer to below URl for PyEZ sw.install() documentation:
         https://pyez.readthedocs.io/en/latest/jnpr.junos.utils.html#jnpr.junos.utils.sw.SW.install
 
     CLI Examples:
@@ -1495,8 +1476,7 @@ def install_os(path=None, **kwargs):
     return ret
 
 
-## @timeoutDecorator
-@timeoutDecorator_cleankwargs
+@_timeout_decorator_cleankwargs
 def file_copy(src, dest):
     """
     Copies the file from the local device to the junos device
@@ -1545,8 +1525,7 @@ def file_copy(src, dest):
         return ret
 
 
-## @timeoutDecorator
-@timeoutDecorator_cleankwargs
+@_timeout_decorator_cleankwargs
 def lock():
     """
     Attempts an exclusive lock on the candidate configuration. This
@@ -1582,8 +1561,7 @@ def lock():
     return ret
 
 
-## @timeoutDecorator
-@timeoutDecorator_cleankwargs
+@_timeout_decorator_cleankwargs
 def unlock():
     """
     Unlocks the candidate configuration.
@@ -1616,7 +1594,7 @@ def unlock():
     return ret
 
 
-@timeoutDecorator
+@_timeout_decorator
 def load(path=None, **kwargs):
     """
     Loads the configuration from the file provided onto the device.
@@ -1764,8 +1742,7 @@ def load(path=None, **kwargs):
         return ret
 
 
-## @timeoutDecorator
-@timeoutDecorator_cleankwargs
+@_timeout_decorator_cleankwargs
 def commit_check():
     """
     Perform a commit check on the configuration
@@ -1790,8 +1767,7 @@ def commit_check():
     return ret
 
 
-## @timeoutDecorator
-@timeoutDecorator_cleankwargs
+@_timeout_decorator_cleankwargs
 def get_table(
     table,
     table_file,
@@ -1973,15 +1949,15 @@ def _recursive_dict(node):
     return result
 
 
-@timeoutDecorator
+@_timeout_decorator
 def rpc_file_list(path, **kwargs):
     """
     Use the Junos RPC interface to get a list of files and return
     them as a structure dictionary.
 
-    .. versionadded:: Aluminum
+    .. versionadded:: 3003
 
-    CLI Example :
+    CLI Example:
 
     .. code-block:: bash
 
@@ -2066,7 +2042,7 @@ def _make_source_list(dir):
     return dir_list
 
 
-@timeoutDecorator
+@_timeout_decorator
 def file_compare(file1, file2, **kwargs):
     """
     Compare two files and return a dictionary indicating if they
@@ -2080,9 +2056,9 @@ def file_compare(file1, file2, **kwargs):
     .. note::
         This function only works on Juniper native minions
 
-    .. versionadded:: Aluminum
+    .. versionadded:: 3003
 
-    CLI Example :
+    CLI Example:
 
     .. code-block:: bash
 
@@ -2128,7 +2104,7 @@ def file_compare(file1, file2, **kwargs):
     return ret
 
 
-@timeoutDecorator
+@_timeout_decorator
 def fsentry_exists(dir, **kwargs):
     """
     Returns a dictionary indicating if `dir` refers to a file
@@ -2138,9 +2114,9 @@ def fsentry_exists(dir, **kwargs):
     .. note::
         This function only works on Juniper native minions
 
-    .. versionadded:: Aluminum
+    .. versionadded:: 3003
 
-    CLI Example :
+    CLI Example:
 
     .. code-block:: bash
 
@@ -2226,7 +2202,7 @@ def _find_routing_engines():
     return engine
 
 
-@timeoutDecorator
+@_timeout_decorator
 def routing_engine(**kwargs):
     """
     Returns a dictionary containing the routing engines on the device and
@@ -2234,9 +2210,9 @@ def routing_engine(**kwargs):
 
     Under the hood parses the result of `show chassis routing-engine`
 
-    .. versionadded:: Aluminum
+    .. versionadded:: 3003
 
-    CLI Example :
+    CLI Example:
 
     .. code-block:: bash
 
@@ -2273,7 +2249,7 @@ def routing_engine(**kwargs):
     return ret
 
 
-@timeoutDecorator
+@_timeout_decorator
 def dir_copy(source, dest, force=False, **kwargs):
     """
     Copy a directory and recursively its contents from source to dest.
@@ -2289,7 +2265,7 @@ def dir_copy(source, dest, force=False, **kwargs):
 
     force : This function will not copy identical files unless `force` is `True`
 
-    .. versionadded:: Aluminum
+    .. versionadded:: 3003
 
     CLI Example:
 

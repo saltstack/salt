@@ -8,7 +8,6 @@ import pytest
 import salt.pillar
 import salt.utils.stringutils
 from saltfactories.utils.processes import ProcessResult
-from tests.support.helpers import slowTest
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
@@ -271,7 +270,7 @@ def test_decrypt_pillar_default_renderer(salt_master, grains):
     assert ret == GPG_PILLAR_DECRYPTED
 
 
-@slowTest
+@pytest.mark.slow_test
 def test_decrypt_pillar_alternate_delimiter(salt_master, grains):
     """
     Test recursive decryption of secrets:vault using a pipe instead of a
