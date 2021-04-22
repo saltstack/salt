@@ -22,64 +22,68 @@ else:
         try:
             import importlib_metadata
 
-            ###            importlib_metadata_version = [
-            ###                int(part)
-            ###                for part in importlib_metadata.version("importlib_metadata").split(".")
-            ###                if part.isdigit()
-            ###            ]
-            ###            if tuple(importlib_metadata_version) >= (3, 3, 0):
-            ###                # Version 3.3.0 of importlib_metadata includes a fix which allows us to
-            ###                # get the distribution of a loaded entry-point
-            ###                USE_IMPORTLIB_METADATA = True
-
-            ## dgm_importlib_metadata_version = importlib_metadata.version(
-            dgm_importlib_metadata_version = importlib.metadata.version(
+            dgm_importlib_metadata_version = importlib_metadata.version(
                 "importlib_metadata"
             )
-
-            log.debug(
-                f"DGM entrypoints sys.version_info '{sys.version_info}', dgm_importlib_metadata_version '{dgm_importlib_metadata_version}' "
-            )
-            log.debug(
-                fr"DGM entrypoints importlib_metadata.version\(importlib_metadata_version\)  '{dgm_importlib_metadata_version}' "
-            )
             print(
                 f"DGM entrypoints sys.version_info '{sys.version_info}', dgm_importlib_metadata_version '{dgm_importlib_metadata_version}' "
             )
+
+            importlib_metadata_version = [
+                int(part)
+                for part in importlib_metadata.version("importlib_metadata").split(".")
+                if part.isdigit()
+            ]
+
             print(
-                fr"DGM entrypoints importlib_metadata.version\(importlib_metadata_version\)  '{dgm_importlib_metadata_version}' "
+                "DGM entrypoints importlib_metadata_version, value is '{importlib_metadata_version}'"
             )
 
-            if dgm_importlib_metadata_version:
-                importlib_metadata_version = [
-                    int(part)
-                    for part in importlib_metadata.version("importlib_metadata").split(
-                        "."
-                    )
-                    if part.isdigit()
-                ]
-                log.debug(
-                    "DGM entrypoints importlib_metadata_version, value is '{importlib_metadata_version}'"
-                )
-                print(
-                    "DGM entrypoints importlib_metadata_version, value is '{importlib_metadata_version}'"
-                )
-                if tuple(importlib_metadata_version) >= (3, 3, 0):
-                    # Version 3.3.0 of importlib_metadata includes a fix which allows us to
-                    # get the distribution of a loaded entry-point
-                    USE_IMPORTLIB_METADATA = True
-            else:
-                log.debug(
-                    "DGM entrypoints dgm_importlib_metadata_version is none or some such , value is '{dgm_importlib_metadata}', since did not get ImportError and using latest can assume good"
-                )
-                print(
-                    "DGM entrypoints dgm_importlib_metadata_version is none or some such , value is '{dgm_importlib_metadata}', since did not get ImportError and using latest can assume good"
-                )
+            if tuple(importlib_metadata_version) >= (3, 3, 0):
+                # Version 3.3.0 of importlib_metadata includes a fix which allows us to
+                # get the distribution of a loaded entry-point
                 USE_IMPORTLIB_METADATA = True
+
+        ###            ## dgm_importlib_metadata_version = importlib_metadata.version(
+        ###            dgm_importlib_metadata_version = importlib.metadata.version(
+        ###                "importlib_metadata"
+        ###            )
+        ###
+        ###            print(
+        ###                f"DGM entrypoints sys.version_info '{sys.version_info}', dgm_importlib_metadata_version '{dgm_importlib_metadata_version}' "
+        ###            )
+        ###            print(
+        ###                fr"DGM entrypoints importlib_metadata.version\(importlib_metadata_version\)  '{dgm_importlib_metadata_version}' "
+        ###            )
+        ###
+        ###            if dgm_importlib_metadata_version:
+        ###                importlib_metadata_version = [
+        ###                    int(part)
+        ###                    for part in importlib_metadata.version("importlib_metadata").split(
+        ###                        "."
+        ###                    )
+        ###                    if part.isdigit()
+        ###                ]
+        ###                print(
+        ###                    "DGM entrypoints importlib_metadata_version, value is '{importlib_metadata_version}'"
+        ###                )
+        ###                if tuple(importlib_metadata_version) >= (3, 3, 0):
+        ###                    # Version 3.3.0 of importlib_metadata includes a fix which allows us to
+        ###                    # get the distribution of a loaded entry-point
+        ###                    USE_IMPORTLIB_METADATA = True
+        ###            else:
+        ###                log.debug(
+        ###                    "DGM entrypoints dgm_importlib_metadata_version is none or some such , value is '{dgm_importlib_metadata}', since did not get ImportError and using latest can assume good"
+        ###                )
+        ###                print(
+        ###                    "DGM entrypoints dgm_importlib_metadata_version is none or some such , value is '{dgm_importlib_metadata}', since did not get ImportError and using latest can assume good"
+        ###                )
+        ###                USE_IMPORTLIB_METADATA = True
 
         except ImportError:
             # We don't have importlib_metadata but USE_IMPORTLIB_METADATA is set to false by default
-            pass
+            print("DGM entrypoints ImportError no importlib_metadata")
+##DGM            pass
 
 if not USE_IMPORTLIB_METADATA_STDLIB and not USE_IMPORTLIB_METADATA:
     # Try to use pkg_resources
