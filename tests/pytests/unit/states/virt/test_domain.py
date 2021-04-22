@@ -21,14 +21,14 @@ def test_defined_no_change(test):
                 "virt.init": init_mock,
             },
         ):
-            assert {
+            assert virt.defined("myvm") == {
                 "name": "myvm",
                 "changes": {"myvm": {"definition": False}},
                 "result": True,
                 "comment": "Domain myvm unchanged",
-            } == virt.defined("myvm")
+            }
             init_mock.assert_not_called()
-            assert [domain_update_call("myvm", test=test)] == update_mock.call_args_list
+            assert update_mock.call_args_list == [domain_update_call("myvm", test=test)]
 
 
 def test_defined_new_with_connection(test):
@@ -72,12 +72,7 @@ def test_defined_new_with_connection(test):
                 {"type": "tcp", "port": 22223, "protocol": "telnet"},
                 {"type": "pty"},
             ]
-            assert {
-                "name": "myvm",
-                "result": True if not test else None,
-                "changes": {"myvm": {"definition": True}},
-                "comment": "Domain myvm defined",
-            } == virt.defined(
+            assert virt.defined(
                 "myvm",
                 cpu=2,
                 mem=2048,
@@ -103,7 +98,12 @@ def test_defined_new_with_connection(test):
                 serials=serials,
                 consoles=consoles,
                 host_devices=["pci_0000_00_17_0"],
-            )
+            ) == {
+                "name": "myvm",
+                "result": True if not test else None,
+                "changes": {"myvm": {"definition": True}},
+                "comment": "Domain myvm defined",
+            }
             if not test:
                 init_mock.assert_called_with(
                     "myvm",
@@ -160,16 +160,16 @@ def test_defined_update(test):
                 "initrd": "/root/f8-i386-initrd",
                 "cmdline": "console=ttyS0 ks=http://example.com/f8-i386/os/",
             }
-            assert {
+            assert virt.defined("myvm", cpu=2, boot=boot,) == {
                 "name": "myvm",
                 "changes": {"myvm": {"definition": True, "cpu": True}},
                 "result": True if not test else None,
                 "comment": "Domain myvm updated",
-            } == virt.defined("myvm", cpu=2, boot=boot,)
+            }
             init_mock.assert_not_called()
-            assert [
+            assert update_mock.call_args_list == [
                 domain_update_call("myvm", cpu=2, test=test, boot=boot)
-            ] == update_mock.call_args_list
+            ]
 
 
 def test_defined_update_error(test):
@@ -189,7 +189,7 @@ def test_defined_update_error(test):
                 "virt.init": init_mock,
             },
         ):
-            assert {
+            assert virt.defined("myvm", cpu=2, boot_dev="cdrom hd") == {
                 "name": "myvm",
                 "changes": {
                     "myvm": {
@@ -200,7 +200,7 @@ def test_defined_update_error(test):
                 },
                 "result": True if not test else None,
                 "comment": "Domain myvm updated with live update(s) failures",
-            } == virt.defined("myvm", cpu=2, boot_dev="cdrom hd")
+            }
             init_mock.assert_not_called()
             update_mock.assert_called_with(
                 "myvm",
@@ -245,16 +245,16 @@ def test_defined_update_definition_error(test):
                 "virt.init": init_mock,
             },
         ):
-            assert {
+            assert virt.defined("myvm", cpu=2) == {
                 "name": "myvm",
                 "changes": {},
                 "result": False,
                 "comment": "error message",
-            } == virt.defined("myvm", cpu=2)
+            }
             init_mock.assert_not_called()
-            assert [
+            assert update_mock.call_args_list == [
                 domain_update_call("myvm", cpu=2, test=test)
-            ] == update_mock.call_args_list
+            ]
 
 
 @pytest.mark.parametrize("running", ["running", "shutdown"])
@@ -279,12 +279,12 @@ def test_running_no_change(test, running):
             if running == "shutdown":
                 changes["started"] = True
                 comment = "Domain myvm started"
-            assert {
+            assert virt.running("myvm") == {
                 "name": "myvm",
                 "result": True,
                 "changes": {"myvm": changes},
                 "comment": comment,
-            } == virt.running("myvm")
+            }
             if running == "shutdown" and not test:
                 start_mock.assert_called()
             else:
@@ -326,12 +326,7 @@ def test_running_define(test):
                 "listen": {"type": "address", "address": "192.168.0.1"},
             }
 
-            assert {
-                "name": "myvm",
-                "result": True if not test else None,
-                "changes": {"myvm": {"definition": True, "started": True}},
-                "comment": "Domain myvm defined and started",
-            } == virt.running(
+            assert virt.running(
                 "myvm",
                 cpu=2,
                 mem=2048,
@@ -353,7 +348,12 @@ def test_running_define(test):
                 connection="someconnection",
                 username="libvirtuser",
                 password="supersecret",
-            )
+            ) == {
+                "name": "myvm",
+                "result": True if not test else None,
+                "changes": {"myvm": {"definition": True, "started": True}},
+                "comment": "Domain myvm defined and started",
+            }
             if not test:
                 init_mock.assert_called_with(
                     "myvm",
@@ -412,12 +412,12 @@ def test_running_start_error():
                 "virt.list_domains": MagicMock(return_value=["myvm"]),
             },
         ):
-            assert {
+            assert virt.running("myvm") == {
                 "name": "myvm",
                 "changes": {"myvm": {"definition": False}},
                 "result": False,
                 "comment": "libvirt error msg",
-            } == virt.running("myvm")
+            }
 
 
 @pytest.mark.parametrize("running", ["running", "shutdown"])
@@ -441,14 +441,14 @@ def test_running_update(test, running):
             changes = {"myvm": {"definition": True, "cpu": True}}
             if running == "shutdown":
                 changes["myvm"]["started"] = True
-            assert {
+            assert virt.running("myvm", cpu=2) == {
                 "name": "myvm",
                 "changes": changes,
                 "result": True if not test else None,
                 "comment": "Domain myvm updated"
                 if running == "running"
                 else "Domain myvm updated and started",
-            } == virt.running("myvm", cpu=2)
+            }
             if running == "shutdown" and not test:
                 start_mock.assert_called()
             else:
@@ -470,12 +470,12 @@ def test_running_definition_error():
                 "virt.list_domains": MagicMock(return_value=["myvm"]),
             },
         ):
-            assert {
+            assert virt.running("myvm", cpu=3) == {
                 "name": "myvm",
                 "changes": {},
                 "result": False,
                 "comment": "error message",
-            } == virt.running("myvm", cpu=3)
+            }
 
 
 def test_running_update_error():
@@ -494,7 +494,7 @@ def test_running_update_error():
                 "virt.list_domains": MagicMock(return_value=["myvm"]),
             },
         ):
-            assert {
+            assert virt.running("myvm", cpu=2) == {
                 "name": "myvm",
                 "changes": {
                     "myvm": {
@@ -505,7 +505,7 @@ def test_running_update_error():
                 },
                 "result": True,
                 "comment": "Domain myvm updated with live update(s) failures",
-            } == virt.running("myvm", cpu=2)
+            }
             update_mock.assert_called_with(
                 "myvm",
                 cpu=2,
@@ -552,14 +552,14 @@ def test_stopped(test, running):
             if running == "running":
                 changes = {"stopped": [{"domain": "myvm", "shutdown": True}]}
                 comment = "Machine has been shut down"
-            assert {
+            assert virt.stopped(
+                "myvm", connection="myconnection", username="user", password="secret",
+            ) == {
                 "name": "myvm",
                 "changes": changes,
                 "comment": comment,
                 "result": True if not test or running == "shutdown" else None,
-            } == virt.stopped(
-                "myvm", connection="myconnection", username="user", password="secret",
-            )
+            }
             if not test and running == "running":
                 shutdown_mock.assert_called_with(
                     "myvm",
@@ -586,12 +586,12 @@ def test_stopped_error():
                 ),
             },
         ):
-            assert {
+            assert virt.stopped("myvm") == {
                 "name": "myvm",
                 "changes": {"ignored": [{"domain": "myvm", "issue": "Some error"}]},
                 "result": False,
                 "comment": "No changes had happened",
-            } == virt.stopped("myvm")
+            }
 
 
 def test_stopped_not_existing(test):
@@ -603,12 +603,12 @@ def test_stopped_not_existing(test):
         with patch.dict(
             virt.__salt__, {"virt.list_domains": MagicMock(return_value=[])},
         ):
-            assert {
+            assert virt.stopped("myvm") == {
                 "name": "myvm",
                 "changes": {},
                 "comment": "No changes had happened",
                 "result": False,
-            } == virt.stopped("myvm")
+            }
 
 
 @pytest.mark.parametrize("running", ["running", "shutdown"])
@@ -631,14 +631,14 @@ def test_powered_off(test, running):
             if running == "running":
                 changes = {"unpowered": [{"domain": "myvm", "stop": True}]}
                 comment = "Machine has been powered off"
-            assert {
+            assert virt.powered_off(
+                "myvm", connection="myconnection", username="user", password="secret",
+            ) == {
                 "name": "myvm",
                 "result": True if not test or running == "shutdown" else None,
                 "changes": changes,
                 "comment": comment,
-            } == virt.powered_off(
-                "myvm", connection="myconnection", username="user", password="secret",
-            )
+            }
             if not test and running == "running":
                 stop_mock.assert_called_with(
                     "myvm",
@@ -666,12 +666,12 @@ def test_powered_off_error():
                 ),
             },
         ):
-            assert {
+            assert virt.powered_off("myvm") == {
                 "name": "myvm",
                 "result": False,
                 "changes": {"ignored": [{"domain": "myvm", "issue": "Some error"}]},
                 "comment": "No changes had happened",
-            } == virt.powered_off("myvm")
+            }
 
 
 def test_powered_off_not_existing():
@@ -686,12 +686,12 @@ def test_powered_off_not_existing():
             ret.update(
                 {"changes": {}, "result": False, "comment": "No changes had happened"}
             )
-            assert {
+            assert virt.powered_off("myvm") == {
                 "name": "myvm",
                 "changes": {},
                 "result": False,
                 "comment": "No changes had happened",
-            } == virt.powered_off("myvm")
+            }
 
 
 def test_snapshot(test):
@@ -707,18 +707,18 @@ def test_snapshot(test):
                 "virt.snapshot": snapshot_mock,
             },
         ):
-            assert {
-                "name": "myvm",
-                "result": True if not test else None,
-                "changes": {"saved": [{"domain": "myvm", "snapshot": True}]},
-                "comment": "Snapshot has been taken",
-            } == virt.snapshot(
+            assert virt.snapshot(
                 "myvm",
                 suffix="snap",
                 connection="myconnection",
                 username="user",
                 password="secret",
-            )
+            ) == {
+                "name": "myvm",
+                "result": True if not test else None,
+                "changes": {"saved": [{"domain": "myvm", "snapshot": True}]},
+                "comment": "Snapshot has been taken",
+            }
             if not test:
                 snapshot_mock.assert_called_with(
                     "myvm",
@@ -745,12 +745,12 @@ def test_snapshot_error():
                 ),
             },
         ):
-            assert {
+            assert virt.snapshot("myvm") == {
                 "name": "myvm",
                 "result": False,
                 "changes": {"ignored": [{"domain": "myvm", "issue": "Some error"}]},
                 "comment": "No changes had happened",
-            } == virt.snapshot("myvm")
+            }
 
 
 def test_snapshot_not_existing(test):
@@ -761,12 +761,12 @@ def test_snapshot_not_existing(test):
         with patch.dict(
             virt.__salt__, {"virt.list_domains": MagicMock(return_value=[])}
         ):
-            assert {
+            assert virt.snapshot("myvm") == {
                 "name": "myvm",
                 "changes": {},
                 "result": False,
                 "comment": "No changes had happened",
-            } == virt.snapshot("myvm")
+            }
 
 
 def test_rebooted(test):
@@ -782,14 +782,14 @@ def test_rebooted(test):
                 "virt.reboot": reboot_mock,
             },
         ):
-            assert {
+            assert virt.rebooted(
+                "myvm", connection="myconnection", username="user", password="secret",
+            ) == {
                 "name": "myvm",
                 "result": True if not test else None,
                 "changes": {"rebooted": [{"domain": "myvm", "reboot": True}]},
                 "comment": "Machine has been rebooted",
-            } == virt.rebooted(
-                "myvm", connection="myconnection", username="user", password="secret",
-            )
+            }
             if not test:
                 reboot_mock.assert_called_with(
                     "myvm",
@@ -816,12 +816,12 @@ def test_rebooted_error():
                 ),
             },
         ):
-            assert {
+            assert virt.rebooted("myvm") == {
                 "name": "myvm",
                 "result": False,
                 "changes": {"ignored": [{"domain": "myvm", "issue": "Some error"}]},
                 "comment": "No changes had happened",
-            } == virt.rebooted("myvm")
+            }
 
 
 def test_rebooted_not_existing(test):
@@ -832,9 +832,9 @@ def test_rebooted_not_existing(test):
         with patch.dict(
             virt.__salt__, {"virt.list_domains": MagicMock(return_value=[])}
         ):
-            assert {
+            assert virt.rebooted("myvm") == {
                 "name": "myvm",
                 "changes": {},
                 "result": False,
                 "comment": "No changes had happened",
-            } == virt.rebooted("myvm")
+            }
