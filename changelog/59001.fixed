@@ -1,0 +1,1 @@
+Fix Xen DomU virt detection in grains for long running machines.

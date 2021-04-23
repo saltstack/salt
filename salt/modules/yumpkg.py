@@ -73,7 +73,16 @@ def __virtual__():
     except Exception:  # pylint: disable=broad-except
         return (False, "Module yumpkg: no yum based system detected")
 
-    enabled = ("amazon", "xcp", "xenserver", "virtuozzolinux", "virtuozzo")
+    enabled = (
+        "amazon",
+        "xcp",
+        "xenserver",
+        "virtuozzolinux",
+        "virtuozzo",
+        "issabel pbx",
+        "openeuler",
+    )
+
     if os_family == "redhat" or os_grain in enabled:
         if _yum() is None:
             return (False, "DNF nor YUM found")
@@ -2085,11 +2094,13 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
     old = list_pkgs()
     targets = []
     for target in pkg_params:
+        version_to_remove = pkg_params[target]
+        installed_versions = old[target].split(",")
+
         # Check if package version set to be removed is actually installed:
-        # old[target] contains a comma-separated list of installed versions
-        if target in old and not pkg_params[target]:
+        if target in old and not version_to_remove:
             targets.append(target)
-        elif target in old and pkg_params[target] in old[target].split(","):
+        elif target in old and version_to_remove in installed_versions:
             arch = ""
             pkgname = target
             try:
@@ -2100,7 +2111,11 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
                 if archpart in salt.utils.pkg.rpm.ARCHES:
                     arch = "." + archpart
                     pkgname = namepart
-            targets.append("{}-{}{}".format(pkgname, pkg_params[target], arch))
+            # Since we don't always have the arch info, epoch information has to parsed out. But
+            # a version check was already performed, so we are removing the right version.
+            targets.append(
+                "{}-{}{}".format(pkgname, version_to_remove.split(":", 1)[-1], arch)
+            )
     if not targets:
         return {}
 
@@ -3314,10 +3329,17 @@ def _get_patches(installed_only=False):
 
     cmd = [_yum(), "--quiet", "updateinfo", "list", "all"]
     ret = __salt__["cmd.run_stdout"](cmd, python_shell=False)
+    parsing_errors = False
+
     for line in salt.utils.itertools.split(ret, os.linesep):
-        inst, advisory_id, sev, pkg = re.match(
-            r"([i|\s]) ([^\s]+) +([^\s]+) +([^\s]+)", line
-        ).groups()
+        try:
+            inst, advisory_id, sev, pkg = re.match(
+                r"([i|\s]) ([^\s]+) +([^\s]+) +([^\s]+)", line
+            ).groups()
+        except Exception:  # pylint: disable=broad-except
+            parsing_errors = True
+            continue
+
         if advisory_id not in patches:
             patches[advisory_id] = {
                 "installed": True if inst == "i" else False,
@@ -3327,6 +3349,13 @@ def _get_patches(installed_only=False):
             patches[advisory_id]["summary"].append(pkg)
             if inst != "i":
                 patches[advisory_id]["installed"] = False
+
+    if parsing_errors:
+        log.warning(
+            "Skipped some unexpected output while running '{}' to list patches. Please check output".format(
+                " ".join(cmd)
+            )
+        )
 
     if installed_only:
         patches = {k: v for k, v in patches.items() if v["installed"]}
