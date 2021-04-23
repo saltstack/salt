@@ -1,15 +1,40 @@
 import logging
 
+import salt.exceptions
 import salt.modules.slsutil as slsutil
+
+# Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase
+from tests.support.mock import MagicMock
 
 log = logging.getLogger(__name__)
 
+MASTER_DIRS = ["red", "red/files", "blue", "blue/files"]
 
-class SlsUtilTestCase(TestCase):
+MASTER_FILES = [
+    "top.sls",
+    "red/init.sls",
+    "red/files/default.conf",
+    "blue/init.sls",
+    "blue/files/default.conf",
+]
+
+
+class SlsUtilTestCase(TestCase, LoaderModuleMockMixin):
     """
     Test cases for salt.modules.slsutil
     """
+
+    def setup_loader_modules(self):
+        return {
+            slsutil: {
+                "__salt__": {
+                    "cp.list_master": MagicMock(return_value=MASTER_FILES),
+                    "cp.list_master_dirs": MagicMock(return_value=MASTER_DIRS),
+                },
+            }
+        }
 
     def test_banner(self):
         """
@@ -55,3 +80,44 @@ class SlsUtilTestCase(TestCase):
         """
         self.assertEqual("yes", slsutil.boolstr(True, true="yes", false="no"))
         self.assertEqual("no", slsutil.boolstr(False, true="yes", false="no"))
+
+    def test_file_exists(self):
+        """
+        Test file_exists function
+        """
+        self.assertTrue(slsutil.file_exists("red/init.sls"))
+        self.assertFalse(slsutil.file_exists("green/init.sls"))
+
+    def test_dir_exists(self):
+        """
+        Test dir_exists function
+        """
+        self.assertTrue(slsutil.dir_exists("red"))
+        self.assertFalse(slsutil.dir_exists("green"))
+
+    def test_path_exists(self):
+        """
+        Test path_exists function
+        """
+        self.assertTrue(slsutil.path_exists("red"))
+        self.assertFalse(slsutil.path_exists("green"))
+        self.assertTrue(slsutil.path_exists("red/init.sls"))
+        self.assertFalse(slsutil.path_exists("green/init.sls"))
+
+    def test_findup(self):
+        """
+        Test findup function
+        """
+        self.assertEqual("red/init.sls", slsutil.findup("red/files", "init.sls"))
+        self.assertEqual("top.sls", slsutil.findup("red/files", ["top.sls"]))
+        self.assertEqual("top.sls", slsutil.findup("", "top.sls"))
+        self.assertEqual("top.sls", slsutil.findup(None, "top.sls"))
+        self.assertEqual(
+            "red/init.sls", slsutil.findup("red/files", ["top.sls", "init.sls"])
+        )
+
+        with self.assertRaises(salt.exceptions.CommandExecutionError):
+            slsutil.findup("red/files", "notfound")
+
+        with self.assertRaises(salt.exceptions.CommandExecutionError):
+            slsutil.findup("red", "default.conf")

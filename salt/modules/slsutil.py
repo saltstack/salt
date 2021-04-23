@@ -11,6 +11,9 @@ import salt.loader
 import salt.template
 import salt.utils.args
 import salt.utils.dictupdate
+import salt.utils.path
+
+CONTEXT_BASE = "slsutil"
 
 
 def update(dest, upd, recursive_update=True, merge_lists=False):
@@ -423,3 +426,158 @@ def boolstr(value, true="true", false="false"):
         return true
 
     return false
+
+
+def _set_context(keys, function, fun_args=None, fun_kwargs=None, force=False):
+    """
+    Convenience function to set a value in the ``__context__`` dictionary.
+
+    :param keys: The list of keys specifying the dictionary path to set. This
+                 list can be of arbitrary length and the path will be created
+                 in the dictionary if it does not exist.
+
+    :param function: A python function to be called if the specified path does
+                     not exist, if the force parameter is ``True``.
+
+    :param fun_args: A list of positional arguments to the function.
+
+    :param fun_kwargs: A dictionary of keyword arguments to the function.
+
+    :param force: If ``True``, force the ```__context__`` path to be updated.
+                  Otherwise, only create it if it does not exist.
+    """
+
+    target = __context__
+
+    # Build each level of the dictionary as needed
+    for key in keys[:-1]:
+        if key not in target:
+            target[key] = {}
+        target = target[key]
+
+    # Call the supplied function to populate the dictionary
+    if force or keys[-1] not in target:
+        if not fun_args:
+            fun_args = []
+
+        if not fun_kwargs:
+            fun_kwargs = {}
+
+        target[keys[-1]] = function(*fun_args, *fun_kwargs)
+
+
+def file_exists(path, saltenv="base"):
+    """
+    Return ``True`` if a file exists in the state tree, ``False`` otherwise.
+
+    :param str path: The fully qualified path to a file in the state tree.
+    :param str saltenv: The fileserver environment to search. Default: ``base``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' slsutil.file_exists nginx/defaults.yaml
+    """
+
+    _set_context(
+        [CONTEXT_BASE, saltenv, "file_list"], __salt__["cp.list_master"], [saltenv]
+    )
+    return path in __context__[CONTEXT_BASE][saltenv]["file_list"]
+
+
+def dir_exists(path, saltenv="base"):
+    """
+    Return ``True`` if a directory exists in the state tree, ``False`` otherwise.
+
+    :param str path: The fully qualified path to a directory in the state tree.
+    :param str saltenv: The fileserver environment to search. Default: ``base``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' slsutil.bir_exists nginx/files
+    """
+
+    _set_context(
+        [CONTEXT_BASE, saltenv, "dir_list"], __salt__["cp.list_master_dirs"], [saltenv]
+    )
+    return path in __context__[CONTEXT_BASE][saltenv]["dir_list"]
+
+
+def path_exists(path, saltenv="base"):
+    """
+    Return ``True`` if a path exists in the state tree, ``False`` otherwise. The path
+    could refer to a file or directory.
+
+    :param str path: The fully qualified path to a file or directory in the state tree.
+    :param str saltenv: The fileserver environment to search. Default: ``base``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' slsutil.file_exists nginx/defaults.yaml
+    """
+
+    return file_exists(path, saltenv) or dir_exists(path, saltenv)
+
+
+def findup(startpath, filenames, saltenv="base"):
+    """
+    Find the first path matching a filename or list of filenames in a specified
+    directory or the nearest ancestor directory. Returns the full path to the
+    first file found.
+
+    :param str startpath: The fileserver path from which to begin the search
+    :param filenames: A filename or list of filenames to search for. Searching for
+        directory names is also supported.
+    :param str saltenv: The fileserver environment to search. Default: ``base``
+
+    Example: return the path to ``defaults.yaml``, walking up the tree from the
+    state file currently being processed.
+
+    .. code-block:: jinja
+
+        {{ salt["slsutil.findup"](tplfile, "defaults.yaml") }}
+    """
+
+    # Normalize the path
+    if startpath:
+        startpath = os.path.normpath(startpath)
+
+    # Verify the cwd is a valid path in the state tree
+    if startpath and not path_exists(startpath, saltenv):
+        raise salt.exceptions.SaltInvocationError(
+            "Path argument must be a valid path in the state tree"
+        )
+
+    # Ensure that patterns is a string or list of strings
+    if isinstance(filenames, str):
+        filenames = [filenames]
+    elif isinstance(filenames, list):
+        pass
+    else:
+        raise salt.exceptions.SaltInvocationError(
+            "Filenames argument must be a string or list of strings"
+        )
+
+    while True:
+
+        # Loop over filenames, looking for one at the current path level
+        for filename in filenames:
+            fullname = salt.utils.path.join(
+                startpath or "", filename, use_posixpath=True
+            )
+            if path_exists(fullname, saltenv):
+                return fullname
+
+        # If the root path was just checked, raise an error
+        if not startpath:
+            raise salt.exceptions.CommandExecutionError(
+                "File pattern(s) not found in path ancestry"
+            )
+
+        # Move up one level in the ancestry
+        startpath = os.path.dirname(startpath)
