@@ -306,7 +306,9 @@ def ordered(obj):
         try:
             return sorted(ordered(x) for x in obj)
         except TypeError as exc:
-            log.warning("No key defined for sorting dictionaries. Trying to sort with a key")
+            log.warning(
+                "No key defined for sorting dictionaries. Trying to sort with a key"
+            )
             return sorted((ordered(x) for x in obj), key=lambda d: sorted(d.items()))
     elif isinstance(obj, dict):
         return {str(k) if isinstance(k, str) else k: ordered(v) for k, v in obj.items()}
