@@ -302,7 +302,7 @@ def user_create(
         mdb.add_user(name, passwd, roles=roles)
     except pymongo.errors.PyMongoError as err:
         log.error("Creating database %s failed with error: %s", name, err)
-        return str(err)
+        return False
     return True
 
 
@@ -328,8 +328,7 @@ def user_remove(
         mdb.remove_user(name)
     except pymongo.errors.PyMongoError as err:
         log.error("Creating database %s failed with error: %s", name, err)
-        return str(err)
-
+        return False
     return True
 
 
