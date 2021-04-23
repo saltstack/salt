@@ -666,6 +666,7 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
                             # Since the "call" method is completely mocked away, we need to
                             # assert on the vendor_change_mock, because the logic of the vendor-change
                             # flag insertion is in thes __call method.
+                            assert zypper.__zypper__.avc == True
                             vendor_change_mock.assert_any_call(False, False, True)
 
     def test_upgrade_with_allowvendorchange(self):
@@ -704,10 +705,10 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
                             # Since the "call" method is completely mocked away, we need to
                             # assert on the vendor_change_mock, because the logic of the vendor-change
                             # flag insertion is in thes __call method.
+                            assert zypper.__zypper__.avc == True
                             vendor_change_mock.assert_any_call(True, True, True)
 
     def test_upgrade_old_zypper(self):
-        # FIXME: This test is a false negative!!!!!!g
         with patch.dict(zypper.__grains__, {"osrelease_info": [12, 1]}), patch(
             "salt.modules.zypperpkg.refresh_db", MagicMock(return_value=True)
         ), patch(
@@ -724,7 +725,7 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
                         zypper.__salt__,
                         {
                             "pkg_resource.version": MagicMock(return_value="1.11"),
-                            "lowpkg.version_cmp": MagicMock(return_value=1),
+                            "lowpkg.version_cmp": MagicMock(return_value=-1),
                         },
                     ):
                         ret = zypper.upgrade(
@@ -733,16 +734,7 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
                             fromrepo=["Dummy", "Dummy2"],
                             novendorchange=False,
                         )
-                        # zypper version is too old, so no
-                        zypper_mock.assert_any_call(
-                            "dist-upgrade",
-                            "--auto-agree-with-licenses",
-                            "--dry-run",
-                            "--from",
-                            "Dummy",
-                            "--from",
-                            "Dummy2",
-                        )
+                        assert zypper.__zypper__.avc == False
 
     def test_upgrade_success(self):
         """
