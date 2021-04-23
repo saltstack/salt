@@ -987,6 +987,40 @@ minion. Since this grain is expensive, it is disabled by default.
 
     nvme_grains: True
 
+.. conf_minion:: openstack_metadata_grains
+
+``openstack_metadata_grains``
+-----------------------------
+
+.. versionadded:: 3003
+
+Default: ``False``
+
+Set this option to ``True`` to enable retrieving grains from the OpenStack
+metadata service (see :py:mod:`salt.grains.openstack` for more information).
+
+.. code-block:: yaml
+
+    openstack_metadata_grains: True
+
+.. conf_minion:: openstack_metadata_version
+
+``openstack_metadata_version``
+------------------------------
+
+.. versionadded:: 3003
+
+Defalse: ``latest``
+
+Configure the OpenStack metadata grains module to use a version other than
+``latest`` (see `here`__ for more information).
+
+.. __: https://docs.openstack.org/nova/latest/user/metadata.html#using-the-metadata-service
+
+.. code-block:: yaml
+
+    openstack_metadata_version: 2018-08-27
+
 .. conf_minion:: mine_enabled
 
 ``mine_enabled``

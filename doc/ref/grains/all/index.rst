@@ -29,6 +29,7 @@ grains modules
     napalm
     nvme
     nxos
+    openstack
     opts
     panos
     pending_reboot
