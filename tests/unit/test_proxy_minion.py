@@ -9,6 +9,7 @@ import shutil
 import tempfile
 import textwrap
 
+import pytest
 import salt.config
 import salt.ext.tornado
 import salt.ext.tornado.testing
@@ -16,7 +17,6 @@ import salt.metaproxy.proxy
 import salt.minion
 import salt.syspaths
 from saltfactories.utils import random_string
-from tests.support.helpers import slowTest
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
@@ -25,7 +25,7 @@ log = logging.getLogger(__name__)
 
 
 class ProxyMinionTestCase(TestCase):
-    @slowTest
+    @pytest.mark.slow_test
     def test_post_master_init_metaproxy_called(self):
         """
         Tests that when the _post_master_ini function is called, _metaproxy_call is also called.
@@ -51,7 +51,7 @@ class ProxyMinionTestCase(TestCase):
             finally:
                 proxy_minion.destroy()
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_handle_decoded_payload_metaproxy_called(self):
         """
         Tests that when the _handle_decoded_payload function is called, _metaproxy_call is also called.
@@ -79,7 +79,7 @@ class ProxyMinionTestCase(TestCase):
             finally:
                 proxy_minion.destroy()
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_handle_payload_metaproxy_called(self):
         """
         Tests that when the _handle_payload function is called, _metaproxy_call is also called.

@@ -1,20 +1,17 @@
 import pytest
-import salt.utils.platform
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, flaky, slowTest
-from tests.support.unit import skipIf
 
 
-@flaky
-@skipIf(not salt.utils.platform.is_windows(), "Tests for only Windows")
+@pytest.mark.flaky(max_runs=4)
+@pytest.mark.skip_unless_on_windows
 @pytest.mark.windows_whitelisted
 class NTPTest(ModuleCase):
     """
     Validate windows ntp module
     """
 
-    @destructiveTest
-    @slowTest
+    @pytest.mark.destructive_test
+    @pytest.mark.slow_test
     def test_ntp_set_servers(self):
         """
         test ntp get and set servers

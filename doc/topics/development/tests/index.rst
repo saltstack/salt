@@ -35,11 +35,25 @@ python3 you would need to specify the zeromq transport and python3.
 
     nox -e 'pytest-zeromq-3(coverage=False)'
 
+As a contrast, when using the deprecated ``runtests.py`` test runner, the
+command would be:
+
+.. code-block:: bash
+
+    nox -e 'runtests-zeromq-3(coverage=False)'
+
 To run all the tests but on the tcp transport, you would need to specify the tcp session.
 
 .. code-block:: bash
 
     nox -e 'pytest-tcp-3(coverage=False)'
+
+As a contrast, when using the deprecated ``runtests.py`` test runner, the
+command would be:
+
+.. code-block:: bash
+
+    nox -e 'runtests-tcp-3(coverage=False)'
 
 You can view all available sessions by running:
 
@@ -177,13 +191,25 @@ Running Test Subsections
 Instead of running the entire test suite all at once, which can take a long time,
 there are several ways to run only specific groups of tests or individual tests:
 
-* Run :ref:`unit tests only<running-unit-tests-no-daemons>`: ``nox -e 'pytest-zeromq-3(coverage=False)' -- tests/unit/``
-* Run unit and integration tests for states: ``nox -e 'pytest-zeromq-3(coverage=False)' -- tests/unit/states/ tests/integration/states/``
-* Run integration tests for an individual module: ``nox -e 'pytest-zeromq-3(coverage=False)' -- tests/integration/modules/test_virt.py``
-* Run unit tests for an individual module: ``nox -e 'pytest-zeromq-3(coverage=False)' -- tests/unit/modules/test_virt.py``
+* Run :ref:`unit tests only<running-unit-tests-no-daemons>`: ``nox -e
+  'pytest-zeromq-3(coverage=False)' -- tests/unit/``, using the deprecated ``runtests.py`` the command would be ``nox -e
+  'runtests-zeromq-3(coverage=False)' -- --unit-tests``
+* Run unit and integration tests for states: ``nox -e
+  'pytest-zeromq-3(coverage=False)' -- tests/unit/states/ tests/integration/states/``, using the deprecated
+  ``runtests.py`` the command would be ``nox -e 'runtests-zeromq-3(coverage=False)' -- --state-tests``
+* Run integration tests for an individual module: ``nox -e 'pytest-zeromq-3(coverage=False)' --
+  tests/integration/modules/test_virt.py``, using the deprecated ``runtests.py`` the command would be ``nox -e
+  'runtests-zeromq-3(coverage=False)' -- -n integration.modules.test_virt``
+* Run unit tests for an individual module: ``nox -e 'pytest-zeromq-3(coverage=False)' --
+  tests/unit/modules/test_virt.py``, using the deprecated ``runtests.py`` the command would be ``nox -e
+  'runtests-zeromq-3(coverage=False)' -- -n unit.modules.test_virt``
 * Run an individual test by using the class and test name (this example is for the
   ``test_default_kvm_profile`` test in the ``tests/integration/module/test_virt.py``):
-  ``nox -e 'pytest-zeromq-3(coverage=False)' -- tests/integration/modules/test_virt.py::VirtTest::test_default_kvm_profile``
+  ``nox -e 'pytest-zeromq-3(coverage=False)' --
+  tests/integration/modules/test_virt.py::VirtTest::test_default_kvm_profile``, using the deprecated ``runtests.py`` the
+  command would be ``nox -e 'runtests-zeromq-3(coverage=False)' -- -n
+  integration.modules.test_virt.VirtTest.test_default_kvm_profile``
+
 
 For more specific examples of how to run various test subsections or individual
 tests, please see the `pytest`_ documentation on how to run specific tests or
@@ -206,6 +232,13 @@ integration test daemons, simply add the unit directory as an argument:
 .. code-block:: bash
 
     nox -e 'pytest-zeromq-3(coverage=False)' -- tests/unit/
+
+As a contrast, when using the deprecated ``runtests.py`` test runner, the
+command would be:
+
+.. code-block:: bash
+
+    nox -e 'runtests-zeromq-3(coverage=False)' -- --unit-tests
 
 All of the other options to run individual tests, entire classes of tests, or
 entire test modules still apply.
@@ -237,6 +270,13 @@ To run tests marked as destructive, set the ``--run-destructive`` flag:
 .. code-block:: bash
 
     nox -e 'pytest-zeromq-3(coverage=False)' -- --run-destructive
+
+As a contrast, when using the deprecated ``runtests.py`` test runner, the
+command would be:
+
+.. code-block:: bash
+
+    nox -e 'runtests-zeromq-3(coverage=False)' -- --run-destuctive
 
 
 Running Cloud Provider Tests
@@ -284,6 +324,13 @@ cloud provider tests can be run by setting the ``--cloud-provider-tests`` flag:
 .. code-block:: bash
 
     nox -e 'pytest-cloud-3(coverage=False)'
+
+As a contrast, when using the deprecated ``runtests.py`` test runner, the
+command would be:
+
+.. code-block:: bash
+
+    nox -e 'runtests-cloud-3(coverage=False)'
 
 Automated Test Runs
 ===================
@@ -428,6 +475,61 @@ question if the path forward is unclear.
     that is untested.It would be wise to see if new functionality could use additional
     testing once the test file has propagated to newer release branches.
 
+Module/Global Level Variables
+-----------------------------
+
+If you need access to module or global level variables, please use a pytest fixture. The
+use of module and global variables can introduce mutable global objects and increases
+processing time because all globals are evaluated when collecting tests. If there is a use
+case where you cannot use a fixture and you are using a type of string, integer, or tuple
+you can use global/module level variables. Any mutable types such as lists and dictionaries must
+use pytest fixtures. For an example, if all of your tests need access to a string variable:
+
+.. code-block:: python
+
+    FOO = "bar"
+
+
+    def test_foo_bar():
+        assert FOO == "bar"
+
+
+    def test_foo_not():
+        assert not FOO == "foo"
+
+We recommend using a pytest fixture:
+
+.. code-block:: python
+
+    import pytest
+
+
+    @pytest.fixture()
+    def foo():
+        return "bar"
+
+
+    def test_foo_bar(foo):
+        assert foo == "bar"
+
+
+    def test_foo_not(foo):
+        assert not foo == "foo"
+
+
+If you need a class to mock something, it can be defined at the global scope,
+but it should only be initialized on the fixture:
+
+.. code-block:: python
+
+    class Foo:
+        def __init__(self):
+            self.bar = True
+
+
+    @pytest.fixture
+    def foo():
+        return Foo()
 
 Test Helpers
 ------------

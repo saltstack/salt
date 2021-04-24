@@ -1,0 +1,1 @@
+Fix crash on "yumpkg" execution module when unexpected output at listing patches
