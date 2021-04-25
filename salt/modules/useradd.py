@@ -52,7 +52,7 @@ def _quote_username(name):
     Usernames can only contain ascii chars, so make sure we return a str type
     """
     if not isinstance(name, str):
-        return str(name)  # future lint: disable=blacklisted-function
+        return str(name)
     else:
         return salt.utils.stringutils.to_str(name)
 

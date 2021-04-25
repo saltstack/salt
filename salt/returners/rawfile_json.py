@@ -59,7 +59,7 @@ def returner(ret):
     try:
         with salt.utils.files.flopen(opts["filename"], "a") as logfile:
             salt.utils.json.dump(ret, logfile)
-            logfile.write("\n")  # future lint: disable=blacklisted-function
+            logfile.write("\n")
     except Exception:  # pylint: disable=broad-except
         log.error("Could not write to rawdata_json file %s", opts["filename"])
         raise
@@ -78,7 +78,7 @@ def event_return(events):
         with salt.utils.files.flopen(opts["filename"], "a") as logfile:
             for event in events:
                 salt.utils.json.dump(event, logfile)
-                logfile.write("\n")  # future lint: disable=blacklisted-function
+                logfile.write("\n")
     except Exception:  # pylint: disable=broad-except
         log.error("Could not write to rawdata_json file %s", opts["filename"])
         raise

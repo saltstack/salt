@@ -43,18 +43,14 @@ class SaltInfo:
             minions[minion] = curr_minion
         log.debug("ended loop")
         ret = {"minions": minions}
-        self.handler.write_message(
-            salt.utils.json.dumps(ret) + "\n\n"
-        )  # future lint: disable=blacklisted-function
+        self.handler.write_message(salt.utils.json.dumps(ret) + "\n\n")
 
     def publish(self, key, data):
         """
         Publishes the data to the event stream.
         """
         publish_data = {key: data}
-        pub = salt.utils.json.dumps(publish_data) + str(
-            "\n\n"
-        )  # future lint: disable=blacklisted-function
+        pub = salt.utils.json.dumps(publish_data) + "\n\n"
         self.handler.write_message(pub)
 
     def process_minion_update(self, event_data):

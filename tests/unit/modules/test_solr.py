@@ -340,7 +340,7 @@ class SolrTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertEqual(
             solr.signal("signal"),
-            ("signal is an invalid signal. Try: one of: start," " stop, or restart"),
+            ("signal is an invalid signal. Try: one of: start, stop or restart"),
         )
 
     def test_reload_core(self):

@@ -162,9 +162,9 @@ def set_agent_settings(contact=None, location=None, services=None):
         # Validate the services.
         for service in services:
             if service not in _SERVICE_TYPES:
-                message = (
-                    "Invalid service '{}' specified. Valid services:" " {}"
-                ).format(service, get_agent_service_types())
+                message = ("Invalid service '{}' specified. Valid services: {}").format(
+                    service, get_agent_service_types()
+                )
                 raise SaltInvocationError(message)
 
     settings = {"contact": contact, "location": location, "services": services}
@@ -415,7 +415,7 @@ def set_community_names(communities):
             vdata = _PERMISSION_TYPES[communities[vname]]
         except KeyError:
             message = (
-                "Invalid permission '{}' specified. Valid permissions: " "{}"
+                "Invalid permission '{}' specified. Valid permissions: {}"
             ).format(communities[vname], _PERMISSION_TYPES.keys())
             raise SaltInvocationError(message)
         values[vname] = vdata

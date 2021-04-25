@@ -42,7 +42,7 @@ def __virtual__():
             from salt.utils.versions import LooseVersion as V
 
             if "cherrypy" in globals() and V(cherrypy.__version__) < V(cpy_min):
-                error_msg = "Required version of CherryPy is {} or " "greater.".format(
+                error_msg = "Required version of CherryPy is {} or greater.".format(
                     cpy_min
                 )
             else:

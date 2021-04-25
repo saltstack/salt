@@ -98,8 +98,8 @@ def list_zones(verbose=True, installed=False, configured=False, hide_global=True
 
             # create zone_t
             zone_t = {}
-            for i in range(0, len(header)):  # pylint: disable=C0200
-                zone_t[header[i]] = zone[i]
+            for num, val in enumerate(header):
+                zone_t[val] = zone[num]
 
             # skip if global and hide_global
             if hide_global and zone_t["zonename"] == "global":

@@ -1184,8 +1184,8 @@ def mysql_to_dict(data, key):
         if line.startswith("+"):
             continue
         comps = line.split("|")
-        for comp in range(len(comps)):  # pylint: disable=C0200
-            comps[comp] = comps[comp].strip()
+        for idx, comp in enumerate(comps):
+            comps[idx] = comp.strip()
         if len(headers) > 1:
             index = len(headers) - 1
             row = {}

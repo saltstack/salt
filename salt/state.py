@@ -1650,18 +1650,14 @@ class State:
                     # high[name][state] is extended by run, both are lists
                     for arg in run:
                         update = False
-                        for hind in range(len(high[name][state])):
-                            if isinstance(arg, str) and isinstance(
-                                high[name][state][hind], str
-                            ):
+                        for hind, val in enumerate(high[name][state]):
+                            if isinstance(arg, str) and isinstance(val, str):
                                 # replacing the function, replace the index
                                 high[name][state].pop(hind)
                                 high[name][state].insert(hind, arg)
                                 update = True
                                 continue
-                            if isinstance(arg, dict) and isinstance(
-                                high[name][state][hind], dict
-                            ):
+                            if isinstance(arg, dict) and isinstance(val, dict):
                                 # It is an option, make sure the options match
                                 argfirst = next(iter(arg))
                                 if argfirst == next(iter(high[name][state][hind])):

@@ -226,9 +226,7 @@ def hosted_zone_present(
         if len(fixed_vpcs) > 1:
             add_vpcs = fixed_vpcs[1:]
             fixed_vpcs = fixed_vpcs[:1]
-        CallerReference = (
-            CallerReference if CallerReference else str(uuid.uuid4())
-        )  # future lint: disable=blacklisted-function
+        CallerReference = CallerReference if CallerReference else str(uuid.uuid4())
     else:
         # Currently the only modifiable traits about a zone are associated VPCs and the comment.
         zone = zone[0]

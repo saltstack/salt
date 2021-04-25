@@ -293,7 +293,7 @@ def sanitize_win_path(winpath):
         winpath = winpath.translate({ord(c): "_" for c in intab})
     elif isinstance(winpath, str):
         outtab = "_" * len(intab)
-        trantab = "".maketrans(intab, outtab)  # pylint: disable=no-member
+        trantab = "".maketrans(intab, outtab)
         winpath = winpath.translate(trantab)
     return winpath
 

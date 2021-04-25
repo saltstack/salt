@@ -88,7 +88,7 @@ def _pshell(cmd, cwd=None, json_depth=2, ignore_retcode=False):
     except ValueError:
         raise CommandExecutionError("No JSON results from PowerShell", info=results)
 
-    log.info('DSC: Returning "{}"'.format(ret))
+    log.info('DSC: Returning "%s"', ret)
     return ret
 
 
@@ -260,7 +260,7 @@ def compile_config(
         )
         if not cached_files:
             error = "Failed to cache {}".format(source)
-            log.error("DSC: {}".format(error))
+            log.error("DSC: %s", error)
             raise CommandExecutionError(error)
 
     if config_data_source:
@@ -270,13 +270,13 @@ def compile_config(
         )
         if not cached_files:
             error = "Failed to cache {}".format(config_data_source)
-            log.error("DSC: {}".format(error))
+            log.error("DSC: %s", error)
             raise CommandExecutionError(error)
 
     # Make sure the path exists
     if not os.path.exists(path):
         error = '"{}" not found'.format(path)
-        log.error("DSC: {}".format(error))
+        log.error("DSC: %s", error)
         raise CommandExecutionError(error)
 
     if config_name is None:
@@ -393,7 +393,7 @@ def apply_config(path, source=None, salt_env="base"):
         cached_files = __salt__["cp.get_dir"](source, dest_path, salt_env)
         if not cached_files:
             error = "Failed to copy {}".format(source)
-            log.error("DSC: {}".format(error))
+            log.error("DSC: %s", error)
             raise CommandExecutionError(error)
         else:
             config = os.path.dirname(cached_files[0])
@@ -401,7 +401,7 @@ def apply_config(path, source=None, salt_env="base"):
     # Make sure the path exists
     if not os.path.exists(config):
         error = "{} not found".format(config)
-        log.error("DSC: {}".format(error))
+        log.error("DSC: %s", error)
         raise CommandExecutionError(error)
 
     # Run the DSC Configuration
@@ -503,7 +503,7 @@ def remove_config(reset=False):
             raise CommandExecutionError(
                 "Failed to Stop DSC Configuration", info=exc.info
             )
-        log.info("DSC: {}".format(exc.info["stdout"]))
+        log.info("DSC: %s", exc.info["stdout"])
 
     # Remove configuration files
     cmd = "Remove-DscConfigurationDocument -Stage Current, Pending, Previous " "-Force"
@@ -515,17 +515,17 @@ def remove_config(reset=False):
             raise CommandExecutionError(
                 "Failed to remove DSC Configuration", info=exc.info
             )
-        log.info("DSC: {}".format(exc.info["stdout"]))
+        log.info("DSC: %s", exc.info["stdout"])
 
     if not reset:
         return True
 
     def _remove_fs_obj(path):
         if os.path.exists(path):
-            log.info("DSC: Removing {}".format(path))
+            log.info("DSC: Removing %s", path)
             if not __salt__["file.remove"](path):
                 error = "Failed to remove {}".format(path)
-                log.error("DSC: {}".format(error))
+                log.error("DSC: %s", error)
                 raise CommandExecutionError(error)
 
     dsc_config_dir = "{}\\System32\\Configuration" "".format(
