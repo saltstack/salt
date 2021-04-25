@@ -965,8 +965,8 @@ def security_rule_present(
                     sorted(destination_address_prefixes),
                     sorted(rule.get("destination_address_prefixes")),
                 )
-                for idx in range(0, len(local_dst_addrs)):  # pylint: disable=C0200
-                    if local_dst_addrs[idx].lower() != remote_dst_addrs[idx].lower():
+                for idx, val in enumerate(local_dst_addrs):
+                    if val.lower() != remote_dst_addrs[idx].lower():
                         ret["changes"]["destination_address_prefixes"] = {
                             "old": rule.get("destination_address_prefixes"),
                             "new": destination_address_prefixes,
@@ -989,8 +989,8 @@ def security_rule_present(
                     sorted(source_address_prefixes),
                     sorted(rule.get("source_address_prefixes")),
                 )
-                for idx in range(0, len(local_src_addrs)):  # pylint: disable=C0200
-                    if local_src_addrs[idx].lower() != remote_src_addrs[idx].lower():
+                for idx, val in enumerate(local_src_addrs):
+                    if val.lower() != remote_src_addrs[idx].lower():
                         ret["changes"]["source_address_prefixes"] = {
                             "old": rule.get("source_address_prefixes"),
                             "new": source_address_prefixes,

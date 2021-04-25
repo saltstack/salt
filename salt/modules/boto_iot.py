@@ -621,7 +621,7 @@ def set_default_policy_version(
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         conn.set_default_policy_version(
             policyName=policyName, policyVersionId=str(policyVersionId)
-        )  # future lint: disable=blacklisted-function
+        )
         return {"changed": True}
     except ClientError as e:
         return {"changed": False, "error": __utils__["boto3.get_error"](e)}

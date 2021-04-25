@@ -467,9 +467,7 @@ def present(
     # hash the launch_config dict to create a unique name suffix and then
     # ensure it is present
     if launch_config:
-        launch_config_bytes = salt.utils.stringutils.to_bytes(
-            str(launch_config)
-        )  # future lint: disable=blacklisted-function
+        launch_config_bytes = salt.utils.stringutils.to_bytes(str(launch_config))
         launch_config_name = (
             launch_config_name + "-" + hashlib.md5(launch_config_bytes).hexdigest()
         )

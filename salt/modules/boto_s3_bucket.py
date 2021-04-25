@@ -163,9 +163,7 @@ def create(
             "GrantWriteACP",
         ):
             if locals()[arg] is not None:
-                kwargs[arg] = str(
-                    locals()[arg]
-                )  # future lint: disable=blacklisted-function
+                kwargs[arg] = str(locals()[arg])
         if LocationConstraint:
             kwargs["CreateBucketConfiguration"] = {
                 "LocationConstraint": LocationConstraint
@@ -558,9 +556,7 @@ def put_acl(
             "GrantWriteACP",
         ):
             if locals()[arg] is not None:
-                kwargs[arg] = str(
-                    locals()[arg]
-                )  # future lint: disable=blacklisted-function
+                kwargs[arg] = str(locals()[arg])
         conn.put_bucket_acl(Bucket=Bucket, **kwargs)
         return {"updated": True, "name": Bucket}
     except ClientError as e:

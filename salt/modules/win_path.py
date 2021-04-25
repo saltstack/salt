@@ -27,7 +27,7 @@ HIVE = "HKEY_LOCAL_MACHINE"
 KEY = "SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment"
 VNAME = "PATH"
 VTYPE = "REG_EXPAND_SZ"
-PATHSEP = str(os.pathsep)  # future lint: disable=blacklisted-function
+PATHSEP = str(os.pathsep)
 
 
 def __virtual__():
@@ -112,9 +112,7 @@ def exists(path):
 
 
 def _update_local_path(local_path):
-    os.environ["PATH"] = PATHSEP.join(
-        local_path
-    )  # future lint: disable=blacklisted-function
+    os.environ["PATH"] = PATHSEP.join(local_path)
 
 
 def add(path, index=None, **kwargs):

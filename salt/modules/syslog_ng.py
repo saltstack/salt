@@ -788,9 +788,7 @@ def _run_command_in_extended_path(syslog_ng_sbin_dir, command, params):
         # normalizes the paths to unicode to join them together, and then
         # converts back to a str type.
         env = {
-            str(
-                "PATH"
-            ): salt.utils.stringutils.to_str(  # future lint: disable=blacklisted-function
+            "PATH": salt.utils.stringutils.to_str(
                 os.pathsep.join(salt.utils.data.decode((orig_path, syslog_ng_sbin_dir)))
             )
         }

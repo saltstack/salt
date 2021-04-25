@@ -288,7 +288,7 @@ def application(environ, start_response):
         ret = salt.utils.json.dumps({"return": resp})
     except TypeError as exc:
         code = 500
-        ret = str(exc)  # future lint: disable=blacklisted-function
+        ret = str(exc)
 
     # Return the response
     start_response(H[code], get_headers(ret, {"Content-Type": "application/json"}))

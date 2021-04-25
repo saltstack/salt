@@ -61,9 +61,7 @@ def _list_tables(con):
 def _create_table(con, queue):
     with con:
         cur = con.cursor()
-        cmd = "CREATE TABLE {}(id INTEGER PRIMARY KEY, " "name TEXT UNIQUE)".format(
-            queue
-        )
+        cmd = "CREATE TABLE {}(id INTEGER PRIMARY KEY, name TEXT UNIQUE)".format(queue)
         log.debug("SQL Query: %s", cmd)
         cur.execute(cmd)
     return True
@@ -140,14 +138,12 @@ def insert(queue, items):
         cur = con.cursor()
         if isinstance(items, str):
             items = _quote_escape(items)
-            cmd = """INSERT INTO {}(name) VALUES('{}')""".format(queue, items)
+            cmd = "INSERT INTO {}(name) VALUES('{}')".format(queue, items)
             log.debug("SQL Query: %s", cmd)
             try:
                 cur.execute(cmd)
             except sqlite3.IntegrityError as esc:
-                return "Item already exists in this queue. " "sqlite error: {}".format(
-                    esc
-                )
+                return "Item already exists in this queue. sqlite error: {}".format(esc)
         if isinstance(items, list):
             items = [_quote_escape(el) for el in items]
             cmd = "INSERT INTO {}(name) VALUES(?)".format(queue)
@@ -166,16 +162,12 @@ def insert(queue, items):
         if isinstance(items, dict):
             items = salt.utils.json.dumps(items).replace('"', "'")
             items = _quote_escape(items)
-            cmd = """INSERT INTO {}(name) VALUES('{}')""".format(
-                queue, items
-            )  # future lint: disable=blacklisted-function
+            cmd = "INSERT INTO {}(name) VALUES('{}')".format(queue, items)
             log.debug("SQL Query: %s", cmd)
             try:
                 cur.execute(cmd)
             except sqlite3.IntegrityError as esc:
-                return "Item already exists in this queue. " "sqlite error: {}".format(
-                    esc
-                )
+                return "Item already exists in this queue. sqlite error: {}".format(esc)
     return True
 
 
@@ -188,7 +180,7 @@ def delete(queue, items):
         cur = con.cursor()
         if isinstance(items, str):
             items = _quote_escape(items)
-            cmd = """DELETE FROM {} WHERE name = '{}'""".format(queue, items)
+            cmd = "DELETE FROM {} WHERE name = '{}'".format(queue, items)
             log.debug("SQL Query: %s", cmd)
             cur.execute(cmd)
             return True
@@ -204,9 +196,7 @@ def delete(queue, items):
         if isinstance(items, dict):
             items = salt.utils.json.dumps(items).replace('"', "'")
             items = _quote_escape(items)
-            cmd = ("""DELETE FROM {} WHERE name = '{}'""").format(
-                queue, items
-            )  # future lint: disable=blacklisted-function
+            cmd = "DELETE FROM {} WHERE name = '{}'".format(queue, items)
             log.debug("SQL Query: %s", cmd)
             cur.execute(cmd)
             return True
@@ -222,7 +212,7 @@ def pop(queue, quantity=1, is_runner=False):
         try:
             quantity = int(quantity)
         except ValueError as exc:
-            error_txt = 'Quantity must be an integer or "all".\n' 'Error: "{}".'.format(
+            error_txt = 'Quantity must be an integer or "all".\nError: "{}".'.format(
                 exc
             )
             raise SaltInvocationError(error_txt)
@@ -237,7 +227,7 @@ def pop(queue, quantity=1, is_runner=False):
             items = [item[0] for item in result]
             itemlist = '","'.join(items)
             _quote_escape(itemlist)
-            del_cmd = """DELETE FROM {} WHERE name IN ("{}")""".format(queue, itemlist)
+            del_cmd = 'DELETE FROM {} WHERE name IN ("{}")'.format(queue, itemlist)
 
             log.debug("SQL Query: %s", del_cmd)
 

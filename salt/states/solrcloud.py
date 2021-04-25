@@ -155,8 +155,7 @@ def collection(name, options=None, **kwargs):
 
         ret["changes"] = {
             "old": None,
-            "new": "options="
-            + new_changes,  # future lint: disable=blacklisted-function
+            "new": "options=" + new_changes,
         }
 
     return ret

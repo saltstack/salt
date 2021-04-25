@@ -262,7 +262,7 @@ def _copy_function(module_name, name=None):
     if name is not None:
         # types.FunctionType requires a str for __name__ attribute, using a
         # unicode type will result in a TypeError.
-        name = str(name)  # future lint: disable=blacklisted-function
+        name = str(name)
     else:
         name = func.__name__
     return types.FunctionType(

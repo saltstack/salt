@@ -121,9 +121,7 @@ class CommandExecutionError(SaltException):
             try:
                 exc_str_prefix = str(message)
             except UnicodeDecodeError:
-                exc_str_prefix = salt.utils.stringutils.to_unicode(
-                    str(message)
-                )  # future lint: disable=blacklisted-function
+                exc_str_prefix = salt.utils.stringutils.to_unicode(str(message))
         self.error = exc_str_prefix
         self.info = info
         if self.info:
@@ -275,9 +273,7 @@ class SaltRenderError(SaltException):
             try:
                 exc_str = str(message)
             except UnicodeDecodeError:
-                exc_str = salt.utils.stringutils.to_unicode(
-                    str(message)
-                )  # future lint: disable=blacklisted-function
+                exc_str = salt.utils.stringutils.to_unicode(str(message))
         self.line_num = line_num
         self.buffer = buf
         self.context = ""
