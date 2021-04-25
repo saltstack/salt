@@ -67,9 +67,7 @@ class NestDisplay:
                 )
             except UnicodeDecodeError:
                 # msg contains binary data that can't be decoded
-                return str(fmt).format(  # future lint: disable=blacklisted-function
-                    indent, color, prefix, msg, endc, suffix
-                )
+                return str(fmt).format(indent, color, prefix, msg, endc, suffix)
 
     def display(self, ret, indent, prefix, out):
         """

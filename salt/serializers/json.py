@@ -31,7 +31,7 @@ def deserialize(stream_or_string, **options):
     """
 
     try:
-        if not isinstance(stream_or_string, (bytes, (str,))):
+        if not isinstance(stream_or_string, (bytes, str)):
             return salt.utils.json.load(stream_or_string, _json_module=_json, **options)
 
         if isinstance(stream_or_string, bytes):

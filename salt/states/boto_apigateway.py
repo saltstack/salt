@@ -865,9 +865,7 @@ class _Swagger:
                         "missing mandatory responses field in path item object"
                     )
                 for rescode, resobj in opobj.get("responses").items():
-                    if not self._is_http_error_rescode(
-                        str(rescode)
-                    ):  # future lint: disable=blacklisted-function
+                    if not self._is_http_error_rescode(str(rescode)):
                         continue
 
                     # only check for response code from 400-599
@@ -1874,7 +1872,7 @@ class _Swagger:
 
         if "responses" in method_data:
             for response, response_data in method_data["responses"].items():
-                httpStatus = str(response)  # future lint: disable=blacklisted-function
+                httpStatus = str(response)
                 method_response = self._parse_method_response(
                     method_name.lower(),
                     _Swagger.SwaggerMethodResponse(response_data),
