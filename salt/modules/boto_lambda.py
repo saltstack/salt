@@ -637,14 +637,12 @@ def add_permission(
         kwargs = {}
         for key in ("SourceArn", "SourceAccount", "Qualifier"):
             if locals()[key] is not None:
-                kwargs[key] = str(
-                    locals()[key]
-                )  # future lint: disable=blacklisted-function
+                kwargs[key] = str(locals()[key])
         conn.add_permission(
             FunctionName=FunctionName,
             StatementId=StatementId,
             Action=Action,
-            Principal=str(Principal),  # future lint: disable=blacklisted-function
+            Principal=str(Principal),
             **kwargs
         )
         return {"updated": True}

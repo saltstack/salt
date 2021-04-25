@@ -295,12 +295,12 @@ def rm_job(user, path, mask, cmd):
     lst = list_tab(user)
     ret = "absent"
     rm_ = None
-    for ind in range(len(lst["crons"])):
+    for ind, val in enumerate(lst["crons"]):
         if rm_ is not None:
             break
-        if path == lst["crons"][ind]["path"]:
-            if cmd == lst["crons"][ind]["cmd"]:
-                if mask == lst["crons"][ind]["mask"]:
+        if path == val["path"]:
+            if cmd == val["cmd"]:
+                if mask == val["mask"]:
                     rm_ = ind
     if rm_ is not None:
         lst["crons"].pop(rm_)

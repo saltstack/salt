@@ -164,7 +164,7 @@ def post_message(channel, message, username, api_url, hook):
         api_url=api_url,
         hook=hook,
         data="payload={}".format(salt.utils.json.dumps(parameters)),
-    )  # future lint: disable=blacklisted-function
+    )
 
     log.debug("result %s", result)
     return bool(result)

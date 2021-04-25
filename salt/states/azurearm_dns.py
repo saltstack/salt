@@ -584,10 +584,10 @@ def record_set_present(
                     local, remote = [
                         sorted(config) for config in (record, rec_set[record_str])
                     ]
-                    for idx in range(0, len(local)):  # pylint: disable=C0200
-                        for key in local[idx]:
-                            local_val = local[idx][key]
-                            remote_val = remote[idx].get(key)
+                    for val in local:
+                        for key in val:
+                            local_val = val[key]
+                            remote_val = val.get(key)
                             if isinstance(local_val, str):
                                 local_val = local_val.lower()
                             if isinstance(remote_val, str):

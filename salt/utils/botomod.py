@@ -171,10 +171,8 @@ def get_connection(
         conn = __utils__['boto.get_connection']('ec2', profile='custom_profile')
     """
 
-    # future lint: disable=blacklisted-function
     module = str(module or service)
     module, submodule = ("boto." + module).rsplit(".", 1)
-    # future lint: enable=blacklisted-function
 
     svc_mod = getattr(__import__(module, fromlist=[submodule]), submodule)
 

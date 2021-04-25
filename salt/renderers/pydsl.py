@@ -351,7 +351,7 @@ def render(template, saltenv="base", sls="", tmplpath=None, rendered_sls=None, *
     #       is compiled to.
 
     # __name__ can't be assigned a unicode
-    mod.__name__ = str(sls)  # future lint: disable=blacklisted-function
+    mod.__name__ = str(sls)
 
     # to workaround state.py's use of copy.deepcopy(chunk)
     mod.__deepcopy__ = lambda x: mod

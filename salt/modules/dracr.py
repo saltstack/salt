@@ -386,7 +386,7 @@ def list_users(host=None, admin_username=None, admin_password=None, module=None)
 
     for idx in range(1, 17):
         cmd = __execute_ret(
-            "getconfig -g " "cfgUserAdmin -i {}".format(idx),
+            "getconfig -g cfgUserAdmin -i {}".format(idx),
             host=host,
             admin_username=admin_username,
             admin_password=admin_password,

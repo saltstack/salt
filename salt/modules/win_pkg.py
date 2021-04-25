@@ -1000,7 +1000,7 @@ def refresh_db(**kwargs):
         )
 
     # Cache repo-ng locally
-    log.info("Fetching *.sls files from {}".format(repo_details.winrepo_source_dir))
+    log.info("Fetching *.sls files from %s", repo_details.winrepo_source_dir)
     try:
         __salt__["cp.cache_dir"](
             path=repo_details.winrepo_source_dir,
@@ -1310,7 +1310,7 @@ def _get_source_sum(source_hash, file_path, saltenv):
         items = source_hash.split("=", 1)
 
         if len(items) != 2:
-            invalid_hash_msg = ("{}, or it must be a supported protocol" ": {}").format(
+            invalid_hash_msg = "{}, or it must be a supported protocol" ": {}".format(
                 invalid_hash_msg, ", ".join(schemes)
             )
             raise SaltInvocationError(invalid_hash_msg)

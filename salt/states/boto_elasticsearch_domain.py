@@ -245,9 +245,7 @@ def present(
             AccessPolicies=AccessPolicies,
             SnapshotOptions=SnapshotOptions,
             AdvancedOptions=AdvancedOptions,
-            ElasticsearchVersion=str(
-                ElasticsearchVersion
-            ),  # future lint: disable=blacklisted-function
+            ElasticsearchVersion=str(ElasticsearchVersion),
             region=region,
             key=key,
             keyid=keyid,
@@ -275,15 +273,12 @@ def present(
     _status = __salt__["boto_elasticsearch_domain.status"](
         DomainName=DomainName, region=region, key=key, keyid=keyid, profile=profile
     )["domain"]
-    if _status.get("ElasticsearchVersion") != str(
-        ElasticsearchVersion
-    ):  # future lint: disable=blacklisted-function
+    if _status.get("ElasticsearchVersion") != str(ElasticsearchVersion):
         ret["result"] = False
         ret["comment"] = (
             "Failed to update domain: version cannot be modified "
             "from {} to {}.".format(
-                _status.get("ElasticsearchVersion"),
-                str(ElasticsearchVersion),  # future lint: disable=blacklisted-function
+                _status.get("ElasticsearchVersion"), str(ElasticsearchVersion),
             )
         )
         return ret

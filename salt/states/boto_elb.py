@@ -1414,7 +1414,7 @@ def _policy_cname(policy_dict):
     canonical_policy_repr = str(sorted(list(policy.items()), key=lambda x: str(x[0])))
     policy_hash = hashlib.md5(
         salt.utils.stringutils.to_bytes(str(canonical_policy_repr))
-    ).hexdigest()  # future lint: disable=blacklisted-function
+    ).hexdigest()
     if policy_type.endswith("Type"):
         policy_type = policy_type[:-4]
     return "{}-{}-{}".format(policy_type, policy_name, policy_hash)

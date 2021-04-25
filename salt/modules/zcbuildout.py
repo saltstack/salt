@@ -157,7 +157,7 @@ class _Logger:
     def clear(self):
         for i in self._by_level:
             self._by_level[i] = []
-        for i in range(len(self._msgs)):
+        for i in self._msgs[:]:
             self._msgs.pop()
 
     def get_logs(self, level):

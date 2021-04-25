@@ -153,13 +153,13 @@ def blkio_weight_device(val, **kwargs):  # pylint: disable=unused-argument
     dictionaries in the format [{'Path': path, 'Weight': weight}]
     """
     val = helpers.map_vals(val, "Path", "Weight")
-    for idx in range(len(val)):  # pylint: disable=C0200
+    for item in val:
         try:
-            val[idx]["Weight"] = int(val[idx]["Weight"])
+            item["Weight"] = int(item["Weight"])
         except (TypeError, ValueError):
             raise SaltInvocationError(
                 "Weight '{Weight}' for path '{Path}' is not an "
-                "integer".format(**val[idx])
+                "integer".format(**item)
             )
     return val
 
@@ -359,9 +359,9 @@ def port_bindings(val, **kwargs):
             except AttributeError:
                 val = helpers.split(str(val))
 
-        for idx in range(len(val)):  # pylint: disable=C0200
-            if not isinstance(val[idx], str):
-                val[idx] = str(val[idx])
+        for idx, item in enumerate(val):
+            if not isinstance(item, str):
+                val[idx] = str(item)
 
         def _format_port(port_num, proto):
             return str(port_num) + "/udp" if proto.lower() == "udp" else port_num
@@ -416,8 +416,8 @@ def port_bindings(val, **kwargs):
                 cport_list = list(range(cport_start, cport_end + 1))
                 hport_list = list(range(hport_start, hport_end + 1))
                 bind_vals = [
-                    (_format_port(cport_list[x], proto), hport_list[x])
-                    for x in range(len(cport_list))
+                    (_format_port(item, proto), hport_list[ind])
+                    for ind, item in enumerate(cport_list)
                 ]
             elif num_bind_parts == 3:
                 host_ip, host_port = bind_parts[0:2]
@@ -477,8 +477,8 @@ def port_bindings(val, **kwargs):
                         bindings[cport].append(bind_def)
                     else:
                         bindings[cport] = [bindings[cport], bind_def]
-                    for idx in range(len(bindings[cport])):
-                        if bindings[cport][idx] is None:
+                    for idx, val in enumerate(bindings[cport]):
+                        if val is None:
                             # Now that we are adding multiple
                             # bindings
                             try:
@@ -612,15 +612,15 @@ def tty(val, **kwargs):  # pylint: disable=unused-argument
 
 def ulimits(val, **kwargs):  # pylint: disable=unused-argument
     val = helpers.translate_stringlist(val)
-    for idx in range(len(val)):  # pylint: disable=C0200
-        if not isinstance(val[idx], dict):
+    for idx, item in enumerate(val):
+        if not isinstance(item, dict):
             try:
-                ulimit_name, limits = helpers.split(val[idx], "=", 1)
+                ulimit_name, limits = helpers.split(item, "=", 1)
                 comps = helpers.split(limits, ":", 1)
             except (AttributeError, ValueError):
                 raise SaltInvocationError(
                     "Ulimit definition '{}' is not in the format "
-                    "type=soft_limit[:hard_limit]".format(val[idx])
+                    "type=soft_limit[:hard_limit]".format(item)
                 )
             if len(comps) == 1:
                 comps *= 2
@@ -633,7 +633,7 @@ def ulimits(val, **kwargs):  # pylint: disable=unused-argument
                 }
             except (TypeError, ValueError):
                 raise SaltInvocationError(
-                    "Limit '{}' contains non-numeric value(s)".format(val[idx])
+                    "Limit '{}' contains non-numeric value(s)".format(item)
                 )
     return val
 

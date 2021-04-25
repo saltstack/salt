@@ -9,9 +9,9 @@ def combine_comments(comments):
     single line of text containing all of the comments.
     """
     if isinstance(comments, list):
-        for idx in range(len(comments)):  # pylint: disable=C0200
-            if not isinstance(comments[idx], str):
-                comments[idx] = str(comments[idx])
+        for idx, val in enumerate(comments):
+            if not isinstance(val, str):
+                comments[idx] = str(val)
     else:
         if not isinstance(comments, str):
             comments = [str(comments)]
@@ -25,7 +25,7 @@ def strip_uri(repo):
     Remove the trailing slash from the URI in a repo definition
     """
     splits = repo.split()
-    for idx in range(len(splits)):  # pylint: disable=C0200
-        if any(splits[idx].startswith(x) for x in ("http://", "https://", "ftp://")):
-            splits[idx] = splits[idx].rstrip("/")
+    for idx, val in enumerate(splits):
+        if any(val.startswith(x) for x in ("http://", "https://", "ftp://")):
+            splits[idx] = val.rstrip("/")
     return " ".join(splits)

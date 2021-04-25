@@ -2363,16 +2363,12 @@ class Events:
             ) as event:
                 stream = event.iter_events(full=True, auto_reconnect=True)
 
-                yield "retry: 400\n"  # future lint: disable=blacklisted-function
+                yield "retry: 400\n"
 
                 while True:
                     data = next(stream)
-                    yield "tag: {}\n".format(
-                        data.get("tag", "")
-                    )  # future lint: disable=blacklisted-function
-                    yield "data: {}\n\n".format(
-                        salt.utils.json.dumps(data)
-                    )  # future lint: disable=blacklisted-function
+                    yield "tag: {}\n".format(data.get("tag", ""))
+                    yield "data: {}\n\n".format(salt.utils.json.dumps(data))
 
         return listen()
 
@@ -2557,9 +2553,7 @@ class WebsocketEndpoint:
                                 SaltInfo.process(data, salt_token, self.opts)
                             else:
                                 handler.send(
-                                    "data: {}\n\n".format(
-                                        salt.utils.json.dumps(data)
-                                    ),  # future lint: disable=blacklisted-function
+                                    "data: {}\n\n".format(salt.utils.json.dumps(data)),
                                     False,
                                 )
                         except UnicodeDecodeError:

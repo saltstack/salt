@@ -61,10 +61,7 @@ def base64_decodestring(instr):
     Decode a base64-encoded byte-like object using the "modern" Python interface.
     """
     bvalue = salt.utils.stringutils.to_bytes(instr)
-
-    # Handle PY3
     decoded = base64.decodebytes(bvalue)
-
     try:
         return salt.utils.stringutils.to_unicode(
             decoded, encoding="utf8" if salt.utils.platform.is_windows() else None

@@ -740,15 +740,15 @@ def rm_special(user, cmd, special=None, identifier=None):
     lst = list_tab(user)
     ret = "absent"
     rm_ = None
-    for ind in range(len(lst["special"])):
+    for ind, val in enumerate(lst["special"]):
         if rm_ is not None:
             break
-        if _cron_matched(lst["special"][ind], cmd, identifier=identifier):
+        if _cron_matched(val, cmd, identifier=identifier):
             if special is None:
                 # No special param was specified
                 rm_ = ind
             else:
-                if lst["special"][ind]["spec"] == special:
+                if val["spec"] == special:
                     rm_ = ind
     if rm_ is not None:
         lst["special"].pop(rm_)
@@ -784,10 +784,10 @@ def rm_job(
     lst = list_tab(user)
     ret = "absent"
     rm_ = None
-    for ind in range(len(lst["crons"])):
+    for ind, val in enumerate(lst["crons"]):
         if rm_ is not None:
             break
-        if _cron_matched(lst["crons"][ind], cmd, identifier=identifier):
+        if _cron_matched(val, cmd, identifier=identifier):
             if not any(
                 [x is not None for x in (minute, hour, daymonth, month, dayweek)]
             ):
@@ -795,7 +795,7 @@ def rm_job(
                 rm_ = ind
             else:
                 if _date_time_match(
-                    lst["crons"][ind],
+                    val,
                     minute=minute,
                     hour=hour,
                     daymonth=daymonth,
@@ -859,8 +859,8 @@ def rm_env(user, name):
     lst = list_tab(user)
     ret = "absent"
     rm_ = None
-    for ind in range(len(lst["env"])):
-        if name == lst["env"][ind]["name"]:
+    for ind, val in enumerate(lst["env"]):
+        if name == val["name"]:
             rm_ = ind
     if rm_ is not None:
         lst["env"].pop(rm_)

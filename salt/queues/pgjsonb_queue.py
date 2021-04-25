@@ -118,7 +118,7 @@ def _list_tables(cur):
 
 
 def _create_table(cur, queue):
-    cmd = "CREATE TABLE {}(id SERIAL PRIMARY KEY, " "data jsonb NOT NULL)".format(queue)
+    cmd = "CREATE TABLE {}(id SERIAL PRIMARY KEY, data jsonb NOT NULL)".format(queue)
     log.debug("SQL Query: %s", cmd)
     cur.execute(cmd)
     return True
@@ -192,9 +192,7 @@ def insert(queue, items):
     with _conn(commit=True) as cur:
         if isinstance(items, dict):
             items = salt.utils.json.dumps(items)
-            cmd = """INSERT INTO {}(data) VALUES('{}')""".format(
-                queue, items
-            )  # future lint: disable=blacklisted-function
+            cmd = "INSERT INTO {}(data) VALUES('{}')".format(queue, items)
             log.debug("SQL Query: %s", cmd)
             try:
                 cur.execute(cmd)
@@ -205,9 +203,7 @@ def insert(queue, items):
                 )
         if isinstance(items, list):
             items = [(salt.utils.json.dumps(el),) for el in items]
-            cmd = "INSERT INTO {}(data) VALUES (%s)".format(
-                queue
-            )  # future lint: disable=blacklisted-function
+            cmd = "INSERT INTO {}(data) VALUES (%s)".format(queue)
             log.debug("SQL Query: %s", cmd)
             try:
                 cur.executemany(cmd, items)
@@ -225,9 +221,7 @@ def delete(queue, items):
     """
     with _conn(commit=True) as cur:
         if isinstance(items, dict):
-            cmd = str(
-                """DELETE FROM {0} WHERE data = '{1}'"""
-            ).format(  # future lint: disable=blacklisted-function
+            cmd = "DELETE FROM {} WHERE data = '{}'".format(
                 queue, salt.utils.json.dumps(items)
             )
             log.debug("SQL Query: %s", cmd)
@@ -250,7 +244,7 @@ def pop(queue, quantity=1, is_runner=False):
         try:
             quantity = int(quantity)
         except ValueError as exc:
-            error_txt = 'Quantity must be an integer or "all".\n' 'Error: "{}".'.format(
+            error_txt = 'Quantity must be an integer or "all".\nError: "{}".'.format(
                 exc
             )
             raise SaltInvocationError(error_txt)
@@ -264,7 +258,7 @@ def pop(queue, quantity=1, is_runner=False):
             ids = [str(item[0]) for item in result]
             items = [item[1] for item in result]
             idlist = "','".join(ids)
-            del_cmd = """DELETE FROM {} WHERE id IN ('{}');""".format(queue, idlist)
+            del_cmd = "DELETE FROM {} WHERE id IN ('{}');".format(queue, idlist)
 
             log.debug("SQL Query: %s", del_cmd)
 

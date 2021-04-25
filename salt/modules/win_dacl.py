@@ -243,7 +243,7 @@ class daclConstants:
                 return m
         except KeyError:
             raise CommandExecutionError(
-                ('No right "{}".  It should be one of the following:  {}').format(
+                'No right "{}".  It should be one of the following:  {}'.format(
                     m, ", ".join(self.rights[t])
                 )
             )
@@ -282,7 +282,7 @@ class daclConstants:
             return self.validAceTypes[t]["TEXT"]
         except KeyError:
             raise CommandExecutionError(
-                ('No ACE type "{}".  It should be one of the following:  {}').format(
+                'No ACE type "{}".  It should be one of the following:  {}'.format(
                     t, ", ".join(self.validAceTypes)
                 )
             )
@@ -295,9 +295,9 @@ class daclConstants:
             return self.validPropagations[t][p]["BITS"]
         except KeyError:
             raise CommandExecutionError(
-                (
-                    'No propagation type of "{}".  It should be one of the following:  {}'
-                ).format(p, ", ".join(self.validPropagations[t]))
+                'No propagation type of "{}".  It should be one of the following:  {}'.format(
+                    p, ", ".join(self.validPropagations[t])
+                )
             )
 
     def getPropagationText(self, t, p):
@@ -308,9 +308,9 @@ class daclConstants:
             return self.validPropagations[t][p]["TEXT"]
         except KeyError:
             raise CommandExecutionError(
-                (
-                    'No propagation type of "{}".  It should be one of the following:  {}'
-                ).format(p, ", ".join(self.validPropagations[t]))
+                'No propagation type of "{}".  It should be one of the following:  {}'.format(
+                    p, ", ".join(self.validPropagations[t])
+                )
             )
 
     def processPath(self, path, objectType):
@@ -496,7 +496,7 @@ def add_ace(path, objectType, user, permission, acetype, propagation):
                     None,
                 )
                 acesAdded.append(
-                    ("{} {} {} on {}").format(
+                    "{} {} {} on {}".format(
                         user,
                         dc.getAceTypeText(acetype),
                         dc.getPermissionText(objectTypeBit, permission),
@@ -646,7 +646,7 @@ def _ace_to_text(ace, objectType):
         if dc.validPropagations[objectType][x]["BITS"] == tProps:
             tProps = dc.validPropagations[objectType][x]["TEXT"]
             break
-    return ("{} {} {} on {} {}").format(userSid, tAceType, tPerm, tProps, tInherited)
+    return "{} {} {} on {} {}".format(userSid, tAceType, tPerm, tProps, tInherited)
 
 
 def _set_dacl_inheritance(path, objectType, inheritance=True, copy=True, clear=False):

@@ -380,9 +380,7 @@ def do(cmdline, runas=None, env=None):
     # NOTE: Env vars (and their values) need to be str type on both Python 2
     # and 3. The code below first normalizes all path components to unicode to
     # stitch them together, and then converts the result back to a str type.
-    env[
-        "PATH"
-    ] = salt.utils.stringutils.to_str(  # future lint: disable=blacklisted-function
+    env["PATH"] = salt.utils.stringutils.to_str(
         os.pathsep.join(
             (
                 salt.utils.path.join(path, "shims"),

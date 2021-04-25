@@ -109,7 +109,7 @@ def request(
 
     log.info("Requesting Venafi certificate")
     if zone is None:
-        log.error(msg="Missing zone parameter")
+        log.error("Missing zone parameter")
         sys.exit(1)
 
     if key_password is not None:

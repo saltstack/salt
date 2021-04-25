@@ -169,9 +169,9 @@ def translate_command(val):
     if isinstance(val, str):
         return val
     elif isinstance(val, list):
-        for idx in range(len(val)):  # pylint: disable=C0200
-            if not isinstance(val[idx], str):
-                val[idx] = str(val[idx])
+        for idx, item in enumerate(val):
+            if not isinstance(item, str):
+                val[idx] = str(item)
     else:
         # Make sure we have a string
         val = str(val)
@@ -204,9 +204,9 @@ def translate_stringlist(val):
             val = split(val)
         except AttributeError:
             val = split(str(val))
-    for idx in range(len(val)):  # pylint: disable=C0200
-        if not isinstance(val[idx], str):
-            val[idx] = str(val[idx])
+    for idx, item in enumerate(val):
+        if not isinstance(item, str):
+            val[idx] = str(item)
     return val
 
 
@@ -216,31 +216,28 @@ def translate_device_rates(val, numeric_rate=True):
     dictionaries in the format [{'Path': path, 'Rate': rate}]
     """
     val = map_vals(val, "Path", "Rate")
-    for idx in range(len(val)):  # pylint: disable=C0200
+    for item in val:
         try:
-            is_abs = os.path.isabs(val[idx]["Path"])
+            is_abs = os.path.isabs(item["Path"])
         except AttributeError:
             is_abs = False
         if not is_abs:
-            raise SaltInvocationError(
-                "Path '{Path}' is not absolute".format(**val[idx])
-            )
+            raise SaltInvocationError("Path '{Path}' is not absolute".format(**item))
 
         # Attempt to convert to an integer. Will fail if rate was specified as
         # a shorthand (e.g. 1mb), this is OK as we will check to make sure the
         # value is an integer below if that is what is required.
         try:
-            val[idx]["Rate"] = int(val[idx]["Rate"])
+            item["Rate"] = int(item["Rate"])
         except (TypeError, ValueError):
             pass
 
         if numeric_rate:
             try:
-                val[idx]["Rate"] = int(val[idx]["Rate"])
+                item["Rate"] = int(item["Rate"])
             except ValueError:
                 raise SaltInvocationError(
-                    "Rate '{Rate}' for path '{Path}' is "
-                    "non-numeric".format(**val[idx])
+                    "Rate '{Rate}' for path '{Path}' is " "non-numeric".format(**item)
                 )
     return val
 

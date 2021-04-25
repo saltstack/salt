@@ -110,9 +110,7 @@ class VirtKey:
         Prepare the master to expect a signing request
         """
         with salt.utils.files.fopen(self.path, "w+") as fp_:
-            fp_.write(
-                str(int(time.time()))
-            )  # future lint: disable=blacklisted-function
+            fp_.write(str(int(time.time())))
         return True
 
     def void(self):

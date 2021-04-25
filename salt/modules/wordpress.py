@@ -41,7 +41,7 @@ def list_plugins(path, user):
         salt '*' wordpress.list_plugins /var/www/html apache
     """
     ret = []
-    resp = __salt__["cmd.shell"](("wp --path={} plugin list").format(path), runas=user)
+    resp = __salt__["cmd.shell"]("wp --path={} plugin list".format(path), runas=user)
     for line in resp.split("\n")[1:]:
         ret.append(line.split("\t"))
     return [plugin.__dict__ for plugin in map(_get_plugins, ret)]
@@ -68,7 +68,7 @@ def show_plugin(name, path, user):
     """
     ret = {"name": name}
     resp = __salt__["cmd.shell"](
-        ("wp --path={} plugin status {}").format(path, name), runas=user
+        "wp --path={} plugin status {}".format(path, name), runas=user
     ).split("\n")
     for line in resp:
         if "Status" in line:
@@ -102,7 +102,7 @@ def activate(name, path, user):
         # already active
         return None
     resp = __salt__["cmd.shell"](
-        ("wp --path={} plugin activate {}").format(path, name), runas=user
+        "wp --path={} plugin activate {}".format(path, name), runas=user
     )
     if "Success" in resp:
         return True
@@ -135,7 +135,7 @@ def deactivate(name, path, user):
         # already inactive
         return None
     resp = __salt__["cmd.shell"](
-        ("wp --path={} plugin deactivate {}").format(path, name), runas=user
+        "wp --path={} plugin deactivate {}".format(path, name), runas=user
     )
     if "Success" in resp:
         return True
@@ -161,7 +161,7 @@ def is_installed(path, user=None):
         salt '*' wordpress.is_installed /var/www/html apache
     """
     retcode = __salt__["cmd.retcode"](
-        ("wp --path={} core is-installed").format(path), runas=user
+        "wp --path={} core is-installed".format(path), runas=user
     )
     if retcode == 0:
         return True

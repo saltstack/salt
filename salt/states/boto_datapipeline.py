@@ -411,7 +411,7 @@ def _diff(old_pipeline_definition, new_pipeline_definition):
             salt.utils.json.dumps(new_pipeline_definition, indent=4).splitlines(True),
         )
     )
-    return "".join(diff)  # future lint: disable=blacklisted-function
+    return "".join(diff)
 
 
 def _standardize(structure):

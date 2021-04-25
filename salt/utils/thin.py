@@ -643,9 +643,7 @@ def gen_thin(
                     overwrite = fh_.read() != salt.version.__version__
                 if overwrite is False and os.path.isfile(pythinver):
                     with salt.utils.files.fopen(pythinver) as fh_:
-                        overwrite = fh_.read() != str(
-                            sys.version_info[0]
-                        )  # future lint: disable=blacklisted-function
+                        overwrite = fh_.read() != str(sys.version_info[0])
             else:
                 overwrite = True
 
@@ -747,9 +745,7 @@ def gen_thin(
     with salt.utils.files.fopen(thinver, "w+") as fp_:
         fp_.write(salt.version.__version__)
     with salt.utils.files.fopen(pythinver, "w+") as fp_:
-        fp_.write(
-            str(sys.version_info.major)
-        )  # future lint: disable=blacklisted-function
+        fp_.write(str(sys.version_info.major))
     with salt.utils.files.fopen(code_checksum, "w+") as fp_:
         fp_.write(digest_collector.digest())
     os.chdir(os.path.dirname(thinver))
@@ -830,9 +826,7 @@ def gen_min(
                     overwrite = fh_.read() != salt.version.__version__
                 if overwrite is False and os.path.isfile(pyminver):
                     with salt.utils.files.fopen(pyminver) as fh_:
-                        overwrite = fh_.read() != str(
-                            sys.version_info[0]
-                        )  # future lint: disable=blacklisted-function
+                        overwrite = fh_.read() != str(sys.version_info[0])
             else:
                 overwrite = True
 
@@ -1016,7 +1010,7 @@ def gen_min(
     with salt.utils.files.fopen(minver, "w+") as fp_:
         fp_.write(salt.version.__version__)
     with salt.utils.files.fopen(pyminver, "w+") as fp_:
-        fp_.write(str(sys.version_info[0]))  # future lint: disable=blacklisted-function
+        fp_.write(str(sys.version_info[0]))
     os.chdir(os.path.dirname(minver))
     tfp.add("version")
     tfp.add(".min-gen-py-version")
