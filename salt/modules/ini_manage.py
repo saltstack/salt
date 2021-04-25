@@ -388,12 +388,14 @@ def get_ini(file_name, separator="=", encoding=None):
 
 
 class _Section(OrderedDict):
-    def __init__(self, name, inicontents="", separator="=", commenter="#"):
+    def __init__(self, name, inicontents="", separator="=", commenter="#", no_spaces=False):
         super().__init__(self)
         self.name = name
         self.inicontents = inicontents
         self.sep = separator
         self.com = commenter
+        if not no_spaces = 
+            self.sep = ' ' + self.sep + ' '
 
         opt_regx_prefix = r"(\s*)(.+?)\s*"
         opt_regx_suffix = r"\s*(.*)\s*"
@@ -517,11 +519,10 @@ class _Section(OrderedDict):
             elif isinstance(value, _Section):
                 sections_dict.update({name: value})
             # Key / Value pairs
-            # Adds spaces between the separator
             else:
                 yield "{}{}{}{}".format(
                     name,
-                    f" {self.sep} " if self.sep != " " else self.sep,
+                    self.sep,
                     value,
                     os.linesep,
                 )
