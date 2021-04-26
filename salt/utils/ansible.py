@@ -25,6 +25,10 @@ def targets(inventory="/etc/ansible/hosts", **kwargs):
     """
     if not os.path.isfile(inventory):
         raise CommandExecutionError("Inventory file not found: {}".format(inventory))
+    if not os.path.isabs(inventory):
+        raise CommandExecutionError(
+            "Path to inventory file must be an absolute path".format(inventory)
+        )
 
     extra_cmd = []
     if "export" in kwargs:
@@ -37,4 +41,9 @@ def targets(inventory="/etc/ansible/hosts", **kwargs):
     if kwargs.get("yaml", False):
         return salt.utils.stringutils.to_str(inv)
     else:
-        return salt.utils.json.loads(salt.utils.stringutils.to_str(inv))
+        try:
+            return salt.utils.json.loads(salt.utils.stringutils.to_str(inv))
+        except ValueError:
+            raise CommandExecutionError(
+                "Error processing the inventory: {}".format(inv)
+            )
