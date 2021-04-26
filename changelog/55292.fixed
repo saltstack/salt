@@ -1,0 +1,1 @@
+Fix base64 encoding/decoding of Secrets in Kubernetes module
