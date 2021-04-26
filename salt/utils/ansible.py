@@ -26,9 +26,7 @@ def targets(inventory="/etc/ansible/hosts", **kwargs):
     if not os.path.isfile(inventory):
         raise CommandExecutionError("Inventory file not found: {}".format(inventory))
     if not os.path.isabs(inventory):
-        raise CommandExecutionError(
-            "Path to inventory file must be an absolute path".format(inventory)
-        )
+        raise CommandExecutionError("Path to inventory file must be an absolute path")
 
     extra_cmd = []
     if "export" in kwargs:
