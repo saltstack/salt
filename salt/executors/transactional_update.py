@@ -5,6 +5,8 @@ Transactional executor module
 
 """
 
+import os
+
 import salt.utils.path
 
 # Functions that are mapped into an equivalent one in
@@ -98,6 +100,8 @@ def execute(opts, data, func, args, kwargs):
        add_delegated_functions: [file.copy]
 
     """
+    inside_transaction = os.environ.get("TRANSACTIONAL_UPDATE")
+
     fun = data["fun"]
     module, _ = fun.split(".")
 
@@ -114,11 +118,13 @@ def execute(opts, data, func, args, kwargs):
         delegated_modules |= set(opts.get("add_delegated_modules", []))
         delegated_functions |= set(opts.get("add_delegated_functions", []))
 
-    if fun in DELEGATION_MAP:
+    if fun in DELEGATION_MAP and not inside_transaction:
         result = __executors__["direct_call.execute"](
             opts, data, __salt__[DELEGATION_MAP[fun]], args, kwargs
         )
-    elif module in delegated_modules or fun in delegated_functions:
+    elif (
+        module in delegated_modules or fun in delegated_functions
+    ) and not inside_transaction:
         result = __salt__["transactional_update.call"](fun, *args, **kwargs)
     else:
         result = __executors__["direct_call.execute"](opts, data, func, args, kwargs)
