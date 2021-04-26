@@ -728,7 +728,10 @@ def show_secret(name, namespace="default", decode=False, **kwargs):
         if api_response.data and (decode or decode == "True"):
             for key in api_response.data:
                 value = api_response.data[key]
-                api_response.data[key] = base64.b64decode(value).decode("utf-8")
+                if sys.version_info < (3, 5):
+                    api_response.data[key] = base64.b64decode(value)
+                else:
+                    api_response.data[key] = base64.b64decode(value).decode("utf-8")
 
         return api_response.to_dict()
     except (ApiException, HTTPError) as exc:
@@ -1123,7 +1126,10 @@ def create_secret(
 
     # encode the secrets using base64 as required by kubernetes
     for key in data:
-        data[key] = base64.b64encode(data[key].encode("utf-8"))
+        if sys.version_info < (3, 5):
+            data[key] = base64.b64encode(data[key])
+        else:
+            data[key] = base64.b64encode(data[key].encode("utf-8"))
 
     body = kubernetes.client.V1Secret(
         metadata=__dict_to_object_meta(name, namespace, {}), data=data
@@ -1351,7 +1357,10 @@ def replace_secret(
 
     # encode the secrets using base64 as required by kubernetes
     for key in data:
-        data[key] = base64.b64encode(data[key].encode("utf-8"))
+        if sys.version_info < (3, 5):
+            data[key] = base64.b64encode(data[key])
+        else:
+            data[key] = base64.b64encode(data[key].encode("utf-8"))
 
     body = kubernetes.client.V1Secret(
         metadata=__dict_to_object_meta(name, namespace, {}), data=data
