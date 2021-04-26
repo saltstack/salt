@@ -4,10 +4,6 @@ import types
 
 USE_IMPORTLIB_METADATA_STDLIB = USE_IMPORTLIB_METADATA = USE_PKG_RESOURCES = False
 
-log = logging.getLogger(__name__)
-
-log.debug(f"DGM entrypoints sys.version_info '{sys.version_info}'")
-print(f"DGM entrypoints sys.version_info '{sys.version_info}'")
 
 if sys.version_info >= (3, 10):
     # Python 3.10 will include a fix in importlib.metadata which allows us to
@@ -22,63 +18,19 @@ else:
         try:
             import importlib_metadata
 
-            print(f"DGM importlib_metadata dir '{dir(importlib_metadata)}'")
-
-            dgm_importlib_metadata_version = importlib_metadata.version(
-                "importlib_metadata"
-            )
-            print(
-                f"DGM entrypoints sys.version_info '{sys.version_info}', dgm_importlib_metadata_version '{dgm_importlib_metadata_version}' "
-            )
-
-            raw_metadata_versions = importlib_metadata.version("importlib_metadata")
-
-            if raw_metadata_versions:
-                print(
-                    f"DGM entrypoints have valid raw_metadata_versions '{raw_metadata_versions}'"
-                )
-                importlib_metadata_version = [
-                    int(part)
-                    for part in raw_metadata_versions.split(".")
-                    if part.isdigit()
-                ]
-            else:
-                importlib_metadata_version = "0.0.0"
-                print(
-                    f"DGM entrypoints have invalid raw_metadata_versions '{raw_metadata_versions}', setting importlib_metadata_version '{importlib_metadata_version}'"
-                )
-
-            print(
-                f"DGM entrypoints importlib_metadata_version, value is '{importlib_metadata_version}'"
-            )
-
+            importlib_metadata_version = [
+                int(part)
+                for part in importlib_metadata.version("importlib_metadata").split(".")
+                if part.isdigit()
+            ]
             if tuple(importlib_metadata_version) >= (3, 3, 0):
                 # Version 3.3.0 of importlib_metadata includes a fix which allows us to
                 # get the distribution of a loaded entry-point
                 USE_IMPORTLIB_METADATA = True
-                print(
-                    f"DGM entrypoints setting USE_IMPORTLIB_METADATA '{USE_IMPORTLIB_METADATA}'"
-                )
-
-            ###            importlib_metadata_version = [
-            ###                int(part)
-            ###                for part in importlib_metadata.version("importlib_metadata").split(".")
-            ###                if part.isdigit()
-            ###            ]
-            ###            if tuple(importlib_metadata_version) >= (3, 3, 0):
-            ###                # Version 3.3.0 of importlib_metadata includes a fix which allows us to
-            ###                # get the distribution of a loaded entry-point
-            ###                USE_IMPORTLIB_METADATA = True
-
-            print(
-                f"DGM entrypoints exiting with USE_IMPORTLIB_METADATA '{USE_IMPORTLIB_METADATA}'"
-            )
 
         except ImportError as ierr:
             # We don't have importlib_metadata but USE_IMPORTLIB_METADATA is set to false by default
-            print("DGM entrypoints ImportError no importlib_metadata '{}'".format(ierr))
-
-##DGM            pass
+            pass
 
 if not USE_IMPORTLIB_METADATA_STDLIB and not USE_IMPORTLIB_METADATA:
     # Try to use pkg_resources
@@ -91,7 +43,7 @@ if not USE_IMPORTLIB_METADATA_STDLIB and not USE_IMPORTLIB_METADATA:
         pass
 
 
-## DGM log = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 
 def iter_entry_points(group, name=None):
