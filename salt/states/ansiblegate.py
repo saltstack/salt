@@ -184,7 +184,7 @@ def playbooks(name, rundir=None, git_repo=None, git_kwargs=None, ansible_kwargs=
         checks = __salt__["ansible.playbooks"](
             name, rundir=rundir, check=True, diff=True, **ansible_kwargs
         )
-        if "stats" not in results:
+        if "stats" not in checks:
             ret["comment"] = checks.get("stderr", checks)
             ret["result"] = False
             ret["changes"] = {}
