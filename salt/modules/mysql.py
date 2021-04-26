@@ -1110,7 +1110,15 @@ def alter_db(name, character_set=None, collate=None, **connection_args):
         collate or existing.get("collate"),
     )
     args = {}
-    _execute(cur, qry, args)
+    try:
+        if _execute(cur, qry, args):
+            log.info("DB '%s' altered", name)
+            return True
+    except MySQLdb.OperationalError as exc:
+        err = "MySQL Error {}: {}".format(*exc.args)
+        __context__["mysql.error"] = err
+        log.error(err)
+    return False
 
 
 def db_get(name, **connection_args):
@@ -1134,7 +1142,7 @@ def db_get(name, **connection_args):
         "INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME=%(dbname)s;"
     )
     args = {"dbname": name}
-    _execute(cur, qry, args)
+    ret = _execute(cur, qry, args)
     if cur.rowcount:
         rows = cur.fetchall()
         return {"character_set": rows[0][0], "collate": rows[0][1]}
@@ -2374,6 +2382,7 @@ def grant_exists(
         if (
             salt.utils.versions.version_cmp(server_version, "8.0") >= 0
             and "MariaDB" not in server_version
+            and database == "*.*"
         ):
             grant = ",".join([i for i in __all_privileges__])
         else:
