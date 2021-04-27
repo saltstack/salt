@@ -77,7 +77,6 @@ def mysql_container(request, salt_call_cli, mysql_port):
         ret = salt_call_cli.run(
             "state.single", "docker_image.present", name=mysql_name, tag=mysql_version
         )
-        log.debug("=== ret %s ===", ret.json)
         assert ret.exitcode == 0
         assert ret.json
         state_run = next(iter(ret.json.values()))
@@ -569,7 +568,6 @@ def test_plugin_add_status_remove(salt_call_cli, mysql_container):
         connection_db="mysql",
         connection_port=mysql_container.mysql_port,
     )
-    log.debug("=== ret.json %s ===", ret.json)
     assert ret.json
 
     ret = salt_call_cli.run(
@@ -581,7 +579,6 @@ def test_plugin_add_status_remove(salt_call_cli, mysql_container):
         connection_db="mysql",
         connection_port=mysql_container.mysql_port,
     )
-    log.debug("=== ret.json %s ===", ret.json)
     assert ret.json
     assert "ACTIVE" == ret.json
 
