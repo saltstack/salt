@@ -15,6 +15,10 @@ docker = pytest.importorskip("docker")
 
 log = logging.getLogger(__name__)
 
+pytestmark = [
+    pytest.mark.skip_if_binaries_missing("dockerd"),
+]
+
 
 @attr.s(kw_only=True, slots=True)
 class MySQLImage:
