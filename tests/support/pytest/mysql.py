@@ -106,7 +106,7 @@ def mysql_container(request, salt_factories, salt_call_cli):
     )
     with container.started():
         authenticated = False
-        login_attempts = 3
+        login_attempts = 6
         while login_attempts:
             login_attempts -= 1
             # Make sure "MYSQL" is ready
@@ -119,7 +119,7 @@ def mysql_container(request, salt_factories, salt_call_cli):
             if authenticated:
                 break
 
-            time.sleep(1)
+            time.sleep(2)
 
         if authenticated:
             yield combo
