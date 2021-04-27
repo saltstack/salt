@@ -43,11 +43,6 @@ def vault_port():
     return get_unused_localhost_port()
 
 
-@pytest.fixture(scope="session")
-def mysql_port():
-    return get_unused_localhost_port()
-
-
 @attr.s(slots=True, frozen=True)
 class ReactorEvent:
     sls_path = attr.ib()
