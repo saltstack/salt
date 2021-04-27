@@ -76,6 +76,12 @@ def reactor_event(tmp_path_factory):
 
 
 @pytest.fixture(scope="session")
+def master_id():
+    master_id = random_string("master-")
+    yield master_id
+
+
+@pytest.fixture(scope="session")
 def salt_master_factory(
     request,
     salt_factories,
@@ -89,8 +95,8 @@ def salt_master_factory(
     sdb_etcd_port,
     vault_port,
     reactor_event,
+    master_id,
 ):
-    master_id = random_string("master-")
     root_dir = salt_factories.get_root_dir_for_daemon(master_id)
     conf_dir = root_dir / "conf"
     conf_dir.mkdir(exist_ok=True)
