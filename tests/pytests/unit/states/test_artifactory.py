@@ -8,7 +8,7 @@ from tests.support.mock import MagicMock, patch
 
 
 @pytest.fixture
-def setup_loader_modules():
+def configure_loader_modules():
     return {artifactory: {}}
 
 
