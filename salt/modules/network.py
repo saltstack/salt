@@ -546,14 +546,14 @@ def _ip_route_linux():
                     "gateway": line.group("gateway"),
                     "netmask": "0.0.0.0",
                     "flags": "UG",
-                    "interface": ip_interface if ip_interface else "",
+                    "interface": ip_interface or "",
                 }
             )
         else:
             address_mask = convert_cidr(line.group("network"))
             ip_interface = line.group("interface")
             ip_gateway = line.group("gateway")
-            if line.group("gateway"):
+            if ip_gateway:
                 flags = "UG"
             else:
                 flags = "U"
@@ -562,10 +562,10 @@ def _ip_route_linux():
                 {
                     "addr_family": "inet",
                     "destination": address_mask["network"],
-                    "gateway": ip_gateway if ip_gateway else "0.0.0.0",
+                    "gateway": ip_gateway or "0.0.0.0",
                     "netmask": address_mask["netmask"],
                     "flags": flags,
-                    "interface": ip_interface if ip_interface else "",
+                    "interface": ip_interface or "",
                 }
             )
 
@@ -592,7 +592,7 @@ def _ip_route_linux():
                     "gateway": ip_gateway,
                     "netmask": "",
                     "flags": "UG",
-                    "interface": ip_interface if ip_interface else "",
+                    "interface": ip_interface or "",
                 }
             )
 
@@ -606,25 +606,25 @@ def _ip_route_linux():
                     "gateway": "::",
                     "netmask": "",
                     "flags": "U",
-                    "interface": ip_interface if ip_interface else "",
+                    "interface": ip_interface or "",
                 }
             )
         else:
             ip_interface = line.group("interface")
             ip_gateway = line.group("gateway")
-            if line.group("gateway") is None:
-                flags = "U"
-            else:
+            if ip_gateway:
                 flags = "UG"
+            else:
+                flags = "U"
 
             ret.append(
                 {
                     "addr_family": "inet6",
                     "destination": line.group("network"),
-                    "gateway": ip_gateway if ip_gateway else "::",
+                    "gateway": ip_gateway or "::",
                     "netmask": "",
                     "flags": flags,
-                    "interface": ip_interface if ip_interface else "",
+                    "interface": ip_interface or "",
                 }
             )
     return ret
