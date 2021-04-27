@@ -7584,7 +7584,7 @@ def network_update(
             if node.get("family", "ipv4") == "ipv4"
         ]
         for ip_node in ipv4_nodes:
-            netmask = ip_node.attrib.pop("netmask")
+            netmask = ip_node.attrib.pop("netmask", None)
             if netmask:
                 address = ipaddress.ip_network(
                     "{}/{}".format(ip_node.get("address"), netmask), strict=False

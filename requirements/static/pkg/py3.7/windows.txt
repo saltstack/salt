@@ -9,11 +9,13 @@ cffi==1.14.5
 chardet==3.0.4            # via requests
 cheroot==8.3.0            # via cherrypy
 cherrypy==18.6.0
+contextvars==2.4
 cryptography==3.4.6
 distro==1.5.0
 gitdb==4.0.5              # via gitpython
 gitpython==3.1.13
 idna==2.8                 # via requests
+immutables==0.15          # via contextvars
 ioloop==0.1a0
 jaraco.classes==3.2.1     # via jaraco.collections
 jaraco.collections==3.2.0  # via cherrypy
