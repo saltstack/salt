@@ -34,7 +34,7 @@ salt/modules/*apache.py:
   - pytests.unit.states.apache.test_site
 
 salt/modules/augeas_cfg.py:
-  - unit.states.test_augeas
+  - pytests.unit.states.test_augeas
 
 salt/modules/cp.py:
   - unit.modules.test_file
