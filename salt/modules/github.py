@@ -734,6 +734,7 @@ def _repo_to_dict(repo):
     ret["watchers"] = repo.watchers
     ret["default_branch"] = repo.default_branch
     ret["has_issues"] = repo.has_issues
+    ret["delete_branch_on_merge"] = repo.delete_branch_on_merge
     ret["has_wiki"] = repo.has_wiki
     ret["has_downloads"] = repo.has_downloads
     return ret
@@ -906,6 +907,7 @@ def add_repo(
     has_issues=None,
     has_wiki=None,
     has_downloads=None,
+    delete_branch_on_merge=None,
     auto_init=None,
     gitignore_template=None,
     license_template=None,
@@ -935,6 +937,9 @@ def add_repo(
 
     has_downloads
         Whether to enable downloads for this repository.
+
+    delete_branch_on_merge
+        Whether to enable the delete branch on merge feature for this repository.
 
     auto_init
         Whether to create an initial commit with an empty README.
@@ -966,6 +971,7 @@ def add_repo(
             "has_issues": has_issues,
             "has_wiki": has_wiki,
             "has_downloads": has_downloads,
+            "delete_branch_on_merge": delete_branch_on_merge,
             "auto_init": auto_init,
             "gitignore_template": gitignore_template,
             "license_template": license_template,
@@ -992,6 +998,7 @@ def edit_repo(
     has_issues=None,
     has_wiki=None,
     has_downloads=None,
+    delete_branch_on_merge=None,
     profile="github",
 ):
     """
@@ -1018,6 +1025,9 @@ def edit_repo(
 
     has_downloads
         Whether to enable downloads for this repository.
+
+    delete_branch_on_merge
+        Whether to enable the delete branch on merge feature for this repository.
 
     profile
         The name of the profile configuration to use. Defaults to ``github``.
@@ -1055,6 +1065,7 @@ def edit_repo(
             "has_issues": has_issues,
             "has_wiki": has_wiki,
             "has_downloads": has_downloads,
+            "delete_branch_on_merge": delete_branch_on_merge,
         }
         parameters = {"name": name}
         for param_name, param_value in six.iteritems(given_params):

@@ -501,6 +501,7 @@ def repo_present(
     has_issues=None,
     has_wiki=None,
     has_downloads=None,
+    delete_branch_on_merge=None,
     auto_init=False,
     gitignore_template=None,
     license_template=None,
@@ -532,6 +533,9 @@ def repo_present(
 
     has_downloads
         Whether to enable downloads for this repository.
+
+    delete_branch_on_merge
+        Whether to enable the delete branch on merge feature for this repository.
 
     auto_init
         Whether to create an initial commit with an empty README.
@@ -578,6 +582,7 @@ def repo_present(
         "has_issues": has_issues,
         "has_wiki": has_wiki,
         "has_downloads": has_downloads,
+        "delete_branch_on_merge": delete_branch_on_merge,
         "auto_init": auto_init,
         "gitignore_template": gitignore_template,
         "license_template": license_template,
