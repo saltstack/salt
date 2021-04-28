@@ -19,14 +19,14 @@ def test_computer_desc():
     ret = {"name": "salt", "changes": {}, "result": True, "comment": ""}
     mock = MagicMock(side_effect=["salt", "stack", "stack"])
     with patch.dict(win_system.__salt__, {"system.get_computer_desc": mock}):
-        ret.update({"comment": "Computer description" " already set to 'salt'"})
+        ret.update({"comment": "Computer description already set to 'salt'"})
         assert win_system.computer_desc("salt") == ret
 
         with patch.dict(win_system.__opts__, {"test": True}):
             ret.update(
                 {
                     "result": None,
-                    "comment": "Computer description" " will be changed to 'salt'",
+                    "comment": "Computer description will be changed to 'salt'",
                 }
             )
             assert win_system.computer_desc("salt") == ret
@@ -37,7 +37,7 @@ def test_computer_desc():
                 ret.update(
                     {
                         "result": False,
-                        "comment": "Unable to set" " computer description to 'salt'",
+                        "comment": "Unable to set computer description to 'salt'",
                     }
                 )
                 assert win_system.computer_desc("salt") == ret
@@ -70,7 +70,7 @@ def test_computer_name():
                 ret.update(
                     {
                         "result": None,
-                        "comment": "Computer name will" " be changed to 'salt'",
+                        "comment": "Computer name will be changed to 'salt'",
                     }
                 )
                 assert win_system.computer_name("salt") == ret
@@ -82,7 +82,7 @@ def test_computer_name():
                 ):
                     ret.update(
                         {
-                            "comment": "Unable to set computer name" " to 'salt'",
+                            "comment": "Unable to set computer name to 'salt'",
                             "result": False,
                         }
                     )
