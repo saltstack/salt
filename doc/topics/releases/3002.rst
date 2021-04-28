@@ -45,7 +45,7 @@ Deprecated
 Changed
 -------
 
-- Allow to specify a custom port for Proxmox connection (#50620)
+- Allow specifying a custom port for Proxmox connection (#50620)
 - Changed the lvm.lv_present state to accept a resizefs switch. So, when
   the logical volume is resized, the filesystem will be resized too. (#55265)
 - Change the ``enable_fqdns_grains`` setting to default to ``False`` on proxy minions
