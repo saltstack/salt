@@ -1143,7 +1143,7 @@ def db_get(name, **connection_args):
     )
     args = {"dbname": name}
     try:
-        _execute(cur, qry)
+        _execute(cur, qry, args)
     except MySQLdb.OperationalError as exc:
         err = "MySQL Error {}: {}".format(*exc.args)
         __context__["mysql.error"] = err
