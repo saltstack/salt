@@ -34,7 +34,7 @@ salt/modules/*apache.py:
   - pytests.unit.states.apache.test_site
 
 salt/modules/augeas_cfg.py:
-  - unit.states.test_augeas
+  - pytests.unit.states.test_augeas
 
 salt/modules/cp.py:
   - unit.modules.test_file
@@ -171,6 +171,7 @@ salt/(client/ssh/.+|cli/ssh\.py):
   - pytests.integration.ssh.test_pillar
   - integration.ssh.test_raw
   - integration.ssh.test_state
+  - pytests.integration.ssh.test_py_versions
 
 salt/config/*:
   - unit.test_config

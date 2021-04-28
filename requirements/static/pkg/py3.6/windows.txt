@@ -10,7 +10,7 @@ cffi==1.14.5
 chardet==3.0.4            # via requests
 cheroot==8.3.0            # via cherrypy
 cherrypy==18.6.0
-contextvars==2.4 ; python_version < "3.7"
+contextvars==2.4
 cryptography==3.4.6
 distro==1.5.0
 gitdb==4.0.5              # via gitpython
