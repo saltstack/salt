@@ -1247,9 +1247,9 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(
                 core.__salt__, {"cmd.run": MagicMock(return_value="")}
             ), patch.dict(
-                core.__salt__, {"cmd.run_all": MagicMock(return_value={"retcode": 0})}
+                core.__salt__,
+                {"cmd.run_all": MagicMock(return_value={"retcode": 0, "stdout": ""})},
             ):
-                log.debug("Testing Xen")
                 self.assertEqual(
                     core._virtual({"kernel": "Linux"}).get("virtual_subtype"),
                     "Xen PV DomU",
