@@ -1142,7 +1142,14 @@ def db_get(name, **connection_args):
         "INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME=%(dbname)s;"
     )
     args = {"dbname": name}
-    ret = _execute(cur, qry, args)
+    try:
+        _execute(cur, qry)
+    except MySQLdb.OperationalError as exc:
+        err = "MySQL Error {}: {}".format(*exc.args)
+        __context__["mysql.error"] = err
+        log.error(err)
+        return []
+
     if cur.rowcount:
         rows = cur.fetchall()
         return {"character_set": rows[0][0], "collate": rows[0][1]}

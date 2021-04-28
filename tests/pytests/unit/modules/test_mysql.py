@@ -9,24 +9,12 @@
 
 import logging
 
+import pymysql  # pylint: disable=3rd-party-module-not-gated
 import pytest
 import salt.modules.mysql as mysql
 from tests.support.mock import MagicMock, call, mock_open, patch
-from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
-NO_MYSQL = False
-NO_PyMYSQL = False
-try:
-    import MySQLdb  # pylint: disable=W0611
-except ImportError:
-    NO_MYSQL = True
-
-try:
-    # MySQLdb import failed, try to import PyMySQL
-    import pymysql
-except ImportError:
-    NO_PyMYSQL = True
 
 __all_privileges__ = [
     "ALTER",
@@ -633,7 +621,7 @@ def test_grant_exists_all():
             assert ret
 
 
-@skipIf(True, "TODO: Mock up user_grants()")
+@pytest.mark.skipif(True, reason="TODO: Mock up user_grants()")
 def test_grant_add():
     """
     Test grant_add function in mysql exec module
@@ -643,7 +631,7 @@ def test_grant_add():
     )
 
 
-@skipIf(True, "TODO: Mock up user_grants()")
+@pytest.mark.skipif(True, reason="TODO: Mock up user_grants()")
 def test_grant_revoke():
     """
     Test grant revoke in mysql exec module
@@ -691,7 +679,9 @@ def test_get_slave_status_bad_server():
             assert rslt == []
 
 
-@skipIf(True, "MySQL module claims this function is not ready for production")
+@pytest.mark.skipif(
+    True, reason="MySQL module claims this function is not ready for production"
+)
 def test_free_slave():
     pass
 
