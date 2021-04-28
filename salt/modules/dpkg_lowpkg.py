@@ -256,7 +256,11 @@ def _get_pkg_license(pkg):
 def info(*packages, **kwargs):
     """
     Returns a detailed summary of package information for provided package names.
-    If no packages are specified, all packages will be returned.
+    If no packages are specified, all installed packages will be returned.
+
+    Only information for installed packages is available. To query packges
+    available in the configured APT archive(s), use the higher level
+    :mod:`pkg.show <salt.modules.aptpkg.show>` function.
 
     .. versionadded:: 2015.8.1
 
