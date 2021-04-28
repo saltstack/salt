@@ -292,8 +292,10 @@ def info(*packages, **kwargs):
         bin_var = "${Package}"
 
     ret = {}
-    cmd = (
-        "dpkg-query -W -f='package:" + bin_var + "\\n"
+    cmd = [
+        "dpkg-query",
+        "-W",
+        "-f=package:" + bin_var + "\\n"
         "revision:${binary:Revision}\\n"
         "architecture:${Architecture}\\n"
         "maintainer:${Maintainer}\\n"
@@ -310,10 +312,8 @@ def info(*packages, **kwargs):
         "status:${db:Status-Abbrev}\\n"
         "install_date:${db-fsys:Last-Modified}\\n"
         "description:${Description}\\n"
-        "\\n*/~^\\\\*\\n'"
-    )
-    cmd += " {}".format(" ".join(packages))
-    cmd = cmd.strip()
+        "\\n*/~^\\\\*\\n",
+    ] + list(packages)
 
     call = __salt__["cmd.run_all"](cmd, python_shell=False)
     if call["retcode"]:
