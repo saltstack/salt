@@ -7,6 +7,22 @@ Versions are `MAJOR.PATCH`.
 
 # Changelog
 
+Salt 3003.1 (2021-04-20)
+========================
+
+Removed
+-------
+
+- Removed support for Ubuntu 16.04 (#59913)
+
+
+Fixed
+-----
+
+- Import salt.utils.azurearm instead of using __utils__ from loader in azure cloud.  This fixes an issue where __utils__ would become unavailable when we are using the ThreadPool in azurearm. (#59744)
+- Use contextvars libary from site-packages if it is intalled. Fixes salt ssh for targets with python <=3.6 (#59942)
+
+
 Salt 3003 (2021-03-05)
 ======================
 

@@ -1,7 +1,7 @@
 @Library('salt@master-1.10') _
 
 runTestSuite(
-    ami_image_id: 'ami-0f8692a4a769c17e4',
+    ami_image_id: 'ami-09161d9a15fbe9316',
     concurrent_builds: 1,
     distro_name: 'freebsd',
     distro_version: '122',
