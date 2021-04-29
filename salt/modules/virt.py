@@ -7057,7 +7057,7 @@ def network_define(
 
         .. versionadded:: 3003
 
-    :param addresses: whitespace separated list of addreses of PCI devices that can be used for this network in `hostdev` forward mode.
+    :param addresses: whitespace separated list of addresses of PCI devices that can be used for this network in `hostdev` forward mode.
         (default ``None``)
 
         .. code-block:: yaml
@@ -7336,7 +7336,7 @@ def network_update(
           - forward: passthrough
           - interfaces: "eth10 eth11 eth12"
 
-    :param addresses: whitespace separated list of addreses of PCI devices that can be used for this network in `hostdev` forward mode.
+    :param addresses: whitespace separated list of addresses of PCI devices that can be used for this network in `hostdev` forward mode.
         (default ``None``)
 
         .. code-block:: yaml
