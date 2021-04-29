@@ -9,7 +9,6 @@ import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 from tests.support.mock import MagicMock, patch
 
-
 pytestmark = pytest.mark.skipif(
     salt.utils.platform.is_windows(), reason="Not supported on Windows"
 )
