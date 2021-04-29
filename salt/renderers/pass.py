@@ -11,8 +11,11 @@ pass_ is an encrypted on-disk password store.
 Setup
 -----
 
-*Note*: ``<user>`` needs to be replaced with the user salt-master will be
-running as.
+.. note::
+    ``<user>`` needs to be replaced with the user salt-master will be running as.
+
+Import gpg key
+**************
 
 Have private gpg loaded into ``user``'s gpg keyring
 
@@ -25,6 +28,9 @@ Have private gpg loaded into ``user``'s gpg keyring
 
 Said private key's public key should have been used when encrypting pass entries
 that are of interest for pillar data.
+
+Fetch pass data
+***************
 
 Fetch and keep local pass git repo up-to-date
 
@@ -40,11 +46,28 @@ Fetch and keep local pass git repo up-to-date
               - cmd: load_private_gpg_key
 
 Install pass binary
+*******************
 
 .. code-block:: yaml
 
         pass:
           pkg.installed
+
+Pillar with value from pass
+---------------------------
+
+Now you can use secrets stored in pass as pillar values.
+The following will result in pillar ``foo_bar`` having contents of pass entry ``secret/foo/bar``:
+
+.. code-block:: yaml
+    
+    #!yaml|pass
+
+    foo_bar: |
+        secret/foo/bar
+
+.. note::
+    If the entry doesn't exist, you'll end uyp with just the string ``secret/foo/bar`` as the pillar value
 """
 
 
