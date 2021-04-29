@@ -1,3 +1,1 @@
-Update the Salt installer to use Python 3.8 for its python environment
-Update libsodium.dll to 1.0.18
-Update OpenSSL dlls to 1.1.1k
+Update Windows build deps & DLLs, Use Python 3.8, libsodium.dll 1.0.18, OpenSSL dlls to 1.1.1k
