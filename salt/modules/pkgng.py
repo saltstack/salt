@@ -298,13 +298,6 @@ def latest_version(*names, **kwargs):
     root = kwargs.get("root")
     pkgs = list_pkgs(versions_as_list=True, jail=jail, chroot=chroot, root=root)
 
-    if salt.utils.versions.compare(
-        _get_pkgng_version(jail, chroot, root), ">=", "1.6.0"
-    ):
-        quiet = True
-    else:
-        quiet = False
-
     for name in names:
         # FreeBSD supports packages in format java/openjdk7
         if "/" in name:
@@ -314,12 +307,9 @@ def latest_version(*names, **kwargs):
                 "search",
                 "-S",
                 "name",
-                "-Q",
-                "version",
                 "-e",
             ]
-        if quiet:
-            cmd.append("-q")
+        cmd.append("-q")
         if not salt.utils.data.is_true(refresh):
             cmd.append("-U")
         cmd.append(name)
