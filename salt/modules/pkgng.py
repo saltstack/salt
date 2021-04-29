@@ -296,7 +296,7 @@ def latest_version(*names, **kwargs):
     chroot = kwargs.get("chroot")
     refresh = kwargs.get("refresh")
     root = kwargs.get("root")
-    pkgs = list_pkgs(versions_as_list=True, jail=jail, chroot=chroot, root=root)
+    pkgs = list_pkgs(jail=jail, chroot=chroot, root=root)
 
     for name in names:
         cmd = _pkg(jail, chroot, root) + ["search", "-eqS"]
@@ -314,14 +314,11 @@ def latest_version(*names, **kwargs):
         );
         if pkg_output != "":
             pkgver = pkg_output.rsplit("-", 1)[1]
-            installed = pkgs.get(name, [])
+            installed = pkgs.get(name)
             if not installed:
                 ret[name] = pkgver
             else:
-                if not any(
-                    salt.utils.versions.compare(ver1=x, oper=">=", ver2=pkgver)
-                    for x in installed
-                ):
+                if not salt.utils.versions.compare(ver1=installed, oper=">=", ver2=pkgver):
                     ret[name] = pkgver
 
     # Return a string if only one package name passed
