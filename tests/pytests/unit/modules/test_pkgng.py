@@ -34,24 +34,19 @@ def test_latest_version(pkgs_as_list):
         with patch.dict(pkgng.__salt__, {"cmd.run": search_cmd}):
             result = pkgng.latest_version("bash")
             search_cmd.assert_called_with(
-                ["pkg", "search", "-S", "name", "-e", "-q", "-U", "bash"], output_loglevel='trace', python_shell=False
+                ["pkg", "search", "-eqS", "name", "-U", "bash"], output_loglevel='trace', python_shell=False
             )
             assert result == "5.1.4"
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="https://github.com/saltstack/salt/issues/60108"
-)
 def test_latest_version_origin(pkgs_as_list):
     "Test pkgng.latest_version with a specific package origin"
     pkgs_mock = MagicMock(side_effect=pkgs_as_list)
-    search_cmd = MagicMock(return_value="bash-5.1.4_2\nbash-completion-2.11,2\nbash-static-5.1.4_2,bashc-5.0.9")
+    search_cmd = MagicMock(return_value="bash-5.1.4_2")
     with patch("salt.modules.pkgng.list_pkgs", pkgs_mock):
         with patch.dict(pkgng.__salt__, {"cmd.run": search_cmd}):
             result = pkgng.latest_version("shells/bash")
             search_cmd.assert_called_with(
-                # TODO: use -S origin.  See #60108
-                ["pkg", "search", "-q", "-U", "shells/bash"], output_loglevel='trace', python_shell=False
+                ["pkg", "search", "-eqS", "origin", "-U", "shells/bash"], output_loglevel='trace', python_shell=False
             )
             assert result == "5.1.4_2"
 
@@ -63,14 +58,10 @@ def test_latest_version_outofdatedate(pkgs_as_list):
         with patch.dict(pkgng.__salt__, {"cmd.run": search_cmd}):
             result = pkgng.latest_version("openvpn")
             search_cmd.assert_called_with(
-                ["pkg", "search", "-S", "name", "-e", "-q", "-U", "openvpn"], output_loglevel='trace', python_shell=False
+                ["pkg", "search", "-eqS", "name", "-U", "openvpn"], output_loglevel='trace', python_shell=False
             )
             assert result == "2.4.8_3"
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="https://github.com/saltstack/salt/issues/60105"
-)
 def test_latest_version_unavailable(pkgs_as_list):
     "Test pkgng.latest_version when the requested package is not available"
     pkgs_mock = MagicMock(side_effect=pkgs_as_list)
@@ -79,7 +70,7 @@ def test_latest_version_unavailable(pkgs_as_list):
         with patch.dict(pkgng.__salt__, {"cmd.run": search_cmd}):
             result = pkgng.latest_version("does_not_exist")
             search_cmd.assert_called_with(
-                ["pkg", "search", "-S", "name", "-e", "-q", "-U", "does_not_exist"], output_loglevel='trace', python_shell=False
+                ["pkg", "search", "-eqS", "name", "-U", "does_not_exist"], output_loglevel='trace', python_shell=False
             )
 
 def test_latest_version_uptodate(pkgs_as_list):
@@ -90,7 +81,7 @@ def test_latest_version_uptodate(pkgs_as_list):
         with patch.dict(pkgng.__salt__, {"cmd.run": search_cmd}):
             result = pkgng.latest_version("openvpn")
             search_cmd.assert_called_with(
-                ["pkg", "search", "-S", "name", "-e", "-q", "-U", "openvpn"], output_loglevel='trace', python_shell=False
+                ["pkg", "search", "-eqS", "name", "-U", "openvpn"], output_loglevel='trace', python_shell=False
             )
             assert result == ""
 
