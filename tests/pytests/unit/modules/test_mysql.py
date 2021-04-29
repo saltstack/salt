@@ -9,10 +9,17 @@
 
 import logging
 
-import pymysql  # pylint: disable=3rd-party-module-not-gated
 import pytest
 import salt.modules.mysql as mysql
 from tests.support.mock import MagicMock, call, mock_open, patch
+
+try:
+    import pymysql
+
+    HAS_PYMYSQL = True
+except ImportError:
+    HAS_PYMYSQL = False
+
 
 log = logging.getLogger(__name__)
 
@@ -690,6 +697,7 @@ def test_query():
     _test_call(mysql.query, "SELECT * FROM testdb", "testdb", "SELECT * FROM testdb")
 
 
+@pytest.mark.skipif(not HAS_PYMYSQL, reason="Could not import pymysql")
 def test_query_error():
     connect_mock = MagicMock()
     with patch.object(mysql, "_connect", connect_mock):
@@ -864,6 +872,7 @@ def test_file_query():
                 assert ret, expected
 
 
+@pytest.mark.skipif(not HAS_PYMYSQL, reason="Could not import pymysql")
 def test__connect_pymysql_exception():
     """
     Test the _connect function in the MySQL module
