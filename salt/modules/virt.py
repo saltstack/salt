@@ -2448,7 +2448,7 @@ def init(
         NUMA node, number of dies per socket, number of cores per die, and number of threads per core, respectively.
 
     features
-        A dictionary conains a set of cpu features to fine-tune features provided by the selected CPU model. Use cpu
+        A dictionary contains a set of cpu features to fine-tune features provided by the selected CPU model. Use cpu
         feature ``name`` as the key and the ``policy`` as the value. ``policy`` Attribute takes ``force``, ``require``,
         ``optional``, ``disable`` or ``forbid``.
 
