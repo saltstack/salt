@@ -5,8 +5,14 @@
 
 import pytest
 import salt.states.btrfs as btrfs
+import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 from tests.support.mock import MagicMock, patch
+
+
+pytestmark = pytest.mark.skipif(
+    salt.utils.platform.is_windows(), reason="Not supported on Windows"
+)
 
 
 @pytest.fixture
@@ -187,7 +193,6 @@ def test__unset_cow():
         )
 
 
-@pytest.mark.skip_on_windows
 @patch("salt.states.btrfs._umount")
 @patch("salt.states.btrfs._mount")
 def test_subvolume_created_exists(mount, umount):
@@ -213,7 +218,6 @@ def test_subvolume_created_exists(mount, umount):
         umount.assert_called_once()
 
 
-@pytest.mark.skip_on_windows
 @patch("salt.states.btrfs._umount")
 @patch("salt.states.btrfs._mount")
 def test_subvolume_created_exists_decorator(mount, umount):
@@ -239,7 +243,6 @@ def test_subvolume_created_exists_decorator(mount, umount):
         umount.assert_called_once()
 
 
-@pytest.mark.skip_on_windows
 @patch("salt.states.btrfs._umount")
 @patch("salt.states.btrfs._mount")
 def test_subvolume_created_exists_test(mount, umount):
@@ -265,7 +268,6 @@ def test_subvolume_created_exists_test(mount, umount):
         umount.assert_called_once()
 
 
-@pytest.mark.skip_on_windows
 @patch("salt.states.btrfs._is_default")
 @patch("salt.states.btrfs._umount")
 @patch("salt.states.btrfs._mount")
@@ -295,7 +297,6 @@ def test_subvolume_created_exists_was_default(mount, umount, is_default):
         umount.assert_called_once()
 
 
-@pytest.mark.skip_on_windows
 @patch("salt.states.btrfs._set_default")
 @patch("salt.states.btrfs._is_default")
 @patch("salt.states.btrfs._umount")
@@ -327,7 +328,6 @@ def test_subvolume_created_exists_set_default(mount, umount, is_default, set_def
         umount.assert_called_once()
 
 
-@pytest.mark.skip_on_windows
 @patch("salt.states.btrfs._set_default")
 @patch("salt.states.btrfs._is_default")
 @patch("salt.states.btrfs._umount")
@@ -361,7 +361,6 @@ def test_subvolume_created_exists_set_default_no_force(
         umount.assert_called_once()
 
 
-@pytest.mark.skip_on_windows
 @patch("salt.states.btrfs._is_cow")
 @patch("salt.states.btrfs._umount")
 @patch("salt.states.btrfs._mount")
@@ -391,7 +390,6 @@ def test_subvolume_created_exists_no_cow(mount, umount, is_cow):
         umount.assert_called_once()
 
 
-@pytest.mark.skip_on_windows
 @patch("salt.states.btrfs._unset_cow")
 @patch("salt.states.btrfs._is_cow")
 @patch("salt.states.btrfs._umount")
@@ -423,7 +421,6 @@ def test_subvolume_created_exists_unset_cow(mount, umount, is_cow, unset_cow):
         umount.assert_called_once()
 
 
-@pytest.mark.skip_on_windows
 @patch("salt.states.btrfs._umount")
 @patch("salt.states.btrfs._mount")
 def test_subvolume_created(mount, umount):
@@ -456,7 +453,6 @@ def test_subvolume_created(mount, umount):
         umount.assert_called_once()
 
 
-@pytest.mark.skip_on_windows
 @patch("salt.states.btrfs._umount")
 @patch("salt.states.btrfs._mount")
 def test_subvolume_created_fails_directory(mount, umount):
@@ -487,7 +483,6 @@ def test_subvolume_created_fails_directory(mount, umount):
         umount.assert_called_once()
 
 
-@pytest.mark.skip_on_windows
 @patch("salt.states.btrfs._umount")
 @patch("salt.states.btrfs._mount")
 def test_subvolume_created_fails(mount, umount):
