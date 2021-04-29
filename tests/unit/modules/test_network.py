@@ -277,6 +277,68 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertTrue(network.mod_hostname("hostname"))
 
+    def test_mod_hostname_quoted(self):
+        """
+        Test for correctly quoted hostname on rh-style distro
+        """
+
+        fopen_mock = mock_open(
+            read_data={
+                "/etc/hosts": "\n".join(
+                    ["127.0.0.1 localhost.localdomain", "127.0.0.2 undef"]
+                ),
+                "/etc/sysconfig/network": "\n".join(
+                    ["NETWORKING=yes", 'HOSTNAME="undef"']
+                ),
+            }
+        )
+
+        with patch.dict(network.__grains__, {"os_family": "RedHat"}), patch.dict(
+            network.__salt__, {"cmd.run": MagicMock(return_value=None)}
+        ), patch("socket.getfqdn", MagicMock(return_value="undef")), patch.dict(
+            network.__utils__,
+            {
+                "path.which": MagicMock(return_value="hostname"),
+                "files.fopen": fopen_mock,
+            },
+        ):
+            self.assertTrue(network.mod_hostname("hostname"))
+            assert (
+                fopen_mock.filehandles["/etc/sysconfig/network"][1].write_calls[1]
+                == 'HOSTNAME="hostname"\n'
+            )
+
+    def test_mod_hostname_unquoted(self):
+        """
+        Test for correctly unquoted hostname on rh-style distro
+        """
+
+        fopen_mock = mock_open(
+            read_data={
+                "/etc/hosts": "\n".join(
+                    ["127.0.0.1 localhost.localdomain", "127.0.0.2 undef"]
+                ),
+                "/etc/sysconfig/network": "\n".join(
+                    ["NETWORKING=yes", "HOSTNAME=undef"]
+                ),
+            }
+        )
+
+        with patch.dict(network.__grains__, {"os_family": "RedHat"}), patch.dict(
+            network.__salt__, {"cmd.run": MagicMock(return_value=None)}
+        ), patch("socket.getfqdn", MagicMock(return_value="undef")), patch.dict(
+            network.__utils__,
+            {
+                "path.which": MagicMock(return_value="hostname"),
+                "files.fopen": fopen_mock,
+            },
+        ):
+            self.assertTrue(network.mod_hostname("hostname"))
+            assert (
+                fopen_mock.filehandles["/etc/sysconfig/network"][1].write_calls[1]
+                == "HOSTNAME=hostname\n"
+            )
+
     def test_connect(self):
         """
         Test for Test connectivity to a host using a particular
