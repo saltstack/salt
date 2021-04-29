@@ -513,7 +513,7 @@ class DownloadWindowsDlls(Command):
                 if find_library(fname):
                     continue
                 furl = url.format(bits=platform_bits[:2], fname=fname)
-                fdest = dest.format(fname=fname.split("/")[-1])
+                fdest = dest.format(fname=os.path.basename(fname))
                 if not os.path.exists(fdest):
                     log.info("Downloading {} to {} from {}".format(fname, fdest, furl))
                     try:
