@@ -1,6 +1,6 @@
 """
 A beacon to execute salt execution module functions. This beacon will fire only if the return data is "truthy".
-The function return, funtion name and args and/or kwargs, will be passed as data in the event.
+The function return, function name and args and/or kwargs, will be passed as data in the event.
 
 The configuration can accept a list of salt functions to execute every interval.
 Make sure to allot enough time via 'interval' key to allow all salt functions to execute.
