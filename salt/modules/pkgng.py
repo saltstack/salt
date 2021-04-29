@@ -299,32 +299,21 @@ def latest_version(*names, **kwargs):
     pkgs = list_pkgs(versions_as_list=True, jail=jail, chroot=chroot, root=root)
 
     for name in names:
-        # FreeBSD supports packages in format java/openjdk7
+        cmd = _pkg(jail, chroot, root) + ["search", "-eqS"]
         if "/" in name:
-            cmd = _pkg(jail, chroot, root) + ["search"]
+            # FreeBSD's pkg supports searching by origin, like java/openjdk7
+            cmd.append("origin")
         else:
-            cmd = _pkg(jail, chroot, root) + [
-                "search",
-                "-S",
-                "name",
-                "-e",
-            ]
-        cmd.append("-q")
+            cmd.append("name")
         if not salt.utils.data.is_true(refresh):
             cmd.append("-U")
         cmd.append(name)
 
-        pkgver = _get_version(
-            name,
-            sorted(
-                __salt__["cmd.run"](
-                    cmd, python_shell=False, output_loglevel="trace"
-                ).splitlines(),
-                reverse=True,
-            ).pop(0),
-        )
-
-        if pkgver is not None:
+        pkg_output = __salt__["cmd.run"](
+            cmd, python_shell=False, output_loglevel="trace"
+        );
+        if pkg_output != "":
+            pkgver = pkg_output.rsplit("-", 1)[1]
             installed = pkgs.get(name, [])
             if not installed:
                 ret[name] = pkgver
