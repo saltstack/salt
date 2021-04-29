@@ -34,7 +34,7 @@ def test_latest_version(pkgs_as_list):
         with patch.dict(pkgng.__salt__, {"cmd.run": search_cmd}):
             result = pkgng.latest_version("bash")
             search_cmd.assert_called_with(
-                ["pkg", "search", "-S", "name", "-Q", "version", "-e", "-q", "-U", "bash"], output_loglevel='trace', python_shell=False
+                ["pkg", "search", "-S", "name", "-e", "-q", "-U", "bash"], output_loglevel='trace', python_shell=False
             )
             assert result == "5.1.4"
 
@@ -63,7 +63,7 @@ def test_latest_version_outofdatedate(pkgs_as_list):
         with patch.dict(pkgng.__salt__, {"cmd.run": search_cmd}):
             result = pkgng.latest_version("openvpn")
             search_cmd.assert_called_with(
-                ["pkg", "search", "-S", "name", "-Q", "version", "-e", "-q", "-U", "openvpn"], output_loglevel='trace', python_shell=False
+                ["pkg", "search", "-S", "name", "-e", "-q", "-U", "openvpn"], output_loglevel='trace', python_shell=False
             )
             assert result == "2.4.8_3"
 
@@ -79,7 +79,7 @@ def test_latest_version_unavailable(pkgs_as_list):
         with patch.dict(pkgng.__salt__, {"cmd.run": search_cmd}):
             result = pkgng.latest_version("does_not_exist")
             search_cmd.assert_called_with(
-                ["pkg", "search", "-S", "name", "-Q", "version", "-e", "-q", "-U", "does_not_exist"], output_loglevel='trace', python_shell=False
+                ["pkg", "search", "-S", "name", "-e", "-q", "-U", "does_not_exist"], output_loglevel='trace', python_shell=False
             )
 
 def test_latest_version_uptodate(pkgs_as_list):
@@ -90,7 +90,7 @@ def test_latest_version_uptodate(pkgs_as_list):
         with patch.dict(pkgng.__salt__, {"cmd.run": search_cmd}):
             result = pkgng.latest_version("openvpn")
             search_cmd.assert_called_with(
-                ["pkg", "search", "-S", "name", "-Q", "version", "-e", "-q", "-U", "openvpn"], output_loglevel='trace', python_shell=False
+                ["pkg", "search", "-S", "name", "-e", "-q", "-U", "openvpn"], output_loglevel='trace', python_shell=False
             )
             assert result == ""
 
