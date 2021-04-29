@@ -273,7 +273,7 @@ Fixed
 - Fixed installation on Apple Silicon Macs by checking $HOMEBREW_PREFIX for `libcrypto` instead of assuming /usr/local. (#59808)
 - Fix incorrect documentation for pillar_source_merging_strategy (#26396)
 - Don't iterate through cloud map errors (#34033)
-- Supress noisy warnings when very old pyzmq is used. (#50327)
+- Suppress noisy warnings when very old pyzmq is used. (#50327)
 - Fixed glusterfs version parsing for pre-4.0 (#50707)
 - Prevent traceback when trying to list reactors when none are configured. (#53334)
 - Fixed zabbix_host.present to accept all Zabbix host properties (#53838)
