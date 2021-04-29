@@ -26,6 +26,43 @@ def configure_loader_modules():
     }
 
 
+@pytest.fixture(scope="function")
+def policy_clear():
+    # Make sure policy is not set to begin with, unsets it after test
+    try:
+        computer_policy = {"Point and Print Restrictions": "Not Configured"}
+        with patch.dict(win_lgpo.__opts__, {"test": False}):
+            win_lgpo.set_(name="test_state", computer_policy=computer_policy)
+        yield
+    finally:
+        computer_policy = {"Point and Print Restrictions": "Not Configured"}
+        with patch.dict(win_lgpo.__opts__, {"test": False}):
+            win_lgpo.set_(name="test_state", computer_policy=computer_policy)
+
+
+@pytest.fixture(scope="function")
+def policy_set():
+    # Make sure policy is set to begin with, unsets it after test
+    try:
+        computer_policy = {
+            "Point and Print Restrictions": {
+                "Users can only point and print to these servers": True,
+                "Enter fully qualified server names separated by "
+                "semicolons": "fakeserver1;fakeserver2",
+                "Users can only point and print to machines in their forest": True,
+                "When installing drivers for a new connection": "Show warning and elevation prompt",
+                "When updating drivers for an existing connection": "Show warning only",
+            }
+        }
+        with patch.dict(win_lgpo.__opts__, {"test": False}):
+            win_lgpo.set_(name="test_state", computer_policy=computer_policy)
+        yield
+    finally:
+        computer_policy = {"Point and Print Restrictions": "Not Configured"}
+        with patch.dict(win_lgpo.__opts__, {"test": False}):
+            win_lgpo.set_(name="test_state", computer_policy=computer_policy)
+
+
 def test__compare_policies_string():
     """
     ``_compare_policies`` should only return ``True`` when the string values
@@ -101,7 +138,10 @@ def test__compare_policies_integer():
 @pytest.mark.skip_unless_on_windows
 @pytest.mark.destructive_test
 @pytest.mark.slow_test
-def test_current_element_naming_style():
+def test_current_element_naming_style(policy_clear):
+    """
+    Ensure that current naming style works properly.
+    """
     computer_policy = {
         "Point and Print Restrictions": {
             "Users can only point and print to these servers": True,
@@ -131,7 +171,11 @@ def test_current_element_naming_style():
 @pytest.mark.skip_unless_on_windows
 @pytest.mark.destructive_test
 @pytest.mark.slow_test
-def test_old_element_naming_style():
+def test_old_element_naming_style(policy_clear):
+    """
+    Ensure that the old naming style is converted to new and a warning is
+    returned
+    """
     computer_policy = {
         "Point and Print Restrictions": {
             "Users can only point and print to these servers": True,
@@ -196,7 +240,10 @@ def test_invalid_elements():
 @pytest.mark.skip_unless_on_windows
 @pytest.mark.destructive_test
 @pytest.mark.slow_test
-def test_current_element_naming_style_true():
+def test_current_element_naming_style_true(policy_set):
+    """
+    Test current naming style with test=True
+    """
     computer_policy = {
         "Point and Print Restrictions": {
             "Users can only point and print to these servers": True,
@@ -221,7 +268,11 @@ def test_current_element_naming_style_true():
 @pytest.mark.skip_unless_on_windows
 @pytest.mark.destructive_test
 @pytest.mark.slow_test
-def test_old_element_naming_style_true():
+def test_old_element_naming_style_true(policy_set):
+    """
+    Test old naming style with test=True. Should not make changes but return a
+    warning
+    """
     computer_policy = {
         "Point and Print Restrictions": {
             "Users can only point and print to these servers": True,
