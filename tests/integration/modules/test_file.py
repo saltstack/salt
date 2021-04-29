@@ -208,6 +208,25 @@ class FileModuleTest(ModuleCase):
                               mode='insert', after='Hello')
         self.assertIn('Hello' + os.linesep + '+Goodbye', ret)
 
+    def test_file_line_changes_entire_line(self):
+        '''
+        Test file.line entire line matching
+
+        Issue #49855
+        '''
+        ret = self.minion_run('file.line', self.myfile, 'Goodbye',
+                              mode='insert', after='Hello')
+        assert 'Hello' + os.linesep + '+Goodbye' in ret
+
+        ret = self.minion_run('file.line', self.myfile, 'Goodbye 1',
+                              mode='insert', after='Hello')
+        assert 'Hello' + os.linesep + '+Goodbye 1' + os.linesep + ' Goodbye' + os.linesep in ret
+
+        with salt.utils.files.fopen(self.myfile, 'r') as fh_:
+            content = fh_.read()
+
+        assert 'Hello' + os.linesep + 'Goodbye 1' + os.linesep + 'Goodbye' + os.linesep == content
+
     def test_file_line_content(self):
         self.minion_run('file.line', self.myfile, 'Goodbye',
                         mode='insert', after='Hello')
