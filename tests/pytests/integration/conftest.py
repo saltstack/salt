@@ -5,7 +5,11 @@
     PyTest fixtures
 """
 
+import logging
+
 import pytest
+
+log = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="package")
@@ -53,6 +57,71 @@ def salt_proxy(salt_master, salt_proxy_factory):
     assert salt_master.is_running()
     with salt_proxy_factory.started():
         yield salt_proxy_factory
+
+
+@pytest.fixture(scope="package")
+def deltaproxy_pillar_tree(base_env_pillar_tree_root_dir, salt_delta_proxy_factory):
+    """
+    Create the pillar files for controlproxy and two dummy proxy minions
+    """
+    log.debug("==== running deltaproxy_pillar_tree ====")
+    top_file = """
+    base:
+      '{}':
+        - controlproxy
+      dummy_proxy_one: 
+        - dummy_proxy_one
+      dummy_proxy_two: 
+        - dummy_proxy_two
+    """.format(
+        salt_delta_proxy_factory.id
+    )
+    controlproxy_pillar_file = """
+    proxy:
+        proxytype: deltaproxy
+        ids:
+          - dummy_proxy_one
+          - dummy_proxy_two
+    """
+
+    dummy_proxy_one_pillar_file = """
+    proxy:
+      proxytype: dummy
+    """
+
+    dummy_proxy_two_pillar_file = """
+    proxy:
+      proxytype: dummy
+    """
+
+    top_tempfile = pytest.helpers.temp_file(
+        "top.sls", top_file, base_env_pillar_tree_root_dir
+    )
+    controlproxy_tempfile = pytest.helpers.temp_file(
+        "controlproxy.sls", controlproxy_pillar_file, base_env_pillar_tree_root_dir
+    )
+    dummy_proxy_one_tempfile = pytest.helpers.temp_file(
+        "dummy_proxy_one.sls",
+        dummy_proxy_one_pillar_file,
+        base_env_pillar_tree_root_dir,
+    )
+    dummy_proxy_two_tempfile = pytest.helpers.temp_file(
+        "dummy_proxy_two.sls",
+        dummy_proxy_two_pillar_file,
+        base_env_pillar_tree_root_dir,
+    )
+    yield
+
+
+@pytest.fixture(scope="package")
+def salt_delta_proxy(salt_master, salt_delta_proxy_factory, deltaproxy_pillar_tree):
+    """
+    A running salt-proxy fixture
+    """
+    assert salt_master.is_running()
+    log.debug("==== running salt_delta_proxy ====")
+    with salt_delta_proxy_factory.started():
+        yield salt_delta_proxy_factory
 
 
 @pytest.fixture(scope="package")
