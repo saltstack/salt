@@ -325,7 +325,8 @@ def post_master_init(self, master):
     self.proxy_pillar = {}
     self.proxy_context = {}
     self.add_periodic_callback("cleanup", self.cleanup_subprocesses)
-    for _id in self.opts["proxy"]["ids"]:
+    log.debug("=== ids %s ===", self.opts["proxy"].get("ids", []))
+    for _id in self.opts["proxy"].get("ids", []):
         control_id = self.opts["id"]
         proxyopts = self.opts.copy()
         proxyopts["id"] = _id
