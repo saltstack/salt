@@ -311,14 +311,16 @@ def latest_version(*names, **kwargs):
 
         pkg_output = __salt__["cmd.run"](
             cmd, python_shell=False, output_loglevel="trace"
-        );
+        )
         if pkg_output != "":
             pkgver = pkg_output.rsplit("-", 1)[1]
             installed = pkgs.get(name)
             if not installed:
                 ret[name] = pkgver
             else:
-                if not salt.utils.versions.compare(ver1=installed, oper=">=", ver2=pkgver):
+                if not salt.utils.versions.compare(
+                    ver1=installed, oper=">=", ver2=pkgver
+                ):
                     ret[name] = pkgver
 
     # Return a string if only one package name passed
