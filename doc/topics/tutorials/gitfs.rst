@@ -939,7 +939,7 @@ URL using the format ``https://<user>:<password>@<url>``, like so:
     gitfs_remotes:
       - https://git:mypassword@domain.tld/myrepo.git
 
-The other way would be to configure the authentication in ``~/.netrc``:
+The other way would be to configure the authentication in ``/var/lib/salt/.netrc``:
 
 .. code-block:: text
 
