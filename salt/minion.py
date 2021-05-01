@@ -846,40 +846,46 @@ class MinionBase:
                         att,
                         self.opts["discovery"].get("attempts", 3),
                     )
-                    masters.update(master_discovery_client.discover())
-                    if not masters:
-                        time.sleep(self.opts["discovery"].get("pause", 5))
-                    else:
-                        break
+                    masters = master_discovery_client.discover()
                 except TimeoutError:
-                    log.error("Service discovery timed out")
                     time.sleep(self.opts["discovery"].get("pause", 5))
                 except Exception as err:  # pylint: disable=broad-except
                     log.error("Service discovery failure: %s", err)
                     break
-
-            if masters:
-                policy = self.opts.get("discovery", {}).get("match", "any")
-                if policy not in ["any", "all"]:
-                    log.error(
-                        'Service discovery match failed: unknown value "%s". '
-                        'Should be "any" or "all"',
-                        policy,
-                    )
                 else:
-                    mapping = self.opts["discovery"].get("mapping", {})
+                    if not masters:
+                        time.sleep(self.opts["discovery"].get("pause", 5))
+                        continue
+
+                    match_policy = self.opts.get("discovery", {}).get("match", "any")
+                    if match_policy not in ["any", "all"]:
+                        log.error(
+                            'Service discovery match failed: unknown value "%s". '
+                            'Should be "any" or "all"',
+                            match_policy,
+                        )
+
+                    local_mapping = self.opts["discovery"].get("mapping", {})
                     for addr, mappings in masters.items():
                         for proto_data in mappings:
                             cnt = len(
                                 [
                                     key
-                                    for key, value in mapping.items()
+                                    for key, value in local_mapping.items()
                                     if proto_data.get("mapping", {}).get(key) == value
                                 ]
                             )
-                            if policy == "any" and bool(cnt) or cnt == len(mapping):
+                            if (
+                                match_policy == "any"
+                                and cnt
+                                or cnt == len(local_mapping)
+                            ):
                                 self.opts["master"] = proto_data.get("master", addr)
                                 return
+                        log.error(
+                            "Service discovery did not find master with matching mapping"
+                        )
+                        time.sleep(self.opts["discovery"].get("pause", 5))
 
     def _return_retry_timer(self):
         """
