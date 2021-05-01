@@ -1,3 +1,244 @@
+[tool.poetry]
+# We are only using poetry to handle dependencies. This is section does not need to be updated and can be ignored.
+name = "salt"
+version = "3000"
+description = "TODO"
+authors = ["Thomas S Hatch <thatch45@gmail.com>"]
+
+[tool.poetry.dependencies]
+python = ">=3.6,<4"
+
+# previous requirements/base.txt
+Jinja2 = {version = ">=2.11.3"}
+msgpack = {version = ">=0.5,!=0.5.5"}
+pyyaml = {version = ">=5.1.2"}
+MarkupSafe = {version = "*"}
+requests = {version = ">=1.0.0"}
+distro = {version = ">=1.0.1"}
+contextvars = {version = "*"}
+# previous requirements/crypto.txt
+pycryptodomex = {version = ">=3.9.8"}
+# previous requirements/zeromq.txt
+pyzmq = [
+  {version = ">=17.0.0", python = "<3.9"},
+  {version = ">=19.0.2", python = ">=3.9"},
+  {version = "<=20.0.0", python = "<3.6"}
+]
+
+# Defined in multiple requirements files
+"backports.ssl-match-hostname" = {version = ">=3.7.0.1", python = "<3.7", optional = true}
+cherrypy = {version = ">=17.4.1", optional = true}
+psutil = {version = ">=5.6.7", optional = true}
+pyopenssl = {version = ">=19.0.0", optional = true}
+python-gnupg = {version = ">=0.4.4", optional = true}
+setproctitle = {version = ">=1.1.10", optional = true}
+timelib = {version = ">=0.2.5", optional = true}
+# Previous requirements/darwin.txt
+apache-libcloud = {version = ">=2.4.0", markers = "sys.platform == 'darwin'", optional = true}
+linode-python = {version = ">=1.1.1", markers = "sys.platform == 'darwin'", optional = true}
+vultr = {version = ">=1.0.1", markers = "sys.platform == 'darwin'", optional = true}
+# Previous pkg/osx/req_pyobjc.in
+pyobjc = {version = ">=6.2.2", markers = "sys.platform == 'darwin' and python_version >= '3.7'", python = ">=3.7", optional = true}
+# These don't "lock" to the platform.
+pyobjc-core = {version = ">=6.2.2", markers = "sys.platform == 'darwin' and python_version >= '3.7'", python = ">=3.7", optional = true}
+#pyobjc-framework-cocoa = {version = ">=6.2.2", markers = "sys.platform == 'darwin' and python_version >= '3.7'", python = ">=3.7"}
+
+# Previous requirements/windows.txt
+pywin32 = {version = ">=300", markers = "sys.platform == 'win32'", python = "^3.7", optional = true}
+wmi = {version = ">=1.5.1", markers = "sys.platform == 'win32'", python = "^3.7", optional = true}
+pythonnet = {version = ">=2.5.2", markers = "sys.platform == 'win32'", python = "^3.7", optional = true}
+
+certifi = {version = ">=2020.4.5.1", markers = "sys.platform == 'win32'", optional = true}
+cffi = {version = ">=1.12.2", markers = "sys.platform == 'win32'", optional = true}
+ioloop = {version = ">=0.1a0", markers = "sys.platform == 'win32'", optional = true}
+libnacl = {version = ">=1.7.1", markers = "sys.platform == 'win32'", optional = true}
+lxml = {version = ">=4.3.0", markers = "sys.platform == 'win32'", optional = true}
+pycurl = {version = ">=7.43.0.5", markers = "sys.platform == 'win32'", optional = true}
+pymssql = {version = ">=2.1.4", markers = "sys.platform == 'win32'", python = "<3.8", optional = true}
+pymysql = {version = ">=0.9.3", markers = "sys.platform == 'win32'", optional = true}
+pyasn1 = { version = ">=0.4.8", markers = "sys.platform == 'win32'", optional = true}
+# Watchdog pulls in a GPL-3 package, argh, which cannot be shipped on the
+# windows distribution package.
+#
+# watchdog = {version = ">=0.9.0", markers = "sys.platform == 'win32'"}
+
+# Darwin and Windows Extra Requirements
+#cryptography = {version = ">=2.6.1", markers = "sys.platform == 'win32' or sys.platform == 'darwin'"}
+cryptography = {version = "*", python = ">=3.6.0,<4", optional = true}
+gitpython = {version = ">=2.1.15", markers = "sys.platform == 'win32' or sys.platform == 'darwin'", optional = true}
+idna = {version = ">=2.8", markers = "sys.platform == 'win32' or sys.platform == 'darwin'", optional = true}
+mako = {version = ">=1.0.7", markers = "sys.platform == 'win32' or sys.platform == 'darwin'", optional = true}
+pycparser = {version = ">=2.19", markers = "sys.platform == 'win32' or sys.platform == 'darwin'", optional = true}
+python-dateutil = {version = ">=2.8.1", markers = "sys.platform == 'win32' or sys.platform == 'darwin'", optional = true}
+
+# Previous requirements/static/ci/cloud.in
+netaddr = {version = "^0.7", optional = true}
+profitbricks = {version = "^4.1", optional = true}
+pypsexec = {version = "^0.1", optional = true}
+pywinrm = {version = ">=0.4.1", optional = true}
+
+[tool.poetry.dev-dependencies]
+# Previous requirements/pytest.txt
+mock = {version = ">=3.0.5"}
+pytest = {version = ">=6.0.1"}
+pytest-salt-factories = {version = ">=0.98.2,<0.900.0"}
+pytest-tempdir = {version = ">=2019.10.12"}
+pytest-helpers-namespace = {version = ">=2019.1.8"}
+# Previous requirements/static/ci/changelog.in
+towncrier = {version = "*", optional = true}
+# Previous requirements/static/ci/crypto.in
+m2crypto = {version = ">=0.35.2", optional = true}
+pycryptodome = {version = ">=3.9.8", optional = true}
+# Previous requirements/static/ci/docs.in
+sphinx = {version = ">=3.5.1", optional = true}
+# Previous requirements/static/ci/invoke.in
+invoke = {version = ">=1.4.1", optional = true}
+blessings = {version = "*", optional = true}
+pyyaml = {version = ">=5.1.2", optional = true}
+# Previous requirements/static/ci/lint.in
+pylint = {version = "==2.4.4", optional = true}
+SaltPyLint = {version = ">=v2020.9.28", optional = true}
+
+# Previous requirements/static/ci/common.in
+azure = {version = ">=4.0.0", optional = true}
+apache-libcloud = {version = ">=2.5.0", optional = true}
+boto3 = [
+  {version = ">=1.17.38", python = ">=3.6.0,<4"},
+  {version = ">=1.13.5,<1.17.38", python = "<3.6"}
+]
+boto = {version = ">=2.49.0"}
+botocore = [
+  {version = ">=1.20.38", python = ">=3.6.0,<4"},
+  {version = ">=1.16.26,<1.20.38", python = "<3.6"}
+]
+cassandra-driver = {version = ">=2.0"}
+cffi = {version = ">=1.12.2"}
+clustershell = {version = "*"}
+dnspython = {version = "*"}
+croniter = {version = ">=0.3.0,!=0.3.22", markers = "sys_platform != 'win32'"}
+docker = {version = "*"}
+gitpython = {version = ">=2.1.15"}
+jmespath = {version = "*"}
+jsonschema = {version = "*"}
+junos-eznc = {version = "==2.4.0", markers = "sys_platform != 'win32'"}
+jxmlease = {version = "*", markers = "sys_platform != 'win32'"}
+kazoo = {version = "*", markers = "sys_platform != 'win32' and sys_platform != 'darwin'"}
+keyring = {version = "==5.7.1"}
+kubernetes = {version = "<4.0"}
+libnacl = {version = ">=1.7.1", markers = "sys_platform != 'win32' and sys_platform != 'darwin'"}
+moto = {version = ">=1.3.14"}
+napalm = {version = "*", markers = "sys_platform != 'win32' and python_version > '3.6'"}
+paramiko = {version = ">=2.1.6", markers = "sys_platform != 'win32' and sys_platform != 'darwin'"}
+passlib = {version = ">=1.7.2", markers = "sys_platform != 'win32'"}
+pycurl = {version = ">=7.43.0.5"}
+pygit2 = [
+  {version = "<=0.28.2", markers = "sys.platform != 'freebsd' and python_version < '3.8'"},
+  {version = "<1.1.0", markers = "sys.platform != 'freebsd' and python_version == '3.8'"},
+  {version = ">=1.2.0", markers = "sys.platform != 'freebsd' and python_version >= '3.9'"},
+  {version = "==1.5.0", markers = "sys.platform == 'freebsd'"}
+]
+pyinotify = {version = ">=0.9.6", markers = "sys_platform != 'win32' and sys_platform != 'darwin'"}
+python-etcd = {version = ">0.4.2"}
+pyvmomi = {version = "*"}
+rfc3987 = {version = "*"}
+sqlparse = {version = "*"}
+strict_rfc3339 = {version = ">=0.7"}
+toml = {version = "*"}
+vcert = {version = "~=0.7.0", markers = "sys_platform != 'win32'"}
+virtualenv = {version = ">=20.0.2"}
+watchdog = {version = ">=0.9.0"}
+# Available template libraries that can be used
+genshi = {version = ">=0.7.3"}
+cheetah3 = {version = ">=3.2.2"}
+mako = {version = "*", optional = true}
+
+# Previous requirements/static/ci/windows.in
+sed = {version = "*", markers = "sys_platform == 'win32'"}
+dmidecode = {version = "*", markers = "sys_platform == 'win32'"}
+patch = {version = "*", markers = "sys_platform == 'win32'"}
+pywinrm = {version = ">=0.4.1", optional = true}
+
+# Previous requirements/static/ci/linux.in
+pyiface = {version = "*", markers = "sys_platform == 'linux'"}
+
+[tool.poetry.extras]
+docs = ["sphinx"]
+lint = ["pylint", "SaltPyLint", "toml"]
+cloud = ["apache-libcloud", "azure", "netaddr", "profitbricks", "pypsexec", "pywinrm"]
+crypto = ["m2crypto", "pycryptodome"]
+invoke = ["Invoke", "blessings", "pyyaml"]
+changelog = ["towncrier"]
+windows = [
+  "pywin32",
+  "wmi",
+  "pythonnet",
+  "backports.ssl-match-hostname",
+  "certifi",
+  "cffi",
+  "cherrypy",
+  "cryptography",
+  "gitpython",
+  "ioloop",
+  "libnacl",
+  "lxml",
+  "mako",
+  "psutil",
+  "pyasn1",
+  "pycparser",
+  "pycurl",
+  "pymssql",
+  "pymysql",
+  "pyopenssl",
+  "python-dateutil",
+  "python-gnupg",
+  "setproctitle",
+  "timelib"
+]
+darwin = [
+  "pyobjc",
+  "apache-libcloud",
+  "backports.ssl-match-hostname",
+  "cherrypy",
+  "cryptography",
+  "gitpython",
+  "idna",
+  "linode-python",
+  "mako",
+  "psutil",
+  "pyasn1",
+  "pycparser",
+  "pyopenssl",
+  "python-dateutil",
+  "python-gnupg",
+  "setproctitle",
+  "timelib",
+  "vultr"
+]
+freebsd = [
+  "backports.ssl-match-hostname",
+  "cherrypy",
+  "psutil",
+  "pyopenssl",
+  "python-dateutil",
+  "python-gnupg",
+  "setproctitle",
+  "timelib"
+]
+linux = [
+  "backports.ssl-match-hostname",
+  "cherrypy",
+  "psutil",
+  "pyopenssl",
+  "python-dateutil",
+  "python-gnupg",
+  "setproctitle",
+  "timelib"
+]
+
+[build-system]
+requires = ["poetry-core>=1.0.0a5"]
+build-backend = "poetry.core.masonry.api"
+
 [tool.black]
 exclude= """
 /(

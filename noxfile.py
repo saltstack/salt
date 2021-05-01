@@ -144,13 +144,12 @@ def _get_session_python_site_packages_dir(session):
     return site_packages_dir
 
 
-def _get_pydir(session):
+def _check_python_version(session):
     version_info = _get_session_python_version_info(session)
     if version_info < (3, 5):
         session.error("Only Python >= 3.5 is supported")
     if IS_WINDOWS and version_info < (3, 6):
         session.error("Only Python >= 3.6 is supported on Windows")
-    return "py{}.{}".format(*version_info)
 
 
 def _install_system_packages(session):
@@ -181,100 +180,47 @@ def _install_system_packages(session):
                 shutil.copyfile(src, dst)
 
 
-def _get_pip_requirements_file(session, transport, crypto=None, requirements_type="ci"):
+def _get_pip_requirements_file(session, requirements_type="ci", requirements_file=None):
+    _check_python_version(session)
     assert requirements_type in ("ci", "pkg")
-    pydir = _get_pydir(session)
 
-    if IS_WINDOWS:
-        if crypto is None:
-            _requirements_file = os.path.join(
-                "requirements",
-                "static",
-                requirements_type,
-                pydir,
-                "{}-windows.txt".format(transport),
-            )
-            if os.path.exists(_requirements_file):
-                return _requirements_file
-            _requirements_file = os.path.join(
-                "requirements", "static", requirements_type, pydir, "windows.txt"
-            )
-            if os.path.exists(_requirements_file):
-                return _requirements_file
+    if requirements_file is not None:
         _requirements_file = os.path.join(
-            "requirements", "static", requirements_type, pydir, "windows-crypto.txt"
+            "requirements", "static", requirements_type, requirements_file
+        )
+        if not os.path.exists(_requirements_file):
+            session.error(
+                "The requirements file {} does not exist".format(_requirements_file)
+            )
+        return _requirements_file
+    if IS_WINDOWS:
+        _requirements_file = os.path.join(
+            "requirements", "static", requirements_type, "windows.txt"
         )
         if os.path.exists(_requirements_file):
             return _requirements_file
     elif IS_DARWIN:
-        if crypto is None:
-            _requirements_file = os.path.join(
-                "requirements",
-                "static",
-                requirements_type,
-                pydir,
-                "{}-darwin.txt".format(transport),
-            )
-            if os.path.exists(_requirements_file):
-                return _requirements_file
-            _requirements_file = os.path.join(
-                "requirements", "static", requirements_type, pydir, "darwin.txt"
-            )
-            if os.path.exists(_requirements_file):
-                return _requirements_file
         _requirements_file = os.path.join(
-            "requirements", "static", requirements_type, pydir, "darwin-crypto.txt"
+            "requirements", "static", requirements_type, "darwin.txt"
         )
         if os.path.exists(_requirements_file):
             return _requirements_file
     elif IS_FREEBSD:
-        if crypto is None:
-            _requirements_file = os.path.join(
-                "requirements",
-                "static",
-                requirements_type,
-                pydir,
-                "{}-freebsd.txt".format(transport),
-            )
-            if os.path.exists(_requirements_file):
-                return _requirements_file
-            _requirements_file = os.path.join(
-                "requirements", "static", requirements_type, pydir, "freebsd.txt"
-            )
-            if os.path.exists(_requirements_file):
-                return _requirements_file
         _requirements_file = os.path.join(
-            "requirements", "static", requirements_type, pydir, "freebsd-crypto.txt"
+            "requirements", "static", requirements_type, "freebsd.txt"
         )
         if os.path.exists(_requirements_file):
             return _requirements_file
     else:
         _install_system_packages(session)
-        if crypto is None:
-            _requirements_file = os.path.join(
-                "requirements",
-                "static",
-                requirements_type,
-                pydir,
-                "{}-linux.txt".format(transport),
-            )
-            if os.path.exists(_requirements_file):
-                return _requirements_file
-            _requirements_file = os.path.join(
-                "requirements", "static", requirements_type, pydir, "linux.txt"
-            )
-            if os.path.exists(_requirements_file):
-                return _requirements_file
         _requirements_file = os.path.join(
-            "requirements", "static", requirements_type, pydir, "linux-crypto.txt"
+            "requirements", "static", requirements_type, "linux.txt"
         )
         if os.path.exists(_requirements_file):
             return _requirements_file
 
 
-def _install_requirements(
-    session, transport, *extra_requirements, requirements_type="ci"
-):
+def _install_requirements(session, *extra_requirements, requirements_type="ci"):
     if SKIP_REQUIREMENTS_INSTALL:
         session.log(
             "Skipping Python Requirements because SKIP_REQUIREMENTS_INSTALL was found in the environ"
@@ -295,7 +241,7 @@ def _install_requirements(
 
     # Install requirements
     requirements_file = _get_pip_requirements_file(
-        session, transport, requirements_type=requirements_type
+        session, requirements_type=requirements_type
     )
     install_command = ["--progress-bar=off", "-r", requirements_file]
     session.install(*install_command, silent=PIP_INSTALL_SILENT)
@@ -511,7 +457,7 @@ def pytest_parametrized(session, coverage, transport, crypto):
     DO NOT CALL THIS NOX SESSION DIRECTLY
     """
     # Install requirements
-    _install_requirements(session, transport)
+    _install_requirements(session)
 
     if crypto:
         session.run(
@@ -527,7 +473,7 @@ def pytest_parametrized(session, coverage, transport, crypto):
         install_command = [
             "--progress-bar=off",
             "--constraint",
-            _get_pip_requirements_file(session, transport, crypto=True),
+            _get_pip_requirements_file(session, requirements_file="crypto.txt"),
         ]
         install_command.append(crypto)
         session.install(*install_command, silent=PIP_INSTALL_SILENT)
@@ -705,9 +651,9 @@ def pytest_cloud(session, coverage):
     pytest cloud tests session
     """
     # Install requirements
-    _install_requirements(session, "zeromq")
-    requirements_file = os.path.join(
-        "requirements", "static", "ci", _get_pydir(session), "cloud.txt"
+    _install_requirements(session)
+    requirements_file = _get_pip_requirements_file(
+        session, requirements_file="cloud.txt"
     )
 
     install_command = ["--progress-bar=off", "-r", requirements_file]
@@ -834,9 +780,9 @@ class Tee:
 
 
 def _lint(session, rcfile, flags, paths, tee_output=True):
-    _install_requirements(session, "zeromq")
-    requirements_file = os.path.join(
-        "requirements", "static", "ci", _get_pydir(session), "lint.txt"
+    _install_requirements(session)
+    requirements_file = _get_pip_requirements_file(
+        session, requirements_file="lint.txt"
     )
     install_command = ["--progress-bar=off", "-r", requirements_file]
     session.install(*install_command, silent=PIP_INSTALL_SILENT)
@@ -1001,8 +947,8 @@ def docs_html(session, compress, clean):
     """
     install_upgrades = ["--progress-bar=off", "-U", "pip", "setuptools", "wheel"]
     session.install(*install_upgrades, silent=PIP_INSTALL_SILENT)
-    requirements_file = os.path.join(
-        "requirements", "static", "ci", _get_pydir(session), "docs.txt"
+    requirements_file = _get_pip_requirements_file(
+        session, requirements_file="docs.txt"
     )
     install_command = ["--progress-bar=off", "-r", requirements_file]
     session.install(*install_command, silent=PIP_INSTALL_SILENT)
@@ -1025,8 +971,8 @@ def docs_man(session, compress, update, clean):
     """
     install_upgrades = ["--progress-bar=off", "-U", "pip", "setuptools", "wheel"]
     session.install(*install_upgrades, silent=PIP_INSTALL_SILENT)
-    requirements_file = os.path.join(
-        "requirements", "static", "ci", _get_pydir(session), "docs.txt"
+    requirements_file = _get_pip_requirements_file(
+        session, requirements_file="docs.txt"
     )
     install_command = ["--progress-bar=off", "-r", requirements_file]
     session.install(*install_command, silent=PIP_INSTALL_SILENT)
@@ -1046,8 +992,8 @@ def _invoke(session):
     """
     Run invoke tasks
     """
-    requirements_file = os.path.join(
-        "requirements", "static", "ci", _get_pydir(session), "invoke.txt"
+    requirements_file = _get_pip_requirements_file(
+        session, requirements_file="invoke.txt"
     )
     install_command = ["--progress-bar=off", "-r", requirements_file]
     session.install(*install_command, silent=PIP_INSTALL_SILENT)
@@ -1122,8 +1068,8 @@ def changelog(session, draft):
     """
     Generate salt's changelog
     """
-    requirements_file = os.path.join(
-        "requirements", "static", "ci", _get_pydir(session), "changelog.txt"
+    requirements_file = _get_pip_requirements_file(
+        session, requirements_file="changelog.txt"
     )
     install_command = ["--progress-bar=off", "-r", requirements_file]
     session.install(*install_command, silent=PIP_INSTALL_SILENT)

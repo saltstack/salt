@@ -118,47 +118,25 @@ SALT_SYSPATHS_HARDCODED = os.path.join(
 )
 SALT_BASE_REQUIREMENTS = [
     os.path.join(os.path.abspath(SETUP_DIRNAME), "requirements", "base.txt"),
-    # pyzmq needs to be installed regardless of the salt transport
-    os.path.join(os.path.abspath(SETUP_DIRNAME), "requirements", "zeromq.txt"),
-    os.path.join(os.path.abspath(SETUP_DIRNAME), "requirements", "crypto.txt"),
 ]
 SALT_LINUX_LOCKED_REQS = [
     # Linux packages defined locked requirements
     os.path.join(
-        os.path.abspath(SETUP_DIRNAME),
-        "requirements",
-        "static",
-        "pkg",
-        "py{}.{}".format(*sys.version_info),
-        "linux.txt",
+        os.path.abspath(SETUP_DIRNAME), "requirements", "static", "pkg", "linux.txt",
     )
 ]
-SALT_OSX_REQS = SALT_BASE_REQUIREMENTS + [
-    os.path.join(os.path.abspath(SETUP_DIRNAME), "requirements", "darwin.txt")
-]
+SALT_OSX_REQS = SALT_BASE_REQUIREMENTS
 SALT_OSX_LOCKED_REQS = [
     # OSX packages already defined locked requirements
     os.path.join(
-        os.path.abspath(SETUP_DIRNAME),
-        "requirements",
-        "static",
-        "pkg",
-        "py{}.{}".format(*sys.version_info),
-        "darwin.txt",
+        os.path.abspath(SETUP_DIRNAME), "requirements", "static", "pkg", "darwin.txt",
     )
 ]
-SALT_WINDOWS_REQS = SALT_BASE_REQUIREMENTS + [
-    os.path.join(os.path.abspath(SETUP_DIRNAME), "requirements", "windows.txt")
-]
+SALT_WINDOWS_REQS = SALT_BASE_REQUIREMENTS
 SALT_WINDOWS_LOCKED_REQS = [
     # Windows packages already defined locked requirements
     os.path.join(
-        os.path.abspath(SETUP_DIRNAME),
-        "requirements",
-        "static",
-        "pkg",
-        "py{}.{}".format(*sys.version_info),
-        "windows.txt",
+        os.path.abspath(SETUP_DIRNAME), "requirements", "static", "pkg", "windows.txt",
     )
 ]
 SALT_LONG_DESCRIPTION_FILE = os.path.join(os.path.abspath(SETUP_DIRNAME), "README.rst")

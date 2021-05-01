@@ -1,6 +1,0 @@
-# Cloud tests requirements
-apache-libcloud>=2.5.0
-netaddr
-profitbricks
-pypsexec
-pywinrm
