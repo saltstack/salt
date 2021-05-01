@@ -406,7 +406,7 @@ class SSDPDiscoveryClient(SSDPBase):
         :rtype: dict
         """
         masters = {}
-        self.log.info("Start service discovery")
+        self.log.debug("Start service discovery")
         response = self._query()
 
         for addr, datagrams in response.items():
