@@ -36,7 +36,8 @@ repos:
           - poetry
         entry: poetry lock --no-update
 
-      - id: export-base-requirements
+      - id: export-requirements
+        alias: export-base-requirements
         name: Export Base Requirements
         files: ^poetry\.lock$
         pass_filenames: false
@@ -44,9 +45,10 @@ repos:
         language_version: python3
         additional_dependencies:
           - poetry
-        entry: poetry export -f requirements.txt -o requirements/base.txt
+        entry: poetry export --without-hashes -f requirements.txt -o requirements/base.txt
 
-      - id: export-linux-requirements
+      - id: export-requirements
+        alias: export-linux-requirements
         name: Export Linux Requirements
         files: ^poetry\.lock$
         language: python
@@ -54,9 +56,10 @@ repos:
         pass_filenames: false
         additional_dependencies:
           - poetry
-        entry: poetry export -f requirements.txt -o requirements/static/pkg/linux.txt -E linux
+        entry: poetry export --without-hashes -f requirements.txt -o requirements/static/pkg/linux.txt -E linux
 
-      - id: export-darwin-requirements
+      - id: export-requirements
+        alias: export-darwin-requirements
         name: Export Darwin Requirements
         files: ^poetry\.lock$
         language: python
@@ -64,9 +67,10 @@ repos:
         pass_filenames: false
         additional_dependencies:
           - poetry
-        entry: poetry export -f requirements.txt -o requirements/static/pkg/darwin.txt -E darwin
+        entry: poetry export --without-hashes -f requirements.txt -o requirements/static/pkg/darwin.txt -E darwin
 
-      - id: export-freebsd-requirements
+      - id: export-requirements
+        alias: export-freebsd-requirements
         name: Export FreeBSD Requirements
         files: ^poetry\.lock$
         language: python
@@ -74,9 +78,10 @@ repos:
         pass_filenames: false
         additional_dependencies:
           - poetry
-        entry: poetry export -f requirements.txt -o requirements/static/pkg/freebsd.txt -E freebsd
+        entry: poetry export --without-hashes -f requirements.txt -o requirements/static/pkg/freebsd.txt -E freebsd
 
-      - id: export-windows-requirements
+      - id: export-requirements
+        alias: export-windows-requirements
         name: Export Windows Requirements
         files: ^poetry\.lock$
         language: python
@@ -84,9 +89,10 @@ repos:
         pass_filenames: false
         additional_dependencies:
           - poetry
-        entry: poetry export -f requirements.txt -o requirements/static/pkg/windows.txt -E windows
+        entry: poetry export --without-hashes -f requirements.txt -o requirements/static/pkg/windows.txt -E windows
 
-      - id: export-linux-dev-requirements
+      - id: export-requirements
+        alias: export-linux-dev-requirements
         name: Export Linux CI Requirements
         files: ^(poetry\.lock|pyproject\.toml)$
         language: python
@@ -94,9 +100,10 @@ repos:
         pass_filenames: false
         additional_dependencies:
           - poetry
-        entry: poetry export -f requirements.txt -o requirements/static/ci/linux.txt -E linux --dev
+        entry: poetry export --without-hashes -f requirements.txt -o requirements/static/ci/linux.txt -E linux --dev
 
-      - id: export-darwin-dev-requirements
+      - id: export-requirements
+        alias: export-darwin-dev-requirements
         name: Export Darwin CI Requirements
         files: ^(poetry\.lock|pyproject\.toml)$
         language: python
@@ -104,9 +111,10 @@ repos:
         pass_filenames: false
         additional_dependencies:
           - poetry
-        entry: poetry export -f requirements.txt -o requirements/static/ci/darwin.txt -E darwin --dev
+        entry: poetry export --without-hashes -f requirements.txt -o requirements/static/ci/darwin.txt -E darwin --dev
 
-      - id: export-freebsd-dev-requirements
+      - id: export-requirements
+        alias: export-freebsd-dev-requirements
         name: Export FreeBSD CI Requirements
         files: ^(poetry\.lock|pyproject\.toml)$
         language: python
@@ -114,9 +122,10 @@ repos:
         pass_filenames: false
         additional_dependencies:
           - poetry
-        entry: poetry export -f requirements.txt -o requirements/static/ci/freebsd.txt -E freebsd --dev
+        entry: poetry export --without-hashes -f requirements.txt -o requirements/static/ci/freebsd.txt -E freebsd --dev
 
-      - id: export-windows-dev-requirements
+      - id: export-requirements
+        alias: export-windows-dev-requirements
         name: Export Windows CI Requirements
         files: ^(poetry\.lock|pyproject\.toml)$
         language: python
@@ -124,9 +133,10 @@ repos:
         pass_filenames: false
         additional_dependencies:
           - poetry
-        entry: poetry export -f requirements.txt -o requirements/static/ci/windows.txt -E windows --dev
+        entry: poetry export --without-hashes -f requirements.txt -o requirements/static/ci/windows.txt -E windows --dev
 
-      - id: export-cloud-dev-requirements
+      - id: export-requirements
+        alias: export-cloud-dev-requirements
         name: Export Cloud CI Requirements
         files: ^(poetry\.lock|pyproject\.toml)$
         language: python
@@ -134,9 +144,10 @@ repos:
         pass_filenames: false
         additional_dependencies:
           - poetry
-        entry: poetry export -f requirements.txt -o requirements/static/ci/cloud.txt -E cloud --dev
+        entry: poetry export --without-hashes -f requirements.txt -o requirements/static/ci/cloud.txt -E cloud --dev
 
-      - id: export-crypto-dev-requirements
+      - id: export-requirements
+        alias: export-crypto-dev-requirements
         name: Export Crypto CI Requirements
         files: ^(poetry\.lock|pyproject\.toml)$
         language: python
@@ -144,9 +155,10 @@ repos:
         pass_filenames: false
         additional_dependencies:
           - poetry
-        entry: poetry export -f requirements.txt -o requirements/static/ci/crypto.txt -E crypto --dev
+        entry: poetry export --without-hashes -f requirements.txt -o requirements/static/ci/crypto.txt -E crypto --dev
 
-      - id: export-docs-dev-requirements
+      - id: export-requirements
+        alias: export-docs-dev-requirements
         name: Export Docs Requirements
         files: ^(poetry\.lock|pyproject\.toml)$
         language: python
@@ -154,9 +166,10 @@ repos:
         pass_filenames: false
         additional_dependencies:
           - poetry
-        entry: poetry export -f requirements.txt -o requirements/static/ci/docs.txt -E docs --dev
+        entry: poetry export --without-hashes -f requirements.txt -o requirements/static/ci/docs.txt -E docs --dev
 
-      - id: export-lint-dev-requirements
+      - id: export-requirements
+        alias: export-lint-dev-requirements
         name: Export Lint CI Requirements
         files: ^(poetry\.lock|pyproject\.toml)$
         language: python
@@ -164,9 +177,10 @@ repos:
         pass_filenames: false
         additional_dependencies:
           - poetry
-        entry: poetry export -f requirements.txt -o requirements/static/ci/lint.txt -E lint --dev
+        entry: poetry export --without-hashes -f requirements.txt -o requirements/static/ci/lint.txt -E lint --dev
 
-      - id: export-invoke-dev-requirements
+      - id: export-requirements
+        alias: export-invoke-dev-requirements
         name: Export Invoke CI Requirements
         files: ^(poetry\.lock|pyproject\.toml)$
         language: python
@@ -174,9 +188,10 @@ repos:
         pass_filenames: false
         additional_dependencies:
           - poetry
-        entry: poetry export -f requirements.txt -o requirements/static/ci/invoke.txt -E invoke --dev
+        entry: poetry export --without-hashes -f requirements.txt -o requirements/static/ci/invoke.txt -E invoke --dev
 
-      - id: export-cangelog-dev-requirements
+      - id: export-requirements
+        alias: export-cangelog-dev-requirements
         name: Export Changelog CI Requirements
         files: ^(poetry\.lock|pyproject\.toml)$
         language: python
@@ -184,7 +199,7 @@ repos:
         pass_filenames: false
         additional_dependencies:
           - poetry
-        entry: poetry export -f requirements.txt -o requirements/static/ci/cangelog.txt -E cangelog --dev
+        entry: poetry export --without-hashes -f requirements.txt -o requirements/static/ci/cangelog.txt -E cangelog --dev
       # <---- Requirements--------------------------------------------------------------------------------------------
   # <---- Local Hooks ------------------------------------------------------------------------------------------------
 
