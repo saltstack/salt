@@ -73,8 +73,7 @@ pycparser==2.20; python_version >= "3.5" and python_full_version < "3.0.0" and p
 pycryptodomex==3.10.1; (python_version >= "2.7" and python_full_version < "3.0.0") or (python_full_version >= "3.5.0")
 pycurl==7.43.0.6; python_version >= "3.5"
 pyeapi==0.8.4; sys_platform != "win32" and python_version > "3.6"
-pygit2==0.28.2; sys_platform != "freebsd" and python_version < "3.8" or sys_platform != "freebsd" and python_version == "3.8"
-pygit2==1.5.0; sys_platform != "freebsd" and python_version >= "3.9" or sys_platform == "freebsd"
+pygit2==1.5.0; sys_platform != "freebsd" or sys_platform == "freebsd"
 pyiface==0.0.11; sys_platform == "linux"
 pyinotify==0.9.6; sys_platform != "win32" and sys_platform != "darwin"
 pynacl==1.4.0; python_version >= "2.7" and python_full_version < "3.0.0" and sys_platform != "win32" and sys_platform != "darwin" and (python_version >= "2.7" and python_full_version < "3.0.0" and sys_platform != "win32" or python_full_version >= "3.4.0" and sys_platform != "win32") or sys_platform != "win32" and sys_platform != "darwin" and (python_version >= "2.7" and python_full_version < "3.0.0" and sys_platform != "win32" or python_full_version >= "3.4.0" and sys_platform != "win32") and python_full_version >= "3.4.0"
@@ -100,7 +99,7 @@ rsa==4.7.2; python_version >= "3.5" and python_version < "4" and (python_version
 s3transfer==0.4.2; python_version >= "3.6.0" and python_full_version < "3.0.0" and python_version < "4" or python_version >= "3.6.0" and python_version < "4" and python_full_version >= "3.6.0"
 scp==0.13.3; python_version > "3.6" and python_full_version < "3.0.0" and sys_platform != "win32" or python_full_version >= "3.4.0" and sys_platform != "win32" and python_version > "3.6"
 sed==0.3.1; sys_platform == "win32"
-six==1.15.0
+six==1.15.0; python_version > "3.6" and python_full_version < "3.0.0" and sys_platform != "win32" and sys_platform != "darwin" and (python_version >= "2.7" and python_full_version < "3.0.0" and sys_platform != "win32" or python_full_version >= "3.4.0" and sys_platform != "win32") or sys_platform != "win32" and sys_platform != "darwin" and (python_version >= "2.7" and python_full_version < "3.0.0" and sys_platform != "win32" or python_full_version >= "3.4.0" and sys_platform != "win32") and python_full_version >= "3.4.0" and python_version > "3.6"
 smmap==4.0.0; sys_platform == "win32" and python_version >= "3.5" or sys_platform == "darwin" and python_version >= "3.5"
 sqlparse==0.4.1; python_version >= "3.5"
 strict-rfc3339==0.7

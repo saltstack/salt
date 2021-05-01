@@ -132,9 +132,7 @@ paramiko = {version = ">=2.1.6", markers = "sys_platform != 'win32' and sys_plat
 passlib = {version = ">=1.7.2", markers = "sys_platform != 'win32'"}
 pycurl = {version = ">=7.43.0.5"}
 pygit2 = [
-  {version = "<=0.28.2", markers = "sys.platform != 'freebsd' and python_version < '3.8'"},
-  {version = "<1.1.0", markers = "sys.platform != 'freebsd' and python_version == '3.8'"},
-  {version = ">=1.2.0", markers = "sys.platform != 'freebsd' and python_version >= '3.9'"},
+  {version = "*", markers = "sys.platform != 'freebsd'"},
   {version = "==1.5.0", markers = "sys.platform == 'freebsd'"}
 ]
 pyinotify = {version = ">=0.9.6", markers = "sys_platform != 'win32' and sys_platform != 'darwin'"}
