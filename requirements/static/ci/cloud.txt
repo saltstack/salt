@@ -3,6 +3,7 @@ appdirs==1.4.4; python_version >= "2.7" and python_full_version < "3.0.0" or pyt
 asn1crypto==1.4.0; sys_platform != "win32"
 atomicwrites==1.4.0; python_version >= "3.6" and python_full_version < "3.0.0" and sys_platform == "win32" or sys_platform == "win32" and python_version >= "3.6" and python_full_version >= "3.4.0"
 attrs==20.3.0; python_version >= "3.6" and python_full_version < "3.0.0" or python_full_version >= "3.4.0" and python_version >= "3.6"
+azure==5.0.0
 bcrypt==3.2.0; sys_platform != "win32" and sys_platform != "darwin" and (python_version >= "2.7" and python_full_version < "3.0.0" and sys_platform != "win32" or python_full_version >= "3.4.0" and sys_platform != "win32") and python_version >= "3.6"
 boto3==1.17.62; python_version >= "2.7" and python_full_version < "3.0.0" or python_full_version >= "3.6.0" or python_version >= "3.6.0" and python_version < "4"
 boto==2.49.0
@@ -50,6 +51,7 @@ keyring==5.7.1
 kubernetes==3.0.0
 libnacl==1.7.2; sys_platform != "win32" and sys_platform != "darwin" or sys_platform == "win32"
 lxml==4.6.3; python_version > "3.6" and python_full_version < "3.0.0" and sys_platform != "win32" or python_full_version >= "3.5.0" and sys_platform != "win32" and python_version > "3.6" or sys_platform == "win32"
+mako==1.1.4; (python_version >= "2.7" and python_full_version < "3.0.0") or (python_full_version >= "3.4.0")
 markupsafe==1.1.1; (python_version >= "2.7" and python_full_version < "3.0.0") or (python_full_version >= "3.4.0")
 mock==4.0.3; python_version >= "3.6"
 more-itertools==8.7.0; python_version >= "3.5"

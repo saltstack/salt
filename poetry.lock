@@ -2,7 +2,7 @@
 name = "alabaster"
 version = "0.7.12"
 description = "A configurable sidebar-enabled Sphinx theme"
-category = "dev"
+category = "main"
 optional = true
 python-versions = "*"
 
@@ -11,7 +11,7 @@ name = "apache-libcloud"
 version = "3.3.1"
 description = "A standard Python library that abstracts away differences among multiple cloud provider APIs. For more information and documentation, please see https://libcloud.apache.org"
 category = "main"
-optional = true
+optional = false
 python-versions = ">=3.5.*, <4"
 
 [package.dependencies]
@@ -37,7 +37,7 @@ python-versions = "*"
 name = "astroid"
 version = "2.3.3"
 description = "An abstract syntax tree for Python with inference support."
-category = "dev"
+category = "main"
 optional = true
 python-versions = ">=3.5.*"
 
@@ -73,15 +73,15 @@ tests_no_zope = ["coverage[toml] (>=5.0.2)", "hypothesis", "pympler", "pytest (>
 name = "azure"
 version = "5.0.0"
 description = "Microsoft Azure Client Libraries for Python"
-category = "dev"
-optional = true
+category = "main"
+optional = false
 python-versions = "*"
 
 [[package]]
 name = "babel"
 version = "2.9.1"
 description = "Internationalization utilities"
-category = "dev"
+category = "main"
 optional = true
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
 
@@ -116,7 +116,7 @@ typecheck = ["mypy"]
 name = "blessings"
 version = "1.7"
 description = "A thin, practical wrapper around terminal coloring, styling, and positioning"
-category = "dev"
+category = "main"
 optional = true
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
 
@@ -301,7 +301,7 @@ passlib = "*"
 name = "click"
 version = "7.1.2"
 description = "Composable command line interface toolkit"
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
 
@@ -309,7 +309,7 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
 name = "click-default-group"
 version = "1.2.2"
 description = "Extends click.Group to invoke a command without explicit subcommand name"
-category = "dev"
+category = "main"
 optional = true
 python-versions = "*"
 
@@ -331,7 +331,7 @@ PyYAML = "*"
 name = "colorama"
 version = "0.4.4"
 description = "Cross-platform colored terminal text."
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
 
@@ -437,7 +437,7 @@ tls = ["pyOpenSSL (>=17.5.0)", "cryptography (>=1.3.4)", "idna (>=2.0.0)"]
 name = "docutils"
 version = "0.16"
 description = "Docutils -- Python Documentation Utilities"
-category = "dev"
+category = "main"
 optional = true
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
 
@@ -538,7 +538,7 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
 name = "imagesize"
 version = "1.2.0"
 description = "Getting image size from png/jpeg/jpeg2000/gif file"
-category = "dev"
+category = "main"
 optional = true
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
 
@@ -588,7 +588,7 @@ testing = ["pytest (>=4.6)", "pytest-checkdocs (>=1.2.3)", "pytest-flake8", "pyt
 name = "incremental"
 version = "21.3.0"
 description = "A small library that versions your Python projects."
-category = "dev"
+category = "main"
 optional = true
 python-versions = "*"
 
@@ -607,7 +607,7 @@ python-versions = "*"
 name = "invoke"
 version = "1.5.0"
 description = "Pythonic task execution"
-category = "dev"
+category = "main"
 optional = true
 python-versions = "*"
 
@@ -631,7 +631,7 @@ python-versions = "*"
 name = "isort"
 version = "4.3.21"
 description = "A Python utility / library to sort Python imports."
-category = "dev"
+category = "main"
 optional = true
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
 
@@ -821,9 +821,9 @@ websocket-client = ">=0.32.0,<=0.40.0"
 
 [[package]]
 name = "lazy-object-proxy"
-version = "1.4.3"
+version = "1.4.0"
 description = "A fast and thorough lazy object proxy."
-category = "dev"
+category = "main"
 optional = true
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
 
@@ -864,7 +864,7 @@ source = ["Cython (>=0.29.7)"]
 name = "m2crypto"
 version = "0.37.1"
 description = "M2Crypto: A Python crypto and SSL toolkit"
-category = "dev"
+category = "main"
 optional = true
 python-versions = "*"
 
@@ -876,7 +876,7 @@ name = "mako"
 version = "1.1.4"
 description = "A super-fast templating language that borrows the  best ideas from the existing templating languages."
 category = "main"
-optional = true
+optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
 
 [package.dependencies]
@@ -898,7 +898,7 @@ python-versions = ">=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*"
 name = "mccabe"
 version = "0.6.1"
 description = "McCabe checker, plugin for flake8"
-category = "dev"
+category = "main"
 optional = true
 python-versions = "*"
 
@@ -919,7 +919,7 @@ test = ["pytest (<5.4)", "pytest-cov"]
 name = "modernize"
 version = "0.5"
 description = "A hack on top of 2to3 for modernizing code for hybrid codebases."
-category = "dev"
+category = "main"
 optional = true
 python-versions = "*"
 
@@ -1065,7 +1065,7 @@ name = "ntlm-auth"
 version = "1.5.0"
 description = "Creates NTLM authentication structures"
 category = "main"
-optional = true
+optional = false
 python-versions = ">=2.6,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*"
 
 [package.extras]
@@ -1086,7 +1086,7 @@ asn1crypto = ">=1.0.0"
 name = "packaging"
 version = "20.9"
 description = "Core utilities for Python packages"
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
 
@@ -1097,7 +1097,7 @@ pyparsing = ">=2.0.2"
 name = "parameterized"
 version = "0.8.1"
 description = "Parameterized testing with any Python test framework"
-category = "dev"
+category = "main"
 optional = true
 python-versions = "*"
 
@@ -1231,7 +1231,7 @@ pyasn1 = ">=0.4.6,<0.5.0"
 name = "pycodestyle"
 version = "2.7.0"
 description = "Python style guide checker"
-category = "dev"
+category = "main"
 optional = true
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
 
@@ -1247,7 +1247,7 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
 name = "pycryptodome"
 version = "3.10.1"
 description = "Cryptographic library for Python"
-category = "dev"
+category = "main"
 optional = true
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
 
@@ -1298,7 +1298,7 @@ cffi = ">=1.4.0"
 name = "pygments"
 version = "2.8.1"
 description = "Pygments is a syntax highlighting package written in Python."
-category = "dev"
+category = "main"
 optional = true
 python-versions = ">=3.5"
 
@@ -1322,7 +1322,7 @@ python-versions = "*"
 name = "pylint"
 version = "2.4.4"
 description = "python code static checker"
-category = "dev"
+category = "main"
 optional = true
 python-versions = ">=3.5.*"
 
@@ -3155,7 +3155,7 @@ test = ["flaky", "pretend", "pytest (>=3.0.1)"]
 name = "pyparsing"
 version = "2.4.7"
 description = "Python parsing module"
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=2.6, !=3.0.*, !=3.1.*, !=3.2.*"
 
@@ -3368,7 +3368,7 @@ name = "pywinrm"
 version = "0.4.1"
 description = "Python library for Windows Remote Management"
 category = "main"
-optional = true
+optional = false
 python-versions = "*"
 
 [package.dependencies]
@@ -3436,7 +3436,7 @@ name = "requests-ntlm"
 version = "1.1.0"
 description = "This package allows for HTTP NTLM authentication using the requests library."
 category = "main"
-optional = true
+optional = false
 python-versions = "*"
 
 [package.dependencies]
@@ -3497,7 +3497,7 @@ crt = ["botocore[crt] (>=1.20.29,<2.0a.0)"]
 name = "saltpylint"
 version = "2020.9.28"
 description = "Required PyLint plugins needed in the several SaltStack projects."
-category = "dev"
+category = "main"
 optional = true
 python-versions = "*"
 
@@ -3572,7 +3572,7 @@ python-versions = ">=3.5"
 name = "snowballstemmer"
 version = "2.1.0"
 description = "This package provides 29 stemmers for 28 languages generated from Snowball algorithms."
-category = "dev"
+category = "main"
 optional = true
 python-versions = "*"
 
@@ -3580,7 +3580,7 @@ python-versions = "*"
 name = "sphinx"
 version = "3.5.4"
 description = "Python documentation generator"
-category = "dev"
+category = "main"
 optional = true
 python-versions = ">=3.5"
 
@@ -3611,7 +3611,7 @@ test = ["pytest", "pytest-cov", "html5lib", "cython", "typed-ast"]
 name = "sphinxcontrib-applehelp"
 version = "1.0.2"
 description = "sphinxcontrib-applehelp is a sphinx extension which outputs Apple help books"
-category = "dev"
+category = "main"
 optional = true
 python-versions = ">=3.5"
 
@@ -3623,7 +3623,7 @@ test = ["pytest"]
 name = "sphinxcontrib-devhelp"
 version = "1.0.2"
 description = "sphinxcontrib-devhelp is a sphinx extension which outputs Devhelp document."
-category = "dev"
+category = "main"
 optional = true
 python-versions = ">=3.5"
 
@@ -3635,7 +3635,7 @@ test = ["pytest"]
 name = "sphinxcontrib-htmlhelp"
 version = "1.0.3"
 description = "sphinxcontrib-htmlhelp is a sphinx extension which renders HTML help files"
-category = "dev"
+category = "main"
 optional = true
 python-versions = ">=3.5"
 
@@ -3647,7 +3647,7 @@ test = ["pytest", "html5lib"]
 name = "sphinxcontrib-jsmath"
 version = "1.0.1"
 description = "A sphinx extension which renders display math in HTML via JavaScript"
-category = "dev"
+category = "main"
 optional = true
 python-versions = ">=3.5"
 
@@ -3658,7 +3658,7 @@ test = ["pytest", "flake8", "mypy"]
 name = "sphinxcontrib-qthelp"
 version = "1.0.3"
 description = "sphinxcontrib-qthelp is a sphinx extension which outputs QtHelp document."
-category = "dev"
+category = "main"
 optional = true
 python-versions = ">=3.5"
 
@@ -3670,7 +3670,7 @@ test = ["pytest"]
 name = "sphinxcontrib-serializinghtml"
 version = "1.1.4"
 description = "sphinxcontrib-serializinghtml is a sphinx extension which outputs \"serialized\" HTML files (json and pickle)."
-category = "dev"
+category = "main"
 optional = true
 python-versions = ">=3.5"
 
@@ -3748,7 +3748,7 @@ python-versions = "*"
 name = "toml"
 version = "0.10.2"
 description = "Python Library for Tom's Obvious, Minimal Language"
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=2.6, !=3.0.*, !=3.1.*, !=3.2.*"
 
@@ -3756,7 +3756,7 @@ python-versions = ">=2.6, !=3.0.*, !=3.1.*, !=3.2.*"
 name = "towncrier"
 version = "21.3.0"
 description = "Building newsfiles for your project."
-category = "dev"
+category = "main"
 optional = true
 python-versions = "*"
 
@@ -3789,7 +3789,7 @@ test = ["pytest"]
 name = "typed-ast"
 version = "1.4.3"
 description = "a fork of Python 2 and 3 ast modules with type comment support"
-category = "dev"
+category = "main"
 optional = true
 python-versions = "*"
 
@@ -3914,9 +3914,9 @@ tests = ["pytest"]
 
 [[package]]
 name = "wrapt"
-version = "1.11.2"
+version = "1.11.0"
 description = "Module for decorators, wrappers and monkey patching."
-category = "dev"
+category = "main"
 optional = true
 python-versions = "*"
 
@@ -3963,21 +3963,21 @@ docs = ["sphinx", "jaraco.packaging (>=8.2)", "rst.linker (>=1.9)"]
 testing = ["pytest (>=4.6)", "pytest-checkdocs (>=1.2.3)", "pytest-flake8", "pytest-cov", "pytest-enabler", "jaraco.itertools", "func-timeout", "pytest-black (>=0.3.7)", "pytest-mypy"]
 
 [extras]
-changelog = []
-cloud = ["apache-libcloud", "netaddr", "profitbricks", "pypsexec", "pywinrm"]
-crypto = []
+changelog = ["towncrier"]
+cloud = ["apache-libcloud", "azure", "netaddr", "profitbricks", "pypsexec", "pywinrm"]
+crypto = ["m2crypto", "pycryptodome"]
 darwin = ["pyobjc", "apache-libcloud", "backports.ssl-match-hostname", "cherrypy", "cryptography", "gitpython", "idna", "linode-python", "mako", "psutil", "pyasn1", "pycparser", "pyopenssl", "python-dateutil", "python-gnupg", "setproctitle", "timelib", "vultr"]
-docs = []
+docs = ["sphinx"]
 freebsd = ["backports.ssl-match-hostname", "cherrypy", "psutil", "pyopenssl", "python-dateutil", "python-gnupg", "setproctitle", "timelib"]
-invoke = ["pyyaml"]
-lint = []
+invoke = ["invoke", "blessings", "pyyaml"]
+lint = ["pylint", "SaltPyLint"]
 linux = ["backports.ssl-match-hostname", "cherrypy", "psutil", "pyopenssl", "python-dateutil", "python-gnupg", "setproctitle", "timelib"]
 windows = ["pywin32", "wmi", "pythonnet", "backports.ssl-match-hostname", "certifi", "cffi", "cherrypy", "cryptography", "gitpython", "ioloop", "libnacl", "lxml", "mako", "psutil", "pyasn1", "pycparser", "pycurl", "pymssql", "pymysql", "pyopenssl", "python-dateutil", "python-gnupg", "setproctitle", "timelib"]
 
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.6,<4"
-content-hash = "4c74f35d690d13eaf9ceb3851719da1125f56c8aaee027a80e5b7fa2ff84f7a1"
+content-hash = "0062a8963eb856b3f23eb730ef7ab0acd4755e9a77cae93d3c20af93fb7e871d"
 
 [metadata.files]
 alabaster = [
@@ -4356,27 +4356,24 @@ kubernetes = [
     {file = "kubernetes-3.0.0.tar.gz", hash = "sha256:0a36f9777df218c959e8d75c0cd837ea3f3b67d86d96d90759c972a2b03b5633"},
 ]
 lazy-object-proxy = [
-    {file = "lazy-object-proxy-1.4.3.tar.gz", hash = "sha256:f3900e8a5de27447acbf900b4750b0ddfd7ec1ea7fbaf11dfa911141bc522af0"},
-    {file = "lazy_object_proxy-1.4.3-cp27-cp27m-macosx_10_13_x86_64.whl", hash = "sha256:a2238e9d1bb71a56cd710611a1614d1194dc10a175c1e08d75e1a7bcc250d442"},
-    {file = "lazy_object_proxy-1.4.3-cp27-cp27m-win32.whl", hash = "sha256:efa1909120ce98bbb3777e8b6f92237f5d5c8ea6758efea36a473e1d38f7d3e4"},
-    {file = "lazy_object_proxy-1.4.3-cp27-cp27m-win_amd64.whl", hash = "sha256:4677f594e474c91da97f489fea5b7daa17b5517190899cf213697e48d3902f5a"},
-    {file = "lazy_object_proxy-1.4.3-cp27-cp27mu-manylinux1_x86_64.whl", hash = "sha256:0c4b206227a8097f05c4dbdd323c50edf81f15db3b8dc064d08c62d37e1a504d"},
-    {file = "lazy_object_proxy-1.4.3-cp34-cp34m-manylinux1_x86_64.whl", hash = "sha256:d945239a5639b3ff35b70a88c5f2f491913eb94871780ebfabb2568bd58afc5a"},
-    {file = "lazy_object_proxy-1.4.3-cp34-cp34m-win32.whl", hash = "sha256:9651375199045a358eb6741df3e02a651e0330be090b3bc79f6d0de31a80ec3e"},
-    {file = "lazy_object_proxy-1.4.3-cp34-cp34m-win_amd64.whl", hash = "sha256:eba7011090323c1dadf18b3b689845fd96a61ba0a1dfbd7f24b921398affc357"},
-    {file = "lazy_object_proxy-1.4.3-cp35-cp35m-manylinux1_x86_64.whl", hash = "sha256:48dab84ebd4831077b150572aec802f303117c8cc5c871e182447281ebf3ac50"},
-    {file = "lazy_object_proxy-1.4.3-cp35-cp35m-win32.whl", hash = "sha256:ca0a928a3ddbc5725be2dd1cf895ec0a254798915fb3a36af0964a0a4149e3db"},
-    {file = "lazy_object_proxy-1.4.3-cp35-cp35m-win_amd64.whl", hash = "sha256:194d092e6f246b906e8f70884e620e459fc54db3259e60cf69a4d66c3fda3449"},
-    {file = "lazy_object_proxy-1.4.3-cp36-cp36m-manylinux1_x86_64.whl", hash = "sha256:97bb5884f6f1cdce0099f86b907aa41c970c3c672ac8b9c8352789e103cf3156"},
-    {file = "lazy_object_proxy-1.4.3-cp36-cp36m-win32.whl", hash = "sha256:cb2c7c57005a6804ab66f106ceb8482da55f5314b7fcb06551db1edae4ad1531"},
-    {file = "lazy_object_proxy-1.4.3-cp36-cp36m-win_amd64.whl", hash = "sha256:8d859b89baf8ef7f8bc6b00aa20316483d67f0b1cbf422f5b4dc56701c8f2ffb"},
-    {file = "lazy_object_proxy-1.4.3-cp37-cp37m-macosx_10_13_x86_64.whl", hash = "sha256:1be7e4c9f96948003609aa6c974ae59830a6baecc5376c25c92d7d697e684c08"},
-    {file = "lazy_object_proxy-1.4.3-cp37-cp37m-manylinux1_x86_64.whl", hash = "sha256:d74bb8693bf9cf75ac3b47a54d716bbb1a92648d5f781fc799347cfc95952383"},
-    {file = "lazy_object_proxy-1.4.3-cp37-cp37m-win32.whl", hash = "sha256:9b15f3f4c0f35727d3a0fba4b770b3c4ebbb1fa907dbcc046a1d2799f3edd142"},
-    {file = "lazy_object_proxy-1.4.3-cp37-cp37m-win_amd64.whl", hash = "sha256:9254f4358b9b541e3441b007a0ea0764b9d056afdeafc1a5569eee1cc6c1b9ea"},
-    {file = "lazy_object_proxy-1.4.3-cp38-cp38-manylinux1_x86_64.whl", hash = "sha256:a6ae12d08c0bf9909ce12385803a543bfe99b95fe01e752536a60af2b7797c62"},
-    {file = "lazy_object_proxy-1.4.3-cp38-cp38-win32.whl", hash = "sha256:5541cada25cd173702dbd99f8e22434105456314462326f06dba3e180f203dfd"},
-    {file = "lazy_object_proxy-1.4.3-cp38-cp38-win_amd64.whl", hash = "sha256:59f79fef100b09564bc2df42ea2d8d21a64fdcda64979c0fa3db7bdaabaf6239"},
+    {file = "lazy-object-proxy-1.4.0.tar.gz", hash = "sha256:7fb11d33d99a374e4b0c3fb20128890b9cf784ca7e4b91ecbb191d34618bd9fe"},
+    {file = "lazy_object_proxy-1.4.0-cp27-cp27m-macosx_10_13_x86_64.whl", hash = "sha256:91c7e1316116fedda36818ce7cd269378fffc4219781536eff441ea1e68e1caf"},
+    {file = "lazy_object_proxy-1.4.0-cp27-cp27m-win32.whl", hash = "sha256:495c583b363c3eded649e2c00177093f03f856f5c9f95b527420084a9ce17b9d"},
+    {file = "lazy_object_proxy-1.4.0-cp27-cp27m-win_amd64.whl", hash = "sha256:a8be3cfd7c3154e8d39276c627c5e7ee55d1f2094597b060ece99620ef9fe86b"},
+    {file = "lazy_object_proxy-1.4.0-cp27-cp27mu-manylinux1_x86_64.whl", hash = "sha256:afcab74f471652b643900e0862b31892ac5fe5a75e435b786a1825855f4effdf"},
+    {file = "lazy_object_proxy-1.4.0-cp34-cp34m-manylinux1_x86_64.whl", hash = "sha256:8758715ea005afa293783797498d64f40ab14d1ded208b3e282760cde9512f1d"},
+    {file = "lazy_object_proxy-1.4.0-cp34-cp34m-win32.whl", hash = "sha256:f03a21f6f6e54778860122a620f70c8b148ec4ee175968782bcaaa94955a46f9"},
+    {file = "lazy_object_proxy-1.4.0-cp34-cp34m-win_amd64.whl", hash = "sha256:7e63da94f5a1ddb0d2dcdb5d17ff4d1d33f51f3368bdf0475d5f56c0f3b99592"},
+    {file = "lazy_object_proxy-1.4.0-cp35-cp35m-manylinux1_x86_64.whl", hash = "sha256:d6957cadc9c079ef4697564af500d52fba6d14fb2f08d20ce92f52201fb77050"},
+    {file = "lazy_object_proxy-1.4.0-cp35-cp35m-win32.whl", hash = "sha256:118d53f8819f9457732dd0e418752f2850f395c5405b2e12485f52336e4ad0f5"},
+    {file = "lazy_object_proxy-1.4.0-cp35-cp35m-win_amd64.whl", hash = "sha256:55fa9eab93482891ce97473e63610efdd9c8fa5c05cca9f60468c412e602e499"},
+    {file = "lazy_object_proxy-1.4.0-cp36-cp36m-manylinux1_x86_64.whl", hash = "sha256:8995543f47a8b81962e384f12791114af9f4997be7a0db71abc40d2a2dfee961"},
+    {file = "lazy_object_proxy-1.4.0-cp36-cp36m-win32.whl", hash = "sha256:7003959a170fde9b92936c38562810f94679c80608fb4b007e026b915bef8b27"},
+    {file = "lazy_object_proxy-1.4.0-cp36-cp36m-win_amd64.whl", hash = "sha256:642fc0a9b61920669dab66e400f79f1b8b0e8f698dcde85f7e9ae5528dbcaf4a"},
+    {file = "lazy_object_proxy-1.4.0-cp37-cp37m-macosx_10_13_x86_64.whl", hash = "sha256:d49a90c27074f44c8dc147d83e31140523948ee147b3248634c540e053caea58"},
+    {file = "lazy_object_proxy-1.4.0-cp37-cp37m-manylinux1_x86_64.whl", hash = "sha256:9b41ec246d31ca6a840dcf67673b2668adc5a095c64310d26d73292588563ea3"},
+    {file = "lazy_object_proxy-1.4.0-cp37-cp37m-win32.whl", hash = "sha256:f6c718ffca055852479880debbe717da952fcfd60067a0ddb6fe3b053b1d4de0"},
+    {file = "lazy_object_proxy-1.4.0-cp37-cp37m-win_amd64.whl", hash = "sha256:da7f2a6c82a11dc4e05bab73522f0d6dd4f3bbc8378cd4b0769137f342cdb3f0"},
 ]
 libnacl = [
     {file = "libnacl-1.7.2-py2.py3-none-any.whl", hash = "sha256:7418623b64aeed76f7b003d3a360f5c0dbb5d98adc98c6db4ddd4a15caf5186a"},
@@ -5884,7 +5881,7 @@ wmi = [
     {file = "WMI-1.5.1.tar.gz", hash = "sha256:b6a6be5711b1b6c8d55bda7a8befd75c48c12b770b9d227d31c1737dbf0d40a6"},
 ]
 wrapt = [
-    {file = "wrapt-1.11.2.tar.gz", hash = "sha256:565a021fd19419476b9362b05eeaa094178de64f8361e44468f9e9d7843901e1"},
+    {file = "wrapt-1.11.0.tar.gz", hash = "sha256:e03f19f64d81d0a3099518ca26b04550026f131eced2e76ced7b85c6b8d32128"},
 ]
 xmltodict = [
     {file = "xmltodict-0.12.0-py2.py3-none-any.whl", hash = "sha256:8bbcb45cc982f48b2ca8fe7e7827c5d792f217ecf1792626f808bf41c3b86051"},

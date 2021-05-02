@@ -1,7 +1,9 @@
+apache-libcloud==3.3.1; python_version >= "3.5" and python_version < "4"
 appdirs==1.4.4; python_version >= "2.7" and python_full_version < "3.0.0" or python_full_version >= "3.4.0"
 asn1crypto==1.4.0; sys_platform != "win32"
 atomicwrites==1.4.0; python_version >= "3.6" and python_full_version < "3.0.0" and sys_platform == "win32" or sys_platform == "win32" and python_version >= "3.6" and python_full_version >= "3.4.0"
 attrs==20.3.0; python_version >= "3.6" and python_full_version < "3.0.0" or python_full_version >= "3.4.0" and python_version >= "3.6"
+azure==5.0.0
 backports.ssl-match-hostname==3.7.0.1; python_version < "3.7"
 bcrypt==3.2.0; sys_platform != "win32" and sys_platform != "darwin" and (python_version >= "2.7" and python_full_version < "3.0.0" and sys_platform != "win32" or python_full_version >= "3.4.0" and sys_platform != "win32") and python_version >= "3.6"
 boto3==1.17.62; python_version >= "2.7" and python_full_version < "3.0.0" or python_full_version >= "3.6.0" or python_version >= "3.6.0" and python_version < "4"
@@ -10,10 +12,10 @@ botocore==1.20.62; python_version >= "3.6.0" and python_full_version < "3.0.0" a
 cached-property==1.5.2
 cachetools==4.2.2; python_version >= "3.5" and python_version < "4.0" and (python_version >= "2.7" and python_full_version < "3.0.0" or python_full_version >= "3.6.0")
 cassandra-driver==3.25.0
-certifi==2020.12.5; python_version >= "2.7" and python_full_version < "3.0.0" or python_full_version >= "3.5.0" or sys_platform == "win32"
+certifi==2020.12.5; python_version >= "3.5" and python_full_version < "3.0.0" and python_version < "4" and sys_platform == "darwin" or python_version >= "3.5" and python_version < "4" and sys_platform == "darwin" and python_full_version >= "3.5.0" or sys_platform == "win32"
 certvalidator==0.11.1; sys_platform != "win32"
 cffi==1.14.5
-chardet==4.0.0; python_version >= "2.7" and python_full_version < "3.0.0" or python_full_version >= "3.5.0"
+chardet==4.0.0; python_version >= "3.5" and python_full_version < "3.0.0" and python_version < "4" and sys_platform == "darwin" or python_version >= "3.5" and python_version < "4" and sys_platform == "darwin" and python_full_version >= "3.5.0"
 cheetah3==3.2.6.post2; (python_version >= "2.7" and python_full_version < "3.0.0") or (python_full_version >= "3.4.0")
 cheroot==8.5.2; python_version >= "3.5" and python_full_version < "3.0.0" or python_full_version >= "3.4.0" and python_version >= "3.5"
 cherrypy==18.6.0; python_version >= "3.5"
@@ -36,7 +38,7 @@ geomet==0.2.1.post1; python_version > "2.6" and python_full_version < "3.3.0" or
 gitdb==4.0.7; sys_platform == "win32" and python_version >= "3.5" or sys_platform == "darwin" and python_version >= "3.5"
 gitpython==3.1.15; python_version >= "3.5"
 google-auth==1.30.0; python_version >= "2.7" and python_full_version < "3.0.0" or python_full_version >= "3.6.0"
-idna==2.10; python_version >= "2.7" and python_full_version < "3.0.0" or python_full_version >= "3.5.0" or sys_platform == "win32" or sys_platform == "darwin"
+idna==2.10; python_version >= "3.5" and python_full_version < "3.0.0" and python_version < "4" and sys_platform == "darwin" or python_version >= "3.5" and python_version < "4" and sys_platform == "darwin" and python_full_version >= "3.5.0" or sys_platform == "win32" or sys_platform == "darwin"
 immutables==0.15; python_version >= "3.5"
 importlib-metadata==4.0.1; python_version < "3.8" and python_version >= "3.6" and (python_version >= "3.6" and python_full_version < "3.0.0" and python_version < "3.8" or python_full_version >= "3.4.0" and python_version < "3.8" and python_version >= "3.6")
 importlib-resources==5.1.2; python_version > "3.6" and python_version < "3.7" and (python_version >= "3.6" and python_full_version < "3.0.0" and python_version < "3.7" or python_full_version >= "3.4.0" and python_version < "3.7" and python_version >= "3.6") and (python_version >= "3.6" and python_full_version < "3.0.0" and sys_platform != "win32" and python_version < "3.7" or python_full_version >= "3.4.0" and sys_platform != "win32" and python_version < "3.7" and python_version >= "3.6") and sys_platform != "win32"
@@ -68,6 +70,7 @@ ncclient==0.6.10; python_version > "3.6" and python_full_version < "3.0.0" and s
 netaddr==0.7.20
 netmiko==3.4.0; sys_platform != "win32" and python_version > "3.6"
 ntc-templates==2.0.0; python_version > "3.6" and python_version < "4.0" and (python_version >= "2.7" and python_full_version < "3.0.0" and sys_platform != "win32" or python_full_version >= "3.4.0" and sys_platform != "win32") and (python_version > "3.6" and python_full_version < "3.0.0" and sys_platform != "win32" or python_full_version >= "3.4.0" and sys_platform != "win32" and python_version > "3.6") and sys_platform != "win32"
+ntlm-auth==1.5.0; python_version >= "2.6" and python_full_version < "3.0.0" or python_full_version >= "3.4.0"
 oscrypto==1.2.1; sys_platform != "win32"
 packaging==20.9; python_version >= "3.6" and python_full_version < "3.0.0" or python_full_version >= "3.4.0" and python_version >= "3.6"
 paramiko==2.7.2; python_version > "3.6" and python_full_version < "3.0.0" and sys_platform != "win32" or python_full_version >= "3.5.0" and sys_platform != "win32" and python_version > "3.6" or sys_platform != "win32" and sys_platform != "darwin"
@@ -105,8 +108,10 @@ pythonnet==2.5.2; sys_platform == "win32"
 pytz==2021.1; python_version >= "3.6"
 pyvmomi==7.0.2; (python_version >= "2.7" and python_full_version < "3.0.0") or (python_full_version >= "3.4.0")
 pywin32==300; sys_platform == "win32" and python_version >= "3.6" and (python_version >= "2.7" and python_full_version < "3.0.0" or python_full_version >= "3.5.0") or sys_platform == "win32"
+pywinrm==0.4.1
 pyyaml==5.4.1; (python_version >= "2.7" and python_full_version < "3.0.0") or (python_full_version >= "3.6.0")
 pyzmq==20.0.0; python_version < "3.9" or python_version >= "3.9"
+requests-ntlm==1.1.0
 requests==2.25.1; (python_version >= "2.7" and python_full_version < "3.0.0") or (python_full_version >= "3.5.0")
 responses==0.13.3; python_version >= "2.7" and python_full_version < "3.0.0" or python_full_version >= "3.5.0"
 rfc3987==1.3.8
@@ -126,7 +131,7 @@ timelib==0.2.5
 toml==0.10.2; (python_version >= "2.6" and python_full_version < "3.0.0") or (python_full_version >= "3.3.0")
 transitions==0.8.8; python_version > "3.6" and python_full_version < "3.0.0" and sys_platform != "win32" or python_full_version >= "3.4.0" and sys_platform != "win32" and python_version > "3.6"
 typing-extensions==3.7.4.3; sys_platform == "win32" and python_version >= "3.6" and python_version < "3.8" or sys_platform == "darwin" and python_version >= "3.6" and python_version < "3.8"
-urllib3==1.26.4; python_version >= "3.6.0" and python_full_version < "3.0.0" and python_version < "4" or python_full_version >= "3.6.0" and python_version < "4" and python_version >= "3.6.0"
+urllib3==1.26.4; python_version >= "3.6.0" and python_full_version < "3.0.0" and python_version < "4" and sys_platform == "darwin" or python_full_version >= "3.6.0" and python_version < "4" and python_version >= "3.6.0" and sys_platform == "darwin"
 vcert==0.7.4; sys_platform != "win32"
 virtualenv==20.4.4; (python_version >= "2.7" and python_full_version < "3.0.0") or (python_full_version >= "3.4.0")
 watchdog==2.0.3; python_version >= "3.6"

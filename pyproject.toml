@@ -16,8 +16,10 @@ MarkupSafe = {version = "*"}
 requests = {version = ">=1.0.0"}
 distro = {version = ">=1.0.1"}
 contextvars = {version = "*"}
+
 # previous requirements/crypto.txt
 pycryptodomex = {version = ">=3.9.8"}
+
 # previous requirements/zeromq.txt
 pyzmq = [
   {version = ">=17.0.0", python = "<3.9"},
@@ -33,21 +35,20 @@ pyopenssl = {version = ">=19.0.0", optional = true}
 python-gnupg = {version = ">=0.4.4", optional = true}
 setproctitle = {version = ">=1.1.10", optional = true}
 timelib = {version = ">=0.2.5", optional = true}
+
 # Previous requirements/darwin.txt
 apache-libcloud = {version = ">=2.4.0", markers = "sys.platform == 'darwin'", optional = true}
 linode-python = {version = ">=1.1.1", markers = "sys.platform == 'darwin'", optional = true}
 vultr = {version = ">=1.0.1", markers = "sys.platform == 'darwin'", optional = true}
-# Previous pkg/osx/req_pyobjc.in
+
+# Previous requirements/pyobjc.txt
 pyobjc = {version = ">=6.2.2", markers = "sys.platform == 'darwin' and python_version >= '3.7'", python = ">=3.7", optional = true}
-# These don't "lock" to the platform.
 pyobjc-core = {version = ">=6.2.2", markers = "sys.platform == 'darwin' and python_version >= '3.7'", python = ">=3.7", optional = true}
-#pyobjc-framework-cocoa = {version = ">=6.2.2", markers = "sys.platform == 'darwin' and python_version >= '3.7'", python = ">=3.7"}
 
 # Previous requirements/windows.txt
 pywin32 = {version = ">=300", markers = "sys.platform == 'win32'", python = "^3.7", optional = true}
 wmi = {version = ">=1.5.1", markers = "sys.platform == 'win32'", python = "^3.7", optional = true}
 pythonnet = {version = ">=2.5.2", markers = "sys.platform == 'win32'", python = "^3.7", optional = true}
-
 certifi = {version = ">=2020.4.5.1", markers = "sys.platform == 'win32'", optional = true}
 cffi = {version = ">=1.12.2", markers = "sys.platform == 'win32'", optional = true}
 ioloop = {version = ">=0.1a0", markers = "sys.platform == 'win32'", optional = true}
@@ -63,7 +64,6 @@ pyasn1 = { version = ">=0.4.8", markers = "sys.platform == 'win32'", optional = 
 # watchdog = {version = ">=0.9.0", markers = "sys.platform == 'win32'"}
 
 # Darwin and Windows Extra Requirements
-#cryptography = {version = ">=2.6.1", markers = "sys.platform == 'win32' or sys.platform == 'darwin'"}
 cryptography = {version = "*", python = ">=3.6.0,<4", optional = true}
 gitpython = {version = ">=2.1.15", markers = "sys.platform == 'win32' or sys.platform == 'darwin'", optional = true}
 idna = {version = ">=2.8", markers = "sys.platform == 'win32' or sys.platform == 'darwin'", optional = true}
@@ -71,11 +71,36 @@ mako = {version = ">=1.0.7", markers = "sys.platform == 'win32' or sys.platform 
 pycparser = {version = ">=2.19", markers = "sys.platform == 'win32' or sys.platform == 'darwin'", optional = true}
 python-dateutil = {version = ">=2.8.1", markers = "sys.platform == 'win32' or sys.platform == 'darwin'", optional = true}
 
+
+# Next are optional CI requirements, but poetry does not allow extras to be defined in dev-dependencies
+
 # Previous requirements/static/ci/cloud.in
 netaddr = {version = "^0.7", optional = true}
 profitbricks = {version = "^4.1", optional = true}
 pypsexec = {version = "^0.1", optional = true}
 pywinrm = {version = ">=0.4.1", optional = true}
+
+# Previous requirements/static/ci/lint.in
+pylint = {version = "==2.4.4", optional = true}
+SaltPyLint = {version = ">=v2020.9.28", optional = true}
+
+# Previous requirements/static/ci/changelog.in
+towncrier = {version = "*", optional = true}
+
+# Previous requirements/static/ci/crypto.in
+m2crypto = {version = ">=0.35.2", optional = true}
+pycryptodome = {version = ">=3.9.8", optional = true}
+
+# Previous requirements/static/ci/docs.in
+sphinx = {version = ">=3.5.1", optional = true}
+
+# Previous requirements/static/ci/invoke.in
+invoke = {version = ">=1.4.1", optional = true}
+blessings = {version = "*", optional = true}
+
+# Previous requirements/static/ci/common.in
+azure = {version = ">=4.0.0", optional = true}
+
 
 [tool.poetry.dev-dependencies]
 # Previous requirements/pytest.txt
@@ -84,24 +109,10 @@ pytest = {version = ">=6.0.1"}
 pytest-salt-factories = {version = ">=0.98.2,<0.900.0"}
 pytest-tempdir = {version = ">=2019.10.12"}
 pytest-helpers-namespace = {version = ">=2019.1.8"}
-# Previous requirements/static/ci/changelog.in
-towncrier = {version = "*", optional = true}
-# Previous requirements/static/ci/crypto.in
-m2crypto = {version = ">=0.35.2", optional = true}
-pycryptodome = {version = ">=3.9.8", optional = true}
-# Previous requirements/static/ci/docs.in
-sphinx = {version = ">=3.5.1", optional = true}
-# Previous requirements/static/ci/invoke.in
-invoke = {version = ">=1.4.1", optional = true}
-blessings = {version = "*", optional = true}
-pyyaml = {version = ">=5.1.2", optional = true}
-# Previous requirements/static/ci/lint.in
-pylint = {version = "==2.4.4", optional = true}
-SaltPyLint = {version = ">=v2020.9.28", optional = true}
 
 # Previous requirements/static/ci/common.in
-azure = {version = ">=4.0.0", optional = true}
-apache-libcloud = {version = ">=2.5.0", optional = true}
+azure = {version = ">=4.0.0"}
+apache-libcloud = {version = ">=2.5.0"}
 boto3 = [
   {version = ">=1.17.38", python = ">=3.6.0,<4"},
   {version = ">=1.13.5,<1.17.38", python = "<3.6"}
@@ -148,24 +159,46 @@ watchdog = {version = ">=0.9.0"}
 # Available template libraries that can be used
 genshi = {version = ">=0.7.3"}
 cheetah3 = {version = ">=3.2.2"}
-mako = {version = "*", optional = true}
+mako = {version = "*"}
 
 # Previous requirements/static/ci/windows.in
 sed = {version = "*", markers = "sys_platform == 'win32'"}
 dmidecode = {version = "*", markers = "sys_platform == 'win32'"}
 patch = {version = "*", markers = "sys_platform == 'win32'"}
-pywinrm = {version = ">=0.4.1", optional = true}
+pywinrm = {version = ">=0.4.1"}
 
 # Previous requirements/static/ci/linux.in
 pyiface = {version = "*", markers = "sys_platform == 'linux'"}
 
 [tool.poetry.extras]
-docs = ["sphinx"]
-lint = ["pylint", "SaltPyLint", "toml"]
-cloud = ["apache-libcloud", "azure", "netaddr", "profitbricks", "pypsexec", "pywinrm"]
-crypto = ["m2crypto", "pycryptodome"]
-invoke = ["Invoke", "blessings", "pyyaml"]
-changelog = ["towncrier"]
+docs = [
+  "sphinx"
+]
+lint = [
+  "pylint",
+  "SaltPyLint",
+  "toml"
+]
+cloud = [
+  "apache-libcloud",
+  "azure",
+  "netaddr",
+  "profitbricks",
+  "pypsexec",
+  "pywinrm"
+]
+crypto = [
+  "m2crypto",
+  "pycryptodome"
+]
+invoke = [
+  "Invoke",
+  "blessings",
+  "pyyaml"
+]
+changelog = [
+  "towncrier"
+]
 windows = [
   "pywin32",
   "wmi",

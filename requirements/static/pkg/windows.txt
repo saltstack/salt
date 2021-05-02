@@ -1,7 +1,9 @@
+apache-libcloud==3.3.1; python_version >= "3.5" and python_version < "4"
+azure==5.0.0
 backports.ssl-match-hostname==3.7.0.1; python_version < "3.7"
-certifi==2020.12.5; python_version >= "2.7" and python_full_version < "3.0.0" or python_full_version >= "3.5.0" or sys_platform == "win32"
+certifi==2020.12.5; python_version >= "3.5" and python_full_version < "3.0.0" and python_version < "4" and sys_platform == "darwin" or python_version >= "3.5" and python_version < "4" and sys_platform == "darwin" and python_full_version >= "3.5.0" or sys_platform == "win32"
 cffi==1.14.5
-chardet==4.0.0; python_version >= "2.7" and python_full_version < "3.0.0" or python_full_version >= "3.5.0"
+chardet==4.0.0; python_version >= "3.5" and python_full_version < "3.0.0" and python_version < "4" and sys_platform == "darwin" or python_version >= "3.5" and python_version < "4" and sys_platform == "darwin" and python_full_version >= "3.5.0"
 cheroot==8.5.2; python_version >= "3.5" and python_full_version < "3.0.0" or python_full_version >= "3.4.0" and python_version >= "3.5"
 cherrypy==18.6.0; python_version >= "3.5"
 contextvars==2.4
@@ -9,7 +11,7 @@ cryptography==3.4.7; python_version >= "3.6" and python_full_version < "3.0.0" o
 distro==1.5.0
 gitdb==4.0.7; sys_platform == "win32" and python_version >= "3.5" or sys_platform == "darwin" and python_version >= "3.5"
 gitpython==3.1.15; python_version >= "3.5"
-idna==2.10; python_version >= "2.7" and python_full_version < "3.0.0" or python_full_version >= "3.5.0" or sys_platform == "win32" or sys_platform == "darwin"
+idna==2.10; python_version >= "3.5" and python_full_version < "3.0.0" and python_version < "4" and sys_platform == "darwin" or python_version >= "3.5" and python_version < "4" and sys_platform == "darwin" and python_full_version >= "3.5.0" or sys_platform == "win32" or sys_platform == "darwin"
 immutables==0.15; python_version >= "3.5"
 importlib-resources==5.1.2; python_version >= "3.6" and python_version < "3.7"
 ioloop==0.1a; sys_platform == "win32"
@@ -25,6 +27,7 @@ markupsafe==1.1.1; (python_version >= "2.7" and python_full_version < "3.0.0") o
 more-itertools==8.7.0; python_version >= "3.6" and python_full_version < "3.0.0" or python_full_version >= "3.4.0" and python_version >= "3.6"
 msgpack==1.0.2
 netaddr==0.7.20
+ntlm-auth==1.5.0; python_version >= "2.6" and python_full_version < "3.0.0" or python_full_version >= "3.4.0"
 portend==2.7.1; python_version >= "3.6"
 psutil==5.8.0; (python_version >= "2.6" and python_full_version < "3.0.0") or (python_full_version >= "3.4.0")
 py==1.10.0; python_version >= "3.5" and python_full_version < "3.0.0" and python_version < "3.6" or python_version >= "3.5" and python_version < "3.6" and python_full_version >= "3.4.0"
@@ -40,16 +43,20 @@ python-gnupg==0.4.7
 pythonnet==2.5.2; sys_platform == "win32"
 pytz==2021.1; python_version >= "3.6"
 pywin32==300; sys_platform == "win32" and python_version >= "3.5" or sys_platform == "win32"
+pywinrm==0.4.1
 pyyaml==5.4.1; (python_version >= "2.7" and python_full_version < "3.0.0") or (python_full_version >= "3.6.0")
 pyzmq==20.0.0; python_version < "3.9" or python_version >= "3.9"
+requests-ntlm==1.1.0
 requests==2.25.1; (python_version >= "2.7" and python_full_version < "3.0.0") or (python_full_version >= "3.5.0")
 setproctitle==1.2.2; python_version >= "3.6"
 six==1.15.0; python_version >= "3.5" and python_full_version < "3.0.0" and sys_platform == "win32" or python_version >= "3.5" and python_full_version < "3.0.0" and sys_platform == "darwin" or python_full_version >= "3.5.0" and sys_platform == "win32" and python_version >= "3.5" or python_full_version >= "3.5.0" and sys_platform == "darwin" and python_version >= "3.5"
 smmap==4.0.0; sys_platform == "win32" and python_version >= "3.5" or sys_platform == "darwin" and python_version >= "3.5"
 tempora==4.0.2; python_version >= "3.6"
 timelib==0.2.5
+toml==0.10.2; (python_version >= "2.6" and python_full_version < "3.0.0") or (python_full_version >= "3.3.0")
 typing-extensions==3.7.4.3; sys_platform == "win32" and python_version >= "3.5" or sys_platform == "darwin" and python_version >= "3.5"
-urllib3==1.26.4; python_version >= "2.7" and python_full_version < "3.0.0" or python_full_version >= "3.5.0" and python_version < "4"
+urllib3==1.26.4; python_version >= "3.5" and python_full_version < "3.0.0" and python_version < "4" and sys_platform == "darwin" or python_full_version >= "3.5.0" and python_version < "4" and python_version >= "3.5" and sys_platform == "darwin"
 wmi==1.5.1; sys_platform == "win32"
+xmltodict==0.12.0; python_version >= "2.7" and python_full_version < "3.0.0" or python_full_version >= "3.4.0"
 zc.lockfile==2.0; python_version >= "3.5"
 zipp==3.4.1; python_version >= "3.6" and python_version < "3.7"
