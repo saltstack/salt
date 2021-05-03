@@ -63,10 +63,7 @@ log = logging.getLogger(__name__)
 
 
 def post_master_init(self, master):
-
     if self.connected:
-        self.opts["master"] = master
-
         self.opts["pillar"] = yield salt.pillar.get_async_pillar(
             self.opts,
             self.opts["grains"],
@@ -74,6 +71,8 @@ def post_master_init(self, master):
             saltenv=self.opts["saltenv"],
             pillarenv=self.opts.get("pillarenv"),
         ).compile_pillar()
+
+        self.opts["master"] = master
 
         tag = "deltaproxy/start"
         self._fire_master(tag=tag)
@@ -325,7 +324,6 @@ def post_master_init(self, master):
     self.proxy_pillar = {}
     self.proxy_context = {}
     self.add_periodic_callback("cleanup", self.cleanup_subprocesses)
-    log.debug("=== ids %s ===", self.opts["proxy"].get("ids", []))
     for _id in self.opts["proxy"].get("ids", []):
         control_id = self.opts["id"]
         proxyopts = self.opts.copy()
@@ -334,6 +332,7 @@ def post_master_init(self, master):
         proxyopts = salt.config.proxy_config(
             self.opts["conf_file"], defaults=proxyopts, minion_id=_id
         )
+        proxyopts["id"] = _id
 
         proxyopts["proxyid"] = _id
         proxyopts["subproxy"] = True
