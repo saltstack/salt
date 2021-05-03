@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Interface with a Junos device via proxy-minion. To connect to a junos device \
 via junos proxy, specify the host information in the pillar in '/srv/pillar/details.sls'
@@ -35,11 +34,9 @@ Run the salt proxy via the following command:
 
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import 3rd-party libs
 try:
     HAS_JUNOS = True
     import jnpr.junos
@@ -47,17 +44,18 @@ try:
     import jnpr.junos.utils.config
     import jnpr.junos.utils.sw
     from jnpr.junos.exception import (
-        RpcTimeoutError,
-        ConnectClosedError,
-        RpcError,
-        ConnectError,
-        ProbeError,
         ConnectAuthError,
+        ConnectClosedError,
+        ConnectError,
         ConnectRefusedError,
         ConnectTimeoutError,
+        ProbeError,
+        RpcError,
+        RpcTimeoutError,
     )
     from ncclient.operations.errors import TimeoutExpiredError
     from ncclient.transport.third_party.junos.ioproc import IOProc
+
 except ImportError:
     HAS_JUNOS = False
 
@@ -66,6 +64,20 @@ __proxyenabled__ = ["junos"]
 thisproxy = {}
 
 log = logging.getLogger(__name__)
+
+
+class RebootActive:
+    """
+    Class to get static variable, to indicate when a reboot/shutdown
+    is being processed and the keep_alive should not probe the
+    connection since it interferes with the shutdown process.
+    """
+
+    reboot_shutdown = False
+
+    def __init__(self, **kwargs):
+        pass
+
 
 # Define the module's virtual name
 __virtualname__ = "junos"
@@ -98,7 +110,6 @@ def init(opts):
         "username",
         "password",
         "passwd",
-        "port",
         "gather_facts",
         "mode",
         "baud",
@@ -160,6 +171,18 @@ def conn():
     return thisproxy["conn"]
 
 
+def reboot_active():
+    RebootActive.reboot_shutdown = True
+
+
+def reboot_clear():
+    RebootActive.reboot_shutdown = False
+
+
+def get_reboot_active():
+    return RebootActive.reboot_shutdown
+
+
 def alive(opts):
     """
     Validate and return the connection status with the remote device.
@@ -169,13 +192,15 @@ def alive(opts):
 
     dev = conn()
 
+    # check if SessionListener sets a TransportError if there is a RpcTimeoutError
     thisproxy["conn"].connected = ping()
 
-    if not dev.connected:
+    local_connected = dev.connected
+    if not local_connected:
         __salt__["event.fire_master"](
             {}, "junos/proxy/{}/stop".format(opts["proxy"]["host"])
         )
-    return dev.connected
+    return local_connected
 
 
 def ping():
@@ -251,7 +276,7 @@ def shutdown(opts):
     This is called when the proxy-minion is exiting to make sure the
     connection to the device is closed cleanly.
     """
-    log.debug("Proxy module %s shutting down!!", opts["id"])
+    log.debug("Proxy module {} shutting down!!".format(opts["id"]))
     try:
         thisproxy["conn"].close()
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Support for reboot, shutdown, etc on POSIX-like systems.
 
@@ -12,15 +11,11 @@ Support for reboot, shutdown, etc on POSIX-like systems.
     ``salt`` will work as expected.
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os.path
 import re
-
-# Import Python libs
 from datetime import datetime, timedelta, tzinfo
 
-# Import Salt libs
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
@@ -72,7 +67,7 @@ def init(runlevel):
 
         salt '*' system.init 3
     """
-    cmd = ["init", "{0}".format(runlevel)]
+    cmd = ["init", "{}".format(runlevel)]
     ret = __salt__["cmd.run"](cmd, python_shell=False)
     return ret
 
@@ -105,7 +100,7 @@ def reboot(at_time=None):
 
         salt '*' system.reboot
     """
-    cmd = ["shutdown", "-r", ("{0}".format(at_time) if at_time else "now")]
+    cmd = ["shutdown", "-r", ("{}".format(at_time) if at_time else "now")]
     ret = __salt__["cmd.run"](cmd, python_shell=False)
     return ret
 
@@ -133,7 +128,7 @@ def shutdown(at_time=None):
     else:
         flag = "-h"
 
-    cmd = ["shutdown", flag, ("{0}".format(at_time) if at_time else "now")]
+    cmd = ["shutdown", flag, ("{}".format(at_time) if at_time else "now")]
     ret = __salt__["cmd.run"](cmd, python_shell=False)
     return ret
 
@@ -174,7 +169,7 @@ def _date_bin_set_datetime(new_date):
         if ret_posix["retcode"] != 0:
             # if both fail it's likely an invalid date string
             # so we will give back the error from the first attempt
-            msg = "date failed: {0}".format(ret_non_posix["stderr"])
+            msg = "date failed: {}".format(ret_non_posix["stderr"])
             raise CommandExecutionError(msg)
     return True
 
@@ -186,7 +181,9 @@ def has_settable_hwclock():
 
     CLI Example:
 
-    salt '*' system.has_settable_hwclock
+    .. code-block:: bash
+
+        salt '*' system.has_settable_hwclock
     """
     if salt.utils.path.which_bin(["hwclock"]) is not None:
         res = __salt__["cmd.run_all"](
@@ -205,7 +202,7 @@ def _swclock_to_hwclock():
     """
     res = __salt__["cmd.run_all"](["hwclock", "--systohc"], python_shell=False)
     if res["retcode"] != 0:
-        msg = "hwclock failed to set hardware clock from software clock: {0}".format(
+        msg = "hwclock failed to set hardware clock from software clock: {}".format(
             res["stderr"]
         )
         raise CommandExecutionError(msg)
@@ -493,7 +490,7 @@ class _FixedOffset(tzinfo):
     """
 
     def __init__(self, offset):
-        super(_FixedOffset, self).__init__()
+        super().__init__()
         self.__offset = timedelta(minutes=offset)
 
     def utcoffset(self, dt):  # pylint: disable=W0613
@@ -547,13 +544,18 @@ def get_computer_desc():
                         # get rid of whitespace then strip off quotes
                         desc = _strip_quotes(match.group(1).strip())
                         # no break so we get the last occurance
-        except IOError:
+        except OSError:
             pass
 
         if desc is None:
             return False
 
-    return desc.replace(r"\"", r'"').replace(r"\n", "\n").replace(r"\t", "\t")
+    return (
+        desc.replace(r"\\", "\\")
+        .replace(r"\"", r'"')
+        .replace(r"\n", "\n")
+        .replace(r"\t", "\t")
+    )
 
 
 def set_computer_desc(desc):
@@ -590,7 +592,7 @@ def set_computer_desc(desc):
             pass
 
     pattern = re.compile(r"^\s*PRETTY_HOSTNAME=(.*)$")
-    new_line = salt.utils.stringutils.to_str('PRETTY_HOSTNAME="{0}"'.format(desc))
+    new_line = salt.utils.stringutils.to_str('PRETTY_HOSTNAME="{}"'.format(desc))
     try:
         with salt.utils.files.fopen("/etc/machine-info", "r+") as mach_info:
             lines = mach_info.readlines()
@@ -606,7 +608,7 @@ def set_computer_desc(desc):
             mach_info.truncate()
             mach_info.writelines(lines)
             return True
-    except IOError:
+    except OSError:
         return False
 
 
@@ -667,10 +669,10 @@ def set_reboot_required_witnessed():
             os.makedirs(dir_path)
         except OSError as ex:
             raise SaltInvocationError(
-                "Error creating {0} (-{1}): {2}".format(dir_path, ex.errno, ex.strerror)
+                "Error creating {} (-{}): {}".format(dir_path, ex.errno, ex.strerror)
             )
 
-        rdict = __salt__["cmd.run_all"]("touch {0}".format(NILRT_REBOOT_WITNESS_PATH))
+        rdict = __salt__["cmd.run_all"]("touch {}".format(NILRT_REBOOT_WITNESS_PATH))
         errcode = rdict["retcode"]
 
     return errcode == 0

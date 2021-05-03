@@ -25,6 +25,8 @@ data. The one exception to this would be the :mod:`pure python
 Text Renderers
 **************
 
+.. include:: ../../_incl/jinja_security.rst
+
 A text renderer returns text. These include templating engines such as
 :mod:`jinja <salt.renderers.jinja>`, :mod:`mako <salt.renderers.mako>`, and
 :mod:`genshi <salt.renderers.genshi>`, as well as the :mod:`gpg

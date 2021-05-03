@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 NetBox
 ======
@@ -22,7 +21,6 @@ private key file:
 
 .. versionadded:: 2018.3.0
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import re
@@ -159,7 +157,7 @@ def filter_(app, endpoint, **kwargs):
     )
     if nb_query:
         ret = [_strip_url_field(dict(i)) for i in nb_query]
-    return sorted(ret)
+    return ret
 
 
 def get_(app, endpoint, id=None, **kwargs):
@@ -560,7 +558,7 @@ def openconfig_interfaces(device_name=None):
     .. versionadded:: 2019.2.0
 
     Return a dictionary structured as standardised in the
-    `openconfig-interfaces <http://ops.openconfig.net/branches/master/openconfig-interfaces.html>`_
+    `openconfig-interfaces <http://ops.openconfig.net/branches/models/master/openconfig-interfaces.html>`_
     YANG model, containing physical and configuration data available in Netbox,
     e.g., IP addresses, MTU, enabled / disabled, etc.
 
@@ -643,7 +641,7 @@ def openconfig_lacp(device_name=None):
     .. versionadded:: 2019.2.0
 
     Return a dictionary structured as standardised in the
-    `openconfig-lacp <http://ops.openconfig.net/branches/master/openconfig-lacp.html>`_
+    `openconfig-lacp <http://ops.openconfig.net/branches/models/master/openconfig-lacp.html>`_
     YANG model, with configuration data for Link Aggregation Control Protocol
     (LACP) for aggregate interfaces.
 
@@ -651,8 +649,8 @@ def openconfig_lacp(device_name=None):
         The ``interval`` and ``lacp_mode`` keys have the values set as ``SLOW``
         and ``ACTIVE`` respectively, as this data is not currently available
         in Netbox, therefore defaulting to the values defined in the standard.
-        See `interval <http://ops.openconfig.net/branches/master/docs/openconfig-lacp.html#lacp-interfaces-interface-config-interval>`_
-        and `lacp-mode <http://ops.openconfig.net/branches/master/docs/openconfig-lacp.html#lacp-interfaces-interface-config-lacp-mode>`_
+        See `interval <http://ops.openconfig.net/branches/models/master/docs/openconfig-lacp.html#lacp-interfaces-interface-config-interval>`_
+        and `lacp-mode <http://ops.openconfig.net/branches/models/master/docs/openconfig-lacp.html#lacp-interfaces-interface-config-lacp-mode>`_
         for further details.
 
     device_name: ``None``

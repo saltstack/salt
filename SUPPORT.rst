@@ -11,7 +11,7 @@ may take a few moments for someone to reply.
 **SaltStack Slack** - Alongside IRC is our SaltStack Community Slack for the
 SaltStack Working groups. Use the following link to request an invitation.
 
-`<https://saltstackcommunity.herokuapp.com/>`_
+`<https://join.slack.com/t/saltstackcommunity/shared_invite/zt-3av8jjyf-oBQ2M0vhXOhJpNpRkPWBvg>`_
 
 **Mailing List** - The SaltStack community users mailing list is hosted by
 Google groups. Anyone can post to ask questions about SaltStack products and
@@ -25,7 +25,7 @@ salt-users@googlegroups.com
 
 **Reporting Issues** - To report an issue with Salt, please follow the
 guidelines for filing bug reports:
-`<https://docs.saltstack.com/en/develop/topics/development/reporting_bugs.html>`_
+`<https://docs.saltstack.com/en/master/topics/development/reporting_bugs.html>`_
 
 **SaltStack Support** - If you need dedicated, prioritized support, please
 consider a SaltStack Support package that fits your needs:

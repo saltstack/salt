@@ -1,20 +1,15 @@
-# -*- coding: utf-8 -*-
 """
 Create and verify ANSI X9.31 RSA signatures using OpenSSL libcrypto
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import ctypes.util
 import glob
 import os
+import platform
 import sys
-
-# Import 3rd-party libs
 from ctypes import c_char_p, c_int, c_void_p, cdll, create_string_buffer, pointer
 
-# Import Salt libs
 import salt.utils.platform
 import salt.utils.stringutils
 
@@ -29,7 +24,31 @@ def _find_libcrypto():
     Find the path (or return the short name) of libcrypto.
     """
     if sys.platform.startswith("win"):
-        lib = str("libeay32")
+        lib = "libeay32"
+    elif salt.utils.platform.is_darwin():
+        # will look for several different location on the system,
+        # Search in the following order. salts pkg, homebrew, macports, finnally
+        # system.
+        # look in salts pkg install location.
+        lib = glob.glob("/opt/salt/lib/libcrypto.dylib")
+        # Find library symlinks in Homebrew locations.
+        brew_prefix = os.getenv("HOMEBREW_PREFIX", "/usr/local")
+        lib = lib or glob.glob(
+            os.path.join(brew_prefix, "opt/openssl/lib/libcrypto.dylib")
+        )
+        lib = lib or glob.glob(
+            os.path.join(brew_prefix, "opt/openssl@*/lib/libcrypto.dylib")
+        )
+        # look in macports.
+        lib = lib or glob.glob("/opt/local/lib/libcrypto.dylib")
+        # check if 10.15, regular libcrypto.dylib is just a false pointer.
+        if platform.mac_ver()[0].split(".")[:2] == ["10", "15"]:
+            lib = lib or glob.glob("/usr/lib/libcrypto.*.dylib")
+            lib = list(reversed(sorted(lib)))
+        elif int(platform.mac_ver()[0].split(".")[0]) < 11:
+            # Fall back on system libcrypto (only works before Big Sur)
+            lib = lib or ["/usr/lib/libcrypto.dylib"]
+        lib = lib[0] if lib else None
     elif getattr(sys, "frozen", False) and salt.utils.platform.is_smartos():
         lib = glob.glob(os.path.join(os.path.dirname(sys.executable), "libcrypto.so*"))
         lib = lib[0] if lib else None
@@ -43,28 +62,20 @@ def _find_libcrypto():
                 # This could be /opt/tools/lib (Global Zone) or
                 # /opt/local/lib (non-Global Zone), thus the two checks
                 # below
-                lib = glob.glob("/opt/local/lib/libcrypto.so*")
+                lib = glob.glob("/opt/saltstack/salt/run/libcrypto.so*")
+                lib = lib or glob.glob("/opt/local/lib/libcrypto.so*")
                 lib = lib or glob.glob("/opt/tools/lib/libcrypto.so*")
                 lib = lib[0] if lib else None
             elif salt.utils.platform.is_aix():
-                if os.path.isdir("/opt/salt/lib"):
+                if os.path.isdir("/opt/saltstack/salt/run") or os.path.isdir(
+                    "/opt/salt/lib"
+                ):
                     # preference for Salt installed fileset
-                    lib = glob.glob("/opt/salt/lib/libcrypto.so*")
+                    lib = glob.glob("/opt/saltstack/salt/run/libcrypto.so*")
+                    lib = lib or glob.glob("/opt/salt/lib/libcrypto.so*")
                 else:
                     lib = glob.glob("/opt/freeware/lib/libcrypto.so*")
                 lib = lib[0] if lib else None
-        elif salt.utils.platform.is_darwin():
-            # Find versioned libraries in system locations, being careful
-            # to avoid the unversioned stub which is no longer permitted.
-            lib = glob.glob("/usr/lib/libcrypto.*.dylib")
-            if lib:
-                # Sort so as to prefer the newest version.
-                lib = list(reversed(sorted(lib)))
-            else:
-                # Find library symlinks in Homebrew locations.
-                lib = glob.glob("/usr/local/opt/openssl/lib/libcrypto.dylib")
-                lib = lib or glob.glob("/usr/local/opt/openssl@*/lib/libcrypto.dylib")
-            lib = lib[0] if lib else None
     if not lib:
         raise OSError("Cannot locate OpenSSL libcrypto")
     return lib
@@ -134,7 +145,7 @@ libcrypto = _init_libcrypto()
 RSA_X931_PADDING = 5
 
 
-class RSAX931Signer(object):
+class RSAX931Signer:
     """
     Create ANSI X9.31 RSA signatures using OpenSSL libcrypto
     """
@@ -179,7 +190,7 @@ class RSAX931Signer(object):
         return buf[0:size]
 
 
-class RSAX931Verifier(object):
+class RSAX931Verifier:
     """
     Verify ANSI X9.31 RSA signatures using OpenSSL libcrypto
     """

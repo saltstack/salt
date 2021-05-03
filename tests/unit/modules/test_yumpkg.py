@@ -1,21 +1,13 @@
-# -*- coding: utf-8 -*-
-
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import os
 
+import salt.modules.cmdmod as cmdmod
 import salt.modules.pkg_resource as pkg_resource
 import salt.modules.rpm_lowpkg as rpm
 import salt.modules.yumpkg as yumpkg
-
-# Import Salt libs
-from salt.exceptions import CommandExecutionError
-from salt.ext import six
-
-# Import Salt Testing Libs
+import salt.utils.platform
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import MagicMock, Mock, patch
+from tests.support.mock import MagicMock, Mock, call, patch
 from tests.support.unit import TestCase, skipIf
 
 try:
@@ -332,10 +324,7 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                 ],
             }
             for pkgname, pkginfo in pkgs.items():
-                if six.PY3:
-                    self.assertCountEqual(pkginfo, expected_pkg_list[pkgname])
-                else:
-                    self.assertItemsEqual(pkginfo, expected_pkg_list[pkgname])
+                self.assertCountEqual(pkginfo, expected_pkg_list[pkgname])
 
     def test_list_patches(self):
         """
@@ -344,6 +333,69 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
         :return:
         """
         yum_out = [
+            "i my-fake-patch-not-installed-1234 recommended    spacewalk-usix-2.7.5.2-2.2.noarch",
+            "  my-fake-patch-not-installed-1234 recommended    spacewalksd-5.0.26.2-21.2.x86_64",
+            "i my-fake-patch-not-installed-1234 recommended    suseRegisterInfo-3.1.1-18.2.x86_64",
+            "i my-fake-patch-installed-1234 recommended        my-package-one-1.1-0.1.x86_64",
+            "i my-fake-patch-installed-1234 recommended        my-package-two-1.1-0.1.x86_64",
+        ]
+
+        expected_patches = {
+            "my-fake-patch-not-installed-1234": {
+                "installed": False,
+                "summary": [
+                    "spacewalk-usix-2.7.5.2-2.2.noarch",
+                    "spacewalksd-5.0.26.2-21.2.x86_64",
+                    "suseRegisterInfo-3.1.1-18.2.x86_64",
+                ],
+            },
+            "my-fake-patch-installed-1234": {
+                "installed": True,
+                "summary": [
+                    "my-package-one-1.1-0.1.x86_64",
+                    "my-package-two-1.1-0.1.x86_64",
+                ],
+            },
+        }
+
+        with patch.dict(yumpkg.__grains__, {"osarch": "x86_64"}), patch.dict(
+            yumpkg.__salt__,
+            {"cmd.run_stdout": MagicMock(return_value=os.linesep.join(yum_out))},
+        ):
+            patches = yumpkg.list_patches()
+            self.assertFalse(patches["my-fake-patch-not-installed-1234"]["installed"])
+            self.assertTrue(
+                len(patches["my-fake-patch-not-installed-1234"]["summary"]) == 3
+            )
+            for _patch in expected_patches["my-fake-patch-not-installed-1234"][
+                "summary"
+            ]:
+                self.assertTrue(
+                    _patch in patches["my-fake-patch-not-installed-1234"]["summary"]
+                )
+
+            self.assertTrue(patches["my-fake-patch-installed-1234"]["installed"])
+            self.assertTrue(
+                len(patches["my-fake-patch-installed-1234"]["summary"]) == 2
+            )
+            for _patch in expected_patches["my-fake-patch-installed-1234"]["summary"]:
+                self.assertTrue(
+                    _patch in patches["my-fake-patch-installed-1234"]["summary"]
+                )
+
+    def test_list_patches_with_unexpected_output(self):
+        """
+        Test patches listin with unexpected output from updateinfo list
+
+        :return:
+        """
+        yum_out = [
+            "Update notice RHBA-2014:0722 (from rhel7-dev-rhel7-rpm-x86_64) is broken, or a bad duplicate, skipping.",
+            "You should report this problem to the owner of the rhel7-dev-rhel7-rpm-x86_64 repository.",
+            'To help pinpoint the issue, please attach the output of "yum updateinfo --verbose" to the report.',
+            "Update notice RHSA-2014:1971 (from rhel7-dev-rhel7-rpm-x86_64) is broken, or a bad duplicate, skipping.",
+            "Update notice RHSA-2015:1981 (from rhel7-dev-rhel7-rpm-x86_64) is broken, or a bad duplicate, skipping.",
+            "Update notice RHSA-2015:0067 (from rhel7-dev-rhel7-rpm-x86_64) is broken, or a bad duplicate, skipping",
             "i my-fake-patch-not-installed-1234 recommended    spacewalk-usix-2.7.5.2-2.2.noarch",
             "  my-fake-patch-not-installed-1234 recommended    spacewalksd-5.0.26.2-21.2.x86_64",
             "i my-fake-patch-not-installed-1234 recommended    suseRegisterInfo-3.1.1-18.2.x86_64",
@@ -632,7 +684,7 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                             except AssertionError:
                                 continue
                         else:
-                            self.fail("repo '{0}' not checked".format(repo))
+                            self.fail("repo '{}' not checked".format(repo))
 
     def test_list_upgrades_dnf(self):
         """
@@ -962,6 +1014,91 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                     redirect_stderr=True,
                 )
 
+    def test_remove_with_epoch(self):
+        """
+        Tests that we properly identify a version containing an epoch for
+        deinstallation.
+
+        You can deinstall pkgs only without the epoch if no arch is provided:
+
+        .. code-block:: bash
+
+            yum remove PackageKit-yum-1.1.10-2.el7.centos
+        """
+        name = "foo"
+        installed = "8:3.8.12-4.n.el7"
+        list_pkgs_mock = MagicMock(
+            side_effect=lambda **kwargs: {
+                name: [installed]
+                if kwargs.get("versions_as_list", False)
+                else installed
+            }
+        )
+        cmd_mock = MagicMock(
+            return_value={"pid": 12345, "retcode": 0, "stdout": "", "stderr": ""}
+        )
+        salt_mock = {
+            "cmd.run_all": cmd_mock,
+            "lowpkg.version_cmp": rpm.version_cmp,
+            "pkg_resource.parse_targets": MagicMock(
+                return_value=({name: installed}, "repository")
+            ),
+        }
+        full_pkg_string = "-".join((name, installed[2:]))
+        with patch.object(yumpkg, "list_pkgs", list_pkgs_mock), patch(
+            "salt.utils.systemd.has_scope", MagicMock(return_value=False)
+        ), patch.dict(yumpkg.__salt__, salt_mock):
+
+            with patch.dict(yumpkg.__grains__, {"os": "CentOS", "osrelease": 7}):
+                expected = ["yum", "-y", "remove", full_pkg_string]
+                yumpkg.remove(name)
+                call = cmd_mock.mock_calls[0][1][0]
+                assert call == expected, call
+
+    def test_remove_with_epoch_and_arch_info(self):
+        """
+        Tests that we properly identify a version containing an epoch and arch
+        deinstallation.
+
+        You can deinstall pkgs with or without epoch in combination with the arch.
+        Here we test for the absence of the epoch, but the presence for the arch:
+
+        .. code-block:: bash
+
+            yum remove PackageKit-yum-1.1.10-2.el7.centos.x86_64
+        """
+        arch = "x86_64"
+        name = "foo"
+        name_and_arch = name + "." + arch
+        installed = "8:3.8.12-4.n.el7"
+        list_pkgs_mock = MagicMock(
+            side_effect=lambda **kwargs: {
+                name_and_arch: [installed]
+                if kwargs.get("versions_as_list", False)
+                else installed
+            }
+        )
+        cmd_mock = MagicMock(
+            return_value={"pid": 12345, "retcode": 0, "stdout": "", "stderr": ""}
+        )
+        salt_mock = {
+            "cmd.run_all": cmd_mock,
+            "lowpkg.version_cmp": rpm.version_cmp,
+            "pkg_resource.parse_targets": MagicMock(
+                return_value=({name_and_arch: installed}, "repository")
+            ),
+        }
+        full_pkg_string = "-".join((name, installed[2:]))
+        with patch.object(yumpkg, "list_pkgs", list_pkgs_mock), patch(
+            "salt.utils.systemd.has_scope", MagicMock(return_value=False)
+        ), patch.dict(yumpkg.__salt__, salt_mock):
+
+            with patch.dict(yumpkg.__grains__, {"os": "CentOS", "osrelease": 7}):
+                expected = ["yum", "-y", "remove", full_pkg_string + "." + arch]
+                yumpkg.remove(name)
+                call = cmd_mock.mock_calls[0][1][0]
+                assert call == expected, call
+
     def test_install_with_epoch(self):
         """
         Tests that we properly identify a version containing an epoch as an
@@ -992,7 +1129,9 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
 
             # Test yum
             expected = ["yum", "-y", "install", full_pkg_string]
-            with patch.dict(yumpkg.__grains__, {"os": "CentOS", "osrelease": 7}):
+            with patch.dict(yumpkg.__context__, {"yum_bin": "yum"}), patch.dict(
+                yumpkg.__grains__, {"os": "CentOS", "osrelease": 7}
+            ):
                 yumpkg.install("foo", version=new)
                 call = cmd_mock.mock_calls[0][1][0]
                 assert call == expected, call
@@ -1008,10 +1147,50 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
             ]
             yumpkg.__context__.pop("yum_bin")
             cmd_mock.reset_mock()
-            with patch.dict(yumpkg.__grains__, {"os": "Fedora", "osrelease": 27}):
+            with patch.dict(yumpkg.__context__, {"yum_bin": "dnf"}), patch.dict(
+                yumpkg.__grains__, {"os": "Fedora", "osrelease": 27}
+            ):
                 yumpkg.install("foo", version=new)
                 call = cmd_mock.mock_calls[0][1][0]
                 assert call == expected, call
+
+    @skipIf(not salt.utils.platform.is_linux(), "Only run on Linux")
+    def test_install_error_reporting(self):
+        """
+        Tests that we properly report yum/dnf errors.
+        """
+        name = "foo"
+        old = "8:3.8.12-6.n.el7"
+        new = "9:3.8.12-4.n.el7"
+        list_pkgs_mock = MagicMock(
+            side_effect=lambda **kwargs: {
+                name: [old] if kwargs.get("versions_as_list", False) else old
+            }
+        )
+        salt_mock = {
+            "cmd.run_all": cmdmod.run_all,
+            "lowpkg.version_cmp": rpm.version_cmp,
+            "pkg_resource.parse_targets": MagicMock(
+                return_value=({name: new}, "repository")
+            ),
+        }
+        full_pkg_string = "-".join((name, new[2:]))
+        with patch.object(yumpkg, "list_pkgs", list_pkgs_mock), patch(
+            "salt.utils.systemd.has_scope", MagicMock(return_value=False)
+        ), patch.dict(yumpkg.__salt__, salt_mock), patch.object(
+            yumpkg, "_yum", MagicMock(return_value="cat")
+        ):
+
+            expected = {
+                "changes": {},
+                "errors": [
+                    "cat: invalid option -- 'y'\n"
+                    "Try 'cat --help' for more information."
+                ],
+            }
+            with pytest.raises(CommandExecutionError) as exc_info:
+                yumpkg.install("foo", version=new)
+            assert exc_info.value.info == expected, exc_info.value.info
 
     def test_upgrade_with_options(self):
         with patch.object(yumpkg, "list_pkgs", MagicMock(return_value={})), patch(
@@ -1197,7 +1376,7 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
 
         # Test Fedora 20
         cmd = MagicMock(return_value={"retcode": 0})
-        with patch.dict(
+        with patch.dict(yumpkg.__context__, {"yum_bin": "yum"}), patch.dict(
             yumpkg.__grains__, {"os": "Fedora", "osrelease": 20}
         ), patch.object(
             yumpkg, "list_pkgs", MagicMock(return_value=list_pkgs_mock)
@@ -1216,6 +1395,14 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                 python_shell=False,
             )
 
+    def test_pkg_hold_tdnf(self):
+        """
+        Tests that we raise a SaltInvocationError if we try to use
+        hold-related functions on Photon OS.
+        """
+        with patch.dict(yumpkg.__context__, {"yum_bin": "tdnf"}):
+            self.assertRaises(SaltInvocationError, yumpkg.hold, "foo")
+
     def test_pkg_hold_dnf(self):
         """
         Tests that we properly identify versionlock plugin when using dnf
@@ -1230,9 +1417,13 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
 
         yumpkg.__context__.pop("yum_bin")
         cmd = MagicMock(return_value={"retcode": 0})
-        with patch.dict(yumpkg.__grains__, {"osmajorrelease": 8}), patch.object(
+        with patch.dict(yumpkg.__context__, {"yum_bin": "dnf"}), patch.dict(
+            yumpkg.__grains__, {"osmajorrelease": 8}
+        ), patch.object(
             yumpkg, "list_pkgs", MagicMock(return_value=list_pkgs_mock)
-        ), patch.object(yumpkg, "list_holds", MagicMock(return_value=[])), patch.dict(
+        ), patch.object(
+            yumpkg, "list_holds", MagicMock(return_value=[])
+        ), patch.dict(
             yumpkg.__salt__, {"cmd.run_all": cmd}
         ), patch(
             "salt.utils.systemd.has_scope", MagicMock(return_value=False)
@@ -1246,9 +1437,8 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
             )
 
         # Test Fedora 26+
-        yumpkg.__context__.pop("yum_bin")
         cmd = MagicMock(return_value={"retcode": 0})
-        with patch.dict(
+        with patch.dict(yumpkg.__context__, {"yum_bin": "dnf"}), patch.dict(
             yumpkg.__grains__, {"os": "Fedora", "osrelease": 26}
         ), patch.object(
             yumpkg, "list_pkgs", MagicMock(return_value=list_pkgs_mock)
@@ -1273,9 +1463,8 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
             "python3-dnf-plugins-extras-versionlock": "0:1.0.0-0.n.el8",
         }
 
-        yumpkg.__context__.pop("yum_bin")
         cmd = MagicMock(return_value={"retcode": 0})
-        with patch.dict(
+        with patch.dict(yumpkg.__context__, {"yum_bin": "dnf"}), patch.dict(
             yumpkg.__grains__, {"os": "Fedora", "osrelease": 25}
         ), patch.object(
             yumpkg, "list_pkgs", MagicMock(return_value=list_pkgs_mock)
@@ -1539,6 +1728,70 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
             info = yumpkg.group_info("@gnome-desktop")
             self.assertDictEqual(info, expected)
 
+    def test_get_repo_with_existent_repo(self):
+        """
+        Test get_repo with an existent repository
+        Expected return is a populated dictionary
+        """
+        repo = "base-source"
+        kwargs = {
+            "baseurl": "http://vault.centos.org/centos/$releasever/os/Source/",
+            "gpgkey": "file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7",
+            "name": "CentOS-$releasever - Base Sources",
+            "enabled": True,
+        }
+        parse_repo_file_return = (
+            "",
+            {
+                "base-source": {
+                    "baseurl": "http://vault.centos.org/centos/$releasever/os/Source/",
+                    "gpgkey": "file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7",
+                    "name": "CentOS-$releasever - Base Sources",
+                    "enabled": "1",
+                }
+            },
+        )
+        expected = {
+            "baseurl": "http://vault.centos.org/centos/$releasever/os/Source/",
+            "gpgkey": "file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7",
+            "name": "CentOS-$releasever - Base Sources",
+            "enabled": "1",
+        }
+        patch_list_repos = patch.object(
+            yumpkg, "list_repos", autospec=True, return_value=LIST_REPOS
+        )
+        patch_parse_repo_file = patch.object(
+            yumpkg,
+            "_parse_repo_file",
+            autospec=True,
+            return_value=parse_repo_file_return,
+        )
+
+        with patch_list_repos, patch_parse_repo_file:
+            ret = yumpkg.get_repo(repo, **kwargs)
+        assert ret == expected, ret
+
+    def test_get_repo_with_non_existent_repo(self):
+        """
+        Test get_repo with an non existent repository
+        Expected return is an empty dictionary
+        """
+        repo = "non-existent-repository"
+        kwargs = {
+            "baseurl": "http://fake.centos.org/centos/$releasever/os/Non-Existent/",
+            "gpgkey": "file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7",
+            "name": "CentOS-$releasever - Non-Existent Repository",
+            "enabled": True,
+        }
+        expected = {}
+        patch_list_repos = patch.object(
+            yumpkg, "list_repos", autospec=True, return_value=LIST_REPOS
+        )
+
+        with patch_list_repos:
+            ret = yumpkg.get_repo(repo, **kwargs)
+        assert ret == expected, ret
+
 
 @skipIf(pytest is None, "PyTest is missing")
 class YumUtilsTestCase(TestCase, LoaderModuleMockMixin):
@@ -1617,3 +1870,33 @@ class YumUtilsTestCase(TestCase, LoaderModuleMockMixin):
                 python_shell=True,
                 username="Darth Vader",
             )
+
+    @skipIf(not salt.utils.systemd.booted(), "Requires systemd")
+    @patch("salt.modules.yumpkg._yum", Mock(return_value="dnf"))
+    def test_services_need_restart(self):
+        """
+        Test that dnf needs-restarting output is parsed and
+        salt.utils.systemd.pid_to_service is called as expected.
+        """
+        expected = ["firewalld", "salt-minion"]
+
+        dnf_mock = Mock(
+            return_value="123 : /usr/bin/firewalld\n456 : /usr/bin/salt-minion\n"
+        )
+        systemd_mock = Mock(side_effect=["firewalld", "salt-minion"])
+        with patch.dict(yumpkg.__salt__, {"cmd.run_stdout": dnf_mock}), patch(
+            "salt.utils.systemd.pid_to_service", systemd_mock
+        ):
+            assert sorted(yumpkg.services_need_restart()) == expected
+            systemd_mock.assert_has_calls([call("123"), call("456")])
+
+    @patch("salt.modules.yumpkg._yum", Mock(return_value="dnf"))
+    def test_services_need_restart_requires_systemd(self):
+        """Test that yumpkg.services_need_restart raises an error if systemd is unavailable."""
+        with patch("salt.utils.systemd.booted", Mock(return_value=False)):
+            pytest.raises(CommandExecutionError, yumpkg.services_need_restart)
+
+    @patch("salt.modules.yumpkg._yum", Mock(return_value="yum"))
+    def test_services_need_restart_requires_dnf(self):
+        """Test that yumpkg.services_need_restart raises an error if DNF is unavailable."""
+        pytest.raises(CommandExecutionError, yumpkg.services_need_restart)

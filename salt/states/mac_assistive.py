@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Allows you to manage assistive access on macOS minions with 10.9+
 =================================================================
@@ -12,12 +11,8 @@ Install, enable and disable assistive access on macOS minions
         - enabled: True
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 
-# Import Salt libs
 import salt.utils.platform
 from salt.utils.versions import LooseVersion as _LooseVersion
 
@@ -58,12 +53,12 @@ def installed(name, enabled=True):
 
         if enabled != is_enabled:
             __salt__["assistive.enable"](name, enabled)
-            ret["comment"] = "Updated enable to {0}".format(enabled)
+            ret["comment"] = "Updated enable to {}".format(enabled)
         else:
             ret["comment"] = "Already in the correct state"
 
     else:
         __salt__["assistive.install"](name, enabled)
-        ret["comment"] = "Installed {0} into the assistive access panel".format(name)
+        ret["comment"] = "Installed {} into the assistive access panel".format(name)
 
     return ret
