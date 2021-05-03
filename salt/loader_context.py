@@ -3,8 +3,14 @@ Manage the context a module loaded by Salt's loader
 """
 import collections.abc
 import contextlib
-import contextvars
 import copy
+
+try:
+    # Try the stdlib C extension first
+    import _contextvars as contextvars
+except ImportError:
+    # Py<3.7
+    import contextvars
 
 DEFAULT_CTX_VAR = "loader_ctxvar"
 
