@@ -183,13 +183,13 @@ https://www.openhub.net/p/salt
 Other community links
 =====================
 
-- `Salt Stack Inc. <http://www.saltstack.com>`_
+- `Salt Project <http://saltproject.io>`_
 - `Subreddit <http://www.reddit.com/r/saltstack>`_
-- `YouTube <https://www.youtube.com/user/SaltStack>`_
-- `Facebook <https://www.facebook.com/SaltStack>`_
-- `Twitter <https://twitter.com/SaltStackInc>`_
+- `YouTube <https://www.youtube.com/channel/UCpveTIucFx9ljGelW63-BWg>`_
+- `Facebook <https://www.facebook.com/SaltProjectOSS>`_
+- `Twitter <https://twitter.com/Salt_Project_OS>`_
 - `Wikipedia page <https://en.wikipedia.org/wiki/Salt_(software)>`_
-- `Stack Overflow <https://stackoverflow.com/questions/tagged/salt-stack>`_
+- `Stack Overflow <https://stackoverflow.com/questions/tagged/salt-stack+or+salt-cloud+or+salt-creation>`_
 
 Hack the Source
 ===============

@@ -114,7 +114,7 @@ cherrypy==17.4.1
 click==7.1.2              # via geomet
 clustershell==1.8.3
 contextlib2==0.5.5
-contextvars==2.4 ; python_version < "3.7"
+contextvars==2.4
 croniter==0.3.29 ; sys_platform != "win32"
 cryptography==3.0
 decorator==4.4.2          # via networkx
@@ -184,7 +184,7 @@ pyasn1==0.4.5             # via pyasn1-modules, python-jose, rsa
 pycparser==2.17
 pycryptodomex==3.9.8
 pycurl==7.43.0.6
-pygit2==1.1.1
+pygit2==1.5.0
 pyinotify==0.9.6 ; sys_platform != "win32" and sys_platform != "darwin"
 pyjwt==2.0.0              # via adal
 pynacl==1.3.0             # via paramiko

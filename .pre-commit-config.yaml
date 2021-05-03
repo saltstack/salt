@@ -142,65 +142,70 @@ repos:
       - id: pip-tools-compile
         alias: compile-pkg-darwin-3.5-zmq-requirements
         name: Darwin Packaging Py3.5 ZeroMQ Requirements
-        files: ^(requirements/((base|zeromq|crypto|darwin)\.txt|static/pkg/(darwin\.in|py3\.5/darwin\.txt)))$
+        files: ^(requirements/((base|zeromq|crypto|darwin|pyobjc)\.txt|static/pkg/(darwin\.in|py3\.5/darwin\.txt)))$
         pass_filenames: false
         args:
           - -v
           - --py-version=3.5
           - --platform=darwin
           - --include=requirements/darwin.txt
+          - --include=requirements/pyobjc.txt
           - --passthrough-line-from-input=^pyobjc(.*)$
           - requirements/static/pkg/darwin.in
 
       - id: pip-tools-compile
         alias: compile-pkg-darwin-3.6-zmq-requirements
         name: Darwin Packaging Py3.6 ZeroMQ Requirements
-        files: ^(requirements/((base|zeromq|crypto|darwin)\.txt|static/pkg/(darwin\.in|py3\.6/darwin\.txt)))$
+        files: ^(requirements/((base|zeromq|crypto|darwin|pyobjc)\.txt|static/pkg/(darwin\.in|py3\.6/darwin\.txt)))$
         pass_filenames: false
         args:
           - -v
           - --py-version=3.6
           - --platform=darwin
           - --include=requirements/darwin.txt
+          - --include=requirements/pyobjc.txt
           - --passthrough-line-from-input=^pyobjc(.*)$
           - requirements/static/pkg/darwin.in
 
       - id: pip-tools-compile
         alias: compile-pkg-darwin-3.7-zmq-requirements
         name: Darwin Packaging Py3.7 ZeroMQ Requirements
-        files: ^(requirements/((base|zeromq|crypto|darwin)\.txt|static/pkg/(darwin\.in|py3\.7/darwin\.txt)))$
+        files: ^(requirements/((base|zeromq|crypto|darwin|pyobjc)\.txt|static/pkg/(darwin\.in|py3\.7/darwin\.txt)))$
         pass_filenames: false
         args:
           - -v
           - --py-version=3.7
           - --platform=darwin
           - --include=requirements/darwin.txt
+          - --include=requirements/pyobjc.txt
           - --passthrough-line-from-input=^pyobjc(.*)$
           - requirements/static/pkg/darwin.in
 
       - id: pip-tools-compile
         alias: compile-pkg-darwin-3.8-zmq-requirements
         name: Darwin Packaging Py3.8 ZeroMQ Requirements
-        files: ^(requirements/((base|zeromq|crypto|darwin)\.txt|static/pkg/(darwin\.in|py3\.8/darwin\.txt)))$
+        files: ^(requirements/((base|zeromq|crypto|darwin|pyobjc)\.txt|static/pkg/(darwin\.in|py3\.8/darwin\.txt)))$
         pass_filenames: false
         args:
           - -v
           - --py-version=3.8
           - --platform=darwin
           - --include=requirements/darwin.txt
+          - --include=requirements/pyobjc.txt
           - --passthrough-line-from-input=^pyobjc(.*)$
           - requirements/static/pkg/darwin.in
 
       - id: pip-tools-compile
         alias: compile-pkg-darwin-3.9-zmq-requirements
         name: Darwin Packaging Py3.9 ZeroMQ Requirements
-        files: ^(requirements/((base|zeromq|crypto|darwin)\.txt|static/pkg/(darwin\.in|py3\.9/darwin\.txt)))$
+        files: ^(requirements/((base|zeromq|crypto|darwin|pyobjc)\.txt|static/pkg/(darwin\.in|py3\.9/darwin\.txt)))$
         pass_filenames: false
         args:
           - -v
           - --py-version=3.9
           - --platform=darwin
           - --include=requirements/darwin.txt
+          - --include=requirements/pyobjc.txt
           - --passthrough-line-from-input=^pyobjc(.*)$
           - requirements/static/pkg/darwin.in
 
@@ -261,7 +266,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-linux-py3.5-zmq-requirements
         name: Linux CI Py3.5 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(linux|common)\.in|pkg/py3\.5/linux\.txt))$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(linux\.in|git-sources\.txt)|pkg/py3\.5/linux\.txt))$
         pass_filenames: false
         args:
           - -v
@@ -270,12 +275,13 @@ repos:
           - --include=requirements/static/pkg/py{py_version}/linux.txt
           - --include=requirements/pytest.txt
           - --include=requirements/static/ci/common.in
+          - --include=requirements/static/ci/git-sources.txt
           - requirements/static/ci/linux.in
 
       - id: pip-tools-compile
         alias: compile-ci-linux-py3.6-zmq-requirements
         name: Linux CI Py3.6 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(linux|common)\.in|pkg/py3\.6/linux\.txt))$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(linux\.in|git-sources\.txt)|pkg/py3\.6/linux\.txt))$
         pass_filenames: false
         args:
           - -v
@@ -284,12 +290,13 @@ repos:
           - --include=requirements/static/pkg/py{py_version}/linux.txt
           - --include=requirements/pytest.txt
           - --include=requirements/static/ci/common.in
+          - --include=requirements/static/ci/git-sources.txt
           - requirements/static/ci/linux.in
 
       - id: pip-tools-compile
         alias: compile-ci-linux-py3.7-zmq-requirements
         name: Linux CI Py3.7 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(linux|common)\.in|pkg/py3\.7/linux\.txt))$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(linux\.in|git-sources\.txt)|pkg/py3\.7/linux\.txt))$
         pass_filenames: false
         args:
           - -v
@@ -298,12 +305,13 @@ repos:
           - --include=requirements/static/pkg/py{py_version}/linux.txt
           - --include=requirements/pytest.txt
           - --include=requirements/static/ci/common.in
+          - --include=requirements/static/ci/git-sources.txt
           - requirements/static/ci/linux.in
 
       - id: pip-tools-compile
         alias: compile-ci-linux-py3.8-zmq-requirements
         name: Linux CI Py3.8 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(linux|common)\.in|pkg/py3\.8/linux\.txt))$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(linux\.in|git-sources\.txt)|pkg/py3\.8/linux\.txt))$
         pass_filenames: false
         args:
           - -v
@@ -312,12 +320,13 @@ repos:
           - --include=requirements/static/pkg/py{py_version}/linux.txt
           - --include=requirements/pytest.txt
           - --include=requirements/static/ci/common.in
+          - --include=requirements/static/ci/git-sources.txt
           - requirements/static/ci/linux.in
 
       - id: pip-tools-compile
         alias: compile-ci-linux-py3.9-zmq-requirements
         name: Linux CI Py3.9 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(linux|common)\.in|pkg/py3\.9/linux\.txt))$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(linux\.in|git-sources\.txt)|pkg/py3\.9/linux\.txt))$
         pass_filenames: false
         args:
           - -v
@@ -326,6 +335,7 @@ repos:
           - --include=requirements/static/pkg/py{py_version}/linux.txt
           - --include=requirements/pytest.txt
           - --include=requirements/static/ci/common.in
+          - --include=requirements/static/ci/git-sources.txt
           - requirements/static/ci/linux.in
 
       - id: pip-tools-compile
@@ -835,56 +845,61 @@ repos:
       - id: pip-tools-compile
         alias: compile-doc-requirements
         name: Docs CI Py3.5 Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/docs\.in)$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/docs\.in|static/pkg/linux\.in|static/pkg/.*/linux\.txt)$
         pass_filenames: false
         args:
           - -v
           - --py-version=3.5
           - --platform=linux
+          - --include=requirements/static/pkg/py{py_version}/linux.txt
           - requirements/static/ci/docs.in
 
       - id: pip-tools-compile
         alias: compile-doc-requirements
         name: Docs CI Py3.6 Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/docs\.in)$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/docs\.in|static/pkg/linux\.in|static/pkg/.*/linux\.txt)$
         pass_filenames: false
         args:
           - -v
           - --py-version=3.6
           - --platform=linux
+          - --include=requirements/static/pkg/py{py_version}/linux.txt
           - requirements/static/ci/docs.in
 
       - id: pip-tools-compile
         alias: compile-doc-requirements
         name: Docs CI Py3.7 Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/docs\.in)$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/docs\.in|static/pkg/linux\.in|static/pkg/.*/linux\.txt)$
         pass_filenames: false
         args:
           - -v
           - --py-version=3.7
           - --platform=linux
+          - --include=requirements/static/pkg/py{py_version}/linux.txt
           - requirements/static/ci/docs.in
 
       - id: pip-tools-compile
         alias: compile-doc-requirements
         name: Docs CI Py3.8 Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/docs\.in)$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/docs\.in|static/pkg/linux\.in|static/pkg/.*/linux\.txt)$
         pass_filenames: false
         args:
           - -v
           - --py-version=3.8
           - --platform=linux
+          - --include=requirements/static/pkg/py{py_version}/linux.txt
           - requirements/static/ci/docs.in
 
       - id: pip-tools-compile
         alias: compile-doc-requirements
         name: Docs CI Py3.9 Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/docs\.in)$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/docs\.in|static/pkg/linux\.in|static/pkg/.*/linux\.txt)$
         pass_filenames: false
         args:
           - -v
           - --py-version=3.9
           - --platform=linux
+          - --include=requirements/static/pkg/py{py_version}/linux.txt
           - requirements/static/ci/docs.in
 
   # <---- Doc CI Requirements ----------------------------------------------------------------------------------------
@@ -1138,6 +1153,31 @@ repos:
         files: ^doc/.*\.rst
         additional_dependencies: [black==19.10b0]
   # <---- Code Formatting --------------------------------------------------------------------------------------------
+
+  # ----- Security -------------------------------------------------------------------------------------------------->
+  - repo: https://github.com/PyCQA/bandit
+    rev: "1.7.0"
+    hooks:
+      - id: bandit
+        alias: bandit-salt
+        name: Run bandit against Salt
+        args: [--silent, -lll, --skip, B701]
+        exclude: >
+            (?x)^(
+                templates/.*|
+                salt/ext/.*|
+                tests/.*
+            )$
+  - repo: https://github.com/PyCQA/bandit
+    rev: "1.7.0"
+    hooks:
+      - id: bandit
+        alias: bandit-tests
+        name: Run bandit against the test suite
+        args: [--silent, -lll, --skip, B701]
+        files: ^tests/.*
+        exclude: ^tests/minionswarm\.py
+  # <---- Security ---------------------------------------------------------------------------------------------------
 
   # ----- Pre-Commit ------------------------------------------------------------------------------------------------>
   - repo: https://github.com/saltstack/mirrors-nox

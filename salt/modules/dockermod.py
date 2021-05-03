@@ -490,7 +490,7 @@ def _change_state(name, action, expected, *args, **kwargs):
         return {
             "result": False,
             "state": {"old": expected, "new": expected},
-            "comment": ("Container '{}' already {}".format(name, expected)),
+            "comment": "Container '{}' already {}".format(name, expected),
         }
     _client_wrapper(action, name, *args, **kwargs)
     _clear_context()
@@ -953,7 +953,6 @@ def compare_containers(first, second, ignore=None):
         comparing. This is useful when comparing two otherwise identical
         containers which have different hostnames.
 
-
     CLI Examples:
 
     .. code-block:: bash
@@ -1080,7 +1079,6 @@ def compare_container_networks(first, second):
 
     second
         Name or ID of second container (new)
-
 
     CLI Example:
 
@@ -1297,7 +1295,6 @@ def compare_networks(first, second, ignore="Name,Id,Created,Containers"):
     ignore : Name,Id,Created,Containers
         A comma-separated list (or Python list) of keys to ignore when
         comparing.
-
 
     CLI Example:
 
@@ -1588,7 +1585,6 @@ def depends(name):
     - ``Containers`` - A list of containers which depend on the specified image
     - ``Images`` - A list of IDs of images which depend on the specified image
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -1632,7 +1628,6 @@ def diff(name):
     These keys will only be present if there were changes, so if the container
     has no differences the return dict will be empty.
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -1666,7 +1661,6 @@ def exists(name):
     **RETURN DATA**
 
     A boolean (``True`` if the container exists, otherwise ``False``)
-
 
     CLI Example:
 
@@ -1734,7 +1728,6 @@ def history(name, quiet=False):
     - ``Time_Created_Local`` - Time this build step was completed (Minion's
       local timezone)
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -1790,7 +1783,6 @@ def images(verbose=False, **kwargs):
     A dictionary with each key being an image ID, and each value some general
     info about that image (time created, size, tags associated with the image,
     etc.)
-
 
     CLI Example:
 
@@ -1885,7 +1877,6 @@ def inspect(name):
 
     A dictionary of container/image/volume/network information
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -1932,7 +1923,6 @@ def inspect_container(name):
 
     A dictionary of container information
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -1960,7 +1950,6 @@ def inspect_image(name):
     **RETURN DATA**
 
     A dictionary of image information
-
 
     CLI Examples:
 
@@ -2160,7 +2149,6 @@ def logs(name, **kwargs):
         .. note:
             Since it blocks, this option should be used with caution.
 
-
     CLI Examples:
 
     .. code-block:: bash
@@ -2252,7 +2240,6 @@ def port(name, private_port=None):
     A dictionary of port mappings, with the keys being the port and the values
     being the mapping(s) for that port.
 
-
     CLI Examples:
 
     .. code-block:: bash
@@ -2323,7 +2310,6 @@ def ps_(filters=None, **kwargs):
     A dictionary with each key being an container ID, and each value some
     general info about that container (time created, name, command, etc.)
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -2385,7 +2371,6 @@ def state(name):
     A string representing the current state of the container (either
     ``running``, ``paused``, or ``stopped``)
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -2422,7 +2407,6 @@ def search(name, official=False, trusted=False):
       not)
     - ``Stars`` - Number of stars the image has on the registry
     - ``Trusted`` - A boolean (``True`` if a trusted build, ``False`` if not)
-
 
     CLI Example:
 
@@ -2477,7 +2461,6 @@ def top(name):
         Container name or ID
 
     CLI Example:
-
 
     **RETURN DATA**
 
@@ -3261,7 +3244,6 @@ def create(
     - ``Id`` - ID of the newly-created container
     - ``Name`` - Name of the newly-created container
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -3582,7 +3564,6 @@ def copy_from(name, source, dest, overwrite=False, makedirs=False):
 
     A boolean (``True`` if successful, otherwise ``False``)
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -3698,7 +3679,6 @@ def copy_to(name, source, dest, exec_driver=None, overwrite=False, makedirs=Fals
 
     A boolean (``True`` if successful, otherwise ``False``)
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -3775,7 +3755,6 @@ def export(name, path, overwrite=False, makedirs=False, compression=None, **kwar
     - ``Size`` - Size of the file, in bytes
     - ``Size_Human`` - Size of the file, in human-readable units
     - ``Time_Elapsed`` - Time in seconds taken to perform the export
-
 
     CLI Examples:
 
@@ -3928,7 +3907,6 @@ def rm_(name, force=False, volumes=False, **kwargs):
     **RETURN DATA**
 
     A list of the IDs of containers which were removed
-
 
     CLI Example:
 
@@ -4084,7 +4062,6 @@ def build(
       *(Only present if the image specified by the "repository" and "tag"
       arguments was not present on the Minion, or if cache=False)*
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -4215,7 +4192,6 @@ def commit(name, repository, tag="latest", message=None, author=None):
     - ``Image`` - Name of the newly-created image
     - ``Time_Elapsed`` - Time in seconds taken to perform the commit
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -4277,7 +4253,6 @@ def dangling(prune=False, force=False):
       *(Only present if prune failed)*
     - ``Removed`` - A boolean (``True`` if prune was successful, ``False`` if
       not)
-
 
     CLI Example:
 
@@ -4349,7 +4324,6 @@ def import_(source, repository, tag="latest", api_response=False):
     - ``Id`` - ID of the newly-created image
     - ``Image`` - Name of the newly-created image
     - ``Time_Elapsed`` - Time in seconds taken to perform the commit
-
 
     CLI Example:
 
@@ -4454,7 +4428,6 @@ def load(path, repository=None, tag=None):
       tag the topmost layer
 
       *(Only present if tag was specified and tagging failed)*
-
 
     CLI Example:
 
@@ -4588,7 +4561,6 @@ def pull(
       message saying that an image was downloaded, or that it was up to date).
     - ``Time_Elapsed`` - Time in seconds taken to perform the pull
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -4683,7 +4655,6 @@ def push(
         - ``Pushed`` - Layers that that were pushed
     - ``Time_Elapsed`` - Time in seconds taken to perform the push
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -4758,7 +4729,6 @@ def rmi(*names, **kwargs):
     - ``Layers`` - A list of the IDs of image layers that were removed
     - ``Tags`` - A list of the tags that were removed
     - ``Errors`` - A list of any errors that were encountered
-
 
     CLI Examples:
 
@@ -4880,7 +4850,6 @@ def save(name, path, overwrite=False, makedirs=False, compression=None, **kwargs
     - ``Size`` - Size of the file, in bytes
     - ``Size_Human`` - Size of the file, in human-readable units
     - ``Time_Elapsed`` - Time in seconds taken to perform the save
-
 
     CLI Examples:
 
@@ -5337,7 +5306,6 @@ def create_network(
         - ``aux_addresses="['foo.bar.tld=192.168.50.10', 'hello.world.tld=192.168.50.11']"``
         - ``aux_addresses="{'foo.bar.tld': '192.168.50.10', 'hello.world.tld': '192.168.50.11'}"``
 
-
     CLI Examples:
 
     .. code-block:: bash
@@ -5647,7 +5615,6 @@ def kill(name):
     - ``result`` - A boolean noting whether or not the action was successful
     - ``comment`` - Only present if the container cannot be killed
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -5675,7 +5642,6 @@ def pause(name):
     - ``result`` - A boolean noting whether or not the action was successful
     - ``comment`` - Only present if the container cannot be paused
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -5687,7 +5653,7 @@ def pause(name):
         return {
             "result": False,
             "state": {"old": orig_state, "new": orig_state},
-            "comment": ("Container '{}' is stopped, cannot pause".format(name)),
+            "comment": "Container '{}' is stopped, cannot pause".format(name),
         }
     return _change_state(name, "pause", "paused")
 
@@ -5716,7 +5682,6 @@ def restart(name, timeout=10):
     - ``result`` - A boolean noting whether or not the action was successful
     - ``restarted`` - If restart was successful, this key will be present and
       will be set to ``True``.
-
 
     CLI Examples:
 
@@ -5776,7 +5741,6 @@ def start_(name):
     - ``result`` - A boolean noting whether or not the action was successful
     - ``comment`` - Only present if the container cannot be started
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -5788,7 +5752,7 @@ def start_(name):
         return {
             "result": False,
             "state": {"old": orig_state, "new": orig_state},
-            "comment": ("Container '{}' is paused, cannot start".format(name)),
+            "comment": "Container '{}' is paused, cannot start".format(name),
         }
 
     return _change_state(name, "start", "running")
@@ -5824,7 +5788,6 @@ def stop(name, timeout=None, **kwargs):
       well as the new state
     - ``result`` - A boolean noting whether or not the action was successful
     - ``comment`` - Only present if the container can not be stopped
-
 
     CLI Examples:
 
@@ -5883,7 +5846,6 @@ def unpause(name):
     - ``result`` - A boolean noting whether or not the action was successful
     - ``comment`` - Only present if the container can not be unpaused
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -5895,7 +5857,7 @@ def unpause(name):
         return {
             "result": False,
             "state": {"old": orig_state, "new": orig_state},
-            "comment": ("Container '{}' is stopped, cannot unpause".format(name)),
+            "comment": "Container '{}' is stopped, cannot unpause".format(name),
         }
     return _change_state(name, "unpause", "running")
 
@@ -5931,7 +5893,6 @@ def wait(name, ignore_already_stopped=False, fail_on_exit_status=False):
     - ``result`` - A boolean noting whether or not the action was successful
     - ``exit_status`` - Exit status for the container
     - ``comment`` - Only present if the container is already stopped
-
 
     CLI Example:
 
@@ -6771,7 +6732,8 @@ def call(name, function, *args, **kwargs):
     untar_cmd = [
         "python",
         "-c",
-        ("import tarfile; " 'tarfile.open("{0}/{1}").extractall(path="{0}")').format(
+        "import tarfile; "
+        'tarfile.open("{0}/{1}").extractall(path="{0}")'.format(
             thin_dest_path, os.path.basename(thin_path)
         ),
     ]

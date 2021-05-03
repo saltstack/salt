@@ -1204,7 +1204,6 @@ class AESFuncs(TransportMethods):
     expose_methods = (
         "verify_minion",
         "_master_tops",
-        "_ext_nodes",
         "_master_opts",
         "_mine_get",
         "_mine",
@@ -1428,9 +1427,6 @@ class AESFuncs(TransportMethods):
         if load is False:
             return {}
         return self.masterapi._master_tops(load, skip_verify=True)
-
-    # Needed so older minions can request master_tops
-    _ext_nodes = _master_tops
 
     def _master_opts(self, load):
         """
@@ -2063,7 +2059,7 @@ class ClearFuncs(TransportMethods):
             fun = clear_load.pop("fun")
             runner_client = salt.runner.RunnerClient(self.opts)
             return runner_client.asynchronous(
-                fun, clear_load.get("kwarg", {}), username
+                fun, clear_load.get("kwarg", {}), username, local=True
             )
         except Exception as exc:  # pylint: disable=broad-except
             log.error("Exception occurred while introspecting %s: %s", fun, exc)

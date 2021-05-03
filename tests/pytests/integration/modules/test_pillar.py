@@ -34,6 +34,10 @@ def pillar_tree(base_env_pillar_tree_root_dir, salt_minion, salt_call_cli):
       - Galahad
       - Bedevere
       - Robin
+
+    12345:
+      code:
+        - luggage
     """
     top_tempfile = pytest.helpers.temp_file(
         "top.sls", top_file, base_env_pillar_tree_root_dir
@@ -157,6 +161,26 @@ def test_pillar_command_line(salt_call_cli, pillar_tree):
     pillar_items = ret.json
     assert "new" in pillar_items
     assert pillar_items["new"] == "additional"
+
+
+def test_pillar_get_integer_key(salt_call_cli, pillar_tree):
+    """
+    Test to ensure we get expected output
+    from pillar.items
+    """
+    ret = salt_call_cli.run("pillar.items")
+    assert ret.exitcode == 0
+    assert ret.json
+    pillar_items = ret.json
+    assert "12345" in pillar_items
+    assert pillar_items["12345"] == {"code": ["luggage"]}
+
+    ret = salt_call_cli.run("pillar.get", key="12345")
+    assert ret.exitcode == 0
+    assert ret.json
+    pillar_get = ret.json
+    assert "code" in pillar_get
+    assert "luggage" in pillar_get["code"]
 
 
 @attr.s
@@ -451,6 +475,100 @@ def test_pillar_refresh_pillar_scheduler(salt_cli, salt_minion):
                 "schedule.job_status", name="first_test_ping", minion_tgt=salt_minion.id
             )
             assert ret.json["_next_fire_time"] == _next_fire_time
+
+    # Refresh pillar once we're done
+    salt_cli.run("saltutil.refresh_pillar", wait=True, minion_tgt=salt_minion.id)
+
+
+@pytest.mark.slow_test
+@pytest.mark.parametrize(
+    "jinja_file,app,caching,db",
+    [
+        ("test_jinja_sls_as_documented", True, True, False),
+        ("test_jinja_sls_with_minion_id", False, False, True),
+        ("test_jinja_sls_with_minion_id_regex_compound", False, False, True),
+    ],
+)
+def test_pillar_match_filter_by_minion_id(
+    salt_cli, salt_minion, jinja_file, app, caching, db
+):
+    """
+    Ensure "match.filter_by" used during Pillar rendering uses the Minion ID and
+    returns the expected values
+    """
+    top_sls = """
+    base:
+      {}:
+        - test_jinja
+    """.format(
+        salt_minion.id
+    )
+
+    sls_files = {
+        "test_jinja_sls_as_documented": """
+    # Filter the data for the current minion into a variable:
+    {{% set roles = salt['match.filter_by']({{
+        'web*': ['app', 'caching'],
+        '{}*': ['db'],
+    }}, default='web*') %}}
+
+    # Make the filtered data available to Pillar:
+    roles: {{{{ roles | yaml() }}}}
+    """.format(
+            salt_minion.id
+        ),
+        "test_jinja_sls_with_minion_id": """
+    # Filter the data for the current minion into a variable:
+    {{% set roles = salt['match.filter_by']({{
+        'web*': ['app', 'caching'],
+        '{}*': ['db'],
+    }}, minion_id=grains['id'], default='web*') %}}
+
+    # Make the filtered data available to Pillar:
+    roles: {{{{ roles | yaml() }}}}
+    """.format(
+            salt_minion.id
+        ),
+        "test_jinja_sls_with_minion_id_regex_compound": """
+    # Filter the data for the current minion into a variable:
+    {{% set roles = salt['match.filter_by']({{
+        'web*': ['app', 'caching'],
+        'E@{}': ['db'],
+    }}, minion_id=grains['id'], default='web*') %}}
+
+    # Make the filtered data available to Pillar:
+    roles: {{{{ roles | yaml() }}}}
+    """.format(
+            salt_minion.id
+        ),
+    }
+
+    # test the brokenness of the currently documented example
+    # it lacks the "minion_id" argument for "match.filter_by" and thereby
+    # assigns the wrong roles
+    with pytest.helpers.temp_pillar_file("top.sls", top_sls):
+        with pytest.helpers.temp_pillar_file("test_jinja.sls", sls_files[jinja_file]):
+            # Calling refresh_pillar to update in-memory pillars
+            salt_cli.run(
+                "saltutil.refresh_pillar", wait=True, minion_tgt=salt_minion.id
+            )
+
+            # Get the Minion's Pillar
+            ret = salt_cli.run("pillar.get", "roles", minion_tgt=salt_minion.id)
+            if app:
+                assert "app" in ret.json
+            else:
+                assert "app" not in ret.json
+
+            if caching:
+                assert "caching" in ret.json
+            else:
+                assert "caching" not in ret.json
+
+            if db:
+                assert "db" in ret.json
+            else:
+                assert "db" not in ret.json
 
     # Refresh pillar once we're done
     salt_cli.run("saltutil.refresh_pillar", wait=True, minion_tgt=salt_minion.id)

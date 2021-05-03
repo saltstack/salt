@@ -4,9 +4,9 @@ directories for python loadable code and organizes the code into the
 plugin interfaces used by Salt.
 """
 
-import contextvars
 import copy
 import functools
+import importlib
 import importlib.machinery  # pylint: disable=no-name-in-module,import-error
 import importlib.util  # pylint: disable=no-name-in-module,import-error
 import inspect
@@ -20,6 +20,7 @@ import time
 import traceback
 import types
 from collections.abc import MutableMapping
+from contextlib import contextmanager
 from zipimport import zipimporter
 
 import salt.config
@@ -39,17 +40,16 @@ import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.versions
 from salt.exceptions import LoaderError
-from salt.ext import six
-from salt.ext.six.moves import reload_module
 from salt.template import check_render_pipe_str
+from salt.utils import entrypoints
 from salt.utils.decorators import Depends
 
 try:
-    import pkg_resources
-
-    HAS_PKG_RESOURCES = True
+    # Try the stdlib C extension first
+    import _contextvars as contextvars
 except ImportError:
-    HAS_PKG_RESOURCES = False
+    # Py<3.7
+    import contextvars
 
 log = logging.getLogger(__name__)
 
@@ -120,18 +120,6 @@ def static_loader(
     return ret
 
 
-def _format_entrypoint_target(ep):
-    """
-    Makes a string describing the target of an EntryPoint object.
-
-    Base strongly on EntryPoint.__str__().
-    """
-    s = ep.module_name
-    if ep.attrs:
-        s += ":" + ".".join(ep.attrs)
-    return s
-
-
 def _module_dirs(
     opts,
     ext_type,
@@ -152,23 +140,93 @@ def _module_dirs(
             ext_type_dirs = "{}_dirs".format(tag)
         if ext_type_dirs in opts:
             ext_type_types.extend(opts[ext_type_dirs])
-        if HAS_PKG_RESOURCES and ext_type_dirs:
-            for entry_point in pkg_resources.iter_entry_points(
-                "salt.loader", ext_type_dirs
-            ):
-                try:
+        if ext_type_dirs:
+            for entry_point in entrypoints.iter_entry_points("salt.loader"):
+                with catch_entry_points_exception(entry_point) as ctx:
                     loaded_entry_point = entry_point.load()
-                    for path in loaded_entry_point():
+                if ctx.exception_caught:
+                    continue
+
+                # Old way of defining loader entry points
+                #   [options.entry_points]
+                #   salt.loader=
+                #     runner_dirs = thirpartypackage.loader:func_to_get_list_of_dirs
+                #     module_dirs = thirpartypackage.loader:func_to_get_list_of_dirs
+                #
+                #
+                # New way of defining entrypoints
+                #   [options.entry_points]
+                #   salt.loader=
+                #     <this-name-does-not-matter> = thirpartypackage
+                #     <this-name-does-not-matter> = thirpartypackage:callable
+                #
+                # We try and see if the thirpartypackage has a `ext_type` sub module, and if so,
+                # we append it to loaded_entry_point_paths.
+                # If the entry-point is in the form of `thirpartypackage:callable`, the return of that
+                # callable must be a dictionary where the keys are the `ext_type`'s and the values must be
+                # lists of paths.
+
+                # We could feed the paths we load directly to `ext_type_types`, but we would not
+                # check for duplicates
+                loaded_entry_point_paths = set()
+
+                if isinstance(loaded_entry_point, types.FunctionType):
+                    # If the entry point object is a function, we have two scenarios
+                    #   1: It returns a list; This is an old style entry entry_point
+                    #   2: It returns a dictionary; This is a new style entry point
+                    with catch_entry_points_exception(entry_point) as ctx:
+                        loaded_entry_point_value = loaded_entry_point()
+                    if ctx.exception_caught:
+                        continue
+
+                    if isinstance(loaded_entry_point_value, list):
+                        # This is old style entry-point, and, as such, the entry point name MUST
+                        # match the value of `ext_type_dirs
+                        if entry_point.name != ext_type_dirs:
+                            continue
+                        for path in loaded_entry_point_value:
+                            loaded_entry_point_paths.add(path)
+                    elif isinstance(loaded_entry_point_value, dict):
+                        # This is new style entry-point and it returns a dictionary.
+                        # It MUST contain `ext_type` in it's keys to be considered
+                        if ext_type not in loaded_entry_point_value:
+                            continue
+                        with catch_entry_points_exception(entry_point) as ctx:
+                            if isinstance(loaded_entry_point_value[ext_type], str):
+                                # No strings please!
+                                raise ValueError(
+                                    "The callable must return an iterable of strings. "
+                                    "A single string is not supported."
+                                )
+                            for path in loaded_entry_point_value[ext_type]:
+                                loaded_entry_point_paths.add(path)
+                elif isinstance(loaded_entry_point, types.ModuleType):
+                    # This is a new style entry points definition which just points us to a package
+                    #
+                    # We try and see if the thirpartypackage has a `ext_type` sub module, and if so,
+                    # we append it to loaded_entry_point_paths.
+                    for loaded_entry_point_path in loaded_entry_point.__path__:
+                        with catch_entry_points_exception(entry_point) as ctx:
+                            entry_point_ext_type_package_path = os.path.join(
+                                loaded_entry_point_path, ext_type
+                            )
+                            if not os.path.exists(entry_point_ext_type_package_path):
+                                continue
+                        if ctx.exception_caught:
+                            continue
+                        loaded_entry_point_paths.add(entry_point_ext_type_package_path)
+                else:
+                    with catch_entry_points_exception(entry_point):
+                        raise ValueError(
+                            "Don't know how to load a salt extension from {}".format(
+                                loaded_entry_point
+                            )
+                        )
+
+                # Finally, we check all paths that we collected to see if they exist
+                for path in loaded_entry_point_paths:
+                    if os.path.exists(path):
                         ext_type_types.append(path)
-                except Exception as exc:  # pylint: disable=broad-except
-                    log.error(
-                        "Error getting module directories from %s: %s",
-                        _format_entrypoint_target(entry_point),
-                        exc,
-                    )
-                    log.debug(
-                        "Full backtrace for module directories error", exc_info=True
-                    )
 
     cli_module_dirs = []
     # The dirs can be any module dir, or a in-tree _{ext_type} dir
@@ -1262,6 +1320,12 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 self.pack[i] = self.pack[i].value()
         if opts is None:
             opts = {}
+        opts = copy.deepcopy(opts)
+        for i in ["pillar", "grains"]:
+            if i in opts and isinstance(
+                opts[i], salt.loader_context.NamedLoaderContext
+            ):
+                opts[i] = opts[i].value()
         threadsafety = not opts.get("multiprocessing")
         self.context_dict = salt.utils.context.ContextDict(threadsafe=threadsafety)
         self.opts = self.__prep_mod_opts(opts)
@@ -1524,7 +1588,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                                 self.file_mapping[f_noext][0],
                             )
 
-                        if six.PY3 and ext == ".pyc" and curr_ext == ".pyc":
+                        if ext == ".pyc" and curr_ext == ".pyc":
                             # Check the optimization level
                             if opt_index >= curr_opt_index:
                                 # Module name match, but a higher-priority
@@ -1537,7 +1601,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                             # exists, so skip this.
                             continue
 
-                    if six.PY3 and not dirname and ext == ".pyc":
+                    if not dirname and ext == ".pyc":
                         # On Python 3, we should only load .pyc files from the
                         # __pycache__ subdirectory (i.e. when dirname is not an
                         # empty string).
@@ -1625,7 +1689,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         for submodule in submodules:
             # it is a submodule if the name is in a namespace under mod
             if submodule.__name__.startswith(mod.__name__ + "."):
-                reload_module(submodule)
+                importlib.reload(submodule)
                 self._reload_submodules(submodule)
 
     def __populate_sys_path(self):
@@ -2260,3 +2324,20 @@ def global_injector_decorator(inject_globals):
         return wrapper
 
     return inner_decorator
+
+
+@contextmanager
+def catch_entry_points_exception(entry_point):
+    context = types.SimpleNamespace(exception_caught=False)
+    try:
+        yield context
+    except Exception as exc:  # pylint: disable=broad-except
+        context.exception_caught = True
+        entry_point_details = entrypoints.name_and_version_from_entry_point(entry_point)
+        log.error(
+            "Error processing Salt Extension %s(version: %s): %s",
+            entry_point_details.name,
+            entry_point_details.version,
+            exc,
+            exc_info_on_loglevel=logging.DEBUG,
+        )

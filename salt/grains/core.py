@@ -1019,10 +1019,11 @@ def _virtual(osdata):
                 # Tested on Fedora 10 / 2.6.27.30-170.2.82 with xen
                 # Tested on Fedora 15 / 2.6.41.4-1 without running xen
                 elif isdir("/sys/bus/xen"):
-                    if "xen:" in __salt__["cmd.run"]("dmesg").lower():
-                        grains["virtual_subtype"] = "Xen PV DomU"
-                    elif os.path.isfile("/sys/bus/xen/drivers/xenconsole"):
+                    if os.path.isdir("/sys/bus/xen/drivers/xenconsole"):
                         # An actual DomU will have the xenconsole driver
+                        grains["virtual_subtype"] = "Xen PV DomU"
+                    elif "xen:" in __salt__["cmd.run"]("dmesg").lower():
+                        # Fallback to parsing dmesg, might not be successful
                         grains["virtual_subtype"] = "Xen PV DomU"
             # If a Dom0 or DomU was detected, obviously this is xen
             if "dom" in grains.get("virtual_subtype", "").lower():
@@ -1387,6 +1388,7 @@ def _windows_platform_data():
     #    serialnumber
     #    osfullname
     #    timezone
+    #    uuid
     #    windowsdomain
     #    windowsdomaintype
     #    motherboard.productname
@@ -1406,6 +1408,8 @@ def _windows_platform_data():
         biosinfo = wmi_c.Win32_BIOS()[0]
         # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394498(v=vs.85).aspx
         timeinfo = wmi_c.Win32_TimeZone()[0]
+        # https://docs.microsoft.com/en-us/windows/win32/cimwin32prov/win32-computersystemproduct
+        csproductinfo = wmi_c.Win32_ComputerSystemProduct()[0]
 
         # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394072(v=vs.85).aspx
         motherboard = {"product": None, "serial": None}
@@ -1443,6 +1447,7 @@ def _windows_platform_data():
             "serialnumber": _clean_value("serialnumber", biosinfo.SerialNumber),
             "osfullname": _clean_value("osfullname", osinfo.Caption),
             "timezone": _clean_value("timezone", timeinfo.Description),
+            "uuid": _clean_value("uuid", csproductinfo.UUID.lower()),
             "windowsdomain": _clean_value("windowsdomain", net_info["Domain"]),
             "windowsdomaintype": _clean_value(
                 "windowsdomaintype", net_info["DomainType"]
@@ -1558,6 +1563,9 @@ _OS_NAME_MAP = {
     "linuxmint": "Mint",
     "neon": "KDE neon",
     "pop": "Pop",
+    "rocky": "Rocky",
+    "alibabaclo": "Alinux",
+    "mendel": "Mendel",
 }
 
 # Map the 'os' grain to the 'os_family' grain
@@ -1634,6 +1642,11 @@ _OS_FAMILY_MAP = {
     "AIX": "AIX",
     "TurnKey": "Debian",
     "Pop": "Debian",
+    "Rocky": "RedHat",
+    "AstraLinuxCE": "Debian",
+    "AstraLinuxSE": "Debian",
+    "Alinux": "RedHat",
+    "Mendel": "Debian",
 }
 
 # Matches any possible format:

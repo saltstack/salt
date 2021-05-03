@@ -1,11 +1,28 @@
+import os
+
 import pytest
+import salt.modules.beacons as beaconmod
+import salt.states.beacon as beaconstate
 import salt.states.pkg as pkg
+from salt.utils.event import SaltEvent
 from tests.support.mock import MagicMock, patch
 
 
 @pytest.fixture
 def configure_loader_modules():
-    return {pkg: {"__grains__": {"os": "CentOS"}}}
+    return {
+        pkg: {
+            "__env__": "base",
+            "__salt__": {},
+            "__grains__": {"os": "CentOS"},
+            "__opts__": {"test": False, "cachedir": ""},
+            "__instance_id__": "",
+            "__low__": {},
+            "__utils__": {},
+        },
+        beaconstate: {"__salt__": {}, "__opts__": {}},
+        beaconmod: {"__salt__": {}, "__opts__": {}},
+    }
 
 
 @pytest.fixture(scope="module")
@@ -242,3 +259,96 @@ def test_fulfills_version_spec(installed_versions, operator, version, expected_r
     assert expected_result == pkg._fulfills_version_spec(
         installed_versions, operator, version
     )
+
+
+def test_mod_beacon():
+    """
+    Test to create a beacon based on a pkg
+    """
+    name = "vim"
+
+    with patch.dict(pkg.__salt__, {"beacons.list": MagicMock(return_value={})}):
+        with patch.dict(pkg.__states__, {"beacon.present": beaconstate.present}):
+            ret = pkg.mod_beacon(name, sfun="latest")
+            expected = {
+                "name": name,
+                "changes": {},
+                "result": False,
+                "comment": "pkg.latest does not work with the mod_beacon state function",
+            }
+
+            assert ret == expected
+
+            ret = pkg.mod_beacon(name, sfun="installed")
+            expected = {
+                "name": name,
+                "changes": {},
+                "result": True,
+                "comment": "Not adding beacon.",
+            }
+
+            assert ret == expected
+
+    event_returns = [
+        {
+            "complete": True,
+            "tag": "/salt/minion/minion_beacons_list_complete",
+            "beacons": {},
+        },
+        {
+            "complete": True,
+            "tag": "/salt/minion/minion_beacons_list_complete",
+            "beacons": {},
+        },
+        {
+            "complete": True,
+            "tag": "/salt/minion/minion_beacons_list_available_complete",
+            "beacons": ["pkg"],
+        },
+        {
+            "valid": True,
+            "tag": "/salt/minion/minion_beacon_validation_complete",
+            "vcomment": "Valid beacon configuration",
+        },
+        {
+            "complete": True,
+            "tag": "/salt/minion/minion_beacon_add_complete",
+            "beacons": {
+                "beacon_pkg_vim": [
+                    {"pkgs": [name]},
+                    {"interval": 60},
+                    {"beacon_module": "pkg"},
+                ]
+            },
+        },
+    ]
+    mock = MagicMock(return_value=True)
+    beacon_state_mocks = {
+        "beacons.list": beaconmod.list_,
+        "beacons.add": beaconmod.add,
+        "beacons.list_available": beaconmod.list_available,
+        "event.fire": mock,
+    }
+
+    beacon_mod_mocks = {"event.fire": mock}
+
+    with pytest.helpers.temp_directory() as tempdir:
+        sock_dir = os.path.join(tempdir, "test-socks")
+        with patch.dict(pkg.__states__, {"beacon.present": beaconstate.present}):
+            with patch.dict(beaconstate.__salt__, beacon_state_mocks):
+                with patch.dict(beaconmod.__salt__, beacon_mod_mocks):
+                    with patch.dict(
+                        beaconmod.__opts__, {"beacons": {}, "sock_dir": sock_dir}
+                    ):
+                        with patch.object(
+                            SaltEvent, "get_event", side_effect=event_returns
+                        ):
+                            ret = pkg.mod_beacon(name, sfun="installed", beacon=True)
+                            expected = {
+                                "name": "beacon_pkg_vim",
+                                "changes": {},
+                                "result": True,
+                                "comment": "Adding beacon_pkg_vim to beacons",
+                            }
+
+                            assert ret == expected

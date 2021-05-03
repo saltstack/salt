@@ -8,6 +8,7 @@ import shutil
 import tempfile
 
 import pytest
+import salt.client.ssh.client
 import salt.config
 import salt.roster
 import salt.utils.files
@@ -666,3 +667,26 @@ class SSHTests(ShellCase):
             assert client.parse_tgt["hostname"] == host
             assert client.parse_tgt["user"] == opts["ssh_user"]
             assert self.opts.get("ssh_cli_tgt") == host
+
+    def test_extra_filerefs(self):
+        """
+        test "extra_filerefs" are not excluded from kwargs
+        when preparing the SSH opts
+        """
+        opts = {
+            "eauth": "auto",
+            "username": "test",
+            "password": "test",
+            "client": "ssh",
+            "tgt": "localhost",
+            "fun": "test.ping",
+            "ssh_port": 22,
+            "extra_filerefs": "salt://foobar",
+        }
+        roster = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "roster")
+        client = salt.client.ssh.client.SSHClient(
+            mopts=self.opts, disable_custom_roster=True
+        )
+        with patch("salt.roster.get_roster_file", MagicMock(return_value=roster)):
+            ssh_obj = client._prep_ssh(**opts)
+            assert ssh_obj.opts.get("extra_filerefs", None) == "salt://foobar"

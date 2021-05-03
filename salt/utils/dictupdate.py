@@ -30,7 +30,7 @@ def update(dest, upd, recursive_update=True, merge_lists=False):
     is ``dest[key] + upd[key]``. This behavior is only activated when
     recursive_update=True. By default merge_lists=False.
 
-    .. versionchanged: 2016.11.6
+    .. versionchanged:: 2016.11.6
         When merging lists, duplicate values are removed. Values already
         present in the ``dest`` list are not added from the ``upd`` list.
     """
@@ -59,13 +59,8 @@ def update(dest, upd, recursive_update=True, merge_lists=False):
             else:
                 dest[key] = upd[key]
         return dest
-    try:
-        for k in upd:
-            dest[k] = upd[k]
-    except AttributeError:
-        # this mapping is not a dict
-        for k in upd:
-            dest[k] = upd[k]
+    for k in upd:
+        dest[k] = upd[k]
     return dest
 
 

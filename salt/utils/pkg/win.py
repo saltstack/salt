@@ -1358,7 +1358,7 @@ class WinSoftware:
         a match in the sub keys, it will return a dict with the
         display name as the key and the version as the value
         .. sectionauthor:: Damon Atkins <https://github.com/damon-atkins>
-        .. versionadded:: Carbon
+        .. versionadded:: 2016.11.0
         """
 
         # FUNCTION MAIN CODE #
