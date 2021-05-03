@@ -9,8 +9,6 @@ import sys
 from collections import namedtuple
 from functools import total_ordering
 
-import salt.utils.entrypoints
-
 MAX_SIZE = sys.maxsize
 VERSION_LIMIT = MAX_SIZE - 200
 
@@ -833,6 +831,9 @@ def extensions_information():
     """
     Gather infomation about any installed salt extensions
     """
+    # Late import
+    import salt.utils.entrypoints
+
     extensions = {}
     for entry_point in salt.utils.entrypoints.iter_entry_points("salt.loader"):
         dist_nv = salt.utils.entrypoints.name_and_version_from_entry_point(entry_point)
