@@ -326,7 +326,6 @@ def salt_proxy_factory(salt_master_factory):
 
 @pytest.fixture(scope="session")
 def salt_delta_proxy_factory(salt_factories, salt_master_factory):
-    log.debug("==== running salt_delta_proxy_factory ====")
     proxy_minion_id = random_string("proxytest-")
     root_dir = salt_factories.get_root_dir_for_daemon(proxy_minion_id)
     conf_dir = root_dir / "conf"
@@ -342,6 +341,7 @@ def salt_delta_proxy_factory(salt_factories, salt_master_factory):
     config_defaults["transport"] = salt_master_factory.config["transport"]
     config_defaults["user"] = salt_master_factory.config["user"]
     config_defaults["metaproxy"] = "deltaproxy"
+    config_defaults["master"] = "127.0.0.1"
 
     factory = salt_master_factory.get_salt_proxy_minion_daemon(
         proxy_minion_id,

@@ -64,14 +64,13 @@ def deltaproxy_pillar_tree(base_env_pillar_tree_root_dir, salt_delta_proxy_facto
     """
     Create the pillar files for controlproxy and two dummy proxy minions
     """
-    log.debug("==== running deltaproxy_pillar_tree ====")
     top_file = """
     base:
       '{}':
         - controlproxy
-      dummy_proxy_one: 
+      dummy_proxy_one:
         - dummy_proxy_one
-      dummy_proxy_two: 
+      dummy_proxy_two:
         - dummy_proxy_two
     """.format(
         salt_delta_proxy_factory.id
@@ -110,7 +109,8 @@ def deltaproxy_pillar_tree(base_env_pillar_tree_root_dir, salt_delta_proxy_facto
         dummy_proxy_two_pillar_file,
         base_env_pillar_tree_root_dir,
     )
-    yield
+    with top_tempfile, controlproxy_tempfile, dummy_proxy_one_tempfile, dummy_proxy_two_tempfile:
+        yield
 
 
 @pytest.fixture(scope="package")
@@ -119,7 +119,6 @@ def salt_delta_proxy(salt_master, salt_delta_proxy_factory, deltaproxy_pillar_tr
     A running salt-proxy fixture
     """
     assert salt_master.is_running()
-    log.debug("==== running salt_delta_proxy ====")
     with salt_delta_proxy_factory.started():
         yield salt_delta_proxy_factory
 
