@@ -12,7 +12,7 @@ chardet==3.0.4            # via requests
 cheroot==6.5.4            # via cherrypy
 cherrypy==17.4.1
 contextlib2==0.5.5        # via cherrypy
-contextvars==2.4 ; python_version < "3.7"
+contextvars==2.4
 cryptography==3.3.2       # via pyopenssl
 distro==1.5.0
 idna==2.8                 # via requests

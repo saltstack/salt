@@ -103,6 +103,7 @@ def _get_token_and_url_from_master():
         "url": result["url"],
         "token": result["token"],
         "verify": result.get("verify", None),
+        "namespace": result.get("namespace"),
         "uses": result.get("uses", 1),
         "lease_duration": result["lease_duration"],
         "issued": result["issued"],
@@ -117,6 +118,8 @@ def get_vault_connection():
 
     def _use_local_config():
         log.debug("Using Vault connection details from local config")
+        # Vault Enterprise requires a namespace
+        namespace = __opts__["vault"].get("namespace")
         try:
             if __opts__["vault"]["auth"]["method"] == "approle":
                 verify = __opts__["vault"].get("verify", None)
@@ -127,7 +130,13 @@ def get_vault_connection():
                     payload = {"role_id": __opts__["vault"]["auth"]["role_id"]}
                     if "secret_id" in __opts__["vault"]["auth"]:
                         payload["secret_id"] = __opts__["vault"]["auth"]["secret_id"]
-                    response = requests.post(url, json=payload, verify=verify)
+                    if namespace is not None:
+                        headers = {"X-Vault-Namespace": namespace}
+                        response = requests.post(
+                            url, headers=headers, json=payload, verify=verify
+                        )
+                    else:
+                        response = requests.post(url, json=payload, verify=verify)
                     if response.status_code != 200:
                         errmsg = "An error occurred while getting a token from approle"
                         raise salt.exceptions.CommandExecutionError(errmsg)
@@ -139,6 +148,8 @@ def get_vault_connection():
                 if _wrapped_token_valid():
                     url = "{}/v1/sys/wrapping/unwrap".format(__opts__["vault"]["url"])
                     headers = {"X-Vault-Token": __opts__["vault"]["auth"]["token"]}
+                    if namespace is not None:
+                        headers["X-Vault-Namespace"] = namespace
                     response = requests.post(url, headers=headers, verify=verify)
                     if response.status_code != 200:
                         errmsg = "An error occured while unwrapping vault token"
@@ -148,6 +159,7 @@ def get_vault_connection():
                     ]
             return {
                 "url": __opts__["vault"]["url"],
+                "namespace": namespace,
                 "token": __opts__["vault"]["auth"]["token"],
                 "verify": __opts__["vault"].get("verify", None),
                 "issued": int(round(time.time())),
@@ -287,6 +299,7 @@ def make_request(
     resource,
     token=None,
     vault_url=None,
+    namespace=None,
     get_token_url=False,
     retry=False,
     **args
@@ -300,6 +313,7 @@ def make_request(
         connection = get_cache()
     token = connection["token"] if not token else token
     vault_url = connection["url"] if not vault_url else vault_url
+    namespace = namespace or connection["namespace"]
     if "verify" in args:
         args["verify"] = args["verify"]
     else:
@@ -310,6 +324,8 @@ def make_request(
             pass
     url = "{}/{}".format(vault_url, resource)
     headers = {"X-Vault-Token": str(token), "Content-Type": "application/json"}
+    if namespace is not None:
+        headers["X-Vault-Namespace"] = namespace
     response = requests.request(method, url, headers=headers, **args)
     if not response.ok and response.json().get("errors", None) == ["permission denied"]:
         log.info("Permission denied from vault")
@@ -363,10 +379,14 @@ def _selftoken_expired():
     """
     try:
         verify = __opts__["vault"].get("verify", None)
+        # Vault Enterprise requires a namespace
+        namespace = __opts__["vault"].get("namespace")
         url = "{}/v1/auth/token/lookup-self".format(__opts__["vault"]["url"])
         if "token" not in __opts__["vault"]["auth"]:
             return True
         headers = {"X-Vault-Token": __opts__["vault"]["auth"]["token"]}
+        if namespace is not None:
+            headers["X-Vault-Namespace"] = namespace
         response = requests.get(url, headers=headers, verify=verify)
         if response.status_code != 200:
             return True
@@ -383,10 +403,14 @@ def _wrapped_token_valid():
     """
     try:
         verify = __opts__["vault"].get("verify", None)
+        # Vault Enterprise requires a namespace
+        namespace = __opts__["vault"].get("namespace")
         url = "{}/v1/sys/wrapping/lookup".format(__opts__["vault"]["url"])
         if "token" not in __opts__["vault"]["auth"]:
             return False
         headers = {"X-Vault-Token": __opts__["vault"]["auth"]["token"]}
+        if namespace is not None:
+            headers["X-Vault-Namespace"] = namespace
         response = requests.post(url, headers=headers, verify=verify)
         if response.status_code != 200:
             return False
