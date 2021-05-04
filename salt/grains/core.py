@@ -52,6 +52,10 @@ def _linux_distribution():
     )
 
 
+def __init__(opts):
+    _clear_interfaces()
+
+
 try:
     import dateutil.tz  # pylint: disable=import-error
 
