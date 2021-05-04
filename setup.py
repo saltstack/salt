@@ -501,7 +501,7 @@ class DownloadWindowsDlls(Command):
                 yield
 
         platform_bits, _ = platform.architecture()
-        url = "https://repo.saltstack.com/windows/dependencies/{bits}/{fname}"
+        url = "https://repo.saltproject.io/windows/dependencies/{bits}/{fname}"
         dest = os.path.join(os.path.dirname(sys.executable), "{fname}")
         with indent_log():
             for fname in (
