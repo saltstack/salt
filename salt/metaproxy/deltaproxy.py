@@ -68,6 +68,9 @@ def post_master_init(self, master):
             pillarenv=self.opts.get("pillarenv"),
         ).compile_pillar()
 
+        # Ensure that the value of master is the one we passed in.
+        # if pillar_opts is enabled then master could be overwritten
+        # when compile_pillar is run.
         self.opts["master"] = master
 
         tag = "deltaproxy/start"
