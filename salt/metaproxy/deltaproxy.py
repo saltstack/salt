@@ -462,9 +462,6 @@ def post_master_init(self, master):
 
 def target(cls, minion_instance, opts, data, connected):
 
-    log.debug("&&^ minion_instance %s", minion_instance)
-    log.debug("&&^ minion_instance %s", minion_instance.opts["id"])
-    log.debug("&&^ _target id is: {}".format(opts["id"]))
     log.debug(
         "Deltaproxy minion_instance %s(ID: %s). Target: %s",
         minion_instance,
@@ -571,7 +568,6 @@ def thread_return(cls, minion_instance, opts, data):
                 args, kwargs = data["arg"], data
             minion_instance.functions.pack["__context__"]["retcode"] = 0
             minion_instance.functions.pack["__opts__"] = opts
-            # minion_instance.pack["__opts__"] = opts
             if isinstance(executors, str):
                 executors = [executors]
             elif not isinstance(executors, list) or not executors:
