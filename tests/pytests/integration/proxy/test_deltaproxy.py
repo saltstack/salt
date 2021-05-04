@@ -11,10 +11,13 @@ log = logging.getLogger(__name__)
 
 @pytest.fixture(scope="module")
 def salt_delta_proxy(salt_delta_proxy):
-    cachefile = os.path.join(salt_delta_proxy.config["cachedir"], "dummy-proxy.cache")
-    if os.path.exists(cachefile):
-        os.unlink(cachefile)
-    return salt_delta_proxy
+    for proxy in [salt_delta_proxy.id, "dummy_proxy_one", "dummy_proxy_two"]:
+        cachefile = os.path.join(
+            salt_delta_proxy.config["cachedir"], "dummy-proxy-{}.cache".format(proxy)
+        )
+        if os.path.exists(cachefile):
+            os.unlink(cachefile)
+        return salt_delta_proxy
 
 
 def test_can_it_ping(salt_cli, salt_delta_proxy):
