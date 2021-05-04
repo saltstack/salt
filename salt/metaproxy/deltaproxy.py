@@ -51,10 +51,6 @@ from salt.exceptions import (
     SaltInvocationError,
     SaltSystemExit,
 )
-
-# pylint: disable=import-error,no-name-in-module,redefined-builtin
-from salt.ext import six
-from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 from salt.minion import ProxyMinion
 from salt.utils.event import tagify
 from salt.utils.process import SignalHandlingProcess
@@ -100,7 +96,7 @@ def post_master_init(self, master):
         strategy=self.opts.get("proxy_merge_pillar_in_opts_strategy"),
         merge_lists=self.opts.get("proxy_deep_merge_pillar_in_opts", False),
     )
-    # this was elif
+
     if self.opts.get("proxy_mines_pillar"):
         # Even when not required, some details such as mine configuration
         # should be merged anyway whenever possible.
@@ -118,10 +114,6 @@ def post_master_init(self, master):
                     )
                 )
 
-    # Not sure we need this
-    # if "metaproxy" in self.opts:
-    #     fq_proxyname = self.opts["metaproxy"]
-    # else:
     fq_proxyname = self.opts["proxy"]["proxytype"]
 
     # Need to load the modules so they get all the dunder variables
@@ -973,8 +965,6 @@ def handle_decoded_payload(self, data):
     differently.
     """
     # Ensure payload is unicode. Disregard failure to decode binary blobs.
-    if six.PY2:
-        data = salt.utils.data.decode(data, keep=True)
     if "user" in data:
         log.info(
             "User %s Executing command %s with jid %s",
