@@ -61,7 +61,6 @@ def test_install_pkgs(salt_cli, salt_delta_proxy):
 def test_remove_pkgs(salt_cli, salt_delta_proxy):
     for proxy in ["dummy_proxy_one", "dummy_proxy_two"]:
         ret = salt_cli.run("pkg.remove", "apache", minion_tgt=proxy)
-        log.debug("=== ret %s ===", ret.json)
         assert "apache" not in ret.json
 
 
