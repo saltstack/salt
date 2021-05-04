@@ -212,7 +212,7 @@ def normalize_name(name):
         pkgname = name
         pkgarch = __grains__["osarch"]
 
-    return pkgname if pkgarch in (__grains__["osarch"], "any") else name
+    return pkgname if pkgarch in (__grains__["osarch"], "all", "any") else name
 
 
 def parse_arch(name):

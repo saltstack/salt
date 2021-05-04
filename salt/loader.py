@@ -4,7 +4,6 @@ directories for python loadable code and organizes the code into the
 plugin interfaces used by Salt.
 """
 
-import contextvars
 import copy
 import functools
 import importlib
@@ -44,6 +43,13 @@ from salt.exceptions import LoaderError
 from salt.template import check_render_pipe_str
 from salt.utils import entrypoints
 from salt.utils.decorators import Depends
+
+try:
+    # Try the stdlib C extension first
+    import _contextvars as contextvars
+except ImportError:
+    # Py<3.7
+    import contextvars
 
 log = logging.getLogger(__name__)
 
@@ -1314,6 +1320,12 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 self.pack[i] = self.pack[i].value()
         if opts is None:
             opts = {}
+        opts = copy.deepcopy(opts)
+        for i in ["pillar", "grains"]:
+            if i in opts and isinstance(
+                opts[i], salt.loader_context.NamedLoaderContext
+            ):
+                opts[i] = opts[i].value()
         threadsafety = not opts.get("multiprocessing")
         self.context_dict = salt.utils.context.ContextDict(threadsafe=threadsafety)
         self.opts = self.__prep_mod_opts(opts)

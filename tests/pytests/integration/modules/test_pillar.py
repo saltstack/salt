@@ -478,3 +478,97 @@ def test_pillar_refresh_pillar_scheduler(salt_cli, salt_minion):
 
     # Refresh pillar once we're done
     salt_cli.run("saltutil.refresh_pillar", wait=True, minion_tgt=salt_minion.id)
+
+
+@pytest.mark.slow_test
+@pytest.mark.parametrize(
+    "jinja_file,app,caching,db",
+    [
+        ("test_jinja_sls_as_documented", True, True, False),
+        ("test_jinja_sls_with_minion_id", False, False, True),
+        ("test_jinja_sls_with_minion_id_regex_compound", False, False, True),
+    ],
+)
+def test_pillar_match_filter_by_minion_id(
+    salt_cli, salt_minion, jinja_file, app, caching, db
+):
+    """
+    Ensure "match.filter_by" used during Pillar rendering uses the Minion ID and
+    returns the expected values
+    """
+    top_sls = """
+    base:
+      {}:
+        - test_jinja
+    """.format(
+        salt_minion.id
+    )
+
+    sls_files = {
+        "test_jinja_sls_as_documented": """
+    # Filter the data for the current minion into a variable:
+    {{% set roles = salt['match.filter_by']({{
+        'web*': ['app', 'caching'],
+        '{}*': ['db'],
+    }}, default='web*') %}}
+
+    # Make the filtered data available to Pillar:
+    roles: {{{{ roles | yaml() }}}}
+    """.format(
+            salt_minion.id
+        ),
+        "test_jinja_sls_with_minion_id": """
+    # Filter the data for the current minion into a variable:
+    {{% set roles = salt['match.filter_by']({{
+        'web*': ['app', 'caching'],
+        '{}*': ['db'],
+    }}, minion_id=grains['id'], default='web*') %}}
+
+    # Make the filtered data available to Pillar:
+    roles: {{{{ roles | yaml() }}}}
+    """.format(
+            salt_minion.id
+        ),
+        "test_jinja_sls_with_minion_id_regex_compound": """
+    # Filter the data for the current minion into a variable:
+    {{% set roles = salt['match.filter_by']({{
+        'web*': ['app', 'caching'],
+        'E@{}': ['db'],
+    }}, minion_id=grains['id'], default='web*') %}}
+
+    # Make the filtered data available to Pillar:
+    roles: {{{{ roles | yaml() }}}}
+    """.format(
+            salt_minion.id
+        ),
+    }
+
+    # test the brokenness of the currently documented example
+    # it lacks the "minion_id" argument for "match.filter_by" and thereby
+    # assigns the wrong roles
+    with pytest.helpers.temp_pillar_file("top.sls", top_sls):
+        with pytest.helpers.temp_pillar_file("test_jinja.sls", sls_files[jinja_file]):
+            # Calling refresh_pillar to update in-memory pillars
+            salt_cli.run(
+                "saltutil.refresh_pillar", wait=True, minion_tgt=salt_minion.id
+            )
+
+            # Get the Minion's Pillar
+            ret = salt_cli.run("pillar.get", "roles", minion_tgt=salt_minion.id)
+            if app:
+                assert "app" in ret.json
+            else:
+                assert "app" not in ret.json
+
+            if caching:
+                assert "caching" in ret.json
+            else:
+                assert "caching" not in ret.json
+
+            if db:
+                assert "db" in ret.json
+            else:
+                assert "db" not in ret.json
+
+    # Refresh pillar once we're done
+    salt_cli.run("saltutil.refresh_pillar", wait=True, minion_tgt=salt_minion.id)
