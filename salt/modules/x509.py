@@ -432,8 +432,8 @@ def _valid_pem(pem, pem_type=None):
 
 def _match_minions(test, minion):
     if "@" in test:
-        match = __salt__["publish.publish"](tgt=minion, fun="match.compound", arg=test)
-        return match.get(minion, False)
+        match = __salt__["match.compound"](test)
+        return match
     else:
         return __salt__["match.glob"](test, minion)
 
