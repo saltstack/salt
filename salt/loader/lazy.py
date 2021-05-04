@@ -808,6 +808,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
         # pack whatever other globals we were asked to
         for p_name, p_value in self.pack.items():
+            if p_name == "__opts__":
+                continue
             mod_named_context = getattr(mod, p_name, None)
             if hasattr(mod_named_context, "default"):
                 default = copy.deepcopy(mod_named_context.default)
