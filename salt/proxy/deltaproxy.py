@@ -13,7 +13,6 @@ __proxyenabled__ = ["deltaproxy"]
 # across calls to fns in here.
 DETAILS = {}
 
-# Want logging!
 log = logging.getLogger(__file__)
 
 
@@ -23,7 +22,7 @@ def __virtual__():
     """
     Only return if all the modules are available
     """
-    log.debug("Deltaproxy master proxy __virtual__() called...")
+    log.debug("Deltaproxy control proxy __virtual__() called...")
     return True
 
 

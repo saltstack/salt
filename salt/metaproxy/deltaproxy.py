@@ -42,8 +42,8 @@ import salt.utils.schedule
 import salt.utils.ssdp
 import salt.utils.user
 import salt.utils.zeromq
-import tornado.gen  # pylint: disable=F0401
-import tornado.ioloop  # pylint: disable=F0401
+import tornado.gen
+import tornado.ioloop
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import (
     CommandExecutionError,
@@ -75,10 +75,8 @@ def post_master_init(self, master):
 
     if "proxy" not in self.opts["pillar"] and "proxy" not in self.opts:
         errmsg = (
-            "No proxy key found in pillar or opts for id "
-            + self.opts["id"]
-            + ". "
-            + "Check your pillar/opts configuration and contents.  Salt-proxy aborted."
+            "No proxy key found in pillar or opts for id {}. Check your pillar/opts "
+            "configuration and contents.  Salt-proxy aborted.".format(self.opts["id"])
         )
         log.error(errmsg)
         self._running = False
@@ -166,10 +164,8 @@ def post_master_init(self, master):
         or "{}.shutdown".format(fq_proxyname) not in self.proxy
     ):
         errmsg = (
-            "Proxymodule {} is missing an init() or a shutdown() or both. ".format(
-                fq_proxyname
-            )
-            + "Check your proxymodule.  Salt-proxy aborted."
+            "Proxymodule {} is missing an init() or a shutdown() or both. "
+            "Check your proxymodule.  Salt-proxy aborted.".format(fq_proxyname)
         )
         log.error(errmsg)
         self._running = False
@@ -324,9 +320,8 @@ def post_master_init(self, master):
         proxyopts = salt.config.proxy_config(
             self.opts["conf_file"], defaults=proxyopts, minion_id=_id
         )
-        proxyopts["id"] = _id
+        proxyopts["id"] = proxyopts["proxyid"] = _id
 
-        proxyopts["proxyid"] = _id
         proxyopts["subproxy"] = True
 
         self.proxy_context[_id] = {"proxy_id": _id}
@@ -467,77 +462,20 @@ def target(cls, minion_instance, opts, data, connected):
     log.debug("&&^ minion_instance %s", minion_instance)
     log.debug("&&^ minion_instance %s", minion_instance.opts["id"])
     log.debug("&&^ _target id is: {}".format(opts["id"]))
+    log.debug(
+        "Deltaproxy minion_instance %s(ID: %s). Target: %s",
+        minion_instance,
+        minion_instance.opts["id"],
+        opts["id"],
+    )
 
     _id = opts["id"]
-    if not minion_instance:
-        log.debug("=== no minion_instance, creating ===")
-    #        minion_instance = cls(opts)
-    #        minion_instance.connected = connected
-    #
-    #        if not hasattr(minion_instance, "functions"):
-    #            # Need to load the modules so they get all the dunder variables
-    #            functions, returners, function_errors, executors = (
-    #                minion_instance._load_modules(grains=opts["grains"])
-    #            )
-    #            minion_instance.functions = functions
-    #            minion_instance.returners = returners
-    #            minion_instance.function_errors = function_errors
-    #            minion_instance.executors = executors
-    #
-    #            # Pull in the utils
-    #            minion_instance.utils = salt.loader.utils(minion_instance.opts)
-    #
-    #            # Then load the proxy module
-    #            minion_instance.proxy = salt.loader.proxy(minion_instance.opts, utils=minion_instance.utils)
-    #
-    #            # And re-load the modules so the __proxy__ variable gets injected
-    #            functions, returners, function_errors, executors = (
-    #                minion_instance._load_modules(grains=opts["grains"])
-    #            )
-    #            minion_instance.functions = functions
-    #            minion_instance.returners = returners
-    #            minion_instance.function_errors = function_errors
-    #            minion_instance.executors = executors
-    #
-    #            minion_instance.functions.pack["__proxy__"] = minion_instance.proxy
-    #            minion_instance.proxy.pack["__salt__"] = minion_instance.functions
-    #            minion_instance.proxy.pack["__ret__"] = minion_instance.returners
-    #            minion_instance.proxy.pack["__pillar__"] = minion_instance.opts["pillar"]
-    #
-    #            # Reload utils as well (chicken and egg, __utils__ needs __proxy__ and __proxy__ needs __utils__
-    #            minion_instance.utils = salt.loader.utils(minion_instance.opts, proxy=minion_instance.proxy)
-    #            minion_instance.proxy.pack["__utils__"] = minion_instance.utils
-    #
-    #            # Reload all modules so all dunder variables are injected
-    #            minion_instance.proxy.reload_modules()
-    #
-    #            fq_proxyname = opts["proxy"]["proxytype"]
-    #
-    #            minion_instance.module_executors = minion_instance.proxy.get("{0}.module_executors".format(fq_proxyname), lambda: [])()
-    #
-    #            proxy_init_fn = minion_instance.proxy[fq_proxyname + ".init"]
-    #            proxy_init_fn(opts)
-    #
-    #        if not hasattr(minion_instance, "serial"):
-    #            minion_instance.serial = salt.payload.Serial(opts)
-    #        if not hasattr(minion_instance, "proc_dir"):
-    #            uid = salt.utils.user.get_uid(user=opts.get("user", None))
-    #            minion_instance.proc_dir = (
-    #                salt.minion.get_proc_dir(opts["cachedir"], uid=uid)
-    #            )
-    else:
-        # if _id in minion_instance.deltaproxy_objs:
-        #    opts = minion_instance.deltaproxy_opts[_id]
-        #    minion_instance = minion_instance.deltaproxy_objs[_id]
+    if not hasattr(minion_instance, "serial"):
+        minion_instance.serial = salt.payload.Serial(opts)
 
-        if not hasattr(minion_instance, "serial"):
-            minion_instance.serial = salt.payload.Serial(opts)
-
-        if not hasattr(minion_instance, "proc_dir"):
-            uid = salt.utils.user.get_uid(user=opts.get("user", None))
-            minion_instance.proc_dir = salt.minion.get_proc_dir(
-                opts["cachedir"], uid=uid
-            )
+    if not hasattr(minion_instance, "proc_dir"):
+        uid = salt.utils.user.get_uid(user=opts.get("user", None))
+        minion_instance.proc_dir = salt.minion.get_proc_dir(opts["cachedir"], uid=uid)
 
     with tornado.stack_context.StackContext(minion_instance.ctx):
         if isinstance(data["fun"], tuple) or isinstance(data["fun"], list):
@@ -554,7 +492,6 @@ def thread_return(cls, minion_instance, opts, data):
 
     _id = opts["id"]
 
-    log.debug("&&^ _thread_return, target id is {}".format(opts["id"]))
     fn_ = os.path.join(minion_instance.proc_dir, data["jid"])
 
     if opts["multiprocessing"] and not salt.utils.platform.is_windows():
@@ -587,7 +524,7 @@ def thread_return(cls, minion_instance, opts, data):
                 function_name
             )
             for executor in executors
-            if "{0}.allow_missing_func" in minion_instance.executors
+            if "{}.allow_missing_func" in minion_instance.executors
         ]
     )
     if function_name in minion_instance.functions or allow_missing_funcs is True:
@@ -642,11 +579,7 @@ def thread_return(cls, minion_instance, opts, data):
                 )
             if opts.get("sudo_user", "") and executors[-1] != "sudo":
                 executors[-1] = "sudo"  # replace the last one with sudo
-            log.debug("Executors list %s", executors)  # pylint: disable=no-member
-
-            # _fq_proxyname = opts["proxy"]["proxytype"]
-            # proxy_init_fn = minion_instance.proxy[_fq_proxyname + ".init"]
-            # proxy_init_fn(opts)
+            log.debug("Executors list %s", executors)
 
             for name in executors:
                 fname = "{}.execute".format(name)
@@ -654,23 +587,12 @@ def thread_return(cls, minion_instance, opts, data):
                     raise SaltInvocationError(
                         "Executor '{}' is not available".format(name)
                     )
-                log.debug(
-                    "&&^ _thread_return running minion_executors, target id is {}".format(
-                        opts["id"]
-                    )
-                )
-                log.debug(
-                    "&&^ _thread_return running minion_executors, fname id is %s", fname
-                )
 
                 return_data = minion_instance.executors[fname](
                     opts, data, func, args, kwargs
                 )
                 if return_data is not None:
                     break
-
-            # proxy_disconnect_fn = minion_instance.proxy[_fq_proxyname + ".shutdown"]
-            # proxy_disconnect_fn(opts)
 
             if isinstance(return_data, types.GeneratorType):
                 ind = 0
@@ -744,7 +666,7 @@ def thread_return(cls, minion_instance, opts, data):
             ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
         except Exception:  # pylint: disable=broad-except
             msg = "The minion function caused an exception"
-            log.warning(msg, exc_info_on_loglevel=True)
+            log.warning(msg, exc_info=True)
             salt.utils.error.fire_exception(
                 salt.exceptions.MinionError(msg), opts, job=data
             )
@@ -964,7 +886,6 @@ def handle_decoded_payload(self, data):
     Override this method if you wish to handle the decoded data
     differently.
     """
-    # Ensure payload is unicode. Disregard failure to decode binary blobs.
     if "user" in data:
         log.info(
             "User %s Executing command %s with jid %s",
@@ -1023,13 +944,10 @@ def handle_decoded_payload(self, data):
             # let python reconstruct the minion on the other side if we"re
             # running on windows
             instance = None
-        log.debug("############## Spawning target")
-        log.debug("############## self._target %s", self._target)
         process = SignalHandlingProcess(
             target=target, args=(self, instance, instance.opts, data, self.connected)
         )
     else:
-        log.debug("############## Spawning thread ")
         process = threading.Thread(
             target=target,
             args=(self, instance, instance.opts, data, self.connected),
@@ -1043,8 +961,9 @@ def handle_decoded_payload(self, data):
 
 def target_load(self, load):
     # Verify that the publication is valid
-    if "tgt" not in load or "jid" not in load or "fun" not in load or "arg" not in load:
-        return False
+    for key in ("tgt", "jid", "fun", "arg"):
+        if key not in load:
+            return False
     # Verify that the publication applies to this minion
 
     # It"s important to note that the master does some pre-processing
