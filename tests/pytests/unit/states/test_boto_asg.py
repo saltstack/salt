@@ -6,8 +6,6 @@ import pytest
 import salt.states.boto_asg as boto_asg
 from tests.support.mock import MagicMock, patch
 
-maxSize = None
-
 
 @pytest.fixture
 def configure_loader_modules():
