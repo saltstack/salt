@@ -6,6 +6,8 @@ import platform
 import re
 import sys
 
+import salt.utils.entrypoints
+
 MAX_SIZE = sys.maxsize
 VERSION_LIMIT = MAX_SIZE - 200
 
@@ -58,8 +60,8 @@ class SaltStackVersion:
         r"(?:\.(?P<minor>[\d]{1,2}))?"
         r"(?:\.(?P<bugfix>[\d]{0,2}))?"
         r"(?:\.(?P<mbugfix>[\d]{0,2}))?"
-        r"(?:(?P<pre_type>rc|a|b|alpha|beta|nb)(?P<pre_num>[\d]{1}))?"
-        r"(?:(?:.*)-(?P<noc>(?:[\d]+|n/a))-" + git_sha_regex + r")?"
+        r"(?:(?P<pre_type>rc|a|b|alpha|beta|nb)(?P<pre_num>[\d]+))?"
+        r"(?:(?:.*)(?:\+|-)(?P<noc>(?:0na|[\d]+|n/a))(?:-|\.)" + git_sha_regex + r")?"
     )
     git_sha_regex = r"^" + git_sha_regex
 
@@ -91,11 +93,11 @@ class SaltStackVersion:
         "Neon": (3000,),
         "Sodium": (3001,),
         "Magnesium": (3002,),
-        "Aluminium": (MAX_SIZE - 96, 0),
+        "Aluminium": (3003,),
         "Silicon": (MAX_SIZE - 95, 0),
         "Phosphorus": (MAX_SIZE - 94, 0),
+        "Sulfur": (MAX_SIZE - 93, 0),
         # pylint: disable=E8265
-        #'Sulfur'       : (MAX_SIZE - 93, 0),
         #'Chlorine'     : (MAX_SIZE - 92, 0),
         #'Argon'        : (MAX_SIZE - 91, 0),
         #'Potassium'    : (MAX_SIZE - 90, 0),
@@ -241,7 +243,7 @@ class SaltStackVersion:
 
         if noc is None:
             noc = 0
-        elif isinstance(noc, str) and noc == "n/a":
+        elif isinstance(noc, str) and noc in ("0na", "n/a"):
             noc = -1
         elif isinstance(noc, str):
             noc = int(noc)
@@ -384,8 +386,8 @@ class SaltStackVersion:
         if self.noc and self.sha:
             noc = self.noc
             if noc < 0:
-                noc = "n/a"
-            version_string += "-{}-{}".format(noc, self.sha)
+                noc = "0na"
+            version_string += "+{}.{}".format(noc, self.sha)
         return version_string
 
     @property
@@ -489,7 +491,7 @@ class SaltStackVersion:
             parts.append("{}={}".format(self.pre_type, self.pre_num))
         noc = self.noc
         if noc == -1:
-            noc = "n/a"
+            noc = "0na"
         if noc and self.sha:
             parts.extend(["noc={}".format(noc), "sha={}".format(self.sha)])
         return "<{} {}>".format(self.__class__.__name__, " ".join(parts))
@@ -534,6 +536,7 @@ def __discover_version(saltstack_version):
                 "git",
                 "describe",
                 "--tags",
+                "--long",
                 "--first-parent",
                 "--match",
                 "v[0-9]*",
@@ -548,7 +551,15 @@ def __discover_version(saltstack_version):
             # The git version running this might not support --first-parent
             # Revert to old command
             process = subprocess.Popen(
-                ["git", "describe", "--tags", "--match", "v[0-9]*", "--always"],
+                [
+                    "git",
+                    "describe",
+                    "--tags",
+                    "--long",
+                    "--match",
+                    "v[0-9]*",
+                    "--always",
+                ],
                 **kwargs
             )
             out, err = process.communicate()
@@ -617,7 +628,7 @@ def dependency_information(include_salt_cloud=False):
         ("Python", None, sys.version.rsplit("\n")[0].strip()),
         ("Jinja2", "jinja2", "__version__"),
         ("M2Crypto", "M2Crypto", "version"),
-        ("msgpack-python", "msgpack", "version"),
+        ("msgpack", "msgpack", "version"),
         ("msgpack-pure", "msgpack_pure", "version"),
         ("pycrypto", "Crypto", "__version__"),
         ("pycryptodome", "Cryptodome", "version_info"),
@@ -748,7 +759,22 @@ def system_information():
         continue
 
 
-def versions_information(include_salt_cloud=False):
+def extensions_information():
+    """
+    Gather infomation about any installed salt extensions
+    """
+    extensions = {}
+    for entry_point in salt.utils.entrypoints.iter_entry_points("salt.loader"):
+        dist_nv = salt.utils.entrypoints.name_and_version_from_entry_point(entry_point)
+        if not dist_nv:
+            continue
+        if dist_nv.name in extensions:
+            continue
+        extensions[dist_nv.name] = dist_nv.version
+    return extensions
+
+
+def versions_information(include_salt_cloud=False, include_extensions=True):
     """
     Report the versions of dependent software.
     """
@@ -756,27 +782,46 @@ def versions_information(include_salt_cloud=False):
     lib_info = list(dependency_information(include_salt_cloud))
     sys_info = list(system_information())
 
-    return {
+    info = {
         "Salt Version": dict(salt_info),
         "Dependency Versions": dict(lib_info),
         "System Versions": dict(sys_info),
     }
+    if include_extensions:
+        extensions_info = extensions_information()
+        if extensions_info:
+            info["Salt Extensions"] = extensions_info
+    return info
 
 
-def versions_report(include_salt_cloud=False):
+def versions_report(include_salt_cloud=False, include_extensions=True):
     """
     Yield each version properly formatted for console output.
     """
-    ver_info = versions_information(include_salt_cloud)
+    ver_info = versions_information(
+        include_salt_cloud=include_salt_cloud, include_extensions=include_extensions
+    )
     not_installed = "Not Installed"
     ns_pad = len(not_installed)
     lib_pad = max(len(name) for name in ver_info["Dependency Versions"])
     sys_pad = max(len(name) for name in ver_info["System Versions"])
-    padding = max(lib_pad, sys_pad, ns_pad) + 1
+    if include_extensions and "Salt Extensions" in ver_info:
+        ext_pad = max(len(name) for name in ver_info["Salt Extensions"])
+    else:
+        ext_pad = 1
+    padding = max(lib_pad, sys_pad, ns_pad, ext_pad) + 1
 
     fmt = "{0:>{pad}}: {1}"
     info = []
-    for ver_type in ("Salt Version", "Dependency Versions", "System Versions"):
+    for ver_type in (
+        "Salt Version",
+        "Dependency Versions",
+        "Salt Extensions",
+        "System Versions",
+    ):
+        if ver_type == "Salt Extensions" and ver_type not in ver_info:
+            # No salt Extensions to report
+            continue
         info.append("{}:".format(ver_type))
         # List dependencies in alphabetical, case insensitive order
         for name in sorted(ver_info[ver_type], key=lambda x: x.lower()):

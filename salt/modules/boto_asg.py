@@ -105,7 +105,9 @@ def exists(name, region=None, key=None, keyid=None, profile=None):
     """
     Check to see if an autoscale group exists.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_asg.exists myasg region=us-east-1
     """
@@ -134,7 +136,9 @@ def get_config(name, region=None, key=None, keyid=None, profile=None):
     """
     Get the configuration for an autoscale group.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_asg.get_config myasg region=us-east-1
     """
@@ -259,7 +263,9 @@ def create(
     """
     Create an autoscale group.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_asg.create myasg mylc '["us-east-1a", "us-east-1e"]' 1 10 load_balancers='["myelb", "myelb2"]' tags='[{"key": "Name", value="myasg", "propagate_at_launch": True}]'
     """
@@ -372,7 +378,9 @@ def update(
     """
     Update an autoscale group.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_asg.update myasg mylc '["us-east-1a", "us-east-1e"]' 1 10 load_balancers='["myelb", "myelb2"]' tags='[{"key": "Name", value="myasg", "propagate_at_launch": True}]'
     """
@@ -550,7 +558,9 @@ def delete(name, force=False, region=None, key=None, keyid=None, profile=None):
     """
     Delete an autoscale group.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_asg.delete myasg region=us-east-1
     """
@@ -610,7 +620,9 @@ def launch_configuration_exists(name, region=None, key=None, keyid=None, profile
     """
     Check for a launch configuration's existence.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_asg.launch_configuration_exists mylc
     """
@@ -641,7 +653,9 @@ def get_all_launch_configurations(region=None, key=None, keyid=None, profile=Non
     """
     Fetch and return all Launch Configuration with details.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_asg.get_all_launch_configurations
     """
@@ -664,7 +678,9 @@ def list_launch_configurations(region=None, key=None, keyid=None, profile=None):
     """
     List all Launch Configurations.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_asg.list_launch_configurations
     """
@@ -678,7 +694,9 @@ def describe_launch_configuration(
     """
     Dump details of a given launch configuration.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_asg.describe_launch_configuration mylc
     """
@@ -734,7 +752,9 @@ def create_launch_configuration(
     """
     Create a launch configuration.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_asg.create_launch_configuration mylc image_id=ami-0b9c9f62 key_name='mykey' security_groups='["mygroup"]' instance_type='c3.2xlarge'
     """
@@ -810,7 +830,9 @@ def delete_launch_configuration(name, region=None, key=None, keyid=None, profile
     """
     Delete a launch configuration.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_asg.delete_launch_configuration mylc
     """
@@ -841,7 +863,9 @@ def get_scaling_policy_arn(
     if not found. Mainly used as a helper method for boto_cloudwatch_alarm, for
     linking alarms to scaling policies.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' boto_asg.get_scaling_policy_arn mygroup mypolicy
     """
@@ -873,7 +897,7 @@ def get_all_groups(region=None, key=None, keyid=None, profile=None):
 
     .. versionadded:: 2016.11.0
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -908,7 +932,7 @@ def list_groups(region=None, key=None, keyid=None, profile=None):
 
     .. versionadded:: 2016.11.0
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -935,7 +959,9 @@ def get_instances(
     """
     return attribute of all instances in the named autoscale group.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-call boto_asg.get_instances my_autoscale_group_name
 
@@ -1009,7 +1035,9 @@ def enter_standby(
 
     .. versionadded:: 2016.11.0
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-call boto_asg.enter_standby my_autoscale_group_name '["i-xxxxxx"]'
 
@@ -1047,7 +1075,9 @@ def exit_standby(
 
     .. versionadded:: 2016.11.0
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-call boto_asg.exit_standby my_autoscale_group_name '["i-xxxxxx"]'
 

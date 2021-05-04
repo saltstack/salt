@@ -35,7 +35,6 @@ if sys.platform.startswith("win"):
     CODE_DIR = CODE_DIR.replace("\\", "\\\\")
 UNIT_TEST_DIR = os.path.join(TESTS_DIR, "unit")
 INTEGRATION_TEST_DIR = os.path.join(TESTS_DIR, "integration")
-MULTIMASTER_TEST_DIR = os.path.join(TESTS_DIR, "multimaster")
 
 # Let's inject CODE_DIR so salt is importable if not there already
 if TESTS_DIR in sys.path:
@@ -73,10 +72,6 @@ TMP_CONF_DIR = TMP_MINION_CONF_DIR = os.path.join(TMP, "config")
 TMP_SUB_MINION_CONF_DIR = os.path.join(TMP_CONF_DIR, "sub-minion")
 TMP_SYNDIC_MINION_CONF_DIR = os.path.join(TMP_CONF_DIR, "syndic-minion")
 TMP_SYNDIC_MASTER_CONF_DIR = os.path.join(TMP_CONF_DIR, "syndic-master")
-TMP_MM_CONF_DIR = TMP_MM_MINION_CONF_DIR = os.path.join(TMP_CONF_DIR, "multimaster")
-TMP_MM_SUB_CONF_DIR = TMP_MM_SUB_MINION_CONF_DIR = os.path.join(
-    TMP_CONF_DIR, "sub-multimaster"
-)
 TMP_PROXY_CONF_DIR = TMP_CONF_DIR
 TMP_SSH_CONF_DIR = TMP_MINION_CONF_DIR
 CONF_DIR = os.path.join(INTEGRATION_TEST_DIR, "files", "conf")
@@ -91,7 +86,7 @@ def list_test_mods():
     A generator which returns all of the test files
     """
     test_re = re.compile(r"^test_.+\.py$")
-    for dirname in (UNIT_TEST_DIR, INTEGRATION_TEST_DIR, MULTIMASTER_TEST_DIR):
+    for dirname in (UNIT_TEST_DIR, INTEGRATION_TEST_DIR):
         test_type = os.path.basename(dirname)
         for root, _, files in salt.utils.path.os_walk(dirname):
             parent_mod = root[len(dirname) :].lstrip(os.sep).replace(os.sep, ".")
