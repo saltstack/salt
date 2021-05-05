@@ -922,6 +922,22 @@ def linux_interfaces():
             stderr=subprocess.STDOUT,
         ).communicate()[0]
         ifaces = _interfaces_ifconfig(salt.utils.stringutils.to_str(cmd))
+
+    ethtool_path = salt.utils.path.which("ethtool")
+    for face in ifaces.keys():
+        if ethtool_path:
+            cmd = subprocess.Popen(
+                "{} -P {}".format(ethtool_path, face),
+                shell=True,
+                close_fds=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+            ).communicate()[0]
+        hwaddr = re.compile(r"^(?i)Permanent address: (?P<hwaddr>([0-9A-F]{2}[:-]){5}([0-9A-F]{2}))")
+        mhwaddr = hwaddr.match(cmd.decode('utf-8'))
+        if mhwaddr:
+            ifaces[face]["hwaddr"] = mhwaddr.group('hwaddr')
+
     return ifaces
 
 
