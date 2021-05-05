@@ -486,7 +486,7 @@ jaraco.functools==2.0
     # via
     #   -r requirements/static/pkg/py3.5/linux.txt
     #   tempora
-jinja2==2.10.1
+jinja2==2.11.3
     # via
     #   -r requirements/static/pkg/py3.5/linux.txt
     #   junos-eznc
