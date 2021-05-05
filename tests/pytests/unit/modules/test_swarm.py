@@ -11,9 +11,11 @@ try:
 except ImportError:
     HAS_DOCKER = False
 
-pytestmark = pytest.mark.skipif(
-    HAS_DOCKER is False, reason="The docker python sdk may not be installed"
-)
+pytestmark = [
+    pytest.mark.skipif(
+        HAS_DOCKER is False, reason="The docker python sdk may not be installed"
+    ),
+]
 
 
 @pytest.fixture
