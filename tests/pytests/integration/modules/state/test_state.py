@@ -57,7 +57,7 @@ def test_issue_56131(salt_minion, base_env_state_tree_root_dir, tmp_path):
     else:
         pythonpath = os.pathsep.join([str(pip_path_dir)] + pythonpath.split(os.pathsep))
     environ["PYTHONPATH"] = pythonpath
-    salt_call_cli = salt_minion.get_salt_call_cli(environ=environ)
+    salt_call_cli = salt_minion.salt_call_cli(environ=environ)
     extract_path = tmp_path / "issue-56131.txt"
     try:
         assert extract_path.exists() is False

@@ -287,32 +287,30 @@ def test_list_un(salt_key_cli):
     assert ret.json == expected
 
 
-def test_keys_generation(salt_key_cli):
-    with pytest.helpers.temp_directory() as tempdir:
-        ret = salt_key_cli.run("--gen-keys", "minibar", "--gen-keys-dir", tempdir)
-        assert ret.exitcode == 0
-        try:
-            key_names = ("minibar.pub", "minibar.pem")
-            for fname in key_names:
-                assert os.path.isfile(os.path.join(tempdir, fname))
-        finally:
-            for filename in os.listdir(tempdir):
-                os.chmod(os.path.join(tempdir, filename), 0o700)
+def test_keys_generation(salt_key_cli, tmp_path):
+    ret = salt_key_cli.run("--gen-keys", "minibar", "--gen-keys-dir", str(tmp_path))
+    assert ret.exitcode == 0
+    try:
+        key_names = ("minibar.pub", "minibar.pem")
+        for fname in key_names:
+            fpath = tmp_path / fname
+            assert fpath.is_file()
+    finally:
+        for filename in tmp_path.iterdir():
+            filename.chmod(0o700)
 
 
-def test_keys_generation_keysize_min(salt_key_cli):
-    with pytest.helpers.temp_directory() as tempdir:
-        ret = salt_key_cli.run(
-            "--gen-keys", "minibar", "--gen-keys-dir", tempdir, "--keysize", "1024"
-        )
-        assert ret.exitcode != 0
-        assert "error: The minimum value for keysize is 2048" in ret.stderr
+def test_keys_generation_keysize_min(salt_key_cli, tmp_path):
+    ret = salt_key_cli.run(
+        "--gen-keys", "minibar", "--gen-keys-dir", str(tmp_path), "--keysize", "1024"
+    )
+    assert ret.exitcode != 0
+    assert "error: The minimum value for keysize is 2048" in ret.stderr
 
 
-def test_keys_generation_keysize_max(salt_key_cli):
-    with pytest.helpers.temp_directory() as tempdir:
-        ret = salt_key_cli.run(
-            "--gen-keys", "minibar", "--gen-keys-dir", tempdir, "--keysize", "32769"
-        )
-        assert ret.exitcode != 0
-        assert "error: The maximum value for keysize is 32768" in ret.stderr
+def test_keys_generation_keysize_max(salt_key_cli, tmp_path):
+    ret = salt_key_cli.run(
+        "--gen-keys", "minibar", "--gen-keys-dir", str(tmp_path), "--keysize", "32769"
+    )
+    assert ret.exitcode != 0
+    assert "error: The maximum value for keysize is 32768" in ret.stderr
