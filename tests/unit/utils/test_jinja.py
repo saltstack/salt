@@ -1394,8 +1394,7 @@ class TestCustomExtensions(TestCase):
         """
         urls = (
             # These cannot be HTTPS urls since urllib2 chokes on those
-            "http://saltstack.com",
-            "http://community.saltstack.com",
+            "http://saltproject.io",
             "http://google.com",
             "http://duckduckgo.com",
         )
