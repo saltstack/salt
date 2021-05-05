@@ -58,7 +58,7 @@ jaraco.functools==2.0
     # via
     #   -r requirements/static/pkg/py3.9/linux.txt
     #   tempora
-jinja2==2.10.1
+jinja2==2.11.3
     # via
     #   -r requirements/static/pkg/py3.9/linux.txt
     #   sphinx
@@ -103,11 +103,11 @@ pytz==2020.1
     #   -r requirements/static/pkg/py3.9/linux.txt
     #   babel
     #   tempora
-pyyaml==5.3.1
+pyyaml==5.4.1
     # via -r requirements/static/pkg/py3.9/linux.txt
 pyzmq==19.0.2 ; python_version >= "3.9"
     # via -r requirements/static/pkg/py3.9/linux.txt
-requests==2.21.0
+requests==2.25.1
     # via
     #   -r requirements/static/pkg/py3.9/linux.txt
     #   sphinx
@@ -145,7 +145,7 @@ tempora==1.14.1
     #   portend
 timelib==0.2.5
     # via -r requirements/static/pkg/py3.9/linux.txt
-urllib3==1.24.2
+urllib3==1.26.4
     # via
     #   -r requirements/static/pkg/py3.9/linux.txt
     #   requests
