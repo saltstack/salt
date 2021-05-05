@@ -105,7 +105,7 @@ pytz==2020.1
     #   -r requirements/static/pkg/py3.6/linux.txt
     #   babel
     #   tempora
-pyyaml==5.3.1
+pyyaml==5.4
     # via -r requirements/static/pkg/py3.6/linux.txt
 pyzmq==18.0.1 ; python_version < "3.9"
     # via -r requirements/static/pkg/py3.6/linux.txt
