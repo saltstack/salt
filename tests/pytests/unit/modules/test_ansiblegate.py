@@ -1,19 +1,16 @@
 # Author: Bo Maryniuk <bo@suse.de>
 
-
 import os
 import sys
 
 import pytest
 import salt.modules.ansiblegate as ansible
-import salt.utils.path
-import salt.utils.platform
 from salt.exceptions import LoaderError
 from tests.support.mock import MagicMock, MockTimedProc, patch
 
-pytestmark = pytest.mark.skipif(
-    salt.utils.platform.is_windows(), reason="Not supported on Windows"
-)
+pytestmark = [
+    pytest.mark.skip_on_windows,
+]
 
 
 @pytest.fixture
