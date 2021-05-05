@@ -88,32 +88,6 @@ repos:
           - requirements/static/pkg/linux.in
 
       - id: pip-tools-compile
-        alias: compile-pkg-freebsd-3.5-zmq-requirements
-        name: FreeBSD Packaging Py3.5 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|crypto)\.txt|static/pkg/(freebsd\.in|py3\.5/freebsd\.txt))$
-        pass_filenames: false
-        args:
-          - -v
-          - --py-version=3.5
-          - --platform=linux
-          - --include=requirements/base.txt
-          - --include=requirements/zeromq.txt
-          - requirements/static/pkg/freebsd.in
-
-      - id: pip-tools-compile
-        alias: compile-pkg-freebsd-3.6-zmq-requirements
-        name: FreeBSD Packaging Py3.6 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|crypto)\.txt|static/pkg/(freebsd\.in|py3\.6/freebsd\.txt))$
-        pass_filenames: false
-        args:
-          - -v
-          - --py-version=3.6
-          - --platform=linux
-          - --include=requirements/base.txt
-          - --include=requirements/zeromq.txt
-          - requirements/static/pkg/freebsd.in
-
-      - id: pip-tools-compile
         alias: compile-pkg-freebsd-3.7-zmq-requirements
         name: FreeBSD Packaging Py3.7 ZeroMQ Requirements
         files: ^requirements/((base|zeromq|crypto)\.txt|static/pkg/(freebsd\.in|py3\.7/freebsd\.txt))$
@@ -480,34 +454,6 @@ repos:
 
 
       - id: pip-tools-compile
-        alias: compile-ci-freebsd-py3.5-zmq-requirements
-        name: FreeBSD CI Py3.5 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(freebsd|common)\.in|pkg/py3\.5/freebsd\.txt))$
-        pass_filenames: false
-        args:
-          - -v
-          - --py-version=3.5
-          - --platform=linux
-          - --include=requirements/static/pkg/py{py_version}/freebsd.txt
-          - --include=requirements/pytest.txt
-          - --include=requirements/static/ci/common.in
-          - requirements/static/ci/freebsd.in
-
-      - id: pip-tools-compile
-        alias: compile-ci-freebsd-py3.6-zmq-requirements
-        name: FreeBSD CI Py3.6 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(freebsd|common)\.in|pkg/py3\.6/freebsd\.txt))$
-        pass_filenames: false
-        args:
-          - -v
-          - --py-version=3.6
-          - --platform=linux
-          - --include=requirements/static/pkg/py{py_version}/freebsd.txt
-          - --include=requirements/pytest.txt
-          - --include=requirements/static/ci/common.in
-          - requirements/static/ci/freebsd.in
-
-      - id: pip-tools-compile
         alias: compile-ci-freebsd-py3.7-zmq-requirements
         name: FreeBSD CI Py3.7 ZeroMQ Requirements
         files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(freebsd|common)\.in|pkg/py3\.7/freebsd\.txt))$
@@ -562,30 +508,6 @@ repos:
           - --include=requirements/pytest.txt
           - --include=requirements/static/ci/common.in
           - requirements/static/ci/freebsd.in
-
-      - id: pip-tools-compile
-        alias: compile-ci-freebsd-crypto-py3.5-requirements
-        name: FreeBSD CI Py3.5 Crypto Requirements
-        files: ^requirements/(crypto\.txt|static/ci/crypto\.in)$
-        pass_filenames: false
-        args:
-          - -v
-          - --py-version=3.5
-          - --platform=linux
-          - --out-prefix=freebsd
-          - requirements/static/ci/crypto.in
-
-      - id: pip-tools-compile
-        alias: compile-ci-freebsd-crypto-py3.6-requirements
-        name: FreeBSD CI Py3.6 Crypto Requirements
-        files: ^requirements/(crypto\.txt|static/ci/crypto\.in)$
-        pass_filenames: false
-        args:
-          - -v
-          - --py-version=3.6
-          - --platform=linux
-          - --out-prefix=freebsd
-          - requirements/static/ci/crypto.in
 
       - id: pip-tools-compile
         alias: compile-ci-freebsd-crypto-py3.7-requirements
