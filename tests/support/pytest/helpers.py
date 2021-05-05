@@ -582,7 +582,7 @@ class FakeSaltExtension:
             author = Pedro
             author_email = pedro@algarvio.me
             keywords = salt-extension
-            url = http://saltstack.com
+            url = http://saltproject.io
             license = Apache Software License 2.0
             classifiers =
                 Programming Language :: Python
