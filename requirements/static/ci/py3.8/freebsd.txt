@@ -702,7 +702,7 @@ pycurl==7.43.0.6
     # via -r requirements/static/ci/common.in
 pyeapi==0.8.3
     # via napalm
-pygit2==1.5.0
+pygit2==1.5.0 ; python_version >= "3.7"
     # via -r requirements/static/ci/freebsd.in
 pyinotify==0.9.6 ; sys_platform != "win32" and sys_platform != "darwin"
     # via -r requirements/static/ci/common.in

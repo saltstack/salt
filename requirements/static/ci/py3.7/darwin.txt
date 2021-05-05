@@ -343,6 +343,8 @@ botocore==1.16.26
     #   boto3
     #   moto
     #   s3transfer
+cached-property==1.5.2
+    # via pygit2
 cachetools==3.1.0
     # via google-auth
 cassandra-driver==3.23.0
@@ -364,6 +366,7 @@ cffi==1.12.2
     #   bcrypt
     #   cryptography
     #   napalm
+    #   pygit2
     #   pynacl
 cfn-lint==0.44.3
     # via moto
@@ -709,6 +712,8 @@ pycurl==7.43.0.6
     # via -r requirements/static/ci/common.in
 pyeapi==0.8.3
     # via napalm
+pygit2==1.5.0 ; python_version >= "3.7"
+    # via -r requirements/static/ci/darwin.in
 pyjwt==2.0.0
     # via adal
 pynacl==1.3.0
