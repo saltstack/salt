@@ -9,9 +9,9 @@ atomicwrites==1.3.0       # via pytest
 attrs==20.3.0             # via jsonschema, pytest, pytest-salt-factories
 aws-sam-translator==1.33.0  # via cfn-lint
 aws-xray-sdk==0.95        # via moto
-boto3==1.13.5
+boto3==1.17.67
 boto==2.49.0
-botocore==1.16.26         # via boto3, moto, s3transfer
+botocore==1.20.67         # via boto3, moto, s3transfer
 cachetools==3.1.0         # via google-auth
 cassandra-driver==3.23.0
 certifi==2020.12.5
@@ -33,8 +33,7 @@ dmidecode==0.9.0
 dnspython==1.16.0
 docker-pycreds==0.4.0     # via docker
 docker==2.7.0
-docutils==0.15.2          # via botocore
-ecdsa==0.13.3             # via moto, python-jose, sshpubkeys
+ecdsa==0.14.1             # via moto, python-jose, sshpubkeys
 filelock==3.0.12          # via virtualenv
 flaky==3.7.0
 genshi==0.7.3
@@ -44,7 +43,7 @@ gitpython==3.1.13
 google-auth==1.6.3        # via kubernetes
 idna==2.8
 immutables==0.15
-importlib-metadata==0.23  # via jsonschema, pluggy, pytest, virtualenv
+importlib-metadata==0.23  # via jsonpickle, jsonschema, pluggy, pytest, virtualenv
 iniconfig==1.0.1          # via pytest
 ioloop==0.1a0
 ipaddress==1.0.22         # via kubernetes
@@ -52,11 +51,11 @@ jaraco.classes==3.2.1
 jaraco.collections==3.2.0
 jaraco.functools==2.0
 jaraco.text==3.5.0
-jinja2==2.10.1
+jinja2==2.11.3
 jmespath==0.9.4
 jsondiff==1.2.0           # via moto
 jsonpatch==1.28           # via cfn-lint
-jsonpickle==1.1           # via aws-xray-sdk
+jsonpickle==2.0.0         # via aws-xray-sdk
 jsonpointer==2.0          # via jsonpatch
 jsonschema==3.2.0
 junit-xml==1.9            # via cfn-lint
@@ -78,7 +77,7 @@ pathtools==0.1.2          # via watchdog
 pluggy==0.13.0            # via pytest
 portend==2.6
 psutil==5.8.0
-py==1.9.0                 # via pytest
+py==1.10.0                # via pytest
 pyasn1-modules==0.2.4     # via google-auth
 pyasn1==0.4.8
 pycparser==2.20
@@ -104,14 +103,14 @@ pytz==2020.1
 pyvmomi==6.7.1.2018.12
 pywin32==300
 pywinrm==0.4.1
-pyyaml==5.3.1
+pyyaml==5.4.1
 pyzmq==18.0.1 ; python_version < "3.9"
 requests-ntlm==1.1.0      # via pywinrm
 requests==2.25.1
 responses==0.10.6         # via moto
 rfc3987==1.3.8
-rsa==4.0                  # via google-auth, python-jose
-s3transfer==0.3.3         # via boto3
+rsa==4.7.2                # via google-auth, python-jose
+s3transfer==0.4.2         # via boto3
 sed==0.3.1
 setproctitle==1.1.10
 six==1.15.0
@@ -122,7 +121,7 @@ strict-rfc3339==0.7
 tempora==1.14.1
 timelib==0.2.5
 toml==0.10.2
-urllib3==1.24.3
+urllib3==1.26.4
 virtualenv==20.0.20
 watchdog==0.10.3
 websocket-client==0.40.0  # via docker, kubernetes
