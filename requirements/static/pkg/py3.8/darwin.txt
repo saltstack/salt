@@ -19,7 +19,7 @@ gitpython==3.1.12
 idna==2.8
 immutables==0.15          # via contextvars
 jaraco.functools==2.0     # via cheroot, tempora
-jinja2==2.10.1
+jinja2==2.11.3
 linode-python==1.1.1
 mako==1.0.7
 markupsafe==1.1.1
@@ -34,15 +34,15 @@ pyopenssl==19.0.0
 python-dateutil==2.8.0
 python-gnupg==0.4.4
 pytz==2020.1              # via tempora
-pyyaml==5.3.1
+pyyaml==5.4.1
 pyzmq==19.0.0 ; python_version < "3.9"
-requests==2.21.0
+requests==2.25.1
 setproctitle==1.1.10
 six==1.15.0               # via cheroot, cherrypy, cryptography, pyopenssl, python-dateutil, tempora
 smmap==3.0.2              # via gitdb
 tempora==1.14.1           # via portend
 timelib==0.2.5
-urllib3==1.24.3           # via requests
+urllib3==1.26.4           # via requests
 vultr==1.0.1
 zc.lockfile==2.0          # via cherrypy
 # Passthrough dependencies from requirements/darwin.txt
