@@ -4,7 +4,7 @@ default_language_version:
 exclude: ^(doc/_static/.*|doc/_themes/.*)$
 repos:
   - repo: https://github.com/saltstack/pip-tools-compile-impersonate
-    rev: dcfda442e55f17b109d132cb62f424639935e9d6
+    rev: bc8a2653cee05c6b84e69912eeb4350b3d7a578b
     hooks:
 
   # ----- Packaging Requirements ------------------------------------------------------------------------------------>
@@ -95,7 +95,7 @@ repos:
         args:
           - -v
           - --py-version=3.7
-          - --platform=linux
+          - --platform=freebsd
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - requirements/static/pkg/freebsd.in
@@ -108,7 +108,7 @@ repos:
         args:
           - -v
           - --py-version=3.8
-          - --platform=linux
+          - --platform=freebsd
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - requirements/static/pkg/freebsd.in
@@ -121,7 +121,7 @@ repos:
         args:
           - -v
           - --py-version=3.9
-          - --platform=linux
+          - --platform=freebsd
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - requirements/static/pkg/freebsd.in
@@ -134,7 +134,7 @@ repos:
         args:
           - -v
           - --py-version=3.10
-          - --platform=linux
+          - --platform=freebsd
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - requirements/static/pkg/freebsd.in
@@ -421,7 +421,7 @@ repos:
         args:
           - -v
           - --py-version=3.7
-          - --platform=linux
+          - --platform=freebsd
           - --include=requirements/static/pkg/py{py_version}/freebsd.txt
           - --include=requirements/pytest.txt
           - --include=requirements/static/ci/common.in
@@ -435,7 +435,7 @@ repos:
         args:
           - -v
           - --py-version=3.8
-          - --platform=linux
+          - --platform=freebsd
           - --include=requirements/static/pkg/py{py_version}/freebsd.txt
           - --include=requirements/pytest.txt
           - --include=requirements/static/ci/common.in
@@ -449,7 +449,7 @@ repos:
         args:
           - -v
           - --py-version=3.9
-          - --platform=linux
+          - --platform=freebsd
           - --include=requirements/static/pkg/py{py_version}/freebsd.txt
           - --include=requirements/pytest.txt
           - --include=requirements/static/ci/common.in
@@ -463,7 +463,7 @@ repos:
         args:
           - -v
           - --py-version=3.10
-          - --platform=linux
+          - --platform=freebsd
           - --include=requirements/static/pkg/py{py_version}/freebsd.txt
           - --include=requirements/pytest.txt
           - --include=requirements/static/ci/common.in
@@ -477,7 +477,7 @@ repos:
         args:
           - -v
           - --py-version=3.7
-          - --platform=linux
+          - --platform=freebsd
           - --out-prefix=freebsd
           - requirements/static/ci/crypto.in
 
@@ -489,7 +489,7 @@ repos:
         args:
           - -v
           - --py-version=3.8
-          - --platform=linux
+          - --platform=freebsd
           - --out-prefix=freebsd
           - requirements/static/ci/crypto.in
 
@@ -501,7 +501,7 @@ repos:
         args:
           - -v
           - --py-version=3.9
-          - --platform=linux
+          - --platform=freebsd
           - --out-prefix=freebsd
           - requirements/static/ci/crypto.in
 
@@ -513,7 +513,7 @@ repos:
         args:
           - -v
           - --py-version=3.10
-          - --platform=linux
+          - --platform=freebsd
           - --out-prefix=freebsd
           - requirements/static/ci/crypto.in
 
