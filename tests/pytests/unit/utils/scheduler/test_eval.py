@@ -7,7 +7,6 @@ import pytest
 import salt.utils.platform
 import salt.utils.schedule
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import skipIf
 
 try:
     import dateutil.parser
@@ -33,6 +32,38 @@ pytestmark = [
     ),
     pytest.mark.windows_whitelisted,
 ]
+
+
+def _check_last_run(schedule, job_name, runtime=None):
+    """
+    Check that last_run time exists and
+    is not the previous run time if prev_runtime
+    is passed.
+    """
+
+    # The number of times to
+    # check before bailing out.
+    checks = 5
+
+    status = schedule.job_status(job_name)
+    count = 0
+    while "_last_run" not in status:
+        status = schedule.job_status(job_name)
+        if count == checks:
+            return False
+        time.sleep(2)
+        count += 1
+
+    if runtime:
+        count = 0
+        status = schedule.job_status(job_name)
+        while status["_last_run"] != runtime:
+            if count == checks:
+                return False
+            status = schedule.job_status(job_name)
+            time.sleep(2)
+            count += 1
+    return True
 
 
 @pytest.mark.slow_test
@@ -90,21 +121,13 @@ def test_eval_multiple_whens(schedule):
     schedule.eval(now=run_time1)
 
     # Give the job a chance to finish
-    time.sleep(5)
-
-    ret = schedule.job_status(job_name)
-
-    assert ret["_last_run"] == run_time1
+    assert _check_last_run(schedule, job_name, run_time1)
 
     # Evaluate run time2
     schedule.eval(now=run_time2)
 
-    # Give the job a chance to finish
-    time.sleep(5)
-
-    ret = schedule.job_status(job_name)
-
-    assert ret["_last_run"] == run_time2
+    # Give the job a chance to finish and check
+    assert _check_last_run(schedule, job_name, run_time2)
 
 
 @pytest.mark.slow_test
@@ -124,8 +147,7 @@ def test_eval_whens(schedule):
 
     # Evaluate run time1
     schedule.eval(now=run_time)
-    ret = schedule.job_status(job_name)
-    assert ret["_last_run"] == run_time
+    assert _check_last_run(schedule, job_name, run_time)
 
 
 @pytest.mark.slow_test
@@ -150,8 +172,9 @@ def test_eval_loop_interval(schedule):
     # Evaluate 1 second at the run time
     schedule.eval(now=run_time2 + datetime.timedelta(seconds=LOOP_INTERVAL))
 
-    ret = schedule.job_status(job_name)
-    assert ret["_last_run"] == run_time2 + datetime.timedelta(seconds=LOOP_INTERVAL)
+    assert _check_last_run(
+        schedule, job_name, run_time2 + datetime.timedelta(seconds=LOOP_INTERVAL)
+    )
 
 
 @pytest.mark.slow_test
@@ -190,20 +213,13 @@ def test_eval_multiple_whens_loop_interval(schedule):
     schedule.eval(now=run_time1)
 
     # Give the job a chance to finish
-    time.sleep(5)
-
-    ret = schedule.job_status(job_name)
-
-    assert ret["_last_run"] == run_time1
+    assert _check_last_run(schedule, job_name, run_time1)
 
     # Evaluate 1 second at the run time
     schedule.eval(now=run_time2)
 
     # Give the job a chance to finish
-    time.sleep(5)
-
-    ret = schedule.job_status(job_name)
-    assert ret["_last_run"] == run_time2
+    assert _check_last_run(schedule, job_name, run_time2)
 
 
 @pytest.mark.slow_test
@@ -224,8 +240,7 @@ def test_eval_once(schedule):
 
     # Evaluate 1 second at the run time
     schedule.eval(now=run_time)
-    ret = schedule.job_status(job_name)
-    assert ret["_last_run"] == run_time
+    assert _check_last_run(schedule, job_name, run_time)
 
 
 @pytest.mark.slow_test
@@ -252,11 +267,10 @@ def test_eval_once_loop_interval(schedule):
 
     # Evaluate at the run time
     schedule.eval(now=run_time)
-    ret = schedule.job_status(job_name)
-    assert ret["_last_run"] == run_time
+    assert _check_last_run(schedule, job_name, run_time)
 
 
-@skipIf(not HAS_CRONITER, "Cannot find croniter python module")
+@pytest.mark.skipif(not HAS_CRONITER, reason="Cannot find croniter python module")
 def test_eval_cron(schedule):
     """
     verify that scheduled job runs
@@ -271,12 +285,10 @@ def test_eval_cron(schedule):
     run_time = dateutil.parser.parse("11/29/2017 4:00pm")
     with patch("croniter.croniter.get_next", MagicMock(return_value=run_time)):
         schedule.eval(now=run_time)
-
-    ret = schedule.job_status(job_name)
-    assert ret["_last_run"] == run_time
+    assert _check_last_run(schedule, job_name, run_time)
 
 
-@skipIf(not HAS_CRONITER, "Cannot find croniter python module")
+@pytest.mark.skipif(not HAS_CRONITER, reason="Cannot find croniter python module")
 def test_eval_cron_loop_interval(schedule):
     """
     verify that scheduled job runs
@@ -294,9 +306,7 @@ def test_eval_cron_loop_interval(schedule):
     run_time = dateutil.parser.parse("11/29/2017 4:00pm")
     with patch("croniter.croniter.get_next", MagicMock(return_value=run_time)):
         schedule.eval(now=run_time)
-
-    ret = schedule.job_status(job_name)
-    assert ret["_last_run"] == run_time
+    assert _check_last_run(schedule, job_name, run_time)
 
 
 @pytest.mark.slow_test
@@ -327,35 +337,24 @@ def test_eval_until(schedule):
     # eval at 2:00pm to prime, simulate minion start up.
     run_time = dateutil.parser.parse("11/29/2017 2:00pm")
     schedule.eval(now=run_time)
-    ret = schedule.job_status(job_name)
 
     # eval at 3:00pm, will run.
     run_time = dateutil.parser.parse("11/29/2017 3:00pm")
     schedule.eval(now=run_time)
 
     # Give the job a chance to finish
-    time.sleep(5)
-
-    ret = schedule.job_status(job_name)
-
-    assert ret["_last_run"] == run_time
+    assert _check_last_run(schedule, job_name, run_time)
 
     # eval at 4:00pm, will run.
     run_time = dateutil.parser.parse("11/29/2017 4:00pm")
     schedule.eval(now=run_time)
 
     # Give the job a chance to finish
-    time.sleep(5)
-
-    ret = schedule.job_status(job_name)
-    assert ret["_last_run"] == run_time
+    assert _check_last_run(schedule, job_name, run_time)
 
     # eval at 5:00pm, will not run
     run_time = dateutil.parser.parse("11/29/2017 5:00pm")
     schedule.eval(now=run_time)
-
-    # Give the job a chance to finish
-    time.sleep(5)
 
     ret = schedule.job_status(job_name)
 
@@ -413,8 +412,7 @@ def test_eval_after(schedule):
     # eval at 6:00pm, will run
     run_time = dateutil.parser.parse("11/29/2017 6:00pm")
     schedule.eval(now=run_time)
-    ret = schedule.job_status(job_name)
-    assert ret["_last_run"] == run_time
+    assert _check_last_run(schedule, job_name, run_time)
 
 
 @pytest.mark.slow_test
@@ -437,8 +435,7 @@ def test_eval_enabled(schedule):
 
     # Evaluate 1 second at the run time
     schedule.eval(now=run_time1)
-    ret = schedule.job_status(job_name)
-    assert ret["_last_run"] == run_time1
+    assert _check_last_run(schedule, job_name, run_time1)
 
 
 @pytest.mark.slow_test
@@ -469,8 +466,7 @@ def test_eval_enabled_key(schedule):
 
     # Evaluate 1 second at the run time
     schedule.eval(now=run_time2)
-    ret = schedule.job_status("test_eval_enabled_key")
-    assert ret["_last_run"] == run_time2
+    assert _check_last_run(schedule, job_name, run_time2)
 
 
 def test_eval_disabled(schedule):
@@ -550,13 +546,12 @@ def test_eval_run_on_start(schedule):
     # eval at 2:00pm, will run.
     run_time = dateutil.parser.parse("11/29/2017 2:00pm")
     schedule.eval(now=run_time)
-    ret = schedule.job_status(job_name)
-    assert ret["_last_run"] == run_time
+    assert _check_last_run(schedule, job_name, run_time)
 
     # eval at 3:00pm, will run.
     run_time = dateutil.parser.parse("11/29/2017 3:00pm")
     schedule.eval(now=run_time)
-    ret = schedule.job_status(job_name)
+    assert _check_last_run(schedule, job_name, run_time)
 
 
 @pytest.mark.slow_test
@@ -579,13 +574,11 @@ def test_eval_splay(schedule):
         # eval at 2:00pm to prime, simulate minion start up.
         run_time = dateutil.parser.parse("11/29/2017 2:00pm")
         schedule.eval(now=run_time)
-        ret = schedule.job_status(job_name)
 
         # eval at 2:00:40pm, will run.
         run_time = dateutil.parser.parse("11/29/2017 2:00:40pm")
         schedule.eval(now=run_time)
-        ret = schedule.job_status(job_name)
-        assert ret["_last_run"] == run_time
+        assert _check_last_run(schedule, job_name, run_time)
 
 
 @pytest.mark.slow_test
@@ -612,13 +605,11 @@ def test_eval_splay_range(schedule):
         # eval at 2:00pm to prime, simulate minion start up.
         run_time = dateutil.parser.parse("11/29/2017 2:00pm")
         schedule.eval(now=run_time)
-        ret = schedule.job_status(job_name)
 
         # eval at 2:00:40pm, will run.
         run_time = dateutil.parser.parse("11/29/2017 2:00:40pm")
         schedule.eval(now=run_time)
-        ret = schedule.job_status(job_name)
-        assert ret["_last_run"] == run_time
+        assert _check_last_run(schedule, job_name, run_time)
 
 
 @pytest.mark.slow_test
@@ -642,13 +633,11 @@ def test_eval_splay_global(schedule):
         # eval at 2:00pm to prime, simulate minion start up.
         run_time = dateutil.parser.parse("11/29/2017 2:00pm")
         schedule.eval(now=run_time)
-        ret = schedule.job_status(job_name)
 
         # eval at 2:00:40pm, will run.
         run_time = dateutil.parser.parse("11/29/2017 2:00:40pm")
         schedule.eval(now=run_time)
-        ret = schedule.job_status(job_name)
-        assert ret["_last_run"] == run_time
+        assert _check_last_run(schedule, job_name, run_time)
 
 
 @pytest.mark.slow_test
