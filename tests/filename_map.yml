@@ -238,13 +238,13 @@ salt/utils/docker/*:
   - unit.utils.test_dockermod
 
 salt/utils/schedule.py:
-  - unit.utils.scheduler.test_error
-  - unit.utils.scheduler.test_eval
-  - unit.utils.scheduler.test_postpone
-  - unit.utils.scheduler.test_skip
-  - unit.utils.scheduler.test_maxrunning
-  - unit.utils.scheduler.test_helpers
-  - unit.utils.scheduler.test_schedule
+  - pytests.unit.utils.scheduler.test_error
+  - pytests.unit.utils.scheduler.test_eval
+  - pytests.unit.utils.scheduler.test_postpone
+  - pytests.unit.utils.scheduler.test_skip
+  - pytests.unit.utils.scheduler.test_maxrunning
+  - pytests.unit.utils.scheduler.test_helpers
+  - pytests.unit.utils.scheduler.test_schedule
 
 salt/utils/vt.py:
   - integration.cli.test_custom_module
