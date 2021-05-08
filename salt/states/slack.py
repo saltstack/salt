@@ -105,20 +105,27 @@ def post_message(name, **kwargs):
             Icon to use instead of WebHook default.
     """
     ret = {"name": name, "changes": {}, "result": False, "comment": ""}
+    api_key = kwargs.get("api_key")
+    webhook = kwargs.get("webhook")
 
-    if not kwargs.get("api_key") and not kwargs.get("webhook"):
-        ret["comment"] = "Please specify api_key or webhook."
-        return ret
+    # If neither api_key and webhook are not provided at the CLI, check the config
+    if not api_key and not webhook:
+        api_key = __salt__["config.get"]("slack.api_key") or __salt__["config.get"]("slack:api_key")
+        if not api_key:
+            webhook = __salt__["config.get"]("slack.hook") or __salt__["config.get"]("slack:hook")
+            if not webhook:
+                ret["comment"] = "Please specify api_key or webhook."
+                return ret
 
-    if kwargs.get("api_key") and kwargs.get("webhook"):
+    if api_key and webhook:
         ret["comment"] = "Please specify only either api_key or webhook."
         return ret
 
-    if kwargs.get("api_key") and not kwargs.get("channel"):
+    if api_key and not kwargs.get("channel"):
         ret["comment"] = "Slack channel is missing."
         return ret
 
-    if kwargs.get("api_key") and not kwargs.get("from_name"):
+    if api_key and not kwargs.get("from_name"):
         ret["comment"] = "Slack from name is missing."
         return ret
 
@@ -134,7 +141,7 @@ def post_message(name, **kwargs):
         return ret
 
     try:
-        if kwargs.get("api_key"):
+        if api_key:
             result = __salt__["slack.post_message"](
                 channel=kwargs.get("channel"),
                 message=kwargs.get("message"),
@@ -142,7 +149,7 @@ def post_message(name, **kwargs):
                 api_key=kwargs.get("api_key"),
                 icon=kwargs.get("icon"),
             )
-        elif kwargs.get("webhook"):
+        elif webhook:
             result = __salt__["slack.call_hook"](
                 message=kwargs.get("message"),
                 attachment=kwargs.get("attachment"),
