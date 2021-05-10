@@ -2,13 +2,14 @@
 Test case for the slack utils module
 """
 
-import pytest
 import logging
 
+import pytest
 import salt.utils.slack as slack
 from tests.support.mock import MagicMock, patch
 
 log = logging.getLogger(__name__)
+
 
 @pytest.fixture
 def configure_loader_modules():
