@@ -646,6 +646,39 @@ Example to reconfigure the memory and number of vCPUs:
       num_cpus: 8
 
 
+Instant Cloning a VM
+====================
+
+Instant Cloning a powered-ON VM is the easiest and the preferred way to work with VMs from controlled point in time using the VMware driver.
+
+.. note::
+
+    Instant Cloning operations are unsupported on standalone ESXi hosts, a vCenter server will be required.
+
+Example of a minimal profile when skipping optional parameters:
+
+.. code-block:: yaml
+
+    my-minimal-clone:
+      provider: vcenter01
+      clonefrom: 'test-vm'
+      instant_clone: true
+
+When Instant cloning a VM, all the profile configuration parameters are optional and the configuration gets inherited from the clone.
+
+Example to specify optional parameters :
+
+.. code-block:: yaml
+
+    my-minimal-clone:
+      provider: vcenter01
+      clonefrom: 'test-vm'
+      instant_clone: true
+      datastore: 'local-0 (1)'
+      datacenter: 'vAPISdkDatacenter'
+      resourcepool: 'RP1'
+
+
 Cloning a Template
 ==================
 
