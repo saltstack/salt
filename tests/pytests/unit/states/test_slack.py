@@ -48,7 +48,11 @@ def test_post_message_apikey():
             ret.update({"comment": comt, "result": False})
             assert (
                 slack.post_message(
-                    name, channel=None, from_name=from_name, message=message, api_key=None,
+                    name,
+                    channel=None,
+                    from_name=from_name,
+                    message=message,
+                    api_key=None,
                 )
                 == ret
             )
