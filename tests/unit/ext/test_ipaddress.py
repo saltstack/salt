@@ -112,7 +112,7 @@ class BaseTestCase(TestCase):
         self.assertEqual(self.factory(lhs), self.factory(rhs))
 
 
-@skipIf(sys.version_info >= (3, 9, 5), "Only run on Python versions below 3.9.5")
+@skipIf(sys.version_info >= (3, 9, 5), "We use builtin ipaddress on Python >= 3.9.5")
 class CommonTestMixin:
     def test_empty_address(self):
         with self.assertAddressError("Address cannot be empty"):
@@ -137,7 +137,7 @@ class CommonTestMixin:
                 self.assertEqual(y, x)
 
 
-@skipIf(sys.version_info >= (3, 9, 5), "Only run on Python versions below 3.9.5")
+@skipIf(sys.version_info >= (3, 9, 5), "We use builtin ipaddress on Python >= 3.9.5")
 class CommonTestMixin_v4(CommonTestMixin):
     def test_leading_zeros(self):
         # bpo-36384: no leading zeros to avoid ambiguity with octal notation
@@ -187,7 +187,7 @@ class CommonTestMixin_v4(CommonTestMixin):
         assertBadLength(5)
 
 
-@skipIf(sys.version_info >= (3, 9, 5), "Only run on Python versions below 3.9.5")
+@skipIf(sys.version_info >= (3, 9, 5), "We use builtin ipaddress on Python >= 3.9.5")
 class CommonTestMixin_v6(CommonTestMixin):
     def test_leading_zeros(self):
         self.assertInstancesEqual("0000::0000", "::")
@@ -237,7 +237,7 @@ class CommonTestMixin_v6(CommonTestMixin):
             self.factory(address)
 
 
-@skipIf(sys.version_info >= (3, 9, 5), "Only run on Python versions below 3.9.5")
+@skipIf(sys.version_info >= (3, 9, 5), "We use builtin ipaddress on Python >= 3.9.5")
 class AddressTestCase_v4(BaseTestCase, CommonTestMixin_v4):
     factory = ipaddress.IPv4Address
 
@@ -350,7 +350,7 @@ class AddressTestCase_v4(BaseTestCase, CommonTestMixin_v4):
         weakref.ref(self.factory("192.0.2.1"))
 
 
-@skipIf(sys.version_info >= (3, 9, 5), "Only run on Python versions below 3.9.5")
+@skipIf(sys.version_info >= (3, 9, 5), "We use builtin ipaddress on Python >= 3.9.5")
 class AddressTestCase_v6(BaseTestCase, CommonTestMixin_v6):
     factory = ipaddress.IPv6Address
 
@@ -604,7 +604,7 @@ class AddressTestCase_v6(BaseTestCase, CommonTestMixin_v6):
         weakref.ref(self.factory("2001:db8::%scope"))
 
 
-@skipIf(sys.version_info >= (3, 9, 5), "Only run on Python versions below 3.9.5")
+@skipIf(sys.version_info >= (3, 9, 5), "We use builtin ipaddress on Python >= 3.9.5")
 class NetmaskTestMixin_v4(CommonTestMixin_v4):
     """Input validation on interfaces and networks is very similar"""
 
@@ -692,7 +692,7 @@ class InterfaceTestCase_v4(BaseTestCase, NetmaskTestMixin_v4):
     factory = ipaddress.IPv4Interface
 
 
-@skipIf(sys.version_info >= (3, 9, 5), "Only run on Python versions below 3.9.5")
+@skipIf(sys.version_info >= (3, 9, 5), "We use builtin ipaddress on Python >= 3.9.5")
 class NetworkTestCase_v4(BaseTestCase, NetmaskTestMixin_v4):
     factory = ipaddress.IPv4Network
 
@@ -751,7 +751,7 @@ class NetworkTestCase_v4(BaseTestCase, NetmaskTestMixin_v4):
             )
 
 
-@skipIf(sys.version_info >= (3, 9, 5), "Only run on Python versions below 3.9.5")
+@skipIf(sys.version_info >= (3, 9, 5), "We use builtin ipaddress on Python >= 3.9.5")
 class NetmaskTestMixin_v6(CommonTestMixin_v6):
     """Input validation on interfaces and networks is very similar"""
 
@@ -864,7 +864,7 @@ class InterfaceTestCase_v6(BaseTestCase, NetmaskTestMixin_v6):
     factory = ipaddress.IPv6Interface
 
 
-@skipIf(sys.version_info >= (3, 9, 5), "Only run on Python versions below 3.9.5")
+@skipIf(sys.version_info >= (3, 9, 5), "We use builtin ipaddress on Python >= 3.9.5")
 class NetworkTestCase_v6(BaseTestCase, NetmaskTestMixin_v6):
     factory = ipaddress.IPv6Network
 
@@ -916,7 +916,7 @@ class NetworkTestCase_v6(BaseTestCase, NetmaskTestMixin_v6):
         )
 
 
-@skipIf(sys.version_info >= (3, 9, 5), "Only run on Python versions below 3.9.5")
+@skipIf(sys.version_info >= (3, 9, 5), "We use builtin ipaddress on Python >= 3.9.5")
 class FactoryFunctionErrors(BaseTestCase):
     def assertFactoryError(self, factory, kind):
         """Ensure a clean ValueError with the expected message"""
@@ -935,7 +935,7 @@ class FactoryFunctionErrors(BaseTestCase):
         self.assertFactoryError(ipaddress.ip_network, "network")
 
 
-@skipIf(sys.version_info >= (3, 9, 5), "Only run on Python versions below 3.9.5")
+@skipIf(sys.version_info >= (3, 9, 5), "We use builtin ipaddress on Python >= 3.9.5")
 class ComparisonTests(TestCase):
 
     v4addr = ipaddress.IPv4Address(1)
@@ -1122,7 +1122,7 @@ class ComparisonTests(TestCase):
         self.assertRaises(TypeError, v6net_scoped.__gt__, v4net)
 
 
-@skipIf(sys.version_info >= (3, 9, 5), "Only run on Python versions below 3.9.5")
+@skipIf(sys.version_info >= (3, 9, 5), "We use builtin ipaddress on Python >= 3.9.5")
 class IpaddrUnitTest(TestCase):
     def setUp(self):
         self.ipv4_address = ipaddress.IPv4Address("1.2.3.4")
