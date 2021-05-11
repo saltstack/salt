@@ -501,7 +501,7 @@ def test_pillar_match_filter_by_minion_id(salt_cli, salt_minion):
         'web*': ['app', 'caching'],
         '{}*': ['db'],
     }}, default='web*') %}}
-    
+
     # Make the filtered data available to Pillar:
     roles: {{{{ roles | yaml() }}}}
     """.format(
@@ -514,7 +514,7 @@ def test_pillar_match_filter_by_minion_id(salt_cli, salt_minion):
         'web*': ['app', 'caching'],
         '{}*': ['db'],
     }}, minion_id=grains['id'], default='web*') %}}
-    
+
     # Make the filtered data available to Pillar:
     roles: {{{{ roles | yaml() }}}}
     """.format(
@@ -527,7 +527,7 @@ def test_pillar_match_filter_by_minion_id(salt_cli, salt_minion):
         'web*': ['app', 'caching'],
         'E@{}': ['db'],
     }}, minion_id=grains['id'], default='web*') %}}
-    
+
     # Make the filtered data available to Pillar:
     roles: {{{{ roles | yaml() }}}}
     """.format(
@@ -593,3 +593,12 @@ def test_pillar_match_filter_by_minion_id(salt_cli, salt_minion):
 
     # Refresh pillar once we're done
     salt_cli.run("saltutil.refresh_pillar", wait=True, minion_tgt=salt_minion.id)
+
+
+@pytest.mark.slow_test
+def test_pillar_ext_59975(salt_call_cli):
+    """
+    pillar.ext returns result. Issue #59975
+    """
+    ret = salt_call_cli.run("pillar.ext", '{"libvert": _}')
+    assert "ext_pillar_opts" in ret.json
