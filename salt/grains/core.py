@@ -1573,7 +1573,6 @@ _OS_NAME_MAP = {
 # post-_OS_NAME_MAP. If your system is having trouble with detection, please
 # make sure that the 'os' grain is capitalized and working correctly first.
 _OS_FAMILY_MAP = {
-    "Ubuntu": "Debian",
     "Fedora": "RedHat",
     "Chapeau": "RedHat",
     "Korora": "RedHat",
@@ -1617,7 +1616,6 @@ _OS_FAMILY_MAP = {
     "OpenSolaris": "Solaris",
     "Oracle Solaris": "Solaris",
     "Arch ARM": "Arch",
-    "Manjaro": "Arch",
     "Antergos": "Arch",
     "ALT": "RedHat",
     "Trisquel": "Debian",
