@@ -1628,7 +1628,7 @@ class State:
                 if name not in high or state_type not in high[name]:
                     # Check for a matching 'name' override in high data
                     ids = find_name(name, state_type, high)
-                    if len(ids) != 1:
+                    if len(ids) == 0:
                         errors.append(
                             "Cannot extend ID '{0}' in '{1}:{2}'. It is not "
                             "part of the high state.\n"
@@ -1639,6 +1639,25 @@ class State:
                                 name,
                                 body.get("__env__", "base"),
                                 body.get("__sls__", "base"),
+                            )
+                        )
+                        continue
+                    elif len(ids) != 1:
+                        #log.debug("WARNING : ID '{0}' in '{1}:{2}' defined '{3}' times, see below :".format(name,body.get("__env__", "base"),body.get("__sls__", "base"),len(ids)))
+                        msg = ""
+                        for x in range(len(ids)):
+                            msg = msg + "{0}) {1}".format(x+1, ids[x][0]) + "\n"
+                            #log.debug("WARNING : {0}) {1}".format(x+1, ids[x][0]))
+                        errors.append(
+                            "ID '{0}' in '{1}:{2}' defined '{3}' times.\n"
+                            #"Report to minion debug information for more details.\n"
+                            "This is likely due to the '{3}' following states with an ID of '{0}'\n"
+                            "in environment '{1}' and to SLS '{2}' :\n{4}".format(
+                                name,
+                                body.get("__env__", "base"),
+                                body.get("__sls__", "base"),
+                                len(ids),
+                                msg,
                             )
                         )
                         continue
