@@ -9,6 +9,7 @@ from datetime import datetime
 import msgpack
 import pytest
 import salt.modules.file as filemod
+import salt.modules.test as salt_test
 import salt.serializers.json as jsonserializer
 import salt.serializers.msgpack as msgpackserializer
 import salt.serializers.plist as plistserializer
@@ -2595,6 +2596,29 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             self.assertDictEqual(filestate.mod_run_check_cmd(cmd, filename), ret)
 
             self.assertTrue(filestate.mod_run_check_cmd(cmd, filename))
+
+    # 'patch' function tests: 1
+
+    def test_patch_56338(self):
+        """
+        Test the fix for issue #56338
+        """
+        file_name = "nonexistant_file_alsdjfoghiohoiw"
+        mock_source_list = MagicMock(return_value=[None])
+        setattr(salt_test, "__opts__", {"test", False})
+
+        with patch("os.path.isabs", return_value=True) and patch(
+            "os.path.exists", return_value=True
+        ) and patch.dict(
+            filestate.__salt__,
+            {"file.source_list": mock_source_list, "test.ping": salt_test.ping},
+        ) and patch.object(
+            filestate, "managed", return_value={"result": False}
+        ) and patch(
+            "salt.utils.url.redact_http_basic_auth", return_value=""
+        ):
+            ret = filestate.patch(file_name)
+            self.assertFalse(ret["result"])
 
     @skipIf(not HAS_DATEUTIL, NO_DATEUTIL_REASON)
     @pytest.mark.slow_test
