@@ -128,7 +128,7 @@ class CpTestCase(TestCase, LoaderModuleMockMixin):
         """
         filename = "/saltines/test.file"
         if salt.utils.platform.is_windows():
-            filename = "c:\\saltines\\test.file"
+            filename = "C:\\saltines\\test.file"
         with patch(
             "salt.modules.cp.os.path",
             MagicMock(isfile=Mock(return_value=True), wraps=cp.os.path),
