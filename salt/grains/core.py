@@ -1976,6 +1976,14 @@ def os_data():
                             if codename_match:
                                 codename = codename_match.group(1)
                         grains["lsb_distrib_codename"] = codename
+                    if "ID_LIKE" in os_release:
+                        # ID_LIKE returns what we call here the family of the
+                        # given distro. For example:
+                        #  - Ubuntu will return "debian"
+                        #  - CentOS will return "rhel fedora"
+                        #  - Manjaro will return "arch"
+                        # Get the closest (first) token, capitalise
+                        grains["os_family"] = _OS_NAME_MAP.get(os_release["ID_LIKE"].split(" ")[0], "")
                     if "CPE_NAME" in os_release:
                         cpe = _parse_cpe_name(os_release["CPE_NAME"])
                         if not cpe:
@@ -2238,7 +2246,7 @@ def os_data():
     if not grains["os"]:
         grains["os"] = "Unknown {}".format(grains["kernel"])
         grains["os_family"] = "Unknown"
-    else:
+    elif "os_family" not in grains or not grains["os_family"]:
         # this assigns family names based on the os name
         # family defaults to the os name if not found
         grains["os_family"] = _OS_FAMILY_MAP.get(grains["os"], grains["os"])
