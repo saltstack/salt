@@ -237,13 +237,18 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                     "group.info": mock_group,
                 },
             ):
-                with patch.dict(mount.__opts__, {"test": True}), \
-                        patch.object(os.path, "exists", mock_t):
+                with patch.dict(mount.__opts__, {"test": True}), patch.object(
+                    os.path, "exists", mock_t
+                ):
                     # Starting with Python 3.8 the os.path.realpath function attempts to resolve
                     # symbolic links and junctions on Windows. So, since were using a share
                     # that doesn't exist, we need to mock
                     # https://docs.python.org/3/library/os.path.html?highlight=ntpath%20realpath#os.path.realpath
-                    with patch.object(os.path, "realpath", MagicMock(side_effect=[name2, device2, device2])):
+                    with patch.object(
+                        os.path,
+                        "realpath",
+                        MagicMock(side_effect=[name2, device2, device2]),
+                    ):
                         comt = "Target was already mounted. Entry already exists in the fstab."
                         ret.update({"name": name2, "result": True})
                         ret.update({"comment": comt, "changes": {}})
