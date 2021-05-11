@@ -288,7 +288,7 @@ def _install_requirements(
         "install",
         "--progress-bar=off",
         "-U",
-        "pip",
+        "pip>=20.2.4",
         "setuptools!=50.*,!=51.*,!=52.*",
     ]
     session.run(*install_command, silent=PIP_INSTALL_SILENT)
