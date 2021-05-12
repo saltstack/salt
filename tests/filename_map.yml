@@ -180,6 +180,7 @@ salt/config/*:
 salt/loader.py:
   - integration.loader.test_ext_grains
   - integration.loader.test_ext_modules
+  - pytests.functional.test_loader
 
 salt/minion.py:
   - integration.client.test_syndic
