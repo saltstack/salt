@@ -17,37 +17,38 @@ def configure_loader_modules(minion_opts, modules):
         },
     }
 
-# nox -e pytest-zeromq-3.7(coverage=False) -- -vvv --run-slow --run-destructive tests\pytests\functional\modules\win_lgpo\test_write_regpol.py
-
 
 @pytest.fixture(scope="function")
 def clear_policy():
     # Ensure the policy is not set
-    current = win_lgpo.get_policy("Audit Account Management", "machine")
+    test_setting = "No Auditing"
+    pre_setting = win_lgpo.get_policy(policy_name="Audit account management", policy_class="machine")
     try:
-        if current != "No auditing":
-            computer_policy = {"Audit Account Management": "No auditing"}
+        if pre_setting != test_setting:
+            computer_policy = {"Audit account management": test_setting}
             win_lgpo.set_(computer_policy=computer_policy)
+            assert win_lgpo.get_policy(policy_name="Audit account management", policy_class="machine") == test_setting
         yield
     finally:
-        if win_lgpo.get_policy("Audit Account Management", "machine") != current:
-            computer_policy = {"Audit Account Management": current}
+        if win_lgpo.get_policy(policy_name="Audit account management", policy_class="machine") != pre_setting:
+            computer_policy = {"Audit account management": pre_setting}
             win_lgpo.set_(computer_policy=computer_policy)
 
 
 @pytest.fixture(scope="function")
 def set_policy():
-    # Ensure the policy is not set
-    policy_name = "Audit account management"
-    current = win_lgpo.get_policy(policy_name=policy_name, policy_class="machine")
+    # Ensure the policy is set
+    test_setting = "Success"
+    pre_setting = win_lgpo.get_policy(policy_name="Audit account management", policy_class="machine")
     try:
-        if current != "Success":
-            computer_policy = {policy_name: "Success"}
+        if pre_setting != test_setting:
+            computer_policy = {"Audit account management": test_setting}
             win_lgpo.set_(computer_policy=computer_policy)
+            assert win_lgpo.get_policy(policy_name="Audit account management", policy_class="machine") == test_setting
         yield
     finally:
-        if win_lgpo.get_policy(policy_name=policy_name, policy_class="machine") != current:
-            computer_policy = {policy_name: current}
+        if win_lgpo.get_policy(policy_name="Audit account management", policy_class="machine") != pre_setting:
+            computer_policy = {"Audit account management": pre_setting}
             win_lgpo.set_(computer_policy=computer_policy)
 
 
@@ -56,22 +57,14 @@ def _test_auditing(setting):
     Helper function to set an audit setting and assert that it was
     successful
     """
-    policy_name = "Audit account management"
-    computer_policy = {policy_name: setting}
-    print("PRE " * 30)
-    print(win_lgpo.get_policy(policy_name, "machine"))
-    print("PRE " * 30)
+    computer_policy = {"Audit account management": setting}
     win_lgpo.set_(computer_policy=computer_policy)
-    result = win_lgpo.get_policy(policy_name=policy_name, policy_class="machine")
-    print("POST " * 30)
-    print(result)
-    print("POST " * 30)
-    expected = setting
-    assert result == expected
+    result = win_lgpo.get_policy(policy_name="Audit account management", policy_class="machine")
+    assert result == setting
 
 
 def test_audit_no_auditing(set_policy):
-    _test_auditing("No auditing")
+    _test_auditing("No Auditing")
 
 
 def test_audit_success(clear_policy):
