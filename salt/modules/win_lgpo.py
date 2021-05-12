@@ -332,7 +332,7 @@ class _policy_info:
 
     def __init__(self):
         self.audit_lookup = {
-            0: "No auditing",
+            0: "No Auditing",
             1: "Success",
             2: "Failure",
             3: "Success and Failure",
