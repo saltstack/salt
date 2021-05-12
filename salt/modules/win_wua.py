@@ -101,7 +101,7 @@ def __virtual__():
             "WUA: The Windows Installer service (msiserver) must not be disabled",
         )
 
-    if not salt.utils.win_service.info("BITS")["StartType"] == "Auto":
+    if salt.utils.win_service.info("BITS")["StartType"] == "Disabled":
         return (
             False,
             "WUA: The Background Intelligent Transfer service (bits) must not "

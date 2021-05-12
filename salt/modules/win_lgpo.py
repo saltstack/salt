@@ -5620,8 +5620,19 @@ def _getFullPolicyName(
 
 def _regexSearchRegPolData(search_string, policy_data):
     """
-    helper function to do a search of Policy data from a registry.pol file
-    returns True if the regex search_string is found, otherwise False
+    Helper function to do a regex search of a string value in policy_data.
+    This is used to search the policy data from a registry.pol file or from
+    gpt.ini
+
+    Args:
+
+        search_string (str): The string to search for
+
+        policy_data (str): The data to be searched
+
+    Returns:
+
+        bool: ``True`` if the regex search_string is found, otherwise ``False``
     """
     if policy_data:
         if search_string:
@@ -6027,9 +6038,9 @@ def _processValueItem(
             element_valuenames = []
             element_values = this_element_value
             if this_element_value is not None:
-                element_valuenames = list(
-                    [str(z) for z in range(1, len(this_element_value) + 1)]
-                )
+                element_valuenames = [
+                    str(z) for z in range(1, len(this_element_value) + 1)
+                ]
             if "additive" in element.attrib:
                 if element.attrib["additive"].lower() == "false":
                     # a delete values will be added before all the other
@@ -7223,6 +7234,12 @@ def _write_regpol_data(
     if os.path.exists(gpt_ini_path):
         with salt.utils.files.fopen(gpt_ini_path, "r") as gpt_file:
             gpt_ini_data = gpt_file.read()
+        # Make sure it has Windows Style line endings
+        gpt_ini_data = (
+            gpt_ini_data.replace("\r\n", "_|-")
+            .replace("\n", "_|-")
+            .replace("_|-", "\r\n")
+        )
     if not _regexSearchRegPolData(r"\[General\]\r\n", gpt_ini_data):
         gpt_ini_data = "[General]\r\n" + gpt_ini_data
     if _regexSearchRegPolData(r"{}=".format(re.escape(gpt_extension)), gpt_ini_data):

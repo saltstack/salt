@@ -25,7 +25,6 @@ EXCLUDED_DIRS = [
     os.path.join("tests", "unit", "modules", "zypp"),
     os.path.join("tests", "unit", "setup"),
     os.path.join("tests", "unit", "templates", "files"),
-    os.path.join("tests", "unit", "utils", "cache_mods"),
 ]
 INCLUDED_DIRS = [
     os.path.join("tests", "kitchen", "tests", "*", "tests", "*"),
@@ -125,10 +124,8 @@ class BadTestModuleNamesTestCase(TestCase):
             "integration.logging.test_jid_logging",
             "integration.master.test_clear_funcs",
             "integration.master.test_event_return",
-            "integration.minion.test_blackout",
             "integration.minion.test_executor",
             "integration.minion.test_minion_cache",
-            "integration.minion.test_pillar",
             "integration.minion.test_timeout",
             "integration.modules.test_decorators",
             "integration.modules.test_pkg",
@@ -154,7 +151,6 @@ class BadTestModuleNamesTestCase(TestCase):
             "integration.shell.test_key",
             "integration.shell.test_master",
             "integration.shell.test_master_tops",
-            "integration.shell.test_matcher",
             "integration.shell.test_minion",
             "integration.shell.test_proxy",
             "integration.shell.test_runner",
@@ -183,7 +179,6 @@ class BadTestModuleNamesTestCase(TestCase):
             "integration.states.test_match",
             "integration.states.test_renderers",
             "integration.wheel.test_client",
-            "multimaster.minion.test_event",
             "unit.cache.test_cache",
             "unit.serializers.test_serializers",
             "unit.setup.test_install",
@@ -197,14 +192,7 @@ class BadTestModuleNamesTestCase(TestCase):
             "unit.test_simple",
             "unit.test_virtualname",
             "unit.test_zypp_plugins",
-            "unit.utils.scheduler.test_error",
-            "unit.utils.scheduler.test_eval",
-            "unit.utils.scheduler.test_helpers",
-            "unit.utils.scheduler.test_maxrunning",
-            "unit.utils.scheduler.test_postpone",
-            "unit.utils.scheduler.test_run_job",
-            "unit.utils.scheduler.test_schedule",
-            "unit.utils.scheduler.test_skip",
+            "unit.auth.test_auth",
         )
         errors = []
 

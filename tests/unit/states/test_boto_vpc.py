@@ -2,13 +2,11 @@ import os.path
 import random
 import string
 
+import pytest
 import salt.config
 import salt.states.boto_vpc as boto_vpc
 import salt.utils.botomod as botomod
-from salt.ext import six
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 from salt.utils.versions import LooseVersion
-from tests.support.helpers import slowTest
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch
 from tests.support.runtests import RUNTIME_VARS
@@ -155,7 +153,7 @@ class BotoVpcTestCase(BotoVpcStateTestCaseBase, BotoVpcTestCaseMixin):
     """
 
     @mock_ec2_deprecated
-    @slowTest
+    @pytest.mark.slow_test
     def test_present_when_vpc_does_not_exist(self):
         """
         Tests present on a VPC that does not exist.
@@ -190,7 +188,7 @@ class BotoVpcTestCase(BotoVpcStateTestCaseBase, BotoVpcTestCaseMixin):
             self.assertTrue("Mocked error" in vpc_present_result["comment"])
 
     @mock_ec2_deprecated
-    @slowTest
+    @pytest.mark.slow_test
     def test_absent_when_vpc_does_not_exist(self):
         """
         Tests absent on a VPC that does not exist.
@@ -201,7 +199,7 @@ class BotoVpcTestCase(BotoVpcStateTestCaseBase, BotoVpcTestCaseMixin):
         self.assertEqual(vpc_absent_result["changes"], {})
 
     @mock_ec2_deprecated
-    @slowTest
+    @pytest.mark.slow_test
     def test_absent_when_vpc_exists(self):
         vpc = self._create_vpc(name="test")
         with patch.dict(botomod.__salt__, self.funcs):
@@ -232,7 +230,7 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
         _create(vpc_id=vpc_id, name=name, **self.extra_kwargs)
 
     @mock_ec2_deprecated
-    @slowTest
+    @pytest.mark.slow_test
     def test_present_when_resource_does_not_exist(self):
         """
         Tests present on a resource that does not exist.
@@ -251,7 +249,7 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
         self.assertTrue(exists)
 
     @mock_ec2_deprecated
-    @slowTest
+    @pytest.mark.slow_test
     def test_present_when_resource_exists(self):
         vpc = self._create_vpc(name="test")
         self._create_resource(vpc_id=vpc.id, name="test")
@@ -277,7 +275,7 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
             self.assertTrue("Mocked error" in resource_present_result["comment"])
 
     @mock_ec2_deprecated
-    @slowTest
+    @pytest.mark.slow_test
     def test_absent_when_resource_does_not_exist(self):
         """
         Tests absent on a resource that does not exist.
@@ -290,7 +288,7 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
         self.assertEqual(resource_absent_result["changes"], {})
 
     @mock_ec2_deprecated
-    @slowTest
+    @pytest.mark.slow_test
     def test_absent_when_resource_exists(self):
         vpc = self._create_vpc(name="test")
         self._create_resource(vpc_id=vpc.id, name="test")
@@ -354,7 +352,7 @@ class BotoVpcInternetGatewayTestCase(
 
 
 @skipIf(
-    six.PY3,
+    True,
     "Disabled for Python 3 due to upstream bugs: "
     "https://github.com/spulec/moto/issues/548 and "
     "https://github.com/gabrielfalcao/HTTPretty/issues/325",

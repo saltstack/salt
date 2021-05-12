@@ -2,11 +2,9 @@
 Support for Linux LVM2
 """
 
-# Import python libs
 import logging
 import os.path
 
-# Import salt libs
 import salt.utils.path
 
 # Set up logger
@@ -77,7 +75,6 @@ def pvdisplay(pvname="", real=False, quiet=False):
 
     quiet
         if the physical volume is not present, do not show any error
-
 
     CLI Examples:
 
@@ -359,12 +356,17 @@ def vgcreate(vgname, devices, force=False, **kwargs):
         cmd.append("-qq")
 
     valid = (
+        "addtag",
+        "alloc",
+        "autobackup",
         "clustered",
         "maxlogicalvolumes",
         "maxphysicalvolumes",
+        "metadatatype",
         "vgmetadatacopies",
         "metadatacopies",
         "physicalextentsize",
+        "zero",
     )
     for var in kwargs:
         if kwargs[var] and var in valid:
@@ -441,7 +443,7 @@ def lvcreate(
         salt '*' lvm.lvcreate new_volume_name     vg_name extents=100 pv=/dev/sdb
         salt '*' lvm.lvcreate new_snapshot        vg_name snapshot=volume_name size=3G
 
-    .. versionadded:: to_complete
+    .. versionadded:: 0.12.0
 
     Support for thin pools and thin volumes
 
@@ -468,6 +470,7 @@ def lvcreate(
         "minor",
         "persistent",
         "mirrors",
+        "nosync",
         "noudevsync",
         "monitor",
         "ignoremonitoring",
@@ -480,6 +483,7 @@ def lvcreate(
         "zero",
     )
     no_parameter = (
+        "nosync",
         "noudevsync",
         "ignoremonitoring",
         "thin",

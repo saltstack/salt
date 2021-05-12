@@ -1,7 +1,7 @@
 r"""
 Proxy Minion for Cisco NX-OS Switches
 
-.. versionadded: 2016.11.0
+.. versionadded:: 2016.11.0
 
 The Cisco NX-OS Proxy Minion is supported on NX-OS devices for the following connection types:
 1) Connection Type SSH
@@ -161,13 +161,11 @@ the :mod:`salt.modules.nxos<salt.modules.nxos>` execution module.
 
 """
 
-# Import Python libs
 import copy
 import logging
 import multiprocessing
 import re
 
-# Import Salt libs
 import salt.utils.nxos
 from salt.exceptions import CommandExecutionError, NxosCliError
 from salt.utils.args import clean_kwargs

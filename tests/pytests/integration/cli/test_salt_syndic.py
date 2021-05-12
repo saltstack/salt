@@ -14,11 +14,14 @@ import pytest
 import salt.defaults.exitcodes
 from saltfactories.exceptions import FactoryNotStarted
 from saltfactories.utils import random_string
-from tests.support.helpers import PRE_PYTEST_SKIP, PRE_PYTEST_SKIP_REASON, slowTest
+from tests.support.helpers import PRE_PYTEST_SKIP, PRE_PYTEST_SKIP_REASON
+
+pytestmark = [
+    pytest.mark.slow_test,
+    pytest.mark.windows_whitelisted,
+]
 
 log = logging.getLogger(__name__)
-
-pytestmark = pytest.mark.windows_whitelisted
 
 
 @pytest.fixture
@@ -37,7 +40,6 @@ def syndic_id(salt_factories, salt_master):
             os.unlink(syndic_key_file)
 
 
-@slowTest
 @PRE_PYTEST_SKIP
 @pytest.mark.skip_on_windows(reason="Windows does not do user checks")
 def test_exit_status_unknown_user(salt_master, syndic_id):
@@ -55,7 +57,6 @@ def test_exit_status_unknown_user(salt_master, syndic_id):
     assert "The user is not available." in exc.value.stderr, exc.value
 
 
-@slowTest
 @PRE_PYTEST_SKIP
 def test_exit_status_unknown_argument(salt_master, syndic_id):
     """
@@ -71,7 +72,6 @@ def test_exit_status_unknown_argument(salt_master, syndic_id):
     assert "no such option: --unknown-argument" in exc.value.stderr, exc.value
 
 
-@slowTest
 @PRE_PYTEST_SKIP
 @pytest.mark.skip_on_windows(reason=PRE_PYTEST_SKIP_REASON)
 def test_exit_status_correct_usage(salt_master, syndic_id):
