@@ -65,21 +65,18 @@ def _test_adv_auditing(setting):
     result = win_lgpo.get_policy(policy_name="Audit account management", policy_class="machine")
     assert result == setting
 
-@pytest.mark.destructive_test
+
 def test_adv_audit_no_auditing(set_policy):
     _test_adv_auditing("No Auditing")
 
 
-@pytest.mark.destructive_test
 def test_adv_audit_success(clear_policy):
     _test_adv_auditing("Success")
 
 
-@pytest.mark.destructive_test
 def test_adv_audit_failure(clear_policy):
     _test_adv_auditing("Failure")
 
 
-@pytest.mark.destructive_test
 def test_adv_audit_success_and_failure(clear_policy):
     _test_adv_auditing("Success and Failure")
