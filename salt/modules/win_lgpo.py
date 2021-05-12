@@ -335,7 +335,7 @@ class _policy_info:
             0: "No auditing",
             1: "Success",
             2: "Failure",
-            3: "Success, Failure",
+            3: "Success and Failure",
             "Not Defined": "Not Defined",
             None: "Not Defined",
         }
