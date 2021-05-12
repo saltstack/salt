@@ -1,6 +1,6 @@
 import pytest
-import salt.modules.win_lgpo as win_lgpo
 import salt.loader
+import salt.modules.win_lgpo as win_lgpo
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
@@ -25,15 +25,27 @@ def configure_loader_modules(minion_opts, modules):
 def clear_policy():
     # Ensure the policy is not set
     test_setting = "No Auditing"
-    pre_setting = win_lgpo.get_policy(policy_name="Audit User Account Management", policy_class="machine")
+    pre_setting = win_lgpo.get_policy(
+        policy_name="Audit User Account Management", policy_class="machine"
+    )
     try:
         if pre_setting != test_setting:
             computer_policy = {"Audit User Account Management": test_setting}
             win_lgpo.set_(computer_policy=computer_policy)
-            assert win_lgpo.get_policy(policy_name="Audit User Account Management", policy_class="machine") == test_setting
+            assert (
+                win_lgpo.get_policy(
+                    policy_name="Audit User Account Management", policy_class="machine"
+                )
+                == test_setting
+            )
         yield
     finally:
-        if win_lgpo.get_policy(policy_name="Audit User Account Management", policy_class="machine") != pre_setting:
+        if (
+            win_lgpo.get_policy(
+                policy_name="Audit User Account Management", policy_class="machine"
+            )
+            != pre_setting
+        ):
             computer_policy = {"Audit User Account Management": pre_setting}
             win_lgpo.set_(computer_policy=computer_policy)
 
@@ -42,15 +54,27 @@ def clear_policy():
 def set_policy():
     # Ensure the policy is set
     test_setting = "Success"
-    pre_setting = win_lgpo.get_policy(policy_name="Audit User Account Management", policy_class="machine")
+    pre_setting = win_lgpo.get_policy(
+        policy_name="Audit User Account Management", policy_class="machine"
+    )
     try:
         if pre_setting != test_setting:
             computer_policy = {"Audit User Account Management": test_setting}
             win_lgpo.set_(computer_policy=computer_policy)
-            assert win_lgpo.get_policy(policy_name="Audit User Account Management", policy_class="machine") == test_setting
+            assert (
+                win_lgpo.get_policy(
+                    policy_name="Audit User Account Management", policy_class="machine"
+                )
+                == test_setting
+            )
         yield
     finally:
-        if win_lgpo.get_policy(policy_name="Audit User Account Management", policy_class="machine") != pre_setting:
+        if (
+            win_lgpo.get_policy(
+                policy_name="Audit User Account Management", policy_class="machine"
+            )
+            != pre_setting
+        ):
             computer_policy = {"Audit User Account Management": pre_setting}
             win_lgpo.set_(computer_policy=computer_policy)
 
@@ -62,7 +86,9 @@ def _test_adv_auditing(setting):
     """
     computer_policy = {"Audit User Account Management": setting}
     win_lgpo.set_(computer_policy=computer_policy)
-    result = win_lgpo.get_policy(policy_name="Audit account management", policy_class="machine")
+    result = win_lgpo.get_policy(
+        policy_name="Audit account management", policy_class="machine"
+    )
     assert result == setting
 
 
