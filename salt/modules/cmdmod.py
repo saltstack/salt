@@ -3195,8 +3195,24 @@ def exec_code_all(lang, code, cwd=None, args=None, **kwargs):
     elif isinstance(args, list):
         cmd += args
 
+    def _cleanup_tempfile(path):
+        try:
+            __salt__["file.remove"](path)
+        except (SaltInvocationError, CommandExecutionError) as exc:
+            log.error(
+                "cmd.exec_code_all: Unable to clean tempfile '%s': %s",
+                path,
+                exc,
+                exc_info_on_loglevel=logging.DEBUG,
+            )
+
+    runas = kwargs.get("runas")
+    if runas is not None:
+        if not salt.utils.platform.is_windows():
+            os.chown(codefile, __salt__["file.user_to_uid"](runas), -1)
+
     ret = run_all(cmd, cwd=cwd, python_shell=False, **kwargs)
-    os.remove(codefile)
+    _cleanup_tempfile(codefile)
     return ret
 
 
