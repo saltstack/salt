@@ -2876,8 +2876,11 @@ class State:
             status, reqs = self.check_requisite(low, running, chunks, pre=True)
         else:
             status, reqs = self.check_requisite(low, running, chunks)
+
         if status == "unmet":
             lost = {}
+            # We're obliterating the reqs we just got back from check_requisite.
+            # Is this intentional?
             reqs = []
             for requisite in requisites:
                 lost[requisite] = []
@@ -2893,6 +2896,7 @@ class State:
                     for chunk in chunks:
                         if req_val is None:
                             continue
+                        # How do I pronounce this?
                         if req_key == "sls":
                             # Allow requisite tracking of entire sls files
                             if fnmatch.fnmatch(chunk["__sls__"], req_val):
@@ -2901,6 +2905,7 @@ class State:
                                 reqs.append(chunk)
                                 found = True
                             continue
+                        # How do I pronounce this?
                         if fnmatch.fnmatch(chunk["name"], req_val) or fnmatch.fnmatch(
                             chunk["__id__"], req_val
                         ):
@@ -2910,6 +2915,7 @@ class State:
                                 elif requisite == "prerequired":
                                     chunk["__prerequired__"] = True
                                 reqs.append(chunk)
+                                # TODO: need to hit this point as well -W. Werner, 2021-04-22
                                 found = True
                     if not found:
                         lost[requisite].append(req)
@@ -2950,6 +2956,8 @@ class State:
                 }
                 self.__run_num += 1
                 self.event(run_dict[tag], len(chunks), fire_event=low.get("fire_event"))
+                # REMOVEME
+                running[tag]["__saltfunc__"] = "whatever"
                 return running
             for chunk in reqs:
                 # Check to see if the chunk has been run, only run it if
@@ -2962,8 +2970,12 @@ class State:
                             if tag not in self.pre:
                                 low["__prereq__"] = True
                                 self.pre[ctag] = self.call(low, chunks, running)
+                                # REMOVEME
+                                running.setdefault(ctag, {"__saltfunc__": "dude"})
                                 return running
                             else:
+                                # REMOVEME
+                                running.setdefault(ctag, {"__saltfunc__": "dude"})
                                 return running
                         elif ctag not in running:
                             log.error("Recursive requisite found")
@@ -2978,10 +2990,14 @@ class State:
                         self.event(
                             running[tag], len(chunks), fire_event=low.get("fire_event")
                         )
+                        # REMOVEME
+                        running[tag]["__saltfunc__"] = "dude"
                         return running
                     running = self.call_chunk(chunk, running, chunks)
                     if self.check_failhard(chunk, running):
                         running["__FAILHARD__"] = True
+                        # REMOVEME
+                        running.setdefault(tag, {"__saltfunc__": "dude"})
                         return running
             if low.get("__prereq__"):
                 status, reqs = self.check_requisite(low, running, chunks)
@@ -2989,8 +3005,11 @@ class State:
                 if not self.pre[tag]["changes"] and status == "change":
                     self.pre[tag]["changes"] = {"watch": "watch"}
                     self.pre[tag]["result"] = None
+                # REMOVEME
+                running[tag] = self.pre[tag]
             else:
                 running = self.call_chunk(low, running, chunks)
+            # TODO: Does this check_failhard belong here too? It's already in the loop? Or should it be checking the low for failhard? -W. Werner, 2021-05-13
             if self.check_failhard(chunk, running):
                 running["__FAILHARD__"] = True
                 return running
@@ -3046,6 +3065,7 @@ class State:
         elif status == "change" and not low.get("__prereq__"):
             ret = self.call(low, chunks, running)
             if not ret["changes"] and not ret.get("skip_watch", False):
+                # changes were false, and skip watch was False, or missing
                 low = low.copy()
                 low["sfun"] = low["fun"]
                 low["fun"] = "mod_watch"
@@ -3098,6 +3118,8 @@ class State:
             else:
                 running[tag] = self.call(low, chunks, running)
         if tag in running:
+            # TODO: This is the line that we want -W. Werner, 2021-04-20
+            # running[tag]['__saltfunc__'] = "{0}.{1}".format(low["state"], low["fun"])
             self.event(running[tag], len(chunks), fire_event=low.get("fire_event"))
 
             for sub_state_data in running[tag].pop("sub_state_run", ()):
