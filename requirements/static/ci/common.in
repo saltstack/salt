@@ -3,7 +3,8 @@
 # to a particular platform, please add it to the corresponding `<platform>.in` file in this directory.
 azure==4.0.0; sys_platform != 'win32'
 apache-libcloud>=1.5.0; sys_platform != 'win32'
-boto3>=1.13.5
+boto3>=1.16.0,<1.17.0; python_version < '3.6'
+boto3>=1.17.67; python_version >= '3.6'
 boto>=2.46.0
 cassandra-driver>=2.0
 certifi
@@ -40,5 +41,5 @@ virtualenv>=20.0.2
 watchdog>=0.9.0
 # Available template libraries that can be used
 genshi>=0.7.3
-cheetah3==3.1.0
+cheetah3>=3.2.2
 mako
