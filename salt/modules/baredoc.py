@@ -1,27 +1,20 @@
-# -*- coding: utf-8 -*-
 """
 Baredoc walks the installed module and state directories and generates
 dictionaries and lists of the function names and their arguments.
 
-.. versionadded:: Sodium
+.. versionadded:: 3001
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import ast
-
-# Import python libs
+import itertools
 import logging
 import os
 from typing import Dict, List
 
-# Import salt libs
+import salt.utils.doc
 import salt.utils.files
 from salt.exceptions import ArgumentValueError
-from salt.ext.six.moves import zip_longest
-from salt.utils.doc import strip_rst as _strip_rst
-
-# Import 3rd-party libs
 from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
@@ -52,7 +45,9 @@ def _get_func_aliases(tree) -> Dict:
     for assign in assignments:
         try:
             if assign.targets[0].id == "__func_alias__":
-                for key, value in zip_longest(assign.value.keys, assign.value.values):
+                for key, value in itertools.zip_longest(
+                    assign.value.keys, assign.value.values
+                ):
                     fun_aliases.update({key.s: value.s})
         except AttributeError:
             pass
@@ -85,7 +80,7 @@ def _get_args(function: str) -> Dict:
 
     # Since only some args may have default values, need to zip in reverse order
     backwards_args = OrderedDict(
-        zip_longest(reversed(arg_strings), reversed(arg_default_strings))
+        itertools.zip_longest(reversed(arg_strings), reversed(arg_default_strings))
     )
     ordered_args = OrderedDict(reversed(list(backwards_args.items())))
 
@@ -130,7 +125,7 @@ def _parse_module_docs(module_path, mod_name=None):
                         ret["{}.{}".format(module_name, function_name)] = doc_string
                 else:
                     ret["{}.{}".format(module_name, function_name)] = doc_string
-    return _strip_rst(ret)
+    return salt.utils.doc.strip_rst(ret)
 
 
 def _parse_module_functions(module_py: str, return_type: str) -> Dict:
@@ -218,11 +213,12 @@ def list_states(name=False, names_only=False):
     :param names_only: Return only a list of the callable functions instead of a dictionary with arguments
 
     CLI Example:
+
     (example truncated for brevity)
 
     .. code-block:: bash
 
-        salt myminion baredoc.modules_and_args
+        salt myminion baredoc.list_states
 
         myminion:
             ----------
@@ -271,11 +267,10 @@ def list_modules(name=False, names_only=False):
     :param names_only: Return only a list of the callable functions instead of a dictionary with arguments
 
     CLI Example:
-    (example truncated for brevity)
 
     .. code-block:: bash
 
-        salt myminion baredoc.modules_and_args
+        salt myminion baredoc.list_modules
 
         myminion:
             ----------
@@ -283,14 +278,14 @@ def list_modules(name=False, names_only=False):
           at:
         - atq:
             tag: null
-          - atrm:
+        - atrm:
             args: args
-          - at:
+        - at:
             args: args
             kwargs: kwargs
-          - atc:
+        - atc:
             jobid: null
-          - jobcheck:
+        - jobcheck:
             kwargs: kwargs
         [...]
     """
@@ -311,6 +306,12 @@ def state_docs(*names):
     function to narrow the selection.
 
     :param name: specify a specific module to list.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion baredoc.state_docs at
     """
     return_type = "docs"
     ret = {}
@@ -333,6 +334,12 @@ def module_docs(*names):
     function to narrow the selection.
 
     :param name: specify a specific module to list.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion baredoc.module_docs
     """
     return_type = "docs"
     ret = {}

@@ -44,6 +44,24 @@ calls, e.g. running, calling, logging, output filtering etc.
             - foo
         - integer:
             - bar
+
+You may also use these states for controlled failure in state definitions, for example if certain conditions in
+pillar or grains do not apply. The following state definition will fail with a message "OS not supported!" when
+`grains['os']` is neither Ubuntu nor CentOS:
+
+.. code-block:: jinja
+
+    {% if grains['os'] in ['Ubuntu', 'CentOS'] %}
+
+    # Your state definitions go here
+
+    {% else %}
+    failure:
+      test.fail_without_changes:
+        - name: "OS not supported!"
+        - failhard: True
+    {% endif %}
+
 """
 from __future__ import absolute_import, print_function, unicode_literals
 
@@ -145,7 +163,7 @@ def fail_with_changes(name, **kwargs):  # pylint: disable=unused-argument
     """
     comment = kwargs.get("comment", "Failure!")
 
-    ret = {"name": name, "changes": {}, "result": False, "comment": "Failure!"}
+    ret = {"name": name, "changes": {}, "result": False, "comment": comment}
 
     # Following the docs as written here
     # http://docs.saltstack.com/ref/states/writing.html#return-data
@@ -155,7 +173,7 @@ def fail_with_changes(name, **kwargs):  # pylint: disable=unused-argument
 
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "If we weren't testing, this would be failed with " "changes"
+        ret["comment"] = "If we weren't testing, this would be failed with changes"
 
     return ret
 

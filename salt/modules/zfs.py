@@ -1,8 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 Module for running ZFS command
 
-:codeauthor:    Nitin Madhok <nmadhok@clemson.edu>, Jorge Schrauwen <sjorge@blackdot.be>
+:codeauthor:    Nitin Madhok <nmadhok@g.clemson.edu>, Jorge Schrauwen <sjorge@blackdot.be>
 :maintainer:    Jorge Schrauwen <sjorge@blackdot.be>
 :maturity:      new
 :depends:       salt.utils.zfs
@@ -13,16 +12,13 @@ Module for running ZFS command
   consistency in output.
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import logging
 
 import salt.modules.cmdmod
-
-# Import Salt libs
 import salt.utils.args
 import salt.utils.path
+import salt.utils.platform
 import salt.utils.versions
 from salt.ext.six.moves import zip
 from salt.utils.odict import OrderedDict
@@ -409,7 +405,7 @@ def mount(name=None, **kwargs):
 
     .. warning::
 
-            Passing '-a' as name is deprecated and will be removed in Sodium.
+            Passing '-a' as name is deprecated and will be removed in 3001.
 
     CLI Example:
 
@@ -430,20 +426,6 @@ def mount(name=None, **kwargs):
         flags.append("-O")
     if kwargs.get("options", False):
         opts["-o"] = kwargs.get("options")
-    if name in [None, "-a"]:
-        # NOTE: the new way to mount all filesystems is to have name
-        #       set to ```None```. We still accept the old '-a' until
-        #       Sodium. After Sodium we can update the if statement
-        #       to ```if not name:```
-        if name == "-a":
-            salt.utils.versions.warn_until(
-                "Sodium",
-                "Passing '-a' as name is deprecated as of Salt 2019.2.0. This "
-                "warning will be removed in Salt Sodium. Please pass name as "
-                "'None' instead to mount all filesystems.",
-            )
-        flags.append("-a")
-        name = None
 
     ## Mount filesystem
     res = __salt__["cmd.run_all"](
@@ -474,7 +456,7 @@ def unmount(name, **kwargs):
 
     .. warning::
 
-            Passing '-a' as name is deprecated and will be removed in Sodium.
+            Passing '-a' as name is deprecated and will be removed in 3001.
 
     CLI Example:
 
@@ -492,7 +474,7 @@ def unmount(name, **kwargs):
         flags.append("-f")
     if name in [None, "-a"]:
         # NOTE: still accept '-a' as name for backwards compatibility
-        #       until Salt Sodium this should just simplify
+        #       until Salt 3001 this should just simplify
         #       this to just set '-a' if name is not set.
         flags.append("-a")
         name = None
@@ -906,15 +888,7 @@ def hold(tag, *snapshot, **kwargs):
 
         salt '*' zfs.hold mytag myzpool/mydataset@mysnapshot [recursive=True]
         salt '*' zfs.hold mytag myzpool/mydataset@mysnapshot myzpool/mydataset@myothersnapshot
-
     """
-    ## warn about tag change
-    if "," in tag:
-        salt.utils.versions.warn_until(
-            "Sodium",
-            "A comma-separated tag is no support as of Salt 2018.3.1 "
-            "This warning will be removed in Salt Sodium.",
-        )
 
     ## Configure command
     # NOTE: initialize the defaults
@@ -973,14 +947,6 @@ def release(tag, *snapshot, **kwargs):
         salt '*' zfs.release mytag myzpool/mydataset@mysnapshot myzpool/mydataset@myothersnapshot
 
     """
-    ## warn about tag change
-    if "," in tag:
-        salt.utils.versions.warn_until(
-            "Sodium",
-            "A comma-separated tag is no support as of Salt 2018.3.1 "
-            "This warning will be removed in Salt Sodium.",
-        )
-
     ## Configure command
     # NOTE: initialize the defaults
     flags = []
@@ -1129,6 +1095,11 @@ def get(*dataset, **kwargs):
     type : string
         comma-separated list of types to display, where type is one of
         filesystem, snapshot, volume, bookmark, or all.
+
+        .. versionchanged:: Silicon
+
+        type is ignored on Solaris 10 and 11 since not a valid parameter on those platforms
+
     source : string
         comma-separated list of sources to display. Must be one of the following:
         local, default, inherited, temporary, and none. The default value is all sources.
@@ -1170,8 +1141,11 @@ def get(*dataset, **kwargs):
     fields.insert(0, "name")
     fields.insert(1, "property")
     opts["-o"] = ",".join(fields)
-    if kwargs.get("type", False):
-        opts["-t"] = kwargs.get("type")
+
+    if not salt.utils.platform.is_sunos():
+        if kwargs.get("type", False):
+            opts["-t"] = kwargs.get("type")
+
     if kwargs.get("source", False):
         opts["-s"] = kwargs.get("source")
 

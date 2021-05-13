@@ -395,8 +395,7 @@ class LinuxAclTestCase(TestCase, LoaderModuleMockMixin):
                 expected = {
                     "name": name,
                     "comment": comt,
-                    "changes": {},
-                    "pchanges": {
+                    "changes": {
                         "new": {
                             "acl_name": ", ".join(acl_names),
                             "acl_type": acl_type,
@@ -430,7 +429,6 @@ class LinuxAclTestCase(TestCase, LoaderModuleMockMixin):
                                 "perms": "rwx",
                             }
                         },
-                        "pchanges": {},
                         "result": True,
                     }
 
@@ -454,7 +452,6 @@ class LinuxAclTestCase(TestCase, LoaderModuleMockMixin):
                         "name": name,
                         "comment": comt,
                         "changes": {},
-                        "pchanges": {},
                         "result": False,
                     }
 
@@ -470,8 +467,7 @@ class LinuxAclTestCase(TestCase, LoaderModuleMockMixin):
                     expected = {
                         "name": name,
                         "comment": comt,
-                        "changes": {},
-                        "pchanges": {
+                        "changes": {
                             "new": {
                                 "acl_name": ", ".join(acl_names),
                                 "acl_type": acl_type,
@@ -500,7 +496,6 @@ class LinuxAclTestCase(TestCase, LoaderModuleMockMixin):
                                 "perms": perms,
                             }
                         },
-                        "pchanges": {},
                         "result": True,
                     }
                     ret = linux_acl.list_present(name, acl_type, acl_names, perms)
@@ -523,7 +518,6 @@ class LinuxAclTestCase(TestCase, LoaderModuleMockMixin):
                         "name": name,
                         "comment": comt,
                         "changes": {},
-                        "pchanges": {},
                         "result": False,
                     }
 
@@ -537,7 +531,6 @@ class LinuxAclTestCase(TestCase, LoaderModuleMockMixin):
                 "comment": comt,
                 "result": False,
                 "changes": {},
-                "pchanges": {},
             }
             ret = linux_acl.list_present(name, acl_type, acl_names, perms)
             self.assertDictEqual(expected, ret)

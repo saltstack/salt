@@ -1,22 +1,18 @@
-# -*- coding: utf-8 -*-
 """
 Encapsulate the different transports available to Salt.
 
 This includes client side transport, for the ReqServer and the Publisher
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import Salt Libs
 from salt.utils.asynchronous import SyncWrapper
 
 log = logging.getLogger(__name__)
 
 
-class ReqChannel(object):
+class ReqChannel:
     """
     Factory class to create a Sync communication channels to the ReqServer
     """
@@ -24,8 +20,9 @@ class ReqChannel(object):
     @staticmethod
     def factory(opts, **kwargs):
         # All Sync interfaces are just wrappers around the Async ones
-        sync = SyncWrapper(AsyncReqChannel.factory, (opts,), kwargs)
-        return sync
+        return SyncWrapper(
+            AsyncReqChannel.factory, (opts,), kwargs, loop_kwarg="io_loop",
+        )
 
     def close(self):
         """
@@ -55,15 +52,16 @@ class ReqChannel(object):
         self.close()
 
 
-class PushChannel(object):
+class PushChannel:
     """
     Factory class to create Sync channel for push side of push/pull IPC
     """
 
     @staticmethod
     def factory(opts, **kwargs):
-        sync = SyncWrapper(AsyncPushChannel.factory, (opts,), kwargs)
-        return sync
+        return SyncWrapper(
+            AsyncPushChannel.factory, (opts,), kwargs, loop_kwarg="io_loop",
+        )
 
     def send(self, load, tries=3, timeout=60):
         """
@@ -72,19 +70,20 @@ class PushChannel(object):
         raise NotImplementedError()
 
 
-class PullChannel(object):
+class PullChannel:
     """
     Factory class to create Sync channel for pull side of push/pull IPC
     """
 
     @staticmethod
     def factory(opts, **kwargs):
-        sync = SyncWrapper(AsyncPullChannel.factory, (opts,), kwargs)
-        return sync
+        return SyncWrapper(
+            AsyncPullChannel.factory, (opts,), kwargs, loop_kwarg="io_loop",
+        )
 
 
 # TODO: better doc strings
-class AsyncChannel(object):
+class AsyncChannel:
     """
     Parent class for Async communication channels
     """
@@ -235,7 +234,7 @@ class AsyncPubChannel(AsyncChannel):
         self.close()
 
 
-class AsyncPushChannel(object):
+class AsyncPushChannel:
     """
     Factory class to create IPC Push channels
     """
@@ -252,7 +251,7 @@ class AsyncPushChannel(object):
         return salt.transport.ipc.IPCMessageClient(opts, **kwargs)
 
 
-class AsyncPullChannel(object):
+class AsyncPullChannel:
     """
     Factory class to create IPC pull channels
     """

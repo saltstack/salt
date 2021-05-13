@@ -23,15 +23,16 @@ For example, assuming the following simple utility module, saved to
 .. code-block:: python
 
     # -*- coding: utf-8 -*-
-    '''
+    """
     My utils module
     ---------------
 
     This module contains common functions for use in my other custom types.
-    '''
+    """
+
 
     def bar():
-        return 'baz'
+        return "baz"
 
 Once synced to a minion, this function would be available to other custom Salt
 types like so:
@@ -39,13 +40,14 @@ types like so:
 .. code-block:: python
 
     # -*- coding: utf-8 -*-
-    '''
+    """
     My awesome execution module
     ---------------------------
-    '''
+    """
+
 
     def observe_the_awesomeness():
-        '''
+        """
         Prints information from my utility module
 
         CLI Example:
@@ -53,8 +55,8 @@ types like so:
         .. code-block:: bash
 
             salt '*' mymodule.observe_the_awesomeness
-        '''
-        return __utils__['foo.bar']()
+        """
+        return __utils__["foo.bar"]()
 
 Utility modules, like any other kind of Salt extension, support using a
 :ref:`__virtual__ function <modules-virtual-name>` to conditionally load them,
@@ -65,21 +67,23 @@ the ``foo`` utility module with a ``__virtual__`` function.
 .. code-block:: python
 
     # -*- coding: utf-8 -*-
-    '''
+    """
     My utils module
     ---------------
 
     This module contains common functions for use in my other custom types.
-    '''
+    """
+
 
     def __virtual__():
-        '''
+        """
         Load as a different name
-        '''
-        return 'foo'
+        """
+        return "foo"
+
 
     def bar():
-        return 'baz'
+        return "baz"
 
 .. versionadded:: 2018.3.0
     Instantiating objects from classes declared in util modules works with
@@ -90,35 +94,36 @@ Also you could even write your utility modules in object oriented fashion:
 .. code-block:: python
 
     # -*- coding: utf-8 -*-
-    '''
+    """
     My OOP-style utils module
     -------------------------
 
     This module contains common functions for use in my other custom types.
-    '''
+    """
+
 
     class Foo(object):
-
         def __init__(self):
             pass
 
         def bar(self):
-            return 'baz'
+            return "baz"
 
 And import them into other custom modules:
 
 .. code-block:: python
 
     # -*- coding: utf-8 -*-
-    '''
+    """
     My awesome execution module
     ---------------------------
-    '''
+    """
 
     import mymodule
 
+
     def observe_the_awesomeness():
-        '''
+        """
         Prints information from my utility module
 
         CLI Example:
@@ -126,7 +131,7 @@ And import them into other custom modules:
         .. code-block:: bash
 
             salt '*' mymodule.observe_the_awesomeness
-        '''
+        """
         foo = mymodule.Foo()
         return foo.bar()
 

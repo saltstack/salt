@@ -1,0 +1,1 @@
+Ensure that zypper is called with only one --no-refresh parameter

@@ -40,4 +40,4 @@ Calling runners, for example:
 
 Will not work, and you will receive and empty reply from the salt master.
 
-This will be addressed in the Sodium release of Salt set for mid-June 2020.
+This will be addressed in the 3001 release of Salt set for mid-June 2020.

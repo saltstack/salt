@@ -1,5 +1,5 @@
-salt.pillar.csvpillar module
-============================
+salt.pillar.csvpillar
+=====================
 
 .. automodule:: salt.pillar.csvpillar
     :members:

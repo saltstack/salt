@@ -94,7 +94,7 @@ _geom_attribs = [
 
 def _freebsd_geom():
     geom = salt.utils.path.which("geom")
-    ret = {"disks": {}, "SSDs": []}
+    ret = {"disks": {}, "ssds": []}
 
     devices = __salt__["cmd.run"]("{0} disk list".format(geom))
     devices = devices.split("\n\n")
@@ -119,7 +119,7 @@ def _freebsd_geom():
         ret["disks"][name] = tmp
         if tmp.get(_geomconsts.ROTATIONRATE) == 0:
             log.trace("Device %s reports itself as an SSD", device)
-            ret["SSDs"].append(name)
+            ret["ssds"].append(name)
 
     for device in devices:
         parse_geom_attribs(device)
@@ -131,25 +131,27 @@ def _linux_disks():
     """
     Return list of disk devices and work out if they are SSD or HDD.
     """
-    ret = {"disks": [], "SSDs": []}
+    ret = {"disks": [], "ssds": []}
 
-    for entry in glob.glob("/sys/block/*/queue/rotational"):
+    for entry in glob.glob("/sys/block/*"):
+        virtual = salt.utils.path.readlink(entry).startswith("../devices/virtual/")
         try:
-            with salt.utils.files.fopen(entry) as entry_fp:
-                device = entry.split("/")[3]
-                flag = entry_fp.read(1)
-                if flag == "0":
-                    ret["SSDs"].append(device)
-                    log.trace("Device %s reports itself as an SSD", device)
-                elif flag == "1":
-                    ret["disks"].append(device)
-                    log.trace("Device %s reports itself as an HDD", device)
-                else:
-                    log.trace(
-                        "Unable to identify device %s as an SSD or HDD. It does "
-                        "not report 0 or 1",
-                        device,
-                    )
+            if not virtual:
+                with salt.utils.files.fopen(entry + "/queue/rotational") as entry_fp:
+                    device = entry.split("/")[3]
+                    flag = entry_fp.read(1)
+                    if flag == "0":
+                        ret["ssds"].append(device)
+                        log.trace("Device %s reports itself as an SSD", device)
+                    elif flag == "1":
+                        ret["disks"].append(device)
+                        log.trace("Device %s reports itself as an HDD", device)
+                    else:
+                        log.trace(
+                            "Unable to identify device %s as an SSD or HDD. It does "
+                            "not report 0 or 1",
+                            device,
+                        )
         except IOError:
             pass
     return ret
@@ -162,7 +164,7 @@ def _windows_disks():
     path = "MSFT_PhysicalDisk"
     get = "DeviceID,MediaType"
 
-    ret = {"disks": [], "SSDs": []}
+    ret = {"disks": [], "ssds": []}
 
     cmdret = __salt__["cmd.run_all"](
         "{0} /namespace:{1} path {2} get {3} /format:table".format(
@@ -184,7 +186,7 @@ def _windows_disks():
                 ret["disks"].append(device)
             elif mediatype == "4":
                 log.trace("Device %s reports itself as an SSD", device)
-                ret["SSDs"].append(device)
+                ret["ssds"].append(device)
                 ret["disks"].append(device)
             elif mediatype == "5":
                 log.trace("Device %s reports itself as an SCM", device)

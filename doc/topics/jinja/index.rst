@@ -8,6 +8,8 @@ Understanding Jinja
 
 .. _Jinja: https://jinja.palletsprojects.com/en/2.11.x/templates/
 
+.. include:: ../../_incl/jinja_security.rst
+
 Jinja in States
 ===============
 
@@ -379,7 +381,7 @@ Returns:
 
 .. code-block:: python
 
-  ('defabcdef',)
+  ("defabcdef",)
 
 
 .. jinja_ref:: regex_match
@@ -654,7 +656,7 @@ Returns:
 ``method_call``
 ---------------
 
-.. versionadded:: Sodium
+.. versionadded:: 3001
 
 Returns a result of object's method call.
 
@@ -696,7 +698,7 @@ Return of examples #2 and #3:
 
   [[web01, example.com], [db01, example.com]]
 
-.. _`map filter`: http://jinja.pocoo.org/docs/2.10/templates/#map
+.. _`map filter`: https://jinja.palletsprojects.com/en/2.11.x/templates/#map
 
 
 .. jinja_ref:: is_sorted
@@ -740,7 +742,7 @@ Returns:
 
 .. code-block:: python
 
-  {'new': [4], 'old': [3]}
+  {"new": [4], "old": [3]}
 
 
 .. jinja_ref:: compare_dicts
@@ -762,7 +764,7 @@ Returns:
 
 .. code-block:: python
 
-  {'a': {'new': 'c', 'old': 'b'}}
+  {"a": {"new": "c", "old": "b"}}
 
 
 .. jinja_ref:: is_hex
@@ -964,7 +966,7 @@ Example:
     Renamed from ``json_decode_list`` to ``json_encode_list``. When you encode
     something you get bytes, and when you decode, you get your locale's
     encoding (usually a ``unicode`` type). This filter was incorrectly-named
-    when it was added. ``json_decode_list`` will be supported until the Aluminium
+    when it was added. ``json_decode_list`` will be supported until the 3003
     release.
 .. deprecated:: 2018.3.3,2019.2.0
     The :jinja_ref:`tojson` filter accomplishes what this filter was designed
@@ -997,7 +999,7 @@ Returns:
     Renamed from ``json_decode_dict`` to ``json_encode_dict``. When you encode
     something you get bytes, and when you decode, you get your locale's
     encoding (usually a ``unicode`` type). This filter was incorrectly-named
-    when it was added. ``json_decode_dict`` will be supported until the Aluminium
+    when it was added. ``json_decode_dict`` will be supported until the 3003
     release.
 .. deprecated:: 2018.3.3,2019.2.0
     The :jinja_ref:`tojson` filter accomplishes what this filter was designed
@@ -1018,7 +1020,7 @@ Returns:
 
 .. code-block:: python
 
-  {'a': '\xd0\x94'}
+  {"a": "\xd0\x94"}
 
 
 .. jinja_ref:: tojson
@@ -1074,7 +1076,7 @@ Returns:
 ``set_dict_key_value``
 ----------------------
 
-..versionadded:: 3000
+.. versionadded:: 3000
 
 Allows you to set a value in a nested dictionary without having to worry if all the nested keys actually exist.
 Missing keys will be automatically created if they do not exist.
@@ -1107,7 +1109,7 @@ Example 2:
 ``append_dict_key_value``
 -------------------------
 
-..versionadded:: 3000
+.. versionadded:: 3000
 
 Allows you to append to a list nested (deep) in a dictionary without having to worry if all the nested keys (or the list itself) actually exist.
 Missing keys will automatically be created if they do not exist.
@@ -1141,7 +1143,7 @@ Example 2:
 ``extend_dict_key_value``
 -------------------------
 
-..versionadded:: 3000
+.. versionadded:: 3000
 
 Allows you to extend a list nested (deep) in a dictionary without having to worry if all the nested keys (or the list itself) actually exist.
 Missing keys will automatically be created if they do not exist.
@@ -1174,7 +1176,7 @@ Example 2:
 ``update_dict_key_value``
 -------------------------
 
-..versionadded:: 3000
+.. versionadded:: 3000
 
 Allows you to update a dictionary nested (deep) in another dictionary without having to worry if all the nested keys actually exist.
 Missing keys will automatically be created if they do not exist.
@@ -1348,7 +1350,7 @@ Example:
 
 Returns:
 
-.. code-block:: python
+.. code-block:: pycon
 
   {
     'body': '{
@@ -1381,7 +1383,7 @@ Returns:
 
 .. code-block:: python
 
-  {'c1': 'foo'}
+  {"c1": "foo"}
 
 .. code-block:: jinja
 
@@ -1391,7 +1393,7 @@ Returns:
 
 .. code-block:: python
 
-  'default'
+  "default"
 
 
 .. jinja_ref:: json_query
@@ -1571,7 +1573,7 @@ Returns:
 
 .. code-block:: python
 
-  ['192.168.0.1', 'fe80::']
+  ["192.168.0.1", "fe80::"]
 
 
 .. jinja_ref:: ipv4
@@ -1594,7 +1596,7 @@ Returns:
 
 .. code-block:: python
 
-  ['192.168.0.1']
+  ["192.168.0.1"]
 
 
 .. jinja_ref:: ipv6
@@ -1617,7 +1619,7 @@ Returns:
 
 .. code-block:: python
 
-  ['fe80::']
+  ["fe80::"]
 
 
 .. jinja_ref:: network_hosts
@@ -1644,7 +1646,7 @@ Returns:
 
 .. code-block:: python
 
-  ['192.168.0.1', '192.168.0.2']
+  ["192.168.0.1", "192.168.0.2"]
 
 
 .. jinja_ref:: network_size
@@ -1947,7 +1949,7 @@ Returns:
 
 .. code-block:: python
 
-    [{'value': 3}]
+    [{"value": 3}]
 
 .. jinja_ref:: match
 
@@ -1976,7 +1978,7 @@ Returns:
 
 .. code-block:: python
 
-    [{'value': 'b'}, {'value': 'c'}]
+    [{"value": "b"}, {"value": "c"}]
 
 
 Test supports additional optional arguments: ``ignorecase``, ``multiline``
@@ -2169,6 +2171,85 @@ Will insert the following message in the minion logs:
 
 .. jinja_ref:: custom-execution-modules
 
+Profiling
+=========
+
+.. versionadded:: 3002
+
+When working with a very large codebase, it becomes increasingly imperative to
+trace inefficiencies with state and pillar render times.  The `profile` jinja
+block enables the user to get finely detailed information on the most expensive
+areas in the codebase.
+
+Profiling blocks
+----------------
+
+Any block of jinja code can be wrapped in a ``profile`` block.  The syntax for
+a profile block is ``{% profile as '<name>' %}<jinja code>{% endprofile %}``,
+where ``<name>`` can be any string.  The ``<name>`` token will appear in the
+log at the ``profile`` level along with the render time of the block.
+
+.. code-block:: sls
+
+    # /srv/salt/example.sls
+    {%- profile as 'local data' %}
+      {%- set local_data = {'counter': 0} %}
+      {%- for i in range(313377) %}
+        {%- do local_data.update({'counter': i}) %}
+      {%- endfor %}
+    {%- endprofile %}
+
+    test:
+      cmd.run:
+        - name: |-
+            printf 'data: %s' '{{ local_data['counter'] }}'
+
+The ``profile`` block in the ``example.sls`` state will emit the following log
+statement:
+
+.. code-block:: console
+
+    # salt-call --local -l profile state.apply example
+    [...]
+    [PROFILE ] Time (in seconds) to render profile block 'local data': 0.9385035037994385
+    [...]
+
+Profiling imports
+-----------------
+
+Using the same logic as the ``profile`` block, the ``import_yaml``,
+``import_json``, and ``import_text`` blocks will emit similar statements at the
+``profile`` log level.
+
+.. code-block:: sls
+
+    # /srv/salt/data.sls
+    {%- set values = {'counter': 0} %}
+    {%- for i in range(524288) %}
+      {%- do values.update({'counter': i}) %}
+    {%- endfor %}
+
+    data: {{ values['counter'] }}
+
+.. code-block:: sls
+
+    # /srv/salt/example.sls
+    {%- import_yaml 'data.sls' as imported %}
+
+    test:
+      cmd.run:
+        - name: |-
+            printf 'data: %s' '{{ imported['data'] }}'
+
+For ``import_*`` blocks, the ``profile`` log statement has the following form:
+
+.. code-block:: console
+
+    # salt-call --local -l profile state.apply example
+    [...]
+    [PROFILE ] Time (in seconds) to render import_yaml 'data.sls': 1.5500736236572266
+    [...]
+
 Python Methods
 ====================
 
@@ -2184,7 +2265,7 @@ variable type. Here is the python documentation for `string methods`_.
 
   {% set strings = grains.id.split('-') %}{{ strings[0] }}
 
-.. _`string methods`: https://docs.python.org/2/library/stdtypes.html#string-methods
+.. _`string methods`: https://docs.python.org/3/library/stdtypes.html#string-methods
 
 Custom Execution Modules
 ========================

@@ -169,6 +169,16 @@ class PsTestCase(TestCase):
                 ps.pgrep(_get_proc_name(self.mocked_proc)),
             )
 
+    def test_pgrep_regex(self):
+        with patch(
+            "salt.utils.psutil_compat.process_iter",
+            MagicMock(return_value=[self.mocked_proc]),
+        ):
+            self.assertIn(
+                _get_proc_pid(self.mocked_proc),
+                ps.pgrep("t.st_[a-z]+_proc", pattern_is_regex=True),
+            )
+
     def test_cpu_percent(self):
         with patch("salt.utils.psutil_compat.cpu_percent", MagicMock(return_value=1)):
             self.assertEqual(ps.cpu_percent(), 1)

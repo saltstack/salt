@@ -2,34 +2,14 @@
 """
     :codeauthor: Mike Wiebe <@mikewiebe>
 """
-
-# Copyright (c) 2019 Cisco and/or its affiliates.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
 import salt.modules.cp as cp_module
 import salt.modules.file as file_module
 import salt.modules.nxos as nxos_module
 import salt.utils.nxos as nxos_utils
 import salt.utils.pycrypto
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, create_autospec, patch
 from tests.support.unit import TestCase, skipIf
@@ -63,11 +43,6 @@ from tests.unit.modules.nxos.nxos_show_run import (
     n9k_show_running_inc_username_list,
 )
 
-# pylint: disable-msg=C0103
-# pylint: disable-msg=C0301
-# pylint: disable-msg=E1101
-# pylint: disable-msg=R0904
-
 
 class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
@@ -80,9 +55,6 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
             nxos_module.sendline, autospec=True, return_value={"command": "fake_output"}
         )
         return {nxos_module: {"__proxy__": {"nxos.sendline": sendline}}}
-
-    def tearDown(self):
-        pass
 
     @staticmethod
     def test_check_virtual():
@@ -442,9 +414,12 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
         method = "cli_show_ascii"
 
         with patch("salt.utils.platform.is_proxy", return_value=True, autospec=True):
-            nxos_module.__proxy__["nxos.sendline"].return_value = n9k_show_ver
-            result = nxos_module.sendline(command, method)
-            self.assertIn(n9k_show_ver, result)
+            with patch.dict(
+                nxos_module.__proxy__,
+                {"nxos.sendline": MagicMock(return_value=n9k_show_ver)},
+            ):
+                result = nxos_module.sendline(command, method)
+                self.assertIn(n9k_show_ver, result)
 
     def test_sendline_valid_method_nxapi_uds(self):
 

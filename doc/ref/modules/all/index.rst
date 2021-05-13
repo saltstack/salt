@@ -92,8 +92,8 @@ execution modules
     btrfs
     cabal
     capirca_acl
-    cassandra
     cassandra_cql
+    cassandra_mod
     celery
     ceph
     chassis
@@ -172,7 +172,6 @@ execution modules
     gentoolkitmod
     git
     github
-    glance
     glanceng
     glassfish
     glusterfs
@@ -194,6 +193,7 @@ execution modules
     hosts
     http
     icinga2
+    idem
     ifttt
     ilo
     incron
@@ -426,6 +426,7 @@ execution modules
     serverdensity_device
     servicenow
     slack_notify
+    slackware_service
     slsutil
     smartos_imgadm
     smartos_nictagadm

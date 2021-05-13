@@ -66,14 +66,12 @@ A well-written state function will follow these steps:
 
    .. code-block:: python
 
-       ret = {'name': name,
-              'result': False,
-              'changes': {},
-              'comment': ''}
+       def myfunc():
+           ret = {"name": name, "result": False, "changes": {}, "comment": ""}
 
-       if foo and bar:
-           ret['comment'] = 'Only one of foo and bar is permitted'
-           return ret
+           if foo and bar:
+               ret["comment"] = "Only one of foo and bar is permitted"
+               return ret
 
 2. Check if changes need to be made. This is best done with an
    information-gathering function in an accompanying :ref:`execution module
@@ -83,17 +81,18 @@ A well-written state function will follow these steps:
 
    .. code-block:: python
 
-       result = __salt__['modname.check'](name)
+       result = __salt__["modname.check"](name)
 
 3. If step 2 found that the minion is already in the desired state, then exit
    immediately with a ``True`` result and without making any changes.
 
    .. code-block:: python
 
-       if result:
-           ret['result'] = True
-           ret['comment'] = '{0} is already installed'.format(name)
-           return ret
+       def myfunc():
+           if result:
+               ret["result"] = True
+               ret["comment"] = "{0} is already installed".format(name)
+               return ret
 
 4. If step 2 found that changes *do* need to be made, then check to see if the
    state was being run in test mode (i.e. with ``test=True``). If so, then exit
@@ -102,11 +101,12 @@ A well-written state function will follow these steps:
 
    .. code-block:: python
 
-       if __opts__['test']:
-           ret['result'] = None
-           ret['comment'] = '{0} would be installed'.format(name)
-           ret['changes'] = result
-           return ret
+       def myfunc():
+           if __opts__["test"]:
+               ret["result"] = None
+               ret["comment"] = "{0} would be installed".format(name)
+               ret["changes"] = result
+               return ret
 
 5. Make the desired changes. This should again be done using a function from an
    accompanying execution module. If the result of that function is enough to
@@ -115,7 +115,7 @@ A well-written state function will follow these steps:
 
    .. code-block:: python
 
-       result = __salt__['modname.install'](name)
+       result = __salt__["modname.install"](name)
 
 6. Perform the same check from step 2 again to confirm whether or not the
    minion is in the desired state. Just as in step 2, this function should be
@@ -123,7 +123,7 @@ A well-written state function will follow these steps:
 
    .. code-block:: python
 
-       ret['changes'] = __salt__['modname.check'](name)
+       ret["changes"] = __salt__["modname.check"](name)
 
    As you can see here, we are setting the ``changes`` key in the return
    dictionary to the result of the ``modname.check`` function (just as we did
@@ -135,13 +135,14 @@ A well-written state function will follow these steps:
 
    .. code-block:: python
 
-       if ret['changes']:
-           ret['comment'] = '{0} failed to install'.format(name)
-       else:
-           ret['result'] = True
-           ret['comment'] = '{0} was installed'.format(name)
+       def myfunc():
+           if ret["changes"]:
+               ret["comment"] = "{0} failed to install".format(name)
+           else:
+               ret["result"] = True
+               ret["comment"] = "{0} was installed".format(name)
 
-       return ret
+           return ret
 
 Using Custom State Modules
 ==========================
@@ -202,7 +203,7 @@ Salt state modules can be cross-called by accessing the value in the
 
 .. code-block:: python
 
-    ret = __states__['file.managed'](name='/tmp/myfile', source='salt://myfile')
+    ret = __states__["file.managed"](name="/tmp/myfile", source="salt://myfile")
 
 This code will call the `managed` function in the :mod:`file
 <salt.states.file>` state module and pass the arguments ``name`` and ``source``
@@ -225,8 +226,7 @@ A State Module must return a dict containing the following keys/values:
 
   .. code-block:: python
 
-    ret['changes'].update({'my_pkg_name': {'old': '',
-                                           'new': 'my_pkg_name-1.0'}})
+    ret["changes"].update({"my_pkg_name": {"old": "", "new": "my_pkg_name-1.0"}})
 
 
 - **result:** A tristate value.  ``True`` if the action was successful,
@@ -263,6 +263,45 @@ A State Module must return a dict containing the following keys/values:
 
     States should not return data which cannot be serialized such as frozensets.
 
+Sub State Runs
+--------------
+
+Some states can return multiple state runs from an external engine.
+State modules that extend tools like Puppet, Chef, Ansible, and idem can run multiple external
+states and then return their results individually in the "sub_state_run" portion of their return
+as long as their individual state runs are formatted like salt states with low and high data.
+
+For example, the idem state module can execute multiple idem states
+via it's runtime and report the status of all those runs by attaching them to "sub_state_run" in it's state return.
+These sub_state_runs will be formatted and printed alongside other salt states.
+
+Example:
+
+.. code-block:: python
+
+    state_return = {
+        "name": None,  # The parent state name
+        "result": None,  # The overall status of the external state engine run
+        "comment": None,  # Comments on the overall external state engine run
+        "changes": {},  # An empty dictionary, each sub state run has it's own changes to report
+        "sub_state_run": [
+            {
+                "changes": {},  # A dictionary describing the changes made in the external state run
+                "result": None,  # The external state run name
+                "comment": None,  # Comment on the external state run
+                "duration": None,  # Optional, the duration in seconds of the external state run
+                "start_time": None,  # Optional, the timestamp of the external state run's start time
+                "low": {
+                    "name": None,  # The name of the state from the external state run
+                    "state": None,  # Name of the external state run
+                    "__id__": None,  # ID of the external state run
+                    "fun": None,  # The Function name from the external state run
+                },
+            }
+        ],
+    }
+
+
 Test State
 ==========
 
@@ -272,11 +311,12 @@ run. An example of such a check could look like this:
 
 .. code-block:: python
 
-    # Return comment of changes if test.
-    if __opts__['test']:
-        ret['result'] = None
-        ret['comment'] = 'State Foo will execute with param {0}'.format(bar)
-        return ret
+    def myfunc():
+        # Return comment of changes if test.
+        if __opts__["test"]:
+            ret["result"] = None
+            ret["comment"] = "State Foo will execute with param {0}".format(bar)
+            return ret
 
 Make sure to test and return before performing any real actions on the minion.
 
@@ -337,13 +377,13 @@ A good example of the mod_init function is found in the pkg state module:
 .. code-block:: python
 
     def mod_init(low):
-        '''
+        """
         Refresh the package database here so that it only needs to happen once
-        '''
-        if low['fun'] == 'installed' or low['fun'] == 'latest':
+        """
+        if low["fun"] == "installed" or low["fun"] == "latest":
             rtag = __gen_rtag()
             if not os.path.exists(rtag):
-                open(rtag, 'w+').write('')
+                open(rtag, "w+").write("")
             return True
         else:
             return False
@@ -368,9 +408,9 @@ logs. The following code snippet demonstrates writing log messages:
 
     log = logging.getLogger(__name__)
 
-    log.info('Here is Some Information')
-    log.warning('You Should Not Do That')
-    log.error('It Is Busted')
+    log.info("Here is Some Information")
+    log.warning("You Should Not Do That")
+    log.error("It Is Busted")
 
 
 Strings and Unicode
@@ -424,8 +464,9 @@ Example state module
 
     import salt.exceptions
 
+
     def enforce_custom_thing(name, foo, bar=True):
-        '''
+        """
         Enforce the state of a custom thing
 
         This state module does a custom thing. It calls out to the execution module
@@ -438,52 +479,53 @@ Example state module
             A required argument
         bar : True
             An argument with a default value
-        '''
+        """
         ret = {
-            'name': name,
-            'changes': {},
-            'result': False,
-            'comment': '',
-            }
+            "name": name,
+            "changes": {},
+            "result": False,
+            "comment": "",
+        }
 
         # Start with basic error-checking. Do all the passed parameters make sense
         # and agree with each-other?
-        if bar == True and foo.startswith('Foo'):
+        if bar == True and foo.startswith("Foo"):
             raise salt.exceptions.SaltInvocationError(
-                'Argument "foo" cannot start with "Foo" if argument "bar" is True.')
+                'Argument "foo" cannot start with "Foo" if argument "bar" is True.'
+            )
 
         # Check the current state of the system. Does anything need to change?
-        current_state = __salt__['my_custom_module.current_state'](name)
+        current_state = __salt__["my_custom_module.current_state"](name)
 
         if current_state == foo:
-            ret['result'] = True
-            ret['comment'] = 'System already in the correct state'
+            ret["result"] = True
+            ret["comment"] = "System already in the correct state"
             return ret
 
         # The state of the system does need to be changed. Check if we're running
         # in ``test=true`` mode.
-        if __opts__['test'] == True:
-            ret['comment'] = 'The state of "{0}" will be changed.'.format(name)
-            ret['changes'] = {
-                'old': current_state,
-                'new': 'Description, diff, whatever of the new state',
+        if __opts__["test"] == True:
+            ret["comment"] = 'The state of "{0}" will be changed.'.format(name)
+            ret["changes"] = {
+                "old": current_state,
+                "new": "Description, diff, whatever of the new state",
             }
 
             # Return ``None`` when running with ``test=true``.
-            ret['result'] = None
+            ret["result"] = None
 
             return ret
 
         # Finally, make the actual change and return the result.
-        new_state = __salt__['my_custom_module.change_state'](name, foo)
+        new_state = __salt__["my_custom_module.change_state"](name, foo)
 
-        ret['comment'] = 'The state of "{0}" was changed!'.format(name)
+        ret["comment"] = 'The state of "{0}" was changed!'.format(name)
 
-        ret['changes'] = {
-            'old': current_state,
-            'new': new_state,
+        ret["changes"] = {
+            "old": current_state,
+            "new": new_state,
         }
 
-        ret['result'] = True
+        ret["result"] = True
 
         return ret

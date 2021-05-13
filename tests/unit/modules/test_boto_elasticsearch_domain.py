@@ -1,8 +1,3 @@
-# -*- coding: utf-8 -*-
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import copy
 import logging
 import random
@@ -10,18 +5,11 @@ import string
 
 import salt.loader
 import salt.modules.boto_elasticsearch_domain as boto_elasticsearch_domain
-
-# Import Salt libs
-from salt.ext import six
 from salt.ext.six.moves import range
 from salt.utils.versions import LooseVersion
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
-
-# Import 3rd-party libs
 
 # pylint: disable=import-error,no-name-in-module
 try:
@@ -102,7 +90,7 @@ class BotoElasticsearchDomainTestCaseBase(TestCase, LoaderModuleMockMixin):
         return {boto_elasticsearch_domain: {"__utils__": utils}}
 
     def setUp(self):
-        super(BotoElasticsearchDomainTestCaseBase, self).setUp()
+        super().setUp()
         boto_elasticsearch_domain.__init__(self.opts)
         del self.opts
 
@@ -125,16 +113,16 @@ class BotoElasticsearchDomainTestCaseBase(TestCase, LoaderModuleMockMixin):
         session_instance.client.return_value = self.conn
 
 
-class BotoElasticsearchDomainTestCaseMixin(object):
+class BotoElasticsearchDomainTestCaseMixin:
     pass
 
 
-@skipIf(True, "Skip these tests while investigating failures")
+# @skipIf(True, "Skip these tests while investigating failures")
 @skipIf(HAS_BOTO is False, "The boto module must be installed.")
 @skipIf(
     _has_required_boto() is False,
     "The boto3 module must be greater than"
-    " or equal to version {0}".format(required_boto3_version),
+    " or equal to version {}".format(required_boto3_version),
 )
 class BotoElasticsearchDomainTestCase(
     BotoElasticsearchDomainTestCaseBase, BotoElasticsearchDomainTestCaseMixin
@@ -224,7 +212,7 @@ class BotoElasticsearchDomainTestCase(
         Tests describing parameters if domain exists
         """
         domainconfig = {}
-        for k, v in six.iteritems(domain_ret):
+        for k, v in domain_ret.items():
             if k == "DomainName":
                 continue
             domainconfig[k] = {"Options": v}

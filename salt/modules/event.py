@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 Use the :ref:`Salt Event System <events>` to fire events from the
 master to the minion and vice-versa.
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
@@ -26,7 +24,7 @@ def _dict_subset(keys, master_dict):
     """
     Return a dictionary of only the subset of keys/values specified in keys
     """
-    return dict([(k, v) for k, v in master_dict.items() if k in keys])
+    return {k: v for k, v in master_dict.items() if k in keys}
 
 
 def fire_master(data, tag, preload=None):
@@ -241,7 +239,7 @@ def send(
         __opts__.get("local")
         or __opts__.get("file_client") == "local"
         or __opts__.get("master_type") == "disable"
-    ):
+    ) and not __opts__.get("use_master_when_local"):
         return fire(data_dict, tag)
     else:
         return fire_master(data_dict, tag, preload=preload)

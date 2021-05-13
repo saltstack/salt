@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Functions used for CLI argument handling
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 import fnmatch
@@ -70,9 +68,9 @@ def invalid_kwargs(invalid_kwargs, raise_exc=True):
     """
     if invalid_kwargs:
         if isinstance(invalid_kwargs, dict):
-            new_invalid = ["{0}={1}".format(x, y) for x, y in invalid_kwargs.items()]
+            new_invalid = ["{}={}".format(x, y) for x, y in invalid_kwargs.items()]
             invalid_kwargs = new_invalid
-    msg = "The following keyword arguments are not valid: {0}".format(
+    msg = "The following keyword arguments are not valid: {}".format(
         ", ".join(invalid_kwargs)
     )
     if raise_exc:
@@ -244,7 +242,12 @@ def yamlify_arg(arg):
 
 def get_function_argspec(func, is_class_method=None):
     """
-    A small wrapper around getargspec that also supports callable classes
+    A small wrapper around getargspec that also supports callable classes and wrapped functions
+
+    If the given function is a wrapper around another function (i.e. has a
+    ``__wrapped__`` attribute), return the functions specification of the underlying
+    function.
+
     :param is_class_method: Pass True if you are sure that the function being passed
                             is a class method. The reason for this is that on Python 3
                             ``inspect.ismethod`` only returns ``True`` for bound methods,
@@ -254,7 +257,10 @@ def get_function_argspec(func, is_class_method=None):
                             and this is not always wanted.
     """
     if not callable(func):
-        raise TypeError("{0} is not a callable".format(func))
+        raise TypeError("{} is not a callable".format(func))
+
+    while hasattr(func, "__wrapped__"):
+        func = func.__wrapped__
 
     if is_class_method is True:
         aspec = _getargspec(func)
@@ -268,7 +274,32 @@ def get_function_argspec(func, is_class_method=None):
         aspec = _getargspec(func.__call__)
         del aspec.args[0]  # self
     else:
-        raise TypeError("Cannot inspect argument list for '{0}'".format(func))
+        try:
+            sig = inspect.signature(func)
+        except TypeError:
+            raise TypeError("Cannot inspect argument list for '{}'".format(func))
+        else:
+            # argspec-related functions are deprecated in Python 3 in favor of
+            # the new inspect.Signature class, and will be removed at some
+            # point in the Python 3 lifecycle. So, build a namedtuple which
+            # looks like the result of a Python 2 argspec.
+            _ArgSpec = namedtuple("ArgSpec", "args varargs keywords defaults")
+            args = []
+            defaults = []
+            varargs = keywords = None
+            for param in sig.parameters.values():
+                if param.kind == param.POSITIONAL_OR_KEYWORD:
+                    args.append(param.name)
+                    if param.default is not inspect._empty:
+                        defaults.append(param.default)
+                elif param.kind == param.VAR_POSITIONAL:
+                    varargs = param.name
+                elif param.kind == param.VAR_KEYWORD:
+                    keywords = param.name
+            if is_class_method:
+                del args[0]
+            aspec = _ArgSpec(args, varargs, keywords, tuple(defaults) or None)
+
     return aspec
 
 
@@ -437,7 +468,7 @@ def format_call(
         used_args_count = len(ret["args"]) + len(args)
         args_count = used_args_count + len(missing_args)
         raise SaltInvocationError(
-            "{0} takes at least {1} argument{2} ({3} given)".format(
+            "{} takes at least {} argument{} ({} given)".format(
                 fun.__name__, args_count, args_count > 1 and "s" or "", used_args_count
             )
         )
@@ -473,18 +504,18 @@ def format_call(
                     # In case this is being called for a state module
                     "full",
                     # Not a state module, build the name
-                    "{0}.{1}".format(fun.__module__, fun.__name__),
+                    "{}.{}".format(fun.__module__, fun.__name__),
                 ),
             )
         else:
-            msg = "{0} and '{1}' are invalid keyword arguments for '{2}'".format(
-                ", ".join(["'{0}'".format(e) for e in extra][:-1]),
+            msg = "{} and '{}' are invalid keyword arguments for '{}'".format(
+                ", ".join(["'{}'".format(e) for e in extra][:-1]),
                 list(extra.keys())[-1],
                 ret.get(
                     # In case this is being called for a state module
                     "full",
                     # Not a state module, build the name
-                    "{0}.{1}".format(fun.__module__, fun.__name__),
+                    "{}.{}".format(fun.__module__, fun.__name__),
                 ),
             )
 

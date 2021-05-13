@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Mandrill
 ========
@@ -18,16 +17,12 @@ In the minion configuration file, the following block is required:
 .. versionadded:: 2018.3.0
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import Salt libs
 import salt.utils.json
 import salt.utils.versions
 
-# import third party
 try:
     import requests
 
@@ -132,7 +127,6 @@ def send(
     api_url=None,
     api_version=None,
     api_key=None,
-    **kwargs
 ):
     """
     Send out the email using the details from the ``message`` argument.
@@ -171,7 +165,7 @@ def send(
 
     .. code-block:: bash
 
-        $ salt '*' mandrill.send message="{'subject': 'Hi', 'from_email': 'test@example.com', 'to': [{'email': 'recv@example.com', 'type': 'to'}]}"
+        salt '*' mandrill.send message="{'subject': 'Hi', 'from_email': 'test@example.com', 'to': [{'email': 'recv@example.com', 'type': 'to'}]}"
 
     ``message`` structure example (as YAML for readability):
 
@@ -220,14 +214,6 @@ def send(
             result:
                 True
     """
-    if "async" in kwargs:  # Remove this in Sodium
-        salt.utils.versions.warn_until(
-            "Sodium",
-            'Parameter "async" is renamed to "asynchronous" '
-            "and will be removed in version {version}.",
-        )
-        asynchronous = bool(kwargs["async"])
-
     params = _get_api_params(api_url=api_url, api_version=api_version, api_key=api_key)
     url = _get_url(
         "messages/send", api_url=params["api_url"], api_version=params["api_version"]

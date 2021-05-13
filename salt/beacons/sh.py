@@ -1,15 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 Watch the shell commands being executed actively. This beacon requires strace.
 """
-
-# Import python libs
-from __future__ import absolute_import, unicode_literals
-
 import logging
 import time
 
-# Import salt libs
 import salt.utils.path
 import salt.utils.stringutils
 import salt.utils.vt
@@ -73,7 +67,7 @@ def beacon(config):
         __context__[pkey] = {}
     for pid in track_pids:
         if pid not in __context__[pkey]:
-            cmd = ["strace", "-f", "-e", "execve", "-p", "{0}".format(pid)]
+            cmd = ["strace", "-f", "-e", "execve", "-p", "{}".format(pid)]
             __context__[pkey][pid] = {}
             __context__[pkey][pid]["vt"] = salt.utils.vt.Terminal(
                 cmd,

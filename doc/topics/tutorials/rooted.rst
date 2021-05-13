@@ -37,22 +37,24 @@ Edit it to include needed variables and your new paths
 .. code-block:: python
 
    # you need to edit this
-   ROOT_DIR = *your current dir* + '/salt/root'
+   _your_current_dir_ = ...
+   ROOT_DIR = _your_current_dir_ + "/salt/root"
 
    # you need to edit this
-   INSTALL_DIR = *location of source code*
+   _location_of_source_code_ = ...
+   INSTALL_DIR = _location_of_source_code_
 
-   CONFIG_DIR =  ROOT_DIR + '/etc/salt'
-   CACHE_DIR = ROOT_DIR + '/var/cache/salt'
-   SOCK_DIR = ROOT_DIR + '/var/run/salt'
-   SRV_ROOT_DIR= ROOT_DIR + '/srv'
-   BASE_FILE_ROOTS_DIR = ROOT_DIR + '/srv/salt'
-   BASE_PILLAR_ROOTS_DIR = ROOT_DIR + '/srv/pillar'
-   BASE_MASTER_ROOTS_DIR = ROOT_DIR + '/srv/salt-master'
-   LOGS_DIR = ROOT_DIR + '/var/log/salt'
-   PIDFILE_DIR = ROOT_DIR + '/var/run'
-   CLOUD_DIR = INSTALL_DIR + '/cloud'
-   BOOTSTRAP = CLOUD_DIR + '/deploy/bootstrap-salt.sh'
+   CONFIG_DIR = ROOT_DIR + "/etc/salt"
+   CACHE_DIR = ROOT_DIR + "/var/cache/salt"
+   SOCK_DIR = ROOT_DIR + "/var/run/salt"
+   SRV_ROOT_DIR = ROOT_DIR + "/srv"
+   BASE_FILE_ROOTS_DIR = ROOT_DIR + "/srv/salt"
+   BASE_PILLAR_ROOTS_DIR = ROOT_DIR + "/srv/pillar"
+   BASE_MASTER_ROOTS_DIR = ROOT_DIR + "/srv/salt-master"
+   LOGS_DIR = ROOT_DIR + "/var/log/salt"
+   PIDFILE_DIR = ROOT_DIR + "/var/run"
+   CLOUD_DIR = INSTALL_DIR + "/cloud"
+   BOOTSTRAP = CLOUD_DIR + "/deploy/bootstrap-salt.sh"
 
 
 Create the directory structure

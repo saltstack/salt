@@ -14,16 +14,16 @@
 #
 #          BUGS: https://github.com/saltstack/salt-bootstrap/issues
 #
-#     COPYRIGHT: (c) 2012-2018 by the SaltStack Team, see AUTHORS.rst for more
+#     COPYRIGHT: (c) 2012-2021 by the SaltStack Team, see AUTHORS.rst for more
 #                details.
 #
 #       LICENSE: Apache 2.0
-#  ORGANIZATION: SaltStack (saltstack.com)
+#  ORGANIZATION: SaltStack (saltproject.io)
 #       CREATED: 10/15/2012 09:49:37 PM WEST
 #======================================================================================================================
 set -o nounset                              # Treat unset variables as an error
 
-__ScriptVersion="2020.02.24"
+__ScriptVersion="2021.03.02"
 __ScriptName="bootstrap-salt.sh"
 
 __ScriptFullName="$0"
@@ -267,12 +267,12 @@ _CUSTOM_REPO_URL="null"
 _CUSTOM_MASTER_CONFIG="null"
 _CUSTOM_MINION_CONFIG="null"
 _QUIET_GIT_INSTALLATION=$BS_FALSE
-_REPO_URL="repo.saltstack.com"
+_REPO_URL="repo.saltproject.io"
 _PY_EXE=""
 _INSTALL_PY="$BS_FALSE"
 _TORNADO_MAX_PY3_VERSION="5.0"
 _POST_NEON_INSTALL=$BS_FALSE
-_MINIMUM_PIP_VERSION="8.0.0"
+_MINIMUM_PIP_VERSION="9.0.1"
 _MINIMUM_SETUPTOOLS_VERSION="9.1"
 _POST_NEON_PIP_INSTALL_ARGS="--prefix=/usr"
 
@@ -293,9 +293,10 @@ __usage() {
     - stable              Install latest stable release. This is the default
                           install type
     - stable [branch]     Install latest version on a branch. Only supported
-                          for packages available at repo.saltstack.com
+                          for packages available at repo.saltproject.io
     - stable [version]    Install a specific version. Only supported for
-                          packages available at repo.saltstack.com
+                          packages available at repo.saltproject.io
+                          To pin a 3xxx minor version, specify it as 3xxx.0
     - testing             RHEL-family specific: configure EPEL testing repo
     - git                 Install from the head of the master branch
     - git [ref]           Install from any git ref (such as a branch, tag, or
@@ -349,7 +350,7 @@ __usage() {
         with -c and -k
     -C  Only run the configuration function. Implies -F (forced overwrite).
         To overwrite Master or Syndic configs, -M or -S, respectively, must
-        also be specified. Salt installation will be omitted, but some of the
+        also be specified. Salt installation will be ommitted, but some of the
         dependencies could be installed to write configuration with -j or -J.
     -A  Pass the salt-master DNS name or IP. This will be stored under
         \${BS_SALT_ETC_DIR}/minion.d/99-master-address.conf
@@ -376,8 +377,8 @@ __usage() {
         on the system.
     -R  Specify a custom repository URL. Assumes the custom repository URL
         points to a repository that mirrors Salt packages located at
-        repo.saltstack.com. The option passed with -R replaces the
-        "repo.saltstack.com". If -R is passed, -r is also set. Currently only
+        repo.saltproject.io. The option passed with -R replaces the
+        "repo.saltproject.io". If -R is passed, -r is also set. Currently only
         works on CentOS/RHEL and Debian based distributions.
     -J  Replace the Master config file with data passed in as a JSON string. If
         a Master config file is found, a reasonable effort will be made to save
@@ -603,18 +604,18 @@ elif [ "$ITYPE" = "stable" ]; then
     if [ "$#" -eq 0 ];then
         STABLE_REV="latest"
     else
-        if [ "$(echo "$1" | grep -E '^(latest|1\.6|1\.7|2014\.1|2014\.7|2015\.5|2015\.8|2016\.3|2016\.11|2017\.7|2018\.3|2019\.2|3000)$')" != "" ]; then
+        if [ "$(echo "$1" | grep -E '^(latest|1\.6|1\.7|2014\.1|2014\.7|2015\.5|2015\.8|2016\.3|2016\.11|2017\.7|2018\.3|2019\.2|3000|3001|3002|3003)$')" != "" ]; then
             STABLE_REV="$1"
             shift
-        elif [ "$(echo "$1" | grep -E '^(2[0-9]*\.[0-9]*\.[0-9]*|[3-9][0-9]{3}*(\.[0-9]*)?)$')" != "" ]; then
-            if [ "$(uname)" = "Darwin" ]; then
-              STABLE_REV="$1"
-            else
-              STABLE_REV="archive/$1"
+        elif [ "$(echo "$1" | grep -E '^(2[0-9]*\.[0-9]*\.[0-9]*|[3-9][0-9]{3}(\.[0-9]*)?)$')" != "" ]; then
+            # Handle the 3xxx.0 version as 3xxx archive (pin to minor) and strip the fake ".0" suffix
+            STABLE_REV=$(echo "$1" | sed -E 's/^([3-9][0-9]{3})\.0$/\1/')
+            if [ "$(uname)" != "Darwin" ]; then
+                STABLE_REV="archive/$STABLE_REV"
             fi
             shift
         else
-            echo "Unknown stable version: $1 (valid: 1.6, 1.7, 2014.1, 2014.7, 2015.5, 2015.8, 2016.3, 2016.11, 2017.7, 2018.3, 2019.2, 3000, latest, \$MAJOR.\$MINOR.\$PATCH until 2019.2, \$MAJOR or \$MAJOR.\$PATCH starting from 3000)"
+            echo "Unknown stable version: $1 (valid: 1.6, 1.7, 2014.1, 2014.7, 2015.5, 2015.8, 2016.3, 2016.11, 2017.7, 2018.3, 2019.2, 3000, 3001, 3002, 3003, latest, \$MAJOR.\$MINOR.\$PATCH until 2019.2, \$MAJOR or \$MAJOR.\$PATCH starting from 3000)"
             exit 1
         fi
     fi
@@ -693,6 +694,7 @@ if [ -n "$_PY_EXE" ]; then
     echoinfo "Detected -x option. Using $_PY_EXE to install Salt."
 else
     _PY_PKG_VER=""
+    _PY_MAJOR_VERSION=""
 fi
 
 # If the configuration directory or archive does not exist, error out
@@ -719,7 +721,7 @@ if [ "$ITYPE" != "git" ]; then
     fi
 fi
 
-# Set the _REPO_URL value based on if -R was passed or not. Defaults to repo.saltstack.com.
+# Set the _REPO_URL value based on if -R was passed or not. Defaults to repo.saltproject.io.
 if [ "$_CUSTOM_REPO_URL" != "null" ]; then
     _REPO_URL="$_CUSTOM_REPO_URL"
 
@@ -785,18 +787,18 @@ if [ -d "${_VIRTUALENV_DIR}" ]; then
     exit 1
 fi
 
-
 #---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #         NAME:  __fetch_url
 #  DESCRIPTION:  Retrieves a URL and writes it to a given path
 #----------------------------------------------------------------------------------------------------------------------
 __fetch_url() {
     # shellcheck disable=SC2086
-    curl $_CURL_ARGS -L -s -o "$1" "$2" >/dev/null 2>&1        ||
+    curl $_CURL_ARGS -L -s -f -o "$1" "$2" >/dev/null 2>&1     ||
         wget $_WGET_ARGS -q -O "$1" "$2" >/dev/null 2>&1       ||
             fetch $_FETCH_ARGS -q -o "$1" "$2" >/dev/null 2>&1 ||  # FreeBSD
                 fetch -q -o "$1" "$2" >/dev/null 2>&1          ||  # Pre FreeBSD 10
-                    ftp -o "$1" "$2" >/dev/null 2>&1               # OpenBSD
+                    ftp -o "$1" "$2" >/dev/null 2>&1           ||  # OpenBSD
+                        (echoerror "$2 failed to download to $1"; exit 1)
 }
 
 #---  FUNCTION  -------------------------------------------------------------------------------------------------------
@@ -898,6 +900,8 @@ __derive_debian_numeric_version() {
             NUMERIC_VERSION=$(__parse_version_string "9.0")
         elif [ "$INPUT_VERSION" = "buster/sid" ]; then
             NUMERIC_VERSION=$(__parse_version_string "10.0")
+        elif [ "$INPUT_VERSION" = "bullseye/sid" ]; then
+            NUMERIC_VERSION=$(__parse_version_string "11.0")
         else
             echowarn "Unable to parse the Debian Version (codename: '$INPUT_VERSION')"
         fi
@@ -996,7 +1000,8 @@ __gather_linux_system_info() {
             # Skip setting DISTRO_NAME this time, splitting CamelCase has failed.
             # See https://github.com/saltstack/salt-bootstrap/issues/918
             [ "$n" = "$DISTRO_NAME" ] && DISTRO_NAME="" || DISTRO_NAME="$n"
-        elif [ "${DISTRO_NAME}" = "openSUSE project" ]; then
+        elif [ "$( echo "${DISTRO_NAME}" | grep openSUSE )" != "" ]; then
+            # lsb_release -si returns "openSUSE Tumbleweed" on openSUSE tumbleweed
             # lsb_release -si returns "openSUSE project" on openSUSE 12.3
             # lsb_release -si returns "openSUSE" on openSUSE 15.n
             DISTRO_NAME="opensuse"
@@ -1117,7 +1122,7 @@ __gather_linux_system_info() {
                         n="SUSE"
                         v="${rv}"
                         ;;
-                    opensuse-leap  )
+                    opensuse-* )
                         n="opensuse"
                         v="${rv}"
                         ;;
@@ -1153,7 +1158,7 @@ __install_python() {
         echoinfo "$DISTRO_NAME_L"
         case "$DISTRO_NAME_L" in
             "red_hat"|"centos")
-                __PYTHON_REPO_URL="https://centos${DISTRO_MAJOR_VERSION}.iuscommunity.org/ius-release.rpm"
+                __PYTHON_REPO_URL="https://repo.ius.io/ius-release-el${DISTRO_MAJOR_VERSION}.rpm"
                 ;;
             *)
                 echoerror "Installing a repo to provide a python package is only supported on Redhat/CentOS.
@@ -1308,9 +1313,12 @@ __ubuntu_derivatives_translation() {
     linuxmint_17_ubuntu_base="14.04"
     linuxmint_18_ubuntu_base="16.04"
     linuxmint_19_ubuntu_base="18.04"
+    linuxmint_20_ubuntu_base="20.04"
     linaro_12_ubuntu_base="12.04"
     elementary_os_02_ubuntu_base="12.04"
     neon_16_ubuntu_base="16.04"
+    neon_18_ubuntu_base="18.04"
+    neon_20_ubuntu_base="20.04"
 
     # Translate Ubuntu derivatives to their base Ubuntu version
     match=$(echo "$DISTRO_NAME_L" | grep -E ${UBUNTU_DERIVATIVES})
@@ -1354,7 +1362,7 @@ __check_dpkg_architecture() {
     fi
 
     __REPO_ARCH="$DPKG_ARCHITECTURE"
-    __REPO_ARCH_DEB='deb'
+    __REPO_ARCH_DEB='deb [signed-by=/usr/share/keyrings/salt-archive-keyring.gpg]'
     __return_code=0
 
     case $DPKG_ARCHITECTURE in
@@ -1373,7 +1381,7 @@ __check_dpkg_architecture() {
                 # Saltstack official repository does not yet have arm64 metadata,
                 # use amd64 repositories on arm64, since all pkgs are arch-independent
                 __REPO_ARCH="amd64"
-                __REPO_ARCH_DEB="deb [arch=$__REPO_ARCH]"
+                __REPO_ARCH_DEB="deb [signed-by=/usr/share/keyrings/salt-archive-keyring.gpg arch=$__REPO_ARCH]"
                 warn_msg="Support for arm64 packages is experimental and might rely on architecture-independent packages from the amd64 repository."
             fi
             error_msg=""
@@ -1467,10 +1475,11 @@ __debian_derivatives_translation() {
     # If the file does not exist, return
     [ ! -f /etc/os-release ] && return
 
-    DEBIAN_DERIVATIVES="(cumulus_.+|devuan|kali|linuxmint|raspbian|bunsenlabs|turnkey)"
+    DEBIAN_DERIVATIVES="(cumulus|devuan|kali|linuxmint|raspbian|bunsenlabs|turnkey)"
     # Mappings
     cumulus_2_debian_base="7.0"
     cumulus_3_debian_base="8.0"
+    cumulus_4_debian_base="10.0"
     devuan_1_debian_base="8.0"
     devuan_2_debian_base="9.0"
     kali_1_debian_base="7.0"
@@ -1486,7 +1495,7 @@ __debian_derivatives_translation() {
 
     if [ "${match}" != "" ]; then
         case $match in
-            cumulus_*)
+            cumulus*)
                 _major=$(echo "$DISTRO_VERSION" | sed 's/^\([0-9]*\).*/\1/g')
                 _debian_derivative="cumulus"
                 ;;
@@ -1536,20 +1545,17 @@ __debian_derivatives_translation() {
 __debian_codename_translation() {
 
     case $DISTRO_MAJOR_VERSION in
-        "7")
-            DISTRO_CODENAME="wheezy"
-            ;;
-        "8")
-            DISTRO_CODENAME="jessie"
-            ;;
         "9")
             DISTRO_CODENAME="stretch"
             ;;
         "10")
             DISTRO_CODENAME="buster"
             ;;
+        "11")
+            DISTRO_CODENAME="bullseye"
+            ;;
         *)
-            DISTRO_CODENAME="jessie"
+            DISTRO_CODENAME="stretch"
             ;;
     esac
 }
@@ -1562,8 +1568,8 @@ __debian_codename_translation() {
 __check_end_of_life_versions() {
     case "${DISTRO_NAME_L}" in
         debian)
-            # Debian versions below 7 are not supported
-            if [ "$DISTRO_MAJOR_VERSION" -lt 8 ]; then
+            # Debian versions below 9 are not supported
+            if [ "$DISTRO_MAJOR_VERSION" -lt 9 ]; then
                 echoerror "End of life distributions are not supported."
                 echoerror "Please consider upgrading to the next stable. See:"
                 echoerror "    https://wiki.debian.org/DebianReleases"
@@ -1574,15 +1580,16 @@ __check_end_of_life_versions() {
         ubuntu)
             # Ubuntu versions not supported
             #
-            #  < 14.04
-            #  = 14.10
-            #  = 15.04, 15.10
+            #  < 16.04
             #  = 16.10
             #  = 17.04, 17.10
-            if [ "$DISTRO_MAJOR_VERSION" -lt 14 ] || \
-                [ "$DISTRO_MAJOR_VERSION" -eq 15 ] || \
+            #  = 18.10
+            #  = 19.04, 19.10
+            if [ "$DISTRO_MAJOR_VERSION" -lt 16 ] || \
                 [ "$DISTRO_MAJOR_VERSION" -eq 17 ] || \
-                { [ "$DISTRO_MAJOR_VERSION" -eq 16 ] && [ "$DISTRO_MINOR_VERSION" -eq 10 ]; }; then
+                [ "$DISTRO_MAJOR_VERSION" -eq 19 ] || \
+                { [ "$DISTRO_MAJOR_VERSION" -eq 16 ] && [ "$DISTRO_MINOR_VERSION" -eq 10 ]; } || \
+                { [ "$DISTRO_MAJOR_VERSION" -eq 18 ] && [ "$DISTRO_MINOR_VERSION" -eq 10 ]; }; then
                 echoerror "End of life distributions are not supported."
                 echoerror "Please consider upgrading to the next stable. See:"
                 echoerror "    https://wiki.ubuntu.com/Releases"
@@ -1722,7 +1729,7 @@ echoinfo "  Distribution: ${DISTRO_NAME} ${DISTRO_VERSION}"
 echo
 
 # Simplify distro name naming on functions
-DISTRO_NAME_L=$(echo "$DISTRO_NAME" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-zA-Z0-9_ ]//g' | sed -Ee 's/([[:space:]])+/_/g')
+DISTRO_NAME_L=$(echo "$DISTRO_NAME" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-zA-Z0-9_ ]//g' | sed -Ee 's/([[:space:]])+/_/g' | sed -Ee 's/tumbleweed//' )
 
 # Simplify version naming on functions
 if [ "$DISTRO_VERSION" = "" ] || [ ${_SIMPLIFY_VERSION} -eq $BS_FALSE ]; then
@@ -1800,7 +1807,7 @@ elif [ "${DISTRO_NAME_L}" = "debian" ]; then
   __debian_codename_translation
 fi
 
-if [ "$(echo "${DISTRO_NAME_L}" | grep -E '(debian|ubuntu|centos|red_hat|oracle|scientific|amazon|fedora|macosx)')" = "" ] && [ "$ITYPE" = "stable" ] && [ "$STABLE_REV" != "latest" ]; then
+if [ "$(echo "${DISTRO_NAME_L}" | grep -E '(debian|ubuntu|centos|gentoo|red_hat|oracle|scientific|amazon|fedora|macosx)')" = "" ] && [ "$ITYPE" = "stable" ] && [ "$STABLE_REV" != "latest" ]; then
     echoerror "${DISTRO_NAME} does not have major version pegged packages support"
     exit 1
 fi
@@ -1982,7 +1989,7 @@ __apt_key_fetch() {
     tempfile="$(__temp_gpg_pub)"
 
     __fetch_url "$tempfile" "$url" || return 1
-    apt-key add "$tempfile" || return 1
+    cp -f "$tempfile" /usr/share/keyrings/salt-archive-keyring.gpg && chmod 644 /usr/share/keyrings/salt-archive-keyring.gpg || return 1
     rm -f "$tempfile"
 
     return 0
@@ -2000,6 +2007,12 @@ __rpm_import_gpg() {
     tempfile="$(__temp_gpg_pub)"
 
     __fetch_url "$tempfile" "$url" || return 1
+
+    # At least on CentOS 8, a missing newline at the end causes:
+    #   error: /tmp/salt-gpg-n1gKUb1u.pub: key 1 not an armored public key.
+    # shellcheck disable=SC1003,SC2086
+    sed -i -e '$a\' $tempfile
+
     rpm --import "$tempfile" || return 1
     rm -f "$tempfile"
 
@@ -2500,11 +2513,11 @@ __check_services_openbsd() {
 }   # ----------  end of function __check_services_openbsd  ----------
 
 #---  FUNCTION  -------------------------------------------------------------------------------------------------------
-#          NAME:  __check_services_alpine
+#          NAME:  __check_services_openrc
 #   DESCRIPTION:  Return 0 or 1 in case the service is enabled or not
 #    PARAMETERS:  servicename
 #----------------------------------------------------------------------------------------------------------------------
-__check_services_alpine() {
+__check_services_openrc() {
     if [ $# -eq 0 ]; then
         echoerror "You need to pass a service name to check!"
         exit 1
@@ -2523,7 +2536,7 @@ __check_services_alpine() {
         echodebug "Service ${servicename} is NOT enabled"
         return 1
     fi
-}   # ----------  end of function __check_services_openbsd  ----------
+}   # ----------  end of function __check_services_openrc  ----------
 
 
 #---  FUNCTION  -------------------------------------------------------------------------------------------------------
@@ -2620,7 +2633,7 @@ __install_tornado_pip() {
 #    PARAMETERS:  requirements_file
 #----------------------------------------------------------------------------------------------------------------------
 __install_pip_deps() {
-    # Install virtualenv to system pip before activating virtualenv if that's going to be used
+    # Install virtualenv to system pip before activating virtualenv if thats going to be used
     # We assume pip pkg is installed since that is distro specific
     if [ "$_VIRTUALENV_DIR" != "null" ]; then
         if ! __check_command_exists pip; then
@@ -2701,8 +2714,13 @@ EOM
 )
     if ! ${_py_exe} -c "$CHECK_PIP_VERSION_SCRIPT"; then
         # Upgrade pip to at least 1.2 which is when we can start using "python -m pip"
-        echodebug "Running '${_pip_cmd} install ${_POST_NEON_PIP_INSTALL_ARGS} pip>=${_MINIMUM_PIP_VERSION}'"
-        ${_pip_cmd} install ${_POST_NEON_PIP_INSTALL_ARGS} -v "pip>=${_MINIMUM_PIP_VERSION}"
+        if [ "${_py_version}" = "3.5" ]; then
+          echodebug "Running '${_pip_cmd} install ${_POST_NEON_PIP_INSTALL_ARGS} pip>=${_MINIMUM_PIP_VERSION},<21.0'"
+          ${_pip_cmd} install ${_POST_NEON_PIP_INSTALL_ARGS} -v "pip>=${_MINIMUM_PIP_VERSION},<21.0"
+        else
+          echodebug "Running '${_pip_cmd} install ${_POST_NEON_PIP_INSTALL_ARGS} pip>=${_MINIMUM_PIP_VERSION}'"
+          ${_pip_cmd} install ${_POST_NEON_PIP_INSTALL_ARGS} -v "pip>=${_MINIMUM_PIP_VERSION}"
+        fi
         sleep 1
         echodebug "PATH: ${PATH}"
         _pip_cmd="pip${_py_version}"
@@ -2779,6 +2797,18 @@ EOM
     return 0
 }   # ----------  end of function __install_salt_from_repo_post_neon  ----------
 
+
+if [ "${_POST_NEON_INSTALL}" -eq $BS_FALSE ]; then
+    if [ "x${_PY_MAJOR_VERSION}" = "x" ]; then
+        # Default to python 2 for pre Neon installs
+        _PY_MAJOR_VERSION=2
+    fi
+else
+    if [ "x${_PY_MAJOR_VERSION}" = "x" ]; then
+        # Default to python 3 for post Neon install
+        _PY_MAJOR_VERSION=3
+    fi
+fi
 
 #######################################################################################################################
 #
@@ -2877,11 +2907,10 @@ __enable_universe_repository() {
 
 __install_saltstack_ubuntu_repository() {
     # Workaround for latest non-LTS ubuntu
-    if [ "$DISTRO_MAJOR_VERSION" -eq 19 ] || \
-        { [ "$DISTRO_MAJOR_VERSION" -eq 18 ] && [ "$DISTRO_MINOR_VERSION" -eq 10 ]; }; then
+    if { [ "$DISTRO_MAJOR_VERSION" -eq 20 ] && [ "$DISTRO_MINOR_VERSION" -eq 10 ]; }; then
         echowarn "Non-LTS Ubuntu detected, but stable packages requested. Trying packages for previous LTS release. You may experience problems."
-        UBUNTU_VERSION=18.04
-        UBUNTU_CODENAME="bionic"
+        UBUNTU_VERSION=20.04
+        UBUNTU_CODENAME="focal"
     else
         UBUNTU_VERSION=${DISTRO_VERSION}
         UBUNTU_CODENAME=${DISTRO_CODENAME}
@@ -2912,7 +2941,7 @@ __install_saltstack_ubuntu_repository() {
     SALTSTACK_UBUNTU_URL="${HTTP_VAL}://${_REPO_URL}/${__PY_VERSION_REPO}/ubuntu/${UBUNTU_VERSION}/${__REPO_ARCH}/${STABLE_REV}"
     echo "$__REPO_ARCH_DEB $SALTSTACK_UBUNTU_URL $UBUNTU_CODENAME main" > /etc/apt/sources.list.d/saltstack.list
 
-    __apt_key_fetch "$SALTSTACK_UBUNTU_URL/SALTSTACK-GPG-KEY.pub" || return 1
+    __apt_key_fetch "$SALTSTACK_UBUNTU_URL/salt-archive-keyring.gpg" || return 1
 
     __wait_for_apt apt-get update || return 1
 }
@@ -2981,6 +3010,15 @@ install_ubuntu_stable_deps() {
         _SLEEP=10
     fi
 
+    if [ "$DISTRO_MAJOR_VERSION" -ge 20 ]; then
+        # Default Ubuntu 20.04 to Py3
+        if [ "x${_PY_EXE}" = "x" ]; then
+            _PY_EXE=python3
+            _PY_MAJOR_VERSION=3
+            PY_PKG_VER=3
+        fi
+    fi
+
     if [ $_START_DAEMONS -eq $BS_FALSE ]; then
         echowarn "Not starting daemons on Debian based distributions is not working mostly because starting them is the default behaviour."
     fi
@@ -2992,8 +3030,12 @@ install_ubuntu_stable_deps() {
 
     if [ "${_UPGRADE_SYS}" -eq $BS_TRUE ]; then
         if [ "${_INSECURE_DL}" -eq $BS_TRUE ]; then
-            __apt_get_install_noinput --allow-unauthenticated debian-archive-keyring &&
-                apt-key update && apt-get update || return 1
+            if [ "$DISTRO_MAJOR_VERSION" -ge 20 ]; then
+                __apt_get_install_noinput --allow-unauthenticated debian-archive-keyring && apt-get update || return 1
+            else
+                __apt_get_install_noinput --allow-unauthenticated debian-archive-keyring &&
+                    apt-key update && apt-get update || return 1
+            fi
         fi
 
         __apt_get_upgrade_noinput || return 1
@@ -3305,8 +3347,17 @@ install_ubuntu_check_services() {
 #   Debian Install Functions
 #
 __install_saltstack_debian_repository() {
-    DEBIAN_RELEASE="$DISTRO_MAJOR_VERSION"
-    DEBIAN_CODENAME="$DISTRO_CODENAME"
+    if [ "$DISTRO_MAJOR_VERSION" -eq 11 ]; then
+        # Packages for Debian 11 at repo.saltproject.io are not yet available
+        # Set up repository for Debian 10 for Debian 11 for now until support
+        # is available at repo.saltproject.io for Debian 11.
+        echowarn "Debian 11 distribution detected, but stable packages requested. Trying packages from Debian 10. You may experience problems."
+        DEBIAN_RELEASE="10"
+        DEBIAN_CODENAME="buster"
+    else
+        DEBIAN_RELEASE="$DISTRO_MAJOR_VERSION"
+        DEBIAN_CODENAME="$DISTRO_CODENAME"
+    fi
 
     __PY_VERSION_REPO="apt"
     if [ -n "$_PY_EXE" ] && [ "$_PY_MAJOR_VERSION" -eq 3 ]; then
@@ -3333,7 +3384,7 @@ __install_saltstack_debian_repository() {
     SALTSTACK_DEBIAN_URL="${HTTP_VAL}://${_REPO_URL}/${__PY_VERSION_REPO}/debian/${DEBIAN_RELEASE}/${__REPO_ARCH}/${STABLE_REV}"
     echo "$__REPO_ARCH_DEB $SALTSTACK_DEBIAN_URL $DEBIAN_CODENAME main" > "/etc/apt/sources.list.d/saltstack.list"
 
-    __apt_key_fetch "$SALTSTACK_DEBIAN_URL/SALTSTACK-GPG-KEY.pub" || return 1
+    __apt_key_fetch "$SALTSTACK_DEBIAN_URL/salt-archive-keyring.gpg" || return 1
 
     __wait_for_apt apt-get update || return 1
 }
@@ -3351,11 +3402,24 @@ install_debian_deps() {
     if [ "${_UPGRADE_SYS}" -eq $BS_TRUE ]; then
         # Try to update GPG keys first if allowed
         if [ "${_INSECURE_DL}" -eq $BS_TRUE ]; then
-            __apt_get_install_noinput --allow-unauthenticated debian-archive-keyring &&
-                apt-key update && apt-get update || return 1
+            if [ "$DISTRO_MAJOR_VERSION" -ge 10 ]; then
+                __apt_get_install_noinput --allow-unauthenticated debian-archive-keyring && apt-get update || return 1
+            else
+                __apt_get_install_noinput --allow-unauthenticated debian-archive-keyring &&
+                    apt-key update && apt-get update || return 1
+            fi
         fi
 
         __apt_get_upgrade_noinput || return 1
+    fi
+
+    if [ "$DISTRO_MAJOR_VERSION" -ge 10 ]; then
+        # Default Debian 10 to Py3
+        if [ "x${_PY_EXE}" = "x" ]; then
+            _PY_EXE=python3
+            _PY_MAJOR_VERSION=3
+            PY_PKG_VER=3
+        fi
     fi
 
     if [ -n "$_PY_EXE" ] && [ "$_PY_MAJOR_VERSION" -eq 3 ]; then
@@ -3798,19 +3862,30 @@ install_fedora_deps() {
 }
 
 install_fedora_stable() {
+    if [ "$STABLE_REV" = "latest" ]; then
+        __SALT_VERSION=""
+    else
+        __SALT_VERSION="$(dnf list --showduplicates salt | grep "$STABLE_REV" | head -n 1 | awk '{print $2}')"
+        if [ "x${__SALT_VERSION}" = "x" ]; then
+            echoerror "Could not find a stable install for Salt ${STABLE_REV}"
+            exit 1
+        fi
+        echoinfo "Installing Stable Package Version ${__SALT_VERSION}"
+        __SALT_VERSION="-${__SALT_VERSION}"
+    fi
     __PACKAGES=""
 
     if [ "$_INSTALL_CLOUD" -eq $BS_TRUE ];then
-        __PACKAGES="${__PACKAGES} salt-cloud"
+        __PACKAGES="${__PACKAGES} salt-cloud${__SALT_VERSION}"
     fi
     if [ "$_INSTALL_MASTER" -eq $BS_TRUE ]; then
-        __PACKAGES="${__PACKAGES} salt-master"
+        __PACKAGES="${__PACKAGES} salt-master${__SALT_VERSION}"
     fi
     if [ "$_INSTALL_MINION" -eq $BS_TRUE ]; then
-        __PACKAGES="${__PACKAGES} salt-minion"
+        __PACKAGES="${__PACKAGES} salt-minion${__SALT_VERSION}"
     fi
     if [ "$_INSTALL_SYNDIC" -eq $BS_TRUE ]; then
-        __PACKAGES="${__PACKAGES} salt-syndic"
+        __PACKAGES="${__PACKAGES} salt-syndic${__SALT_VERSION}"
     fi
 
     # shellcheck disable=SC2086
@@ -4083,11 +4158,18 @@ install_centos_stable_deps() {
         yum -y update || return 1
     fi
 
+    if [ "$DISTRO_MAJOR_VERSION" -ge 8 ]; then
+        # CentOS/RHEL 8 Default to Py3
+        if [ "x${_PY_EXE}" = "x" ]; then
+            _PY_EXE=python3
+            _PY_MAJOR_VERSION=3
+        fi
+    fi
+
     if [ "$_DISABLE_REPOS" -eq "$BS_TRUE" ] && [ -n "$_PY_EXE" ] && [ "$_PY_MAJOR_VERSION" -eq 3 ]; then
-        echoerror "Detected -r or -R option while installing Salt packages for Python 3."
-        echoerror "Python 3 packages for Salt require the EPEL repository to be installed."
-        echoerror "The -r and -R options are incompatible with -x and Python 3 bootstrap installs."
-        return 1
+        echowarn "Detected -r or -R option while installing Salt packages for Python 3."
+        echowarn "Python 3 packages for older Salt releases requires the EPEL repository to be installed."
+        echowarn "Installing the EPEL repository automatically is disabled when using the -r or -R options."
     fi
 
     if [ "$_DISABLE_REPOS" -eq "$BS_FALSE" ]; then
@@ -4482,6 +4564,16 @@ install_red_hat_linux_git_deps() {
     return 0
 }
 
+install_red_hat_enterprise_stable_deps() {
+    install_red_hat_linux_stable_deps || return 1
+    return 0
+}
+
+install_red_hat_enterprise_git_deps() {
+    install_red_hat_linux_git_deps || return 1
+    return 0
+}
+
 install_red_hat_enterprise_linux_stable_deps() {
     install_red_hat_linux_stable_deps || return 1
     return 0
@@ -4519,6 +4611,16 @@ install_red_hat_linux_stable() {
 
 install_red_hat_linux_git() {
     install_centos_git || return 1
+    return 0
+}
+
+install_red_hat_enterprise_stable() {
+    install_red_hat_linux_stable || return 1
+    return 0
+}
+
+install_red_hat_enterprise_git() {
+    install_red_hat_linux_git || return 1
     return 0
 }
 
@@ -4564,6 +4666,21 @@ install_red_hat_linux_restart_daemons() {
 
 install_red_hat_linux_git_post() {
     install_centos_git_post || return 1
+    return 0
+}
+
+install_red_hat_enterprise_stable_post() {
+    install_red_hat_linux_stable_post || return 1
+    return 0
+}
+
+install_red_hat_enterprise_restart_daemons() {
+    install_red_hat_linux_restart_daemons || return 1
+    return 0
+}
+
+install_red_hat_enterprise_git_post() {
+    install_red_hat_linux_git_post || return 1
     return 0
 }
 
@@ -4623,6 +4740,21 @@ install_red_hat_linux_testing() {
 }
 
 install_red_hat_linux_testing_post() {
+    install_centos_testing_post || return 1
+    return 0
+}
+
+install_red_hat_enterprise_testing_deps() {
+    install_centos_testing_deps || return 1
+    return 0
+}
+
+install_red_hat_enterprise_testing() {
+    install_centos_testing || return 1
+    return 0
+}
+
+install_red_hat_enterprise_testing_post() {
     install_centos_testing_post || return 1
     return 0
 }
@@ -4998,7 +5130,7 @@ install_alpine_linux_check_services() {
         [ $fname = "minion" ] && [ "$_INSTALL_MINION" -eq $BS_FALSE ] && continue
         [ $fname = "syndic" ] && [ "$_INSTALL_SYNDIC" -eq $BS_FALSE ] && continue
 
-        __check_services_alpine salt-$fname || return 1
+        __check_services_openrc salt-$fname || return 1
     done
 
     return 0
@@ -5191,23 +5323,19 @@ install_amazon_linux_ami_2_git_deps() {
     fi
 
     install_amazon_linux_ami_2_deps || return 1
-    if __check_command_exists python3; then
-            if ! __check_command_exists pip3; then
-                __yum_install_noinput python3-pip
-            fi
-            PIP_EXE='/bin/pip3'
-            _PY_EXE='python3'
-            PY_PKG_VER=3
+
+    if [ "$_PY_MAJOR_VERSION" -eq 2 ]; then
+        PY_PKG_VER=2
+        PIP_EXE='/bin/pip'
     else
-        PIP_EXE='pip'
-        if __check_command_exists python2.7; then
-            if ! __check_command_exists pip2.7; then
-                __yum_install_noinput python2-pip
-            fi
-            PIP_EXE='/bin/pip'
-            _PY_EXE='python2.7'
-            PY_PKG_VER=2
-        fi
+        PY_PKG_VER=3
+        PIP_EXE='/bin/pip3'
+    fi
+    __PACKAGES="python${PY_PKG_VER}-pip"
+
+    if ! __check_command_exists "${PIP_EXE}"; then
+        # shellcheck disable=SC2086
+        __yum_install_noinput ${__PACKAGES} || return 1
     fi
 
     if ! __check_command_exists git; then
@@ -5241,12 +5369,16 @@ install_amazon_linux_ami_2_git_deps() {
             __REQUIRED_TORNADO="$(grep tornado "${_SALT_GIT_CHECKOUT_DIR}/requirements/base.txt")"
             if [ "${__REQUIRED_TORNADO}" != "" ]; then
                 if [ -n "$_PY_EXE" ] && [ "$_PY_MAJOR_VERSION" -eq "3" ]; then
-                    __PACKAGES="${__PACKAGES} python3-pip"
                     __PIP_PACKAGES="${__PIP_PACKAGES} tornado<$_TORNADO_MAX_PY3_VERSION"
                 else
                     __PACKAGES="${__PACKAGES} ${pkg_append}${PY_PKG_VER}-tornado"
                 fi
             fi
+        fi
+
+        if [ "${__PIP_PACKAGES}" != "" ]; then
+            __check_pip_allowed "You need to allow pip based installations (-P) in order to install ${__PIP_PACKAGES}"
+            __PACKAGES="${__PACKAGES} python${PY_PKG_VER}-pip"
         fi
 
         if [ "${__PACKAGES}" != "" ]; then
@@ -5309,7 +5441,6 @@ install_amazon_linux_ami_2_deps() {
         __REPO_FILENAME="saltstack-repo.repo"
         __PY_VERSION_REPO="yum"
         PY_PKG_VER=""
-        _PY_MAJOR_VERSION=$(echo "$_PY_PKG_VER" | cut -c 7)
         repo_label="saltstack-repo"
         repo_name="SaltStack repo for Amazon Linux 2"
         if [ -n "$_PY_EXE" ] && [ "$_PY_MAJOR_VERSION" -eq 3 ]; then
@@ -5467,11 +5598,19 @@ install_arch_linux_stable_deps() {
         pacman-db-upgrade || return 1
     fi
 
+    if [ -n "$_PY_EXE" ] && [ "$_PY_MAJOR_VERSION" -eq 2 ]; then
+        PY_PKG_VER=2
+    else
+        PY_PKG_VER=""
+    fi
+
     # YAML module is used for generating custom master/minion configs
-    pacman -Su --noconfirm --needed python2-yaml
+    # shellcheck disable=SC2086
+    pacman -Su --noconfirm --needed python${PY_PKG_VER}-yaml
 
     if [ "$_INSTALL_CLOUD" -eq $BS_TRUE ]; then
-        pacman -Su --noconfirm --needed python2-apache-libcloud || return 1
+        # shellcheck disable=SC2086
+        pacman -Su --noconfirm --needed python${PY_PKG_VER}-apache-libcloud || return 1
     fi
 
     if [ "${_EXTRA_PACKAGES}" != "" ]; then
@@ -5680,6 +5819,8 @@ install_arch_check_services() {
 # Using a separate conf step to head for idempotent install...
 __configure_freebsd_pkg_details() {
     _SALT_ETC_DIR="/usr/local/etc/salt"
+    _PKI_DIR=${_SALT_ETC_DIR}/pki
+    _POST_NEON_PIP_INSTALL_ARGS="--prefix=/usr/local"
 }
 
 install_freebsd_deps() {
@@ -5697,14 +5838,15 @@ install_freebsd_git_deps() {
 
     if [ "${_POST_NEON_INSTALL}" -eq $BS_FALSE ]; then
 
-        SALT_DEPENDENCIES=$(/usr/local/sbin/pkg search -R -d py37-salt | grep 'origin:' \
-            | tail -n +2 | awk -F\" '{print $2}')
+        SALT_DEPENDENCIES=$(/usr/local/sbin/pkg rquery %dn py37-salt)
         # shellcheck disable=SC2086
         /usr/local/sbin/pkg install -y ${SALT_DEPENDENCIES} python || return 1
 
         /usr/local/sbin/pkg install -y py37-requests || return 1
+        /usr/local/sbin/pkg install -y py37-tornado4 || return 1
+
     else
-        /usr/local/sbin/pkg install -y python python-pip python-setuptools || return 1
+        /usr/local/sbin/pkg install -y python py37-pip py37-setuptools libzmq4 libunwind || return 1
     fi
 
     echodebug "Adapting paths to FreeBSD"
@@ -5763,6 +5905,13 @@ install_freebsd_git() {
 
     if [ "${_POST_NEON_INSTALL}" -eq $BS_TRUE ]; then
          __install_salt_from_repo_post_neon "${__PYTHON_PATH}" || return 1
+    for script in salt_api salt_master salt_minion salt_proxy salt_syndic; do
+        __fetch_url "/usr/local/etc/rc.d/${script}" "https://raw.githubusercontent.com/freebsd/freebsd-ports/master/sysutils/py-salt/files/${script}.in" || return 1
+        sed -i '' 's/%%PREFIX%%/\/usr\/local/g' /usr/local/etc/rc.d/${script}
+        sed -i '' "s/%%PYTHON_CMD%%/${__ESCAPED_PYTHON_PATH}/g" /usr/local/etc/rc.d/${script}
+        chmod +x /usr/local/etc/rc.d/${script} || return 1
+    done
+
         return 0
     fi
 
@@ -6179,7 +6328,7 @@ __set_suse_pkg_repo() {
         suse_pkg_url_base="https://download.opensuse.org/repositories/systemsmanagement:/saltstack"
         suse_pkg_url_path="${DISTRO_REPO}/systemsmanagement:saltstack.repo"
     else
-        suse_pkg_url_base="${HTTP_VAL}://repo.saltstack.com/opensuse"
+        suse_pkg_url_base="${HTTP_VAL}://repo.saltproject.io/opensuse"
         suse_pkg_url_path="${DISTRO_REPO}/systemsmanagement:saltstack:products.repo"
     fi
     SUSE_PKG_URL="$suse_pkg_url_base/$suse_pkg_url_path"
@@ -6316,6 +6465,9 @@ install_opensuse_git_deps() {
         if [ "$_INSTALL_CLOUD" -eq $BS_TRUE ]; then
             __PACKAGES="${__PACKAGES} python-apache-libcloud"
         fi
+    # Check for Tumbleweed
+    elif [ "${DISTRO_MAJOR_VERSION}" -ge 20210101 ]; then
+        __PACKAGES="python3-pip"
     else
         __PACKAGES="python-pip python-setuptools gcc"
     fi
@@ -6374,7 +6526,7 @@ install_opensuse_stable_post() {
         [ $fname = "minion" ] && [ "$_INSTALL_MINION" -eq $BS_FALSE ] && continue
         [ $fname = "syndic" ] && [ "$_INSTALL_SYNDIC" -eq $BS_FALSE ] && continue
 
-        if [ -f /bin/systemctl ]; then
+        if [ -f /bin/systemctl ] || [ -f /usr/bin/systemctl ]; then
             systemctl is-enabled salt-$fname.service || (systemctl preset salt-$fname.service && systemctl enable salt-$fname.service)
             sleep 1
             systemctl daemon-reload
@@ -6397,7 +6549,7 @@ install_opensuse_git_post() {
         [ $fname = "minion" ] && [ "$_INSTALL_MINION" -eq $BS_FALSE ] && continue
         [ $fname = "syndic" ] && [ "$_INSTALL_SYNDIC" -eq $BS_FALSE ] && continue
 
-        if [ -f /bin/systemctl ]; then
+        if command -v systemctl; then
             use_usr_lib=$BS_FALSE
 
             if [ "${DISTRO_MAJOR_VERSION}" -ge 15 ]; then
@@ -6880,26 +7032,37 @@ install_suse_check_services() {
 #    Gentoo Install Functions.
 #
 __autounmask() {
-    emerge --autounmask-write --autounmask-only "${@}"; return $?
-}
-
-__emerge() {
-    if [ "$_GENTOO_USE_BINHOST" -eq $BS_TRUE ]; then
-        emerge --getbinpkg "${@}"; return $?
-    fi
-    emerge "${@}"; return $?
-}
-
-__gentoo_config_protection() {
-    # usually it's a good thing to have config files protected by portage, but
+    # Unmask package(s) and accept changes
+    #
+    # Usually it's a good thing to have config files protected by portage, but
     # in this case this would require to interrupt the bootstrapping script at
     # this point, manually merge the changes using etc-update/dispatch-conf/
     # cfg-update and then restart the bootstrapping script, so instead we allow
     # at this point to modify certain config files directly
-    export CONFIG_PROTECT_MASK="${CONFIG_PROTECT_MASK:-} /etc/portage/package.accept_keywords /etc/portage/package.keywords /etc/portage/package.license /etc/portage/package.unmask /etc/portage/package.use"
+    export CONFIG_PROTECT_MASK="${CONFIG_PROTECT_MASK:-}
+        /etc/portage/package.accept_keywords
+        /etc/portage/package.keywords
+        /etc/portage/package.license
+        /etc/portage/package.unmask
+        /etc/portage/package.use"
+    emerge --autounmask --autounmask-continue --autounmask-only --autounmask-write "${@}"; return $?
+}
 
-    # emerge currently won't write to files that aren't there, so we need to ensure their presence
-    touch /etc/portage/package.accept_keywords /etc/portage/package.keywords /etc/portage/package.license /etc/portage/package.unmask /etc/portage/package.use
+__emerge() {
+    EMERGE_FLAGS='-q'
+    if [ "$_ECHO_DEBUG" -eq $BS_TRUE ]; then
+        EMERGE_FLAGS='-v'
+    fi
+
+    # Do not re-emerge packages that are already installed
+    EMERGE_FLAGS="${EMERGE_FLAGS} --noreplace"
+
+    if [ "$_GENTOO_USE_BINHOST" -eq $BS_TRUE ]; then
+        EMERGE_FLAGS="${EMERGE_FLAGS} --getbinpkg"
+    fi
+
+    # shellcheck disable=SC2086
+    emerge ${EMERGE_FLAGS} "${@}"; return $?
 }
 
 __gentoo_pre_dep() {
@@ -6919,52 +7082,152 @@ __gentoo_pre_dep() {
     if [ ! -d /etc/portage ]; then
         mkdir /etc/portage
     fi
+
+    # Enable Python 3.6 target for pre Neon Salt release
+    if echo "${STABLE_REV}" | grep -q "2019" || [ "${ITYPE}" = "git" ] && [ "${_POST_NEON_INSTALL}" -eq $BS_FALSE ]; then
+        EXTRA_PYTHON_TARGET=python3_6
+    fi
+
+    # Enable Python 3.7 target for Salt Neon using GIT
+    if [ "${ITYPE}" = "git" ] && [ "${GIT_REV}" = "v3000" ]; then
+        EXTRA_PYTHON_TARGET=python3_7
+    fi
+
+    if [ -n "${EXTRA_PYTHON_TARGET:-}" ]; then
+        if ! emerge --info | sed 's/.*\(PYTHON_TARGETS="[^"]*"\).*/\1/' | grep -q "${EXTRA_PYTHON_TARGET}" ; then
+            echo "PYTHON_TARGETS=\"\${PYTHON_TARGETS} ${EXTRA_PYTHON_TARGET}\"" >> /etc/portage/make.conf
+            emerge --deep --with-bdeps=y --newuse --quiet @world
+        fi
+    fi
 }
 
 __gentoo_post_dep() {
-    # ensures dev-lib/crypto++ compiles happily
-    __emerge --oneshot 'sys-devel/libtool'
-    # the -o option asks it to emerge the deps but not the package.
-    __gentoo_config_protection
-
-    if [ "$_INSTALL_CLOUD" -eq $BS_TRUE ]; then
-        __autounmask 'dev-python/libcloud'
-        __emerge -v 'dev-python/libcloud'
-    fi
-
-    __autounmask 'dev-python/requests'
-    __autounmask 'app-admin/salt'
-
-    __emerge -vo 'dev-python/requests'
-    __emerge -vo 'app-admin/salt'
-
     if [ "${_EXTRA_PACKAGES}" != "" ]; then
         echoinfo "Installing the following extra packages as requested: ${_EXTRA_PACKAGES}"
         # shellcheck disable=SC2086
         __autounmask ${_EXTRA_PACKAGES} || return 1
         # shellcheck disable=SC2086
-        __emerge -v ${_EXTRA_PACKAGES} || return 1
+        __emerge ${_EXTRA_PACKAGES} || return 1
     fi
+
+    return 0
 }
 
 install_gentoo_deps() {
     __gentoo_pre_dep || return 1
+
+    # Make sure that the 'libcloud' use flag is set when Salt Cloud support is requested
+    if [ "$_INSTALL_CLOUD" -eq $BS_TRUE ]; then
+        SALT_USE_FILE='/etc/portage/package.use'
+        if [ -d '/etc/portage/package.use' ]; then
+            SALT_USE_FILE='/etc/portage/package.use/salt'
+        fi
+
+        SALT_USE_FLAGS="$(grep -E '^[<>=~]*app-admin/salt.*' ${SALT_USE_FILE} 2>/dev/null)"
+        SALT_USE_FLAG_LIBCLOUD="$(echo "${SALT_USE_FLAGS}" | grep ' libcloud' 2>/dev/null)"
+
+        # Set the libcloud use flag, if it is not set yet
+        if [ -z "${SALT_USE_FLAGS}" ]; then
+            echo "app-admin/salt libcloud" >> ${SALT_USE_FILE}
+        elif [ -z "${SALT_USE_FLAG_LIBCLOUD}" ]; then
+            sed 's#^\([<>=~]*app-admin/salt[^ ]*\)\(.*\)#\1 libcloud\2#g' -i ${SALT_USE_FILE}
+        fi
+    fi
+
     __gentoo_post_dep || return 1
 }
 
 install_gentoo_git_deps() {
     __gentoo_pre_dep || return 1
+
+    # Install pip if it does not exist
+    if ! __check_command_exists pip ; then
+        GENTOO_GIT_PACKAGES="${GENTOO_GIT_PACKAGES:-} dev-python/pip"
+    fi
+
+    # Install GIT if it does not exist
+    if ! __check_command_exists git ; then
+        GENTOO_GIT_PACKAGES="${GENTOO_GIT_PACKAGES:-} dev-vcs/git"
+    fi
+
+    # Salt <3000 does not automatically install dependencies. It has to be done manually.
+    if [ "${_POST_NEON_INSTALL}" -eq $BS_FALSE ]; then
+        GENTOO_GIT_PACKAGES="${GENTOO_GIT_PACKAGES:-}
+            sys-apps/pciutils
+            dev-python/pyyaml
+            dev-python/pyzmq
+            dev-python/libnacl
+            dev-python/pycryptodome
+            dev-python/py
+            dev-python/requests
+            <dev-python/msgpack-1.0
+            dev-python/jinja
+            dev-python/pyasn1
+            dev-python/markupsafe
+            dev-python/cython
+            dev-python/six
+            dev-python/idna
+            dev-python/pycurl
+            <www-servers/tornado-5.0"
+    fi
+
+    # Install libcloud when Salt Cloud support was requested
+    if [ "$_INSTALL_CLOUD" -eq $BS_TRUE ]; then
+        GENTOO_GIT_PACKAGES="${GENTOO_GIT_PACKAGES:-} dev-python/libcloud"
+    fi
+
+    if [ -n "${GENTOO_GIT_PACKAGES:-}" ]; then
+        # shellcheck disable=SC2086
+        __autounmask ${GENTOO_GIT_PACKAGES} || return 1
+        # shellcheck disable=SC2086
+        __emerge ${GENTOO_GIT_PACKAGES} || return 1
+    fi
+
+    __git_clone_and_checkout || return 1
     __gentoo_post_dep || return 1
 }
 
 install_gentoo_stable() {
-    __gentoo_config_protection
-    __emerge -v 'app-admin/salt' || return 1
+    GENTOO_SALT_PACKAGE="app-admin/salt"
+
+    STABLE_REV_WITHOUT_PREFIX=$(echo "${STABLE_REV}" | sed 's#archive/##')
+    if [ "${STABLE_REV_WITHOUT_PREFIX}" != "latest" ]; then
+        GENTOO_SALT_PACKAGE="=app-admin/salt-${STABLE_REV_WITHOUT_PREFIX}*"
+    fi
+
+    # shellcheck disable=SC2086
+    __autounmask ${GENTOO_SALT_PACKAGE} || return 1
+    # shellcheck disable=SC2086
+    __emerge ${GENTOO_SALT_PACKAGE} || return 1
 }
 
 install_gentoo_git() {
-    __gentoo_config_protection
-    __emerge -v '=app-admin/salt-9999' || return 1
+    _PYEXE=${_PY_EXE}
+
+    if [ "$_PY_EXE" = "python3" ] || [ -z "$_PY_EXE" ]; then
+        if [ "${GIT_REV}" = "v3000" ]; then
+            # Salt Neon does not support Python 3.8 and greater
+            _PYEXE=python3.7
+        elif [ "${_POST_NEON_INSTALL}" -eq $BS_FALSE ]; then
+            # Tornado 4.3 ebuild supports only Python 3.6, use Python 3.6 as the default Python 3 interpreter
+            _PYEXE=python3.6
+        else
+            _PYEXE=$(emerge --info | grep -oE 'PYTHON_SINGLE_TARGET="[^"]*"' | sed -e 's/"//g' -e 's/_/./g' | cut -d= -f2)
+        fi
+    fi
+
+    if [ "${_POST_NEON_INSTALL}" -eq $BS_TRUE ]; then
+        __install_salt_from_repo_post_neon "${_PYEXE}" || return 1
+        return 0
+    fi
+
+    if [ -f "${_SALT_GIT_CHECKOUT_DIR}/salt/syspaths.py" ]; then
+        "${_PYEXE}" setup.py --salt-config-dir="$_SALT_ETC_DIR" --salt-cache-dir="${_SALT_CACHE_DIR}" ${SETUP_PY_INSTALL_ARGS} install || return 1
+    else
+        "${_PYEXE}" setup.py ${SETUP_PY_INSTALL_ARGS} install || return 1
+    fi
+
+    return 0
 }
 
 install_gentoo_post() {
@@ -6977,47 +7240,84 @@ install_gentoo_post() {
         [ $fname = "minion" ] && [ "$_INSTALL_MINION" -eq $BS_FALSE ] && continue
         [ $fname = "syndic" ] && [ "$_INSTALL_SYNDIC" -eq $BS_FALSE ] && continue
 
-        if [ -d "/run/systemd/system" ]; then
-            systemctl enable salt-$fname.service
-            systemctl start salt-$fname.service
+        if __check_command_exists systemctl ; then
+            systemctl is-enabled salt-$fname.service > /dev/null 2>&1 || (
+                systemctl preset salt-$fname.service > /dev/null 2>&1 &&
+                systemctl enable salt-$fname.service > /dev/null 2>&1
+            )
         else
-            rc-update add salt-$fname default
-            /etc/init.d/salt-$fname start
+            # Salt minion cannot start in a docker container because the "net" service is not available
+            if [ $fname = "minion" ] && [ -f /.dockerenv ]; then
+                sed '/need net/d' -i /etc/init.d/salt-$fname
+            fi
+
+            rc-update add "salt-$fname" > /dev/null 2>&1 || return 1
         fi
     done
+}
+
+install_gentoo_git_post() {
+    for fname in api master minion syndic; do
+        # Skip if not meant to be installed
+        [ $fname = "api" ] && \
+            ([ "$_INSTALL_MASTER" -eq $BS_FALSE ] || ! __check_command_exists "salt-${fname}") && continue
+        [ $fname = "master" ] && [ "$_INSTALL_MASTER" -eq $BS_FALSE ] && continue
+        [ $fname = "minion" ] && [ "$_INSTALL_MINION" -eq $BS_FALSE ] && continue
+        [ $fname = "syndic" ] && [ "$_INSTALL_SYNDIC" -eq $BS_FALSE ] && continue
+
+        if __check_command_exists systemctl ; then
+            __copyfile "${_SALT_GIT_CHECKOUT_DIR}/pkg/salt-${fname}.service" "/lib/systemd/system/salt-${fname}.service"
+
+            # Skip salt-api since the service should be opt-in and not necessarily started on boot
+            [ $fname = "api" ] && continue
+
+            systemctl is-enabled salt-$fname.service > /dev/null 2>&1 || (
+                systemctl preset salt-$fname.service > /dev/null 2>&1 &&
+                systemctl enable salt-$fname.service > /dev/null 2>&1
+            )
+        else
+            cat <<_eof > "/etc/init.d/salt-${fname}"
+#!/sbin/openrc-run
+# Copyright 1999-2015 Gentoo Foundation
+# Distributed under the terms of the GNU General Public License v2
+
+command="/usr/bin/salt-${fname}"
+command_args="\${SALT_OPTS}"
+command_background="1"
+pidfile="/var/run/salt-${fname}.pid"
+name="SALT ${fname} daemon"
+retry="20"
+
+depend() {
+        use net logger
+}
+_eof
+            chmod +x /etc/init.d/salt-$fname
+
+            cat <<_eof > "/etc/conf.d/salt-${fname}"
+# /etc/conf.d/salt-${fname}: config file for /etc/init.d/salt-master
+
+# see man pages for salt-${fname} or run 'salt-${fname} --help'
+# for valid cmdline options
+SALT_OPTS="--log-level=warning"
+_eof
+
+            # Skip salt-api since the service should be opt-in and not necessarily started on boot
+            [ $fname = "api" ] && continue
+
+            rc-update add "salt-$fname" > /dev/null 2>&1 || return 1
+        fi
+    done
+
+    return 0
 }
 
 install_gentoo_restart_daemons() {
     [ $_START_DAEMONS -eq $BS_FALSE ] && return
 
-    for fname in api master minion syndic; do
-        # Skip salt-api since the service should be opt-in and not necessarily started on boot
-        [ $fname = "api" ] && continue
-
-        # Skip if not meant to be installed
-        [ $fname = "minion" ] && [ "$_INSTALL_MINION" -eq $BS_FALSE ] && continue
-        [ $fname = "master" ] && [ "$_INSTALL_MASTER" -eq $BS_FALSE ] && continue
-        [ $fname = "syndic" ] && [ "$_INSTALL_SYNDIC" -eq $BS_FALSE ] && continue
-
-        if [ -d "/run/systemd/system" ]; then
-            systemctl stop salt-$fname > /dev/null 2>&1
-            systemctl start salt-$fname.service && continue
-            echodebug "Failed to start salt-$fname using systemd"
-            if [ "$_ECHO_DEBUG" -eq $BS_TRUE ]; then
-                systemctl status salt-$fname.service
-                journalctl -xe
-            fi
-        else
-            /etc/init.d/salt-$fname stop > /dev/null 2>&1
-            /etc/init.d/salt-$fname start
-        fi
-    done
-}
-
-install_gentoo_check_services() {
-    if [ ! -d "/run/systemd/system" ]; then
-        # Not running systemd!? Don't check!
-        return 0
+    # Ensure upstart configs / systemd units are loaded
+    if __check_command_exists systemctl ; then
+        systemctl daemon-reload
     fi
 
     for fname in api master minion syndic; do
@@ -7029,7 +7329,39 @@ install_gentoo_check_services() {
         [ $fname = "master" ] && [ "$_INSTALL_MASTER" -eq $BS_FALSE ] && continue
         [ $fname = "syndic" ] && [ "$_INSTALL_SYNDIC" -eq $BS_FALSE ] && continue
 
-        __check_services_systemd salt-$fname || return 1
+        if __check_command_exists systemctl ; then
+            systemctl stop salt-$fname > /dev/null 2>&1
+            systemctl start salt-$fname.service && continue
+            echodebug "Failed to start salt-$fname using systemd"
+            if [ "$_ECHO_DEBUG" -eq $BS_TRUE ]; then
+                systemctl status salt-$fname.service
+                journalctl -xe
+            fi
+        else
+            # Disable stdin to fix shell session hang on killing tee pipe
+            rc-service salt-$fname stop < /dev/null > /dev/null 2>&1
+            rc-service salt-$fname start < /dev/null || return 1
+        fi
+    done
+
+    return 0
+}
+
+install_gentoo_check_services() {
+    for fname in api master minion syndic; do
+        # Skip salt-api since the service should be opt-in and not necessarily started on boot
+        [ $fname = "api" ] && continue
+
+        # Skip if not meant to be installed
+        [ $fname = "minion" ] && [ "$_INSTALL_MINION" -eq $BS_FALSE ] && continue
+        [ $fname = "master" ] && [ "$_INSTALL_MASTER" -eq $BS_FALSE ] && continue
+        [ $fname = "syndic" ] && [ "$_INSTALL_SYNDIC" -eq $BS_FALSE ] && continue
+
+        if __check_command_exists systemctl ; then
+            __check_services_systemd salt-$fname || return 1
+        else
+            __check_services_openrc salt-$fname || return 1
+        fi
     done
 
     return 0
@@ -7131,7 +7463,7 @@ __macosx_get_packagesite() {
     fi
 
     PKG="salt-${STABLE_REV}-${__PY_VERSION_REPO}-${DARWIN_ARCH}.pkg"
-    SALTPKGCONFURL="https://repo.saltstack.com/osx/${PKG}"
+    SALTPKGCONFURL="https://repo.saltproject.io/osx/${PKG}"
 }
 
 # Using a separate conf step to head for idempotent install...
@@ -7222,7 +7554,7 @@ install_macosx_stable_post() {
     set +o nounset
     # shellcheck disable=SC1091
     . /etc/profile
-    # Revert nounset to its previous state
+    # Revert nounset to it's previous state
     set -o nounset
 
     return 0

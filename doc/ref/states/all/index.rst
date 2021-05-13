@@ -109,7 +109,6 @@ state modules
     gem
     git
     github
-    glance
     glance_image
     glassfish
     glusterfs
@@ -131,6 +130,7 @@ state modules
     host
     http
     icinga2
+    idem
     ifttt
     incron
     influxdb08_database

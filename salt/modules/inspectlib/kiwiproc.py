@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # Copyright 2016 SUSE LLC
 #
@@ -14,15 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Import python libs
-from __future__ import absolute_import
-
 import os
 import platform
 import socket
 from xml.dom import minidom
 
-# Import salt libs
 import salt.utils.files
 from salt.modules.inspectlib.exceptions import InspectorKiwiProcessorException
 
@@ -33,14 +28,13 @@ except ImportError:
     pass
 
 
-# Import third party libs
 try:
     from lxml import etree
 except ImportError:
-    from salt._compat import ElementTree as etree
+    import xml.etree.ElementTree as etree
 
 
-class KiwiExporter(object):
+class KiwiExporter:
     """
     Exports system description as Kiwi configuration.
     """
@@ -81,9 +75,7 @@ class KiwiExporter(object):
         return "\n".join(
             [
                 line
-                for line in minidom.parseString(
-                    etree.tostring(root, encoding="UTF-8", pretty_print=True)
-                )
+                for line in minidom.parseString(etree.tostring(root, encoding="UTF-8"))
                 .toprettyxml(indent="  ")
                 .split("\n")
                 if line.strip()
@@ -106,7 +98,7 @@ class KiwiExporter(object):
 
         if ret is None:
             raise InspectorKiwiProcessorException(
-                "Unsupported platform: {0}".format(self.__grains__.get("os_family"))
+                "Unsupported platform: {}".format(self.__grains__.get("os_family"))
             )
 
         return ret
@@ -255,11 +247,11 @@ class KiwiExporter(object):
 
         descr = etree.SubElement(node, "description")
         author = etree.SubElement(descr, "author")
-        author.text = "salt.modules.node on {0}".format(hostname)
+        author.text = "salt.modules.node on {}".format(hostname)
         contact = etree.SubElement(descr, "contact")
-        contact.text = "root@{0}".format(hostname)
+        contact.text = "root@{}".format(hostname)
         specs = etree.SubElement(descr, "specification")
-        specs.text = "Rebuild of {0}, based on Salt inspection.".format(hostname)
+        specs.text = "Rebuild of {}, based on Salt inspection.".format(hostname)
 
         return descr
 

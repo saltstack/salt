@@ -1,5 +1,5 @@
-salt.states.win_lgpo module
-===========================
+salt.states.win_lgpo
+====================
 
 .. automodule:: salt.states.win_lgpo
     :members:
