@@ -2,11 +2,9 @@ import logging
 
 import salt.exceptions
 import salt.modules.slsutil as slsutil
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase
 from tests.support.mock import MagicMock
+from tests.support.unit import TestCase
 
 log = logging.getLogger(__name__)
 
