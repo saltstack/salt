@@ -3,6 +3,7 @@
 Define some generic socket functions for network modules
 """
 
+
 import fnmatch
 import itertools
 import logging
