@@ -1858,7 +1858,7 @@ def inspect(name):
         Volumes and networks are now checked, in addition to containers and
         images.
 
-    This is a generic container/image/volume/network inspecton function. It
+    This is a generic container/image/volume/network inspection function. It
     will run the following functions in order:
 
     - :py:func:`docker.inspect_container
