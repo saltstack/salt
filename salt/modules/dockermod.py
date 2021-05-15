@@ -1976,14 +1976,19 @@ def list_containers(**kwargs):
     all : False
         If ``True``, stopped containers will be included in return data
 
+    filter : None
+        Do the same as analogical option in :py:func:`docker.ps <salt.modules.dockermod.ps_>`
+
     CLI Example:
 
     .. code-block:: bash
 
-        salt myminion docker.inspect_image <image>
+        salt myminion docker.list_containers
+        salt myminion docker.list_containers all=True
+        salt myminion docker.list_containers filter='{"name":"nginx"}'
     """
     ret = set()
-    for item in ps_(all=kwargs.get("all", False)).values():
+    for item in ps_(all=kwargs.get("all", False), filter=kwargs.get('filter', None)).values():
         names = item.get("Names")
         if not names:
             continue
