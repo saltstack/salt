@@ -1161,7 +1161,7 @@ def agent_service_maintenance(consul_url=None, token=None, serviceid=None, **kwa
 
     function = "agent/service/maintenance/{}".format(serviceid)
     res = _query(
-        consul_url=consul_url, token=token, function=function, query_params=query_params
+        consul_url=consul_url, token=token, function=function, method="PUT", query_params=query_params
     )
 
     if res["res"]:
