@@ -1133,7 +1133,7 @@ def agent_service_maintenance(consul_url=None, token=None, serviceid=None, **kwa
 
     .. code-block:: bash
 
-        salt '*' consul.agent_service_deregister serviceid='redis' enable='True' reason='Down for upgrade'
+        salt '*' consul.agent_service_maintenance serviceid='redis' enable='True' reason='Down for upgrade'
 
     """
     ret = {}
