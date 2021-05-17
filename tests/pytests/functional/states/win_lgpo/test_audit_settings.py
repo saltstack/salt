@@ -83,17 +83,17 @@ def _test_auditing(setting):
     assert result == setting
 
 
-def test_audit_no_auditing(enable_legacy_auditing, set_policy):
+def test_audit_state_no_auditing(enable_legacy_auditing, set_policy):
     _test_auditing("No auditing")
 
 
-def test_audit_success(enable_legacy_auditing, clear_policy):
+def test_audit_state_success(enable_legacy_auditing, clear_policy):
     _test_auditing("Success")
 
 
-def test_audit_failure(enable_legacy_auditing, clear_policy):
+def test_audit_state_failure(enable_legacy_auditing, clear_policy):
     _test_auditing("Failure")
 
 
-def test_audit_success_and_failure(enable_legacy_auditing, clear_policy):
+def test_audit_state_success_and_failure(enable_legacy_auditing, clear_policy):
     _test_auditing("Success, Failure")

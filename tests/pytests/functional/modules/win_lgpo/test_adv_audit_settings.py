@@ -99,17 +99,17 @@ def _test_adv_auditing(setting):
     assert result == setting
 
 
-def test_adv_audit_no_auditing(disable_legacy_auditing, set_policy):
+def test_adv_audit_module_no_auditing(disable_legacy_auditing, set_policy):
     _test_adv_auditing("No Auditing")
 
 
-def test_adv_audit_success(disable_legacy_auditing, clear_policy):
+def test_adv_audit_module_success(disable_legacy_auditing, clear_policy):
     _test_adv_auditing("Success")
 
 
-def test_adv_audit_failure(disable_legacy_auditing, clear_policy):
+def test_adv_audit_module_failure(disable_legacy_auditing, clear_policy):
     _test_adv_auditing("Failure")
 
 
-def test_adv_audit_success_and_failure(disable_legacy_auditing, clear_policy):
+def test_adv_audit_module_success_and_failure(disable_legacy_auditing, clear_policy):
     _test_adv_auditing("Success and Failure")
