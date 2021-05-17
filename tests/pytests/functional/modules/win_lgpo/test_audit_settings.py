@@ -1,4 +1,5 @@
 import pytest
+import salt.loader
 import salt.modules.win_lgpo as win_lgpo
 
 pytestmark = [
@@ -14,11 +15,12 @@ def configure_loader_modules(minion_opts, modules):
         win_lgpo: {
             "__opts__": minion_opts,
             "__salt__": modules,
+            "__utils__": salt.loader.utils(minion_opts),
         },
     }
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 def enable_legacy_auditing():
     # To test and use these policy settings we have to set one of the policies to Disabled
     # Location: Windows Settings -> Security Settings -> Local Policies -> Security Options
@@ -27,11 +29,11 @@ def enable_legacy_auditing():
     test_setting = "Disabled"
     pre_setting = win_lgpo.get_policy(policy_name="SceNoApplyLegacyAuditPolicy", policy_class="machine")
     try:
-        if pre_setting != "Disabled":
+        if pre_setting != test_setting:
             computer_policy = {"SceNoApplyLegacyAuditPolicy": test_setting}
             win_lgpo.set_(computer_policy=computer_policy)
             assert win_lgpo.get_policy(policy_name="SceNoApplyLegacyAuditPolicy", policy_class="machine") == test_setting
-            yield
+        yield
     finally:
         if win_lgpo.get_policy(policy_name="SceNoApplyLegacyAuditPolicy", policy_class="machine") != pre_setting:
             computer_policy = {"SceNoApplyLegacyAuditPolicy": pre_setting}
@@ -83,17 +85,17 @@ def _test_auditing(setting):
     assert result == setting
 
 
-def test_audit_no_auditing(set_policy):
+def test_audit_no_auditing(enable_legacy_auditing, set_policy):
     _test_auditing("No auditing")
 
 
-def test_audit_success(clear_policy):
+def test_audit_success(enable_legacy_auditing, clear_policy):
     _test_auditing("Success")
 
 
-def test_audit_failure(clear_policy):
+def test_audit_failure(enable_legacy_auditing, clear_policy):
     _test_auditing("Failure")
 
 
-def test_audit_success_and_failure(clear_policy):
+def test_audit_success_and_failure(enable_legacy_auditing, clear_policy):
     _test_auditing("Success and Failure")
