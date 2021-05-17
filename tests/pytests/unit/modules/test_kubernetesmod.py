@@ -1,4 +1,5 @@
 import salt.modules.kubernetesmod as kmod
+import salt.exceptions as se
 import pytest, collections
 
 def test_dict_to_service_spec_should_set_all_existent_attributes_on_spec():
@@ -22,7 +23,7 @@ def test_dict_to_service_spec_should_set_all_existent_attributes_on_spec():
 
 def test_dict_to_service_spec_with_ports():
     expected_spec = kmod.kubernetes.client.V1ServiceSpec()
-    expected_spec.ports = {'name': 'tai-tomcat-service', 'protocol': 'TCP', 'port': 18080, 'targetPort': 18080}
+    expected_spec.ports = [{'name': 'tai-tomcat-service', 'protocol': 'TCP', 'port': 18080, 'target_port': 18080}]
     expected_spec.cluster_ip = "dummy"
     expected_spec.external_i_ps = "dummy"
     expected_spec.external_name = "dummy"
@@ -36,6 +37,24 @@ def test_dict_to_service_spec_with_ports():
     data = {"test": "test"}
     data.update(expected_spec.to_dict())
     kmod.__dict_to_service_spec(spec=data)
+
+def test_dict_to_service_spec_with_ports_but_missingport():
+    expected_spec = kmod.kubernetes.client.V1ServiceSpec()
+    expected_spec.ports = [{'name': 'tai-tomcat-service', 'protocol': 'TCP', 'target_port': 18080}]
+    expected_spec.cluster_ip = "dummy"
+    expected_spec.external_i_ps = "dummy"
+    expected_spec.external_name = "dummy"
+    expected_spec.external_traffic_policy = "dummy"
+    expected_spec.health_check_node_port = "dummy"
+    expected_spec.load_balancer_ip = "dummy"
+    expected_spec.load_balancer_source_ranges = "dummy"
+    expected_spec.selector = "dummy"
+    expected_spec.session_affinity = "dummy"
+    expected_spec.type = "dummy"
+    data = {"test": "test"}
+    data.update(expected_spec.to_dict())
+    with pytest.raises(se.CommandExecutionError) as cee:
+        kmod.__dict_to_service_spec(spec=data)
 
 def test_dict_to_service_spec_should_raise_exception():
     print(30*">", "This below should be successful")

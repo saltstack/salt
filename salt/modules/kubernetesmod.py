@@ -1558,42 +1558,29 @@ def __dict_to_pod_spec(spec):
 
     return spec_obj
 
+def _port_from_spec(data):
+    data = { allowedkey: data.get(allowedkey) \
+             for allowedkey in kubernetes.client.V1ServicePort.attribute_map.keys() \
+           } if isinstance(data, dict) else {'port': data}
+    data = {k:v for k,v in data.items() if v is not None}
+    if 'port' not in data:
+        raise CommandExecutionError("port not found in {0}".format(data))
+    return kubernetes.client.V1ServicePort(**data)
 
 def __dict_to_service_spec(spec):
     """
     Converts a dictionary into kubernetes V1ServiceSpec instance.
     """
-    spec_obj = kubernetes.client.V1ServiceSpec()
-    for key, value in spec.items():  # pylint: disable=too-many-nested-blocks
-        if key == "ports":
-            spec_obj.ports = []
-            for port in value:
-                if isinstance(port, dict):
-                    # https://github.com/kubernetes-client/python/issues/1199
-                    kube_port = None
-                    for port_key, port_value in port.items():
-                        if port_key == "port":
-                            kube_port = kubernetes.client.V1ServicePort(port=port_value)
-                            setattr(kube_port, port_key, port_value)
-
-                    if kube_port == None:
-                        raise CommandExecutionError(
-                            "port not found in {0}".format(port)
-                        )
-
-                    for port_key, port_value in port.items():
-                        if hasattr(kube_port, port_key):
-                            setattr(kube_port, port_key, port_value)
-                else:
-                    # https://github.com/kubernetes-client/python/issues/1199
-                    kube_port = kubernetes.client.V1ServicePort(port=port)
-                    kube_port.port = port
-                spec_obj.ports.append(kube_port)
-        elif hasattr(spec_obj, key):
-            setattr(spec_obj, key, value)
-
+    spec = spec.copy()
+    ports = spec.get('ports')
+    if ports:
+        spec['ports'] = [ _port_from_spec(data) for data in ports ]
+    spec = { allowedkey: spec.get(allowedkey) \
+             for allowedkey in kubernetes.client.V1ServiceSpec.attribute_map.keys() \
+           }
+    spec = {k:v for k,v in spec.items() if v is not None}
+    spec_obj =  kubernetes.client.V1ServiceSpec(**spec)
     return spec_obj
-
 
 def __enforce_only_strings_dict(dictionary):
     """
