@@ -26,6 +26,7 @@ from salt import __path__ as saltpath
 from salt.exceptions import CommandExecutionError, SaltInvocationError, SaltRenderError
 from salt.ext import six
 from salt.features import features
+from salt.loader_context import NamedLoaderContext
 from salt.utils.decorators.jinja import JinjaFilter, JinjaGlobal, JinjaTest
 from salt.utils.odict import OrderedDict
 from salt.utils.versions import LooseVersion
@@ -477,7 +478,10 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     decoded_context = {}
     for key, value in context.items():
         if not isinstance(value, str):
-            decoded_context[key] = value
+            if isinstance(value, NamedLoaderContext):
+                decoded_context[key] = value.value()
+            else:
+                decoded_context[key] = value
             continue
 
         try:
@@ -490,7 +494,6 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
                 SLS_ENCODING,
             )
             decoded_context[key] = salt.utils.data.decode(value)
-
     try:
         template = jinja_env.from_string(tmplstr)
         template.globals.update(decoded_context)
