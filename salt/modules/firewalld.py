@@ -919,24 +919,24 @@ def remove_interface(zone, interface, permanent=True):
 
 
 def change_interface(zone, interface, permanent=True):
-    '''
+    """
     Change zone the interface bound to
 
-    .. versionadded:: 2019.?.?
+    .. versionadded:: 300?.?.?
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' firewalld.change_interface zone eth0
-    '''
+    """
     if interface in get_interfaces(zone, permanent):
-        log.info('Interface is already bound to zone.')
+        log.info("Interface is already bound to zone.")
 
-    cmd = '--zone={0} --change-interface={1}'.format(zone, interface)
+    cmd = "--zone={} --change-interface={}".format(zone, interface)
 
     if permanent:
-        cmd += ' --permanent'
+        cmd += " --permanent"
 
     return __firewall_cmd(cmd)
 
