@@ -16,6 +16,7 @@ _OSCAP_EXIT_CODES_MAP = {
     2: True,  # there is at least one rule with either fail or unknown result
 }
 
+# Kept in for compatibility
 error = None
 
 
@@ -33,22 +34,25 @@ def __virtual__():
 
 
 def _oscap_cmd():
-    """
-    Return correct command for openscap.
+    """Return correct command for openscap.
+
+    Returns:
+        string: Path of oscap binary
     """
     return salt.utils.path.which("oscap")
 
 
 def _has_operation(module, operation):
-    """[summary]
+    """Check if the given operation is supported by the module.
 
     Args:
-        module ([type]): [description]
-        operation ([type]): [description]
+        module (string): Name of the module.
+        operation (string): Name of the operation
 
     Returns:
-        [type]: [description]
+        boolean: Return true, if the operation is supported. Otherwhise false.
     """
+
     cmd = "{} {} -h".format(_oscap_cmd(), module)
     if operation in __salt__["cmd.run"](cmd, output_loglevel="quiet"):
         return True
@@ -56,14 +60,14 @@ def _has_operation(module, operation):
 
 
 def _has_param(mod_op, param):
-    """[summary]
+    """Check if the given parameter is supported by the module.
 
     Args:
         module (string): Name if the Module
         operation (string): Name of the Modules Operation
 
     Returns:
-        Boolean: Value that determines, if an operation is available inside a module.
+        boolean: Value that determines, if an operation is available inside a module.
     """
 
     cmd = "{} {} -h".format(_oscap_cmd(), mod_op)
@@ -73,14 +77,14 @@ def _has_param(mod_op, param):
 
 
 def _build_cmd(module="", operation="", **kwargs):
-    """[summary]
+    """Build a well-formed command to execute on the system.
 
     Args:
-        module (str, optional): [description]. Defaults to "".
-        operation (str, optional): [description]. Defaults to "".
+        module (str): Module Name. 
+        operation (str): Name of the operation. 
 
     Returns:
-        [type]: [description]
+        string: Command 
     """
     for ignore in list(_STATE_INTERNAL_KEYWORDS) + ["--upload-to-master"]:
         if ignore in kwargs:
@@ -112,13 +116,13 @@ def _build_cmd(module="", operation="", **kwargs):
 
 
 def _upload_to_master(path):
-    """[summary]
+    """Upload given directory to Master
 
     Args:
-        path ([type]): [description]
+        path (string): Path to upload to master
 
     Returns:
-        [type]: [description]
+        boolean: True, if upload was successful.
     """
     if __salt__["cp.push_dir"](path):
         return True
@@ -126,10 +130,13 @@ def _upload_to_master(path):
 
 
 def version(*args):
-    """[summary]
+    """Show the version of installed oscap package
+
+    Args:
+        full: Show long version information output. 
 
     Returns:
-        [type]: [description]
+        dict: Version information
     """
     cmd = "{} --version".format(_oscap_cmd())
     _version = __salt__["cmd.run"](cmd)
@@ -184,11 +191,17 @@ def xccdf(file="", operation="eval", upload=True, **kwargs):
     """[summary]
 
     Args:
-        file (str, optional): [description]. Defaults to "".
-        operation (str, optional): [description]. Defaults to "eval".
+        file (str): Target File with to evaluate the system.
+        operation (str, optional): Operation of Module. Defaults to "eval".
+        upload (bool, optional): Upload results to Master. Defaults to True.
 
     Returns:
-        [type]: [description]
+        dict: {
+            "success": _OSCAP_EXIT_CODES_MAP[_retcode],
+            "upload_dir": _upload_path,
+            "error": None,
+            "returncode": _retcode
+            }
     """
 
     if not file:
