@@ -18,6 +18,26 @@ def configure_loader_modules(minion_opts, modules):
     }
 
 
+@pytest.fixture(scope="module")
+def enable_legacy_auditing():
+    # To test and use these policy settings we have to set one of the policies to Disabled
+    # Location: Windows Settings -> Security Settings -> Local Policies -> Security Options
+    # Policy: "Audit: Force audit policy subcategory settings..."
+    # Short Name: SceNoApplyLegacyAuditPolicy
+    test_setting = "Disabled"
+    pre_setting = win_lgpo.get_policy(policy_name="SceNoApplyLegacyAuditPolicy", policy_class="machine")
+    try:
+        if pre_setting != "Disabled":
+            computer_policy = {"SceNoApplyLegacyAuditPolicy": test_setting}
+            win_lgpo.set_(computer_policy=computer_policy)
+            assert win_lgpo.get_policy(policy_name="SceNoApplyLegacyAuditPolicy", policy_class="machine") == test_setting
+            yield
+    finally:
+        if win_lgpo.get_policy(policy_name="SceNoApplyLegacyAuditPolicy", policy_class="machine") != pre_setting:
+            computer_policy = {"SceNoApplyLegacyAuditPolicy": pre_setting}
+            win_lgpo.set_(computer_policy=computer_policy)
+
+
 @pytest.fixture(scope="function")
 def clear_policy():
     # Ensure the policy is not set
