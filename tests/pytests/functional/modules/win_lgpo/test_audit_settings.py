@@ -41,7 +41,7 @@ def enable_legacy_auditing():
 @pytest.fixture(scope="function")
 def clear_policy():
     # Ensure the policy is not set
-    test_setting = "No Auditing"
+    test_setting = "No auditing"
     pre_setting = win_lgpo.get_policy(policy_name="Audit account management", policy_class="machine")
     try:
         if pre_setting != test_setting:
@@ -84,7 +84,7 @@ def _test_auditing(setting):
 
 
 def test_audit_no_auditing(set_policy):
-    _test_auditing("No Auditing")
+    _test_auditing("No auditing")
 
 
 def test_audit_success(clear_policy):
