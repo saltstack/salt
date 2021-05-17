@@ -22,6 +22,24 @@ def configure_loader_modules(minion_opts, modules):
 
 
 @pytest.fixture(scope="function")
+def disable_legacy_auditing():
+    # To test and use these policy settings we have to set one of the policies to Disabled
+    # Location: Windows Settings -> Security Settings -> Local Policies -> Security Options
+    # Policy: "Audit: Force audit policy subcategory settings..."
+    # Short Name: SceNoApplyLegacyAuditPolicy
+    test_setting = "Enabled"
+    pre_setting = win_lgpo.get_policy(policy_name="SceNoApplyLegacyAuditPolicy", policy_class="machine")
+    try:
+        if pre_setting != test_setting:
+            win_lgpo.set_computer_policy(name="SceNoApplyLegacyAuditPolicy", setting=test_setting)
+            assert win_lgpo.get_policy(policy_name="SceNoApplyLegacyAuditPolicy", policy_class="machine") == test_setting
+        yield
+    finally:
+        if win_lgpo.get_policy(policy_name="SceNoApplyLegacyAuditPolicy", policy_class="machine") != pre_setting:
+            win_lgpo.set_computer_policy(name="SceNoApplyLegacyAuditPolicy", setting=pre_setting)
+
+
+@pytest.fixture(scope="function")
 def clear_policy():
     # Ensure the policy is not set
     test_setting = "No Auditing"
@@ -30,13 +48,9 @@ def clear_policy():
     )
     try:
         if pre_setting != test_setting:
-            computer_policy = {"Audit User Account Management": test_setting}
-            win_lgpo.set_(computer_policy=computer_policy)
+            win_lgpo.set_computer_policy(name="Audit User Account Management", setting=test_setting)
             assert (
-                win_lgpo.get_policy(
-                    policy_name="Audit User Account Management", policy_class="machine"
-                )
-                == test_setting
+                win_lgpo.get_policy(policy_name="Audit User Account Management", policy_class="machine") == test_setting
             )
         yield
     finally:
@@ -46,8 +60,7 @@ def clear_policy():
             )
             != pre_setting
         ):
-            computer_policy = {"Audit User Account Management": pre_setting}
-            win_lgpo.set_(computer_policy=computer_policy)
+            win_lgpo.set_computer_policy(name="Audit User Account Management", setting=pre_setting)
 
 
 @pytest.fixture(scope="function")
@@ -59,8 +72,7 @@ def set_policy():
     )
     try:
         if pre_setting != test_setting:
-            computer_policy = {"Audit User Account Management": test_setting}
-            win_lgpo.set_(computer_policy=computer_policy)
+            win_lgpo.set_computer_policy(name="Audit User Account Management", setting=test_setting)
             assert (
                 win_lgpo.get_policy(
                     policy_name="Audit User Account Management", policy_class="machine"
@@ -75,34 +87,29 @@ def set_policy():
             )
             != pre_setting
         ):
-            computer_policy = {"Audit User Account Management": pre_setting}
-            win_lgpo.set_(computer_policy=computer_policy)
+            win_lgpo.set_computer_policy(name="Audit User Account Management", setting=pre_setting)
 
 
 def _test_adv_auditing(setting):
     """
-    Helper function to set an audit setting and assert that it was
-    successful
+    Helper function to set an audit setting and assert that it was successful
     """
-    computer_policy = {"Audit User Account Management": setting}
-    win_lgpo.set_(computer_policy=computer_policy)
-    result = win_lgpo.get_policy(
-        policy_name="Audit account management", policy_class="machine"
-    )
+    win_lgpo.set_computer_policy(name="Audit User Account Management", setting=setting)
+    result = win_lgpo.get_policy(policy_name="Audit User Account Management", policy_class="machine")
     assert result == setting
 
 
-def test_adv_audit_no_auditing(set_policy):
+def test_adv_audit_no_auditing(disable_legacy_auditing, set_policy):
     _test_adv_auditing("No Auditing")
 
 
-def test_adv_audit_success(clear_policy):
+def test_adv_audit_success(disable_legacy_auditing, clear_policy):
     _test_adv_auditing("Success")
 
 
-def test_adv_audit_failure(clear_policy):
+def test_adv_audit_failure(disable_legacy_auditing, clear_policy):
     _test_adv_auditing("Failure")
 
 
-def test_adv_audit_success_and_failure(clear_policy):
+def test_adv_audit_success_and_failure(disable_legacy_auditing, clear_policy):
     _test_adv_auditing("Success and Failure")
