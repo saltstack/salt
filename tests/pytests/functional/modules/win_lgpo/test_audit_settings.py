@@ -30,14 +30,12 @@ def enable_legacy_auditing():
     pre_setting = win_lgpo.get_policy(policy_name="SceNoApplyLegacyAuditPolicy", policy_class="machine")
     try:
         if pre_setting != test_setting:
-            computer_policy = {"SceNoApplyLegacyAuditPolicy": test_setting}
-            win_lgpo.set_(computer_policy=computer_policy)
+            win_lgpo.set_computer_policy(name="SceNoApplyLegacyAuditPolicy", setting=test_setting)
             assert win_lgpo.get_policy(policy_name="SceNoApplyLegacyAuditPolicy", policy_class="machine") == test_setting
         yield
     finally:
         if win_lgpo.get_policy(policy_name="SceNoApplyLegacyAuditPolicy", policy_class="machine") != pre_setting:
-            computer_policy = {"SceNoApplyLegacyAuditPolicy": pre_setting}
-            win_lgpo.set_(computer_policy=computer_policy)
+            win_lgpo.set_computer_policy(name="SceNoApplyLegacyAuditPolicy", setting=pre_setting)
 
 
 @pytest.fixture(scope="function")
@@ -47,14 +45,12 @@ def clear_policy():
     pre_setting = win_lgpo.get_policy(policy_name="Audit account management", policy_class="machine")
     try:
         if pre_setting != test_setting:
-            computer_policy = {"Audit account management": test_setting}
-            win_lgpo.set_(computer_policy=computer_policy)
+            win_lgpo.set_computer_policy(name="Audit account management", setting=test_setting)
             assert win_lgpo.get_policy(policy_name="Audit account management", policy_class="machine") == test_setting
         yield
     finally:
         if win_lgpo.get_policy(policy_name="Audit account management", policy_class="machine") != pre_setting:
-            computer_policy = {"Audit account management": pre_setting}
-            win_lgpo.set_(computer_policy=computer_policy)
+            win_lgpo.set_computer_policy(name="Audit account management", setting=pre_setting)
 
 
 @pytest.fixture(scope="function")
@@ -64,23 +60,19 @@ def set_policy():
     pre_setting = win_lgpo.get_policy(policy_name="Audit account management", policy_class="machine")
     try:
         if pre_setting != test_setting:
-            computer_policy = {"Audit account management": test_setting}
-            win_lgpo.set_(computer_policy=computer_policy)
+            win_lgpo.set_computer_policy(name="Audit account management", setting=test_setting)
             assert win_lgpo.get_policy(policy_name="Audit account management", policy_class="machine") == test_setting
         yield
     finally:
         if win_lgpo.get_policy(policy_name="Audit account management", policy_class="machine") != pre_setting:
-            computer_policy = {"Audit account management": pre_setting}
-            win_lgpo.set_(computer_policy=computer_policy)
+            win_lgpo.set_computer_policy(name="Audit account management", setting=pre_setting)
 
 
 def _test_auditing(setting):
     """
-    Helper function to set an audit setting and assert that it was
-    successful
+    Helper function to set an audit setting and assert that it was successful
     """
-    computer_policy = {"Audit account management": setting}
-    win_lgpo.set_(computer_policy=computer_policy)
+    win_lgpo.set_computer_policy(name="Audit account management", setting=setting)
     result = win_lgpo.get_policy(policy_name="Audit account management", policy_class="machine")
     assert result == setting
 
@@ -98,4 +90,4 @@ def test_audit_failure(enable_legacy_auditing, clear_policy):
 
 
 def test_audit_success_and_failure(enable_legacy_auditing, clear_policy):
-    _test_auditing("Success and Failure")
+    _test_auditing("Success, Failure")
