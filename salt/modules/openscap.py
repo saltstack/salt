@@ -1,58 +1,14 @@
-# -*- coding: utf-8 -*-
 """
 Module for OpenSCAP Management
-
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-import shlex
-import shutil
 import tempfile
-from subprocess import PIPE, Popen
 
-# Import Salt libs
-from salt.ext import six
-
-ArgumentParser = object
-
-try:
-    import argparse  # pylint: disable=minimum-python-version
-
-    ArgumentParser = argparse.ArgumentParser
-    HAS_ARGPARSE = True
-except ImportError:  # python 2.6
-    HAS_ARGPARSE = False
-
-
-_XCCDF_MAP = {
-    "eval": {
-        "parser_arguments": [(("--profile",), {"required": True})],
-        "cmd_pattern": (
-            "oscap xccdf eval "
-            "--oval-results --results results.xml --report report.html "
-            "--profile {0} {1}"
-        ),
-    }
-}
-
-
-def __virtual__():
-    return HAS_ARGPARSE, "argparse module is required."
-
-
-class _ArgumentParser(ArgumentParser):
-    def __init__(self, action=None, *args, **kwargs):
-        super(_ArgumentParser, self).__init__(*args, prog="oscap", **kwargs)
-        self.add_argument("action", choices=["eval"])
-        add_arg = None
-        for params, kwparams in _XCCDF_MAP["eval"]["parser_arguments"]:
-            self.add_argument(*params, **kwparams)
-
-    def error(self, message, *args, **kwargs):
-        raise Exception(message)
-
+import salt.utils.files
+import salt.utils.path
+from salt.exceptions import ArgumentValueError
+from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 
 _OSCAP_EXIT_CODES_MAP = {
     0: True,  # all rules pass
@@ -60,51 +16,210 @@ _OSCAP_EXIT_CODES_MAP = {
     2: True,  # there is at least one rule with either fail or unknown result
 }
 
+error = None
 
-def xccdf(params):
+
+def __virtual__():
     """
-    Run ``oscap xccdf`` commands on minions.
-    It uses cp.push_dir to upload the generated files to the salt master
-    in the master's minion files cachedir
-    (defaults to ``/var/cache/salt/master/minions/minion-id/files``)
-
-    It needs ``file_recv`` set to ``True`` in the master configuration file.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*'  openscap.xccdf "eval --profile Default /usr/share/openscap/scap-yast2sec-xccdf.xml"
+    Only load the module if oscap is installed
     """
-    params = shlex.split(params)
-    policy = params[-1]
+    if not salt.utils.path.which("oscap"):
+        return (
+            False,
+            "The oscap execution module cannot be loaded: OpenSCAP not installed.",
+        )
 
-    success = True
-    error = None
-    upload_dir = None
-    action = None
-    returncode = None
+    return True
 
-    try:
-        parser = _ArgumentParser()
-        action = parser.parse_known_args(params)[0].action
-        args, argv = _ArgumentParser(action=action).parse_known_args(args=params)
-    except Exception as err:  # pylint: disable=broad-except
-        success = False
-        error = six.text_type(err)
 
-    if success:
-        cmd = _XCCDF_MAP[action]["cmd_pattern"].format(args.profile, policy)
-        tempdir = tempfile.mkdtemp()
-        proc = Popen(shlex.split(cmd), stdout=PIPE, stderr=PIPE, cwd=tempdir)
-        (stdoutdata, error) = proc.communicate()
-        success = _OSCAP_EXIT_CODES_MAP[proc.returncode]
-        returncode = proc.returncode
-        if success:
-            __salt__["cp.push_dir"](tempdir)
-            shutil.rmtree(tempdir, ignore_errors=True)
-            upload_dir = tempdir
+def _oscap_cmd():
+    """
+    Return correct command for openscap.
+    """
+    return salt.utils.path.which("oscap")
 
-    return dict(
-        success=success, upload_dir=upload_dir, error=error, returncode=returncode
-    )
+
+def _has_operation(module, operation):
+    """[summary]
+
+    Args:
+        module ([type]): [description]
+        operation ([type]): [description]
+
+    Returns:
+        [type]: [description]
+    """
+    cmd = "{} {} -h".format(_oscap_cmd(), module)
+    if operation in __salt__["cmd.run"](cmd, output_loglevel="quiet"):
+        return True
+    return False
+
+
+def _has_param(mod_op, param):
+    """[summary]
+
+    Args:
+        module (string): Name if the Module
+        operation (string): Name of the Modules Operation
+
+    Returns:
+        Boolean: Value that determines, if an operation is available inside a module.
+    """
+
+    cmd = "{} {} -h".format(_oscap_cmd(), mod_op)
+    if param in __salt__["cmd.run"](cmd, output_loglevel="quiet"):
+        return True
+    return False
+
+
+def _build_cmd(module="", operation="", **kwargs):
+    """[summary]
+
+    Args:
+        module (str, optional): [description]. Defaults to "".
+        operation (str, optional): [description]. Defaults to "".
+
+    Returns:
+        [type]: [description]
+    """
+    for ignore in list(_STATE_INTERNAL_KEYWORDS) + ["--upload-to-master"]:
+        if ignore in kwargs:
+            del kwargs[ignore]
+
+    cmd = "{}".format(_oscap_cmd())
+    _mod_op = "{}".format(module)
+    if len(operation) > 0:
+        if not _has_operation(module, operation):
+            raise ArgumentValueError(
+                "'{}' does not support '{}' operation!".format(module, operation)
+            )
+        _mod_op = "{} {}".format(module, operation)
+        cmd = cmd + " {}".format(_mod_op)
+    else:
+        cmd = cmd + " {}".format(_mod_op)
+
+    for _key, _value in kwargs.items():
+        if not _has_param(_mod_op, _key):
+            raise ArgumentValueError(
+                "'{}' does not support '{}' parameter!".format(_mod_op, _key)
+            )
+
+        if kwargs[_key] is True:
+            cmd = cmd + " --{}".format(_key)
+        else:
+            cmd = cmd + " --{} {}".format(_key, _value)
+    return cmd
+
+
+def _upload_to_master(path):
+    """[summary]
+
+    Args:
+        path ([type]): [description]
+
+    Returns:
+        [type]: [description]
+    """
+    if __salt__["cp.push_dir"](path):
+        return True
+    return False
+
+
+def version(*args):
+    """[summary]
+
+    Returns:
+        [type]: [description]
+    """
+    cmd = "{} --version".format(_oscap_cmd())
+    _version = __salt__["cmd.run"](cmd)
+
+    # Output beautifications
+    _resdict = {}
+    _prep_version = _version.split("\n")
+    while "" in _prep_version:
+        _prep_version.remove("")
+
+    _clean_version = _prep_version[2:]
+
+    # Split the version information based on the section they are in.
+    KEY_RULES = {
+        "Supported specifications": {"split_at": ": "},
+        "Capabilities added by auto-loaded plugins": {"split_at": ": "},
+        "Paths": {"split_at": ": "},
+        "Inbuilt CPE names": {"split_at": " - "},
+    }
+
+    for line in _clean_version:
+        if line.startswith("===="):
+            _head = line.strip("=")[1:-1]
+            _resdict[_head] = {}
+            continue
+
+        if _head == "Supported OVAL objects and associated OpenSCAP probes":
+            if line.startswith("OVAL") or line.startswith("---"):
+                continue
+            _line = line.split(" ")
+            while "" in _line:
+                _line.remove("")
+            _resdict[_head][_line[0]] = {
+                "OVAL object": _line[1],
+                "OpenSCAP probe": _line[2],
+            }
+            continue
+
+        _key = line.split(KEY_RULES[_head]["split_at"])[0]
+        _value = line.split(KEY_RULES[_head]["split_at"])[1]
+        _resdict[_head][_key] = _value
+
+    if "full" in args:
+        return _resdict
+
+    # Default return
+    _bin = _oscap_cmd().split("/")[-1]
+    return {"{}".format(_bin): _prep_version[0].split(" ")[-1]}
+
+
+def xccdf(file="", operation="eval", upload=True, **kwargs):
+    """[summary]
+
+    Args:
+        file (str, optional): [description]. Defaults to "".
+        operation (str, optional): [description]. Defaults to "eval".
+
+    Returns:
+        [type]: [description]
+    """
+
+    if not file:
+        return "A File must be defined!"
+
+    _upload_flag = upload
+    if _upload_flag is True:
+        _tmp_path = tempfile.mkdtemp()
+        if "oval-results" not in kwargs.keys():
+            kwargs["oval-results"] = True
+
+        kwargs["results"] = "{}/results.xml".format(_tmp_path)
+        kwargs["report"] = "{}/report.html".format(_tmp_path)
+
+    _cmd = _build_cmd("xccdf", operation, **kwargs)
+    cmd = _cmd + " {}".format(file)
+
+    _retcode = __salt__["cmd.retcode"](cmd)
+
+    # No need to upload anything, if openscap itself failed.
+    if _retcode == 1:
+        _upload_flag = False
+
+    _upload_path = None
+    if _upload_flag and _upload_to_master(_tmp_path):
+        _upload_path = _tmp_path
+
+    _results = {
+        "success": _OSCAP_EXIT_CODES_MAP[_retcode],
+        "upload_dir": _upload_path,
+        "error": None,
+        "returncode": _retcode,
+    }
+    return _results
