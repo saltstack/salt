@@ -6,3 +6,9 @@ Salt 3004 Release Notes - Codename Silicon
 
 Salt 3004 is an *unreleased* upcoming feature release.
 
+Changed
+=======
+
+State Engine support for ``onfail`` as a requisite now can be
+used with multiple requisites. This behavior was previously
+broken and is described in detail at https://github.com/saltstack/salt/issues/59026
