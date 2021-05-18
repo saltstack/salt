@@ -17,6 +17,8 @@ aws-sam-translator==1.33.0
     # via cfn-lint
 aws-xray-sdk==0.95
     # via moto
+bcrypt==3.2.0
+    # via -r requirements/static/ci/windows.in
 boto3==1.17.67 ; python_version >= "3.6"
     # via
     #   -r requirements/static/ci/common.in
@@ -47,6 +49,7 @@ cffi==1.14.5
     # via
     #   -r requirements/static/ci/common.in
     #   -r requirements/static/pkg/py3.7/windows.txt
+    #   bcrypt
     #   cryptography
     #   pygit2
 cfn-lint==0.44.3
@@ -229,6 +232,8 @@ ntlm-auth==1.5.0
     # via requests-ntlm
 packaging==19.2
     # via pytest
+passlib==1.7.4
+    # via -r requirements/static/ci/windows.in
 patch==1.16
     # via -r requirements/static/ci/windows.in
 pathtools==0.1.2
@@ -366,6 +371,7 @@ six==1.16.0
     # via
     #   -r requirements/static/pkg/py3.7/windows.txt
     #   aws-sam-translator
+    #   bcrypt
     #   cassandra-driver
     #   cfn-lint
     #   cheroot
