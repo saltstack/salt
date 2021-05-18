@@ -2,7 +2,6 @@
     :codeauthor: Erik Johnson <erik@saltstack.com>
 """
 import logging
-import os
 
 import pytest
 import salt.states.git as git_state
@@ -22,8 +21,10 @@ def test_latest_no_diff_for_bare_repo(tmp_path):
     using either bare=True or mirror=True.
     """
     name = "https://foo.com/bar/baz.git"
-    gitdir = os.path.join(tmp_path, "refs")
-    isdir_mock = MagicMock(side_effect=lambda path: DEFAULT if path != gitdir else True)
+    gitdir = tmp_path / "refs"
+    isdir_mock = MagicMock(
+        side_effect=lambda path: DEFAULT if path != str(gitdir) else True
+    )
 
     branches = ["foo", "bar", "baz"]
     tags = ["v1.1.0", "v.1.1.1", "v1.2.0"]
@@ -51,7 +52,9 @@ def test_latest_no_diff_for_bare_repo(tmp_path):
         git_state.__salt__, dunder_salt
     ):
         result = git_state.latest(
-            name=name, target=tmp_path, mirror=True,  # mirror=True implies bare=True
+            name=name,
+            target=str(tmp_path),
+            mirror=True,  # mirror=True implies bare=True
         )
         assert result["result"] is True, result
         git_diff.assert_not_called()
