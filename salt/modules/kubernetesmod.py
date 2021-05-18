@@ -1575,11 +1575,11 @@ def __dict_to_service_spec(spec):
     ports = spec.get('ports')
     if ports:
         spec['ports'] = [ _port_from_spec(data) for data in ports ]
-    spec = { allowedkey: spec.get(allowedkey) \
-             for allowedkey in kubernetes.client.V1ServiceSpec.attribute_map.keys() \
-           }
-    spec = {k:v for k,v in spec.items() if v is not None}
-    spec_obj =  kubernetes.client.V1ServiceSpec(**spec)
+    _spec_map = { allowedkey: spec.get(allowedkey) \
+                  for allowedkey in kubernetes.client.V1ServiceSpec.attribute_map.keys() \
+                }
+    _spec_map = {k:v for k,v in _spec_map.items() if v is not None}
+    spec_obj  =  kubernetes.client.V1ServiceSpec(**_spec_map)
     return spec_obj
 
 def __enforce_only_strings_dict(dictionary):
