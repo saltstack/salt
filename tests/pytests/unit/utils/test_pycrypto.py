@@ -10,42 +10,44 @@ from tests.support.mock import patch
 
 passwd = "test_password"
 invalid_salt = "thissaltistoolong" * 10
-expecteds = {
-    "sha512": {
+
+
+@pytest.fixture(params=["sha512", "sha256", "blowfish", "md5", "crypt"])
+def algorithm(request):
+    return request.param
+
+
+@pytest.fixture
+def expected(algorithm):
+    if algorithm == "sha512":
+        return {
         "hashed": "$6$rounds=65601$goodsalt$lZFhiN5M8RTLd9WKDin50H4lF4F8HGMIdwvKs.nTG7f8F0Y4P447Zb9/E8SkUWjY.K10QT3NuHZNDgc/P/NjT1",
         "salt": "rounds=65601$goodsalt",
-        "badsalt": "badsalt",
-    },
-    "sha256": {
+        "badsalt": "badsalt", }
+
+    if algorithm == "sha256":
+        return {
         "hashed": "$5$rounds=53501$goodsalt$W.uoco0wMfGLDOlsbW52E6raFS1Nhj0McfUTj2vORt7",
         "salt": "rounds=53501$goodsalt",
-        "badsalt": "badsalt",
-    },
-    "blowfish": {
-        "hashed": "$2b$10$goodsaltgoodsaltgoodsObFfGrJwfV.13QddrZIh2w1ccESmvj8K",
+        "badsalt": "badsalt", }
+
+    if algorithm == "blowfish":
+        return {
+         "hashed": "$2b$10$goodsaltgoodsaltgoodsObFfGrJwfV.13QddrZIh2w1ccESmvj8K",
         "salt": "10$goodsaltgoodsaltgoodsa",
-        "badsalt": "badsaltbadsaltbadsaltb",
-    },
-    "md5": {
+        "badsalt": "badsaltbadsaltbadsaltb" ,}
+
+    if algorithm == "md5":
+        return {
         "hashed": "$1$goodsalt$4XQMx4a4e1MpBB8xzz.TQ0",
         "salt": "goodsalt",
-        "badsalt": "badsalt",
-    },
-    "crypt": {"hashed": "goVHulDpuGA7w", "salt": "go", "badsalt": "ba"},
-}
+        "badsalt": "badsalt", }
+
+    if algorithm == "crypt":
+        return {"hashed": "goVHulDpuGA7w", "salt": "go", "badsalt": "ba"}
 
 
 @pytest.mark.skipif(not salt.utils.pycrypto.HAS_CRYPT, reason="crypt not available")
-@pytest.mark.parametrize(
-    "algorithm,expected",
-    [
-        ("sha512", expecteds["sha512"]),
-        ("sha256", expecteds["sha256"]),
-        ("blowfish", expecteds["blowfish"]),
-        ("md5", expecteds["md5"]),
-        ("crypt", expecteds["crypt"]),
-    ],
-)
 def test_gen_hash_crypt(algorithm, expected):
     """
     Test gen_hash with crypt library
@@ -66,16 +68,17 @@ def test_gen_hash_crypt(algorithm, expected):
     assert ret != expected["hashed"]
 
 
+@pytest.mark.skipif(not salt.utils.pycrypto.HAS_CRYPT, reason="crypt not available")
 def test_gen_hash_crypt_no_arguments():
     # Assert it works without arguments passed
     assert salt.utils.pycrypto.gen_hash() is not None
 
 
 @pytest.mark.skipif(not salt.utils.pycrypto.HAS_CRYPT, reason="crypt not available")
-def test_gen_hash_crypt_default_algorithm():
+def test_gen_hash_crypt_default_algorithm(expected):
     # Assert it works without algorithm passed
     default_algorithm = salt.utils.pycrypto.crypt.methods[0].name.lower()
-    expected = expecteds[default_algorithm]
+    expected = expected[default_algorithm]
     ret = salt.utils.pycrypto.gen_hash(crypt_salt=expected["salt"], password=passwd)
     assert ret == expected["hashed"]
 
@@ -86,11 +89,11 @@ def test_gen_hash_crypt_default_algorithm():
 @pytest.mark.parametrize(
     "algorithm,expected",
     [
-        ("sha512", expecteds["sha512"]),
-        ("sha256", expecteds["sha256"]),
-        ("blowfish", expecteds["blowfish"]),
-        ("md5", expecteds["md5"]),
-        ("crypt", expecteds["crypt"]),
+        ("sha512", expected["sha512"]),
+        ("sha256", expected["sha256"]),
+        ("blowfish", expected["blowfish"]),
+        ("md5", expected["md5"]),
+        ("crypt", expected["crypt"]),
     ],
 )
 def test_gen_hash_passlib(algorithm, expected):
@@ -118,11 +121,11 @@ def test_gen_hash_passlib_no_arguments():
     assert salt.utils.pycrypto.gen_hash() is not None
 
 
-def test_gen_hash_passlib_default_algorithm():
+def test_gen_hash_passlib_default_algorithm(expected):
     # Assert it works without algorithm passed
     default_algorithm = salt.utils.pycrypto.known_methods[0]
-    expected = expecteds[default_algorithm]
-    if default_algorithm in expecteds:
+    expected = expected[default_algorithm]
+    if default_algorithm in expected:
         ret = salt.utils.pycrypto.gen_hash(crypt_salt=expected["salt"], password=passwd)
         assert ret == expected["hashed"]
 
