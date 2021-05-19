@@ -18,6 +18,7 @@ import logging
 import salt.modules.cmdmod
 import salt.utils.args
 import salt.utils.path
+import salt.utils.platform
 import salt.utils.versions
 from salt.ext.six.moves import zip
 from salt.utils.odict import OrderedDict
@@ -1094,6 +1095,11 @@ def get(*dataset, **kwargs):
     type : string
         comma-separated list of types to display, where type is one of
         filesystem, snapshot, volume, bookmark, or all.
+
+        .. versionchanged:: Silicon
+
+        type is ignored on Solaris 10 and 11 since not a valid parameter on those platforms
+
     source : string
         comma-separated list of sources to display. Must be one of the following:
         local, default, inherited, temporary, and none. The default value is all sources.
@@ -1135,8 +1141,11 @@ def get(*dataset, **kwargs):
     fields.insert(0, "name")
     fields.insert(1, "property")
     opts["-o"] = ",".join(fields)
-    if kwargs.get("type", False):
-        opts["-t"] = kwargs.get("type")
+
+    if not salt.utils.platform.is_sunos():
+        if kwargs.get("type", False):
+            opts["-t"] = kwargs.get("type")
+
     if kwargs.get("source", False):
         opts["-s"] = kwargs.get("source")
 

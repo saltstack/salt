@@ -18,7 +18,6 @@ import json
 import logging
 import os
 import re
-import tempfile
 from functools import wraps
 
 import salt.utils.args
@@ -112,51 +111,34 @@ class HandleFileCopy:
                 proxy_hash = __salt__["file.get_hash"](local_cache_path)
                 # check if hash is same, else copy newly
                 if master_hash.get("hsum") == proxy_hash:
-                    # kwargs will have values when path is a template
-                    if self._kwargs:
-                        self._cached_file = salt.utils.files.mkstemp()
-                        # local copy is a template, hence need to render
-                        with salt.utils.files.fopen(self._cached_file, "w") as fp:
-                            template_string = __salt__["slsutil.renderer"](
-                                path=local_cache_path,
-                                default_renderer="jinja",
-                                **self._kwargs
-                            )
-                            fp.write(template_string)
-                        return self._cached_file
-                    else:
-                        return local_cache_path
-                # continue for else part
-            if self._kwargs:
-                self._cached_file = salt.utils.files.mkstemp()
-                __salt__["cp.get_template"](
-                    self._file_path, self._cached_file, **self._kwargs
-                )
-            else:
-                self._cached_folder = tempfile.mkdtemp()
-                log.debug(
-                    "Caching file {} at {}".format(self._file_path, self._cached_folder)
-                )
-                self._cached_file = __salt__["cp.get_file"](
-                    self._file_path, self._cached_folder
-                )
+                    self._cached_file = salt.utils.files.mkstemp()
+                    # local copy is a template, hence need to render
+                    with salt.utils.files.fopen(self._cached_file, "w") as fp:
+                        template_string = __salt__["slsutil.renderer"](
+                            path=local_cache_path,
+                            default_renderer="jinja",
+                            **self._kwargs,
+                        )
+                        fp.write(template_string)
+                    return self._cached_file
+
+            # continue for else part
+            self._cached_file = salt.utils.files.mkstemp()
+            __salt__["cp.get_template"](
+                self._file_path, self._cached_file, **self._kwargs
+            )
             if self._cached_file != "":
                 return self._cached_file
         else:
             # check for local location of file
             if __salt__["file.file_exists"](self._file_path):
-                if self._kwargs:
-                    self._cached_file = salt.utils.files.mkstemp()
-                    with salt.utils.files.fopen(self._cached_file, "w") as fp:
-                        template_string = __salt__["slsutil.renderer"](
-                            path=self._file_path,
-                            default_renderer="jinja",
-                            **self._kwargs
-                        )
-                        fp.write(template_string)
-                    return self._cached_file
-                else:
-                    return self._file_path
+                self._cached_file = salt.utils.files.mkstemp()
+                with salt.utils.files.fopen(self._cached_file, "w") as fp:
+                    template_string = __salt__["slsutil.renderer"](
+                        path=self._file_path, default_renderer="jinja", **self._kwargs
+                    )
+                    fp.write(template_string)
+                return self._cached_file
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
         if self._cached_file is not None:
@@ -1261,7 +1243,7 @@ def install_config(path=None, **kwargs):
                 except Exception as exception:  # pylint: disable=broad-except
                     ret[
                         "message"
-                    ] = 'Could not write into diffs_file due to: "{}"'.format(exception)
+                    ] = "Could not write into diffs_file due to: '{}'".format(exception)
                     ret["out"] = False
 
         except ValueError as ex:
@@ -1277,6 +1259,9 @@ def install_config(path=None, **kwargs):
             message = "install_config failed due to timeout error : {}".format(str(ex))
             log.error(message)
             ret["message"] = message
+            ret["out"] = False
+        except Exception as exc:  # pylint: disable=broad-except
+            ret["message"] = "install_config failed due to exception: '{}'".format(exc)
             ret["out"] = False
 
         return ret
