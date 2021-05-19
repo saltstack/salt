@@ -572,9 +572,7 @@ def findup(startpath, filenames, saltenv="base"):
     # Ensure that patterns is a string or list of strings
     if isinstance(filenames, str):
         filenames = [filenames]
-    elif isinstance(filenames, list):
-        pass
-    else:
+    if not isinstance(filenames, list):
         raise salt.exceptions.SaltInvocationError(
             "Filenames argument must be a string or list of strings"
         )
