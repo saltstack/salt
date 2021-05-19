@@ -460,7 +460,7 @@ def returners(opts, functions, whitelist=None, context=None, proxy=None):
     )
 
 
-def utils(opts, whitelist=None, context=None, proxy=proxy, pack_self=None):
+def utils(opts, whitelist=None, context=None, proxy=None, pack_self=None):
     """
     Returns the utility modules
     """
