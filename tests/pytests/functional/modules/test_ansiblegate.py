@@ -23,3 +23,22 @@ def test_ansible_functions_loaded(modules):
 
     ret.pop("timeout", None)
     assert ret == {"ping": "pong"}
+
+
+def test_passing_data_to_ansible_modules(modules):
+    """
+    Test that the ansible functions are actually loaded
+    """
+    expected = "foobar"
+    if "ansible.system.ping" in modules:
+        # we need to go by getattr() because salt's loader will try to find "system" in the dictionary and fail
+        # The ansible hack injects, in this case, "system.ping" as an attribute to the loaded module
+        ret = getattr(modules.ansible, "system.ping")(data=expected)
+    elif "ansible.ping" in modules:
+        # Ansible >= 2.10
+        ret = modules.ansible.ping(data=expected)
+    else:
+        pytest.fail("Where is the ping function these days in Ansible?!")
+
+    ret.pop("timeout", None)
+    assert ret == {"ping": expected}
