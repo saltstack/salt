@@ -5055,6 +5055,43 @@ def _get_advaudit_defaults(option=None):
         return __context__["lgpo.audit_defaults"]
 
 
+def _advaudit_check_csv():
+    """
+    This function checks for the existence of the `audit.csv` file here:
+    `C:\\Windows\\security\\audit`
+
+    If the file does not exist, then it copies the `audit.csv` file from the
+    Group Policy location:
+    `C:\\Windows\\System32\\GroupPolicy\\Machine\\Microsoft\\Windows NT\\Audit`
+
+    If there is no `audit.csv` in either location, then a default `audit.csv`
+    file is created.
+    """
+    system_root = os.environ.get("SystemRoot", "C:\\Windows")
+    f_audit = os.path.join(system_root, "security", "audit", "audit.csv")
+    f_audit_gpo = os.path.join(
+        system_root,
+        "System32",
+        "GroupPolicy",
+        "Machine",
+        "Microsoft",
+        "Windows NT",
+        "Audit",
+        "audit.csv",
+    )
+    # Make sure there is an existing audit.csv file on the machine
+    if not __salt__["file.file_exists"](f_audit):
+        if __salt__["file.file_exists"](f_audit_gpo):
+            # If the GPO audit.csv exists, we'll use that one
+            __salt__["file.copy"](f_audit_gpo, f_audit)
+        else:
+            field_names = _get_advaudit_defaults("fieldnames")
+            # If the file doesn't exist anywhere, create it with default
+            # fieldnames
+            __salt__["file.makedirs"](f_audit)
+            __salt__["file.write"](f_audit, ",".join(field_names))
+
+
 def _get_advaudit_value(option):
     """
     Get the Advanced Auditing policy as configured in
@@ -5069,28 +5106,9 @@ def _get_advaudit_value(option):
     if "lgpo.adv_audit_data" not in __context__:
         system_root = os.environ.get("SystemRoot", "C:\\Windows")
         f_audit = os.path.join(system_root, "security", "audit", "audit.csv")
-        f_audit_gpo = os.path.join(
-            system_root,
-            "System32",
-            "GroupPolicy",
-            "Machine",
-            "Microsoft",
-            "Windows NT",
-            "Audit",
-            "audit.csv",
-        )
 
-        # Make sure there is an existing audit.csv file on the machine
-        if not __salt__["file.file_exists"](f_audit):
-            if __salt__["file.file_exists"](f_audit_gpo):
-                # If the GPO audit.csv exists, we'll use that one
-                __salt__["file.copy"](f_audit_gpo, f_audit)
-            else:
-                field_names = _get_advaudit_defaults("fieldnames")
-                # If the file doesn't exist anywhere, create it with default
-                # fieldnames
-                __salt__["file.makedirs"](f_audit)
-                __salt__["file.write"](f_audit, ",".join(field_names))
+        # Make sure the csv file exists before trying to open it
+        _advaudit_check_csv()
 
         audit_settings = {}
         with salt.utils.files.fopen(f_audit, mode="r") as csv_file:
@@ -5104,7 +5122,7 @@ def _get_advaudit_value(option):
     return __context__["lgpo.adv_audit_data"].get(option, None)
 
 
-def _set_audit_file_data(option, value):
+def _set_advaudit_file_data(option, value):
     """
     Helper function that sets the Advanced Audit settings in the two .csv files
     on Windows. Those files are located at:
@@ -5143,6 +5161,9 @@ def _set_audit_file_data(option, value):
         "2": "Failure",
         "3": "Success and Failure",
     }
+
+    # Make sure the csv file exists before trying to open it
+    _advaudit_check_csv()
 
     try:
         # Open the existing audit.csv and load the csv `reader`
@@ -5258,7 +5279,7 @@ def _set_advaudit_value(option, value):
         bool: ``True`` if successful, otherwise ``False``
     """
     # Set the values in both audit.csv files
-    if not _set_audit_file_data(option=option, value=value):
+    if not _set_advaudit_file_data(option=option, value=value):
         raise CommandExecutionError("Failed to set audit.csv option: {}".format(option))
     # Apply the settings locally
     if not _set_advaudit_pol_data(option=option, value=value):
