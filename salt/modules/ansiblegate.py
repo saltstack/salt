@@ -171,25 +171,24 @@ class AnsibleModuleCaller:
             )
         if args:
             kwargs["_raw_params"] = " ".join(args)
-        js_args = str(
-            '{{"ANSIBLE_MODULE_ARGS": {args}}}'
-        )  # future lint: disable=blacklisted-function
-        js_args = js_args.format(args=salt.utils.json.dumps(kwargs))
+        js_args = salt.utils.json.dumps({"ANSIBLE_MODULE_ARGS": kwargs})
 
-        proc_out = salt.utils.timed_subprocess.TimedProc(
-            ["echo", "{}".format(js_args)],
+        proc_exc = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                "import sys, {0}; print({0}.main(), file=sys.stdout); sys.stdout.flush()".format(
+                    module.__name__
+                ),
+            ],
+            input=js_args,
             stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
             timeout=self.timeout,
+            universal_newlines=True,
+            check=True,
+            shell=False,
         )
-        proc_out.run()
-        proc_out_stdout = salt.utils.stringutils.to_str(proc_out.stdout)
-        proc_exc = salt.utils.timed_subprocess.TimedProc(
-            [sys.executable, module.__file__],
-            stdin=proc_out_stdout,
-            stdout=subprocess.PIPE,
-            timeout=self.timeout,
-        )
-        proc_exc.run()
 
         try:
             out = salt.utils.json.loads(proc_exc.stdout)
@@ -249,14 +248,13 @@ def __virtual__():
     """
     if salt.utils.platform.is_windows():
         return False, "The ansiblegate module isn't supported on Windows"
-    ret = ansible is not None
-    msg = not ret and "Ansible is not installed on this system" or None
-    if ret:
-        global _resolver
-        global _caller
-        _resolver = AnsibleModuleResolver(__opts__).resolve().install()
-        _caller = AnsibleModuleCaller(_resolver)
-        _set_callables(list_())
+    if ansible is None:
+        return False, "Ansible is not installed on this system"
+    global _resolver
+    global _caller
+    _resolver = AnsibleModuleResolver(__opts__).resolve().install()
+    _caller = AnsibleModuleCaller(_resolver)
+    _set_callables(list_())
     return __virtualname__
 
 
