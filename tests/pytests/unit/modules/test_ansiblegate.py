@@ -4,23 +4,23 @@ import os
 import sys
 
 import pytest
-import salt.modules.ansiblegate as ansible
+import salt.modules.ansiblegate as ansiblegate
 from salt.exceptions import LoaderError
-from tests.support.mock import MagicMock, MockTimedProc, patch
+from tests.support.mock import MagicMock, patch
 
 pytestmark = [
-    pytest.mark.skip_on_windows,
+    pytest.mark.skip_on_windows(reason="Not supported on Windows"),
 ]
 
 
 @pytest.fixture
 def configure_loader_modules():
-    return {ansible: {}}
+    return {ansiblegate: {}}
 
 
 @pytest.fixture
 def resolver():
-    _resolver = ansible.AnsibleModuleResolver({})
+    _resolver = ansiblegate.AnsibleModuleResolver({})
     _resolver._modules_map = {
         "one.two.three": os.sep + os.path.join("one", "two", "three.py"),
         "four.five.six": os.sep + os.path.join("four", "five", "six.py"),
@@ -52,10 +52,10 @@ description:
     describe the second part
     """
 
-    with patch.object(ansible, "_resolver", resolver), patch.object(
-        ansible._resolver, "load_module", MagicMock(return_value=Module())
+    with patch.object(ansiblegate, "_resolver", resolver), patch.object(
+        ansiblegate._resolver, "load_module", MagicMock(return_value=Module())
     ):
-        ret = ansible.help("dummy")
+        ret = ansiblegate.help("dummy")
         assert sorted(
             ret.get('Available sections on module "{}"'.format(Module().__name__))
         ) == ["one", "two"]
@@ -87,11 +87,11 @@ def test_resolver_module_loader_failure(resolver):
     :return:
     """
     mod = "four.five.six"
-    with pytest.raises(ImportError) as import_error:
+    with pytest.raises(ImportError):
         resolver.load_module(mod)
 
     mod = "i.even.do.not.exist.at.all"
-    with pytest.raises(LoaderError) as loader_error:
+    with pytest.raises(LoaderError):
         resolver.load_module(mod)
 
 
@@ -114,7 +114,7 @@ def test_resolver_module_loader_import_failure(resolver):
     with patch("salt.modules.ansiblegate.importlib", MagicMock()), patch(
         "salt.modules.ansiblegate.importlib.import_module", lambda x: x
     ):
-        with pytest.raises(LoaderError) as loader_error:
+        with pytest.raises(LoaderError):
             resolver.load_module("something.strange")
 
 
@@ -124,9 +124,16 @@ def test_virtual_function(resolver):
     :return:
     """
     with patch("salt.modules.ansiblegate.ansible", None):
-        assert ansible.__virtual__() == "ansible"
+        assert ansiblegate.__virtual__() == (
+            False,
+            "Ansible is not installed on this system",
+        )
 
 
+@pytest.mark.skipif(
+    sys.version_info < (3, 6),
+    reason="Skipped on Py3.5, the mock of subprocess.run is different",
+)
 def test_ansible_module_call(resolver):
     """
     Test Ansible module call from ansible gate module
@@ -144,45 +151,28 @@ def test_ansible_module_call(resolver):
         def main():  # pylint: disable=no-method-argument
             pass
 
-    ANSIBLE_MODULE_ARGS = '{"ANSIBLE_MODULE_ARGS": ["arg_1", {"kwarg1": "foobar"}]}'
-
-    proc = MagicMock(
-        side_effect=[
-            MockTimedProc(stdout=ANSIBLE_MODULE_ARGS.encode(), stderr=None),
-            MockTimedProc(stdout=b'{"completed": true}', stderr=None),
-        ]
-    )
-
-    with patch.object(ansible, "_resolver", resolver), patch.object(
-        ansible._resolver, "load_module", MagicMock(return_value=Module())
+    with patch.object(ansiblegate, "_resolver", resolver), patch.object(
+        ansiblegate._resolver, "load_module", MagicMock(return_value=Module())
     ):
-        _ansible_module_caller = ansible.AnsibleModuleCaller(ansible._resolver)
-        with patch("salt.utils.timed_subprocess.TimedProc", proc):
+        _ansible_module_caller = ansiblegate.AnsibleModuleCaller(ansiblegate._resolver)
+        with patch("subprocess.run") as proc_run_mock:
+            proc_run_mock.return_value.stdout = '{"completed": true}'
+
             ret = _ansible_module_caller.call("one.two.three", "arg_1", kwarg1="foobar")
-            proc.assert_any_call(
-                [sys.executable, "foofile"],
-                stdin=ANSIBLE_MODULE_ARGS,
+            proc_run_mock.assert_any_call(
+                [
+                    sys.executable,
+                    "-c",
+                    "import sys, one.two.three; print(one.two.three.main(), file=sys.stdout); sys.stdout.flush()",
+                ],
+                input='{"ANSIBLE_MODULE_ARGS": {"kwarg1": "foobar", "_raw_params": "arg_1"}}',
                 stdout=-1,
+                stderr=-1,
+                check=True,
+                shell=False,
+                universal_newlines=True,
                 timeout=1200,
             )
-            try:
-                proc.assert_any_call(
-                    [
-                        "echo",
-                        '{"ANSIBLE_MODULE_ARGS": {"kwarg1": "foobar", "_raw_params": "arg_1"}}',
-                    ],
-                    stdout=-1,
-                    timeout=1200,
-                )
-            except AssertionError:
-                proc.assert_any_call(
-                    [
-                        "echo",
-                        '{"ANSIBLE_MODULE_ARGS": {"_raw_params": "arg_1", "kwarg1": "foobar"}}',
-                    ],
-                    stdout=-1,
-                    timeout=1200,
-                )
             assert ret == {"completed": True, "timeout": 1200}
 
 
@@ -193,8 +183,8 @@ def test_ansible_playbooks_return_retcode(resolver):
     """
     ref_out = {"retcode": 0, "stdout": '{"foo": "bar"}'}
     cmd_run_all = MagicMock(return_value=ref_out)
-    with patch.dict(ansible.__salt__, {"cmd.run_all": cmd_run_all}), patch(
+    with patch.dict(ansiblegate.__salt__, {"cmd.run_all": cmd_run_all}), patch(
         "salt.utils.path.which", MagicMock(return_value=True)
     ):
-        ret = ansible.playbooks("fake-playbook.yml")
+        ret = ansiblegate.playbooks("fake-playbook.yml")
         assert "retcode" in ret
