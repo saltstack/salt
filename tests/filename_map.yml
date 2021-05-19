@@ -32,6 +32,7 @@ salt/modules/ansiblegate.py:
   - unit.states.test_ansiblegate
   - integration.states.test_ansiblegate
   - pytests.functional.modules.test_ansiblegate
+  - pytests.unit.modules.test_ansiblegate
 
 salt/modules/*apache.py:
   - pytests.unit.states.apache.test_apache
