@@ -432,6 +432,8 @@ def _set_context(keys, function, fun_args=None, fun_kwargs=None, force=False):
     """
     Convenience function to set a value in the ``__context__`` dictionary.
 
+    ..versionadded:: 3004
+
     :param keys: The list of keys specifying the dictionary path to set. This
                  list can be of arbitrary length and the path will be created
                  in the dictionary if it does not exist.
@@ -470,6 +472,8 @@ def file_exists(path, saltenv="base"):
     """
     Return ``True`` if a file exists in the state tree, ``False`` otherwise.
 
+    ..versionadded:: 3004
+
     :param str path: The fully qualified path to a file in the state tree.
     :param str saltenv: The fileserver environment to search. Default: ``base``
 
@@ -493,11 +497,13 @@ def dir_exists(path, saltenv="base"):
     :param str path: The fully qualified path to a directory in the state tree.
     :param str saltenv: The fileserver environment to search. Default: ``base``
 
+    ..versionadded:: 3004
+
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' slsutil.bir_exists nginx/files
+        salt '*' slsutil.dir_exists nginx/files
     """
 
     _set_context(
@@ -511,6 +517,8 @@ def path_exists(path, saltenv="base"):
     Return ``True`` if a path exists in the state tree, ``False`` otherwise. The path
     could refer to a file or directory.
 
+    ..versionadded:: 3004
+
     :param str path: The fully qualified path to a file or directory in the state tree.
     :param str saltenv: The fileserver environment to search. Default: ``base``
 
@@ -518,7 +526,7 @@ def path_exists(path, saltenv="base"):
 
     .. code-block:: bash
 
-        salt '*' slsutil.file_exists nginx/defaults.yaml
+        salt '*' slsutil.path_exists nginx/defaults.yaml
     """
 
     return file_exists(path, saltenv) or dir_exists(path, saltenv)
@@ -529,6 +537,8 @@ def findup(startpath, filenames, saltenv="base"):
     Find the first path matching a filename or list of filenames in a specified
     directory or the nearest ancestor directory. Returns the full path to the
     first file found.
+
+    ..versionadded:: 3004
 
     :param str startpath: The fileserver path from which to begin the search
     :param filenames: A filename or list of filenames to search for. Searching for
@@ -541,6 +551,12 @@ def findup(startpath, filenames, saltenv="base"):
     .. code-block:: jinja
 
         {{ salt["slsutil.findup"](tplfile, "defaults.yaml") }}
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' slsutil.findup formulas/shared/nginx map.jinja
     """
 
     # Normalize the path
