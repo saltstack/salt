@@ -30,7 +30,7 @@ salt/modules/(debian_service|freebsdservice|gentoo_service|launchctl_service|mac
 
 salt/modules/ansiblegate.py:
   - unit.states.test_ansiblegate
-  - integration.states.test_ansiblegate
+  - pytests.integration.states.test_ansiblegate
   - pytests.functional.modules.test_ansiblegate
   - pytests.unit.modules.test_ansiblegate
 
