@@ -41,24 +41,35 @@ def algorithm(request):
 
 
 @pytest.mark.skipif(not salt.utils.pycrypto.HAS_CRYPT, reason="crypt not available")
-def test_gen_hash_crypt(algorithm):
+@patch("salt.utils.pycrypto.methods", {})
+@pytest.mark.parametrize(
+    "algorithm, expected",
+    [
+        ("sha512", expecteds["sha512"]),
+        ("sha256", expecteds["sha256"]),
+        ("blowfish", expecteds["blowfish"]),
+        ("md5", expecteds["md5"]),
+        ("crypt", expecteds["crypt"]),
+    ],
+)
+def test_gen_hash_crypt(algorithm, expected):
     """
     Test gen_hash with crypt library
     """
     ret = salt.utils.pycrypto.gen_hash(
-        crypt_salt=expecteds["salt"], password=passwd, algorithm=algorithm
+        crypt_salt=expected["salt"], password=passwd, algorithm=algorithm
     )
-    assert ret == expecteds["hashed"]
+    assert ret == expected["hashed"]
 
     ret = salt.utils.pycrypto.gen_hash(
-        crypt_salt=expecteds["badsalt"], password=passwd, algorithm=algorithm
+        crypt_salt=expected["badsalt"], password=passwd, algorithm=algorithm
     )
-    assert ret != expecteds["hashed"]
+    assert ret != expected["hashed"]
 
     ret = salt.utils.pycrypto.gen_hash(
         crypt_salt=None, password=passwd, algorithm=algorithm
     )
-    assert ret != expecteds["hashed"]
+    assert ret != expected["hashed"]
 
 
 @pytest.mark.skipif(not salt.utils.pycrypto.HAS_CRYPT, reason="crypt not available")
