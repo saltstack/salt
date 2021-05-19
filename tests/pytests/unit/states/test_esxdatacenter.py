@@ -14,30 +14,13 @@ def configure_loader_modules():
 
 @pytest.fixture(scope="function")
 def policy_set():
+    patcher_1 = patcher_2 = None
     try:
-        patcher = patch.dict(esxdatacenter.__opts__, {"test": False})
-        patcher.start()
-
+        patcher_1 = patch.dict(esxdatacenter.__opts__, {"test": False})
+        patcher_1.start()
         mock_si = MagicMock()
         mock_dc = MagicMock()
-
-        with patch.dict(
-            esxdatacenter.__salt__,
-            {
-                "vsphere.get_proxy_type": MagicMock(),
-                "vsphere.get_service_instance_via_proxy": MagicMock(
-                    return_value=mock_si
-                ),
-                "vsphere.list_datacenters_via_proxy": MagicMock(return_value=[mock_dc]),
-                "vsphere.disconnect": MagicMock(),
-            },
-        ):
-            yield
-    finally:
-        mock_si = MagicMock()
-        mock_dc = MagicMock()
-
-        patch.dict(
+        patcher_2 = patch.dict(
             esxdatacenter.__salt__,
             {
                 "vsphere.get_proxy_type": MagicMock(),
@@ -48,6 +31,13 @@ def policy_set():
                 "vsphere.disconnect": MagicMock(),
             },
         )
+        patcher_2.start()
+        yield
+    finally:
+        if patcher_1:
+            patcher_1.stop()
+        if patcher_2:
+            patcher_2.stop()
 
 
 def test_dc_name_different_proxy(policy_set):
