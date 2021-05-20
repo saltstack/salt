@@ -1,44 +1,43 @@
 import pytest
-import salt.modules.ansiblegate as ansiblegate
 
 pytestmark = [
-    pytest.mark.skipif(ansiblegate.ansible is None, reason="Ansible is not installed"),
     pytest.mark.skip_on_windows(reason="Not supported on Windows"),
+    pytest.mark.skip_if_binaries_missing(
+        "ansible",
+        "ansible-doc",
+        "ansible-playbook",
+        check_all=True,
+        reason="ansible is not installed",
+    ),
 ]
 
 
-def test_ansible_functions_loaded(modules):
-    """
-    Test that the ansible functions are actually loaded
-    """
+@pytest.fixture
+def ansible_ping_func(modules):
     if "ansible.system.ping" in modules:
         # we need to go by getattr() because salt's loader will try to find "system" in the dictionary and fail
         # The ansible hack injects, in this case, "system.ping" as an attribute to the loaded module
-        ret = getattr(modules.ansible, "system.ping")()
-    elif "ansible.ping" in modules:
-        # Ansible >= 2.10
-        ret = modules.ansible.ping()
-    else:
-        pytest.fail("Where is the ping function these days in Ansible?!")
+        return getattr(modules.ansible, "system.ping")
 
-    ret.pop("timeout", None)
+    if "ansible.ping" in modules:
+        # Ansible >= 2.10
+        return modules.ansible.ping
+
+    pytest.fail("Where is the ping function these days in Ansible?!")
+
+
+def test_ansible_functions_loaded(ansible_ping_func):
+    """
+    Test that the ansible functions are actually loaded
+    """
+    ret = ansible_ping_func()
     assert ret == {"ping": "pong"}
 
 
-def test_passing_data_to_ansible_modules(modules):
+def test_passing_data_to_ansible_modules(ansible_ping_func):
     """
     Test that the ansible functions are actually loaded
     """
     expected = "foobar"
-    if "ansible.system.ping" in modules:
-        # we need to go by getattr() because salt's loader will try to find "system" in the dictionary and fail
-        # The ansible hack injects, in this case, "system.ping" as an attribute to the loaded module
-        ret = getattr(modules.ansible, "system.ping")(data=expected)
-    elif "ansible.ping" in modules:
-        # Ansible >= 2.10
-        ret = modules.ansible.ping(data=expected)
-    else:
-        pytest.fail("Where is the ping function these days in Ansible?!")
-
-    ret.pop("timeout", None)
+    ret = ansible_ping_func(data=expected)
     assert ret == {"ping": expected}

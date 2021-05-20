@@ -17,16 +17,13 @@ pytestmark = [
     # Because of the above, these are also destructive tests
     pytest.mark.destructive_test,
     pytest.mark.skip_if_binaries_missing(
-        "ansible-playbook", message="ansible-playbook is not installed"
+        "ansible-playbook", reason="ansible-playbook is not installed"
     ),
 ]
 
 
 @pytest.fixture(scope="module")
 def ansible_inventory_directory(tmp_path_factory, grains):
-    import pprint
-
-    pprint.pprint(grains)
     if grains["os_family"] != "RedHat":
         pytest.skip("Currently, the test targets the RedHat OS familly only.")
     tmp_dir = tmp_path_factory.mktemp("ansible")
@@ -38,7 +35,7 @@ def ansible_inventory_directory(tmp_path_factory, grains):
 
 @pytest.fixture(scope="module", autouse=True)
 def ansible_inventory(ansible_inventory_directory, sshd_server):
-    inventory = ansible_inventory_directory / "inventory"
+    inventory = str(ansible_inventory_directory / "inventory")
     client_key = str(sshd_server.config_dir / "client_key")
     data = {
         "all": {
@@ -56,9 +53,9 @@ def ansible_inventory(ansible_inventory_directory, sshd_server):
             },
         },
     }
-    with salt.utils.files.fopen(str(inventory), "w") as yaml_file:
+    with salt.utils.files.fopen(inventory, "w") as yaml_file:
         yaml.dump(data, yaml_file, default_flow_style=False)
-    return str(inventory)
+    return inventory
 
 
 @pytest.mark.requires_sshd_server
