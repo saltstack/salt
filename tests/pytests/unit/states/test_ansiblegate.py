@@ -29,16 +29,17 @@ def test_ansible_playbooks_states_success(playbooks_examples_dir):
     with patch.dict(
         ansiblegate.__salt__,
         {"ansible.playbooks": MagicMock(return_value=success_output)},
-    ), patch("salt.utils.path.which", MagicMock(return_value=True)):
-        with patch.dict(ansiblegate.__opts__, {"test": False}):
-            ret = ansiblegate.playbooks("foobar")
-            assert ret["result"] is True
-            assert ret["comment"] == "Changes were made by playbook foobar"
-            assert ret["changes"] == {
-                "py2hosts": {
-                    "Ansible copy file to remote server": {"centos7-host1.tf.local": {}}
-                }
+    ), patch("salt.utils.path.which", return_value=True), patch.dict(
+        ansiblegate.__opts__, {"test": False}
+    ):
+        ret = ansiblegate.playbooks("foobar")
+        assert ret["result"] is True
+        assert ret["comment"] == "Changes were made by playbook foobar"
+        assert ret["changes"] == {
+            "py2hosts": {
+                "Ansible copy file to remote server": {"centos7-host1.tf.local": {}}
             }
+        }
 
 
 def test_ansible_playbooks_states_failed(playbooks_examples_dir):
@@ -52,19 +53,18 @@ def test_ansible_playbooks_states_failed(playbooks_examples_dir):
     with patch.dict(
         ansiblegate.__salt__,
         {"ansible.playbooks": MagicMock(return_value=failed_output)},
-    ), patch("salt.utils.path.which", MagicMock(return_value=True)):
-        with patch.dict(ansiblegate.__opts__, {"test": False}):
-            ret = ansiblegate.playbooks("foobar")
-            assert ret["result"] is False
-            assert (
-                ret["comment"] == "There were some issues running the playbook foobar"
-            )
-            assert ret["changes"] == {
-                "py2hosts": {
-                    "yum": {
-                        "centos7-host1.tf.local": [
-                            "No package matching 'rsyndc' found available, installed or updated"
-                        ]
-                    }
+    ), patch("salt.utils.path.which", return_value=True), patch.dict(
+        ansiblegate.__opts__, {"test": False}
+    ):
+        ret = ansiblegate.playbooks("foobar")
+        assert ret["result"] is False
+        assert ret["comment"] == "There were some issues running the playbook foobar"
+        assert ret["changes"] == {
+            "py2hosts": {
+                "yum": {
+                    "centos7-host1.tf.local": [
+                        "No package matching 'rsyndc' found available, installed or updated"
+                    ]
                 }
             }
+        }
