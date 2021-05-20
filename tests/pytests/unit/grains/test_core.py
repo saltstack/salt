@@ -3621,3 +3621,24 @@ def test_virtual_set_virtual_ec2():
 
         assert virtual_grains["virtual"] == "Nitro"
         assert virtual_grains["virtual_subtype"] == "Amazon EC2"
+
+
+@pytest.mark.skip_unless_on_linux
+def test_manjaro_arm_arch_os_family_grains():
+    """
+    Test if OS-family grains are parsed correctly in Manjaro-ARM  "Arch"
+    """
+    _os_release_map = {
+        "_linux_distribution": ("Manjaro-3", "21.05", "n/a"),
+    }
+    expectation = {
+        "os": "Manjaro-ARM",
+        "os_family": "Arch",
+        "oscodename": "n/a",
+        "osfullname": "Manjaro-ARM",
+        "osrelease": "21.05",
+        "osrelease_info": (21, 5),
+        "osmajorrelease": 21,
+        "osfinger": "Manjaro-ARM-21",
+    }
+    _run_os_grains_tests("manjaro-arm-21", _os_release_map, expectation)
