@@ -14,7 +14,7 @@ def test_issue_60083(
     Issue #60083
     """
     target_path = tmp_path / "issue-60083-target.txt"
-    assert not os.path.exists(target_path)
+    assert not os.path.exists(str(target_path))
     sls_name = "issue-60083"
     sls_contents = """
     {{ pillar["target-path"] }}:
