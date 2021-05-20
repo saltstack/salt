@@ -1,6 +1,7 @@
 import pytest
 import salt.loader
-import salt.modules.win_lgpo as win_lgpo
+import salt.modules.win_lgpo as win_lgpo_module
+import salt.states.win_lgpo as win_lgpo_state
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
@@ -11,12 +12,17 @@ pytestmark = [
 
 @pytest.fixture
 def configure_loader_modules(minion_opts, modules):
+    utils = salt.loader.utils(minion_opts)
     return {
-        win_lgpo: {
+        win_lgpo_state: {
             "__opts__": minion_opts,
             "__salt__": modules,
-            "__utils__": salt.loader.utils(minion_opts),
-            "__context__": {},
+            "__utils__": utils,
+        },
+        win_lgpo_module: {
+            "__opts__": minion_opts,
+            "__salt__": modules,
+            "__utils__": utils,
         },
     }
 
@@ -46,24 +52,24 @@ def disable_legacy_auditing():
 def clear_policy():
     # Ensure the policy is not set
     test_setting = "No Auditing"
-    win_lgpo.set_computer_policy(name="Audit User Account Management", setting=test_setting)
-    assert (win_lgpo.get_policy(policy_name="Audit User Account Management", policy_class="machine") == test_setting)
+    win_lgpo_module.set_computer_policy(name="Audit User Account Management", setting=test_setting)
+    assert (win_lgpo_module.get_policy(policy_name="Audit User Account Management", policy_class="machine") == test_setting)
 
 
 @pytest.fixture(scope="function")
 def set_policy():
     # Ensure the policy is set
     test_setting = "Success"
-    win_lgpo.set_computer_policy(name="Audit User Account Management", setting=test_setting)
-    assert win_lgpo.get_policy(policy_name="Audit User Account Management", policy_class="machine") == test_setting
+    win_lgpo_module.set_computer_policy(name="Audit User Account Management", setting=test_setting)
+    assert win_lgpo_module.get_policy(policy_name="Audit User Account Management", policy_class="machine") == test_setting
 
 
 def _test_adv_auditing(setting):
     """
     Helper function to set an audit setting and assert that it was successful
     """
-    win_lgpo.set_computer_policy(name="Audit User Account Management", setting=setting)
-    result = win_lgpo.get_policy(policy_name="Audit User Account Management", policy_class="machine")
+    win_lgpo_state.set_(name="Audit User Account Management", setting=setting, policy_class="machine")
+    result = win_lgpo_module.get_policy(policy_name="Audit User Account Management", policy_class="machine")
     assert result == setting
 
 
