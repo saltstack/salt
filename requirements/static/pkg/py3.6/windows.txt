@@ -26,7 +26,7 @@ jaraco.functools==2.0     # via cheroot, jaraco.text, tempora
 jaraco.text==3.5.0        # via jaraco.collections
 jinja2==2.11.3
 libnacl==1.7.2
-lxml==4.6.2
+lxml==4.6.3
 mako==1.1.4
 markupsafe==1.1.1
 more-itertools==8.2.0     # via cheroot, cherrypy, jaraco.classes, jaraco.functools

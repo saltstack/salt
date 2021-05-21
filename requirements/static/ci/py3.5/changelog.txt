@@ -6,7 +6,7 @@
 #
 click==7.1.1              # via towncrier
 incremental==17.5.0       # via towncrier
-jinja2==2.11.2            # via towncrier
+jinja2==2.11.3            # via towncrier
 markupsafe==1.1.1         # via jinja2
 toml==0.10.2              # via towncrier
 towncrier==19.2.0
