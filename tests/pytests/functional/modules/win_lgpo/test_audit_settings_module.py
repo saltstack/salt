@@ -88,6 +88,8 @@ def _test_auditing(setting):
     Helper function to set an audit setting and assert that it was successful
     """
     win_lgpo.set_computer_policy(name="Audit account management", setting=setting)
+    # Clear the context so we're getting the actual settings from the machine
+    win_lgpo._get_secedit_data(refresh=True)
     result = win_lgpo.get_policy(
         policy_name="Audit account management", policy_class="machine"
     )
