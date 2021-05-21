@@ -30,6 +30,7 @@ import logging
 import sys
 from functools import partial
 
+import salt.loader_context
 import salt.utils.stringutils
 import salt.utils.versions
 from salt.exceptions import SaltInvocationError
@@ -54,6 +55,8 @@ log = logging.getLogger(__name__)
 
 __salt__ = None
 __virtualname__ = "boto"
+__salt_loader__ = salt.loader_context.LoaderContext()
+__context__ = __salt_loader__.named_context("__context__", {})
 
 
 def __virtual__():

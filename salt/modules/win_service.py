@@ -1,7 +1,9 @@
 """
 Windows Service module.
 
-.. versionchanged:: 2016.11.0 - Rewritten to use PyWin32
+.. versionchanged:: 2016.11.0
+
+    Rewritten to use PyWin32
 """
 import fnmatch
 import logging

@@ -19,7 +19,7 @@ salt for Windows with their corresponding licenses:
 | lxml | BSD |
 | Mako | MIT |
 | MarkupSafe | BSD |
-| msgpack-python | Apache 2.0 |
+| msgpack | Apache 2.0 |
 | pip | MIT |
 | psutil | BSD |
 | pyasn1 | BSD |

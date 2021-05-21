@@ -4,6 +4,7 @@
 
     PyTest fixtures
 """
+
 import pytest
 
 
@@ -99,10 +100,16 @@ def salt_run_cli(salt_master):
     return salt_master.get_salt_run_cli()
 
 
-@pytest.fixture(scope="package")
-def salt_ssh_cli(salt_master):
+@pytest.fixture(scope="module")
+def salt_ssh_cli(salt_master, salt_ssh_roster_file, sshd_config_dir):
     """
     The ``salt-ssh`` CLI as a fixture against the running master
     """
     assert salt_master.is_running()
-    return salt_master.get_salt_ssh_cli()
+    return salt_master.get_salt_ssh_cli(
+        default_timeout=180,
+        roster_file=salt_ssh_roster_file,
+        target_host="localhost",
+        client_key=str(sshd_config_dir / "client_key"),
+        base_script_args=["--ignore-host-keys"],
+    )

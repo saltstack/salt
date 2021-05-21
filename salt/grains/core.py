@@ -17,6 +17,7 @@ import os
 import platform
 import re
 import socket
+import subprocess
 import sys
 import time
 import uuid
@@ -68,10 +69,11 @@ if salt.utils.platform.is_windows():
     # attempt to import the python wmi module
     # the Windows minion uses WMI for some of its grains
     try:
-        import wmi  # pylint: disable=import-error
-        import salt.utils.winapi
         import win32api
+        import wmi  # pylint: disable=import-error
+
         import salt.utils.win_reg
+        import salt.utils.winapi
 
         HAS_WMI = True
     except ImportError:
@@ -98,6 +100,24 @@ HAS_UNAME = hasattr(os, "uname")
 # Possible value for h_errno defined in netdb.h
 HOST_NOT_FOUND = 1
 NO_DATA = 4
+
+
+def _parse_junos_showver(txt):
+    showver = {}
+    for l in txt.splitlines():
+        decoded_line = l.decode("utf-8")
+        if decoded_line.startswith("Model"):
+            showver["model"] = decoded_line.split(" ")[1]
+        if decoded_line.startswith("Junos"):
+            showver["osrelease"] = decoded_line.split(" ")[1]
+            showver["osmajorrelease"] = decoded_line.split(".")[0]
+            showver["osrelease_info"] = decoded_line.split(".")
+        if decoded_line.startswith("JUNOS OS Kernel"):
+            showver["kernelversion"] = decoded_line
+            relno = re.search(r"\[(.*)\]", decoded_line)
+            if relno:
+                showver["kernelrelease"] = relno.group(1)
+    return showver
 
 
 def _windows_cpudata():
@@ -999,10 +1019,11 @@ def _virtual(osdata):
                 # Tested on Fedora 10 / 2.6.27.30-170.2.82 with xen
                 # Tested on Fedora 15 / 2.6.41.4-1 without running xen
                 elif isdir("/sys/bus/xen"):
-                    if "xen:" in __salt__["cmd.run"]("dmesg").lower():
-                        grains["virtual_subtype"] = "Xen PV DomU"
-                    elif os.path.isfile("/sys/bus/xen/drivers/xenconsole"):
+                    if os.path.isdir("/sys/bus/xen/drivers/xenconsole"):
                         # An actual DomU will have the xenconsole driver
+                        grains["virtual_subtype"] = "Xen PV DomU"
+                    elif "xen:" in __salt__["cmd.run"]("dmesg").lower():
+                        # Fallback to parsing dmesg, might not be successful
                         grains["virtual_subtype"] = "Xen PV DomU"
             # If a Dom0 or DomU was detected, obviously this is xen
             if "dom" in grains.get("virtual_subtype", "").lower():
@@ -1367,6 +1388,7 @@ def _windows_platform_data():
     #    serialnumber
     #    osfullname
     #    timezone
+    #    uuid
     #    windowsdomain
     #    windowsdomaintype
     #    motherboard.productname
@@ -1386,6 +1408,8 @@ def _windows_platform_data():
         biosinfo = wmi_c.Win32_BIOS()[0]
         # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394498(v=vs.85).aspx
         timeinfo = wmi_c.Win32_TimeZone()[0]
+        # https://docs.microsoft.com/en-us/windows/win32/cimwin32prov/win32-computersystemproduct
+        csproductinfo = wmi_c.Win32_ComputerSystemProduct()[0]
 
         # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394072(v=vs.85).aspx
         motherboard = {"product": None, "serial": None}
@@ -1423,6 +1447,7 @@ def _windows_platform_data():
             "serialnumber": _clean_value("serialnumber", biosinfo.SerialNumber),
             "osfullname": _clean_value("osfullname", osinfo.Caption),
             "timezone": _clean_value("timezone", timeinfo.Description),
+            "uuid": _clean_value("uuid", csproductinfo.UUID.lower()),
             "windowsdomain": _clean_value("windowsdomain", net_info["Domain"]),
             "windowsdomaintype": _clean_value(
                 "windowsdomaintype", net_info["DomainType"]
@@ -1511,6 +1536,7 @@ _OS_NAME_MAP = {
     "archarm": "Arch ARM",
     "arch": "Arch",
     "debian": "Debian",
+    "Junos": "Junos",
     "raspbian": "Raspbian",
     "fedoraremi": "Fedora",
     "chapeau": "Chapeau",
@@ -1521,6 +1547,7 @@ _OS_NAME_MAP = {
     "oracleserv": "OEL",
     "cloudserve": "CloudLinux",
     "cloudlinux": "CloudLinux",
+    "almalinux": "AlmaLinux",
     "pidora": "Fedora",
     "scientific": "ScientificLinux",
     "synology": "Synology",
@@ -1535,6 +1562,10 @@ _OS_NAME_MAP = {
     "slesexpand": "RES",
     "linuxmint": "Mint",
     "neon": "KDE neon",
+    "pop": "Pop",
+    "rocky": "Rocky",
+    "alibabaclo": "Alinux",
+    "mendel": "Mendel",
 }
 
 # Map the 'os' grain to the 'os_family' grain
@@ -1548,10 +1579,12 @@ _OS_FAMILY_MAP = {
     "Korora": "RedHat",
     "FedBerry": "RedHat",
     "CentOS": "RedHat",
+    "CentOS Stream": "RedHat",
     "GoOSe": "RedHat",
     "Scientific": "RedHat",
     "Amazon": "RedHat",
     "CloudLinux": "RedHat",
+    "AlmaLinux": "RedHat",
     "OVS": "RedHat",
     "OEL": "RedHat",
     "XCP": "RedHat",
@@ -1559,6 +1592,7 @@ _OS_FAMILY_MAP = {
     "XenServer": "RedHat",
     "RES": "RedHat",
     "Sangoma": "RedHat",
+    "VMware Photon OS": "RedHat",
     "Mandrake": "Mandriva",
     "ESXi": "VMware",
     "Mint": "Debian",
@@ -1607,6 +1641,12 @@ _OS_FAMILY_MAP = {
     "Funtoo": "Gentoo",
     "AIX": "AIX",
     "TurnKey": "Debian",
+    "Pop": "Debian",
+    "Rocky": "RedHat",
+    "AstraLinuxCE": "Debian",
+    "AstraLinuxSE": "Debian",
+    "Alinux": "RedHat",
+    "Mendel": "Debian",
 }
 
 # Matches any possible format:
@@ -1757,7 +1797,18 @@ def os_data():
     ) = platform.uname()
     # pylint: enable=unpacking-non-sequence
 
-    if salt.utils.platform.is_proxy():
+    if salt.utils.platform.is_junos():
+        grains["kernel"] = "Junos"
+        grains["osfullname"] = "Junos"
+        grains["os"] = "Junos"
+        grains["os_family"] = "FreeBSD"
+        showver = _parse_junos_showver(
+            subprocess.run(
+                ["/usr/sbin/cli", "show", "version"], stdout=subprocess.PIPE, check=True
+            ).stdout
+        )
+        grains.update(showver)
+    elif salt.utils.platform.is_proxy():
         grains["kernel"] = "proxy"
         grains["kernelrelease"] = "proxy"
         grains["kernelversion"] = "proxy"
@@ -2388,7 +2439,7 @@ def ip_fqdn():
             try:
                 start_time = datetime.datetime.utcnow()
                 info = socket.getaddrinfo(_fqdn, None, socket_type)
-                ret[key] = list(item[4][0] for item in info)
+                ret[key] = list({item[4][0] for item in info})
             except (OSError, UnicodeError):
                 timediff = datetime.datetime.utcnow() - start_time
                 if timediff.seconds > 5 and __opts__["__role"] == "master":
@@ -2510,7 +2561,11 @@ def dns():
     if salt.utils.platform.is_windows() or "proxyminion" in __opts__:
         return {}
 
-    resolv = salt.utils.dns.parse_resolv()
+    if os.path.exists("/run/systemd/resolve/resolv.conf"):
+        resolv = salt.utils.dns.parse_resolv("/run/systemd/resolve/resolv.conf")
+    else:
+        resolv = salt.utils.dns.parse_resolv()
+
     for key in ("nameservers", "ip4_nameservers", "ip6_nameservers", "sortlist"):
         if key in resolv:
             resolv[key] = [str(i) for i in resolv[key]]

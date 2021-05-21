@@ -568,7 +568,6 @@ def read_certificate(certificate):
         "Key Size": cert.get_pubkey().size() * 8,
         "Serial Number": _dec2hex(cert.get_serial_number()),
         "SHA-256 Finger Print": _pretty_hex(cert.get_fingerprint(md="sha256")),
-        "MD5 Finger Print": _pretty_hex(cert.get_fingerprint(md="md5")),
         "SHA1 Finger Print": _pretty_hex(cert.get_fingerprint(md="sha1")),
         "Subject": _parse_subject(cert.get_subject()),
         "Subject Hash": _dec2hex(cert.get_subject().as_hash()),
@@ -580,7 +579,8 @@ def read_certificate(certificate):
         "Not After": cert.get_not_after().get_datetime().strftime("%Y-%m-%d %H:%M:%S"),
         "Public Key": get_public_key(cert),
     }
-
+    if __opts__["fips_mode"] is False:
+        ret["MD5 Finger Print"] = _pretty_hex(cert.get_fingerprint(md="md5"))
     exts = OrderedDict()
     for ext_index in range(0, cert.get_ext_count()):
         ext = cert.get_ext_at(ext_index)

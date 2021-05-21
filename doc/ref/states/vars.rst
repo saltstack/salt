@@ -190,6 +190,7 @@ is in root of the file roots, this will return ".". This is usually identical
 to `slspath` except in case of root-level sls, where this will return a "`.`".
 
 A Common use case for this variable is to generate relative salt urls like:
+
 .. code-block:: jinja
 
     my-file:
