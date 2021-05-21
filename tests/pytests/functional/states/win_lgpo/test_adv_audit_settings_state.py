@@ -102,7 +102,9 @@ def _test_adv_auditing(setting, expected):
         name="Audit User Account Management", setting=setting, policy_class="machine"
     )
     # Clear the context so we're getting the actual settings from the machine
-    result = win_lgpo_module._get_advaudit_value("Audit User Account Management", refresh=True)
+    result = win_lgpo_module._get_advaudit_value(
+        "Audit User Account Management", refresh=True
+    )
     assert result == expected
 
 
