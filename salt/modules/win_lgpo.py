@@ -5092,18 +5092,25 @@ def _advaudit_check_csv():
             __salt__["file.write"](f_audit, ",".join(field_names))
 
 
-def _get_advaudit_value(option):
+def _get_advaudit_value(option, refresh=False):
     """
     Get the Advanced Auditing policy as configured in
     ``C:\\Windows\\Security\\Audit\\audit.csv``
 
     Args:
-        option (str): The name of the setting as it appears in audit.csv
+
+        option (str):
+            The name of the setting as it appears in audit.csv
+
+        refresh (bool):
+            Refresh secedit data stored in __context__. This is needed for
+            testing where the state is setting the value, but the module that
+            is checking the value has its own __context__.
 
     Returns:
         bool: ``True`` if successful, otherwise ``False``
     """
-    if "lgpo.adv_audit_data" not in __context__:
+    if "lgpo.adv_audit_data" not in __context__ or refresh is True:
         system_root = os.environ.get("SystemRoot", "C:\\Windows")
         f_audit = os.path.join(system_root, "security", "audit", "audit.csv")
 
@@ -5379,15 +5386,22 @@ def _load_secedit_data():
             __salt__["file.remove"](f_exp)
 
 
-def _get_secedit_data():
+def _get_secedit_data(refresh=False):
     """
     Helper function that returns the secedit data in __context__ if it exists
     and puts the secedit data in __context__ if it does not.
 
+    Args:
+
+        refresh (bool):
+            Refresh secedit data stored in __context__. This is needed for
+            testing where the state is setting the value, but the module that
+            is checking the value has its own __context__.
+
     Returns:
         str: secedit data from __context__
     """
-    if "lgpo.secedit_data" not in __context__:
+    if "lgpo.secedit_data" not in __context__ or refresh is True:
         log.debug("LGPO: Loading secedit data")
         __context__["lgpo.secedit_data"] = _load_secedit_data()
     return __context__["lgpo.secedit_data"]
