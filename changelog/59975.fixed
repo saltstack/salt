@@ -1,1 +1,0 @@
-Pass the value of the `__grains__` NamedContext to salt.pillar.get_pillar, instead of the NamedContext object itself.
