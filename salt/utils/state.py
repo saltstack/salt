@@ -214,6 +214,25 @@ def get_sls_opts(opts, **kwargs):
     if "localconfig" in kwargs:
         return salt.config.minion_config(kwargs["localconfig"], defaults=opts)
 
+    if opts.get("saltenv_from_pillar", False) \
+            and ("saltenv" not in kwargs and "lock_saltenv" not in opts):
+        pillarsaltenv = opts.get("saltenv_from_pillar")
+        pillar = opts.get("pillar")
+
+        try:
+            if ":" in pillarsaltenv and pillar:
+                nested = pillarsaltenv.split(":")
+                env = pillar
+                for nest in nested:
+                    env = env[nest]
+            else:
+                env = pillar[pillarsaltenv]
+            opts["saltenv"] = env
+        except KeyError:
+            raise CommandExecutionError(
+                "Could not get salt env from configured pillar {0}".format(pillarsaltenv)
+            )
+
     if "saltenv" in kwargs:
         saltenv = kwargs["saltenv"]
         if saltenv is not None:
