@@ -69,6 +69,7 @@ def _test_adv_auditing(setting):
     Helper function to set an audit setting and assert that it was successful
     """
     win_lgpo_state.set_(name="Audit User Account Management", setting=setting, policy_class="machine")
+    win_lgpo_module._get_advaudit_value("junk", refresh=True)
     result = win_lgpo_module.get_policy(policy_name="Audit User Account Management", policy_class="machine")
     assert result == setting
 

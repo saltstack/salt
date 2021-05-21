@@ -23,7 +23,7 @@ def configure_loader_modules(minion_opts, modules):
             "__opts__": {"cachedir": minion_opts["cachedir"]},
             "__salt__": modules,
             "__utils__": utils,
-        }
+        },
     }
 
 
@@ -68,8 +68,10 @@ def _test_auditing(setting):
     """
     Helper function to set an audit setting and assert that it was successful
     """
-    win_lgpo_state.set_(name="Audit account management", setting=setting, policy_class="machine")
-    result = win_lgpo_module.get_policy(policy_name="Audit account management", policy_class="machine")
+    computer_policy = {"Audit Account Management": setting}
+    win_lgpo_state.set_(name="junk", computer_policy=computer_policy)
+    win_lgpo_module._get_secedit_data(refresh=True)
+    result = win_lgpo_module.get_policy(policy_name="Audit Account Management", policy_class="machine")
     assert result == setting
 
 
