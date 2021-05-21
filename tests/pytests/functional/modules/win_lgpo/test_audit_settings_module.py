@@ -27,18 +27,34 @@ def enable_legacy_auditing():
     # Policy: "Audit: Force audit policy subcategory settings..."
     # Short Name: SceNoApplyLegacyAuditPolicy
     from tests.support.sminion import create_sminion
+
     salt_minion = create_sminion()
     test_setting = "Disabled"
-    pre_security_setting = salt_minion.functions.lgpo.get_policy(policy_name="SceNoApplyLegacyAuditPolicy", policy_class="machine")
-    pre_audit_setting = salt_minion.functions.lgpo.get_policy(policy_name="Audit Account Management", policy_class="machine")
+    pre_security_setting = salt_minion.functions.lgpo.get_policy(
+        policy_name="SceNoApplyLegacyAuditPolicy", policy_class="machine"
+    )
+    pre_audit_setting = salt_minion.functions.lgpo.get_policy(
+        policy_name="Audit Account Management", policy_class="machine"
+    )
     try:
         if pre_security_setting != test_setting:
-            salt_minion.functions.lgpo.set_computer_policy(name="SceNoApplyLegacyAuditPolicy", setting=test_setting)
-            assert salt_minion.functions.lgpo.get_policy(policy_name="SceNoApplyLegacyAuditPolicy", policy_class="machine") == test_setting
+            salt_minion.functions.lgpo.set_computer_policy(
+                name="SceNoApplyLegacyAuditPolicy", setting=test_setting
+            )
+            assert (
+                salt_minion.functions.lgpo.get_policy(
+                    policy_name="SceNoApplyLegacyAuditPolicy", policy_class="machine"
+                )
+                == test_setting
+            )
         yield
     finally:
-        salt_minion.functions.lgpo.set_computer_policy(name="SceNoApplyLegacyAuditPolicy", setting=pre_security_setting)
-        salt_minion.functions.lgpo.set_computer_policy(name="Audit Account Management", setting=pre_audit_setting)
+        salt_minion.functions.lgpo.set_computer_policy(
+            name="SceNoApplyLegacyAuditPolicy", setting=pre_security_setting
+        )
+        salt_minion.functions.lgpo.set_computer_policy(
+            name="Audit Account Management", setting=pre_audit_setting
+        )
 
 
 @pytest.fixture(scope="function")
@@ -46,7 +62,12 @@ def clear_policy():
     # Ensure the policy is not set
     test_setting = "No auditing"
     win_lgpo.set_computer_policy(name="Audit account management", setting=test_setting)
-    assert win_lgpo.get_policy(policy_name="Audit account management", policy_class="machine") == test_setting
+    assert (
+        win_lgpo.get_policy(
+            policy_name="Audit account management", policy_class="machine"
+        )
+        == test_setting
+    )
 
 
 @pytest.fixture(scope="function")
@@ -54,7 +75,12 @@ def set_policy():
     # Ensure the policy is set
     test_setting = "Success"
     win_lgpo.set_computer_policy(name="Audit account management", setting=test_setting)
-    assert win_lgpo.get_policy(policy_name="Audit account management", policy_class="machine") == test_setting
+    assert (
+        win_lgpo.get_policy(
+            policy_name="Audit account management", policy_class="machine"
+        )
+        == test_setting
+    )
 
 
 def _test_auditing(setting):
@@ -62,7 +88,9 @@ def _test_auditing(setting):
     Helper function to set an audit setting and assert that it was successful
     """
     win_lgpo.set_computer_policy(name="Audit account management", setting=setting)
-    result = win_lgpo.get_policy(policy_name="Audit account management", policy_class="machine")
+    result = win_lgpo.get_policy(
+        policy_name="Audit account management", policy_class="machine"
+    )
     assert result == setting
 
 
