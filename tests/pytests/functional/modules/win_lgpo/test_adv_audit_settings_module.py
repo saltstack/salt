@@ -80,36 +80,35 @@ def set_policy():
     win_lgpo.set_computer_policy(
         name="Audit User Account Management", setting=test_setting
     )
-    # Clear the context so we're getting the actual settings from the machine
-    win_lgpo._get_advaudit_value("junk", refresh=True)
-    result = win_lgpo.get_policy(
-        policy_name="Audit User Account Management", policy_class="machine"
+    assert (
+        win_lgpo.get_policy(
+            policy_name="Audit User Account Management", policy_class="machine"
+        )
+        == test_setting
     )
-    assert result == test_setting
 
 
-def _test_adv_auditing(setting):
+def _test_adv_auditing(setting, expected):
     """
     Helper function to set an audit setting and assert that it was successful
     """
     win_lgpo.set_computer_policy(name="Audit User Account Management", setting=setting)
-    result = win_lgpo.get_policy(
-        policy_name="Audit User Account Management", policy_class="machine"
-    )
-    assert result == setting
+    # Clear the context so we're getting the actual settings from the machine
+    result = win_lgpo._get_advaudit_value("Audit User Account Management", refresh=True)
+    assert result == expected
 
 
 def test_no_auditing(disable_legacy_auditing, set_policy):
-    _test_adv_auditing("No Auditing")
+    _test_adv_auditing("No Auditing", "0")
 
 
 def test_success(disable_legacy_auditing, clear_policy):
-    _test_adv_auditing("Success")
+    _test_adv_auditing("Success", "1")
 
 
 def test_failure(disable_legacy_auditing, clear_policy):
-    _test_adv_auditing("Failure")
+    _test_adv_auditing("Failure", "2")
 
 
 def test_success_and_failure(disable_legacy_auditing, clear_policy):
-    _test_adv_auditing("Success and Failure")
+    _test_adv_auditing("Success and Failure", "3")
