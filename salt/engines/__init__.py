@@ -8,6 +8,7 @@ import logging
 import salt
 import salt.loader
 import salt.utils.platform
+import salt.utils.process
 from salt.utils.process import SignalHandlingProcess
 
 log = logging.getLogger(__name__)
@@ -126,7 +127,9 @@ class Engine(SignalHandlingProcess):
             self.opts, self.funcs, self.runners, self.utils, proxy=self.proxy
         )
         kwargs = self.config or {}
+
         try:
+            salt.utils.process.appendproctitle(self.name)
             self.engine[self.fun](**kwargs)
         except Exception as exc:  # pylint: disable=broad-except
             log.critical(

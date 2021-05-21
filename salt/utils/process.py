@@ -55,7 +55,10 @@ def appendproctitle(name):
     Append "name" to the current process title
     """
     if HAS_SETPROCTITLE:
-        setproctitle.setproctitle(setproctitle.getproctitle() + " " + name)
+        current = setproctitle.getproctitle()
+        if current.strip().endswith("MainProcess"):
+            current, _ = current.rsplit("MainProcess", 1)
+        setproctitle.setproctitle("{} {}".format(current.rstrip(), name))
 
 
 def daemonize(redirect_out=True):
@@ -638,7 +641,8 @@ class ProcessManager:
         Load and start all available api modules
         """
         log.debug("Process Manager starting!")
-        appendproctitle(self.name)
+        if multiprocessing.current_process().name != "MainProcess":
+            appendproctitle(self.name)
 
         # make sure to kill the subprocesses if the parent is killed
         if signal.getsignal(signal.SIGTERM) is signal.SIG_DFL:
