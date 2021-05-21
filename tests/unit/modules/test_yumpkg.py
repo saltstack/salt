@@ -1792,6 +1792,47 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
             ret = yumpkg.get_repo(repo, **kwargs)
         assert ret == expected, ret
 
+    def test_pkg_update_dnf(self):
+        """
+        Tests that the proper CLI options are added when obsoletes=False
+        """
+        name = "foo"
+        old = "1.2.2-1.fc31"
+        new = "1.2.3-1.fc31"
+        cmd_mock = MagicMock(return_value={"retcode": 0})
+        list_pkgs_mock = MagicMock(side_effect=[{name: old}, {name: new}])
+        parse_targets_mock = MagicMock(return_value=({"foo": None}, "repository"))
+        with patch.dict(
+            yumpkg.__salt__,
+            {"cmd.run_all": cmd_mock, "pkg_resource.parse_targets": parse_targets_mock},
+        ), patch.object(yumpkg, "refresh_db", MagicMock()), patch.object(
+            yumpkg, "list_pkgs", list_pkgs_mock
+        ), patch.object(
+            yumpkg, "_yum", MagicMock(return_value="dnf")
+        ), patch(
+            "salt.utils.systemd.has_scope", MagicMock(return_value=False)
+        ):
+            ret = yumpkg.update(name, setopt="obsoletes=0,plugins=0")
+            expected = {name: {"old": old, "new": new}}
+            assert ret == expected, ret
+
+            cmd_mock.assert_called_once_with(
+                [
+                    "dnf",
+                    "--quiet",
+                    "-y",
+                    "--setopt",
+                    "plugins=0",
+                    "--setopt",
+                    "obsoletes=False",
+                    "upgrade",
+                    "foo",
+                ],
+                env={},
+                output_loglevel="trace",
+                python_shell=False,
+            )
+
 
 @skipIf(pytest is None, "PyTest is missing")
 class YumUtilsTestCase(TestCase, LoaderModuleMockMixin):
