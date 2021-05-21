@@ -80,12 +80,12 @@ def set_policy():
     win_lgpo.set_computer_policy(
         name="Audit User Account Management", setting=test_setting
     )
-    assert (
-        win_lgpo.get_policy(
-            policy_name="Audit User Account Management", policy_class="machine"
-        )
-        == test_setting
+    # Clear the context so we're getting the actual settings from the machine
+    win_lgpo._get_advaudit_value("junk", refresh=True)
+    result = win_lgpo.get_policy(
+        policy_name="Audit User Account Management", policy_class="machine"
     )
+    assert result == test_setting
 
 
 def _test_adv_auditing(setting):
