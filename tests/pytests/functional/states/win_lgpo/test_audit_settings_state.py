@@ -100,6 +100,7 @@ def _test_auditing(setting):
     """
     computer_policy = {"Audit Account Management": setting}
     win_lgpo_state.set_(name="junk", computer_policy=computer_policy)
+    # Clear the context so we're getting the actual settings from the machine
     win_lgpo_module._get_secedit_data(refresh=True)
     result = win_lgpo_module.get_policy(
         policy_name="Audit Account Management", policy_class="machine"

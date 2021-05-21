@@ -101,6 +101,7 @@ def _test_adv_auditing(setting):
     win_lgpo_state.set_(
         name="Audit User Account Management", setting=setting, policy_class="machine"
     )
+    # Clear the context so we're getting the actual settings from the machine
     win_lgpo_module._get_advaudit_value("junk", refresh=True)
     result = win_lgpo_module.get_policy(
         policy_name="Audit User Account Management", policy_class="machine"
