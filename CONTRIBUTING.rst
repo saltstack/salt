@@ -9,7 +9,7 @@ in a number of ways:
 -  Using Salt and opening well-written bug reports.
 -  Joining a `working group <https://github.com/saltstack/community>`__.
 -  Answering questions on `irc <https://webchat.freenode.net/#salt>`__,
-   the `community Slack <https://saltstackcommunity.herokuapp.com/>`__,
+   the `community Slack <https://join.slack.com/t/saltstackcommunity/shared_invite/zt-3av8jjyf-oBQ2M0vhXOhJpNpRkPWBvg>`__,
    the `salt-users mailing
    list <https://groups.google.com/forum/#!forum/salt-users>`__,
    `Server Fault <https://serverfault.com/questions/tagged/saltstack>`__,
