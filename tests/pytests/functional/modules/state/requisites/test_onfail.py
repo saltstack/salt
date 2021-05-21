@@ -484,7 +484,10 @@ def test_multiple_onfail_requisite_with_required(state, state_tree):
             ret["cmd_|-e_|-echo e_|-run"]["comment"]
             == "State was not run because onfail req did not change"
         )
-        assert ret["cmd_|-f_|-echo f_|-run"]["changes"]["stdout"] == "f"
+        assert (
+            ret["cmd_|-f_|-echo f_|-run"]["comment"]
+            == "State was not run because onfail req did not change"
+        )
 
 
 def test_multiple_onfail_requisite_with_required_no_run(state, state_tree):

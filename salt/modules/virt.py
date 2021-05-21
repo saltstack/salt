@@ -656,19 +656,15 @@ def _libvirt_creds():
     """
     Returns the user and group that the disk images should be owned by
     """
-    g_cmd = "grep ^\\s*group /etc/libvirt/qemu.conf"
-    u_cmd = "grep ^\\s*user /etc/libvirt/qemu.conf"
+    g_cmd = ["grep", "^\\s*group", "/etc/libvirt/qemu.conf"]
+    u_cmd = ["grep", "^\\s*user", "/etc/libvirt/qemu.conf"]
     try:
-        stdout = subprocess.Popen(
-            g_cmd, shell=True, stdout=subprocess.PIPE
-        ).communicate()[0]
+        stdout = subprocess.Popen(g_cmd, stdout=subprocess.PIPE).communicate()[0]
         group = salt.utils.stringutils.to_str(stdout).split('"')[1]
     except IndexError:
         group = "root"
     try:
-        stdout = subprocess.Popen(
-            u_cmd, shell=True, stdout=subprocess.PIPE
-        ).communicate()[0]
+        stdout = subprocess.Popen(u_cmd, stdout=subprocess.PIPE).communicate()[0]
         user = salt.utils.stringutils.to_str(stdout).split('"')[1]
     except IndexError:
         user = "root"
@@ -5765,7 +5761,7 @@ def seed_non_shared_migrate(disks, force=False):
             # the target exists, check to see if it is compatible
             pre = salt.utils.yaml.safe_load(
                 subprocess.Popen(
-                    "qemu-img info arch", shell=True, stdout=subprocess.PIPE
+                    ["qemu-img", "info", "arch"], stdout=subprocess.PIPE
                 ).communicate()[0]
             )
             if (
@@ -5777,11 +5773,9 @@ def seed_non_shared_migrate(disks, force=False):
             os.makedirs(os.path.dirname(fn_))
         if os.path.isfile(fn_):
             os.remove(fn_)
-        cmd = "qemu-img create -f " + form + " " + fn_ + " " + size
-        subprocess.call(cmd, shell=True)
+        subprocess.call(["qemu-img", "create", "-f", form, fn_, size])
         creds = _libvirt_creds()
-        cmd = "chown " + creds["user"] + ":" + creds["group"] + " " + fn_
-        subprocess.call(cmd, shell=True)
+        subprocess.call(["chown", "{user}:{group}".format(**creds), fn_])
     return True
 
 
@@ -6016,7 +6010,7 @@ def _is_bhyve_hyper():
     vmm_enabled = False
     try:
         stdout = subprocess.Popen(
-            sysctl_cmd, shell=True, stdout=subprocess.PIPE
+            ["sysctl", "hw.vmm.create"], stdout=subprocess.PIPE
         ).communicate()[0]
         vmm_enabled = len(salt.utils.stringutils.to_str(stdout).split('"')[1]) != 0
     except IndexError:
@@ -7627,7 +7621,7 @@ def network_update(
             if node.get("family", "ipv4") == "ipv4"
         ]
         for ip_node in ipv4_nodes:
-            netmask = ip_node.attrib.pop("netmask")
+            netmask = ip_node.attrib.pop("netmask", None)
             if netmask:
                 address = ipaddress.ip_network(
                     "{}/{}".format(ip_node.get("address"), netmask), strict=False

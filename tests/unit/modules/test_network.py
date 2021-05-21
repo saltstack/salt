@@ -1,5 +1,6 @@
 import logging
 import os.path
+import shutil
 import socket
 
 import salt.config
@@ -121,7 +122,20 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
         """
         Test for Performs a traceroute to a 3rd party host
         """
-        with patch("salt.utils.path.which", MagicMock(return_value="traceroute")):
+
+        def patched_which(binary):
+            binary_path = shutil.which(binary)
+            if binary_path:
+                # The path exists, just return it
+                return binary_path
+            if binary == "traceroute":
+                # The path doesn't exist but we mock it on the test.
+                # Return the binary name
+                return binary
+            # The binary does not exist
+            return binary_path
+
+        with patch("salt.utils.path.which", patched_which):
             with patch.dict(network.__salt__, {"cmd.run": MagicMock(return_value="")}):
                 self.assertListEqual(network.traceroute("gentoo.org"), [])
 
@@ -262,6 +276,68 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
             network.__grains__, {"os_family": "A"}
         ):
             self.assertTrue(network.mod_hostname("hostname"))
+
+    def test_mod_hostname_quoted(self):
+        """
+        Test for correctly quoted hostname on rh-style distro
+        """
+
+        fopen_mock = mock_open(
+            read_data={
+                "/etc/hosts": "\n".join(
+                    ["127.0.0.1 localhost.localdomain", "127.0.0.2 undef"]
+                ),
+                "/etc/sysconfig/network": "\n".join(
+                    ["NETWORKING=yes", 'HOSTNAME="undef"']
+                ),
+            }
+        )
+
+        with patch.dict(network.__grains__, {"os_family": "RedHat"}), patch.dict(
+            network.__salt__, {"cmd.run": MagicMock(return_value=None)}
+        ), patch("socket.getfqdn", MagicMock(return_value="undef")), patch.dict(
+            network.__utils__,
+            {
+                "path.which": MagicMock(return_value="hostname"),
+                "files.fopen": fopen_mock,
+            },
+        ):
+            self.assertTrue(network.mod_hostname("hostname"))
+            assert (
+                fopen_mock.filehandles["/etc/sysconfig/network"][1].write_calls[1]
+                == 'HOSTNAME="hostname"\n'
+            )
+
+    def test_mod_hostname_unquoted(self):
+        """
+        Test for correctly unquoted hostname on rh-style distro
+        """
+
+        fopen_mock = mock_open(
+            read_data={
+                "/etc/hosts": "\n".join(
+                    ["127.0.0.1 localhost.localdomain", "127.0.0.2 undef"]
+                ),
+                "/etc/sysconfig/network": "\n".join(
+                    ["NETWORKING=yes", "HOSTNAME=undef"]
+                ),
+            }
+        )
+
+        with patch.dict(network.__grains__, {"os_family": "RedHat"}), patch.dict(
+            network.__salt__, {"cmd.run": MagicMock(return_value=None)}
+        ), patch("socket.getfqdn", MagicMock(return_value="undef")), patch.dict(
+            network.__utils__,
+            {
+                "path.which": MagicMock(return_value="hostname"),
+                "files.fopen": fopen_mock,
+            },
+        ):
+            self.assertTrue(network.mod_hostname("hostname"))
+            assert (
+                fopen_mock.filehandles["/etc/sysconfig/network"][1].write_calls[1]
+                == "HOSTNAME=hostname\n"
+            )
 
     def test_connect(self):
         """

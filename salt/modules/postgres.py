@@ -31,8 +31,11 @@ Module to provide Postgres compatibility to salt.
 # pylint: disable=E8203
 
 
+import base64
 import datetime
 import hashlib
+import hmac
+import io
 import logging
 import os
 import pipes
@@ -45,8 +48,7 @@ import salt.utils.odict
 import salt.utils.path
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
-from salt.ext.six.moves import StringIO
+from salt.ext.saslprep import saslprep
 from salt.utils.versions import LooseVersion as _LooseVersion
 
 try:
@@ -56,11 +58,16 @@ try:
 except ImportError:
     HAS_CSV = False
 
+try:
+    from secrets import token_bytes
+except ImportError:
+    # python <3.6
+    from os import urandom as token_bytes
 
 log = logging.getLogger(__name__)
 
 
-_DEFAULT_PASSWORDS_ENCRYPTION = True
+_DEFAULT_PASSWORDS_ENCRYPTION = "md5"
 _EXTENSION_NOT_INSTALLED = "EXTENSION NOT INSTALLED"
 _EXTENSION_INSTALLED = "EXTENSION INSTALLED"
 _EXTENSION_TO_UPGRADE = "EXTENSION TO UPGRADE"
@@ -153,7 +160,7 @@ def _run_psql(cmd, runas=None, password=None, host=None, port=None, user=None):
             host = __salt__["config.option"]("postgres.host")
         if not host or host.startswith("/"):
             if "FreeBSD" in __grains__["os_family"]:
-                runas = "pgsql"
+                runas = "postgres"
             elif "OpenBSD" in __grains__["os_family"]:
                 runas = "_postgresql"
             else:
@@ -209,7 +216,7 @@ def _run_initdb(
     """
     if runas is None:
         if "FreeBSD" in __grains__["os_family"]:
-            runas = "pgsql"
+            runas = "postgres"
         elif "OpenBSD" in __grains__["os_family"]:
             runas = "_postgresql"
         else:
@@ -272,9 +279,7 @@ def version(
 
         salt '*' postgres.version
     """
-    query = (
-        "SELECT setting FROM pg_catalog.pg_settings " "WHERE name = 'server_version'"
-    )
+    query = "SELECT setting FROM pg_catalog.pg_settings WHERE name = 'server_version'"
     cmd = _psql_cmd(
         "-c",
         query,
@@ -459,7 +464,7 @@ def psql_query(
     if cmdret["retcode"] > 0:
         return ret
 
-    csv_file = StringIO(cmdret["stdout"])
+    csv_file = io.StringIO(cmdret["stdout"])
     header = {}
     for row in csv.reader(
         csv_file,
@@ -1151,18 +1156,87 @@ def _add_role_flag(string, test, flag, cond=None, prefix="NO", addtxt="", skip=F
 
 
 def _maybe_encrypt_password(role, password, encrypted=_DEFAULT_PASSWORDS_ENCRYPTION):
-    """
-    pgsql passwords are md5 hashes of the string: 'md5{password}{rolename}'
-    """
     if password is not None:
         password = str(password)
-    if encrypted and password and not password.startswith("md5"):
-        password = "md5{}".format(
-            hashlib.md5(
-                salt.utils.stringutils.to_bytes("{}{}".format(password, role))
-            ).hexdigest()
-        )
+    else:
+        return None
+
+    if encrypted is True:
+        encrypted = "md5"
+    if encrypted not in (False, "md5", "scram-sha-256"):
+        raise ValueError("Unknown password algorithm: " + str(encrypted))
+
+    if encrypted == "scram-sha-256" and not password.startswith("SCRAM-SHA-256"):
+        password = _scram_sha_256(password)
+    elif encrypted == "md5" and not password.startswith("md5"):
+        log.warning("The md5 password algorithm was deprecated in PostgreSQL 10")
+        password = _md5_password(role, password)
+    elif encrypted is False:
+        log.warning("Unencrypted passwords were removed in PostgreSQL 10")
+
     return password
+
+
+def _verify_password(role, password, verifier, method):
+    """
+    Test the given password against the verifier.
+
+    The given password may already be a verifier, in which case test for
+     simple equality.
+    """
+    if method == "md5" or method is True:
+        if password.startswith("md5"):
+            expected = password
+        else:
+            expected = _md5_password(role, password)
+    elif method == "scram-sha-256":
+        if password.startswith("SCRAM-SHA-256"):
+            expected = password
+        else:
+            match = re.match(r"^SCRAM-SHA-256\$(\d+):([^\$]+?)\$", verifier)
+            if match:
+                iterations = int(match.group(1))
+                salt_bytes = base64.b64decode(match.group(2))
+                expected = _scram_sha_256(
+                    password, salt_bytes=salt_bytes, iterations=iterations
+                )
+            else:
+                expected = object()
+    elif method is False:
+        expected = password
+    else:
+        expected = object()
+
+    return verifier == expected
+
+
+def _md5_password(role, password):
+    return "md5{}".format(
+        hashlib.md5(
+            salt.utils.stringutils.to_bytes("{}{}".format(password, role))
+        ).hexdigest()
+    )
+
+
+def _scram_sha_256(password, salt_bytes=None, iterations=4096):
+    """
+    Build a SCRAM-SHA-256 password verifier.
+
+    Ported from https://doxygen.postgresql.org/scram-common_8c.html
+    """
+    if salt_bytes is None:
+        salt_bytes = token_bytes(16)
+    password = salt.utils.stringutils.to_bytes(saslprep(password))
+    salted_password = hashlib.pbkdf2_hmac("sha256", password, salt_bytes, iterations)
+    stored_key = hmac.new(salted_password, b"Client Key", "sha256").digest()
+    stored_key = hashlib.sha256(stored_key).digest()
+    server_key = hmac.new(salted_password, b"Server Key", "sha256").digest()
+    return "SCRAM-SHA-256${}:{}${}:{}".format(
+        iterations,
+        base64.b64encode(salt_bytes).decode("ascii"),
+        base64.b64encode(stored_key).decode("ascii"),
+        base64.b64encode(server_key).decode("ascii"),
+    )
 
 
 def _role_cmd_args(
@@ -1190,7 +1264,7 @@ def _role_cmd_args(
             login = True
         if typ_ == "group":
             login = False
-    # defaults to encrypted passwords (md5{password}{rolename})
+    # defaults to encrypted passwords
     if encrypted is None:
         encrypted = _DEFAULT_PASSWORDS_ENCRYPTION
     skip_passwd = False
@@ -1232,7 +1306,7 @@ def _role_cmd_args(
             "flag": "ENCRYPTED",
             "test": (encrypted is not None and bool(rolepassword)),
             "skip": skip_passwd or isinstance(rolepassword, bool),
-            "cond": encrypted,
+            "cond": bool(encrypted),
             "prefix": "UN",
         },
         {

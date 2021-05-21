@@ -232,7 +232,9 @@ def _login(**kwargs):
                     name = name[len(prefix) :]
                 except IndexError:
                     return
-            val = __salt__["config.option"]("zabbix.{}".format(name), None)
+            val = __salt__["config.get"]("zabbix.{}".format(name), None) or __salt__[
+                "config.get"
+            ]("zabbix:{}".format(name), None)
             if val is not None:
                 connargs[key] = val
 

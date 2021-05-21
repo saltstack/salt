@@ -433,7 +433,7 @@ class SSHThinTestCase(TestCase):
         type("concurrent", (), {"__file__": "/site-packages/concurrent"}),
     )
     @patch(
-        "salt.utils.thin.contextvars",
+        "salt.utils.thin.py_contextvars",
         type("contextvars", (), {"__file__": "/site-packages/contextvars"}),
     )
     @patch_if(
@@ -448,24 +448,30 @@ class SSHThinTestCase(TestCase):
         :return:
         """
         base_tops = [
-            "/site-packages/distro",
-            "/site-packages/salt",
-            "/site-packages/jinja2",
-            "/site-packages/yaml",
-            "/site-packages/tornado",
-            "/site-packages/msgpack",
-            "/site-packages/certifi",
-            "/site-packages/sdp",
-            "/site-packages/sdp_hlp",
-            "/site-packages/ssl_mh",
-            "/site-packages/markupsafe",
-            "/site-packages/backports_abc",
-            "/site-packages/concurrent",
-            "/site-packages/contextvars",
+            "distro",
+            "salt",
+            "jinja2",
+            "yaml",
+            "tornado",
+            "msgpack",
+            "certifi",
+            "sdp",
+            "sdp_hlp",
+            "ssl_mh",
+            "markupsafe",
+            "backports_abc",
+            "concurrent",
+            "contextvars",
         ]
         if salt.utils.thin.has_immutables:
-            base_tops.extend(["/site-packages/immutables"])
-        tops = thin.get_tops()
+            base_tops.extend(["immutables"])
+        tops = []
+        for top in thin.get_tops(extra_mods="foo,bar"):
+            if top.find("/") != -1:
+                spl = "/"
+            else:
+                spl = os.sep
+            tops.append(top.rsplit(spl, 1)[-1])
         assert len(tops) == len(base_tops)
         assert sorted(tops) == sorted(base_tops), sorted(tops)
 
@@ -520,7 +526,7 @@ class SSHThinTestCase(TestCase):
         type("concurrent", (), {"__file__": "/site-packages/concurrent"}),
     )
     @patch(
-        "salt.utils.thin.contextvars",
+        "salt.utils.thin.py_contextvars",
         type("contextvars", (), {"__file__": "/site-packages/contextvars"}),
     )
     @patch_if(
@@ -535,33 +541,40 @@ class SSHThinTestCase(TestCase):
         :return:
         """
         base_tops = [
-            "/site-packages/distro",
-            "/site-packages/salt",
-            "/site-packages/jinja2",
-            "/site-packages/yaml",
-            "/site-packages/tornado",
-            "/site-packages/msgpack",
-            "/site-packages/certifi",
-            "/site-packages/sdp",
-            "/site-packages/sdp_hlp",
-            "/site-packages/ssl_mh",
-            "/site-packages/concurrent",
-            "/site-packages/markupsafe",
-            "/site-packages/backports_abc",
-            "/site-packages/contextvars",
-            os.sep + os.path.join("custom", "foo"),
-            os.sep + os.path.join("custom", "bar.py"),
+            "distro",
+            "salt",
+            "jinja2",
+            "yaml",
+            "tornado",
+            "msgpack",
+            "certifi",
+            "sdp",
+            "sdp_hlp",
+            "ssl_mh",
+            "concurrent",
+            "markupsafe",
+            "backports_abc",
+            "contextvars",
+            "foo",
+            "bar.py",
         ]
         if salt.utils.thin.has_immutables:
-            base_tops.extend(["/site-packages/immutables"])
-        builtins = sys.version_info.major == 3 and "builtins" or "__builtin__"
+            base_tops.extend(["immutables"])
+        libs = salt.utils.thin.find_site_modules("contextvars")
         foo = {"__file__": os.sep + os.path.join("custom", "foo", "__init__.py")}
         bar = {"__file__": os.sep + os.path.join("custom", "bar")}
-        with patch(
-            "{}.__import__".format(builtins),
-            MagicMock(side_effect=[type("foo", (), foo), type("bar", (), bar)]),
-        ):
-            tops = thin.get_tops(extra_mods="foo,bar")
+        with patch("salt.utils.thin.find_site_modules", MagicMock(side_effect=[libs])):
+            with patch(
+                "builtins.__import__",
+                MagicMock(side_effect=[type("foo", (), foo), type("bar", (), bar)]),
+            ):
+                tops = []
+                for top in thin.get_tops(extra_mods="foo,bar"):
+                    if top.find("/") != -1:
+                        spl = "/"
+                    else:
+                        spl = os.sep
+                    tops.append(top.rsplit(spl, 1)[-1])
         self.assertEqual(len(tops), len(base_tops))
         self.assertListEqual(sorted(tops), sorted(base_tops))
 
@@ -616,7 +629,7 @@ class SSHThinTestCase(TestCase):
         type("concurrent", (), {"__file__": "/site-packages/concurrent"}),
     )
     @patch(
-        "salt.utils.thin.contextvars",
+        "salt.utils.thin.py_contextvars",
         type("contextvars", (), {"__file__": "/site-packages/contextvars"}),
     )
     @patch_if(
@@ -631,36 +644,43 @@ class SSHThinTestCase(TestCase):
         :return:
         """
         base_tops = [
-            "/site-packages/distro",
-            "/site-packages/salt",
-            "/site-packages/jinja2",
-            "/site-packages/yaml",
-            "/site-packages/tornado",
-            "/site-packages/msgpack",
-            "/site-packages/certifi",
-            "/site-packages/sdp",
-            "/site-packages/sdp_hlp",
-            "/site-packages/ssl_mh",
-            "/site-packages/concurrent",
-            "/site-packages/markupsafe",
-            "/site-packages/backports_abc",
-            "/site-packages/contextvars",
-            "/custom/foo.so",
-            "/custom/bar.so",
+            "distro",
+            "salt",
+            "jinja2",
+            "yaml",
+            "tornado",
+            "msgpack",
+            "certifi",
+            "sdp",
+            "sdp_hlp",
+            "ssl_mh",
+            "concurrent",
+            "markupsafe",
+            "backports_abc",
+            "contextvars",
+            "foo.so",
+            "bar.so",
         ]
         if salt.utils.thin.has_immutables:
-            base_tops.extend(["/site-packages/immutables"])
-        builtins = sys.version_info.major == 3 and "builtins" or "__builtin__"
-        with patch(
-            "{}.__import__".format(builtins),
-            MagicMock(
-                side_effect=[
-                    type("salt", (), {"__file__": "/custom/foo.so"}),
-                    type("salt", (), {"__file__": "/custom/bar.so"}),
-                ]
-            ),
-        ):
-            tops = thin.get_tops(so_mods="foo,bar")
+            base_tops.extend(["immutables"])
+        libs = salt.utils.thin.find_site_modules("contextvars")
+        with patch("salt.utils.thin.find_site_modules", MagicMock(side_effect=[libs])):
+            with patch(
+                "builtins.__import__",
+                MagicMock(
+                    side_effect=[
+                        type("salt", (), {"__file__": "/custom/foo.so"}),
+                        type("salt", (), {"__file__": "/custom/bar.so"}),
+                    ]
+                ),
+            ):
+                tops = []
+                for top in thin.get_tops(so_mods="foo,bar"):
+                    if top.find("/") != -1:
+                        spl = "/"
+                    else:
+                        spl = os.sep
+                    tops.append(top.rsplit(spl, 1)[-1])
         assert len(tops) == len(base_tops)
         assert sorted(tops) == sorted(base_tops)
 
@@ -1330,16 +1350,13 @@ class SSHThinTestCase(TestCase):
         # This was previously an integration test and is now here, as a unit test.
         # Should actually be a functional test
         with VirtualEnv() as venv:
-            salt.utils.thin.gen_thin(venv.venv_dir)
-            thin_dir = os.path.join(venv.venv_dir, "thin")
-            thin_archive = os.path.join(thin_dir, "thin.tgz")
-            tar = tarfile.open(thin_archive)
-            tar.extractall(thin_dir)
+            salt.utils.thin.gen_thin(str(venv.venv_dir))
+            thin_dir = venv.venv_dir / "thin"
+            thin_archive = thin_dir / "thin.tgz"
+            tar = tarfile.open(str(thin_archive))
+            tar.extractall(str(thin_dir))
             tar.close()
             ret = venv.run(
-                venv.venv_python,
-                os.path.join(thin_dir, "salt-call"),
-                "--version",
-                check=False,
+                venv.venv_python, str(thin_dir / "salt-call"), "--version", check=False,
             )
             assert ret.exitcode == 0, ret

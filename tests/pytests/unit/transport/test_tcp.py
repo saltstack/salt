@@ -378,3 +378,25 @@ def test_timeout_message_unknown_future(salt_message_client):
     salt_message_client.timeout_message(message_id, "message")
 
     assert message_id not in salt_message_client.send_future_map
+
+
+def test_client_reconnect_backoff(client_socket):
+    opts = {"tcp_reconnect_backoff": 20.3}
+
+    client = salt.transport.tcp.SaltMessageClient(
+        opts, client_socket.listen_on, client_socket.port
+    )
+
+    def _sleep(t):
+        client.close()
+        assert t == 20.3
+        return
+
+    try:
+        with patch("salt.ext.tornado.gen.sleep", side_effect=_sleep), patch(
+            "salt.transport.tcp.TCPClientKeepAlive.connect",
+            side_effect=Exception("err"),
+        ):
+            client.io_loop.run_sync(client._connect)
+    finally:
+        client.close()

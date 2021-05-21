@@ -31,7 +31,7 @@ automation support is based on proxy minions.
 - :mod:`NAPALM proxy <salt.proxy.napalm>`
 - :mod:`Junos proxy<salt.proxy.junos>`
 - :mod:`Cisco NXOS <salt.proxy.nxos>`
-- :mod:`Cisco NOS <salt.proxy.cisconso>`
+- :mod:`Cisco NSO <salt.proxy.cisconso>`
 
 NAPALM
 ------

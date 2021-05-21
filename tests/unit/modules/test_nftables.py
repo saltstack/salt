@@ -2,16 +2,11 @@
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
-# Import Python Libs
-
 import json
 
-# Import Salt Libs
 import salt.modules.nftables as nftables
 import salt.utils.files
 from salt.exceptions import CommandExecutionError
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, mock_open, patch
 from tests.support.unit import TestCase
@@ -89,6 +84,25 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
             {
                 "result": True,
                 "rule": "nft halt rule ip filter input ",
+                "comment": "Successfully built rule",
+            },
+        )
+
+        self.assertEqual(
+            nftables.build_rule(
+                table="filter",
+                chain="input",
+                command="insert",
+                position="3",
+                full="True",
+                connstate="related,established",
+                saddr="10.0.0.1",
+                daddr="10.0.0.2",
+                jump="accept",
+            ),
+            {
+                "result": True,
+                "rule": "nft insert rule ip filter input position 3 ct state { related,established } ip saddr 10.0.0.1 ip daddr 10.0.0.2 accept",
                 "comment": "Successfully built rule",
             },
         )
