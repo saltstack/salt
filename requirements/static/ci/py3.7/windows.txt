@@ -192,7 +192,7 @@ kubernetes==3.0.0
     # via -r requirements/static/ci/common.in
 libnacl==1.7.2
     # via -r requirements/static/pkg/py3.7/windows.txt
-lxml==4.6.2
+lxml==4.6.3
     # via -r requirements/static/pkg/py3.7/windows.txt
 mako==1.1.4
     # via
