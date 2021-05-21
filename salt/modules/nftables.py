@@ -12,7 +12,6 @@ import salt.utils.path
 from salt.exceptions import CommandExecutionError
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 
-# Set up logging
 log = logging.getLogger(__name__)
 
 _NFTABLES_FAMILIES = {
@@ -166,14 +165,14 @@ def build_rule(
         del kwargs["counter"]
 
     if "saddr" in kwargs or "source" in kwargs:
-        rule += "ip saddr {}".format(kwargs.get("saddr") or kwargs.get("source"))
+        rule += "ip saddr {} ".format(kwargs.get("saddr") or kwargs.get("source"))
         if "saddr" in kwargs:
             del kwargs["saddr"]
         if "source" in kwargs:
             del kwargs["source"]
 
     if "daddr" in kwargs or "destination" in kwargs:
-        rule += "ip daddr {}".format(kwargs.get("daddr") or kwargs.get("destination"))
+        rule += "ip daddr {} ".format(kwargs.get("daddr") or kwargs.get("destination"))
         if "daddr" in kwargs:
             del kwargs["daddr"]
         if "destination" in kwargs:
@@ -632,7 +631,9 @@ def check_table(table=None, family="ipv4"):
     """
     Check for the existence of a table
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' nftables.check_table nat
     """

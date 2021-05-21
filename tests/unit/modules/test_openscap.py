@@ -1,18 +1,7 @@
-# -*- coding: utf-8 -*-
+import subprocess
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-from subprocess import PIPE
-
-# Import salt libs
 import salt.modules.openscap as openscap
-
-# Import 3rd-party libs
-from salt.ext import six
 from tests.support.mock import MagicMock, Mock, patch
-
-# Import salt test libs
 from tests.support.unit import TestCase
 
 
@@ -50,7 +39,7 @@ class OpenscapTestCase(TestCase):
             ),
         ):
             response = openscap.xccdf(
-                "eval --profile Default {0}".format(self.policy_file)
+                "eval --profile Default {}".format(self.policy_file)
             )
 
             self.assertEqual(openscap.tempfile.mkdtemp.call_count, 1)
@@ -70,8 +59,8 @@ class OpenscapTestCase(TestCase):
             openscap.Popen.assert_called_once_with(
                 expected_cmd,
                 cwd=openscap.tempfile.mkdtemp.return_value,
-                stderr=PIPE,
-                stdout=PIPE,
+                stderr=subprocess.PIPE,
+                stdout=subprocess.PIPE,
             )
             openscap.__salt__["cp.push_dir"].assert_called_once_with(
                 self.random_temp_dir
@@ -97,7 +86,7 @@ class OpenscapTestCase(TestCase):
             ),
         ):
             response = openscap.xccdf(
-                "eval --profile Default {0}".format(self.policy_file)
+                "eval --profile Default {}".format(self.policy_file)
             )
 
             self.assertEqual(openscap.tempfile.mkdtemp.call_count, 1)
@@ -117,8 +106,8 @@ class OpenscapTestCase(TestCase):
             openscap.Popen.assert_called_once_with(
                 expected_cmd,
                 cwd=openscap.tempfile.mkdtemp.return_value,
-                stderr=PIPE,
-                stdout=PIPE,
+                stderr=subprocess.PIPE,
+                stdout=subprocess.PIPE,
             )
             openscap.__salt__["cp.push_dir"].assert_called_once_with(
                 self.random_temp_dir
@@ -136,10 +125,7 @@ class OpenscapTestCase(TestCase):
 
     def test_openscap_xccdf_eval_fail_no_profile(self):
         response = openscap.xccdf("eval --param Default /unknown/param")
-        if six.PY2:
-            error = "argument --profile is required"
-        else:
-            error = "the following arguments are required: --profile"
+        error = "the following arguments are required: --profile"
         self.assertEqual(
             response,
             {"error": error, "upload_dir": None, "success": False, "returncode": None},
@@ -182,8 +168,8 @@ class OpenscapTestCase(TestCase):
             openscap.Popen.assert_called_once_with(
                 expected_cmd,
                 cwd=openscap.tempfile.mkdtemp.return_value,
-                stderr=PIPE,
-                stdout=PIPE,
+                stderr=subprocess.PIPE,
+                stdout=subprocess.PIPE,
             )
 
     def test_openscap_xccdf_eval_evaluation_error(self):
@@ -199,7 +185,7 @@ class OpenscapTestCase(TestCase):
             ),
         ):
             response = openscap.xccdf(
-                "eval --profile Default {0}".format(self.policy_file)
+                "eval --profile Default {}".format(self.policy_file)
             )
 
             self.assertEqual(
@@ -213,11 +199,8 @@ class OpenscapTestCase(TestCase):
             )
 
     def test_openscap_xccdf_eval_fail_not_implemented_action(self):
-        response = openscap.xccdf("info {0}".format(self.policy_file))
-        if six.PY2:
-            mock_err = "argument action: invalid choice: 'info' (choose from u'eval')"
-        else:
-            mock_err = "argument action: invalid choice: 'info' (choose from 'eval')"
+        response = openscap.xccdf("info {}".format(self.policy_file))
+        mock_err = "argument action: invalid choice: 'info' (choose from 'eval')"
 
         self.assertEqual(
             response,

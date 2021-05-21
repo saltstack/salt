@@ -1,0 +1,1 @@
+Fix incorrect hostname quoting in /etc/sysconfig/networking on Red Hat family OS.

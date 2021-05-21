@@ -8,6 +8,8 @@ Understanding Jinja
 
 .. _Jinja: https://jinja.palletsprojects.com/en/2.11.x/templates/
 
+.. include:: ../../_incl/jinja_security.rst
+
 Jinja in States
 ===============
 
@@ -964,7 +966,7 @@ Example:
     Renamed from ``json_decode_list`` to ``json_encode_list``. When you encode
     something you get bytes, and when you decode, you get your locale's
     encoding (usually a ``unicode`` type). This filter was incorrectly-named
-    when it was added. ``json_decode_list`` will be supported until the Aluminium
+    when it was added. ``json_decode_list`` will be supported until the 3003
     release.
 .. deprecated:: 2018.3.3,2019.2.0
     The :jinja_ref:`tojson` filter accomplishes what this filter was designed
@@ -997,7 +999,7 @@ Returns:
     Renamed from ``json_decode_dict`` to ``json_encode_dict``. When you encode
     something you get bytes, and when you decode, you get your locale's
     encoding (usually a ``unicode`` type). This filter was incorrectly-named
-    when it was added. ``json_decode_dict`` will be supported until the Aluminium
+    when it was added. ``json_decode_dict`` will be supported until the 3003
     release.
 .. deprecated:: 2018.3.3,2019.2.0
     The :jinja_ref:`tojson` filter accomplishes what this filter was designed
@@ -2263,7 +2265,7 @@ variable type. Here is the python documentation for `string methods`_.
 
   {% set strings = grains.id.split('-') %}{{ strings[0] }}
 
-.. _`string methods`: https://docs.python.org/2/library/stdtypes.html#string-methods
+.. _`string methods`: https://docs.python.org/3/library/stdtypes.html#string-methods
 
 Custom Execution Modules
 ========================

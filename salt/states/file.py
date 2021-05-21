@@ -289,9 +289,11 @@ import shutil
 import sys
 import time
 import traceback
+import urllib.parse
 from collections import defaultdict
 from collections.abc import Iterable, Mapping
 from datetime import date, datetime  # python3 problem in the making?
+from itertools import zip_longest
 
 import salt.loader
 import salt.payload
@@ -307,8 +309,6 @@ import salt.utils.templates
 import salt.utils.url
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError
-from salt.ext.six.moves import zip_longest
-from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
 from salt.serializers import DeserializationError
 from salt.state import get_accumulator_dir as _get_accumulator_dir
 
@@ -818,152 +818,20 @@ def _check_directory_win(
     """
     Check what changes need to be made on a directory
     """
-    changes = {}
-
     if not os.path.isdir(name):
         changes = {name: {"directory": "new"}}
     else:
-        # Check owner by SID
-        if win_owner is not None:
-            current_owner = salt.utils.win_dacl.get_owner(name)
-            current_owner_sid = salt.utils.win_functions.get_sid_from_name(
-                current_owner
-            )
-            expected_owner_sid = salt.utils.win_functions.get_sid_from_name(win_owner)
-            if not current_owner_sid == expected_owner_sid:
-                changes["owner"] = win_owner
-
-        # Check perms
-        perms = salt.utils.win_dacl.get_permissions(name)
-
-        # Verify Permissions
-        if win_perms is not None:
-            for user in win_perms:
-                # Check that user exists:
-                try:
-                    salt.utils.win_dacl.get_name(user)
-                except CommandExecutionError:
-                    continue
-
-                grant_perms = []
-                # Check for permissions
-                if isinstance(win_perms[user]["perms"], str):
-                    if not salt.utils.win_dacl.has_permission(
-                        name, user, win_perms[user]["perms"]
-                    ):
-                        grant_perms = win_perms[user]["perms"]
-                else:
-                    for perm in win_perms[user]["perms"]:
-                        if not salt.utils.win_dacl.has_permission(
-                            name, user, perm, exact=False
-                        ):
-                            grant_perms.append(win_perms[user]["perms"])
-                if grant_perms:
-                    if "grant_perms" not in changes:
-                        changes["grant_perms"] = {}
-                    if user not in changes["grant_perms"]:
-                        changes["grant_perms"][user] = {}
-                    changes["grant_perms"][user]["perms"] = grant_perms
-
-                # Check Applies to
-                if "applies_to" not in win_perms[user]:
-                    applies_to = "this_folder_subfolders_files"
-                else:
-                    applies_to = win_perms[user]["applies_to"]
-
-                if user in perms:
-                    user = salt.utils.win_dacl.get_name(user)
-
-                    # Get the proper applies_to text
-                    at_flag = salt.utils.win_dacl.flags().ace_prop["file"][applies_to]
-                    applies_to_text = salt.utils.win_dacl.flags().ace_prop["file"][
-                        at_flag
-                    ]
-
-                    if "grant" in perms[user]:
-                        if not perms[user]["grant"]["applies to"] == applies_to_text:
-                            if "grant_perms" not in changes:
-                                changes["grant_perms"] = {}
-                            if user not in changes["grant_perms"]:
-                                changes["grant_perms"][user] = {}
-                            changes["grant_perms"][user]["applies_to"] = applies_to
-
-        # Verify Deny Permissions
-        if win_deny_perms is not None:
-            for user in win_deny_perms:
-                # Check that user exists:
-                try:
-                    salt.utils.win_dacl.get_name(user)
-                except CommandExecutionError:
-                    continue
-
-                deny_perms = []
-                # Check for permissions
-                if isinstance(win_deny_perms[user]["perms"], str):
-                    if not salt.utils.win_dacl.has_permission(
-                        name, user, win_deny_perms[user]["perms"], "deny"
-                    ):
-                        deny_perms = win_deny_perms[user]["perms"]
-                else:
-                    for perm in win_deny_perms[user]["perms"]:
-                        if not salt.utils.win_dacl.has_permission(
-                            name, user, perm, "deny", exact=False
-                        ):
-                            deny_perms.append(win_deny_perms[user]["perms"])
-                if deny_perms:
-                    if "deny_perms" not in changes:
-                        changes["deny_perms"] = {}
-                    if user not in changes["deny_perms"]:
-                        changes["deny_perms"][user] = {}
-                    changes["deny_perms"][user]["perms"] = deny_perms
-
-                # Check Applies to
-                if "applies_to" not in win_deny_perms[user]:
-                    applies_to = "this_folder_subfolders_files"
-                else:
-                    applies_to = win_deny_perms[user]["applies_to"]
-
-                if user in perms:
-                    user = salt.utils.win_dacl.get_name(user)
-
-                    # Get the proper applies_to text
-                    at_flag = salt.utils.win_dacl.flags().ace_prop["file"][applies_to]
-                    applies_to_text = salt.utils.win_dacl.flags().ace_prop["file"][
-                        at_flag
-                    ]
-
-                    if "deny" in perms[user]:
-                        if not perms[user]["deny"]["applies to"] == applies_to_text:
-                            if "deny_perms" not in changes:
-                                changes["deny_perms"] = {}
-                            if user not in changes["deny_perms"]:
-                                changes["deny_perms"][user] = {}
-                            changes["deny_perms"][user]["applies_to"] = applies_to
-
-        # Check inheritance
-        if win_inheritance is not None:
-            if not win_inheritance == salt.utils.win_dacl.get_inheritance(name):
-                changes["inheritance"] = win_inheritance
-
-        # Check reset
-        if win_perms_reset:
-            for user_name in perms:
-                if user_name not in win_perms:
-                    if (
-                        "grant" in perms[user_name]
-                        and not perms[user_name]["grant"]["inherited"]
-                    ):
-                        if "remove_perms" not in changes:
-                            changes["remove_perms"] = {}
-                        changes["remove_perms"].update({user_name: perms[user_name]})
-                if user_name not in win_deny_perms:
-                    if (
-                        "deny" in perms[user_name]
-                        and not perms[user_name]["deny"]["inherited"]
-                    ):
-                        if "remove_perms" not in changes:
-                            changes["remove_perms"] = {}
-                        changes["remove_perms"].update({user_name: perms[user_name]})
+        changes = salt.utils.win_dacl.check_perms(
+            obj_name=name,
+            obj_type="file",
+            ret={},
+            owner=win_owner,
+            grant_perms=win_perms,
+            deny_perms=win_deny_perms,
+            inheritance=win_inheritance,
+            reset=win_perms_reset,
+            test_mode=True,
+        )["changes"]
 
     if changes:
         return None, 'The directory "{}" will be changed'.format(name), changes
@@ -1678,7 +1546,7 @@ def symlink(
         will be deleted to make room for the symlink, unless
         backupname is set, when it will be renamed
 
-        .. versionchanged:: Neon
+        .. versionchanged:: 3000
             Force will now remove all types of existing file system entries,
             not just files, directories and symlinks.
 
@@ -2771,7 +2639,7 @@ def managed(
                     setype: system_conf_t
                     seranage: s0
 
-        .. versionadded:: Neon
+        .. versionadded:: 3000
 
     win_owner : None
         The owner of the directory. If this is not passed, user will be used. If
@@ -3098,7 +2966,8 @@ def managed(
             )
         if __opts__["test"]:
             if (
-                isinstance(ret_perms, dict)
+                mode
+                and isinstance(ret_perms, dict)
                 and "lmode" in ret_perms
                 and mode != ret_perms["lmode"]
             ):
@@ -3266,7 +3135,11 @@ def managed(
             log.debug(traceback.format_exc())
             salt.utils.files.remove(tmp_filename)
             if not keep_source:
-                if not sfn and source and _urlparse(source).scheme == "salt":
+                if (
+                    not sfn
+                    and source
+                    and urllib.parse.urlparse(source).scheme == "salt"
+                ):
                     # The file would not have been cached until manage_file was
                     # run, so check again here for a cached copy.
                     sfn = __salt__["cp.is_cached"](source, __env__)
@@ -3343,7 +3216,11 @@ def managed(
             if tmp_filename:
                 salt.utils.files.remove(tmp_filename)
             if not keep_source:
-                if not sfn and source and _urlparse(source).scheme == "salt":
+                if (
+                    not sfn
+                    and source
+                    and urllib.parse.urlparse(source).scheme == "salt"
+                ):
                     # The file would not have been cached until manage_file was
                     # run, so check again here for a cached copy.
                     sfn = __salt__["cp.is_cached"](source, __env__)
@@ -3797,10 +3674,11 @@ def directory(
         else:
             __salt__["file.mkdir"](name, user=user, group=group, mode=dir_mode)
 
-        ret["changes"][name] = "New Dir"
+        if not os.path.isdir(name):
+            return _error(ret, "Failed to create directory {}".format(name))
 
-    if not os.path.isdir(name):
-        return _error(ret, "Failed to create directory {}".format(name))
+        ret["changes"][name] = {"directory": "new"}
+        return ret
 
     # issue 32707: skip this __salt__['file.check_perms'] call if children_only == True
     # Check permissions
@@ -5721,13 +5599,13 @@ def blockreplace(
         If markers are not found, this parameter can be set to a regex which will
         insert the block before the first found occurrence in the file.
 
-        .. versionadded:: Sodium
+        .. versionadded:: 3001
 
     insert_after_match
         If markers are not found, this parameter can be set to a regex which will
         insert the block after the first found occurrence in the file.
 
-        .. versionadded:: Sodium
+        .. versionadded:: 3001
 
     backup
         The file extension to use for a backup of the file if any edit is made.
@@ -6950,7 +6828,7 @@ def patch(
         try:
             orig_test = __opts__["test"]
             __opts__["test"] = False
-            sys.modules[__salt__["test.ping"].__module__].__opts__["test"] = False
+            sys.modules[__salt__["file.patch"].__module__].__opts__["test"] = False
             result = managed(
                 patch_file,
                 source=source_match,
@@ -6972,7 +6850,7 @@ def patch(
             log.debug("file.managed: %s", result)
         finally:
             __opts__["test"] = orig_test
-            sys.modules[__salt__["test.ping"].__module__].__opts__["test"] = orig_test
+            sys.modules[__salt__["file.patch"].__module__].__opts__["test"] = orig_test
 
         if not result["result"]:
             log.debug(
@@ -8602,7 +8480,7 @@ def cached(
     ret = {"changes": {}, "comment": "", "name": name, "result": False}
 
     try:
-        parsed = _urlparse(name)
+        parsed = urllib.parse.urlparse(name)
     except Exception:  # pylint: disable=broad-except
         ret["comment"] = "Only URLs or local file paths are valid input"
         return ret
@@ -8811,7 +8689,7 @@ def not_cached(name, saltenv="base"):
     ret = {"changes": {}, "comment": "", "name": name, "result": False}
 
     try:
-        parsed = _urlparse(name)
+        parsed = urllib.parse.urlparse(name)
     except Exception:  # pylint: disable=broad-except
         ret["comment"] = "Only URLs or local file paths are valid input"
         return ret
@@ -8839,3 +8717,59 @@ def not_cached(name, saltenv="base"):
         ret["result"] = True
         ret["comment"] = "{} is not cached".format(name)
     return ret
+
+
+def mod_beacon(name, **kwargs):
+    """
+    Create a beacon to monitor a file based on a beacon state argument.
+
+    .. note::
+        This state exists to support special handling of the ``beacon``
+        state argument for supported state functions. It should not be called directly.
+
+    """
+    sfun = kwargs.pop("sfun", None)
+    supported_funcs = ["managed", "directory"]
+
+    if sfun in supported_funcs:
+        if kwargs.get("beacon"):
+            beacon_module = "inotify"
+
+            data = {}
+            _beacon_data = kwargs.get("beacon_data", {})
+
+            default_mask = ["create", "delete", "modify"]
+            data["mask"] = _beacon_data.get("mask", default_mask)
+
+            if sfun == "directory":
+                data["auto_add"] = _beacon_data.get("auto_add", True)
+                data["recurse"] = _beacon_data.get("recurse", True)
+                data["exclude"] = _beacon_data.get("exclude", [])
+
+            beacon_name = "beacon_{}_{}".format(beacon_module, name)
+            beacon_kwargs = {
+                "name": beacon_name,
+                "files": {name: data},
+                "interval": _beacon_data.get("interval", 60),
+                "coalesce": _beacon_data.get("coalesce", False),
+                "beacon_module": beacon_module,
+            }
+
+            ret = __states__["beacon.present"](**beacon_kwargs)
+            return ret
+        else:
+            return {
+                "name": name,
+                "changes": {},
+                "comment": "Not adding beacon.",
+                "result": True,
+            }
+    else:
+        return {
+            "name": name,
+            "changes": {},
+            "comment": "file.{} does not work with the beacon state function".format(
+                sfun
+            ),
+            "result": False,
+        }

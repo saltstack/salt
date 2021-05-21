@@ -1,12 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 Send events through Salt's event system during state runs
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# import salt libs
 import salt.utils.functools
 
 
@@ -70,7 +66,7 @@ def send(
     return ret
 
 
-def wait(name, sfun=None):
+def wait(name, sfun=None, data=None):
     """
     Fire an event on the Salt master event bus if called from a watch statement
 

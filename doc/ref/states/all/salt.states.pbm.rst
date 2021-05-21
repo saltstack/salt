@@ -1,5 +1,5 @@
-salt.states.pbm module
-======================
+salt.states.pbm
+===============
 
 .. automodule:: salt.states.pbm
     :members:
