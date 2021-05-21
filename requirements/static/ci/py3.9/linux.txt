@@ -155,7 +155,7 @@ kazoo==2.6.1 ; sys_platform != "win32" and sys_platform != "darwin"
 keyring==5.7.1
 kubernetes==3.0.0
 libnacl==1.7.1 ; sys_platform != "win32" and sys_platform != "darwin"
-lxml==4.6.2               # via junos-eznc, napalm, ncclient, vsphere-automation-sdk
+lxml==4.6.3               # via junos-eznc, napalm, ncclient, vsphere-automation-sdk
 mako==1.1.0
 markupsafe==1.1.1
 mock==3.0.5
