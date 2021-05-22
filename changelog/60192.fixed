@@ -1,0 +1,1 @@
+Fixed HTTP method in consul module's agent_service_maintenance function
