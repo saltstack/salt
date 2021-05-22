@@ -48,6 +48,7 @@ def _query(
     api_version="v1",
     data=None,
     query_params=None,
+    decode_type="auto",
 ):
     """
     Consul object method function to construct and execute on the API URL.
@@ -57,6 +58,7 @@ def _query(
     :param function:    The Consul api function to perform.
     :param method:      The HTTP method, e.g. GET or POST.
     :param data:        The data to be sent for POST method. This param is ignored for GET requests.
+    :param decode_type: The method how data returned from the API should be decoded
     :return:            The json response from the API call or False.
     """
 
@@ -85,6 +87,7 @@ def _query(
         params=query_params,
         data=data,
         decode=True,
+        decode_type=decode_type,
         status=True,
         header_dict=headers,
         opts=__opts__,
@@ -1161,7 +1164,12 @@ def agent_service_maintenance(consul_url=None, token=None, serviceid=None, **kwa
 
     function = "agent/service/maintenance/{}".format(serviceid)
     res = _query(
-        consul_url=consul_url, token=token, function=function, query_params=query_params
+        consul_url=consul_url,
+        token=token,
+        function=function,
+        method="PUT",
+        query_params=query_params,
+        decode_type="plain",
     )
 
     if res["res"]:
