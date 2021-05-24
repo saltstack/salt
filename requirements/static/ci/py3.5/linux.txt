@@ -768,7 +768,7 @@ pyvmomi==6.7.1.2018.12
     # via
     #   -r requirements/static/ci/common.in
     #   vsphere-automation-sdk
-pyyaml==5.3.1
+pyyaml==5.4
     # via
     #   -r requirements/static/pkg/py3.5/linux.txt
     #   cfn-lint
