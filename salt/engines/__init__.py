@@ -8,7 +8,6 @@ import logging
 import salt
 import salt.loader
 import salt.utils.platform
-import salt.utils.process
 from salt.utils.process import SignalHandlingProcess
 
 log = logging.getLogger(__name__)
@@ -53,12 +52,10 @@ def start_engines(opts, proc_mgr, proxy=None):
         if fun in engines:
             start_func = engines[fun]
             if engine_name:
-                name = "{}.Engine({}-{})".format(
-                    __name__, start_func.__module__, engine_name
-                )
+                name = "Engine({}, name={})".format(start_func.__module__, engine_name)
             else:
-                name = "{}.Engine({})".format(__name__, start_func.__module__)
-            log.info("Starting Engine %s", name)
+                name = "Engine({})".format(start_func.__module__)
+            log.info("Starting %s", name)
             proc_mgr.add_process(
                 Engine, args=(opts, fun, engine_opts, funcs, runners, proxy), name=name
             )
@@ -129,11 +126,8 @@ class Engine(SignalHandlingProcess):
         kwargs = self.config or {}
 
         try:
-            salt.utils.process.appendproctitle(self.name)
             self.engine[self.fun](**kwargs)
-        except Exception as exc:  # pylint: disable=broad-except
+        except Exception:  # pylint: disable=broad-except
             log.critical(
-                "Engine '%s' could not be started!",
-                self.fun.split(".")[0],
-                exc_info=True,
+                "%s could not be started!", self.name, exc_info=True,
             )

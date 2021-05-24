@@ -525,47 +525,29 @@ class ProcessManager:
             # Need to ensure that 'log_queue' and 'log_queue_level' is
             # correctly transferred to processes that inherit from
             # 'Process'.
-            if type(Process) is type(tgt) and (issubclass(tgt, Process)):
-                need_log_queue = True
-            else:
-                need_log_queue = False
-
-            if need_log_queue:
-                if "log_queue" not in kwargs:
-                    if hasattr(self, "log_queue"):
-                        kwargs["log_queue"] = self.log_queue
-                    else:
-                        kwargs[
-                            "log_queue"
-                        ] = salt.log.setup.get_multiprocessing_logging_queue()
-                if "log_queue_level" not in kwargs:
-                    if hasattr(self, "log_queue_level"):
-                        kwargs["log_queue_level"] = self.log_queue_level
-                    else:
-                        kwargs[
-                            "log_queue_level"
-                        ] = salt.log.setup.get_multiprocessing_logging_level()
-
-        # create a nicer name for the debug log
-        if name is None:
-            if isinstance(tgt, types.FunctionType):
-                name = "{}.{}".format(tgt.__module__, tgt.__name__,)
-            else:
-                name = "{}{}.{}".format(
-                    tgt.__module__,
-                    ".{}".format(tgt.__class__)
-                    if str(tgt.__class__) != "<type 'type'>"
-                    else "",
-                    tgt.__name__,
+            if "log_queue" not in kwargs:
+                log_queue = getattr(
+                    self,
+                    "log_queue",
+                    salt.log.setup.get_multiprocessing_logging_queue(),
                 )
+                kwargs["log_queue"] = log_queue
+            if "log_queue_level" not in kwargs:
+                log_queue_level = getattr(
+                    self,
+                    "log_queue_level",
+                    salt.log.setup.get_multiprocessing_logging_level(),
+                )
+                kwargs["log_queue_level"] = log_queue_level
 
-        if type(multiprocessing.Process) is type(tgt) and issubclass(
+        if type(tgt) is type(multiprocessing.Process) and issubclass(
             tgt, multiprocessing.Process
         ):
+            kwargs["name"] = name or tgt.__qualname__
             process = tgt(*args, **kwargs)
         else:
-            process = multiprocessing.Process(
-                target=tgt, args=args, kwargs=kwargs, name=name
+            process = Process(
+                target=tgt, args=args, kwargs=kwargs, name=name or tgt.__qualname__
             )
 
         if isinstance(process, SignalHandlingProcess):
@@ -573,7 +555,7 @@ class ProcessManager:
                 process.start()
         else:
             process.start()
-        log.debug("Started '%s' with pid %s", name, process.pid)
+        log.debug("Started '%s' with pid %s", process.name, process.pid)
         self._process_map[process.pid] = {
             "tgt": tgt,
             "args": args,
@@ -845,6 +827,7 @@ class Process(multiprocessing.Process, NewStyleClassMixIn):
 
         self._after_fork_methods = [
             (Process._setup_process_logging, [self], {}),
+            (Process._set_process_name, [self], {}),
         ]
         self._finalize_methods = [
             (salt.log.setup.shutdown_multiprocessing_logging, [], {})
@@ -889,6 +872,9 @@ class Process(multiprocessing.Process, NewStyleClassMixIn):
 
     def _setup_process_logging(self):
         salt.log.setup.setup_multiprocessing_logging(self.log_queue)
+
+    def _set_process_name(self):
+        appendproctitle(self.name)
 
     def __decorate_run(self, run_func):
         @functools.wraps(run_func)

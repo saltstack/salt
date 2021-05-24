@@ -1165,8 +1165,6 @@ class EventPublisher(salt.utils.process.SignalHandlingProcess):
         """
         Bind the pub and pull sockets for events
         """
-        salt.utils.process.appendproctitle(self.__class__.__name__)
-
         if (
             self.opts["event_publisher_niceness"]
             and not salt.utils.platform.is_windows()
@@ -1342,8 +1340,6 @@ class EventReturn(salt.utils.process.SignalHandlingProcess):
         """
         Spin up the multiprocess event returner
         """
-        salt.utils.process.appendproctitle(self.__class__.__name__)
-
         if self.opts["event_return_niceness"] and not salt.utils.platform.is_windows():
             log.info(
                 "setting EventReturn niceness to %i", self.opts["event_return_niceness"]

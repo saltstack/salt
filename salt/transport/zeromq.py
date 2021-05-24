@@ -682,7 +682,6 @@ class ZeroMQReqServerChannel(
         Multiprocessing target for the zmq queue device
         """
         self.__setup_signals()
-        salt.utils.process.appendproctitle("MWorkerQueue")
         self.context = zmq.Context(self.opts["worker_threads"])
         # Prepare the zeromq sockets
         self.uri = "tcp://{interface}:{ret_port}".format(**self.opts)
@@ -758,7 +757,7 @@ class ZeroMQReqServerChannel(
         :param func process_manager: An instance of salt.utils.process.ProcessManager
         """
         salt.transport.mixins.auth.AESReqServerMixin.pre_fork(self, process_manager)
-        process_manager.add_process(self.zmq_device)
+        process_manager.add_process(self.zmq_device, name="MWorkerQueue")
 
     def _start_zmq_monitor(self):
         """
@@ -955,8 +954,6 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
         """
         Bind to the interface specified in the configuration file
         """
-        salt.utils.process.appendproctitle(self.__class__.__name__)
-
         if self.opts["pub_server_niceness"] and not salt.utils.platform.is_windows():
             log.info(
                 "setting Publish daemon niceness to %i",
@@ -1088,7 +1085,9 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
 
         :param func process_manager: A ProcessManager, from salt.utils.process.ProcessManager
         """
-        process_manager.add_process(self._publish_daemon, kwargs=kwargs)
+        process_manager.add_process(
+            self._publish_daemon, kwargs=kwargs, name=self.__class__.__name__
+        )
 
     @property
     def pub_sock(self):

@@ -1727,6 +1727,7 @@ class Minion(MinionBase):
         # side.
         instance = self
         multiprocessing_enabled = self.opts.get("multiprocessing", True)
+        name = "ProcessPayload(jid={})".format(data["jid"])
         if multiprocessing_enabled:
             if sys.platform.startswith("win"):
                 # let python reconstruct the minion on the other side if we're
@@ -1735,7 +1736,7 @@ class Minion(MinionBase):
             with default_signals(signal.SIGINT, signal.SIGTERM):
                 process = SignalHandlingProcess(
                     target=self._target,
-                    name="ProcessPayload",
+                    name=name,
                     args=(instance, self.opts, data, self.connected),
                 )
                 process._after_fork_methods.append(
@@ -1745,7 +1746,7 @@ class Minion(MinionBase):
             process = threading.Thread(
                 target=self._target,
                 args=(instance, self.opts, data, self.connected),
-                name=data["jid"],
+                name=name,
             )
 
         if multiprocessing_enabled:
@@ -1755,7 +1756,6 @@ class Minion(MinionBase):
                 process.start()
         else:
             process.start()
-        process.name = "{}-Job-{}".format(process.name, data["jid"])
         self.subprocess_list.add(process)
 
     def ctx(self):

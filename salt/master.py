@@ -215,8 +215,6 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
         This is where any data that needs to be cleanly maintained from the
         master is maintained.
         """
-        salt.utils.process.appendproctitle(self.__class__.__name__)
-
         # init things that need to be done after the process is forked
         self._post_fork_init()
 
@@ -489,8 +487,6 @@ class FileserverUpdate(salt.utils.process.SignalHandlingProcess):
         """
         Start the update threads
         """
-        salt.utils.process.appendproctitle(self.__class__.__name__)
-
         if (
             self.opts["fileserver_update_niceness"]
             and not salt.utils.platform.is_windows()
@@ -711,7 +707,9 @@ class Master(SMaster):
 
             log.info("Creating master event publisher process")
             self.process_manager.add_process(
-                salt.utils.event.EventPublisher, args=(self.opts,)
+                salt.utils.event.EventPublisher,
+                args=(self.opts,),
+                name="EventPublisher",
             )
 
             if self.opts.get("reactor"):
@@ -732,12 +730,14 @@ class Master(SMaster):
 
             # must be after channels
             log.info("Creating master maintenance process")
-            self.process_manager.add_process(Maintenance, args=(self.opts,))
+            self.process_manager.add_process(
+                Maintenance, args=(self.opts,), name="Maintenance"
+            )
 
             if self.opts.get("event_return"):
                 log.info("Creating master event return process")
                 self.process_manager.add_process(
-                    salt.utils.event.EventReturn, args=(self.opts,)
+                    salt.utils.event.EventReturn, args=(self.opts,), name="EventReturn"
                 )
 
             ext_procs = self.opts.get("ext_processes", [])
@@ -748,7 +748,8 @@ class Master(SMaster):
                     cls = proc.split(".")[-1]
                     _tmp = __import__(mod, globals(), locals(), [cls], -1)
                     cls = _tmp.__getattribute__(cls)
-                    self.process_manager.add_process(cls, args=(self.opts,))
+                    name = "ExtProcess({})".format(cls.__qualname__)
+                    self.process_manager.add_process(cls, args=(self.opts,), name=name)
                 except Exception:  # pylint: disable=broad-except
                     log.error("Error creating ext_processes process: %s", proc)
 
@@ -756,7 +757,9 @@ class Master(SMaster):
             if self.opts["con_cache"]:
                 log.info("Creating master concache process")
                 self.process_manager.add_process(
-                    salt.utils.master.ConnectedCache, args=(self.opts,)
+                    salt.utils.master.ConnectedCache,
+                    args=(self.opts,),
+                    name="ConnectedCache",
                 )
                 # workaround for issue #16315, race condition
                 log.debug("Sleeping for two seconds to let concache rest")
@@ -778,7 +781,9 @@ class Master(SMaster):
                 name="ReqServer",
             )
 
-            self.process_manager.add_process(FileserverUpdate, args=(self.opts,))
+            self.process_manager.add_process(
+                FileserverUpdate, args=(self.opts,), name="FileServerUpdate"
+            )
 
             # Fire up SSDP discovery publisher
             if self.opts["discovery"]:
@@ -790,7 +795,8 @@ class Master(SMaster):
                             answer={
                                 "mapping": self.opts["discovery"].get("mapping", {})
                             },
-                        ).run
+                        ).run,
+                        name="SSDPDiscoveryServer",
                     )
                 else:
                     log.error("Unable to load SSDP: asynchronous IO is not available.")
@@ -927,7 +933,7 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
                 name = "MWorker-{}".format(ind)
                 self.process_manager.add_process(
                     MWorker,
-                    args=(self.opts, self.master_key, self.key, req_channels, name),
+                    args=(self.opts, self.master_key, self.key, req_channels),
                     kwargs=kwargs,
                     name=name,
                 )
@@ -958,7 +964,7 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
     salt master.
     """
 
-    def __init__(self, opts, mkey, key, req_channels, name, **kwargs):
+    def __init__(self, opts, mkey, key, req_channels, **kwargs):
         """
         Create a salt master worker process
 
@@ -969,8 +975,6 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         :rtype: MWorker
         :return: Master worker
         """
-        kwargs["name"] = name
-        self.name = name
         super().__init__(**kwargs)
         self.opts = opts
         self.req_channels = req_channels
@@ -1139,8 +1143,6 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         """
         Start a Master Worker
         """
-        salt.utils.process.appendproctitle(self.name)
-
         # if we inherit req_server level without our own, reset it
         if not salt.utils.platform.is_windows():
             enforce_mworker_niceness = True

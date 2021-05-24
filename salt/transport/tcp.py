@@ -707,7 +707,9 @@ class TCPReqServerChannel(
         if USE_LOAD_BALANCER:
             self.socket_queue = multiprocessing.Queue()
             process_manager.add_process(
-                LoadBalancerServer, args=(self.opts, self.socket_queue)
+                LoadBalancerServer,
+                args=(self.opts, self.socket_queue),
+                name="LoadBalancerServer",
             )
         elif not salt.utils.platform.is_windows():
             self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -1667,8 +1669,6 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
         """
         Bind to the interface specified in the configuration file
         """
-        salt.utils.process.appendproctitle(self.__class__.__name__)
-
         log_queue = kwargs.get("log_queue")
         if log_queue is not None:
             salt.log.setup.set_multiprocessing_logging_queue(log_queue)
@@ -1721,7 +1721,9 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
         primarily be used to create IPC channels and create our daemon process to
         do the actual publishing
         """
-        process_manager.add_process(self._publish_daemon, kwargs=kwargs)
+        process_manager.add_process(
+            self._publish_daemon, kwargs=kwargs, name=self.__class__.__name__
+        )
 
     def publish(self, load):
         """
