@@ -91,6 +91,7 @@ The salt specific ones are:
   - ssh_key_file: The name of the keypair in openstack
   - userdata_template: The renderer to use if the userdata is a file that is templated. Default: False
   - ssh_interface: The interface to use to login for bootstrapping: public_ips, private_ips, floating_ips, fixed_ips
+  - ignore_cidr: Specify a CIDR range of unreachable private addresses for salt to ignore when connecting
 
 .. code-block:: yaml
 
@@ -119,6 +120,15 @@ If metadata is set to make sure that the host has finished setting up the
       wait_for_metadata:
         rax_service_level_automation: Complete
         rackconnect_automation_status: DEPLOYED
+
+If your OpenStack instances only have private IP addresses and a CIDR range of
+private addresses are not reachable from the salt-master, you may set your
+preference to have Salt ignore it:
+
+.. code-block:: yaml
+
+    my-openstack-config:
+      ignore_cidr: 192.168.0.0/16
 
 Anything else from the create_server_ docs can be passed through here.
 
@@ -243,6 +253,7 @@ try:
 except ImportError:
     HAS_SHADE = (False, "Install pypi module shade >= 1.19.0")
 
+
 log = logging.getLogger(__name__)
 __virtualname__ = "openstack"
 
@@ -294,16 +305,14 @@ def get_dependencies():
     elif hasattr(HAS_SHADE, "__len__") and not HAS_SHADE[0]:
         log.warning(HAS_SHADE[1])
         return False
-    deps = {
-        "shade": HAS_SHADE[0],
-        "os_client_config": HAS_SHADE[0],
-    }
+    deps = {"shade": HAS_SHADE[0], "os_client_config": HAS_SHADE[0]}
     return config.check_driver_dependencies(__virtualname__, deps)
 
 
 def preferred_ip(vm_, ips):
     """
-    Return the preferred Internet protocol. Either 'ipv4' (default) or 'ipv6'.
+    Return either an 'ipv4' (default) or 'ipv6' address depending on 'protocol' option.
+    The list of 'ipv4' IPs is filtered by ignore_cidr() to remove any unreachable private addresses.
     """
     proto = config.get_cloud_config_value(
         "protocol", vm_, __opts__, default="ipv4", search_global=False
@@ -313,11 +322,33 @@ def preferred_ip(vm_, ips):
     if proto == "ipv6":
         family = socket.AF_INET6
     for ip in ips:
+        ignore_ip = ignore_cidr(vm_, ip)
+        if ignore_ip:
+            continue
         try:
             socket.inet_pton(family, ip)
             return ip
         except Exception:  # pylint: disable=broad-except
             continue
+    return False
+
+
+def ignore_cidr(vm_, ip):
+    """
+    Return True if we are to ignore the specified IP.
+    """
+    from ipaddress import ip_address, ip_network
+
+    cidrs = config.get_cloud_config_value(
+        "ignore_cidr", vm_, __opts__, default=[], search_global=False
+    )
+    if cidrs and isinstance(cidrs, str):
+        cidrs = [cidrs]
+    for cidr in cidrs or []:
+        if ip_address(ip) in ip_network(cidr):
+            log.warning("IP '{}' found within '{}'; ignoring it.".format(ip, cidr))
+            return True
+
     return False
 
 
@@ -477,7 +508,7 @@ def list_nodes_select(conn=None, call=None):
             "The list_nodes_select function must be called with -f or --function."
         )
     return __utils__["cloud.list_nodes_select"](
-        list_nodes(conn, "function"), __opts__["query.selection"], call,
+        list_nodes(conn, "function"), __opts__["query.selection"], call
     )
 
 
