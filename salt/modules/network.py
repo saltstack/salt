@@ -605,6 +605,54 @@ def _ip_route_linux():
                     "interface": ip_interface,
                 }
             )
+        elif comps[0] == "unicast":
+            ip_interface = ""
+            if comps[2] == "dev":
+                ip_interface = comps[3]
+
+            local_address = comps[1] + "/128"
+            ret.append(
+                {
+                    "addr_family": "inet6",
+                    "destination": local_address,
+                    "gateway": "::",
+                    "netmask": "",
+                    "flags": "U",
+                    "interface": ip_interface,
+                }
+            )
+        elif comps[0] == "anycast":
+            ip_interface = ""
+            if comps[2] == "dev":
+                ip_interface = comps[3]
+
+            local_address = comps[1] + "/128"
+            ret.append(
+                {
+                    "addr_family": "inet6",
+                    "destination": local_address,
+                    "gateway": "::",
+                    "netmask": "",
+                    "flags": "U",
+                    "interface": ip_interface,
+                }
+            )
+        elif comps[0] == "multicast":
+            ip_interface = ""
+            if comps[2] == "dev":
+                ip_interface = comps[3]
+
+            local_address = comps[1] + "/128"
+            ret.append(
+                {
+                    "addr_family": "inet6",
+                    "destination": local_address,
+                    "gateway": "::",
+                    "netmask": "",
+                    "flags": "U",
+                    "interface": ip_interface,
+                }
+            )
         else:
             address_mask = convert_cidr(comps[0])
             ip_interface = ""
