@@ -107,8 +107,10 @@ class IPCMessagePubSubCase(tornado.testing.AsyncTestCase):
                 self.stop()
 
         # Now let both waiting data at once
-        client1.read_async(handler)
-        client2.read_async(handler)
+        client1.callbacks = {handler}
+        client2.callbacks = {handler}
+        client1.read_async()
+        client2.read_async()
         self.pub_channel.publish("TEST")
         self.wait()
         self.assertEqual(len(call_cnt), 2)
@@ -145,12 +147,8 @@ class IPCMessagePubSubCase(tornado.testing.AsyncTestCase):
         watchdog = threading.Thread(target=close_server)
         watchdog.start()
 
-        # Runs in ioloop thread so we're safe from race conditions here
-        def handler(raw):
-            pass
-
         try:
-            ret1 = yield client1.read_async(handler)
+            ret1 = yield client1.read_async()
             self.wait()
         except StreamClosedError as ex:
             assert False, "StreamClosedError was raised inside the Future"
