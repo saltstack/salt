@@ -658,13 +658,19 @@ def list_permissions(vhost, runas=None):
     if runas is None and not salt.utils.platform.is_windows():
         runas = salt.utils.user.get_user()
     res = __salt__["cmd.run_all"](
-        [RABBITMQCTL, "list_permissions", "-q", "-p", vhost],
+        [RABBITMQCTL, "list_permissions", "--formatter=json", "-p", vhost],
         reset_system_locale=False,
         runas=runas,
         python_shell=False,
     )
 
-    return _output_to_dict(res)
+    perms = salt.utils.json.loads(res["stdout"])
+    perms_dict = {}
+    for perm in perms:
+        user = perm["user"]
+        perms_dict[user] = perm
+        del perms_dict[user]["user"]
+    return perms_dict
 
 
 def list_user_permissions(name, runas=None):
@@ -680,18 +686,19 @@ def list_user_permissions(name, runas=None):
     if runas is None and not salt.utils.platform.is_windows():
         runas = salt.utils.user.get_user()
     res = __salt__["cmd.run_all"](
-        [RABBITMQCTL, "list_user_permissions", name, "-q"],
+        [RABBITMQCTL, "list_user_permissions", name, "--formatter=json"],
         reset_system_locale=False,
         runas=runas,
         python_shell=False,
     )
 
-    perms = _output_to_dict(res)
+    perms = salt.utils.json.loads(res["stdout"])
+    perms_dict = {}
     for perm in perms:
-        if len(perms[perm]) < 3:
-            missing = ["" for i in range(0, 3 - len(perms[perm]))]
-            perms[perm].extend(missing)
-    return perms
+        vhost = perm["vhost"]
+        perms_dict[vhost] = perm
+        del perms_dict[vhost]["vhost"]
+    return perms_dict
 
 
 def set_user_tags(name, tags, runas=None):
