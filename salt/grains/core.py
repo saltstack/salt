@@ -1644,6 +1644,7 @@ _OS_FAMILY_MAP = {
     "Devuan": "Debian",
     "antiX": "Debian",
     "Kali": "Debian",
+    "Parrot": "Debian",
     "neon": "Debian",
     "Cumulus": "Debian",
     "Deepin": "Debian",
