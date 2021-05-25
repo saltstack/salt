@@ -3,10 +3,14 @@
 """
 
 
+import logging
+
 import pytest
 import salt.modules.rabbitmq as rabbitmq
 from salt.exceptions import CommandExecutionError
 from tests.support.mock import MagicMock, patch
+
+log = logging.getLogger(__name__)
 
 
 @pytest.fixture
@@ -326,14 +330,13 @@ def test_list_permissions():
     mock_run = MagicMock(
         return_value={
             "retcode": 0,
-            "stdout": "Listing stuff ...\nsaltstack\tsaltstack\t.*\t1\nguest\t0\tone\n...done",
+            "stdout": '[{"user":"myuser","configure":"saltstack","write":".*","read":"1"}]',
             "stderr": "",
         }
     )
     with patch.dict(rabbitmq.__salt__, {"cmd.run_all": mock_run}):
-        assert rabbitmq.list_user_permissions("myuser") == {
-            "saltstack": ["saltstack", ".*", "1"],
-            "guest": ["0", "one", ""],
+        assert rabbitmq.list_permissions("saltstack") == {
+            "myuser": {"configure": "saltstack", "write": ".*", "read": "1"},
         }
 
 
@@ -346,14 +349,14 @@ def test_list_user_permissions():
     mock_run = MagicMock(
         return_value={
             "retcode": 0,
-            "stdout": "Listing stuff ...\nsaltstack\tsaltstack\t0\t1\nguest\t0\tone\n...done",
+            "stdout": '[{"vhost":"saltstack","configure":"saltstack","write":"0","read":"1"},{"vhost":"guest","configure":"0","write":"one","read":""}]',
             "stderr": "",
         }
     )
     with patch.dict(rabbitmq.__salt__, {"cmd.run_all": mock_run}):
         assert rabbitmq.list_user_permissions("myuser") == {
-            "saltstack": ["saltstack", "0", "1"],
-            "guest": ["0", "one", ""],
+            "saltstack": {"configure": "saltstack", "write": "0", "read": "1"},
+            "guest": {"configure": "0", "write": "one", "read": ""},
         }
 
 
