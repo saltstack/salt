@@ -168,7 +168,6 @@ import os
 import salt.utils.files
 import salt.utils.path
 import salt.utils.stringutils
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 

@@ -13,7 +13,6 @@ Pacemaker/Cororsync conifguration system (PCS)
 import logging
 
 import salt.utils.path
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
