@@ -27,10 +27,10 @@ class Batch:
         self.pub_kwargs = eauth if eauth else {}
         self.quiet = quiet
         self.local = salt.client.get_local_client(opts["conf_file"])
-        self.minions, self.ping_gen, self.down_minions = self.__gather_minions()
+        #        self.minions, self.ping_gen, self.down_minions = self.__gather_minions()
         self.options = parser
 
-    def __gather_minions(self):
+    def gather_minions(self):
         """
         Return a list of minions to use for the batch run
         """
@@ -106,6 +106,7 @@ class Batch:
         """
         Execute the batch run
         """
+        self.minions, self.ping_gen, self.down_minions = self.gather_minions()
         args = [
             [],
             self.opts["fun"],
