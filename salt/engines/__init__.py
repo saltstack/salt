@@ -8,7 +8,7 @@ import logging
 import salt
 import salt.loader
 import salt.utils.platform
-from salt.utils.process import SignalHandlingProcess
+import salt.utils.process
 
 log = logging.getLogger(__name__)
 
@@ -63,7 +63,7 @@ def start_engines(opts, proc_mgr, proxy=None):
             )
 
 
-class Engine(SignalHandlingProcess):
+class Engine(salt.utils.process.SignalHandlingProcess):
     """
     Execute the given engine in a new process
     """
@@ -107,10 +107,18 @@ class Engine(SignalHandlingProcess):
             "log_queue_level": self.log_queue_level,
         }
 
+    @property
+    def module_name(self):
+        """
+        The name of the module this engine is targeting.
+        """
+        return self.fun.split('.')[0]
+
     def run(self):
         """
         Run the master service!
         """
+        salt.utils.process.appendproctitle("Engine: {}".format(self.module_name))
         self.utils = salt.loader.utils(self.opts, proxy=self.proxy)
         if salt.utils.platform.is_windows():
             # Calculate function references since they can't be pickled.
