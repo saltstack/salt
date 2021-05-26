@@ -30,25 +30,26 @@ def test_latest_installed_with_changes():
     """
     installed = MagicMock(return_value=KERNEL_LIST[:-1])
     upgrade = MagicMock(return_value=KERNEL_LIST[-1])
-    with patch.dict(kernelpkg.__salt__, {"kernelpkg.list_installed": installed}):
-        with patch.dict(kernelpkg.__salt__, {"kernelpkg.latest_available": upgrade}):
-            with patch.dict(kernelpkg.__opts__, {"test": False}):
-                kernelpkg.__salt__["kernelpkg.upgrade"].reset_mock()
-                ret = kernelpkg.latest_installed(name=STATE_NAME)
-                assert ret["name"] == STATE_NAME
-                assert ret["result"]
-                assert isinstance(ret["changes"], dict)
-                assert isinstance(ret["comment"], str)
-                assert kernelpkg.__salt__["kernelpkg.upgrade"]
-
-            with patch.dict(kernelpkg.__opts__, {"test": True}):
-                kernelpkg.__salt__["kernelpkg.upgrade"].reset_mock()
-                ret = kernelpkg.latest_installed(name=STATE_NAME)
-                assert ret["name"] == STATE_NAME
-                assert ret["result"] is None
-                assert ret["changes"] == {}
-                assert isinstance(ret["comment"], str)
-                kernelpkg.__salt__["kernelpkg.upgrade"].assert_not_called()
+    with patch.dict(
+        kernelpkg.__salt__,
+        {"kernelpkg.list_installed": installed, "kernelpkg.latest_available": upgrade},
+    ):
+        with patch.dict(kernelpkg.__opts__, {"test": False}):
+            kernelpkg.__salt__["kernelpkg.upgrade"].reset_mock()
+            ret = kernelpkg.latest_installed(name=STATE_NAME)
+            assert ret["name"] == STATE_NAME
+            assert ret["result"]
+            assert isinstance(ret["changes"], dict)
+            assert isinstance(ret["comment"], str)
+            assert kernelpkg.__salt__["kernelpkg.upgrade"]
+        with patch.dict(kernelpkg.__opts__, {"test": True}):
+            kernelpkg.__salt__["kernelpkg.upgrade"].reset_mock()
+            ret = kernelpkg.latest_installed(name=STATE_NAME)
+            assert ret["name"] == STATE_NAME
+            assert ret["result"] is None
+            assert ret["changes"] == {}
+            assert isinstance(ret["comment"], str)
+            kernelpkg.__salt__["kernelpkg.upgrade"].assert_not_called()
 
 
 def test_latest_installed_at_latest():
@@ -57,23 +58,25 @@ def test_latest_installed_at_latest():
     """
     installed = MagicMock(return_value=KERNEL_LIST)
     upgrade = MagicMock(return_value=KERNEL_LIST[-1])
-    with patch.dict(kernelpkg.__salt__, {"kernelpkg.list_installed": installed}):
-        with patch.dict(kernelpkg.__salt__, {"kernelpkg.latest_available": upgrade}):
-            with patch.dict(kernelpkg.__opts__, {"test": False}):
-                ret = kernelpkg.latest_installed(name=STATE_NAME)
-                assert ret["name"] == STATE_NAME
-                assert ret["result"]
-                assert ret["changes"] == {}
-                assert isinstance(ret["comment"], str)
-                kernelpkg.__salt__["kernelpkg.upgrade"].assert_not_called()
+    with patch.dict(
+        kernelpkg.__salt__,
+        {"kernelpkg.list_installed": installed, "kernelpkg.latest_available": upgrade},
+    ):
+        with patch.dict(kernelpkg.__opts__, {"test": False}):
+            ret = kernelpkg.latest_installed(name=STATE_NAME)
+            assert ret["name"] == STATE_NAME
+            assert ret["result"]
+            assert ret["changes"] == {}
+            assert isinstance(ret["comment"], str)
+            kernelpkg.__salt__["kernelpkg.upgrade"].assert_not_called()
 
-            with patch.dict(kernelpkg.__opts__, {"test": True}):
-                ret = kernelpkg.latest_installed(name=STATE_NAME)
-                assert ret["name"] == STATE_NAME
-                assert ret["result"]
-                assert ret["changes"] == {}
-                assert isinstance(ret["comment"], str)
-                kernelpkg.__salt__["kernelpkg.upgrade"].assert_not_called()
+        with patch.dict(kernelpkg.__opts__, {"test": True}):
+            ret = kernelpkg.latest_installed(name=STATE_NAME)
+            assert ret["name"] == STATE_NAME
+            assert ret["result"]
+            assert ret["changes"] == {}
+            assert isinstance(ret["comment"], str)
+            kernelpkg.__salt__["kernelpkg.upgrade"].assert_not_called()
 
 
 def test_latest_active_with_changes():
