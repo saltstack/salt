@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Configure a Pacemaker/Corosync cluster with PCS
 ===============================================
@@ -10,11 +9,13 @@ Pacemaker/Cororsync conifguration system (PCS)
 
 .. versionadded:: 2016.3.0
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import salt libs
+import logging
+
 import salt.utils.path
 from salt.ext import six
+
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -24,6 +25,23 @@ def __virtual__():
     if salt.utils.path.which("pcs"):
         return "pcs"
     return (False, "Missing dependency: pcs")
+
+
+def __use_new_commands():
+    """
+    The command line arguments of pcs changed after version 0.10
+    This will return True if the new arguments are needed and
+    false if the ole ones are needed
+    """
+    pcs_version = __salt__["pkg.version"]("pcs")
+    log.debug("PCS package version %s", pcs_version)
+
+    if __salt__["pkg.version_cmp"](pcs_version, "0.10") == 1:
+        log.info("New version, new rules")
+        return True
+    else:
+        log.info("Old Version")
+        return False
 
 
 def item_show(
@@ -48,10 +66,10 @@ def item_show(
     """
     cmd = ["pcs"]
 
-    if isinstance(cibfile, six.string_types):
+    if isinstance(cibfile, str):
         cmd += ["-f", cibfile]
 
-    if isinstance(item, six.string_types):
+    if isinstance(item, str):
         cmd += [item]
     elif isinstance(item, (list, tuple)):
         cmd += item
@@ -60,12 +78,12 @@ def item_show(
     if item in ["constraint"]:
         cmd += [item_type]
 
-    if isinstance(show, six.string_types):
+    if isinstance(show, str):
         cmd += [show]
     elif isinstance(show, (list, tuple)):
         cmd += show
 
-    if isinstance(item_id, six.string_types):
+    if isinstance(item_id, str):
         cmd += [item_id]
 
     if isinstance(extra_args, (list, tuple)):
@@ -75,7 +93,7 @@ def item_show(
     if item in ["constraint"]:
         if not isinstance(extra_args, (list, tuple)) or "--full" not in extra_args:
             cmd += ["--full"]
-
+    log.debug("Running item show %s", cmd)
     return __salt__["cmd.run_all"](cmd, output_loglevel="trace", python_shell=False)
 
 
@@ -100,20 +118,20 @@ def item_create(
         use cibfile instead of the live CIB
     """
     cmd = ["pcs"]
-    if isinstance(cibfile, six.string_types):
+    if isinstance(cibfile, str):
         cmd += ["-f", cibfile]
 
-    if isinstance(item, six.string_types):
+    if isinstance(item, str):
         cmd += [item]
     elif isinstance(item, (list, tuple)):
         cmd += item
 
     # constraint command follows a different order
     if item in ["constraint"]:
-        if isinstance(item_type, six.string_types):
+        if isinstance(item_type, str):
             cmd += [item_type]
 
-    if isinstance(create, six.string_types):
+    if isinstance(create, str):
         cmd += [create]
     elif isinstance(create, (list, tuple)):
         cmd += create
@@ -122,13 +140,13 @@ def item_create(
     # constraint command follows a different order
     if item not in ["constraint"]:
         cmd += [item_id]
-        if isinstance(item_type, six.string_types):
+        if isinstance(item_type, str):
             cmd += [item_type]
 
     if isinstance(extra_args, (list, tuple)):
         # constraint command needs item_id in format 'id=<id' after all params
         if item in ["constraint"]:
-            extra_args = extra_args + ["id={0}".format(item_id)]
+            extra_args = extra_args + ["id={}".format(item_id)]
         cmd += extra_args
 
     return __salt__["cmd.run_all"](cmd, output_loglevel="trace", python_shell=False)
@@ -151,9 +169,12 @@ def auth(nodes, pcsuser="hacluster", pcspasswd="hacluster", extra_args=None):
 
     .. code-block:: bash
 
-        salt '*' pcs.auth nodes='[ node1.example.org node2.example.org ]' pcsuser=hacluster pcspasswd=hoonetorg extra_args="[ '--force' ]"
+        salt '*' pcs.auth nodes='[ node1.example.org node2.example.org ]' pcsuser=hacluster pcspasswd=hoonetorg"
     """
-    cmd = ["pcs", "cluster", "auth"]
+    if __use_new_commands():
+        cmd = ["pcs", "host", "auth"]
+    else:
+        cmd = ["pcs", "cluster", "auth"]
 
     if pcsuser:
         cmd += ["-u", pcsuser]
@@ -168,7 +189,7 @@ def auth(nodes, pcsuser="hacluster", pcspasswd="hacluster", extra_args=None):
     return __salt__["cmd.run_all"](cmd, output_loglevel="trace", python_shell=False)
 
 
-def is_auth(nodes):
+def is_auth(nodes, pcsuser="hacluster", pcspasswd="hacluster"):
     """
     Check if nodes are already authorized
 
@@ -181,9 +202,22 @@ def is_auth(nodes):
 
         salt '*' pcs.is_auth nodes='[node1.example.org node2.example.org]'
     """
-    cmd = ["pcs", "cluster", "auth"]
-    cmd += nodes
+    if __use_new_commands():
 
+        cmd = ["pcs", "host", "auth"]
+
+        if pcsuser:
+            cmd += ["-u", pcsuser]
+
+        if pcspasswd:
+            cmd += ["-p", pcspasswd]
+
+        cmd += nodes
+    else:
+        cmd = ["pcs", "cluster", "auth"]
+        cmd += nodes
+
+    log.info(str(("Commands: ", cmd)))
     return __salt__["cmd.run_all"](
         cmd, stdin="\n\n", output_loglevel="trace", python_shell=False
     )
@@ -208,11 +242,16 @@ def cluster_setup(nodes, pcsclustername="pcscluster", extra_args=None):
     """
     cmd = ["pcs", "cluster", "setup"]
 
-    cmd += ["--name", pcsclustername]
+    if __use_new_commands():
+        cmd += [pcsclustername]
+    else:
+        cmd += ["--name", pcsclustername]
 
     cmd += nodes
     if isinstance(extra_args, (list, tuple)):
         cmd += extra_args
+
+    log.debug("Running cluster setup: %s", cmd)
 
     return __salt__["cmd.run_all"](cmd, output_loglevel="trace", python_shell=False)
 
@@ -259,8 +298,8 @@ def cib_create(cibfile, scope="configuration", extra_args=None):
         salt '*' pcs.cib_create cibfile='/tmp/VIP_apache_1.cib' scope=False
     """
     cmd = ["pcs", "cluster", "cib", cibfile]
-    if isinstance(scope, six.string_types):
-        cmd += ["scope={0}".format(scope)]
+    if isinstance(scope, str):
+        cmd += ["scope={}".format(scope)]
     if isinstance(extra_args, (list, tuple)):
         cmd += extra_args
 
@@ -285,8 +324,8 @@ def cib_push(cibfile, scope="configuration", extra_args=None):
         salt '*' pcs.cib_push cibfile='/tmp/VIP_apache_1.cib' scope=False
     """
     cmd = ["pcs", "cluster", "cib-push", cibfile]
-    if isinstance(scope, six.string_types):
-        cmd += ["scope={0}".format(scope)]
+    if isinstance(scope, str):
+        cmd += ["scope={}".format(scope)]
     if isinstance(extra_args, (list, tuple)):
         cmd += extra_args
 
@@ -352,7 +391,7 @@ def prop_set(prop, value, extra_args=None, cibfile=None):
     """
     return item_create(
         item="property",
-        item_id="{0}={1}".format(prop, value),
+        item_id="{}={}".format(prop, value),
         item_type=None,
         create="set",
         extra_args=extra_args,
