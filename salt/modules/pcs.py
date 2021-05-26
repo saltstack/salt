@@ -36,10 +36,10 @@ def __use_new_commands():
     log.debug("PCS package version %s", pcs_version)
 
     if __salt__["pkg.version_cmp"](pcs_version, "0.10") == 1:
-        log.info("New version, new rules")
+        log.debug("New version, new command")
         return True
     else:
-        log.info("Old Version")
+        log.debug("Old Version")
         return False
 
 
@@ -220,7 +220,7 @@ def is_auth(nodes, pcsuser="hacluster", pcspasswd="hacluster"):
         cmd = ["pcs", "cluster", "auth"]
         cmd += nodes
 
-    log.info(str(("Commands: ", cmd)))
+    log.info("Commands: %s", cmd)
     return __salt__["cmd.run_all"](
         cmd, stdin="\n\n", output_loglevel="trace", python_shell=False
     )
