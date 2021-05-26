@@ -194,12 +194,16 @@ def is_auth(nodes, pcsuser="hacluster", pcspasswd="hacluster"):
 
     nodes
         a list of nodes to be checked for authorization to the cluster
+    pcsuser
+        user for communitcation with PCS (default: hacluster)
+    pcspasswd
+        password for pcsuser (default: hacluster)
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' pcs.is_auth nodes='[node1.example.org node2.example.org]'
+        salt '*' pcs.is_auth nodes='[node1.example.org node2.example.org]' pcsuser=hacluster pcspasswd=hoonetorg
     """
     if __use_new_commands():
 
