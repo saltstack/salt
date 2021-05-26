@@ -2,14 +2,13 @@
 tests.pytests.functional.cli.test_batch
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
-import pytest
 import salt.cli.batch
 import salt.config
 import salt.utils.jid
-from mock import Mock, patch
+from tests.support.mock import Mock, patch
 
 
-class PubRetSide:
+class MockPub:
     """
     Mock salt.client.LocalClient.pub method
     """
@@ -25,27 +24,27 @@ class PubRetSide:
 
     def __call__(self, tgt, fun, *args, **kwargs):
         if tgt == "minion*" and fun == "test.ping":
-            PubRetSide.calls += 1
-            PubRetSide.initial_ping = salt.utils.jid.gen_jid({})
+            MockPub.calls += 1
+            MockPub.initial_ping = salt.utils.jid.gen_jid({})
             pub_ret = {
-                "jid": PubRetSide.initial_ping,
+                "jid": MockPub.initial_ping,
                 "minions": ["minion0", "minion1", "minion2", "minion3"],
             }
         elif fun == "state.sls":
-            if PubRetSide.calls == 1:
-                PubRetSide.calls += 1
-                PubRetSide.batch1_tgt = list(tgt)
-                PubRetSide.batch1_jid = jid = salt.utils.jid.gen_jid({})
+            if MockPub.calls == 1:
+                MockPub.calls += 1
+                MockPub.batch1_tgt = list(tgt)
+                MockPub.batch1_jid = jid = salt.utils.jid.gen_jid({})
                 pub_ret = {"jid": jid, "minions": tgt}
-            elif PubRetSide.calls == 2:
-                PubRetSide.calls += 1
-                PubRetSide.batch2_tgt = tgt
-                PubRetSide.batch2_jid = jid = salt.utils.jid.gen_jid({})
+            elif MockPub.calls == 2:
+                MockPub.calls += 1
+                MockPub.batch2_tgt = tgt
+                MockPub.batch2_jid = jid = salt.utils.jid.gen_jid({})
                 pub_ret = {"jid": jid, "minions": tgt}
-            elif PubRetSide.calls == 3:
-                PubRetSide.calls += 1
-                PubRetSide.batch3_tgt = tgt
-                PubRetSide.batch3_jid = jid = salt.utils.jid.gen_jid({})
+            elif MockPub.calls == 3:
+                MockPub.calls += 1
+                MockPub.batch3_tgt = tgt
+                MockPub.batch3_jid = jid = salt.utils.jid.gen_jid({})
                 pub_ret = {"jid": jid, "minions": tgt}
         elif fun == "saltutil.find_job":
             jid = salt.utils.jid.gen_jid({})
@@ -149,10 +148,14 @@ class MockSubscriber:
         pass
 
 
-def test_batch():
+def test_batch_issue_56273():
+    """
+    Regression test for race condition in batch logic.
+    https://github.com/saltstack/salt/issues/56273
+    """
 
-    pub_side_effect = PubRetSide()
-    MockSubscriber.pubret = pub_side_effect
+    mock_pub = MockPub()
+    MockSubscriber.pubret = mock_pub
 
     def returns_for_job(jid):
         return True
@@ -170,7 +173,7 @@ def test_batch():
     }
     with patch("salt.transport.ipc.IPCMessageSubscriber", MockSubscriber):
         batch = salt.cli.batch.Batch(opts, quiet=True)
-        with patch.object(batch.local, "pub", Mock(side_effect=pub_side_effect)):
+        with patch.object(batch.local, "pub", Mock(side_effect=mock_pub)):
             with patch.object(
                 batch.local, "returns_for_job", Mock(side_effect=returns_for_job)
             ):
