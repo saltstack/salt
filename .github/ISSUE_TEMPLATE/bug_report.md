@@ -11,8 +11,17 @@ assignees: ''
 A clear and concise description of what the bug is.
 
 **Setup**
-(Please provide relevant configs and/or SLS files (be sure to remove sensitive info).
+(Please provide relevant configs and/or SLS files (be sure to remove sensitive info. There is no general set-up of Salt.)
 
+Please be as specific as possible and give set-up details.
+
+
+- [ ] on-prem machine
+- [ ] VM (Virtualbox, KVM, etc. please specify)
+- [ ] container (Kubernetes, Docker, containerd, etc. please specify)
+- [ ] or a combination, please be explicit
+
+  
 **Steps to Reproduce the behavior**
 (Include debug logs if possible and relevant)
 
