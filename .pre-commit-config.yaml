@@ -1013,7 +1013,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-invoke-py3.5-requirements
         name: Linux CI Py3.5 Invoke Requirements
-        files: ^requirements/static/ci/invoke\.in$
+        files: ^requirements/static/ci/(invoke\.in|py3.5/invoke\.txt)$
         pass_filenames: false
         args:
           - -v
@@ -1023,7 +1023,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-invoke-py3.6-requirements
         name: Linux CI Py3.6 Invoke Requirements
-        files: ^requirements/static/ci/invoke\.in$
+        files: ^requirements/static/ci/(invoke\.in|py3.6/invoke\.txt)$
         pass_filenames: false
         args:
           - -v
@@ -1033,7 +1033,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-invoke-py3.7-requirements
         name: Linux CI Py3.7 Invoke Requirements
-        files: ^requirements/static/ci/invoke\.in$
+        files: ^requirements/static/ci/(invoke\.in|py3.7/invoke\.txt)$
         pass_filenames: false
         args:
           - -v
@@ -1043,7 +1043,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-invoke-py3.8-requirements
         name: Linux CI Py3.8 Invoke Requirements
-        files: ^requirements/static/ci/invoke\.in$
+        files: ^requirements/static/ci/(invoke\.in|py3.8/invoke\.txt)$
         pass_filenames: false
         args:
           - -v
@@ -1053,7 +1053,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-invoke-py3.9-requirements
         name: Linux CI Py3.9 Invoke Requirements
-        files: ^requirements/static/ci/invoke\.in$
+        files: ^requirements/static/ci/(invoke\.in|py3.9/invoke\.txt)$
         pass_filenames: false
         args:
           - -v
