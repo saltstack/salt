@@ -1052,6 +1052,9 @@ class LocalClient:
             )
             yield raw
 
+    def returns_for_job(self, jid):
+        return self.returners["{}.get_load".format(self.opts["master_job_cache"])](jid)
+
     def get_iter_returns(
         self,
         jid,
@@ -1088,10 +1091,7 @@ class LocalClient:
         missing = set()
         # Check to see if the jid is real, if not return the empty dict
         try:
-            if (
-                self.returners["{}.get_load".format(self.opts["master_job_cache"])](jid)
-                == {}
-            ):
+            if self.returns_for_job(jid) == {}:
                 log.warning("jid does not exist")
                 yield {}
                 # stop the iteration, since the jid is invalid
