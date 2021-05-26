@@ -208,7 +208,7 @@ rsa==4.7.2                # via google-auth, python-jose
 s3transfer==0.4.2         # via boto3
 scp==0.13.2               # via junos-eznc, napalm, netmiko
 setproctitle==1.1.10
-six==1.15.0
+six==1.16.0
 smmap==3.0.2
 sqlparse==0.4.1
 sshpubkeys==3.1.0         # via moto

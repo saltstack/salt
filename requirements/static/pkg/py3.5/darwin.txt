@@ -39,7 +39,7 @@ pyyaml==5.3.1
 pyzmq==18.0.1 ; python_version < "3.9"
 requests==2.25.1
 setproctitle==1.1.10
-six==1.15.0               # via cheroot, cherrypy, cryptography, pyopenssl, python-dateutil, tempora
+six==1.16.0               # via cheroot, cherrypy, cryptography, pyopenssl, python-dateutil, tempora
 smmap==3.0.2              # via gitdb
 tempora==1.14.1           # via portend
 timelib==0.2.5
