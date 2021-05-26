@@ -1,0 +1,4 @@
+Fix race condition in batch logic. Adds an option to `salt.client.LocalClient`
+to keep listening between calls to `iter_cmd` and `iter_cmd_no_block`. This
+prevents the event subscriber from purging cached events while the batch logic
+iterates over batches.
