@@ -427,10 +427,13 @@ def post_master_init(self, master):
                 _subprocess_list=_proxy_minion.subprocess_list,
             )
 
+        self.deltaproxy_objs[_id] = _proxy_minion
+        self.deltaproxy_opts[_id] = copy.deepcopy(proxyopts)
+
         # proxy keepalive
         _proxy_alive_fn = _fq_proxyname + ".alive"
         if (
-            proxy_alive_fn in _proxy_minion.proxy
+            _proxy_alive_fn in _proxy_minion.proxy
             and "status.proxy_reconnect" in self.deltaproxy_objs[_id].functions
             and proxyopts.get("proxy_keep_alive", True)
         ):
@@ -453,9 +456,6 @@ def post_master_init(self, master):
             _proxy_minion.schedule.enable_schedule()
         else:
             _proxy_minion.schedule.delete_job("__proxy_keepalive", persist=True)
-
-        self.deltaproxy_objs[_id] = _proxy_minion
-        self.deltaproxy_opts[_id] = copy.deepcopy(proxyopts)
 
     self.ready = True
 
