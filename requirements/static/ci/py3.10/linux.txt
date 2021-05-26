@@ -837,7 +837,7 @@ scp==0.13.2
     #   netmiko
 setproctitle==1.1.10
     # via -r requirements/static/pkg/py3.10/linux.txt
-six==1.15.0
+six==1.16.0
     # via
     #   -r requirements/static/pkg/py3.10/linux.txt
     #   aws-sam-translator
