@@ -6723,17 +6723,8 @@ def call(name, function, *args, **kwargs):
         name, thin_path, os.path.join(thin_dest_path, os.path.basename(thin_path))
     )
 
-    # figure out available python interpreter inside the container
-    pycmds = (
-        "python3",
-        "/usr/libexec/platform-python",
-        "python27",
-        "python2.7",
-        "python26",
-        "python2.6",
-        "python2",
-        "python",
-    )
+    # figure out available python interpreter inside the container (only Python3)
+    pycmds = ("python3", "/usr/libexec/platform-python")
     container_python_bin = None
     for py_cmd in pycmds:
         cmd = [py_cmd] + ["--version"]
