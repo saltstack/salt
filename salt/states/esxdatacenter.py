@@ -84,7 +84,7 @@ def datacenter_configured(name):
         dc_name = __salt__["esxdatacenter.get_details"]()["datacenter"]
     else:
         dc_name = name
-    log.info("Running datacenter_configured for datacenter '{}'" "".format(dc_name))
+    log.info("Running datacenter_configured for datacenter '{}'".format(dc_name))
     ret = {"name": name, "changes": {}, "result": None, "comment": "Default"}
     comments = []
     si = None
@@ -95,7 +95,7 @@ def datacenter_configured(name):
         )
         if not dcs:
             if __opts__["test"]:
-                comments.append("State will create " "datacenter '{}'.".format(dc_name))
+                comments.append("State will create datacenter '{}'.".format(dc_name))
             else:
                 log.debug("Creating datacenter '{}'. ".format(dc_name))
                 __salt__["vsphere.create_datacenter"](dc_name, si)
@@ -104,7 +104,7 @@ def datacenter_configured(name):
             ret["changes"].update({"new": {"name": dc_name}})
         else:
             comments.append(
-                "Datacenter '{}' already exists. Nothing to be " "done.".format(dc_name)
+                "Datacenter '{}' already exists. Nothing to be done.".format(dc_name)
             )
             log.info(comments[-1])
         __salt__["vsphere.disconnect"](si)

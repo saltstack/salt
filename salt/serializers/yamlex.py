@@ -231,7 +231,7 @@ class Loader(BaseLoader):  # pylint: disable=W0232
                 hash(key)
             except TypeError:
                 err = (
-                    "While constructing a mapping {} found unacceptable " "key {}"
+                    "While constructing a mapping {} found unacceptable key {}"
                 ).format(node.start_mark, key_node.start_mark)
                 raise ConstructorError(err)
             value = self.construct_object(value_node, deep=False)

@@ -99,7 +99,7 @@ def vsan_supported(service_instance):
     except vim.fault.NoPermission as exc:
         log.exception(exc)
         raise VMwareApiError(
-            "Not enough permissions. Required privilege: " "{}".format(exc.privilegeId)
+            "Not enough permissions. Required privilege: {}".format(exc.privilegeId)
         )
     except vim.fault.VimFault as exc:
         log.exception(exc)
@@ -187,7 +187,7 @@ def get_host_vsan_system(service_instance, host_ref, hostname=None):
     )
     if not objs:
         raise VMwareObjectRetrievalError(
-            "Host's '{}' VSAN system was " "not retrieved".format(hostname)
+            "Host's '{}' VSAN system was not retrieved".format(hostname)
         )
     log.trace("[%s] Retrieved VSAN system", hostname)
     return objs[0]["object"]
@@ -238,7 +238,7 @@ def create_diskgroup(
     except vim.fault.NoPermission as exc:
         log.exception(exc)
         raise VMwareApiError(
-            "Not enough permissions. Required privilege: " "{}".format(exc.privilegeId)
+            "Not enough permissions. Required privilege: {}".format(exc.privilegeId)
         )
     except vim.fault.VimFault as exc:
         log.exception(exc)
@@ -305,7 +305,7 @@ def add_capacity_to_diskgroup(
     except vim.fault.NoPermission as exc:
         log.exception(exc)
         raise VMwareApiError(
-            "Not enough permissions. Required privilege: " "{}".format(exc.privilegeId)
+            "Not enough permissions. Required privilege: {}".format(exc.privilegeId)
         )
     except vim.fault.VimFault as exc:
         log.exception(exc)
@@ -389,7 +389,7 @@ def remove_capacity_from_diskgroup(
     except vim.fault.NoPermission as exc:
         log.exception(exc)
         raise VMwareApiError(
-            "Not enough permissions. Required privilege: " "{}".format(exc.privilegeId)
+            "Not enough permissions. Required privilege: {}".format(exc.privilegeId)
         )
     except vim.fault.VimFault as exc:
         log.exception(exc)

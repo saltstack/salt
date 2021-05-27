@@ -38,7 +38,7 @@ def get_timestamp_at(time_in=None, time_at=None):
         return time.mktime(time_at.timetuple())
     elif time_at:
         log.debug("Predicted at specified as %s", time_at)
-        if isinstance(time_at, ((int,), float)):
+        if isinstance(time_at, (int, float)):
             # then it's a timestamp
             return time_at
         else:

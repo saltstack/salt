@@ -45,8 +45,7 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
-required_moto = "0.3.7"
-required_moto_py3 = "1.0.1"
+required_moto = "1.0.1"
 
 
 def _has_required_moto():
@@ -62,17 +61,13 @@ def _has_required_moto():
         )
         if moto_version < salt.utils.versions.LooseVersion(required_moto):
             return False
-        elif moto_version < salt.utils.versions.LooseVersion(required_moto_py3):
-            return False
-
     return True
 
 
 @skipIf(HAS_MOTO is False, "The moto module must be installed.")
 @skipIf(
     _has_required_moto() is False,
-    "The moto module must be >= to {} for "
-    "PY2 or {} for PY3.".format(required_moto, required_moto_py3),
+    "The moto module must be >= to {}".format(required_moto),
 )
 class BotoRoute53TestCase(TestCase, LoaderModuleMockMixin):
     """

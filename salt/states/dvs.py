@@ -543,7 +543,7 @@ def portgroups_configured(name, dvs, portgroups):
     """
     datacenter = _get_datacenter_name()
     log.info(
-        "Running state {} on DVS '{}', datacenter " "'{}'".format(name, dvs, datacenter)
+        "Running state %s on DVS '%s', datacenter '%s'", name, dvs, datacenter
     )
     changes_required = False
     ret = {"name": name, "changes": {}, "result": None, "comment": None}
@@ -707,7 +707,7 @@ def uplink_portgroup_configured(name, dvs, uplink_portgroup):
 
     """
     datacenter = _get_datacenter_name()
-    log.info("Running {} on DVS '{}', datacenter '{}'" "".format(name, dvs, datacenter))
+    log.info("Running %s on DVS '%s', datacenter '%s'", name, dvs, datacenter)
     changes_required = False
     ret = {"name": name, "changes": {}, "result": None, "comment": None}
     comments = []
@@ -720,7 +720,7 @@ def uplink_portgroup_configured(name, dvs, uplink_portgroup):
         current_uplink_portgroup = __salt__["vsphere.list_uplink_dvportgroup"](
             dvs=dvs, service_instance=si
         )
-        log.trace("current_uplink_portgroup = " "{}".format(current_uplink_portgroup))
+        log.trace("current_uplink_portgroup = %s", current_uplink_portgroup)
         diff_dict = _get_diff_dict(current_uplink_portgroup, uplink_portgroup)
         if diff_dict:
             changes_required = True
@@ -761,7 +761,7 @@ def uplink_portgroup_configured(name, dvs, uplink_portgroup):
             )
         __salt__["vsphere.disconnect"](si)
     except salt.exceptions.CommandExecutionError as exc:
-        log.error("Error: {}\n{}".format(exc, traceback.format_exc()))
+        log.error("Error: %s", exc, exc_info=True)
         if si:
             __salt__["vsphere.disconnect"](si)
         if not __opts__["test"]:

@@ -372,7 +372,7 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
         certk = "{}/{}/certs/{}.key".format(
             ca_path, ca_name, _TLS_TEST_DATA["create_ca"]["CN"]
         )
-        ret = ('Created Private Key: "{}." ' 'Created CSR for "{}": "{}."').format(
+        ret = 'Created Private Key: "{}." Created CSR for "{}": "{}."'.format(
             certk, _TLS_TEST_DATA["create_ca"]["CN"], certp
         )
         mock_opt = MagicMock(return_value=ca_path)
@@ -407,7 +407,7 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
         certk = "{}/{}/certs/{}.key".format(
             ca_path, ca_name, _TLS_TEST_DATA["create_ca"]["CN"]
         )
-        ret = ('Created Private Key: "{}." ' 'Created CSR for "{}": "{}."').format(
+        ret = 'Created Private Key: "{}." Created CSR for "{}": "{}."').format(
             certk, _TLS_TEST_DATA["create_ca"]["CN"], certp
         )
         mock_opt = MagicMock(return_value=ca_path)
@@ -445,7 +445,7 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
         certk = "{}/{}/certs/{}.key".format(
             ca_path, tls_dir, _TLS_TEST_DATA["create_ca"]["CN"]
         )
-        ret = ('Created Private Key: "{}." ' 'Created Certificate: "{}."').format(
+        ret = 'Created Private Key: "{}." Created Certificate: "{}."'.format(
             certk, certp
         )
         mock_opt = MagicMock(return_value=ca_path)
@@ -473,7 +473,7 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
         certk = "{}/{}/certs/{}.key".format(
             ca_path, tls_dir, _TLS_TEST_DATA["create_ca"]["CN"]
         )
-        ret = ('Created Private Key: "{}." ' 'Created Certificate: "{}."').format(
+        ret = 'Created Private Key: "{}." Created Certificate: "{}."'.format(
             certk, certp
         )
         mock_opt = MagicMock(return_value=ca_path)
@@ -750,7 +750,7 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
         certk = "{}/{}/certs/{}.key".format(
             ca_path, ca_name, _TLS_TEST_DATA["create_ca"]["CN"]
         )
-        ret = ('Created Private Key: "{}." ' 'Created CSR for "{}": "{}."').format(
+        ret = 'Created Private Key: "{}." Created CSR for "{}": "{}."'.format(
             certk, _TLS_TEST_DATA["create_ca"]["CN"], certp
         )
         with patch.dict(

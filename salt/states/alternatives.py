@@ -100,7 +100,7 @@ def install(name, link, path, priority):
             }
         else:
             ret["result"] = False
-            ret["comment"] = ("Alternative for {} not installed: {}").format(name, out)
+            ret["comment"] = "Alternative for {} not installed: {}".format(name, out)
 
     return ret
 
@@ -143,7 +143,7 @@ def remove(name, path):
     current = __salt__["alternatives.show_current"](name)
     if current:
         ret["result"] = True
-        ret["comment"] = ("Alternative for {} is set to it's default path {}").format(
+        ret["comment"] = "Alternative for {} is set to it's default path {}".format(
             name, current
         )
         return ret

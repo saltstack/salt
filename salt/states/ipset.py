@@ -282,15 +282,15 @@ def absent(name, entry=None, entries=None, family="ipv4", **kwargs):
                     ret["result"] = True
                     ret[
                         "comment"
-                    ] += "ipset entry {1} removed from set {0} for {2}\n".format(
-                        kwargs["set_name"], _entry, family
+                    ] += "ipset entry {} removed from set {} for {}\n".format(
+                        _entry_, kwargs["set_name"], family
                     )
                 else:
                     ret["result"] = False
                     ret["comment"] = (
-                        "Failed to delete ipset entry from set {0} for {2}. "
-                        "Attempted entry was {1}.\n"
-                        "{3}\n".format(kwargs["set_name"], _entry, family, command)
+                        "Failed to delete ipset entry from set {} for {}. "
+                        "Attempted entry was {}.\n"
+                        "{}\n".format(kwargs["set_name"], family, _entry, command)
                     )
     return ret
 
@@ -325,7 +325,7 @@ def flush(name, family="ipv4", **kwargs):
         return ret
     else:
         ret["result"] = False
-        ret["comment"] = "Failed to flush ipset entries from set {} for {}" "".format(
+        ret["comment"] = "Failed to flush ipset entries from set {} for {}".format(
             name, family
         )
         return ret

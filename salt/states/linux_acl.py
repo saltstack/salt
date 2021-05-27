@@ -218,7 +218,7 @@ def present(name, acl_type, acl_name="", perms="", recurse=False, force=False):
                     )
                     ret.update(
                         {
-                            "comment": "Updated permissions for " "{}".format(acl_name),
+                            "comment": "Updated permissions for {}".format(acl_name),
                             "result": True,
                             "changes": changes,
                         }

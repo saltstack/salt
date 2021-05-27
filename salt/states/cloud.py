@@ -115,11 +115,11 @@ def present(name, cloud_provider, onlyif=None, unless=None, opts=None, **kwargs)
         ret["changes"] = info
         ret["result"] = True
         ret["comment"] = (
-            "Created instance {} using provider {} " "and the following options: {}"
+            "Created instance {} using provider {} and the following options: {}"
         ).format(name, cloud_provider, pprint.pformat(kwargs))
     elif info and "Error" in info:
         ret["result"] = False
-        ret["comment"] = ("Failed to create instance {}" "using profile {}: {}").format(
+        ret["comment"] = "Failed to create instance {} using profile {}: {}".format(
             name, profile, info["Error"],
         )
     else:
@@ -272,11 +272,11 @@ def profile(name, profile, onlyif=None, unless=None, opts=None, **kwargs):
     elif error:
         ret["result"] = False
         ret["comment"] = (
-            "Failed to create instance {}" " using profile {}: {}"
+            "Failed to create instance {} using profile {}: {}"
         ).format(name, profile, "{}\n{}\n".format(main_error, name_error).strip(),)
     else:
         ret["result"] = False
-        ret["comment"] = ("Failed to create instance {}" "using profile {}").format(
+        ret["comment"] = "Failed to create instance {} using profile {}".format(
             name, profile,
         )
     return ret

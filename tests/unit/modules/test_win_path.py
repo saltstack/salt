@@ -22,7 +22,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.pathsep = ";"  # future lint: disable=blacklisted-function
+        self.pathsep = ";"
 
     def assert_call_matches(self, mock_obj, new_path):
         mock_obj.assert_called_once_with(

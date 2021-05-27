@@ -397,7 +397,7 @@ def present(
 
     ret = {"name": name, "result": True, "comment": "", "changes": {}}
 
-    if not isinstance(security_groups, ((str,), list, type(None))):
+    if not isinstance(security_groups, (str, list, type(None))):
         msg = (
             "The 'security_group' parameter must be either a list or a "
             "comma-separated string."
