@@ -79,12 +79,12 @@ def import_cert(
         )
 
     if cert_props["thumbprint"] in current_certs:
-        ret["comment"] = ("Certificate '{}' already contained in store:" " {}").format(
+        ret["comment"] = "Certificate '{}' already contained in store: {}".format(
             cert_props["thumbprint"], store_path
         )
         ret["result"] = True
     elif __opts__["test"]:
-        ret["comment"] = ("Certificate '{}' will be imported into store:" " {}").format(
+        ret["comment"] = "Certificate '{}' will be imported into store: {}".format(
             cert_props["thumbprint"], store_path
         )
         ret["changes"] = {"old": None, "new": cert_props["thumbprint"]}
@@ -100,12 +100,12 @@ def import_cert(
             saltenv=saltenv,
         )
         if ret["result"]:
-            ret["comment"] = ("Certificate '{}' imported into store:" " {}").format(
+            ret["comment"] = "Certificate '{}' imported into store: {}".format(
                 cert_props["thumbprint"], store_path
             )
         else:
             ret["comment"] = (
-                "Certificate '{}' unable to be imported into store:" " {}"
+                "Certificate '{}' unable to be imported into store: {}"
             ).format(cert_props["thumbprint"], store_path)
     return ret
 

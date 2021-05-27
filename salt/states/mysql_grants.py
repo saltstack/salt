@@ -244,12 +244,12 @@ def absent(
 
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "MySQL grant {} is set to be " "revoked".format(name)
+            ret["comment"] = "MySQL grant {} is set to be revoked".format(name)
             return ret
         if __salt__["mysql.grant_revoke"](
             grant, database, user, host, grant_option, **connection_args
         ):
-            ret["comment"] = "Grant {} on {} for {}@{} has been " "revoked".format(
+            ret["comment"] = "Grant {} on {} for {}@{} has been revoked".format(
                 grant, database, user, host
             )
             ret["changes"][name] = "Absent"
@@ -275,6 +275,6 @@ def absent(
 
     # fallback
     ret["comment"] = (
-        "Grant {} on {} to {}@{} is not present, so it" " cannot be revoked"
+        "Grant {} on {} to {}@{} is not present, so it cannot be revoked"
     ).format(grant, database, user, host)
     return ret

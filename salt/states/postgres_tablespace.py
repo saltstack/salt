@@ -222,7 +222,7 @@ def absent(
             return ret
 
     # fallback
-    ret["comment"] = "Tablespace {} is not present, so it cannot " "be removed".format(
+    ret["comment"] = "Tablespace {} is not present, so it cannot be removed".format(
         name
     )
     return ret
