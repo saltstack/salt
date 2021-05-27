@@ -827,7 +827,7 @@ scp==0.13.2
     #   netmiko
 setproctitle==1.1.10
     # via -r requirements/static/pkg/py3.7/darwin.txt
-six==1.15.0
+six==1.16.0
     # via
     #   -r requirements/static/pkg/py3.7/darwin.txt
     #   aws-sam-translator

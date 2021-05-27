@@ -68,7 +68,7 @@ requests==2.25.1
     # via -r requirements/base.txt
 setproctitle==1.1.10
     # via -r requirements/static/pkg/freebsd.in
-six==1.15.0
+six==1.16.0
     # via
     #   cheroot
     #   cherrypy
