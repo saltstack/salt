@@ -49,7 +49,7 @@ jobs:
 
     - name: Install Python Requirements
       env:
-        PIP_EXTRA_INDEX_URL: https://artifactory.saltstack.net/artifactory/api/pypi/pypi-open/simple/
+        PIP_EXTRA_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
       run:
         nox --install-only --forcecolor -e 'docs-html(compress=False, clean=True)'
 
@@ -116,7 +116,7 @@ jobs:
     - name: Install Python Requirements
       if: github.event_name == 'push' || steps.changed-files.outputs.docs == 'true'
       env:
-        PIP_EXTRA_INDEX_URL: https://artifactory.saltstack.net/artifactory/api/pypi/pypi-open/simple/
+        PIP_EXTRA_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
       run:
         nox --install-only --forcecolor -e 'docs-man(compress=False, update=False, clean=True)'
 

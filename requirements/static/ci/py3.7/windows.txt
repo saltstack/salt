@@ -192,7 +192,7 @@ kubernetes==3.0.0
     # via -r requirements/static/ci/common.in
 libnacl==1.7.2
     # via -r requirements/static/pkg/py3.7/windows.txt
-lxml==4.6.2
+lxml==4.6.3
     # via -r requirements/static/pkg/py3.7/windows.txt
 mako==1.1.4
     # via
@@ -360,7 +360,7 @@ sed==0.3.1
     # via -r requirements/static/ci/windows.in
 setproctitle==1.1.10
     # via -r requirements/static/pkg/py3.7/windows.txt
-six==1.15.0
+six==1.16.0
     # via
     #   -r requirements/static/pkg/py3.7/windows.txt
     #   aws-sam-translator
