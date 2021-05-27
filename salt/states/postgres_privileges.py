@@ -290,7 +290,7 @@ def absent(
         "name": name,
         "changes": {},
         "result": True,
-        "comment": ("The requested privilege(s) are " "not set so cannot be revoked"),
+        "comment": "The requested privilege(s) are not set so cannot be revoked",
     }
 
     privileges = ",".join(privileges) if privileges else None
@@ -312,7 +312,7 @@ def absent(
         if __opts__["test"]:
             ret["result"] = None
             ret["comment"] = (
-                "The privilege(s): {} are" " set to be revoked from {}"
+                "The privilege(s): {} are set to be revoked from {}"
             ).format(_privs, name)
             return ret
 
@@ -320,7 +320,7 @@ def absent(
             name, object_name, object_type, **kwargs
         ):
             ret["comment"] = (
-                "The privilege(s): {} have " "been revoked from {}"
+                "The privilege(s): {} have been revoked from {}"
             ).format(_privs, name)
             ret["changes"][name] = "Absent"
         else:
