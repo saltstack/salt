@@ -99,9 +99,7 @@ def _get_windows_root_dir():
     # TODO: Probably need to lock down this key in salt.utils.verify.py
     # TODO: and in the NullSoft installer code
     root_dir = salt.utils.win_reg.read_value(
-        hive="HKLM",
-        key="SOFTWARE\\Salt Project\\salt",
-        vname="root_dir"
+        hive="HKLM", key="SOFTWARE\\Salt Project\\salt", vname="root_dir"
     )
     if root_dir["success"]:
         # Make sure vdata contains something
