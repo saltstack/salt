@@ -515,7 +515,7 @@ kubernetes==3.0.0
     # via -r requirements/static/ci/common.in
 linode-python==1.1.1
     # via -r requirements/static/pkg/py3.8/darwin.txt
-lxml==4.6.2
+lxml==4.6.3
     # via
     #   junos-eznc
     #   napalm
@@ -819,7 +819,7 @@ scp==0.13.2
     #   netmiko
 setproctitle==1.1.10
     # via -r requirements/static/pkg/py3.8/darwin.txt
-six==1.15.0
+six==1.16.0
     # via
     #   -r requirements/static/pkg/py3.8/darwin.txt
     #   aws-sam-translator
