@@ -189,7 +189,7 @@ def present(
     if __opts__["test"]:
         # there is probably better things to make in test mode
         ret["result"] = None
-        ret["comment"] = ("MySQL grant {} is set to be created").format(name)
+        ret["comment"] = "MySQL grant {} is set to be created".format(name)
         return ret
     if __salt__["mysql.grant_add"](
         grant, database, user, host, grant_option, escape, ssl_option, **connection_args
