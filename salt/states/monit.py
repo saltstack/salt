@@ -70,7 +70,7 @@ def unmonitor(name):
     try:
         for key, value in result.items():
             if "Not monitored" in value[name]:
-                ret["comment"] = ("{} is not being monitored.").format(name)
+                ret["comment"] = "{} is not being monitored.".format(name)
                 ret["result"] = True
             else:
                 if __opts__["test"]:

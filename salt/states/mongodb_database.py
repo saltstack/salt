@@ -46,7 +46,7 @@ def absent(name, user=None, password=None, host=None, port=None, authdb=None):
     if __salt__["mongodb.db_exists"](name, user, password, host, port, authdb=authdb):
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = ("Database {} is present and needs to be removed").format(
+            ret["comment"] = "Database {} is present and needs to be removed".format(
                 name
             )
             return ret
