@@ -57,7 +57,7 @@ def disabled(name="allprofiles"):
     current_config = __salt__["firewall.get_config"]()
     if name != "allprofiles" and profile_map[name] not in current_config:
         ret["result"] = False
-        ret["comment"] = "Profile {} does not exist in firewall.get_config" "".format(
+        ret["comment"] = "Profile {} does not exist in firewall.get_config".format(
             name
         )
         return ret
@@ -78,7 +78,7 @@ def disabled(name="allprofiles"):
         try:
             ret["result"] = __salt__["firewall.disable"](name)
         except CommandExecutionError:
-            ret["comment"] = "Firewall Profile {} could not be disabled" "".format(
+            ret["comment"] = "Firewall Profile {} could not be disabled".format(
                 profile_map[name]
             )
     else:
@@ -218,7 +218,7 @@ def enabled(name="allprofiles"):
     current_config = __salt__["firewall.get_config"]()
     if name != "allprofiles" and profile_map[name] not in current_config:
         ret["result"] = False
-        ret["comment"] = "Profile {} does not exist in firewall.get_config" "".format(
+        ret["comment"] = "Profile {} does not exist in firewall.get_config".format(
             name
         )
         return ret
@@ -239,7 +239,7 @@ def enabled(name="allprofiles"):
         try:
             ret["result"] = __salt__["firewall.enable"](name)
         except CommandExecutionError:
-            ret["comment"] = "Firewall Profile {} could not be enabled" "".format(
+            ret["comment"] = "Firewall Profile {} could not be enabled".format(
                 profile_map[name]
             )
     else:
