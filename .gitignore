@@ -116,4 +116,6 @@ kitchen.local.yml
 Gemfile.lock
 /artifacts/
 requirements/static/*/py*/*.log
-/venv/
+
+# Vim's default session file
+Session.vim
