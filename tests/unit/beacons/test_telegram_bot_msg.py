@@ -1,7 +1,4 @@
-# coding: utf-8
-
 # Python libs
-from __future__ import absolute_import
 
 import datetime
 import logging
@@ -84,7 +81,6 @@ class TelegramBotMsgBeaconTestCase(TestCase, LoaderModuleMockMixin):
             inst.get_updates.return_value = []
 
             ret = telegram_bot_msg.beacon(config)
-            self.assertEqual(ret, (True, "Valid beacon configuration"))
 
             telegram_api.Bot.assert_called_once_with(token)
             self.assertEqual(ret, [])
@@ -99,16 +95,19 @@ class TelegramBotMsgBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
             log.debug("telegram {}".format(telegram))
             username = "different_user"
-            user = telegram.user.User(id=1, first_name="", username=username)
+            user = telegram.user.User(
+                id=1, first_name="", username=username, is_bot=True
+            )
             chat = telegram.chat.Chat(1, "private", username=username)
             date = datetime.datetime(2016, 12, 18, 0, 0)
-            message = telegram.message.Message(1, user, date=date, chat=chat)
+            message = telegram.message.Message(
+                message_id=1, user=user, date=date, chat=chat
+            )
             update = telegram.update.Update(update_id=1, message=message)
 
             inst.get_updates.return_value = [update]
 
             ret = telegram_bot_msg.beacon(config)
-            self.assertEqual(ret, (True, "Valid beacon configuration"))
 
             telegram_api.Bot.assert_called_once_with(token)
             self.assertEqual(ret, [])
@@ -121,16 +120,15 @@ class TelegramBotMsgBeaconTestCase(TestCase, LoaderModuleMockMixin):
             inst = MagicMock(name="telegram.Bot()")
             telegram_api.Bot = MagicMock(name="telegram", return_value=inst)
 
-            user = telegram.User(id=1, first_name="", username=username)
+            user = telegram.User(id=1, first_name="", username=username, is_bot=True)
             chat = telegram.Chat(1, "private", username=username)
             date = datetime.datetime(2016, 12, 18, 0, 0)
-            message = telegram.Message(1, user, date=date, chat=chat)
+            message = telegram.Message(1, user=user, date=date, chat=chat)
             update = telegram.update.Update(update_id=1, message=message)
 
             inst.get_updates.return_value = [update]
 
             ret = telegram_bot_msg.beacon(config)
-            self.assertEqual(ret, (True, "Valid beacon configuration"))
 
             telegram_api.Bot.assert_called_once_with(token)
             self.assertTrue(ret)
