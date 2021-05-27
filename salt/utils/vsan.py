@@ -490,7 +490,7 @@ def get_cluster_vsan_info(cluster_ref):
     except vim.fault.NoPermission as exc:
         log.exception(exc)
         raise VMwareApiError(
-            "Not enough permissions. Required privilege: " "{}".format(exc.privilegeId)
+            "Not enough permissions. Required privilege: {}".format(exc.privilegeId)
         )
     except vim.fault.VimFault as exc:
         log.exception(exc)
@@ -519,7 +519,7 @@ def reconfigure_cluster_vsan(cluster_ref, cluster_vsan_spec):
     except vim.fault.NoPermission as exc:
         log.exception(exc)
         raise VMwareApiError(
-            "Not enough permissions. Required privilege: " "{}".format(exc.privilegeId)
+            "Not enough permissions. Required privilege: {}".format(exc.privilegeId)
         )
     except vim.fault.VimFault as exc:
         log.exception(exc)
@@ -540,7 +540,7 @@ def _wait_for_tasks(tasks, service_instance):
     except vim.fault.NoPermission as exc:
         log.exception(exc)
         raise VMwareApiError(
-            "Not enough permissions. Required privilege: " "{}".format(exc.privilegeId)
+            "Not enough permissions. Required privilege: {}".format(exc.privilegeId)
         )
     except vim.fault.VimFault as exc:
         log.exception(exc)
