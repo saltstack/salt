@@ -45,6 +45,8 @@ independent   family                       probe_family"""
 
         with patch.dict(
             openscap.__salt__, {"cmd.run": MagicMock(return_value=mocked_oscap_string)}
+        ), patch.object(
+            openscap, "_oscap_cmd", MagicMock(return_value="/usr/bin/oscap")
         ):
             # Test if short output is correct
             self.assertEqual(openscap.version(), {"oscap": "1.2.16"})

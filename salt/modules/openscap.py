@@ -80,11 +80,11 @@ def _build_cmd(module="", operation="", **kwargs):
     """Build a well-formed command to execute on the system.
 
     Args:
-        module (str): Module Name. 
-        operation (str): Name of the operation. 
+        module (str): Module Name.
+        operation (str): Name of the operation.
 
     Returns:
-        string: Command 
+        string: Command
     """
     for ignore in list(_STATE_INTERNAL_KEYWORDS) + ["--upload-to-master"]:
         if ignore in kwargs:
@@ -133,7 +133,7 @@ def version(*args):
     """Show the version of installed oscap package
 
     Args:
-        full: Show long version information output. 
+        full: Show long version information output.
 
     Returns:
         dict: Version information
