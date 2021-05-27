@@ -98,24 +98,29 @@ def _get_windows_root_dir():
     # TODO: Probably need to lock down this key in salt.utils.verify.py
     # TODO: and in the NullSoft installer code
     root_dir = salt.utils.win_reg.read_value(
-        hive="HKLM", key="SOFTWARE\\Salt Project\\salt", vname="root_dir"
+        hive="HKLM",
+        key="SOFTWARE\\Salt Project\\salt",
+        vname="root_dir"
     )
     if root_dir["success"]:
-        return root_dir
+        # Make sure vdata contains something
+        if root_dir["vdata"]:
+            return root_dir["vdata"]
+
+    # If this key does not exist, then salt was not installed using the
+    # installer. Could be pip or setup.py.
+    log.debug("Failed to get ROOT_DIR from registry. {}".format(root_dir["comment"]))
+    # Check for C:\salt\conf
+    old_root = "\\".join([os.environ["SystemDrive"], "salt", "conf"])
+    dflt_root = os.path.join(os.environ["ProgramData"], "Salt Project", "salt")
+    if os.path.isdir(old_root):
+        # If the old config location is present use it
+        log.debug("ROOT_DIR: {}".format(os.path.dirname(old_root)))
+        return os.path.dirname(old_root)
     else:
-        # If this key does not exist, then salt was not installed using the
-        # installer. Could be pip or setup.py.
-        log.warning(root_dir["comment"])
-        # Check for C:\salt\conf
-        old_root = "\\".join([os.environ["SystemDrive"], "salt", "conf"])
-        if os.path.isdir(old_root):
-            # If the old config location is present use it
-            log.warning("Found {}".format(old_root))
-            return os.path.dirname(old_root)
-        else:
-            # If not, then default to ProgramData
-            log.warning("Using default config")
-            return os.path.join(os.environ["ProgramData"], "Salt Project", "salt")
+        # If not, then default to ProgramData
+        log.debug("ROOT_DIR: {}".format(dflt_root))
+        return dflt_root
 
 
 ROOT_DIR = __generated_syspaths.ROOT_DIR
