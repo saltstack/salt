@@ -87,7 +87,7 @@ def present(name, passwd, admin=False, grants=None, **client_args):
                 ):
                     ret[
                         "comment"
-                    ] = "Failed to set admin privilege to " "user {}".format(name)
+                    ] = "Failed to set admin privilege to user {}".format(name)
                     ret["result"] = False
                     return ret
             ret["changes"]["Admin privileges"] = admin

@@ -919,7 +919,7 @@ def delete_key_recursive(hive, key, use_32bit_registry=False):
             try:
                 win32api.RegDeleteKey(key_handle, "")
                 ret["Deleted"].append(r"{}\{}".format(hive, sub_key_path))
-            except OSError as exc:  # pylint: disable=undefined-variable
+            except OSError as exc:
                 log.error(exc, exc_info=True)
                 ret["Failed"].append(r"{}\{} {}".format(hive, sub_key_path, exc))
         except win32api.error as exc:

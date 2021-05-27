@@ -80,7 +80,7 @@ def tuned(name, **kwargs):
 
     if not __salt__["file.is_blkdev"]:
         ret["comment"] = (
-            "Changes to {} cannot be applied. " "Not a block device. "
+            "Changes to {} cannot be applied. Not a block device. "
         ).format(name)
     elif __opts__["test"]:
         ret["comment"] = "Changes to {} will be applied ".format(name)
@@ -174,7 +174,7 @@ def formatted(name, fs_type="ext4", force=False, **kwargs):
         current_fs = _checkblk(name)
 
         if current_fs == fs_type:
-            ret["comment"] = ("{} has been formatted " "with {}").format(name, fs_type)
+            ret["comment"] = "{} has been formatted with {}".format(name, fs_type)
             ret["changes"] = {"new": fs_type, "old": current_fs}
             ret["result"] = True
             return ret
