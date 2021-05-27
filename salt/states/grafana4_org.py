@@ -183,7 +183,7 @@ def present(
             if username in db_users:
                 if role is False:
                     if __opts__["test"]:
-                        ret["comment"] = "Org {} user {} will be " "deleted".format(
+                        ret["comment"] = "Org {} user {} will be deleted".format(
                             name, username
                         )
                         return ret

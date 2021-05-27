@@ -28,7 +28,7 @@ def deserialize(stream_or_string, **options):
     cp = configparser.ConfigParser(**options)
 
     try:
-        if not isinstance(stream_or_string, (bytes, (str,))):
+        if not isinstance(stream_or_string, (bytes, str)):
             cp.read_file(stream_or_string)
         else:
             cp.read_file(io.StringIO(stream_or_string))

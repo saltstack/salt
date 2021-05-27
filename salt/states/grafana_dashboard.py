@@ -135,7 +135,7 @@ def present(
             ret["changes"]["new"] = "Dashboard {} created.".format(name)
         else:
             ret["result"] = False
-            ret["comment"] = ("Failed to create dashboard {}, " "response={}").format(
+            ret["comment"] = ("Failed to create dashboard {}, "response={}").format(
                 name, response
             )
         return ret
@@ -159,8 +159,8 @@ def present(
         if __opts__["test"]:
             ret["result"] = None
             ret["comment"] = str(
-                "Dashboard {0} is set to be updated, changes={1}"
-            ).format(  # future lint: blacklisted-function
+                "Dashboard {} is set to be updated, changes={}"
+            ).format(
                 name,
                 salt.utils.json.dumps(
                     _dashboard_diff(_cleaned(new_dashboard), _cleaned(old_dashboard)),
@@ -181,7 +181,7 @@ def present(
             )
         else:
             ret["result"] = False
-            ret["comment"] = ("Failed to update dashboard {}, " "response={}").format(
+            ret["comment"] = ("Failed to update dashboard {}, response={}").format(
                 name, response
             )
         return ret
