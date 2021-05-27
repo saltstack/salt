@@ -15,10 +15,11 @@
 
 
 import logging
-import os.path
+import os
 import sys
 
 import salt.utils.platform
+import salt.utils.win_reg
 
 if salt.utils.platform.is_junos():
     __PLATFORM = "junos"
@@ -88,11 +89,40 @@ INSTALL_DIR = os.path.dirname(os.path.realpath(__THIS_FILE))
 CLOUD_DIR = os.path.join(INSTALL_DIR, "cloud")
 BOOTSTRAP = os.path.join(CLOUD_DIR, "deploy", "bootstrap-salt.sh")
 
+
+def _get_windows_root_dir():
+    # Try to get the root directory location from the registry
+    # This key will be created by the NullSoft installer
+    # If salt is currently installed in C:\salt and the user performs an
+    # upgrade, then this key will be set to C:\salt
+    # TODO: Probably need to lock down this key in salt.utils.verify.py
+    # TODO: and in the NullSoft installer code
+    root_dir = salt.utils.win_reg.read_value(
+        hive="HKLM", key="SOFTWARE\\Salt Project\\salt", vname="root_dir"
+    )
+    if root_dir["success"]:
+        return root_dir
+    else:
+        # If this key does not exist, then salt was not installed using the
+        # installer. Could be pip or setup.py.
+        log.warning(root_dir["comment"])
+        # Check for C:\salt\conf
+        old_root = "\\".join([os.environ["SystemDrive"], "salt", "conf"])
+        if os.path.isdir(old_root):
+            # If the old config location is present use it
+            log.warning("Found {}".format(old_root))
+            return os.path.dirname(old_root)
+        else:
+            # If not, then default to ProgramData
+            log.warning("Using default config")
+            return os.path.join(os.environ["ProgramData"], "Salt Project", "salt")
+
+
 ROOT_DIR = __generated_syspaths.ROOT_DIR
 if ROOT_DIR is None:
     # The installation time value was not provided, let's define the default
     if __PLATFORM.startswith("win"):
-        ROOT_DIR = r"c:\salt"
+        ROOT_DIR = _get_windows_root_dir()
     else:
         ROOT_DIR = "/"
 
