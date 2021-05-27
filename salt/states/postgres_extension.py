@@ -225,6 +225,6 @@ def absent(
     else:
         ret[
             "comment"
-        ] = "Extension {} is not present, so it cannot " "be removed".format(name)
+        ] = "Extension {} is not present, so it cannot be removed".format(name)
 
     return ret

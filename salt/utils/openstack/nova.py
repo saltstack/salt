@@ -1162,7 +1162,7 @@ class SaltNova:
             "vpn_start",
         ]
 
-        for variable in kwargs.keys():  # iterate over a copy, we might delete some
+        for variable in list(kwargs):  # iterate over a copy, we might delete some
             if variable not in params:
                 del kwargs[variable]
         return kwargs

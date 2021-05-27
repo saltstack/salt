@@ -199,12 +199,12 @@ def present(
             unix_socket,
             **connection_args
         ):
-            ret["comment"] = "Password for user {}@{} has been " "{}".format(
+            ret["comment"] = "Password for user {}@{} has been {}".format(
                 name, host, "cleared" if passwordless else "changed"
             )
             ret["changes"][name] = "Updated"
         else:
-            ret["comment"] = "Failed to {} password for user " "{}@{}".format(
+            ret["comment"] = "Failed to {} password for user {}@{}".format(
                 "clear" if passwordless else "change", name, host
             )
             err = _get_mysql_error()
@@ -293,7 +293,7 @@ def absent(name, host="localhost", **connection_args):
             return ret
 
     # fallback
-    ret["comment"] = ("User {}@{} is not present, so it cannot be removed").format(
+    ret["comment"] = "User {}@{} is not present, so it cannot be removed".format(
         name, host
     )
     return ret

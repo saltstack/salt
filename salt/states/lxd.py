@@ -166,7 +166,7 @@ def config_managed(name, value, force_password=False):
 
     if name == _password_config_key and (not force_password or not current_value):
         msg = (
-            '"{}" is already set ' "(we don't known if the password is correct)"
+            '"{}" is already set (we don't known if the password is correct)'
         ).format(name)
         return _success(ret, msg)
 

@@ -119,7 +119,7 @@ def _validate(dns_proto, dns_servers, ip_proto, ip_addrs, gateway):
             )
         if gateway is not None:
             errors.append(
-                "A gateway IP cannot be set if unless ip_proto is set to " "'static'"
+                "A gateway IP cannot be set if unless ip_proto is set to 'static'"
             )
     else:
         if not ip_addrs:
@@ -332,7 +332,7 @@ def managed(
             ret["result"] = False
             ret[
                 "comment"
-            ] = "Unable to get current configuration for " "interface '{}'".format(name)
+            ] = "Unable to get current configuration for interface '{}'".format(name)
             return ret
 
         changes = _changes(old, dns_proto, dns_servers, ip_proto, ip_addrs, gateway)
@@ -432,5 +432,5 @@ def managed(
         else:
             ret[
                 "comment"
-            ] = "Successfully updated configuration for " "interface '{}'".format(name)
+            ] = "Successfully updated configuration for interface '{}'".format(name)
         return ret
