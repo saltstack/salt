@@ -256,7 +256,7 @@ class daclConstants:
             return self.rights[t][m]["TEXT"]
         except KeyError:
             raise CommandExecutionError(
-                ('No right "{}".  It should be one of the following:  {}').format(
+                'No right "{}".  It should be one of the following:  {}'.format(
                     m, ", ".join(self.rights[t])
                 )
             )
@@ -269,7 +269,7 @@ class daclConstants:
             return self.validAceTypes[t]["BITS"]
         except KeyError:
             raise CommandExecutionError(
-                ('No ACE type "{}".  It should be one of the following:  {}').format(
+                'No ACE type "{}".  It should be one of the following:  {}'.format(
                     t, ", ".join(self.validAceTypes)
                 )
             )
