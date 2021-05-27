@@ -122,7 +122,6 @@ def _get_windows_root_dir():
         log.debug("ROOT_DIR: {}".format(dflt_root))
         return dflt_root
 
-
 ROOT_DIR = __generated_syspaths.ROOT_DIR
 if ROOT_DIR is None:
     # The installation time value was not provided, let's define the default
