@@ -577,7 +577,7 @@ def file(
     source = name
 
     if not replace and os.stat(cron_path).st_size > 0:
-        ret["comment"] = "User {} already has a crontab. No changes " "made".format(
+        ret["comment"] = "User {} already has a crontab. No changes made".format(
             user
         )
         os.unlink(cron_path)
@@ -665,13 +665,13 @@ def file(
             ret["result"] = True
             ret["changes"] = ret["changes"]
         else:
-            ret["comment"] = "Unable to update user {} crontab {}." " Error: {}".format(
+            ret["comment"] = "Unable to update user {} crontab {}. Error: {}".format(
                 user, cron_path, cron_ret["stderr"]
             )
             ret["result"] = False
             ret["changes"] = {}
     elif ret["result"]:
-        ret["comment"] = "Crontab for user {} is in the correct " "state".format(user)
+        ret["comment"] = "Crontab for user {} is in the correct state".format(user)
         ret["changes"] = {}
 
     os.unlink(cron_path)

@@ -141,9 +141,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
         modules_globals["wmi"] = wmi
 
         if win_system.HAS_WIN32NET_MODS is False:
-            win32api = types.ModuleType(
-                "win32api"  # future lint: disable=blacklisted-function
-            )
+            win32api = types.ModuleType("win32api")
             now = datetime.now()
             win32api.GetLocalTime = MagicMock(
                 return_value=[

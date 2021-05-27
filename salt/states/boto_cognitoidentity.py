@@ -98,7 +98,7 @@ def _role_present(
     )
     if r.get("error"):
         ret["result"] = False
-        failure_comment = "Failed to get existing identity pool roles: " "{}".format(
+        failure_comment = "Failed to get existing identity pool roles: {}".format(
             r["error"].get("message", r["error"])
         )
         ret["comment"] = "{}\n{}".format(ret["comment"], failure_comment)
@@ -230,7 +230,7 @@ def pool_present(
 
     if __opts__["test"]:
         if identity_pools is None:
-            ret["comment"] = "A new identity pool named {} will be " "created.".format(
+            ret["comment"] = "A new identity pool named {} will be created.".format(
                 IdentityPoolName
             )
         else:
@@ -266,7 +266,7 @@ def pool_present(
             )
         else:
             ret["result"] = False
-            ret["comment"] = "Failed to add a new identity pool: " "{}".format(
+            ret["comment"] = "Failed to add a new identity pool: {}".format(
                 r["error"].get("message", r["error"])
             )
             return ret
@@ -400,7 +400,7 @@ def pool_absent(
         )
         if r.get("error"):
             ret["result"] = False
-            failure_comment = "Failed to delete identity pool {}: " "{}".format(
+            failure_comment = "Failed to delete identity pool {}: {}".format(
                 IdentityPoolId, r["error"].get("message", r["error"])
             )
             ret["comment"] = "{}\n{}".format(ret["comment"], failure_comment)

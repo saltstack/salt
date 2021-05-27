@@ -15,7 +15,6 @@ import tarfile
 import tempfile
 import zipfile
 
-# pylint: enable=import-error,no-name-in-module
 import distro
 import jinja2
 import msgpack

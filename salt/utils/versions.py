@@ -11,7 +11,6 @@
 """
 
 
-import contextlib
 import datetime
 import inspect
 import logging
@@ -81,12 +80,6 @@ def _format_warning(message, category, filename, lineno, line=None):
     return "{}:{}: {}: {}\n".format(filename, lineno, category.__name__, message)
 
 
-@contextlib.contextmanager
-def _patched_format_warning():
-    # Under Py3 we no longer have to patch warnings.formatwarning
-    yield
-
-
 def warn_until(
     version,
     message,
@@ -151,12 +144,11 @@ def warn_until(
         )
 
     if _dont_call_warnings is False:
-        with _patched_format_warning():
-            warnings.warn(
-                message.format(version=version.formatted_version),
-                category,
-                stacklevel=stacklevel,
-            )
+        warnings.warn(
+            message.format(version=version.formatted_version),
+            category,
+            stacklevel=stacklevel,
+        )
 
 
 def warn_until_date(
@@ -221,12 +213,11 @@ def warn_until_date(
         )
 
     if _dont_call_warnings is False:
-        with _patched_format_warning():
-            warnings.warn(
-                message.format(date=date.isoformat(), today=today.isoformat()),
-                category,
-                stacklevel=stacklevel,
-            )
+        warnings.warn(
+            message.format(date=date.isoformat(), today=today.isoformat()),
+            category,
+            stacklevel=stacklevel,
+        )
 
 
 def kwargs_warn_until(

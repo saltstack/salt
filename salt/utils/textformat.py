@@ -155,11 +155,9 @@ class TextFormat:
             self.codes.extend((codes["extended"], "2"))
             self.codes.extend(*qualify_triple_int(kwargs["bg_rgb"]))
 
-        # pylint: disable=string-substitution-usage-error
         self.sequence = "{}{}{}".format(
             graph_prefix, ";".join(self.codes), graph_suffix
         )
-        # pylint: enable=string-substitution-usage-error
 
     def __call__(self, text, reset=True):
         """
@@ -174,7 +172,7 @@ class TextFormat:
             'The answer is: {0}'.format(green_blink_text(42))
         """
         end = TextFormat("reset") if reset else ""
-        return "{}{}{}".format(self.sequence, text, end)  # pylint: disable=E1321
+        return "{}{}{}".format(self.sequence, text, end)
 
     def __str__(self):
         return self.sequence

@@ -483,7 +483,7 @@ def _function_config_present(
         )
         if not _r.get("updated"):
             ret["result"] = False
-            ret["comment"] = "Failed to update function: " "{}.".format(
+            ret["comment"] = "Failed to update function: {}.".format(
                 _r["error"]["message"]
             )
             ret["changes"] = {}
@@ -543,7 +543,7 @@ def _function_code_present(
         )
         if not func.get("updated"):
             ret["result"] = False
-            ret["comment"] = "Failed to update function: " "{}.".format(
+            ret["comment"] = "Failed to update function: {}.".format(
                 func["error"]["message"]
             )
             ret["changes"] = {}
@@ -622,7 +622,7 @@ def _function_permissions_present(
                     oldperms[sid] = {}
             if not _r.get("updated"):
                 ret["result"] = False
-                ret["comment"] = "Failed to update function: " "{}.".format(
+                ret["comment"] = "Failed to update function: {}.".format(
                     _r["error"]["message"]
                 )
                 ret["changes"] = {}
@@ -678,7 +678,7 @@ def function_absent(
     )
     if not r["deleted"]:
         ret["result"] = False
-        ret["comment"] = "Failed to delete function: " "{}.".format(
+        ret["comment"] = "Failed to delete function: {}.".format(
             r["error"]["message"]
         )
         return ret
@@ -744,7 +744,7 @@ def alias_present(
 
     if "error" in r:
         ret["result"] = False
-        ret["comment"] = "Failed to create alias: " "{}.".format(r["error"]["message"])
+        ret["comment"] = "Failed to create alias: {}.".format(r["error"]["message"])
         return ret
 
     if not r.get("exists"):
@@ -764,7 +764,7 @@ def alias_present(
         )
         if not r.get("created"):
             ret["result"] = False
-            ret["comment"] = "Failed to create alias: " "{}.".format(
+            ret["comment"] = "Failed to create alias: {}.".format(
                 r["error"]["message"]
             )
             return ret
@@ -855,7 +855,7 @@ def alias_absent(
     )
     if "error" in r:
         ret["result"] = False
-        ret["comment"] = "Failed to delete alias: " "{}.".format(r["error"]["message"])
+        ret["comment"] = "Failed to delete alias: {}.".format(r["error"]["message"])
         return ret
 
     if r and not r["exists"]:
@@ -871,7 +871,7 @@ def alias_absent(
     )
     if not r["deleted"]:
         ret["result"] = False
-        ret["comment"] = "Failed to delete alias: " "{}.".format(r["error"]["message"])
+        ret["comment"] = "Failed to delete alias: {}.".format(r["error"]["message"])
         return ret
     ret["changes"]["old"] = {"alias": Name}
     ret["changes"]["new"] = {"alias": None}

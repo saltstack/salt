@@ -497,7 +497,7 @@ def vm_updated(
         "name": name,
         "result": True,
         "changes": changes,
-        "comment": "Virtual machine " "{} was updated successfully".format(vm_name),
+        "comment": "Virtual machine {} was updated successfully".format(vm_name),
     }
 
     return result
@@ -579,7 +579,7 @@ def vm_created(
         "name": name,
         "result": True,
         "changes": changes,
-        "comment": "Virtual machine " "{} created successfully".format(vm_name),
+        "comment": "Virtual machine {} created successfully".format(vm_name),
     }
 
     return result
@@ -628,7 +628,7 @@ def vm_registered(vm_name, datacenter, placement, vm_file, power_on=False):
         {
             "result": True,
             "changes": {"name": vm_name, "power_on": power_on},
-            "comment": "Virtual machine " "{} registered successfully".format(vm_name),
+            "comment": "Virtual machine {} registered successfully".format(vm_name),
         }
     )
 
