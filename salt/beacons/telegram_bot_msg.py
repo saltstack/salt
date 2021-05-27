@@ -91,10 +91,21 @@ def beacon(config):
 
     latest_update_id = 0
     for update in updates:
-        if update.message:
-            message = update.message
-        else:
-            message = update.edited_message
+        message = update.message or update.edited_message
+        if message is None:
+            # According to the telegram bot docs found here:
+            # https://python-telegram-bot.readthedocs.io/en/v12.0.0/telegram.choseninlineresult.html#telegram.      ChosenInlineResult
+            # There are a multitude of other options, and only one will be set.
+            # It's possible that only message/edited message are ever set for
+            # a beacon, but this will protect in the case that something else
+            # happens. If there are any other returns besides
+            # message/edited_message then they can be added to the above
+            # fallback/or list
+            log.debug(
+                "Telegram bot update was not messaqge/edited_message"
+                " - no beacon was fired."
+            )
+            continue
 
         if update.update_id > latest_update_id:
             latest_update_id = update.update_id
