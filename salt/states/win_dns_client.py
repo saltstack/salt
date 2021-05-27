@@ -68,7 +68,7 @@ def dns_exists(name, servers=None, interface="Local Area Connection", replace=Fa
                 ret["changes"]["Servers Added"].append(server)
         else:
             if not __salt__["win_dns_client.add_dns"](server, interface, i + 1):
-                ret["comment"] = ("Failed to add {} as DNS server number {}").format(
+                ret["comment"] = "Failed to add {} as DNS server number {}".format(
                     server, i + 1
                 )
                 ret["result"] = False
@@ -122,7 +122,7 @@ def dns_dhcp(name, interface="Local Area Connection"):
     ret["result"] = __salt__["win_dns_client.dns_dhcp"](interface)
     if not ret["result"]:
         ret["changes"] = {}
-        ret["comment"] = ('Could not configure "{}" DNS servers from DHCP').format(
+        ret["comment"] = 'Could not configure "{}" DNS servers from DHCP'.format(
             interface
         )
 

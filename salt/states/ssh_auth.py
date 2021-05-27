@@ -128,12 +128,12 @@ def _present_test(
         fingerprint_hash_type=fingerprint_hash_type,
     )
     if check == "update":
-        comment = ("Key {} for user {} is set to be updated").format(name, user)
+        comment = "Key {} for user {} is set to be updated".format(name, user)
     elif check == "add":
-        comment = ("Key {} for user {} is set to be added").format(name, user)
+        comment = "Key {} for user {} is set to be added".format(name, user)
     elif check == "exists":
         result = True
-        comment = "The authorized host key {} is already present " "for user {}".format(
+        comment = "The authorized host key {} is already present for user {}".format(
             name, user
         )
 
@@ -201,7 +201,7 @@ def _absent_test(
         fingerprint_hash_type=fingerprint_hash_type,
     )
     if check == "update" or check == "exists":
-        comment = ("Key {} for user {} is set for removal").format(name, user)
+        comment = "Key {} for user {} is set for removal".format(name, user)
     else:
         comment = "Key is already absent"
         result = True
@@ -351,7 +351,7 @@ def present(
 
     if data == "replace":
         ret["changes"][name] = "Updated"
-        ret["comment"] = "The authorized host key {} for user {} was " "updated".format(
+        ret["comment"] = "The authorized host key {} for user {} was updated".format(
             name, user
         )
         return ret
@@ -369,7 +369,7 @@ def present(
         ret["result"] = False
         ret[
             "comment"
-        ] = "Failed to add the ssh key. Source file {} is " "missing".format(source)
+        ] = "Failed to add the ssh key. Source file {} is missing".format(source)
     elif data == "fail":
         ret["result"] = False
         err = sys.modules[__salt__["test.ping"].__module__].__context__.pop(

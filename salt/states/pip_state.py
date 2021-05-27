@@ -284,7 +284,7 @@ def _check_if_installed(
                 and _fulfills_version_spec(pip_list[prefix], version_spec)
             ) or (not any(version_spec)):
                 ret["result"] = True
-                ret["comment"] = "Python package {} was already " "installed".format(
+                ret["comment"] = "Python package {} was already installed".format(
                     state_pkg_name
                 )
                 return ret
@@ -331,7 +331,7 @@ def _check_if_installed(
                 return ret
             if _pep440_version_cmp(pip_list[prefix], desired_version) == 0:
                 ret["result"] = True
-                ret["comment"] = "Python package {} was already " "installed".format(
+                ret["comment"] = "Python package {} was already installed".format(
                     state_pkg_name
                 )
                 return ret
@@ -814,7 +814,7 @@ def installed(
                 # TODO: Check requirements file against currently-installed
                 # packages to provide more accurate state output.
                 comments.append(
-                    "Requirements file '{}' will be " "processed.".format(requirements)
+                    "Requirements file '{}' will be processed.".format(requirements)
                 )
             if editable:
                 comments.append(
@@ -1068,18 +1068,18 @@ def installed(
             comments = []
             if requirements:
                 comments.append(
-                    "Unable to process requirements file " '"{}".'.format(requirements)
+                    'Unable to process requirements file "{}"'.format(requirements)
                 )
             if editable:
                 comments.append(
-                    "Unable to install from VCS checkout" "{}.".format(editable)
+                    "Unable to install from VCS checkout {}.".format(editable)
                 )
             comments.append(error)
             ret["comment"] = " ".join(comments)
         else:
             pkgs_str = ", ".join([state_name for _, state_name in target_pkgs])
             aicomms = "\n".join(already_installed_comments)
-            error_comm = "Failed to install packages: {}. " "{}".format(pkgs_str, error)
+            error_comm = "Failed to install packages: {}. {}".format(pkgs_str, error)
             ret["comment"] = aicomms + ("\n" if aicomms else "") + error_comm
     else:
         ret["result"] = False

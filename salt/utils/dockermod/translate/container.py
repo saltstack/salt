@@ -652,7 +652,7 @@ def user(val, **kwargs):  # pylint: disable=unused-argument
             val = int(val)
         except (TypeError, ValueError):
             pass
-    if not isinstance(val, ((int,), (str,))):
+    if not isinstance(val, (int, str)):
         raise SaltInvocationError("Value must be a username or uid")
     elif isinstance(val, int) and val < 0:
         raise SaltInvocationError("'{}' is an invalid uid".format(val))

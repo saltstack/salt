@@ -189,19 +189,19 @@ def present(
         if __opts__["test"]:
             ret["result"] = None
             ret["comment"] = (
-                "The privilege(s): {} are" " set to be granted to {}"
+                "The privilege(s): {} are set to be granted to {}"
             ).format(_privs, name)
             return ret
 
         if __salt__["postgres.privileges_grant"](
             name, object_name, object_type, **kwargs
         ):
-            ret["comment"] = ("The privilege(s): {} have " "been granted to {}").format(
+            ret["comment"] = "The privilege(s): {} have been granted to {}".format(
                 _privs, name
             )
             ret["changes"][name] = "Present"
         else:
-            ret["comment"] = ("Failed to grant privilege(s):" " {} to {}").format(
+            ret["comment"] = "Failed to grant privilege(s): {} to {}".format(
                 _privs, name
             )
             ret["result"] = False
@@ -324,7 +324,7 @@ def absent(
             ).format(_privs, name)
             ret["changes"][name] = "Absent"
         else:
-            ret["comment"] = ("Failed to revoke privilege(s):" " {} from {}").format(
+            ret["comment"] = "Failed to revoke privilege(s): {} from {}".format(
                 _privs, name
             )
             ret["result"] = False

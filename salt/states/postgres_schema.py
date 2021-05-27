@@ -87,7 +87,7 @@ def present(
     if schema_attr is None:
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "Schema {} is set to be created" " in database {}.".format(
+            ret["comment"] = "Schema {} is set to be created in database {}.".format(
                 name, dbname
             )
             return ret

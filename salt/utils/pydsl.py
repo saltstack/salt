@@ -409,7 +409,7 @@ class StateFunction:
     def _repr(self, context=None):
         if not self.name and context != "extend":
             raise PyDslError(
-                "No state function specified for module: " "{}".format(self.mod._name)
+                "No state function specified for module: {}".format(self.mod._name)
             )
         if not self.name and context == "extend":
             return self.args

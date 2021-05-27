@@ -106,12 +106,12 @@ def set_timeout(name, value, power="ac", scheme=None):
 
     # Check current settings
     if old[power] == value:
-        ret["comment"] = "{} timeout on {} power is already set to {}" "".format(
+        ret["comment"] = "{} timeout on {} power is already set to {}".format(
             name.capitalize(), power.upper(), value
         )
         return ret
     else:
-        ret["comment"] = "{} timeout on {} power will be set to {}" "".format(
+        ret["comment"] = "{} timeout on {} power will be set to {}".format(
             name.capitalize(), power.upper(), value
         )
 

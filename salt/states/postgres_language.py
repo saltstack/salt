@@ -158,7 +158,7 @@ def absent(
             ret["comment"] = "Failed to remove language {}".format(name)
             ret["result"] = False
 
-    ret["comment"] = "Language {} is not present " "so it cannot be removed".format(
+    ret["comment"] = "Language {} is not present so it cannot be removed".format(
         name
     )
     return ret

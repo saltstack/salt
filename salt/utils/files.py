@@ -842,7 +842,6 @@ def get_encoding(path):
         except UnicodeDecodeError:
             return False
         else:
-            # Reject surrogate characters in Py2 (Py3 behavior)
             return True
 
     def check_system_encoding(_data):

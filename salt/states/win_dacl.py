@@ -95,7 +95,7 @@ def present(name, objectType, user, permission, acetype, propagation):
             if __opts__["test"]:
                 ret["result"] = None
                 ret["comment"] = "The ACE is set to be added."
-                ret["changes"]["Added ACEs"] = ("{} {} {} on {}").format(
+                ret["changes"]["Added ACEs"] = "{} {} {} on {}".format(
                     user, acetype, permission, propagation
                 )
                 return ret
@@ -131,7 +131,7 @@ def absent(name, objectType, user, permission, acetype, propagation):
             if __opts__["test"]:
                 ret["result"] = None
                 ret["comment"] = "The ACE is set to be removed."
-                ret["changes"]["Removed ACEs"] = ("{} {} {} on {}").format(
+                ret["changes"]["Removed ACEs"] = "{} {} {} on {}".format(
                     user, acetype, permission, propagation
                 )
                 return ret

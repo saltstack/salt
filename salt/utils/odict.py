@@ -71,7 +71,7 @@ except (ImportError, AttributeError):
                 because their insertion order is arbitrary.
 
                 """
-                super().__init__()  # pylint: disable=E1003
+                super().__init__()
                 if len(args) > 1:
                     raise TypeError(
                         "expected at most 1 arguments, got {}".format(len(args))

@@ -15,7 +15,7 @@ except ImportError:
 
 
 # pylint: disable=string-substitution-usage-error
-class GitConfigParser(RawConfigParser):  # pylint: disable=undefined-variable
+class GitConfigParser(RawConfigParser):
     """
     Custom ConfigParser which reads and writes git config files.
 

@@ -141,7 +141,7 @@ def present(
         else:
             ret[
                 "comment"
-            ] = "Database {} exists, but parameters " "need to be changed".format(name)
+            ] = "Database {} exists, but parameters need to be changed".format(name)
         return ret
     if name not in dbs and __salt__["postgres.db_create"](
         name,
@@ -158,10 +158,10 @@ def present(
     elif name in dbs and __salt__["postgres.db_alter"](
         name, tablespace=tablespace, owner=owner, owner_recurse=owner_recurse, **db_args
     ):
-        ret["comment"] = ("Parameters for database {} have been changed").format(name)
+        ret["comment"] = "Parameters for database {} have been changed".format(name)
         ret["changes"][name] = "Parameters changed"
     elif name in dbs:
-        ret["comment"] = ("Failed to change parameters for database {}").format(name)
+        ret["comment"] = "Failed to change parameters for database {}".format(name)
         ret["result"] = False
     else:
         ret["comment"] = "Failed to create database {}".format(name)
@@ -224,7 +224,7 @@ def absent(
             return ret
 
     # fallback
-    ret["comment"] = "Database {} is not present, so it cannot " "be removed".format(
+    ret["comment"] = "Database {} is not present, so it cannot be removed".format(
         name
     )
     return ret

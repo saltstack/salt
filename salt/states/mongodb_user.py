@@ -152,7 +152,7 @@ def present(
 
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = ("User {} is not present and needs to be created").format(name)
+        ret["comment"] = "User {} is not present and needs to be created".format(name)
         return ret
     # The user is not present, make it!
     if __salt__["mongodb.user_create"](
@@ -212,7 +212,7 @@ def absent(
     if user_exists is True:
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = ("User {} is present and needs to be removed").format(name)
+            ret["comment"] = "User {} is present and needs to be removed".format(name)
             return ret
         if __salt__["mongodb.user_remove"](
             name, user, password, host, port, database=database, authdb=authdb

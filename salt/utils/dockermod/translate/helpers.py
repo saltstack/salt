@@ -237,7 +237,7 @@ def translate_device_rates(val, numeric_rate=True):
                 item["Rate"] = int(item["Rate"])
             except ValueError:
                 raise SaltInvocationError(
-                    "Rate '{Rate}' for path '{Path}' is " "non-numeric".format(**item)
+                    "Rate '{Rate}' for path '{Path}' is non-numeric".format(**item)
                 )
     return val
 
