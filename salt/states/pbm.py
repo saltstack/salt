@@ -151,13 +151,13 @@ def default_vsan_policy_configured(name, policy):
     # It's going to make the whole thing much easier
     policy_copy = copy.deepcopy(policy)
     proxy_type = __salt__["vsphere.get_proxy_type"]()
-    log.trace("proxy_type = {}".format(proxy_type))
+    log.trace("proxy_type = %s", proxy_type)
     # All allowed proxies have a shim execution module with the same
     # name which implementes a get_details function
     # All allowed proxies have a vcenter detail
     vcenter = __salt__["{}.get_details".format(proxy_type)]()["vcenter"]
-    log.info("Running {} on vCenter " "'{}'".format(name, vcenter))
-    log.trace("policy = {}".format(policy))
+    log.info("Running %s on vCenter '%s'", name, vcenter)
+    log.trace("policy = %s", policy)
     changes_required = False
     ret = {"name": name, "changes": {}, "result": None, "comment": None}
     comments = []
@@ -244,7 +244,7 @@ def default_vsan_policy_configured(name, policy):
                     service_instance=si,
                 )
                 comments.append(
-                    "Updated the default VSAN policy in vCenter " "'{}'".format(vcenter)
+                    "Updated the default VSAN policy in vCenter '{}'".format(vcenter)
                 )
             log.info(comments[-1])
 
@@ -324,7 +324,7 @@ def storage_policies_configured(name, policies):
         # name which implementes a get_details function
         # All allowed proxies have a vcenter detail
         vcenter = __salt__["{}.get_details".format(proxy_type)]()["vcenter"]
-        log.info("Running state '{}' on vCenter " "'{}'".format(name, vcenter))
+        log.info("Running state '%s' on vCenter '%s'", name, vcenter)
         si = __salt__["vsphere.get_service_instance_via_proxy"]()
         current_policies = __salt__["vsphere.list_storage_policies"](
             policy_names=[policy["name"] for policy in policies], service_instance=si
@@ -537,14 +537,14 @@ def default_storage_policy_assigned(name, policy, datastore):
             }
             if __opts__["test"]:
                 comment = (
-                    "State {} will assign storage policy '{}' to " "datastore '{}'."
+                    "State {} will assign storage policy '{}' to datastore '{}'."
                 ).format(name, policy, datastore)
             else:
                 __salt__["vsphere.assign_default_storage_policy_to_datastore"](
                     policy=policy, datastore=datastore, service_instance=si
                 )
                 comment = (
-                    "Storage policy '{} was assigned to datastore " "'{}'."
+                    "Storage policy '{} was assigned to datastore '{}'."
                 ).format(policy, name)
         log.info(comment)
     except CommandExecutionError as exc:

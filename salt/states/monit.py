@@ -40,7 +40,7 @@ def monitor(name):
     try:
         for key, value in result.items():
             if "Running" in value[name]:
-                ret["comment"] = ("{} is being being monitored.").format(name)
+                ret["comment"] = "{} is being being monitored.".format(name)
                 ret["result"] = True
             else:
                 if __opts__["test"]:
@@ -48,12 +48,12 @@ def monitor(name):
                     ret["result"] = None
                     return ret
                 __salt__["monit.monitor"](name)
-                ret["comment"] = ("{} started to be monitored.").format(name)
+                ret["comment"] = "{} started to be monitored.".format(name)
                 ret["changes"][name] = "Running"
                 ret["result"] = True
                 break
     except KeyError:
-        ret["comment"] = ("{} not found in configuration.").format(name)
+        ret["comment"] = "{} not found in configuration.".format(name)
         ret["result"] = False
 
     return ret
@@ -78,12 +78,12 @@ def unmonitor(name):
                     ret["result"] = None
                     return ret
                 __salt__["monit.unmonitor"](name)
-                ret["comment"] = ("{} stopped being monitored.").format(name)
+                ret["comment"] = "{} stopped being monitored.".format(name)
                 ret["changes"][name] = "Not monitored"
                 ret["result"] = True
                 break
     except KeyError:
-        ret["comment"] = ("{} not found in configuration.").format(name)
+        ret["comment"] = "{} not found in configuration.".format(name)
         ret["result"] = False
 
     return ret
