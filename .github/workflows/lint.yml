@@ -53,7 +53,7 @@ jobs:
 
     - name: Install Python Requirements
       env:
-        PIP_EXTRA_INDEX_URL: https://artifactory.saltstack.net/artifactory/api/pypi/pypi-open/simple/
+        PIP_EXTRA_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
       run:
         nox --install-only --forcecolor -e lint-salt
 
@@ -118,7 +118,7 @@ jobs:
 
     - name: Install Python Requirements
       env:
-        PIP_EXTRA_INDEX_URL: https://artifactory.saltstack.net/artifactory/api/pypi/pypi-open/simple/
+        PIP_EXTRA_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
       run:
         nox --install-only --forcecolor -e lint-tests
 
