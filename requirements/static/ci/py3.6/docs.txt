@@ -115,7 +115,7 @@ requests==2.25.1
     #   sphinx
 setproctitle==1.1.10
     # via -r requirements/static/pkg/py3.6/linux.txt
-six==1.15.0
+six==1.16.0
     # via
     #   -r requirements/static/pkg/py3.6/linux.txt
     #   cheroot
