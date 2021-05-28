@@ -179,29 +179,48 @@ def version(*args):
         _value = line.split(KEY_RULES[_head]["split_at"])[1]
         _resdict[_head][_key] = _value
 
+    _bin = _oscap_cmd().split("/")[-1]
+    short_version = {"{}".format(_bin): _prep_version[0].split(" ")[-1]}
     if "full" in args:
-        return _resdict
+        return _resdict.update(short_version)
 
     # Default return
-    _bin = _oscap_cmd().split("/")[-1]
-    return {"{}".format(_bin): _prep_version[0].split(" ")[-1]}
+    return short_version
 
 
 def xccdf(file="", operation="eval", upload=True, **kwargs):
-    """[summary]
+    """
+    Run ``oscap xccdf`` commands on minions.
+    It uses ``cp.push_dir`` to upload the generated files to the salt master.
+    (defaults to ``/var/cache/salt/master/minions/minion-id/files``)
+
+    It needs ``file_recv`` set to ``True`` in the master configuration file.
 
     Args:
-        file (str): Target File with to evaluate the system.
+        file (str): Target File to evaluate the system.
         operation (str, optional): Operation of Module. Defaults to "eval".
+                    It will automatically add and set the parameters 'oval-results', 'report' and, 'results'.
         upload (bool, optional): Upload results to Master. Defaults to True.
 
     Returns:
         dict: {
             "success": _OSCAP_EXIT_CODES_MAP[_retcode],
             "upload_dir": _upload_path,
-            "error": None,
+            "error": None (Kept in for compatibility reasons. It does not change!),
             "returncode": _retcode
             }
+
+    CLI Example:
+
+    .. code-block:: bash
+        salt '*' openscap.xccdf /usr/share/openscap/scap-yast2sec-xccdf.xml profile=default
+
+    All additional parameters need to either be set with a boolean or a string value.
+    E.g. the oscap '--fetch-remote-resources' parameter of 'xccdf eval' is just switching on the progress bar.
+    To enable it you have to set the parameter like this:
+
+    .. code-block:: bash
+        salt '*' openscap.xccdf /usr/share/openscap/scap-yast2sec-xccdf.xml profile=default fetch-remote-resources=true
     """
 
     if not file:
