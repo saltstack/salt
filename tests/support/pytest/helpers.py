@@ -176,17 +176,32 @@ class TestAccount:
     username = attr.ib(default=None)
     password = attr.ib(default=None)
     hashed_password = attr.ib(default=None, repr=False)
-    groups = attr.ib(default=None)
+    create_group = attr.ib(default=False, repr=False)
+    group = attr.ib(default=None)
+    _group_info = attr.ib(init=False, repr=False, default=None)
+    _delete_group = attr.ib(init=False, repr=False, default=False)
 
     def __attrs_post_init__(self):
+        random_str = random_string("-", uppercase=False)
         if self.sminion is None:
             self.sminion = create_sminion()
         if self.username is None:
-            self.username = random_string("account-", uppercase=False)
+            self.username = "account{}".format(random_str)
         if self.password is None:
             self.password = self.username
         if self.hashed_password is None:
             self.hashed_password = salt.utils.pycrypto.gen_hash(password=self.password)
+        if self.create_group:
+            if self.group is None:
+                self.group = "group{}".format(random_str)
+
+    @property
+    def group_info(self):
+        if self._group_info is None:
+            self._group_info = types.SimpleNamespace(
+                **self.sminion.functions.group.info(self.group)
+            )
+        return self._group_info
 
     def __enter__(self):
         log.debug("Creating system account: %s", self)
@@ -198,23 +213,43 @@ class TestAccount:
         )
         assert ret
         assert self.username in self.sminion.functions.user.list_users()
+        if self.group is not None:
+            group = self.sminion.functions.group.info(self.group)
+            if not group:
+                ret = self.sminion.functions.group.add(self.group)
+                assert ret
+                self._delete_group = True
+            self.sminion.functions.group.adduser(self.group, self.username)
         log.debug("Created system account: %s", self)
         # Run tests
         return self
 
     def __exit__(self, *args):
+        if self.group:
+            self.sminion.functions.group.deluser(self.group, self.username)
+            if self._delete_group:
+                self.sminion.functions.group.delete(self.group)
         self.sminion.functions.user.delete(self.username, remove=True, force=True)
         log.debug("Deleted system account: %s", self.username)
 
 
 @pytest.helpers.register
 @contextmanager
-def create_account(username=None, password=None, hashed_password=None, sminion=None):
+def create_account(
+    username=None,
+    password=None,
+    hashed_password=None,
+    sminion=None,
+    create_group=False,
+    group=None,
+):
     with TestAccount(
         sminion=sminion,
         username=username,
         password=password,
         hashed_password=hashed_password,
+        create_group=create_group,
+        group=group,
     ) as account:
         yield account
 
