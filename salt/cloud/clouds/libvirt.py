@@ -24,6 +24,8 @@ Example profile:
       num_cpus: 2
       # Amount of virtual memory (unit: MB or GB)
       memory: 2048MB
+      # Version of USB controller to use (1, 2 or 3; default: 1)
+      usb: 3
       # Serial number visible in DMI data (string)
       serial: 01234456789
       # Should the domain start automatically at hypervisor boot
@@ -389,6 +391,8 @@ def create(vm_):
 
     memory = config.get_cloud_config_value("memory", vm_, __opts__, default=None)
 
+    usb = config.get_cloud_config_value("usb", vm_, __opts__, default=1)
+
     serial = config.get_cloud_config_value("serial", vm_, __opts__, default=None)
 
     autostart = config.get_cloud_config_value("autostart", vm_, __opts__, default=False)
@@ -496,6 +500,17 @@ def create(vm_):
                 currentMemory_xml.text = str(memory_mb)
                 currentMemory_xml.set("unit", "Mib")
                 log.debug("Setting memory to: %s MB", memory_mb)
+
+            # Configure USB controller
+            if usb:
+                usb_xml = domain_xml.find("./devices/controller[@type='usb']")
+                usb_model = "piix3-uhci"  # Default to USB 1.0
+                if usb == 2:
+                    usb_model = "ich9-ehci1"  # USB 2.0
+                elif usb == 3:
+                    usb_model = "nec-xhci"  # USB 3.0
+                usb_xml.set("model", usb_model)
+                log.debug("Setting USB controller to: %s", usb_model)
 
             # Configure network interfaces
             devices_xml = domain_xml.find("./devices")
