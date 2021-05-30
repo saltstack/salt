@@ -531,8 +531,12 @@ def create(vm_):
                 for iface_xml in devices_xml.findall("./interface"):
                     devices_xml.remove(iface_xml)
 
+                # default bus/slot address
+                iface_bus = 1
+                iface_slot = 1
+
                 # Add new network interfaces to cloned domain
-                for network in sorted(devices["network"]):
+                for index, network in enumerate(devices["network"]):
                     # Interface type: should be "bridge" or "network" (default)
                     if "type" in devices["network"][network]:
                         type = devices["network"][network]["type"]
@@ -572,12 +576,26 @@ def create(vm_):
                         )
                     )
 
+                    # Define network card address starting to avoid issue when too many cards
+                    if ( iface_slot % 32 ) == 0:
+                        iface_bus += 1
+                        iface_slot = 1
+
+                    iface_bus_str = '0x0'+ str(iface_bus)
+                    iface_slot_str = hex(iface_slot)
+                    iface_xml.append(
+                        ElementTree.Element("address", type="pci", domain='0x0000', bus=iface_bus_str, slot=iface_slot_str, function='0x0')
+                    )
+                    iface_slot += 1
+
                     log.debug(
-                        "Adding NIC '%s', type '%s', source '%s', model '%s'",
+                        "Adding NIC '%s', type '%s', source '%s', model '%s', bus '%s', slot '%s'",
                         network,
                         type,
                         source,
                         model,
+                        iface_bus_str,
+                        iface_slot_str,
                     )
 
             else:
