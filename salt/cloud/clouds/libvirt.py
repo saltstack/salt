@@ -1137,3 +1137,174 @@ def get_domain_volumes(conn, domain):
             except libvirtError:
                 log.warning("Disk not found '%s'", source)
     return volumes
+
+def start(name, call=None):
+    """
+    This function start a virtual machine on the cloud provider.
+    Before doing so, it should fire an event on the Salt event bus.
+
+    The tag for this event is `salt/cloud/<vm name>/starting`.
+
+    Dependencies:
+        list_nodes
+
+    @param name:
+    @type name: str
+    @param call:
+    @type call:
+    @return: True if all went well, otherwise an error message
+    @rtype: bool|str
+    """
+    log.info("Attempting to start instance %s", name)
+
+    if call == "function":
+        raise SaltCloudSystemExit(
+            "The start action must be called with -a or --action."
+        )
+
+    found = []
+
+    providers = __opts__.get("providers", {})
+    providers_to_check = [
+        _f for _f in [cfg.get("libvirt") for cfg in providers.values()] if _f
+    ]
+    for provider in providers_to_check:
+        conn = __get_conn(provider["url"])
+        log.info("looking at %s", provider["url"])
+        try:
+            domain = conn.lookupByName(name)
+            found.append(domain)
+        except libvirtError:
+            pass
+
+    if not found:
+        return "{} doesn't exist and can't be started".format(name)
+
+    if len(found) > 1:
+        return "{} doesn't identify a unique machine leaving things".format(name)
+
+    __utils__["cloud.fire_event"](
+        "event",
+        "starting instance",
+        "salt/cloud/{}/starting".format(name),
+        args={"name": name},
+        sock_dir=__opts__["sock_dir"],
+        transport=__opts__["transport"],
+    )
+
+    log.info("Starting domain %s", found[0].name())
+    found[0].create()
+
+def stop(name, call=None):
+    """
+    This function stop a virtual machine on the cloud provider.
+    Before doing so, it should fire an event on the Salt event bus.
+
+    The tag for this event is `salt/cloud/<vm name>/stopping`.
+
+    Dependencies:
+        list_nodes
+
+    @param name:
+    @type name: str
+    @param call:
+    @type call:
+    @return: True if all went well, otherwise an error message
+    @rtype: bool|str
+    """
+    log.info("Attempting to stop instance %s", name)
+
+    if call == "function":
+        raise SaltCloudSystemExit(
+            "The start action must be called with -a or --action."
+        )
+
+    found = []
+
+    providers = __opts__.get("providers", {})
+    providers_to_check = [
+        _f for _f in [cfg.get("libvirt") for cfg in providers.values()] if _f
+    ]
+    for provider in providers_to_check:
+        conn = __get_conn(provider["url"])
+        log.info("looking at %s", provider["url"])
+        try:
+            domain = conn.lookupByName(name)
+            found.append(domain)
+        except libvirtError:
+            pass
+
+    if not found:
+        return "{} doesn't exist and can't be stopped".format(name)
+
+    if len(found) > 1:
+        return "{} doesn't identify a unique machine leaving things".format(name)
+
+    __utils__["cloud.fire_event"](
+        "event",
+        "stopping instance",
+        "salt/cloud/{}/stopping".format(name),
+        args={"name": name},
+        sock_dir=__opts__["sock_dir"],
+        transport=__opts__["transport"],
+    )
+
+    log.info("Stopping domain %s", found[0].name())
+    found[0].shutdown()
+
+def reboot(name, call=None):
+    """
+    This function reboot a virtual machine on the cloud provider.
+    Before doing so, it should fire an event on the Salt event bus.
+
+    The tag for this event is `salt/cloud/<vm name>/rebooting`.
+
+    Dependencies:
+        list_nodes
+
+    @param name:
+    @type name: str
+    @param call:
+    @type call:
+    @return: True if all went well, otherwise an error message
+    @rtype: bool|str
+    """
+    log.info("Attempting to stop instance %s", name)
+
+    if call == "function":
+        raise SaltCloudSystemExit(
+            "The start action must be called with -a or --action."
+        )
+
+    found = []
+
+    providers = __opts__.get("providers", {})
+    providers_to_check = [
+        _f for _f in [cfg.get("libvirt") for cfg in providers.values()] if _f
+    ]
+    for provider in providers_to_check:
+        conn = __get_conn(provider["url"])
+        log.info("looking at %s", provider["url"])
+        try:
+            domain = conn.lookupByName(name)
+            found.append(domain)
+        except libvirtError:
+            pass
+
+    if not found:
+        return "{} doesn't exist and can't be rebooted".format(name)
+
+    if len(found) > 1:
+        return "{} doesn't identify a unique machine leaving things".format(name)
+
+    __utils__["cloud.fire_event"](
+        "event",
+        "rebooting instance",
+        "salt/cloud/{}/rebooting".format(name),
+        args={"name": name},
+        sock_dir=__opts__["sock_dir"],
+        transport=__opts__["transport"],
+    )
+
+    log.info("Rebooting domain %s", found[0].name())
+    found[0].shutdown()
