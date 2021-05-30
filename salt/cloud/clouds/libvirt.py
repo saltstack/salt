@@ -788,6 +788,16 @@ def create(vm_):
                                 pool = p
 
                         if pool:
+                            # Start the pool, if required.
+                            if pool.isActive() == 0:
+                                pool.create()
+                                log.debug(
+                                    "Pool '%s' was started.",
+                                    pool.name(),
+                                )
+
+                            pool.refresh()
+
                             pool_xml = ElementTree.fromstring(pool.XMLDesc())
                             pool_target = pool_xml.find("./target/path").text
 
