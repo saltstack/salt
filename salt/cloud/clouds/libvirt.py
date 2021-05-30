@@ -50,6 +50,8 @@ Example profile:
             bus: scsi
             # Block device to expose from the hypervisor to the virtual machine
             device: /dev/sdc
+            # (optional) Address for SCSI devices (controller:bus:target:unit)
+            address: 0:0:1:1
         # Network interfaces
         network:
           eth0:
@@ -730,12 +732,24 @@ def create(vm_):
                         disk_xml.append(
                             ElementTree.Element("driver", name="qemu", type="raw")
                         )
-                        disk_xml.append(ElementTree.Element("source", file=device))
+                        disk_xml.append(
+                            ElementTree.Element("source", file=device)
+                        )
                         disk_xml.append(
                             ElementTree.Element("target", dev=disk, bus=bus)
                         )
+
+                        if bus == "scsi" and "address" in devices["disk"][disk]:
+                            a = devices["disk"][disk]["address"].split(":")
+                            log.debug("Configuring scsi disk '%s': controller='%s', bus='%s', target='%s', unit='%s'", disk, a[0], a[1], a[2], a[3])
+                            disk_xml.append(
+                                ElementTree.Element("address", type="drive", controller=a[0], bus=a[1], target=a[2], unit=a[3])
+                            )
+
                         if shareable:
-                            disk_xml.append(ElementTree.Element("shareable"))
+                            disk_xml.append(
+                                ElementTree.Element("shareable")
+                            )
 
                     else:
                         # format: should be 'raw' or 'qcow2' (default)
