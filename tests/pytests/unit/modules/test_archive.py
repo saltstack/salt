@@ -446,7 +446,7 @@ def test_rar_raises_exception_if_not_found():
             assert not mock.called
 
 
-@pytest.mark.skip_if_binaries_missing("unrar", "rar", message="unrar not installed")
+@pytest.mark.skip_if_binaries_missing("unrar", "rar", reason="unrar not installed")
 def test_unrar():
     with patch(
         "salt.utils.path.which_bin",

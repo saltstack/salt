@@ -20,7 +20,7 @@ from tests.support.unit import SkipTest
 @pytest.mark.destructive_test
 @pytest.mark.requires_sshd_server
 @pytest.mark.skip_if_binaries_missing(
-    "ansible-playbook", message="ansible-playbook is not installed"
+    "ansible-playbook", reason="ansible-playbook is not installed"
 )
 class AnsiblePlaybooksTestCase(ModuleCase, SaltReturnAssertsMixin):
     """

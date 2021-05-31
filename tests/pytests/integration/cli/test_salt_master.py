@@ -25,7 +25,7 @@ def master_id():
 
 @pytest.mark.skip_on_windows(reason=PRE_PYTEST_SKIP_REASON)
 def test_exit_status_correct_usage(salt_factories, master_id):
-    factory = salt_factories.get_salt_master_daemon(master_id)
+    factory = salt_factories.salt_master_daemon(master_id)
     factory.start()
     assert factory.is_running()
     time.sleep(0.5)
