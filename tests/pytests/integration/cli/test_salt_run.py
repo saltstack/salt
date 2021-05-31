@@ -42,7 +42,7 @@ def salt_run_cli(salt_master):
     """
     Override salt_run_cli fixture to provide an increased default_timeout to the calls
     """
-    return salt_master.get_salt_run_cli(default_timeout=120)
+    return salt_master.salt_run_cli(timeout=120)
 
 
 def test_in_docs(salt_run_cli):

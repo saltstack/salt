@@ -14,10 +14,10 @@ import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 from salt.utils.decorators import state as statedecorators
 from salt.utils.odict import OrderedDict
+from saltfactories.utils.tempfiles import temp_file
 from tests.support.helpers import with_tempfile
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.pytest.helpers import temp_state_file
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
 
@@ -950,9 +950,9 @@ class MultiEnvHighStateTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             RUNTIME_VARS.TMP
         )
 
-        with temp_state_file(
-            "{}/top.sls".format(self.base_state_tree_dir), top_sls
-        ), temp_state_file("{}/core.sls".format(self.base_state_tree_dir), core_state):
+        with temp_file("top.sls", top_sls, self.base_state_tree_dir), temp_file(
+            "core.sls", core_state, self.base_state_tree_dir
+        ):
             # list_states not called yet
             self.assertEqual(self.highstate.avail._filled, False)
             self.assertEqual(self.highstate.avail._avail, {"base": None})
@@ -978,9 +978,9 @@ class MultiEnvHighStateTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             RUNTIME_VARS.TMP
         )
 
-        with temp_state_file(
-            "{}/top.sls".format(self.base_state_tree_dir), top_sls
-        ), temp_state_file("{}/core.sls".format(self.base_state_tree_dir), core_state):
+        with temp_file("top.sls", top_sls, self.base_state_tree_dir), temp_file(
+            "core.sls", core_state, self.base_state_tree_dir
+        ):
             # list_states not called yet
             self.assertEqual(self.highstate.avail._filled, False)
             self.assertEqual(self.highstate.avail._avail, {"base": None})
@@ -1008,9 +1008,9 @@ class MultiEnvHighStateTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             RUNTIME_VARS.TMP
         )
 
-        with temp_state_file(
-            "{}/top.sls".format(self.base_state_tree_dir), top_sls
-        ), temp_state_file("{}/core.sls".format(self.base_state_tree_dir), core_state):
+        with temp_file("top.sls", top_sls, self.base_state_tree_dir), temp_file(
+            "core.sls", core_state, self.base_state_tree_dir
+        ):
             # list_states not called yet
             self.assertEqual(self.highstate.avail._filled, False)
             self.assertEqual(self.highstate.avail._avail, {"base": None})
