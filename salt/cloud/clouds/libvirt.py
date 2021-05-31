@@ -22,8 +22,8 @@ Example profile:
       base_domain: base-image
       # Number of virtual cpus
       num_cpus: 2
-      # Amount of virtual memory (unit: MB or GB)
-      memory: 2048MB
+      # Amount of virtual memory (unit: MiB or GiB)
+      memory: 2048MiB
       # Version of USB controller to use (1, 2 or 3; default: 1)
       usb: 3
       # Serial number visible in DMI data (string)
@@ -41,7 +41,7 @@ Example profile:
             format: qcow2
             # Pool name, must exist prior to instantiate domain (default: 'default')
             pool: Data
-            # Size in GB (default: '1')
+            # Size in GiB (default: '1')
             size: 3
             # Should the supplementary disk be thin provisionned (default: False, disk will be fully preallocated)
             thin_provision: True
@@ -651,8 +651,7 @@ def create(vm_):
                     pool, volume = find_pool_and_volume(conn, source)
                     if clone_strategy == "quick":
                         new_volume = pool.createXML(
-                            create_volume_with_backing_store_xml(volume, disk_name),
-                            volumeFlags,
+                            create_volume_with_backing_store_xml(volume, disk_name), volumeFlags
                         )
                     else:
                         new_volume = pool.createXMLFrom(
@@ -742,7 +741,7 @@ def create(vm_):
                         else:
                             pool_name = "default"
 
-                        # size: should be a size in GB (default: 1 GB)
+                        # size: should be a size in GiB (default: 1 GiB)
                         if "size" in devices["disk"][disk]:
                             size = devices["disk"][disk]["size"]
                         else:
