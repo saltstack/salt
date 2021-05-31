@@ -458,12 +458,22 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
     ``template: True`` is set, this field is ignored. Default is ``power_on: True``.
 
 ``cpu_hot_add``
-    Boolean value that enables hot-add support for modifying CPU resources while
+    Boolean value that enables hot-add support for adding CPU resources while
+    the guest is powered on.
+
+``cpu_hot_remove``
+    Boolean value that enables hot-remove support for removing CPU resources while
     the guest is powered on.
 
 ``mem_hot_add``
-    Boolean value that enables hot-add support for modifying memory resources while
+    Boolean value that enables hot-add support for adding memory resources while
     the guest is powered on.
+    
+``nested_hv``
+    Boolean value that enables support for nested hardware-assisted virtualization.
+
+``vpmc``
+    Boolean value that enables virtual CPU performance counters.
 
 ``extra_config``
     Specifies the additional configuration information for the virtual machine. This
