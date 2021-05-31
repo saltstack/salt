@@ -223,9 +223,7 @@ def minion_opts(
         "file_roots": {"base": [str(state_tree)], "prod": [str(state_tree_prod)]},
         "features": {"enable_slsvars_fixes": True},
     }
-    factory = salt_factories.get_salt_minion_daemon(
-        minion_id, config_overrides=config_overrides,
-    )
+    factory = salt_factories.salt_minion_daemon(minion_id, overrides=config_overrides,)
     return factory.config.copy()
 
 
