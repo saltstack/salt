@@ -2813,8 +2813,17 @@ def create(vm_):
     cpu_hot_add = config.get_cloud_config_value(
         "cpu_hot_add", vm_, __opts__, search_global=False, default=None
     )
+    cpu_hot_remove = config.get_cloud_config_value(
+        "cpu_hot_remove", vm_, __opts__, search_global=False, default=None
+    )
     mem_hot_add = config.get_cloud_config_value(
         "mem_hot_add", vm_, __opts__, search_global=False, default=None
+    )
+    nested_hv = config.get_cloud_config_value(
+        "nested_hv", vm_, __opts__, search_global=False, default=None
+    )
+    vpmc = config.get_cloud_config_value(
+        "vpmc", vm_, __opts__, search_global=False, default=None
     )
 
     # Get service instance object
@@ -3037,8 +3046,17 @@ def create(vm_):
     if cpu_hot_add and hasattr(config_spec, "cpuHotAddEnabled"):
         config_spec.cpuHotAddEnabled = bool(cpu_hot_add)
 
+    if cpu_hot_remove and hasattr(config_spec, "cpuHotRemoveEnabled"):
+        config_spec.cpuHotRemoveEnabled = bool(cpu_hot_remove)
+
     if mem_hot_add and hasattr(config_spec, "memoryHotAddEnabled"):
         config_spec.memoryHotAddEnabled = bool(mem_hot_add)
+
+    if nested_hv and hasattr(config_spec, "nestedHVEnabled"):
+        config_spec.nestedHVEnabled = bool(nested_hv)
+
+    if vpmc and hasattr(config_spec, "vPMCEnabled"):
+        config_spec.vPMCEnabled = bool(vpmc)
 
     if extra_config:
         for key, value in extra_config.items():
