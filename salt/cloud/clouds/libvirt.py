@@ -115,6 +115,7 @@ from salt.exceptions import (
     SaltCloudNotFound,
     SaltCloudSystemExit,
 )
+from salt.modules.virt import _handle_unit
 from salt.utils.xmlutil import get_xml_node
 
 try:
@@ -483,30 +484,14 @@ def create(vm_):
 
             # Configure amount of memory
             if memory:
-                try:
-                    memory_num, memory_unit = re.findall(
-                        r"[^\W\d_]+|\d+.\d+|\d+", memory
-                    )
-                    if memory_unit.lower() == "mb":
-                        memory_mb = int(memory_num)
-                    elif memory_unit.lower() == "gb":
-                        memory_mb = int(float(memory_num) * 1024.0)
-                    else:
-                        err_msg = "Invalid memory type specified: '{}'".format(
-                            memory_unit
-                        )
-                        log.error(err_msg)
-                        return {"Error": err_msg}
-                except (TypeError, ValueError):
-                    memory_mb = int(memory)
-
+                memory_b = _handle_unit(memory)
                 memory_xml = domain_xml.find("./memory")
-                memory_xml.text = str(memory_mb)
-                memory_xml.set("unit", "Mib")
+                memory_xml.text = str(memory_b)
+                memory_xml.set("unit", "b")
                 currentMemory_xml = domain_xml.find("./currentMemory")
-                currentMemory_xml.text = str(memory_mb)
-                currentMemory_xml.set("unit", "Mib")
-                log.debug("Setting memory to: %s MB", memory_mb)
+                currentMemory_xml.text = str(memory_b)
+                currentMemory_xml.set("unit", "b")
+                log.debug("Setting memory to: %s bytes", memory_b)
 
             # Configure USB controller
             if usb:
