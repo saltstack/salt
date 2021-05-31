@@ -476,16 +476,9 @@ def create(vm_):
                 # Add <smbios> tag, if missing
                 smbios_xml = get_xml_node(domain_xml, "./os/smbios[@mode='sysinfo']")
 
-                # Add <sysinfo> tag at fixed location, if missing
-                if domain_xml.find("./sysinfo") is None:
-                    sysinfo_elem = ElementTree.Element("sysinfo")
-                    sysinfo_elem.set("type", "smbios")
-                    domain_xml.insert(6, sysinfo_elem)
-
                 # Add entry for serial
-                entry_xml = get_xml_node(domain_xml, "./sysinfo/system/entry[@name='serial']")
+                entry_xml = get_xml_node(domain_xml, "./sysinfo[@type='smbios']/system/entry[@name='serial']")
                 entry_xml.text = str(serial)
-
                 log.debug("Setting Serial to %s", serial)
 
             # Configure amount of memory
