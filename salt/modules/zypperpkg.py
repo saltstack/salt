@@ -1517,7 +1517,7 @@ def install(
         Skip the GPG verification check (e.g., ``--no-gpg-checks``)
 
     novendorchange
-        Disallow vendor change
+        DEPRECATED(use allowvendorchange): If set to True, do not allow vendor changes. Default: True
 
     allowvendorchange
         If set to True, allow vendor changes. Default: False
@@ -1806,10 +1806,10 @@ def upgrade(
         Specify a list of package repositories to upgrade from. Default: None
 
     novendorchange
-        If set to True, no allow vendor changes. Default: False
+        DEPRECATED(use allowvendorchange): If set to True, do not allow vendor changes. Default: True
 
     allowvendorchange
-        If set to True, allow vendor changes. Default: False
+        If set to True, vendor change is allowed. Default: False
 
     skip_verify
         Skip the GPG verification check (e.g., ``--no-gpg-checks``)
