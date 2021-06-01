@@ -116,7 +116,8 @@ def _build_cmd(module="", operation="", **kwargs):
 
 
 def _upload_to_master(path):
-    """Upload given directory to Master
+    """
+    Upload given directory to master
 
     Args:
         path (string): Path to upload to master
@@ -130,13 +131,18 @@ def _upload_to_master(path):
 
 
 def version(*args):
-    """Show the version of installed oscap package
+    """
+    Show the version of the installed oscap package
 
-    Args:
-        full: Show long version information output.
+    Usage:
 
-    Returns:
-        dict: Version information
+    .. code-block:: bash
+
+        salt '*' oscap.version
+
+    :param full: Show full version information output.
+
+    :return: a dict with the version information
     """
     cmd = "{} --version".format(_oscap_cmd())
     _version = __salt__["cmd.run"](cmd)
@@ -196,30 +202,24 @@ def xccdf(file="", operation="eval", upload=True, **kwargs):
 
     It needs ``file_recv`` set to ``True`` in the master configuration file.
 
-    Args:
-        file (str): Target File to evaluate the system.
-        operation (str, optional): Operation of Module. Defaults to "eval".
-                    It will automatically add and set the parameters 'oval-results', 'report' and, 'results'.
-        upload (bool, optional): Upload results to Master. Defaults to True.
+    :param file: Target File to evaluate the system.
+    :param operation: (Optional) Operation of ``xccdf`` Module. Defaults to "eval".
+    :param upload: Upload results to Master. Defaults to True. It will automatically add and set the parameters 'oval-results', 'report' and, 'results'.
 
-    Returns:
-        dict: {
-            "success": _OSCAP_EXIT_CODES_MAP[_retcode],
-            "upload_dir": _upload_path,
-            "error": None (Kept in for compatibility reasons. It does not change!),
-            "returncode": _retcode
-            }
+    :return: a dict with the execution results.
 
     CLI Example:
 
     .. code-block:: bash
+
         salt '*' openscap.xccdf /usr/share/openscap/scap-yast2sec-xccdf.xml profile=default
 
     All additional parameters need to either be set with a boolean or a string value.
     E.g. the oscap '--fetch-remote-resources' parameter of 'xccdf eval' is just switching on the progress bar.
-    To enable it you have to set the parameter like this:
+    To enable it, users have to set the parameter like this:
 
     .. code-block:: bash
+
         salt '*' openscap.xccdf /usr/share/openscap/scap-yast2sec-xccdf.xml profile=default fetch-remote-resources=true
     """
 
