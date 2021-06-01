@@ -3,7 +3,6 @@
 """
 
 import logging
-import os
 
 import pytest
 import salt.modules.beacons as beaconmod
@@ -527,7 +526,7 @@ def test_mod_watch():
         assert service.mod_watch("salt", "stack") == ret[1]
 
 
-def test_mod_beacon():
+def test_mod_beacon(tmp_path):
     """
     Test to create a beacon based on a service
     """
@@ -597,34 +596,28 @@ def test_mod_beacon():
 
     beacon_mod_mocks = {"event.fire": mock}
 
-    with pytest.helpers.temp_directory() as tempdir:
-        sock_dir = os.path.join(tempdir, "test-socks")
-        with patch.dict(service.__states__, {"beacon.present": beaconstate.present}):
-            with patch.dict(beaconstate.__salt__, beacon_state_mocks):
-                with patch.dict(beaconmod.__salt__, beacon_mod_mocks):
-                    with patch.dict(
-                        beaconmod.__opts__, {"beacons": {}, "sock_dir": sock_dir}
+    sock_dir = str(tmp_path / "test-socks")
+    with patch.dict(service.__states__, {"beacon.present": beaconstate.present}):
+        with patch.dict(beaconstate.__salt__, beacon_state_mocks):
+            with patch.dict(beaconmod.__salt__, beacon_mod_mocks):
+                with patch.dict(
+                    beaconmod.__opts__, {"beacons": {}, "sock_dir": sock_dir}
+                ):
+                    with patch.object(
+                        SaltEvent, "get_event", side_effect=event_returns
                     ):
-                        with patch.object(
-                            SaltEvent, "get_event", side_effect=event_returns
-                        ):
-                            ret = service.mod_beacon(
-                                name, sfun="running", beacon="True"
-                            )
-                            expected = {
-                                "name": "beacon_service_sshd",
-                                "changes": {},
-                                "result": True,
-                                "comment": "Adding beacon_service_sshd to beacons",
-                            }
+                        ret = service.mod_beacon(name, sfun="running", beacon="True")
+                        expected = {
+                            "name": "beacon_service_sshd",
+                            "changes": {},
+                            "result": True,
+                            "comment": "Adding beacon_service_sshd to beacons",
+                        }
 
-                            assert ret == expected
+                        assert ret == expected
 
 
-@pytest.mark.skipif(
-    salt.utils.platform.is_darwin(),
-    reason="service.running is currently failing on OSX",
-)
+@pytest.mark.skip_on_darwin(reason="service.running is currently failing on OSX")
 @pytest.mark.destructive_test
 @pytest.mark.slow_test
 def test_running_with_reload():
