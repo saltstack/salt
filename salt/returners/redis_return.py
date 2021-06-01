@@ -166,7 +166,7 @@ def _get_options(ret=None):
             "port": __opts__.get("redis.port", 6379),
             "unix_socket_path": __opts__.get("redis.unix_socket_path", None),
             "db": __opts__.get("redis.db", "0"),
-            "password": __opts__.get("redis.password", ""),
+            "password": __opts__.get("redis.password", None),
             "cluster_mode": __opts__.get("redis.cluster_mode", False),
             "startup_nodes": __opts__.get("redis.cluster.startup_nodes", {}),
             "skip_full_coverage_check": __opts__.get(
