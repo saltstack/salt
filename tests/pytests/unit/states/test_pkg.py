@@ -1,5 +1,3 @@
-import os
-
 import pytest
 import salt.modules.beacons as beaconmod
 import salt.states.beacon as beaconstate
@@ -261,7 +259,7 @@ def test_fulfills_version_spec(installed_versions, operator, version, expected_r
     )
 
 
-def test_mod_beacon():
+def test_mod_beacon(tmp_path):
     """
     Test to create a beacon based on a pkg
     """
@@ -332,23 +330,22 @@ def test_mod_beacon():
 
     beacon_mod_mocks = {"event.fire": mock}
 
-    with pytest.helpers.temp_directory() as tempdir:
-        sock_dir = os.path.join(tempdir, "test-socks")
-        with patch.dict(pkg.__states__, {"beacon.present": beaconstate.present}):
-            with patch.dict(beaconstate.__salt__, beacon_state_mocks):
-                with patch.dict(beaconmod.__salt__, beacon_mod_mocks):
-                    with patch.dict(
-                        beaconmod.__opts__, {"beacons": {}, "sock_dir": sock_dir}
+    sock_dir = str(tmp_path / "test-socks")
+    with patch.dict(pkg.__states__, {"beacon.present": beaconstate.present}):
+        with patch.dict(beaconstate.__salt__, beacon_state_mocks):
+            with patch.dict(beaconmod.__salt__, beacon_mod_mocks):
+                with patch.dict(
+                    beaconmod.__opts__, {"beacons": {}, "sock_dir": sock_dir}
+                ):
+                    with patch.object(
+                        SaltEvent, "get_event", side_effect=event_returns
                     ):
-                        with patch.object(
-                            SaltEvent, "get_event", side_effect=event_returns
-                        ):
-                            ret = pkg.mod_beacon(name, sfun="installed", beacon=True)
-                            expected = {
-                                "name": "beacon_pkg_vim",
-                                "changes": {},
-                                "result": True,
-                                "comment": "Adding beacon_pkg_vim to beacons",
-                            }
+                        ret = pkg.mod_beacon(name, sfun="installed", beacon=True)
+                        expected = {
+                            "name": "beacon_pkg_vim",
+                            "changes": {},
+                            "result": True,
+                            "comment": "Adding beacon_pkg_vim to beacons",
+                        }
 
-                            assert ret == expected
+                        assert ret == expected

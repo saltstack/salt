@@ -737,9 +737,11 @@ pyserial==3.4
     # via
     #   junos-eznc
     #   netmiko
-pytest-helpers-namespace==2019.1.8
-    # via -r requirements/pytest.txt
-pytest-salt-factories==0.121.1
+pytest-helpers-namespace==2021.4.29
+    # via
+    #   -r requirements/pytest.txt
+    #   pytest-salt-factories
+pytest-salt-factories==0.903.2
     # via -r requirements/pytest.txt
 pytest-subtests==0.4.0
     # via -r requirements/pytest.txt
@@ -937,7 +939,9 @@ vapi-runtime==2.19.0
 vcert==0.7.3 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
 virtualenv==20.0.20
-    # via -r requirements/static/ci/common.in
+    # via
+    #   -r requirements/static/ci/common.in
+    #   pytest-salt-factories
 vmc-client-bindings==1.32.0
     # via vsphere-automation-sdk
 vmc-draas-client-bindings==1.17.0
