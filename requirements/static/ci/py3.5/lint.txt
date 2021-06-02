@@ -22,7 +22,7 @@ pylint==2.4.4
     #   saltpylint
 saltpylint==2020.9.28
     # via -r requirements/static/ci/lint.in
-six==1.15.0
+six==1.16.0
     # via astroid
 toml==0.10.2
     # via -r requirements/static/ci/lint.in
