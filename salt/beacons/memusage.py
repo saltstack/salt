@@ -8,6 +8,8 @@ Beacon to monitor memory usage.
 import logging
 import re
 
+import salt.utils.beacons
+
 try:
     import psutil
 
@@ -35,10 +37,9 @@ def validate(config):
     if not isinstance(config, list):
         return False, ("Configuration for memusage beacon must be a list.")
     else:
-        _config = {}
-        list(map(_config.update, config))
+        config = salt.utils.beacons.list_to_dict(config)
 
-        if "percent" not in _config:
+        if "percent" not in config:
             return False, ("Configuration for memusage beacon requires percent.")
 
     return True, "Valid beacon configuration"
@@ -59,13 +60,12 @@ def beacon(config):
     """
     ret = []
 
-    _config = {}
-    list(map(_config.update, config))
+    config = salt.utils.beacons.list_to_dict(config)
 
     _current_usage = psutil.virtual_memory()
 
     current_usage = _current_usage.percent
-    monitor_usage = _config["percent"]
+    monitor_usage = config["percent"]
     if "%" in monitor_usage:
         monitor_usage = re.sub("%", "", monitor_usage)
     monitor_usage = float(monitor_usage)

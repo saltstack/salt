@@ -19,6 +19,8 @@ Beacon that fires events on image import/delete.
 """
 import logging
 
+import salt.utils.beacons
+
 __virtualname__ = "imgadm"
 
 IMGADM_STATE = {
@@ -71,10 +73,9 @@ def beacon(config):
     if IMGADM_STATE["first_run"]:
         log.info("Applying configuration for imgadm beacon")
 
-        _config = {}
-        list(map(_config.update, config))
+        config = salt.utils.beacons.list_to_dict(config)
 
-        if "startup_import_event" not in _config or not _config["startup_import_event"]:
+        if "startup_import_event" not in config or not config["startup_import_event"]:
             IMGADM_STATE["images"] = current_images
 
     # NOTE: import events

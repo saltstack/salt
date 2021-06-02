@@ -109,13 +109,12 @@ def validate(config):
     if not isinstance(config, list):
         return False, "Configuration for inotify beacon must be a list."
     else:
-        _config = {}
-        list(map(_config.update, config))
+        config = salt.utils.beacons.list_to_dict(config)
 
-        if "files" not in _config:
+        if "files" not in config:
             return False, "Configuration for inotify beacon must include files."
         else:
-            if not isinstance(_config["files"], dict):
+            if not isinstance(config["files"], dict):
                 return (
                     False,
                     (
@@ -124,9 +123,9 @@ def validate(config):
                     ),
                 )
 
-            for path in _config.get("files"):
+            for path in config.get("files"):
 
-                if not isinstance(_config["files"][path], dict):
+                if not isinstance(config["files"][path], dict):
                     return (
                         False,
                         (
@@ -137,7 +136,7 @@ def validate(config):
                 else:
                     if not any(
                         j in ["mask", "recurse", "auto_add"]
-                        for j in _config["files"][path]
+                        for j in config["files"][path]
                     ):
                         return (
                             False,
@@ -147,8 +146,8 @@ def validate(config):
                             ),
                         )
 
-                    if "auto_add" in _config["files"][path]:
-                        if not isinstance(_config["files"][path]["auto_add"], bool):
+                    if "auto_add" in config["files"][path]:
+                        if not isinstance(config["files"][path]["auto_add"], bool):
                             return (
                                 False,
                                 (
@@ -157,8 +156,8 @@ def validate(config):
                                 ),
                             )
 
-                    if "recurse" in _config["files"][path]:
-                        if not isinstance(_config["files"][path]["recurse"], bool):
+                    if "recurse" in config["files"][path]:
+                        if not isinstance(config["files"][path]["recurse"], bool):
                             return (
                                 False,
                                 (
@@ -167,8 +166,8 @@ def validate(config):
                                 ),
                             )
 
-                    if "mask" in _config["files"][path]:
-                        if not isinstance(_config["files"][path]["mask"], list):
+                    if "mask" in config["files"][path]:
+                        if not isinstance(config["files"][path]["mask"], list):
                             return (
                                 False,
                                 (
@@ -176,7 +175,7 @@ def validate(config):
                                     "mask must be list."
                                 ),
                             )
-                        for mask in _config["files"][path]["mask"]:
+                        for mask in config["files"][path]["mask"]:
                             if mask not in VALID_MASK:
                                 return (
                                     False,
@@ -257,11 +256,10 @@ def beacon(config):
     whitelist = ["_beacon_name"]
     config = salt.utils.beacons.remove_hidden_options(config, whitelist)
 
-    _config = {}
-    list(map(_config.update, config))
+    config = salt.utils.beacons.list_to_dict(config)
 
     ret = []
-    notifier = _get_notifier(_config)
+    notifier = _get_notifier(config)
     wm = notifier._watch_manager
 
     # Read in existing events
@@ -276,11 +274,11 @@ def beacon(config):
             # Find the matching path in config
             path = event.path
             while path != "/":
-                if path in _config.get("files", {}):
+                if path in config.get("files", {}):
                     break
                 path = os.path.dirname(path)
 
-            excludes = _config["files"].get(path, {}).get("exclude", "")
+            excludes = config["files"].get(path, {}).get("exclude", "")
 
             if excludes and isinstance(excludes, list):
                 for exclude in excludes:
@@ -318,10 +316,10 @@ def beacon(config):
 
     # Update existing watches and add new ones
     # TODO: make the config handle more options
-    for path in _config.get("files", ()):
+    for path in config.get("files", ()):
 
-        if isinstance(_config["files"][path], dict):
-            mask = _config["files"][path].get("mask", DEFAULT_MASK)
+        if isinstance(config["files"][path], dict):
+            mask = config["files"][path].get("mask", DEFAULT_MASK)
             if isinstance(mask, list):
                 r_mask = 0
                 for sub in mask:
@@ -331,8 +329,8 @@ def beacon(config):
             else:
                 r_mask = mask
             mask = r_mask
-            rec = _config["files"][path].get("recurse", False)
-            auto_add = _config["files"][path].get("auto_add", False)
+            rec = config["files"][path].get("recurse", False)
+            auto_add = config["files"][path].get("auto_add", False)
         else:
             mask = DEFAULT_MASK
             rec = False
@@ -349,7 +347,7 @@ def beacon(config):
                     if update:
                         wm.update_watch(wd, mask=mask, rec=rec, auto_add=auto_add)
         elif os.path.exists(path):
-            excludes = _config["files"][path].get("exclude", "")
+            excludes = config["files"][path].get("exclude", "")
             excl = None
             if isinstance(excludes, list):
                 excl = []
@@ -367,6 +365,7 @@ def beacon(config):
 
 
 def close(config):
+    config = salt.utils.beacons.list_to_dict(config)
     beacon_name = config.get("_beacon_name", "inotify")
     notifier = "{}.notifier".format(beacon_name)
     if notifier in __context__:

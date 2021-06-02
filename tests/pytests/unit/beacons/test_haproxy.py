@@ -4,9 +4,13 @@
 
     HAProxy beacon test cases
 """
+import logging
+
 import pytest
 import salt.beacons.haproxy as haproxy
 from tests.support.mock import MagicMock, patch
+
+log = logging.getLogger(__name__)
 
 
 @pytest.fixture
@@ -44,6 +48,7 @@ def test_threshold_reached():
     mock = MagicMock(return_value=46)
     with patch.dict(haproxy.__salt__, {"haproxy.get_sessions": mock}):
         ret = haproxy.beacon(config)
+        log.debug("=== ret %s ===", ret)
         assert ret == [{"threshold": 45, "scur": 46, "server": "web1"}]
 
 

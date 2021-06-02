@@ -10,6 +10,7 @@ import logging
 import re
 
 import salt.loader
+import salt.utils.beacons
 
 try:
     from pyroute2 import IPDB
@@ -77,10 +78,9 @@ def validate(config):
     if not isinstance(config, list):
         return False, ("Configuration for network_settings beacon must be a list.")
     else:
-        _config = {}
-        list(map(_config.update, config))
+        config = salt.utils.beacons.list_to_dict(config)
 
-        interfaces = _config.get("interfaces", {})
+        interfaces = config.get("interfaces", {})
         if isinstance(interfaces, list):
             # Old syntax
             return (
@@ -92,7 +92,7 @@ def validate(config):
             )
 
         for item in interfaces:
-            if not isinstance(_config["interfaces"][item], dict):
+            if not isinstance(config["interfaces"][item], dict):
                 return (
                     False,
                     (
@@ -100,7 +100,7 @@ def validate(config):
                         " must be a dictionary."
                     ),
                 )
-            if not all(j in ATTRS for j in _config["interfaces"][item]):
+            if not all(j in ATTRS for j in config["interfaces"][item]):
                 return False, ("Invalid attributes in beacon configuration.")
     return True, "Valid beacon configuration"
 
@@ -166,8 +166,7 @@ def beacon(config):
                   promiscuity:
 
     """
-    _config = {}
-    list(map(_config.update, config))
+    config = salt.utils.beacons.list_to_dict(config)
 
     ret = []
     interfaces = []
@@ -182,14 +181,14 @@ def beacon(config):
     if not LAST_STATS:
         LAST_STATS = _stats
 
-    if "coalesce" in _config and _config["coalesce"]:
+    if "coalesce" in config and config["coalesce"]:
         coalesce = True
         changes = {}
 
     log.debug("_stats %s", _stats)
     # Get list of interfaces included in config that are registered in the
     # system, including interfaces defined by wildcards (eth*, wlan*)
-    for interface_config in _config.get("interfaces", {}):
+    for interface_config in config.get("interfaces", {}):
         if interface_config in _stats:
             interfaces.append(interface_config)
         else:
@@ -198,22 +197,22 @@ def beacon(config):
                 match = re.search(interface_config, interface_stat)
                 if match:
                     interfaces.append(interface_stat)
-                    expanded_config["interfaces"][interface_stat] = _config[
+                    expanded_config["interfaces"][interface_stat] = config[
                         "interfaces"
                     ][interface_config]
 
     if expanded_config:
-        _config["interfaces"].update(expanded_config["interfaces"])
+        config["interfaces"].update(expanded_config["interfaces"])
 
-        # config updated so update _config
-        list(map(_config.update, config))
+        # config updated so update config
+        config = salt.utils.beacons.list_to_dict(config)
 
     log.debug("interfaces %s", interfaces)
     for interface in interfaces:
         _send_event = False
         _diff_stats = _stats[interface] - LAST_STATS[interface]
         _ret_diff = {}
-        interface_config = _config["interfaces"][interface]
+        interface_config = config["interfaces"][interface]
 
         log.debug("_diff_stats %s", _diff_stats)
         if _diff_stats:
