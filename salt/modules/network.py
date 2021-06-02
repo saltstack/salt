@@ -570,7 +570,31 @@ def _ip_route_linux():
 
         # need to fake similar output to that provided by netstat
         # to maintain output format
+        if comps[0] == "unicast":
+            continue
+
+        if comps[0] == "broadcast":
+            continue
+
+        if comps[0] == "throw":
+            continue
+
         if comps[0] == "unreachable":
+            continue
+
+        if comps[0] == "prohibit":
+            continue
+
+        if comps[0] == "blackhole":
+            continue
+
+        if comps[0] == "nat":
+            continue
+
+        if comps[0] == "anycast":
+            continue
+
+        if comps[0] == "multicast":
             continue
 
         if comps[0] == "default":
@@ -590,54 +614,6 @@ def _ip_route_linux():
             )
 
         elif comps[0] == "local":
-            ip_interface = ""
-            if comps[2] == "dev":
-                ip_interface = comps[3]
-
-            local_address = comps[1] + "/128"
-            ret.append(
-                {
-                    "addr_family": "inet6",
-                    "destination": local_address,
-                    "gateway": "::",
-                    "netmask": "",
-                    "flags": "U",
-                    "interface": ip_interface,
-                }
-            )
-        elif comps[0] == "unicast":
-            ip_interface = ""
-            if comps[2] == "dev":
-                ip_interface = comps[3]
-
-            local_address = comps[1] + "/128"
-            ret.append(
-                {
-                    "addr_family": "inet6",
-                    "destination": local_address,
-                    "gateway": "::",
-                    "netmask": "",
-                    "flags": "U",
-                    "interface": ip_interface,
-                }
-            )
-        elif comps[0] == "anycast":
-            ip_interface = ""
-            if comps[2] == "dev":
-                ip_interface = comps[3]
-
-            local_address = comps[1] + "/128"
-            ret.append(
-                {
-                    "addr_family": "inet6",
-                    "destination": local_address,
-                    "gateway": "::",
-                    "netmask": "",
-                    "flags": "U",
-                    "interface": ip_interface,
-                }
-            )
-        elif comps[0] == "multicast":
             ip_interface = ""
             if comps[2] == "dev":
                 ip_interface = comps[3]
@@ -1846,11 +1822,11 @@ def default_route(family=None):
 
         salt '*' network.default_route
     """
-
     if family != "inet" and family != "inet6" and family is not None:
         raise CommandExecutionError("Invalid address family {}".format(family))
 
-    _routes = routes()
+    _routes = routes(family)
+
     default_route = {}
     if __grains__["kernel"] == "Linux":
         default_route["inet"] = ["0.0.0.0", "default"]
@@ -1870,6 +1846,8 @@ def default_route(family=None):
     ret = []
     for route in _routes:
         if family:
+            route_dest = route["destination"]
+            def_route_family = default_route[family]
             if route["destination"] in default_route[family]:
                 if __grains__["kernel"] == "SunOS" and route["addr_family"] != family:
                     continue

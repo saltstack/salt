@@ -481,6 +481,81 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(network.__grains__, {"kernel": "Linux"}):
                 self.assertListEqual(network.default_route("inet"), [])
 
+    def test_default_route_ipv6(self):
+        """
+        Test for return default route(s) from routing table for IPv6
+        Additionally tests that multicast, anycast, etc. do not throw errors
+        """
+        mock_iproute_ipv4 = """default via 192.168.0.1 dev enx3c18a040229d proto dhcp metric 100
+default via 192.168.0.1 dev wlp59s0 proto dhcp metric 600
+3.15.90.221 via 10.16.119.224 dev gpd0
+3.18.18.213 via 10.16.119.224 dev gpd0
+10.0.0.0/8 via 10.16.119.224 dev gpd0
+10.1.0.0/16 via 10.12.240.1 dev tun0
+10.2.0.0/16 via 10.12.240.1 dev tun0
+10.12.0.0/16 via 10.12.240.1 dev tun0
+10.12.240.0/20 dev tun0 proto kernel scope link src 10.12.240.2
+10.14.0.0/16 via 10.12.240.1 dev tun0
+10.16.0.0/16 via 10.12.240.1 dev tun0
+10.16.188.201 via 10.16.119.224 dev gpd0
+10.16.188.202 via 10.16.119.224 dev gpd0
+10.27.0.0/16 via 10.12.240.1 dev tun0
+52.14.149.204 via 10.16.119.224 dev gpd0
+52.14.159.171 via 10.16.119.224 dev gpd0
+52.14.249.61 via 10.16.119.224 dev gpd0
+52.15.65.251 via 10.16.119.224 dev gpd0
+54.70.229.135 via 10.16.119.224 dev gpd0
+54.71.37.253 via 10.12.240.1 dev tun0
+54.189.240.227 via 10.16.119.224 dev gpd0
+66.170.96.2 via 192.168.0.1 dev enx3c18a040229d
+80.169.184.191 via 10.16.119.224 dev gpd0
+107.154.251.105 via 10.16.119.224 dev gpd0
+168.61.48.213 via 10.16.119.224 dev gpd0
+169.254.0.0/16 dev enx3c18a040229d scope link metric 1000
+172.17.0.0/16 dev docker0 proto kernel scope link src 172.17.0.1 linkdown
+172.30.0.0/16 via 10.12.240.1 dev tun0
+184.169.136.236 via 10.16.119.224 dev gpd0
+191.237.22.167 via 10.16.119.224 dev gpd0
+192.30.68.16 via 10.16.119.224 dev gpd0
+192.30.71.16 via 10.16.119.224 dev gpd0
+192.30.71.71 via 10.16.119.224 dev gpd0
+192.168.0.0/24 dev enx3c18a040229d proto kernel scope link src 192.168.0.99 metric 100
+192.168.0.0/24 dev wlp59s0 proto kernel scope link src 192.168.0.99 metric 600
+192.240.157.233 via 10.16.119.224 dev gpd0
+206.80.50.33 via 10.16.119.224 dev gpd0
+209.34.94.97 via 10.16.119.224 dev gpd0
+"""
+        mock_iproute_ipv6 = """::1 dev lo proto kernel metric 256 pref medium
+fe80::/64 dev enx3c18a040229d proto kernel metric 100 pref medium
+fe80::/64 dev tun0 proto kernel metric 256 pref medium
+fe80::/64 dev wlp59s0 proto kernel metric 600 pref medium
+local ::1 dev lo table local proto kernel metric 0 pref medium
+local fe80::581a:a903:d7d0:de05 dev tun0 table local proto kernel metric 0 pref medium
+local fe80::6c8d:66f8:230f:a81f dev enx3c18a040229d table local proto kernel metric 0 pref medium
+local fe80::dd8e:db7f:b999:fc82 dev wlp59s0 table local proto kernel metric 0 pref medium
+multicast ff00::/8 dev enx3c18a040229d table local proto kernel metric 256 pref medium
+multicast ff00::/8 dev wlp59s0 table local proto kernel metric 256 pref medium
+multicast ff00::/8 dev tun0 table local proto kernel metric 256 pref medium
+anycast fe80:: dev ens160 table local proto kernel metric 0 pref medium
+anycast fe80:: dev ens192 table local proto kernel metric 0 pref medium
+"""
+
+        self.assertRaises(CommandExecutionError, network.default_route, "family")
+
+        with patch.object(
+            network,
+            "routes",
+            side_effect=[[{"family": "inet6"}, {"destination": "A"}], []],
+        ):
+            with patch.dict(network.__grains__, {"kernel": "A", "os": "B"}):
+                self.assertRaises(CommandExecutionError, network.default_route, "inet6")
+
+        cmd_mock = MagicMock(side_effect=[mock_iproute_ipv4, mock_iproute_ipv6])
+        with patch.dict(network.__grains__, {"kernel": "Linux"}):
+            with patch.dict(network.__salt__, {"cmd.run": cmd_mock}):
+                ret = network.default_route("inet6")
+                self.assertListEqual(network.default_route("inet6"), [])
+
     def test_get_route(self):
         """
         Test for return output from get_route
