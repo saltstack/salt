@@ -93,7 +93,7 @@ class Loaders:
         if self._pillar is None:
             self._pillar = salt.pillar.get_pillar(
                 self.opts,
-                self.opts["grains"],
+                self.grains,
                 self.opts["id"],
                 saltenv=self.opts["saltenv"],
                 pillarenv=self.opts.get("pillarenv"),
@@ -147,21 +147,21 @@ class StateResult:
 
     def __eq__(self, value):
         raise RuntimeError(
-            "Please assert comparissons with {}.filtered instead".format(
+            "Please assert comparisons with {}.filtered instead".format(
                 self.__class__.__name__
             )
         )
 
     def __contains__(self, value):
         raise RuntimeError(
-            "Please assert comparissons with {}.filtered instead".format(
+            "Please assert comparisons with {}.filtered instead".format(
                 self.__class__.__name__
             )
         )
 
     def __bool__(self):
         raise RuntimeError(
-            "Please assert comparissons with {}.filtered instead".format(
+            "Please assert comparisons with {}.filtered instead".format(
                 self.__class__.__name__
             )
         )
@@ -215,15 +215,44 @@ def state_tree_prod(tmp_path_factory):
 
 
 @pytest.fixture(scope="module")
+def minion_config_defaults():
+    """
+    Functional test modules can provide this fixture to tweak the default configuration dictionary
+    passed to the minion factory
+    """
+    return {}
+
+
+@pytest.fixture(scope="module")
+def minion_config_overrides():
+    """
+    Functional test modules can provide this fixture to tweak the configuration overrides dictionary
+    passed to the minion factory
+    """
+    return {}
+
+
+@pytest.fixture(scope="module")
 def minion_opts(
-    salt_factories, minion_id, state_tree, state_tree_prod,
+    salt_factories,
+    minion_id,
+    state_tree,
+    state_tree_prod,
+    minion_config_defaults,
+    minion_config_overrides,
 ):
-    config_overrides = {
-        "file_client": "local",
-        "file_roots": {"base": [str(state_tree)], "prod": [str(state_tree_prod)]},
-        "features": {"enable_slsvars_fixes": True},
-    }
-    factory = salt_factories.salt_minion_daemon(minion_id, overrides=config_overrides,)
+    minion_config_overrides.update(
+        {
+            "file_client": "local",
+            "file_roots": {"base": [str(state_tree)], "prod": [str(state_tree_prod)]},
+            "features": {"enable_slsvars_fixes": True},
+        }
+    )
+    factory = salt_factories.salt_minion_daemon(
+        minion_id,
+        defaults=minion_config_defaults or None,
+        overrides=minion_config_overrides,
+    )
     return factory.config.copy()
 
 
