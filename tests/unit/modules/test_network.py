@@ -553,7 +553,6 @@ anycast fe80:: dev ens192 table local proto kernel metric 0 pref medium
         cmd_mock = MagicMock(side_effect=[mock_iproute_ipv4, mock_iproute_ipv6])
         with patch.dict(network.__grains__, {"kernel": "Linux"}):
             with patch.dict(network.__salt__, {"cmd.run": cmd_mock}):
-                ret = network.default_route("inet6")
                 self.assertListEqual(network.default_route("inet6"), [])
 
     def test_get_route(self):
