@@ -4225,7 +4225,7 @@ def update(
                     if (
                         item in changes["disk"]["new"]
                         and source_file
-                        and not os.path.isfile(source_file)
+                        and not os.path.exists(source_file)
                     ):
                         _qemu_image_create(all_disks[idx])
                     elif item in changes["disk"]["new"] and not source_file:
