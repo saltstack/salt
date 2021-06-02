@@ -21,7 +21,7 @@ jobs:
     - name: Install dependencies
       run: |
         pip install --upgrade pip setuptools wheel
-        pip install twine==3.3.0
+        pip install twine>=3.4.1
     - name: Python setup
       run: |
         python3 setup.py sdist

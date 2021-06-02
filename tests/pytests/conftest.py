@@ -76,6 +76,12 @@ def reactor_event(tmp_path_factory):
 
 
 @pytest.fixture(scope="session")
+def master_id():
+    master_id = random_string("master-")
+    yield master_id
+
+
+@pytest.fixture(scope="session")
 def salt_master_factory(
     request,
     salt_factories,
@@ -89,8 +95,8 @@ def salt_master_factory(
     sdb_etcd_port,
     vault_port,
     reactor_event,
+    master_id,
 ):
-    master_id = random_string("master-")
     root_dir = salt_factories.get_root_dir_for_daemon(master_id)
     conf_dir = root_dir / "conf"
     conf_dir.mkdir(exist_ok=True)
@@ -213,10 +219,10 @@ def salt_master_factory(
         else:
             shutil.copyfile(source, dest)
 
-    factory = salt_factories.get_salt_master_daemon(
+    factory = salt_factories.salt_master_daemon(
         master_id,
-        config_defaults=config_defaults,
-        config_overrides=config_overrides,
+        defaults=config_defaults,
+        overrides=config_overrides,
         extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
     )
     return factory
@@ -248,13 +254,13 @@ def salt_minion_factory(salt_master_factory, salt_minion_id, sdb_etcd_port, vaul
     virtualenv_binary = get_virtualenv_binary_path()
     if virtualenv_binary:
         config_overrides["venv_bin"] = virtualenv_binary
-    factory = salt_master_factory.get_salt_minion_daemon(
+    factory = salt_master_factory.salt_minion_daemon(
         salt_minion_id,
-        config_defaults=config_defaults,
-        config_overrides=config_overrides,
+        defaults=config_defaults,
+        overrides=config_overrides,
         extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
     )
-    factory.register_after_terminate_callback(
+    factory.after_terminate(
         pytest.helpers.remove_stale_minion_key, salt_master_factory, factory.id
     )
     return factory
@@ -278,13 +284,13 @@ def salt_sub_minion_factory(salt_master_factory, salt_sub_minion_id):
     virtualenv_binary = get_virtualenv_binary_path()
     if virtualenv_binary:
         config_overrides["venv_bin"] = virtualenv_binary
-    factory = salt_master_factory.get_salt_minion_daemon(
+    factory = salt_master_factory.salt_minion_daemon(
         salt_sub_minion_id,
-        config_defaults=config_defaults,
-        config_overrides=config_overrides,
+        defaults=config_defaults,
+        overrides=config_overrides,
         extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
     )
-    factory.register_after_terminate_callback(
+    factory.after_terminate(
         pytest.helpers.remove_stale_minion_key, salt_master_factory, factory.id
     )
     return factory
@@ -307,13 +313,19 @@ def salt_proxy_factory(salt_factories, salt_master_factory):
     config_defaults["transport"] = salt_master_factory.config["transport"]
     config_defaults["user"] = salt_master_factory.config["user"]
 
-    factory = salt_master_factory.get_salt_proxy_minion_daemon(
+    config_overrides = {
+        "file_roots": salt_master_factory.config["file_roots"].copy(),
+        "pillar_roots": salt_master_factory.config["pillar_roots"].copy(),
+    }
+
+    factory = salt_master_factory.salt_proxy_minion_daemon(
         proxy_minion_id,
-        config_defaults=config_defaults,
+        defaults=config_defaults,
+        overrides=config_overrides,
         extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
         start_timeout=240,
     )
-    factory.register_after_terminate_callback(
+    factory.after_terminate(
         pytest.helpers.remove_stale_minion_key, salt_master_factory, factory.id
     )
     return factory
@@ -327,9 +339,9 @@ def temp_salt_master(
         "open_mode": True,
         "transport": request.config.getoption("--transport"),
     }
-    factory = salt_factories.get_salt_master_daemon(
+    factory = salt_factories.salt_master_daemon(
         random_string("temp-master-"),
-        config_defaults=config_defaults,
+        defaults=config_defaults,
         extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
     )
     return factory
@@ -341,12 +353,12 @@ def temp_salt_minion(temp_salt_master):
         "open_mode": True,
         "transport": temp_salt_master.config["transport"],
     }
-    factory = temp_salt_master.get_salt_minion_daemon(
+    factory = temp_salt_master.salt_minion_daemon(
         random_string("temp-minion-"),
-        config_defaults=config_defaults,
+        defaults=config_defaults,
         extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
     )
-    factory.register_after_terminate_callback(
+    factory.after_terminate(
         pytest.helpers.remove_stale_minion_key, temp_salt_master, factory.id
     )
     return factory

@@ -10,7 +10,7 @@ import shutil
 
 import pytest
 import salt.utils.path
-from saltfactories.factories.daemons.container import ContainerFactory
+from saltfactories.daemons.container import Container
 from saltfactories.utils import random_string
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.sminion import create_sminion
@@ -36,7 +36,7 @@ def docker_client():
         pytest.skip("The docker binary is not available")
     try:
         client = docker.from_env()
-        connectable = ContainerFactory.client_connectable(client)
+        connectable = Container.client_connectable(client)
         if connectable is not True:  # pragma: no cover
             pytest.skip(connectable)
         return client
@@ -144,8 +144,8 @@ def salt_master(
             "pillar_roots": {"base": [str(pillar_tree)]},
         }
     )
-    factory = salt_factories.get_salt_master_daemon(
-        master_id, config_defaults=config_defaults, config_overrides=config_overrides,
+    factory = salt_factories.salt_master_daemon(
+        master_id, defaults=config_defaults, overrides=config_overrides,
     )
     with factory.started():
         yield factory
@@ -158,4 +158,4 @@ def salt_cli(salt_master):
 
 @pytest.fixture
 def salt_cp_cli(salt_master):
-    return salt_master.get_salt_cp_cli()
+    return salt_master.salt_cp_cli()
