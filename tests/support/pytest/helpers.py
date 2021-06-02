@@ -6,11 +6,9 @@
 """
 import logging
 import os
-import pathlib
 import pprint
 import re
 import shutil
-import tempfile
 import textwrap
 import types
 import warnings
@@ -21,139 +19,12 @@ import pytest
 import salt.utils.platform
 import salt.utils.pycrypto
 from saltfactories.utils import random_string
+from saltfactories.utils.tempfiles import temp_file
 from tests.support.pytest.loader import LoaderModuleMock
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.sminion import create_sminion
 
 log = logging.getLogger(__name__)
-
-
-@pytest.helpers.register
-@contextmanager
-def temp_directory(name=None):
-    """
-    This helper creates a temporary directory. It should be used as a context manager
-    which returns the temporary directory path, and, once out of context, deletes it.
-
-    Can be directly imported and used, or, it can be used as a pytest helper function if
-    ``pytest-helpers-namespace`` is installed.
-
-    .. code-block:: python
-
-        import os
-        import pytest
-
-        def test_blah():
-            with pytest.helpers.temp_directory() as tpath:
-                print(tpath)
-                assert os.path.exists(tpath)
-
-            assert not os.path.exists(tpath)
-    """
-    try:
-        if name is not None:
-            directory_path = os.path.join(RUNTIME_VARS.TMP, name)
-        else:
-            directory_path = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
-
-        if not os.path.isdir(directory_path):
-            os.makedirs(directory_path)
-
-        yield directory_path
-    finally:
-        shutil.rmtree(directory_path, ignore_errors=True)
-
-
-@pytest.helpers.register
-@contextmanager
-def temp_file(name=None, contents=None, directory=None, strip_first_newline=True):
-    """
-    This helper creates a temporary file. It should be used as a context manager
-    which returns the temporary file path, and, once out of context, deletes it.
-
-    Can be directly imported and used, or, it can be used as a pytest helper function if
-    ``pytest-helpers-namespace`` is installed.
-
-    .. code-block:: python
-
-        import os
-        import pytest
-
-        def test_blah():
-            with pytest.helpers.temp_file("blah.txt") as tpath:
-                print(tpath)
-                assert os.path.exists(tpath)
-
-            assert not os.path.exists(tpath)
-
-    Args:
-        name(str):
-            The temporary file name
-        contents(str):
-            The contents of the temporary file
-        directory(str):
-            The directory where to create the temporary file. If ``None``, then ``RUNTIME_VARS.TMP``
-            will be used.
-        strip_first_newline(bool):
-            Wether to strip the initial first new line char or not.
-    """
-    try:
-        if directory is None:
-            directory = RUNTIME_VARS.TMP
-
-        if not isinstance(directory, pathlib.Path):
-            directory = pathlib.Path(str(directory))
-
-        if name is not None:
-            file_path = directory / name
-        else:
-            handle, file_path = tempfile.mkstemp(dir=str(directory))
-            os.close(handle)
-            file_path = pathlib.Path(file_path)
-
-        file_directory = file_path.parent
-        if not file_directory.is_dir():
-            file_directory.mkdir(parents=True)
-
-        if contents is not None:
-            if contents:
-                if contents.startswith("\n") and strip_first_newline:
-                    contents = contents[1:]
-                file_contents = textwrap.dedent(contents)
-            else:
-                file_contents = contents
-
-            file_path.write_text(file_contents)
-            log_contents = "{0} Contents of {1}\n{2}\n{3} Contents of {1}".format(
-                ">" * 6, file_path, file_contents, "<" * 6
-            )
-            log.debug("Created temp file: %s\n%s", file_path, log_contents)
-        else:
-            log.debug("Touched temp file: %s", file_path)
-
-        yield file_path
-
-    finally:
-        if file_path.exists():
-            file_path.unlink()
-            log.debug("Deleted temp file: %s", file_path)
-
-        try:
-            file_path.relative_to(directory)
-
-            created_directory = file_path.parent
-            while True:
-                if created_directory == directory:
-                    break
-                if created_directory.parent == directory:
-                    break
-                created_directory = created_directory.parent
-            if created_directory != directory:
-                shutil.rmtree(str(created_directory), ignore_errors=True)
-                log.debug("Deleted temp directory: %s", created_directory)
-        except ValueError:
-            # The 'file_path' is not located within 'directory'
-            pass
 
 
 @pytest.helpers.register

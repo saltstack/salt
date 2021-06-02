@@ -112,7 +112,7 @@ requests==2.25.1
     #   -r requirements/windows.txt
 setproctitle==1.1.10
     # via -r requirements/windows.txt
-six==1.15.0
+six==1.16.0
     # via
     #   cheroot
     #   pyopenssl
