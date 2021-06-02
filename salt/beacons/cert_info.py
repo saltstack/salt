@@ -38,11 +38,11 @@ def validate(config):
     """
     Validate the beacon configuration
     """
-    config = salt.utils.beacons.list_to_dict(config)
-
     # Configuration for cert_info beacon should be a list of dicts
     if not isinstance(config, list):
         return False, ("Configuration for cert_info beacon must be a list.")
+
+    config = salt.utils.beacons.list_to_dict(config)
 
     if "files" not in config:
         return (
