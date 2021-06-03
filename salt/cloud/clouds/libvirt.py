@@ -1163,6 +1163,8 @@ def start(name, call=None):
             found.append(domain)
         except libvirtError:
             pass
+        finally:
+            conn.close()
 
     if not found:
         return "{} doesn't exist and can't be started".format(name)
@@ -1180,7 +1182,10 @@ def start(name, call=None):
     )
 
     log.info("Starting domain %s", found[0].name())
-    found[0].create()
+    try:
+        found[0].create()
+    except libvirtError:
+        log.warning("Failed to start domain '%s'", found[0].name())
 
 def stop(name, call=None):
     """
@@ -1220,6 +1225,8 @@ def stop(name, call=None):
             found.append(domain)
         except libvirtError:
             pass
+        finally:
+            conn.close()
 
     if not found:
         return "{} doesn't exist and can't be stopped".format(name)
@@ -1237,7 +1244,10 @@ def stop(name, call=None):
     )
 
     log.info("Stopping domain %s", found[0].name())
-    found[0].shutdown()
+    try:
+        found[0].shutdown()
+    except libvirtError:
+        log.warning("Failed to stop domain '%s'", found[0].name())
 
 def reboot(name, call=None):
     """
@@ -1277,6 +1287,8 @@ def reboot(name, call=None):
             found.append(domain)
         except libvirtError:
             pass
+        finally:
+            conn.close()
 
     if not found:
         return "{} doesn't exist and can't be rebooted".format(name)
@@ -1294,4 +1306,7 @@ def reboot(name, call=None):
     )
 
     log.info("Rebooting domain %s", found[0].name())
-    found[0].shutdown()
+    try:
+        found[0].reboot()
+    except libvirtError:
+        log.warning("Failed to reboot domain '%s'", found[0].name())
