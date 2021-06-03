@@ -53,6 +53,33 @@ def __mgmt(name, _type, action):
     return __firewall_cmd(cmd)
 
 
+def __parse_zone(cmd):
+    """
+    Return zone information in a dictionary
+    """
+    _zone = {}
+    id_ = ""
+
+    for i in __firewall_cmd(cmd).splitlines():
+        if i.strip():
+            if re.match("^[a-z0-9]", i, re.I):
+                zone_name = i.rstrip()
+            else:
+                if i.startswith("\t"):
+                    _zone[zone_name][id_].append(i.strip())
+                    continue
+
+                (id_, val) = i.split(":", 1)
+
+                id_ = id_.strip()
+
+                if _zone.get(zone_name, None):
+                    _zone[zone_name].update({id_: [val.strip()]})
+                else:
+                    _zone[zone_name] = {id_: [val.strip()]}
+    return _zone
+
+
 def version():
     """
     Return version from firewall-cmd
@@ -105,26 +132,12 @@ def list_zones(permanent=True):
 
         salt '*' firewalld.list_zones
     """
-    zones = {}
-
     cmd = "--list-all-zones"
 
     if permanent:
         cmd += " --permanent"
 
-    for i in __firewall_cmd(cmd).splitlines():
-        if i.strip():
-            if bool(re.match("^[a-z0-9]", i, re.I)):
-                zone_name = i.rstrip()
-            else:
-                (id_, val) = i.strip().split(":")
-
-                if zones.get(zone_name, None):
-                    zones[zone_name].update({id_: val})
-                else:
-                    zones[zone_name] = {id_: val}
-
-    return zones
+    return __parse_zone(cmd)
 
 
 def get_zones(permanent=True):
@@ -318,9 +331,6 @@ def list_all(zone=None, permanent=True):
 
         salt '*' firewalld.list_all my_zone
     """
-    _zone = {}
-    id_ = ""
-
     if zone:
         cmd = "--zone={} --list-all".format(zone)
     else:
@@ -329,24 +339,7 @@ def list_all(zone=None, permanent=True):
     if permanent:
         cmd += " --permanent"
 
-    for i in __firewall_cmd(cmd).splitlines():
-        if re.match("^[a-z0-9]", i, re.I):
-            zone_name = i.rstrip()
-        else:
-            if i.startswith("\t"):
-                _zone[zone_name][id_].append(i.strip())
-                continue
-
-            (id_, val) = i.split(":", 1)
-
-            id_ = id_.strip()
-
-            if _zone.get(zone_name, None):
-                _zone[zone_name].update({id_: [val.strip()]})
-            else:
-                _zone[zone_name] = {id_: [val.strip()]}
-
-    return _zone
+    return __parse_zone(cmd)
 
 
 def list_services(zone=None, permanent=True):
