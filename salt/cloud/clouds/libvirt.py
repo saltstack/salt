@@ -1160,11 +1160,10 @@ def start(name, call=None):
         log.info("looking at %s", provider["url"])
         try:
             domain = conn.lookupByName(name)
-            found.append(domain)
+            found.append({"domain": domain, "conn": conn})
         except libvirtError:
-            pass
-        finally:
             conn.close()
+            pass
 
     if not found:
         return "{} doesn't exist and can't be started".format(name)
@@ -1181,11 +1180,13 @@ def start(name, call=None):
         transport=__opts__["transport"],
     )
 
-    log.info("Starting domain %s", found[0].name())
+    log.info("Starting domain %s", found[0]["domain"].name())
     try:
-        found[0].create()
+        found[0]["domain"].create()
     except libvirtError:
-        log.warning("Failed to start domain '%s'", found[0].name())
+        log.warning("Failed to start domain '%s'", found[0]["domain"].name())
+
+    found[0]["conn"].close()
 
 def stop(name, call=None):
     """
@@ -1222,11 +1223,10 @@ def stop(name, call=None):
         log.info("looking at %s", provider["url"])
         try:
             domain = conn.lookupByName(name)
-            found.append(domain)
+            found.append({"domain": domain, "conn": conn})
         except libvirtError:
-            pass
-        finally:
             conn.close()
+            pass
 
     if not found:
         return "{} doesn't exist and can't be stopped".format(name)
@@ -1243,11 +1243,13 @@ def stop(name, call=None):
         transport=__opts__["transport"],
     )
 
-    log.info("Stopping domain %s", found[0].name())
+    log.info("Stopping domain %s", found[0]["domain"].name())
     try:
-        found[0].shutdown()
+        found[0]["domain"].shutdown()
     except libvirtError:
-        log.warning("Failed to stop domain '%s'", found[0].name())
+        log.warning("Failed to stop domain '%s'", found[0]["domain"].name())
+
+    found[0]["conn"].close()
 
 def reboot(name, call=None):
     """
@@ -1284,11 +1286,10 @@ def reboot(name, call=None):
         log.info("looking at %s", provider["url"])
         try:
             domain = conn.lookupByName(name)
-            found.append(domain)
+            found.append({"domain": domain, "conn": conn})
         except libvirtError:
-            pass
-        finally:
             conn.close()
+            pass
 
     if not found:
         return "{} doesn't exist and can't be rebooted".format(name)
@@ -1305,8 +1306,10 @@ def reboot(name, call=None):
         transport=__opts__["transport"],
     )
 
-    log.info("Rebooting domain %s", found[0].name())
+    log.info("Rebooting domain %s", found[0]["domain"].name())
     try:
-        found[0].reboot()
+        found[0]["domain"].reboot()
     except libvirtError:
-        log.warning("Failed to reboot domain '%s'", found[0].name())
+        log.warning("Failed to reboot domain '%s'", found[0]["domain"].name())
+
+    found[0]["conn"].close()
