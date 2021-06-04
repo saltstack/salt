@@ -570,31 +570,17 @@ def _ip_route_linux():
 
         # need to fake similar output to that provided by netstat
         # to maintain output format
-        if comps[0] == "unicast":
-            continue
-
-        if comps[0] == "broadcast":
-            continue
-
-        if comps[0] == "throw":
-            continue
-
-        if comps[0] == "unreachable":
-            continue
-
-        if comps[0] == "prohibit":
-            continue
-
-        if comps[0] == "blackhole":
-            continue
-
-        if comps[0] == "nat":
-            continue
-
-        if comps[0] == "anycast":
-            continue
-
-        if comps[0] == "multicast":
+        if comps[0] in (
+            "unicast",
+            "broadcast",
+            "throw",
+            "unreachable",
+            "prohibit",
+            "blackhole",
+            "nat",
+            "anycast",
+            "multicast",
+        ):
             continue
 
         if comps[0] == "default":
