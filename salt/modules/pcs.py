@@ -57,12 +57,15 @@ def item_show(
     item_type
         item type
     show
-        show command (probably None, default: show)
+        show command (probably None, default: show or status for newer implementation)
     extra_args
         additional options for the pcs command
     cibfile
         use cibfile instead of the live CIB
     """
+
+    new_commands = __use_new_commands()
+
     cmd = ["pcs"]
 
     if isinstance(cibfile, str):
@@ -76,6 +79,15 @@ def item_show(
     # constraint command follows a different order
     if item in ["constraint"]:
         cmd += [item_type]
+
+    # New implementions use config in stead of show. This resolves that issue.
+    if new_commands:
+        if show == "show":
+            show = "config"
+        elif isinstance(show, (list, tuple)):
+             for i in range(len(show)):
+                if show[i] == "show":
+                    show[i] = "config" 
 
     if isinstance(show, str):
         cmd += [show]
@@ -171,15 +183,11 @@ def auth(nodes, pcsuser="hacluster", pcspasswd="hacluster", extra_args=None):
         salt '*' pcs.auth nodes='[ node1.example.org node2.example.org ]' pcsuser=hacluster pcspasswd=hoonetorg"
     """
     if __use_new_commands():
-        cmd = ["pcs", "host", "auth"]
+        cmd = ["pcs", "host", "auth" ]
     else:
         cmd = ["pcs", "cluster", "auth"]
 
-    if pcsuser:
-        cmd += ["-u", pcsuser]
-
-    if pcspasswd:
-        cmd += ["-p", pcspasswd]
+    cmd.extend(["-u", pcsuser, "-p", pcspasswd])
 
     if isinstance(extra_args, (list, tuple)):
         cmd += extra_args
@@ -188,37 +196,20 @@ def auth(nodes, pcsuser="hacluster", pcspasswd="hacluster", extra_args=None):
     return __salt__["cmd.run_all"](cmd, output_loglevel="trace", python_shell=False)
 
 
-def is_auth(nodes, pcsuser="hacluster", pcspasswd="hacluster"):
+def is_auth():
     """
     Check if nodes are already authorized
-
-    nodes
-        a list of nodes to be checked for authorization to the cluster
-    pcsuser
-        user for communitcation with PCS (default: hacluster)
-    pcspasswd
-        password for pcsuser (default: hacluster)
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' pcs.is_auth nodes='[node1.example.org node2.example.org]' pcsuser=hacluster pcspasswd=hoonetorg
+        salt '*' pcs.is_auth nodes='[node1.example.org node2.example.org]'
     """
     if __use_new_commands():
-
         cmd = ["pcs", "host", "auth"]
-
-        if pcsuser:
-            cmd += ["-u", pcsuser]
-
-        if pcspasswd:
-            cmd += ["-p", pcspasswd]
-
-        cmd += nodes
     else:
         cmd = ["pcs", "cluster", "auth"]
-        cmd += nodes
 
     log.info("Commands: %s", cmd)
     return __salt__["cmd.run_all"](
