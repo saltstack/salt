@@ -83,7 +83,7 @@ def __virtual__():
         "openeuler",
     )
 
-    if os_family == "redhat" or os_grain in enabled:
+    if os_family in ["almalinux", "redhat"] or os_grain in enabled:
         if _yum() is None:
             return (False, "DNF nor YUM found")
         return __virtualname__
