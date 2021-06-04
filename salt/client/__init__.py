@@ -83,7 +83,7 @@ def get_local_client(
 
                        The default value is None.
 
-    :param bool mopts: When provided the local client will use is dictionary of
+    :param bool mopts: When provided the local client will use this dictionary of
                        options insead of loading a config file from the value
                        of c_path.
 
@@ -175,7 +175,7 @@ class LocalClient:
 
                            The default value is None.
 
-        :param bool mopts: When provided the local client will use is dictionary of
+        :param bool mopts: When provided the local client will use this dictionary of
                            options insead of loading a config file from the value
                            of c_path.
 
