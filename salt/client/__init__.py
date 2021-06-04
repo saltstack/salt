@@ -1150,7 +1150,7 @@ class LocalClient:
         missing = set()
         # Check to see if the jid is real, if not return the empty dict
         try:
-            if self.returns_for_job(jid) == {}:
+            if not self.returns_for_job(jid):
                 log.warning("jid does not exist")
                 yield {}
                 # stop the iteration, since the jid is invalid
