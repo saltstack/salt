@@ -311,17 +311,19 @@ def absent(
 
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = (
-                "The privilege(s): {} are set to be revoked from {}"
-            ).format(_privs, name)
+            ret[
+                "comment"
+            ] = "The privilege(s): {} are set to be revoked from {}".format(
+                _privs, name
+            )
             return ret
 
         if __salt__["postgres.privileges_revoke"](
             name, object_name, object_type, **kwargs
         ):
-            ret["comment"] = (
-                "The privilege(s): {} have been revoked from {}"
-            ).format(_privs, name)
+            ret["comment"] = "The privilege(s): {} have been revoked from {}".format(
+                _privs, name
+            )
             ret["changes"][name] = "Absent"
         else:
             ret["comment"] = "Failed to revoke privilege(s): {} from {}".format(

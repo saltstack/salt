@@ -407,7 +407,7 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
         certk = "{}/{}/certs/{}.key".format(
             ca_path, ca_name, _TLS_TEST_DATA["create_ca"]["CN"]
         )
-        ret = 'Created Private Key: "{}." Created CSR for "{}": "{}."').format(
+        ret = 'Created Private Key: "{}." Created CSR for "{}": "{}."'.format(
             certk, _TLS_TEST_DATA["create_ca"]["CN"], certp
         )
         mock_opt = MagicMock(return_value=ca_path)

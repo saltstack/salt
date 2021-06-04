@@ -367,9 +367,9 @@ def present(
         )
     elif data == "no key":
         ret["result"] = False
-        ret[
-            "comment"
-        ] = "Failed to add the ssh key. Source file {} is missing".format(source)
+        ret["comment"] = "Failed to add the ssh key. Source file {} is missing".format(
+            source
+        )
     elif data == "fail":
         ret["result"] = False
         err = sys.modules[__salt__["test.ping"].__module__].__context__.pop(

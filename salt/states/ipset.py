@@ -283,7 +283,7 @@ def absent(name, entry=None, entries=None, family="ipv4", **kwargs):
                     ret[
                         "comment"
                     ] += "ipset entry {} removed from set {} for {}\n".format(
-                        _entry_, kwargs["set_name"], family
+                        entry, kwargs["set_name"], family
                     )
                 else:
                     ret["result"] = False

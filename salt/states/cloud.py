@@ -271,9 +271,9 @@ def profile(name, profile, onlyif=None, unless=None, opts=None, **kwargs):
             ret["comment"] = default_msg
     elif error:
         ret["result"] = False
-        ret["comment"] = (
-            "Failed to create instance {} using profile {}: {}"
-        ).format(name, profile, "{}\n{}\n".format(main_error, name_error).strip(),)
+        ret["comment"] = ("Failed to create instance {} using profile {}: {}").format(
+            name, profile, "{}\n{}\n".format(main_error, name_error).strip(),
+        )
     else:
         ret["result"] = False
         ret["comment"] = "Failed to create instance {} using profile {}".format(
