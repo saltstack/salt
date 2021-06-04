@@ -21,12 +21,17 @@ pytestmark = [
 @pytest.fixture(scope="module")
 def salt_call_cli_wrapper(salt_call_cli, mysql_container):
     def run_command(*command, **kwargs):
+        connection_user = kwargs.pop("connection_user", mysql_container.mysql_user)
+        connection_pass = kwargs.pop("connection_pass", mysql_container.mysql_passwd)
+        connection_db = kwargs.pop("connection_db", "mysql")
+        connection_port = kwargs.pop("connection_port", mysql_container.mysql_port)
+
         return salt_call_cli.run(
             *command,
-            connection_user=mysql_container.mysql_user,
-            connection_pass=mysql_container.mysql_passwd,
-            connection_db="mysql",
-            connection_port=mysql_container.mysql_port,
+            connection_user=connection_user,
+            connection_pass=connection_pass,
+            connection_db=connection_db,
+            connection_port=connection_port,
             **kwargs
         )
 
@@ -294,4 +299,173 @@ def test_plugin_list(salt_call_cli_wrapper, mysql_container):
     assert {"name": plugin, "status": "ACTIVE"} in ret.json
 
     ret = salt_call_cli_wrapper("mysql.plugin_remove", plugin)
+    assert ret.json
+
+
+def test_grant_add_revoke_password_hash(salt_call_cli_wrapper):
+    # Create the database
+    ret = salt_call_cli_wrapper("mysql.db_create", "salt")
+    assert ret.json
+
+    # Create a user
+    ret = salt_call_cli_wrapper(
+        "mysql.user_create",
+        "george",
+        host="%",
+        password_hash="*2470C0C06DEE42FD1618BB99005ADCA2EC9D1E19",
+    )
+    log.debug("=== ret %s ===", ret)
+    assert ret.json
+
+    # Grant privileges to user to specific table
+    ret = salt_call_cli_wrapper(
+        "mysql.grant_add",
+        grant="ALL PRIVILEGES",
+        database="salt.*",
+        user="george",
+        host="%",
+    )
+    assert ret.json
+
+    # Check the grant exists
+    ret = salt_call_cli_wrapper(
+        "mysql.grant_exists",
+        grant="ALL PRIVILEGES",
+        database="salt.*",
+        user="george",
+        host="%",
+    )
+    assert ret.json
+
+    # Check the grant exists via a query
+    ret = salt_call_cli_wrapper(
+        "mysql.query",
+        database="salt",
+        query="SELECT 1",
+        connection_user="george",
+        connection_pass="password",
+        connection_db="salt",
+    )
+    assert ret.json
+
+    # Revoke the grant
+    ret = salt_call_cli_wrapper(
+        "mysql.grant_revoke",
+        grant="ALL PRIVILEGES",
+        database="salt.*",
+        user="george",
+        host="%",
+    )
+    assert ret.json
+
+    # Check the grant does not exist
+    ret = salt_call_cli_wrapper(
+        "mysql.grant_exists",
+        grant="ALL PRIVILEGES",
+        database="salt.*",
+        user="george",
+        host="%",
+    )
+    assert not ret.json
+
+    # Remove the user
+    ret = salt_call_cli_wrapper("mysql.user_remove", "george", host="%")
+    assert ret.json
+
+    # Remove the database
+    ret = salt_call_cli_wrapper("mysql.db_remove", "salt")
+    assert ret.json
+
+
+def test_create_alter_password_hash(salt_call_cli_wrapper):
+    # Create the database
+    ret = salt_call_cli_wrapper("mysql.db_create", "salt")
+    assert ret.json
+
+    # Create a user
+    ret = salt_call_cli_wrapper(
+        "mysql.user_create",
+        "george",
+        host="%",
+        password_hash="*2470C0C06DEE42FD1618BB99005ADCA2EC9D1E19",
+    )
+    assert ret.json
+
+    # Grant privileges to user to specific table
+    ret = salt_call_cli_wrapper(
+        "mysql.grant_add",
+        grant="ALL PRIVILEGES",
+        database="salt.*",
+        user="george",
+        host="%",
+    )
+    assert ret.json
+
+    # Check the grant exists
+    ret = salt_call_cli_wrapper(
+        "mysql.grant_exists",
+        grant="ALL PRIVILEGES",
+        database="salt.*",
+        user="george",
+        host="%",
+    )
+    assert ret.json
+
+    # Check we can query as the new user
+    ret = salt_call_cli_wrapper(
+        "mysql.query",
+        database="salt",
+        query="SELECT 1",
+        connection_user="george",
+        connection_pass="password",
+        connection_db="salt",
+    )
+    assert ret.json
+
+    # Change the user password
+    ret = salt_call_cli_wrapper(
+        "mysql.user_chpass",
+        "george",
+        host="%",
+        password_hash="*F4A5147613F01DEC0C5226BF24CD1D5762E6AAF2",
+    )
+    assert ret.json
+
+    # Check we can query with the new password
+    ret = salt_call_cli_wrapper(
+        "mysql.query",
+        database="salt",
+        query="SELECT 1",
+        connection_user="george",
+        connection_pass="badpassword",
+        connection_db="salt",
+    )
+    assert ret.json
+
+    # Revoke the grant
+    ret = salt_call_cli_wrapper(
+        "mysql.grant_revoke",
+        grant="ALL PRIVILEGES",
+        database="salt.*",
+        user="george",
+        host="%",
+    )
+    assert ret.json
+
+    # Check the grant does not exist
+    ret = salt_call_cli_wrapper(
+        "mysql.grant_exists",
+        grant="ALL PRIVILEGES",
+        database="salt.*",
+        user="george",
+        host="%",
+    )
+    assert not ret.json
+
+    # Remove the user
+    ret = salt_call_cli_wrapper("mysql.user_remove", "george", host="%")
+    assert ret.json
+
+    # Remove the database
+    ret = salt_call_cli_wrapper("mysql.db_remove", "salt")
     assert ret.json

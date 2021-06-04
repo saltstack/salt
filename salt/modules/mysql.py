@@ -1594,7 +1594,8 @@ def _mysql_user_create(
         args["password"] = str(password)
     elif password_hash is not None:
         if salt.utils.versions.version_cmp(server_version, compare_version) >= 0:
-            qry += " IDENTIFIED BY %(password)s"
+            args["auth_plugin"] = auth_plugin
+            qry += " IDENTIFIED WITH %(auth_plugin)s AS %(password)s"
         else:
             qry += " IDENTIFIED BY PASSWORD %(password)s"
         args["password"] = password_hash
@@ -1844,7 +1845,12 @@ def _mysql_user_chpass(
     args["host"] = host
 
     if salt.utils.versions.version_cmp(server_version, compare_version) >= 0:
-        qry = "ALTER USER %(user)s@%(host)s IDENTIFIED BY %(password)s;"
+        args["auth_plugin"] = auth_plugin
+        qry = "ALTER USER %(user)s@%(host)s IDENTIFIED WITH %(auth_plugin)s "
+        if password is not None:
+            qry += "BY %(password)s;"
+        elif password_hash is not None:
+            qry += "AS %(password)s;"
     else:
         qry = (
             "UPDATE mysql.user SET "
@@ -1920,7 +1926,12 @@ def _mariadb_user_chpass(
     args["host"] = host
 
     if salt.utils.versions.version_cmp(server_version, compare_version) >= 0:
-        qry = "ALTER USER %(user)s@%(host)s IDENTIFIED BY %(password)s;"
+        args["auth_plugin"] = auth_plugin
+        qry = "ALTER USER %(user)s@%(host)s IDENTIFIED WITH %(auth_plugin)s "
+        if password is not None:
+            qry += "BY %(password)s;"
+        elif password_hash is not None:
+            qry += "AS %(password)s;"
     else:
         qry = (
             "UPDATE mysql.user SET "
