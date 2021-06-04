@@ -177,7 +177,7 @@ def warn_until_date(
                                 checks to raise a ``RuntimeError``.
     """
     _strptime_fmt = "%Y%m%d"
-    if not isinstance(date, ((str,), datetime.date, datetime.datetime)):
+    if not isinstance(date, (str, datetime.date, datetime.datetime)):
         raise RuntimeError(
             "The 'date' argument should be passed as a 'datetime.date()' or "
             "'datetime.datetime()' objects or as string parserable by "
@@ -256,7 +256,7 @@ def kwargs_warn_until(
                                 issued. When we're only after the salt version
                                 checks to raise a ``RuntimeError``.
     """
-    if not isinstance(version, (tuple, (str,), salt.version.SaltStackVersion)):
+    if not isinstance(version, (tuple, str, salt.version.SaltStackVersion)):
         raise RuntimeError(
             "The 'version' argument should be passed as a tuple, string or "
             "an instance of 'salt.version.SaltStackVersion'."
