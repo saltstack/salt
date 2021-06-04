@@ -542,9 +542,7 @@ def portgroups_configured(name, dvs, portgroups):
         Portgroup dict representations (see module sysdocs)
     """
     datacenter = _get_datacenter_name()
-    log.info(
-        "Running state %s on DVS '%s', datacenter '%s'", name, dvs, datacenter
-    )
+    log.info("Running state %s on DVS '%s', datacenter '%s'", name, dvs, datacenter)
     changes_required = False
     ret = {"name": name, "changes": {}, "result": None, "comment": None}
     comments = []

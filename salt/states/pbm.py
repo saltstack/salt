@@ -543,9 +543,9 @@ def default_storage_policy_assigned(name, policy, datastore):
                 __salt__["vsphere.assign_default_storage_policy_to_datastore"](
                     policy=policy, datastore=datastore, service_instance=si
                 )
-                comment = (
-                    "Storage policy '{} was assigned to datastore '{}'."
-                ).format(policy, name)
+                comment = ("Storage policy '{} was assigned to datastore '{}'.").format(
+                    policy, name
+                )
         log.info(comment)
     except CommandExecutionError as exc:
         log.error("Error: {}".format(exc))

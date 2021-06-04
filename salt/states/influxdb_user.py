@@ -85,9 +85,9 @@ def present(name, passwd, admin=False, grants=None, **client_args):
                     admin
                     != __salt__["influxdb.user_info"](name, **client_args)["admin"]
                 ):
-                    ret[
-                        "comment"
-                    ] = "Failed to set admin privilege to user {}".format(name)
+                    ret["comment"] = "Failed to set admin privilege to user {}".format(
+                        name
+                    )
                     ret["result"] = False
                     return ret
             ret["changes"]["Admin privileges"] = admin

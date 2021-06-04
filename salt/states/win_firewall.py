@@ -57,9 +57,7 @@ def disabled(name="allprofiles"):
     current_config = __salt__["firewall.get_config"]()
     if name != "allprofiles" and profile_map[name] not in current_config:
         ret["result"] = False
-        ret["comment"] = "Profile {} does not exist in firewall.get_config".format(
-            name
-        )
+        ret["comment"] = "Profile {} does not exist in firewall.get_config".format(name)
         return ret
 
     for key in current_config:
@@ -218,9 +216,7 @@ def enabled(name="allprofiles"):
     current_config = __salt__["firewall.get_config"]()
     if name != "allprofiles" and profile_map[name] not in current_config:
         ret["result"] = False
-        ret["comment"] = "Profile {} does not exist in firewall.get_config".format(
-            name
-        )
+        ret["comment"] = "Profile {} does not exist in firewall.get_config".format(name)
         return ret
 
     for key in current_config:

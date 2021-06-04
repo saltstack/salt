@@ -123,9 +123,7 @@ def _talk2modjk(name, lbn, target, action, profile="default", tgt_type="glob"):
     status = _worker_status(target, name, action_map[action], profile, tgt_type)
     if not status["result"]:
         ret["result"] = False
-        ret["comment"] = (
-            "no servers answered the published command modjk.worker_status"
-        )
+        ret["comment"] = "no servers answered the published command modjk.worker_status"
         return ret
     if status["errors"]:
         ret["result"] = False
@@ -135,9 +133,9 @@ def _talk2modjk(name, lbn, target, action, profile="default", tgt_type="glob"):
         )
         return ret
     if not status["wrong_state"]:
-        ret["comment"] = (
-            "the worker is in the desired activation state on all the balancers"
-        )
+        ret[
+            "comment"
+        ] = "the worker is in the desired activation state on all the balancers"
         return ret
     else:
         ret["comment"] = "the action {} will be sent to the balancers {}".format(
