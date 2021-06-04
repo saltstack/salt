@@ -577,9 +577,7 @@ def file(
     source = name
 
     if not replace and os.stat(cron_path).st_size > 0:
-        ret["comment"] = "User {} already has a crontab. No changes made".format(
-            user
-        )
+        ret["comment"] = "User {} already has a crontab. No changes made".format(user)
         os.unlink(cron_path)
         return ret
 

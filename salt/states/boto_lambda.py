@@ -678,9 +678,7 @@ def function_absent(
     )
     if not r["deleted"]:
         ret["result"] = False
-        ret["comment"] = "Failed to delete function: {}.".format(
-            r["error"]["message"]
-        )
+        ret["comment"] = "Failed to delete function: {}.".format(r["error"]["message"])
         return ret
     ret["changes"]["old"] = {"function": FunctionName}
     ret["changes"]["new"] = {"function": None}
@@ -764,9 +762,7 @@ def alias_present(
         )
         if not r.get("created"):
             ret["result"] = False
-            ret["comment"] = "Failed to create alias: {}.".format(
-                r["error"]["message"]
-            )
+            ret["comment"] = "Failed to create alias: {}.".format(r["error"]["message"])
             return ret
         _describe = __salt__["boto_lambda.describe_alias"](
             FunctionName, Name, region=region, key=key, keyid=keyid, profile=profile

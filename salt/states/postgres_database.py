@@ -224,7 +224,5 @@ def absent(
             return ret
 
     # fallback
-    ret["comment"] = "Database {} is not present, so it cannot be removed".format(
-        name
-    )
+    ret["comment"] = "Database {} is not present, so it cannot be removed".format(name)
     return ret

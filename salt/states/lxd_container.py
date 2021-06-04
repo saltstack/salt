@@ -315,8 +315,7 @@ def present(
             if __opts__["test"]:
                 changes["running"] = "Would start the container"
                 return _unchanged(
-                    ret,
-                    'Container "{}" would get changed and started.'.format(name),
+                    ret, 'Container "{}" would get changed and started.'.format(name),
                 )
             else:
                 container.start(wait=True)
@@ -326,8 +325,7 @@ def present(
             if __opts__["test"]:
                 changes["stopped"] = "Would stopped the container"
                 return _unchanged(
-                    ret,
-                    'Container "{}" would get changed and stopped.'.format(name),
+                    ret, 'Container "{}" would get changed and stopped.'.format(name),
                 )
             else:
                 container.stop(wait=True)
@@ -573,9 +571,9 @@ def frozen(name, start=True, remote_addr=None, cert=None, key=None, verify_cert=
     if not is_running and not start:
         return _error(
             ret,
-            (
-                'Container "{}" is not running and start is False, cannot freeze it'
-            ).format(name),
+            'Container "{}" is not running and start is False, cannot freeze it'.format(
+                name
+            ),
         )
 
     elif not is_running and start:
