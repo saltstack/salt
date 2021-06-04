@@ -286,20 +286,24 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
             return
 
         log.debug("Closing %s instance", self.__class__.__name__)
-        self._closing = True
-        if hasattr(self, "message_client"):
-            self.message_client.close()
+        try:
+            self._closing = True
+            if hasattr(self, "message_client"):
+                self.message_client.close()
 
-        # Remove the entry from the instance map so that a closed entry may not
-        # be reused.
-        # This forces this operation even if the reference count of the entry
-        # has not yet gone to zero.
-        if self._io_loop in self.__class__.instance_map:
-            loop_instance_map = self.__class__.instance_map[self._io_loop]
-            if self._instance_key in loop_instance_map:
-                del loop_instance_map[self._instance_key]
-            if not loop_instance_map:
-                del self.__class__.instance_map[self._io_loop]
+            # Remove the entry from the instance map so that a closed entry may not
+            # be reused.
+            # This forces this operation even if the reference count of the entry
+            # has not yet gone to zero.
+            if self._io_loop in self.__class__.instance_map:
+                loop_instance_map = self.__class__.instance_map[self._io_loop]
+                if self._instance_key in loop_instance_map:
+                    del loop_instance_map[self._instance_key]
+                if not loop_instance_map:
+                    del self.__class__.instance_map[self._io_loop]
+        except FileNotFoundError:
+            log.warning("*** Caught FileNotFound", exc_info=True)
+
 
     # pylint: disable=W1701
     def __del__(self):
