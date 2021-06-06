@@ -739,10 +739,8 @@ class PollIOLoop(IOLoop):
         self._events.pop(fd, None)
         try:
             self._impl.unregister(fd)
-        except Exception:
-            import traceback
+        except KeyError:
             gen_log.debug("Error deleting fd from IOLoop", exc_info=True)
-            gen_log.debug("TB is %s", "\n".join(traceback.format_stack()))
 
     def set_blocking_signal_threshold(self, seconds, action):
         if not hasattr(signal, "setitimer"):
