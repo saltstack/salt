@@ -41,6 +41,27 @@ class Collector(salt.utils.process.SignalHandlingProcess):
         self.started = multiprocessing.Event()
         self.running = multiprocessing.Event()
 
+    def __getstate__(self):
+        state = super().__getstate__()
+        state["args"] = [
+            self.minion_config,
+            self.pub_uri,
+            self.aes_key,
+        ]
+        state["kwargs"] = {"timeout": self.timeout, "zmq_filtering": self.zmq_filtering}
+        state["results"] = self.results
+        state["stopped"] = self.stopped
+        state["started"] = self.started
+        state["running"] = self.running
+        return state
+
+    def __setstate__(self, state):
+        super().__setstate__(state)
+        for key in ("stopped", "started", "running"):
+            setattr(self, key, state[key])
+        for result in state["results"]:
+            self.results.append(result)
+
     def run(self):
         """
         Gather results until then number of seconds specified by timeout passes
