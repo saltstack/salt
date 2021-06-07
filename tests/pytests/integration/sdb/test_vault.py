@@ -17,6 +17,7 @@ log = logging.getLogger(__name__)
 
 pytestmark = [
     pytest.mark.skip_if_binaries_missing("dockerd", "vault", "getent"),
+    pytest.mark.destructive_test,
 ]
 
 
@@ -58,6 +59,14 @@ def vault_container_version(request, salt_call_cli, vault_port):
     vault_version = request.param
     container_started = False
     try:
+        # Prune all existing docker networks so there is no potential for
+        # conflicts. This is attempting to resolve flakiness we're seeing with
+        # errors like 'bind: address already in use'. We may be able to remove
+        # this if we still see those errors.
+        ret = salt_call_cli.run("docker.prune", networks=True)
+        assert ret.exitcode == 0
+        assert ret.json
+
         vault_binary = salt.utils.path.which("vault")
         config = {
             "backend": {"file": {"path": "/vault/file"}},

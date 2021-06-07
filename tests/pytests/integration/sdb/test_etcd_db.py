@@ -10,6 +10,7 @@ log = logging.getLogger(__name__)
 
 pytestmark = [
     pytest.mark.skip_if_binaries_missing("dockerd"),
+    pytest.mark.destructive_test,
 ]
 
 
@@ -17,6 +18,14 @@ pytestmark = [
 def etc_docker_container(salt_call_cli, sdb_etcd_port):
     container_started = False
     try:
+        # Prune all existing docker networks so there is no potential for
+        # conflicts. This is attempting to resolve flakiness we're seeing with
+        # errors like 'bind: address already in use'. We may be able to remove
+        # this if we still see those errors.
+        ret = salt_call_cli.run("docker.prune", networks=True)
+        assert ret.exitcode == 0
+        assert ret.json
+
         ret = salt_call_cli.run(
             "state.single", "docker_image.present", name="bitnami/etcd", tag="latest"
         )
