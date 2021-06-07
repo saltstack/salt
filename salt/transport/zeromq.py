@@ -294,12 +294,14 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
         # be reused.
         # This forces this operation even if the reference count of the entry
         # has not yet gone to zero.
-        if self._io_loop in self.__class__.instance_map:
-            loop_instance_map = self.__class__.instance_map[self._io_loop]
-            if self._instance_key in loop_instance_map:
-                del loop_instance_map[self._instance_key]
+        io_loop = self._io_loop
+        instance_key = self._instance_key
+        instance_map = self.__class__.instance_map
+        if io_loop in instance_map:
+            loop_instance_map = instance_map[io_loop]
+            loop_instance_map.pop(instance_key, None)
             if not loop_instance_map:
-                del self.__class__.instance_map[self._io_loop]
+                instance_map.pop(io_loop)
 
     # pylint: disable=W1701
     def __del__(self):
