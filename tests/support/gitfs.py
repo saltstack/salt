@@ -452,7 +452,8 @@ class GitPillarTestBase(GitTestBase, LoaderModuleMockMixin):
         self.admin_repo_backup = "{}.backup".format(self.admin_repo)
 
         for dirname in (self.bare_repo, self.admin_repo):
-            shutil.rmtree(dirname, ignore_errors=True)
+            if os.path.exists(dirname):
+                shutil.rmtree(dirname)
 
         if os.path.exists(self.bare_repo_backup) and os.path.exists(
             self.admin_repo_backup
@@ -462,10 +463,22 @@ class GitPillarTestBase(GitTestBase, LoaderModuleMockMixin):
             return
 
         # Create bare repo
-        self.run_function("git.init", [self.bare_repo], user=user, bare=True)
+        create_repo = self.run_function(
+            "git.init", [self.bare_repo], user=user, bare=True
+        )
 
         # Clone bare repo
-        self.run_function("git.clone", [self.admin_repo], url=self.bare_repo, user=user)
+        clone_repo = self.run_function(
+            "git.clone", [self.admin_repo], url=self.bare_repo, user=user
+        )
+
+        if not any([create_repo, clone_repo]):
+            raise AssertionError("Unable to create and clone the bare repo")
+        for repo_dir in [self.bare_repo, self.admin_repo]:
+            if not os.path.exists(repo_dir):
+                raise AssertionError(
+                    "The directory {} was not created".format(repo_dir)
+                )
 
         def _push(branch, message):
             self.run_function("git.add", [self.admin_repo, "."], user=user)
