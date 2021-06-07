@@ -373,6 +373,23 @@ def append(name, table="filter", family="ipv4", **kwargs):
     family
         Network family, ipv4 or ipv6.
 
+    save
+        If set to a true value, the new iptables rules for the given family
+        will be saved to a file.
+
+        If the value is True, rules are saved to an OS-dependent file
+        that will be loaded during system startup, resulting in the
+        firewall rule remaining active across reboots if possible.
+
+        Note that loading the iptables rules during system startup
+        may require non-default packages to be installed.
+        On Debian-derived systems, the iptables-persistent
+        package is required.
+
+        If the value is a string, it is taken to be a filename to which
+        the rules will be saved. Arranging for the rules to be loaded
+        during system startup must be done separately.
+
     All other arguments are passed in with the same name as the long option
     that would normally be used for iptables, with one exception: ``--state`` is
     specified as `connstate` instead of `state` (not to be confused with
@@ -502,6 +519,10 @@ def insert(name, table="filter", family="ipv4", **kwargs):
         The numerical representation of where the rule should be inserted into
         the chain. Note that ``-1`` is not a supported position value.
 
+    save
+        If set to a true value, the new iptables rules for the given family
+        will be saved to a file. See the ``append`` state for more details.
+
     All other arguments are passed in with the same name as the long option
     that would normally be used for iptables, with one exception: ``--state`` is
     specified as `connstate` instead of `state` (not to be confused with
@@ -629,6 +650,10 @@ def delete(name, table="filter", family="ipv4", **kwargs):
     family
         Networking family, either ipv4 or ipv6
 
+    save
+        If set to a true value, the new iptables rules for the given family
+        will be saved to a file. See the ``append`` state for more details.
+
     All other arguments are passed in with the same name as the long option
     that would normally be used for iptables, with one exception: ``--state`` is
     specified as `connstate` instead of `state` (not to be confused with
@@ -738,6 +763,10 @@ def set_policy(name, table="filter", family="ipv4", **kwargs):
 
     policy
         The requested table policy
+
+    save
+        If set to a true value, the new iptables rules for the given family
+        will be saved to a file. See the ``append`` state for more details.
 
     """
     ret = {"name": name, "changes": {}, "result": None, "comment": ""}
