@@ -362,6 +362,8 @@ def append(name, table="filter", family="ipv4", **kwargs):
     .. versionadded:: 0.17.0
 
     Add a rule to the end of the specified chain.
+    If the rule is already present anywhere in the chain, its position is
+    not changed.
 
     name
         A user-defined name to call this rule by in another part of a state or
@@ -503,7 +505,8 @@ def insert(name, table="filter", family="ipv4", **kwargs):
     """
     .. versionadded:: 2014.1.0
 
-    Insert a rule into a chain
+    Insert a rule into a chain. If the rule is already present anywhere
+    in the chain, its position is not changed.
 
     name
         A user-defined name to call this rule by in another part of a state or
@@ -638,7 +641,8 @@ def delete(name, table="filter", family="ipv4", **kwargs):
     """
     .. versionadded:: 2014.1.0
 
-    Delete a rule to a chain
+    Delete a rule from a chain if present. If the rule is already absent,
+    this is not an error and nothing is changed.
 
     name
         A user-defined name to call this rule by in another part of a state or
