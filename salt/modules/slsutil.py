@@ -4,6 +4,7 @@ Utility functions for use with or in SLS files
 
 
 import os
+import posixpath
 import textwrap
 
 import salt.exceptions
@@ -540,7 +541,8 @@ def findup(startpath, filenames, saltenv="base"):
 
     ..versionadded:: 3004
 
-    :param str startpath: The fileserver path from which to begin the search
+    :param str startpath: The fileserver path from which to begin the search.
+        An empty string refers to the state tree root.
     :param filenames: A filename or list of filenames to search for. Searching for
         directory names is also supported.
     :param str saltenv: The fileserver environment to search. Default: ``base``
@@ -561,12 +563,12 @@ def findup(startpath, filenames, saltenv="base"):
 
     # Normalize the path
     if startpath:
-        startpath = os.path.normpath(startpath)
+        startpath = posixpath.normpath(startpath)
 
     # Verify the cwd is a valid path in the state tree
     if startpath and not path_exists(startpath, saltenv):
         raise salt.exceptions.SaltInvocationError(
-            "Path argument must be a valid path in the state tree"
+            "Starting path not found in the state tree: {}".format(startpath)
         )
 
     # Ensure that patterns is a string or list of strings
