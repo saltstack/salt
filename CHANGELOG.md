@@ -7,6 +7,18 @@ Versions are `MAJOR.PATCH`.
 
 # Changelog
 
+Salt 3003.1 (2021-06-08)
+========================
+
+Fixed
+-----
+
+- Fixed race condition in batch logic. Added `listen` option to `LocalClient` to prevent event subscriber from purging cached events during batch iteration. (#56273)
+- Fixed dependencies for Amazon Linux 2 on https://repo.saltproject.io since Amazon Linux 2 now provides some of the python libraries in their repos. (#59982)
+- IPCMessageSubscriber objects expose their connect method as a coroutine so they
+  can be wrapped by SyncWrapper. (#60049)
+
+
 Salt 3003.1 (2021-05-21)
 ========================
 

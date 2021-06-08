@@ -1,1 +1,0 @@
-Fixed race condition in batch logic. Added `listen` option to `LocalClient` to prevent event subscriber from purging cached events during batch iteration.
