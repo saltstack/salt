@@ -122,9 +122,9 @@ def pytest_tempdir_temproot():
     # Avoid ${TMPDIR} and gettempdir() on MacOS as they yield a base path too long
     # for unix sockets: ``error: AF_UNIX path too long``
     # Gentoo Portage prefers ebuild tests are rooted in ${TMPDIR}
-    if saltfactories.utils.platform.is_windows():
+    if salt.utils.platform.is_windows():
         tempdir = "c:/temp"
-    elif saltfactories.utils.platform.is_darwin():
+    elif salt.utils.platform.is_darwin():
         tempdir = "/tmp"
     else:
         tempdir = os.environ.get("TMPDIR") or tempfile.gettempdir()
