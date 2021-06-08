@@ -1191,6 +1191,13 @@ def get_tenancy(vm_):
     """
     return config.get_cloud_config_value("tenancy", vm_, __opts__, search_global=False)
 
+def get_host_id(vm_):
+    '''
+    Returns the dedicated_host_id.
+    '''
+    return config.get_cloud_config_value(
+        'host_id', vm_, __opts__, search_global=False
+    )
 
 def get_imageid(vm_):
     """
@@ -1892,14 +1899,17 @@ def request_instance(vm_=None, call=None):
     az_ = get_availability_zone(vm_)
     if az_ is not None:
         params[spot_prefix + "Placement.AvailabilityZone"] = az_
-
+        
     tenancy_ = get_tenancy(vm_)
+    host_id = get_host_id(vm_)
     if tenancy_ is not None:
         if spot_config is not None:
             raise SaltCloudConfigError(
                 "Spot instance config for {} does not support "
                 "specifying tenancy.".format(vm_["name"])
             )
+        if tenancy_ == 'host' and host_id is not None:
+           params["Placement.HostId"] = host_id
         params["Placement.Tenancy"] = tenancy_
 
     subnetid_ = get_subnetid(vm_)
