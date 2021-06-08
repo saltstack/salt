@@ -78,6 +78,15 @@ set up in the cloud configuration at
       protocol: 'http'
       port: 80
 
+    vcenter03-do-not-verify:
+      driver: vmware
+      user: 'DOMAIN\user'
+      password: 'verybadpass'
+      url: 'vcenter01.domain.com'
+      protocol: 'https'
+      port: 443
+      verify_ssl: False
+
     esx01:
       driver: vmware
       user: 'admin'
@@ -219,6 +228,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
       plain_text: True
       win_installer: /root/Salt-Minion-2015.8.4-AMD64-Setup.exe
       win_user_fullname: Windows User
+      verify_ssl: False
 
 ``provider``
     Enter the name that was specified when the cloud provider config was created.
@@ -559,6 +569,10 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
     Specify a list of commands to run on first login to a windows minion
 
     https://www.vmware.com/support/developer/vc-sdk/visdk25pubs/ReferenceGuide/vim.vm.customization.GuiRunOnce.html
+
+``verify_ssl``
+    Verify the vmware ssl certificate. The default is True.
+
 
 Cloning a VM
 ============
