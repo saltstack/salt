@@ -861,6 +861,89 @@ Function getExistingInstallation
 
 FunctionEnd
 
+Function getExistingInstallation
+    # Try to detect an existing installation. There are three possible scenarios
+    # 1. Existing New Method Installation
+    # 2. Existing Old Method Installation
+    # 3. New Installation
+    # The results of this function will determine if the user is allowed to set
+    # the install location in the GUI. If there is an existing installation
+    # present, the location picker will be grayed out
+    # This function also sets the RootDir and INSTDIR variables used by the
+    # installer.
+
+    # Reset ExistingInstallation
+    StrCpy $ExistingInstallation 0
+
+    # Get ProgramFiles
+    # Use RunningX64 here to get the Architecture for the system running the
+    # installer. CPUARCH is defined when the installer is built and is based on
+    # the machine that built the installer, not the target system
+    # There are 3 scenarios here:
+    ${If} ${RunningX64}
+        ${If} ${CPUARCH} == "AMD64"
+            # 64 bit Salt on 64 bit system (C:\Program Files)
+            StrCpy $INSTDIR "$ProgramFiles64\Salt Project\Salt"
+        ${Else}
+            # 32 bit Salt on 64 bit system (C:\Program Files (x86))
+            StrCpy $INSTDIR "$ProgramFiles32\Salt Project\Salt"
+        ${EndIf}
+    ${Else}
+        # 32 bit Salt on 32 bit system (C:\Program Files)
+        StrCpy $INSTDIR "$ProgramFiles\Salt Project\Salt"
+    ${EndIf}
+
+    # This makes the $APPDATA variable point to the ProgramData folder instead
+    # of the current user's roaming AppData folder
+    SetShellVarContext all
+
+    # Set default location of for salt config
+    StrCpy $RootDir "$APPDATA\Salt Project\Salt"
+
+    # The NSIS installer is a 32bit application and will use the WOW6432Node in
+    # the registry by default. We need to look in the 64 bit location on 64 bit
+    # systems
+    ${If} ${RunningX64}
+        # This would only apply if we are installing the 64 bit version of Salt
+        ${If} ${CPUARCH} == "AMD64"
+            # https://nsis.sourceforge.io/Docs/Chapter4.html#setregview
+            SetRegView 64
+        ${EndIf}
+    ${EndIf}
+
+    # Check for existing new method installation
+    # Look for `install_dir` in HKLM\SOFTWARE\Salt Project\Salt
+    ReadRegStr $R0 HKLM "SOFTWARE\Salt Project\Salt" "install_dir"
+    StrCmp $R0 "" checkOldInstallation
+    StrCpy $ExistingInstallation 1
+    # Set INSTDIR
+    StrCpy $INSTDIR $R0
+    # Set RootDir, if defined
+    ReadRegStr $R0 HKLM "SOFTWARE\Salt Project\Salt" "root_dir"
+    StrCmp $R0 "" finished
+    StrCpy $RootDir $R0
+    Goto finished
+
+    # Check for existing old method installation
+    # Look for `python.exe` in C:\salt\bin
+    checkOldInstallation:
+    IfFileExists "C:\salt\bin\python.exe" 0 newInstallation
+    StrCpy $ExistingInstallation 1
+    StrCpy $INSTDIR "C:\salt"
+    StrCpy $RootDir "C:\salt"
+    Goto finished
+
+    # This is a new installation
+    # Check if custom location was passed via command line
+    newInstallation:
+    ${IfNot} $CustomLocation == ""
+        StrCpy $INSTDIR $CustomLocation
+    ${EndIf}
+
+    finished:
+
+FunctionEnd
+
 
 # Time Stamp Definition
 Function BackupExistingConfig
