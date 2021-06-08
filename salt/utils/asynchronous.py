@@ -1,18 +1,15 @@
-# -*- coding: utf-8 -*-
 """
 Helpers/utils for working with tornado asynchronous stuff
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
+import concurrent.futures
 import contextlib
 import logging
-import sys
 import threading
 
 import salt.ext.tornado.concurrent
 import salt.ext.tornado.ioloop
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -27,10 +24,11 @@ def current_ioloop(io_loop):
     try:
         yield
     finally:
+        io_loop.clear_current()
         orig_loop.make_current()
 
 
-class SyncWrapper(object):
+class SyncWrapper:
     """
     A wrapper to make Async classes synchronous
 
@@ -88,24 +86,28 @@ class SyncWrapper(object):
         return "<SyncWrapper(cls={})".format(self.cls)
 
     def close(self):
-        for method in self._close_methods:
-            if method in self._async_methods:
-                method = self._wrap(method)
-            else:
+        try:
+            for method in self._close_methods:
+                if method in self._async_methods:
+                    method = self._wrap(method)
+                else:
+                    try:
+                        method = getattr(self.obj, method)
+                    except AttributeError:
+                        log.error("No sync method %s on object %r", method, self.obj)
+                        continue
                 try:
-                    method = getattr(self.obj, method)
+                    method()
                 except AttributeError:
-                    log.error("No sync method %s on object %r", method, self.obj)
-                    continue
-            try:
-                method()
-            except AttributeError:
-                log.error("No async method %s on object %r", method, self.obj)
-            except Exception:  # pylint: disable=broad-except
-                log.exception("Exception encountered while running stop method")
-        io_loop = self.io_loop
-        io_loop.stop()
-        io_loop.close(all_fds=True)
+                    log.error("No async method %s on object %r", method, self.obj)
+                except Exception:  # pylint: disable=broad-except
+                    log.exception("Exception encountered while running stop method")
+        finally:
+            io_loop = self.io_loop
+            # Drop the reference to the io_loop
+            self.io_loop = None
+            # io_loop.stop()
+            io_loop.close(all_fds=True)
 
     def __getattr__(self, key):
         if key in self._async_methods:
@@ -114,30 +116,31 @@ class SyncWrapper(object):
 
     def _wrap(self, key):
         def wrap(*args, **kwargs):
-            results = []
+            future = concurrent.futures.Future()
             thread = threading.Thread(
-                target=self._target, args=(key, args, kwargs, results, self.io_loop),
+                target=self._target, args=(key, args, kwargs, future, self.io_loop),
             )
             thread.start()
             thread.join()
-            if results[0]:
-                return results[1]
-            else:
-                six.reraise(*results[1])
+            exc = future.exception()
+            if exc is not None:
+                raise exc from None
+            return future.result()
 
         return wrap
 
-    def _target(self, key, args, kwargs, results, io_loop):
+    def _target(self, key, args, kwargs, future, io_loop):
+        io_loop.make_current()
         try:
             result = io_loop.run_sync(lambda: getattr(self.obj, key)(*args, **kwargs))
-            results.append(True)
-            results.append(result)
+            future.set_result(result)
         except Exception as exc:  # pylint: disable=broad-except
-            results.append(False)
-            results.append(sys.exc_info())
+            future.set_exception(exc)
+        finally:
+            io_loop.clear_current()
 
     def __enter__(self):
         return self
 
-    def __exit__(self, exc_type, exc_val, tb):
+    def __exit__(self, *_):
         self.close()
