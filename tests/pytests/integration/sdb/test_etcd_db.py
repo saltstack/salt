@@ -42,6 +42,12 @@ def etc_docker_container(salt_call_cli, sdb_etcd_port):
             environment={"ALLOW_NONE_AUTHENTICATION": "yes", "ETCD_ENABLE_V2": "true"},
             cap_add="IPC_LOCK",
         )
+        if ret.exitcode != 0:
+            proc = subprocess.run(
+                ['netstat', '-plntu'],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
         assert ret.exitcode == 0
         assert ret.json
         state_run = next(iter(ret.json.values()))
