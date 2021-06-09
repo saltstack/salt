@@ -14,7 +14,7 @@ pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.skip_on_freebsd(reason="No Docker on FreeBSD available"),
     pytest.mark.skip_if_binaries_missing(
-        "docker", "dockerd", message="Docker not installed"
+        "docker", "dockerd", reason="Docker not installed"
     ),
 ]
 
