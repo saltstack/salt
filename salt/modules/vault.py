@@ -411,3 +411,31 @@ def clear_token_cache():
     else:
         log.info("Attempted to delete vault cache file, but it does not exist.")
         return False
+
+def sign_host_key(path, public_key_file=None, **kwargs):
+    """
+    Sign the provided SSH host key with the provided vault path and role.
+    The vault policy used must allow this.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+            salt '*' vault.sign_host_key "ssh/sign/hostrole" "/etc/ssh/ssh_host_rsa_key.pub"
+    """
+    log.debug("Signing ssh key with vault ca for %s at %s", __grains__["id"], path)
+    data = {x: y for x, y in kwargs.items() if not x.startswith("__")}
+    data['cert_type'] = 'host' if 'cert_type' not in data else data['cert_type']
+    if public_key_file:
+        with __utils__["files.fopen"](public_key_file, "r") as contents:
+            data['public_key'] = contents.read()
+    try:
+        url = "v1/{}".format(path)
+        response = __utils__["vault.make_request"]("POST", url, json=data)
+        if response.status_code != 200:
+            response.raise_for_status()
+        data = response.json()["data"]
+        return data['signed_key']
+    except Exception as err:  # pylint: disable=broad-except
+        log.error("Failed to write secret! %s: %s", type(err).__name__, err)
+        return False
