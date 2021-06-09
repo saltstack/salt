@@ -373,20 +373,41 @@ def test_pkg_info(pkg, info_pkgs):
         assert pkg_name in ret
 
 
+@pytest.fixture
+def pending_upgrades(pkg):
+    hold_pkgs = []
+    _pending_upgrades = pkg.list_upgrades()
+    log.debug("Pending upgrades: %s", _pending_upgrades)
+    if not pending_upgrades:
+        pytest.skip("No updates available for this machine. Skipping test.")
+
+    if salt.utils.platform.is_darwin():
+        # We don't want to upgrade python
+        for pkg_name in _pending_upgrades:
+            if pkg_name in ("python", "python3") or pkg_name.startswith("python3@"):
+                hold_pkgs.append(pkg_name)
+        if hold_pkgs:
+            log.info("Holding the following packages before the test: %s", hold_pkgs)
+            ret = pkg.hold(pkgs=hold_pkgs)
+            assert ret
+
+    try:
+        yield _pending_upgrades
+    finally:
+        if hold_pkgs:
+            log.info("Un-holding the following packages after the test: %s", hold_pkgs)
+            pkg.unhold(pkgs=hold_pkgs)
+
+
 @pytest.mark.slow_test
 @pytest.mark.destructive_test
 @pytest.mark.requires_network
 @pytest.mark.usefixtures("show_output_on_console")
 @pytest.mark.requires_salt_modules("pkg.upgrade", "pkg.list_upgrades")
-def test_pkg_upgrade_has_pending_upgrades(pkg):
+def test_pkg_upgrade_has_pending_upgrades(pkg, pending_upgrades):
     """
     Test running a system upgrade when there are packages that need upgrading
     """
-    pending_upgrades = pkg.list_upgrades()
-    log.debug("Pending upgrades: %s", pending_upgrades)
-    if not pending_upgrades:
-        pytest.skip("No updates available for this machine. Skipping pkg.upgrade test.")
-
     ret = pkg.upgrade()
     for pkg_name in ret:
         if pkg_name in pending_upgrades:
