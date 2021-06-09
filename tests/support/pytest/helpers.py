@@ -4,12 +4,15 @@
 
     PyTest helpers functions
 """
+import datetime
 import logging
 import os
 import pprint
 import re
 import shutil
 import textwrap
+import threading
+import time
 import types
 import warnings
 from contextlib import contextmanager
@@ -402,6 +405,49 @@ def shell_test_false():
     if salt.utils.platform.is_darwin() or salt.utils.platform.is_freebsd():
         return "/usr/bin/false"
     return "/bin/false"
+
+
+@attr.s(frozen=True)
+class ShowOutputOnConsole:
+    """
+    There are some tests which take a really long time, some of which show no output
+    to the console.
+    CI jobs are set to cancel the test run if not output is seen for X minutes.
+    This class just logs at warning level every X minutes
+    """
+
+    print_minutes = attr.ib(default=5)
+    sleep_seconds = attr.ib(default=0.1)
+    max_minutes = attr.ib(default=90)
+    running = attr.ib(init=False, repr=False, factory=threading.Event)
+    thread = attr.ib(init=False, repr=False)
+
+    @thread.default
+    def _thread_default(self):
+        return threading.Thread(target=self.print_to_console)
+
+    def print_to_console(self):
+        start = utcnow = datetime.datetime.utcnow()
+        max_time = utcnow + datetime.timedelta(minutes=self.max_minutes)
+        next_print = utcnow + datetime.timedelta(minutes=self.print_minutes)
+        while self.running.is_set():
+            utcnow = datetime.datetime.utcnow()
+            if utcnow > max_time:
+                # It already took too long
+                self.running.clear()
+                break
+            if utcnow > next_print:
+                next_print = utcnow + datetime.timedelta(minutes=self.print_minutes)
+                log.warning("Test running since %s(%s)", start, utcnow - start)
+            time.sleep(self.sleep_seconds)
+
+    def __enter__(self):
+        self.running.set()
+        self.thread.start()
+        return self
+
+    def __exit__(self, *_):
+        self.running.clear()
 
 
 @attr.s(kw_only=True, frozen=True)
