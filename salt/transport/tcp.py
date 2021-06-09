@@ -13,7 +13,6 @@ import threading
 import time
 import traceback
 import urllib.parse as urlparse
-import weakref
 
 import salt.crypt
 import salt.exceptions
@@ -221,9 +220,6 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
     Note: this class returns a singleton
     """
 
-    # This class is only a singleton per minion/master pair
-    # mapping of io_loop -> {key -> channel}
-    instance_map = weakref.WeakKeyDictionary()
     async_methods = [
         "crypted_transfer_decode_dictentry",
         "_crypted_transfer",
@@ -234,62 +230,7 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
         "close",
     ]
 
-    def __new__(cls, opts, **kwargs):
-        """
-        Only create one instance of channel per __key()
-        """
-        # do we have any mapping for this io_loop
-        io_loop = kwargs.get("io_loop") or salt.ext.tornado.ioloop.IOLoop.current()
-        if io_loop not in cls.instance_map:
-            cls.instance_map[io_loop] = weakref.WeakValueDictionary()
-        loop_instance_map = cls.instance_map[io_loop]
-
-        key = cls.__key(opts, **kwargs)
-        obj = loop_instance_map.get(key)
-        if obj is None:
-            log.debug("Initializing new AsyncTCPReqChannel for %s", key)
-            # we need to make a local variable for this, as we are going to store
-            # it in a WeakValueDictionary-- which will remove the item if no one
-            # references it-- this forces a reference while we return to the caller
-            obj = object.__new__(cls)
-            obj.__singleton_init__(opts, **kwargs)
-            obj._instance_key = key
-            loop_instance_map[key] = obj
-            obj._refcount = 1
-            obj._refcount_lock = threading.RLock()
-        else:
-            with obj._refcount_lock:
-                obj._refcount += 1
-            log.debug("Re-using AsyncTCPReqChannel for %s", key)
-        return obj
-
-    @classmethod
-    def __key(cls, opts, **kwargs):
-        if "master_uri" in kwargs:
-            opts["master_uri"] = kwargs["master_uri"]
-        return (
-            opts["pki_dir"],  # where the keys are stored
-            opts["id"],  # minion ID
-            opts["master_uri"],
-            kwargs.get("crypt", "aes"),  # TODO: use the same channel for crypt
-        )
-
-    @classmethod
-    def force_close_all_instances(cls):
-        """
-        Will force close all instances
-        :return: None
-        """
-        for weak_dict in list(cls.instance_map.values()):
-            for instance in list(weak_dict.values()):
-                instance.close()
-
-    # has to remain empty for singletons, since __init__ will *always* be called
     def __init__(self, opts, **kwargs):
-        pass
-
-    # an init for the singleton instance to call
-    def __singleton_init__(self, opts, **kwargs):
         self.opts = dict(opts)
 
         self.serial = salt.payload.Serial(self.opts)
@@ -323,37 +264,14 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
         if self._closing:
             return
 
-        if self._refcount > 1:
-            # Decrease refcount
-            with self._refcount_lock:
-                self._refcount -= 1
-            log.debug(
-                "This is not the last %s instance. Not closing yet.",
-                self.__class__.__name__,
-            )
-            return
-
-        log.debug("Closing %s instance", self.__class__.__name__)
+        log.debug("Closing %s instance(id: %s)", self.__class__.__name__, id(self))
         self._closing = True
         self.message_client.close()
-
-        # Remove the entry from the instance map so that a closed entry may not
-        # be reused.
-        # This forces this operation even if the reference count of the entry
-        # has not yet gone to zero.
-        if self.io_loop in self.__class__.instance_map:
-            loop_instance_map = self.__class__.instance_map[self.io_loop]
-            if self._instance_key in loop_instance_map:
-                del loop_instance_map[self._instance_key]
-            if not loop_instance_map:
-                del self.__class__.instance_map[self.io_loop]
+        self.message_client = None
+        self.io_loop = None
 
     # pylint: disable=W1701
     def __del__(self):
-        with self._refcount_lock:
-            # Make sure we actually close no matter if something
-            # went wrong with our ref counting
-            self._refcount = 1
         try:
             self.close()
         except OSError as exc:
