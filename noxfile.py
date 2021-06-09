@@ -780,11 +780,21 @@ def _pytest(session, coverage, cmd_args):
                 "-m",
                 "pytest",
                 "--showlocals",
+                "--strict-config",
+                "--strict-markers",
                 *cmd_args,
                 env=env
             )
         else:
-            session.run("python", "-m", "pytest", *cmd_args, env=env)
+            session.run(
+                "python",
+                "-m",
+                "pytest",
+                "--strict-config",
+                "--strict-markers",
+                *cmd_args,
+                env=env
+            )
     except CommandFailed:  # pylint: disable=try-except-raise
         # Not rerunning failed tests for now
         raise
