@@ -36,7 +36,7 @@ import salt.utils.path
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
 
-INVALID_RESPONSE = "We did not get any expectable answer from buildout"
+INVALID_RESPONSE = "Unexpected response from buildout"
 VALID_RESPONSE = ""
 NOTSET = object()
 HR = "{}\n".format("-" * 80)
@@ -109,7 +109,7 @@ def _salt_callback(func, **kwargs):
                             out=out.get("out", out),
                         )
         except Exception:  # pylint: disable=broad-except
-            trace = traceback.format_exc(None)
+            trace = traceback.format_exc()
             LOG.error(trace)
             _invalid(status)
         LOG.clear()
