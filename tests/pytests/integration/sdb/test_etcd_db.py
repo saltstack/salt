@@ -3,6 +3,7 @@ Integration tests for the etcd modules
 """
 
 import logging
+import subprocess
 
 import pytest
 
