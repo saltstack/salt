@@ -192,7 +192,7 @@ kubernetes==3.0.0
     # via -r requirements/static/ci/common.in
 libnacl==1.7.2
     # via -r requirements/static/pkg/py3.7/windows.txt
-lxml==4.6.2
+lxml==4.6.3
     # via -r requirements/static/pkg/py3.7/windows.txt
 mako==1.1.4
     # via
@@ -276,9 +276,11 @@ pyparsing==2.4.5
     # via packaging
 pyrsistent==0.17.3
     # via jsonschema
-pytest-helpers-namespace==2019.1.8
-    # via -r requirements/pytest.txt
-pytest-salt-factories==0.121.1
+pytest-helpers-namespace==2021.4.29
+    # via
+    #   -r requirements/pytest.txt
+    #   pytest-salt-factories
+pytest-salt-factories==0.903.2
     # via -r requirements/pytest.txt
 pytest-subtests==0.4.0
     # via -r requirements/pytest.txt
@@ -360,7 +362,7 @@ sed==0.3.1
     # via -r requirements/static/ci/windows.in
 setproctitle==1.1.10
     # via -r requirements/static/pkg/py3.7/windows.txt
-six==1.15.0
+six==1.16.0
     # via
     #   -r requirements/static/pkg/py3.7/windows.txt
     #   aws-sam-translator
@@ -415,7 +417,9 @@ urllib3==1.26.4
     #   python-etcd
     #   requests
 virtualenv==20.0.20
-    # via -r requirements/static/ci/common.in
+    # via
+    #   -r requirements/static/ci/common.in
+    #   pytest-salt-factories
 watchdog==0.10.3
     # via -r requirements/static/ci/common.in
 websocket-client==0.40.0
