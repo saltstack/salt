@@ -893,7 +893,7 @@ def hypermedia_handler(*args, **kwargs):
 
         ret = {
             "status": cherrypy.response.status,
-            "return": "{}".format(traceback.format_exc(exc))
+            "return": "{}".format(traceback.format_exc())
             if cherrypy.config["debug"]
             else "An unexpected error occurred",
         }
