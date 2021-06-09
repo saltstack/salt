@@ -436,20 +436,11 @@ def salt_call():
     """
     import salt.cli.call
 
-    try:
-        from salt.transport import zeromq
-    except ImportError:
-        zeromq = None
-
-    try:
-        if "" in sys.path:
-            sys.path.remove("")
-        client = salt.cli.call.SaltCall()
-        _install_signal_handlers(client)
-        client.run()
-    finally:
-        if zeromq is not None:
-            zeromq.AsyncZeroMQReqChannel.force_close_all_instances()
+    if "" in sys.path:
+        sys.path.remove("")
+    client = salt.cli.call.SaltCall()
+    _install_signal_handlers(client)
+    client.run()
 
 
 def salt_run():

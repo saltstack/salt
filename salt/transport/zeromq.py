@@ -9,7 +9,6 @@ import os
 import signal
 import sys
 import threading
-import weakref
 from random import randint
 
 import salt.auth
@@ -128,9 +127,6 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
     ZMQ Channels default to 'crypt=aes'
     """
 
-    # This class is only a singleton per minion/master pair
-    # mapping of io_loop -> {key -> channel}
-    instance_map = weakref.WeakKeyDictionary()
     async_methods = [
         "crypted_transfer_decode_dictentry",
         "_crypted_transfer",
@@ -142,103 +138,7 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
         "close",
     ]
 
-    def __new__(cls, opts, **kwargs):
-        """
-        Only create one instance of channel per __key()
-        """
-
-        # do we have any mapping for this io_loop
-        io_loop = kwargs.get("io_loop")
-        if io_loop is None:
-            install_zmq()
-            io_loop = ZMQDefaultLoop.current()
-        if io_loop not in cls.instance_map:
-            cls.instance_map[io_loop] = weakref.WeakValueDictionary()
-        loop_instance_map = cls.instance_map[io_loop]
-
-        key = cls.__key(opts, **kwargs)
-        obj = loop_instance_map.get(key)
-        if obj is None:
-            log.debug("Initializing new AsyncZeroMQReqChannel for %s", key)
-            # we need to make a local variable for this, as we are going to store
-            # it in a WeakValueDictionary-- which will remove the item if no one
-            # references it-- this forces a reference while we return to the caller
-            obj = object.__new__(cls)
-            obj.__singleton_init__(opts, **kwargs)
-            obj._instance_key = key
-            loop_instance_map[key] = obj
-            obj._refcount = 1
-            obj._refcount_lock = threading.RLock()
-            log.trace(
-                "Inserted key into loop_instance_map id %s for key %s and process %s",
-                id(loop_instance_map),
-                key,
-                os.getpid(),
-            )
-        else:
-            with obj._refcount_lock:
-                obj._refcount += 1
-            log.debug("Re-using AsyncZeroMQReqChannel for %s", key)
-        return obj
-
-    def __deepcopy__(self, memo):
-        cls = self.__class__
-        # pylint: disable=too-many-function-args
-        result = cls.__new__(cls, copy.deepcopy(self.opts, memo))
-        # pylint: enable=too-many-function-args
-        memo[id(self)] = result
-        for key in self.__dict__:
-            if key in ("_io_loop", "_refcount", "_refcount_lock"):
-                continue
-                # The _io_loop has a thread Lock which will fail to be deep
-                # copied. Skip it because it will just be recreated on the
-                # new copy.
-            if key == "message_client":
-                # Recreate the message client because it will fail to be deep
-                # copied. The reason is the same as the io_loop skip above.
-                setattr(
-                    result,
-                    key,
-                    AsyncReqMessageClientPool(
-                        result.opts,
-                        args=(result.opts, self.master_uri,),
-                        kwargs={"io_loop": self._io_loop},
-                    ),
-                )
-
-                continue
-            setattr(result, key, copy.deepcopy(self.__dict__[key], memo))
-        return result
-
-    @classmethod
-    def force_close_all_instances(cls):
-        """
-        Will force close all instances
-
-        ZMQ can hang on quit if left to deconstruct on its own.
-        This because is deconstructs out of order.
-
-        :return: None
-        """
-        for weak_dict in list(cls.instance_map.values()):
-            for instance in list(weak_dict.values()):
-                instance.close()
-
-    @classmethod
-    def __key(cls, opts, **kwargs):
-        return (
-            opts["pki_dir"],  # where the keys are stored
-            opts["id"],  # minion ID
-            kwargs.get("master_uri", opts.get("master_uri")),  # master ID
-            kwargs.get("crypt", "aes"),  # TODO: use the same channel for crypt
-        )
-
-    # has to remain empty for singletons, since __init__ will *always* be called
     def __init__(self, opts, **kwargs):
-        pass
-
-    # an init for the singleton instance to call
-    def __singleton_init__(self, opts, **kwargs):
         self.opts = dict(opts)
         self.ttype = "zeromq"
 
@@ -267,6 +167,35 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
         )
         self._closing = False
 
+    def __deepcopy__(self, memo):
+        cls = self.__class__
+        # pylint: disable=too-many-function-args
+        result = cls.__new__(cls, copy.deepcopy(self.opts, memo))
+        # pylint: enable=too-many-function-args
+        memo[id(self)] = result
+        for key in self.__dict__:
+            if key in ("_io_loop", "_refcount", "_refcount_lock"):
+                continue
+                # The _io_loop has a thread Lock which will fail to be deep
+                # copied. Skip it because it will just be recreated on the
+                # new copy.
+            if key == "message_client":
+                # Recreate the message client because it will fail to be deep
+                # copied. The reason is the same as the io_loop skip above.
+                setattr(
+                    result,
+                    key,
+                    AsyncReqMessageClientPool(
+                        result.opts,
+                        args=(result.opts, self.master_uri),
+                        kwargs={"io_loop": self._io_loop},
+                    ),
+                )
+
+                continue
+            setattr(result, key, copy.deepcopy(self.__dict__[key], memo))
+        return result
+
     def close(self):
         """
         Since the message_client creates sockets and assigns them to the IOLoop we have to
@@ -275,40 +204,17 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
         if self._closing:
             return
 
-        if self._refcount > 1:
-            # Decrease refcount
-            with self._refcount_lock:
-                self._refcount -= 1
-            log.debug(
-                "This is not the last %s instance. Not closing yet.",
-                self.__class__.__name__,
-            )
-            return
-
-        log.debug("Closing %s instance", self.__class__.__name__)
+        log.debug("Closing %s instance(id: %s)", self.__class__.__name__, id(self))
         self._closing = True
         if hasattr(self, "message_client"):
             self.message_client.close()
+            self.message_client = None
 
-        # Remove the entry from the instance map so that a closed entry may not
-        # be reused.
-        # This forces this operation even if the reference count of the entry
-        # has not yet gone to zero.
-        io_loop = self._io_loop
-        instance_key = self._instance_key
-        instance_map = self.__class__.instance_map
-        if io_loop in instance_map:
-            loop_instance_map = instance_map[io_loop]
-            loop_instance_map.pop(instance_key, None)
-            if not loop_instance_map:
-                instance_map.pop(io_loop)
+        # Drop the reference to the IOLoop
+        self._io_loop = None
 
     # pylint: disable=W1701
     def __del__(self):
-        with self._refcount_lock:
-            # Make sure we actually close no matter if something
-            # went wrong with our ref counting
-            self._refcount = 1
         try:
             self.close()
         except OSError as exc:
