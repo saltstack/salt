@@ -43,7 +43,7 @@ CMD . $VIRTUAL_ENV/bin/activate
 def _get_test_versions():
     test_versions = []
     for python_version in ("2", "3"):
-        for salt_version in ("2017.7.8", "2018.3.5", "2019.2.4", "3000.6"):
+        for salt_version in ("2019.2.4", "3000.6"):
             test_versions.append(
                 PySaltCombo(python_version=python_version, salt_version=salt_version)
             )
@@ -78,7 +78,7 @@ def minion_image(
     docker_client, pysaltcombo, container_virtualenv_path, minion_image_name
 ):
     extra = ""
-    if pysaltcombo.salt_version.startswith(("2017.7.", "2018.3.", "2019.2.")):
+    if pysaltcombo.salt_version.startswith("2019.2."):
         # We weren't pinning higher versions which we now know are problematic
         extra = "RUN pip install --ignore-installed --progress-bar=off -U "
         extra += (
@@ -171,12 +171,6 @@ def unicode(request, pysaltcombo):
 
 @pytest.fixture
 def populated_state_tree(pysaltcombo, minion_id, package_name, state_tree, unicode):
-    if unicode and pysaltcombo.salt_version.startswith("2017.7."):
-        pytest.xfail(
-            "Salt {} is known for problematic unicode handling on state files".format(
-                pysaltcombo.salt_version
-            )
-        )
     module_contents = """
     def get_test_package_name():
         return "{}"
@@ -235,7 +229,7 @@ def test_highstate(salt_cli, salt_minion, package_name):
 @pytest.fixture
 def cp_file_source(pysaltcombo, unicode):
     if unicode and pysaltcombo.python_version == "2":
-        if pysaltcombo.salt_version.startswith(("2018.3", "2019.2", "3000.")):
+        if pysaltcombo.salt_version.startswith(("2019.2", "3000.")):
             pytest.xfail(
                 "Salt {} is know to fail with unicode issues under Py2 when copying files".format(
                     pysaltcombo.salt_version
