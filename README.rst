@@ -12,7 +12,7 @@
 
 .. image:: https://img.shields.io/badge/slack-@saltstackcommunity-blue.svg?logo=slack
    :alt: Salt Project Slack Community
-   :target: https://saltstackcommunity.herokuapp.com/
+   :target: https://join.slack.com/t/saltstackcommunity/shared_invite/zt-3av8jjyf-oBQ2M0vhXOhJpNpRkPWBvg
 
 .. image:: https://img.shields.io/twitch/status/saltprojectoss
    :alt: Salt Project Twitch Channel
@@ -87,7 +87,7 @@ announcements.
 Other channels to receive security announcements include the
 `Salt Community mailing list <https://groups.google.com/forum/#!forum/salt-users>`_
 and the
-`Salt Community Slack Channel <https://saltstackcommunity.herokuapp.com/>`_.
+`Salt Project Community Slack`_.
 
 Responsibly Reporting Security Vulnerabilities
 ++++++++++++++++++++++++++++++++++++++++++++++
@@ -103,8 +103,8 @@ Please be sure to review our
 Also, check out some of our community resources including:
 
 * `Salt Project Community Wiki <https://github.com/saltstack/community/wiki>`_
-* `Salt Project Community Slack <https://saltstackcommunity.herokuapp.com/>`_
-* `Salt Project: IRC on Freenode <https://webchat.freenode.net/#salt>`_
+* `Salt Project Community Slack`_
+* `Salt Project: IRC on LiberaChat <https://web.libera.chat/#salt>`_
 * `Salt Project YouTube channel <https://www.youtube.com/channel/UCpveTIucFx9ljGelW63-BWg>`_
 * `Salt Project Twitch channel <https://www.twitch.tv/saltprojectoss>`_
 
@@ -130,7 +130,7 @@ used by external modules.
 A complete list of attributions and dependencies can be found here:
 `salt/DEPENDENCIES.md <https://github.com/saltstack/salt/blob/master/DEPENDENCIES.md>`_
 
-
+.. _Salt Project Community Slack: https://join.slack.com/t/saltstackcommunity/shared_invite/zt-3av8jjyf-oBQ2M0vhXOhJpNpRkPWBvg
 .. _vRealize Automation SaltStack Config: https://www.vmware.com/products/vrealize-automation/saltstack-config.html
 .. _Latest Salt Documentation: https://docs.saltproject.io/en/latest/
 .. _Open an issue: https://github.com/saltstack/salt/issues/new/choose

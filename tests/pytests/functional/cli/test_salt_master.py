@@ -24,8 +24,8 @@ def test_exit_status_unknown_user(salt_factories, master_id):
     Ensure correct exit status when the master is configured to run as an unknown user.
     """
     with pytest.raises(FactoryNotStarted) as exc:
-        factory = salt_factories.get_salt_master_daemon(
-            master_id, config_overrides={"user": "unknown-user"}
+        factory = salt_factories.salt_master_daemon(
+            master_id, overrides={"user": "unknown-user"}
         )
         with factory.started(start_timeout=10, max_start_attempts=1):
             # We should not get here
@@ -40,7 +40,7 @@ def test_exit_status_unknown_argument(salt_factories, master_id):
     Ensure correct exit status when an unknown argument is passed to salt-master.
     """
     with pytest.raises(FactoryNotStarted) as exc:
-        factory = salt_factories.get_salt_master_daemon(master_id)
+        factory = salt_factories.salt_master_daemon(master_id)
         factory.start("--unknown-argument", start_timeout=10, max_start_attempts=1)
     assert exc.value.exitcode == salt.defaults.exitcodes.EX_USAGE, exc.value
     assert "Usage" in exc.value.stderr, exc.value

@@ -1790,7 +1790,8 @@ def proxy_reconnect(proxy_name, opts=None):
     if proxy_keepalive_fn not in __proxy__:
         return False  # fail
 
-    if __proxy__[proxy_name + ".get_reboot_active"]():
+    chk_reboot_active_key = proxy_name + ".get_reboot_active"
+    if chk_reboot_active_key in __proxy__ and __proxy__[chk_reboot_active_key]():
         # if rebooting or shutting down, don't run proxy_reconnect
         # it interferes with the connection and disrupts the shutdown/reboot
         # especially
