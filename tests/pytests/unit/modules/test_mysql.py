@@ -359,48 +359,60 @@ def test_user_chpass():
     with patch.object(mysql, "_connect", connect_mock):
         with patch.object(mysql, "version", return_value="8.0.11"):
             with patch.object(mysql, "user_exists", MagicMock(return_value=True)):
-                with patch.dict(mysql.__salt__, {"config.option": MagicMock()}):
-                    mysql.user_chpass("testuser", password="BLUECOW")
-                    calls = (
-                        call()
-                        .cursor()
-                        .execute(
-                            "ALTER USER %(user)s@%(host)s IDENTIFIED BY %(password)s;",
-                            {
-                                "password": "BLUECOW",
-                                "user": "testuser",
-                                "host": "localhost",
-                            },
-                        ),
-                        call().cursor().execute("FLUSH PRIVILEGES;"),
-                    )
-                    connect_mock.assert_has_calls(calls, any_order=True)
+                with patch.object(
+                    mysql,
+                    "__get_auth_plugin",
+                    MagicMock(return_value="mysql_native_password"),
+                ):
+                    with patch.dict(mysql.__salt__, {"config.option": MagicMock()}):
+                        mysql.user_chpass("testuser", password="BLUECOW")
+                        calls = (
+                            call()
+                            .cursor()
+                            .execute(
+                                "ALTER USER %(user)s@%(host)s IDENTIFIED WITH %(auth_plugin)s BY %(password)s;",
+                                {
+                                    "password": "BLUECOW",
+                                    "user": "testuser",
+                                    "host": "localhost",
+                                    "auth_plugin": "mysql_native_password",
+                                },
+                            ),
+                            call().cursor().execute("FLUSH PRIVILEGES;"),
+                        )
+                        connect_mock.assert_has_calls(calls, any_order=True)
 
     connect_mock = MagicMock()
     with patch.object(mysql, "_connect", connect_mock):
         with patch.object(mysql, "version", side_effect=["", "8.0.11", "8.0.11"]):
             with patch.object(mysql, "user_exists", MagicMock(return_value=True)):
-                with patch.dict(mysql.__salt__, {"config.option": MagicMock()}):
-                    mysql.user_chpass(
-                        "root",
-                        password="new_pass",
-                        connection_user="root",
-                        connection_pass="old_pass",
-                    )
-                    calls = (
-                        call()
-                        .cursor()
-                        .execute(
-                            "ALTER USER %(user)s@%(host)s IDENTIFIED BY %(password)s;",
-                            {
-                                "password": "new_pass",
-                                "user": "root",
-                                "host": "localhost",
-                            },
-                        ),
-                        call().cursor().execute("FLUSH PRIVILEGES;"),
-                    )
-                    connect_mock.assert_has_calls(calls, any_order=True)
+                with patch.object(
+                    mysql,
+                    "__get_auth_plugin",
+                    MagicMock(return_value="mysql_native_password"),
+                ):
+                    with patch.dict(mysql.__salt__, {"config.option": MagicMock()}):
+                        mysql.user_chpass(
+                            "root",
+                            password="new_pass",
+                            connection_user="root",
+                            connection_pass="old_pass",
+                        )
+                        calls = (
+                            call()
+                            .cursor()
+                            .execute(
+                                "ALTER USER %(user)s@%(host)s IDENTIFIED WITH %(auth_plugin)s BY %(password)s;",
+                                {
+                                    "password": "new_pass",
+                                    "user": "root",
+                                    "host": "localhost",
+                                    "auth_plugin": "mysql_native_password",
+                                },
+                            ),
+                            call().cursor().execute("FLUSH PRIVILEGES;"),
+                        )
+                        connect_mock.assert_has_calls(calls, any_order=True)
 
 
 def test_user_remove():
