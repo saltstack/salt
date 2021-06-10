@@ -254,7 +254,7 @@ def runas(cmdLine, username, password=None, cwd=None):
 
 def runas_unpriv(cmd, username, password, cwd=None):
     """
-    Runas that works for non-priviledged users
+    Runas that works for non-privileged users
     """
     # Validate the domain and sid exist for the username
     username, domain = split_username(username)
