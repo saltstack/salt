@@ -129,7 +129,7 @@ class IptablesTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(iptables, "_STATE_INTERNAL_KEYWORDS", mock):
             mock = MagicMock(return_value="a")
             with patch.dict(iptables.__salt__, {"iptables.build_rule": mock}):
-                mock = MagicMock(side_effect=[True, False, False, False])
+                mock = MagicMock(side_effect=[True, False, False, False, False, True])
                 with patch.dict(iptables.__salt__, {"iptables.check": mock}):
                     ret.update(
                         {
@@ -155,7 +155,7 @@ class IptablesTestCase(TestCase, LoaderModuleMockMixin):
                         )
 
                     with patch.dict(iptables.__opts__, {"test": False}):
-                        mock = MagicMock(side_effect=[True, False])
+                        mock = MagicMock(side_effect=[True, False, True, True])
                         with patch.dict(iptables.__salt__, {"iptables.append": mock}):
                             ret.update(
                                 {
@@ -182,6 +182,65 @@ class IptablesTestCase(TestCase, LoaderModuleMockMixin):
                                 iptables.append("salt", table="", chain=""), ret
                             )
 
+                            mock_save = MagicMock(
+                                side_effect=['Wrote 1 lines to "/tmp/iptables"', ""]
+                            )
+                            with patch.dict(
+                                iptables.__salt__, {"iptables.save": mock_save}
+                            ):
+                                mock_get_saved_rules = MagicMock(side_effect=[""])
+                                with patch.dict(
+                                    iptables.__salt__,
+                                    {"iptables.get_saved_rules": mock_get_saved_rules},
+                                ):
+                                    mock = MagicMock(side_effect=[""])
+                                    with patch.dict(
+                                        iptables.__salt__, {"iptables.get_rules": mock}
+                                    ):
+                                        ret.update(
+                                            {
+                                                "changes": {"locale": "salt"},
+                                                "result": True,
+                                                "comment": "Set and saved iptables rule"
+                                                ' salt for ipv4\na\nWrote 1 lines to "/tmp/iptables"',
+                                            }
+                                        )
+                                        self.assertDictEqual(
+                                            iptables.append(
+                                                "salt",
+                                                table="",
+                                                chain="",
+                                                save="/tmp/iptables",
+                                            ),
+                                            ret,
+                                        )
+                                        ret.update(
+                                            {
+                                                "changes": {},
+                                                "result": True,
+                                                "comment": "iptables rule for salt already set (a) for ipv4",
+                                            }
+                                        )
+                                        self.assertDictEqual(
+                                            iptables.append(
+                                                "salt",
+                                                table="",
+                                                chain="",
+                                                save="/tmp/iptables",
+                                            ),
+                                            ret,
+                                        )
+                                        self.assertEqual(
+                                            mock_get_saved_rules.mock_calls[0][2][
+                                                "conf_file"
+                                            ],
+                                            "/tmp/iptables",
+                                        )
+                                        self.assertEqual(
+                                            mock_save.mock_calls[0][2]["filename"],
+                                            "/tmp/iptables",
+                                        )
+
     def test_insert(self):
         """
             Test to insert a rule into a chain
@@ -194,7 +253,7 @@ class IptablesTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(iptables, "_STATE_INTERNAL_KEYWORDS", mock):
             mock = MagicMock(return_value="a")
             with patch.dict(iptables.__salt__, {"iptables.build_rule": mock}):
-                mock = MagicMock(side_effect=[True, False, False, False])
+                mock = MagicMock(side_effect=[True, False, False, False, False, True])
                 with patch.dict(iptables.__salt__, {"iptables.check": mock}):
                     ret.update(
                         {
@@ -220,7 +279,7 @@ class IptablesTestCase(TestCase, LoaderModuleMockMixin):
                         )
 
                     with patch.dict(iptables.__opts__, {"test": False}):
-                        mock = MagicMock(side_effect=[False, True])
+                        mock = MagicMock(side_effect=[False, True, False, True])
                         with patch.dict(iptables.__salt__, {"iptables.insert": mock}):
                             ret.update(
                                 {
@@ -252,6 +311,67 @@ class IptablesTestCase(TestCase, LoaderModuleMockMixin):
                                 ret,
                             )
 
+                            mock_save = MagicMock(
+                                side_effect=['Wrote 1 lines to "/tmp/iptables"', ""]
+                            )
+                            with patch.dict(
+                                iptables.__salt__, {"iptables.save": mock_save}
+                            ):
+                                mock_get_saved_rules = MagicMock(side_effect=[""])
+                                with patch.dict(
+                                    iptables.__salt__,
+                                    {"iptables.get_saved_rules": mock_get_saved_rules},
+                                ):
+                                    mock = MagicMock(side_effect=[""])
+                                    with patch.dict(
+                                        iptables.__salt__, {"iptables.get_rules": mock}
+                                    ):
+                                        ret.update(
+                                            {
+                                                "changes": {"locale": "salt"},
+                                                "result": True,
+                                                "comment": "Set and saved iptables rule"
+                                                ' salt for ipv4\na\nWrote 1 lines to "/tmp/iptables"',
+                                            }
+                                        )
+                                        self.assertDictEqual(
+                                            iptables.insert(
+                                                "salt",
+                                                table="",
+                                                chain="",
+                                                position="",
+                                                save="/tmp/iptables",
+                                            ),
+                                            ret,
+                                        )
+                                        ret.update(
+                                            {
+                                                "changes": {},
+                                                "result": True,
+                                                "comment": "iptables rule for salt already set for ipv4 (a)",
+                                            }
+                                        )
+                                        self.assertDictEqual(
+                                            iptables.insert(
+                                                "salt",
+                                                table="",
+                                                chain="",
+                                                position="",
+                                                save="/tmp/iptables",
+                                            ),
+                                            ret,
+                                        )
+                                        self.assertEqual(
+                                            mock_get_saved_rules.mock_calls[0][2][
+                                                "conf_file"
+                                            ],
+                                            "/tmp/iptables",
+                                        )
+                                        self.assertEqual(
+                                            mock_save.mock_calls[0][2]["filename"],
+                                            "/tmp/iptables",
+                                        )
+
     def test_delete(self):
         """
             Test to delete a rule to a chain
@@ -264,7 +384,7 @@ class IptablesTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(iptables, "_STATE_INTERNAL_KEYWORDS", mock):
             mock = MagicMock(return_value="a")
             with patch.dict(iptables.__salt__, {"iptables.build_rule": mock}):
-                mock = MagicMock(side_effect=[False, True, True, True])
+                mock = MagicMock(side_effect=[False, True, True, True, True, False])
                 with patch.dict(iptables.__salt__, {"iptables.check": mock}):
                     ret.update(
                         {
@@ -290,7 +410,7 @@ class IptablesTestCase(TestCase, LoaderModuleMockMixin):
                         )
 
                     with patch.dict(iptables.__opts__, {"test": False}):
-                        mock = MagicMock(side_effect=[False, True])
+                        mock = MagicMock(side_effect=[False, True, False, False])
                         with patch.dict(iptables.__salt__, {"iptables.delete": mock}):
                             ret.update(
                                 {
@@ -320,6 +440,58 @@ class IptablesTestCase(TestCase, LoaderModuleMockMixin):
                                 ),
                                 ret,
                             )
+
+                            mock_save = MagicMock(
+                                side_effect=['Wrote 1 lines to "/tmp/iptables"', ""]
+                            )
+                            with patch.dict(
+                                iptables.__salt__, {"iptables.save": mock_save}
+                            ):
+                                mock = MagicMock(side_effect=[True, False])
+                                with patch.dict(
+                                    iptables.__salt__, {"iptables.check": mock}
+                                ):
+                                    mock = MagicMock(side_effect=[""])
+                                    with patch.dict(
+                                        iptables.__salt__, {"iptables.get_rules": mock}
+                                    ):
+                                        ret.update(
+                                            {
+                                                "changes": {"locale": "salt"},
+                                                "result": True,
+                                                "comment": "Deleted and saved iptables rule"
+                                                ' salt for ipv4\na\nWrote 1 lines to "/tmp/iptables"',
+                                            }
+                                        )
+                                        self.assertDictEqual(
+                                            iptables.delete(
+                                                "salt",
+                                                table="",
+                                                chain="",
+                                                save="/tmp/iptables",
+                                            ),
+                                            ret,
+                                        )
+                                        ret.update(
+                                            {
+                                                "changes": {},
+                                                "result": True,
+                                                "comment": "iptables rule for salt already absent for ipv4 (a)",
+                                            }
+                                        )
+                                        self.assertDictEqual(
+                                            iptables.delete(
+                                                "salt",
+                                                table="",
+                                                chain="",
+                                                save="/tmp/iptables",
+                                            ),
+                                            ret,
+                                        )
+                                        self.assertEqual(
+                                            mock_save.mock_calls[0][2]["filename"],
+                                            "/tmp/iptables",
+                                        )
 
     def test_set_policy(self):
         """
