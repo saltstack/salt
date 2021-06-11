@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Module for Solaris 10's zoneadm
 
 :maintainer:    Jorge Schrauwen <sjorge@blackdot.be>
@@ -10,72 +10,74 @@ Module for Solaris 10's zoneadm
 
 .. warning::
     Oracle Solaris 11's zoneadm is not supported by this module!
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import logging
 
+import salt.utils.decorators
+
 # Import Salt libs
 import salt.utils.path
-import salt.utils.decorators
 from salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
-__virtualname__ = 'zoneadm'
+__virtualname__ = "zoneadm"
 
 # Function aliases
-__func_alias__ = {
-    'list_zones': 'list'
-}
+__func_alias__ = {"list_zones": "list"}
 
 
 @salt.utils.decorators.memoize
 def _is_globalzone():
-    '''
+    """
     Check if we are running in the globalzone
-    '''
-    if not __grains__['kernel'] == 'SunOS':
+    """
+    if not __grains__["kernel"] == "SunOS":
         return False
 
-    zonename = __salt__['cmd.run_all']('zonename')
-    if zonename['retcode']:
+    zonename = __salt__["cmd.run_all"]("zonename")
+    if zonename["retcode"]:
         return False
-    if zonename['stdout'] == 'global':
+    if zonename["stdout"] == "global":
         return True
 
     return False
 
 
 def _is_uuid(zone):
-    '''
+    """
     Check if zone is actually a UUID
-    '''
-    return len(zone) == 36 and zone.index('-') == 8
+    """
+    return len(zone) == 36 and zone.index("-") == 8
 
 
 def __virtual__():
-    '''
+    """
     We are available if we are have zoneadm and are the global zone on
     Solaris 10, OmniOS, OpenIndiana, OpenSolaris, or Smartos.
-    '''
-    if _is_globalzone() and salt.utils.path.which('zoneadm'):
-        if __grains__['os'] in ['OpenSolaris', 'SmartOS', 'OmniOS', 'OpenIndiana']:
+    """
+    if _is_globalzone() and salt.utils.path.which("zoneadm"):
+        if __grains__["os"] in ["OpenSolaris", "SmartOS", "OmniOS", "OpenIndiana"]:
             return __virtualname__
-        elif __grains__['os'] == 'Oracle Solaris' and int(__grains__['osmajorrelease']) == 10:
+        elif (
+            __grains__["os"] == "Oracle Solaris"
+            and int(__grains__["osmajorrelease"]) == 10
+        ):
             return __virtualname__
     return (
         False,
-        '{0} module can only be loaded in a solaris globalzone.'.format(
+        "{0} module can only be loaded in a solaris globalzone.".format(
             __virtualname__
-        )
+        ),
     )
 
 
 def list_zones(verbose=True, installed=False, configured=False, hide_global=True):
-    '''
+    """
     List all zones
 
     verbose : boolean
@@ -92,15 +94,15 @@ def list_zones(verbose=True, installed=False, configured=False, hide_global=True
     .. code-block:: bash
 
         salt '*' zoneadm.list
-    '''
+    """
     zones = {}
 
     ## fetch zones
-    header = 'zoneid:zonename:state:zonepath:uuid:brand:ip-type'.split(':')
-    zone_data = __salt__['cmd.run_all']('zoneadm list -p -c')
-    if zone_data['retcode'] == 0:
-        for zone in zone_data['stdout'].splitlines():
-            zone = zone.split(':')
+    header = "zoneid:zonename:state:zonepath:uuid:brand:ip-type".split(":")
+    zone_data = __salt__["cmd.run_all"]("zoneadm list -p -c")
+    if zone_data["retcode"] == 0:
+        for zone in zone_data["stdout"].splitlines():
+            zone = zone.split(":")
 
             # create zone_t
             zone_t = {}
@@ -108,24 +110,24 @@ def list_zones(verbose=True, installed=False, configured=False, hide_global=True
                 zone_t[header[i]] = zone[i]
 
             # skip if global and hide_global
-            if hide_global and zone_t['zonename'] == 'global':
+            if hide_global and zone_t["zonename"] == "global":
                 continue
 
             # skip installed and configured
-            if not installed and zone_t['state'] == 'installed':
+            if not installed and zone_t["state"] == "installed":
                 continue
-            if not configured and zone_t['state'] == 'configured':
+            if not configured and zone_t["state"] == "configured":
                 continue
 
             # update dict
-            zones[zone_t['zonename']] = zone_t
-            del zones[zone_t['zonename']]['zonename']
+            zones[zone_t["zonename"]] = zone_t
+            del zones[zone_t["zonename"]]["zonename"]
 
     return zones if verbose else sorted(zones.keys())
 
 
 def boot(zone, single=False, altinit=None, smf_options=None):
-    '''
+    """
     Boot (or activate) the specified zone.
 
     zone : string
@@ -145,36 +147,38 @@ def boot(zone, single=False, altinit=None, smf_options=None):
         salt '*' zoneadm.boot clementine
         salt '*' zoneadm.boot maeve single=True
         salt '*' zoneadm.boot teddy single=True smf_options=verbose
-    '''
-    ret = {'status': True}
+    """
+    ret = {"status": True}
 
     ## build boot_options
-    boot_options = ''
+    boot_options = ""
     if single:
-        boot_options = '-s {0}'.format(boot_options)
+        boot_options = "-s {0}".format(boot_options)
     if altinit:  # note: we cannot validate the path, as this is local to the zonepath.
-        boot_options = '-i {0} {1}'.format(altinit, boot_options)
+        boot_options = "-i {0} {1}".format(altinit, boot_options)
     if smf_options:
-        boot_options = '-m {0} {1}'.format(smf_options, boot_options)
-    if boot_options != '':
-        boot_options = ' -- {0}'.format(boot_options.strip())
+        boot_options = "-m {0} {1}".format(smf_options, boot_options)
+    if boot_options != "":
+        boot_options = " -- {0}".format(boot_options.strip())
 
     ## execute boot
-    res = __salt__['cmd.run_all']('zoneadm {zone} boot{boot_opts}'.format(
-        zone='-u {0}'.format(zone) if _is_uuid(zone) else '-z {0}'.format(zone),
-        boot_opts=boot_options,
-    ))
-    ret['status'] = res['retcode'] == 0
-    ret['message'] = res['stdout'] if ret['status'] else res['stderr']
-    ret['message'] = ret['message'].replace('zoneadm: ', '')
-    if ret['message'] == '':
-        del ret['message']
+    res = __salt__["cmd.run_all"](
+        "zoneadm {zone} boot{boot_opts}".format(
+            zone="-u {0}".format(zone) if _is_uuid(zone) else "-z {0}".format(zone),
+            boot_opts=boot_options,
+        )
+    )
+    ret["status"] = res["retcode"] == 0
+    ret["message"] = res["stdout"] if ret["status"] else res["stderr"]
+    ret["message"] = ret["message"].replace("zoneadm: ", "")
+    if ret["message"] == "":
+        del ret["message"]
 
     return ret
 
 
 def reboot(zone, single=False, altinit=None, smf_options=None):
-    '''
+    """
     Restart the zone. This is equivalent to a halt boot sequence.
 
     zone : string
@@ -193,36 +197,38 @@ def reboot(zone, single=False, altinit=None, smf_options=None):
 
         salt '*' zoneadm.reboot dolores
         salt '*' zoneadm.reboot teddy single=True
-    '''
-    ret = {'status': True}
+    """
+    ret = {"status": True}
 
     ## build boot_options
-    boot_options = ''
+    boot_options = ""
     if single:
-        boot_options = '-s {0}'.format(boot_options)
+        boot_options = "-s {0}".format(boot_options)
     if altinit:  # note: we cannot validate the path, as this is local to the zonepath.
-        boot_options = '-i {0} {1}'.format(altinit, boot_options)
+        boot_options = "-i {0} {1}".format(altinit, boot_options)
     if smf_options:
-        boot_options = '-m {0} {1}'.format(smf_options, boot_options)
-    if boot_options != '':
-        boot_options = ' -- {0}'.format(boot_options.strip())
+        boot_options = "-m {0} {1}".format(smf_options, boot_options)
+    if boot_options != "":
+        boot_options = " -- {0}".format(boot_options.strip())
 
     ## execute reboot
-    res = __salt__['cmd.run_all']('zoneadm {zone} reboot{boot_opts}'.format(
-        zone='-u {0}'.format(zone) if _is_uuid(zone) else '-z {0}'.format(zone),
-        boot_opts=boot_options,
-    ))
-    ret['status'] = res['retcode'] == 0
-    ret['message'] = res['stdout'] if ret['status'] else res['stderr']
-    ret['message'] = ret['message'].replace('zoneadm: ', '')
-    if ret['message'] == '':
-        del ret['message']
+    res = __salt__["cmd.run_all"](
+        "zoneadm {zone} reboot{boot_opts}".format(
+            zone="-u {0}".format(zone) if _is_uuid(zone) else "-z {0}".format(zone),
+            boot_opts=boot_options,
+        )
+    )
+    ret["status"] = res["retcode"] == 0
+    ret["message"] = res["stdout"] if ret["status"] else res["stderr"]
+    ret["message"] = ret["message"].replace("zoneadm: ", "")
+    if ret["message"] == "":
+        del ret["message"]
 
     return ret
 
 
 def halt(zone):
-    '''
+    """
     Halt the specified zone.
 
     zone : string
@@ -236,24 +242,26 @@ def halt(zone):
     .. code-block:: bash
 
         salt '*' zoneadm.halt hector
-    '''
-    ret = {'status': True}
+    """
+    ret = {"status": True}
 
     ## halt zone
-    res = __salt__['cmd.run_all']('zoneadm {zone} halt'.format(
-        zone='-u {0}'.format(zone) if _is_uuid(zone) else '-z {0}'.format(zone),
-    ))
-    ret['status'] = res['retcode'] == 0
-    ret['message'] = res['stdout'] if ret['status'] else res['stderr']
-    ret['message'] = ret['message'].replace('zoneadm: ', '')
-    if ret['message'] == '':
-        del ret['message']
+    res = __salt__["cmd.run_all"](
+        "zoneadm {zone} halt".format(
+            zone="-u {0}".format(zone) if _is_uuid(zone) else "-z {0}".format(zone),
+        )
+    )
+    ret["status"] = res["retcode"] == 0
+    ret["message"] = res["stdout"] if ret["status"] else res["stderr"]
+    ret["message"] = ret["message"].replace("zoneadm: ", "")
+    if ret["message"] == "":
+        del ret["message"]
 
     return ret
 
 
 def shutdown(zone, reboot=False, single=False, altinit=None, smf_options=None):
-    '''
+    """
     Gracefully shutdown the specified zone.
 
     zone : string
@@ -274,37 +282,39 @@ def shutdown(zone, reboot=False, single=False, altinit=None, smf_options=None):
 
         salt '*' zoneadm.shutdown peter
         salt '*' zoneadm.shutdown armistice reboot=True
-    '''
-    ret = {'status': True}
+    """
+    ret = {"status": True}
 
     ## build boot_options
-    boot_options = ''
+    boot_options = ""
     if single:
-        boot_options = '-s {0}'.format(boot_options)
+        boot_options = "-s {0}".format(boot_options)
     if altinit:  # note: we cannot validate the path, as this is local to the zonepath.
-        boot_options = '-i {0} {1}'.format(altinit, boot_options)
+        boot_options = "-i {0} {1}".format(altinit, boot_options)
     if smf_options:
-        boot_options = '-m {0} {1}'.format(smf_options, boot_options)
-    if boot_options != '':
-        boot_options = ' -- {0}'.format(boot_options.strip())
+        boot_options = "-m {0} {1}".format(smf_options, boot_options)
+    if boot_options != "":
+        boot_options = " -- {0}".format(boot_options.strip())
 
     ## shutdown zone
-    res = __salt__['cmd.run_all']('zoneadm {zone} shutdown{reboot}{boot_opts}'.format(
-        zone='-u {0}'.format(zone) if _is_uuid(zone) else '-z {0}'.format(zone),
-        reboot=' -r' if reboot else '',
-        boot_opts=boot_options,
-    ))
-    ret['status'] = res['retcode'] == 0
-    ret['message'] = res['stdout'] if ret['status'] else res['stderr']
-    ret['message'] = ret['message'].replace('zoneadm: ', '')
-    if ret['message'] == '':
-        del ret['message']
+    res = __salt__["cmd.run_all"](
+        "zoneadm {zone} shutdown{reboot}{boot_opts}".format(
+            zone="-u {0}".format(zone) if _is_uuid(zone) else "-z {0}".format(zone),
+            reboot=" -r" if reboot else "",
+            boot_opts=boot_options,
+        )
+    )
+    ret["status"] = res["retcode"] == 0
+    ret["message"] = res["stdout"] if ret["status"] else res["stderr"]
+    ret["message"] = ret["message"].replace("zoneadm: ", "")
+    if ret["message"] == "":
+        del ret["message"]
 
     return ret
 
 
 def detach(zone):
-    '''
+    """
     Detach the specified zone.
 
     zone : string
@@ -315,24 +325,26 @@ def detach(zone):
     .. code-block:: bash
 
         salt '*' zoneadm.detach kissy
-    '''
-    ret = {'status': True}
+    """
+    ret = {"status": True}
 
     ## detach zone
-    res = __salt__['cmd.run_all']('zoneadm {zone} detach'.format(
-        zone='-u {0}'.format(zone) if _is_uuid(zone) else '-z {0}'.format(zone),
-    ))
-    ret['status'] = res['retcode'] == 0
-    ret['message'] = res['stdout'] if ret['status'] else res['stderr']
-    ret['message'] = ret['message'].replace('zoneadm: ', '')
-    if ret['message'] == '':
-        del ret['message']
+    res = __salt__["cmd.run_all"](
+        "zoneadm {zone} detach".format(
+            zone="-u {0}".format(zone) if _is_uuid(zone) else "-z {0}".format(zone),
+        )
+    )
+    ret["status"] = res["retcode"] == 0
+    ret["message"] = res["stdout"] if ret["status"] else res["stderr"]
+    ret["message"] = ret["message"].replace("zoneadm: ", "")
+    if ret["message"] == "":
+        del ret["message"]
 
     return ret
 
 
 def attach(zone, force=False, brand_opts=None):
-    '''
+    """
     Attach the specified zone.
 
     zone : string
@@ -348,26 +360,28 @@ def attach(zone, force=False, brand_opts=None):
 
         salt '*' zoneadm.attach lawrence
         salt '*' zoneadm.attach lawrence True
-    '''
-    ret = {'status': True}
+    """
+    ret = {"status": True}
 
     ## attach zone
-    res = __salt__['cmd.run_all']('zoneadm -z {zone} attach{force}{brand_opts}'.format(
-        zone=zone,
-        force=' -F' if force else '',
-        brand_opts=' {0}'.format(brand_opts) if brand_opts else '',
-    ))
-    ret['status'] = res['retcode'] == 0
-    ret['message'] = res['stdout'] if ret['status'] else res['stderr']
-    ret['message'] = ret['message'].replace('zoneadm: ', '')
-    if ret['message'] == '':
-        del ret['message']
+    res = __salt__["cmd.run_all"](
+        "zoneadm -z {zone} attach{force}{brand_opts}".format(
+            zone=zone,
+            force=" -F" if force else "",
+            brand_opts=" {0}".format(brand_opts) if brand_opts else "",
+        )
+    )
+    ret["status"] = res["retcode"] == 0
+    ret["message"] = res["stdout"] if ret["status"] else res["stderr"]
+    ret["message"] = ret["message"].replace("zoneadm: ", "")
+    if ret["message"] == "":
+        del ret["message"]
 
     return ret
 
 
 def ready(zone):
-    '''
+    """
     Prepares a zone for running applications.
 
     zone : string
@@ -378,24 +392,26 @@ def ready(zone):
     .. code-block:: bash
 
         salt '*' zoneadm.ready clementine
-    '''
-    ret = {'status': True}
+    """
+    ret = {"status": True}
 
     ## ready zone
-    res = __salt__['cmd.run_all']('zoneadm {zone} ready'.format(
-        zone='-u {0}'.format(zone) if _is_uuid(zone) else '-z {0}'.format(zone),
-    ))
-    ret['status'] = res['retcode'] == 0
-    ret['message'] = res['stdout'] if ret['status'] else res['stderr']
-    ret['message'] = ret['message'].replace('zoneadm: ', '')
-    if ret['message'] == '':
-        del ret['message']
+    res = __salt__["cmd.run_all"](
+        "zoneadm {zone} ready".format(
+            zone="-u {0}".format(zone) if _is_uuid(zone) else "-z {0}".format(zone),
+        )
+    )
+    ret["status"] = res["retcode"] == 0
+    ret["message"] = res["stdout"] if ret["status"] else res["stderr"]
+    ret["message"] = ret["message"].replace("zoneadm: ", "")
+    if ret["message"] == "":
+        del ret["message"]
 
     return ret
 
 
 def verify(zone):
-    '''
+    """
     Check to make sure the configuration of the specified
     zone can safely be installed on the machine.
 
@@ -407,24 +423,22 @@ def verify(zone):
     .. code-block:: bash
 
         salt '*' zoneadm.verify dolores
-    '''
-    ret = {'status': True}
+    """
+    ret = {"status": True}
 
     ## verify zone
-    res = __salt__['cmd.run_all']('zoneadm -z {zone} verify'.format(
-        zone=zone,
-    ))
-    ret['status'] = res['retcode'] == 0
-    ret['message'] = res['stdout'] if ret['status'] else res['stderr']
-    ret['message'] = ret['message'].replace('zoneadm: ', '')
-    if ret['message'] == '':
-        del ret['message']
+    res = __salt__["cmd.run_all"]("zoneadm -z {zone} verify".format(zone=zone,))
+    ret["status"] = res["retcode"] == 0
+    ret["message"] = res["stdout"] if ret["status"] else res["stderr"]
+    ret["message"] = ret["message"].replace("zoneadm: ", "")
+    if ret["message"] == "":
+        del ret["message"]
 
     return ret
 
 
 def move(zone, zonepath):
-    '''
+    """
     Move zone to new zonepath.
 
     zone : string
@@ -437,25 +451,27 @@ def move(zone, zonepath):
     .. code-block:: bash
 
         salt '*' zoneadm.move meave /sweetwater/meave
-    '''
-    ret = {'status': True}
+    """
+    ret = {"status": True}
 
     ## verify zone
-    res = __salt__['cmd.run_all']('zoneadm {zone} move {path}'.format(
-        zone='-u {0}'.format(zone) if _is_uuid(zone) else '-z {0}'.format(zone),
-        path=zonepath,
-    ))
-    ret['status'] = res['retcode'] == 0
-    ret['message'] = res['stdout'] if ret['status'] else res['stderr']
-    ret['message'] = ret['message'].replace('zoneadm: ', '')
-    if ret['message'] == '':
-        del ret['message']
+    res = __salt__["cmd.run_all"](
+        "zoneadm {zone} move {path}".format(
+            zone="-u {0}".format(zone) if _is_uuid(zone) else "-z {0}".format(zone),
+            path=zonepath,
+        )
+    )
+    ret["status"] = res["retcode"] == 0
+    ret["message"] = res["stdout"] if ret["status"] else res["stderr"]
+    ret["message"] = ret["message"].replace("zoneadm: ", "")
+    if ret["message"] == "":
+        del ret["message"]
 
     return ret
 
 
 def uninstall(zone):
-    '''
+    """
     Uninstall the specified zone from the system.
 
     zone : string
@@ -469,24 +485,26 @@ def uninstall(zone):
     .. code-block:: bash
 
         salt '*' zoneadm.uninstall teddy
-    '''
-    ret = {'status': True}
+    """
+    ret = {"status": True}
 
     ## uninstall zone
-    res = __salt__['cmd.run_all']('zoneadm {zone} uninstall -F'.format(
-        zone='-u {0}'.format(zone) if _is_uuid(zone) else '-z {0}'.format(zone),
-    ))
-    ret['status'] = res['retcode'] == 0
-    ret['message'] = res['stdout'] if ret['status'] else res['stderr']
-    ret['message'] = ret['message'].replace('zoneadm: ', '')
-    if ret['message'] == '':
-        del ret['message']
+    res = __salt__["cmd.run_all"](
+        "zoneadm {zone} uninstall -F".format(
+            zone="-u {0}".format(zone) if _is_uuid(zone) else "-z {0}".format(zone),
+        )
+    )
+    ret["status"] = res["retcode"] == 0
+    ret["message"] = res["stdout"] if ret["status"] else res["stderr"]
+    ret["message"] = ret["message"].replace("zoneadm: ", "")
+    if ret["message"] == "":
+        del ret["message"]
 
     return ret
 
 
 def install(zone, nodataset=False, brand_opts=None):
-    '''
+    """
     Install the specified zone from the system.
 
     zone : string
@@ -502,26 +520,28 @@ def install(zone, nodataset=False, brand_opts=None):
 
         salt '*' zoneadm.install dolores
         salt '*' zoneadm.install teddy True
-    '''
-    ret = {'status': True}
+    """
+    ret = {"status": True}
 
     ## install zone
-    res = __salt__['cmd.run_all']('zoneadm -z {zone} install{nodataset}{brand_opts}'.format(
-        zone=zone,
-        nodataset=' -x nodataset' if nodataset else '',
-        brand_opts=' {0}'.format(brand_opts) if brand_opts else '',
-    ))
-    ret['status'] = res['retcode'] == 0
-    ret['message'] = res['stdout'] if ret['status'] else res['stderr']
-    ret['message'] = ret['message'].replace('zoneadm: ', '')
-    if ret['message'] == '':
-        del ret['message']
+    res = __salt__["cmd.run_all"](
+        "zoneadm -z {zone} install{nodataset}{brand_opts}".format(
+            zone=zone,
+            nodataset=" -x nodataset" if nodataset else "",
+            brand_opts=" {0}".format(brand_opts) if brand_opts else "",
+        )
+    )
+    ret["status"] = res["retcode"] == 0
+    ret["message"] = res["stdout"] if ret["status"] else res["stderr"]
+    ret["message"] = ret["message"].replace("zoneadm: ", "")
+    if ret["message"] == "":
+        del ret["message"]
 
     return ret
 
 
 def clone(zone, source, snapshot=None):
-    '''
+    """
     Install a zone by copying an existing installed zone.
 
     zone : string
@@ -536,21 +556,24 @@ def clone(zone, source, snapshot=None):
     .. code-block:: bash
 
         salt '*' zoneadm.clone clementine dolores
-    '''
-    ret = {'status': True}
+    """
+    ret = {"status": True}
 
     ## install zone
-    res = __salt__['cmd.run_all']('zoneadm -z {zone} clone {snapshot}{source}'.format(
-        zone=zone,
-        source=source,
-        snapshot='-s {0} '.format(snapshot) if snapshot else '',
-    ))
-    ret['status'] = res['retcode'] == 0
-    ret['message'] = res['stdout'] if ret['status'] else res['stderr']
-    ret['message'] = ret['message'].replace('zoneadm: ', '')
-    if ret['message'] == '':
-        del ret['message']
+    res = __salt__["cmd.run_all"](
+        "zoneadm -z {zone} clone {snapshot}{source}".format(
+            zone=zone,
+            source=source,
+            snapshot="-s {0} ".format(snapshot) if snapshot else "",
+        )
+    )
+    ret["status"] = res["retcode"] == 0
+    ret["message"] = res["stdout"] if ret["status"] else res["stderr"]
+    ret["message"] = ret["message"].replace("zoneadm: ", "")
+    if ret["message"] == "":
+        del ret["message"]
 
     return ret
+
 
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4

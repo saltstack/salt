@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Module for low-level interaction with JbossAS7 through CLI.
 
 This module exposes two ways of interaction with the CLI, either through commands or operations.
@@ -34,13 +34,14 @@ Example:
       cli_user: 'jbossadm'
       cli_password: 'jbossadm'
 
-'''
+"""
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
-import re
 import pprint
+import re
 import time
 
 # Import Salt libs
@@ -53,7 +54,7 @@ log = logging.getLogger(__name__)
 
 
 def run_command(jboss_config, command, fail_on_error=True):
-    '''
+    """
     Execute a command against jboss instance through the CLI interface.
 
     jboss_config
@@ -69,22 +70,26 @@ def run_command(jboss_config, command, fail_on_error=True):
     .. code-block:: bash
 
         salt '*' jboss7_cli.run_command '{"cli_path": "integration.modules.sysmod.SysModuleTest.test_valid_docs", "controller": "10.11.12.13:9999", "cli_user": "jbossadm", "cli_password": "jbossadm"}' my_command
-    '''
-    cli_command_result = __call_cli(jboss_config, command)
+    """
+    cli_command_result = _call_cli(jboss_config, command)
 
-    if cli_command_result['retcode'] == 0:
-        cli_command_result['success'] = True
+    if cli_command_result["retcode"] == 0:
+        cli_command_result["success"] = True
     else:
         if fail_on_error:
-            raise CommandExecutionError('''Command execution failed, return code={retcode}, stdout='{stdout}', stderr='{stderr}' '''.format(**cli_command_result))
+            raise CommandExecutionError(
+                """Command execution failed, return code={retcode}, stdout='{stdout}', stderr='{stderr}' """.format(
+                    **cli_command_result
+                )
+            )
         else:
-            cli_command_result['success'] = False
+            cli_command_result["success"] = False
 
     return cli_command_result
 
 
 def run_operation(jboss_config, operation, fail_on_error=True, retries=1):
-    '''
+    """
     Execute an operation against jboss instance through the CLI interface.
 
     jboss_config
@@ -103,72 +108,106 @@ def run_operation(jboss_config, operation, fail_on_error=True, retries=1):
     .. code-block:: bash
 
         salt '*' jboss7_cli.run_operation '{"cli_path": "integration.modules.sysmod.SysModuleTest.test_valid_docs", "controller": "10.11.12.13:9999", "cli_user": "jbossadm", "cli_password": "jbossadm"}' my_operation
-    '''
-    cli_command_result = __call_cli(jboss_config, operation, retries)
+    """
+    cli_command_result = _call_cli(jboss_config, operation, retries)
 
-    if cli_command_result['retcode'] == 0:
-        if _is_cli_output(cli_command_result['stdout']):
-            cli_result = _parse(cli_command_result['stdout'])
-            cli_result['success'] = cli_result['outcome'] == 'success'
+    if cli_command_result["retcode"] == 0:
+        if _is_cli_output(cli_command_result["stdout"]):
+            cli_result = _parse(cli_command_result["stdout"])
+            cli_result["success"] = cli_result["outcome"] == "success"
         else:
-            raise CommandExecutionError('Operation has returned unparseable output: {0}'.format(cli_command_result['stdout']))
+            raise CommandExecutionError(
+                "Operation has returned unparseable output: {0}".format(
+                    cli_command_result["stdout"]
+                )
+            )
     else:
-        if _is_cli_output(cli_command_result['stdout']):
-            cli_result = _parse(cli_command_result['stdout'])
-            cli_result['success'] = False
-            match = re.search(r'^(JBAS\d+):', cli_result['failure-description'])
-            cli_result['err_code'] = match.group(1)
-            cli_result['stdout'] = cli_command_result['stdout']
+        if _is_cli_output(cli_command_result["stdout"]):
+            cli_result = _parse(cli_command_result["stdout"])
+            cli_result["success"] = False
+
+            match = re.search(r"^(JBAS\d+):", cli_result["failure-description"])
+            # if match is None then check for wildfly error code
+            if match is None:
+                match = re.search(r"^(WFLYCTL\d+):", cli_result["failure-description"])
+
+            if match is not None:
+                cli_result["err_code"] = match.group(1)
+            else:
+                # Could not find err_code
+                log.error("Jboss 7 operation failed! Error Code could not be found!")
+                cli_result["err_code"] = "-1"
+
+            cli_result["stdout"] = cli_command_result["stdout"]
         else:
             if fail_on_error:
-                raise CommandExecutionError('''Command execution failed, return code={retcode}, stdout='{stdout}', stderr='{stderr}' '''.format(**cli_command_result))
+                raise CommandExecutionError(
+                    """Command execution failed, return code={retcode}, stdout='{stdout}', stderr='{stderr}' """.format(
+                        **cli_command_result
+                    )
+                )
             else:
                 cli_result = {
-                    'success': False,
-                    'stdout': cli_command_result['stdout'],
-                    'stderr': cli_command_result['stderr'],
-                    'retcode': cli_command_result['retcode']
+                    "success": False,
+                    "stdout": cli_command_result["stdout"],
+                    "stderr": cli_command_result["stderr"],
+                    "retcode": cli_command_result["retcode"],
                 }
     return cli_result
 
 
-def __call_cli(jboss_config, command, retries=1):
+def _call_cli(jboss_config, command, retries=1):
     command_segments = [
-        jboss_config['cli_path'],
-        '--connect',
-        '--controller="{0}"'.format(jboss_config['controller'])
+        jboss_config["cli_path"],
+        "--connect",
+        '--controller="{0}"'.format(jboss_config["controller"]),
     ]
-    if 'cli_user' in six.iterkeys(jboss_config):
-        command_segments.append('--user="{0}"'.format(jboss_config['cli_user']))
-    if 'cli_password' in six.iterkeys(jboss_config):
-        command_segments.append('--password="{0}"'.format(jboss_config['cli_password']))
+    if "cli_user" in six.iterkeys(jboss_config):
+        command_segments.append('--user="{0}"'.format(jboss_config["cli_user"]))
+    if "cli_password" in six.iterkeys(jboss_config):
+        command_segments.append('--password="{0}"'.format(jboss_config["cli_password"]))
     command_segments.append('--command="{0}"'.format(__escape_command(command)))
-    cli_script = ' '.join(command_segments)
+    cli_script = " ".join(command_segments)
 
-    cli_command_result = __salt__['cmd.run_all'](cli_script)
-    log.debug('cli_command_result=%s', cli_command_result)
+    cli_command_result = __salt__["cmd.run_all"](cli_script)
+    log.debug("cli_command_result=%s", cli_command_result)
 
-    log.debug('========= STDOUT:\n%s', cli_command_result['stdout'])
-    log.debug('========= STDERR:\n%s', cli_command_result['stderr'])
-    log.debug('========= RETCODE: %d', cli_command_result['retcode'])
+    log.debug("========= STDOUT:\n%s", cli_command_result["stdout"])
+    log.debug("========= STDERR:\n%s", cli_command_result["stderr"])
+    log.debug("========= RETCODE: %d", cli_command_result["retcode"])
 
-    if cli_command_result['retcode'] == 127:
-        raise CommandExecutionError('Could not execute jboss-cli.sh script. Have you specified server_dir variable correctly?\nCurrent CLI path: {cli_path}. '.format(cli_path=jboss_config['cli_path']))
+    if cli_command_result["retcode"] == 127:
+        raise CommandExecutionError(
+            "Could not execute jboss-cli.sh script. Have you specified server_dir variable correctly?\nCurrent CLI path: {cli_path}. ".format(
+                cli_path=jboss_config["cli_path"]
+            )
+        )
 
-    if cli_command_result['retcode'] == 1 and 'Unable to authenticate against controller' in cli_command_result['stderr']:
-        raise CommandExecutionError('Could not authenticate against controller, please check username and password for the management console. Err code: {retcode}, stdout: {stdout}, stderr: {stderr}'.format(**cli_command_result))
+    if (
+        cli_command_result["retcode"] == 1
+        and "Unable to authenticate against controller" in cli_command_result["stderr"]
+    ):
+        raise CommandExecutionError(
+            "Could not authenticate against controller, please check username and password for the management console. Err code: {retcode}, stdout: {stdout}, stderr: {stderr}".format(
+                **cli_command_result
+            )
+        )
 
-    # It may happen that eventhough server is up it may not respond to the call
-    if cli_command_result['retcode'] == 1 and 'JBAS012144' in cli_command_result['stderr'] and retries > 0:  # Cannot connect to cli
-        log.debug('Command failed, retrying... (%d tries left)', retries)
+    # TODO add WFLYCTL code
+    if (
+        cli_command_result["retcode"] == 1
+        and "JBAS012144" in cli_command_result["stderr"]
+        and retries > 0
+    ):  # Cannot connect to cli
+        log.debug("Command failed, retrying... (%d tries left)", retries)
         time.sleep(3)
-        return __call_cli(jboss_config, command, retries - 1)
+        return _call_cli(jboss_config, command, retries - 1)
 
     return cli_command_result
 
 
 def __escape_command(command):
-    '''
+    """
     This function escapes the command so that can be passed in the command line to JBoss CLI.
     Escaping commands passed to jboss is extremely confusing.
     If you want to save a binding that contains a single backslash character read the following explanation.
@@ -213,9 +252,9 @@ def __escape_command(command):
     ... are all the same thing:)
 
     Remember that the command that comes in is already (3) format. Now we need to escape it further to be able to pass it to command line.
-    '''
-    result = command.replace('\\', '\\\\')  # replace \ -> \\
-    result = result.replace('"', '\\"')     # replace " -> \"
+    """
+    result = command.replace("\\", "\\\\")  # replace \ -> \\
+    result = result.replace('"', '\\"')  # replace " -> \"
     return result
 
 
@@ -231,7 +270,7 @@ def _parse(cli_output):
     tokens = __tokenize(cli_output)
     result = __process_tokens(tokens)
 
-    log.debug("=== RESULT: "+pprint.pformat(result))
+    log.debug("=== RESULT: %s", pprint.pformat(result))
     return result
 
 
@@ -287,7 +326,9 @@ def __process_tokens_internal(tokens, start_at=0):
             current_key = None
         elif __is_dict_start(token):
             log.debug("    TYPE: DICT START")
-            dict_value, token_no = __process_tokens_internal(tokens, start_at=token_no+1)
+            dict_value, token_no = __process_tokens_internal(
+                tokens, start_at=token_no + 1
+            )
             log.debug("    DICT = %s ", dict_value)
             result[current_key] = dict_value
             log.debug("    %s -> %s", current_key, result[current_key])
@@ -302,7 +343,7 @@ def __process_tokens_internal(tokens, start_at=0):
             log.debug("    TYPE: EXPRESSION")
             is_expression = True
         else:
-            raise CommandExecutionError('Unknown token! Token: {0}'.format(token))
+            raise CommandExecutionError("Unknown token! Token: {0}".format(token))
 
         token_no = token_no + 1
 
@@ -310,26 +351,28 @@ def __process_tokens_internal(tokens, start_at=0):
 def __tokenize(cli_output):
     # add all possible tokens here
     # \\ means a single backslash here
-    tokens_re = re.compile(r'("(?:[^"\\]|\\"|\\\\)*"|=>|{|}|true|false|undefined|[0-9A-Za-z]+)', re.DOTALL)
+    tokens_re = re.compile(
+        r'("(?:[^"\\]|\\"|\\\\)*"|=>|{|}|true|false|undefined|[0-9A-Za-z]+)', re.DOTALL
+    )
     tokens = tokens_re.findall(cli_output)
     log.debug("tokens=%s", tokens)
     return tokens
 
 
 def __is_dict_start(token):
-    return token == '{'
+    return token == "{"
 
 
 def __is_dict_end(token):
-    return token == '}'
+    return token == "}"
 
 
 def __is_boolean(token):
-    return token == 'true' or token == 'false'
+    return token == "true" or token == "false"
 
 
 def __get_boolean(token):
-    return token == 'true'
+    return token == "true"
 
 
 def __is_int(token):
@@ -341,12 +384,14 @@ def __get_int(token):
 
 
 def __is_long(token):
-    return token[0:-1].isdigit() and token[-1] == 'L'
+    return token[0:-1].isdigit() and token[-1] == "L"
 
 
 def __get_long(token):
     if six.PY2:
-        return long(token[0:-1])  # pylint: disable=incompatible-py3-code
+        # pylint: disable=incompatible-py3-code,undefined-variable
+        return long(token[0:-1])
+        # pylint: enable=incompatible-py3-code,undefined-variable
     else:
         return int(token[0:-1])
 
@@ -360,7 +405,7 @@ def __get_datatype(token):
 
 
 def __is_undefined(token):
-    return token == 'undefined'
+    return token == "undefined"
 
 
 def __is_quoted_string(token):
@@ -369,13 +414,15 @@ def __is_quoted_string(token):
 
 def __get_quoted_string(token):
     result = token[1:-1]  # remove quotes
-    result = result.replace('\\\\', '\\')  # unescape the output, by default all the string are escaped in the output
+    result = result.replace(
+        "\\\\", "\\"
+    )  # unescape the output, by default all the string are escaped in the output
     return result
 
 
 def __is_assignment(token):
-    return token == '=>'
+    return token == "=>"
 
 
 def __is_expression(token):
-    return token == 'expression'
+    return token == "expression"

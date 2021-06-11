@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 An external pillar module for getting credentials from confidant.
 
 Configuring the Confidant module
@@ -36,31 +36,35 @@ ext_pillar:
 
 Module Documentation
 ====================
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
+
+import copy
 
 # Import python libs
 import logging
-import copy
 
 # Import third party libs
 try:
+    # pylint: disable=no-name-in-module
     import confidant.client
     import confidant.formatter
+
     HAS_LIBS = True
+    # pylint: enable=no-name-in-module
 except ImportError:
     HAS_LIBS = False
 
 # Set up logging
 log = logging.getLogger(__name__)
 
-__virtualname__ = 'confidant'
+__virtualname__ = "confidant"
 
 
 def __virtual__():
-    '''
+    """
     Only return if requests and boto are installed.
-    '''
+    """
     if HAS_LIBS:
         return __virtualname__
     else:
@@ -68,36 +72,36 @@ def __virtual__():
 
 
 def ext_pillar(minion_id, pillar, profile=None):
-    '''
+    """
     Read pillar data from Confidant via its API.
-    '''
+    """
     if profile is None:
         profile = {}
     # default to returning failure
     ret = {
-        'credentials_result': False,
-        'credentials': None,
-        'credentials_metadata': None
+        "credentials_result": False,
+        "credentials": None,
+        "credentials_metadata": None,
     }
     profile_data = copy.deepcopy(profile)
-    if profile_data.get('disabled', False):
-        ret['result'] = True
+    if profile_data.get("disabled", False):
+        ret["result"] = True
         return ret
-    token_version = profile_data.get('token_version', 1)
+    token_version = profile_data.get("token_version", 1)
     try:
-        url = profile_data['url']
-        auth_key = profile_data['auth_key']
-        auth_context = profile_data['auth_context']
-        role = auth_context['from']
+        url = profile_data["url"]
+        auth_key = profile_data["auth_key"]
+        auth_context = profile_data["auth_context"]
+        role = auth_context["from"]
     except (KeyError, TypeError):
-        msg = ('profile has undefined url, auth_key or auth_context')
+        msg = "profile has undefined url, auth_key or auth_context"
         log.debug(msg)
         return ret
-    region = profile_data.get('region', 'us-east-1')
-    token_duration = profile_data.get('token_duration', 60)
-    retries = profile_data.get('retries', 5)
-    token_cache_file = profile_data.get('token_cache_file')
-    backoff = profile_data.get('backoff', 1)
+    region = profile_data.get("region", "us-east-1")
+    token_duration = profile_data.get("token_duration", 60)
+    retries = profile_data.get("retries", 5)
+    token_cache_file = profile_data.get("token_cache_file")
+    backoff = profile_data.get("backoff", 1)
     client = confidant.client.ConfidantClient(
         url,
         auth_key,
@@ -107,17 +111,14 @@ def ext_pillar(minion_id, pillar, profile=None):
         token_cache_file=token_cache_file,
         region=region,
         retries=retries,
-        backoff=backoff
+        backoff=backoff,
     )
     try:
-        data = client.get_service(
-            role,
-            decrypt_blind=True
-        )
+        data = client.get_service(role, decrypt_blind=True)
     except confidant.client.TokenCreationError:
         return ret
-    if not data['result']:
+    if not data["result"]:
         return ret
     ret = confidant.formatter.combined_credential_pair_format(data)
-    ret['credentials_result'] = True
+    ret["credentials_result"] = True
     return ret

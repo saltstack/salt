@@ -144,7 +144,7 @@ be doubled after each attempt to reconnect (ZeroMQ default behavior).
 
 Lets say the generated random value is 11 seconds (or 11000ms).
 
-.. code-block:: bash
+.. code-block:: console
 
     reconnect 1: wait 11 seconds
     reconnect 2: wait 22 seconds
@@ -227,12 +227,16 @@ To reduce pillar rendering times, it is possible to cache pillars on the
 master. To do this, see the set of master configuration options which
 are prefixed with `pillar_cache`.
 
+If many pillars are encrypted using :mod:`gpg <salt.renderers.gpg>` renderer, it
+is possible to cache GPG data. To do this, see the set of master configuration
+options which are prefixed with `gpg_cache`.
+
 .. note::
 
-    Caching pillars on the master may introduce security considerations.
-    Be certain to read caveats outlined in the master configuration file
-    to understand how pillar caching may affect a master's ability to
-    protect sensitive data!
+    Caching pillars or GPG data on the master may introduce security
+    considerations. Be certain to read caveats outlined in the master
+    configuration file to understand how pillar caching may affect a master's
+    ability to protect sensitive data!
 
 The Master is disk IO bound
 ---------------------------
@@ -272,7 +276,7 @@ system, such as a database.
   data using a returner (instead of the local job cache on disk).
 
 If a master has many accepted keys, it may take a long time to publish a job
-because the master much first determine the matching minions and deliver
+because the master must first determine the matching minions and deliver
 that information back to the waiting client before the job can be published.
 
 To mitigate this, a key cache may be enabled. This will reduce the load

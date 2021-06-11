@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Module for the management of MacOS systems that use launchd/launchctl
 
 .. important::
@@ -9,52 +9,62 @@ Module for the management of MacOS systems that use launchd/launchctl
     <module-provider-override>`.
 
 :depends:   - plistlib Python module
-'''
+"""
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
+import fnmatch
 import logging
 import os
 import plistlib
-import fnmatch
 import re
 
 # Import salt libs
 import salt.utils.data
+import salt.utils.decorators as decorators
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
-import salt.utils.decorators as decorators
-from salt.utils.versions import LooseVersion as _LooseVersion
 from salt.ext import six
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Set up logging
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
-__virtualname__ = 'service'
+__virtualname__ = "service"
 
 BEFORE_YOSEMITE = True
 
 
 def __virtual__():
-    '''
+    """
     Only work on MacOS
-    '''
+    """
     if not salt.utils.platform.is_darwin():
-        return (False, 'Failed to load the mac_service module:\n'
-                       'Only available on macOS systems.')
+        return (
+            False,
+            "Failed to load the mac_service module:\n"
+            "Only available on macOS systems.",
+        )
 
-    if not os.path.exists('/bin/launchctl'):
-        return (False, 'Failed to load the mac_service module:\n'
-                       'Required binary not found: "/bin/launchctl"')
+    if not os.path.exists("/bin/launchctl"):
+        return (
+            False,
+            "Failed to load the mac_service module:\n"
+            'Required binary not found: "/bin/launchctl"',
+        )
 
-    if _LooseVersion(__grains__['osrelease']) >= _LooseVersion('10.11'):
-        return (False, 'Failed to load the mac_service module:\n'
-                       'Not available on El Capitan, uses mac_service.py')
+    if _LooseVersion(__grains__["osrelease"]) >= _LooseVersion("10.11"):
+        return (
+            False,
+            "Failed to load the mac_service module:\n"
+            "Not available on El Capitan, uses mac_service.py",
+        )
 
-    if _LooseVersion(__grains__['osrelease']) >= _LooseVersion('10.10'):
+    if _LooseVersion(__grains__["osrelease"]) >= _LooseVersion("10.10"):
         global BEFORE_YOSEMITE
         BEFORE_YOSEMITE = False
 
@@ -62,22 +72,22 @@ def __virtual__():
 
 
 def _launchd_paths():
-    '''
+    """
     Paths where launchd services can be found
-    '''
+    """
     return [
-        '/Library/LaunchAgents',
-        '/Library/LaunchDaemons',
-        '/System/Library/LaunchAgents',
-        '/System/Library/LaunchDaemons',
+        "/Library/LaunchAgents",
+        "/Library/LaunchDaemons",
+        "/System/Library/LaunchAgents",
+        "/System/Library/LaunchDaemons",
     ]
 
 
 @decorators.memoize
 def _available_services():
-    '''
+    """
     Return a dictionary of all available services on the system
-    '''
+    """
     available_services = dict()
     for launch_dir in _launchd_paths():
         for root, dirs, files in salt.utils.path.os_walk(launch_dir):
@@ -93,28 +103,29 @@ def _available_services():
                     # This assumes most of the plist files
                     # will be already in XML format
                     with salt.utils.files.fopen(file_path):
-                        plist = plistlib.readPlist(
-                            salt.utils.data.decode(true_path)
-                        )
+                        plist = plistlib.readPlist(salt.utils.data.decode(true_path))
 
-                except Exception:
+                except Exception:  # pylint: disable=broad-except
                     # If plistlib is unable to read the file we'll need to use
                     # the system provided plutil program to do the conversion
                     cmd = '/usr/bin/plutil -convert xml1 -o - -- "{0}"'.format(
-                        true_path)
-                    plist_xml = __salt__['cmd.run_all'](
-                        cmd, python_shell=False)['stdout']
+                        true_path
+                    )
+                    plist_xml = __salt__["cmd.run_all"](cmd, python_shell=False)[
+                        "stdout"
+                    ]
                     if six.PY2:
                         plist = plistlib.readPlistFromString(plist_xml)
                     else:
                         plist = plistlib.readPlistFromBytes(
-                            salt.utils.stringutils.to_bytes(plist_xml))
+                            salt.utils.stringutils.to_bytes(plist_xml)
+                        )
 
                 try:
                     available_services[plist.Label.lower()] = {
-                        'filename': filename,
-                        'file_path': true_path,
-                        'plist': plist,
+                        "filename": filename,
+                        "file_path": true_path,
+                        "plist": plist,
                     }
                 except AttributeError:
                     # As of MacOS 10.12 there might be plist files without Label key
@@ -126,9 +137,9 @@ def _available_services():
 
 
 def _service_by_name(name):
-    '''
+    """
     Return the service info for a service by label, filename or path
-    '''
+    """
     services = _available_services()
     name = name.lower()
 
@@ -137,10 +148,10 @@ def _service_by_name(name):
         return services[name]
 
     for service in six.itervalues(services):
-        if service['file_path'].lower() == name:
+        if service["file_path"].lower() == name:
             # Match on full path
             return service
-        basename, ext = os.path.splitext(service['filename'])
+        basename, ext = os.path.splitext(service["filename"])
         if basename.lower() == name:
             # Match on basename
             return service
@@ -149,7 +160,7 @@ def _service_by_name(name):
 
 
 def get_all():
-    '''
+    """
     Return all installed services
 
     CLI Example:
@@ -157,17 +168,16 @@ def get_all():
     .. code-block:: bash
 
         salt '*' service.get_all
-    '''
-    cmd = 'launchctl list'
+    """
+    cmd = "launchctl list"
 
     service_lines = [
-        line for line in __salt__['cmd.run'](cmd).splitlines()
-        if not line.startswith('PID')
+        line
+        for line in __salt__["cmd.run"](cmd).splitlines()
+        if not line.startswith("PID")
     ]
 
-    service_labels_from_list = [
-        line.split("\t")[2] for line in service_lines
-    ]
+    service_labels_from_list = [line.split("\t")[2] for line in service_lines]
     service_labels_from_services = list(_available_services().keys())
 
     return sorted(set(service_labels_from_list + service_labels_from_services))
@@ -175,25 +185,23 @@ def get_all():
 
 def _get_launchctl_data(job_label, runas=None):
     if BEFORE_YOSEMITE:
-        cmd = 'launchctl list -x {0}'.format(job_label)
+        cmd = "launchctl list -x {0}".format(job_label)
     else:
-        cmd = 'launchctl list {0}'.format(job_label)
+        cmd = "launchctl list {0}".format(job_label)
 
-    launchctl_data = __salt__['cmd.run_all'](cmd,
-                                             python_shell=False,
-                                             runas=runas)
+    launchctl_data = __salt__["cmd.run_all"](cmd, python_shell=False, runas=runas)
 
-    if launchctl_data['stderr']:
+    if launchctl_data["stderr"]:
         # The service is not loaded, further, it might not even exist
         # in either case we didn't get XML to parse, so return an empty
         # dict
         return None
 
-    return launchctl_data['stdout']
+    return launchctl_data["stdout"]
 
 
 def available(job_label):
-    '''
+    """
     Check that the given service is available.
 
     CLI Example:
@@ -201,12 +209,12 @@ def available(job_label):
     .. code-block:: bash
 
         salt '*' service.available com.openssh.sshd
-    '''
+    """
     return True if _service_by_name(job_label) else False
 
 
 def missing(job_label):
-    '''
+    """
     The inverse of service.available
     Check that the given service is not available.
 
@@ -215,12 +223,12 @@ def missing(job_label):
     .. code-block:: bash
 
         salt '*' service.missing com.openssh.sshd
-    '''
+    """
     return False if _service_by_name(job_label) else True
 
 
 def status(name, runas=None):
-    '''
+    """
     Return the status for a service via systemd.
     If the name contains globbing, a dict mapping service name to True/False
     values is returned.
@@ -241,9 +249,9 @@ def status(name, runas=None):
     .. code-block:: bash
 
         salt '*' service.status <service name>
-    '''
+    """
 
-    contains_globbing = bool(re.search(r'\*|\?|\[.+\]', name))
+    contains_globbing = bool(re.search(r"\*|\?|\[.+\]", name))
     if contains_globbing:
         services = fnmatch.filter(get_all(), name)
     else:
@@ -252,15 +260,17 @@ def status(name, runas=None):
     for service in services:
         service_info = _service_by_name(service)
 
-        lookup_name = service_info['plist']['Label'] if service_info else service
+        lookup_name = service_info["plist"]["Label"] if service_info else service
         launchctl_data = _get_launchctl_data(lookup_name, runas=runas)
 
         if launchctl_data:
             if BEFORE_YOSEMITE:
                 if six.PY3:
-                    results[service] = 'PID' in plistlib.loads(launchctl_data)
+                    results[service] = "PID" in plistlib.loads(launchctl_data)
                 else:
-                    results[service] = 'PID' in dict(plistlib.readPlistFromString(launchctl_data))
+                    results[service] = "PID" in dict(
+                        plistlib.readPlistFromString(launchctl_data)
+                    )
             else:
                 pattern = '"PID" = [0-9]+;'
                 results[service] = True if re.search(pattern, launchctl_data) else False
@@ -272,7 +282,7 @@ def status(name, runas=None):
 
 
 def stop(job_label, runas=None):
-    '''
+    """
     Stop the specified service
 
     CLI Example:
@@ -282,18 +292,17 @@ def stop(job_label, runas=None):
         salt '*' service.stop <service label>
         salt '*' service.stop org.ntp.ntpd
         salt '*' service.stop /System/Library/LaunchDaemons/org.ntp.ntpd.plist
-    '''
+    """
     service = _service_by_name(job_label)
     if service:
-        cmd = 'launchctl unload -w {0}'.format(service['file_path'],
-                                               runas=runas)
-        return not __salt__['cmd.retcode'](cmd, runas=runas, python_shell=False)
+        cmd = "launchctl unload -w {0}".format(service["file_path"], runas=runas)
+        return not __salt__["cmd.retcode"](cmd, runas=runas, python_shell=False)
 
     return False
 
 
 def start(job_label, runas=None):
-    '''
+    """
     Start the specified service
 
     CLI Example:
@@ -303,17 +312,17 @@ def start(job_label, runas=None):
         salt '*' service.start <service label>
         salt '*' service.start org.ntp.ntpd
         salt '*' service.start /System/Library/LaunchDaemons/org.ntp.ntpd.plist
-    '''
+    """
     service = _service_by_name(job_label)
     if service:
-        cmd = 'launchctl load -w {0}'.format(service['file_path'], runas=runas)
-        return not __salt__['cmd.retcode'](cmd, runas=runas, python_shell=False)
+        cmd = "launchctl load -w {0}".format(service["file_path"], runas=runas)
+        return not __salt__["cmd.retcode"](cmd, runas=runas, python_shell=False)
 
     return False
 
 
 def restart(job_label, runas=None):
-    '''
+    """
     Restart the named service
 
     CLI Example:
@@ -321,13 +330,13 @@ def restart(job_label, runas=None):
     .. code-block:: bash
 
         salt '*' service.restart <service label>
-    '''
+    """
     stop(job_label, runas=runas)
     return start(job_label, runas=runas)
 
 
 def enabled(job_label, runas=None):
-    '''
+    """
     Return True if the named service is enabled, false otherwise
 
     CLI Example:
@@ -335,12 +344,12 @@ def enabled(job_label, runas=None):
     .. code-block:: bash
 
         salt '*' service.enabled <service label>
-    '''
-    overrides_data = dict(plistlib.readPlist(
-        '/var/db/launchd.db/com.apple.launchd/overrides.plist'
-    ))
+    """
+    overrides_data = dict(
+        plistlib.readPlist("/var/db/launchd.db/com.apple.launchd/overrides.plist")
+    )
     if overrides_data.get(job_label, False):
-        if overrides_data[job_label]['Disabled']:
+        if overrides_data[job_label]["Disabled"]:
             return False
         else:
             return True
@@ -349,7 +358,7 @@ def enabled(job_label, runas=None):
 
 
 def disabled(job_label, runas=None):
-    '''
+    """
     Return True if the named service is disabled, false otherwise
 
     CLI Example:
@@ -357,12 +366,12 @@ def disabled(job_label, runas=None):
     .. code-block:: bash
 
         salt '*' service.disabled <service label>
-    '''
-    overrides_data = dict(plistlib.readPlist(
-        '/var/db/launchd.db/com.apple.launchd/overrides.plist'
-    ))
+    """
+    overrides_data = dict(
+        plistlib.readPlist("/var/db/launchd.db/com.apple.launchd/overrides.plist")
+    )
     if overrides_data.get(job_label, False):
-        if overrides_data[job_label]['Disabled']:
+        if overrides_data[job_label]["Disabled"]:
             return True
         else:
             return False

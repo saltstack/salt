@@ -1,92 +1,89 @@
-# -*- coding: utf-8 -*-
-'''
+"""
 Support for LVS (Linux Virtual Server)
-'''
-from __future__ import absolute_import, print_function, unicode_literals
+"""
 
-# Import python libs
-
-# Import salt libs
-import salt.utils.path
 import salt.utils.decorators as decorators
+import salt.utils.path
 from salt.exceptions import SaltException
 
-
-__func_alias__ = {
-    'list_': 'list'
-}
+__func_alias__ = {"list_": "list"}
 
 
 # Cache the output of running which('ipvsadm')
 @decorators.memoize
 def __detect_os():
-    return salt.utils.path.which('ipvsadm')
+    return salt.utils.path.which("ipvsadm")
 
 
 def __virtual__():
-    '''
+    """
     Only load if ipvsadm command exists on the system.
-    '''
+    """
     if not __detect_os():
-        return (False, 'The lvs execution module cannot be loaded: the ipvsadm binary is not in the path.')
+        return (
+            False,
+            "The lvs execution module cannot be loaded: the ipvsadm binary is not in the path.",
+        )
 
-    return 'lvs'
+    return "lvs"
 
 
 def _build_cmd(**kwargs):
-    '''
+    """
 
     Build a well-formatted ipvsadm command based on kwargs.
-    '''
-    cmd = ''
+    """
+    cmd = ""
 
-    if 'service_address' in kwargs:
-        if kwargs['service_address']:
-            if 'protocol' in kwargs:
-                if kwargs['protocol'] == 'tcp':
-                    cmd += ' -t {0}'.format(kwargs['service_address'])
-                elif kwargs['protocol'] == 'udp':
-                    cmd += ' -u {0}'.format(kwargs['service_address'])
-                elif kwargs['protocol'] == 'fwmark':
-                    cmd += ' -f {0}'.format(kwargs['service_address'])
+    if "service_address" in kwargs:
+        if kwargs["service_address"]:
+            if "protocol" in kwargs:
+                if kwargs["protocol"] == "tcp":
+                    cmd += " -t {}".format(kwargs["service_address"])
+                elif kwargs["protocol"] == "udp":
+                    cmd += " -u {}".format(kwargs["service_address"])
+                elif kwargs["protocol"] == "fwmark":
+                    cmd += " -f {}".format(kwargs["service_address"])
                 else:
-                    raise SaltException('Error: Only support tcp, udp and fwmark service protocol')
-                del kwargs['protocol']
+                    raise SaltException(
+                        "Error: Only support tcp, udp and fwmark service protocol"
+                    )
+                del kwargs["protocol"]
             else:
-                raise SaltException('Error: protocol should specified')
-            if 'scheduler' in kwargs:
-                if kwargs['scheduler']:
-                    cmd += ' -s {0}'.format(kwargs['scheduler'])
-                    del kwargs['scheduler']
+                raise SaltException("Error: protocol should specified")
+            if "scheduler" in kwargs:
+                if kwargs["scheduler"]:
+                    cmd += " -s {}".format(kwargs["scheduler"])
+                    del kwargs["scheduler"]
         else:
-            raise SaltException('Error: service_address should specified')
-        del kwargs['service_address']
+            raise SaltException("Error: service_address should specified")
+        del kwargs["service_address"]
 
-    if 'server_address' in kwargs:
-        if kwargs['server_address']:
-            cmd += ' -r {0}'.format(kwargs['server_address'])
-            if 'packet_forward_method' in kwargs and kwargs['packet_forward_method']:
-                if kwargs['packet_forward_method'] == 'dr':
-                    cmd += ' -g'
-                elif kwargs['packet_forward_method'] == 'tunnel':
-                    cmd += ' -i'
-                elif kwargs['packet_forward_method'] == 'nat':
-                    cmd += ' -m'
+    if "server_address" in kwargs:
+        if kwargs["server_address"]:
+            cmd += " -r {}".format(kwargs["server_address"])
+            if "packet_forward_method" in kwargs and kwargs["packet_forward_method"]:
+                if kwargs["packet_forward_method"] == "dr":
+                    cmd += " -g"
+                elif kwargs["packet_forward_method"] == "tunnel":
+                    cmd += " -i"
+                elif kwargs["packet_forward_method"] == "nat":
+                    cmd += " -m"
                 else:
-                    raise SaltException('Error: only support dr, tunnel and nat')
-                del kwargs['packet_forward_method']
-            if 'weight' in kwargs and kwargs['weight']:
-                cmd += ' -w {0}'.format(kwargs['weight'])
-                del kwargs['weight']
+                    raise SaltException("Error: only support dr, tunnel and nat")
+                del kwargs["packet_forward_method"]
+            if "weight" in kwargs and kwargs["weight"]:
+                cmd += " -w {}".format(kwargs["weight"])
+                del kwargs["weight"]
         else:
-            raise SaltException('Error: server_address should specified')
-        del kwargs['server_address']
+            raise SaltException("Error: server_address should specified")
+        del kwargs["server_address"]
 
     return cmd
 
 
-def add_service(protocol=None, service_address=None, scheduler='wlc'):
-    '''
+def add_service(protocol=None, service_address=None, scheduler="wlc"):
+    """
     Add a virtual service.
 
     protocol
@@ -98,30 +95,31 @@ def add_service(protocol=None, service_address=None, scheduler='wlc'):
     scheduler
         Algorithm for allocating TCP connections and UDP datagrams to real servers.
 
-
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' lvs.add_service tcp 1.1.1.1:80 rr
-    '''
+    """
 
-    cmd = '{0} -A {1}'.format(__detect_os(),
-                              _build_cmd(protocol=protocol,
-                                         service_address=service_address,
-                                         scheduler=scheduler))
-    out = __salt__['cmd.run_all'](cmd, python_shell=False)
+    cmd = "{} -A {}".format(
+        __detect_os(),
+        _build_cmd(
+            protocol=protocol, service_address=service_address, scheduler=scheduler
+        ),
+    )
+    out = __salt__["cmd.run_all"](cmd, python_shell=False)
 
     # A non-zero return code means fail
-    if out['retcode']:
-        ret = out['stderr'].strip()
+    if out["retcode"]:
+        ret = out["stderr"].strip()
     else:
         ret = True
     return ret
 
 
 def edit_service(protocol=None, service_address=None, scheduler=None):
-    '''
+    """
     Edit the virtual service.
 
     protocol
@@ -133,30 +131,31 @@ def edit_service(protocol=None, service_address=None, scheduler=None):
     scheduler
         Algorithm for allocating TCP connections and UDP datagrams to real servers.
 
-
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' lvs.edit_service tcp 1.1.1.1:80 rr
-    '''
+    """
 
-    cmd = '{0} -E {1}'.format(__detect_os(),
-                              _build_cmd(protocol=protocol,
-                                         service_address=service_address,
-                                         scheduler=scheduler))
-    out = __salt__['cmd.run_all'](cmd, python_shell=False)
+    cmd = "{} -E {}".format(
+        __detect_os(),
+        _build_cmd(
+            protocol=protocol, service_address=service_address, scheduler=scheduler
+        ),
+    )
+    out = __salt__["cmd.run_all"](cmd, python_shell=False)
 
     # A non-zero return code means fail
-    if out['retcode']:
-        ret = out['stderr'].strip()
+    if out["retcode"]:
+        ret = out["stderr"].strip()
     else:
         ret = True
     return ret
 
 
 def delete_service(protocol=None, service_address=None):
-    '''
+    """
 
     Delete the virtual service.
 
@@ -166,29 +165,35 @@ def delete_service(protocol=None, service_address=None):
     service_address
         The LVS service address.
 
-
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' lvs.delete_service tcp 1.1.1.1:80
-    '''
+    """
 
-    cmd = '{0} -D {1}'.format(__detect_os(),
-                              _build_cmd(protocol=protocol,
-                                         service_address=service_address))
-    out = __salt__['cmd.run_all'](cmd, python_shell=False)
+    cmd = "{} -D {}".format(
+        __detect_os(), _build_cmd(protocol=protocol, service_address=service_address)
+    )
+    out = __salt__["cmd.run_all"](cmd, python_shell=False)
 
     # A non-zero return code means fail
-    if out['retcode']:
-        ret = out['stderr'].strip()
+    if out["retcode"]:
+        ret = out["stderr"].strip()
     else:
         ret = True
     return ret
 
 
-def add_server(protocol=None, service_address=None, server_address=None, packet_forward_method='dr', weight=1, **kwargs):
-    '''
+def add_server(
+    protocol=None,
+    service_address=None,
+    server_address=None,
+    packet_forward_method="dr",
+    weight=1,
+    **kwargs
+):
+    """
 
     Add a real server to a virtual service.
 
@@ -207,33 +212,43 @@ def add_server(protocol=None, service_address=None, server_address=None, packet_
     weight
         The capacity  of a server relative to the others in the pool.
 
-
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' lvs.add_server tcp 1.1.1.1:80 192.168.0.11:8080 nat 1
-    '''
+    """
 
-    cmd = '{0} -a {1}'.format(__detect_os(),
-                              _build_cmd(protocol=protocol,
-                                         service_address=service_address,
-                                         server_address=server_address,
-                                         packet_forward_method=packet_forward_method,
-                                         weight=weight,
-                                         **kwargs))
-    out = __salt__['cmd.run_all'](cmd, python_shell=False)
+    cmd = "{} -a {}".format(
+        __detect_os(),
+        _build_cmd(
+            protocol=protocol,
+            service_address=service_address,
+            server_address=server_address,
+            packet_forward_method=packet_forward_method,
+            weight=weight,
+            **kwargs
+        ),
+    )
+    out = __salt__["cmd.run_all"](cmd, python_shell=False)
 
     # A non-zero return code means fail
-    if out['retcode']:
-        ret = out['stderr'].strip()
+    if out["retcode"]:
+        ret = out["stderr"].strip()
     else:
         ret = True
     return ret
 
 
-def edit_server(protocol=None, service_address=None, server_address=None, packet_forward_method=None, weight=None, **kwargs):
-    '''
+def edit_server(
+    protocol=None,
+    service_address=None,
+    server_address=None,
+    packet_forward_method=None,
+    weight=None,
+    **kwargs
+):
+    """
 
     Edit a real server to a virtual service.
 
@@ -252,33 +267,36 @@ def edit_server(protocol=None, service_address=None, server_address=None, packet
     weight
         The capacity  of a server relative to the others in the pool.
 
-
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' lvs.edit_server tcp 1.1.1.1:80 192.168.0.11:8080 nat 1
-    '''
+    """
 
-    cmd = '{0} -e {1}'.format(__detect_os(),
-                              _build_cmd(protocol=protocol,
-                                         service_address=service_address,
-                                         server_address=server_address,
-                                         packet_forward_method=packet_forward_method,
-                                         weight=weight,
-                                         **kwargs))
-    out = __salt__['cmd.run_all'](cmd, python_shell=False)
+    cmd = "{} -e {}".format(
+        __detect_os(),
+        _build_cmd(
+            protocol=protocol,
+            service_address=service_address,
+            server_address=server_address,
+            packet_forward_method=packet_forward_method,
+            weight=weight,
+            **kwargs
+        ),
+    )
+    out = __salt__["cmd.run_all"](cmd, python_shell=False)
 
     # A non-zero return code means fail
-    if out['retcode']:
-        ret = out['stderr'].strip()
+    if out["retcode"]:
+        ret = out["stderr"].strip()
     else:
         ret = True
     return ret
 
 
 def delete_server(protocol=None, service_address=None, server_address=None):
-    '''
+    """
 
     Delete the realserver from the virtual service.
 
@@ -291,30 +309,33 @@ def delete_server(protocol=None, service_address=None, server_address=None):
     server_address
         The real server address.
 
-
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' lvs.delete_server tcp 1.1.1.1:80 192.168.0.11:8080
-    '''
+    """
 
-    cmd = '{0} -d {1}'.format(__detect_os(),
-                              _build_cmd(protocol=protocol,
-                                         service_address=service_address,
-                                         server_address=server_address))
-    out = __salt__['cmd.run_all'](cmd, python_shell=False)
+    cmd = "{} -d {}".format(
+        __detect_os(),
+        _build_cmd(
+            protocol=protocol,
+            service_address=service_address,
+            server_address=server_address,
+        ),
+    )
+    out = __salt__["cmd.run_all"](cmd, python_shell=False)
 
     # A non-zero return code means fail
-    if out['retcode']:
-        ret = out['stderr'].strip()
+    if out["retcode"]:
+        ret = out["stderr"].strip()
     else:
         ret = True
     return ret
 
 
 def clear():
-    '''
+    """
 
     Clear the virtual server table
 
@@ -323,22 +344,22 @@ def clear():
     .. code-block:: bash
 
         salt '*' lvs.clear
-    '''
+    """
 
-    cmd = '{0} -C'.format(__detect_os())
+    cmd = "{} -C".format(__detect_os())
 
-    out = __salt__['cmd.run_all'](cmd, python_shell=False)
+    out = __salt__["cmd.run_all"](cmd, python_shell=False)
 
     # A non-zero return code means fail
-    if out['retcode']:
-        ret = out['stderr'].strip()
+    if out["retcode"]:
+        ret = out["stderr"].strip()
     else:
         ret = True
     return ret
 
 
 def get_rules():
-    '''
+    """
 
     Get the virtual server rules
 
@@ -347,16 +368,16 @@ def get_rules():
     .. code-block:: bash
 
         salt '*' lvs.get_rules
-    '''
+    """
 
-    cmd = '{0} -S -n'.format(__detect_os())
+    cmd = "{} -S -n".format(__detect_os())
 
-    ret = __salt__['cmd.run'](cmd, python_shell=False)
+    ret = __salt__["cmd.run"](cmd, python_shell=False)
     return ret
 
 
 def list_(protocol=None, service_address=None):
-    '''
+    """
 
     List the virtual server table if service_address is not specified. If a service_address is selected, list this service only.
 
@@ -365,27 +386,28 @@ def list_(protocol=None, service_address=None):
     .. code-block:: bash
 
         salt '*' lvs.list
-    '''
+    """
 
     if service_address:
-        cmd = '{0} -L {1} -n'.format(__detect_os(),
-                                  _build_cmd(protocol=protocol,
-                                             service_address=service_address))
+        cmd = "{} -L {} -n".format(
+            __detect_os(),
+            _build_cmd(protocol=protocol, service_address=service_address),
+        )
     else:
-        cmd = '{0} -L -n'.format(__detect_os())
-    out = __salt__['cmd.run_all'](cmd, python_shell=False)
+        cmd = "{} -L -n".format(__detect_os())
+    out = __salt__["cmd.run_all"](cmd, python_shell=False)
 
     # A non-zero return code means fail
-    if out['retcode']:
-        ret = out['stderr'].strip()
+    if out["retcode"]:
+        ret = out["stderr"].strip()
     else:
-        ret = out['stdout'].strip()
+        ret = out["stdout"].strip()
 
     return ret
 
 
 def zero(protocol=None, service_address=None):
-    '''
+    """
 
     Zero the packet, byte and rate counters in a service or all services.
 
@@ -394,27 +416,27 @@ def zero(protocol=None, service_address=None):
     .. code-block:: bash
 
         salt '*' lvs.zero
-    '''
+    """
 
     if service_address:
-        cmd = '{0} -Z {1}'.format(
+        cmd = "{} -Z {}".format(
             __detect_os(),
-            _build_cmd(protocol=protocol, service_address=service_address)
+            _build_cmd(protocol=protocol, service_address=service_address),
         )
     else:
-        cmd = '{0} -Z'.format(__detect_os())
-    out = __salt__['cmd.run_all'](cmd, python_shell=False)
+        cmd = "{} -Z".format(__detect_os())
+    out = __salt__["cmd.run_all"](cmd, python_shell=False)
 
     # A non-zero return code means fail
-    if out['retcode']:
-        ret = out['stderr'].strip()
+    if out["retcode"]:
+        ret = out["stderr"].strip()
     else:
         ret = True
     return ret
 
 
 def check_service(protocol=None, service_address=None, **kwargs):
-    '''
+    """
 
     Check the virtual service exists.
 
@@ -423,14 +445,14 @@ def check_service(protocol=None, service_address=None, **kwargs):
     .. code-block:: bash
 
         salt '*' lvs.check_service tcp 1.1.1.1:80
-    '''
+    """
 
-    cmd = '{0}'.format(_build_cmd(protocol=protocol,
-                                   service_address=service_address,
-                                   **kwargs))
+    cmd = "{}".format(
+        _build_cmd(protocol=protocol, service_address=service_address, **kwargs)
+    )
     # Exact match
     if not kwargs:
-        cmd += ' '
+        cmd += " "
 
     all_rules = get_rules()
     out = all_rules.find(cmd)
@@ -438,12 +460,12 @@ def check_service(protocol=None, service_address=None, **kwargs):
     if out != -1:
         ret = True
     else:
-        ret = 'Error: service not exists'
+        ret = "Error: service not exists"
     return ret
 
 
 def check_server(protocol=None, service_address=None, server_address=None, **kwargs):
-    '''
+    """
 
     Check the real server exists in the specified service.
 
@@ -452,15 +474,19 @@ def check_server(protocol=None, service_address=None, server_address=None, **kwa
     .. code-block:: bash
 
          salt '*' lvs.check_server tcp 1.1.1.1:80 192.168.0.11:8080
-    '''
+    """
 
-    cmd = '{0}'.format(_build_cmd(protocol=protocol,
-                                   service_address=service_address,
-                                   server_address=server_address,
-                                   **kwargs))
+    cmd = "{}".format(
+        _build_cmd(
+            protocol=protocol,
+            service_address=service_address,
+            server_address=server_address,
+            **kwargs
+        )
+    )
     # Exact match
     if not kwargs:
-        cmd += ' '
+        cmd += " "
 
     all_rules = get_rules()
     out = all_rules.find(cmd)
@@ -468,5 +494,5 @@ def check_server(protocol=None, service_address=None, server_address=None, **kwa
     if out != -1:
         ret = True
     else:
-        ret = 'Error: server not exists'
+        ret = "Error: server not exists"
     return ret

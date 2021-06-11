@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Manage ruby installations and gemsets with RVM, the Ruby Version Manager.
-'''
-from __future__ import absolute_import, unicode_literals, print_function
+"""
+from __future__ import absolute_import, print_function, unicode_literals
+
+import logging
+import os
 
 # Import python libs
 import re
-import os
-import logging
 
 # Import salt libs
 import salt.utils.args
@@ -19,49 +20,45 @@ from salt.ext import six
 log = logging.getLogger(__name__)
 
 # Don't shadow built-in's.
-__func_alias__ = {
-    'list_': 'list'
-}
+__func_alias__ = {"list_": "list"}
 
 __opts__ = {
-    'rvm.runas': None,
+    "rvm.runas": None,
 }
 
 
 def _get_rvm_location(runas=None):
     if runas:
-        runas_home = os.path.expanduser('~{0}'.format(runas))
-        rvmpath = '{0}/.rvm/bin/rvm'.format(runas_home)
+        runas_home = os.path.expanduser("~{0}".format(runas))
+        rvmpath = "{0}/.rvm/bin/rvm".format(runas_home)
         if os.path.exists(rvmpath):
             return [rvmpath]
-    return ['/usr/local/rvm/bin/rvm']
+    return ["/usr/local/rvm/bin/rvm"]
 
 
 def _rvm(command, runas=None, cwd=None, env=None):
     if runas is None:
-        runas = __salt__['config.option']('rvm.runas')
+        runas = __salt__["config.option"]("rvm.runas")
     if not is_installed(runas):
         return False
 
     cmd = _get_rvm_location(runas) + command
 
-    ret = __salt__['cmd.run_all'](cmd,
-                                  runas=runas,
-                                  cwd=cwd,
-                                  python_shell=False,
-                                  env=env)
+    ret = __salt__["cmd.run_all"](
+        cmd, runas=runas, cwd=cwd, python_shell=False, env=env
+    )
 
-    if ret['retcode'] == 0:
-        return ret['stdout']
+    if ret["retcode"] == 0:
+        return ret["stdout"]
     return False
 
 
 def _rvm_do(ruby, command, runas=None, cwd=None, env=None):
-    return _rvm([ruby or 'default', 'do'] + command, runas=runas, cwd=cwd, env=env)
+    return _rvm([ruby or "default", "do"] + command, runas=runas, cwd=cwd, env=env)
 
 
 def is_installed(runas=None):
-    '''
+    """
     Check if RVM is installed.
 
     CLI Example:
@@ -69,15 +66,15 @@ def is_installed(runas=None):
     .. code-block:: bash
 
         salt '*' rvm.is_installed
-    '''
+    """
     try:
-        return __salt__['cmd.has_exec'](_get_rvm_location(runas)[0])
+        return __salt__["cmd.has_exec"](_get_rvm_location(runas)[0])
     except IndexError:
         return False
 
 
 def install(runas=None):
-    '''
+    """
     Install RVM system-wide
 
     runas
@@ -89,27 +86,29 @@ def install(runas=None):
     .. code-block:: bash
 
         salt '*' rvm.install
-    '''
+    """
     # RVM dependencies on Ubuntu 10.04:
     #   bash coreutils gzip bzip2 gawk sed curl git-core subversion
-    installer = 'https://raw.githubusercontent.com/rvm/rvm/master/binscripts/rvm-installer'
-    ret = __salt__['cmd.run_all'](
+    installer = (
+        "https://raw.githubusercontent.com/rvm/rvm/master/binscripts/rvm-installer"
+    )
+    ret = __salt__["cmd.run_all"](
         # the RVM installer automatically does a multi-user install when it is
         # invoked with root privileges
-        'curl -Ls {installer} | bash -s stable'.format(installer=installer),
+        "curl -Ls {installer} | bash -s stable".format(installer=installer),
         runas=runas,
-        python_shell=True
+        python_shell=True,
     )
-    if ret['retcode'] > 0:
-        msg = 'Error encountered while downloading the RVM installer'
-        if ret['stderr']:
-            msg += '. stderr follows:\n\n' + ret['stderr']
+    if ret["retcode"] > 0:
+        msg = "Error encountered while downloading the RVM installer"
+        if ret["stderr"]:
+            msg += ". stderr follows:\n\n" + ret["stderr"]
         raise CommandExecutionError(msg)
     return True
 
 
 def install_ruby(ruby, runas=None, opts=None, env=None):
-    '''
+    """
     Install a ruby implementation.
 
     ruby
@@ -131,7 +130,7 @@ def install_ruby(ruby, runas=None, opts=None, env=None):
     .. code-block:: bash
 
         salt '*' rvm.install_ruby 1.9.3-p385
-    '''
+    """
     # MRI/RBX/REE dependencies for Ubuntu 10.04:
     #   build-essential openssl libreadline6 libreadline6-dev curl
     #   git-core zlib1g zlib1g-dev libssl-dev libyaml-dev libsqlite3-0
@@ -140,14 +139,14 @@ def install_ruby(ruby, runas=None, opts=None, env=None):
     if opts is None:
         opts = []
 
-    if runas and runas != 'root':
-        _rvm(['autolibs', 'disable', ruby] + opts, runas=runas)
-        opts.append('--disable-binary')
-    return _rvm(['install', ruby] + opts, runas=runas, env=env)
+    if runas and runas != "root":
+        _rvm(["autolibs", "disable", ruby] + opts, runas=runas)
+        opts.append("--disable-binary")
+    return _rvm(["install", ruby] + opts, runas=runas, env=env)
 
 
 def reinstall_ruby(ruby, runas=None, env=None):
-    '''
+    """
     Reinstall a ruby implementation
 
     ruby
@@ -162,12 +161,12 @@ def reinstall_ruby(ruby, runas=None, env=None):
     .. code-block:: bash
 
         salt '*' rvm.reinstall_ruby 1.9.3-p385
-    '''
-    return _rvm(['reinstall', ruby], runas=runas, env=env)
+    """
+    return _rvm(["reinstall", ruby], runas=runas, env=env)
 
 
 def list_(runas=None):
-    '''
+    """
     List all rvm-installed rubies
 
     runas
@@ -179,22 +178,20 @@ def list_(runas=None):
     .. code-block:: bash
 
         salt '*' rvm.list
-    '''
+    """
     rubies = []
-    output = _rvm(['list'], runas=runas)
+    output = _rvm(["list"], runas=runas)
     if output:
-        regex = re.compile(r'^[= ]([*> ]) ([^- ]+)-([^ ]+) \[ (.*) \]')
+        regex = re.compile(r"^[= ]([*> ]) ([^- ]+)-([^ ]+) \[ (.*) \]")
         for line in output.splitlines():
             match = regex.match(line)
             if match:
-                rubies.append([
-                    match.group(2), match.group(3), match.group(1) == '*'
-                ])
+                rubies.append([match.group(2), match.group(3), match.group(1) == "*"])
     return rubies
 
 
 def set_default(ruby, runas=None):
-    '''
+    """
     Set the default ruby
 
     ruby
@@ -209,12 +206,12 @@ def set_default(ruby, runas=None):
     .. code-block:: bash
 
         salt '*' rvm.set_default 2.0.0
-    '''
-    return _rvm(['alias', 'create', 'default', ruby], runas=runas)
+    """
+    return _rvm(["alias", "create", "default", ruby], runas=runas)
 
 
-def get(version='stable', runas=None):
-    '''
+def get(version="stable", runas=None):
+    """
     Update RVM
 
     version : stable
@@ -225,12 +222,12 @@ def get(version='stable', runas=None):
     .. code-block:: bash
 
         salt '*' rvm.get
-    '''
-    return _rvm(['get', version], runas=runas)
+    """
+    return _rvm(["get", version], runas=runas)
 
 
 def wrapper(ruby_string, wrapper_prefix, runas=None, *binaries):
-    '''
+    """
     Install RVM wrapper scripts
 
     ruby_string
@@ -253,14 +250,14 @@ def wrapper(ruby_string, wrapper_prefix, runas=None, *binaries):
     .. code-block:: bash
 
         salt '*' rvm.wrapper <ruby_string> <wrapper_prefix>
-    '''
-    cmd = ['wrapper', ruby_string, wrapper_prefix]
+    """
+    cmd = ["wrapper", ruby_string, wrapper_prefix]
     cmd.extend(binaries)
     return _rvm(cmd, runas=runas)
 
 
 def rubygems(ruby, version, runas=None):
-    '''
+    """
     Installs a specific rubygems version in the given ruby
 
     ruby
@@ -279,12 +276,12 @@ def rubygems(ruby, version, runas=None):
     .. code-block:: bash
 
         salt '*' rvm.rubygems 2.0.0 1.8.24
-    '''
-    return _rvm_do(ruby, ['rubygems', version], runas=runas)
+    """
+    return _rvm_do(ruby, ["rubygems", version], runas=runas)
 
 
 def gemset_create(ruby, gemset, runas=None):
-    '''
+    """
     Creates a gemset.
 
     ruby
@@ -302,12 +299,12 @@ def gemset_create(ruby, gemset, runas=None):
     .. code-block:: bash
 
         salt '*' rvm.gemset_create 2.0.0 foobar
-    '''
-    return _rvm_do(ruby, ['rvm', 'gemset', 'create', gemset], runas=runas)
+    """
+    return _rvm_do(ruby, ["rvm", "gemset", "create", gemset], runas=runas)
 
 
-def gemset_list(ruby='default', runas=None):
-    '''
+def gemset_list(ruby="default", runas=None):
+    """
     List all gemsets for the given ruby.
 
     ruby : default
@@ -322,11 +319,11 @@ def gemset_list(ruby='default', runas=None):
     .. code-block:: bash
 
         salt '*' rvm.gemset_list
-    '''
+    """
     gemsets = []
-    output = _rvm_do(ruby, ['rvm', 'gemset', 'list'], runas=runas)
+    output = _rvm_do(ruby, ["rvm", "gemset", "list"], runas=runas)
     if output:
-        regex = re.compile('^   ([^ ]+)')
+        regex = re.compile("^   ([^ ]+)")
         for line in output.splitlines():
             match = regex.match(line)
             if match:
@@ -335,7 +332,7 @@ def gemset_list(ruby='default', runas=None):
 
 
 def gemset_delete(ruby, gemset, runas=None):
-    '''
+    """
     Delete a gemset
 
     ruby
@@ -353,14 +350,12 @@ def gemset_delete(ruby, gemset, runas=None):
     .. code-block:: bash
 
         salt '*' rvm.gemset_delete 2.0.0 foobar
-    '''
-    return _rvm_do(ruby,
-                   ['rvm', '--force', 'gemset', 'delete', gemset],
-                   runas=runas)
+    """
+    return _rvm_do(ruby, ["rvm", "--force", "gemset", "delete", gemset], runas=runas)
 
 
 def gemset_empty(ruby, gemset, runas=None):
-    '''
+    """
     Remove all gems from a gemset.
 
     ruby
@@ -378,14 +373,12 @@ def gemset_empty(ruby, gemset, runas=None):
     .. code-block:: bash
 
         salt '*' rvm.gemset_empty 2.0.0 foobar
-    '''
-    return _rvm_do(ruby,
-                   ['rvm', '--force', 'gemset', 'empty', gemset],
-                   runas=runas)
+    """
+    return _rvm_do(ruby, ["rvm", "--force", "gemset", "empty", gemset], runas=runas)
 
 
 def gemset_copy(source, destination, runas=None):
-    '''
+    """
     Copy all gems from one gemset to another.
 
     source
@@ -403,12 +396,12 @@ def gemset_copy(source, destination, runas=None):
     .. code-block:: bash
 
         salt '*' rvm.gemset_copy foobar bazquo
-    '''
-    return _rvm(['gemset', 'copy', source, destination], runas=runas)
+    """
+    return _rvm(["gemset", "copy", source, destination], runas=runas)
 
 
 def gemset_list_all(runas=None):
-    '''
+    """
     List all gemsets for all installed rubies.
 
     Note that you must have set a default ruby before this can work.
@@ -422,13 +415,13 @@ def gemset_list_all(runas=None):
     .. code-block:: bash
 
         salt '*' rvm.gemset_list_all
-    '''
+    """
     gemsets = {}
     current_ruby = None
-    output = _rvm_do('default', ['rvm', 'gemset', 'list_all'], runas=runas)
+    output = _rvm_do("default", ["rvm", "gemset", "list_all"], runas=runas)
     if output:
-        gems_regex = re.compile('^   ([^ ]+)')
-        gemset_regex = re.compile('^gemsets for ([^ ]+)')
+        gems_regex = re.compile("^   ([^ ]+)")
+        gemset_regex = re.compile("^gemsets for ([^ ]+)")
         for line in output.splitlines():
             match = gemset_regex.match(line)
             if match:
@@ -441,7 +434,7 @@ def gemset_list_all(runas=None):
 
 
 def do(ruby, command, runas=None, cwd=None, env=None):  # pylint: disable=C0103
-    '''
+    """
     Execute a command in an RVM controlled environment.
 
     ruby
@@ -463,7 +456,7 @@ def do(ruby, command, runas=None, cwd=None, env=None):  # pylint: disable=C0103
     .. code-block:: bash
 
         salt '*' rvm.do 2.0.0 <command>
-    '''
+    """
     try:
         command = salt.utils.args.shlex_split(command)
     except AttributeError:

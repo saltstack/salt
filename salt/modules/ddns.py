@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Support for RFC 2136 dynamic DNS updates.
 
 :depends:   - dnspython Python module
@@ -22,10 +22,15 @@ Support for RFC 2136 dynamic DNS updates.
     .. code-block:: json
 
         {"keyname.": "keycontent"}
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
+
 # Import python libs
 import logging
+
+import salt.utils.files
+import salt.utils.json
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -38,31 +43,30 @@ try:
 except ImportError as e:
     dns_support = False
 
-import salt.utils.files
-import salt.utils.json
-from salt.ext import six
-
 
 def __virtual__():
-    '''
+    """
     Confirm dnspython is available.
-    '''
+    """
     if dns_support:
-        return 'ddns'
-    return (False, 'The ddns execution module cannot be loaded: dnspython not installed.')
+        return "ddns"
+    return (
+        False,
+        "The ddns execution module cannot be loaded: dnspython not installed.",
+    )
 
 
 def _config(name, key=None, **kwargs):
-    '''
+    """
     Return a value for 'name' from command line args then config file options.
     Specify 'key' if the config file option is not the same as 'name'.
-    '''
+    """
     if key is None:
         key = name
     if name in kwargs:
         value = kwargs[name]
     else:
-        value = __salt__['config.option']('ddns.{0}'.format(key))
+        value = __salt__["config.option"]("ddns.{0}".format(key))
         if not value:
             value = None
     return value
@@ -76,9 +80,18 @@ def _get_keyring(keyfile):
     return keyring
 
 
-def add_host(zone, name, ttl, ip, nameserver='127.0.0.1', replace=True,
-             timeout=5, port=53, **kwargs):
-    '''
+def add_host(
+    zone,
+    name,
+    ttl,
+    ip,
+    nameserver="127.0.0.1",
+    replace=True,
+    timeout=5,
+    port=53,
+    **kwargs
+):
+    """
     Add, replace, or update the A and PTR (reverse) records for a host.
 
     CLI Example:
@@ -86,32 +99,31 @@ def add_host(zone, name, ttl, ip, nameserver='127.0.0.1', replace=True,
     .. code-block:: bash
 
         salt ns1 ddns.add_host example.com host1 60 10.1.1.1
-    '''
-    res = update(zone, name, ttl, 'A', ip, nameserver, timeout, replace, port,
-                 **kwargs)
+    """
+    res = update(zone, name, ttl, "A", ip, nameserver, timeout, replace, port, **kwargs)
     if res is False:
         return False
 
-    fqdn = '{0}.{1}.'.format(name, zone)
-    parts = ip.split('.')[::-1]
+    fqdn = "{0}.{1}.".format(name, zone)
+    parts = ip.split(".")[::-1]
     popped = []
 
     # Iterate over possible reverse zones
     while len(parts) > 1:
         p = parts.pop(0)
         popped.append(p)
-        zone = '{0}.{1}'.format('.'.join(parts), 'in-addr.arpa.')
-        name = '.'.join(popped)
-        ptr = update(zone, name, ttl, 'PTR', fqdn, nameserver, timeout,
-                     replace, port, **kwargs)
+        zone = "{0}.{1}".format(".".join(parts), "in-addr.arpa.")
+        name = ".".join(popped)
+        ptr = update(
+            zone, name, ttl, "PTR", fqdn, nameserver, timeout, replace, port, **kwargs
+        )
         if ptr:
             return True
     return res
 
 
-def delete_host(zone, name, nameserver='127.0.0.1', timeout=5, port=53,
-                **kwargs):
-    '''
+def delete_host(zone, name, nameserver="127.0.0.1", timeout=5, port=53, **kwargs):
+    """
     Delete the forward and reverse records for a host.
 
     Returns true if any records are deleted.
@@ -121,39 +133,58 @@ def delete_host(zone, name, nameserver='127.0.0.1', timeout=5, port=53,
     .. code-block:: bash
 
         salt ns1 ddns.delete_host example.com host1
-    '''
-    fqdn = '{0}.{1}'.format(name, zone)
-    request = dns.message.make_query(fqdn, 'A')
+    """
+    fqdn = "{0}.{1}".format(name, zone)
+    request = dns.message.make_query(fqdn, "A")
     answer = dns.query.udp(request, nameserver, timeout, port)
     try:
         ips = [i.address for i in answer.answer[0].items]
     except IndexError:
         ips = []
 
-    res = delete(zone, name, nameserver=nameserver, timeout=timeout, port=port,
-                 **kwargs)
+    res = delete(
+        zone, name, nameserver=nameserver, timeout=timeout, port=port, **kwargs
+    )
 
-    fqdn = fqdn + '.'
+    fqdn = fqdn + "."
     for ip in ips:
-        parts = ip.split('.')[::-1]
+        parts = ip.split(".")[::-1]
         popped = []
 
         # Iterate over possible reverse zones
         while len(parts) > 1:
             p = parts.pop(0)
             popped.append(p)
-            zone = '{0}.{1}'.format('.'.join(parts), 'in-addr.arpa.')
-            name = '.'.join(popped)
-            ptr = delete(zone, name, 'PTR', fqdn, nameserver=nameserver,
-                         timeout=timeout, port=port, **kwargs)
+            zone = "{0}.{1}".format(".".join(parts), "in-addr.arpa.")
+            name = ".".join(popped)
+            ptr = delete(
+                zone,
+                name,
+                "PTR",
+                fqdn,
+                nameserver=nameserver,
+                timeout=timeout,
+                port=port,
+                **kwargs
+            )
         if ptr:
             res = True
     return res
 
 
-def update(zone, name, ttl, rdtype, data, nameserver='127.0.0.1', timeout=5,
-           replace=False, port=53, **kwargs):
-    '''
+def update(
+    zone,
+    name,
+    ttl,
+    rdtype,
+    data,
+    nameserver="127.0.0.1",
+    timeout=5,
+    replace=False,
+    port=53,
+    **kwargs
+):
+    """
     Add, replace, or update a DNS record.
     nameserver must be an IP address and the minion running this module
     must have update privileges on that server.
@@ -164,13 +195,13 @@ def update(zone, name, ttl, rdtype, data, nameserver='127.0.0.1', timeout=5,
     .. code-block:: bash
 
         salt ns1 ddns.update example.com host1 60 A 10.0.0.1
-    '''
+    """
     name = six.text_type(name)
 
-    if name[-1:] == '.':
+    if name[-1:] == ".":
         fqdn = name
     else:
-        fqdn = '{0}.{1}'.format(name, zone)
+        fqdn = "{0}.{1}".format(name, zone)
 
     request = dns.message.make_query(fqdn, rdtype)
     answer = dns.query.udp(request, nameserver, timeout, port)
@@ -178,10 +209,9 @@ def update(zone, name, ttl, rdtype, data, nameserver='127.0.0.1', timeout=5,
     rdtype = dns.rdatatype.from_text(rdtype)
     rdata = dns.rdata.from_text(dns.rdataclass.IN, rdtype, data)
 
-    keyring = _get_keyring(_config('keyfile', **kwargs))
-    keyname = _config('keyname', **kwargs)
-    keyalgorithm = _config('keyalgorithm',
-                           **kwargs) or 'HMAC-MD5.SIG-ALG.REG.INT'
+    keyring = _get_keyring(_config("keyfile", **kwargs))
+    keyname = _config("keyname", **kwargs)
+    keyalgorithm = _config("keyalgorithm", **kwargs) or "HMAC-MD5.SIG-ALG.REG.INT"
 
     is_exist = False
     for rrset in answer.answer:
@@ -191,8 +221,9 @@ def update(zone, name, ttl, rdtype, data, nameserver='127.0.0.1', timeout=5,
                     is_exist = True
                     break
 
-    dns_update = dns.update.Update(zone, keyring=keyring, keyname=keyname,
-                                   keyalgorithm=keyalgorithm)
+    dns_update = dns.update.Update(
+        zone, keyring=keyring, keyname=keyname, keyalgorithm=keyalgorithm
+    )
     if replace:
         dns_update.replace(name, ttl, rdata)
     elif not is_exist:
@@ -205,9 +236,17 @@ def update(zone, name, ttl, rdtype, data, nameserver='127.0.0.1', timeout=5,
     return True
 
 
-def delete(zone, name, rdtype=None, data=None, nameserver='127.0.0.1',
-           timeout=5, port=53, **kwargs):
-    '''
+def delete(
+    zone,
+    name,
+    rdtype=None,
+    data=None,
+    nameserver="127.0.0.1",
+    timeout=5,
+    port=53,
+    **kwargs
+):
+    """
     Delete a DNS record.
 
     CLI Example:
@@ -215,26 +254,26 @@ def delete(zone, name, rdtype=None, data=None, nameserver='127.0.0.1',
     .. code-block:: bash
 
         salt ns1 ddns.delete example.com host1 A
-    '''
+    """
     name = six.text_type(name)
 
-    if name[-1:] == '.':
+    if name[-1:] == ".":
         fqdn = name
     else:
-        fqdn = '{0}.{1}'.format(name, zone)
+        fqdn = "{0}.{1}".format(name, zone)
 
-    request = dns.message.make_query(fqdn, (rdtype or 'ANY'))
+    request = dns.message.make_query(fqdn, (rdtype or "ANY"))
     answer = dns.query.udp(request, nameserver, timeout, port)
     if not answer.answer:
         return None
 
-    keyring = _get_keyring(_config('keyfile', **kwargs))
-    keyname = _config('keyname', **kwargs)
-    keyalgorithm = _config('keyalgorithm',
-                           **kwargs) or 'HMAC-MD5.SIG-ALG.REG.INT'
+    keyring = _get_keyring(_config("keyfile", **kwargs))
+    keyname = _config("keyname", **kwargs)
+    keyalgorithm = _config("keyalgorithm", **kwargs) or "HMAC-MD5.SIG-ALG.REG.INT"
 
-    dns_update = dns.update.Update(zone, keyring=keyring, keyname=keyname,
-                                   keyalgorithm=keyalgorithm)
+    dns_update = dns.update.Update(
+        zone, keyring=keyring, keyname=keyname, keyalgorithm=keyalgorithm
+    )
 
     if rdtype:
         rdtype = dns.rdatatype.from_text(rdtype)

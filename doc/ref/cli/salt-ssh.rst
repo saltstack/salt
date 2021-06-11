@@ -105,6 +105,14 @@ Options
 
    Pass a JID to be used instead of generating one.
 
+.. option:: --pre-flight
+
+   Run the ssh_pre_flight script defined in the roster.
+   By default this script will only run if the thin dir
+   does not exist on the target minion. This option will
+   force the script to run regardless of the thin dir
+   existing or not.
+
 Authentication Options
 ----------------------
 
@@ -174,6 +182,12 @@ Scan Roster Options
 
 .. include:: _includes/output-options.rst
 
+.. note::
+    If using ``--out=json``, you will probably want ``--static`` as well.
+    Without the static option, you will get a separate JSON string per minion
+    which makes JSON output invalid as a whole.
+    This is due to using an iterative outputter. So if you want to feed it
+    to a JSON parser, use ``--static`` as well.
 
 See also
 ========

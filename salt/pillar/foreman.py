@@ -1,5 +1,5 @@
 # -*- strcoding: utf-8 -*-
-'''
+"""
 A module to pull data from Foreman via its API into the Pillar dictionary
 
 
@@ -37,102 +37,102 @@ Further information can be found on `GitHub <https://github.com/theforeman/forem
 
 Module Documentation
 ====================
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
 
 from salt.ext import six
+
 try:
     import requests
+
     HAS_REQUESTS = True
 except ImportError:
     HAS_REQUESTS = False
 
-__opts__ = {'foreman.url': 'http://foreman/api',
-            'foreman.user': 'admin',
-            'foreman.password': 'changeme',
-            'foreman.api': 2,
-            'foreman.verifyssl': True,
-            'foreman.certfile': None,
-            'foreman.keyfile': None,
-            'foreman.cafile': None,
-            'foreman.lookup_parameters': True,
-           }
+__opts__ = {
+    "foreman.url": "http://foreman/api",
+    "foreman.user": "admin",
+    "foreman.password": "changeme",
+    "foreman.api": 2,
+    "foreman.verifyssl": True,
+    "foreman.certfile": None,
+    "foreman.keyfile": None,
+    "foreman.cafile": None,
+    "foreman.lookup_parameters": True,
+}
 
 
 # Set up logging
 log = logging.getLogger(__name__)
 
 # Declare virtualname
-__virtualname__ = 'foreman'
+__virtualname__ = "foreman"
 
 
 def __virtual__():
-    '''
+    """
     Only return if all the modules are available
-    '''
+    """
     if not HAS_REQUESTS:
         return False
     return __virtualname__
 
 
-def ext_pillar(minion_id,
-               pillar,  # pylint: disable=W0613
-               key=None,
-               only=()):
-    '''
+def ext_pillar(minion_id, pillar, key=None, only=()):  # pylint: disable=W0613
+    """
     Read pillar data from Foreman via its API.
-    '''
-    url = __opts__['foreman.url']
-    user = __opts__['foreman.user']
-    password = __opts__['foreman.password']
-    api = __opts__['foreman.api']
-    verify = __opts__['foreman.verifyssl']
-    certfile = __opts__['foreman.certfile']
-    keyfile = __opts__['foreman.keyfile']
-    cafile = __opts__['foreman.cafile']
-    lookup_parameters = __opts__['foreman.lookup_parameters']
+    """
+    url = __opts__["foreman.url"]
+    user = __opts__["foreman.user"]
+    password = __opts__["foreman.password"]
+    api = __opts__["foreman.api"]
+    verify = __opts__["foreman.verifyssl"]
+    certfile = __opts__["foreman.certfile"]
+    keyfile = __opts__["foreman.keyfile"]
+    cafile = __opts__["foreman.cafile"]
+    lookup_parameters = __opts__["foreman.lookup_parameters"]
 
     log.info("Querying Foreman at %r for information for %r", url, minion_id)
     try:
         # Foreman API version 1 is currently not supported
         if api != 2:
-            log.error('Foreman API v2 is supported only, please specify'
-                    'version 2 in your Salt master config')
+            log.error(
+                "Foreman API v2 is supported only, please specify"
+                "version 2 in your Salt master config"
+            )
             raise Exception
 
-        headers = {'accept': 'version=' + six.text_type(api) + ',application/json'}
+        headers = {"accept": "version=" + six.text_type(api) + ",application/json"}
 
         if verify and cafile is not None:
             verify = cafile
 
         resp = requests.get(
-                url + '/hosts/' + minion_id,
-                auth=(user, password),
-                headers=headers,
-                verify=verify,
-                cert=(certfile, keyfile)
-                )
+            url + "/hosts/" + minion_id,
+            auth=(user, password),
+            headers=headers,
+            verify=verify,
+            cert=(certfile, keyfile),
+        )
         result = resp.json()
 
-        log.debug('Raw response of the Foreman request is %r', result)
+        log.debug("Raw response of the Foreman request is %r", result)
 
         if lookup_parameters:
             parameters = dict()
-            for param in result['all_parameters']:
-                parameters.update({param['name']: param['value']})
+            for param in result["all_parameters"]:
+                parameters.update({param["name"]: param["value"]})
 
-            result['parameters'] = parameters
+            result["parameters"] = parameters
 
         if only:
             result = dict((k, result[k]) for k in only if k in result)
 
-    except Exception:
-        log.exception(
-            'Could not fetch host data via Foreman API:'
-        )
+    except Exception:  # pylint: disable=broad-except
+        log.exception("Could not fetch host data via Foreman API:")
         return {}
 
     if key:

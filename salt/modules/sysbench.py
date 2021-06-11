@@ -1,39 +1,43 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 The 'sysbench' module is used to analyze the
 performance of the minions, right from the master!
 It measures various system parameters such as
 CPU, Memory, File I/O, Threads and Mutex.
-'''
-from __future__ import absolute_import, unicode_literals, print_function
+"""
+from __future__ import absolute_import, print_function, unicode_literals
 
 import re
+
 import salt.utils.path
 from salt.ext.six.moves import zip
 
 
 def __virtual__():
-    '''
+    """
     loads the module, if only sysbench is installed
-    '''
+    """
     # finding the path of the binary
-    if salt.utils.path.which('sysbench'):
-        return 'sysbench'
-    return (False, 'The sysbench execution module failed to load: the sysbench binary is not in the path.')
+    if salt.utils.path.which("sysbench"):
+        return "sysbench"
+    return (
+        False,
+        "The sysbench execution module failed to load: the sysbench binary is not in the path.",
+    )
 
 
 def _parser(result):
-    '''
+    """
     parses the output into a dictionary
-    '''
+    """
 
     # regexes to match
-    _total_time = re.compile(r'total time:\s*(\d*.\d*s)')
-    _total_execution = re.compile(r'event execution:\s*(\d*.\d*s?)')
-    _min_response_time = re.compile(r'min:\s*(\d*.\d*ms)')
-    _max_response_time = re.compile(r'max:\s*(\d*.\d*ms)')
-    _avg_response_time = re.compile(r'avg:\s*(\d*.\d*ms)')
-    _per_response_time = re.compile(r'95 percentile:\s*(\d*.\d*ms)')
+    _total_time = re.compile(r"total time:\s*(\d*.\d*s)")
+    _total_execution = re.compile(r"event execution:\s*(\d*.\d*s?)")
+    _min_response_time = re.compile(r"min:\s*(\d*.\d*ms)")
+    _max_response_time = re.compile(r"max:\s*(\d*.\d*ms)")
+    _avg_response_time = re.compile(r"avg:\s*(\d*.\d*ms)")
+    _per_response_time = re.compile(r"95 percentile:\s*(\d*.\d*ms)")
 
     # extracting data
     total_time = re.search(_total_time, result).group(1)
@@ -47,17 +51,17 @@ def _parser(result):
 
     # returning the data as dictionary
     return {
-        'total time': total_time,
-        'total execution time': total_execution,
-        'minimum response time': min_response_time,
-        'maximum response time': max_response_time,
-        'average response time': avg_response_time,
-        '95 percentile': per_response_time
+        "total time": total_time,
+        "total execution time": total_execution,
+        "minimum response time": min_response_time,
+        "maximum response time": max_response_time,
+        "average response time": avg_response_time,
+        "95 percentile": per_response_time,
     }
 
 
 def cpu():
-    '''
+    """
     Tests for the CPU performance of minions.
 
     CLI Examples:
@@ -65,28 +69,28 @@ def cpu():
     .. code-block:: bash
 
         salt '*' sysbench.cpu
-    '''
+    """
 
     # Test data
     max_primes = [500, 1000, 2500, 5000]
 
     # Initializing the test variables
-    test_command = 'sysbench --test=cpu --cpu-max-prime={0} run'
+    test_command = "sysbench --test=cpu --cpu-max-prime={0} run"
     result = None
     ret_val = {}
 
     # Test beings!
     for primes in max_primes:
-        key = 'Prime numbers limit: {0}'.format(primes)
+        key = "Prime numbers limit: {0}".format(primes)
         run_command = test_command.format(primes)
-        result = __salt__['cmd.run'](run_command)
+        result = __salt__["cmd.run"](run_command)
         ret_val[key] = _parser(result)
 
     return ret_val
 
 
 def threads():
-    '''
+    """
     This tests the performance of the processor's scheduler
 
     CLI Example:
@@ -94,30 +98,30 @@ def threads():
     .. code-block:: bash
 
         salt '*' sysbench.threads
-    '''
+    """
 
     # Test data
     thread_yields = [100, 200, 500, 1000]
     thread_locks = [2, 4, 8, 16]
 
     # Initializing the test variables
-    test_command = 'sysbench --num-threads=64 --test=threads '
-    test_command += '--thread-yields={0} --thread-locks={1} run '
+    test_command = "sysbench --num-threads=64 --test=threads "
+    test_command += "--thread-yields={0} --thread-locks={1} run "
     result = None
     ret_val = {}
 
     # Test begins!
     for yields, locks in zip(thread_yields, thread_locks):
-        key = 'Yields: {0} Locks: {1}'.format(yields, locks)
+        key = "Yields: {0} Locks: {1}".format(yields, locks)
         run_command = test_command.format(yields, locks)
-        result = __salt__['cmd.run'](run_command)
+        result = __salt__["cmd.run"](run_command)
         ret_val[key] = _parser(result)
 
     return ret_val
 
 
 def mutex():
-    '''
+    """
     Tests the implementation of mutex
 
     CLI Examples:
@@ -125,7 +129,7 @@ def mutex():
     .. code-block:: bash
 
         salt '*' sysbench.mutex
-    '''
+    """
 
     # Test options and the values they take
     # --mutex-num = [50,500,1000]
@@ -140,23 +144,23 @@ def mutex():
     mutex_loops = [2500, 5000, 10000, 10000, 2500, 5000, 5000, 10000, 2500]
 
     # Initializing the test variables
-    test_command = 'sysbench --num-threads=250 --test=mutex '
-    test_command += '--mutex-num={0} --mutex-locks={1} --mutex-loops={2} run '
+    test_command = "sysbench --num-threads=250 --test=mutex "
+    test_command += "--mutex-num={0} --mutex-locks={1} --mutex-loops={2} run "
     result = None
     ret_val = {}
 
     # Test begins!
     for num, locks, loops in zip(mutex_num, mutex_locks, mutex_loops):
-        key = 'Mutex: {0} Locks: {1} Loops: {2}'.format(num, locks, loops)
+        key = "Mutex: {0} Locks: {1} Loops: {2}".format(num, locks, loops)
         run_command = test_command.format(num, locks, loops)
-        result = __salt__['cmd.run'](run_command)
+        result = __salt__["cmd.run"](run_command)
         ret_val[key] = _parser(result)
 
     return ret_val
 
 
 def memory():
-    '''
+    """
     This tests the memory for read and write operations.
 
     CLI Examples:
@@ -164,7 +168,7 @@ def memory():
     .. code-block:: bash
 
         salt '*' sysbench.memory
-    '''
+    """
 
     # test defaults
     # --memory-block-size = 10M
@@ -172,29 +176,29 @@ def memory():
 
     # We test memory read / write against global / local scope of memory
     # Test data
-    memory_oper = ['read', 'write']
-    memory_scope = ['local', 'global']
+    memory_oper = ["read", "write"]
+    memory_scope = ["local", "global"]
 
     # Initializing the test variables
-    test_command = 'sysbench --num-threads=64 --test=memory '
-    test_command += '--memory-oper={0} --memory-scope={1} '
-    test_command += '--memory-block-size=1K --memory-total-size=32G run '
+    test_command = "sysbench --num-threads=64 --test=memory "
+    test_command += "--memory-oper={0} --memory-scope={1} "
+    test_command += "--memory-block-size=1K --memory-total-size=32G run "
     result = None
     ret_val = {}
 
     # Test begins!
     for oper in memory_oper:
         for scope in memory_scope:
-            key = 'Operation: {0} Scope: {1}'.format(oper, scope)
+            key = "Operation: {0} Scope: {1}".format(oper, scope)
             run_command = test_command.format(oper, scope)
-            result = __salt__['cmd.run'](run_command)
+            result = __salt__["cmd.run"](run_command)
             ret_val[key] = _parser(result)
 
     return ret_val
 
 
 def fileio():
-    '''
+    """
     This tests for the file read and write operations
     Various modes of operations are
 
@@ -213,33 +217,33 @@ def fileio():
     .. code-block:: bash
 
         salt '*' sysbench.fileio
-    '''
+    """
 
     # Test data
-    test_modes = ['seqwr', 'seqrewr', 'seqrd', 'rndrd', 'rndwr', 'rndrw']
+    test_modes = ["seqwr", "seqrewr", "seqrd", "rndrd", "rndwr", "rndrw"]
 
     # Initializing the required variables
-    test_command = 'sysbench --num-threads=16 --test=fileio '
-    test_command += '--file-num=32 --file-total-size=1G --file-test-mode={0} '
+    test_command = "sysbench --num-threads=16 --test=fileio "
+    test_command += "--file-num=32 --file-total-size=1G --file-test-mode={0} "
     result = None
     ret_val = {}
 
     # Test begins!
     for mode in test_modes:
-        key = 'Mode: {0}'.format(mode)
+        key = "Mode: {0}".format(mode)
 
         # Prepare phase
-        run_command = (test_command + 'prepare').format(mode)
-        __salt__['cmd.run'](run_command)
+        run_command = (test_command + "prepare").format(mode)
+        __salt__["cmd.run"](run_command)
 
         # Test phase
-        run_command = (test_command + 'run').format(mode)
-        result = __salt__['cmd.run'](run_command)
+        run_command = (test_command + "run").format(mode)
+        result = __salt__["cmd.run"](run_command)
         ret_val[key] = _parser(result)
 
         # Clean up phase
-        run_command = (test_command + 'cleanup').format(mode)
-        __salt__['cmd.run'](run_command)
+        run_command = (test_command + "cleanup").format(mode)
+        __salt__["cmd.run"](run_command)
 
     return ret_val
 

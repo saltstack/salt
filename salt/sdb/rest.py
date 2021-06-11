@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Generic REST API SDB Module
 
 :maintainer:    SaltStack
@@ -63,10 +63,11 @@ For instance:
         url: https://api.example.com/users/
         params:
           user: myuser
-'''
+"""
 
 # import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 
 import salt.loader
@@ -75,59 +76,53 @@ from salt.template import compile_template
 
 log = logging.getLogger(__name__)
 
-__func_alias__ = {
-    'set_': 'set'
-}
+__func_alias__ = {"set_": "set"}
 
 
 def set_(key, value, service=None, profile=None):  # pylint: disable=W0613
-    '''
+    """
     Set a key/value pair in the REST interface
-    '''
+    """
     return query(key, value, service, profile)
 
 
 def get(key, service=None, profile=None):  # pylint: disable=W0613
-    '''
+    """
     Get a value from the REST interface
-    '''
+    """
     return query(key, None, service, profile)
 
 
 def query(key, value=None, service=None, profile=None):  # pylint: disable=W0613
-    '''
+    """
     Get a value from the REST interface
-    '''
-    comps = key.split('?')
+    """
+    comps = key.split("?")
     key = comps[0]
     key_vars = {}
-    for pair in comps[1].split('&'):
-        pair_key, pair_val = pair.split('=')
+    for pair in comps[1].split("&"):
+        pair_key, pair_val = pair.split("=")
         key_vars[pair_key] = pair_val
 
-    renderer = __opts__.get('renderer', 'jinja|yaml')
+    renderer = __opts__.get("renderer", "jinja|yaml")
     rend = salt.loader.render(__opts__, {})
-    blacklist = __opts__.get('renderer_blacklist')
-    whitelist = __opts__.get('renderer_whitelist')
+    blacklist = __opts__.get("renderer_blacklist")
+    whitelist = __opts__.get("renderer_whitelist")
     url = compile_template(
-        ':string:',
+        ":string:",
         rend,
         renderer,
         blacklist,
         whitelist,
-        input_data=profile[key]['url'],
+        input_data=profile[key]["url"],
         **key_vars
     )
 
     extras = {}
     for item in profile[key]:
-        if item not in ('backend', 'url'):
+        if item not in ("backend", "url"):
             extras[item] = profile[key][item]
 
-    result = http.query(
-        url,
-        decode=True,
-        **extras
-    )
+    result = http.query(url, decode=True, **extras)
 
-    return result['dict']
+    return result["dict"]

@@ -84,13 +84,11 @@ The following code will check for a single event:
     import salt.config
     import salt.utils.event
 
-    opts = salt.config.client_config('/etc/salt/master')
+    opts = salt.config.client_config("/etc/salt/master")
 
     event = salt.utils.event.get_event(
-            'master',
-            sock_dir=opts['sock_dir'],
-            transport=opts['transport'],
-            opts=opts)
+        "master", sock_dir=opts["sock_dir"], transport=opts["transport"], opts=opts
+    )
 
     data = event.get_event()
 
@@ -106,15 +104,15 @@ instead of the default 5.
 
 .. code-block:: python
 
-    data = event.get_event(wait=10, tag='salt/auth')
+    data = event.get_event(wait=10, tag="salt/auth")
 
 To retrieve the tag as well as the event data, pass ``full=True``:
 
 .. code-block:: python
 
-    evdata = event.get_event(wait=10, tag='salt/job', full=True)
+    evdata = event.get_event(wait=10, tag="salt/job", full=True)
 
-    tag, data = evdata['tag'], evdata['data']
+    tag, data = evdata["tag"], evdata["data"]
 
 
 Instead of looking for a single event, the ``iter_events`` method can be used to
@@ -124,7 +122,7 @@ The iter_events method also accepts a tag but not a wait time:
 
 .. code-block:: python
 
-    for data in event.iter_events(tag='salt/auth'):
+    for data in event.iter_events(tag="salt/auth"):
         print(data)
 
 And finally event tags can be globbed, such as they can be in the Reactor,
@@ -137,21 +135,19 @@ using the fnmatch library.
     import salt.config
     import salt.utils.event
 
-    opts = salt.config.client_config('/etc/salt/master')
+    opts = salt.config.client_config("/etc/salt/master")
 
     sevent = salt.utils.event.get_event(
-            'master',
-            sock_dir=opts['sock_dir'],
-            transport=opts['transport'],
-            opts=opts)
+        "master", sock_dir=opts["sock_dir"], transport=opts["transport"], opts=opts
+    )
 
     while True:
         ret = sevent.get_event(full=True)
         if ret is None:
             continue
 
-        if fnmatch.fnmatch(ret['tag'], 'salt/job/*/ret/*'):
-            do_something_with_job_return(ret['data'])
+        if fnmatch.fnmatch(ret["tag"], "salt/job/*/ret/*"):
+            do_something_with_job_return(ret["data"])
 
 Firing Events
 =============
@@ -184,12 +180,12 @@ a minion on a non-Windows system:
     # Job on minion
     import salt.utils.event
 
-    opts = salt.config.minion_config('/etc/salt/minion')
+    opts = salt.config.minion_config("/etc/salt/minion")
     event = salt.utils.event.MinionEvent(opts)
 
-    for evdata in event.iter_events(match_type = 'regex',
-                                    tag = 'custom/.*'):
+    for evdata in event.iter_events(match_type="regex", tag="custom/.*"):
         # do your processing here...
+        ...
 
 And an example of listening local events on a Windows system:
 
@@ -201,9 +197,9 @@ And an example of listening local events on a Windows system:
     opts = salt.config.minion_config(salt.minion.DEFAULT_MINION_OPTS)
     event = salt.utils.event.MinionEvent(opts)
 
-    for evdata in event.iter_events(match_type = 'regex',
-                                    tag = 'custom/.*'):
+    for evdata in event.iter_events(match_type="regex", tag="custom/.*"):
         # do your processing here...
+        ...
 
 .. code-block:: bash
 
@@ -224,19 +220,20 @@ easily done using the normal cross-calling syntax:
 
     # /srv/salt/_modules/my_custom_module.py
 
+
     def do_something():
-        '''
+        """
         Do something and fire an event to the master when finished
 
         CLI Example::
 
             salt '*' my_custom_module:do_something
-        '''
+        """
         # do something!
-        __salt__['event.send']('myco/my_custom_module/finished', {
-            'finished': True,
-            'message': "The something is finished!",
-        })
+        __salt__["event.send"](
+            "myco/my_custom_module/finished",
+            {"finished": True, "message": "The something is finished!",},
+        )
 
 From Custom Python Scripts
 --------------------------
@@ -250,10 +247,10 @@ done at the CLI:
 
     caller = salt.client.Caller()
 
-    ret = called.cmd('event.send',
-                     'myco/event/success'
-                     { 'success': True,
-                       'message': "It works!" })
+    ret = caller.cmd(
+        "event.send", "myco/event/success", {"success": True, "message": "It works!"}
+    )
 
     if not ret:
         # the event could not be sent, process the error here
+        ...

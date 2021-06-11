@@ -15,7 +15,9 @@ systems to connect to and run ``salt-ssh`` commands in a similar way as
 standard ``salt`` commands.
 
 - Salt ssh is considered production ready in version 2014.7.0
-- Python is required on the remote system (unless using the ``-r`` option to send raw ssh commands)
+- Python is required on the remote system (unless using the ``-r`` option to
+  send raw ssh commands).  The python version requirement is the same as that
+  for a standard :ref:`Salt installation <installation-dependencies>`.
 - On many systems, the ``salt-ssh`` executable will be in its own package, usually named
   ``salt-ssh``
 - The Salt SSH system does not supersede the standard Salt communication
@@ -100,10 +102,10 @@ Alternatively ssh agent forwarding can be used by setting the priv to agent-forw
 Calling Salt SSH
 ================
 
-.. note:: ``salt-ssh`` on RHEL/CentOS 5
+.. note:: ``salt-ssh`` on target hosts without Python 3
 
-    The ``salt-ssh`` command requires at least python 2.6, which is not
-    installed by default on RHEL/CentOS 5.  An easy workaround in this
+    The ``salt-ssh`` command requires at least python 3, which is not
+    installed by default on some target hosts.  An easy workaround in this
     situation is to use the ``-r`` option to run a raw shell command that
     installs python26:
 
@@ -242,6 +244,59 @@ Boolean-style options should be specified in their YAML representation.
 At last you can create ``~/.salt/Saltfile`` and ``salt-ssh``
 will automatically load it by default.
 
+Advanced options with salt-ssh
+==============================
+
+Salt's ability to allow users to have custom grains and custom modules
+is also applicable to using salt-ssh. This is done through first packing
+the custom grains into the thin tarball before it is deployed on the system.
+
+For this to happen, the ``config`` file must be explicit enough to indicate
+where the custom grains are located on the machine like so:
+
+.. code-block:: yaml
+
+    file_client: local
+    file_roots:
+      base:
+        - /home/user/.salt
+        - /home/user/.salt/_states
+        - /home/user/.salt/_grains
+    module_dirs:
+      - /home/user/.salt
+    pillar_roots:
+      base:
+        - /home/user/.salt/_pillar
+    root_dir: /tmp/.salt-root
+
+It's better to be explicit rather than implicit in this situation. This will
+allow urls all under `salt://` to be resolved such as `salt://_grains/custom_grain.py`.
+
+One can confirm this action by executing a properly setup salt-ssh minion with
+`salt-ssh minion grains.items`. During this process, a `saltutil.sync_all` is
+ran to discover the thin tarball and then consumed. Output similar to this
+indicates a successful sync with custom grains.
+
+.. code-block:: yaml
+
+    local:
+        ----------
+        ...
+        executors:
+        grains:
+            - grains.custom_grain
+        log_handlers:
+        ...
+
+This is especially important when using a custom `file_roots` that differ from
+`/etc/salt/`.
+
+.. note::
+
+    Please see https://docs.saltstack.com/en/latest/topics/grains/ for more
+    information on grains and custom grains.
+
+
 Debugging salt-ssh
 ==================
 
@@ -258,3 +313,14 @@ It is recommended that one modify this command a bit by removing the ``-l quiet`
 .. toctree::
 
     roster
+    ssh_ext_alternatives
+
+Different Python Versions
+=========================
+The 3001 release removed python 2 support in Salt. Even though this python 2 support
+is being dropped we have provided multiple ways to work around this with Salt-SSH. You
+can use the following options:
+
+  * :ref:`ssh_pre_flight <ssh_pre_flight>`
+  * Using the Salt-SSH raw shell calls to install Python3.
+  * Use an older version of Salt on the target host that still supports Python 2 using the feature :ref:`SSH ext alternatives <ssh-ext-alternatives>`

@@ -1,26 +1,15 @@
-# -*- coding: utf-8 -*-
-'''
+"""
 The daemons package is used to store implementations of the Salt Master and
 Minion enabling different transports.
-'''
-from __future__ import absolute_import, print_function, unicode_literals
-# Import Python Libs
-import sys
-
-try:
-    from collections.abc import Iterable, Sequence, Mapping
-except ImportError:
-    from collections import Iterable, Sequence, Mapping
+"""
 
 import logging
+import sys
+from collections.abc import Iterable, Mapping, Sequence
 
-# Import Salt Libs
 from salt.ext import six
 
 log = logging.getLogger(__name__)
-
-if sys.version_info[0] == 3:
-    six.string_types = (six.text_type, six.binary_type)
 
 
 def is_non_string_iterable(obj):
@@ -31,7 +20,7 @@ def is_non_string_iterable(obj):
     for non string iterables.
     Assumes in Python3 that, basestring = (str, bytes)
     """
-    return not isinstance(obj, six.string_types) and isinstance(obj, Iterable)
+    return not isinstance(obj, str) and isinstance(obj, Iterable)
 
 
 def is_non_string_sequence(obj):
@@ -42,11 +31,11 @@ def is_non_string_sequence(obj):
     for non string sequences.
     Assumes in Python3 that, basestring = (str, bytes)
     """
-    return not isinstance(obj, six.string_types) and isinstance(obj, Sequence)
+    return not isinstance(obj, str) and isinstance(obj, Sequence)
 
 
-def extract_masters(opts, masters='master', port=None, raise_if_empty=True):
-    '''
+def extract_masters(opts, masters="master", port=None, raise_if_empty=True):
+    """
     Parses opts and generates a list of master (host,port) addresses.
     By default looks for list of masters in opts['master'] and uses
     opts['master_port'] as the default port when otherwise not provided.
@@ -135,11 +124,11 @@ def extract_masters(opts, masters='master', port=None, raise_if_empty=True):
                 external: we.example.com
 
             - they.example.com
-    '''
+    """
     if port is not None:
         master_port = opts.get(port)
     else:
-        master_port = opts.get('master_port')
+        master_port = opts.get("master_port")
     try:
         master_port = int(master_port)
     except ValueError:
@@ -153,7 +142,7 @@ def extract_masters(opts, masters='master', port=None, raise_if_empty=True):
     entries = opts.get(masters, [])
 
     if not entries:
-        emsg = "Invalid or missing opts['{0}'].".format(masters)
+        emsg = "Invalid or missing opts['{}'].".format(masters)
         log.error(emsg)
         if raise_if_empty:
             raise ValueError(emsg)
@@ -163,30 +152,30 @@ def extract_masters(opts, masters='master', port=None, raise_if_empty=True):
     if is_non_string_sequence(entries):  # multiple master addresses provided
         for entry in entries:
             if isinstance(entry, Mapping):  # mapping
-                external = entry.get('external', '')
-                internal = entry.get('internal', '')
+                external = entry.get("external", "")
+                internal = entry.get("internal", "")
                 hostages.append(dict(external=external, internal=internal))
 
-            elif isinstance(entry, six.string_types):  # string
+            elif isinstance(entry, str):  # string
                 external = entry
-                internal = ''
+                internal = ""
                 hostages.append(dict(external=external, internal=internal))
 
     elif isinstance(entries, Mapping):  # mapping
-        external = entries.get('external', '')
-        internal = entries.get('internal', '')
+        external = entries.get("external", "")
+        internal = entries.get("internal", "")
         hostages.append(dict(external=external, internal=internal))
 
-    elif isinstance(entries, six.string_types):  # string
+    elif isinstance(entries, str):  # string
         external = entries
-        internal = ''
+        internal = ""
         hostages.append(dict(external=external, internal=internal))
 
     # now parse each hostname string for host and optional port
     masters = []
     for hostage in hostages:
-        external = hostage['external']
-        internal = hostage['internal']
+        external = hostage["external"]
+        internal = hostage["internal"]
         if external:
             external = parse_hostname(external, master_port)
             if not external:
@@ -198,7 +187,7 @@ def extract_masters(opts, masters='master', port=None, raise_if_empty=True):
 
 
 def parse_hostname(hostname, default_port):
-    '''
+    """
     Parse hostname string and return a tuple of (host, port)
     If port missing in hostname string then use default_port
     If anything is not a valid then return None
@@ -211,9 +200,9 @@ def parse_hostname(hostname, default_port):
     This is problematic since IPV6 addresses may have colons in them.
     Consequently the use of colon delimited ports is strongly discouraged.
     An ipv6 address must have at least 2 colons.
-    '''
+    """
     try:
-        host, sep, port = hostname.strip().rpartition(' ')
+        host, sep, port = hostname.strip().rpartition(" ")
         if not port:  # invalid nothing there
             return None
 
@@ -221,8 +210,8 @@ def parse_hostname(hostname, default_port):
             host = port
             port = default_port
             # ipv6 must have two or more colons
-            if host.count(':') == 1:  # only one so may be using colon delimited port
-                host, sep, port = host.rpartition(':')
+            if host.count(":") == 1:  # only one so may be using colon delimited port
+                host, sep, port = host.rpartition(":")
                 if not host:  # colon but not host so invalid
                     return None
                 if not port:  # colon but no port so use default

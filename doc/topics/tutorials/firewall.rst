@@ -28,7 +28,7 @@ FirewallD use the command line client ``firewall-cmd``.
 
     firewall-cmd --permanent --zone=<zone> --add-port=4505-4506/tcp
 
-A network zone defines the security level of trust for the the network. 
+A network zone defines the security level of trust for the network. 
 The user should choose an appropriate zone value for their setup.
 Possible values include: drop, block, public, external, dmz, work, home, internal, trusted.
 
@@ -38,7 +38,7 @@ Don't forget to reload after you made your changes.
 
     firewall-cmd --reload
 
-.. _`FirewallD`: https://fedoraproject.org/wiki/FirewallD
+.. _`FirewallD`: https://fedoraproject.org/wiki/Firewalld
 
 RHEL 6 / CentOS 6
 =================
@@ -148,7 +148,7 @@ Different Linux distributions store their `iptables` (also known as
 standardize firewall documentation. Included are some of the more
 common locations, but your mileage may vary.
 
-.. _`netfilter`: http://www.netfilter.org/
+.. _`netfilter`: https://netfilter.org/
 
 **Fedora / RHEL / CentOS**:
 

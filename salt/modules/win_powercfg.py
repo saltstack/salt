@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 This module allows you to control the power settings of a windows minion via
 powercfg.
 
@@ -11,51 +11,52 @@ powercfg.
     salt '*' powercfg.set_monitor_timeout 0 power=dc
     # Set disk timeout to 120 minutes on AC power
     salt '*' powercfg.set_disk_timeout 120 power=ac
-'''
+"""
 # Import Python Libs
-from __future__ import absolute_import, unicode_literals, print_function
-import re
+from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
+import re
 
 # Import Salt Libs
 import salt.utils.platform
 
 log = logging.getLogger(__name__)
 
-__virtualname__ = 'powercfg'
+__virtualname__ = "powercfg"
 
 
 def __virtual__():
-    '''
+    """
     Only work on Windows
-    '''
+    """
     if not salt.utils.platform.is_windows():
-        return False, 'PowerCFG: Module only works on Windows'
+        return False, "PowerCFG: Module only works on Windows"
     return __virtualname__
 
 
 def _get_current_scheme():
-    cmd = 'powercfg /getactivescheme'
-    out = __salt__['cmd.run'](cmd, python_shell=False)
-    matches = re.search(r'GUID: (.*) \(', out)
+    cmd = "powercfg /getactivescheme"
+    out = __salt__["cmd.run"](cmd, python_shell=False)
+    matches = re.search(r"GUID: (.*) \(", out)
     return matches.groups()[0].strip()
 
 
 def _get_powercfg_minute_values(scheme, guid, subguid, safe_name):
-    '''
+    """
     Returns the AC/DC values in an dict for a guid and subguid for a the given
     scheme
-    '''
+    """
     if scheme is None:
         scheme = _get_current_scheme()
 
-    if __grains__['osrelease'] == '7':
-        cmd = 'powercfg /q {0} {1}'.format(scheme, guid)
+    if __grains__["osrelease"] == "7":
+        cmd = "powercfg /q {0} {1}".format(scheme, guid)
     else:
-        cmd = 'powercfg /q {0} {1} {2}'.format(scheme, guid, subguid)
-    out = __salt__['cmd.run'](cmd, python_shell=False)
+        cmd = "powercfg /q {0} {1} {2}".format(scheme, guid, subguid)
+    out = __salt__["cmd.run"](cmd, python_shell=False)
 
-    split = out.split('\r\n\r\n')
+    split = out.split("\r\n\r\n")
     if len(split) > 1:
         for s in split:
             if safe_name in s or subguid in s:
@@ -64,25 +65,25 @@ def _get_powercfg_minute_values(scheme, guid, subguid, safe_name):
     else:
         out = split[0]
 
-    raw_settings = re.findall(r'Power Setting Index: ([0-9a-fx]+)', out)
-    return {'ac': int(raw_settings[0], 0) / 60,
-            'dc': int(raw_settings[1], 0) / 60}
+    raw_settings = re.findall(r"Power Setting Index: ([0-9a-fx]+)", out)
+    return {"ac": int(raw_settings[0], 0) / 60, "dc": int(raw_settings[1], 0) / 60}
 
 
 def _set_powercfg_value(scheme, sub_group, setting_guid, power, value):
-    '''
+    """
     Sets the AC/DC values of a setting with the given power for the given scheme
-    '''
+    """
     if scheme is None:
         scheme = _get_current_scheme()
 
-    cmd = 'powercfg /set{0}valueindex {1} {2} {3} {4}' \
-          ''.format(power, scheme, sub_group, setting_guid, value * 60)
-    return __salt__['cmd.retcode'](cmd, python_shell=False) == 0
+    cmd = "powercfg /set{0}valueindex {1} {2} {3} {4}" "".format(
+        power, scheme, sub_group, setting_guid, value * 60
+    )
+    return __salt__["cmd.retcode"](cmd, python_shell=False) == 0
 
 
-def set_monitor_timeout(timeout, power='ac', scheme=None):
-    '''
+def set_monitor_timeout(timeout, power="ac", scheme=None):
+    """
     Set the monitor timeout in minutes for the given power scheme
 
     Args:
@@ -114,17 +115,18 @@ def set_monitor_timeout(timeout, power='ac', scheme=None):
 
         # Sets the monitor timeout to 30 minutes
         salt '*' powercfg.set_monitor_timeout 30
-    '''
+    """
     return _set_powercfg_value(
         scheme=scheme,
-        sub_group='SUB_VIDEO',
-        setting_guid='VIDEOIDLE',
+        sub_group="SUB_VIDEO",
+        setting_guid="VIDEOIDLE",
         power=power,
-        value=timeout)
+        value=timeout,
+    )
 
 
 def get_monitor_timeout(scheme=None):
-    '''
+    """
     Get the current monitor timeout of the given scheme
 
     Args:
@@ -145,16 +147,17 @@ def get_monitor_timeout(scheme=None):
     .. code-block:: bash
 
         salt '*' powercfg.get_monitor_timeout
-    '''
+    """
     return _get_powercfg_minute_values(
         scheme=scheme,
-        guid='SUB_VIDEO',
-        subguid='VIDEOIDLE',
-        safe_name='Turn off display after')
+        guid="SUB_VIDEO",
+        subguid="VIDEOIDLE",
+        safe_name="Turn off display after",
+    )
 
 
-def set_disk_timeout(timeout, power='ac', scheme=None):
-    '''
+def set_disk_timeout(timeout, power="ac", scheme=None):
+    """
     Set the disk timeout in minutes for the given power scheme
 
     Args:
@@ -186,17 +189,18 @@ def set_disk_timeout(timeout, power='ac', scheme=None):
 
         # Sets the disk timeout to 30 minutes on battery
         salt '*' powercfg.set_disk_timeout 30 power=dc
-    '''
+    """
     return _set_powercfg_value(
         scheme=scheme,
-        sub_group='SUB_DISK',
-        setting_guid='DISKIDLE',
+        sub_group="SUB_DISK",
+        setting_guid="DISKIDLE",
         power=power,
-        value=timeout)
+        value=timeout,
+    )
 
 
 def get_disk_timeout(scheme=None):
-    '''
+    """
     Get the current disk timeout of the given scheme
 
     Args:
@@ -217,16 +221,17 @@ def get_disk_timeout(scheme=None):
     .. code-block:: bash
 
         salt '*' powercfg.get_disk_timeout
-    '''
+    """
     return _get_powercfg_minute_values(
         scheme=scheme,
-        guid='SUB_DISK',
-        subguid='DISKIDLE',
-        safe_name='Turn off hard disk after')
+        guid="SUB_DISK",
+        subguid="DISKIDLE",
+        safe_name="Turn off hard disk after",
+    )
 
 
-def set_standby_timeout(timeout, power='ac', scheme=None):
-    '''
+def set_standby_timeout(timeout, power="ac", scheme=None):
+    """
     Set the standby timeout in minutes for the given power scheme
 
     Args:
@@ -258,17 +263,18 @@ def set_standby_timeout(timeout, power='ac', scheme=None):
 
         # Sets the system standby timeout to 30 minutes on Battery
         salt '*' powercfg.set_standby_timeout 30 power=dc
-    '''
+    """
     return _set_powercfg_value(
         scheme=scheme,
-        sub_group='SUB_SLEEP',
-        setting_guid='STANDBYIDLE',
+        sub_group="SUB_SLEEP",
+        setting_guid="STANDBYIDLE",
         power=power,
-        value=timeout)
+        value=timeout,
+    )
 
 
 def get_standby_timeout(scheme=None):
-    '''
+    """
     Get the current standby timeout of the given scheme
 
         scheme (str):
@@ -288,16 +294,14 @@ def get_standby_timeout(scheme=None):
     .. code-block:: bash
 
         salt '*' powercfg.get_standby_timeout
-    '''
+    """
     return _get_powercfg_minute_values(
-        scheme=scheme,
-        guid='SUB_SLEEP',
-        subguid='STANDBYIDLE',
-        safe_name='Sleep after')
+        scheme=scheme, guid="SUB_SLEEP", subguid="STANDBYIDLE", safe_name="Sleep after"
+    )
 
 
-def set_hibernate_timeout(timeout, power='ac', scheme=None):
-    '''
+def set_hibernate_timeout(timeout, power="ac", scheme=None):
+    """
     Set the hibernate timeout in minutes for the given power scheme
 
     Args:
@@ -329,17 +333,18 @@ def set_hibernate_timeout(timeout, power='ac', scheme=None):
 
         # Sets the hibernate timeout to 30 minutes on Battery
         salt '*' powercfg.set_hibernate_timeout 30 power=dc
-    '''
+    """
     return _set_powercfg_value(
         scheme=scheme,
-        sub_group='SUB_SLEEP',
-        setting_guid='HIBERNATEIDLE',
+        sub_group="SUB_SLEEP",
+        setting_guid="HIBERNATEIDLE",
         power=power,
-        value=timeout)
+        value=timeout,
+    )
 
 
 def get_hibernate_timeout(scheme=None):
-    '''
+    """
     Get the current hibernate timeout of the given scheme
 
         scheme (str):
@@ -359,9 +364,10 @@ def get_hibernate_timeout(scheme=None):
     .. code-block:: bash
 
         salt '*' powercfg.get_hibernate_timeout
-    '''
+    """
     return _get_powercfg_minute_values(
         scheme=scheme,
-        guid='SUB_SLEEP',
-        subguid='HIBERNATEIDLE',
-        safe_name='Hibernate after')
+        guid="SUB_SLEEP",
+        subguid="HIBERNATEIDLE",
+        safe_name="Hibernate after",
+    )

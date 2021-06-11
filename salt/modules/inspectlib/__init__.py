@@ -16,36 +16,41 @@
 
 # Import Python libs
 from __future__ import absolute_import
+
 import os
+
+from salt.modules.inspectlib.dbhandle import DBHandle
 
 # Import Salt libs
 from salt.modules.inspectlib.exceptions import InspectorSnapshotException
-from salt.modules.inspectlib.dbhandle import DBHandle
 
 
 class EnvLoader(object):
-    '''
+    """
     Load environment.
-    '''
-    PID_FILE = '_minion_collector.pid'
-    DB_FILE = '_minion_collector.db'
-    DEFAULT_PID_PATH = '/var/run'
-    DEFAULT_CACHE_PATH = '/var/cache/salt'
+    """
+
+    PID_FILE = "_minion_collector.pid"
+    DB_FILE = "_minion_collector.db"
+    DEFAULT_PID_PATH = "/var/run"
+    DEFAULT_CACHE_PATH = "/var/cache/salt"
 
     def __init__(self, cachedir=None, piddir=None, pidfilename=None):
-        '''
+        """
         Constructor.
 
         :param options:
         :param db_path:
         :param pid_file:
-        '''
-        if not cachedir and '__salt__' in globals():
-            cachedir = globals().get('__salt__')['config.get']('inspector.db', '')
+        """
+        if not cachedir and "__salt__" in globals():
+            cachedir = globals().get("__salt__")["config.get"]("inspector.db", "")
 
         self.dbfile = os.path.join(cachedir or self.DEFAULT_CACHE_PATH, self.DB_FILE)
         self.db = DBHandle(self.dbfile)
 
-        if not piddir and '__salt__' in globals():
-            piddir = globals().get('__salt__')['config.get']('inspector.pid', '')
-        self.pidfile = os.path.join(piddir or self.DEFAULT_PID_PATH, pidfilename or self.PID_FILE)
+        if not piddir and "__salt__" in globals():
+            piddir = globals().get("__salt__")["config.get"]("inspector.pid", "")
+        self.pidfile = os.path.join(
+            piddir or self.DEFAULT_PID_PATH, pidfilename or self.PID_FILE
+        )

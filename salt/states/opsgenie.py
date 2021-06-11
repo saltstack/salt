@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Create/Close an alert in OpsGenie
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -31,11 +31,12 @@ during state runs.
         - require:
           - disk: used_space
 
-'''
+"""
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import logging
+
 import inspect
+import logging
 
 # Import Salt libs
 import salt.exceptions
@@ -44,7 +45,7 @@ log = logging.getLogger(__name__)
 
 
 def create_alert(name=None, api_key=None, reason=None, action_type="Create"):
-    '''
+    """
     Create an alert in OpsGenie. Example usage with Salt's requisites and other
     global state arguments could be found above.
 
@@ -67,61 +68,57 @@ def create_alert(name=None, api_key=None, reason=None, action_type="Create"):
         OpsGenie supports the default values Create/Close for action_type.
         You can customize this field with OpsGenie's custom actions for
         other purposes like adding notes or acknowledging alerts.
-    '''
+    """
 
     _, _, _, values = inspect.getargvalues(inspect.currentframe())
     log.info("Arguments values: %s", values)
 
-    ret = {
-        'result': '',
-        'name': '',
-        'changes': '',
-        'comment': ''
-    }
+    ret = {"result": "", "name": "", "changes": "", "comment": ""}
 
     if api_key is None or reason is None:
-        raise salt.exceptions.SaltInvocationError(
-            'API Key or Reason cannot be None.')
+        raise salt.exceptions.SaltInvocationError("API Key or Reason cannot be None.")
 
-    if __opts__['test'] is True:
-        ret[
-            'comment'] = 'Test: {0} alert request will be processed ' \
-                         'using the API Key="{1}".'.format(action_type, api_key)
+    if __opts__["test"] is True:
+        ret["comment"] = (
+            "Test: {0} alert request will be processed "
+            'using the API Key="{1}".'.format(action_type, api_key)
+        )
 
         # Return ``None`` when running with ``test=true``.
-        ret['result'] = None
+        ret["result"] = None
 
         return ret
 
-    response_status_code, response_text = __salt__['opsgenie.post_data'](
-        api_key=api_key,
-        name=name,
-        reason=reason,
-        action_type=action_type
+    response_status_code, response_text = __salt__["opsgenie.post_data"](
+        api_key=api_key, name=name, reason=reason, action_type=action_type
     )
 
     if 200 <= response_status_code < 300:
         log.info(
             "POST Request has succeeded with message: %s status code: %s",
-            response_text, response_status_code)
-        ret[
-            'comment'] = 'Test: {0} alert request will be processed' \
-                         ' using the API Key="{1}".'.format(
-            action_type,
-            api_key)
-        ret['result'] = True
+            response_text,
+            response_status_code,
+        )
+        ret["comment"] = (
+            "Test: {0} alert request will be processed"
+            ' using the API Key="{1}".'.format(action_type, api_key)
+        )
+        ret["result"] = True
     else:
         log.error(
             "POST Request has failed with error: %s status code: %s",
-            response_text, response_status_code)
-        ret['result'] = False
+            response_text,
+            response_status_code,
+        )
+        ret["result"] = False
 
     return ret
 
 
-def close_alert(name=None, api_key=None, reason="Conditions are met.",
-                action_type="Close"):
-    '''
+def close_alert(
+    name=None, api_key=None, reason="Conditions are met.", action_type="Close"
+):
+    """
     Close an alert in OpsGenie. It's a wrapper function for create_alert.
     Example usage with Salt's requisites and other global state arguments
     could be found above.
@@ -145,9 +142,8 @@ def close_alert(name=None, api_key=None, reason="Conditions are met.",
         OpsGenie supports the default values Create/Close for action_type.
         You can customize this field with OpsGenie's custom actions for
         other purposes like adding notes or acknowledging alerts.
-    '''
+    """
     if name is None:
-        raise salt.exceptions.SaltInvocationError(
-            'Name cannot be None.')
+        raise salt.exceptions.SaltInvocationError("Name cannot be None.")
 
     return create_alert(name, api_key, reason, action_type)

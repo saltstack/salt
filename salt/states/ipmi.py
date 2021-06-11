@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Manage IPMI devices over LAN
 ============================
 
@@ -33,7 +33,7 @@ Every call can override the config defaults:
             - api_host: myipmi.hostname.com
             - api_user: root
             - api_pass: apassword
-'''
+"""
 
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
@@ -45,14 +45,14 @@ from salt.ext import six
 def __virtual__():
     IMPORT_ERR = None
     try:
-        from pyghmi.ipmi import command
-    except Exception as exc:
+        from pyghmi.ipmi import command  # pylint: disable=unused-import
+    except Exception as exc:  # pylint: disable=broad-except
         IMPORT_ERR = six.text_type(exc)
     return (IMPORT_ERR is None, IMPORT_ERR)
 
 
-def boot_device(name='default', **kwargs):
-    '''
+def boot_device(name="default", **kwargs):
+    """
     Request power state change
 
     name = ``default``
@@ -69,32 +69,32 @@ def boot_device(name='default', **kwargs):
         - api_pass=
         - api_port=623
         - api_kg=None
-    '''
-    ret = {'name': name, 'result': False, 'comment': '', 'changes': {}}
-    org = __salt__['ipmi.get_bootdev'](**kwargs)
-    if 'bootdev' in org:
-        org = org['bootdev']
+    """
+    ret = {"name": name, "result": False, "comment": "", "changes": {}}
+    org = __salt__["ipmi.get_bootdev"](**kwargs)
+    if "bootdev" in org:
+        org = org["bootdev"]
 
     if org == name:
-        ret['result'] = True
-        ret['comment'] = 'system already in this state'
+        ret["result"] = True
+        ret["comment"] = "system already in this state"
         return ret
 
-    if __opts__['test']:
-        ret['comment'] = 'would change boot device'
-        ret['result'] = None
-        ret['changes'] = {'old': org, 'new': name}
+    if __opts__["test"]:
+        ret["comment"] = "would change boot device"
+        ret["result"] = None
+        ret["changes"] = {"old": org, "new": name}
         return ret
 
-    outdddd = __salt__['ipmi.set_bootdev'](bootdev=name, **kwargs)
-    ret['comment'] = 'changed boot device'
-    ret['result'] = True
-    ret['changes'] = {'old': org, 'new': name}
+    outdddd = __salt__["ipmi.set_bootdev"](bootdev=name, **kwargs)
+    ret["comment"] = "changed boot device"
+    ret["result"] = True
+    ret["changes"] = {"old": org, "new": name}
     return ret
 
 
-def power(name='power_on', wait=300, **kwargs):
-    '''
+def power(name="power_on", wait=300, **kwargs):
+    """
     Request power state change
 
     name
@@ -115,41 +115,50 @@ def power(name='power_on', wait=300, **kwargs):
         - api_pass=
         - api_port=623
         - api_kg=None
-    '''
-    ret = {'name': name, 'result': False, 'comment': '', 'changes': {}}
-    org = __salt__['ipmi.get_power'](**kwargs)
+    """
+    ret = {"name": name, "result": False, "comment": "", "changes": {}}
+    org = __salt__["ipmi.get_power"](**kwargs)
 
     state_map = {
-        'off': 'off',
-        'on': 'on',
-        'power_off': 'off',
-        'power_on': 'on',
-        'shutdown': 'off',
-        'reset': 'na',
-        'boot': 'na'
+        "off": "off",
+        "on": "on",
+        "power_off": "off",
+        "power_on": "on",
+        "shutdown": "off",
+        "reset": "na",
+        "boot": "na",
     }
 
     if org == state_map[name]:
-        ret['result'] = True
-        ret['comment'] = 'system already in this state'
+        ret["result"] = True
+        ret["comment"] = "system already in this state"
         return ret
 
-    if __opts__['test']:
-        ret['comment'] = 'would power: {0} system'.format(name)
-        ret['result'] = None
-        ret['changes'] = {'old': org, 'new': name}
+    if __opts__["test"]:
+        ret["comment"] = "would power: {0} system".format(name)
+        ret["result"] = None
+        ret["changes"] = {"old": org, "new": name}
         return ret
 
-    outdddd = __salt__['ipmi.set_power'](name, wait=wait, **kwargs)
-    ret['comment'] = 'changed system power'
-    ret['result'] = True
-    ret['changes'] = {'old': org, 'new': name}
+    outdddd = __salt__["ipmi.set_power"](name, wait=wait, **kwargs)
+    ret["comment"] = "changed system power"
+    ret["result"] = True
+    ret["changes"] = {"old": org, "new": name}
     return ret
 
 
-def user_present(name, uid, password, channel=14, callback=False,
-                link_auth=True, ipmi_msg=True, privilege_level='administrator', **kwargs):
-    '''
+def user_present(
+    name,
+    uid,
+    password,
+    channel=14,
+    callback=False,
+    link_auth=True,
+    ipmi_msg=True,
+    privilege_level="administrator",
+    **kwargs
+):
+    """
     Ensure IPMI user and user privileges.
 
     name
@@ -213,52 +222,58 @@ def user_present(name, uid, password, channel=14, callback=False,
         - api_pass=
         - api_port=623
         - api_kg=None
-    '''
-    ret = {'name': name, 'result': False, 'comment': '', 'changes': {}}
-    org_user = __salt__['ipmi.get_user'](uid=uid, channel=channel, **kwargs)
+    """
+    ret = {"name": name, "result": False, "comment": "", "changes": {}}
+    org_user = __salt__["ipmi.get_user"](uid=uid, channel=channel, **kwargs)
 
     change = False
-    if org_user['access']['callback'] != callback:
+    if org_user["access"]["callback"] != callback:
         change = True
-    if org_user['access']['link_auth'] != link_auth:
+    if org_user["access"]["link_auth"] != link_auth:
         change = True
-    if org_user['access']['ipmi_msg'] != ipmi_msg:
+    if org_user["access"]["ipmi_msg"] != ipmi_msg:
         change = True
-    if org_user['access']['privilege_level'] != privilege_level:
+    if org_user["access"]["privilege_level"] != privilege_level:
         change = True
-    if __salt__['ipmi.set_user_password'](uid, mode='test_password',
-                                          password=password, **kwargs) is False:
+    if (
+        __salt__["ipmi.set_user_password"](
+            uid, mode="test_password", password=password, **kwargs
+        )
+        is False
+    ):
         change = True
 
     if change is False:
-        ret['result'] = True
-        ret['comment'] = 'user already present'
+        ret["result"] = True
+        ret["comment"] = "user already present"
         return ret
 
-    if __opts__['test']:
-        ret['comment'] = 'would (re)create user'
-        ret['result'] = None
-        ret['changes'] = {'old': org_user, 'new': name}
+    if __opts__["test"]:
+        ret["comment"] = "would (re)create user"
+        ret["result"] = None
+        ret["changes"] = {"old": org_user, "new": name}
         return ret
 
-    __salt__['ipmi.ensure_user'](uid,
-                                 name,
-                                 password,
-                                 channel,
-                                 callback,
-                                 link_auth,
-                                 ipmi_msg,
-                                 privilege_level,
-                                 **kwargs)
-    current_user = __salt__['ipmi.get_user'](uid=uid, channel=channel, **kwargs)
-    ret['comment'] = '(re)created user'
-    ret['result'] = True
-    ret['changes'] = {'old': org_user, 'new': current_user}
+    __salt__["ipmi.ensure_user"](
+        uid,
+        name,
+        password,
+        channel,
+        callback,
+        link_auth,
+        ipmi_msg,
+        privilege_level,
+        **kwargs
+    )
+    current_user = __salt__["ipmi.get_user"](uid=uid, channel=channel, **kwargs)
+    ret["comment"] = "(re)created user"
+    ret["result"] = True
+    ret["changes"] = {"old": org_user, "new": current_user}
     return ret
 
 
 def user_absent(name, channel=14, **kwargs):
-    '''
+    """
     Remove user
     Delete all user (uid) records having the matching name.
 
@@ -274,24 +289,24 @@ def user_absent(name, channel=14, **kwargs):
         - api_pass=
         - api_port=623
         - api_kg=None
-    '''
-    ret = {'name': name, 'result': False, 'comment': '', 'changes': {}}
-    user_id_list = __salt__['ipmi.get_name_uids'](name, channel, **kwargs)
+    """
+    ret = {"name": name, "result": False, "comment": "", "changes": {}}
+    user_id_list = __salt__["ipmi.get_name_uids"](name, channel, **kwargs)
 
     if len(user_id_list) == 0:
-        ret['result'] = True
-        ret['comment'] = 'user already absent'
+        ret["result"] = True
+        ret["comment"] = "user already absent"
         return ret
 
-    if __opts__['test']:
-        ret['comment'] = 'would delete user(s)'
-        ret['result'] = None
-        ret['changes'] = {'delete': user_id_list}
+    if __opts__["test"]:
+        ret["comment"] = "would delete user(s)"
+        ret["result"] = None
+        ret["changes"] = {"delete": user_id_list}
         return ret
 
     for uid in user_id_list:
-        __salt__['ipmi.delete_user'](uid, channel, **kwargs)
+        __salt__["ipmi.delete_user"](uid, channel, **kwargs)
 
-    ret['comment'] = 'user(s) removed'
-    ret['changes'] = {'old': user_id_list, 'new': 'None'}
+    ret["comment"] = "user(s) removed"
+    ret["changes"] = {"old": user_id_list, "new": "None"}
     return ret

@@ -4,7 +4,7 @@
 # (c) 2007 Chris AtLee <chris@atlee.ca>
 # Licensed under the MIT license:
 # http://www.opensource.org/licenses/mit-license.php
-'''
+"""
 Authenticate against PAM
 
 Provides an authenticate function that will allow the caller to authenticate
@@ -33,26 +33,39 @@ authenticated against.  This defaults to `login`
     This should not be needed with python >= 3.3, because the `os` modules has the
     `getgrouplist` function.
 
-'''
+"""
 
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
-from ctypes import CDLL, POINTER, Structure, CFUNCTYPE, cast, pointer, sizeof
-from ctypes import c_void_p, c_uint, c_char_p, c_char, c_int
+from ctypes import (
+    CDLL,
+    CFUNCTYPE,
+    POINTER,
+    Structure,
+    c_char,
+    c_char_p,
+    c_int,
+    c_uint,
+    c_void_p,
+    cast,
+    pointer,
+    sizeof,
+)
 from ctypes.util import find_library
 
 # Import Salt libs
 import salt.utils.user
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 # Import 3rd-party libs
 from salt.ext import six
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 log = logging.getLogger(__name__)
 
 try:
-    LIBC = CDLL(find_library('c'))
+    LIBC = CDLL(find_library("c"))
 
     CALLOC = LIBC.calloc
     CALLOC.restype = c_void_p
@@ -62,7 +75,7 @@ try:
     STRDUP.argstypes = [c_char_p]
     STRDUP.restype = POINTER(c_char)  # NOT c_char_p !!!!
 except Exception:  # pylint: disable=broad-except
-    log.trace('Failed to load libc using ctypes', exc_info=True)
+    log.trace("Failed to load libc using ctypes", exc_info=True)
     HAS_LIBC = False
 else:
     HAS_LIBC = True
@@ -75,12 +88,11 @@ PAM_TEXT_INFO = 4
 
 
 class PamHandle(Structure):
-    '''
+    """
     Wrapper class for pam_handle_t
-    '''
-    _fields_ = [
-            ('handle', c_void_p)
-            ]
+    """
+
+    _fields_ = [("handle", c_void_p)]
 
     def __init__(self):
         Structure.__init__(self)
@@ -88,57 +100,51 @@ class PamHandle(Structure):
 
 
 class PamMessage(Structure):
-    '''
+    """
     Wrapper class for pam_message structure
-    '''
+    """
+
     _fields_ = [
-            ("msg_style", c_int),
-            ("msg", c_char_p),
-            ]
+        ("msg_style", c_int),
+        ("msg", c_char_p),
+    ]
 
     def __repr__(self):
-        return '<PamMessage {0} \'{1}\'>'.format(self.msg_style, self.msg)
+        return "<PamMessage {0} '{1}'>".format(self.msg_style, self.msg)
 
 
 class PamResponse(Structure):
-    '''
+    """
     Wrapper class for pam_response structure
-    '''
+    """
+
     _fields_ = [
-            ('resp', c_char_p),
-            ('resp_retcode', c_int),
-            ]
+        ("resp", c_char_p),
+        ("resp_retcode", c_int),
+    ]
 
     def __repr__(self):
-        return '<PamResponse {0} \'{1}\'>'.format(self.resp_retcode, self.resp)
+        return "<PamResponse {0} '{1}'>".format(self.resp_retcode, self.resp)
 
 
 CONV_FUNC = CFUNCTYPE(
-        c_int,
-        c_int,
-        POINTER(POINTER(PamMessage)),
-        POINTER(POINTER(PamResponse)),
-        c_void_p)
+    c_int, c_int, POINTER(POINTER(PamMessage)), POINTER(POINTER(PamResponse)), c_void_p
+)
 
 
 class PamConv(Structure):
-    '''
+    """
     Wrapper class for pam_conv structure
-    '''
-    _fields_ = [
-            ('conv', CONV_FUNC),
-            ('appdata_ptr', c_void_p)
-            ]
+    """
+
+    _fields_ = [("conv", CONV_FUNC), ("appdata_ptr", c_void_p)]
 
 
 try:
-    LIBPAM = CDLL(find_library('pam'))
+    LIBPAM = CDLL(find_library("pam"))
     PAM_START = LIBPAM.pam_start
     PAM_START.restype = c_int
-    PAM_START.argtypes = [c_char_p,
-                          c_char_p,
-                          POINTER(PamConv),
-                          POINTER(PamHandle)]
+    PAM_START.argtypes = [c_char_p, c_char_p, POINTER(PamConv), POINTER(PamHandle)]
 
     PAM_AUTHENTICATE = LIBPAM.pam_authenticate
     PAM_AUTHENTICATE.restype = c_int
@@ -152,29 +158,29 @@ try:
     PAM_END.restype = c_int
     PAM_END.argtypes = [PamHandle, c_int]
 except Exception:  # pylint: disable=broad-except
-    log.trace('Failed to load pam using ctypes', exc_info=True)
+    log.trace("Failed to load pam using ctypes", exc_info=True)
     HAS_PAM = False
 else:
     HAS_PAM = True
 
 
 def __virtual__():
-    '''
+    """
     Only load on Linux systems
-    '''
+    """
     return HAS_LIBC and HAS_PAM
 
 
 def authenticate(username, password):
-    '''
+    """
     Returns True if the given username and password authenticate for the
     given service.  Returns False otherwise
 
     ``username``: the username to authenticate
 
     ``password``: the password in plain text
-    '''
-    service = __opts__.get('auth.pam.service', 'login')
+    """
+    service = __opts__.get("auth.pam.service", "login")
 
     if isinstance(username, six.text_type):
         username = username.encode(__salt_system_encoding__)
@@ -185,10 +191,10 @@ def authenticate(username, password):
 
     @CONV_FUNC
     def my_conv(n_messages, messages, p_response, app_data):
-        '''
+        """
         Simple conversation function that responds to any
         prompt where the echo is off with the supplied password
-        '''
+        """
         # Create an array of n_messages response objects
         addr = CALLOC(n_messages, sizeof(PamResponse))
         p_response[0] = cast(addr, POINTER(PamResponse))
@@ -217,16 +223,16 @@ def authenticate(username, password):
 
 
 def auth(username, password, **kwargs):
-    '''
+    """
     Authenticate via pam
-    '''
+    """
     return authenticate(username, password)
 
 
 def groups(username, *args, **kwargs):
-    '''
+    """
     Retrieve groups for a given user for this auth provider
 
     Uses system groups
-    '''
+    """
     return salt.utils.user.get_group_list(username)

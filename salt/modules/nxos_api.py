@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Execution module to manage Cisco Nexus Switches (NX-OS) over the NX-API
 
 .. versionadded:: 2019.2.0
@@ -121,26 +121,27 @@ outside a ``nxos_api`` Proxy, e.g.:
     Remember that the above applies only when not running in a ``nxos_api`` Proxy
     Minion. If you want to use the :mod:`nxos_api Proxy<salt.proxy.nxos_api>`,
     please follow the documentation notes for a proper setup.
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
+
+import difflib
 
 # Import python stdlib
 import logging
-import difflib
+
+from salt.exceptions import CommandExecutionError, SaltException
 
 # Import Salt libs
 from salt.ext import six
-from salt.exceptions import CommandExecutionError
-from salt.exceptions import SaltException
 
 # -----------------------------------------------------------------------------
 # execution module properties
 # -----------------------------------------------------------------------------
 
-__proxyenabled__ = ['*']
+__proxyenabled__ = ["*"]
 # Any Proxy Minion should be able to execute these
 
-__virtualname__ = 'nxos_api'
+__virtualname__ = "nxos_api"
 # The Execution Module will be identified as ``nxos_api``
 # The ``nxos`` namespace is already taken, used for SSH-based connections.
 
@@ -156,52 +157,50 @@ log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    '''
+    """
     This module does not have external dependencies, hence it is widely
     available.
-    '''
+    """
     # No extra requirements, uses Salt native modules.
     return __virtualname__
+
 
 # -----------------------------------------------------------------------------
 # helper functions
 # -----------------------------------------------------------------------------
 
 
-def _cli_command(commands,
-                 method='cli',
-                 **kwargs):
-    '''
+def _cli_command(commands, method="cli", **kwargs):
+    """
     Execute a list of CLI commands.
-    '''
+    """
     if not isinstance(commands, (list, tuple)):
         commands = [commands]
-    rpc_responses = rpc(commands,
-                        method=method,
-                        **kwargs)
+    rpc_responses = rpc(commands, method=method, **kwargs)
     txt_responses = []
     for rpc_reponse in rpc_responses:
-        error = rpc_reponse.get('error')
+        error = rpc_reponse.get("error")
         if error:
-            cmd = rpc_reponse.get('command')
-            if 'data' in error:
-                msg = 'The command "{cmd}" raised the error "{err}".'.format(cmd=cmd, err=error['data']['msg'])
+            cmd = rpc_reponse.get("command")
+            if "data" in error:
+                msg = 'The command "{cmd}" raised the error "{err}".'.format(
+                    cmd=cmd, err=error["data"]["msg"]
+                )
                 raise SaltException(msg)
             else:
                 msg = 'Invalid command: "{cmd}".'.format(cmd=cmd)
                 raise SaltException(msg)
-        txt_responses.append(rpc_reponse['result'])
+        txt_responses.append(rpc_reponse["result"])
     return txt_responses
+
 
 # -----------------------------------------------------------------------------
 # callable functions
 # -----------------------------------------------------------------------------
 
 
-def rpc(commands,
-        method='cli',
-        **kwargs):
-    '''
+def rpc(commands, method="cli", **kwargs):
+    """
     Execute an arbitrary RPC request via the Nexus API.
 
     commands
@@ -242,22 +241,23 @@ def rpc(commands,
     .. code-block:: bash
 
         salt-call --local nxps_api.rpc 'show version'
-    '''
-    nxos_api_kwargs = __salt__['config.get']('nxos_api', {})
+    """
+    nxos_api_kwargs = __salt__["config.get"]("nxos_api", {})
     nxos_api_kwargs.update(**kwargs)
-    if 'nxos_api.rpc' in __proxy__ and __salt__['config.get']('proxy:proxytype') == 'nxos_api':
+    if (
+        "nxos_api.rpc" in __proxy__
+        and __salt__["config.get"]("proxy:proxytype") == "nxos_api"
+    ):
         # If the nxos_api.rpc Proxy function is available and currently running
         # in a nxos_api Proxy Minion
-        return __proxy__['nxos_api.rpc'](commands, method=method, **nxos_api_kwargs)
-    nxos_api_kwargs = __salt__['config.get']('nxos_api', {})
+        return __proxy__["nxos_api.rpc"](commands, method=method, **nxos_api_kwargs)
+    nxos_api_kwargs = __salt__["config.get"]("nxos_api", {})
     nxos_api_kwargs.update(**kwargs)
-    return __utils__['nxos_api.rpc'](commands, method=method, **nxos_api_kwargs)
+    return __utils__["nxos_api.rpc"](commands, method=method, **nxos_api_kwargs)
 
 
-def show(commands,
-         raw_text=True,
-         **kwargs):
-    '''
+def show(commands, raw_text=True, **kwargs):
+    """
     Execute one or more show (non-configuration) commands.
 
     commands
@@ -299,29 +299,29 @@ def show(commands,
         salt-call --local nxos_api.show 'show version'
         salt '*' nxos_api.show 'show bgp sessions' 'show processes' raw_text=False
         salt 'regular-minion' nxos_api.show 'show interfaces' host=sw01.example.com username=test password=test
-    '''
+    """
     ret = []
     if raw_text:
-        method = 'cli_ascii'
-        key = 'msg'
+        method = "cli_ascii"
+        key = "msg"
     else:
-        method = 'cli'
-        key = 'body'
-    response_list = _cli_command(commands,
-                                 method=method,
-                                 **kwargs)
+        method = "cli"
+        key = "body"
+    response_list = _cli_command(commands, method=method, **kwargs)
     ret = [response[key] for response in response_list if response]
     return ret
 
 
-def config(commands=None,
-           config_file=None,
-           template_engine='jinja',
-           context=None,
-           defaults=None,
-           saltenv='base',
-           **kwargs):
-    '''
+def config(
+    commands=None,
+    config_file=None,
+    template_engine="jinja",
+    context=None,
+    defaults=None,
+    saltenv="base",
+    **kwargs
+):
+    """
     Configures the Nexus switch with the specified commands.
 
     This method is used to send configuration commands to the switch.  It
@@ -402,26 +402,26 @@ def config(commands=None,
         salt '*' nxos_api.config commands="['spanning-tree mode mstp']"
         salt '*' nxos_api.config config_file=salt://config.txt
         salt '*' nxos_api.config config_file=https://bit.ly/2LGLcDy context="{'servers': ['1.2.3.4']}"
-    '''
-    initial_config = show('show running-config', **kwargs)[0]
+    """
+    initial_config = show("show running-config", **kwargs)[0]
     if config_file:
-        file_str = __salt__['cp.get_file_str'](config_file, saltenv=saltenv)
+        file_str = __salt__["cp.get_file_str"](config_file, saltenv=saltenv)
         if file_str is False:
-            raise CommandExecutionError('Source file {} not found'.format(config_file))
+            raise CommandExecutionError("Source file {} not found".format(config_file))
     elif commands:
         if isinstance(commands, (six.string_types, six.text_type)):
             commands = [commands]
-        file_str = '\n'.join(commands)
+        file_str = "\n".join(commands)
         # unify all the commands in a single file, to render them in a go
     if template_engine:
-        file_str = __salt__['file.apply_template_on_contents'](file_str,
-                                                               template_engine,
-                                                               context,
-                                                               defaults,
-                                                               saltenv)
+        file_str = __salt__["file.apply_template_on_contents"](
+            file_str, template_engine, context, defaults, saltenv
+        )
     # whatever the source of the commands would be, split them line by line
     commands = [line for line in file_str.splitlines() if line.strip()]
     ret = _cli_command(commands, **kwargs)
-    current_config = show('show running-config', **kwargs)[0]
-    diff = difflib.unified_diff(initial_config.splitlines(1)[4:], current_config.splitlines(1)[4:])
-    return ''.join([x.replace('\r', '') for x in diff])
+    current_config = show("show running-config", **kwargs)[0]
+    diff = difflib.unified_diff(
+        initial_config.splitlines(1)[4:], current_config.splitlines(1)[4:]
+    )
+    return "".join([x.replace("\r", "") for x in diff])

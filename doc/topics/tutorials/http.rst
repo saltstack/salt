@@ -64,14 +64,14 @@ single URL:
 
 .. code-block:: python
 
-    salt.utils.http.query('http://example.com')
+    salt.utils.http.query("http://example.com")
 
 By default the query will be performed with a ``GET`` method. The method can
 be overridden with the ``method`` argument:
 
 .. code-block:: python
 
-    salt.utils.http.query('http://example.com/delete/url', 'DELETE')
+    salt.utils.http.query("http://example.com/delete/url", "DELETE")
 
 When using the ``POST`` method (and others, such as ``PUT``), extra data is usually
 sent as well. This data can be sent directly (would be URL encoded when necessary),
@@ -80,9 +80,7 @@ or in whatever format is required by the remote server (XML, JSON, plain text, e
 .. code-block:: python
 
     salt.utils.http.query(
-        'http://example.com/post/url',
-        method='POST',
-        data=json.dumps(mydict)
+        "http://example.com/post/url", method="POST", data=json.dumps(mydict)
     )
 
 Data Formatting and Templating
@@ -96,9 +94,7 @@ the file (untemplated):
 .. code-block:: python
 
     salt.utils.http.query(
-        'http://example.com/post/url',
-        method='POST',
-        data_file='/srv/salt/somefile.xml'
+        "http://example.com/post/url", method="POST", data_file="/srv/salt/somefile.xml"
     )
 
 To pass through a file that contains jinja + yaml templating (the default):
@@ -106,11 +102,11 @@ To pass through a file that contains jinja + yaml templating (the default):
 .. code-block:: python
 
     salt.utils.http.query(
-        'http://example.com/post/url',
-        method='POST',
-        data_file='/srv/salt/somefile.jinja',
+        "http://example.com/post/url",
+        method="POST",
+        data_file="/srv/salt/somefile.jinja",
         data_render=True,
-        template_dict={'key1': 'value1', 'key2': 'value2'}
+        template_dict={"key1": "value1", "key2": "value2"},
     )
 
 To pass through a file that contains mako templating:
@@ -118,12 +114,12 @@ To pass through a file that contains mako templating:
 .. code-block:: python
 
     salt.utils.http.query(
-        'http://example.com/post/url',
-        method='POST',
-        data_file='/srv/salt/somefile.mako',
+        "http://example.com/post/url",
+        method="POST",
+        data_file="/srv/salt/somefile.mako",
         data_render=True,
-        data_renderer='mako',
-        template_dict={'key1': 'value1', 'key2': 'value2'}
+        data_renderer="mako",
+        template_dict={"key1": "value1", "key2": "value2"},
     )
 
 Because this function uses Salt's own rendering system, any Salt renderer can
@@ -136,21 +132,21 @@ However, this can be changed to ``master`` if necessary.
 .. code-block:: python
 
     salt.utils.http.query(
-        'http://example.com/post/url',
-        method='POST',
-        data_file='/srv/salt/somefile.jinja',
+        "http://example.com/post/url",
+        method="POST",
+        data_file="/srv/salt/somefile.jinja",
         data_render=True,
-        template_dict={'key1': 'value1', 'key2': 'value2'},
-        opts=__opts__
+        template_dict={"key1": "value1", "key2": "value2"},
+        opts=__opts__,
     )
 
     salt.utils.http.query(
-        'http://example.com/post/url',
-        method='POST',
-        data_file='/srv/salt/somefile.jinja',
+        "http://example.com/post/url",
+        method="POST",
+        data_file="/srv/salt/somefile.jinja",
         data_render=True,
-        template_dict={'key1': 'value1', 'key2': 'value2'},
-        node='master'
+        template_dict={"key1": "value1", "key2": "value2"},
+        node="master",
     )
 
 Headers
@@ -165,12 +161,12 @@ a Python dict.
 .. code-block:: python
 
     salt.utils.http.query(
-        'http://example.com/delete/url',
-        method='POST',
-        header_file='/srv/salt/headers.jinja',
+        "http://example.com/delete/url",
+        method="POST",
+        header_file="/srv/salt/headers.jinja",
         header_render=True,
-        header_renderer='jinja',
-        template_dict={'key1': 'value1', 'key2': 'value2'}
+        header_renderer="jinja",
+        template_dict={"key1": "value1", "key2": "value2"},
     )
 
 Because much of the data that would be templated between headers and data may be
@@ -186,9 +182,7 @@ password may be passed in as ``username`` and ``password``, respectively.
 .. code-block:: python
 
     salt.utils.http.query(
-        'http://example.com',
-        username='larry',
-        password=`5700g3543v4r`,
+        "http://example.com", username="larry", password="5700g3543v4r",
     )
 
 Cookies and Sessions
@@ -199,10 +193,7 @@ are turned off by default. To turn cookies on, set ``cookies`` to True.
 
 .. code-block:: python
 
-    salt.utils.http.query(
-        'http://example.com',
-        cookies=True
-    )
+    salt.utils.http.query("http://example.com", cookies=True)
 
 By default cookies are stored in Salt's cache directory, normally
 ``/var/cache/salt``, as a file called ``cookies.txt``. However, this location
@@ -211,9 +202,7 @@ may be changed with the ``cookie_jar`` argument:
 .. code-block:: python
 
     salt.utils.http.query(
-        'http://example.com',
-        cookies=True,
-        cookie_jar='/path/to/cookie_jar.txt'
+        "http://example.com", cookies=True, cookie_jar="/path/to/cookie_jar.txt"
     )
 
 By default, the format of the cookie jar is LWP (aka, lib-www-perl). This
@@ -223,10 +212,10 @@ format of the cookie jar can be set to Mozilla:
 .. code-block:: python
 
     salt.utils.http.query(
-        'http://example.com',
+        "http://example.com",
         cookies=True,
-        cookie_jar='/path/to/cookie_jar.txt',
-        cookie_format='mozilla'
+        cookie_jar="/path/to/cookie_jar.txt",
+        cookie_format="mozilla",
     )
 
 Because Salt commands are normally one-off commands that are piped together,
@@ -238,9 +227,7 @@ Salt's cache directory, is ``cookies.session.p``. This can also be changed.
 .. code-block:: python
 
     salt.utils.http.query(
-        'http://example.com',
-        persist_session=True,
-        session_cookie_jar='/path/to/jar.p'
+        "http://example.com", persist_session=True, session_cookie_jar="/path/to/jar.p"
     )
 
 The format of this file is msgpack, which is consistent with much of the rest
@@ -265,11 +252,7 @@ these are set in the minion configuration file.
 
 .. code-block:: python
 
-    salt.utils.http.query(
-        'http://example.com',
-        opts=__opts__,
-        backend='tornado'
-    )
+    salt.utils.http.query("http://example.com", opts=__opts__, backend="tornado")
 
 Return Data
 ~~~~~~~~~~~
@@ -294,10 +277,7 @@ force either JSON or XML decoding, the ``decode_type`` may be set:
 
 .. code-block:: python
 
-    salt.utils.http.query(
-        'http://example.com',
-        decode_type='xml'
-    )
+    salt.utils.http.query("http://example.com", decode_type="xml")
 
 Once translated, the return dict from ``query()`` will include a dict called
 ``dict``.
@@ -307,10 +287,7 @@ turned off.
 
 .. code-block:: python
 
-    salt.utils.http.query(
-        'http://example.com',
-        decode=False
-    )
+    salt.utils.http.query("http://example.com", decode=False)
 
 If decoding is turned on, and references to JSON or XML cannot be found, then
 this module will default to plain text, and return the undecoded data as
@@ -321,12 +298,7 @@ as required. However, each must individually be turned on.
 
 .. code-block:: python
 
-    salt.utils.http.query(
-        'http://example.com',
-        status=True,
-        headers=True,
-        text=True
-    )
+    salt.utils.http.query("http://example.com", status=True, headers=True, text=True)
 
 The return from these will be found in the return dict as ``status``,
 ``headers`` and ``text``, respectively.
@@ -341,11 +313,11 @@ to be returned to the user in order to do this.
 .. code-block:: python
 
     salt.utils.http.query(
-        'http://example.com',
+        "http://example.com",
         text=False,
         headers=False,
-        text_out='/path/to/url_download.txt',
-        headers_out='/path/to/headers_download.txt',
+        text_out="/path/to/url_download.txt",
+        headers_out="/path/to/headers_download.txt",
     )
 
 SSL Verification
@@ -356,8 +328,7 @@ debugging purposes, SSL verification can be turned off.
 .. code-block:: python
 
     salt.utils.http.query(
-        'https://example.com',
-        verify_ssl=False,
+        "https://example.com", verify_ssl=False,
     )
 
 CA Bundles
@@ -373,8 +344,7 @@ using the ``ca_bundle`` variable.
 .. code-block:: python
 
     salt.utils.http.query(
-        'https://example.com',
-        ca_bundle='/path/to/ca_bundle.pem',
+        "https://example.com", ca_bundle="/path/to/ca_bundle.pem",
     )
 
 Updating CA Bundles
@@ -395,8 +365,8 @@ download which is hazardous or does not meet the needs of the user.
 .. code-block:: python
 
     salt.utils.http.update_ca_bundle(
-        target='/path/to/ca-bundle.crt',
-        source='https://example.com/path/to/ca-bundle.crt',
+        target="/path/to/ca-bundle.crt",
+        source="https://example.com/path/to/ca-bundle.crt",
         opts=__opts__,
     )
 
@@ -423,10 +393,10 @@ otherwise reasonable to add to the bundle file.
     salt.utils.http.update_ca_bundle(
         opts=__opts__,
         merge_files=[
-            '/etc/ssl/private_cert_1.pem',
-            '/etc/ssl/private_cert_2.pem',
-            '/etc/ssl/private_cert_3.pem',
-        ]
+            "/etc/ssl/private_cert_1.pem",
+            "/etc/ssl/private_cert_2.pem",
+            "/etc/ssl/private_cert_3.pem",
+        ],
     )
 
 
@@ -499,8 +469,9 @@ value of match in the return text. In Python terms this looks like:
 
 .. code-block:: python
 
-    if match in html_text:
-        return True
+   def myfunc():
+       if match in html_text:
+           return True
 
 If more complex pattern matching is required, a regular expression can be used
 by specifying a ``match_type``. By default this is set to ``string``, but it

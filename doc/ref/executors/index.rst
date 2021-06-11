@@ -59,7 +59,8 @@ the ``execute`` function with the following signature:
 
 .. code-block:: python
 
-    def execute(opts, data, func, args, kwargs)
+    def execute(opts, data, func, args, kwargs):
+        ...
 
 Where the args are:
 
@@ -69,7 +70,7 @@ Where the args are:
   Dictionary containing the load data including ``executor_opts`` passed via
   cmdline/API.
 ``func``, ``args``, ``kwargs``:
-  Execution module function to be executed and it's arguments. For instance the
+  Execution module function to be executed and its arguments. For instance the
   simplest ``direct_call`` executor just runs it as ``func(*args, **kwargs)``.
 ``Returns``:
   ``None`` if the execution sequence must be continued with the next executor.

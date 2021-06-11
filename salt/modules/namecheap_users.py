@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Namecheap User Management
 
 .. versionadded:: 2017.7.0
@@ -25,7 +25,7 @@ file, or in the Pillar data.
     namecheap.url: https://api.namecheap.com/xml.response
     #Sandbox url
     #namecheap.url: https://api.sandbox.namecheap.xml.response
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
 
 CAN_USE_NAMECHEAP = True
@@ -38,16 +38,16 @@ except ImportError:
 
 
 def __virtual__():
-    '''
+    """
     Check to make sure requests and xml are installed and requests
-    '''
+    """
     if CAN_USE_NAMECHEAP:
-        return 'namecheap_users'
+        return "namecheap_users"
     return False
 
 
 def get_balances():
-    '''
+    """
     Gets information about fund in the user's account. This method returns the
     following information: Available Balance, Account Balance, Earned Amount,
     Withdrawable Amount and Funds Required for AutoRenew.
@@ -62,8 +62,8 @@ def get_balances():
     .. code-block:: bash
 
         salt 'my-minion' namecheap_users.get_balances
-    '''
-    opts = salt.utils.namecheap.get_opts('namecheap.users.getBalances')
+    """
+    opts = salt.utils.namecheap.get_opts("namecheap.users.getBalances")
 
     response_xml = salt.utils.namecheap.get_request(opts)
 
@@ -75,7 +75,7 @@ def get_balances():
 
 
 def check_balances(minimum=100):
-    '''
+    """
     Checks if the provided minimum value is present in the user's account.
 
     Returns a boolean. Returns ``False`` if the user's account balance is less
@@ -91,9 +91,9 @@ def check_balances(minimum=100):
         salt 'my-minion' namecheap_users.check_balances
         salt 'my-minion' namecheap_users.check_balances minimum=150
 
-    '''
+    """
     min_float = float(minimum)
     result = get_balances()
-    if result['accountbalance'] <= min_float:
+    if result["accountbalance"] <= min_float:
         return False
     return True

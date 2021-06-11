@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
     salt.utils.aggregation
     ~~~~~~~~~~~~~~~~~~~~~~
 
@@ -101,55 +101,56 @@
 
     TODO: write this part
 
-'''
+"""
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import copy
 import logging
-
-# Import Salt libs
-from salt.utils.odict import OrderedDict
 
 # Import 3rd-party libs
 from salt.ext import six
 
-__all__ = ['aggregate', 'Aggregate', 'Map', 'Scalar', 'Sequence']
+# Import Salt libs
+from salt.utils.odict import OrderedDict
+
+__all__ = ["aggregate", "Aggregate", "Map", "Scalar", "Sequence"]
 
 log = logging.getLogger(__name__)
 
 
 class Aggregate(object):
-    '''
+    """
     Aggregation base.
-    '''
+    """
 
 
 class Map(OrderedDict, Aggregate):
-    '''
+    """
     Map aggregation.
-    '''
+    """
 
 
 class Sequence(list, Aggregate):
-    '''
+    """
     Sequence aggregation.
-    '''
+    """
 
 
 def Scalar(obj):
 
-    '''
+    """
     Shortcut for Sequence creation
 
     >>> Scalar('foo') == Sequence(['foo'])
     True
-    '''
+    """
     return Sequence([obj])
 
 
 def levelise(level):
-    '''
+    """
     Describe which levels are allowed to do deep merging.
 
     level can be:
@@ -169,7 +170,7 @@ def levelise(level):
         * a list of bool and int values
         * a string of 0 and 1 characters
 
-    '''
+    """
 
     if not level:  # False, 0, [] ...
         return False, False
@@ -180,15 +181,15 @@ def levelise(level):
     try:  # a sequence
         deep, subs = int(level[0]), level[1:]
         return bool(deep), subs
-    except Exception as error:
+    except Exception as error:  # pylint: disable=broad-except
         log.warning(error)
         raise
 
 
 def mark(obj, map_class=Map, sequence_class=Sequence):
-    '''
+    """
     Convert obj into an Aggregate instance
-    '''
+    """
     if isinstance(obj, Aggregate):
         return obj
     if isinstance(obj, dict):
@@ -200,12 +201,12 @@ def mark(obj, map_class=Map, sequence_class=Sequence):
 
 
 def aggregate(obj_a, obj_b, level=False, map_class=Map, sequence_class=Sequence):
-    '''
+    """
     Merge obj_b into obj_a.
 
     >>> aggregate('first', 'second', True) == ['first', 'second']
     True
-    '''
+    """
     deep, subdeep = levelise(level)
 
     if deep:
@@ -222,8 +223,7 @@ def aggregate(obj_a, obj_b, level=False, map_class=Map, sequence_class=Sequence)
 
         for key, value in six.iteritems(obj_b):
             if key in obj_a:
-                value = aggregate(obj_a[key], value,
-                                  subdeep, map_class, sequence_class)
+                value = aggregate(obj_a[key], value, subdeep, map_class, sequence_class)
             response[key] = value
         return response
 
@@ -237,8 +237,8 @@ def aggregate(obj_a, obj_b, level=False, map_class=Map, sequence_class=Sequence)
     response = copy.copy(obj_b)
 
     if isinstance(obj_a, Aggregate) or isinstance(obj_b, Aggregate):
-        log.info('only one value marked as aggregate. keep `obj_b` value')
+        log.info("only one value marked as aggregate. keep `obj_b` value")
         return response
 
-    log.debug('no value marked as aggregate. keep `obj_b` value')
+    log.debug("no value marked as aggregate. keep `obj_b` value")
     return response

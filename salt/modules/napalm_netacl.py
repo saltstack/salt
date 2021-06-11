@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-'''
+"""
 NAPALM ACL
 ==========
 
@@ -26,35 +25,36 @@ it requires NAPALM_ library to be installed:  ``pip install napalm``.
 Please check Installation_ for complete details.
 
 .. _NAPALM: https://napalm.readthedocs.io
-.. _Installation: https://napalm.readthedocs.io/en/latest/installation.html
-'''
-from __future__ import absolute_import, unicode_literals, print_function
+.. _Installation: https://napalm.readthedocs.io/en/latest/installation/index.html
+"""
 
 import logging
+
+# import Salt modules
+import salt.utils.napalm
+from salt.utils.napalm import proxy_napalm_wrap
+
 log = logging.getLogger(__file__)
 
-# Import third party libs
 try:
     # pylint: disable=W0611
     import capirca
     import capirca.aclgen
     import capirca.lib.policy
     import capirca.lib.aclgenerator
+
     HAS_CAPIRCA = True
     # pylint: enable=W0611
 except ImportError:
     HAS_CAPIRCA = False
 
-# import Salt modules
-import salt.utils.napalm
-from salt.utils.napalm import proxy_napalm_wrap
 
 # ------------------------------------------------------------------------------
 # module properties
 # ------------------------------------------------------------------------------
 
-__virtualname__ = 'netacl'
-__proxyenabled__ = ['*']
+__virtualname__ = "netacl"
+__proxyenabled__ = ["*"]
 # allow napalm proxy only
 
 # ------------------------------------------------------------------------------
@@ -63,14 +63,18 @@ __proxyenabled__ = ['*']
 
 
 def __virtual__():
-    '''
+    """
     This module requires both NAPALM and Capirca.
-    '''
+    """
     if HAS_CAPIRCA and salt.utils.napalm.virtual(__opts__, __virtualname__, __file__):
         return __virtualname__
     else:
-        return (False, 'The netacl (napalm_acl) module cannot be loaded: \
-                Please install capirca and napalm.')
+        return (
+            False,
+            "The netacl (napalm_acl) module cannot be loaded: \
+                Please install capirca and napalm.",
+        )
+
 
 # ------------------------------------------------------------------------------
 # helper functions -- will not be exported
@@ -78,7 +82,7 @@ def __virtual__():
 
 
 def _get_capirca_platform():  # pylint: disable=too-many-return-statements
-    '''
+    """
     Given the following NAPALM grains, we can determine the Capirca platform name:
 
     - vendor
@@ -86,26 +90,27 @@ def _get_capirca_platform():  # pylint: disable=too-many-return-statements
     - operating system
 
     Not the most optimal.
-    '''
-    vendor = __grains__['vendor'].lower()
-    os_ = __grains__['os'].lower()
-    model = __grains__['model'].lower()
-    if vendor == 'juniper' and 'srx' in model:
-        return 'junipersrx'
-    elif vendor == 'cisco' and os_ == 'ios':
-        return 'cisco'
-    elif vendor == 'cisco' and os_ == 'iosxr':
-        return 'ciscoxr'
-    elif vendor == 'cisco' and os_ == 'asa':
-        return 'ciscoasa'
-    elif os_ == 'linux':
-        return 'iptables'
-    elif vendor == 'palo alto networks':
-        return 'paloaltofw'
+    """
+    vendor = __grains__["vendor"].lower()
+    os_ = __grains__["os"].lower()
+    model = __grains__["model"].lower()
+    if vendor == "juniper" and "srx" in model:
+        return "junipersrx"
+    elif vendor == "cisco" and os_ == "ios":
+        return "cisco"
+    elif vendor == "cisco" and os_ == "iosxr":
+        return "ciscoxr"
+    elif vendor == "cisco" and os_ == "asa":
+        return "ciscoasa"
+    elif os_ == "linux":
+        return "iptables"
+    elif vendor == "palo alto networks":
+        return "paloaltofw"
     # anything else will point to the vendor
     # i.e.: some of the Capirca platforms are named by the device vendor
     # e.g.: eOS => arista, junos => juniper, etc.
     return vendor
+
 
 # ------------------------------------------------------------------------------
 # callable functions
@@ -113,24 +118,26 @@ def _get_capirca_platform():  # pylint: disable=too-many-return-statements
 
 
 @proxy_napalm_wrap
-def load_term_config(filter_name,
-                     term_name,
-                     filter_options=None,
-                     pillar_key='acl',
-                     pillarenv=None,
-                     saltenv=None,
-                     merge_pillar=True,
-                     revision_id=None,
-                     revision_no=None,
-                     revision_date=True,
-                     revision_date_format='%Y/%m/%d',
-                     test=False,
-                     commit=True,
-                     debug=False,
-                     source_service=None,
-                     destination_service=None,
-                     **term_fields):
-    '''
+def load_term_config(
+    filter_name,
+    term_name,
+    filter_options=None,
+    pillar_key="acl",
+    pillarenv=None,
+    saltenv=None,
+    merge_pillar=True,
+    revision_id=None,
+    revision_no=None,
+    revision_date=True,
+    revision_date_format="%Y/%m/%d",
+    test=False,
+    commit=True,
+    debug=False,
+    source_service=None,
+    destination_service=None,
+    **term_fields
+):
+    """
     Generate and load the configuration of a policy term.
 
     filter_name
@@ -425,51 +432,59 @@ def load_term_config(filter_name,
                 }
             result:
                 True
-    '''
+    """
     if not filter_options:
         filter_options = []
     platform = _get_capirca_platform()
-    term_config = __salt__['capirca.get_term_config'](platform,
-                                                      filter_name,
-                                                      term_name,
-                                                      filter_options=filter_options,
-                                                      pillar_key=pillar_key,
-                                                      pillarenv=pillarenv,
-                                                      saltenv=saltenv,
-                                                      merge_pillar=merge_pillar,
-                                                      revision_id=revision_id,
-                                                      revision_no=revision_no,
-                                                      revision_date=revision_date,
-                                                      revision_date_format=revision_date_format,
-                                                      source_service=source_service,
-                                                      destination_service=destination_service,
-                                                      **term_fields)
-    return __salt__['net.load_config'](text=term_config,
-                                       test=test,
-                                       commit=commit,
-                                       debug=debug,
-                                       inherit_napalm_device=napalm_device)  # pylint: disable=undefined-variable
+    term_config = __salt__["capirca.get_term_config"](
+        platform,
+        filter_name,
+        term_name,
+        filter_options=filter_options,
+        pillar_key=pillar_key,
+        pillarenv=pillarenv,
+        saltenv=saltenv,
+        merge_pillar=merge_pillar,
+        revision_id=revision_id,
+        revision_no=revision_no,
+        revision_date=revision_date,
+        revision_date_format=revision_date_format,
+        source_service=source_service,
+        destination_service=destination_service,
+        **term_fields
+    )
+    # pylint: disable=undefined-variable
+    return __salt__["net.load_config"](
+        text=term_config,
+        test=test,
+        commit=commit,
+        debug=debug,
+        inherit_napalm_device=napalm_device,
+    )
+    # pylint: enable=undefined-variable
 
 
 @proxy_napalm_wrap
-def load_filter_config(filter_name,
-                       filter_options=None,
-                       terms=None,
-                       prepend=True,
-                       pillar_key='acl',
-                       pillarenv=None,
-                       saltenv=None,
-                       merge_pillar=True,
-                       only_lower_merge=False,
-                       revision_id=None,
-                       revision_no=None,
-                       revision_date=True,
-                       revision_date_format='%Y/%m/%d',
-                       test=False,
-                       commit=True,
-                       debug=False,
-                       **kwargs):  # pylint: disable=unused-argument
-    '''
+def load_filter_config(
+    filter_name,
+    filter_options=None,
+    terms=None,
+    prepend=True,
+    pillar_key="acl",
+    pillarenv=None,
+    saltenv=None,
+    merge_pillar=True,
+    only_lower_merge=False,
+    revision_id=None,
+    revision_no=None,
+    revision_date=True,
+    revision_date_format="%Y/%m/%d",
+    test=False,
+    commit=True,
+    debug=False,
+    **kwargs
+):  # pylint: disable=unused-argument
+    """
     Generate and load the configuration of a policy filter.
 
     .. note::
@@ -638,50 +653,58 @@ def load_filter_config(filter_name,
                         - 5680
                     protocol: tcp
                     action: accept
-    '''
+    """
     if not filter_options:
         filter_options = []
     if not terms:
         terms = []
     platform = _get_capirca_platform()
-    filter_config = __salt__['capirca.get_filter_config'](platform,
-                                                          filter_name,
-                                                          terms=terms,
-                                                          prepend=prepend,
-                                                          filter_options=filter_options,
-                                                          pillar_key=pillar_key,
-                                                          pillarenv=pillarenv,
-                                                          saltenv=saltenv,
-                                                          merge_pillar=merge_pillar,
-                                                          only_lower_merge=only_lower_merge,
-                                                          revision_id=revision_id,
-                                                          revision_no=revision_no,
-                                                          revision_date=revision_date,
-                                                          revision_date_format=revision_date_format)
-    return __salt__['net.load_config'](text=filter_config,
-                                       test=test,
-                                       commit=commit,
-                                       debug=debug,
-                                       inherit_napalm_device=napalm_device)  # pylint: disable=undefined-variable
+    filter_config = __salt__["capirca.get_filter_config"](
+        platform,
+        filter_name,
+        terms=terms,
+        prepend=prepend,
+        filter_options=filter_options,
+        pillar_key=pillar_key,
+        pillarenv=pillarenv,
+        saltenv=saltenv,
+        merge_pillar=merge_pillar,
+        only_lower_merge=only_lower_merge,
+        revision_id=revision_id,
+        revision_no=revision_no,
+        revision_date=revision_date,
+        revision_date_format=revision_date_format,
+    )
+    # pylint: disable=undefined-variable
+    return __salt__["net.load_config"](
+        text=filter_config,
+        test=test,
+        commit=commit,
+        debug=debug,
+        inherit_napalm_device=napalm_device,
+    )
+    # pylint: enable=undefined-variable
 
 
 @proxy_napalm_wrap
-def load_policy_config(filters=None,
-                       prepend=True,
-                       pillar_key='acl',
-                       pillarenv=None,
-                       saltenv=None,
-                       merge_pillar=True,
-                       only_lower_merge=False,
-                       revision_id=None,
-                       revision_no=None,
-                       revision_date=True,
-                       revision_date_format='%Y/%m/%d',
-                       test=False,
-                       commit=True,
-                       debug=False,
-                       **kwargs):  # pylint: disable=unused-argument
-    '''
+def load_policy_config(
+    filters=None,
+    prepend=True,
+    pillar_key="acl",
+    pillarenv=None,
+    saltenv=None,
+    merge_pillar=True,
+    only_lower_merge=False,
+    revision_id=None,
+    revision_no=None,
+    revision_date=True,
+    revision_date_format="%Y/%m/%d",
+    test=False,
+    commit=True,
+    debug=False,
+    **kwargs
+):  # pylint: disable=unused-argument
+    """
     Generate and load the configuration of the whole policy.
 
     .. note::
@@ -832,34 +855,37 @@ def load_policy_config(filters=None,
                     protocol:
                       - icmp
                     action: reject
-    '''
+    """
     if not filters:
         filters = []
     platform = _get_capirca_platform()
-    policy_config = __salt__['capirca.get_policy_config'](platform,
-                                                          filters=filters,
-                                                          prepend=prepend,
-                                                          pillar_key=pillar_key,
-                                                          pillarenv=pillarenv,
-                                                          saltenv=saltenv,
-                                                          merge_pillar=merge_pillar,
-                                                          only_lower_merge=only_lower_merge,
-                                                          revision_id=revision_id,
-                                                          revision_no=revision_no,
-                                                          revision_date=revision_date,
-                                                          revision_date_format=revision_date_format)
-    return __salt__['net.load_config'](text=policy_config,
-                                       test=test,
-                                       commit=commit,
-                                       debug=debug,
-                                       inherit_napalm_device=napalm_device)  # pylint: disable=undefined-variable
+    policy_config = __salt__["capirca.get_policy_config"](
+        platform,
+        filters=filters,
+        prepend=prepend,
+        pillar_key=pillar_key,
+        pillarenv=pillarenv,
+        saltenv=saltenv,
+        merge_pillar=merge_pillar,
+        only_lower_merge=only_lower_merge,
+        revision_id=revision_id,
+        revision_no=revision_no,
+        revision_date=revision_date,
+        revision_date_format=revision_date_format,
+    )
+    # pylint: disable=undefined-variable
+    return __salt__["net.load_config"](
+        text=policy_config,
+        test=test,
+        commit=commit,
+        debug=debug,
+        inherit_napalm_device=napalm_device,
+    )
+    # pylint: enable=undefined-variable
 
 
-def get_filter_pillar(filter_name,
-                      pillar_key='acl',
-                      pillarenv=None,
-                      saltenv=None):
-    '''
+def get_filter_pillar(filter_name, pillar_key="acl", pillarenv=None, saltenv=None):
+    """
     Helper that can be used inside a state SLS,
     in order to get the filter configuration given its name.
 
@@ -876,19 +902,16 @@ def get_filter_pillar(filter_name,
     saltenv
         Included only for compatibility with
         :conf_minion:`pillarenv_from_saltenv`, and is otherwise ignored.
-    '''
-    return __salt__['capirca.get_filter_pillar'](filter_name,
-                                                  pillar_key=pillar_key,
-                                                  pillarenv=pillarenv,
-                                                  saltenv=saltenv)
+    """
+    return __salt__["capirca.get_filter_pillar"](
+        filter_name, pillar_key=pillar_key, pillarenv=pillarenv, saltenv=saltenv
+    )
 
 
-def get_term_pillar(filter_name,
-                    term_name,
-                    pillar_key='acl',
-                    pillarenv=None,
-                    saltenv=None):
-    '''
+def get_term_pillar(
+    filter_name, term_name, pillar_key="acl", pillarenv=None, saltenv=None
+):
+    """
     Helper that can be used inside a state SLS,
     in order to get the term configuration given its name,
     under a certain filter uniquely identified by its name.
@@ -909,9 +932,11 @@ def get_term_pillar(filter_name,
     saltenv
         Included only for compatibility with
         :conf_minion:`pillarenv_from_saltenv`, and is otherwise ignored.
-    '''
-    return __salt__['capirca.get_term_pillar'](filter_name,
-                                               term_name,
-                                               pillar_key=pillar_key,
-                                               pillarenv=pillarenv,
-                                               saltenv=saltenv)
+    """
+    return __salt__["capirca.get_term_pillar"](
+        filter_name,
+        term_name,
+        pillar_key=pillar_key,
+        pillarenv=pillarenv,
+        saltenv=saltenv,
+    )

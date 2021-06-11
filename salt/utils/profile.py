@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Decorator and functions to profile Salt using cProfile
-'''
+"""
 
 from __future__ import absolute_import, print_function, unicode_literals
 
@@ -22,28 +22,33 @@ log = logging.getLogger(__name__)
 
 try:
     import cProfile
+
     HAS_CPROFILE = True
 except ImportError:
     HAS_CPROFILE = False
 
 
 def profile_func(filename=None):
-    '''
+    """
     Decorator for adding profiling to a nested function in Salt
-    '''
+    """
+
     def proffunc(fun):
         def profiled_func(*args, **kwargs):
-            logging.info('Profiling function %s', fun.__name__)
+            logging.info("Profiling function %s", fun.__name__)
             try:
                 profiler = cProfile.Profile()
                 retval = profiler.runcall(fun, *args, **kwargs)
-                profiler.dump_stats((filename or '{0}_func.profile'
-                                     .format(fun.__name__)))
+                profiler.dump_stats(
+                    (filename or "{0}_func.profile".format(fun.__name__))
+                )
             except IOError:
-                logging.exception('Could not open profile file %s', filename)
+                logging.exception("Could not open profile file %s", filename)
 
             return retval
+
         return profiled_func
+
     return proffunc
 
 
@@ -54,11 +59,11 @@ def activate_profile(test=True):
             pr = cProfile.Profile()
             pr.enable()
         else:
-            log.error('cProfile is not available on your platform')
+            log.error("cProfile is not available on your platform")
     return pr
 
 
-def output_profile(pr, stats_path='/tmp/stats', stop=False, id_=None):
+def output_profile(pr, stats_path="/tmp/stats", stop=False, id_=None):
     if pr is not None and HAS_CPROFILE:
         try:
             pr.disable()
@@ -67,36 +72,38 @@ def output_profile(pr, stats_path='/tmp/stats', stop=False, id_=None):
             date = datetime.datetime.now().isoformat()
             if id_ is None:
                 id_ = salt.utils.hashutils.random_hash(size=32)
-            ficp = os.path.join(stats_path, '{0}.{1}.pstats'.format(id_, date))
-            fico = os.path.join(stats_path, '{0}.{1}.dot'.format(id_, date))
-            ficn = os.path.join(stats_path, '{0}.{1}.stats'.format(id_, date))
+            ficp = os.path.join(stats_path, "{0}.{1}.pstats".format(id_, date))
+            fico = os.path.join(stats_path, "{0}.{1}.dot".format(id_, date))
+            ficn = os.path.join(stats_path, "{0}.{1}.stats".format(id_, date))
             if not os.path.exists(ficp):
                 pr.dump_stats(ficp)
-                with salt.utils.files.fopen(ficn, 'w') as fic:
-                    pstats.Stats(pr, stream=fic).sort_stats('cumulative')
-            log.info('PROFILING: %s generated', ficp)
-            log.info('PROFILING (cumulative): %s generated', ficn)
-            pyprof = salt.utils.path.which('pyprof2calltree')
-            cmd = [pyprof, '-i', ficp, '-o', fico]
+                with salt.utils.files.fopen(ficn, "w") as fic:
+                    pstats.Stats(pr, stream=fic).sort_stats("cumulative")
+            log.info("PROFILING: %s generated", ficp)
+            log.info("PROFILING (cumulative): %s generated", ficn)
+            pyprof = salt.utils.path.which("pyprof2calltree")
+            cmd = [pyprof, "-i", ficp, "-o", fico]
             if pyprof:
                 failed = False
                 try:
                     pro = subprocess.Popen(
-                        cmd, shell=False,
-                        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                        cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+                    )
                 except OSError:
                     failed = True
                 if pro.returncode:
                     failed = True
                 if failed:
-                    log.error('PROFILING (dot problem')
+                    log.error("PROFILING (dot problem")
                 else:
-                    log.info('PROFILING (dot): %s generated', fico)
-                log.trace('pyprof2calltree output:')
-                log.trace(salt.utils.stringutils.to_str(pro.stdout.read()).strip() +
-                          salt.utils.stringutils.to_str(pro.stderr.read()).strip())
+                    log.info("PROFILING (dot): %s generated", fico)
+                log.trace("pyprof2calltree output:")
+                log.trace(
+                    salt.utils.stringutils.to_str(pro.stdout.read()).strip()
+                    + salt.utils.stringutils.to_str(pro.stderr.read()).strip()
+                )
             else:
-                log.info('You can run %s for additional stats.', cmd)
+                log.info("You can run %s for additional stats.", cmd)
         finally:
             if not stop:
                 pr.enable()

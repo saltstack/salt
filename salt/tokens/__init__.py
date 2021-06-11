@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
     salt.tokens
     ~~~~~~~~~~~~
 
@@ -14,4 +14,4 @@
 
     :list_tokens: list all tokens in storage
 
-'''
+"""

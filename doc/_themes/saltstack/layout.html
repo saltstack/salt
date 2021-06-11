@@ -81,7 +81,7 @@
     </script>
     {%- for scriptfile in script_files %}
     {% if scriptfile not in js_blacklist %}
-    <script src="{{ pathto(scriptfile, 1) }}"></script>
+    <script type="text/javascript" src="{{ pathto(scriptfile, 1) }}"></script>
     {% endif %}
     {%- endfor %}
 {%- endmacro %}
@@ -159,7 +159,7 @@
         {%- endblock %}
 
         {%- block extrahead %} {% endblock %}
-        <script src="{{ pathto('_static/js/vendor/modernizr-2.6.2-respond-1.1.0.min.js', 1) }}"></script>
+        <script type="text/javascript" src="{{ pathto('_static/js/vendor/modernizr-2.6.2-respond-1.1.0.min.js', 1) }}"></script>
 
         {%- block analytics %}
         {% endblock %}
@@ -248,9 +248,9 @@
                                 </div>
                         </div>
                             <div class="row-fluid social">
-<!--                                <a href="http://www.facebook.com/SaltStack"><img src="images/socialFB.png" alt="SaltStack on Facebook" /></a> -->
-                                    <a href="http://twitter.com/SaltStackInc"><img src="{{ pathto('_static/images/socialTW.png', 1) }}" alt="SaltStack on Twitter" /></a>
-                                    <a href="http://www.linkedin.com/company/salt-stack-inc"><img src="{{ pathto('_static/images/socialLI.png', 1) }}" alt="SaltStack on LinkedIn" /></a>
+<!--                                <a href="https://www.facebook.com/SaltProjectOSS"><img src="images/socialFB.png" alt="SaltStack on Facebook" /></a> -->
+                                    <a href="https://twitter.com/Salt_Project_OS"><img src="{{ pathto('_static/images/socialTW.png', 1) }}" alt="Salt Project on Twitter" /></a>
+                                    <a href="https://www.linkedin.com/company/saltproject/"><img src="{{ pathto('_static/images/socialLI.png', 1) }}" alt="Salt Project on LinkedIn" /></a>
 <!--                                <a href="http://plus.google.com/114449193225626631691"><img src="images/socialG+.png" alt="SaltStack on Google+" /></a> -->
                                     <a href="https://github.com/saltstack"><img src="{{ pathto('_static/images/socialGitHub.png', 1) }}" alt="SaltStack on GitHub" />
                             </div>
@@ -258,7 +258,7 @@
             </footer>
         {%- endblock %}
 
-        <script src="{{ pathto('_static/js/main.js', 1) }}"></script>
+        <script type="text/javascript" src="{{ pathto('_static/js/main.js', 1) }}"></script>
 
         {% if on_saltstack %}
         <script type="text/javascript" language="javascript">llactid=23943</script>

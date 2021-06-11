@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Manage Parallels Desktop VMs with ``prlctl`` and ``prlsrvctl``.  Only some of
 the prlctl commands implemented so far.  Of those that have been implemented,
 not all of the options may have been provided yet.  For a complete reference,
@@ -20,36 +20,39 @@ necessary):
     salt -- '*' parallels.prlsrvctl set '--mem-limit auto' runas=macdev
 
 .. versionadded:: 2016.3.0
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
+
+import logging
 
 # Import python libs
 import re
-import logging
 import shlex
 
 # Import salt libs
 import salt.utils.data
 import salt.utils.path
 import salt.utils.yaml
-from salt.exceptions import SaltInvocationError, CommandExecutionError
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 # Import 3rd party libs
 from salt.ext import six
 
-__virtualname__ = 'parallels'
+__virtualname__ = "parallels"
 __func_alias__ = {
-    'exec_': 'exec',
+    "exec_": "exec",
 }
 log = logging.getLogger(__name__)
 # Match any GUID
-GUID_REGEX = re.compile(r'{?([0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12})}?', re.I)
+GUID_REGEX = re.compile(
+    r"{?([0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12})}?", re.I
+)
 
 
 def _normalize_args(args):
-    '''
+    """
     Return args as a list of strings
-    '''
+    """
     if isinstance(args, six.string_types):
         return shlex.split(args)
 
@@ -60,7 +63,7 @@ def _normalize_args(args):
 
 
 def _find_guids(guid_string):
-    '''
+    """
     Return the set of GUIDs found in guid_string
 
     :param str guid_string:
@@ -72,16 +75,16 @@ def _find_guids(guid_string):
     PARENT_SNAPSHOT_ID                      SNAPSHOT_ID
                                             {a5b8999f-5d95-4aff-82de-e515b0101b66}
     {a5b8999f-5d95-4aff-82de-e515b0101b66} *{a7345be5-ab66-478c-946e-a6c2caf14909}
-    '''
+    """
     guids = []
     for found_guid in re.finditer(GUID_REGEX, guid_string):
         if found_guid.groups():
-            guids.append(found_guid.group(0).strip('{}'))
+            guids.append(found_guid.group(0).strip("{}"))
     return sorted(list(set(guids)))
 
 
 def prlsrvctl(sub_cmd, args=None, runas=None):
-    '''
+    """
     Execute a prlsrvctl command
 
     .. versionadded:: 2016.11.0
@@ -102,21 +105,21 @@ def prlsrvctl(sub_cmd, args=None, runas=None):
         salt '*' parallels.prlsrvctl info runas=macdev
         salt '*' parallels.prlsrvctl usb list runas=macdev
         salt -- '*' parallels.prlsrvctl set '--mem-limit auto' runas=macdev
-    '''
-    if not salt.utils.path.which('prlsrvctl'):
-        raise CommandExecutionError('prlsrvctl utility not available')
+    """
+    if not salt.utils.path.which("prlsrvctl"):
+        raise CommandExecutionError("prlsrvctl utility not available")
 
     # Construct command
-    cmd = ['prlsrvctl', sub_cmd]
+    cmd = ["prlsrvctl", sub_cmd]
     if args:
         cmd.extend(_normalize_args(args))
 
     # Execute command and return output
-    return __salt__['cmd.run'](cmd, runas=runas)
+    return __salt__["cmd.run"](cmd, runas=runas)
 
 
 def prlctl(sub_cmd, args=None, runas=None):
-    '''
+    """
     Execute a prlctl command
 
     :param str sub_cmd:
@@ -135,21 +138,21 @@ def prlctl(sub_cmd, args=None, runas=None):
         salt '*' parallels.prlctl user list runas=macdev
         salt '*' parallels.prlctl exec 'macvm uname' runas=macdev
         salt -- '*' parallels.prlctl capture 'macvm --file macvm.display.png' runas=macdev
-    '''
-    if not salt.utils.path.which('prlctl'):
-        raise CommandExecutionError('prlctl utility not available')
+    """
+    if not salt.utils.path.which("prlctl"):
+        raise CommandExecutionError("prlctl utility not available")
 
     # Construct command
-    cmd = ['prlctl', sub_cmd]
+    cmd = ["prlctl", sub_cmd]
     if args:
         cmd.extend(_normalize_args(args))
 
     # Execute command and return output
-    return __salt__['cmd.run'](cmd, runas=runas)
+    return __salt__["cmd.run"](cmd, runas=runas)
 
 
 def list_vms(name=None, info=False, all=False, args=None, runas=None, template=False):
-    '''
+    """
     List information about the VMs
 
     :param str name:
@@ -185,7 +188,7 @@ def list_vms(name=None, info=False, all=False, args=None, runas=None, template=F
         salt '*' parallels.list_vms name=macvm info=True runas=macdev
         salt '*' parallels.list_vms info=True runas=macdev
         salt '*' parallels.list_vms ' -o uuid,status' all=True runas=macdev
-    '''
+    """
     # Construct argument list
     if args is None:
         args = []
@@ -195,18 +198,18 @@ def list_vms(name=None, info=False, all=False, args=None, runas=None, template=F
     if name:
         args.extend([name])
     if info:
-        args.append('--info')
+        args.append("--info")
     if all:
-        args.append('--all')
+        args.append("--all")
     if template:
-        args.append('--template')
+        args.append("--template")
 
     # Execute command and return output
-    return prlctl('list', args, runas=runas)
+    return prlctl("list", args, runas=runas)
 
 
 def clone(name, new_name, linked=False, template=False, runas=None):
-    '''
+    """
     Clone a VM
 
     .. versionadded:: 2016.11.0
@@ -232,17 +235,17 @@ def clone(name, new_name, linked=False, template=False, runas=None):
 
         salt '*' parallels.clone macvm macvm_new runas=macdev
         salt '*' parallels.clone macvm macvm_templ template=True runas=macdev
-    '''
-    args = [salt.utils.data.decode(name), '--name', salt.utils.data.decode(new_name)]
+    """
+    args = [salt.utils.data.decode(name), "--name", salt.utils.data.decode(new_name)]
     if linked:
-        args.append('--linked')
+        args.append("--linked")
     if template:
-        args.append('--template')
-    return prlctl('clone', args, runas=runas)
+        args.append("--template")
+    return prlctl("clone", args, runas=runas)
 
 
 def delete(name, runas=None):
-    '''
+    """
     Delete a VM
 
     .. versionadded:: 2016.11.0
@@ -258,12 +261,12 @@ def delete(name, runas=None):
     .. code-block:: bash
 
         salt '*' parallels.exec macvm 'find /etc/paths.d' runas=macdev
-    '''
-    return prlctl('delete', salt.utils.data.decode(name), runas=runas)
+    """
+    return prlctl("delete", salt.utils.data.decode(name), runas=runas)
 
 
 def exists(name, runas=None):
-    '''
+    """
     Query whether a VM exists
 
     .. versionadded:: 2016.11.0
@@ -279,16 +282,16 @@ def exists(name, runas=None):
     .. code-block:: bash
 
         salt '*' parallels.exists macvm runas=macdev
-    '''
+    """
     vm_info = list_vms(name, info=True, runas=runas).splitlines()
     for info_line in vm_info:
-        if 'Name: {0}'.format(name) in info_line:
+        if "Name: {0}".format(name) in info_line:
             return True
     return False
 
 
 def start(name, runas=None):
-    '''
+    """
     Start a VM
 
     :param str name:
@@ -302,12 +305,12 @@ def start(name, runas=None):
     .. code-block:: bash
 
         salt '*' parallels.start macvm runas=macdev
-    '''
-    return prlctl('start', salt.utils.data.decode(name), runas=runas)
+    """
+    return prlctl("start", salt.utils.data.decode(name), runas=runas)
 
 
 def stop(name, kill=False, runas=None):
-    '''
+    """
     Stop a VM
 
     :param str name:
@@ -325,18 +328,18 @@ def stop(name, kill=False, runas=None):
 
         salt '*' parallels.stop macvm runas=macdev
         salt '*' parallels.stop macvm kill=True runas=macdev
-    '''
+    """
     # Construct argument list
     args = [salt.utils.data.decode(name)]
     if kill:
-        args.append('--kill')
+        args.append("--kill")
 
     # Execute command and return output
-    return prlctl('stop', args, runas=runas)
+    return prlctl("stop", args, runas=runas)
 
 
 def restart(name, runas=None):
-    '''
+    """
     Restart a VM by gracefully shutting it down and then restarting
     it
 
@@ -351,12 +354,12 @@ def restart(name, runas=None):
     .. code-block:: bash
 
         salt '*' parallels.restart macvm runas=macdev
-    '''
-    return prlctl('restart', salt.utils.data.decode(name), runas=runas)
+    """
+    return prlctl("restart", salt.utils.data.decode(name), runas=runas)
 
 
 def reset(name, runas=None):
-    '''
+    """
     Reset a VM by performing a hard shutdown and then a restart
 
     :param str name:
@@ -370,12 +373,12 @@ def reset(name, runas=None):
     .. code-block:: bash
 
         salt '*' parallels.reset macvm runas=macdev
-    '''
-    return prlctl('reset', salt.utils.data.decode(name), runas=runas)
+    """
+    return prlctl("reset", salt.utils.data.decode(name), runas=runas)
 
 
 def status(name, runas=None):
-    '''
+    """
     Status of a VM
 
     :param str name:
@@ -389,12 +392,12 @@ def status(name, runas=None):
     .. code-block:: bash
 
         salt '*' parallels.status macvm runas=macdev
-    '''
-    return prlctl('status', salt.utils.data.decode(name), runas=runas)
+    """
+    return prlctl("status", salt.utils.data.decode(name), runas=runas)
 
 
 def exec_(name, command, runas=None):
-    '''
+    """
     Run a command on a VM
 
     :param str name:
@@ -411,17 +414,17 @@ def exec_(name, command, runas=None):
     .. code-block:: bash
 
         salt '*' parallels.exec macvm 'find /etc/paths.d' runas=macdev
-    '''
+    """
     # Construct argument list
     args = [salt.utils.data.decode(name)]
     args.extend(_normalize_args(command))
 
     # Execute command and return output
-    return prlctl('exec', args, runas=runas)
+    return prlctl("exec", args, runas=runas)
 
 
 def snapshot_id_to_name(name, snap_id, strict=False, runas=None):
-    '''
+    """
     Attempt to convert a snapshot ID to a snapshot name.  If the snapshot has
     no name or if the ID is not found or invalid, an empty string will be returned
 
@@ -453,7 +456,7 @@ def snapshot_id_to_name(name, snap_id, strict=False, runas=None):
     .. code-block:: bash
 
         salt '*' parallels.snapshot_id_to_name macvm a5b8999f-5d95-4aff-82de-e515b0101b66 runas=macdev
-    '''
+    """
     # Validate VM name and snapshot ID
     name = salt.utils.data.decode(name)
     if not re.match(GUID_REGEX, snap_id):
@@ -462,10 +465,10 @@ def snapshot_id_to_name(name, snap_id, strict=False, runas=None):
         )
 
     # Get the snapshot information of the snapshot having the requested ID
-    info = prlctl('snapshot-list', [name, '--id', snap_id], runas=runas)
+    info = prlctl("snapshot-list", [name, "--id", snap_id], runas=runas)
 
     # Parallels desktop returned no information for snap_id
-    if not len(info):
+    if not info:
         raise SaltInvocationError(
             'No snapshots for VM "{0}" have ID "{1}"'.format(name, snap_id)
         )
@@ -474,23 +477,22 @@ def snapshot_id_to_name(name, snap_id, strict=False, runas=None):
     try:
         data = salt.utils.yaml.safe_load(info)
     except salt.utils.yaml.YAMLError as err:
-        log.warning(
-            'Could not interpret snapshot data returned from prlctl: %s', err
-        )
+        log.warning("Could not interpret snapshot data returned from prlctl: %s", err)
         data = {}
 
     # Find the snapshot name
     if isinstance(data, dict):
-        snap_name = data.get('Name', '')
+        snap_name = data.get("Name", "")
         # If snapshot name is of type NoneType, then the snapshot is unnamed
         if snap_name is None:
-            snap_name = ''
+            snap_name = ""
     else:
         log.warning(
-            'Could not interpret snapshot data returned from prlctl: '
-            'data is not formed as a dictionary: %s', data
+            "Could not interpret snapshot data returned from prlctl: "
+            "data is not formed as a dictionary: %s",
+            data,
         )
-        snap_name = ''
+        snap_name = ""
 
     # Raise or return the result
     if not snap_name and strict:
@@ -502,7 +504,7 @@ def snapshot_id_to_name(name, snap_id, strict=False, runas=None):
 
 
 def snapshot_name_to_id(name, snap_name, strict=False, runas=None):
-    '''
+    """
     Attempt to convert a snapshot name to a snapshot ID.  If the name is not
     found an empty string is returned.  If multiple snapshots share the same
     name, a list will be returned
@@ -524,13 +526,13 @@ def snapshot_name_to_id(name, snap_name, strict=False, runas=None):
     .. code-block:: bash
 
         salt '*' parallels.snapshot_id_to_name macvm original runas=macdev
-    '''
+    """
     # Validate VM and snapshot names
     name = salt.utils.data.decode(name)
     snap_name = salt.utils.data.decode(snap_name)
 
     # Get a multiline string containing all the snapshot GUIDs
-    info = prlctl('snapshot-list', name, runas=runas)
+    info = prlctl("snapshot-list", name, runas=runas)
 
     # Get a set of all snapshot GUIDs in the string
     snap_ids = _find_guids(info)
@@ -550,8 +552,9 @@ def snapshot_name_to_id(name, snap_name, strict=False, runas=None):
     elif len(named_ids) == 1:
         return named_ids[0]
     else:
-        multi_msg = ('Multiple snapshots for VM "{0}" have name '
-                     '"{1}"'.format(name, snap_name))
+        multi_msg = 'Multiple snapshots for VM "{0}" have name ' '"{1}"'.format(
+            name, snap_name
+        )
         if strict:
             raise SaltInvocationError(multi_msg)
         else:
@@ -560,7 +563,7 @@ def snapshot_name_to_id(name, snap_name, strict=False, runas=None):
 
 
 def _validate_snap_name(name, snap_name, strict=True, runas=None):
-    '''
+    """
     Validate snapshot name and convert to snapshot ID
 
     :param str name:
@@ -574,18 +577,18 @@ def _validate_snap_name(name, snap_name, strict=True, runas=None):
 
     :param str runas:
         The user that the prlctl command will be run as
-    '''
+    """
     snap_name = salt.utils.data.decode(snap_name)
 
     # Try to convert snapshot name to an ID without {}
     if re.match(GUID_REGEX, snap_name):
-        return snap_name.strip('{}')
+        return snap_name.strip("{}")
     else:
         return snapshot_name_to_id(name, snap_name, strict=strict, runas=runas)
 
 
 def list_snapshots(name, snap_name=None, tree=False, names=False, runas=None):
-    '''
+    """
     List the snapshots
 
     :param str name:
@@ -613,7 +616,7 @@ def list_snapshots(name, snap_name=None, tree=False, names=False, runas=None):
         salt '*' parallels.list_snapshots macvm tree=True runas=macdev
         salt '*' parallels.list_snapshots macvm snap_name=original runas=macdev
         salt '*' parallels.list_snapshots macvm names=True runas=macdev
-    '''
+    """
     # Validate VM and snapshot names
     name = salt.utils.data.decode(name)
     if snap_name:
@@ -622,12 +625,12 @@ def list_snapshots(name, snap_name=None, tree=False, names=False, runas=None):
     # Construct argument list
     args = [name]
     if tree:
-        args.append('--tree')
+        args.append("--tree")
     if snap_name:
-        args.extend(['--id', snap_name])
+        args.extend(["--id", snap_name])
 
     # Execute command
-    res = prlctl('snapshot-list', args, runas=runas)
+    res = prlctl("snapshot-list", args, runas=runas)
 
     # Construct ID, name pairs
     if names:
@@ -635,10 +638,10 @@ def list_snapshots(name, snap_name=None, tree=False, names=False, runas=None):
         snap_ids = _find_guids(res)
 
         # Try to find the snapshot names
-        ret = '{0:<38}  {1}\n'.format('Snapshot ID', 'Snapshot Name')
+        ret = "{0:<38}  {1}\n".format("Snapshot ID", "Snapshot Name")
         for snap_id in snap_ids:
             snap_name = snapshot_id_to_name(name, snap_id, runas=runas)
-            ret += ('{{{0}}}  {1}\n'.format(snap_id, salt.utils.data.decode(snap_name)))
+            ret += "{{{0}}}  {1}\n".format(snap_id, salt.utils.data.decode(snap_name))
         return ret
 
     # Return information directly from parallels desktop
@@ -647,7 +650,7 @@ def list_snapshots(name, snap_name=None, tree=False, names=False, runas=None):
 
 
 def snapshot(name, snap_name=None, desc=None, runas=None):
-    '''
+    """
     Create a snapshot
 
     :param str name:
@@ -668,7 +671,7 @@ def snapshot(name, snap_name=None, desc=None, runas=None):
 
         salt '*' parallels.create_snapshot macvm snap_name=macvm-original runas=macdev
         salt '*' parallels.create_snapshot macvm snap_name=macvm-updates desc='clean install with updates' runas=macdev
-    '''
+    """
     # Validate VM and snapshot names
     name = salt.utils.data.decode(name)
     if snap_name:
@@ -677,16 +680,16 @@ def snapshot(name, snap_name=None, desc=None, runas=None):
     # Construct argument list
     args = [name]
     if snap_name:
-        args.extend(['--name', snap_name])
+        args.extend(["--name", snap_name])
     if desc:
-        args.extend(['--description', desc])
+        args.extend(["--description", desc])
 
     # Execute command and return output
-    return prlctl('snapshot', args, runas=runas)
+    return prlctl("snapshot", args, runas=runas)
 
 
 def delete_snapshot(name, snap_name, runas=None, all=False):
-    '''
+    """
     Delete a snapshot
 
     .. note::
@@ -714,7 +717,7 @@ def delete_snapshot(name, snap_name, runas=None, all=False):
 
         salt '*' parallels.delete_snapshot macvm 'unneeded snapshot' runas=macdev
         salt '*' parallels.delete_snapshot macvm 'Snapshot for linked clone' all=True runas=macdev
-    '''
+    """
     # strict means raise an error if multiple snapshot IDs found for the name given
     strict = not all
 
@@ -727,12 +730,12 @@ def delete_snapshot(name, snap_name, runas=None, all=False):
     # Delete snapshot(s)
     ret = {}
     for snap_id in snap_ids:
-        snap_id = snap_id.strip('{}')
+        snap_id = snap_id.strip("{}")
         # Construct argument list
-        args = [name, '--id', snap_id]
+        args = [name, "--id", snap_id]
 
         # Execute command
-        ret[snap_id] = prlctl('snapshot-delete', args, runas=runas)
+        ret[snap_id] = prlctl("snapshot-delete", args, runas=runas)
 
     # Return results
     ret_keys = list(ret.keys())
@@ -743,7 +746,7 @@ def delete_snapshot(name, snap_name, runas=None, all=False):
 
 
 def revert_snapshot(name, snap_name, runas=None):
-    '''
+    """
     Revert a VM to a snapshot
 
     :param str name:
@@ -760,13 +763,13 @@ def revert_snapshot(name, snap_name, runas=None):
     .. code-block:: bash
 
         salt '*' parallels.revert_snapshot macvm base-with-updates runas=macdev
-    '''
+    """
     # Validate VM and snapshot names
     name = salt.utils.data.decode(name)
     snap_name = _validate_snap_name(name, snap_name, runas=runas)
 
     # Construct argument list
-    args = [name, '--id', snap_name]
+    args = [name, "--id", snap_name]
 
     # Execute command and return output
-    return prlctl('snapshot-switch', args, runas=runas)
+    return prlctl("snapshot-switch", args, runas=runas)

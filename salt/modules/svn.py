@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Subversion SCM
-'''
-from __future__ import absolute_import, unicode_literals, print_function
+"""
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import re
@@ -17,18 +17,17 @@ _INI_RE = re.compile(r"^([^:]+):\s+(\S.*)$", re.M)
 
 
 def __virtual__():
-    '''
+    """
     Only load if svn is installed
-    '''
-    if salt.utils.path.which('svn') is None:
-        return (False,
-                'The svn execution module cannot be loaded: svn unavailable.')
+    """
+    if salt.utils.path.which("svn") is None:
+        return (False, "The svn execution module cannot be loaded: svn unavailable.")
     else:
         return True
 
 
 def _run_svn(cmd, cwd, user, username, password, opts, **kwargs):
-    '''
+    """
     Execute svn
     return the output of the command
 
@@ -54,32 +53,29 @@ def _run_svn(cmd, cwd, user, username, password, opts, **kwargs):
 
     kwargs
         Additional options to pass to the run-cmd
-    '''
-    cmd = ['svn', '--non-interactive', cmd]
+    """
+    cmd = ["svn", "--non-interactive", cmd]
 
     options = list(opts)
     if username:
-        options.extend(['--username', username])
+        options.extend(["--username", username])
     if password:
-        options.extend(['--password', password])
+        options.extend(["--password", password])
     cmd.extend(options)
 
-    result = __salt__['cmd.run_all'](cmd, python_shell=False, cwd=cwd, runas=user, **kwargs)
+    result = __salt__["cmd.run_all"](
+        cmd, python_shell=False, cwd=cwd, runas=user, **kwargs
+    )
 
-    retcode = result['retcode']
+    retcode = result["retcode"]
 
     if retcode == 0:
-        return result['stdout']
-    raise CommandExecutionError(result['stderr'] + '\n\n' + ' '.join(cmd))
+        return result["stdout"]
+    raise CommandExecutionError(result["stderr"] + "\n\n" + " ".join(cmd))
 
 
-def info(cwd,
-         targets=None,
-         user=None,
-         username=None,
-         password=None,
-         fmt='str'):
-    '''
+def info(cwd, targets=None, user=None, username=None, password=None, fmt="str"):
+    """
     Display the Subversion information from the checkout.
 
     cwd
@@ -109,35 +105,29 @@ def info(cwd,
     .. code-block:: bash
 
         salt '*' svn.info /path/to/svn/repo
-    '''
+    """
     opts = list()
-    if fmt == 'xml':
-        opts.append('--xml')
+    if fmt == "xml":
+        opts.append("--xml")
     if targets:
         opts += salt.utils.args.shlex_split(targets)
-    infos = _run_svn('info', cwd, user, username, password, opts)
+    infos = _run_svn("info", cwd, user, username, password, opts)
 
-    if fmt in ('str', 'xml'):
+    if fmt in ("str", "xml"):
         return infos
 
     info_list = []
-    for infosplit in infos.split('\n\n'):
+    for infosplit in infos.split("\n\n"):
         info_list.append(_INI_RE.findall(infosplit))
 
-    if fmt == 'list':
+    if fmt == "list":
         return info_list
-    if fmt == 'dict':
+    if fmt == "dict":
         return [dict(tmp) for tmp in info_list]
 
 
-def checkout(cwd,
-             remote,
-             target=None,
-             user=None,
-             username=None,
-             password=None,
-             *opts):
-    '''
+def checkout(cwd, remote, target=None, user=None, username=None, password=None, *opts):
+    """
     Download a working copy of the remote Subversion repository
     directory or file
 
@@ -167,16 +157,15 @@ def checkout(cwd,
     .. code-block:: bash
 
         salt '*' svn.checkout /path/to/repo svn://remote/repo
-    '''
+    """
     opts += (remote,)
     if target:
         opts += (target,)
-    return _run_svn('checkout', cwd, user, username, password, opts)
+    return _run_svn("checkout", cwd, user, username, password, opts)
 
 
-def switch(cwd, remote, target=None, user=None, username=None,
-           password=None, *opts):
-    '''
+def switch(cwd, remote, target=None, user=None, username=None, password=None, *opts):
+    """
     .. versionadded:: 2014.1.0
 
     Switch a working copy of a remote Subversion repository
@@ -206,15 +195,15 @@ def switch(cwd, remote, target=None, user=None, username=None,
     .. code-block:: bash
 
         salt '*' svn.switch /path/to/repo svn://remote/repo
-    '''
+    """
     opts += (remote,)
     if target:
         opts += (target,)
-    return _run_svn('switch', cwd, user, username, password, opts)
+    return _run_svn("switch", cwd, user, username, password, opts)
 
 
 def update(cwd, targets=None, user=None, username=None, password=None, *opts):
-    '''
+    """
     Update the current directory, files, or directories from
     the remote Subversion repository
 
@@ -241,14 +230,14 @@ def update(cwd, targets=None, user=None, username=None, password=None, *opts):
     .. code-block:: bash
 
         salt '*' svn.update /path/to/repo
-    '''
+    """
     if targets:
         opts += tuple(salt.utils.args.shlex_split(targets))
-    return _run_svn('update', cwd, user, username, password, opts)
+    return _run_svn("update", cwd, user, username, password, opts)
 
 
 def diff(cwd, targets=None, user=None, username=None, password=None, *opts):
-    '''
+    """
     Return the diff of the current directory, files, or directories from
     the remote Subversion repository
 
@@ -275,20 +264,14 @@ def diff(cwd, targets=None, user=None, username=None, password=None, *opts):
     .. code-block:: bash
 
         salt '*' svn.diff /path/to/repo
-    '''
+    """
     if targets:
         opts += tuple(salt.utils.args.shlex_split(targets))
-    return _run_svn('diff', cwd, user, username, password, opts)
+    return _run_svn("diff", cwd, user, username, password, opts)
 
 
-def commit(cwd,
-           targets=None,
-           msg=None,
-           user=None,
-           username=None,
-           password=None,
-           *opts):
-    '''
+def commit(cwd, targets=None, msg=None, user=None, username=None, password=None, *opts):
+    """
     Commit the current directory, files, or directories to
     the remote Subversion repository
 
@@ -318,16 +301,16 @@ def commit(cwd,
     .. code-block:: bash
 
         salt '*' svn.commit /path/to/repo
-    '''
+    """
     if msg:
-        opts += ('-m', msg)
+        opts += ("-m", msg)
     if targets:
         opts += tuple(salt.utils.args.shlex_split(targets))
-    return _run_svn('commit', cwd, user, username, password, opts)
+    return _run_svn("commit", cwd, user, username, password, opts)
 
 
 def add(cwd, targets, user=None, username=None, password=None, *opts):
-    '''
+    """
     Add files to be tracked by the Subversion working-copy checkout
 
     cwd
@@ -352,20 +335,14 @@ def add(cwd, targets, user=None, username=None, password=None, *opts):
     .. code-block:: bash
 
         salt '*' svn.add /path/to/repo /path/to/new/file
-    '''
+    """
     if targets:
         opts += tuple(salt.utils.args.shlex_split(targets))
-    return _run_svn('add', cwd, user, username, password, opts)
+    return _run_svn("add", cwd, user, username, password, opts)
 
 
-def remove(cwd,
-           targets,
-           msg=None,
-           user=None,
-           username=None,
-           password=None,
-           *opts):
-    '''
+def remove(cwd, targets, msg=None, user=None, username=None, password=None, *opts):
+    """
     Remove files and directories from the Subversion repository
 
     cwd
@@ -393,16 +370,16 @@ def remove(cwd,
     .. code-block:: bash
 
         salt '*' svn.remove /path/to/repo /path/to/repo/remove
-    '''
+    """
     if msg:
-        opts += ('-m', msg)
+        opts += ("-m", msg)
     if targets:
         opts += tuple(salt.utils.args.shlex_split(targets))
-    return _run_svn('remove', cwd, user, username, password, opts)
+    return _run_svn("remove", cwd, user, username, password, opts)
 
 
 def status(cwd, targets=None, user=None, username=None, password=None, *opts):
-    '''
+    """
     Display the status of the current directory, files, or
     directories in the Subversion repository
 
@@ -429,21 +406,23 @@ def status(cwd, targets=None, user=None, username=None, password=None, *opts):
     .. code-block:: bash
 
         salt '*' svn.status /path/to/repo
-    '''
+    """
     if targets:
         opts += tuple(salt.utils.args.shlex_split(targets))
-    return _run_svn('status', cwd, user, username, password, opts)
+    return _run_svn("status", cwd, user, username, password, opts)
 
 
-def export(cwd,
-           remote,
-           target=None,
-           user=None,
-           username=None,
-           password=None,
-           revision='HEAD',
-           *opts):
-    '''
+def export(
+    cwd,
+    remote,
+    target=None,
+    user=None,
+    username=None,
+    password=None,
+    revision="HEAD",
+    *opts
+):
+    """
     Create an unversioned copy of a tree.
 
     cwd
@@ -472,10 +451,13 @@ def export(cwd,
     .. code-block:: bash
 
         salt '*' svn.export /path/to/repo svn://remote/repo
-    '''
+    """
     opts += (remote,)
     if target:
         opts += (target,)
-    revision_args = '-r'
-    opts += (revision_args, six.text_type(revision),)
-    return _run_svn('export', cwd, user, username, password, opts)
+    revision_args = "-r"
+    opts += (
+        revision_args,
+        six.text_type(revision),
+    )
+    return _run_svn("export", cwd, user, username, password, opts)

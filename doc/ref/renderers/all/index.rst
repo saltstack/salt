@@ -4,12 +4,15 @@
 renderer modules
 ================
 
+.. include:: ../../../_incl/jinja_security.rst
+
 .. currentmodule:: salt.renderers
 
 .. autosummary::
     :toctree:
     :template: autosummary.rst.tmpl
 
+    aws_kms
     cheetah
     dson
     genshi
@@ -20,11 +23,13 @@ renderer modules
     json5
     mako
     msgpack
+    nacl
     pass
     py
     pydsl
     pyobjects
     stateconf
+    tomlmod
     wempy
     yaml
     yamlex

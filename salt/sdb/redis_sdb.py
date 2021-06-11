@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Redis SDB module
 ================
 
@@ -23,62 +23,61 @@ requires very little. For example:
 The ``driver`` refers to the Redis module, all other options are optional.
 For option details see: https://redis-py.readthedocs.io/en/latest/.
 
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
 
 try:
     import redis
+
     HAS_REDIS = True
 except ImportError:
     HAS_REDIS = False
 
 
-__func_alias__ = {
-    'set_': 'set'
-}
-__virtualname__ = 'redis'
+__func_alias__ = {"set_": "set"}
+__virtualname__ = "redis"
 
 
 def __virtual__():
-    '''
+    """
     Module virtual name.
-    '''
+    """
     if not HAS_REDIS:
-        return (False, 'Please install python-redis to use this SDB module.')
+        return (False, "Please install python-redis to use this SDB module.")
     return __virtualname__
 
 
 def set_(key, value, profile=None):
-    '''
+    """
     Set a value into the Redis SDB.
-    '''
+    """
     if not profile:
         return False
     redis_kwargs = profile.copy()
-    redis_kwargs.pop('driver')
+    redis_kwargs.pop("driver")
     redis_conn = redis.StrictRedis(**redis_kwargs)
     return redis_conn.set(key, value)
 
 
 def get(key, profile=None):
-    '''
+    """
     Get a value from the Redis SDB.
-    '''
+    """
     if not profile:
         return False
     redis_kwargs = profile.copy()
-    redis_kwargs.pop('driver')
+    redis_kwargs.pop("driver")
     redis_conn = redis.StrictRedis(**redis_kwargs)
     return redis_conn.get(key)
 
 
 def delete(key, profile=None):
-    '''
+    """
     Delete a key from the Redis SDB.
-    '''
+    """
     if not profile:
         return False
     redis_kwargs = profile.copy()
-    redis_kwargs.pop('driver')
+    redis_kwargs.pop("driver")
     redis_conn = redis.StrictRedis(**redis_kwargs)
     return redis_conn.delete(key)

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
     :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
 
@@ -8,7 +8,7 @@
 
     This is where Salt's logging gets set up. Currently, the required imports
     are made to assure backwards compatibility.
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import severals classes/functions from salt.log.setup for backwards
@@ -20,8 +20,8 @@ from salt.log.setup import (
     is_logfile_configured,
     is_logging_configured,
     is_temp_logging_configured,
-    setup_temp_logger,
+    set_logger_level,
     setup_console_logger,
     setup_logfile_logger,
-    set_logger_level,
+    setup_temp_logger,
 )

@@ -1,34 +1,36 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 NAPALM YANG
 ===========
 
 NAPALM YANG basic operations.
 
 .. versionadded:: 2017.7.0
-'''
-from __future__ import absolute_import, unicode_literals, print_function
+"""
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python stdlib
 import logging
-
-# Import third party libs
-try:
-    import napalm_yang
-    HAS_NAPALM_YANG = True
-except ImportError:
-    HAS_NAPALM_YANG = False
 
 # import NAPALM utils
 import salt.utils.napalm
 from salt.utils.napalm import proxy_napalm_wrap
 
+# Import third party libs
+try:
+    import napalm_yang
+
+    HAS_NAPALM_YANG = True
+except ImportError:
+    HAS_NAPALM_YANG = False
+
+
 # -----------------------------------------------------------------------------
 # module properties
 # -----------------------------------------------------------------------------
 
-__virtualname__ = 'napalm_yang'
-__proxyenabled__ = ['*']
+__virtualname__ = "napalm_yang"
+__proxyenabled__ = ["*"]
 # uses NAPALM-based proxy to interact with network devices
 
 log = logging.getLogger(__file__)
@@ -39,13 +41,17 @@ log = logging.getLogger(__file__)
 
 
 def __virtual__():
-    '''
+    """
     NAPALM library must be installed for this module to work and run in a (proxy) minion.
     This module in particular requires also napalm-yang.
-    '''
+    """
     if not HAS_NAPALM_YANG:
-        return (False, 'Unable to load napalm_yang execution module: please install napalm-yang!')
+        return (
+            False,
+            "Unable to load napalm_yang execution module: please install napalm-yang!",
+        )
     return salt.utils.napalm.virtual(__opts__, __virtualname__, __file__)
+
 
 # -----------------------------------------------------------------------------
 # helper functions -- will not be exported
@@ -53,16 +59,17 @@ def __virtual__():
 
 
 def _get_root_object(models):
-    '''
+    """
     Read list of models and returns a Root object with the proper models added.
-    '''
+    """
     root = napalm_yang.base.Root()
     for model in models:
         current = napalm_yang
-        for part in model.split('.'):
+        for part in model.split("."):
             current = getattr(current, part)
         root.add_model(current)
     return root
+
 
 # -----------------------------------------------------------------------------
 # callable functions
@@ -70,7 +77,7 @@ def _get_root_object(models):
 
 
 def diff(candidate, running, *models):
-    '''
+    """
     Returns the difference between two configuration entities structured
     according to the YANG model.
 
@@ -118,7 +125,7 @@ def diff(candidate, running, *models):
                 }
             }
         }
-    '''
+    """
     if isinstance(models, tuple) and isinstance(models[0], list):
         models = models[0]
 
@@ -131,7 +138,7 @@ def diff(candidate, running, *models):
 
 @proxy_napalm_wrap
 def parse(*models, **kwargs):
-    '''
+    """
     Parse configuration from the device.
 
     models
@@ -342,20 +349,22 @@ def parse(*models, **kwargs):
                 }
             }
         }
-    '''
+    """
     if isinstance(models, tuple) and isinstance(models[0], list):
         models = models[0]
-    config = kwargs.pop('config', False)
-    state = kwargs.pop('state', False)
-    profiles = kwargs.pop('profiles', [])
-    if not profiles and hasattr(napalm_device, 'profile'):  # pylint: disable=undefined-variable
+    config = kwargs.pop("config", False)
+    state = kwargs.pop("state", False)
+    profiles = kwargs.pop("profiles", [])
+    # pylint: disable=undefined-variable
+    if not profiles and hasattr(napalm_device, "profile"):
         profiles = napalm_device.profile  # pylint: disable=undefined-variable
+    # pylint: enable=undefined-variable
     if not profiles:
-        profiles = [__grains__.get('os')]
+        profiles = [__grains__.get("os")]
     root = _get_root_object(models)
     parser_kwargs = {
-        'device': napalm_device.get('DRIVER'),  # pylint: disable=undefined-variable
-        'profile': profiles
+        "device": napalm_device.get("DRIVER"),  # pylint: disable=undefined-variable
+        "profile": profiles,
     }
     if config:
         root.parse_config(**parser_kwargs)
@@ -366,7 +375,7 @@ def parse(*models, **kwargs):
 
 @proxy_napalm_wrap
 def get_config(data, *models, **kwargs):
-    '''
+    """
     Return the native config.
 
     data
@@ -397,28 +406,28 @@ def get_config(data, *models, **kwargs):
             ip address 192.168.2.1/24
             description Uplink2
             mtu 9000
-    '''
+    """
     if isinstance(models, tuple) and isinstance(models[0], list):
         models = models[0]
-    profiles = kwargs.pop('profiles', [])
-    if not profiles and hasattr(napalm_device, 'profile'):  # pylint: disable=undefined-variable
+    profiles = kwargs.pop("profiles", [])
+    # pylint: disable=undefined-variable
+    if not profiles and hasattr(napalm_device, "profile"):
+        # pylint: enable=undefined-variable
         profiles = napalm_device.profile  # pylint: disable=undefined-variable
     if not profiles:
-        profiles = [__grains__.get('os')]
-    parser_kwargs = {
-        'profile': profiles
-    }
+        profiles = [__grains__.get("os")]
+    parser_kwargs = {"profile": profiles}
     root = _get_root_object(models)
     root.load_dict(data)
     native_config = root.translate_config(**parser_kwargs)
-    log.debug('Generated config')
+    log.debug("Generated config")
     log.debug(native_config)
     return native_config
 
 
 @proxy_napalm_wrap
 def load_config(data, *models, **kwargs):
-    '''
+    """
     Generate and load the config on the device using the OpenConfig or IETF
     models and device profiles.
 
@@ -551,25 +560,29 @@ def load_config(data, *models, **kwargs):
                 </configuration>
             result:
                 True
-    '''
+    """
     if isinstance(models, tuple) and isinstance(models[0], list):
         models = models[0]
     config = get_config(data, *models, **kwargs)
-    test = kwargs.pop('test', False)
-    debug = kwargs.pop('debug', False)
-    commit = kwargs.pop('commit', True)
-    replace = kwargs.pop('replace', False)
-    return __salt__['net.load_config'](text=config,
-                                       test=test,
-                                       debug=debug,
-                                       commit=commit,
-                                       replace=replace,
-                                       inherit_napalm_device=napalm_device)  # pylint: disable=undefined-variable
+    test = kwargs.pop("test", False)
+    debug = kwargs.pop("debug", False)
+    commit = kwargs.pop("commit", True)
+    replace = kwargs.pop("replace", False)
+    # pylint: disable=undefined-variable
+    return __salt__["net.load_config"](
+        text=config,
+        test=test,
+        debug=debug,
+        commit=commit,
+        replace=replace,
+        inherit_napalm_device=napalm_device,
+    )
+    # pylint: enable=undefined-variable
 
 
 @proxy_napalm_wrap
 def compliance_report(data, *models, **kwargs):
-    '''
+    """
     Return the compliance report using YANG objects.
 
     data
@@ -606,10 +619,10 @@ def compliance_report(data, *models, **kwargs):
             "extra": []
           }
         }
-    '''
+    """
     if isinstance(models, tuple) and isinstance(models[0], list):
         models = models[0]
-    filepath = kwargs.pop('filepath', '')
+    filepath = kwargs.pop("filepath", "")
     root = _get_root_object(models)
     root.load_dict(data)
     return root.compliance_report(filepath)

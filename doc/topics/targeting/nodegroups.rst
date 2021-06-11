@@ -63,11 +63,11 @@ To match a nodegroup on the CLI, use the ``-N`` command-line option:
 .. note::
 
     The ``N@`` classifier historically could not be used in compound matches
-    within the CLI or :term:`top file`, it was only recognized in the
+    within the CLI or :term:`top file <Top File>`, it was only recognized in the
     :conf_master:`nodegroups` master config file parameter. As of the 2019.2.0
     release, this limitation no longer exists.
 
-To match a nodegroup in your :term:`top file`, make sure to put ``- match:
+To match a nodegroup in your :term:`top file <Top File>`, make sure to put ``- match:
 nodegroup`` on the line directly following the nodegroup name.
 
 .. code-block:: yaml

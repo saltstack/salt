@@ -1,0 +1,10 @@
+#tencentcloud-guangzhou-s1sm1:
+#    provider: my-tencentcloud-config
+#    availability_zone: ap-guangzhou-3
+#    image: img-31tjrtph
+#    size: S1.SMALL1
+#    allocate_public_ip: True
+#    internet_max_bandwidth_out: 1
+#    password: '153e41ec96140152'
+#    securitygroups:
+#        - sg-5e90804b

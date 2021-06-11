@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Cobbler Tops
 ============
 
@@ -18,33 +18,34 @@ the Cobbler tops and Cobbler pillar modules.
 
 Module Documentation
 ====================
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
-import salt.ext.six.moves.xmlrpc_client  # pylint: disable=E0611
 
+import salt.ext.six.moves.xmlrpc_client  # pylint: disable=E0611
 
 # Set up logging
 log = logging.getLogger(__name__)
 
 
-__opts__ = {'cobbler.url': 'http://localhost/cobbler_api',
-            'cobbler.user': None,
-            'cobbler.password': None
-           }
+__opts__ = {
+    "cobbler.url": "http://localhost/cobbler_api",
+    "cobbler.user": None,
+    "cobbler.password": None,
+}
 
 
 def top(**kwargs):
-    '''
+    """
     Look up top data in Cobbler for a minion.
-    '''
-    url = __opts__['cobbler.url']
-    user = __opts__['cobbler.user']
-    password = __opts__['cobbler.password']
+    """
+    url = __opts__["cobbler.url"]
+    user = __opts__["cobbler.user"]
+    password = __opts__["cobbler.password"]
 
-    minion_id = kwargs['opts']['id']
+    minion_id = kwargs["opts"]["id"]
 
     log.info("Querying cobbler for information for %r", minion_id)
     try:
@@ -52,10 +53,8 @@ def top(**kwargs):
         if user:
             server.login(user, password)
         data = server.get_blended_data(None, minion_id)
-    except Exception:
-        log.exception(
-            'Could not connect to cobbler.'
-        )
+    except Exception:  # pylint: disable=broad-except
+        log.exception("Could not connect to cobbler.")
         return {}
 
-    return {data['status']: data['mgmt_classes']}
+    return {data["status"]: data["mgmt_classes"]}

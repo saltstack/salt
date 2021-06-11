@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Use `Varstack <https://github.com/conversis/varstack>`_ to provide tops data
 
 .. |varstack| replace:: **varstack**
@@ -41,7 +41,7 @@ Ie, if my.fqdn.yaml file contains:
 these will be returned as {'base': ['sudo', 'openssh', 'apache', 'salt.minion']} and
 managed by salt as if given from a top.sls file.
 
-'''
+"""
 
 from __future__ import absolute_import, print_function, unicode_literals
 
@@ -51,21 +51,21 @@ except ImportError:
     varstack = None
 
 # Define the module's virtual name
-__virtualname__ = 'varstack'
+__virtualname__ = "varstack"
 
 
 def __virtual__():
-    return (False, 'varstack not installed') if varstack is None else __virtualname__
+    return (False, "varstack not installed") if varstack is None else __virtualname__
 
 
 def top(**kwargs):
-    '''
+    """
     Query |varstack| for the top data (states of the minions).
-    '''
+    """
 
-    conf = __opts__['master_tops']['varstack']
-    __grains__ = kwargs['grains']
+    conf = __opts__["master_tops"]["varstack"]
+    __grains__ = kwargs["grains"]
 
     vs_ = varstack.Varstack(config_filename=conf)
     ret = vs_.evaluate(__grains__)
-    return {'base': ret['states']}
+    return {"base": ret["states"]}

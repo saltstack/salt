@@ -1501,7 +1501,7 @@ Changelog for v2017.7.2..v2017.7.3
 
       * 1b12acd303 Check type before casting
 
-      * 03fa37b445 Cast vdata to it's proper type
+      * 03fa37b445 Cast vdata to its proper type
 
     * ed8da2450b Merge pull request `#43863`_ from nicholasmhughes/fix-atomicfile-permission-copy
 

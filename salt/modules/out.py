@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Output Module
 =============
 
@@ -16,26 +16,28 @@ For example, inside a Jinja template:
 .. code-block:: jinja
 
     {{ salt.out.string_format(complex_object, out='highstate') }}
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
-log = logging.getLogger(__name__)
 
 # Import salt modules
 import salt.output
 
-__virtualname__ = 'out'
-__proxyenabled__ = ['*']
+log = logging.getLogger(__name__)
+
+
+__virtualname__ = "out"
+__proxyenabled__ = ["*"]
 
 
 def __virtual__():
     return __virtualname__
 
 
-def out_format(data, out='nested', opts=None, **kwargs):
-    '''
+def out_format(data, out="nested", opts=None, **kwargs):
+    """
     Return the formatted outputter string for the Python object.
 
     data
@@ -55,14 +57,14 @@ def out_format(data, out='nested', opts=None, **kwargs):
     .. code-block:: bash
 
         salt '*' out.out_format "{'key': 'value'}"
-    '''
+    """
     if not opts:
         opts = __opts__
     return salt.output.out_format(data, out, opts=opts, **kwargs)
 
 
-def string_format(data, out='nested', opts=None, **kwargs):
-    '''
+def string_format(data, out="nested", opts=None, **kwargs):
+    """
     Return the outputter formatted string, removing the ANSI escape sequences.
 
     data
@@ -82,14 +84,14 @@ def string_format(data, out='nested', opts=None, **kwargs):
     .. code-block:: bash
 
         salt '*' out.string_format "{'key': 'value'}" out=table
-    '''
+    """
     if not opts:
         opts = __opts__
     return salt.output.string_format(data, out, opts=opts, **kwargs)
 
 
-def html_format(data, out='nested', opts=None, **kwargs):
-    '''
+def html_format(data, out="nested", opts=None, **kwargs):
+    """
     Return the formatted string as HTML.
 
     data
@@ -109,7 +111,7 @@ def html_format(data, out='nested', opts=None, **kwargs):
     .. code-block:: bash
 
         salt '*' out.html_format "{'key': 'value'}" out=yaml
-    '''
+    """
     if not opts:
         opts = __opts__
     return salt.output.html_format(data, out, opts=opts, **kwargs)

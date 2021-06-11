@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Module for managing dnsmasq
-'''
+"""
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 import os
 
@@ -20,20 +21,20 @@ log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    '''
+    """
     Only work on POSIX-like systems.
-    '''
+    """
     if salt.utils.platform.is_windows():
         return (
             False,
-            'dnsmasq execution module cannot be loaded: only works on '
-            'non-Windows systems.'
+            "dnsmasq execution module cannot be loaded: only works on "
+            "non-Windows systems.",
         )
     return True
 
 
 def version():
-    '''
+    """
     Shows installed version of dnsmasq.
 
     CLI Example:
@@ -41,15 +42,15 @@ def version():
     .. code-block:: bash
 
         salt '*' dnsmasq.version
-    '''
-    cmd = 'dnsmasq -v'
-    out = __salt__['cmd.run'](cmd).splitlines()
+    """
+    cmd = "dnsmasq -v"
+    out = __salt__["cmd.run"](cmd).splitlines()
     comps = out[0].split()
     return comps[2]
 
 
 def fullversion():
-    '''
+    """
     Shows installed version of dnsmasq and compile options.
 
     CLI Example:
@@ -57,18 +58,17 @@ def fullversion():
     .. code-block:: bash
 
         salt '*' dnsmasq.fullversion
-    '''
-    cmd = 'dnsmasq -v'
-    out = __salt__['cmd.run'](cmd).splitlines()
+    """
+    cmd = "dnsmasq -v"
+    out = __salt__["cmd.run"](cmd).splitlines()
     comps = out[0].split()
     version_num = comps[2]
     comps = out[1].split()
-    return {'version': version_num,
-            'compile options': comps[3:]}
+    return {"version": version_num, "compile options": comps[3:]}
 
 
-def set_config(config_file='/etc/dnsmasq.conf', follow=True, **kwargs):
-    '''
+def set_config(config_file="/etc/dnsmasq.conf", follow=True, **kwargs):
+    """
     Sets a value or a set of values in the specified file. By default, if
     conf-dir is configured in this file, salt will attempt to set the option
     in any file inside the conf-dir where it has already been enabled. If it
@@ -93,46 +93,46 @@ def set_config(config_file='/etc/dnsmasq.conf', follow=True, **kwargs):
         salt '*' dnsmasq.set_config domain=mydomain.com
         salt '*' dnsmasq.set_config follow=False domain=mydomain.com
         salt '*' dnsmasq.set_config config_file=/etc/dnsmasq.conf domain=mydomain.com
-    '''
+    """
     dnsopts = get_config(config_file)
     includes = [config_file]
-    if follow is True and 'conf-dir' in dnsopts:
-        for filename in os.listdir(dnsopts['conf-dir']):
-            if filename.startswith('.'):
+    if follow is True and "conf-dir" in dnsopts:
+        for filename in os.listdir(dnsopts["conf-dir"]):
+            if filename.startswith("."):
                 continue
-            if filename.endswith('~'):
+            if filename.endswith("~"):
                 continue
-            if filename.endswith('bak'):
+            if filename.endswith("bak"):
                 continue
-            if filename.endswith('#') and filename.endswith('#'):
+            if filename.endswith("#") and filename.endswith("#"):
                 continue
-            includes.append('{0}/{1}'.format(dnsopts['conf-dir'], filename))
+            includes.append("{0}/{1}".format(dnsopts["conf-dir"], filename))
 
     ret_kwargs = {}
     for key in kwargs:
         # Filter out __pub keys as they should not be added to the config file
         # See Issue #34263 for more information
-        if key.startswith('__'):
+        if key.startswith("__"):
             continue
         ret_kwargs[key] = kwargs[key]
 
         if key in dnsopts:
             if isinstance(dnsopts[key], six.string_types):
                 for config in includes:
-                    __salt__['file.sed'](path=config,
-                                         before='^{0}=.*'.format(key),
-                                         after='{0}={1}'.format(key, kwargs[key]))
+                    __salt__["file.sed"](
+                        path=config,
+                        before="^{0}=.*".format(key),
+                        after="{0}={1}".format(key, kwargs[key]),
+                    )
             else:
-                __salt__['file.append'](config_file,
-                                        '{0}={1}'.format(key, kwargs[key]))
+                __salt__["file.append"](config_file, "{0}={1}".format(key, kwargs[key]))
         else:
-            __salt__['file.append'](config_file,
-                                    '{0}={1}'.format(key, kwargs[key]))
+            __salt__["file.append"](config_file, "{0}={1}".format(key, kwargs[key]))
     return ret_kwargs
 
 
-def get_config(config_file='/etc/dnsmasq.conf'):
-    '''
+def get_config(config_file="/etc/dnsmasq.conf"):
+    """
     Dumps all options from the config file.
 
     config_file
@@ -145,41 +145,40 @@ def get_config(config_file='/etc/dnsmasq.conf'):
 
         salt '*' dnsmasq.get_config
         salt '*' dnsmasq.get_config config_file=/etc/dnsmasq.conf
-    '''
+    """
     dnsopts = _parse_dnamasq(config_file)
-    if 'conf-dir' in dnsopts:
-        for filename in os.listdir(dnsopts['conf-dir']):
-            if filename.startswith('.'):
+    if "conf-dir" in dnsopts:
+        for filename in os.listdir(dnsopts["conf-dir"]):
+            if filename.startswith("."):
                 continue
-            if filename.endswith('~'):
+            if filename.endswith("~"):
                 continue
-            if filename.endswith('#') and filename.endswith('#'):
+            if filename.endswith("#") and filename.endswith("#"):
                 continue
-            dnsopts.update(_parse_dnamasq('{0}/{1}'.format(dnsopts['conf-dir'],
-                                                        filename)))
+            dnsopts.update(
+                _parse_dnamasq("{0}/{1}".format(dnsopts["conf-dir"], filename))
+            )
     return dnsopts
 
 
 def _parse_dnamasq(filename):
-    '''
+    """
     Generic function for parsing dnsmasq files including includes.
-    '''
+    """
     fileopts = {}
 
     if not os.path.isfile(filename):
-        raise CommandExecutionError(
-            'Error: No such file \'{0}\''.format(filename)
-        )
+        raise CommandExecutionError("Error: No such file '{0}'".format(filename))
 
-    with salt.utils.files.fopen(filename, 'r') as fp_:
+    with salt.utils.files.fopen(filename, "r") as fp_:
         for line in fp_:
             line = salt.utils.stringutils.to_unicode(line)
             if not line.strip():
                 continue
-            if line.startswith('#'):
+            if line.startswith("#"):
                 continue
-            if '=' in line:
-                comps = line.split('=')
+            if "=" in line:
+                comps = line.split("=")
                 if comps[0] in fileopts:
                     if isinstance(fileopts[comps[0]], six.string_types):
                         temp = fileopts[comps[0]]
@@ -188,7 +187,7 @@ def _parse_dnamasq(filename):
                 else:
                     fileopts[comps[0]] = comps[1].strip()
             else:
-                if 'unparsed' not in fileopts:
-                    fileopts['unparsed'] = []
-                fileopts['unparsed'].append(line)
+                if "unparsed" not in fileopts:
+                    fileopts["unparsed"] = []
+                fileopts["unparsed"].append(line)
     return fileopts

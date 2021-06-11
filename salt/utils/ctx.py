@@ -1,21 +1,23 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import absolute_import, with_statement, print_function, unicode_literals
+from __future__ import absolute_import, print_function, unicode_literals, with_statement
+
 import threading
 
 
 class ClassProperty(property):
-    '''
+    """
     Use a classmethod as a property
     http://stackoverflow.com/a/1383402/1258307
-    '''
+    """
+
     def __get__(self, cls, owner):
         return self.fget.__get__(None, owner)()  # pylint: disable=no-member
 
 
 class RequestContext(object):
-    '''
+    """
     A context manager that saves some per-thread state globally.
     Intended for use with Tornado's StackContext.
     https://gist.github.com/simon-weber/7755289
@@ -24,7 +26,7 @@ class RequestContext(object):
     .. code:: python
         from raas.utils.ctx import RequestContext
         current_request_handler = RequestContext.current
-    '''
+    """
 
     _state = threading.local()
     _state.current_request = {}
@@ -35,7 +37,7 @@ class RequestContext(object):
     @ClassProperty
     @classmethod
     def current(cls):
-        if not hasattr(cls._state, 'current_request'):
+        if not hasattr(cls._state, "current_request"):
             return {}
         return cls._state.current_request
 

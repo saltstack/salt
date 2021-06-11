@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-'''
+"""
 A route is a rule that specifies how certain packets should be handled by the
 virtual network. Routes are associated with virtual machine instances by tag,
 and the set of routes for a particular VM is called its routing table.
@@ -11,69 +10,70 @@ routing table for a single best matching route.
 This module will create a route to send traffic destined to the Internet
 through your gateway instance.
 
-:codeauthor: :email:`Pratik Bandarkar <pratik.bandarkar@gmail.com>`
+:codeauthor: `Pratik Bandarkar <pratik.bandarkar@gmail.com>`
 :maturity:   new
 :depends:    google-api-python-client
 :platform:   Linux
 
-'''
+"""
 
-# Import Python libs
-from __future__ import absolute_import, unicode_literals, print_function
 import logging
-
-# Import salt libs
-from salt.ext import six
-
-log = logging.getLogger(__name__)
 
 try:
     import googleapiclient.discovery
     import oauth2client.service_account
+
     HAS_LIB = True
 except ImportError:
     HAS_LIB = False
 
-__virtualname__ = 'gcp'
+log = logging.getLogger(__name__)
+
+__virtualname__ = "gcp"
 
 
 def __virtual__():
-    '''
+    """
     Check for googleapiclient api
-    '''
+    """
     if HAS_LIB is False:
-        return False, 'Required dependencies \'googleapiclient\' and/or \'oauth2client\' were not found.'
+        return (
+            False,
+            "Required dependencies 'googleapiclient' and/or 'oauth2client' were not found.",
+        )
     return __virtualname__
 
 
 def _get_network(project_id, network_name, service):
-    '''
+    """
     Fetch network selfLink from network name.
-    '''
-    return service.networks().get(project=project_id,
-                                  network=network_name).execute()
+    """
+    return service.networks().get(project=project_id, network=network_name).execute()
 
 
 def _get_instance(project_id, instance_zone, name, service):
-    '''
+    """
     Get instance details
-    '''
-    return service.instances().get(project=project_id,
-                                   zone=instance_zone,
-                                   instance=name).execute()
+    """
+    return (
+        service.instances()
+        .get(project=project_id, zone=instance_zone, instance=name)
+        .execute()
+    )
 
 
-def route_create(credential_file=None,
-                 project_id=None,
-                 name=None,
-                 dest_range=None,
-                 next_hop_instance=None,
-                 instance_zone=None,
-                 tags=None,
-                 network=None,
-                 priority=None
-                 ):
-    '''
+def route_create(
+    credential_file=None,
+    project_id=None,
+    name=None,
+    dest_range=None,
+    next_hop_instance=None,
+    instance_zone=None,
+    tags=None,
+    network=None,
+    priority=None,
+):
+    """
     Create a route to send traffic destined to the Internet through your
     gateway instance
 
@@ -100,38 +100,38 @@ def route_create(credential_file=None,
 
     CLI Example:
 
-    salt 'salt-master.novalocal' gcp.route_create
-        credential_file=/root/secret_key.json
-        project_id=cp100-170315
-        name=derby-db-route1
-        next_hop_instance=instance-1
-        instance_zone=us-central1-a
-        network=default
-        dest_range=0.0.0.0/0
-        tags=['no-ip']
-        priority=700
+    .. code-block:: bash
+
+        salt 'salt-master.novalocal' gcp.route_create
+            credential_file=/root/secret_key.json
+            project_id=cp100-170315
+            name=derby-db-route1
+            next_hop_instance=instance-1
+            instance_zone=us-central1-a
+            network=default
+            dest_range=0.0.0.0/0
+            tags=['no-ip']
+            priority=700
 
     In above example, the instances which are having tag "no-ip" will route the
     packet to instance "instance-1"(if packet is intended to other network)
-    '''
+    """
 
-    credentials = oauth2client.service_account.ServiceAccountCredentials.\
-        from_json_keyfile_name(credential_file)
-    service = googleapiclient.discovery.build('compute', 'v1',
-                                              credentials=credentials)
+    credentials = oauth2client.service_account.ServiceAccountCredentials.from_json_keyfile_name(
+        credential_file
+    )
+    service = googleapiclient.discovery.build("compute", "v1", credentials=credentials)
     routes = service.routes()
 
     routes_config = {
-        'name': six.text_type(name),
-        'network': _get_network(project_id, six.text_type(network),
-                                service=service)['selfLink'],
-        'destRange': six.text_type(dest_range),
-        'nextHopInstance': _get_instance(project_id, instance_zone,
-                                         next_hop_instance,
-                                         service=service)['selfLink'],
-        'tags': tags,
-        'priority': priority
+        "name": str(name),
+        "network": _get_network(project_id, str(network), service=service)["selfLink"],
+        "destRange": str(dest_range),
+        "nextHopInstance": _get_instance(
+            project_id, instance_zone, next_hop_instance, service=service
+        )["selfLink"],
+        "tags": tags,
+        "priority": priority,
     }
-    route_create_request = routes.insert(project=project_id,
-                                         body=routes_config)
+    route_create_request = routes.insert(project=project_id, body=routes_config)
     return route_create_request.execute()

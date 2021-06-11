@@ -1,23 +1,19 @@
-# -*- coding: utf-8 -*-
-'''
+"""
 Returners Directory
 
 :func:`get_returner_options` is a general purpose function that returners may
 use to fetch their configuration options.
-'''
-from __future__ import absolute_import, print_function, unicode_literals
+"""
 
 import logging
+
 from salt.ext import six
 
 log = logging.getLogger(__name__)
 
 
-def get_returner_options(virtualname=None,
-                         ret=None,
-                         attrs=None,
-                         **kwargs):
-    '''
+def get_returner_options(virtualname=None, ret=None, attrs=None, **kwargs):
+    """
     Get the returner options from salt.
 
     :param str virtualname: The returner virtualname (as returned
@@ -62,47 +58,34 @@ def get_returner_options(virtualname=None,
         For each key in profile_attr, a value is read in the are
         used to fetch a value pointed by 'virtualname.%key' in
         the dict found thanks to the param `profile_attr`
-    '''
+    """
 
     ret_config = _fetch_ret_config(ret)
 
     attrs = attrs or {}
-    profile_attr = kwargs.get('profile_attr', None)
-    profile_attrs = kwargs.get('profile_attrs', None)
-    defaults = kwargs.get('defaults', None)
-    __salt__ = kwargs.get('__salt__', {})
-    __opts__ = kwargs.get('__opts__', {})
+    profile_attr = kwargs.get("profile_attr", None)
+    profile_attrs = kwargs.get("profile_attrs", None)
+    defaults = kwargs.get("defaults", None)
+    __salt__ = kwargs.get("__salt__", {})
+    __opts__ = kwargs.get("__opts__", {})
 
     # select the config source
-    cfg = __salt__.get('config.option', __opts__)
+    cfg = __salt__.get("config.option", __opts__)
 
     # browse the config for relevant options, store them in a dict
-    _options = dict(
-        _options_browser(
-            cfg,
-            ret_config,
-            defaults,
-            virtualname,
-            attrs,
-        )
-    )
+    _options = dict(_options_browser(cfg, ret_config, defaults, virtualname, attrs,))
 
     # override some values with relevant profile options
     _options.update(
         _fetch_profile_opts(
-            cfg,
-            virtualname,
-            __salt__,
-            _options,
-            profile_attr,
-            profile_attrs
+            cfg, virtualname, __salt__, _options, profile_attr, profile_attrs
         )
     )
 
     # override some values with relevant options from
     # keyword arguments passed via return_kwargs
-    if ret and 'ret_kwargs' in ret:
-        _options.update(ret['ret_kwargs'])
+    if ret and "ret_kwargs" in ret:
+        _options.update(ret["ret_kwargs"])
 
     return _options
 
@@ -115,9 +98,9 @@ def _fetch_ret_config(ret):
     """
     if not ret:
         return None
-    if 'ret_config' not in ret:
-        return ''
-    return six.text_type(ret['ret_config'])
+    if "ret_config" not in ret:
+        return ""
+    return str(ret["ret_config"])
 
 
 def _fetch_option(cfg, ret_config, virtualname, attr_name):
@@ -131,9 +114,9 @@ def _fetch_option(cfg, ret_config, virtualname, attr_name):
     if isinstance(cfg, dict):
         c_cfg = cfg
     else:
-        c_cfg = cfg('{0}'.format(virtualname), {})
+        c_cfg = cfg("{}".format(virtualname), {})
 
-    default_cfg_key = '{0}.{1}'.format(virtualname, attr_name)
+    default_cfg_key = "{}.{}".format(virtualname, attr_name)
     if not ret_config:
         # Using the default configuration key
         if isinstance(cfg, dict):
@@ -145,20 +128,13 @@ def _fetch_option(cfg, ret_config, virtualname, attr_name):
             return c_cfg.get(attr_name, cfg(default_cfg_key))
 
     # Using ret_config to override the default configuration key
-    ret_cfg = cfg('{0}.{1}'.format(ret_config, virtualname), {})
+    ret_cfg = cfg("{}.{}".format(ret_config, virtualname), {})
 
-    override_default_cfg_key = '{0}.{1}.{2}'.format(
-        ret_config,
-        virtualname,
-        attr_name,
-    )
+    override_default_cfg_key = "{}.{}.{}".format(ret_config, virtualname, attr_name,)
     override_cfg_default = cfg(override_default_cfg_key)
 
     # Look for the configuration item in the override location
-    ret_override_cfg = ret_cfg.get(
-        attr_name,
-        override_cfg_default
-    )
+    ret_override_cfg = ret_cfg.get(attr_name, override_cfg_default)
     if ret_override_cfg:
         return ret_override_cfg
 
@@ -185,7 +161,7 @@ def _options_browser(cfg, ret_config, defaults, virtualname, options):
         # Attribute not found, check for a default value
         if defaults:
             if option in defaults:
-                log.info('Using default for %s %s', virtualname, option)
+                log.debug("Using default for %s %s", virtualname, option)
                 yield option, defaults[option]
                 continue
 
@@ -194,12 +170,8 @@ def _options_browser(cfg, ret_config, defaults, virtualname, options):
 
 
 def _fetch_profile_opts(
-        cfg, virtualname,
-        __salt__,
-        _options,
-        profile_attr,
-        profile_attrs
-    ):
+    cfg, virtualname, __salt__, _options, profile_attr, profile_attrs
+):
     """
     Fetches profile specific options if applicable
 
@@ -216,9 +188,9 @@ def _fetch_profile_opts(
     creds = {}
     profile = _options[profile_attr]
     if profile:
-        log.info('Using profile %s', profile)
+        log.debug("Using profile %s", profile)
 
-        if 'config.option' in __salt__:
+        if "config.option" in __salt__:
             creds = cfg(profile)
         else:
             creds = cfg.get(profile)
@@ -226,10 +198,7 @@ def _fetch_profile_opts(
     if not creds:
         return {}
 
-    return dict(
-        (
-            pattr,
-            creds.get('{0}.{1}'.format(virtualname, profile_attrs[pattr]))
-        )
+    return {
+        pattr: creds.get("{}.{}".format(virtualname, profile_attrs[pattr]))
         for pattr in profile_attrs
-        )
+    }

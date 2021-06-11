@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 The pkgbuild state is the front of Salt package building backend. It
 automatically builds DEB and RPM packages from specified sources
 
@@ -41,9 +41,10 @@ automatically builds DEB and RPM packages from specified sources
           - salt://pkg/salt/sources/SaltTesting-2015.5.8.tar.gz
     /tmp/pkg:
       pkgbuild.repo
-'''
+"""
 # Import python libs
 from __future__ import absolute_import, print_function
+
 import errno
 import logging
 import os
@@ -55,41 +56,37 @@ log = logging.getLogger(__name__)
 
 
 def _get_missing_results(results, dest_dir):
-    '''
+    """
     Return a list of the filenames specified in the ``results`` argument, which
     are not present in the dest_dir.
-    '''
+    """
     try:
         present = set(os.listdir(dest_dir))
     except OSError as exc:
         if exc.errno == errno.ENOENT:
-            log.debug(
-                'pkgbuild.built: dest_dir \'{0}\' does not exist'
-                .format(dest_dir)
-            )
+            log.debug("pkgbuild.built: dest_dir '{0}' does not exist".format(dest_dir))
         elif exc.errno == errno.EACCES:
-            log.error(
-                'pkgbuilt.built: cannot access dest_dir \'{0}\''
-                .format(dest_dir)
-            )
+            log.error("pkgbuilt.built: cannot access dest_dir '{0}'".format(dest_dir))
         present = set()
     return sorted(set(results).difference(present))
 
 
-def built(name,
-          runas,
-          dest_dir,
-          spec,
-          sources,
-          tgt,
-          template=None,
-          deps=None,
-          env=None,
-          results=None,
-          force=False,
-          saltenv='base',
-          log_dir='/var/log/salt/pkgbuild'):
-    '''
+def built(
+    name,
+    runas,
+    dest_dir,
+    spec,
+    sources,
+    tgt,
+    template=None,
+    deps=None,
+    env=None,
+    results=None,
+    force=False,
+    saltenv="base",
+    log_dir="/var/log/salt/pkgbuild",
+):
+    """
     Ensure that the named package is built and exists in the named directory
 
     name
@@ -161,79 +158,69 @@ def built(name,
         under this directory.
 
         .. versionadded:: 2015.8.2
-    '''
-    ret = {'name': name,
-           'changes': {},
-           'comment': '',
-           'result': True}
+    """
+    ret = {"name": name, "changes": {}, "comment": "", "result": True}
 
     if not results:
-        ret['comment'] = '\'results\' argument is required'
-        ret['result'] = False
+        ret["comment"] = "'results' argument is required"
+        ret["result"] = False
         return ret
 
     if isinstance(results, six.string_types):
-        results = results.split(',')
+        results = results.split(",")
 
     needed = _get_missing_results(results, dest_dir)
     if not force and not needed:
-        ret['comment'] = 'All needed packages exist'
+        ret["comment"] = "All needed packages exist"
         return ret
 
-    if __opts__['test']:
-        ret['result'] = None
+    if __opts__["test"]:
+        ret["result"] = None
         if force:
-            ret['comment'] = 'Packages will be force-built'
+            ret["comment"] = "Packages will be force-built"
         else:
-            ret['comment'] = 'The following packages need to be built: '
-            ret['comment'] += ', '.join(needed)
+            ret["comment"] = "The following packages need to be built: "
+            ret["comment"] += ", ".join(needed)
         return ret
 
     # Need the check for None here, if env is not provided then it falls back
     # to None and it is assumed that the environment is not being overridden.
     if env is not None and not isinstance(env, dict):
-        ret['comment'] = ('Invalidly-formatted \'env\' parameter. See '
-                          'documentation.')
-        ret['result'] = False
+        ret["comment"] = "Invalidly-formatted 'env' parameter. See " "documentation."
+        ret["result"] = False
         return ret
 
-    func = 'pkgbuild.build'
-    if __grains__.get('os_family', False) not in ('RedHat', 'Suse'):
+    func = "pkgbuild.build"
+    if __grains__.get("os_family", False) not in ("RedHat", "Suse"):
         for res in results:
-            if res.endswith('.rpm'):
-                func = 'rpmbuild.build'
+            if res.endswith(".rpm"):
+                func = "rpmbuild.build"
                 break
 
-    ret['changes'] = __salt__[func](
-        runas,
-        tgt,
-        dest_dir,
-        spec,
-        sources,
-        deps,
-        env,
-        template,
-        saltenv,
-        log_dir)
+    ret["changes"] = __salt__[func](
+        runas, tgt, dest_dir, spec, sources, deps, env, template, saltenv, log_dir
+    )
 
     needed = _get_missing_results(results, dest_dir)
     if needed:
-        ret['comment'] = 'The following packages were not built: '
-        ret['comment'] += ', '.join(needed)
-        ret['result'] = False
+        ret["comment"] = "The following packages were not built: "
+        ret["comment"] += ", ".join(needed)
+        ret["result"] = False
     else:
-        ret['comment'] = 'All needed packages were built'
+        ret["comment"] = "All needed packages were built"
     return ret
 
 
-def repo(name,
-         keyid=None,
-         env=None,
-         use_passphrase=False,
-         gnupghome='/etc/salt/gpgkeys',
-         runas='builder',
-         timeout=15.0):
-    '''
+def repo(
+    name,
+    keyid=None,
+    env=None,
+    use_passphrase=False,
+    gnupghome="/etc/salt/gpgkeys",
+    runas="builder",
+    timeout=15.0,
+):
+    """
     Make a package repository and optionally sign it and packages present
 
     The name is directory to turn into a repo. This state is best used
@@ -344,43 +331,39 @@ def repo(name,
 
         Timeout in seconds to wait for the prompt for inputting the passphrase.
 
-    '''
-    ret = {'name': name,
-           'changes': {},
-           'comment': '',
-           'result': True}
+    """
+    ret = {"name": name, "changes": {}, "comment": "", "result": True}
 
-    if __opts__['test'] is True:
-        ret['result'] = None
-        ret['comment'] = 'Package repo metadata at {0} will be refreshed'.format(name)
+    if __opts__["test"] is True:
+        ret["result"] = None
+        ret["comment"] = "Package repo metadata at {0} will be refreshed".format(name)
         return ret
 
     # Need the check for None here, if env is not provided then it falls back
     # to None and it is assumed that the environment is not being overridden.
     if env is not None and not isinstance(env, dict):
-        ret['comment'] = ('Invalidly-formatted \'env\' parameter. See '
-                          'documentation.')
+        ret["comment"] = "Invalidly-formatted 'env' parameter. See " "documentation."
         return ret
 
-    func = 'pkgbuild.make_repo'
-    if __grains__.get('os_family', False) not in ('RedHat', 'Suse'):
+    func = "pkgbuild.make_repo"
+    if __grains__.get("os_family", False) not in ("RedHat", "Suse"):
         for file in os.listdir(name):
-            if file.endswith('.rpm'):
-                func = 'rpmbuild.make_repo'
+            if file.endswith(".rpm"):
+                func = "rpmbuild.make_repo"
                 break
 
     res = __salt__[func](name, keyid, env, use_passphrase, gnupghome, runas, timeout)
 
-    if res['retcode'] > 0:
-        ret['result'] = False
+    if res["retcode"] > 0:
+        ret["result"] = False
     else:
-        ret['changes'] = {'refresh': True}
+        ret["changes"] = {"refresh": True}
 
-    if res['stdout'] and res['stderr']:
-        ret['comment'] = "{0}\n{1}".format(res['stdout'], res['stderr'])
-    elif res['stdout']:
-        ret['comment'] = res['stdout']
-    elif res['stderr']:
-        ret['comment'] = res['stderr']
+    if res["stdout"] and res["stderr"]:
+        ret["comment"] = "{0}\n{1}".format(res["stdout"], res["stderr"])
+    elif res["stdout"]:
+        ret["comment"] = res["stdout"]
+    elif res["stderr"]:
+        ret["comment"] = res["stderr"]
 
     return ret

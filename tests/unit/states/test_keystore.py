@@ -1,40 +1,43 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Test cases for keystore state
-'''
+"""
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Salt Testing Libs
-from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase
-from tests.support.mock import MagicMock, patch
 
 # Import Salt Libs
 import salt.states.keystore as keystore
 
+# Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.mock import MagicMock, patch
+from tests.support.unit import TestCase
+
 
 class KeystoreTestCase(TestCase, LoaderModuleMockMixin):
-    '''
+    """
     Test cases for salt.states.keystore
-    '''
+    """
+
     def setup_loader_modules(self):
-        return {keystore: {'__opts__': {'test': False}}}
+        return {keystore: {"__opts__": {"test": False}}}
 
-    @patch('os.path.exists', MagicMock(return_value=True))
+    @patch("os.path.exists", MagicMock(return_value=True))
     def test_cert_already_present(self):
-        '''
+        """
         Test for existing value_present
-        '''
+        """
 
-        cert_return = [{
-            "valid_until": "August 21 2017",
-            "sha1": "07:1C:B9:4F:0C:C8:51:4D:02:41:24:70:8E:E8:B2:68:7B:D7:D9:D5",
-            "valid_start": "August 22 2012",
-            "type": "TrustedCertEntry",
-            "alias": "stringhost",
-            "expired": True
-        }]
+        cert_return = [
+            {
+                "valid_until": "August 21 2017",
+                "sha1": "07:1C:B9:4F:0C:C8:51:4D:02:41:24:70:8E:E8:B2:68:7B:D7:D9:D5",
+                "valid_start": "August 22 2012",
+                "type": "TrustedCertEntry",
+                "alias": "stringhost",
+                "expired": True,
+            }
+        ]
         x509_return = {
             "Not After": "2017-08-21 05:26:54",
             "Subject Hash": "97:95:14:4F",
@@ -52,7 +55,7 @@ class KeystoreTestCase(TestCase, LoaderModuleMockMixin):
                 "SP": "Tokyo",
                 "L": "Chuo-ku",
                 "emailAddress": "support@frank4dd.com",
-                "OU": "WebCert Support"
+                "OU": "WebCert Support",
             },
             "Issuer Hash": "92:DA:45:6B",
             "Not Before": "2012-08-22 05:26:54",
@@ -60,14 +63,16 @@ class KeystoreTestCase(TestCase, LoaderModuleMockMixin):
                 "C": "JP",
                 "SP": "Tokyo",
                 "organizationName": "Frank4DD",
-                "CN": "www.example.com"
-            }
+                "CN": "www.example.com",
+            },
         }
 
-        name = 'keystore.jks'
+        name = "keystore.jks"
         passphrase = "changeit"
-        entries = [{'alias': 'stringhost',
-                   'certificate': '''-----BEGIN CERTIFICATE-----
+        entries = [
+            {
+                "alias": "stringhost",
+                "certificate": """-----BEGIN CERTIFICATE-----
                    MIICEjCCAXsCAg36MA0GCSqGSIb3DQEBBQUAMIGbMQswCQYDVQQGEwJKUDEOMAwG
                    A1UECBMFVG9reW8xEDAOBgNVBAcTB0NodW8ta3UxETAPBgNVBAoTCEZyYW5rNERE
                    MRgwFgYDVQQLEw9XZWJDZXJ0IFN1cHBvcnQxGDAWBgNVBAMTD0ZyYW5rNEREIFdl
@@ -79,40 +84,58 @@ class KeystoreTestCase(TestCase, LoaderModuleMockMixin):
                    AQABMA0GCSqGSIb3DQEBBQUAA4GBABS2TLuBeTPmcaTaUW/LCB2NYOy8GMdzR1mx
                    8iBIu2H6/E2tiY3RIevV2OW61qY2/XRQg7YPxx3ffeUugX9F4J/iPnnu1zAxxyBy
                    2VguKv4SWjRFoRkIfIlHX0qVviMhSlNy2ioFLy7JcPZb+v3ftDGywUqcBiVDoea0
-                   Hn+GmxZA\n-----END CERTIFICATE-----'''}
-                  ]
+                   Hn+GmxZA\n-----END CERTIFICATE-----""",
+            }
+        ]
 
         state_return = {
-            'name': name,
-            'changes': {},
-            'result': True,
-            'comment': 'No changes made.\n'
-            }
+            "name": name,
+            "changes": {},
+            "result": True,
+            "comment": "No changes made.\n",
+        }
 
-        #with patch.dict(keystore.__opts__, {'test': False}):
-        with patch.dict(keystore.__salt__, {'keystore.list': MagicMock(return_value=cert_return)}):
-            with patch.dict(keystore.__salt__, {'x509.read_certificate': MagicMock(return_value=x509_return)}):
-                self.assertDictEqual(keystore.managed(name, passphrase, entries), state_return)
+        # with patch.dict(keystore.__opts__, {'test': False}):
+        with patch.dict(
+            keystore.__salt__, {"keystore.list": MagicMock(return_value=cert_return)}
+        ):
+            with patch.dict(
+                keystore.__salt__,
+                {"x509.read_certificate": MagicMock(return_value=x509_return)},
+            ):
+                self.assertDictEqual(
+                    keystore.managed(name, passphrase, entries), state_return
+                )
 
-        with patch.dict(keystore.__opts__, {'test': True}):
-            with patch.dict(keystore.__salt__, {'keystore.list': MagicMock(return_value=cert_return)}):
-                with patch.dict(keystore.__salt__, {'x509.read_certificate': MagicMock(return_value=x509_return)}):
-                    self.assertDictEqual(keystore.managed(name, passphrase, entries), state_return)
+        with patch.dict(keystore.__opts__, {"test": True}):
+            with patch.dict(
+                keystore.__salt__,
+                {"keystore.list": MagicMock(return_value=cert_return)},
+            ):
+                with patch.dict(
+                    keystore.__salt__,
+                    {"x509.read_certificate": MagicMock(return_value=x509_return)},
+                ):
+                    self.assertDictEqual(
+                        keystore.managed(name, passphrase, entries), state_return
+                    )
 
-    @patch('os.path.exists', MagicMock(return_value=True))
+    @patch("os.path.exists", MagicMock(return_value=True))
     def test_cert_update(self):
-        '''
+        """
         Test for existing value_present
-        '''
+        """
 
-        cert_return = [{
-            "valid_until": "August 21 2017",
-            "sha1": "07:1C:B9:4F:0C:C8:51:4D:02:41:24:70:8E:E8:B2:68:7B:D7:D9:D5",
-            "valid_start": "August 22 2012",
-            "type": "TrustedCertEntry",
-            "alias": "stringhost",
-            "expired": True
-        }]
+        cert_return = [
+            {
+                "valid_until": "August 21 2017",
+                "sha1": "07:1C:B9:4F:0C:C8:51:4D:02:41:24:70:8E:E8:B2:68:7B:D7:D9:D5",
+                "valid_start": "August 22 2012",
+                "type": "TrustedCertEntry",
+                "alias": "stringhost",
+                "expired": True,
+            }
+        ]
         x509_return = {
             "Not After": "2017-08-21 05:26:54",
             "Subject Hash": "97:95:14:4F",
@@ -130,7 +153,7 @@ class KeystoreTestCase(TestCase, LoaderModuleMockMixin):
                 "SP": "Tokyo",
                 "L": "Chuo-ku",
                 "emailAddress": "support@frank4dd.com",
-                "OU": "WebCert Support"
+                "OU": "WebCert Support",
             },
             "Issuer Hash": "92:DA:45:6B",
             "Not Before": "2012-08-22 05:26:54",
@@ -138,14 +161,16 @@ class KeystoreTestCase(TestCase, LoaderModuleMockMixin):
                 "C": "JP",
                 "SP": "Tokyo",
                 "organizationName": "Frank4DD",
-                "CN": "www.example.com"
-            }
+                "CN": "www.example.com",
+            },
         }
 
-        name = 'keystore.jks'
+        name = "keystore.jks"
         passphrase = "changeit"
-        entries = [{'alias': 'stringhost',
-                   'certificate': '''-----BEGIN CERTIFICATE-----
+        entries = [
+            {
+                "alias": "stringhost",
+                "certificate": """-----BEGIN CERTIFICATE-----
                    MIICEjCCAXsCAg36MA0GCSqGSIb3DQEBBQUAMIGbMQswCQYDVQQGEwJKUDEOMAwG
                    A1UECBMFVG9reW8xEDAOBgNVBAcTB0NodW8ta3UxETAPBgNVBAoTCEZyYW5rNERE
                    MRgwFgYDVQQLEw9XZWJDZXJ0IFN1cHBvcnQxGDAWBgNVBAMTD0ZyYW5rNEREIFdl
@@ -157,42 +182,65 @@ class KeystoreTestCase(TestCase, LoaderModuleMockMixin):
                    AQABMA0GCSqGSIb3DQEBBQUAA4GBABS2TLuBeTPmcaTaUW/LCB2NYOy8GMdzR1mx
                    8iBIu2H6/E2tiY3RIevV2OW61qY2/XRQg7YPxx3ffeUugX9F4J/iPnnu1zAxxyBy
                    2VguKv4SWjRFoRkIfIlHX0qVviMhSlNy2ioFLy7JcPZb+v3ftDGywUqcBiVDoea0
-                   Hn+GmxZA\n-----END CERTIFICATE-----'''}
-                  ]
+                   Hn+GmxZA\n-----END CERTIFICATE-----""",
+            }
+        ]
 
         test_return = {
-            'name': name,
-            'changes': {},
-            'result': None,
-            'comment': 'Alias stringhost would have been updated\n'
-            }
+            "name": name,
+            "changes": {},
+            "result": None,
+            "comment": "Alias stringhost would have been updated\n",
+        }
         state_return = {
-            'name': name,
-            'changes': {'stringhost': 'Updated'},
-            'result': True,
-            'comment': 'Alias stringhost updated.\n'
-            }
+            "name": name,
+            "changes": {"stringhost": "Updated"},
+            "result": True,
+            "comment": "Alias stringhost updated.\n",
+        }
 
-        with patch.dict(keystore.__opts__, {'test': True}):
-            with patch.dict(keystore.__salt__, {'keystore.list': MagicMock(return_value=cert_return)}):
-                with patch.dict(keystore.__salt__, {'x509.read_certificate': MagicMock(return_value=x509_return)}):
-                    self.assertDictEqual(keystore.managed(name, passphrase, entries), test_return)
+        with patch.dict(keystore.__opts__, {"test": True}):
+            with patch.dict(
+                keystore.__salt__,
+                {"keystore.list": MagicMock(return_value=cert_return)},
+            ):
+                with patch.dict(
+                    keystore.__salt__,
+                    {"x509.read_certificate": MagicMock(return_value=x509_return)},
+                ):
+                    self.assertDictEqual(
+                        keystore.managed(name, passphrase, entries), test_return
+                    )
 
-        with patch.dict(keystore.__salt__, {'keystore.list': MagicMock(return_value=cert_return)}):
-            with patch.dict(keystore.__salt__, {'x509.read_certificate': MagicMock(return_value=x509_return)}):
-                with patch.dict(keystore.__salt__, {'keystore.remove': MagicMock(return_value=True)}):
-                    with patch.dict(keystore.__salt__, {'keystore.add': MagicMock(return_value=True)}):
-                        self.assertDictEqual(keystore.managed(name, passphrase, entries), state_return)
+        with patch.dict(
+            keystore.__salt__, {"keystore.list": MagicMock(return_value=cert_return)}
+        ):
+            with patch.dict(
+                keystore.__salt__,
+                {"x509.read_certificate": MagicMock(return_value=x509_return)},
+            ):
+                with patch.dict(
+                    keystore.__salt__, {"keystore.remove": MagicMock(return_value=True)}
+                ):
+                    with patch.dict(
+                        keystore.__salt__,
+                        {"keystore.add": MagicMock(return_value=True)},
+                    ):
+                        self.assertDictEqual(
+                            keystore.managed(name, passphrase, entries), state_return
+                        )
 
-    @patch('os.path.exists', MagicMock(return_value=False))
+    @patch("os.path.exists", MagicMock(return_value=False))
     def test_new_file(self):
-        '''
+        """
         Test for existing value_present
-        '''
-        name = 'keystore.jks'
+        """
+        name = "keystore.jks"
         passphrase = "changeit"
-        entries = [{'alias': 'stringhost',
-                   'certificate': '''-----BEGIN CERTIFICATE-----
+        entries = [
+            {
+                "alias": "stringhost",
+                "certificate": """-----BEGIN CERTIFICATE-----
                    MIICEjCCAXsCAg36MA0GCSqGSIb3DQEBBQUAMIGbMQswCQYDVQQGEwJKUDEOMAwG
                    A1UECBMFVG9reW8xEDAOBgNVBAcTB0NodW8ta3UxETAPBgNVBAoTCEZyYW5rNERE
                    MRgwFgYDVQQLEw9XZWJDZXJ0IFN1cHBvcnQxGDAWBgNVBAMTD0ZyYW5rNEREIFdl
@@ -204,43 +252,54 @@ class KeystoreTestCase(TestCase, LoaderModuleMockMixin):
                    AQABMA0GCSqGSIb3DQEBBQUAA4GBABS2TLuBeTPmcaTaUW/LCB2NYOy8GMdzR1mx
                    8iBIu2H6/E2tiY3RIevV2OW61qY2/XRQg7YPxx3ffeUugX9F4J/iPnnu1zAxxyBy
                    2VguKv4SWjRFoRkIfIlHX0qVviMhSlNy2ioFLy7JcPZb+v3ftDGywUqcBiVDoea0
-                   Hn+GmxZA\n-----END CERTIFICATE-----'''}
-                  ]
+                   Hn+GmxZA\n-----END CERTIFICATE-----""",
+            }
+        ]
 
         test_return = {
-            'name': name,
-            'changes': {},
-            'result': None,
-            'comment': 'Alias stringhost would have been added\n'
-            }
+            "name": name,
+            "changes": {},
+            "result": None,
+            "comment": "Alias stringhost would have been added\n",
+        }
         state_return = {
-            'name': name,
-            'changes': {'stringhost': 'Added'},
-            'result': True,
-            'comment': 'Alias stringhost added.\n'
-            }
+            "name": name,
+            "changes": {"stringhost": "Added"},
+            "result": True,
+            "comment": "Alias stringhost added.\n",
+        }
 
-        with patch.dict(keystore.__opts__, {'test': True}):
-            self.assertDictEqual(keystore.managed(name, passphrase, entries), test_return)
+        with patch.dict(keystore.__opts__, {"test": True}):
+            self.assertDictEqual(
+                keystore.managed(name, passphrase, entries), test_return
+            )
 
-        with patch.dict(keystore.__salt__, {'keystore.remove': MagicMock(return_value=True)}):
-            with patch.dict(keystore.__salt__, {'keystore.add': MagicMock(return_value=True)}):
-                self.assertDictEqual(keystore.managed(name, passphrase, entries), state_return)
+        with patch.dict(
+            keystore.__salt__, {"keystore.remove": MagicMock(return_value=True)}
+        ):
+            with patch.dict(
+                keystore.__salt__, {"keystore.add": MagicMock(return_value=True)}
+            ):
+                self.assertDictEqual(
+                    keystore.managed(name, passphrase, entries), state_return
+                )
 
-    @patch('os.path.exists', MagicMock(return_value=True))
+    @patch("os.path.exists", MagicMock(return_value=True))
     def test_force_remove(self):
-        '''
+        """
         Test for existing value_present
-        '''
+        """
 
-        cert_return = [{
-            "valid_until": "August 21 2017",
-            "sha1": "07:1C:B9:4F:0C:C8:51:4D:02:41:24:70:8E:E8:B2:68:7B:D7:D9:D5",
-            "valid_start": "August 22 2012",
-            "type": "TrustedCertEntry",
-            "alias": "oldhost",
-            "expired": True
-        }]
+        cert_return = [
+            {
+                "valid_until": "August 21 2017",
+                "sha1": "07:1C:B9:4F:0C:C8:51:4D:02:41:24:70:8E:E8:B2:68:7B:D7:D9:D5",
+                "valid_start": "August 22 2012",
+                "type": "TrustedCertEntry",
+                "alias": "oldhost",
+                "expired": True,
+            }
+        ]
         x509_return = {
             "Not After": "2017-08-21 05:26:54",
             "Subject Hash": "97:95:14:4F",
@@ -258,7 +317,7 @@ class KeystoreTestCase(TestCase, LoaderModuleMockMixin):
                 "SP": "Tokyo",
                 "L": "Chuo-ku",
                 "emailAddress": "support@frank4dd.com",
-                "OU": "WebCert Support"
+                "OU": "WebCert Support",
             },
             "Issuer Hash": "92:DA:45:6B",
             "Not Before": "2012-08-22 05:26:54",
@@ -266,14 +325,16 @@ class KeystoreTestCase(TestCase, LoaderModuleMockMixin):
                 "C": "JP",
                 "SP": "Tokyo",
                 "organizationName": "Frank4DD",
-                "CN": "www.example.com"
-            }
+                "CN": "www.example.com",
+            },
         }
 
-        name = 'keystore.jks'
+        name = "keystore.jks"
         passphrase = "changeit"
-        entries = [{'alias': 'stringhost',
-                   'certificate': '''-----BEGIN CERTIFICATE-----
+        entries = [
+            {
+                "alias": "stringhost",
+                "certificate": """-----BEGIN CERTIFICATE-----
                    MIICEjCCAXsCAg36MA0GCSqGSIb3DQEBBQUAMIGbMQswCQYDVQQGEwJKUDEOMAwG
                    A1UECBMFVG9reW8xEDAOBgNVBAcTB0NodW8ta3UxETAPBgNVBAoTCEZyYW5rNERE
                    MRgwFgYDVQQLEw9XZWJDZXJ0IFN1cHBvcnQxGDAWBgNVBAMTD0ZyYW5rNEREIFdl
@@ -285,29 +346,54 @@ class KeystoreTestCase(TestCase, LoaderModuleMockMixin):
                    AQABMA0GCSqGSIb3DQEBBQUAA4GBABS2TLuBeTPmcaTaUW/LCB2NYOy8GMdzR1mx
                    8iBIu2H6/E2tiY3RIevV2OW61qY2/XRQg7YPxx3ffeUugX9F4J/iPnnu1zAxxyBy
                    2VguKv4SWjRFoRkIfIlHX0qVviMhSlNy2ioFLy7JcPZb+v3ftDGywUqcBiVDoea0
-                   Hn+GmxZA\n-----END CERTIFICATE-----'''}
-                  ]
+                   Hn+GmxZA\n-----END CERTIFICATE-----""",
+            }
+        ]
 
         test_return = {
-            'name': name,
-            'changes': {},
-            'result': None,
-            'comment': 'Alias stringhost would have been updated\nAlias oldhost would have been removed'
-            }
+            "name": name,
+            "changes": {},
+            "result": None,
+            "comment": "Alias stringhost would have been updated\nAlias oldhost would have been removed",
+        }
         state_return = {
-            'name': name,
-            'changes': {'oldhost': 'Removed', 'stringhost': 'Updated'},
-            'result': True,
-            'comment': 'Alias stringhost updated.\nAlias oldhost removed.\n'
-            }
+            "name": name,
+            "changes": {"oldhost": "Removed", "stringhost": "Updated"},
+            "result": True,
+            "comment": "Alias stringhost updated.\nAlias oldhost removed.\n",
+        }
 
-        with patch.dict(keystore.__opts__, {'test': True}):
-            with patch.dict(keystore.__salt__, {'keystore.list': MagicMock(return_value=cert_return)}):
-                with patch.dict(keystore.__salt__, {'x509.read_certificate': MagicMock(return_value=x509_return)}):
-                    self.assertDictEqual(keystore.managed(name, passphrase, entries, force_remove=True), test_return)
+        with patch.dict(keystore.__opts__, {"test": True}):
+            with patch.dict(
+                keystore.__salt__,
+                {"keystore.list": MagicMock(return_value=cert_return)},
+            ):
+                with patch.dict(
+                    keystore.__salt__,
+                    {"x509.read_certificate": MagicMock(return_value=x509_return)},
+                ):
+                    self.assertDictEqual(
+                        keystore.managed(name, passphrase, entries, force_remove=True),
+                        test_return,
+                    )
 
-        with patch.dict(keystore.__salt__, {'keystore.list': MagicMock(return_value=cert_return)}):
-            with patch.dict(keystore.__salt__, {'x509.read_certificate': MagicMock(return_value=x509_return)}):
-                with patch.dict(keystore.__salt__, {'keystore.remove': MagicMock(return_value=True)}):
-                    with patch.dict(keystore.__salt__, {'keystore.add': MagicMock(return_value=True)}):
-                        self.assertDictEqual(keystore.managed(name, passphrase, entries, force_remove=True), state_return)
+        with patch.dict(
+            keystore.__salt__, {"keystore.list": MagicMock(return_value=cert_return)}
+        ):
+            with patch.dict(
+                keystore.__salt__,
+                {"x509.read_certificate": MagicMock(return_value=x509_return)},
+            ):
+                with patch.dict(
+                    keystore.__salt__, {"keystore.remove": MagicMock(return_value=True)}
+                ):
+                    with patch.dict(
+                        keystore.__salt__,
+                        {"keystore.add": MagicMock(return_value=True)},
+                    ):
+                        self.assertDictEqual(
+                            keystore.managed(
+                                name, passphrase, entries, force_remove=True
+                            ),
+                            state_return,
+                        )

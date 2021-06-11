@@ -83,7 +83,7 @@ from the ``kevinopenstack`` profile above, you would use:
     The ``vault`` driver previously only supported splitting the path and key with
     a question mark. This has since been deprecated in favor of using the standard
     / to split the path and key. The use of the questions mark will still be supported
-    to ensure backwards compatibility, but please use the prefered method using /.
+    to ensure backwards compatibility, but please use the preferred method using /.
     The deprecated approach required the full path to where the key is stored,
     followed by a question mark, followed by the key to be retrieved.  If you were
     using a profile called ``myvault``, you would use a URI that looks like:
@@ -92,7 +92,7 @@ from the ``kevinopenstack`` profile above, you would use:
 
         salt-call sdb.get 'sdb://myvault/secret/salt?saltstack'
 
-    Instead of the above please use the prefered URI using / instead:
+    Instead of the above please use the preferred URI using / instead:
 
     .. code-block:: bash
 
@@ -140,7 +140,7 @@ something like:
 
 .. code-block:: python
 
-    mykey = __salt__['config.get']('mykey')
+    mykey = __salt__["config.get"]("mykey")
 
 Templating renderers use a similar construct. To get the ``mykey`` value from
 above in Jinja, you would use:
@@ -175,7 +175,7 @@ in the module as well:
 .. code-block:: python
 
     __func_alias__ = {
-        'set_': 'set',
+        "set_": "set",
     }
 
 This is because ``set`` is a Python built-in, and therefore functions should not

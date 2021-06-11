@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Management of OpenStack Neutron Networks
 =========================================
 
@@ -27,22 +27,25 @@ Example States
         - shared: False
         - external: False
         - project: project1
-'''
+"""
 
 from __future__ import absolute_import, print_function, unicode_literals
 
-__virtualname__ = 'neutron_network'
+__virtualname__ = "neutron_network"
 
 
 def __virtual__():
-    if 'neutronng.list_networks' in __salt__:
+    if "neutronng.list_networks" in __salt__:
         return __virtualname__
-    return (False, 'The neutronng execution module failed to load:\
-                    shade python module is not available')
+    return (
+        False,
+        "The neutronng execution module failed to load:\
+                    shade python module is not available",
+    )
 
 
 def present(name, auth=None, **kwargs):
-    '''
+    """
     Ensure a network exists and is up-to-date
 
     name
@@ -66,96 +69,92 @@ def present(name, auth=None, **kwargs):
         - physical_network: provider
         - network_type: vlan
         - segmentation_id: (vlan id)
-    '''
-    ret = {'name': name,
-           'changes': {},
-           'result': True,
-           'comment': ''}
+    """
+    ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
-    kwargs = __utils__['args.clean_kwargs'](**kwargs)
+    kwargs = __utils__["args.clean_kwargs"](**kwargs)
 
-    __salt__['neutronng.setup_clouds'](auth)
+    __salt__["neutronng.setup_clouds"](auth)
 
-    kwargs['name'] = name
-    network = __salt__['neutronng.network_get'](name=name)
+    kwargs["name"] = name
+    network = __salt__["neutronng.network_get"](name=name)
 
     if network is None:
-        if __opts__['test'] is True:
-            ret['result'] = None
-            ret['changes'] = kwargs
-            ret['comment'] = 'Network will be created.'
+        if __opts__["test"] is True:
+            ret["result"] = None
+            ret["changes"] = kwargs
+            ret["comment"] = "Network will be created."
             return ret
 
-        if 'vlan' in kwargs:
-            kwargs['provider'] = {"physical_network": "provider",
-                                  "network_type": "vlan",
-                                  "segmentation_id": kwargs['vlan']}
-            del kwargs['vlan']
+        if "vlan" in kwargs:
+            kwargs["provider"] = {
+                "physical_network": "provider",
+                "network_type": "vlan",
+                "segmentation_id": kwargs["vlan"],
+            }
+            del kwargs["vlan"]
 
-        if 'project' in kwargs:
-            projectname = kwargs['project']
-            project = __salt__['keystoneng.project_get'](name=projectname)
+        if "project" in kwargs:
+            projectname = kwargs["project"]
+            project = __salt__["keystoneng.project_get"](name=projectname)
             if project:
-                kwargs['project_id'] = project.id
-                del kwargs['project']
+                kwargs["project_id"] = project.id
+                del kwargs["project"]
             else:
-                ret['result'] = False
-                ret['comment'] = "Project:{} not found.".format(projectname)
+                ret["result"] = False
+                ret["comment"] = "Project:{} not found.".format(projectname)
                 return ret
 
-        network = __salt__['neutronng.network_create'](**kwargs)
-        ret['changes'] = network
-        ret['comment'] = 'Created network'
+        network = __salt__["neutronng.network_create"](**kwargs)
+        ret["changes"] = network
+        ret["comment"] = "Created network"
         return ret
 
-    changes = __salt__['neutronng.compare_changes'](network, **kwargs)
+    changes = __salt__["neutronng.compare_changes"](network, **kwargs)
 
     # there's no method for network update in shade right now;
     # can only delete and recreate
     if changes:
-        if __opts__['test'] is True:
-            ret['result'] = None
-            ret['changes'] = changes
-            ret['comment'] = 'Project will be updated.'
+        if __opts__["test"] is True:
+            ret["result"] = None
+            ret["changes"] = changes
+            ret["comment"] = "Project will be updated."
             return ret
 
-        __salt__['neutronng.network_delete'](name=network)
-        __salt__['neutronng.network_create'](**kwargs)
-        ret['changes'].update(changes)
-        ret['comment'] = 'Updated network'
+        __salt__["neutronng.network_delete"](name=network)
+        __salt__["neutronng.network_create"](**kwargs)
+        ret["changes"].update(changes)
+        ret["comment"] = "Updated network"
 
     return ret
 
 
 def absent(name, auth=None, **kwargs):
-    '''
+    """
     Ensure a network does not exists
 
     name
         Name of the network
 
-    '''
-    ret = {'name': name,
-           'changes': {},
-           'result': True,
-           'comment': ''}
+    """
+    ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
-    kwargs = __utils__['args.clean_kwargs'](**kwargs)
+    kwargs = __utils__["args.clean_kwargs"](**kwargs)
 
-    __salt__['neutronng.setup_clouds'](auth)
+    __salt__["neutronng.setup_clouds"](auth)
 
-    kwargs['name'] = name
-    network = __salt__['neutronng.network_get'](name=name)
+    kwargs["name"] = name
+    network = __salt__["neutronng.network_get"](name=name)
 
     if network:
-        if __opts__['test'] is True:
-            ret['result'] = None
-            ret['changes'] = {'id': network.id}
-            ret['comment'] = 'Network will be deleted.'
+        if __opts__["test"] is True:
+            ret["result"] = None
+            ret["changes"] = {"id": network.id}
+            ret["comment"] = "Network will be deleted."
             return ret
 
-        __salt__['neutronng.network_delete'](name=network)
-        ret['changes']['id'] = network.id
-        ret['comment'] = 'Deleted network'
+        __salt__["neutronng.network_delete"](name=network)
+        ret["changes"]["id"] = network.id
+        ret["comment"] = "Deleted network"
 
     return ret

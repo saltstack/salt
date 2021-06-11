@@ -5,9 +5,9 @@
 #
 # Author: Bo Maryniuk <bo@suse.de>
 
-import sys
-import os
 import hashlib
+import os
+import sys
 
 from zypp_plugin import Plugin
 
@@ -16,25 +16,28 @@ class DriftDetector(Plugin):
     """
     Return diff of the installed packages outside the Salt.
     """
+
     def __init__(self):
         Plugin.__init__(self)
         self.ck_path = "/var/cache/salt/minion/rpmdb.cookie"
         self.rpm_path = "/var/lib/rpm/Packages"
 
     def _get_mtime(self):
-        '''
+        """
         Get the modified time of the RPM Database.
         Returns:
             Unix ticks
-        '''
-        return os.path.exists(self.rpm_path) and int(os.path.getmtime(self.rpm_path)) or 0
+        """
+        return (
+            os.path.exists(self.rpm_path) and int(os.path.getmtime(self.rpm_path)) or 0
+        )
 
     def _get_checksum(self):
-        '''
+        """
         Get the checksum of the RPM Database.
         Returns:
             hexdigest
-        '''
+        """
         digest = hashlib.sha256()
         with open(self.rpm_path, "rb") as rpm_db_fh:
             while True:
@@ -49,9 +52,13 @@ class DriftDetector(Plugin):
         """
         Hook when plugin closes Zypper's transaction.        
         """
-        if 'SALT_RUNNING' not in os.environ:
-            with open(self.ck_path, 'w') as ck_fh:
-                ck_fh.write('{chksum} {mtime}\n'.format(chksum=self._get_checksum(), mtime=self._get_mtime()))
+        if "SALT_RUNNING" not in os.environ:
+            with open(self.ck_path, "w") as ck_fh:
+                ck_fh.write(
+                    "{chksum} {mtime}\n".format(
+                        chksum=self._get_checksum(), mtime=self._get_mtime()
+                    )
+                )
 
         self.ack()
 

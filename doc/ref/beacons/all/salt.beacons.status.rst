@@ -1,5 +1,5 @@
-salt.beacons.status module
-==========================
+salt.beacons.status
+===================
 
 .. automodule:: salt.beacons.status
     :members:

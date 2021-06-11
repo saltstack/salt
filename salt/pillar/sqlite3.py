@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Retrieve Pillar data by doing a SQLite3 query
 
 .. versionadded:: 2015.8.0
@@ -45,13 +45,14 @@ Complete Example
             depth: 5
             as_list: True
             with_lists: [1,3]
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
+
+import logging
+import sqlite3
 
 # Import python libs
 from contextlib import contextmanager
-import logging
-import sqlite3
 
 # Import Salt libs
 from salt.pillar.sql_base import SqlBaseExtPillar
@@ -65,26 +66,26 @@ def __virtual__():
 
 
 class SQLite3ExtPillar(SqlBaseExtPillar):
-    '''
+    """
     This class receives and processes the database rows from SQLite3.
-    '''
+    """
+
     @classmethod
     def _db_name(cls):
-        return 'SQLite3'
+        return "SQLite3"
 
     def _get_options(self):
-        '''
+        """
         Returns options used for the SQLite3 connection.
-        '''
-        defaults = {'database': '/var/lib/salt/pillar.db',
-                    'timeout': 5.0}
+        """
+        defaults = {"database": "/var/lib/salt/pillar.db", "timeout": 5.0}
         _options = {}
         _opts = {}
-        if 'sqlite3' in __opts__ and 'database' in __opts__['sqlite3']:
-            _opts = __opts__.get('sqlite3', {})
+        if "sqlite3" in __opts__ and "database" in __opts__["sqlite3"]:
+            _opts = __opts__.get("sqlite3", {})
         for attr in defaults:
             if attr not in _opts:
-                log.debug('Using default for SQLite3 pillar %s', attr)
+                log.debug("Using default for SQLite3 pillar %s", attr)
                 _options[attr] = defaults[attr]
                 continue
             _options[attr] = _opts[attr]
@@ -92,26 +93,24 @@ class SQLite3ExtPillar(SqlBaseExtPillar):
 
     @contextmanager
     def _get_cursor(self):
-        '''
+        """
         Yield a SQLite3 cursor
-        '''
+        """
         _options = self._get_options()
-        conn = sqlite3.connect(_options.get('database'),
-                               timeout=float(_options.get('timeout')))
+        conn = sqlite3.connect(
+            _options.get("database"), timeout=float(_options.get("timeout"))
+        )
         cursor = conn.cursor()
         try:
             yield cursor
         except sqlite3.Error as err:
-            log.exception('Error in ext_pillar SQLite3: %s', err.args)
+            log.exception("Error in ext_pillar SQLite3: %s", err.args)
         finally:
             conn.close()
 
 
-def ext_pillar(minion_id,
-               pillar,
-               *args,
-               **kwargs):
-    '''
+def ext_pillar(minion_id, pillar, *args, **kwargs):
+    """
     Execute queries against SQLite3, merge and return as a dict
-    '''
+    """
     return SQLite3ExtPillar().fetch(minion_id, pillar, *args, **kwargs)

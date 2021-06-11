@@ -7,15 +7,20 @@ SUSE
 Installation from the Official SaltStack Repository
 ===================================================
 
-Packages for SUSE 12 SP1, SUSE 12, SUSE 11, openSUSE 13 and openSUSE Leap 42.1
-are available in the SaltStack Repository.
+The SaltStack Repository has packages available for the following platforms:
+
+- SLES 11 SP4
+- SLES 12 / SLES 12 SP1 through SP4
+- SLES 15
+- openSUSE Leap 15.0, 15.1, 42.2, 42.3
+- openSUSE Tumbleweed
 
 Instructions are at https://repo.saltstack.com/#suse.
 
 Installation from the SUSE Repository
 =====================================
 
-Since openSUSE 13.2, Salt 2014.1.11 is available in the primary repositories.
+Since openSUSE 13.2, Salt has been available in the primary repositories.
 With the release of SUSE manager 3 a new repository setup has been created.
 The new repo will by systemsmanagement:saltstack, which is the source
 for newer stable packages. For backward compatibility a linkpackage will be
@@ -111,43 +116,20 @@ Unstable Release
 openSUSE
 --------
 
-For openSUSE Tumbleweed run the following as root:
+For openSUSE Leap or Tumbleweed systems, run the following as root:
 
 .. code-block:: bash
 
     zypper install salt salt-minion salt-master
 
-
-For openSUSE 15.0 Leap run the following as root:
-
-.. code-block:: bash
-
-    zypper install salt salt-minion salt-master
-
-
-For openSUSE 15.1 run the following as root:
-
-.. code-block:: bash
-
-    zypper install salt salt-minion salt-master
 
 SUSE Linux Enterprise
 ---------------------
 
-For SLE 12 run the following as root:
+For SLES 15 and above run the following as root:
 
 .. code-block:: bash
 
-    zypper addrepo http://download.opensuse.org/repositories/systemsmanagement:/saltstack/SLE_12/systemsmanagement:saltstack.repo
-    zypper refresh
-    zypper install salt salt-minion salt-master
-
-For SLE 11 SP4 run the following as root:
-
-.. code-block:: bash
-
-    zypper addrepo http://download.opensuse.org/repositories/systemsmanagement:/saltstack/SLE_11_SP4/systemsmanagement:saltstack.repo
-    zypper refresh
     zypper install salt salt-minion salt-master
 
 Now go to the :ref:`Configuring Salt<configuring-salt>` page.
