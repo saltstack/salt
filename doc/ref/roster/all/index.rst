@@ -11,10 +11,10 @@ roster modules
     :template: autosummary.rst.tmpl
 
     ansible
-    dir
     cache
     cloud
     clustershell
+    dir
     flat
     range
     scan

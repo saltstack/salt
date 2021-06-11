@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-'''
+"""
 Create a salt roster out of a flat directory of files.
 
 Each filename in the directory is a minion id.
@@ -45,37 +44,41 @@ then the fully qualified name of each host is also the minion id.)
 
 This makes it possible to avoid having to specify the hostnames when you always want them to match
 their minion id plus some domain.
-'''
+"""
 
-from __future__ import absolute_import, unicode_literals
 
-# Import python libs
 import logging
 import os
 
-# Import Salt libs
 import salt.loader
 import salt.template
 
 log = logging.getLogger(__name__)
 
 
-def targets(tgt, tgt_type='glob', **kwargs):
-    '''
+def targets(tgt, tgt_type="glob", **kwargs):
+    """
     Return the targets from the directory of flat yaml files,
     checks opts for location.
-    '''
-    roster_dir = __opts__.get('roster_dir', '/etc/salt/roster.d')
+    """
+    roster_dir = __opts__.get("roster_dir", "/etc/salt/roster.d")
     # Match the targets before rendering to avoid opening files unnecessarily.
-    raw = dict.fromkeys(os.listdir(roster_dir), '')
-    log.debug('Filtering %d minions in %s', len(raw), roster_dir)
-    matched_raw = __utils__['roster_matcher.targets'](raw, tgt, tgt_type, 'ipv4')
-    rendered = {minion_id: _render(os.path.join(roster_dir, minion_id), **kwargs)
-                for minion_id in matched_raw}
+    raw = dict.fromkeys(os.listdir(roster_dir), "")
+    log.debug("Filtering %d minions in %s", len(raw), roster_dir)
+    matched_raw = __utils__["roster_matcher.targets"](raw, tgt, tgt_type, "ipv4")
+    rendered = {
+        minion_id: _render(os.path.join(roster_dir, minion_id), **kwargs)
+        for minion_id in matched_raw
+    }
     pruned_rendered = {id_: data for id_, data in rendered.items() if data}
-    log.debug('Matched %d minions with tgt=%s and tgt_type=%s.'
-              ' Discarded %d matching filenames because they had rendering errors.',
-              len(rendered), tgt, tgt_type, len(rendered) - len(pruned_rendered))
+    log.debug(
+        "Matched %d minions with tgt=%s and tgt_type=%s."
+        " Discarded %d matching filenames because they had rendering errors.",
+        len(rendered),
+        tgt,
+        tgt_type,
+        len(rendered) - len(pruned_rendered),
+    )
     return pruned_rendered
 
 
@@ -84,16 +87,18 @@ def _render(roster_file, **kwargs):
     Render the roster file
     """
     renderers = salt.loader.render(__opts__, {})
-    domain = __opts__.get('roster_domain', '')
+    domain = __opts__.get("roster_domain", "")
     try:
-        result = salt.template.compile_template(roster_file,
-                                                renderers,
-                                                __opts__['renderer'],
-                                                __opts__['renderer_blacklist'],
-                                                __opts__['renderer_whitelist'],
-                                                mask_value='passw*',
-                                                **kwargs)
-        result.setdefault('host', '{}.{}'.format(os.path.basename(roster_file), domain))
+        result = salt.template.compile_template(
+            roster_file,
+            renderers,
+            __opts__["renderer"],
+            __opts__["renderer_blacklist"],
+            __opts__["renderer_whitelist"],
+            mask_value="passw*",
+            **kwargs
+        )
+        result.setdefault("host", "{}.{}".format(os.path.basename(roster_file), domain))
         return result
     except:  # pylint: disable=W0702
         log.warning('Unable to render roster file "%s".', roster_file, exc_info=True)
