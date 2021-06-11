@@ -160,7 +160,7 @@ rst_prolog = """\
 .. _`salt-users`: https://groups.google.com/forum/#!forum/salt-users
 .. _`salt-announce`: https://groups.google.com/forum/#!forum/salt-announce
 .. _`salt-packagers`: https://groups.google.com/forum/#!forum/salt-packagers
-.. _`salt-slack`: https://saltstackcommunity.herokuapp.com/
+.. _`salt-slack`: https://join.slack.com/t/saltstackcommunity/shared_invite/zt-3av8jjyf-oBQ2M0vhXOhJpNpRkPWBvg
 .. |windownload| raw:: html
 
      <p>Python3 x86: <a

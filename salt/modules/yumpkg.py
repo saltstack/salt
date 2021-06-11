@@ -1967,6 +1967,15 @@ def upgrade(
 
         salt '*' pkg.upgrade security=True exclude='kernel*'
     """
+    if _yum() == "dnf" and not obsoletes:
+        # for dnf we can just disable obsoletes
+        _setopt = [
+            opt
+            for opt in salt.utils.args.split_input(kwargs.pop("setopt", []))
+            if not opt.startswith("obsoletes=")
+        ]
+        _setopt.append("obsoletes=False")
+        kwargs["setopt"] = _setopt
     options = _get_options(get_extra_options=True, **kwargs)
 
     if salt.utils.data.is_true(refresh):
@@ -1997,8 +2006,6 @@ def upgrade(
     else:
         # do not force the removal of obsolete packages
         if _yum() == "dnf":
-            # for dnf we can just disable obsoletes
-            cmd.append("--obsoletes=False")
             cmd.append("upgrade" if not minimal else "upgrade-minimal")
         else:
             # for yum we have to use update instead of upgrade
@@ -2094,11 +2101,13 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
     old = list_pkgs()
     targets = []
     for target in pkg_params:
+        version_to_remove = pkg_params[target]
+        installed_versions = old[target].split(",")
+
         # Check if package version set to be removed is actually installed:
-        # old[target] contains a comma-separated list of installed versions
-        if target in old and not pkg_params[target]:
+        if target in old and not version_to_remove:
             targets.append(target)
-        elif target in old and pkg_params[target] in old[target].split(","):
+        elif target in old and version_to_remove in installed_versions:
             arch = ""
             pkgname = target
             try:
@@ -2109,7 +2118,11 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
                 if archpart in salt.utils.pkg.rpm.ARCHES:
                     arch = "." + archpart
                     pkgname = namepart
-            targets.append("{}-{}{}".format(pkgname, pkg_params[target], arch))
+            # Since we don't always have the arch info, epoch information has to parsed out. But
+            # a version check was already performed, so we are removing the right version.
+            targets.append(
+                "{}-{}{}".format(pkgname, version_to_remove.split(":", 1)[-1], arch)
+            )
     if not targets:
         return {}
 

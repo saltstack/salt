@@ -1,5 +1,5 @@
 """
-A module for testing the logic of states and highstates
+A module for testing the logic of states and highstates on salt minions
 
 :codeauthor:    William Cannon <william.cannon@gmail.com>
 :maturity:      new
@@ -297,7 +297,6 @@ Supported assertions
   ``saltcheck.run_highstate_tests`` are needed.
 """
 
-# Import Python libs
 
 import copy
 import logging
@@ -305,13 +304,13 @@ import multiprocessing
 import os
 import time
 
-# Import Salt libs
 import salt.client
 import salt.exceptions
 import salt.utils.data
 import salt.utils.files
 import salt.utils.functools
 import salt.utils.path
+import salt.utils.platform
 import salt.utils.yaml
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.utils.decorators import memoize
@@ -327,9 +326,14 @@ __virtualname__ = "saltcheck"
 
 def __virtual__():
     """
-    Check dependencies
+    Set the virtual pkg module if not running as a proxy
     """
-    return __virtualname__
+    if not salt.utils.platform.is_proxy():
+        return __virtualname__
+    return (
+        False,
+        "The saltcheck execution module failed to load: only available on minions.",
+    )
 
 
 def run_test(**kwargs):
