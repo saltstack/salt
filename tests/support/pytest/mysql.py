@@ -2,7 +2,7 @@ import time
 
 import attr
 import pytest
-from saltfactories.daemons.container import ContainerFactory
+from saltfactories.daemons.container import Container
 from saltfactories.utils import random_string
 from saltfactories.utils.ports import get_unused_localhost_port
 
@@ -76,7 +76,7 @@ def mysql_container(request, salt_factories, salt_call_cli):
         docker_client = docker.from_env()
     except docker_errors.DockerException:
         pytest.skip("Failed to get a connection to docker running on the system")
-    connectable = ContainerFactory.client_connectable(docker_client)
+    connectable = Container.client_connectable(docker_client)
     if connectable is not True:  # pragma: no cover
         pytest.skip(connectable)
 
