@@ -1520,7 +1520,8 @@ def install(
         DEPRECATED(use allowvendorchange): If set to True, do not allow vendor changes. Default: True
 
     allowvendorchange
-        If set to True, allow vendor changes. Default: False
+        If set to True, vendor change is allowed. Default: False
+        If both allowvendorchange and novendorchange are passed, only allowvendorchange is used.
 
     version
         Can be either a version number, or the combination of a comparison
@@ -1810,6 +1811,7 @@ def upgrade(
 
     allowvendorchange
         If set to True, vendor change is allowed. Default: False
+        If both allowvendorchange and novendorchange are passed, only allowvendorchange is used.
 
     skip_verify
         Skip the GPG verification check (e.g., ``--no-gpg-checks``)
