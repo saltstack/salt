@@ -2,7 +2,7 @@ import time
 
 import attr
 import pytest
-from saltfactories.factories.daemons.container import ContainerFactory
+from saltfactories.daemons.container import ContainerFactory
 from saltfactories.utils import random_string
 from saltfactories.utils.ports import get_unused_localhost_port
 
