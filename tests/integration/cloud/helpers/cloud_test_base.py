@@ -1,20 +1,19 @@
-# -*- coding: utf-8 -*-
 """
 Tests for the Openstack Cloud Provider
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
 import shutil
 from time import sleep
 
+import pytest
+import salt.utils.files
 from salt.config import cloud_config, cloud_providers_config
-from salt.ext.six.moves import range
 from salt.utils.yaml import safe_load
 from tests.support.case import ShellCase
-from tests.support.helpers import expensiveTest, random_string
+from tests.support.helpers import random_string
 from tests.support.paths import FILES
 from tests.support.runtests import RUNTIME_VARS
 
@@ -23,7 +22,7 @@ TIMEOUT = 500
 log = logging.getLogger(__name__)
 
 
-@expensiveTest
+@pytest.mark.expensive_test
 class CloudTest(ShellCase):
     PROVIDER = ""
     REQUIRED_PROVIDER_CONFIG_ITEMS = tuple()
@@ -45,11 +44,11 @@ class CloudTest(ShellCase):
         """
         Standardize the data returned from a salt-cloud --query
         """
-        return set(
+        return {
             x.strip(": ")
             for x in self.run_cloud("--query")
             if x.lstrip().lower().startswith("cloud-test-")
-        )
+        }
 
     def _instance_exists(self, instance_name=None, query=None):
         """
@@ -116,7 +115,7 @@ class CloudTest(ShellCase):
             instance_name = self.instance_name
         log.debug('Deleting instance "{}"'.format(instance_name))
         delete_str = self.run_cloud(
-            "-d {0} --assume-yes --out=yaml".format(instance_name), timeout=timeout
+            "-d {} --assume-yes --out=yaml".format(instance_name), timeout=timeout
         )
         if delete_str:
             delete = safe_load("\n".join(delete_str))
@@ -197,11 +196,23 @@ class CloudTest(ShellCase):
     def profile_str(self):
         return self.PROVIDER + "-config"
 
+    def add_profile_config(self, name, data, conf, new_profile):
+        """
+        copy the current profile and add a new profile in the same file
+        """
+        conf_path = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "cloud.profiles.d", conf)
+        with salt.utils.files.fopen(conf_path, "r") as fp:
+            conf = safe_load(fp)
+        conf[new_profile] = conf[name].copy()
+        conf[new_profile].update(data)
+        with salt.utils.files.fopen(conf_path, "w") as fp:
+            salt.utils.yaml.safe_dump(conf, fp)
+
     def setUp(self):
         """
-        Sets up the test requirements.  In child classes, define PROVIDER and REQUIRED_CONFIG_ITEMS or this will fail
+        Sets up the test requirements.  In child classes, define PROVIDER and REQUIRED_PROVIDER_CONFIG_ITEMS or this will fail
         """
-        super(CloudTest, self).setUp()
+        super().setUp()
 
         if not self.PROVIDER:
             self.fail("A PROVIDER must be defined for this test")
@@ -225,7 +236,7 @@ class CloudTest(ShellCase):
                 "Conf items are missing that must be provided to run these tests:  {}".format(
                     ", ".join(missing_conf_item)
                 )
-                + "\nCheck tests/integration/files/conf/cloud.providers.d/{0}.conf".format(
+                + "\nCheck tests/integration/files/conf/cloud.providers.d/{}.conf".format(
                     self.PROVIDER
                 )
             )

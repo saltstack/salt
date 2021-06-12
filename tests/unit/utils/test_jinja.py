@@ -1,17 +1,18 @@
-# -*- coding: utf-8 -*-
 """
 Tests for salt.utils.jinja
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import ast
+import builtins
 import copy
 import datetime
 import os
 import pprint
+import random
 import re
 import tempfile
 
+import pytest
 import salt.config
 import salt.loader
 
@@ -23,8 +24,6 @@ import salt.utils.stringutils
 import salt.utils.yaml
 from jinja2 import DictLoader, Environment, Markup, exceptions
 from salt.exceptions import SaltRenderError
-from salt.ext import six
-from salt.ext.six.moves import builtins
 from salt.utils.decorators.jinja import JinjaFilter
 from salt.utils.jinja import (
     SaltCacheLoader,
@@ -36,7 +35,6 @@ from salt.utils.jinja import (
 from salt.utils.odict import OrderedDict
 from salt.utils.templates import JINJA, render_jinja_tmpl
 from tests.support.case import ModuleCase
-from tests.support.helpers import requires_network
 from tests.support.mock import MagicMock, Mock, patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
@@ -76,8 +74,15 @@ class JinjaTestCase(TestCase):
         expected = Markup('foo:\n      "bar"')
         assert result == expected, result
 
+    def test_tojson_should_ascii_sort_keys_when_told(self):
+        data = {"z": "zzz", "y": "yyy", "x": "xxx"}
+        expected = '{"x": "xxx", "y": "yyy", "z": "zzz"}'
 
-class MockFileClient(object):
+        actual = tojson(data, sort_keys=True)
+        assert actual == expected
+
+
+class MockFileClient:
     """
     Does not download files but records any file request for testing
     """
@@ -129,7 +134,7 @@ class TestSaltCacheLoader(TestCase):
                 os.path.dirname(os.path.abspath(__file__)), "extmods"
             ),
         }
-        super(TestSaltCacheLoader, self).setUp()
+        super().setUp()
 
     def tearDown(self):
         salt.utils.files.rm_rf(self.tempdir)
@@ -154,7 +159,7 @@ class TestSaltCacheLoader(TestCase):
         res = loader.get_source(None, "hello_simple")
         assert len(res) == 3
         # res[0] on Windows is unicode and use os.linesep so it works cross OS
-        self.assertEqual(six.text_type(res[0]), "world" + os.linesep)
+        self.assertEqual(str(res[0]), "world" + os.linesep)
         tmpl_dir = os.path.join(self.template_dir, "hello_simple")
         self.assertEqual(res[1], tmpl_dir)
         assert res[2](), "Template up to date?"
@@ -287,7 +292,7 @@ class TestGetTemplate(TestCase):
             ),
         }
         self.local_salt = {}
-        super(TestGetTemplate, self).setUp()
+        super().setUp()
 
     def tearDown(self):
         salt.utils.files.rm_rf(self.tempdir)
@@ -898,6 +903,19 @@ class TestCustomExtensions(TestCase):
         with self.assertRaises(exceptions.TemplateNotFound):
             env.from_string('{% import_text "does not exists" as doc %}').render()
 
+    def test_profile(self):
+        env = Environment(extensions=[SerializerExtension])
+
+        source = (
+            "{%- profile as 'profile test' %}"
+            + "{% set var = 'val' %}"
+            + "{%- endprofile %}"
+            + "{{ var }}"
+        )
+
+        rendered = env.from_string(source).render()
+        self.assertEqual(rendered, "val")
+
     def test_catalog(self):
         loader = DictLoader(
             {
@@ -1116,7 +1134,7 @@ class TestCustomExtensions(TestCase):
         self.assertEqual(rendered, "2")
 
         rendered = env.from_string("{{ data | sequence | length }}").render(
-            data=set(["foo", "bar"])
+            data={"foo", "bar"}
         )
         self.assertEqual(rendered, "2")
 
@@ -1369,27 +1387,44 @@ class TestCustomExtensions(TestCase):
         )
         self.assertEqual(rendered, "16777216")
 
-    @requires_network()
+    @pytest.mark.requires_network
     def test_http_query(self):
         """
         Test the `http_query` Jinja filter.
         """
+        urls = (
+            # These cannot be HTTPS urls since urllib2 chokes on those
+            "http://saltproject.io",
+            "http://google.com",
+            "http://duckduckgo.com",
+        )
         for backend in ("requests", "tornado", "urllib2"):
             rendered = render_jinja_tmpl(
-                "{{ 'http://icanhazip.com' | http_query(backend='" + backend + "') }}",
+                "{{ '"
+                + random.choice(urls)
+                + "' | http_query(backend='"
+                + backend
+                + "') }}",
                 dict(opts=self.local_opts, saltenv="test", salt=self.local_salt),
             )
             self.assertIsInstance(
-                rendered, six.text_type, "Failed with backend: {}".format(backend)
+                rendered, str, "Failed with rendered template: {}".format(rendered)
             )
             dict_reply = ast.literal_eval(rendered)
             self.assertIsInstance(
-                dict_reply, dict, "Failed with backend: {}".format(backend)
+                dict_reply, dict, "Failed with rendered template: {}".format(rendered)
+            )
+            self.assertIn(
+                "body",
+                dict_reply,
+                "'body' not found in request response({}). Rendered template: {!r}".format(
+                    dict_reply, rendered
+                ),
             )
             self.assertIsInstance(
                 dict_reply["body"],
-                six.string_types,
-                "Failed with backend: {}".format(backend),
+                str,
+                "Failed with rendered template: {}".format(rendered),
             )
 
     def test_to_bool(self):
@@ -1613,11 +1648,9 @@ class TestCustomExtensions(TestCase):
         )
         self.assertEqual(
             rendered,
-            six.text_type(
-                (
-                    "811a90e1c8e86c7b4c0eef5b2c0bf0ec1b19c4b1b5a242e6455be93787cb473cb7bc"
-                    "9b0fdeb960d00d5c6881c2094dd63c5c900ce9057255e2a4e271fc25fef1"
-                )
+            str(
+                "811a90e1c8e86c7b4c0eef5b2c0bf0ec1b19c4b1b5a242e6455be93787cb473cb7bc"
+                "9b0fdeb960d00d5c6881c2094dd63c5c900ce9057255e2a4e271fc25fef1"
             ),
         )
 

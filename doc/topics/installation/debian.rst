@@ -18,15 +18,37 @@ Installation from official Debian and Raspbian repositories is described
 Installation from the Official SaltStack Repository
 ===================================================
 
-Packages for Debian 9 (Stretch) and Debian 8 (Jessie) are available in the
+Packages for Debian 10 (Buster) and Debian 9 (Stretch) are available in the
 Official SaltStack repository.
 
 Instructions are at https://repo.saltstack.com/#debian.
 
 .. note::
+    Archived builds from unsupported branches:
+    
+    - `Archive 1 <https://archive.repo.saltstack.com/py3/debian/>`__
+    - `Archive 2 <https://archive.repo.saltstack.com/debian/dists/>`__
+
+    If looking to use archives, the same directions from the `Debian install
+    directions <https://repo.saltstack.com/#debian>`__ can be used by replacing
+    the URL paths with the appropriate archive location. The
+    repository configuration endpoint also needs to be adjusted to point to the
+    archives. Here is an example ``sed`` command:
+
+    .. code-block:: bash
+
+        # Salt repo configurations are found in the /etc/apt/sources.list.d/saltstack.list directory
+        sed -i 's/repo.saltstack.com/archive.repo.saltstack.com/g' /etc/apt/sources.list.d/saltstack.list
+
+
+.. warning::
+    Regular security support for Debian 8 ended on June 30th 2018. As a result,
+    3000.3 and 2019.2.5 will be the last Salt releases for which Debian 8
+    packages are created. Debian 8 also reached LTS EOL on June 30 2020.
+
     Regular security support for Debian 7 ended on April 25th 2016. As a result,
     2016.3.1 and 2015.8.10 will be the last Salt releases for which Debian
-    7 packages are created.
+    7 packages are created. Debian 7 also reached LTS EOL on May 31 2018.
 
 .. _installation-debian-raspbian:
 
