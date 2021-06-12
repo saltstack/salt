@@ -125,12 +125,12 @@ try:
 except ImportError:
     pass
 
-#----------------------------------------------------------------
+# ---------------------------------------------------------------
 from azure.mgmt.resource import ResourceManagementClient
 from azure.mgmt.network import NetworkManagementClient
 from azure.mgmt.compute import ComputeManagementClient
 
-#----------------------------------------------------------------
+# ---------------------------------------------------------------
 
 __virtualname__ = "azurearm"
 
@@ -329,7 +329,9 @@ def get_conn(client_type):
     if client_type == 'resource':
         if not 'az_conn_resouces' in globals():
             global az_conn_resouces
-            az_conn_resouces = salt.utils.azurearm.get_client(client_type='resource', **conn_kwargs)
+            az_conn_resouces = salt.utils.azurearm.get_client(
+                client_type='resource', **conn_kwargs
+            )
             client = az_conn_resouces
         else:
             client = az_conn_resouces
@@ -337,7 +339,9 @@ def get_conn(client_type):
     if client_type == 'network':
         if not 'az_conn_network' in globals():
             global az_conn_network
-            az_conn_network = salt.utils.azurearm.get_client(client_type='network', **conn_kwargs)
+            az_conn_network = salt.utils.azurearm.get_client(
+                client_type='network', **conn_kwargs
+            )
             client = az_conn_network
         else:
             client = az_conn_network
@@ -345,7 +349,9 @@ def get_conn(client_type):
     if client_type == 'compute':
         if not 'az_conn_compute' in globals():
             global az_conn_compute
-            az_conn_compute = salt.utils.azurearm.get_client(client_type='compute', **conn_kwargs)
+            az_conn_compute = salt.utils.azurearm.get_client(
+                client_type='compute', **conn_kwargs
+            )
             client = az_conn_compute
         else:
             client = az_conn_compute
@@ -460,7 +466,7 @@ def avail_images(call=None):
         return data
 
     try:
-        publishers =  config.get_cloud_config_value(
+        publishers = config.get_cloud_config_value(
             "publishers", get_configured_provider(), __opts__, search_global=False
         )
         if not publishers:

@@ -43,10 +43,7 @@ except ImportError:
 
 # Import third party libs
 try:
-    from azure.identity import (
-        ClientSecretCredential,
-        UsernamePasswordCredential
-    )
+    from azure.identity import  ClientSecretCredential, UsernamePasswordCredential
     from msrestazure.azure_cloud import (
         MetadataEndpointError,
         get_cloud_from_metadata_endpoint,
@@ -108,7 +105,6 @@ def _determine_auth(**kwargs):
                 tenant_id=kwargs["tenant"],
                 client_id=kwargs["client_id"],
                 client_secret=kwargs["secret"]
-
             )
     elif set(user_pass_creds_kwargs).issubset(kwargs):
         if not (kwargs["username"] and kwargs["password"]):
@@ -200,7 +196,7 @@ def get_client(client_type, **kwargs):
             base_url=cloud_env.endpoints.resource_manager,
         )
 
-    #client.config.add_user_agent("Salt/{0}".format(salt.version.__version__))
+    # client.config.add_user_agent("Salt/{0}".format(salt.version.__version__))
 
     return client
 
