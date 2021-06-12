@@ -118,12 +118,19 @@ HAS_LIBS = False
 try:
     import azure.mgmt.compute.models as compute_models
     import azure.mgmt.network.models as network_models
-    from azure.storage.blob.blockblobservice import BlockBlobService
+    from azure.storage.blob import BlobServiceClient
     from msrestazure.azure_exceptions import CloudError
 
     HAS_LIBS = True
 except ImportError:
     pass
+
+#----------------------------------------------------------------
+from azure.mgmt.resource import ResourceManagementClient
+from azure.mgmt.network import NetworkManagementClient
+from azure.mgmt.compute import ComputeManagementClient
+
+#----------------------------------------------------------------
 
 __virtualname__ = "azurearm"
 
@@ -238,10 +245,49 @@ def get_dependencies():
     return config.check_driver_dependencies(__virtualname__, {"azurearm": HAS_LIBS})
 
 
+def get_az_conn():
+    """
+    Return a connection object for a client type.
+    azure has a limit of connection create so this is to avoid reaching
+    the limit by reusing the same object instead of creating one at every needs
+    """
+    conn_kwargs = {}
+    conn_kwargs["subscription_id"] = salt.utils.stringutils.to_str(
+        config.get_cloud_config_value(
+            "subscription_id", get_configured_provider(), __opts__, search_global=False
+        )
+    )
+    cloud_env = config.get_cloud_config_value(
+        "cloud_environment", get_configured_provider(), __opts__, search_global=False
+    )
+    if cloud_env is not None:
+        conn_kwargs["cloud_environment"] = cloud_env
+    tenant = config.get_cloud_config_value(
+        "tenant", get_configured_provider(), __opts__, search_global=False
+    )
+    if tenant is not None:
+        client_id = config.get_cloud_config_value(
+            "client_id", get_configured_provider(), __opts__, search_global=False
+        )
+        secret = config.get_cloud_config_value(
+            "secret", get_configured_provider(), __opts__, search_global=False
+        )
+        conn_kwargs.update({"client_id": client_id, "secret": secret, "tenant": tenant})
+    username = config.get_cloud_config_value(
+        "username", get_configured_provider(), __opts__, search_global=False
+    )
+    if username:
+        password = config.get_cloud_config_value(
+            "password", get_configured_provider(), __opts__, search_global=False
+        )
+        conn_kwargs.update({"username": username, "password": password})
+
 def get_conn(client_type):
     """
     Return a connection object for a client type.
+    Added section to globalize connections to avoid azure throttling
     """
+    get_az_conn()
     conn_kwargs = {}
 
     conn_kwargs["subscription_id"] = salt.utils.stringutils.to_str(
@@ -280,7 +326,29 @@ def get_conn(client_type):
         )
         conn_kwargs.update({"username": username, "password": password})
 
-    client = salt.utils.azurearm.get_client(client_type=client_type, **conn_kwargs)
+    if client_type == 'resource':
+        if not 'az_conn_resouces' in globals():
+            global az_conn_resouces
+            az_conn_resouces = salt.utils.azurearm.get_client(client_type='resource', **conn_kwargs)
+            client = az_conn_resouces
+        else:
+            client = az_conn_resouces
+
+    if client_type == 'network':
+        if not 'az_conn_network' in globals():
+            global az_conn_network
+            az_conn_network = salt.utils.azurearm.get_client(client_type='network', **conn_kwargs)
+            client = az_conn_network
+        else:
+            client = az_conn_network
+
+    if client_type == 'compute':
+        if not 'az_conn_compute' in globals():
+            global az_conn_compute
+            az_conn_compute = salt.utils.azurearm.get_client(client_type='compute', **conn_kwargs)
+            client = az_conn_compute
+        else:
+            client = az_conn_compute
 
     return client
 
@@ -340,8 +408,15 @@ def avail_images(call=None):
             "The avail_images function must be called with "
             "-f or --function, or with the --list-images option"
         )
-    compconn = get_conn(client_type="compute")
-    region = get_location()
+    try:
+        compconn = get_conn(client_type="compute")
+    except CloudError as exc:
+        salt.utils.azurearm.log_cloud_error("resource", exc.message)
+    try:
+        region = get_location()
+    except CloudError as exc:
+        salt.utils.azurearm.log_cloud_error("resource", exc.message)
+
     publishers = []
     ret = {}
 
@@ -385,12 +460,16 @@ def avail_images(call=None):
         return data
 
     try:
-        publishers_query = compconn.virtual_machine_images.list_publishers(
-            location=region
+        publishers =  config.get_cloud_config_value(
+            "publishers", get_configured_provider(), __opts__, search_global=False
         )
-        for publisher_obj in publishers_query:
-            publisher = publisher_obj.as_dict()
-            publishers.append(publisher["name"])
+        if not publishers:
+            publishers_query = compconn.virtual_machine_images.list_publishers(
+                location=region
+            )
+            for publisher_obj in publishers_query:
+                publisher = publisher_obj.as_dict()
+                publishers.append(publisher["name"])
     except CloudError as exc:
         salt.utils.azurearm.log_cloud_error("compute", exc.message)
 
@@ -572,7 +651,7 @@ def show_instance(name, call=None):
         log.debug("Failed to get data for node '%s'", name)
         node = {}
 
-    __utils__["cloud.cache_node"](node, _get_active_provider_name(), __opts__)
+    salt.cloud.cache_node(node, _get_active_provider_name(), __opts__)
 
     return node
 
@@ -599,13 +678,13 @@ def delete_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
     for ip_ in iface.ip_configurations:
         ips.append(ip_.name)
 
-    poller = netconn.network_interfaces.delete(
+    poller = netconn.network_interfaces.begin_delete(
         kwargs["resource_group"], kwargs["iface_name"],
     )
     poller.wait()
 
     for ip_ in ips:
-        poller = netconn.public_ip_addresses.delete(kwargs["resource_group"], ip_)
+        poller = netconn.public_ip_addresses.begin_delete(kwargs["resource_group"], ip_)
         poller.wait()
 
     return {iface_name: ips}
@@ -755,7 +834,7 @@ def create_network_interface(call=None, kwargs=None):
 
     if kwargs.get("allocate_public_ip") is True:
         pub_ip_name = "{}-ip".format(kwargs["iface_name"])
-        poller = netconn.public_ip_addresses.create_or_update(
+        poller = netconn.public_ip_addresses.begin_create_or_update(
             resource_group_name=kwargs["resource_group"],
             public_ip_address_name=pub_ip_name,
             parameters=PublicIPAddress(
@@ -809,7 +888,7 @@ def create_network_interface(call=None, kwargs=None):
         ip_configurations=ip_configurations,
     )
 
-    poller = netconn.network_interfaces.create_or_update(
+    poller = netconn.network_interfaces.begin_create_or_update(
         kwargs["resource_group"], kwargs["iface_name"], iface_params
     )
     try:
@@ -1203,19 +1282,19 @@ def request_instance(vm_):
         availability_set=availability_set,
     )
 
-    __utils__["cloud.fire_event"](
+    salt.utils.cloud.fire_event(
         "event",
         "requesting instance",
         "salt/cloud/{}/requesting".format(vm_["name"]),
-        args=__utils__["cloud.filter_event"](
+        args=salt.utils.cloud.fire_event(
             "requesting", vm_, ["name", "profile", "provider", "driver"]
         ),
-        sock_dir=__opts__["sock_dir"],
-        transport=__opts__["transport"],
+        sock_dir=salt.opts.sock_dir,
+        transport=salt.opts.transport,
     )
 
     try:
-        vm_create = compconn.virtual_machines.create_or_update(
+        vm_create = compconn.virtual_machines.begin_create_or_update(
             resource_group_name=vm_["resource_group"],
             vm_name=vm_["name"],
             parameters=params,
@@ -1376,11 +1455,11 @@ def destroy(name, call=None, kwargs=None):  # pylint: disable=unused-argument
 
     ret = {name: {}}
     log.debug("Deleting VM")
-    result = compconn.virtual_machines.delete(node_data["resource_group"], name)
+    result = compconn.virtual_machines.begin_delete(node_data["resource_group"], name)
     result.wait()
 
     if __opts__.get("update_cachedir", False) is True:
-        __utils__["cloud.delete_minion_cachedir"](
+        salt.utils.cloud.delete_minion_cachedir(
             name, _get_active_provider_name().split(":")[0], __opts__
         )
 
@@ -1584,7 +1663,7 @@ def _get_block_blob_service(kwargs=None):
 
     endpoint_suffix = cloud_env.suffixes.storage_endpoint
 
-    return BlockBlobService(
+    return BlobServiceClient(
         storage_account,
         storage_key,
         sas_token=sas_token,
@@ -1645,7 +1724,7 @@ def delete_managed_disk(call=None, kwargs=None):  # pylint: disable=unused-argum
     compconn = get_conn(client_type="compute")
 
     try:
-        compconn.disks.delete(kwargs["resource_group"], kwargs["blob"])
+        compconn.disks.begin_delete(kwargs["resource_group"], kwargs["blob"])
     except Exception as exc:  # pylint: disable=broad-except
         log.error(
             "Error deleting managed disk %s - %s", kwargs.get("blob"), str(exc),
@@ -1813,7 +1892,7 @@ def create_or_update_vmextension(
             settings=settings,
             protected_settings=protected_settings,
         )
-        poller = compconn.virtual_machine_extensions.create_or_update(
+        poller = compconn.virtual_machine_extensions.begin_create_or_update(
             resource_group,
             kwargs["virtual_machine_name"],
             kwargs["extension_name"],

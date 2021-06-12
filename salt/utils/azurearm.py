@@ -43,9 +43,9 @@ except ImportError:
 
 # Import third party libs
 try:
-    from azure.common.credentials import (
-        UserPassCredentials,
-        ServicePrincipalCredentials,
+    from azure.identity import (
+        ClientSecretCredential,
+        UsernamePasswordCredential
     )
     from msrestazure.azure_cloud import (
         MetadataEndpointError,
@@ -104,11 +104,11 @@ def _determine_auth(**kwargs):
                 "populated if using service principals."
             )
         else:
-            credentials = ServicePrincipalCredentials(
-                kwargs["client_id"],
-                kwargs["secret"],
-                tenant=kwargs["tenant"],
-                cloud_environment=cloud_env,
+            credentials = ClientSecretCredential(
+                tenant_id=kwargs["tenant"],
+                client_id=kwargs["client_id"],
+                client_secret=kwargs["secret"]
+
             )
     elif set(user_pass_creds_kwargs).issubset(kwargs):
         if not (kwargs["username"] and kwargs["password"]):
@@ -117,7 +117,7 @@ def _determine_auth(**kwargs):
                 "populated if using username/password authentication."
             )
         else:
-            credentials = UserPassCredentials(
+            credentials = UsernamePasswordCredential(
                 kwargs["username"], kwargs["password"], cloud_environment=cloud_env
             )
     elif "subscription_id" in kwargs:
@@ -195,12 +195,12 @@ def get_client(client_type, **kwargs):
         )
     else:
         client = Client(
-            credentials=credentials,
+            credential=credentials,
             subscription_id=subscription_id,
             base_url=cloud_env.endpoints.resource_manager,
         )
 
-    client.config.add_user_agent("Salt/{0}".format(salt.version.__version__))
+    #client.config.add_user_agent("Salt/{0}".format(salt.version.__version__))
 
     return client
 
