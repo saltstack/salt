@@ -14,7 +14,9 @@ import pytest
 import salt.ext.tornado.ioloop
 import salt.utils.files
 import salt.utils.platform
+import tests.support.paths as paths
 from salt.serializers import yaml
+from saltfactories.daemons.proxy import SaltProxyMinion as _SaltProxyMinion
 from saltfactories.utils import random_string
 from saltfactories.utils.ports import get_unused_localhost_port
 from tests.support.helpers import get_virtualenv_binary_path
@@ -296,6 +298,15 @@ def salt_sub_minion_factory(salt_master_factory, salt_sub_minion_id):
     return factory
 
 
+@attr.s(kw_only=True, slots=True)
+class SaltProxyMinion(_SaltProxyMinion):
+    @classmethod
+    def write_config(cls, config):
+        # Overwrite log_handlers_dirs
+        config["log_handlers_dirs"] = [os.path.join(paths.FILES, "log_handlers")]
+        return super().write_config(config)
+
+
 @pytest.fixture(scope="session")
 def salt_proxy_factory(salt_factories, salt_master_factory):
     proxy_minion_id = random_string("proxytest-")
@@ -325,6 +336,7 @@ def salt_proxy_factory(salt_factories, salt_master_factory):
         overrides=config_overrides,
         extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
         start_timeout=240,
+        factory_class=SaltProxyMinion,
     )
     factory.after_terminate(
         pytest.helpers.remove_stale_minion_key, salt_master_factory, factory.id
