@@ -291,11 +291,17 @@ class ZMQHandler(ExcInfoOnLogLevelFormatMixin, logging.Handler, NewStyleClassMix
             return msgpack.dumps(record.__dict__, use_bin_type=True)
         except TypeError as exc:
             # Failed to serialize something with msgpack
-            logging.getLogger(__name__).error(
-                "Failed to serialize log record: %s.\n%s",
-                exc,
-                pprint.pformat(record.__dict__),
+            # logging.getLogger(__name__).error(
+            #    "Failed to serialize log record: %s.\n%s",
+            #    exc,
+            #    pprint.pformat(record.__dict__),
+            # )
+            sys.stderr.write(
+                "Failed to serialize log record:{}.\n{}\n".format(
+                    exc, pprint.pformat(record.__dict__)
+                )
             )
+            sys.stderr.flush()
             self.handleError(record)
 
     def emit(self, record):
