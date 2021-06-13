@@ -327,7 +327,7 @@ def salt_proxy_factory(salt_factories, salt_master_factory):
     config_overrides = {
         "file_roots": salt_master_factory.config["file_roots"].copy(),
         "pillar_roots": salt_master_factory.config["pillar_roots"].copy(),
-        "pytest-minion": {"log": {"disabled": True}},
+        # "pytest-minion": {"log": {"disabled": True}},
     }
 
     factory = salt_master_factory.salt_proxy_minion_daemon(
