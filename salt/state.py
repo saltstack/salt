@@ -3447,7 +3447,7 @@ class LazyAvailStates:
     def items(self):
         self._fill()
         ret = []
-        for saltenv, states in self._avail:
+        for saltenv, states in self._avail.items():
             ret.append((saltenv, self.__getitem__(saltenv)))
         return ret
 
