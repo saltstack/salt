@@ -340,13 +340,13 @@ def salt_delta_proxy_factory(salt_factories, salt_master_factory):
     config_defaults["metaproxy"] = "deltaproxy"
     config_defaults["master"] = "127.0.0.1"
 
-    factory = salt_master_factory.get_salt_proxy_minion_daemon(
+    factory = salt_master_factory.salt_proxy_minion_daemon(
         proxy_minion_id,
-        config_defaults=config_defaults,
+        defaults=config_defaults,
         extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
         start_timeout=240,
     )
-    factory.register_after_terminate_callback(
+    factory.after_terminate(
         pytest.helpers.remove_stale_minion_key, salt_master_factory, factory.id
     )
     return factory
