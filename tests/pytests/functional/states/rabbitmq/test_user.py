@@ -55,6 +55,7 @@ def test_present_absent(docker_cmd_run_all_wrapper, rabbitmq_container):
 
     # Clear the user
     ret = rabbitmq_user.present("myuser")
+    log.debug("=== ret %s ===", ret)
     expected = {
         "name": "myuser",
         "result": True,
