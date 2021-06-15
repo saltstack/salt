@@ -83,9 +83,7 @@ def rabbitmq_container(request, salt_factories, modules):
         while login_attempts:
             log.debug("=== login attempt %s ===", login_attempts)
             login_attempts -= 1
-            status = container.run("rabbitmqctl status --formatter=json")
-            log.debug("=== status %s ===", status)
-            ret = container.run("rabbitmqctl ping")
+            ret = container.run("rabbitmqctl status --formatter=json")
             log.debug("=== ret %s ===", ret)
             authenticated = ret.exitcode == 0
             if authenticated:
