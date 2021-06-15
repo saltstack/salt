@@ -75,17 +75,21 @@ def rabbitmq_container(request, salt_factories, modules):
     )
     with container.started():
         # Sleep
+        log.debug("=== initial sleep")
         time.sleep(10)
 
         authenticated = False
         login_attempts = 6
         while login_attempts:
+            log.debug("=== login attempt %s ===", login_attempts)
             login_attempts -= 1
             ret = container.run("rabbitmqctl ping")
+            log.debug("=== ret %s ===", ret)
             authenticated = ret.exitcode == 0
             if authenticated:
                 break
 
+            log.debug("=== sleep ===")
             time.sleep(10)
 
         if authenticated:
