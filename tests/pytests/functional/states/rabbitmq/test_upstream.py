@@ -45,6 +45,7 @@ def test_absent(rabbitmq_container):
 
     # Delete the user
     ret = rabbitmq_upstream.absent("upstream")
+    log.debug("=== ret %s ===", ret)
     expected = {
         "name": "upstream",
         "result": True,
