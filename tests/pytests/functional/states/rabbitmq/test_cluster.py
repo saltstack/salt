@@ -46,6 +46,7 @@ def test_joined(rabbitmq_container):
 
     hostname = rabbitmq_container.container.attrs["Config"]["Hostname"]
     ret = rabbitmq_cluster.joined("name", host=hostname)
+    log.debug("=== ret %s ===", ret)
     expected = {
         "name": "name",
         "result": True,
