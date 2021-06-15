@@ -7,7 +7,7 @@ Redis plugin for the Salt caching subsystem.
 .. versionadded:: 2017.7.0
 
 As Redis provides a simple mechanism for very fast key-value store, in order to
-privde the necessary features for the Salt caching subsystem, the following
+provide the necessary features for the Salt caching subsystem, the following
 conventions are used:
 
 - A Redis key consists of the bank name and the cache key separated by ``/``, e.g.:
@@ -316,7 +316,7 @@ def _build_bank_hier(bank, redis_pipe):
 
 def _get_banks_to_remove(redis_server, bank, path=""):
     """
-    A simple tree tarversal algorithm that builds the list of banks to remove,
+    A simple tree traversal algorithm that builds the list of banks to remove,
     starting from an arbitrary node in the tree.
     """
     current_path = bank if not path else "{path}/{bank}".format(path=path, bank=bank)
