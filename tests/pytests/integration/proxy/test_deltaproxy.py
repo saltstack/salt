@@ -11,6 +11,9 @@ log = logging.getLogger(__name__)
 
 @pytest.fixture(scope="module")
 def salt_delta_proxy(salt_delta_proxy):
+    """
+    Create some dummy proxy minions for testing
+    """
     for proxy in [salt_delta_proxy.id, "dummy_proxy_one", "dummy_proxy_two"]:
         cachefile = os.path.join(
             salt_delta_proxy.config["cachedir"], "dummy-proxy-{}.cache".format(proxy)
