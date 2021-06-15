@@ -4,7 +4,6 @@ pytest_log_handler
 
 Salt External Logging Handler
 """
-import atexit
 import copy
 import logging
 import os
@@ -159,7 +158,6 @@ class ZMQHandler(ExcInfoOnLogLevelFormatMixin, logging.Handler, NewStyleClassMix
         socket_hwm=100000,
     ):
         super().__init__(level=level)
-        self.pid = None
         self.host = host
         self.port = port
         self._log_prefix = log_prefix
@@ -193,11 +191,6 @@ class ZMQHandler(ExcInfoOnLogLevelFormatMixin, logging.Handler, NewStyleClassMix
         return log_prefix.format(cli_name=cli_name)
 
     def start(self):
-        if self.pid and self.pid != os.getpid():
-            # This is not the starting pid, reconnect
-            self.stop(flush=False)
-            self._exiting = False
-
         if self._exiting is True:
             return
 
@@ -205,7 +198,6 @@ class ZMQHandler(ExcInfoOnLogLevelFormatMixin, logging.Handler, NewStyleClassMix
             # We're running ...
             return
 
-        atexit.register(self.stop)
         context = pusher = None
         try:
             context = zmq.Context()
@@ -241,31 +233,16 @@ class ZMQHandler(ExcInfoOnLogLevelFormatMixin, logging.Handler, NewStyleClassMix
             self._exiting = False
             return
 
-        self.pid = os.getpid()
-
-    def stop(self, flush=True):
+    def stop(self):
         if self._exiting:
             return
 
         self._exiting = True
 
         try:
-            atexit.unregister(self.stop)
-        except AttributeError:  # pragma: no cover
-            # Python 2
-            try:
-                atexit._exithandlers.remove((self.stop, (), {}))
-            except ValueError:
-                # The exit handler isn't registered
-                pass
-
-        try:
             if self.pusher is not None and not self.pusher.closed:
-                if flush is True:
-                    # Give it 1.5 seconds to flush any messages in it's queue
-                    self.pusher.close(1500)
-                else:
-                    self.pusher.close()
+                # Give it 1.5 seconds to flush any messages in it's queue
+                self.pusher.close(1500)
                 self.pusher = None
             if self.context is not None and not self.context.closed:
                 self.context.term()
@@ -285,7 +262,7 @@ class ZMQHandler(ExcInfoOnLogLevelFormatMixin, logging.Handler, NewStyleClassMix
             sys.stderr.flush()
             raise
         finally:
-            self.context = self.pusher = self.pid = None
+            self.context = self.pusher = None
 
     def format(self, record):
         msg = super().format(record)
@@ -337,7 +314,13 @@ class ZMQHandler(ExcInfoOnLogLevelFormatMixin, logging.Handler, NewStyleClassMix
         try:
             msg = self.prepare(record)
             if msg:
-                self.pusher.send(msg)
+                try:
+                    self.pusher.send(msg, flags=zmq.NOBLOCK)
+                except zmq.error.Again:
+                    # We can't send it nor queue it for send.
+                    # Drop it, otherwise, this call blocks until we can
+                    # at least queue the message
+                    pass
         except (  # pragma: no cover pylint: disable=try-except-raise
             SystemExit,
             KeyboardInterrupt,
