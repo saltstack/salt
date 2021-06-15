@@ -14,7 +14,6 @@ proxy modules
     chronos
     cimc
     cisconso
-    deltaproxy
     docker
     dummy
     esxcluster
