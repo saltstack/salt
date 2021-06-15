@@ -47,7 +47,6 @@ def test_present_absent(docker_cmd_run_all_wrapper):
 
     # Clear the user
     ret = rabbitmq_vhost.present("vhost")
-    log.debug("=== ret %s ===", ret)
     expected = {
         "name": "vhost",
         "result": True,
