@@ -56,6 +56,7 @@ def test_present_absent(rabbitmq_container):
         ret = rabbitmq_policy.present(
             name="HA", pattern=".*", definition={"ha-mode": "all"}
         )
+        log.debug("=== ret %s ===", ret)
         expected = {
             "name": "HA",
             "result": True,
