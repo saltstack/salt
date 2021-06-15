@@ -59,7 +59,6 @@ def test_enabled_enabled_disabled(rabbitmq_container):
     with patch.object(rabbitmq, "_get_rabbitmq_plugin", mock_get_rabbitmq_plugin):
         # Enable the plugin
         ret = rabbitmq_plugin.enabled("rabbitmq_auth_backend_http")
-        log.debug("=== ret %s ===", ret)
         expected = {
             "name": "rabbitmq_auth_backend_http",
             "result": True,
