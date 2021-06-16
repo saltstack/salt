@@ -22,12 +22,15 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 import errno
+import functools
 import logging
 
 # Import python libs
 import os
 import select
+import shlex
 import signal
+import subprocess
 import sys
 import time
 
@@ -58,7 +61,6 @@ except ImportError:
     import fcntl
     import struct
     import termios
-    import resource
 
 
 log = logging.getLogger(__name__)
@@ -97,7 +99,39 @@ def _cleanup():
 # <---- Cleanup Running Instances --------------------------------------------
 
 
-class Terminal(object):
+def setwinsize(child, rows=80, cols=80):
+    """
+    This sets the terminal window size of the child tty. This will
+    cause a SIGWINCH signal to be sent to the child. This does not
+    change the physical window size. It changes the size reported to
+    TTY-aware applications like vi or curses -- applications that
+    respond to the SIGWINCH signal.
+
+    Thank you for the shortcut PEXPECT
+    """
+    TIOCSWINSZ = getattr(termios, "TIOCSWINSZ", -2146929561)
+    if TIOCSWINSZ == 2148037735:
+        # Same bits, but with sign.
+        TIOCSWINSZ = -2146929561
+    # Note, assume ws_xpixel and ws_ypixel are zero.
+    packed = struct.pack(b"HHHH", rows, cols, 0, 0)
+    fcntl.ioctl(child, TIOCSWINSZ, packed)
+
+
+def getwinsize(child):
+    """
+    This returns the terminal window size of the child tty. The return
+    value is a tuple of (rows, cols).
+
+    Thank you for the shortcut PEXPECT
+    """
+    TIOCGWINSZ = getattr(termios, "TIOCGWINSZ", 1074295912)
+    packed = struct.pack(b"HHHH", 0, 0, 0, 0)
+    ioctl = fcntl.ioctl(child, TIOCGWINSZ, packed)
+    return struct.unpack(b"HHHH", ioctl)[0:2]
+
+
+class Terminal:
     """
     I'm a virtual terminal
     """
@@ -417,160 +451,87 @@ class Terminal(object):
         # ----- Linux Methods ----------------------------------------------->
         # ----- Internal API ------------------------------------------------>
         def _spawn(self):
-            self.pid, self.child_fd, self.child_fde = self.__fork_ptys()
-
-            if isinstance(self.args, string_types):
+            # TODO: Get rid of this logic, just use the same api as Popen
+            if isinstance(self.args, str):
                 args = [self.args]
+            #if isinstance(self.args, string_types):
+            #    args = shlex.split(self.args)
             elif self.args:
                 args = list(self.args)
             else:
                 args = []
-
-            if self.shell and self.args:
-                self.args = ["/bin/sh", "-c", " ".join(args)]
-            elif self.shell:
-                self.args = ["/bin/sh"]
-            else:
-                self.args = args
-
+            self.args = args
             if self.executable:
                 self.args[0] = self.executable
-
             if self.executable is None:
                 self.executable = self.args[0]
+            if self.shell:
+                self.args = " ".join(self.args)
 
-            if self.pid == 0:
-                # Child
-                self.stdin = sys.stdin.fileno()
-                self.stdout = sys.stdout.fileno()
-                self.stderr = sys.stderr.fileno()
-
-                # Set the terminal size
-                self.child_fd = self.stdin
-
-                if os.isatty(self.child_fd):
-                    # Only try to set the window size if the parent IS a tty
-                    try:
-                        self.setwinsize(self.rows, self.cols)
-                    except IOError as err:
-                        log.warning(
-                            "Failed to set the VT terminal size: %s",
-                            err,
-                            exc_info_on_loglevel=logging.DEBUG,
-                        )
-
-                # Do not allow child to inherit open file descriptors from
-                # parent
-                max_fd = resource.getrlimit(resource.RLIMIT_NOFILE)
-                try:
-                    os.closerange(pty.STDERR_FILENO + 1, max_fd[0])
-                except OSError:
-                    pass
-
-                if self.cwd is not None:
-                    os.chdir(self.cwd)
-
-                if self.preexec_fn:
-                    self.preexec_fn()
-
-                if self.env is None:
-                    os.execvp(self.executable, self.args)
-                else:
-                    os.execvpe(self.executable, self.args, self.env)
-
-            # Parent
+            parent, child = pty.openpty()
+            child_name = os.ttyname(child)
+            os.set_inheritable(child, True)
+            proc = subprocess.Popen(  # pylint: disable=subprocess-popen-preexec-fn
+                self.args,
+                preexec_fn=functools.partial(
+                    self._preexec, child_name, self.rows, self.cols, self.preexec_fn
+                ),
+                shell=self.shell,
+                cwd=self.cwd,
+                stdin=child,
+                stdout=child,
+                stderr=subprocess.PIPE,
+            )
+            os.close(child)
+            self.child_fd = parent
+            self.child_fde = proc.stderr.fileno()
+            self.pid = proc.pid
             self.closed = False
             self.terminated = False
 
-        def __fork_ptys(self):
-            """
-            Fork the PTY
-
-            The major difference from the python source is that we separate the
-            stdout from stderr output.
-            """
-            stdout_parent_fd, stdout_child_fd = pty.openpty()
-            if stdout_parent_fd < 0 or stdout_child_fd < 0:
-                raise TerminalException("Failed to open a TTY for stdout")
-
-            stderr_parent_fd, stderr_child_fd = pty.openpty()
-            if stderr_parent_fd < 0 or stderr_child_fd < 0:
-                raise TerminalException("Failed to open a TTY for stderr")
-
-            pid = os.fork()
-            if pid < pty.CHILD:
-                raise TerminalException("Failed to fork")
-            elif pid == pty.CHILD:
-                # Child.
-                # Close parent FDs
-                os.close(stdout_parent_fd)
-                os.close(stderr_parent_fd)
-                salt.utils.crypt.reinit_crypto()
-
-                # ----- Make STDOUT the controlling PTY --------------------->
-                child_name = os.ttyname(stdout_child_fd)
-                # Disconnect from controlling tty. Harmless if not already
-                # connected
-                try:
-                    tty_fd = os.open("/dev/tty", os.O_RDWR | os.O_NOCTTY)
-                    if tty_fd >= 0:
-                        os.close(tty_fd)
-                # which exception, shouldn't we catch explicitly .. ?
-                except Exception:  # pylint: disable=broad-except
-                    # Already disconnected. This happens if running inside cron
-                    pass
-
-                # New session!
+        @staticmethod
+        def _preexec(child_name, rows=80, cols=80, preexec_fn=None):
+            # Disconnect from controlling tty. Harmless if not already
+            # connected
+            try:
+                tty_fd = os.open("/dev/tty", os.O_RDWR | os.O_NOCTTY)
+                if tty_fd >= 0:
+                    os.close(tty_fd)
+            # which exception, shouldn't we catch explicitly .. ?
+            except Exception:  # pylint: disable=broad-except
+                # Already disconnected. This happens if running inside cron
+                pass
+            try:
                 os.setsid()
-
-                # Verify we are disconnected from controlling tty
-                # by attempting to open it again.
-                try:
-                    tty_fd = os.open("/dev/tty", os.O_RDWR | os.O_NOCTTY)
-                    if tty_fd >= 0:
-                        os.close(tty_fd)
-                        raise TerminalException(
-                            "Failed to disconnect from controlling tty. It is "
-                            "still possible to open /dev/tty."
-                        )
-                # which exception, shouldn't we catch explicitly .. ?
-                except Exception:  # pylint: disable=broad-except
-                    # Good! We are disconnected from a controlling tty.
-                    pass
-
-                # Verify we can open child pty.
-                tty_fd = os.open(child_name, os.O_RDWR)
-                if tty_fd < 0:
+            except OSError:
+                pass
+            try:
+                tty_fd = os.open("/dev/tty", os.O_RDWR | os.O_NOCTTY)
+                if tty_fd >= 0:
+                    os.close(tty_fd)
                     raise TerminalException(
                         "Could not open child pty, {0}".format(child_name)
                     )
+            # which exception, shouldn't we catch explicitly .. ?
+            except Exception:  # pylint: disable=broad-except
+                # Good! We are disconnected from a controlling tty.
+                pass
+            tty_fd = os.open(child_name, os.O_RDWR)
+            setwinsize(tty_fd, rows, cols)
+            if tty_fd < 0:
+                raise TerminalException(
+                    "Could not open child pty, {}".format(child_name)
+                )
+            else:
+                os.close(tty_fd)
+            if os.name != "posix":
+                tty_fd = os.open("/dev/tty", os.O_WRONLY)
+                if tty_fd < 0:
+                    raise TerminalException("Could not open controlling tty, /dev/tty")
                 else:
                     os.close(tty_fd)
-
-                # Verify we now have a controlling tty.
-                if os.name != "posix":
-                    # Only do this check in not BSD-like operating systems. BSD-like operating systems breaks at this point
-                    tty_fd = os.open("/dev/tty", os.O_WRONLY)
-                    if tty_fd < 0:
-                        raise TerminalException(
-                            "Could not open controlling tty, /dev/tty"
-                        )
-                    else:
-                        os.close(tty_fd)
-                # <---- Make STDOUT the controlling PTY ----------------------
-
-                # ----- Duplicate Descriptors ------------------------------->
-                os.dup2(stdout_child_fd, pty.STDIN_FILENO)
-                os.dup2(stdout_child_fd, pty.STDOUT_FILENO)
-                os.dup2(stderr_child_fd, pty.STDERR_FILENO)
-                # <---- Duplicate Descriptors --------------------------------
-            else:
-                # Parent. Close Child PTY's
-                salt.utils.crypt.reinit_crypto()
-                os.close(stdout_child_fd)
-                os.close(stderr_child_fd)
-
-            return pid, stdout_parent_fd, stderr_parent_fd
+            if preexec_fn is not None:
+                preexec_fn()
 
         def _send(self, data):
             if self.child_fd is None:
@@ -804,38 +765,10 @@ class Terminal(object):
                     "Can't check the size of the terminal since we're not "
                     "connected to the child process."
                 )
+            return getwinsize(self.child_fd)
 
-            TIOCGWINSZ = getattr(termios, "TIOCGWINSZ", 1074295912)
-            packed = struct.pack(b"HHHH", 0, 0, 0, 0)
-            ioctl = fcntl.ioctl(self.child_fd, TIOCGWINSZ, packed)
-            return struct.unpack(b"HHHH", ioctl)[0:2]
-
-        def setwinsize(self, rows, cols):
-            """
-            This sets the terminal window size of the child tty. This will
-            cause a SIGWINCH signal to be sent to the child. This does not
-            change the physical window size. It changes the size reported to
-            TTY-aware applications like vi or curses -- applications that
-            respond to the SIGWINCH signal.
-
-            Thank you for the shortcut PEXPECT
-            """
-            # Check for buggy platforms. Some Python versions on some platforms
-            # (notably OSF1 Alpha and RedHat 7.1) truncate the value for
-            # termios.TIOCSWINSZ. It is not clear why this happens.
-            # These platforms don't seem to handle the signed int very well;
-            # yet other platforms like OpenBSD have a large negative value for
-            # TIOCSWINSZ and they don't have a truncate problem.
-            # Newer versions of Linux have totally different values for
-            # TIOCSWINSZ.
-            # Note that this fix is a hack.
-            TIOCSWINSZ = getattr(termios, "TIOCSWINSZ", -2146929561)
-            if TIOCSWINSZ == 2148037735:
-                # Same bits, but with sign.
-                TIOCSWINSZ = -2146929561
-            # Note, assume ws_xpixel and ws_ypixel are zero.
-            packed = struct.pack(b"HHHH", rows, cols, 0, 0)
-            fcntl.ioctl(self.child_fd, TIOCSWINSZ, packed)
+        def setwinsize(self, child, rows=80, cols=80):
+            setwinsize(self.child_fd, rows, cols)
 
         def isalive(
             self,
