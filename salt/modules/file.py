@@ -3174,6 +3174,13 @@ def patch(originalfile, patchfile, options="", dry_run=False):
     options
         Options to pass to patch.
 
+    .. note::
+        Windows now supports this as of 3001. In order to use this
+        function in Windows, select the "Use Git and optional Unix
+        tools from the Command Prompt" option when installing Git.
+        This will put all the Unix commands in your system Path to
+        allow patch to be used.
+
     CLI Example:
 
     .. code-block:: bash
