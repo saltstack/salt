@@ -63,27 +63,38 @@ def fixStdOutErrFileNoIfNeeded(func):
 
 
 class VTTestCase(TestCase):
-    @skipIf(
-        True,
-        "Disabled until we can figure out why this fails when whole test suite runs.",
-    )
+    #    @skipIf(
+    #        True,
+    #        "Disabled until we can figure out why this fails when whole test suite runs.",
+    #    )
     def test_vt_size(self):
         """Confirm that the terminal size is being set"""
-        if not sys.stdin.isatty():
-            self.skipTest("Not attached to a TTY. The test would fail.")
+        #        if not sys.stdin.isatty():
+        #            self.skipTest("Not attached to a TTY. The test would fail.")
         cols = random.choice(range(80, 250))
         terminal = salt.utils.vt.Terminal(
-            'echo "Foo!"',
+            "stty size",
             shell=True,
             cols=cols,
             rows=24,
             stream_stdout=False,
             stream_stderr=False,
         )
-        # First the assertion
         self.assertEqual(terminal.getwinsize(), (24, cols))
-        # Then wait for the terminal child to exit
-        terminal.wait()
+        buffer_o = buffer_e = ""
+        while terminal.has_unread_data:
+            stdout, stderr = terminal.recv()
+            if stdout:
+                buffer_o += stdout
+            if stderr:
+                buffer_e += stderr
+        assert buffer_o.strip() == "24 {}".format(cols)
+        try:
+            # Then wait for the terminal child to exit, this will raise an
+            # exception if the process has already exited.
+            terminal.wait()
+        except salt.utils.vt.TerminalException:
+            pass
         terminal.close()
 
     @skipIf(
