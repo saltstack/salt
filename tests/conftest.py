@@ -1003,7 +1003,7 @@ def salt_sub_minion_factory(salt_master_factory):
 
 @pytest.fixture(scope="session")
 def salt_cli(salt_master_factory):
-    return salt_master_factory.get_salt_cli()
+    return salt_master_factory.salt_cli()
 
 
 @pytest.fixture(scope="session")
