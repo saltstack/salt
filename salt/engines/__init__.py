@@ -116,7 +116,7 @@ class Engine(salt.utils.process.SignalHandlingProcess):
         """
         Run the master service!
         """
-        salt.utils.process.appendproctitle("Engine: {}".format(self.name))
+        salt.utils.process.appendproctitle(self.name)
         self.utils = salt.loader.utils(self.opts, proxy=self.proxy)
         if salt.utils.platform.is_windows():
             # Calculate function references since they can't be pickled.
