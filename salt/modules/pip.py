@@ -104,8 +104,8 @@ __func_alias__ = {"list_": "list"}
 
 VALID_PROTOS = ["http", "https", "ftp", "file"]
 
-rex_pip_chain_read = re.compile(r'(?:-r\s|--requirement[=\s])(.*)\n?', re.MULTILINE)
-rex_pip_reqs_comment = re.compile(r'(?:^|\s+)#.*$', re.MULTILINE)
+rex_pip_chain_read = re.compile(r"(?:-r\s|--requirement[=\s])(.*)\n?", re.MULTILINE)
+rex_pip_reqs_comment = re.compile(r"(?:^|\s+)#.*$", re.MULTILINE)
 
 
 def __virtual__():
