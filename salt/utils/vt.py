@@ -304,10 +304,6 @@ class Terminal:
 
         self.stderr_logger_level = LOG_LEVELS.get(log_stderr_level, log_stderr_level)
         if log_stderr is True:
-            self.stderr_logger = logging.getLogger(
-                "{}.{}.PID-{}.STDERR".format(
-                    __name__, self.__class__.__name__, self.pid
-                )
             )
         elif log_stderr is not None:
             if not isinstance(log_stderr, logging.Logger):
