@@ -59,7 +59,9 @@ def start_engines(opts, proc_mgr, proxy=None):
                 name = "{}.Engine({})".format(__name__, start_func.__module__)
             log.info("Starting Engine %s", name)
             proc_mgr.add_process(
-                Engine, args=(opts, fun, engine_opts, funcs, runners, proxy), name=name
+                Engine,
+                args=(name, opts, fun, engine_opts, funcs, runners, proxy),
+                name=name,
             )
 
 
@@ -68,11 +70,12 @@ class Engine(salt.utils.process.SignalHandlingProcess):
     Execute the given engine in a new process
     """
 
-    def __init__(self, opts, fun, config, funcs, runners, proxy, **kwargs):
+    def __init__(self, name, opts, fun, config, funcs, runners, proxy, **kwargs):
         """
         Set up the process executor
         """
         super().__init__(**kwargs)
+        self.name = name
         self.opts = opts
         self.config = config
         self.fun = fun
@@ -85,6 +88,7 @@ class Engine(salt.utils.process.SignalHandlingProcess):
     # process so that a register_after_fork() equivalent will work on Windows.
     def __setstate__(self, state):
         self.__init__(
+            state["name"],
             state["opts"],
             state["fun"],
             state["config"],
@@ -97,6 +101,7 @@ class Engine(salt.utils.process.SignalHandlingProcess):
 
     def __getstate__(self):
         return {
+            "name": self.name,
             "opts": self.opts,
             "fun": self.fun,
             "config": self.config,
@@ -107,18 +112,11 @@ class Engine(salt.utils.process.SignalHandlingProcess):
             "log_queue_level": self.log_queue_level,
         }
 
-    @property
-    def module_name(self):
-        """
-        The name of the module this engine is targeting.
-        """
-        return self.fun.split('.')[0]
-
     def run(self):
         """
         Run the master service!
         """
-        salt.utils.process.appendproctitle("Engine: {}".format(self.module_name))
+        salt.utils.process.appendproctitle("Engine: {}".format(self.name))
         self.utils = salt.loader.utils(self.opts, proxy=self.proxy)
         if salt.utils.platform.is_windows():
             # Calculate function references since they can't be pickled.
