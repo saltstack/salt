@@ -10,6 +10,7 @@ import os
 import pprint
 import socket
 import sys
+import time
 import traceback
 
 # pylint: disable=import-error,no-name-in-module
@@ -165,6 +166,10 @@ class ZMQHandler(ExcInfoOnLogLevelFormatMixin, logging.Handler, NewStyleClassMix
         self.log_prefix = self._get_log_prefix(log_prefix)
         self.context = self.pusher = None
         self._exiting = False
+        self.dropped_messages_count = 0
+        # We set the formatter so that we only include the actual log message and not any other
+        # fields found in the log record
+        self.__formatter = logging.Formatter("%(message)s")
 
     def __getstate__(self):
         return {
@@ -180,6 +185,14 @@ class ZMQHandler(ExcInfoOnLogLevelFormatMixin, logging.Handler, NewStyleClassMix
         self.stop()
         self._exiting = False
 
+    def __repr__(self):
+        return "<{} host={} port={} level={}>".format(
+            self.__class__.__name__,
+            self.host,
+            self.port,
+            logging.getLevelName(self.level),
+        )
+
     def _get_log_prefix(self, log_prefix):
         if log_prefix is None:
             return
@@ -190,6 +203,24 @@ class ZMQHandler(ExcInfoOnLogLevelFormatMixin, logging.Handler, NewStyleClassMix
         cli_name = os.path.basename(sys.argv[cli_arg_idx])
         return log_prefix.format(cli_name=cli_name)
 
+    def _get_formatter(self):
+        return self.__formatter
+
+    def _set_formatter(self, fmt):
+        if fmt is not None:
+            self.setFormatter(fmt)
+
+    def _del_formatter(self):
+        raise RuntimeError("Cannot delete the 'formatter' attribute")
+
+    # We set formatter as a property to purposely blow up
+    formatter = property(_get_formatter, _set_formatter, _del_formatter)
+
+    def setFormatter(self, _):
+        raise RuntimeError(
+            "Do not set a formatter on {}".format(self.__class__.__name__)
+        )
+
     def start(self):
         if self._exiting is True:
             return
@@ -198,6 +229,7 @@ class ZMQHandler(ExcInfoOnLogLevelFormatMixin, logging.Handler, NewStyleClassMix
             # We're running ...
             return
 
+        self.dropped_messages_count = 0
         context = pusher = None
         try:
             context = zmq.Context()
@@ -238,6 +270,14 @@ class ZMQHandler(ExcInfoOnLogLevelFormatMixin, logging.Handler, NewStyleClassMix
             return
 
         self._exiting = True
+
+        if self.dropped_messages_count:
+            sys.stderr.write(
+                "Dropped {} messages from getting forwarded. High water mark reached...\n".format(
+                    self.dropped_messages_count
+                )
+            )
+            sys.stderr.flush()
 
         try:
             if self.pusher is not None and not self.pusher.closed:
@@ -315,12 +355,16 @@ class ZMQHandler(ExcInfoOnLogLevelFormatMixin, logging.Handler, NewStyleClassMix
             msg = self.prepare(record)
             if msg:
                 try:
-                    self.pusher.send(msg, flags=zmq.NOBLOCK)
+                    self._send_message(msg)
                 except zmq.error.Again:
-                    # We can't send it nor queue it for send.
-                    # Drop it, otherwise, this call blocks until we can
-                    # at least queue the message
-                    pass
+                    # Sleep a little and give up
+                    time.sleep(0.001)
+                    try:
+                        self._send_message(msg)
+                    except zmq.error.Again:
+                        # We can't send it nor queue it for send.
+                        # Drop it, otherwise, this call blocks until we can at least queue the message
+                        self.dropped_messages_count += 1
         except (  # pragma: no cover pylint: disable=try-except-raise
             SystemExit,
             KeyboardInterrupt,
@@ -330,6 +374,15 @@ class ZMQHandler(ExcInfoOnLogLevelFormatMixin, logging.Handler, NewStyleClassMix
             raise
         except Exception:  # pragma: no cover pylint: disable=broad-except
             self.handleError(record)
+
+    def _send_message(self, msg):
+        self.pusher.send(msg, flags=zmq.NOBLOCK)
+        if self.dropped_messages_count:
+            logging.getLogger(__name__).debug(
+                "Dropped %s messages from getting forwarded. High water mark reached...",
+                self.dropped_messages_count,
+            )
+            self.dropped_messages_count = 0
 
     def close(self):
         """
