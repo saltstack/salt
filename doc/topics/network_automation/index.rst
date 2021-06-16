@@ -1,3 +1,7 @@
+.. meta::
+   :description: Network automation is a continuous process of automating the configuration, management and operations of a computer network. Most network devices can be managed via Salt Proxy Minions using Salt SSH. However, some vendors allow for a Salt Minion to be installed directly.
+   :keywords: network configuration automation, netops, juniper, configuration management, cisco, junos, napalm
+
 .. _network-automation:
 
 ==================
@@ -27,7 +31,7 @@ automation support is based on proxy minions.
 - :mod:`NAPALM proxy <salt.proxy.napalm>`
 - :mod:`Junos proxy<salt.proxy.junos>`
 - :mod:`Cisco NXOS <salt.proxy.nxos>`
-- :mod:`Cisco NOS <salt.proxy.cisconso>`
+- :mod:`Cisco NSO <salt.proxy.cisconso>`
 
 NAPALM
 ------

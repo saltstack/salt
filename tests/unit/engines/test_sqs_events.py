@@ -1,14 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 unit tests for the sqs_events engine
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
 import salt.engines.sqs_events as sqs_events
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf

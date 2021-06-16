@@ -292,7 +292,7 @@ A new :py:func:`state <salt.states.keystore>` and
 Keystore files is now included. It allows for adding/removing/listing
 as well as managing keystore files.
 
-.. code-block:: bash
+.. code-block:: console
 
   # salt-call keystore.list /path/to/keystore.jks changeit
   local:
@@ -518,6 +518,8 @@ Module Changes
 
 - Added new :py:func:`boto_ssm <salt.modules.boto_ssm>` module to set and query
   secrets in AWS SSM parameters.
+
+- Added new :py:func:`flatpak <salt.modules.flatpak>` module to work with flatpak packages.
 
 - The :py:func:`file.remove <salt.modules.file.remove>` module was
   fixed to remove file system entries other than files, directories
@@ -747,7 +749,7 @@ Cloud Deprecations
 Jinja Filter Deprecations
 -------------------------
 
-- The following jinja filters are set to be removed in the Aluminium release:
+- The following jinja filters are set to be removed in the 3003 release:
 
   - :jinja_ref:`json_decode_dict` in favor of :jinja_ref:`tojson`
   - :jinja_ref:`json_decode_list` in favor of :jinja_ref:`tojson`

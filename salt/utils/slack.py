@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Library for interacting with Slack API
 
@@ -15,7 +14,6 @@ Library for interacting with Slack API
         slack:
           api_key: peWcBiMOS9HrZG15peWcBiMOS9HrZG15
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
@@ -24,10 +22,8 @@ import salt.ext.six.moves.http_client
 # pylint: enable=import-error,no-name-in-module
 import salt.utils.http
 
-# Import 3rd-party libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext.six.moves.urllib.parse import urljoin as _urljoin
-from salt.version import __version__
 
 log = logging.getLogger(__name__)
 
@@ -79,7 +75,6 @@ def query(
         query_params = {}
     else:
         query_params = args.copy()
-    query_params["token"] = api_key
 
     if header_dict is None:
         header_dict = {}
@@ -87,6 +82,14 @@ def query(
     if method != "POST":
         header_dict["Accept"] = "application/json"
 
+    # https://api.slack.com/changelog/2020-11-no-more-tokens-in-querystrings-for
+    # -newly-created-apps
+    # Apps created after February 24, 2021 may no longer send tokens as query
+    # parameters and must instead use an HTTP authorization header or
+    # send the token in an HTTP POST body.
+    # Apps created before February 24, 2021 will continue functioning no
+    # matter which way you pass your token.
+    header_dict["Authorization"] = "Bearer {}".format(api_key)
     result = salt.utils.http.query(
         url,
         method,
@@ -120,7 +123,8 @@ def query(
                 ret["message"] = result["error"]
                 ret["res"] = False
                 return ret
-            ret["message"] = _result.get(response)
+            ret["message"] = "Unknown response"
+            ret["res"] = False
         else:
             ret["message"] = "invalid_auth"
             ret["res"] = False

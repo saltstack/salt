@@ -204,6 +204,21 @@ class PfTestCase(TestCase, LoaderModuleMockMixin):
                 ]
             )
 
+    def test_table_delete_addresses(self):
+        """
+        Tests deleting addresses in a table.
+        """
+        ret = {}
+        ret["stderr"] = "2/2 addressess deleted."
+        ret["retcode"] = 0
+        mock_cmd = MagicMock(return_value=ret)
+        with patch.dict(pf.__salt__, {"cmd.run_all": mock_cmd}):
+            self.assertTrue(
+                pf.table("delete", table="bad_hosts", addresses=["1.2.3.4", "5.6.7.8"])[
+                    "changes"
+                ]
+            )
+
     def test_table_test_address(self):
         """
         Tests testing addresses in a table.
@@ -244,9 +259,20 @@ class PfTestCase(TestCase, LoaderModuleMockMixin):
                 pf.table("show", table="bad_hosts")["comment"], expected
             )
 
-    def test_show(self):
+    def test_table_zero(self):
         """
-        Tests a regular show command.
+        Tests clearing all the statistics of a table.
+        """
+        ret = {}
+        ret["stderr"] = "42 addresses has been cleared"
+        ret["retcode"] = 0
+        mock_cmd = MagicMock(return_value=ret)
+        with patch.dict(pf.__salt__, {"cmd.run_all": mock_cmd}):
+            self.assertTrue(pf.table("zero", table="bad_hosts")["changes"])
+
+    def test_show_rules(self):
+        """
+        Tests show rules command.
         """
         ret = {}
         ret["stdout"] = "block return\npass"
@@ -256,9 +282,21 @@ class PfTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(pf.__salt__, {"cmd.run_all": mock_cmd}):
             self.assertListEqual(pf.show("rules")["comment"], expected)
 
-    def test_show_capital(self):
+    def test_show_states(self):
         """
-        Tests a show command starting with a capital letter.
+        Tests show states command.
+        """
+        ret = {}
+        ret["stdout"] = "all udp 192.168.1.1:3478\n"
+        ret["retcode"] = 0
+        expected = ["all udp 192.168.1.1:3478", ""]
+        mock_cmd = MagicMock(return_value=ret)
+        with patch.dict(pf.__salt__, {"cmd.run_all": mock_cmd}):
+            self.assertListEqual(pf.show("states")["comment"], expected)
+
+    def test_show_tables(self):
+        """
+        Tests show tables command.
         """
         ret = {}
         ret["stdout"] = "bad_hosts"
