@@ -2,8 +2,8 @@ import os
 import sys
 
 import salt.modules.pip as pip
-import salt.utils.platform
 import salt.utils.files
+import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
@@ -1450,6 +1450,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_resolve_requirements_chain_function(self):
         """ensure requirements chain can handle special cases"""
+
         class FakeFopen:
             def __init__(self, filename):
                 d = {
@@ -1489,10 +1490,18 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                 return self.val
 
         with patch("salt.utils.files.fopen", FakeFopen):
-            chain = pip._resolve_requirements_chain(["requirements-0.txt", "requirements-3.txt"])
+            chain = pip._resolve_requirements_chain(
+                ["requirements-0.txt", "requirements-3.txt"]
+            )
         self.assertEqual(
             chain,
-            ["requirements-0.txt", "requirements-1.txt", "requirements-2.txt", "requirements-3.txt", "requirements-4.txt"]
+            [
+                "requirements-0.txt",
+                "requirements-1.txt",
+                "requirements-2.txt",
+                "requirements-3.txt",
+                "requirements-4.txt",
+            ],
         )
 
     # TODO: When we switch to pytest, mark parametrized with None for user as well -W. Werner, 2020-06-23
