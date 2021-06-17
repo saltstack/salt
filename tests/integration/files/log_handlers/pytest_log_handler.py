@@ -142,9 +142,10 @@ def setup_handlers():
 
 class ZMQHandler(ExcInfoOnLogLevelFormatMixin, logging.Handler, NewStyleClassMixin):
 
-    # The start method is deferred until sending the first message because,
-    # logging handlers, on platforms which support forking, are inherited
-    # by forked processes, and we don't want the ZMQ machinery inherited.
+    # We implement a lazy start approach which is deferred until sending the
+    # first message because, logging handlers, on platforms which support
+    # forking, are inherited by forked processes, and we want to minimize the ZMQ
+    # machinery inherited.
     # For the cases where the ZMQ machinery is still inherited because a
     # process was forked after ZMQ has been prepped up, we check the handler's
     # pid attribute against the current process pid. If it's not a match, we
@@ -170,6 +171,25 @@ class ZMQHandler(ExcInfoOnLogLevelFormatMixin, logging.Handler, NewStyleClassMix
         # We set the formatter so that we only include the actual log message and not any other
         # fields found in the log record
         self.__formatter = logging.Formatter("%(message)s")
+        self.pid = os.getpid()
+
+    def _get_formatter(self):
+        return self.__formatter
+
+    def _set_formatter(self, fmt):
+        if fmt is not None:
+            self.setFormatter(fmt)
+
+    def _del_formatter(self):
+        raise RuntimeError("Cannot delete the 'formatter' attribute")
+
+    # We set formatter as a property to make it immutable
+    formatter = property(_get_formatter, _set_formatter, _del_formatter)
+
+    def setFormatter(self, _):
+        raise RuntimeError(
+            "Do not set a formatter on {}".format(self.__class__.__name__)
+        )
 
     def __getstate__(self):
         return {
@@ -203,25 +223,11 @@ class ZMQHandler(ExcInfoOnLogLevelFormatMixin, logging.Handler, NewStyleClassMix
         cli_name = os.path.basename(sys.argv[cli_arg_idx])
         return log_prefix.format(cli_name=cli_name)
 
-    def _get_formatter(self):
-        return self.__formatter
-
-    def _set_formatter(self, fmt):
-        if fmt is not None:
-            self.setFormatter(fmt)
-
-    def _del_formatter(self):
-        raise RuntimeError("Cannot delete the 'formatter' attribute")
-
-    # We set formatter as a property to purposely blow up
-    formatter = property(_get_formatter, _set_formatter, _del_formatter)
-
-    def setFormatter(self, _):
-        raise RuntimeError(
-            "Do not set a formatter on {}".format(self.__class__.__name__)
-        )
-
     def start(self):
+        if self.pid != os.getpid():
+            self.stop()
+            self._exiting = False
+
         if self._exiting is True:
             return
 
@@ -265,6 +271,8 @@ class ZMQHandler(ExcInfoOnLogLevelFormatMixin, logging.Handler, NewStyleClassMix
             self._exiting = False
             return
 
+        self.pid = os.getpid()
+
     def stop(self):
         if self._exiting:
             return
@@ -302,7 +310,7 @@ class ZMQHandler(ExcInfoOnLogLevelFormatMixin, logging.Handler, NewStyleClassMix
             sys.stderr.flush()
             raise
         finally:
-            self.context = self.pusher = None
+            self.context = self.pusher = self.pid = None
 
     def format(self, record):
         msg = super().format(record)
