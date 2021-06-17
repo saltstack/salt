@@ -1690,6 +1690,11 @@ class VirtualEnv:
         return self
 
     def __exit__(self, *args):
+        if os.environ.get("JENKINS_URL") or os.environ.get("CI") is not None:
+            # Under a CI run, delete the pip cache to avoid running out of disk space
+            ret = self.run(self.venv_python, "-m", "pip", "cache", "dir", check=False)
+            if ret.exitcode == 0:
+                shutil.rmtree(ret.stdout.strip(), ignore_errors=True)
         shutil.rmtree(str(self.venv_dir), ignore_errors=True)
 
     def install(self, *args, **kwargs):

@@ -88,6 +88,23 @@ def find_session_runner(session, name, **kwargs):
     )
 
 
+def session_run_always(session, *command, **kwargs):
+    try:
+        # Guess we weren't the only ones wanting this
+        # https://github.com/theacodes/nox/pull/331
+        return session.run_always(*command, **kwargs)
+    except AttributeError:
+        old_install_only_value = session._runner.global_config.install_only
+        try:
+            # Force install only to be false for the following chunk of code
+            # For additional information as to why see:
+            #   https://github.com/theacodes/nox/pull/181
+            session._runner.global_config.install_only = False
+            return session.run(*command, **kwargs)
+        finally:
+            session._runner.global_config.install_only = old_install_only_value
+
+
 def _create_ci_directories():
     for dirname in ("logs", "coverage", "xml-unittests-output"):
         path = os.path.join("artifacts", dirname)
@@ -99,25 +116,17 @@ def _get_session_python_version_info(session):
     try:
         version_info = session._runner._real_python_version_info
     except AttributeError:
-        old_install_only_value = session._runner.global_config.install_only
-        try:
-            # Force install only to be false for the following chunk of code
-            # For additional information as to why see:
-            #   https://github.com/theacodes/nox/pull/181
-            session._runner.global_config.install_only = False
-            session_py_version = session.run(
-                "python",
-                "-c"
-                'import sys; sys.stdout.write("{}.{}.{}".format(*sys.version_info))',
-                silent=True,
-                log=False,
-            )
-            version_info = tuple(
-                int(part) for part in session_py_version.split(".") if part.isdigit()
-            )
-            session._runner._real_python_version_info = version_info
-        finally:
-            session._runner.global_config.install_only = old_install_only_value
+        session_py_version = session_run_always(
+            session,
+            "python",
+            "-c" 'import sys; sys.stdout.write("{}.{}.{}".format(*sys.version_info))',
+            silent=True,
+            log=False,
+        )
+        version_info = tuple(
+            int(part) for part in session_py_version.split(".") if part.isdigit()
+        )
+        session._runner._real_python_version_info = version_info
     return version_info
 
 
@@ -125,22 +134,15 @@ def _get_session_python_site_packages_dir(session):
     try:
         site_packages_dir = session._runner._site_packages_dir
     except AttributeError:
-        old_install_only_value = session._runner.global_config.install_only
-        try:
-            # Force install only to be false for the following chunk of code
-            # For additional information as to why see:
-            #   https://github.com/theacodes/nox/pull/181
-            session._runner.global_config.install_only = False
-            site_packages_dir = session.run(
-                "python",
-                "-c"
-                "import sys; from distutils.sysconfig import get_python_lib; sys.stdout.write(get_python_lib())",
-                silent=True,
-                log=False,
-            )
-            session._runner._site_packages_dir = site_packages_dir
-        finally:
-            session._runner.global_config.install_only = old_install_only_value
+        site_packages_dir = session_run_always(
+            session,
+            "python",
+            "-c"
+            "import sys; from distutils.sysconfig import get_python_lib; sys.stdout.write(get_python_lib())",
+            silent=True,
+            log=False,
+        )
+        session._runner._site_packages_dir = site_packages_dir
     return site_packages_dir
 
 
@@ -316,6 +318,24 @@ def _install_requirements(
         install_command = ["--progress-bar=off", "--constraint", requirements_file]
         install_command += EXTRA_REQUIREMENTS_INSTALL.split()
         session.install(*install_command, silent=PIP_INSTALL_SILENT)
+
+    if CI_RUN:
+        # Under CI test runs, once requirements are installed, delete the pip cache
+        # to avoid running out of disk space
+        try:
+            pip_cache_dir = session_run_always(
+                session, "python", "-m", "pip", "cache", "dir", silent=True, log=False,
+            )
+            session.log(
+                "CI run detected. Deleting pip cache directory: %s", pip_cache_dir
+            )
+            shutil.rmtree(pip_cache_dir.strip(), ignore_errors=True)
+        except CommandFailed:
+            # Sometimes the cache is disabled
+            # WARNING: The directory '/github/home/.cache/pip' or its parent directory is not owned or is not
+            # writable by the current user. The cache has been disabled. Check the permissions and owner of that
+            # directory. If executing pip with sudo, you should use sudo's -H flag.
+            pass
 
 
 def _run_with_coverage(session, *test_cmd, env=None):
