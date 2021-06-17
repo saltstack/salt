@@ -7,7 +7,6 @@ Versions are `MAJOR.PATCH`.
 
 # Changelog
 
-Salt 3003.1 (2021-04-20)
 Salt 3003.1 (2021-06-08)
 ========================
 
