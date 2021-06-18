@@ -389,6 +389,7 @@ class ZMQHandler(ExcInfoOnLogLevelFormatMixin, logging.Handler, NewStyleClassMix
         ):
             # Catch and raise SystemExit and KeyboardInterrupt so that we can handle
             # all other exception below
+            self.stop(flush=False)
             raise
         except Exception:  # pragma: no cover pylint: disable=broad-except
             self.handleError(record)
