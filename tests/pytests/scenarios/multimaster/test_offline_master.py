@@ -53,7 +53,7 @@ def test_minion_hangs_on_master_failure_50814(
 
     # Wait for the minion to re-connect so this test will not affect any
     # others.
-    salt_mm_master_1.register_after_start_callback(
+    salt_mm_master_1.after_start(
         wait_for_minion, salt_mm_master_1.get_salt_cli(), salt_mm_minion_1.id
     )
 
