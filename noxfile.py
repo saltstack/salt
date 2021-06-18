@@ -88,23 +88,6 @@ def find_session_runner(session, name, **kwargs):
     )
 
 
-def session_run_always(session, *command, **kwargs):
-    try:
-        # Guess we weren't the only ones wanting this
-        # https://github.com/theacodes/nox/pull/331
-        return session.run_always(*command, **kwargs)
-    except AttributeError:
-        old_install_only_value = session._runner.global_config.install_only
-        try:
-            # Force install only to be false for the following chunk of code
-            # For additional information as to why see:
-            #   https://github.com/theacodes/nox/pull/181
-            session._runner.global_config.install_only = False
-            return session.run(*command, **kwargs)
-        finally:
-            session._runner.global_config.install_only = old_install_only_value
-
-
 def _create_ci_directories():
     for dirname in ("logs", "coverage", "xml-unittests-output"):
         path = os.path.join("artifacts", dirname)
@@ -602,33 +585,6 @@ def pytest_zeromq(session, coverage):
     """
     pytest session with zeromq transport and default crypto
     """
-    if IS_DARWIN:
-        try:
-            session_run_always(
-                session, "which", "brew",
-            )
-        except CommandFailed:
-            pass
-        try:
-            session_run_always(
-                session,
-                "/usr/bin/su",
-                "-",
-                "jenkins",
-                "/usr/local/bin/brew",
-                "install",
-                "python@3.7",
-            )
-        except CommandFailed:
-            session_run_always(
-                session,
-                "/usr/bin/su",
-                "-",
-                "jenkins",
-                "/usr/local/bin/brew",
-                "upgrade",
-                "python@3.7",
-            )
     session.notify(
         find_session_runner(
             session,
