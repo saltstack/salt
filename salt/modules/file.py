@@ -3185,6 +3185,7 @@ def patch(originalfile, patchfile, options="", dry_run=False):
         Git\\usr\\bin\\ is in your system path. The patch.exe binary
         is typically found within this folder from Git.
 
+
     CLI Example:
 
     .. code-block:: bash
