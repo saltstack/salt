@@ -476,7 +476,7 @@ class Terminal:
                 preexec_fn=functools.partial(
                     self._preexec, child_name, self.rows, self.cols, self.preexec_fn
                 ),
-                shell=self.shell,
+                shell=self.shell,  # nosec
                 cwd=self.cwd,
                 stdin=child,
                 stdout=child,
