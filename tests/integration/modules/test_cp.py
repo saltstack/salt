@@ -15,9 +15,9 @@ import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
 from saltfactories.utils.ports import get_unused_localhost_port
+from saltfactories.utils.tempfiles import temp_file
 from tests.support.case import ModuleCase
 from tests.support.helpers import with_tempfile
-from tests.support.pytest.helpers import temp_state_file
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
@@ -514,9 +514,9 @@ class CPModuleTest(ModuleCase):
             RUNTIME_VARS.TMP
         )
 
-        with temp_state_file("top.sls", top_sls), temp_state_file(
-            "core.sls", core_state
-        ):
+        with temp_file(
+            "top.sls", top_sls, RUNTIME_VARS.TMP_BASEENV_STATE_TREE
+        ), temp_file("core.sls", core_state, RUNTIME_VARS.TMP_BASEENV_STATE_TREE):
             ret = self.run_function("cp.list_states",)
             self.assertIn("core", ret)
             self.assertIn("top", ret)

@@ -192,14 +192,6 @@ class BadTestModuleNamesTestCase(TestCase):
             "unit.test_simple",
             "unit.test_virtualname",
             "unit.test_zypp_plugins",
-            "unit.utils.scheduler.test_error",
-            "unit.utils.scheduler.test_eval",
-            "unit.utils.scheduler.test_helpers",
-            "unit.utils.scheduler.test_maxrunning",
-            "unit.utils.scheduler.test_postpone",
-            "unit.utils.scheduler.test_run_job",
-            "unit.utils.scheduler.test_schedule",
-            "unit.utils.scheduler.test_skip",
             "unit.auth.test_auth",
         )
         errors = []
