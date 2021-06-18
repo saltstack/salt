@@ -493,7 +493,7 @@ You can get a list of packages installed on the system using
 This will return all software installed on the system whether it is managed by
 Salt or not as shown below:
 
-.. code-block:: bash
+.. code-block:: console
 
     local:
         ----------
@@ -647,7 +647,7 @@ be inside that directory and named ``init.sls``.
 Look at the following example directory structure on a Linux master assuming
 default config settings:
 
-.. code-block:: bash
+.. code-block:: console
 
     srv/
     |---salt/
@@ -932,7 +932,7 @@ the control panel. You can also get this information by installing the package
 manually and then running ``pkg.list_pkgs``. Here's an example of the output
 from ``pkg.list_pkgs``:
 
-.. code-block:: bash
+.. code-block:: console
 
     salt 'test-2008' pkg.list_pkgs
     test-2008
@@ -1167,7 +1167,7 @@ before execution. The value can be formatted as ``<hash_algorithm>=<hash_sum>``,
 or it can be a URI to a file containing the hash sum.
 
 For a list of supported algorithms, see the `hashlib documentation
-<https://docs.python.org/2/library/hashlib.html>`_.
+<https://docs.python.org/3/library/hashlib.html>`_.
 
 Here's an example using ``source_hash``:
 

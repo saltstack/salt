@@ -9,9 +9,11 @@ import salt.utils.platform
 import salt.utils.pycrypto
 import salt.utils.yaml
 from saltfactories.utils import random_string
-from tests.support.helpers import slowTest
 
-pytestmark = pytest.mark.windows_whitelisted
+pytestmark = [
+    pytest.mark.slow_test,
+    pytest.mark.windows_whitelisted,
+]
 
 USERA = "saltdev-key"
 USERA_PWD = "saltdev"
@@ -47,7 +49,6 @@ def saltdev_account(sminion):
         sminion.functions.user.delete(USERA, remove=True)
 
 
-@slowTest
 def test_remove_key(salt_master, salt_key_cli):
     """
     test salt-key -d usage
@@ -90,7 +91,6 @@ def test_remove_key(salt_master, salt_key_cli):
             os.unlink(key)
 
 
-@slowTest
 @pytest.mark.skip_if_not_root
 @pytest.mark.destructive_test
 @pytest.mark.skip_on_windows(reason="PAM is not supported on Windows")
@@ -146,7 +146,6 @@ def test_remove_key_eauth(salt_key_cli, salt_master, saltdev_account):
             os.unlink(key)
 
 
-@slowTest
 @pytest.mark.parametrize("key_type", ("acc", "pre", "den", "un", "rej"))
 def test_list_accepted_args(salt_key_cli, key_type):
     """
@@ -162,7 +161,6 @@ def test_list_accepted_args(salt_key_cli, key_type):
     assert "error:" in ret.stderr
 
 
-@slowTest
 def test_list_all(salt_key_cli, salt_minion, salt_sub_minion):
     """
     test salt-key -L
@@ -178,7 +176,6 @@ def test_list_all(salt_key_cli, salt_minion, salt_sub_minion):
     assert ret.json == expected
 
 
-@slowTest
 def test_list_all_yaml_out(salt_key_cli, salt_minion, salt_sub_minion):
     """
     test salt-key -L --out=yaml
@@ -195,7 +192,6 @@ def test_list_all_yaml_out(salt_key_cli, salt_minion, salt_sub_minion):
     assert output == expected
 
 
-@slowTest
 def test_list_all_raw_out(salt_key_cli, salt_minion, salt_sub_minion):
     """
     test salt-key -L --out=raw
@@ -212,7 +208,6 @@ def test_list_all_raw_out(salt_key_cli, salt_minion, salt_sub_minion):
     assert output == expected
 
 
-@slowTest
 def test_list_acc(salt_key_cli, salt_minion, salt_sub_minion):
     """
     test salt-key -l acc
@@ -223,7 +218,6 @@ def test_list_acc(salt_key_cli, salt_minion, salt_sub_minion):
     assert ret.json == expected
 
 
-@slowTest
 @pytest.mark.skip_if_not_root
 @pytest.mark.destructive_test
 @pytest.mark.skip_on_windows(reason="PAM is not supported on Windows")
@@ -239,7 +233,6 @@ def test_list_acc_eauth(salt_key_cli, saltdev_account, salt_minion, salt_sub_min
     assert ret.json == expected
 
 
-@slowTest
 @pytest.mark.skip_if_not_root
 @pytest.mark.destructive_test
 @pytest.mark.skip_on_windows(reason="PAM is not supported on Windows")
@@ -263,7 +256,6 @@ def test_list_acc_eauth_bad_creds(salt_key_cli, saltdev_account):
     )
 
 
-@slowTest
 def test_list_acc_wrong_eauth(salt_key_cli):
     """
     test salt-key -l with wrong eauth
@@ -285,7 +277,6 @@ def test_list_acc_wrong_eauth(salt_key_cli):
     )
 
 
-@slowTest
 def test_list_un(salt_key_cli):
     """
     test salt-key -l un
@@ -296,35 +287,30 @@ def test_list_un(salt_key_cli):
     assert ret.json == expected
 
 
-@slowTest
-def test_keys_generation(salt_key_cli):
-    with pytest.helpers.temp_directory() as tempdir:
-        ret = salt_key_cli.run("--gen-keys", "minibar", "--gen-keys-dir", tempdir)
-        assert ret.exitcode == 0
-        try:
-            key_names = ("minibar.pub", "minibar.pem")
-            for fname in key_names:
-                assert os.path.isfile(os.path.join(tempdir, fname))
-        finally:
-            for filename in os.listdir(tempdir):
-                os.chmod(os.path.join(tempdir, filename), 0o700)
+def test_keys_generation(salt_key_cli, tmp_path):
+    ret = salt_key_cli.run("--gen-keys", "minibar", "--gen-keys-dir", str(tmp_path))
+    assert ret.exitcode == 0
+    try:
+        key_names = ("minibar.pub", "minibar.pem")
+        for fname in key_names:
+            fpath = tmp_path / fname
+            assert fpath.is_file()
+    finally:
+        for filename in tmp_path.iterdir():
+            filename.chmod(0o700)
 
 
-@slowTest
-def test_keys_generation_keysize_min(salt_key_cli):
-    with pytest.helpers.temp_directory() as tempdir:
-        ret = salt_key_cli.run(
-            "--gen-keys", "minibar", "--gen-keys-dir", tempdir, "--keysize", "1024"
-        )
-        assert ret.exitcode != 0
-        assert "error: The minimum value for keysize is 2048" in ret.stderr
+def test_keys_generation_keysize_min(salt_key_cli, tmp_path):
+    ret = salt_key_cli.run(
+        "--gen-keys", "minibar", "--gen-keys-dir", str(tmp_path), "--keysize", "1024"
+    )
+    assert ret.exitcode != 0
+    assert "error: The minimum value for keysize is 2048" in ret.stderr
 
 
-@slowTest
-def test_keys_generation_keysize_max(salt_key_cli):
-    with pytest.helpers.temp_directory() as tempdir:
-        ret = salt_key_cli.run(
-            "--gen-keys", "minibar", "--gen-keys-dir", tempdir, "--keysize", "32769"
-        )
-        assert ret.exitcode != 0
-        assert "error: The maximum value for keysize is 32768" in ret.stderr
+def test_keys_generation_keysize_max(salt_key_cli, tmp_path):
+    ret = salt_key_cli.run(
+        "--gen-keys", "minibar", "--gen-keys-dir", str(tmp_path), "--keysize", "32769"
+    )
+    assert ret.exitcode != 0
+    assert "error: The maximum value for keysize is 32768" in ret.stderr

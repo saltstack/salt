@@ -1,8 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 Connection module for Amazon Elasticsearch Service
 
-.. versionadded:: Natrium
+.. versionadded:: 3001
 
 :configuration: This module accepts explicit IAM credentials but can also
     utilize IAM roles assigned to the instance trough Instance Profiles.
@@ -50,8 +49,6 @@ Connection module for Amazon Elasticsearch Service
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
@@ -59,12 +56,7 @@ import salt.utils.compat
 import salt.utils.json
 import salt.utils.versions
 from salt.exceptions import SaltInvocationError
-
-# Import Salt libs
-from salt.ext import six
 from salt.utils.decorators import depends
-
-# Import third party libs
 
 try:
     # Disable unused import-errors as these are only used for dependency checking
@@ -76,8 +68,9 @@ try:
     from botocore.exceptions import ClientError, ParamValidationError, WaiterError
 
     logging.getLogger("boto3").setLevel(logging.INFO)
+    HAS_BOTO = True
 except ImportError:
-    pass
+    HAS_BOTO = False
 
 log = logging.getLogger(__name__)
 
@@ -87,13 +80,15 @@ def __virtual__():
     Only load if boto libraries exist and if boto libraries are greater than
     a given version.
     """
-    return salt.utils.versions.check_boto_reqs(boto3_ver="1.2.7")
+    return HAS_BOTO and salt.utils.versions.check_boto_reqs(
+        boto3_ver="1.2.7", check_boto=False
+    )
 
 
 def __init__(opts):
     _ = opts
-    salt.utils.compat.pack_dunder(__name__)
-    __utils__["boto3.assign_funcs"](__name__, "es")
+    if HAS_BOTO:
+        __utils__["boto3.assign_funcs"](__name__, "es")
 
 
 def add_tags(
@@ -119,7 +114,7 @@ def add_tags(
     :return: Dictionary with key 'result' and as value a boolean denoting success or failure.
         Upon failure, also contains a key 'error' with the error message as value.
 
-    .. versionadded:: Natrium
+    .. versionadded:: 3001
 
     CLI Example:
 
@@ -156,7 +151,7 @@ def add_tags(
         boto_params = {
             "ARN": arn,
             "TagList": [
-                {"Key": k, "Value": value} for k, value in six.iteritems(tags or {})
+                {"Key": k, "Value": value} for k, value in (tags or {}).items()
             ],
         }
         try:
@@ -185,7 +180,7 @@ def cancel_elasticsearch_service_software_update(
         Upon success, also contains a key 'reponse' with the current service software options.
         Upon failure, also contains a key 'error' with the error message as value.
 
-    .. versionadded:: Natrium
+    .. versionadded:: 3001
 
     """
     ret = {"result": False}
@@ -318,7 +313,7 @@ def create_elasticsearch_domain(
         Upon success, also contains a key 'reponse' with the domain status configuration.
         Upon failure, also contains a key 'error' with the error message as value.
 
-    .. versionadded:: Natrium
+    .. versionadded:: 3001
 
     CLI Example:
 
@@ -349,7 +344,7 @@ def create_elasticsearch_domain(
     boto_kwargs = salt.utils.data.filter_falsey(
         {
             "DomainName": domain_name,
-            "ElasticsearchVersion": six.text_type(elasticsearch_version or ""),
+            "ElasticsearchVersion": str(elasticsearch_version or ""),
             "ElasticsearchClusterConfig": elasticsearch_cluster_config,
             "EBSOptions": ebs_options,
             "AccessPolicies": (
@@ -398,7 +393,7 @@ def delete_elasticsearch_domain(
     :return: Dictionary with key 'result' and as value a boolean denoting success or failure.
         Upon failure, also contains a key 'error' with the error message as value.
 
-    .. versionadded:: Natrium
+    .. versionadded:: 3001
 
     """
     ret = {"result": False}
@@ -427,7 +422,7 @@ def delete_elasticsearch_service_role(region=None, keyid=None, key=None, profile
     :return: Dictionary with key 'result' and as value a boolean denoting success or failure.
         Upon failure, also contains a key 'error' with the error message as value.
 
-    .. versionadded:: Natrium
+    .. versionadded:: 3001
 
     """
     ret = {"result": False}
@@ -453,7 +448,7 @@ def describe_elasticsearch_domain(
         Upon success, also contains a key 'reponse' with the domain status information.
         Upon failure, also contains a key 'error' with the error message as value.
 
-    .. versionadded:: Natrium
+    .. versionadded:: 3001
 
     """
     ret = {"result": False}
@@ -482,7 +477,7 @@ def describe_elasticsearch_domain_config(
         Upon success, also contains a key 'reponse' with the current configuration information.
         Upon failure, also contains a key 'error' with the error message as value.
 
-    .. versionadded:: Natrium
+    .. versionadded:: 3001
 
     """
     ret = {"result": False}
@@ -511,7 +506,7 @@ def describe_elasticsearch_domains(
         Upon success, also contains a key 'reponse' with the list of domain status information.
         Upon failure, also contains a key 'error' with the error message as value.
 
-    .. versionadded:: Natrium
+    .. versionadded:: 3001
 
     CLI Example:
 
@@ -559,7 +554,7 @@ def describe_elasticsearch_instance_type_limits(
         Upon success, also contains a key 'reponse' with the limits information.
         Upon failure, also contains a key 'error' with the error message as value.
 
-    .. versionadded:: Natrium
+    .. versionadded:: 3001
 
     CLI Example:
 
@@ -574,7 +569,7 @@ def describe_elasticsearch_instance_type_limits(
         {
             "DomainName": domain_name,
             "InstanceType": instance_type,
-            "ElasticsearchVersion": six.text_type(elasticsearch_version),
+            "ElasticsearchVersion": str(elasticsearch_version),
         }
     )
     try:
@@ -608,7 +603,7 @@ def describe_reserved_elasticsearch_instance_offerings(
         Upon success, also contains a key 'reponse' with the list of offerings information.
         Upon failure, also contains a key 'error' with the error message as value.
 
-    .. versionadded:: Natrium
+    .. versionadded:: 3001
 
     """
     ret = {"result": False}
@@ -654,7 +649,7 @@ def describe_reserved_elasticsearch_instances(
     :note: Version 1.9.174 of boto3 has a bug in that reserved_elasticsearch_instance_id
         is considered a required argument, even though the documentation says otherwise.
 
-    .. versionadded:: Natrium
+    .. versionadded:: 3001
 
     """
     ret = {"result": False}
@@ -692,7 +687,7 @@ def get_compatible_elasticsearch_versions(
         Upon success, also contains a key 'reponse' with a list of compatible versions.
         Upon failure, also contains a key 'error' with the error message as value.
 
-    .. versionadded:: Natrium
+    .. versionadded:: 3001
 
     """
     ret = {"result": False}
@@ -723,7 +718,7 @@ def get_upgrade_history(domain_name, region=None, keyid=None, key=None, profile=
         Upon success, also contains a key 'reponse' with a list of upgrade histories.
         Upon failure, also contains a key 'error' with the error message as value.
 
-    .. versionadded:: Natrium
+    .. versionadded:: 3001
 
     """
     ret = {"result": False}
@@ -757,7 +752,7 @@ def get_upgrade_status(domain_name, region=None, keyid=None, key=None, profile=N
         Upon success, also contains a key 'reponse' with upgrade status information.
         Upon failure, also contains a key 'error' with the error message as value.
 
-    .. versionadded:: Natrium
+    .. versionadded:: 3001
 
     """
     ret = {"result": False}
@@ -782,7 +777,7 @@ def list_domain_names(region=None, keyid=None, key=None, profile=None):
         Upon success, also contains a key 'reponse' with a list of domain names.
         Upon failure, also contains a key 'error' with the error message as value.
 
-    .. versionadded:: Natrium
+    .. versionadded:: 3001
 
     """
     ret = {"result": False}
@@ -820,7 +815,7 @@ def list_elasticsearch_instance_types(
         Upon success, also contains a key 'reponse' with a list of Elasticsearch instance types.
         Upon failure, also contains a key 'error' with the error message as value.
 
-    .. versionadded:: Natrium
+    .. versionadded:: 3001
 
     """
     ret = {"result": False}
@@ -828,7 +823,7 @@ def list_elasticsearch_instance_types(
         conn = _get_conn(region=region, keyid=keyid, key=key, profile=profile)
         boto_params = salt.utils.data.filter_falsey(
             {
-                "ElasticsearchVersion": six.text_type(elasticsearch_version),
+                "ElasticsearchVersion": str(elasticsearch_version),
                 "DomainName": domain_name,
             }
         )
@@ -855,7 +850,7 @@ def list_elasticsearch_versions(region=None, keyid=None, key=None, profile=None)
         Upon success, also contains a key 'reponse' with a list of Elasticsearch versions.
         Upon failure, also contains a key 'error' with the error message as value.
 
-    .. versionadded:: Natrium
+    .. versionadded:: 3001
 
     """
     ret = {"result": False}
@@ -883,7 +878,7 @@ def list_tags(
         Upon success, also contains a key 'reponse' with a dict of tags.
         Upon failure, also contains a key 'error' with the error message as value.
 
-    .. versionadded:: Natrium
+    .. versionadded:: 3001
 
     """
     if not any((arn, domain_name)):
@@ -947,7 +942,7 @@ def purchase_reserved_elasticsearch_instance_offering(
         Upon success, also contains a key 'reponse' with purchase information.
         Upon failure, also contains a key 'error' with the error message as value.
 
-    .. versionadded:: Natrium
+    .. versionadded:: 3001
 
     """
     ret = {"result": False}
@@ -990,7 +985,7 @@ def remove_tags(
     :return: Dictionary with key 'result' and as value a boolean denoting success or failure.
         Upon failure, also contains a key 'error' with the error message as value.
 
-    .. versionadded:: Natrium
+    .. versionadded:: 3001
 
     CLI Example:
 
@@ -1048,7 +1043,7 @@ def start_elasticsearch_service_software_update(
         Upon success, also contains a key 'reponse' with service software information.
         Upon failure, also contains a key 'error' with the error message as value.
 
-    .. versionadded:: Natrium
+    .. versionadded:: 3001
 
     """
     ret = {"result": False}
@@ -1163,7 +1158,7 @@ def update_elasticsearch_domain_config(
         Upon success, also contains a key 'reponse' with the domain configuration.
         Upon failure, also contains a key 'error' with the error message as value.
 
-    .. versionadded:: Natrium
+    .. versionadded:: 3001
 
     CLI Example:
 
@@ -1255,7 +1250,7 @@ def upgrade_elasticsearch_domain(
         Upon success, also contains a key 'reponse' with the domain configuration.
         Upon failure, also contains a key 'error' with the error message as value.
 
-    .. versionadded:: Natrium
+    .. versionadded:: 3001
 
     CLI Example:
 
@@ -1269,7 +1264,7 @@ def upgrade_elasticsearch_domain(
     boto_params = salt.utils.data.filter_falsey(
         {
             "DomainName": domain_name,
-            "TargetVersion": six.text_type(target_version),
+            "TargetVersion": str(target_version),
             "PerformCheckOnly": perform_check_only,
         }
     )
@@ -1299,7 +1294,7 @@ def exists(domain_name, region=None, key=None, keyid=None, profile=None):
     :return: Dictionary with key 'result' and as value a boolean denoting success or failure.
         Upon failure, also contains a key 'error' with the error message as value.
 
-    .. versionadded:: Natrium
+    .. versionadded:: 3001
 
     """
     ret = {"result": False}
@@ -1323,7 +1318,7 @@ def wait_for_upgrade(domain_name, region=None, keyid=None, key=None, profile=Non
     :return: Dictionary with key 'result' and as value a boolean denoting success or failure.
         Upon failure, also contains a key 'error' with the error message as value.
 
-    .. versionadded:: Natrium
+    .. versionadded:: 3001
 
     """
     ret = {"result": False}
@@ -1369,7 +1364,7 @@ def check_upgrade_eligibility(
         Upon success, also contains a key 'reponse' with boolean result of the check.
         Upon failure, also contains a key 'error' with the error message as value.
 
-    .. versionadded:: Natrium
+    .. versionadded:: 3001
 
     CLI Example:
 
@@ -1385,7 +1380,7 @@ def check_upgrade_eligibility(
     if "error" in res:
         return res
     compatible_versions = res["response"][0]["TargetVersions"]
-    if six.text_type(elasticsearch_version) not in compatible_versions:
+    if str(elasticsearch_version) not in compatible_versions:
         ret["result"] = True
         ret["response"] = False
         ret["error"] = 'Desired version "{}" not in compatible versions: {}.' "".format(

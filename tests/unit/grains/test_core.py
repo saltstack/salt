@@ -2,14 +2,12 @@
     :codeauthor: Erik Johnson <erik@saltstack.com>
 """
 
-# Import Python libs
 import logging
 import os
 import platform
 import socket
 import textwrap
 
-# Import Salt Libs
 import salt.grains.core as core
 import salt.modules.cmdmod
 import salt.modules.network
@@ -20,13 +18,10 @@ import salt.utils.network
 import salt.utils.path
 import salt.utils.platform
 from salt._compat import ipaddress
-
-# Import Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, mock_open, patch
 from tests.support.unit import TestCase, skipIf
 
-# Import Salt Testing Libs
 try:
     import pytest
 except ImportError as import_error:
@@ -191,6 +186,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             "motherboard",
             "serialnumber",
             "timezone",
+            "uuid",
             "manufacturer",
             "kernelversion",
             "osservicepack",
@@ -682,6 +678,144 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         }
         self._run_os_grains_tests(None, _os_release_map, expectation)
 
+    @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
+    def test_alinux2_os_grains(self):
+        """
+        Test if OS grains are parsed correctly in Alibaba Cloud Linux
+        """
+        _os_release_map = {
+            "os_release_file": {
+                "NAME": "Alibaba Cloud Linux (Aliyun Linux)",
+                "VERSION": "2.1903 LTS (Hunting Beagle)",
+                "VERSION_ID": "2.1903",
+                "PRETTY_NAME": "Alibaba Cloud Linux (Aliyun Linux) 2.1903 LTS (Hunting Beagle)",
+                "ID": "alinux",
+                "ANSI_COLOR": "0;31",
+            },
+            "_linux_distribution": ("alinux", "2.1903", "LTS"),
+        }
+
+        expectation = {
+            "os": "Alinux",
+            "os_family": "RedHat",
+            "oscodename": "Alibaba Cloud Linux (Aliyun Linux) 2.1903 LTS (Hunting Beagle)",
+            "osfullname": "Alibaba Cloud Linux (Aliyun Linux)",
+            "osrelease": "2.1903",
+            "osrelease_info": (2, 1903),
+            "osmajorrelease": 2,
+            "osfinger": "Alibaba Cloud Linux (Aliyun Linux)-2",
+        }
+        self._run_os_grains_tests(None, _os_release_map, expectation)
+
+    @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
+    def test_centos_stream_8_os_grains(self):
+        """
+        Test if OS grains are parsed correctly in Centos 8
+        """
+        _os_release_map = {
+            "os_release_file": {
+                "NAME": "CentOS Stream",
+                "VERSION": "8",
+                "VERSION_ID": "8",
+                "PRETTY_NAME": "CentOS Stream 8",
+                "ID": "centos",
+                "ANSI_COLOR": "0;31",
+                "CPE_NAME": "cpe:/o:centos:centos:8",
+            },
+            "_linux_distribution": ("centos", "8", ""),
+        }
+
+        expectation = {
+            "os": "CentOS Stream",
+            "os_family": "RedHat",
+            "oscodename": "CentOS Stream 8",
+            "osfullname": "CentOS Stream",
+            "osrelease": "8",
+            "osrelease_info": (8,),
+            "osmajorrelease": 8,
+            "osfinger": "CentOS Stream-8",
+        }
+        self._run_os_grains_tests(None, _os_release_map, expectation)
+
+    @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
+    def test_rocky_8_os_grains(self):
+        """
+        Test if OS grains are parsed correctly in Rocky 8
+        """
+        _os_release_map = {
+            "os_release_file": {
+                "NAME": "Rocky",
+                "VERSION_ID": "8.3",
+                "PRETTY_NAME": "Rocky 8",
+                "ID": "Rocky",
+                "ANSI_COLOR": "0;31",
+                "CPE_NAME": "cpe:/o:rocky:rocky:8.3",
+            },
+            "_linux_distribution": ("rocky", "8.3", ""),
+        }
+
+        expectation = {
+            "os": "Rocky",
+            "os_family": "RedHat",
+            "oscodename": "Rocky 8",
+            "osfullname": "Rocky",
+            "osrelease": "8.3",
+            "osrelease_info": (8, 3,),
+            "osmajorrelease": 8,
+            "osfinger": "Rocky-8",
+        }
+        self._run_os_grains_tests(None, _os_release_map, expectation)
+
+    @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
+    def test_mendel_os_grains(self):
+        """
+        Test if OS grains are parsed correctly in Mendel Linux
+        """
+        _os_release_map = {
+            "_linux_distribution": ("Mendel", "10.0", "eagle"),
+        }
+
+        expectation = {
+            "os": "Mendel",
+            "os_family": "Debian",
+            "oscodename": "eagle",
+            "osfullname": "Mendel",
+            "osrelease": "10.0",
+            "osrelease_info": (10, 0),
+            "osmajorrelease": 10,
+            "osfinger": "Mendel-10",
+        }
+        self._run_os_grains_tests(None, _os_release_map, expectation)
+
+    @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
+    def test_almalinux_8_os_grains(self):
+        """
+        Test if OS grains are parsed correctly in AlmaLinux 8
+        """
+        _os_release_map = {
+            "os_release_file": {
+                "NAME": "AlmaLinux",
+                "VERSION_ID": "8.3",
+                "PRETTY_NAME": "AlmaLinux 8",
+                "ID": "almalinux",
+                "ANSI_COLOR": "0;31",
+                "CPE_NAME": "cpe:/o:almalinux:almalinux:8.3",
+            },
+            "_linux_distribution": ("almaLinux", "8.3", ""),
+        }
+
+        expectation = {
+            "os": "AlmaLinux",
+            "os_family": "RedHat",
+            "oscodename": "AlmaLinux 8",
+            "osfullname": "AlmaLinux",
+            "osrelease": "8.3",
+            "osrelease_info": (8, 3,),
+            "osmajorrelease": 8,
+            "osfinger": "AlmaLinux-8",
+        }
+        self._run_os_grains_tests(None, _os_release_map, expectation)
+
     def test_unicode_error(self):
         raise_unicode_mock = MagicMock(
             name="raise_unicode_error", side_effect=UnicodeError
@@ -730,6 +864,86 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             "osfinger": "Ubuntu-17.10",
         }
         self._run_os_grains_tests("ubuntu-17.10", _os_release_map, expectation)
+
+    @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
+    def test_pop_focal_os_grains(self):
+        """
+        Test if OS grains are parsed correctly in Pop!_OS 20.04 "Focal Fossa"
+        """
+        _os_release_map = {
+            "_linux_distribution": ("Pop", "20.04", "focal"),
+        }
+        expectation = {
+            "os": "Pop",
+            "os_family": "Debian",
+            "oscodename": "focal",
+            "osfullname": "Pop",
+            "osrelease": "20.04",
+            "osrelease_info": (20, 4),
+            "osmajorrelease": 20,
+            "osfinger": "Pop-20",
+        }
+        self._run_os_grains_tests("pop-20.04", _os_release_map, expectation)
+
+    @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
+    def test_pop_groovy_os_grains(self):
+        """
+        Test if OS grains are parsed correctly in Pop!_OS 20.10 "Groovy Gorilla"
+        """
+        _os_release_map = {
+            "_linux_distribution": ("Pop", "20.10", "groovy"),
+        }
+        expectation = {
+            "os": "Pop",
+            "os_family": "Debian",
+            "oscodename": "groovy",
+            "osfullname": "Pop",
+            "osrelease": "20.10",
+            "osrelease_info": (20, 10),
+            "osmajorrelease": 20,
+            "osfinger": "Pop-20",
+        }
+        self._run_os_grains_tests("pop-20.10", _os_release_map, expectation)
+
+    @skipIf(not salt.utils.platform.is_linux(), "System is not Linux based")
+    def test_astralinuxce_os_grains(self):
+        """
+        Test that OS grains are parsed correctly for Astra Linux Orel
+        """
+        _os_release_map = {
+            "_linux_distribution": ("AstraLinuxCE", "2.12.40", "orel"),
+        }
+        expectation = {
+            "os": "AstraLinuxCE",
+            "os_family": "Debian",
+            "oscodename": "orel",
+            "osfullname": "AstraLinuxCE",
+            "osrelease": "2.12.40",
+            "osrelease_info": (2, 12, 40),
+            "osmajorrelease": 2,
+            "osfinger": "AstraLinuxCE-2",
+        }
+        self._run_os_grains_tests(None, _os_release_map, expectation)
+
+    @skipIf(not salt.utils.platform.is_linux(), "System is not Linux based")
+    def test_astralinuxse_os_grains(self):
+        """
+        Test that OS grains are parsed correctly for Astra Linux Smolensk
+        """
+        _os_release_map = {
+            "_linux_distribution": ("AstraLinuxSE", "1.6", "smolensk"),
+        }
+        expectation = {
+            "os": "AstraLinuxSE",
+            "os_family": "Debian",
+            "oscodename": "smolensk",
+            "osfullname": "AstraLinuxSE",
+            "osrelease": "1.6",
+            "osrelease_info": (1, 6),
+            "osmajorrelease": 1,
+            "osfinger": "AstraLinuxSE-1",
+        }
+        self._run_os_grains_tests(None, _os_release_map, expectation)
 
     @skipIf(not salt.utils.platform.is_windows(), "System is not Windows")
     def test_windows_platform_data(self):
@@ -1018,20 +1232,108 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                             grains.get("virtual"), "container",
                         )
 
+        with patch.object(os.path, "isdir", MagicMock(return_value=False)):
+            with patch.object(
+                os.path,
+                "isfile",
+                MagicMock(
+                    side_effect=lambda x: True
+                    if x in ("/proc/1/cgroup", "/proc/1/environ")
+                    else False
+                ),
+            ):
+                file_contents = {
+                    "/proc/1/cgroup": "10:memory",
+                    "/proc/1/environ": "container=lxc",
+                }
+                with patch(
+                    "salt.utils.files.fopen", mock_open(read_data=file_contents)
+                ):
+                    with patch.dict(core.__salt__, {"cmd.run_all": MagicMock()}):
+                        grains = core._virtual({"kernel": "Linux"})
+                        self.assertEqual(grains.get("virtual_subtype"), "LXC")
+                        self.assertEqual(
+                            grains.get("virtual"), "container",
+                        )
+
+    @skipIf(salt.utils.platform.is_windows(), "System is Windows")
+    def test_lxc_virtual_with_virt_what(self):
+        """
+        Test if virtual grains are parsed correctly in LXC using virt-what.
+        """
+        virt = "lxc\nkvm"
+        with patch.object(
+            salt.utils.platform, "is_windows", MagicMock(return_value=False)
+        ):
+            with patch.object(salt.utils.path, "which", MagicMock(return_value=True)):
+                with patch.dict(
+                    core.__salt__,
+                    {
+                        "cmd.run_all": MagicMock(
+                            return_value={
+                                "pid": 78,
+                                "retcode": 0,
+                                "stderr": "",
+                                "stdout": virt,
+                            }
+                        )
+                    },
+                ):
+                    osdata = {
+                        "kernel": "test",
+                    }
+                    ret = core._virtual(osdata)
+                    self.assertEqual(ret["virtual"], "container")
+                    self.assertEqual(ret["virtual_subtype"], "LXC")
+
+    @skipIf(salt.utils.platform.is_windows(), "System is Windows")
+    def test_container_inside_virtual_machine(self):
+        """
+        Test if a container inside an hypervisor is shown as a container
+        """
+        with patch.object(os.path, "isdir", MagicMock(return_value=False)):
+            with patch.object(
+                os.path,
+                "isfile",
+                MagicMock(
+                    side_effect=lambda x: True
+                    if x in ("/proc/cpuinfo", "/proc/1/cgroup", "/proc/1/environ")
+                    else False
+                ),
+            ):
+                file_contents = {
+                    "/proc/cpuinfo": "QEMU Virtual CPU",
+                    "/proc/1/cgroup": "10:memory",
+                    "/proc/1/environ": "container=lxc",
+                }
+                with patch(
+                    "salt.utils.files.fopen", mock_open(read_data=file_contents)
+                ):
+                    with patch.dict(core.__salt__, {"cmd.run_all": MagicMock()}):
+                        grains = core._virtual({"kernel": "Linux"})
+                        self.assertEqual(grains.get("virtual_subtype"), "LXC")
+                        self.assertEqual(
+                            grains.get("virtual"), "container",
+                        )
+
     @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
     def test_xen_virtual(self):
         """
-        Test if OS grains are parsed correctly in Ubuntu Xenial Xerus
+        Test if OS grains are parsed correctly for Xen hypervisors
         """
         with patch.multiple(
             os.path,
-            isdir=MagicMock(side_effect=lambda x: x == "/sys/bus/xen"),
-            isfile=MagicMock(
-                side_effect=lambda x: x == "/sys/bus/xen/drivers/xenconsole"
+            isdir=MagicMock(
+                side_effect=lambda x: x
+                in ["/sys/bus/xen", "/sys/bus/xen/drivers/xenconsole"]
             ),
         ):
-            with patch.dict(core.__salt__, {"cmd.run": MagicMock(return_value="")}):
-                log.debug("Testing Xen")
+            with patch.dict(
+                core.__salt__, {"cmd.run": MagicMock(return_value="")}
+            ), patch.dict(
+                core.__salt__,
+                {"cmd.run_all": MagicMock(return_value={"retcode": 0, "stdout": ""})},
+            ):
                 self.assertEqual(
                     core._virtual({"kernel": "Linux"}).get("virtual_subtype"),
                     "Xen PV DomU",
@@ -1174,6 +1476,12 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                 )
             )
 
+    def _check_ip_fqdn_set(self, value, empty, _set=None):
+        if empty:
+            self.assertEqual(len(value), 0)
+        else:
+            self.assertEqual(sorted(value), sorted(_set))
+
     @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
     def test_fqdn_return(self):
         """
@@ -1219,6 +1527,31 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
     def _run_fqdn_tests(
         self, net_ip4_mock, net_ip6_mock, ip6_empty=True, ip4_empty=True
     ):
+        ip4_mock = [
+            (2, 1, 6, "", (IP4_ADD1, 0)),
+            (2, 2, 17, "", (IP4_ADD1, 0)),
+            (2, 3, 0, "", (IP4_ADD1, 0)),
+            (2, 3, 0, "", (IP4_ADD2, 0)),
+            (2, 1, 6, "", (IP4_ADD2, 0)),
+            (2, 2, 17, "", (IP4_ADD2, 0)),
+        ]
+        ip6_mock = [
+            (10, 1, 6, "", (IP6_ADD1, 0, 0, 0)),
+            (10, 2, 17, "", (IP6_ADD1, 0, 0, 0)),
+            (10, 3, 0, "", (IP6_ADD1, 0, 0, 0)),
+            (10, 1, 6, "", (IP6_ADD2, 0, 0, 0)),
+            (10, 2, 17, "", (IP6_ADD2, 0, 0, 0)),
+            (10, 3, 0, "", (IP6_ADD2, 0, 0, 0)),
+        ]
+
+        def _getaddrinfo(fqdn, port, family=0, *args, **kwargs):
+            if not ip4_empty and family == socket.AF_INET:
+                return ip4_mock
+            elif not ip6_empty and family == socket.AF_INET6:
+                return ip6_mock
+            else:
+                return []
+
         def _check_type(key, value, ip4_empty, ip6_empty):
             """
             check type and other checks
@@ -1232,29 +1565,27 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                 self._check_empty(key, value, ip6_empty)
                 self._check_ipaddress(value, ip_v="6")
 
-        ip4_mock = [(2, 1, 6, "", (IP4_ADD1, 0)), (2, 3, 0, "", (IP4_ADD2, 0))]
-        ip6_mock = [
-            (10, 1, 6, "", (IP6_ADD1, 0, 0, 0)),
-            (10, 3, 0, "", (IP6_ADD2, 0, 0, 0)),
-        ]
-
-        with patch.dict(core.__opts__, {"ipv6": False}):
-            with patch.object(
-                salt.utils.network, "ip_addrs", MagicMock(return_value=net_ip4_mock)
-            ):
-                with patch.object(
-                    salt.utils.network,
-                    "ip_addrs6",
-                    MagicMock(return_value=net_ip6_mock),
-                ):
-                    with patch.object(
-                        core.socket, "getaddrinfo", side_effect=[ip4_mock, ip6_mock]
-                    ):
-                        get_fqdn = core.ip_fqdn()
-                        ret_keys = ["fqdn_ip4", "fqdn_ip6", "ipv4", "ipv6"]
-                        for key in ret_keys:
-                            value = get_fqdn[key]
-                            _check_type(key, value, ip4_empty, ip6_empty)
+        with patch.object(
+            salt.utils.network, "ip_addrs", MagicMock(return_value=net_ip4_mock)
+        ), patch.object(
+            salt.utils.network, "ip_addrs6", MagicMock(return_value=net_ip6_mock),
+        ), patch.object(
+            core.socket, "getaddrinfo", side_effect=_getaddrinfo,
+        ):
+            get_fqdn = core.ip_fqdn()
+            ret_keys = ["fqdn_ip4", "fqdn_ip6", "ipv4", "ipv6"]
+            for key in ret_keys:
+                value = get_fqdn[key]
+                _check_type(key, value, ip4_empty, ip6_empty)
+                if key.startswith("fqdn_ip"):
+                    if key.endswith("4"):
+                        self._check_ip_fqdn_set(
+                            value, ip4_empty, _set=[IP4_ADD1, IP4_ADD2]
+                        )
+                    if key.endswith("6"):
+                        self._check_ip_fqdn_set(
+                            value, ip6_empty, _set=[IP6_ADD1, IP6_ADD2]
+                        )
 
     @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
     @patch.object(salt.utils.platform, "is_windows", MagicMock(return_value=False))
@@ -1289,6 +1620,11 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             }
         }
         with patch.object(
+            salt.utils.dns, "parse_resolv", MagicMock(return_value=resolv_mock)
+        ):
+            assert core.dns() == ret
+
+        with patch("os.path.exists", return_value=True), patch.object(
             salt.utils.dns, "parse_resolv", MagicMock(return_value=resolv_mock)
         ):
             assert core.dns() == ret
@@ -1614,7 +1950,51 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                         )
                     },
                 ):
-                    with patch("salt.utils.files.fopen", mock_open(read_data="嗨")):
+                    with patch(
+                        "salt.utils.files.fopen", mock_open(read_data="嗨".encode()),
+                    ):
+                        osdata = {
+                            "kernel": "Linux",
+                        }
+                        osdata = {
+                            "kernel": "Linux",
+                        }
+                        ret = core._virtual(osdata)
+                        self.assertEqual(ret["virtual"], virt)
+
+    @patch("os.path.isfile")
+    @patch("os.path.isdir")
+    def test_core_virtual_invalid(self, mock_file, mock_dir):
+        """
+        test virtual grain with an invalid unicode character in product_name file
+        """
+
+        def path_side_effect(path):
+            if path == "/sys/devices/virtual/dmi/id/product_name":
+                return True
+            return False
+
+        virt = "kvm"
+        mock_file.side_effect = path_side_effect
+        mock_dir.side_effect = path_side_effect
+        with patch.object(
+            salt.utils.platform, "is_windows", MagicMock(return_value=False)
+        ):
+            with patch.object(salt.utils.path, "which", MagicMock(return_value=True)):
+                with patch.dict(
+                    core.__salt__,
+                    {
+                        "cmd.run_all": MagicMock(
+                            return_value={
+                                "pid": 78,
+                                "retcode": 0,
+                                "stderr": "",
+                                "stdout": virt,
+                            }
+                        )
+                    },
+                ):
+                    with patch("salt.utils.files.fopen", mock_open(read_data=b"\xff")):
                         osdata = {
                             "kernel": "Linux",
                         }
@@ -1989,7 +2369,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
     def test__hw_data_linux_empty(self, is_proxy, exists):
         is_proxy.return_value = False
         exists.return_value = True
-        with patch("salt.utils.files.fopen", mock_open(read_data="")):
+        with patch("salt.utils.files.fopen", mock_open(read_data=b"")):
             self.assertEqual(
                 core._hw_data({"kernel": "Linux"}),
                 {

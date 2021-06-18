@@ -109,7 +109,6 @@ state modules
     gem
     git
     github
-    glance
     glance_image
     glassfish
     glusterfs

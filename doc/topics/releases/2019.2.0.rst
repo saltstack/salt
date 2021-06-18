@@ -713,7 +713,7 @@ Alternatively, the newly-added :py:func:`pkg.show <salt.modules.aptpkg.show>`
 function can be used to get more detailed information about a given package and
 help determine what package name is correct:
 
-.. code-block:: bash
+.. code-block:: console
 
     # salt myminion pkg.show 'nginx*' filter=description,provides
     myminion:
@@ -955,7 +955,7 @@ Those who are using the :ref:`LocalClient <local-client>` (either directly,
 or implicitly via a :ref:`netapi module <all-netapi-modules>`) need to update
 their code to use ``tgt_type``.
 
-.. code-block:: python
+.. code-block:: pycon
 
     >>> import salt.client
     >>> local = salt.client.LocalClient()

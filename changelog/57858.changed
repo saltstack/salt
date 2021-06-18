@@ -1,5 +1,0 @@
-The ``serializer`` argument has been added to the :py:func:`file.serialize
-<salt.states.file.serialize>` state, as an alternative to ``formatter``. This
-brings it more in line with the ``serializer_opts`` and ``deserializer_opts``
-arguments. ``formatter`` is still supported, but using both ``serializer`` and
-``formatter`` will cause the state to fail.

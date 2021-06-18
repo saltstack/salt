@@ -14,12 +14,12 @@ features! Be sure to report any bugs you find on `Github
 Installing Using Packages
 =========================
 
-Builds for a few platforms are available as part of the RC at https://repo.saltstack.com/salt_rc/.
+Builds for a few platforms are available as part of the RC at https://repo.saltproject.io/salt_rc/.
 The builds should include the latest version of the OS that is currently available.
 
 .. note::
 
-    Follow the instructions on https://repo.saltstack.com/,
+    Follow the instructions on https://repo.saltproject.io/,
     but insert ``salt_rc/`` into the URL between the hostname
     and the remainder of the path.
 
@@ -27,21 +27,21 @@ The builds should include the latest version of the OS that is currently availab
 
     .. code-block:: bash
 
-        baseurl=https://repo.saltstack.com/salt_rc/py3/redhat/$releasever/$basearch/
+        baseurl=https://repo.saltproject.io/salt_rc/py3/redhat/$releasever/$basearch/
 
-    For Ubuntu Python 3 (replace os_version, with ubuntu version. For example 18.04)
-
-    .. code-block:: none
-
-        deb http://repo.saltstack.com/salt_rc/py3/ubuntu/<os_version>/amd64 bionic main
-
-    For Debian Python 3 (replace os_version, with debian version. For example 9)
+    For Ubuntu Python 3 (replace os_version, with ubuntu version. For example 20.04)
 
     .. code-block:: none
 
-        deb http://repo.saltstack.com/salt_rc/py3/debian/<os_version>/amd64 stretch main
+        deb https://repo.saltproject.io/salt_rc/py3/ubuntu/<os_version>/amd64 focal main
 
-The OSs that will be built for each RC release are the latest version of each OS on https://repo.saltstack.com
+    For Debian Python 3 (replace os_version, with debian version. For example 10)
+
+    .. code-block:: none
+
+        deb https://repo.saltproject.io/salt_rc/py3/debian/<os_version>/amd64 buster main
+
+The OSs that will be built for each RC release are the latest version of each OS on https://repo.saltproject.io
 
 
 .. FreeBSD
@@ -52,27 +52,27 @@ Installing Using Bootstrap
 You can install a release candidate of Salt using `Salt Bootstrap
 <https://github.com/saltstack/salt-bootstrap/>`_:
 
-For example for the 2019.2.0rc1 release:
+For example for the 3003rc1 release:
 
 .. code-block:: bash
 
-    curl -o install_salt.sh -L https://bootstrap.saltstack.com
-    sudo sh install_salt.sh -P -x python3 git v2019.2.0rc1
+    curl -o install_salt.sh -L https://bootstrap.saltproject.io
+    sudo sh install_salt.sh -P -x python3 git v3003rc1
 
 If you want to also install a master using Salt Bootstrap, use the ``-M`` flag:
 
 .. code-block:: bash
 
-    curl -o install_salt.sh -L https://bootstrap.saltstack.com
-    sudo sh install_salt.sh -P -M -x python3 git v2019.2.0rc1
+    curl -o install_salt.sh -L https://bootstrap.saltproject.io
+    sudo sh install_salt.sh -P -M -x python3 git v3003rc1
 
 If you want to install only a master and not a minion using Salt Bootstrap, use
 the ``-M`` and ``-N`` flags:
 
 .. code-block:: bash
 
-    curl -o install_salt.sh -L https://bootstrap.saltstack.com
-    sudo sh install_salt.sh -P -M -N -x python3 git v2019.2.0rc1
+    curl -o install_salt.sh -L https://bootstrap.saltproject.io
+    sudo sh install_salt.sh -P -M -N -x python3 git v3003rc1
 
 Installing Using PyPI
 =====================
@@ -115,10 +115,10 @@ Then install salt using the following command:
 
 .. code-block:: bash
 
-    sudo pip install salt==<rc tag version>
+    sudo pip install salt==$rc_tag_version
 
-For example for the 2019.2.0rc1 release:
+For example for the 3003rc1 release:
 
 .. code-block:: bash
 
-    sudo pip install salt==2019.2.0rc1
+    sudo pip install salt==3003rc1

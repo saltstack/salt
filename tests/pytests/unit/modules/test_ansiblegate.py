@@ -1,20 +1,21 @@
-#
 # Author: Bo Maryniuk <bo@suse.de>
-
 
 import os
 import sys
 
 import pytest
 import salt.modules.ansiblegate as ansible
-import salt.utils.path
-import salt.utils.platform
 from salt.exceptions import LoaderError
 from tests.support.mock import MagicMock, MockTimedProc, patch
 
-pytestmark = pytest.mark.skipif(
-    salt.utils.platform.is_windows(), reason="Not supported on Windows"
-)
+pytestmark = [
+    pytest.mark.skip_on_windows,
+]
+
+
+@pytest.fixture
+def configure_loader_modules():
+    return {ansible: {}}
 
 
 @pytest.fixture
@@ -26,13 +27,6 @@ def resolver():
         "three.six.one": os.sep + os.path.join("three", "six", "one.py"),
     }
     return _resolver
-
-
-@pytest.fixture(autouse=True)
-def setup_loader(request):
-    setup_loader_modules = {ansible: {}}
-    with pytest.helpers.loader_mock(request, setup_loader_modules) as loader_mock:
-        yield loader_mock
 
 
 def test_ansible_module_help(resolver):

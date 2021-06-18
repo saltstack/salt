@@ -9,7 +9,6 @@ module can be overwritten just by returning dict keys with the same value
 as those returned here
 """
 
-# Import Python libs
 import datetime
 import hashlib
 import locale
@@ -18,14 +17,13 @@ import os
 import platform
 import re
 import socket
+import subprocess
 import sys
 import time
 import uuid
 from errno import EACCES, EPERM
 
 import distro
-
-# Import Salt libs
 import salt.exceptions
 import salt.log
 
@@ -71,10 +69,11 @@ if salt.utils.platform.is_windows():
     # attempt to import the python wmi module
     # the Windows minion uses WMI for some of its grains
     try:
-        import wmi  # pylint: disable=import-error
-        import salt.utils.winapi
         import win32api
+        import wmi  # pylint: disable=import-error
+
         import salt.utils.win_reg
+        import salt.utils.winapi
 
         HAS_WMI = True
     except ImportError:
@@ -101,6 +100,24 @@ HAS_UNAME = hasattr(os, "uname")
 # Possible value for h_errno defined in netdb.h
 HOST_NOT_FOUND = 1
 NO_DATA = 4
+
+
+def _parse_junos_showver(txt):
+    showver = {}
+    for l in txt.splitlines():
+        decoded_line = l.decode("utf-8")
+        if decoded_line.startswith("Model"):
+            showver["model"] = decoded_line.split(" ")[1]
+        if decoded_line.startswith("Junos"):
+            showver["osrelease"] = decoded_line.split(" ")[1]
+            showver["osmajorrelease"] = decoded_line.split(".")[0]
+            showver["osrelease_info"] = decoded_line.split(".")
+        if decoded_line.startswith("JUNOS OS Kernel"):
+            showver["kernelversion"] = decoded_line
+            relno = re.search(r"\[(.*)\]", decoded_line)
+            if relno:
+                showver["kernelrelease"] = relno.group(1)
+    return showver
 
 
 def _windows_cpudata():
@@ -840,15 +857,17 @@ def _virtual(osdata):
                 grains["virtual"] = "VirtualPC"
                 break
             elif "lxc" in output:
-                grains["virtual"] = "LXC"
-                break
-            elif "systemd-nspawn" in output:
-                grains["virtual"] = "LXC"
+                grains["virtual"] = "container"
+                grains["virtual_subtype"] = "LXC"
                 break
         elif command == "virt-what":
             for line in output.splitlines():
-                if line in ("kvm", "qemu", "uml", "xen", "lxc"):
+                if line in ("kvm", "qemu", "uml", "xen"):
                     grains["virtual"] = line
+                    break
+                elif "lxc" in line:
+                    grains["virtual"] = "container"
+                    grains["virtual_subtype"] = "LXC"
                     break
                 elif "vmware" in line:
                     grains["virtual"] = "VMware"
@@ -859,6 +878,7 @@ def _virtual(osdata):
                 elif "hyperv" in line:
                     grains["virtual"] = "HyperV"
                     break
+            break
         elif command == "dmidecode":
             # Product Name: VirtualBox
             if "Vendor: QEMU" in output:
@@ -1002,35 +1022,15 @@ def _virtual(osdata):
                 # Tested on Fedora 10 / 2.6.27.30-170.2.82 with xen
                 # Tested on Fedora 15 / 2.6.41.4-1 without running xen
                 elif isdir("/sys/bus/xen"):
-                    if "xen:" in __salt__["cmd.run"]("dmesg").lower():
-                        grains["virtual_subtype"] = "Xen PV DomU"
-                    elif os.path.isfile("/sys/bus/xen/drivers/xenconsole"):
+                    if os.path.isdir("/sys/bus/xen/drivers/xenconsole"):
                         # An actual DomU will have the xenconsole driver
+                        grains["virtual_subtype"] = "Xen PV DomU"
+                    elif "xen:" in __salt__["cmd.run"]("dmesg").lower():
+                        # Fallback to parsing dmesg, might not be successful
                         grains["virtual_subtype"] = "Xen PV DomU"
             # If a Dom0 or DomU was detected, obviously this is xen
             if "dom" in grains.get("virtual_subtype", "").lower():
                 grains["virtual"] = "xen"
-        # Check container type after hypervisors, to avoid variable overwrite on containers running in virtual environment.
-        if os.path.isfile("/proc/1/cgroup"):
-            try:
-                with salt.utils.files.fopen("/proc/1/cgroup", "r") as fhr:
-                    fhr_contents = fhr.read()
-                if ":/lxc/" in fhr_contents:
-                    grains["virtual"] = "container"
-                    grains["virtual_subtype"] = "LXC"
-                elif ":/kubepods/" in fhr_contents:
-                    grains["virtual_subtype"] = "kubernetes"
-                elif ":/libpod_parent/" in fhr_contents:
-                    grains["virtual_subtype"] = "libpod"
-                else:
-                    if any(
-                        x in fhr_contents
-                        for x in (":/system.slice/docker", ":/docker/", ":/docker-ce/")
-                    ):
-                        grains["virtual"] = "container"
-                        grains["virtual_subtype"] = "Docker"
-            except OSError:
-                pass
         if os.path.isfile("/proc/cpuinfo"):
             with salt.utils.files.fopen("/proc/cpuinfo", "r") as fhr:
                 if "QEMU Virtual CPU" in fhr.read():
@@ -1038,7 +1038,7 @@ def _virtual(osdata):
         if os.path.isfile("/sys/devices/virtual/dmi/id/product_name"):
             try:
                 with salt.utils.files.fopen(
-                    "/sys/devices/virtual/dmi/id/product_name", "r"
+                    "/sys/devices/virtual/dmi/id/product_name", "rb"
                 ) as fhr:
                     output = salt.utils.stringutils.to_unicode(
                         fhr.read(), errors="replace"
@@ -1063,6 +1063,38 @@ def _virtual(osdata):
                 )
             except OSError:
                 pass
+        # Check container type after hypervisors, to avoid variable overwrite on containers running in virtual environment.
+        if os.path.isfile("/proc/1/cgroup"):
+            try:
+                with salt.utils.files.fopen("/proc/1/cgroup", "r") as fhr:
+                    fhr_contents = fhr.read()
+                if ":/lxc/" in fhr_contents:
+                    grains["virtual"] = "container"
+                    grains["virtual_subtype"] = "LXC"
+                elif ":/kubepods/" in fhr_contents:
+                    grains["virtual_subtype"] = "kubernetes"
+                elif ":/libpod_parent/" in fhr_contents:
+                    grains["virtual_subtype"] = "libpod"
+                else:
+                    if any(
+                        x in fhr_contents
+                        for x in (":/system.slice/docker", ":/docker/", ":/docker-ce/")
+                    ):
+                        grains["virtual"] = "container"
+                        grains["virtual_subtype"] = "Docker"
+            except OSError:
+                pass
+        # Newer versions of LXC didn't have "lxc" in /proc/1/cgroup. Check environ
+        if ("virtual_subtype" not in grains) or (grains["virtual_subtype"] != "LXC"):
+            if os.path.isfile("/proc/1/environ"):
+                try:
+                    with salt.utils.files.fopen("/proc/1/environ", "r") as fhr:
+                        fhr_contents = fhr.read()
+                    if "container=lxc" in fhr_contents:
+                        grains["virtual"] = "container"
+                        grains["virtual_subtype"] = "LXC"
+                except OSError:
+                    pass
     elif osdata["kernel"] == "FreeBSD":
         kenv = salt.utils.path.which("kenv")
         if kenv:
@@ -1370,6 +1402,7 @@ def _windows_platform_data():
     #    serialnumber
     #    osfullname
     #    timezone
+    #    uuid
     #    windowsdomain
     #    windowsdomaintype
     #    motherboard.productname
@@ -1389,6 +1422,8 @@ def _windows_platform_data():
         biosinfo = wmi_c.Win32_BIOS()[0]
         # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394498(v=vs.85).aspx
         timeinfo = wmi_c.Win32_TimeZone()[0]
+        # https://docs.microsoft.com/en-us/windows/win32/cimwin32prov/win32-computersystemproduct
+        csproductinfo = wmi_c.Win32_ComputerSystemProduct()[0]
 
         # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394072(v=vs.85).aspx
         motherboard = {"product": None, "serial": None}
@@ -1426,6 +1461,7 @@ def _windows_platform_data():
             "serialnumber": _clean_value("serialnumber", biosinfo.SerialNumber),
             "osfullname": _clean_value("osfullname", osinfo.Caption),
             "timezone": _clean_value("timezone", timeinfo.Description),
+            "uuid": _clean_value("uuid", csproductinfo.UUID.lower()),
             "windowsdomain": _clean_value("windowsdomain", net_info["Domain"]),
             "windowsdomaintype": _clean_value(
                 "windowsdomaintype", net_info["DomainType"]
@@ -1503,15 +1539,18 @@ def id_():
 _REPLACE_LINUX_RE = re.compile(r"\W(?:gnu/)?linux", re.IGNORECASE)
 
 # This maps (at most) the first ten characters (no spaces, lowercased) of
-# 'osfullname' to the 'os' grain that Salt traditionally uses.
-# Please see os_data() and _supported_dists.
-# If your system is not detecting properly it likely needs an entry here.
+# 'osfullname' to the 'os' grain that Salt traditionally uses, and is used by
+# the os_data() function to create the "os" grain.
+#
+# If your system is not detecting the "os" grain properly, it likely needs an
+# entry in this dictionary.
 _OS_NAME_MAP = {
     "redhatente": "RedHat",
     "gentoobase": "Gentoo",
     "archarm": "Arch ARM",
     "arch": "Arch",
     "debian": "Debian",
+    "Junos": "Junos",
     "raspbian": "Raspbian",
     "fedoraremi": "Fedora",
     "chapeau": "Chapeau",
@@ -1522,6 +1561,7 @@ _OS_NAME_MAP = {
     "oracleserv": "OEL",
     "cloudserve": "CloudLinux",
     "cloudlinux": "CloudLinux",
+    "almalinux": "AlmaLinux",
     "pidora": "Fedora",
     "scientific": "ScientificLinux",
     "synology": "Synology",
@@ -1536,6 +1576,10 @@ _OS_NAME_MAP = {
     "slesexpand": "RES",
     "linuxmint": "Mint",
     "neon": "KDE neon",
+    "pop": "Pop",
+    "rocky": "Rocky",
+    "alibabaclo": "Alinux",
+    "mendel": "Mendel",
 }
 
 # Map the 'os' grain to the 'os_family' grain
@@ -1549,10 +1593,12 @@ _OS_FAMILY_MAP = {
     "Korora": "RedHat",
     "FedBerry": "RedHat",
     "CentOS": "RedHat",
+    "CentOS Stream": "RedHat",
     "GoOSe": "RedHat",
     "Scientific": "RedHat",
     "Amazon": "RedHat",
     "CloudLinux": "RedHat",
+    "AlmaLinux": "RedHat",
     "OVS": "RedHat",
     "OEL": "RedHat",
     "XCP": "RedHat",
@@ -1560,6 +1606,7 @@ _OS_FAMILY_MAP = {
     "XenServer": "RedHat",
     "RES": "RedHat",
     "Sangoma": "RedHat",
+    "VMware Photon OS": "RedHat",
     "Mandrake": "Mandriva",
     "ESXi": "VMware",
     "Mint": "Debian",
@@ -1608,6 +1655,12 @@ _OS_FAMILY_MAP = {
     "Funtoo": "Gentoo",
     "AIX": "AIX",
     "TurnKey": "Debian",
+    "Pop": "Debian",
+    "Rocky": "RedHat",
+    "AstraLinuxCE": "Debian",
+    "AstraLinuxSE": "Debian",
+    "Alinux": "RedHat",
+    "Mendel": "Debian",
 }
 
 # Matches any possible format:
@@ -1758,7 +1811,18 @@ def os_data():
     ) = platform.uname()
     # pylint: enable=unpacking-non-sequence
 
-    if salt.utils.platform.is_proxy():
+    if salt.utils.platform.is_junos():
+        grains["kernel"] = "Junos"
+        grains["osfullname"] = "Junos"
+        grains["os"] = "Junos"
+        grains["os_family"] = "FreeBSD"
+        showver = _parse_junos_showver(
+            subprocess.run(
+                ["/usr/sbin/cli", "show", "version"], stdout=subprocess.PIPE, check=True
+            ).stdout
+        )
+        grains.update(showver)
+    elif salt.utils.platform.is_proxy():
         grains["kernel"] = "proxy"
         grains["kernelrelease"] = "proxy"
         grains["kernelversion"] = "proxy"
@@ -2389,7 +2453,7 @@ def ip_fqdn():
             try:
                 start_time = datetime.datetime.utcnow()
                 info = socket.getaddrinfo(_fqdn, None, socket_type)
-                ret[key] = list(item[4][0] for item in info)
+                ret[key] = list({item[4][0] for item in info})
             except (OSError, UnicodeError):
                 timediff = datetime.datetime.utcnow() - start_time
                 if timediff.seconds > 5 and __opts__["__role"] == "master":
@@ -2511,7 +2575,11 @@ def dns():
     if salt.utils.platform.is_windows() or "proxyminion" in __opts__:
         return {}
 
-    resolv = salt.utils.dns.parse_resolv()
+    if os.path.exists("/run/systemd/resolve/resolv.conf"):
+        resolv = salt.utils.dns.parse_resolv("/run/systemd/resolve/resolv.conf")
+    else:
+        resolv = salt.utils.dns.parse_resolv()
+
     for key in ("nameservers", "ip4_nameservers", "ip6_nameservers", "sortlist"):
         if key in resolv:
             resolv[key] = [str(i) for i in resolv[key]]
@@ -2667,7 +2735,7 @@ def _hw_data(osdata):
             contents_file = os.path.join("/sys/class/dmi/id", fw_file)
             if os.path.exists(contents_file):
                 try:
-                    with salt.utils.files.fopen(contents_file, "r") as ifile:
+                    with salt.utils.files.fopen(contents_file, "rb") as ifile:
                         grains[key] = salt.utils.stringutils.to_unicode(
                             ifile.read().strip(), errors="replace"
                         )

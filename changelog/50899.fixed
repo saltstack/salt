@@ -1,5 +1,0 @@
-permit the use of int/float type for the version in:
- - the state postgres_cluster.present
- - the state postgres_cluster.absent
- - the module postgres.cluster_create
- - the module postgres.cluster_remove
