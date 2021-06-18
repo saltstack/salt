@@ -179,14 +179,7 @@ def _module_dirs(
                     if ctx.exception_caught:
                         continue
 
-                    if isinstance(loaded_entry_point_value, list):
-                        # This is old style entry-point, and, as such, the entry point name MUST
-                        # match the value of `ext_type_dirs
-                        if entry_point.name != ext_type_dirs:
-                            continue
-                        for path in loaded_entry_point_value:
-                            loaded_entry_point_paths.add(path)
-                    elif isinstance(loaded_entry_point_value, dict):
+                    if isinstance(loaded_entry_point_value, dict):
                         # This is new style entry-point and it returns a dictionary.
                         # It MUST contain `ext_type` in it's keys to be considered
                         if ext_type not in loaded_entry_point_value:
@@ -200,6 +193,13 @@ def _module_dirs(
                                 )
                             for path in loaded_entry_point_value[ext_type]:
                                 loaded_entry_point_paths.add(path)
+                    else:
+                        # This is old style entry-point, and, as such, the entry point name MUST
+                        # match the value of `ext_type_dirs
+                        if entry_point.name != ext_type_dirs:
+                            continue
+                        for path in loaded_entry_point_value:
+                            loaded_entry_point_paths.add(path)
                 elif isinstance(loaded_entry_point, types.ModuleType):
                     # This is a new style entry points definition which just points us to a package
                     #

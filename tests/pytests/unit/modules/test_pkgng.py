@@ -19,6 +19,90 @@ def pkgs():
     ]
 
 
+def test_latest_version(pkgs):
+    """
+    Test basic usage of pkgng.latest_version
+    """
+    pkgs_mock = MagicMock(side_effect=pkgs)
+    search_cmd = MagicMock(return_value="bash-5.1.4")
+    with patch("salt.modules.pkgng.list_pkgs", pkgs_mock):
+        with patch.dict(pkgng.__salt__, {"cmd.run": search_cmd}):
+            result = pkgng.latest_version("bash")
+            search_cmd.assert_called_with(
+                ["pkg", "search", "-eqS", "name", "-U", "bash"],
+                output_loglevel="trace",
+                python_shell=False,
+            )
+            assert result == "5.1.4"
+
+
+def test_latest_version_origin(pkgs):
+    """
+    Test pkgng.latest_version with a specific package origin
+    """
+    pkgs_mock = MagicMock(side_effect=pkgs)
+    search_cmd = MagicMock(return_value="bash-5.1.4_2")
+    with patch("salt.modules.pkgng.list_pkgs", pkgs_mock):
+        with patch.dict(pkgng.__salt__, {"cmd.run": search_cmd}):
+            result = pkgng.latest_version("shells/bash")
+            search_cmd.assert_called_with(
+                ["pkg", "search", "-eqS", "origin", "-U", "shells/bash"],
+                output_loglevel="trace",
+                python_shell=False,
+            )
+            assert result == "5.1.4_2"
+
+
+def test_latest_version_outofdatedate(pkgs):
+    """
+    Test pkgng.latest_version with an out-of-date package
+    """
+    pkgs_mock = MagicMock(side_effect=pkgs)
+    search_cmd = MagicMock(return_value="openvpn-2.4.8_3")
+    with patch("salt.modules.pkgng.list_pkgs", pkgs_mock):
+        with patch.dict(pkgng.__salt__, {"cmd.run": search_cmd}):
+            result = pkgng.latest_version("openvpn")
+            search_cmd.assert_called_with(
+                ["pkg", "search", "-eqS", "name", "-U", "openvpn"],
+                output_loglevel="trace",
+                python_shell=False,
+            )
+            assert result == "2.4.8_3"
+
+
+def test_latest_version_unavailable(pkgs):
+    """
+    Test pkgng.latest_version when the requested package is not available
+    """
+    pkgs_mock = MagicMock(side_effect=pkgs)
+    search_cmd = MagicMock(return_value="")
+    with patch("salt.modules.pkgng.list_pkgs", pkgs_mock):
+        with patch.dict(pkgng.__salt__, {"cmd.run": search_cmd}):
+            result = pkgng.latest_version("does_not_exist")
+            search_cmd.assert_called_with(
+                ["pkg", "search", "-eqS", "name", "-U", "does_not_exist"],
+                output_loglevel="trace",
+                python_shell=False,
+            )
+
+
+def test_latest_version_uptodate(pkgs):
+    """
+    Test pkgng.latest_version with an up-to-date package
+    """
+    pkgs_mock = MagicMock(side_effect=pkgs)
+    search_cmd = MagicMock(return_value="openvpn-2.4.8_2")
+    with patch("salt.modules.pkgng.list_pkgs", pkgs_mock):
+        with patch.dict(pkgng.__salt__, {"cmd.run": search_cmd}):
+            result = pkgng.latest_version("openvpn")
+            search_cmd.assert_called_with(
+                ["pkg", "search", "-eqS", "name", "-U", "openvpn"],
+                output_loglevel="trace",
+                python_shell=False,
+            )
+            assert result == ""
+
+
 def test_lock():
     """
     Test pkgng.lock
