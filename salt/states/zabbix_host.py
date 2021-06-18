@@ -6,6 +6,7 @@ Management of Zabbix hosts.
 
 """
 
+from collections.abc import Mapping
 from copy import deepcopy
 
 import salt.utils.json
@@ -33,12 +34,15 @@ def present(host, groups, interfaces, **kwargs):
     :param groups: groupids of host groups to add the host to
     :param interfaces: interfaces to be created for the host
     :param proxy_host: Optional proxy name or proxyid to monitor host
-    :param inventory: Optional list of inventory names and values
+    :param inventory: Optional list or dictionary of inventory names and values
     :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
     :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
     :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
     :param visible_name: Optional - string with visible name of the host, use 'visible_name' instead of 'name' \
     parameter to not mess with value supplied from Salt sls file.
+    :param inventory_clean: Optional - Boolean value that selects if the current inventory will be cleaned and \
+    overwritten by the declared inventory list (true); or if the inventory will be kept and only updated with \
+    inventory list contents (false).
 
     .. code-block:: yaml
 
@@ -238,14 +242,18 @@ def present(host, groups, interfaces, **kwargs):
                 ret["comment"] = "Invalid proxy_host {}".format(proxy_host)
                 return ret
 
+    # Selects if the current inventory should be substituted by the new one
+    inventory_clean = kwargs.pop("inventory_clean", True)
+
     inventory = kwargs.pop("inventory", None)
-    if inventory is None:
-        inventory = {}
-    # Create dict of requested inventory items
     new_inventory = {}
-    for inv_item in inventory:
-        for k, v in inv_item.items():
-            new_inventory[k] = str(v)
+    if isinstance(inventory, Mapping):
+        new_inventory = dict(inventory)
+    elif inventory is not None:
+        # Create dict of requested inventory items
+        for inv_item in inventory:
+            for k, v in inv_item.items():
+                new_inventory[k] = str(v)
 
     visible_name = kwargs.pop("visible_name", None)
 
@@ -336,21 +344,23 @@ def present(host, groups, interfaces, **kwargs):
         elif not hostinterfaces and interfaces:
             update_interfaces = True
 
-        cur_inventory = __salt__["zabbix.host_inventory_get"](
-            hostids=hostid, **connection_args
-        )
-        if cur_inventory:
-            # Remove blank inventory items
-            cur_inventory = {k: v for k, v in cur_inventory.items() if v}
-            # Remove persistent inventory keys for comparison
-            cur_inventory.pop("hostid", None)
-            cur_inventory.pop("inventory_mode", None)
+        # if inventory param is empty leave inventory as is don't compare it
+        if inventory is not None:
+            cur_inventory = __salt__["zabbix.host_inventory_get"](
+                hostids=hostid, **connection_args
+            )
+            if cur_inventory:
+                # Remove blank inventory items
+                cur_inventory = {k: v for k, v in cur_inventory.items() if v}
+                # Remove persistent inventory keys for comparison
+                cur_inventory.pop("hostid", None)
+                cur_inventory.pop("inventory_mode", None)
 
-        if not cur_inventory:
-            if new_inventory:
+            if not cur_inventory:
+                if new_inventory:
+                    update_inventory = True
+            elif sorted(cur_inventory.items()) != sorted(new_inventory.items()):
                 update_inventory = True
-        elif set(cur_inventory) != set(new_inventory):
-            update_inventory = True
 
     # Dry run, test=true mode
     if __opts__["test"]:
@@ -397,7 +407,7 @@ def present(host, groups, interfaces, **kwargs):
                 # combine connection_args, inventory, and clear_old
                 sum_kwargs = dict(new_inventory)
                 sum_kwargs.update(connection_args)
-                sum_kwargs["clear_old"] = True
+                sum_kwargs["clear_old"] = inventory_clean
 
                 hostupdate = __salt__["zabbix.host_inventory_set"](hostid, **sum_kwargs)
                 ret["changes"]["inventory"] = str(new_inventory)
