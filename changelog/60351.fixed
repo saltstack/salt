@@ -1,1 +1,1 @@
-Now hosts.rm_host parses /etc/hosts that have comments in hosts entries and is able to remove hosts entries or aliases.
+Now hosts.rm_host can remove entries from /etc/hosts when this file have inline comments.
