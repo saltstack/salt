@@ -34,21 +34,27 @@ def etc_docker_container(salt_call_cli, sdb_etcd_port):
         assert ret.json
         state_run = next(iter(ret.json.values()))
         assert state_run["result"] is True
-        ret = salt_call_cli.run(
-            "state.single",
-            "docker_container.running",
-            name="etcd",
-            image="bitnami/etcd:latest",
-            port_bindings="{}:2379".format(sdb_etcd_port),
-            environment={"ALLOW_NONE_AUTHENTICATION": "yes", "ETCD_ENABLE_V2": "true"},
-            cap_add="IPC_LOCK",
-        )
-        if ret.exitcode != 0:
-            proc = subprocess.run(
-                ['netstat', '-plntu'],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+        tries = 0
+        while tries < 3:
+            tries += 1
+            ret = salt_call_cli.run(
+                "state.single",
+                "docker_container.running",
+                name="etcd",
+                image="bitnami/etcd:latest",
+                port_bindings="{}:2379".format(sdb_etcd_port),
+                environment={"ALLOW_NONE_AUTHENTICATION": "yes", "ETCD_ENABLE_V2": "true"},
+                cap_add="IPC_LOCK",
             )
+            if ret.exitcode != 0:
+                proc = subprocess.run(
+                    ['netstat', '-plntu'],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                )
+            else:
+                break
+            time.sleep(4)
         assert ret.exitcode == 0
         assert ret.json
         state_run = next(iter(ret.json.values()))
