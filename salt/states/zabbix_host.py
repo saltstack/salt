@@ -41,8 +41,8 @@ def present(host, groups, interfaces, **kwargs):
     :param visible_name: Optional - string with visible name of the host, use 'visible_name' instead of 'name' \
     parameter to not mess with value supplied from Salt sls file.
     :param inventory_clean: Optional - Boolean value that selects if the current inventory will be cleaned and \
-    overwritten by the declared inventory list (true); or if the inventory will be kept and only updated with \
-    inventory list contents (false).
+    overwritten by the declared inventory list (True); or if the inventory will be kept and only updated with \
+    inventory list contents (False). Defaults to True
 
     .. code-block:: yaml
 
@@ -299,6 +299,10 @@ def present(host, groups, interfaces, **kwargs):
         if host_updated_params:
             update_host = True
 
+        inventory_mode = host_updated_params.get(
+            "inventory_mode", host["inventory_mode"]
+        )
+
         cur_proxy_hostid = host["proxy_hostid"]
         if proxy_hostid != cur_proxy_hostid:
             update_proxy = True
@@ -345,7 +349,8 @@ def present(host, groups, interfaces, **kwargs):
             update_interfaces = True
 
         # if inventory param is empty leave inventory as is don't compare it
-        if inventory is not None:
+        # if inventory_mode is '-1', the inventory will be erased, why compare it?
+        if inventory is not None and inventory_mode != "-1":
             cur_inventory = __salt__["zabbix.host_inventory_get"](
                 hostids=hostid, **connection_args
             )
@@ -411,6 +416,13 @@ def present(host, groups, interfaces, **kwargs):
 
                 hostupdate = __salt__["zabbix.host_inventory_set"](hostid, **sum_kwargs)
                 ret["changes"]["inventory"] = str(new_inventory)
+                if "error" in hostupdate:
+                    error.append(hostupdate["error"])
+                # restore inventory_mode as host_inventory_set changes it to '0'
+                if inventory_mode != "0":
+                    hostupdate = __salt__["zabbix.host_update"](
+                        hostid, inventory_mode=inventory_mode, **connection_args
+                    )
                 if "error" in hostupdate:
                     error.append(hostupdate["error"])
             if update_proxy:
