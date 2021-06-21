@@ -2,13 +2,13 @@ import time
 import uuid
 
 import attr
-from saltfactories.factories.daemons.container import SaltMinionContainerFactory
+from saltfactories.daemons.container import SaltMinion
 from saltfactories.utils import ports
 from tests.support.runtests import RUNTIME_VARS
 
 
 @attr.s(kw_only=True, slots=True)
-class SaltVirtMinionContainerFactory(SaltMinionContainerFactory):
+class SaltVirtMinionContainerFactory(SaltMinion):
 
     host_uuid = attr.ib(default=attr.Factory(uuid.uuid4))
     ssh_port = attr.ib(
