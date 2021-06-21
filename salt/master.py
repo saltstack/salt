@@ -448,7 +448,7 @@ class FileserverUpdate(salt.utils.process.SignalHandlingProcess):
             try:
                 if update_args:
                     log.debug(
-                        "Updating %s fileserver cache for the following " "targets: %s",
+                        "Updating %s fileserver cache for the following targets: %s",
                         backend_name,
                         update_args,
                     )
@@ -460,7 +460,7 @@ class FileserverUpdate(salt.utils.process.SignalHandlingProcess):
                 update_func(*args)
             except Exception as exc:  # pylint: disable=broad-except
                 log.exception(
-                    "Uncaught exception while updating %s fileserver " "cache",
+                    "Uncaught exception while updating %s fileserver cache",
                     backend_name,
                 )
 
