@@ -299,9 +299,12 @@ def present(host, groups, interfaces, **kwargs):
         if host_updated_params:
             update_host = True
 
-        inventory_mode = host_updated_params.get(
-            "inventory_mode", host["inventory_mode"]
-        )
+        if "inventory_mode" in host_extra_properties:
+            inventory_mode = host_extra_properties["inventory_mode"]
+        elif host["inventory_mode"] == "-1":
+            inventory_mode = "0"
+        else:
+            inventory_mode = host["inventory_mode"]
 
         cur_proxy_hostid = host["proxy_hostid"]
         if proxy_hostid != cur_proxy_hostid:
@@ -419,7 +422,7 @@ def present(host, groups, interfaces, **kwargs):
                 if "error" in hostupdate:
                     error.append(hostupdate["error"])
                 # restore inventory_mode as host_inventory_set changes it to '0'
-                if inventory_mode != "0":
+                if inventory_mode == "1":
                     hostupdate = __salt__["zabbix.host_update"](
                         hostid, inventory_mode=inventory_mode, **connection_args
                     )
