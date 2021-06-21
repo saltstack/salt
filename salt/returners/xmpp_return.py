@@ -80,14 +80,19 @@ from salt.utils.versions import LooseVersion as _LooseVersion
 HAS_LIBS = False
 try:
     from sleekxmpp import ClientXMPP as _ClientXMPP  # pylint: disable=import-error
-
     HAS_LIBS = True
+    salt.utils.versions.warn_until("Chlorine",
+                                   "'sleekxmpp' is being deprecated please use 'slixmpp'!")
 except ImportError:
+    try:
+        from slixmpp import ClientXMPP as _ClientXMPP
+        HAS_LIBS = True
+    except ImportError:
 
-    class _ClientXMPP(object):
-        """
-        Fake class in order not to raise errors
-        """
+        class _ClientXMPP(object):
+            """
+            Fake class in order not to raise errors
+            """
 
 
 log = logging.getLogger(__name__)
@@ -128,7 +133,10 @@ def __virtual__():
     """
     min_version = "1.3.1"
     if HAS_LIBS:
-        import sleekxmpp  # pylint: disable=3rd-party-module-not-gated
+        try:
+            import sleekxmpp
+        except ImportError:
+            import slixmpp as sleekxmpp  # pylint: disable=3rd-party-module-not-gated
 
         # Certain XMPP functionaility we're using doesn't work with versions under 1.3.1
         sleekxmpp_version = _LooseVersion(sleekxmpp.__version__)
@@ -137,7 +145,7 @@ def __virtual__():
             return __virtualname__
     return (
         False,
-        "Could not import xmpp returner; sleekxmpp python client is not "
+        "Could not import xmpp returner; sleekxmpp or slixmpp python client is not "
         "installed or is older than version '{0}'.".format(min_version),
     )
 

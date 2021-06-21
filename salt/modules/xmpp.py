@@ -40,18 +40,26 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
+import salt.utils.versions
+
 HAS_LIBS = False
 try:
     from sleekxmpp import ClientXMPP as _ClientXMPP
     from sleekxmpp.exceptions import XMPPError
-
     HAS_LIBS = True
-except ImportError:
 
-    class _ClientXMPP(object):
-        """
-        Fake class in order not to raise errors
-        """
+    salt.utils.versions.warn_until("Chlorine",
+                                   "'sleekxmpp' is being deprecated please use 'slixmpp'!")
+except ImportError:
+    try:
+        from slixmpp import ClientXMPP as _ClientXMPP
+        from slixmpp.exceptions import XMPPError
+        HAS_LIBS = True
+    except ImportError:
+        class _ClientXMPP(object):
+            """
+            Fake class in order not to raise errors
+            """
 
 
 log = logging.getLogger(__name__)
@@ -67,7 +75,7 @@ def __virtual__():
     """
     if HAS_LIBS:
         return __virtualname__
-    return (False, "Module xmpp: required libraries failed to load")
+    return False, "Module xmpp: required libraries failed to load"
 
 
 class SleekXMPPMUC(logging.Filter):
