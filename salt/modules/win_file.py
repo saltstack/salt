@@ -93,8 +93,8 @@ from salt.modules.file import (
 )
 from salt.modules.file import normpath as normpath_
 from salt.modules.file import (
-    patch,
     pardir,
+    patch,
     path_exists_glob,
     prepend,
     psed,
