@@ -1257,6 +1257,7 @@ def test_update_inventory_values(basic_host_configuration, existing_host_respons
             _connection_user="XXXXXXXXXX",
             asset_tag="ABC12345",
             clear_old=True,
+            inventory_mode="0",
             vendor="TrueVendor",
         )
 
@@ -1335,6 +1336,7 @@ def test_update_inventory_keys(basic_host_configuration, existing_host_responses
             _connection_url="http://XXXXXXXXX/zabbix/api_jsonrpc.php",
             _connection_user="XXXXXXXXXX",
             clear_old=True,
+            inventory_mode="0",
             serialno_a="123751236JJ123K",
             vendor="TrueVendor",
         )
@@ -1423,6 +1425,7 @@ def test_update_inventory_values_without_clear_existing_data(
             _connection_url="http://XXXXXXXXX/zabbix/api_jsonrpc.php",
             _connection_user="XXXXXXXXXX",
             clear_old=False,
+            inventory_mode="0",
             vendor="TrueVendor",
         )
 
@@ -1581,7 +1584,6 @@ def test_update_inventory_and_restore_inventory_mode(
     mock_hostinterface_get = MagicMock(return_value=hostinterface_get_output)
     mock_host_inventory_get = MagicMock(return_value=host_inventory_get_output)
     mock_host_inventory_set = MagicMock(return_value=host_inventory_set_output)
-    mock_host_update = MagicMock(return_value=host_update_output)
     with patch.dict(
         zabbix_host.__salt__,
         {
@@ -1591,7 +1593,6 @@ def test_update_inventory_and_restore_inventory_mode(
             "zabbix.hostinterface_get": mock_hostinterface_get,
             "zabbix.host_inventory_get": mock_host_inventory_get,
             "zabbix.host_inventory_set": mock_host_inventory_set,
-            "zabbix.host_update": mock_host_update,
         },
     ):
         # Blame Python 3.5 support for all this black magic
@@ -1617,12 +1618,6 @@ def test_update_inventory_and_restore_inventory_mode(
             _connection_user="XXXXXXXXXX",
             asset_tag="ABC12345",
             clear_old=True,
-            vendor="TrueVendor",
-        )
-        mock_host_update.assert_called_with(
-            "31337",
-            _connection_password="XXXXXXXXXX",
-            _connection_url="http://XXXXXXXXX/zabbix/api_jsonrpc.php",
-            _connection_user="XXXXXXXXXX",
             inventory_mode="1",
+            vendor="TrueVendor",
         )
