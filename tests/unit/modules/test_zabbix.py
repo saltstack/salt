@@ -1127,12 +1127,65 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
 
         module_return = {"hostids": [10258]}
         query_return = {"jsonrpc": "2.0", "result": {"hostids": [10258]}, "id": 0}
-
-        with patch.object(zabbix, "_query", return_value=query_return):
+        mock__query = MagicMock(return_value=query_return)
+        with patch.object(zabbix, "_query", mock__query):
             with patch.object(zabbix, "_login", return_value=CONN_ARGS):
                 self.assertEqual(
                     zabbix.host_inventory_set(
                         10258, asset_tag="jml3322", type="Xen", **CONN_ARGS
                     ),
                     module_return,
+                )
+                mock__query.assert_called_with(
+                    "host.update",
+                    {
+                        "hostid": 10258,
+                        "inventory_mode": "0",
+                        "inventory": {
+                            "asset_tag": "jml3322",
+                            "type": "Xen",
+                            "url": "http://test.url",
+                            "auth": "1234",
+                        },
+                    },
+                    "http://test.url",
+                    "1234",
+                )
+
+    def test_host_inventory_set_with_inventory_mode(self):
+        """
+        query_submitted = {"params": {"hostid": 10258, "inventory_mode": "1", "inventory":
+        {"asset_tag": "jml3322", "type": "Xen"}}, "jsonrpc": "2.0", "id": 0,
+        "auth": "a50d2c3030b9b73d7c28b5ebd89c044c", "method": "host.update"}
+        """
+
+        module_return = {"hostids": [10258]}
+        query_return = {"jsonrpc": "2.0", "result": {"hostids": [10258]}, "id": 0}
+        mock__query = MagicMock(return_value=query_return)
+        with patch.object(zabbix, "_query", mock__query):
+            with patch.object(zabbix, "_login", return_value=CONN_ARGS):
+                self.assertEqual(
+                    zabbix.host_inventory_set(
+                        10258,
+                        asset_tag="jml3322",
+                        type="Xen",
+                        inventory_mode="1",
+                        **CONN_ARGS
+                    ),
+                    module_return,
+                )
+                mock__query.assert_called_with(
+                    "host.update",
+                    {
+                        "hostid": 10258,
+                        "inventory_mode": "1",
+                        "inventory": {
+                            "asset_tag": "jml3322",
+                            "type": "Xen",
+                            "url": "http://test.url",
+                            "auth": "1234",
+                        },
+                    },
+                    "http://test.url",
+                    "1234",
                 )

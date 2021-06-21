@@ -413,19 +413,13 @@ def present(host, groups, interfaces, **kwargs):
                     error.append(hostupdate["error"])
             if update_inventory:
                 # combine connection_args, inventory, and clear_old
-                sum_kwargs = dict(new_inventory)
+                sum_kwargs = new_inventory
                 sum_kwargs.update(connection_args)
                 sum_kwargs["clear_old"] = inventory_clean
+                sum_kwargs["inventory_mode"] = inventory_mode
 
                 hostupdate = __salt__["zabbix.host_inventory_set"](hostid, **sum_kwargs)
                 ret["changes"]["inventory"] = str(new_inventory)
-                if "error" in hostupdate:
-                    error.append(hostupdate["error"])
-                # restore inventory_mode as host_inventory_set changes it to '0'
-                if inventory_mode == "1":
-                    hostupdate = __salt__["zabbix.host_update"](
-                        hostid, inventory_mode=inventory_mode, **connection_args
-                    )
                 if "error" in hostupdate:
                     error.append(hostupdate["error"])
             if update_proxy:
