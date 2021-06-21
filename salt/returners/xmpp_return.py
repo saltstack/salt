@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Return salt data via xmpp
 
@@ -67,29 +66,29 @@ To override individual configuration items, append --return_kwargs '{"key:": "va
     salt '*' test.ping --return xmpp --return_kwargs '{"recipient": "someone-else@xmpp.example.com"}'
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 import pprint
 
-# Import salt libs
 import salt.returners
 from salt.utils.versions import LooseVersion as _LooseVersion
 
 HAS_LIBS = False
 try:
     from sleekxmpp import ClientXMPP as _ClientXMPP  # pylint: disable=import-error
+
     HAS_LIBS = True
-    salt.utils.versions.warn_until("Chlorine",
-                                   "'sleekxmpp' is being deprecated please use 'slixmpp'!")
+    salt.utils.versions.warn_until(
+        "Chlorine", "'sleekxmpp' is being deprecated please use 'slixmpp'!"
+    )
 except ImportError:
     try:
         from slixmpp import ClientXMPP as _ClientXMPP
+
         HAS_LIBS = True
     except ImportError:
 
-        class _ClientXMPP(object):
+        class _ClientXMPP:
             """
             Fake class in order not to raise errors
             """
@@ -146,7 +145,7 @@ def __virtual__():
     return (
         False,
         "Could not import xmpp returner; sleekxmpp or slixmpp python client is not "
-        "installed or is older than version '{0}'.".format(min_version),
+        "installed or is older than version '{}'.".format(min_version),
     )
 
 
@@ -154,7 +153,7 @@ class SendMsgBot(_ClientXMPP):
     def __init__(self, jid, password, recipient, msg):
         # PyLint wrongly reports an error when calling super, hence the above
         # disable call
-        super(SendMsgBot, self).__init__(jid, password)
+        super().__init__(jid, password)
 
         self.recipient = recipient
         self.msg = msg
@@ -193,11 +192,11 @@ def returner(ret):
         return
 
     message = (
-        "id: {0}\r\n"
-        "function: {1}\r\n"
-        "function args: {2}\r\n"
-        "jid: {3}\r\n"
-        "return: {4}\r\n"
+        "id: {}\r\n"
+        "function: {}\r\n"
+        "function args: {}\r\n"
+        "jid: {}\r\n"
+        "return: {}\r\n"
     ).format(
         ret.get("id"),
         ret.get("fun"),
