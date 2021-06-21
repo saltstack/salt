@@ -648,7 +648,7 @@ def _find_keep_files(root, keep):
         for fn_ in keep:
             if not os.path.isabs(fn_):
                 continue
-            fn_ = os.path.normcase(os.path.abspath(fn_))
+            fn_ = os.path.abspath(fn_)
             real_keep.add(fn_)
             while True:
                 fn_ = os.path.abspath(os.path.dirname(fn_))
@@ -664,7 +664,7 @@ def _clean_dir(root, keep, exclude_pat):
     Clean out all of the files and directories in a directory (root) while
     preserving the files in a list (keep) and part of exclude_pat
     """
-    root = os.path.normcase(root)
+    root = os.path.normpath(root)
     real_keep = _find_keep_files(root, keep)
     removed = set()
 
