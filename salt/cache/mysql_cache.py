@@ -43,6 +43,7 @@ value to ``mysql``:
 
 """
 
+import copy
 import logging
 import time
 
@@ -90,7 +91,7 @@ def __virtual__():
     return bool(MySQLdb), "No python mysql client installed." if MySQLdb is None else ""
 
 
-def run_query(conn, query, retries=3):
+def run_query(conn, query, args=None, retries=3):
     """
     Get a cursor and run a query. Reconnect up to `retries` times if
     needed.
@@ -99,7 +100,14 @@ def run_query(conn, query, retries=3):
     """
     try:
         cur = conn.cursor()
-        out = cur.execute(query)
+
+        if args is None or args == {}:
+            log.debug("Doing query: %s", query)
+            out = cur.execute(query)
+        else:
+            log.debug("Doing query: %s args: %s ", query, repr(args))
+            out = cur.execute(query, args)
+
         return cur, out
     except (AttributeError, OperationalError) as e:
         if retries == 0:
@@ -111,8 +119,9 @@ def run_query(conn, query, retries=3):
         else:
             log.info("mysql_cache: recreating db connection due to: %r", e)
         global client
+        log.debug("=== MySQLdb.connect %s ===", MySQLdb.connect)
         client = MySQLdb.connect(**_mysql_kwargs)
-        return run_query(client, query, retries - 1)
+        return run_query(client, query, args, retries - 1)
     except Exception as e:  # pylint: disable=broad-except
         if len(query) > 150:
             query = query[:150] + "<...>"
@@ -168,7 +177,7 @@ def _init_client():
     _table_name = __opts__.get("mysql.table_name", _table_name)
     # TODO: handle SSL connection parameters
 
-    for k, v in _mysql_kwargs.items():
+    for k, v in copy.deepcopy(_mysql_kwargs).items():
         if v is None:
             _mysql_kwargs.pop(k)
     kwargs_copy = _mysql_kwargs.copy()
@@ -184,12 +193,12 @@ def store(bank, key, data):
     """
     _init_client()
     data = __context__["serial"].dumps(data)
-    query = (
-        b"REPLACE INTO {} (bank, etcd_key, data) values('{}', '{}', "
-        b"'{}')".format(_table_name, bank, key, data)
+    query = "REPLACE INTO {} (bank, etcd_key, data) values(%s,%s,%s)".format(
+        _table_name
     )
+    args = (bank, key, data)
 
-    cur, cnt = run_query(client, query)
+    cur, cnt = run_query(client, query, args)
     cur.close()
     if cnt not in (1, 2):
         raise SaltCacheError("Error storing {} {} returned {}".format(bank, key, cnt))
