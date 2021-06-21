@@ -413,7 +413,7 @@ def present(host, groups, interfaces, **kwargs):
                     error.append(hostupdate["error"])
             if update_inventory:
                 # combine connection_args, inventory, and clear_old
-                sum_kwargs = new_inventory
+                sum_kwargs = new_inventory.copy()
                 sum_kwargs.update(connection_args)
                 sum_kwargs["clear_old"] = inventory_clean
                 sum_kwargs["inventory_mode"] = inventory_mode
