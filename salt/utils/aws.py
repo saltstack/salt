@@ -506,7 +506,8 @@ def query(
                     data,
                     attempts,
                 )
-                sleep_exponential_backoff(AWS_MAX_RETRIES - attempts + 1)
+                if attempts > 0:
+                    sleep_exponential_backoff(AWS_MAX_RETRIES - attempts + 1)
                 continue
 
             log.error(
