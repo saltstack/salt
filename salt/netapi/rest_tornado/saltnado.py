@@ -281,6 +281,7 @@ class EventListener:
             opts=opts,
             listen=True,
             io_loop=salt.ext.tornado.ioloop.IOLoop.current(),
+            keep_loop=True,
         )
 
         # tag -> list of futures
@@ -432,7 +433,11 @@ class BaseSaltAPIHandler(salt.ext.tornado.web.RequestHandler):  # pylint: disabl
             )
 
         if not hasattr(self, "saltclients"):
-            local_client = salt.client.get_local_client(mopts=self.application.opts)
+            local_client = salt.client.get_local_client(
+                mopts=self.application.opts,
+                io_loop=salt.ext.tornado.ioloop.IOLoop.current(),
+                keep_loop=True,
+            )
             self.saltclients = {
                 "local": local_client.run_job_async,
                 # not the actual client we'll use.. but its what we'll use to get args
@@ -1753,6 +1758,8 @@ class WebhookSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
             self.application.opts["transport"],
             opts=self.application.opts,
             listen=False,
+            io_loop=salt.ext.tornado.ioloop.IOLoop.current(),
+            keep_loop=True,
         )
 
         arguments = {}

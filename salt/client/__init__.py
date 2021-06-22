@@ -72,6 +72,7 @@ def get_local_client(
     io_loop=None,
     auto_reconnect=False,
     listen=False,
+    keep_loop=False,
 ):
     """
     .. versionadded:: 2014.7.0
@@ -127,6 +128,7 @@ def get_local_client(
         io_loop=io_loop,
         auto_reconnect=auto_reconnect,
         listen=listen,
+        keep_loop=keep_loop,
     )
 
 
