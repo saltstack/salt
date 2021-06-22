@@ -124,6 +124,8 @@ tempora==1.14.1
     # via portend
 timelib==0.2.5
     # via -r requirements/windows.txt
+tornado==5.1.0
+    # via -r requirements/base.txt
 urllib3==1.26.4
     # via requests
 wheel==0.36.2

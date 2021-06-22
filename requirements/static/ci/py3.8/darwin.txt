@@ -885,6 +885,8 @@ toml==0.10.2
     # via
     #   -r requirements/static/ci/common.in
     #   pytest
+tornado==5.1.0
+    # via -r requirements/static/pkg/py3.8/darwin.txt
 transitions==0.8.1
     # via junos-eznc
 urllib3==1.26.4

@@ -409,6 +409,8 @@ toml==0.10.2
     # via
     #   -r requirements/static/ci/common.in
     #   pytest
+tornado==5.1.0
+    # via -r requirements/static/pkg/py3.7/windows.txt
 urllib3==1.26.4
     # via
     #   -r requirements/static/pkg/py3.7/windows.txt
