@@ -101,7 +101,7 @@ class VMWareTest(CloudTest):
         # salt-cloud -p my-instant-clone IC3
         profile_name = "my-instant-clone"
         self.add_profile_config(
-            "vmware-test", {"verify_ssl": False}, "vmware.conf", profile_name
+            "vmware-test", {"instant_clone": True}, "vmware.conf", profile_name
         )
         # create the instance
         ret_val = self.run_cloud(
