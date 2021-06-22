@@ -5917,12 +5917,7 @@ def _is_kvm_hyper():
     """
     Returns a bool whether or not this node is a KVM hypervisor
     """
-    try:
-        with salt.utils.files.fopen("/proc/modules") as fp_:
-            if "kvm_" not in salt.utils.stringutils.to_unicode(fp_.read()):
-                return False
-    except OSError:
-        # No /proc/modules? Are we on Windows? Or Solaris?
+    if not os.path.exists("/dev/kvm"):
         return False
     return "libvirtd" in __salt__["cmd.run"](__grains__["ps"])
 
