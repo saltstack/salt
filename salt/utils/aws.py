@@ -519,12 +519,7 @@ def query(
                 return {"error": data}, requesturl
             return {"error": data}
     else:
-        log.error(
-            "AWS Response Status Code and Error: [%s %s] %s",
-            exc.response.status_code,
-            exc,
-            data,
-        )
+        log.error("Max attempts threshold (%s) reached.", AWS_MAX_RETRIES)
         if return_url is True:
             return {"error": data}, requesturl
         return {"error": data}
