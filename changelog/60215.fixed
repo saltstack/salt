@@ -1,0 +1,1 @@
+Use PyCryptodomex instead of PyCrypto in salt.utils.crypt if available

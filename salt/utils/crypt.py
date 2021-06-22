@@ -13,11 +13,19 @@ log = logging.getLogger(__name__)
 
 
 try:
-    import Crypto.Random  # nosec
+    from Cryptodome import Random
 
     HAS_CRYPTO = True
 except ImportError:
     HAS_CRYPTO = False
+
+if not HAS_CRYPTO:
+    try:
+        from Crypto import Random  # nosec
+
+        HAS_CRYPTO = True
+    except ImportError:
+        HAS_CRYPTO = False
 
 
 def decrypt(
@@ -104,7 +112,7 @@ def reinit_crypto():
 
     """
     if HAS_CRYPTO:
-        Crypto.Random.atfork()
+        Random.atfork()
 
 
 def pem_finger(path=None, key=None, sum_type="sha256"):
