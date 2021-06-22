@@ -25,10 +25,10 @@ def salt_mm_master_1(request, salt_factories):
         "interface": "127.0.0.1",
     }
 
-    factory = salt_factories.get_salt_master_daemon(
+    factory = salt_factories.salt_master_daemon(
         "mm-master-1",
-        config_defaults=config_defaults,
-        config_overrides=config_overrides,
+        defaults=config_defaults,
+        overrides=config_overrides,
         extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
     )
     with factory.started(start_timeout=120):
@@ -37,7 +37,7 @@ def salt_mm_master_1(request, salt_factories):
 
 @pytest.fixture(scope="package")
 def mm_master_1_salt_cli(salt_mm_master_1):
-    return salt_mm_master_1.get_salt_cli(default_timeout=120)
+    return salt_mm_master_1.get_salt_cli(timeout=120)
 
 
 @pytest.fixture(scope="package")
@@ -59,10 +59,10 @@ def salt_mm_master_2(salt_factories, salt_mm_master_1):
         "publish_port",
     ):
         config_overrides[key] = salt_mm_master_1.config[key]
-    factory = salt_factories.get_salt_master_daemon(
+    factory = salt_factories.salt_master_daemon(
         "mm-master-2",
-        config_defaults=config_defaults,
-        config_overrides=config_overrides,
+        defaults=config_defaults,
+        overrides=config_overrides,
         extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
     )
 
@@ -79,7 +79,7 @@ def salt_mm_master_2(salt_factories, salt_mm_master_1):
 
 @pytest.fixture(scope="package")
 def mm_master_2_salt_cli(salt_mm_master_2):
-    return salt_mm_master_2.get_salt_cli(default_timeout=120)
+    return salt_mm_master_2.get_salt_cli(timeout=120)
 
 
 @pytest.fixture(scope="package")
@@ -99,10 +99,10 @@ def salt_mm_minion_1(salt_mm_master_1, salt_mm_master_2):
         ],
         "test.foo": "baz",
     }
-    factory = salt_mm_master_1.get_salt_minion_daemon(
+    factory = salt_mm_master_1.salt_minion_daemon(
         "mm-minion-1",
-        config_defaults=config_defaults,
-        config_overrides=config_overrides,
+        defaults=config_defaults,
+        overrides=config_overrides,
         extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
     )
     with factory.started(start_timeout=120):
@@ -126,10 +126,10 @@ def salt_mm_minion_2(salt_mm_master_1, salt_mm_master_2):
         ],
         "test.foo": "baz",
     }
-    factory = salt_mm_master_2.get_salt_minion_daemon(
+    factory = salt_mm_master_2.salt_minion_daemon(
         "mm-minion-2",
-        config_defaults=config_defaults,
-        config_overrides=config_overrides,
+        defaults=config_defaults,
+        overrides=config_overrides,
         extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
     )
     with factory.started(start_timeout=120):
