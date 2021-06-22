@@ -189,7 +189,7 @@ class PillarRefresh:
     minion_1_pillar = attr.ib(init=False, default=None)
 
     def refresh_pillar(self, timeout=60):
-        ret = self.master.get_salt_cli().run(
+        ret = self.master.salt_cli().run(
             "saltutil.refresh_pillar",
             wait=True,
             minion_tgt=self.minion_id,
