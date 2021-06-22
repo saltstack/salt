@@ -284,8 +284,8 @@ def query(
     # Retrieve access credentials from meta-data, or use provided
     access_key_id, secret_access_key, token = aws.creds(provider)
 
-    attempts = 0
-    while attempts < aws.AWS_MAX_RETRIES:
+    attempts = aws.AWS_MAX_RETRIES
+    while attempts > 0:
         params_with_headers = params.copy()
         timestamp = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
 
@@ -417,7 +417,7 @@ def query(
             # check to see if we should retry the query
             err_code = data.get("Errors", {}).get("Error", {}).get("Code", "")
             if err_code and err_code in EC2_RETRY_CODES:
-                attempts += 1
+                attempts -= 1
                 log.error(
                     "EC2 Response Status Code and Error: [%s %s] %s; "
                     "Attempts remaining: %s",
@@ -2226,8 +2226,8 @@ def query_instance(vm_=None, call=None):
 
     provider = get_provider(vm_)
 
-    attempts = 0
-    while attempts < aws.AWS_MAX_RETRIES:
+    attempts = aws.AWS_MAX_RETRIES
+    while attempts > 0:
         data, requesturl = aws.query(
             params,  # pylint: disable=unbalanced-tuple-unpacking
             location=location,
@@ -2252,7 +2252,7 @@ def query_instance(vm_=None, call=None):
             break
 
         aws.sleep_exponential_backoff(attempts)
-        attempts += 1
+        attempts -= 1
         continue
     else:
         raise SaltCloudSystemExit(
@@ -3146,8 +3146,8 @@ def set_tags(
         params["Tag.{}.Key".format(idx)] = tag_k
         params["Tag.{}.Value".format(idx)] = tag_v
 
-    attempts = 0
-    while attempts < aws.AWS_MAX_RETRIES:
+    attempts = aws.AWS_MAX_RETRIES
+    while attempts > 0:
         aws.query(
             params,
             setname="tagSet",
@@ -3184,7 +3184,7 @@ def set_tags(
 
         if failed_to_set_tags:
             log.warning("Failed to set tags. Remaining attempts %s", attempts)
-            attempts += 1
+            attempts -= 1
             aws.sleep_exponential_backoff(attempts)
             continue
 
@@ -3510,8 +3510,8 @@ def _get_node(name=None, instance_id=None, location=None):
 
     provider = get_provider()
 
-    attempts = 0
-    while attempts < aws.AWS_MAX_RETRIES:
+    attempts = aws.AWS_MAX_RETRIES
+    while attempts > 0:
         try:
             instances = aws.query(
                 params, location=location, provider=provider, opts=__opts__, sigver="4"
@@ -3519,7 +3519,7 @@ def _get_node(name=None, instance_id=None, location=None):
             instance_info = _extract_instance_info(instances).values()
             return next(iter(instance_info))
         except IndexError:
-            attempts += 1
+            attempts -= 1
             log.debug(
                 "Failed to get the data for node '%s'. Remaining " "attempts: %s",
                 instance_id or name,

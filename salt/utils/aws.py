@@ -478,8 +478,8 @@ def query(
         params_with_headers = sig2(method, endpoint, params, prov_dict, aws_api_version)
         headers = {}
 
-    attempts = 0
-    while attempts < AWS_MAX_RETRIES:
+    attempts = AWS_MAX_RETRIES
+    while attempts > 0:
         log.debug("AWS Request: %s", requesturl)
         log.trace("AWS Request Parameters: %s", params_with_headers)
         try:
@@ -496,8 +496,8 @@ def query(
 
             # check to see if we should retry the query
             err_code = data.get("Errors", {}).get("Error", {}).get("Code", "")
-            if attempts < AWS_MAX_RETRIES and err_code and err_code in AWS_RETRY_CODES:
-                attempts += 1
+            if attempts > 0 and err_code and err_code in AWS_RETRY_CODES:
+                attempts -= 1
                 log.error(
                     "AWS Response Status Code and Error: [%s %s] %s; "
                     "Attempts remaining: %s",
@@ -506,7 +506,7 @@ def query(
                     data,
                     attempts,
                 )
-                sleep_exponential_backoff(attempts)
+                sleep_exponential_backoff(AWS_MAX_RETRIES - attempts + 1)
                 continue
 
             log.error(
