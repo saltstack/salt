@@ -38,7 +38,7 @@ jobs:
         list-files: json
         filters: |
           docs:
-            - docs/**
+            - doc/**
 
     - name: Set Docs Python Cache Key
       run: echo "PY=$(python --version --version | sha256sum | cut -d' ' -f1)" >> $GITHUB_ENV
@@ -93,7 +93,7 @@ jobs:
         list-files: json
         filters: |
           docs:
-            - docs/**
+            - doc/**
 
     - name: Set Python Version Env Var
       if: github.event_name == 'push' || steps.changed-files.outputs.docs == 'true'
