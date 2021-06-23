@@ -1417,7 +1417,7 @@ def host_inventory_get(hostids, **connection_args):
     :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
     :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
 
-    :return: Array with host interfaces details, False if no convenient host interfaces found or on failure.
+    :return: Array with host inventory fields, populated or not, False if host inventory is disabled or on failure.
 
     CLI Example:
 
@@ -1437,7 +1437,7 @@ def host_inventory_get(hostids, **connection_args):
             ret = _query(method, params, conn_args["url"], conn_args["auth"])
             return (
                 ret["result"][0]["inventory"]
-                if len(ret["result"][0]["inventory"]) > 0
+                if ret["result"] and ret["result"][0]["inventory"]
                 else False
             )
         else:
