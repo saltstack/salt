@@ -1621,3 +1621,95 @@ def test_update_inventory_and_restore_inventory_mode(
             inventory_mode="1",
             vendor="TrueVendor",
         )
+
+
+def test_clear_inventory_value_sending_an_empty_key(
+    basic_host_configuration, existing_host_responses
+):
+    """
+    Tests clear an specific value sending it as an empty string
+    """
+    host, groups, interfaces, kwargs, _ = basic_host_configuration
+    (
+        host_get_output,
+        hostgroup_get_output,
+        hostinterface_get_output,
+        host_inventory_get_output,
+    ) = existing_host_responses
+
+    host_inventory_get_output = {
+        "vendor": "FakeVendor",
+        "asset_tag": "ABC12345",
+    }
+    hostgroup_get_output = [
+        {"groupid": "16", "name": "Testing Group", "internal": "0", "flags": "0"}
+    ]
+    host_exists_output = True
+    host_inventory_set_output = {"result": {"hostids": ["31337"]}}
+
+    inventory = (
+        {"vendor": "TrueVendor"},
+        {"asset_tag": ""},
+    )
+    ret = {
+        "changes": {"inventory": "{'vendor': 'TrueVendor', 'asset_tag': ''}"},
+        "comment": "Host new_host updated.",
+        "name": "new_host",
+        "result": True,
+    }
+
+    mock_hostgroup_get = MagicMock(return_value=hostgroup_get_output)
+    mock_host_exists = MagicMock(return_value=host_exists_output)
+    mock_host_get = MagicMock(return_value=host_get_output)
+    mock_hostinterface_get = MagicMock(return_value=hostinterface_get_output)
+    mock_host_inventory_get = MagicMock(return_value=host_inventory_get_output)
+    mock_host_inventory_set = MagicMock(return_value=host_inventory_set_output)
+    with patch.dict(
+        zabbix_host.__salt__,
+        {
+            "zabbix.hostgroup_get": mock_hostgroup_get,
+            "zabbix.host_exists": mock_host_exists,
+            "zabbix.host_get": mock_host_get,
+            "zabbix.hostinterface_get": mock_hostinterface_get,
+            "zabbix.host_inventory_get": mock_host_inventory_get,
+            "zabbix.host_inventory_set": mock_host_inventory_set,
+        },
+    ):
+        # Blame Python 3.5 support for all this black magic
+        host_present_ret = zabbix_host.present(
+            host,
+            groups,
+            interfaces,
+            inventory=inventory,
+            inventory_clean=False,
+            **kwargs
+        )
+        host_present_changes = ast.literal_eval(
+            host_present_ret["changes"]["inventory"]
+        )
+        assert host_present_changes == ast.literal_eval(ret["changes"]["inventory"])
+        assert host_present_ret["comment"] == "Host new_host updated."
+        assert host_present_ret["name"] == "new_host"
+        assert host_present_ret["result"] is True
+        # When Python 3.5 is gone, the following line does the job:
+        # assert (
+        #    zabbix_host.present(
+        #        host,
+        #        groups,
+        #        interfaces,
+        #        inventory=inventory,
+        #        inventory_clean=False,
+        #        **kwargs
+        #    )
+        #    == ret
+        # )
+        mock_host_inventory_set.assert_called_with(
+            "31337",
+            _connection_password="XXXXXXXXXX",
+            _connection_url="http://XXXXXXXXX/zabbix/api_jsonrpc.php",
+            _connection_user="XXXXXXXXXX",
+            asset_tag="",
+            clear_old=False,
+            inventory_mode="0",
+            vendor="TrueVendor",
+        )
