@@ -756,7 +756,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
 
         expectation = {
             "os": "Rocky",
-            "os_family": "Rocky",
+            "os_family": "RedHat",
             "oscodename": "Rocky Linux 8.4 (Green Obsidian)",
             "osfullname": "Rocky Linux",
             "osrelease": "8.4",
