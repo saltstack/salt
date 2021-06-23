@@ -14,7 +14,7 @@ MAC_LIST = ["08:00:27:82:b2:ca", "52:54:00:ee:eb:e1", "52:54:00:ee:eb:e1"]
 
 class ListMacAddresses:
     def __init__(self):
-        self.list_macs = MAC_LIST
+        self.list_macs = MAC_LIST.sort()
 
     def __call__(self):
         """
@@ -251,5 +251,5 @@ def test_wolmatch():
     with patch.dict(network.__salt__, patches):
         with patch("salt.runners.network.wol", wol_out):
             added = network.wolmatch(MINION_ID)
-            expected = MAC_LIST
-            assert added == expected
+            expected = MAC_LIST.sort()
+            assert added.sort() == expected
