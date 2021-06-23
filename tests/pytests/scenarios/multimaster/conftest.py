@@ -37,7 +37,7 @@ def salt_mm_master_1(request, salt_factories):
 
 @pytest.fixture(scope="package")
 def mm_master_1_salt_cli(salt_mm_master_1):
-    return salt_mm_master_1.get_salt_cli(timeout=120)
+    return salt_mm_master_1.salt_cli(timeout=120)
 
 
 @pytest.fixture(scope="package")
@@ -79,7 +79,7 @@ def salt_mm_master_2(salt_factories, salt_mm_master_1):
 
 @pytest.fixture(scope="package")
 def mm_master_2_salt_cli(salt_mm_master_2):
-    return salt_mm_master_2.get_salt_cli(timeout=120)
+    return salt_mm_master_2.salt_cli(timeout=120)
 
 
 @pytest.fixture(scope="package")
