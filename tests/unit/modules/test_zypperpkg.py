@@ -802,7 +802,7 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
                     ret = zypper.upgrade(dist_upgrade=True, novendorchange=True)
                     refresh_flags_mock.assert_not_called()
                     zypper_mock.assert_any_call(
-                        "update", "--auto-agree-with-licenses",
+                        "dist-upgrade", "--auto-agree-with-licenses",
                     )
 
     def test_upgrade_with_novendorchange_false(self):
