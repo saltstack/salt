@@ -358,17 +358,26 @@ def present(host, groups, interfaces, **kwargs):
                 hostids=hostid, **connection_args
             )
             if cur_inventory:
-                # Remove blank inventory items
-                cur_inventory = {k: v for k, v in cur_inventory.items() if v}
-                # Remove persistent inventory keys for comparison
                 cur_inventory.pop("hostid", None)
                 cur_inventory.pop("inventory_mode", None)
-
-            if not cur_inventory:
+                if new_inventory:
+                    for key in new_inventory:
+                        if (
+                            key in cur_inventory
+                            and new_inventory[key] != cur_inventory[key]
+                        ):
+                            update_inventory = True
+                            break
+                else:
+                    # remove the empty keys in current inventory
+                    cur_inventory = {k: v for k, v in cur_inventory.items() if v}
+                    # if current inventory any no empty key and new inventory is empty
+                    if not cur_inventory:
+                        update_inventory = True
+            else:
+                # if current inventory is empty and the new one have anything
                 if new_inventory:
                     update_inventory = True
-            elif sorted(cur_inventory.items()) != sorted(new_inventory.items()):
-                update_inventory = True
 
     # Dry run, test=true mode
     if __opts__["test"]:
