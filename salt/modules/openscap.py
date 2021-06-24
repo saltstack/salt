@@ -89,6 +89,12 @@ def xccdf_eval(xccdffile, ovalfiles=None, **kwargs):
     fetch_remote_resources
         download remote content referenced by XCCDF (True or False)
 
+    tailoring_file
+        use given XCCDF Tailoring file
+
+    tailoring_id
+        use given DS component as XCCDF Tailoring file
+
     remediate
         automatically execute XCCDF fix elements for failed rules.
         Use of this option is always at your own risk. (True or False)
@@ -122,6 +128,12 @@ def xccdf_eval(xccdffile, ovalfiles=None, **kwargs):
     if "rule" in kwargs:
         cmd_opts.append("--rule")
         cmd_opts.append(kwargs["rule"])
+    if "tailoring_file" in kwargs:
+        cmd_opts.append("--tailoring-file")
+        cmd_opts.append(kwargs["tailoring_file"])
+    if "tailoring_id" in kwargs:
+        cmd_opts.append("--tailoring-id")
+        cmd_opts.append(kwargs["tailoring_id"])
     if kwargs.get("fetch_remote_resources"):
         cmd_opts.append("--fetch-remote-resources")
     if kwargs.get("remediate"):
