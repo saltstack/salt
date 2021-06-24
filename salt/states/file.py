@@ -648,7 +648,7 @@ def _find_keep_files(root, keep):
         for fn_ in keep:
             if not os.path.isabs(fn_):
                 continue
-            fn_ = os.path.abspath(fn_)
+            fn_ = os.path.normcase(os.path.abspath(fn_))
             real_keep.add(fn_)
             while True:
                 fn_ = os.path.abspath(os.path.dirname(fn_))
@@ -659,12 +659,12 @@ def _find_keep_files(root, keep):
     return real_keep
 
 
-def _clean_dir(root, keep, exclude_pat):
+def _clean_dir(root, keep, exclude_pat, win_keep):
     """
     Clean out all of the files and directories in a directory (root) while
     preserving the files in a list (keep) and part of exclude_pat
     """
-    root = os.path.normpath(root)
+    root = os.path.normcase(root)
     real_keep = _find_keep_files(root, keep)
     removed = set()
 
@@ -676,12 +676,22 @@ def _clean_dir(root, keep, exclude_pat):
                 os.path.relpath(nfn, root), None, exclude_pat
             ):
                 return
-            removed.add(nfn)
-            if not __opts__["test"]:
-                try:
-                    os.remove(nfn)
-                except OSError:
-                    __salt__["file.remove"](nfn)
+            # Before we can accurately assess the removal of a file, we must
+            # check for windows case sensitive files. If we originally meant
+            # to keep a file, but due to case sensitivity, check against the
+            # original list.
+            for item in win_keep:
+                if item.lower() != nfn.lower():
+                    continue
+                elif item.lower() == nfn.lower():
+                    return
+                else:
+                    removed.add(nfn)
+                    if not __opts__["test"]:
+                        try:
+                            os.remove(nfn)
+                        except OSError:
+                            __salt__["file.remove"](nfn)
 
     for roots, dirs, files in salt.utils.path.os_walk(root):
         for name in itertools.chain(dirs, files):
@@ -4285,8 +4295,14 @@ def recurse(
 
     if clean:
         # TODO: Use directory(clean=True) instead
+        # If we are running on windows, store a copy of the files that the
+        # system itself has found. We must store a copy of the capitalization
+        # and restore that after we've determined which files to keep.
+        win_keep = None
+        if salt.utils.platform.is_windows():
+            win_keep = copy.deepcopy(keep)
         keep.update(_gen_keep_files(name, require))
-        removed = _clean_dir(name, list(keep), exclude_pat)
+        removed = _clean_dir(name, list(keep), exclude_pat, win_keep)
         if removed:
             if __opts__["test"]:
                 if ret["result"]:
