@@ -58,6 +58,7 @@ import logging
 import salt.cloud
 import salt.loader
 import salt.utils
+import salt.utils.azurearm
 
 # Salt libs
 from salt.exceptions import SaltInvocationError  # pylint: disable=unused-import
@@ -93,12 +94,6 @@ def __virtual__():
     return __virtualname__
 
 
-def get_config_from_cloud(cloud_provider):
-    client = salt.cloud.CloudClient(path="/etc/salt/cloud")
-    conn_kwargs = client.opts["providers"][cloud_provider]["azurearm"]
-    return conn_kwargs
-
-
 def check_dns_name_availability(name, region, cloud_provider=None, **kwargs):
     """
     .. versionadded:: 2019.2.0
@@ -121,7 +116,7 @@ def check_dns_name_availability(name, region, cloud_provider=None, **kwargs):
 
     """
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         kwargs.update(conn_config)
 
     netconn = __utils__["azurearm.get_client"]("network", **kwargs)
@@ -156,7 +151,7 @@ def check_ip_address_availability(
 
     :param cloud_provider: The Cloud Provider parameter allow you to use a defined
         provider config in /etc/salt/cloud.providers.d/
-        with this paramater, you dont have to specify ressource_group as it is already defined in the provider
+        with this paramater, you don't have to specify ressource_group as it is already defined in the provider
 
     CLI Example:
 
@@ -167,7 +162,7 @@ def check_ip_address_availability(
     """
 
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         if resource_group is None:
             resource_group = conn_config["resource_group"]
         else:
@@ -219,7 +214,7 @@ def default_security_rule_get(
     result = {}
 
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         if resource_group is None:
             resource_group = conn_config["resource_group"]
         else:
@@ -273,7 +268,7 @@ def default_security_rules_list(
     result = {}
 
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         if resource_group is None:
             resource_group = conn_config["resource_group"]
         else:
@@ -322,7 +317,7 @@ def security_rules_list(
     """
 
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         if resource_group is None:
             resource_group = conn_config["resource_group"]
         else:
@@ -454,7 +449,7 @@ def security_rule_create_or_update(
             exec("{} = None".format(params[1]))
 
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         if resource_group is None:
             resource_group = conn_config["resource_group"]
         else:
@@ -537,7 +532,7 @@ def security_rule_delete(
     result = False
 
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         if resource_group is None:
             resource_group = conn_config["resource_group"]
         else:
@@ -588,7 +583,7 @@ def security_rule_get(
     """
 
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         if resource_group is None:
             resource_group = conn_config["resource_group"]
         else:
@@ -636,7 +631,7 @@ def network_security_group_create_or_update(
     """
 
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         if resource_group is None:
             resource_group = conn_config["resource_group"]
         else:
@@ -710,7 +705,7 @@ def network_security_group_delete(
     result = False
 
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         if resource_group is None:
             resource_group = conn_config["resource_group"]
         else:
@@ -756,7 +751,7 @@ def network_security_group_get(
     """
 
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         if resource_group is None:
             resource_group = conn_config["resource_group"]
         else:
@@ -799,7 +794,7 @@ def network_security_groups_list(resource_group=None, cloud_provider=None, **kwa
     result = {}
 
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         if resource_group is None:
             resource_group = conn_config["resource_group"]
         else:
@@ -842,7 +837,7 @@ def network_security_groups_list_all(
     result = {}
 
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         kwargs.update(conn_config)
 
     netconn = __utils__["azurearm.get_client"]("network", **kwargs)
@@ -884,7 +879,7 @@ def subnets_list(virtual_network, resource_group=None, cloud_provider=None, **kw
     result = {}
 
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         if resource_group is None:
             resource_group = conn_config["resource_group"]
         else:
@@ -937,7 +932,7 @@ def subnet_get(
     """
 
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         if resource_group is None:
             resource_group = conn_config["resource_group"]
         else:
@@ -997,7 +992,7 @@ def subnet_create_or_update(
     """
 
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         if resource_group is None:
             resource_group = conn_config["resource_group"]
         else:
@@ -1087,7 +1082,7 @@ def subnet_delete(
     result = False
 
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         if resource_group is None:
             resource_group = conn_config["resource_group"]
         else:
@@ -1129,7 +1124,7 @@ def virtual_networks_list_all(cloud_provider=None, **kwargs):
     result = {}
 
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         kwargs.update(conn_config)
 
     netconn = __utils__["azurearm.get_client"]("network", **kwargs)
@@ -1170,7 +1165,7 @@ def virtual_networks_list(resource_group=None, cloud_provider=None, **kwargs):
     result = {}
 
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         if resource_group is None:
             resource_group = conn_config["resource_group"]
         else:
@@ -1224,7 +1219,7 @@ def virtual_network_create_or_update(
     """
 
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         if resource_group is None:
             resource_group = conn_config["resource_group"]
         else:
@@ -1307,7 +1302,7 @@ def virtual_network_delete(name, resource_group=None, cloud_provider=None, **kwa
     result = False
 
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         if resource_group is None:
             resource_group = conn_config["resource_group"]
         else:
@@ -1351,7 +1346,7 @@ def virtual_network_get(name, resource_group=None, cloud_provider=None, **kwargs
     """
 
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         if resource_group is None:
             resource_group = conn_config["resource_group"]
         else:
@@ -1391,7 +1386,7 @@ def load_balancers_list_all(cloud_provider=None, **kwargs):
     result = {}
 
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         kwargs.update(conn_config)
 
     netconn = __utils__["azurearm.get_client"]("network", **kwargs)
@@ -1432,7 +1427,7 @@ def load_balancers_list(resource_group=None, cloud_provider=None, **kwargs):
     result = {}
 
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         if resource_group is None:
             resource_group = conn_config["resource_group"]
         else:
@@ -1478,7 +1473,7 @@ def load_balancer_get(name, resource_group=None, cloud_provider=None, **kwargs):
     """
 
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         if resource_group is None:
             resource_group = conn_config["resource_group"]
         else:
@@ -1524,7 +1519,7 @@ def load_balancer_create_or_update(
     """
 
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         if resource_group is None:
             resource_group = conn_config["resource_group"]
         else:
@@ -1724,7 +1719,7 @@ def load_balancer_delete(name, resource_group=None, cloud_provider=None, **kwarg
     result = False
 
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         if resource_group is None:
             resource_group = conn_config["resource_group"]
         else:
@@ -1765,7 +1760,7 @@ def usages_list(location, cloud_provider=None, **kwargs):
     """
 
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         kwargs.update(conn_config)
 
     netconn = __utils__["azurearm.get_client"]("network", **kwargs)
@@ -1805,7 +1800,7 @@ def network_interface_delete(name, resource_group=None, cloud_provider=None, **k
     result = False
 
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         if resource_group is None:
             resource_group = conn_config["resource_group"]
         else:
@@ -1849,7 +1844,7 @@ def network_interface_get(name, resource_group=None, cloud_provider=None, **kwar
     """
 
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         if resource_group is None:
             resource_group = conn_config["resource_group"]
         else:
@@ -1911,7 +1906,7 @@ def network_interface_create_or_update(
     """
 
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         if resource_group is None:
             resource_group = conn_config["resource_group"]
         else:
@@ -2033,7 +2028,7 @@ def network_interfaces_list_all(cloud_provider=None, **kwargs):
     result = {}
 
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         kwargs.update(conn_config)
 
     netconn = __utils__["azurearm.get_client"]("network", **kwargs)
@@ -2074,7 +2069,7 @@ def network_interfaces_list(resource_group=None, cloud_provider=None, **kwargs):
     result = {}
 
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         if resource_group is None:
             resource_group = conn_config["resource_group"]
         else:
@@ -2123,7 +2118,7 @@ def network_interface_get_effective_route_table(
     """
 
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         if resource_group is None:
             resource_group = conn_config["resource_group"]
         else:
@@ -2173,7 +2168,7 @@ def network_interface_list_effective_network_security_groups(
     """
 
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         if resource_group is None:
             resource_group = conn_config["resource_group"]
         else:
@@ -2226,7 +2221,7 @@ def list_virtual_machine_scale_set_vm_network_interfaces(
     result = {}
 
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         if resource_group is None:
             resource_group = conn_config["resource_group"]
         else:
@@ -2280,7 +2275,7 @@ def list_virtual_machine_scale_set_network_interfaces(
     result = {}
 
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         if resource_group is None:
             resource_group = conn_config["resource_group"]
         else:
@@ -2336,7 +2331,7 @@ def get_virtual_machine_scale_set_network_interface(
     """
 
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         if resource_group is None:
             resource_group = conn_config["resource_group"]
         else:
@@ -2388,7 +2383,7 @@ def public_ip_address_delete(name, resource_group=None, cloud_provider=None, **k
     result = False
 
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         if resource_group is None:
             resource_group = conn_config["resource_group"]
         else:
@@ -2432,7 +2427,7 @@ def public_ip_address_get(name, resource_group=None, cloud_provider=None, **kwar
     """
 
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         if resource_group is None:
             resource_group = conn_config["resource_group"]
         else:
@@ -2483,7 +2478,7 @@ def public_ip_address_create_or_update(
     """
 
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         if resource_group is None:
             resource_group = conn_config["resource_group"]
         else:
@@ -2550,7 +2545,7 @@ def public_ip_addresses_list_all(cloud_provider=None, **kwargs):
     result = {}
 
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         kwargs.update(conn_config)
 
     netconn = __utils__["azurearm.get_client"]("network", **kwargs)
@@ -2591,7 +2586,7 @@ def public_ip_addresses_list(resource_group=None, cloud_provider=None, **kwargs)
     result = {}
 
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         if resource_group is None:
             resource_group = conn_config["resource_group"]
         else:
@@ -2642,7 +2637,7 @@ def route_filter_rule_delete(
     result = False
 
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         if resource_group is None:
             resource_group = conn_config["resource_group"]
         else:
@@ -2693,7 +2688,7 @@ def route_filter_rule_get(
     result = {}
 
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         if resource_group is None:
             resource_group = conn_config["resource_group"]
         else:
@@ -2755,7 +2750,7 @@ def route_filter_rule_create_or_update(
     """
 
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         if resource_group is None:
             resource_group = conn_config["resource_group"]
         else:
@@ -2841,7 +2836,7 @@ def route_filter_rules_list(
     result = {}
 
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         if resource_group is None:
             resource_group = conn_config["resource_group"]
         else:
@@ -2890,7 +2885,7 @@ def route_filter_delete(name, resource_group=None, cloud_provider=None, **kwargs
     result = False
 
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         if resource_group is None:
             resource_group = conn_config["resource_group"]
         else:
@@ -2933,7 +2928,7 @@ def route_filter_get(name, resource_group=None, cloud_provider=None, **kwargs):
 
     """
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         if resource_group is None:
             resource_group = conn_config["resource_group"]
         else:
@@ -2981,7 +2976,7 @@ def route_filter_create_or_update(
 
     """
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         if resource_group is None:
             resource_group = conn_config["resource_group"]
         else:
@@ -3051,7 +3046,7 @@ def route_filters_list(resource_group=None, cloud_provider=None, **kwargs):
     result = {}
 
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         if resource_group is None:
             resource_group = conn_config["resource_group"]
         else:
@@ -3095,7 +3090,7 @@ def route_filters_list_all(cloud_provider=None, **kwargs):
     result = {}
 
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         kwargs.update(conn_config)
 
     netconn = __utils__["azurearm.get_client"]("network", **kwargs)
@@ -3140,7 +3135,7 @@ def route_delete(name, route_table, resource_group=None, cloud_provider=None, **
     result = False
 
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         if resource_group is None:
             resource_group = conn_config["resource_group"]
         else:
@@ -3189,7 +3184,7 @@ def route_get(name, route_table, resource_group=None, cloud_provider=None, **kwa
     result = {}
 
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         if resource_group is None:
             resource_group = conn_config["resource_group"]
         else:
@@ -3256,7 +3251,7 @@ def route_create_or_update(
     netconn = __utils__["azurearm.get_client"]("network", **kwargs)
 
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         if resource_group is None:
             resource_group = conn_config["resource_group"]
         else:
@@ -3322,7 +3317,7 @@ def routes_list(route_table, resource_group=None, cloud_provider=None, **kwargs)
     result = {}
 
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         if resource_group is None:
             resource_group = conn_config["resource_group"]
         else:
@@ -3371,7 +3366,7 @@ def route_table_delete(name, resource_group=None, cloud_provider=None, **kwargs)
     result = False
 
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         if resource_group is None:
             resource_group = conn_config["resource_group"]
         else:
@@ -3415,7 +3410,7 @@ def route_table_get(name, resource_group=None, cloud_provider=None, **kwargs):
     """
 
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         if resource_group is None:
             resource_group = conn_config["resource_group"]
         else:
@@ -3464,7 +3459,7 @@ def route_table_create_or_update(
     """
 
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         if resource_group is None:
             resource_group = conn_config["resource_group"]
         else:
@@ -3534,7 +3529,7 @@ def route_tables_list(resource_group=None, cloud_provider=None, **kwargs):
     result = {}
 
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         if resource_group is None:
             resource_group = conn_config["resource_group"]
         else:
@@ -3576,7 +3571,7 @@ def route_tables_list_all(cloud_provider=None, **kwargs):
     result = {}
 
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         kwargs.update(conn_config)
 
     netconn = __utils__["azurearm.get_client"]("network", **kwargs)

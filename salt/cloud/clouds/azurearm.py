@@ -103,7 +103,6 @@ import time
 from multiprocessing import cpu_count
 from multiprocessing.pool import ThreadPool
 
-import azure.storage.blob
 import salt.cache
 import salt.config as config
 import salt.loader
@@ -122,6 +121,7 @@ from salt.exceptions import (
 
 HAS_LIBS = False
 try:
+    import azure.storage.blob
     import azure.mgmt.compute.models as compute_models
     import azure.mgmt.network.models as network_models
     from msrestazure.azure_exceptions import CloudError

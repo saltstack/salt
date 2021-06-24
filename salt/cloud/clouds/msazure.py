@@ -603,10 +603,10 @@ def create(vm_):
     except AzureConflictHttpError:
         log.debug("Conflict error. The deployment may already exist, trying add_role")
         # Deleting two useless keywords
-        del vm_kwargs["deployment_slot"]
-        del vm_kwargs["label"]
+        del vm_kwargs["deployment_slot"]  # pylint: disable=E1123
+        del vm_kwargs["label"]  # pylint: disable=E1123
         del vm_kwargs["virtual_network_name"]
-        result = conn.add_role(**vm_kwargs)
+        result = conn.add_role(**vm_kwargs)  # pylint: disable=E1123
         _wait_for_async(conn, result.request_id)
     except Exception as exc:  # pylint: disable=broad-except
         error = "The hosted service name is invalid."

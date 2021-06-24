@@ -3,20 +3,24 @@ Azure (ARM) DNS Execution Module
 
 .. versionadded:: 3000
 
-:maintainer: <devops@eitr.tech>
+:maintainer: <devops@eitr.tech>, <devops@l2web.ca>
 :maturity: new
 :depends:
-    * `azure <https://pypi.python.org/pypi/azure>`_ >= 2.0.0
-    * `azure-common <https://pypi.python.org/pypi/azure-common>`_ >= 1.1.8
-    * `azure-mgmt <https://pypi.python.org/pypi/azure-mgmt>`_ >= 1.0.0
-    * `azure-mgmt-compute <https://pypi.python.org/pypi/azure-mgmt-compute>`_ >= 1.0.0
-    * `azure-mgmt-dns <https://pypi.python.org/pypi/azure-mgmt-dns>`_ >= 2.0.0rc1
-    * `azure-mgmt-network <https://pypi.python.org/pypi/azure-mgmt-network>`_ >= 1.7.1
-    * `azure-mgmt-resource <https://pypi.python.org/pypi/azure-mgmt-resource>`_ >= 1.1.0
-    * `azure-mgmt-storage <https://pypi.python.org/pypi/azure-mgmt-storage>`_ >= 1.0.0
-    * `azure-mgmt-web <https://pypi.python.org/pypi/azure-mgmt-web>`_ >= 0.32.0
-    * `azure-storage <https://pypi.python.org/pypi/azure-storage>`_ >= 0.34.3
-    * `msrestazure <https://pypi.python.org/pypi/msrestazure>`_ >= 0.4.21
+    * `azure-core <https://pypi.python.org/pypi/azure-core>`_ >= 1.15.0
+    * `azure-batch <https://pypi.python.org/pypi/azure-batch>`_ >= 10.0.0
+    * `azure-identity <https://pypi.python.org/pypi/azure-identity>`_ >= 1.6.0
+    * `azure-common <https://pypi.python.org/pypi/azure-common>`_ >= 1.1.27
+    * `azure-mgmt-core <https://pypi.python.org/pypi/azure-mgmt-core>`_ >= 1.2.2
+    * `azure-mgmt-subscription <https://pypi.python.org/pypi/azure-mgmt-subscription>`_ >= 1.0.0
+    * `azure-mgmt-compute <https://pypi.python.org/pypi/azure-mgmt-compute>`_ >= 20.0.0
+    * `azure-mgmt-network <https://pypi.python.org/pypi/azure-mgmt-network>`_ >= 19.0.0
+    * `azure-mgmt-resource <https://pypi.python.org/pypi/azure-mgmt-resource>`_ >= 18.0.0
+    * `azure-mgmt-storage <https://pypi.python.org/pypi/azure-mgmt-storage>`_ >= 18.0.0
+    * `azure-mgmt-web <https://pypi.python.org/pypi/azure-mgmt-web>`_ >= 2.0.0
+    * `azure-storage-common <https://pypi.python.org/pypi/azure-storage-common>`_ >= 1.4.2
+    * `azure-storage-blob <https://pypi.python.org/pypi/azure-storage-blob>`_ >= 12.8.1
+    * `azure-storage-file <https://pypi.python.org/pypi/azure-storage-file>`_ >= 2.1.0
+    * `msrestazure <https://pypi.python.org/pypi/msrestazure>`_ >= 0.6.41
 
 :platform: linux
 :configuration:
@@ -55,6 +59,7 @@ Optional provider parameters:
 
 import logging
 
+import salt.cloud
 import salt.utils.azurearm
 
 # Azure libs
@@ -85,7 +90,9 @@ def __virtual__():
     return __virtualname__
 
 
-def record_set_create_or_update(name, zone_name, resource_group, record_type, **kwargs):
+def record_set_create_or_update(
+    name, zone_name, record_type, resource_group=None, cloud_provider=None, **kwargs
+):
     """
     .. versionadded:: 3000
 
@@ -102,6 +109,11 @@ def record_set_create_or_update(name, zone_name, resource_group, record_type, **
         updated but not created (they are created when the DNS zone is created).
         Possible values include: 'A', 'AAAA', 'CAA', 'CNAME', 'MX', 'NS', 'PTR', 'SOA', 'SRV', 'TXT'
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider.
+        If you specify the ressource_group anyway, it will overwrite the cloud ressource_group value.
+
     CLI Example:
 
     .. code-block:: bash
@@ -109,14 +121,27 @@ def record_set_create_or_update(name, zone_name, resource_group, record_type, **
         salt-call azurearm_dns.record_set_create_or_update myhost myzone testgroup A
             arecords='[{ipv4_address: 10.0.0.1}]' ttl=300
 
-    """
+    .. code-block:: bash
 
-    if "dnsconn" not in globals():
-        global dnsconn  # pylint: disable=W0601
-        dnsconn = salt.utils.azurearm.get_client("dns", **kwargs)
+        salt-call azurearm_dns.record_set_create_or_update myhost myzone testgroup A
+            arecords='[{ipv4_address: 10.0.0.1}]' ttl=300
+
+    """
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if "error" in conn_config:
+            return conn_config
+        else:
+            if resource_group is None:
+                resource_group = conn_config["resource_group"]
+            else:
+                conn_config["resource_group"] = resource_group
+            kwargs.update(conn_config)
+
+    dnsconn = __utils__["azurearm.get_client"]("dns", **kwargs)
 
     try:
-        record_set_model = salt.utils.azurearm.create_object_model(
+        record_set_model = __utils__["azurearm.create_object_model"](
             "dns", "RecordSet", **kwargs
         )
     except TypeError as exc:
@@ -125,9 +150,9 @@ def record_set_create_or_update(name, zone_name, resource_group, record_type, **
 
     try:
         record_set = dnsconn.record_sets.create_or_update(
-            resource_group_name=resource_group,
-            zone_name=zone_name,
             relative_record_set_name=name,
+            zone_name=zone_name,
+            resource_group_name=resource_group,
             record_type=record_type,
             parameters=record_set_model,
             if_match=kwargs.get("if_match"),
@@ -135,7 +160,7 @@ def record_set_create_or_update(name, zone_name, resource_group, record_type, **
         )
         result = record_set.as_dict()
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("dns", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("dns", str(exc), **kwargs)
         result = {"error": str(exc)}
     except SerializationError as exc:
         result = {
@@ -145,7 +170,9 @@ def record_set_create_or_update(name, zone_name, resource_group, record_type, **
     return result
 
 
-def record_set_delete(name, zone_name, resource_group, record_type, **kwargs):
+def record_set_delete(
+    name, zone_name, record_type, resource_group=None, cloud_provider=None, **kwargs
+):
     """
     .. versionadded:: 3000
 
@@ -162,7 +189,16 @@ def record_set_delete(name, zone_name, resource_group, record_type, **kwargs):
         deleted (they are deleted when the DNS zone is deleted).
         Possible values include: 'A', 'AAAA', 'CAA', 'CNAME', 'MX', 'NS', 'PTR', 'SOA', 'SRV', 'TXT'
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider.
+        If you specify the ressource_group anyway, it will overwrite the cloud ressource_group value.
+
     CLI Example:
+
+    .. code-block:: bash
+
+        salt-call azurearm_dns.record_set_delete myhost myzone testgroup A
 
     .. code-block:: bash
 
@@ -170,23 +206,37 @@ def record_set_delete(name, zone_name, resource_group, record_type, **kwargs):
 
     """
     result = False
-    dnsconn = salt.utils.azurearm.get_client("dns", **kwargs)
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if "error" in conn_config:
+            return conn_config
+        else:
+            if resource_group is None:
+                resource_group = conn_config["resource_group"]
+            else:
+                conn_config["resource_group"] = resource_group
+            kwargs.update(conn_config)
+
+    dnsconn = __utils__["azurearm.get_client"]("dns", **kwargs)
     try:
         record_set = dnsconn.record_sets.delete(
-            resource_group_name=resource_group,
-            zone_name=zone_name,
             relative_record_set_name=name,
+            zone_name=zone_name,
+            resource_group_name=resource_group,
             record_type=record_type,
             if_match=kwargs.get("if_match"),
         )
         result = True
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("dns", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("dns", str(exc), **kwargs)
 
     return result
 
 
-def record_set_get(name, zone_name, resource_group, record_type, **kwargs):
+def record_set_get(
+    name, zone_name, record_type, resource_group=None, cloud_provider=None, **kwargs
+):
     """
     .. versionadded:: 3000
 
@@ -202,14 +252,35 @@ def record_set_get(name, zone_name, resource_group, record_type, **kwargs):
         The type of DNS record in this record set.
         Possible values include: 'A', 'AAAA', 'CAA', 'CNAME', 'MX', 'NS', 'PTR', 'SOA', 'SRV', 'TXT'
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider.
+        If you specify the ressource_group anyway, it will overwrite the cloud ressource_group value.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt-call azurearm_dns.record_set_get '@' myzone testgroup SOA
 
+    .. code-block:: bash
+
+        salt-call azurearm_dns.record_set_get '@' myzone testgroup SOA
+
     """
-    dnsconn = salt.utils.azurearm.get_client("dns", **kwargs)
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if "error" in conn_config:
+            return conn_config
+        else:
+            if resource_group is None:
+                resource_group = conn_config["resource_group"]
+            else:
+                conn_config["resource_group"] = resource_group
+            kwargs.update(conn_config)
+
+    dnsconn = __utils__["azurearm.get_client"]("dns", **kwargs)
     try:
         record_set = dnsconn.record_sets.get(
             relative_record_set_name=name,
@@ -220,14 +291,20 @@ def record_set_get(name, zone_name, resource_group, record_type, **kwargs):
         result = record_set.as_dict()
 
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("dns", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("dns", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result
 
 
 def record_sets_list_by_type(
-    zone_name, resource_group, record_type, top=None, recordsetnamesuffix=None, **kwargs
+    zone_name,
+    record_type,
+    resource_group=None,
+    cloud_provider=None,
+    top=None,
+    recordsetnamesuffix=None,
+    **kwargs
 ):
     """
     .. versionadded:: 3000
@@ -250,7 +327,16 @@ def record_sets_list_by_type(
         The suffix label of the record set name that has
         to be used to filter the record set enumerations.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you don't have to specify ressource_group as it is already defined in the provider.
+        If you specify the ressource_group anyway, it will overwrite the cloud ressource_group value.
+
     CLI Example:
+
+    .. code-block:: bash
+
+        salt-call azurearm_dns.record_sets_list_by_type myzone testgroup SOA
 
     .. code-block:: bash
 
@@ -258,9 +344,21 @@ def record_sets_list_by_type(
 
     """
     result = {}
-    dnsconn = salt.utils.azurearm.get_client("dns", **kwargs)
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if "error" in conn_config:
+            return conn_config
+        else:
+            if resource_group is None:
+                resource_group = conn_config["resource_group"]
+            else:
+                conn_config["resource_group"] = resource_group
+            kwargs.update(conn_config)
+
+    dnsconn = __utils__["azurearm.get_client"]("dns", **kwargs)
     try:
-        record_sets = salt.utils.azurearm.paged_object_to_list(
+        record_sets = __utils__["azurearm.paged_object_to_list"](
             dnsconn.record_sets.list_by_type(
                 zone_name=zone_name,
                 resource_group_name=resource_group,
@@ -273,14 +371,19 @@ def record_sets_list_by_type(
         for record_set in record_sets:
             result[record_set["name"]] = record_set
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("dns", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("dns", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result
 
 
 def record_sets_list_by_dns_zone(
-    zone_name, resource_group, top=None, recordsetnamesuffix=None, **kwargs
+    zone_name,
+    resource_group=None,
+    cloud_provider=None,
+    top=None,
+    recordsetnamesuffix=None,
+    **kwargs
 ):
     """
     .. versionadded:: 3000
@@ -299,7 +402,16 @@ def record_sets_list_by_dns_zone(
         The suffix label of the record set name that has
         to be used to filter the record set enumerations.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider.
+        If you specify the ressource_group anyway, it will overwrite the cloud ressource_group value.
+
     CLI Example:
+
+    .. code-block:: bash
+
+        salt-call azurearm_dns.record_sets_list_by_dns_zone myzone testgroup
 
     .. code-block:: bash
 
@@ -307,9 +419,21 @@ def record_sets_list_by_dns_zone(
 
     """
     result = {}
-    dnsconn = salt.utils.azurearm.get_client("dns", **kwargs)
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if "error" in conn_config:
+            return conn_config
+        else:
+            if resource_group is None:
+                resource_group = conn_config["resource_group"]
+            else:
+                conn_config["resource_group"] = resource_group
+            kwargs.update(conn_config)
+
+    dnsconn = __utils__["azurearm.get_client"]("dns", **kwargs)
     try:
-        record_sets = salt.utils.azurearm.paged_object_to_list(
+        record_sets = __utils__["azurearm.paged_object_to_list"](
             dnsconn.record_sets.list_by_dns_zone(
                 zone_name=zone_name,
                 resource_group_name=resource_group,
@@ -321,13 +445,13 @@ def record_sets_list_by_dns_zone(
         for record_set in record_sets:
             result[record_set["name"]] = record_set
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("dns", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("dns", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result
 
 
-def zone_create_or_update(name, resource_group, **kwargs):
+def zone_create_or_update(name, resource_group=None, cloud_provider=None, **kwargs):
     """
     .. versionadded:: 3000
 
@@ -337,7 +461,16 @@ def zone_create_or_update(name, resource_group, **kwargs):
 
     :param resource_group: The name of the resource group.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider.
+        If you specify the ressource_group anyway, it will overwrite the cloud ressource_group value.
+
     CLI Example:
+
+    .. code-block:: bash
+
+        salt-call azurearm_dns.zone_create_or_update myzone testgroup
 
     .. code-block:: bash
 
@@ -347,7 +480,18 @@ def zone_create_or_update(name, resource_group, **kwargs):
     # DNS zones are global objects
     kwargs["location"] = "global"
 
-    dnsconn = salt.utils.azurearm.get_client("dns", **kwargs)
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if "error" in conn_config:
+            return conn_config
+        else:
+            if resource_group is None:
+                resource_group = conn_config["resource_group"]
+            else:
+                conn_config["resource_group"] = resource_group
+            kwargs.update(conn_config)
+
+    dnsconn = __utils__["azurearm.get_client"]("dns", **kwargs)
 
     # Convert list of ID strings to list of dictionaries with id key.
     if isinstance(kwargs.get("registration_virtual_networks"), list):
@@ -361,7 +505,7 @@ def zone_create_or_update(name, resource_group, **kwargs):
         ]
 
     try:
-        zone_model = salt.utils.azurearm.create_object_model("dns", "Zone", **kwargs)
+        zone_model = __utils__["azurearm.create_object_model"]("dns", "Zone", **kwargs)
     except TypeError as exc:
         result = {"error": "The object model could not be built. ({})".format(str(exc))}
         return result
@@ -376,7 +520,7 @@ def zone_create_or_update(name, resource_group, **kwargs):
         )
         result = zone.as_dict()
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("dns", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("dns", str(exc), **kwargs)
         result = {"error": str(exc)}
     except SerializationError as exc:
         result = {
@@ -386,7 +530,7 @@ def zone_create_or_update(name, resource_group, **kwargs):
     return result
 
 
-def zone_delete(name, resource_group, **kwargs):
+def zone_delete(name, resource_group=None, cloud_provider=None, **kwargs):
     """
     .. versionadded:: 3000
 
@@ -396,7 +540,16 @@ def zone_delete(name, resource_group, **kwargs):
 
     :param resource_group: The name of the resource group.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider.
+        If you specify the ressource_group anyway, it will overwrite the cloud ressource_group value.
+
     CLI Example:
+
+    .. code-block:: bash
+
+        salt-call azurearm_dns.zone_delete myzone testgroup
 
     .. code-block:: bash
 
@@ -404,7 +557,19 @@ def zone_delete(name, resource_group, **kwargs):
 
     """
     result = False
-    dnsconn = salt.utils.azurearm.get_client("dns", **kwargs)
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if "error" in conn_config:
+            return conn_config
+        else:
+            if resource_group is None:
+                resource_group = conn_config["resource_group"]
+            else:
+                conn_config["resource_group"] = resource_group
+            kwargs.update(conn_config)
+
+    dnsconn = __utils__["azurearm.get_client"]("dns", **kwargs)
     try:
         zone = dnsconn.zones.delete(
             zone_name=name,
@@ -414,12 +579,12 @@ def zone_delete(name, resource_group, **kwargs):
         zone.wait()
         result = True
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("dns", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("dns", str(exc), **kwargs)
 
     return result
 
 
-def zone_get(name, resource_group, **kwargs):
+def zone_get(name, resource_group=None, cloud_provider=None, **kwargs):
     """
     .. versionadded:: 3000
 
@@ -430,26 +595,48 @@ def zone_get(name, resource_group, **kwargs):
 
     :param resource_group: The name of the resource group.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider.
+        If you specify the ressource_group anyway, it will overwrite the cloud ressource_group value.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt-call azurearm_dns.zone_get myzone testgroup
 
+    .. code-block:: bash
+
+        salt-call azurearm_dns.zone_get myzone testgroup
+
     """
-    dnsconn = salt.utils.azurearm.get_client("dns", **kwargs)
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if "error" in conn_config:
+            return conn_config
+        else:
+            if resource_group is None:
+                resource_group = conn_config["resource_group"]
+            else:
+                conn_config["resource_group"] = resource_group
+            kwargs.update(conn_config)
+
+    dnsconn = __utils__["azurearm.get_client"]("dns", **kwargs)
     try:
         zone = dnsconn.zones.get(zone_name=name, resource_group_name=resource_group)
         result = zone.as_dict()
 
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("dns", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("dns", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result
 
 
-def zones_list_by_resource_group(resource_group, top=None, **kwargs):
+def zones_list_by_resource_group(
+    resource_group=None, cloud_provider=None, top=None, **kwargs
+):
     """
     .. versionadded:: 3000
 
@@ -461,7 +648,16 @@ def zones_list_by_resource_group(resource_group, top=None, **kwargs):
         The maximum number of DNS zones to return. If not specified,
         returns up to 100 zones.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider.
+        If you specify the ressource_group anyway, it will overwrite the cloud ressource_group value.
+
     CLI Example:
+
+    .. code-block:: bash
+
+        salt-call azurearm_dns.zones_list_by_resource_group testgroup
 
     .. code-block:: bash
 
@@ -469,9 +665,21 @@ def zones_list_by_resource_group(resource_group, top=None, **kwargs):
 
     """
     result = {}
-    dnsconn = salt.utils.azurearm.get_client("dns", **kwargs)
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if "error" in conn_config:
+            return conn_config
+        else:
+            if resource_group is None:
+                resource_group = conn_config["resource_group"]
+            else:
+                conn_config["resource_group"] = resource_group
+            kwargs.update(conn_config)
+
+    dnsconn = __utils__["azurearm.get_client"]("dns", **kwargs)
     try:
-        zones = salt.utils.azurearm.paged_object_to_list(
+        zones = __utils__["azurearm.paged_object_to_list"](
             dnsconn.zones.list_by_resource_group(
                 resource_group_name=resource_group, top=top
             )
@@ -480,13 +688,13 @@ def zones_list_by_resource_group(resource_group, top=None, **kwargs):
         for zone in zones:
             result[zone["name"]] = zone
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("dns", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("dns", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result
 
 
-def zones_list(top=None, **kwargs):
+def zones_list(top=None, cloud_provider=None, **kwargs):
     """
     .. versionadded:: 3000
 
@@ -496,7 +704,16 @@ def zones_list(top=None, **kwargs):
         The maximum number of DNS zones to return. If not specified,
         eturns up to 100 zones.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify / duplicate informations already provided in the cloud
+        provider config file.
+
     CLI Example:
+
+    .. code-block:: bash
+
+        salt-call azurearm_dns.zones_list
 
     .. code-block:: bash
 
@@ -504,14 +721,22 @@ def zones_list(top=None, **kwargs):
 
     """
     result = {}
-    dnsconn = salt.utils.azurearm.get_client("dns", **kwargs)
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if "error" in conn_config:
+            return conn_config
+        else:
+            kwargs.update(conn_config)
+
+    dnsconn = __utils__["azurearm.get_client"]("dns", **kwargs)
     try:
-        zones = salt.utils.azurearm.paged_object_to_list(dnsconn.zones.list(top=top))
+        zones = __utils__["azurearm.paged_object_to_list"](dnsconn.zones.list(top=top))
 
         for zone in zones:
             result[zone["name"]] = zone
     except CloudError as exc:
-        salt.utils.azurearm.log_cloud_error("dns", str(exc), **kwargs)
+        __utils__["azurearm.log_cloud_error"]("dns", str(exc), **kwargs)
         result = {"error": str(exc)}
 
     return result
