@@ -1,4 +1,5 @@
 import collections
+import itertools
 import logging
 import os
 import plistlib
@@ -1533,36 +1534,8 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             mock_perms = MagicMock(return_value=check_perms_ret)
         else:
             mock_perms = MagicMock(return_value=(check_perms_ret, ""))
-        mock_uid = MagicMock(
-            side_effect=[
-                "",
-                "U12",
-                "U12",
-                "U12",
-                "U12",
-                "U12",
-                "U12",
-                "U12",
-                "U12",
-                "U12",
-                "U12",
-            ]
-        )
-        mock_gid = MagicMock(
-            side_effect=[
-                "",
-                "G12",
-                "G12",
-                "G12",
-                "G12",
-                "G12",
-                "G12",
-                "G12",
-                "G12",
-                "G12",
-                "G12",
-            ]
-        )
+        mock_uid = MagicMock(side_effect=itertools.chain([""], itertools.repeat("U12")))
+        mock_gid = MagicMock(side_effect=itertools.chain([""], itertools.repeat("G12")))
         mock_check = MagicMock(
             return_value=(
                 None,

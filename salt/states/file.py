@@ -775,7 +775,7 @@ def _check_directory(
 
     # Recurse skips root (we always do dirs, not root), so always check root:
     if not children_only:
-        fchange = _check_dir_meta(name, user, group, follow_symlinks)
+        fchange = _check_dir_meta(name, user, group, dir_mode, follow_symlinks)
         if fchange:
             changes[name] = fchange
 
