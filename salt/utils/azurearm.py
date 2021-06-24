@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Azure (ARM) Utilities
 
@@ -7,30 +6,31 @@ Azure (ARM) Utilities
 :maintainer: <devops@eitr.tech>
 :maturity: new
 :depends:
-    * `azure <https://pypi.python.org/pypi/azure>`_ >= 2.0.0rc6
-    * `azure-common <https://pypi.python.org/pypi/azure-common>`_ >= 1.1.4
-    * `azure-mgmt <https://pypi.python.org/pypi/azure-mgmt>`_ >= 0.30.0rc6
-    * `azure-mgmt-compute <https://pypi.python.org/pypi/azure-mgmt-compute>`_ >= 0.33.0
-    * `azure-mgmt-network <https://pypi.python.org/pypi/azure-mgmt-network>`_ >= 0.30.0rc6
-    * `azure-mgmt-resource <https://pypi.python.org/pypi/azure-mgmt-resource>`_ >= 0.30.0
-    * `azure-mgmt-storage <https://pypi.python.org/pypi/azure-mgmt-storage>`_ >= 0.30.0rc6
-    * `azure-mgmt-web <https://pypi.python.org/pypi/azure-mgmt-web>`_ >= 0.30.0rc6
-    * `azure-storage <https://pypi.python.org/pypi/azure-storage>`_ >= 0.32.0
-    * `msrestazure <https://pypi.python.org/pypi/msrestazure>`_ >= 0.4.21
+    * `azure-core <https://pypi.python.org/pypi/azure-core>`_ >= 1.15.0
+    * `azure-batch <https://pypi.python.org/pypi/azure-batch>`_ >= 10.0.0
+    * `azure-identity <https://pypi.python.org/pypi/azure-identity>`_ >= 1.6.0
+    * `azure-common <https://pypi.python.org/pypi/azure-common>`_ >= 1.1.27
+    * `azure-mgmt-core <https://pypi.python.org/pypi/azure-mgmt-core>`_ >= 1.2.2
+    * `azure-mgmt-subscription <https://pypi.python.org/pypi/azure-mgmt-subscription>`_ >= 1.0.0
+    * `azure-mgmt-compute <https://pypi.python.org/pypi/azure-mgmt-compute>`_ >= 20.0.0
+    * `azure-mgmt-network <https://pypi.python.org/pypi/azure-mgmt-network>`_ >= 19.0.0
+    * `azure-mgmt-resource <https://pypi.python.org/pypi/azure-mgmt-resource>`_ >= 18.0.0
+    * `azure-mgmt-storage <https://pypi.python.org/pypi/azure-mgmt-storage>`_ >= 18.0.0
+    * `azure-mgmt-web <https://pypi.python.org/pypi/azure-mgmt-web>`_ >= 2.0.0
+    * `azure-storage-common <https://pypi.python.org/pypi/azure-storage-common>`_ >= 1.4.2
+    * `azure-storage-blob <https://pypi.python.org/pypi/azure-storage-blob>`_ >= 12.8.1
+    * `azure-storage-file <https://pypi.python.org/pypi/azure-storage-file>`_ >= 2.1.0
+    * `msrestazure <https://pypi.python.org/pypi/msrestazure>`_ >= 0.6.4
 :platform: linux
 
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import importlib
 import logging
 import sys
 from operator import itemgetter
 
-# Import Salt libs
 import salt.config
-import salt.ext.six as six
 import salt.loader
 import salt.utils.stringutils
 import salt.version
@@ -41,7 +41,6 @@ try:
 except ImportError:
     six_range = range
 
-# Import third party libs
 try:
     from azure.common.credentials import (
         UserPassCredentials,
@@ -92,7 +91,7 @@ def _determine_auth(**kwargs):
             )
     except (AttributeError, ImportError, MetadataEndpointError):
         raise sys.exit(
-            "The Azure cloud environment {0} is not available.".format(
+            "The Azure cloud environment {} is not available.".format(
                 kwargs["cloud_environment"]
             )
         )
@@ -166,7 +165,7 @@ def get_client(client_type, **kwargs):
 
     if client_type not in client_map:
         raise SaltSystemExit(
-            msg="The Azure ARM client_type {0} specified can not be found.".format(
+            msg="The Azure ARM client_type {} specified can not be found.".format(
                 client_type
             )
         )
@@ -183,9 +182,9 @@ def get_client(client_type, **kwargs):
     try:
         client_module = importlib.import_module("azure.mgmt." + module_name)
         # pylint: disable=invalid-name
-        Client = getattr(client_module, "{0}Client".format(map_value))
+        Client = getattr(client_module, "{}Client".format(map_value))
     except ImportError:
-        raise sys.exit("The azure {0} client is not available.".format(client_type))
+        raise sys.exit("The azure {} client is not available.".format(client_type))
 
     credentials, subscription_id, cloud_env = _determine_auth(**kwargs)
 
@@ -200,7 +199,7 @@ def get_client(client_type, **kwargs):
             base_url=cloud_env.endpoints.resource_manager,
         )
 
-    client.config.add_user_agent("Salt/{0}".format(salt.version.__version__))
+    client.config.add_user_agent("Salt/{}".format(salt.version.__version__))
 
     return client
 
@@ -244,13 +243,13 @@ def create_object_model(module_name, object_name, **kwargs):
 
     try:
         model_module = importlib.import_module(
-            "azure.mgmt.{0}.models".format(module_name)
+            "azure.mgmt.{}.models".format(module_name)
         )
         # pylint: disable=invalid-name
         Model = getattr(model_module, object_name)
     except ImportError:
         raise sys.exit(
-            "The {0} model in the {1} Azure module is not available.".format(
+            "The {} model in the {} Azure module is not available.".format(
                 object_name, module_name
             )
         )
@@ -332,9 +331,9 @@ def compare_list_of_dicts(old, new, convert_id_to_name=None):
                 )
             else:
                 remote_val = remote_configs[idx].get(key)
-                if isinstance(local_val, six.string_types):
+                if isinstance(local_val, str):
                     local_val = local_val.lower()
-                if isinstance(remote_val, six.string_types):
+                if isinstance(remote_val, str):
                     remote_val = remote_val.lower()
             if local_val != remote_val:
                 ret["changes"] = {"old": remote_configs, "new": local_configs}

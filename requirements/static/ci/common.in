@@ -1,7 +1,23 @@
 # Requirements in this file apply to all platforms.
 # We can also exclude platforms from the requirements using markers, but if a requirement only applies
 # to a particular platform, please add it to the corresponding `<platform>.in` file in this directory.
-azure==4.0.0; sys_platform != 'win32'
+# azure==4.0.0; sys_platform != 'win32'
+azure-core>= 1.15.0
+azure-batch>= 10.0.0
+azure-identity>= 1.6.0
+azure-common>= 1.1.27
+azure-mgmt-core>= 1.2.2
+azure-mgmt-dns>=8.0.0
+azure-mgmt-subscription>= 1.0.0
+azure-mgmt-compute>= 20.0.0
+azure-mgmt-network>= 19.0.0
+azure-mgmt-resource>= 18.0.0
+azure-mgmt-storage>= 18.0.0
+azure-mgmt-web>= 2.0.0
+azure-storage-common>= 1.4.2
+azure-storage-blob>= 12.8.1
+azure-storage-file>= 2.1.0
+azure-servicemanagement-legacy>=0.20.7
 apache-libcloud>=1.5.0; sys_platform != 'win32'
 boto3>=1.16.0,<1.17.0; python_version < '3.6'
 boto3>=1.17.67; python_version >= '3.6'
