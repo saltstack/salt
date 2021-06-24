@@ -478,11 +478,11 @@ def auth(name, nodes, pcsuser="hacluster", pcspasswd="hacluster", extra_args=Non
     return ret
 
 
-def cluster_setup(name, nodes, pcsclustername="pcscluster", extra_args=None):
+def cluster_setup(name, nodes, pcsclustername="pcscluster", extra_args=None, pcsuser="hacluster", pcspasswd="hacluster", pcs_auth_extra_args=None):
     """
     Setup Pacemaker cluster on nodes.
     Should be run on one cluster node only
-    (there may be races)
+    (there may be race conditions)
 
     name
         Irrelevant, not used (recommended: pcs_setup__setup)
@@ -492,6 +492,12 @@ def cluster_setup(name, nodes, pcsclustername="pcscluster", extra_args=None):
         Name of the Pacemaker cluster
     extra_args
         list of extra args for the \'pcs cluster setup\' command
+    pcsuser
+        The username for authenticating the cluster (default: hacluster)
+    pcspasswd
+        The password for authenticating the cluster (default: hacluster)
+    pcs_auth_extra_args
+        Extra args to be passed to the auth function in case of reauth.
 
     Example:
 
@@ -537,6 +543,19 @@ def cluster_setup(name, nodes, pcsclustername="pcscluster", extra_args=None):
     if __opts__["test"]:
         ret["result"] = None
         return ret
+
+    # Debian based distros deploy corosync with some initial cluster setup. 
+    # The following detects if it's a Debian based distro and then stops Corosync
+    # and removes the config files. I've put this here because trying to do all this in the
+    # state file can break running clusters and can also take quite a long time to debug.
+    
+
+    log.debug("OS_Family: %s", __grains__.get("os_family"))
+    if __grains__.get("os_family") == "Debian":
+        __salt__["file.remove"]("/etc/corosync/corosync.conf")
+        __salt__["file.remove"]("/var/lib/pacemaker/cib/cib.xml")
+        __salt__["service.stop"]("corosync")
+        auth("pcs_auth__auth", nodes, pcsuser, pcspasswd, pcs_auth_extra_args)
 
     nodes = _get_node_list_for_version(nodes)
 

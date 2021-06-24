@@ -80,8 +80,8 @@ def item_show(
     if item in ["constraint"]:
         cmd += [item_type]
 
-    # New implementions use config in stead of show. This resolves that issue.
-    if new_commands:
+    # New implementions use config instead of show. This resolves that issue.
+    if new_commands and item != "config":
         if show == "show":
             show = "config"
         elif isinstance(show, (list, tuple)):
@@ -196,25 +196,39 @@ def auth(nodes, pcsuser="hacluster", pcspasswd="hacluster", extra_args=None):
     return __salt__["cmd.run_all"](cmd, output_loglevel="trace", python_shell=False)
 
 
-def is_auth():
+def is_auth(nodes, pcsuser="hacluster", pcspasswd="hacluster"):
     """
     Check if nodes are already authorized
+
+    nodes
+        a list of nodes to be checked for authorization to the cluster
+    pcsuser
+        user for communitcation with PCS (default: hacluster)
+    pcspasswd
+        password for pcsuser (default: hacluster)
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' pcs.is_auth nodes='[node1.example.org node2.example.org]'
+        salt '*' pcs.is_auth nodes='[node1.example.org node2.example.org]' pcsuser=hacluster pcspasswd=hoonetorg
     """
     if __use_new_commands():
+
         cmd = ["pcs", "host", "auth"]
+
+        cmd += ["-u", pcsuser, "-p", pcspasswd]
+
+        cmd += nodes
     else:
         cmd = ["pcs", "cluster", "auth"]
-
+        cmd += nodes
     log.info("Commands: %s", cmd)
     return __salt__["cmd.run_all"](
         cmd, stdin="\n\n", output_loglevel="trace", python_shell=False
     )
+
+
 
 
 def cluster_setup(nodes, pcsclustername="pcscluster", extra_args=None):
@@ -237,8 +251,10 @@ def cluster_setup(nodes, pcsclustername="pcscluster", extra_args=None):
     cmd = ["pcs", "cluster", "setup"]
 
     if __use_new_commands():
+        #cmd += [pcsclustername, "--force"]
         cmd += [pcsclustername]
     else:
+        #cmd += ["--name", pcsclustername, "--force"]
         cmd += ["--name", pcsclustername]
 
     cmd += nodes
@@ -249,6 +265,27 @@ def cluster_setup(nodes, pcsclustername="pcscluster", extra_args=None):
 
     return __salt__["cmd.run_all"](cmd, output_loglevel="trace", python_shell=False)
 
+def cluster_destroy(extra_args=None):
+    """
+    Destroy corosync cluster using the pcs command
+
+    extra_args
+        list of extra option for the \'pcs cluster destroy\' command (only really --all)
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pcs.cluster_destroy extra_args=--all
+    """
+    cmd = ["pcs", "cluster", "destroy"]
+
+    if isinstance(extra_args, (list, tuple)):
+        cmd += extra_args
+
+    log.debug("Running cluster destroy: %s", cmd)
+
+    return __salt__["cmd.run_all"](cmd, output_loglevel="trace", python_shell=False)
 
 def cluster_node_add(node, extra_args=None):
     """
@@ -444,7 +481,6 @@ def stonith_create(
         extra_args=stonith_device_options,
         cibfile=cibfile,
     )
-
 
 def resource_show(resource_id, extra_args=None, cibfile=None):
     """
