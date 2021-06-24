@@ -86,12 +86,6 @@ def __virtual__():
     return __virtualname__
 
 
-def get_config_from_cloud(cloud_provider):
-    client = salt.cloud.CloudClient(path="/etc/salt/cloud")
-    conn_kwargs = client.opts["providers"][cloud_provider]["azurearm"]
-    return conn_kwargs
-
-
 def availability_set_create_or_update(
     name, resource_group=None, cloud_provider=None, **kwargs
 ):  # pylint: disable=invalid-name
@@ -121,7 +115,7 @@ def availability_set_create_or_update(
 
     """
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         resource_group = conn_config["resource_group"]
         kwargs.update(conn_config)
 
@@ -201,7 +195,7 @@ def availability_set_delete(name, resource_group=None, cloud_provider=None, **kw
     """
     result = False
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         resource_group = conn_config["resource_group"]
         kwargs.update(conn_config)
     compconn = salt.utils.azurearm.get_client("compute", **kwargs)
@@ -244,7 +238,7 @@ def availability_set_get(name, resource_group=None, cloud_provider=None, **kwarg
 
     """
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         resource_group = conn_config["resource_group"]
         kwargs.update(conn_config)
     compconn = salt.utils.azurearm.get_client("compute", **kwargs)
@@ -287,7 +281,7 @@ def availability_sets_list(resource_group=None, cloud_provider=None, **kwargs):
     """
     result = {}
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         resource_group = conn_config["resource_group"]
         kwargs.update(conn_config)
     compconn = salt.utils.azurearm.get_client("compute", **kwargs)
@@ -337,7 +331,7 @@ def availability_sets_list_available_sizes(
     """
     result = {}
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         resource_group = conn_config["resource_group"]
         kwargs.update(conn_config)
     compconn = salt.utils.azurearm.get_client("compute", **kwargs)
@@ -399,7 +393,7 @@ def virtual_machine_capture(
 
     """
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         resource_group = conn_config["resource_group"]
         kwargs.update(conn_config)
     # pylint: disable=invalid-name
@@ -457,7 +451,7 @@ def virtual_machine_get(name, resource_group=None, cloud_provider=None, **kwargs
 
     """
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         resource_group = conn_config["resource_group"]
         kwargs.update(conn_config)
     expand = kwargs.get("expand")
@@ -505,7 +499,7 @@ def virtual_machine_convert_to_managed_disks(
 
     """
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         resource_group = conn_config["resource_group"]
         kwargs.update(conn_config)
     compconn = salt.utils.azurearm.get_client("compute", **kwargs)
@@ -553,7 +547,7 @@ def virtual_machine_deallocate(
 
     """
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         resource_group = conn_config["resource_group"]
         kwargs.update(conn_config)
     compconn = salt.utils.azurearm.get_client("compute", **kwargs)
@@ -602,7 +596,7 @@ def virtual_machine_generalize(
     """
     result = False
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         resource_group = conn_config["resource_group"]
         kwargs.update(conn_config)
     compconn = salt.utils.azurearm.get_client("compute", **kwargs)
@@ -643,7 +637,7 @@ def virtual_machines_list(resource_group=None, cloud_provider=None, **kwargs):
     """
     result = {}
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         resource_group = conn_config["resource_group"]
         kwargs.update(conn_config)
 
@@ -684,7 +678,7 @@ def virtual_machines_list_all(cloud_provider=None, **kwargs):
     """
     result = {}
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         resource_group = conn_config["resource_group"]
         kwargs.update(conn_config)
     compconn = salt.utils.azurearm.get_client("compute", **kwargs)
@@ -732,7 +726,7 @@ def virtual_machines_list_available_sizes(
     """
     result = {}
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         resource_group = conn_config["resource_group"]
         kwargs.update(conn_config)
     compconn = salt.utils.azurearm.get_client("compute", **kwargs)
@@ -778,7 +772,7 @@ def virtual_machine_power_off(name, resource_group=None, cloud_provider=None, **
 
     """
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         resource_group = conn_config["resource_group"]
         kwargs.update(conn_config)
     compconn = salt.utils.azurearm.get_client("compute", **kwargs)
@@ -824,7 +818,7 @@ def virtual_machine_restart(name, resource_group=None, cloud_provider=None, **kw
 
     """
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         resource_group = conn_config["resource_group"]
         kwargs.update(conn_config)
     compconn = salt.utils.azurearm.get_client("compute", **kwargs)
@@ -870,7 +864,7 @@ def virtual_machine_start(name, resource_group=None, cloud_provider=None, **kwar
 
     """
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         resource_group = conn_config["resource_group"]
         kwargs.update(conn_config)
     compconn = salt.utils.azurearm.get_client("compute", **kwargs)
@@ -908,7 +902,7 @@ def virtual_machine_redeploy(name, resource_group=None, cloud_provider=None, **k
 
     """
     if cloud_provider is not None:
-        conn_config = get_config_from_cloud(cloud_provider)
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
         resource_group = conn_config["resource_group"]
         kwargs.update(conn_config)
     compconn = salt.utils.azurearm.get_client("compute", **kwargs)

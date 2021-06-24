@@ -3,7 +3,7 @@ Azure (ARM) Utilities
 
 .. versionadded:: 2019.2.0
 
-:maintainer: <devops@eitr.tech>
+:maintainer: <devops@eitr.tech>, <devops@l2web.ca>
 :maturity: new
 :depends:
     * `azure-core <https://pypi.python.org/pypi/azure-core>`_ >= 1.15.0
@@ -31,6 +31,7 @@ import sys
 from operator import itemgetter
 
 import salt.config
+import salt.ext.six as six  # pylint: disable=W0611
 import salt.loader
 import salt.utils.stringutils
 import salt.version
@@ -42,10 +43,7 @@ except ImportError:
     six_range = range
 
 try:
-    from azure.common.credentials import (
-        UserPassCredentials,
-        ServicePrincipalCredentials,
-    )
+    import azure.identity
     from msrestazure.azure_cloud import (
         MetadataEndpointError,
         get_cloud_from_metadata_endpoint,
@@ -103,10 +101,10 @@ def _determine_auth(**kwargs):
                 "populated if using service principals."
             )
         else:
-            credentials = ServicePrincipalCredentials(
-                kwargs["client_id"],
-                kwargs["secret"],
-                tenant=kwargs["tenant"],
+            credentials = azure.identity.ClientSecretCredential(
+                client_id=kwargs["client_id"],
+                client_secret=kwargs["secret"],
+                tenant_id=kwargs["tenant"],
                 cloud_environment=cloud_env,
             )
     elif set(user_pass_creds_kwargs).issubset(kwargs):
@@ -116,7 +114,7 @@ def _determine_auth(**kwargs):
                 "populated if using username/password authentication."
             )
         else:
-            credentials = UserPassCredentials(
+            credentials = azure.identity.UsernamePasswordCredential(  # pylint: disable=E1120
                 kwargs["username"], kwargs["password"], cloud_environment=cloud_env
             )
     elif "subscription_id" in kwargs:
@@ -190,16 +188,14 @@ def get_client(client_type, **kwargs):
 
     if client_type == "subscription":
         client = Client(
-            credentials=credentials, base_url=cloud_env.endpoints.resource_manager,
+            credential=credentials, base_url=cloud_env.endpoints.resource_manager,
         )
     else:
         client = Client(
-            credentials=credentials,
+            credential=credentials,
             subscription_id=subscription_id,
             base_url=cloud_env.endpoints.resource_manager,
         )
-
-    client.config.add_user_agent("Salt/{}".format(salt.version.__version__))
 
     return client
 
@@ -340,3 +336,14 @@ def compare_list_of_dicts(old, new, convert_id_to_name=None):
                 return ret
 
     return ret
+
+
+def get_config_from_cloud(cloud_provider):
+    """
+    Function use to retreive the configuration from the cloud
+    provider
+    """
+    conn_kwargs = ""
+    client = salt.cloud.CloudClient(path="/etc/salt/cloud")
+    conn_kwargs = client.opts["providers"][cloud_provider]["azurearm"]
+    return conn_kwargs
