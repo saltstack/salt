@@ -3642,3 +3642,313 @@ def mod_beacon(name, **kwargs):
             ),
             "result": False,
         }
+
+
+def held(name, version=None, pkgs=None, replace=False, **kwargs):
+    """
+    Set package in 'hold' state, meaning it will not be changed.
+
+    :param str name:
+        The name of the package to be held. This parameter is ignored
+        if ``pkgs`` is used.
+
+    :param str version:
+        Hold a specific version of a package.
+        Full description of this parameter is in `installed` function.
+
+        .. note::
+
+            This parameter make sense for Zypper-based systems.
+            Ignored for YUM/DNF and APT
+
+    :param list pkgs:
+        A list of packages to be held. All packages listed under ``pkgs``
+        will be held.
+
+        .. code-block:: yaml
+
+            mypkgs:
+              pkg.held:
+                - pkgs:
+                  - foo
+                  - bar: 1.2.3-4
+                  - baz
+
+        .. note::
+
+            For Zypper-based systems the package could be held for
+            the version specified. YUM/DNF and APT ingore it.
+
+    :param bool replace:
+        Force replacement of existings holds with specified.
+        By default, this parameter is set to ``False``.
+    """
+
+    if isinstance(pkgs, list) and len(pkgs) == 0 and not replace:
+        return {
+            "name": name,
+            "changes": {},
+            "result": True,
+            "comment": "No packages to be held provided",
+        }
+
+    # If just a name (and optionally a version) is passed, just pack them into
+    # the pkgs argument.
+    if name and pkgs is None:
+        if version:
+            pkgs = [{name: version}]
+            version = None
+        else:
+            pkgs = [name]
+
+    locks = {}
+    vr_lock = False
+    if "pkg.list_locks" in __salt__:
+        locks = __salt__["pkg.list_locks"]()
+        vr_lock = True
+    elif "pkg.list_holds" in __salt__:
+        _locks = __salt__["pkg.list_holds"](full=True)
+        lock_re = re.compile(r"^(.+)-(\d+):(.*)\.\*")
+        for lock in _locks:
+            match = lock_re.match(lock)
+            if match:
+                epoch = match.group(2)
+                if epoch == "0":
+                    epoch = ""
+                else:
+                    epoch = "{}:".format(epoch)
+                locks.update(
+                    {match.group(1): {"version": "{}{}".format(epoch, match.group(3))}}
+                )
+            else:
+                locks.update({lock: {}})
+    elif "pkg.get_selections" in __salt__:
+        _locks = __salt__["pkg.get_selections"](state="hold")
+        for lock in _locks.get("hold", []):
+            locks.update({lock: {}})
+    else:
+        return {
+            "name": name,
+            "changes": {},
+            "result": False,
+            "comment": "No any function to get the list of held packages available.\n"
+            "Check if the package manager supports package locking.",
+        }
+
+    if "pkg.hold" not in __salt__:
+        return {
+            "name": name,
+            "changes": {},
+            "result": False,
+            "comment": "`hold` function is not implemented for the package manager.",
+        }
+
+    ret = {"name": name, "changes": {}, "result": True, "comment": ""}
+    comments = []
+
+    held_pkgs = set()
+    for pkg in pkgs:
+        if isinstance(pkg, dict):
+            (pkg_name, pkg_ver) = next(iter(pkg.items()))
+        else:
+            pkg_name = pkg
+            pkg_ver = None
+        lock_ver = None
+        if pkg_name in locks and "version" in locks[pkg_name]:
+            lock_ver = locks[pkg_name]["version"]
+            lock_ver = lock_ver.lstrip("= ")
+        held_pkgs.add(pkg_name)
+        if pkg_name not in locks or (vr_lock and lock_ver != pkg_ver):
+            if __opts__["test"]:
+                if pkg_name in locks:
+                    comments.append(
+                        "The following package's hold rule would be updated: {}{}".format(
+                            pkg_name,
+                            "" if not pkg_ver else " (version = {})".format(pkg_ver),
+                        )
+                    )
+                else:
+                    comments.append(
+                        "The following package would be held: {}{}".format(
+                            pkg_name,
+                            "" if not pkg_ver else " (version = {})".format(pkg_ver),
+                        )
+                    )
+            else:
+                unhold_ret = None
+                if pkg_name in locks:
+                    unhold_ret = __salt__["pkg.unhold"](name=name, pkgs=[pkg_name])
+                hold_ret = __salt__["pkg.hold"](name=name, pkgs=[pkg])
+                if not hold_ret.get(pkg_name, {}).get("result", False):
+                    ret["result"] = False
+                if (
+                    unhold_ret
+                    and unhold_ret.get(pkg_name, {}).get("result", False)
+                    and hold_ret
+                    and hold_ret.get(pkg_name, {}).get("result", False)
+                ):
+                    comments.append(
+                        "Package {} was updated with hold rule".format(pkg_name)
+                    )
+                elif hold_ret and hold_ret.get(pkg_name, {}).get("result", False):
+                    comments.append("Package {} is now being held".format(pkg_name))
+                else:
+                    comments.append("Package {} was not held".format(pkg_name))
+                ret["changes"].update(hold_ret)
+
+    if replace:
+        for pkg_name in locks:
+            if locks[pkg_name].get("type", "package") != "package":
+                continue
+            if __opts__["test"]:
+                if pkg_name not in held_pkgs:
+                    comments.append(
+                        "The following package would be unheld: {}".format(pkg_name)
+                    )
+            else:
+                if pkg_name not in held_pkgs:
+                    unhold_ret = __salt__["pkg.unhold"](name=name, pkgs=[pkg_name])
+                    if not unhold_ret.get(pkg_name, {}).get("result", False):
+                        ret["result"] = False
+                    if unhold_ret and unhold_ret.get(pkg_name, {}).get("comment"):
+                        comments.append(unhold_ret.get(pkg_name).get("comment"))
+                    ret["changes"].update(unhold_ret)
+
+    ret["comment"] = "\n".join(comments)
+    if not (ret["changes"] or ret["comment"]):
+        ret["comment"] = "No changes made"
+
+    return ret
+
+
+def unheld(name, version=None, pkgs=None, all=False, **kwargs):
+    """
+    Unset package from 'hold' state, to allow operations with the package.
+
+    :param str name:
+        The name of the package to be unheld. This parameter is ignored
+        if ``pkgs`` is used.
+
+    :param str version:
+        Unhold a specific version of a package.
+        Full description of this parameter is in `installed` function.
+
+        .. note::
+
+            This parameter make sense for Zypper-based systems.
+            Ignored for YUM/DNF and APT
+
+    :param list pkgs:
+        A list of packages to be unheld. All packages listed under ``pkgs``
+        will be unheld.
+
+        .. code-block:: yaml
+
+            mypkgs:
+              pkg.unheld:
+                - pkgs:
+                  - foo
+                  - bar: 1.2.3-4
+                  - baz
+
+        .. note::
+
+            For Zypper-based systems the package could be held for
+            the version specified. YUM/DNF and APT ingore it.
+            For ``unheld`` there is no need to specify the exact version
+            to be unheld.
+
+    :param bool all:
+        Force removing of all existings locks.
+        By default, this parameter is set to ``False``.
+    """
+
+    if isinstance(pkgs, list) and len(pkgs) == 0 and not all:
+        return {
+            "name": name,
+            "changes": {},
+            "result": True,
+            "comment": "No packages to be unheld provided",
+        }
+
+    # If just a name (and optionally a version) is passed, just pack them into
+    # the pkgs argument.
+    if name and pkgs is None:
+        pkgs = [{name: version}]
+        version = None
+
+    locks = {}
+    vr_lock = False
+    if "pkg.list_locks" in __salt__:
+        locks = __salt__["pkg.list_locks"]()
+        vr_lock = True
+    elif "pkg.list_holds" in __salt__:
+        _locks = __salt__["pkg.list_holds"](full=True)
+        lock_re = re.compile(r"^(.+)-(\d+):(.*)\.\*")
+        for lock in _locks:
+            match = lock_re.match(lock)
+            if match:
+                epoch = match.group(2)
+                if epoch == "0":
+                    epoch = ""
+                else:
+                    epoch = "{}:".format(epoch)
+                locks.update(
+                    {match.group(1): {"version": "{}{}".format(epoch, match.group(3))}}
+                )
+            else:
+                locks.update({lock: {}})
+    elif "pkg.get_selections" in __salt__:
+        _locks = __salt__["pkg.get_selections"](state="hold")
+        for lock in _locks.get("hold", []):
+            locks.update({lock: {}})
+    else:
+        return {
+            "name": name,
+            "changes": {},
+            "result": False,
+            "comment": "No any function to get the list of held packages available.\n"
+            "Check if the package manager supports package locking.",
+        }
+
+    dpkgs = {}
+    for pkg in pkgs:
+        if isinstance(pkg, dict):
+            (pkg_name, pkg_ver) = next(iter(pkg.items()))
+            dpkgs.update({pkg_name: pkg_ver})
+        else:
+            dpkgs.update({pkg: None})
+
+    ret = {"name": name, "changes": {}, "result": True, "comment": ""}
+    comments = []
+
+    for pkg_name in locks:
+        if locks[pkg_name].get("type", "package") != "package":
+            continue
+        lock_ver = None
+        if vr_lock and "version" in locks[pkg_name]:
+            lock_ver = locks[pkg_name]["version"]
+            lock_ver = lock_ver.lstrip("= ")
+        if all or (pkg_name in dpkgs and (not lock_ver or lock_ver == dpkgs[pkg_name])):
+            if __opts__["test"]:
+                comments.append(
+                    "The following package would be unheld: {}{}".format(
+                        pkg_name,
+                        ""
+                        if not dpkgs.get(pkg_name)
+                        else " (version = {})".format(lock_ver),
+                    )
+                )
+            else:
+                unhold_ret = __salt__["pkg.unhold"](name=name, pkgs=[pkg_name])
+                if not unhold_ret.get(pkg_name, {}).get("result", False):
+                    ret["result"] = False
+                if unhold_ret and unhold_ret.get(pkg_name, {}).get("comment"):
+                    comments.append(unhold_ret.get(pkg_name).get("comment"))
+                ret["changes"].update(unhold_ret)
+
+    ret["comment"] = "\n".join(comments)
+    if not (ret["changes"] or ret["comment"]):
+        ret["comment"] = "No changes made"
+
+    return ret
