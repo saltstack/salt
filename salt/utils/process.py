@@ -585,12 +585,21 @@ class ProcessManager:
         """
         if self._restart_processes is False:
             return
-        log.info(
-            "Process %s (%s) died with exit status %s, restarting...",
-            self._process_map[pid]["tgt"],
-            pid,
-            self._process_map[pid]["Process"].exitcode,
-        )
+        exit = self._process_map[pid]["Process"].exitcode
+        if exit > 0:
+            log.info(
+                "Process %s (%s) died with exit status %s, restarting...",
+                self._process_map[pid]["tgt"],
+                pid,
+                self._process_map[pid]["Process"].exitcode,
+            )
+        else:
+            log.debug(
+                "Process %s (%s) died with exit status %s, restarting...",
+                self._process_map[pid]["tgt"],
+                pid,
+                self._process_map[pid]["Process"].exitcode,
+            )
         # don't block, the process is already dead
         self._process_map[pid]["Process"].join(1)
 
