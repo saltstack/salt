@@ -1,4 +1,5 @@
 import collections
+import itertools
 import logging
 import os
 import plistlib
@@ -1533,36 +1534,8 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             mock_perms = MagicMock(return_value=check_perms_ret)
         else:
             mock_perms = MagicMock(return_value=(check_perms_ret, ""))
-        mock_uid = MagicMock(
-            side_effect=[
-                "",
-                "U12",
-                "U12",
-                "U12",
-                "U12",
-                "U12",
-                "U12",
-                "U12",
-                "U12",
-                "U12",
-                "U12",
-            ]
-        )
-        mock_gid = MagicMock(
-            side_effect=[
-                "",
-                "G12",
-                "G12",
-                "G12",
-                "G12",
-                "G12",
-                "G12",
-                "G12",
-                "G12",
-                "G12",
-                "G12",
-            ]
-        )
+        mock_uid = MagicMock(side_effect=itertools.chain([""], itertools.repeat("U12")))
+        mock_gid = MagicMock(side_effect=itertools.chain([""], itertools.repeat("G12")))
         mock_check = MagicMock(
             return_value=(
                 None,
@@ -1777,6 +1750,17 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                     filestate.directory(name, user=user, group=group),
                                     ret,
                                 )
+
+                        recurse = ['mode']
+                        ret.update({'comment': 'The directory {} is in the '
+                                               'correct state'.format(name),
+                                    'changes': {},
+                                    'result': True})
+                        with patch.object(os.path, 'isdir', mock_t):
+                            self.assertDictEqual(filestate.directory
+                                                 (name, user=user, dir_mode=700,
+                                                  recurse=recurse, group=group,
+                                                  children_only=True), ret)
 
     # 'recurse' function tests: 1
 

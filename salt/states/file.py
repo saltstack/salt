@@ -708,6 +708,7 @@ def _check_directory(
     exclude_pat=None,
     max_depth=None,
     follow_symlinks=False,
+    children_only=False,
 ):
     """
     Check what changes need to be made on a directory
@@ -771,10 +772,13 @@ def _check_directory(
                     )
                     if fchange:
                         changes[path] = fchange
+
     # Recurse skips root (we always do dirs, not root), so always check root:
-    fchange = _check_dir_meta(name, user, group, dir_mode, follow_symlinks)
-    if fchange:
-        changes[name] = fchange
+    if not children_only:
+        fchange = _check_dir_meta(name, user, group, dir_mode, follow_symlinks)
+        if fchange:
+            changes[name] = fchange
+
     if clean:
         keep = _gen_keep_files(name, require, walk_d)
 
@@ -3628,6 +3632,7 @@ def directory(
             exclude_pat,
             max_depth,
             follow_symlinks,
+            children_only,
         )
 
     if tchanges:
