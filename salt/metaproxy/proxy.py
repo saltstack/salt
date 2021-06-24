@@ -99,7 +99,7 @@ def post_master_init(self, master):
         if "mine_interval" in self.opts["pillar"]:
             self.opts["mine_interval"] = self.opts["pillar"]["mine_interval"]
         if "mine_functions" in self.opts["pillar"]:
-            general_proxy_mines = self.opts.get("mine_functions", [])
+            general_proxy_mines = self.opts.get("mine_functions", {})
             specific_proxy_mines = self.opts["pillar"]["mine_functions"]
             try:
                 self.opts["mine_functions"] = general_proxy_mines + specific_proxy_mines
