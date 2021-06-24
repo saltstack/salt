@@ -18,6 +18,7 @@ import pprint
 import subprocess
 import tempfile
 import time
+import xml.etree.ElementTree as etree
 
 import salt.config
 import salt.exceptions
@@ -29,7 +30,6 @@ import salt.utils.process
 import salt.utils.stringutils
 import salt.utils.yaml
 import salt.version
-from salt._compat import ElementTree as etree
 from salt.ext import six
 from salt.ext.six.moves import zip
 from salt.ext.six.moves.queue import Empty
@@ -598,23 +598,25 @@ def _fetch_events(q, opts):
             queue_item.task_done()
 
     atexit.register(_clean_queue)
-    event = salt.utils.event.get_event("minion", sock_dir=opts["sock_dir"], opts=opts)
+    with salt.utils.event.get_event(
+        "minion", sock_dir=opts["sock_dir"], opts=opts
+    ) as event:
 
-    # Wait for event bus to be connected
-    while not event.connect_pull(30):
-        time.sleep(1)
+        # Wait for event bus to be connected
+        while not event.connect_pull(30):
+            time.sleep(1)
 
-    # Notify parent process that the event bus is connected
-    q.put("CONNECTED")
+        # Notify parent process that the event bus is connected
+        q.put("CONNECTED")
 
-    while True:
-        try:
-            events = event.get_event(full=False)
-        except Exception as exc:  # pylint: disable=broad-except
-            # This is broad but we'll see all kinds of issues right now
-            # if we drop the proc out from under the socket while we're reading
-            log.exception("Exception caught while getting events %r", exc)
-        q.put(events)
+        while True:
+            try:
+                events = event.get_event(full=False)
+            except Exception as exc:  # pylint: disable=broad-except
+                # This is broad but we'll see all kinds of issues right now
+                # if we drop the proc out from under the socket while we're reading
+                log.exception("Exception caught while getting events %r", exc)
+            q.put(events)
 
 
 class SaltMinionEventAssertsMixin:

@@ -7,7 +7,6 @@ from xml.etree import ElementTree
 
 import pytest
 from saltfactories.utils import cli_scripts
-from tests.support.helpers import skip_if_binaries_missing, slowTest
 from tests.support.virt import SaltVirtMinionContainerFactory
 
 docker = pytest.importorskip("docker")
@@ -73,8 +72,8 @@ def virt_minion_0(
         factories_manager=salt_factories,
         daemon_id=virt_minion_0_id,
         root_dir=root_dir,
-        config_defaults=config_defaults,
-        config_overrides=config_overrides,
+        defaults=config_defaults,
+        overrides=config_overrides,
         master=salt_master,
     )
     salt_factories.final_minion_config_tweaks(config)
@@ -84,7 +83,7 @@ def virt_minion_0(
         image="quay.io/rst0git/virt-minion",
         docker_client=docker_client,
         config=loaded_config,
-        cli_script_name=salt_minion_script_path,
+        script_name=salt_minion_script_path,
         start_timeout=60,
         factories_manager=salt_factories,
         event_listener=salt_factories.event_listener,
@@ -95,7 +94,7 @@ def virt_minion_0(
             }
         },
     )
-    factory.register_after_terminate_callback(
+    factory.after_terminate(
         pytest.helpers.remove_stale_minion_key, salt_master, factory.id
     )
     with factory.started():
@@ -123,8 +122,8 @@ def virt_minion_1(
         factories_manager=salt_factories,
         daemon_id=virt_minion_1_id,
         root_dir=root_dir,
-        config_defaults=config_defaults,
-        config_overrides=config_overrides,
+        defaults=config_defaults,
+        overrides=config_overrides,
         master=salt_master,
     )
     salt_factories.final_minion_config_tweaks(config)
@@ -134,7 +133,7 @@ def virt_minion_1(
         image="quay.io/rst0git/virt-minion",
         docker_client=docker_client,
         config=loaded_config,
-        cli_script_name=salt_minion_script_path,
+        script_name=salt_minion_script_path,
         start_timeout=60,
         factories_manager=salt_factories,
         event_listener=salt_factories.event_listener,
@@ -145,7 +144,7 @@ def virt_minion_1(
             }
         },
     )
-    factory.register_after_terminate_callback(
+    factory.after_terminate(
         pytest.helpers.remove_stale_minion_key, salt_master, factory.id
     )
     with factory.started():
@@ -154,11 +153,11 @@ def virt_minion_1(
 
 @pytest.fixture(scope="module")
 def salt_cli(salt_master, virt_minion_0, virt_minion_1):
-    return salt_master.get_salt_cli()
+    return salt_master.salt_cli()
 
 
-@skip_if_binaries_missing("docker")
-@slowTest
+@pytest.mark.slow_test
+@pytest.mark.skip_if_binaries_missing("docker")
 class TestVirtTest:
     """
     Test virt routines
@@ -414,8 +413,8 @@ def prep_virt(salt_cli, virt_minion_0, virt_minion_1, virt_domain):
             salt_cli.run("virt.undefine", virt_domain, minion_tgt=virt_minion_1.id)
 
 
-@skip_if_binaries_missing("docker")
-@slowTest
+@pytest.mark.slow_test
+@pytest.mark.skip_if_binaries_missing("docker")
 class TestVirtMigrateTest:
     def test_define_xml_path(self, salt_cli, virt_minion_0, virt_domain):
         """

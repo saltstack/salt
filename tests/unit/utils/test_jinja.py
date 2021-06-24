@@ -12,6 +12,7 @@ import random
 import re
 import tempfile
 
+import pytest
 import salt.config
 import salt.loader
 
@@ -34,7 +35,6 @@ from salt.utils.jinja import (
 from salt.utils.odict import OrderedDict
 from salt.utils.templates import JINJA, render_jinja_tmpl
 from tests.support.case import ModuleCase
-from tests.support.helpers import requires_network
 from tests.support.mock import MagicMock, Mock, patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
@@ -73,6 +73,13 @@ class JinjaTestCase(TestCase):
         result = indent(data)
         expected = Markup('foo:\n      "bar"')
         assert result == expected, result
+
+    def test_tojson_should_ascii_sort_keys_when_told(self):
+        data = {"z": "zzz", "y": "yyy", "x": "xxx"}
+        expected = '{"x": "xxx", "y": "yyy", "z": "zzz"}'
+
+        actual = tojson(data, sort_keys=True)
+        assert actual == expected
 
 
 class MockFileClient:
@@ -1380,15 +1387,14 @@ class TestCustomExtensions(TestCase):
         )
         self.assertEqual(rendered, "16777216")
 
-    @requires_network()
+    @pytest.mark.requires_network
     def test_http_query(self):
         """
         Test the `http_query` Jinja filter.
         """
         urls = (
             # These cannot be HTTPS urls since urllib2 chokes on those
-            "http://saltstack.com",
-            "http://community.saltstack.com",
+            "http://saltproject.io",
             "http://google.com",
             "http://duckduckgo.com",
         )

@@ -2,11 +2,13 @@
 Generate the salt thin tarball from the installed python files
 """
 
-import contextvars
+import contextvars as py_contextvars
 import copy
+import importlib.util
 import logging
 import os
 import shutil
+import site
 import subprocess
 import sys
 import tarfile
@@ -91,6 +93,74 @@ else:
 
 
 log = logging.getLogger(__name__)
+
+
+def import_module(name, path):
+    """
+    Import a module from a specific path. Path can be a full or relative path
+    to a .py file.
+
+    :name: The name of the module to import
+    :path: The path of the module to import
+    """
+    try:
+        spec = importlib.util.spec_from_file_location(name, path)
+    except ValueError:
+        spec = None
+    if spec is not None:
+        lib = importlib.util.module_from_spec(spec)
+        try:
+            spec.loader.exec_module(lib)
+        except OSError:
+            pass
+        else:
+            return lib
+
+
+def getsitepackages():
+    """
+    Some versions of Virtualenv ship a site.py without getsitepackages. This
+    method will first try and return sitepackages from the default site module
+    if no method exists we will try importing the site module from every other
+    path in sys.paths until we find a getsitepackages method to return the
+    results from. If for some reason no gesitepackages method can be found a
+    RuntimeError will be raised
+
+    :return: A list containing all global site-packages directories.
+    """
+    if hasattr(site, "getsitepackages"):
+        return site.getsitepackages()
+    for path in sys.path:
+        lib = import_module("site", os.path.join(path, "site.py"))
+        if hasattr(lib, "getsitepackages"):
+            return lib.getsitepackages()
+    raise RuntimeError("Unable to locate a getsitepackages method")
+
+
+def find_site_modules(name):
+    """
+    Finds and imports a module from site packages directories.
+
+    :name: The name of the module to import
+    :return: A list of imported modules, if no modules are imported an empty
+             list is returned.
+    """
+    libs = []
+    site_paths = []
+    try:
+        site_paths = getsitepackages()
+    except RuntimeError:
+        log.debug("No site package directories found")
+    for site_path in site_paths:
+        path = os.path.join(site_path, "{}.py".format(name))
+        lib = import_module(name, path)
+        if lib:
+            libs.append(lib)
+        path = os.path.join(site_path, name, "__init__.py")
+        lib = import_module(name, path)
+        if lib:
+            libs.append(lib)
+    return libs
 
 
 def _get_salt_call(*dirs, **namespaces):
@@ -228,8 +298,8 @@ def get_tops_python(py_ver, exclude=None, ext_py_ver=None):
                 "{} does not exist. Could not auto detect dependencies".format(py_ver)
             )
             return {}
-        py_shell_cmd = "{0} -c 'import {1}; print({1}.__file__)'".format(py_ver, mod)
-        cmd = subprocess.Popen(py_shell_cmd, stdout=subprocess.PIPE, shell=True)
+        py_shell_cmd = [py_ver, "-c", "import {0}; print({0}.__file__)".format(mod)]
+        cmd = subprocess.Popen(py_shell_cmd, stdout=subprocess.PIPE)
         stdout, _ = cmd.communicate()
         mod_file = os.path.abspath(salt.utils.data.decode(stdout).rstrip("\n"))
 
@@ -364,8 +434,14 @@ def get_tops(extra_mods="", so_mods=""):
         ssl_match_hostname,
         markupsafe,
         backports_abc,
-        contextvars,
     ]
+    modules = find_site_modules("contextvars")
+    if modules:
+        contextvars = modules[0]
+    else:
+        contextvars = py_contextvars
+    log.debug("Using contextvars %r", contextvars)
+    mods.append(contextvars)
     if has_immutables:
         mods.append(immutables)
     for mod in mods:

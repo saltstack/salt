@@ -1456,10 +1456,8 @@ def mod_hostname(hostname):
                     # fmt: off
                     fh_.write(
                         __utils__["stringutils.to_str"](
-                            "HOSTNAME={}{}{}\n".format(
-                                __utils__["stringutils.dequote"](hostname),
-                                quote_type,
-                                __utils__["stringutils.dequote"](hostname),
+                            "HOSTNAME={1}{0}{1}\n".format(
+                                __utils__["stringutils.dequote"](hostname), quote_type
                             )
                         )
                     )
@@ -1851,7 +1849,9 @@ def get_route(ip):
     .. versionchanged:: 2016.11.4
         Added support for AIX
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' network.get_route 10.10.10.10
     """

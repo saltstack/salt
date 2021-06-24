@@ -9,11 +9,6 @@ The data structure needs to be:
 """
 
 
-# pylint: disable=import-error
-
-# Try to import range from https://github.com/ytoolshed/range
-#
-
 import logging
 
 # The components here are simple, and they need to be and stay simple, we
@@ -33,9 +28,7 @@ from datetime import datetime
 import salt.cache
 import salt.config
 import salt.defaults.exitcodes
-
-# Import tornado
-import salt.ext.tornado.gen  # pylint: disable=F0401
+import salt.ext.tornado.gen
 import salt.loader
 import salt.payload
 import salt.syspaths as syspaths
@@ -59,7 +52,6 @@ from salt.exceptions import (
     SaltInvocationError,
     SaltReqTimeoutError,
 )
-from salt.ext import six
 
 HAS_RANGE = False
 try:
@@ -68,7 +60,6 @@ try:
     HAS_RANGE = True
 except ImportError:
     pass
-# pylint: enable=import-error
 
 
 log = logging.getLogger(__name__)
@@ -80,6 +71,7 @@ def get_local_client(
     skip_perm_errors=False,
     io_loop=None,
     auto_reconnect=False,
+    listen=False,
 ):
     """
     .. versionadded:: 2014.7.0
@@ -87,11 +79,38 @@ def get_local_client(
     Read in the config and return the correct LocalClient object based on
     the configured transport
 
+    :param str c_path: Path of config file to use for opts.
+
+                       The default value is None.
+
+    :param bool mopts: When provided the local client will use this dictionary of
+                       options insead of loading a config file from the value
+                       of c_path.
+
+                       The default value is None.
+
+    :param str skip_perm_errors: Ignore permissions errors while loading keys.
+
+                                 The default value is False.
+
     :param IOLoop io_loop: io_loop used for events.
                            Pass in an io_loop if you want asynchronous
                            operation for obtaining events. Eg use of
                            set_event_handler() API. Otherwise, operation
                            will be synchronous.
+
+    :param bool keep_loop: Do not destroy the event loop when closing the event
+                           subsriber.
+
+    :param bool auto_reconnect: When True the event subscriber will reconnect
+                                automatically if a disconnect error is raised.
+
+    .. versionadded:: 3004
+    :param bool listen: Listen for events indefinitly. When option is set the
+                        LocalClient object will listen for events until it's
+                        destroy method is called.
+
+                        The default value is False.
     """
     if mopts:
         opts = mopts
@@ -107,6 +126,7 @@ def get_local_client(
         skip_perm_errors=skip_perm_errors,
         io_loop=io_loop,
         auto_reconnect=auto_reconnect,
+        listen=listen,
     )
 
 
@@ -137,6 +157,7 @@ class LocalClient:
 
         local = salt.client.LocalClient()
         local.cmd('*', 'test.fib', [10])
+
     """
 
     def __init__(
@@ -147,13 +168,41 @@ class LocalClient:
         io_loop=None,
         keep_loop=False,
         auto_reconnect=False,
+        listen=False,
     ):
         """
+        :param str c_path: Path of config file to use for opts.
+
+                           The default value is None.
+
+        :param bool mopts: When provided the local client will use this dictionary of
+                           options insead of loading a config file from the value
+                           of c_path.
+
+                           The default value is None.
+
+        :param str skip_perm_errors: Ignore permissions errors while loading keys.
+
+                                     The default value is False.
+
         :param IOLoop io_loop: io_loop used for events.
                                Pass in an io_loop if you want asynchronous
                                operation for obtaining events. Eg use of
-                               set_event_handler() API. Otherwise,
-                               operation will be synchronous.
+                               set_event_handler() API. Otherwise, operation
+                               will be synchronous.
+
+        :param bool keep_loop: Do not destroy the event loop when closing the event
+                               subsriber.
+
+        :param bool auto_reconnect: When True the event subscriber will reconnect
+                                    automatically if a disconnect error is raised.
+
+        .. versionadded:: 3004
+        :param bool listen: Listen for events indefinitly. When option is set the
+                            LocalClient object will listen for events until it's
+                            destroy method is called.
+
+                            The default value is False.
         """
         if mopts:
             self.opts = mopts
@@ -171,12 +220,13 @@ class LocalClient:
         self.skip_perm_errors = skip_perm_errors
         self.key = self.__read_master_key()
         self.auto_reconnect = auto_reconnect
+        self.listen = listen
         self.event = salt.utils.event.get_event(
             "master",
             self.opts["sock_dir"],
             self.opts["transport"],
             opts=self.opts,
-            listen=False,
+            listen=self.listen,
             io_loop=io_loop,
             keep_loop=keep_loop,
         )
@@ -1027,7 +1077,7 @@ class LocalClient:
 
         # if you have all the returns, stop
         if len(found.intersection(minions)) >= len(minions):
-            raise StopIteration()
+            return
 
         # otherwise, get them from the event system
         for event in event_iter:
@@ -1036,7 +1086,7 @@ class LocalClient:
                 yield event
             if len(found.intersection(minions)) >= len(minions):
                 self._clean_up_subscriptions(jid)
-                raise StopIteration()
+                return
 
     # TODO: tests!!
     def get_returns_no_block(self, tag, match_type=None):
@@ -1060,6 +1110,9 @@ class LocalClient:
                 auto_reconnect=self.auto_reconnect,
             )
             yield raw
+
+    def returns_for_job(self, jid):
+        return self.returners["{}.get_load".format(self.opts["master_job_cache"])](jid)
 
     def get_iter_returns(
         self,
@@ -1097,14 +1150,11 @@ class LocalClient:
         missing = set()
         # Check to see if the jid is real, if not return the empty dict
         try:
-            if (
-                self.returners["{}.get_load".format(self.opts["master_job_cache"])](jid)
-                == {}
-            ):
+            if not self.returns_for_job(jid):
                 log.warning("jid does not exist")
                 yield {}
                 # stop the iteration, since the jid is invalid
-                raise StopIteration()
+                return
         except Exception as exc:  # pylint: disable=broad-except
             log.warning(
                 "Returner unavailable: %s", exc, exc_info_on_loglevel=logging.DEBUG
@@ -1676,7 +1726,7 @@ class LocalClient:
             log.warning("jid does not exist")
             yield {}
             # stop the iteration, since the jid is invalid
-            raise StopIteration()
+            return
         # Wait for the hosts to check in
         while True:
             raw = self.event.get_event(timeout, auto_reconnect=self.auto_reconnect)
@@ -1991,9 +2041,7 @@ class LocalClient:
         # This IS really necessary!
         # When running tests, if self.events is not destroyed, we leak 2
         # threads per test case which uses self.client
-        if hasattr(self, "event"):
-            # The call below will take care of calling 'self.event.destroy()'
-            del self.event
+        self.destroy()
 
     # pylint: enable=W1701
 
@@ -2001,6 +2049,17 @@ class LocalClient:
         if self.opts.get("order_masters"):
             self.event.unsubscribe("syndic/.*/{}".format(job_id), "regex")
         self.event.unsubscribe("salt/job/{}".format(job_id))
+
+    def destroy(self):
+        if self.event is not None:
+            self.event.destroy()
+            self.event = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.destroy()
 
 
 class FunctionWrapper(dict):

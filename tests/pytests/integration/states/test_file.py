@@ -2,11 +2,10 @@
 Tests for the file state
 """
 import pytest
-from tests.support.helpers import slowTest
 
 
 @pytest.fixture(scope="module")
-def pillar_tree(base_env_pillar_tree_root_dir, salt_minion, salt_call_cli):
+def pillar_tree(salt_master, salt_minion, salt_call_cli):
     top_file = """
     base:
       '{}':
@@ -22,11 +21,9 @@ def pillar_tree(base_env_pillar_tree_root_dir, salt_minion, salt_call_cli):
         - jo
         - sarah jane
     """
-    top_tempfile = pytest.helpers.temp_file(
-        "top.sls", top_file, base_env_pillar_tree_root_dir
-    )
-    basic_tempfile = pytest.helpers.temp_file(
-        "basic.sls", basic_pillar_file, base_env_pillar_tree_root_dir
+    top_tempfile = salt_master.pillar_tree.base.temp_file("top.sls", top_file)
+    basic_tempfile = salt_master.pillar_tree.base.temp_file(
+        "basic.sls", basic_pillar_file
     )
 
     try:
@@ -42,8 +39,10 @@ def pillar_tree(base_env_pillar_tree_root_dir, salt_minion, salt_call_cli):
         assert ret.json is True
 
 
-@slowTest
-def test_verify_ssl_skip_verify_false(salt_call_cli, tmpdir, ssl_webserver):
+@pytest.mark.slow_test
+def test_verify_ssl_skip_verify_false(
+    salt_master, salt_call_cli, tmpdir, ssl_webserver
+):
     """
     test verify_ssl when its False and True when managing
     a file with an https source and skip_verify is false.
@@ -62,7 +61,9 @@ def test_verify_ssl_skip_verify_false(salt_call_cli, tmpdir, ssl_webserver):
     false_content = true_content + "    - verify_ssl: False"
 
     # test when verify_ssl is True
-    with pytest.helpers.temp_state_file("verify_ssl.sls", true_content) as sfpath:
+    with salt_master.state_tree.base.temp_file(
+        "verify_ssl.sls", true_content
+    ) as sfpath:
         ret = salt_call_cli.run("--local", "state.apply", "verify_ssl")
         assert ret.exitcode == 1
         assert (
@@ -71,7 +72,9 @@ def test_verify_ssl_skip_verify_false(salt_call_cli, tmpdir, ssl_webserver):
         )
 
     # test when verify_ssl is False
-    with pytest.helpers.temp_state_file("verify_ssl.sls", false_content) as sfpath:
+    with salt_master.state_tree.base.temp_file(
+        "verify_ssl.sls", false_content
+    ) as sfpath:
         ret = salt_call_cli.run("--local", "state.apply", "verify_ssl")
         assert ret.exitcode == 0
         assert ret.json[next(iter(ret.json))]["changes"] == {
@@ -82,7 +85,7 @@ def test_verify_ssl_skip_verify_false(salt_call_cli, tmpdir, ssl_webserver):
 
 @pytest.mark.windows_whitelisted
 def test_contents_pillar_with_pillar_list(
-    salt_call_cli, pillar_tree, base_env_state_tree_root_dir, tmp_path
+    salt_master, salt_call_cli, pillar_tree, tmp_path
 ):
     """
     This tests for any regressions for this issue:
@@ -98,8 +101,8 @@ def test_contents_pillar_with_pillar_list(
     """.format(
         target_path
     )
-    sls_tempfile = pytest.helpers.temp_file(
-        "{}.sls".format(sls_name), sls_contents, base_env_state_tree_root_dir
+    sls_tempfile = salt_master.state_tree.base.temp_file(
+        "{}.sls".format(sls_name), sls_contents
     )
     with sls_tempfile:
         ret = salt_call_cli.run("state.sls", sls_name)
@@ -113,7 +116,7 @@ def test_contents_pillar_with_pillar_list(
 
 @pytest.mark.windows_whitelisted
 def test_managed_file_with_pillar_sls(
-    salt_call_cli, pillar_tree, tmp_path, base_env_state_tree_root_dir
+    salt_master, salt_call_cli, pillar_tree, tmp_path
 ):
     """
     Test to ensure pillar data in sls file
@@ -136,8 +139,8 @@ def test_managed_file_with_pillar_sls(
         - name: {{ filedir | path_join(filename) }}
     """
     )
-    sls_tempfile = pytest.helpers.temp_file(
-        "{}.sls".format(sls_name), sls_contents, base_env_state_tree_root_dir
+    sls_tempfile = salt_master.state_tree.base.temp_file(
+        "{}.sls".format(sls_name), sls_contents
     )
     with sls_tempfile:
         ret = salt_call_cli.run("state.sls", sls_name)
@@ -151,11 +154,11 @@ def test_managed_file_with_pillar_sls(
 
 @pytest.mark.windows_whitelisted
 def test_issue_50221(
+    salt_master,
     salt_call_cli,
     pillar_tree,
     tmp_path,
     salt_minion,
-    base_env_state_tree_root_dir,
     ext_pillar_file_tree_root_dir,
 ):
     expected_content = "abc\n\n\n"
@@ -166,8 +169,8 @@ def test_issue_50221(
       file.managed:
         - contents_pillar: issue-50221
     """
-    sls_tempfile = pytest.helpers.temp_file(
-        "{}.sls".format(sls_name), sls_contents, base_env_state_tree_root_dir
+    sls_tempfile = salt_master.state_tree.base.temp_file(
+        "{}.sls".format(sls_name), sls_contents
     )
     issue_50221_ext_pillar_tempfile = pytest.helpers.temp_file(
         "issue-50221",

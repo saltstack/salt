@@ -5,11 +5,12 @@ Integration tests for the etcd modules
 import logging
 
 import pytest
-from tests.support.helpers import slowTest
 
 log = logging.getLogger(__name__)
 
-pytestmark = [pytest.mark.skip_if_binaries_missing("dockerd")]
+pytestmark = [
+    pytest.mark.skip_if_binaries_missing("dockerd"),
+]
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -80,7 +81,7 @@ def pillar_tree(base_env_pillar_tree_root_dir, salt_minion):
         yield
 
 
-@slowTest
+@pytest.mark.slow_test
 def test_sdb(salt_call_cli):
     ret = salt_call_cli.run(
         "sdb.set", uri="sdb://sdbetcd/secret/test/test_sdb/foo", value="bar"
@@ -95,7 +96,7 @@ def test_sdb(salt_call_cli):
     assert ret.json == "bar"
 
 
-@slowTest
+@pytest.mark.slow_test
 def test_sdb_runner(salt_run_cli):
     ret = salt_run_cli.run(
         "sdb.set", uri="sdb://sdbetcd/secret/test/test_sdb_runner/foo", value="bar"
@@ -110,7 +111,7 @@ def test_sdb_runner(salt_run_cli):
     assert ret.stdout == "bar"
 
 
-@slowTest
+@pytest.mark.slow_test
 def test_config(salt_call_cli, pillar_tree):
     ret = salt_call_cli.run(
         "sdb.set", uri="sdb://sdbetcd/secret/test/test_pillar_sdb/foo", value="bar"

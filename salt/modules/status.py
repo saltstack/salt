@@ -3,7 +3,6 @@ Module for returning various status data about a minion.
 These data can be useful for compiling into stats later.
 """
 
-
 import collections
 import copy
 import datetime
@@ -22,12 +21,10 @@ import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
-from salt.ext.six.moves import range, zip
 
 log = logging.getLogger(__file__)
 
 __virtualname__ = "status"
-__opts__ = {}
 
 # Don't shadow built-in's.
 __func_alias__ = {"time_": "time"}
@@ -408,8 +405,8 @@ def cpustats():
                 ret["mpstat"].append({})
                 ret["mpstat"][procn]["system"] = {}
                 cpu_comps = comps[1].split()
-                for i in range(0, len(cpu_comps)):
-                    cpu_vals = cpu_comps[i].split("=")
+                for comp in cpu_comps:
+                    cpu_vals = comp.split("=")
                     ret["mpstat"][procn]["system"][cpu_vals[0]] = cpu_vals[1]
 
             if line.startswith("cpu"):
@@ -550,9 +547,9 @@ def meminfo():
                 ret["svmon"].append({})
                 comps = line.split()
                 ret["svmon"][procn][comps[0]] = {}
-                for i in range(0, len(fields)):
-                    if len(comps) > i + 1:
-                        ret["svmon"][procn][comps[0]][fields[i]] = comps[i + 1]
+                for idx, field in enumerate(fields):
+                    if len(comps) > idx + 1:
+                        ret["svmon"][procn][comps[0]][field] = comps[idx + 1]
                 continue
 
             if line.startswith("pg space") or line.startswith("in use"):
@@ -561,9 +558,9 @@ def meminfo():
                 comps = line.split()
                 pg_space = "{} {}".format(comps[0], comps[1])
                 ret["svmon"][procn][pg_space] = {}
-                for i in range(0, len(fields)):
-                    if len(comps) > i + 2:
-                        ret["svmon"][procn][pg_space][fields[i]] = comps[i + 2]
+                for idx, field in enumerate(fields):
+                    if len(comps) > idx + 2:
+                        ret["svmon"][procn][pg_space][field] = comps[idx + 2]
                 continue
 
             if line.startswith("PageSize"):
@@ -576,9 +573,9 @@ def meminfo():
                 ret["svmon"].append({})
                 comps = line.split()
                 ret["svmon"][procn][comps[0]] = {}
-                for i in range(0, len(fields)):
-                    if len(comps) > i:
-                        ret["svmon"][procn][comps[0]][fields[i]] = comps[i]
+                for idx, field in enumerate(fields):
+                    if len(comps) > idx:
+                        ret["svmon"][procn][comps[0]][field] = comps[idx]
                 continue
 
         for line in __salt__["cmd.run"]("vmstat -v").splitlines():
@@ -955,9 +952,9 @@ def diskstats():
                 ret[disk_name][procn][disk_mode] = {}
             else:
                 comps = line.split()
-                for i in range(0, len(fields)):
-                    if len(comps) > i:
-                        ret[disk_name][procn][disk_mode][fields[i]] = comps[i]
+                for idx, field in enumerate(fields):
+                    if len(comps) > idx:
+                        ret[disk_name][procn][disk_mode][field] = comps[idx]
 
         return ret
 
@@ -1778,6 +1775,8 @@ def proxy_reconnect(proxy_name, opts=None):
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt '*' status.proxy_reconnect rest_sample
     """
 
@@ -1791,7 +1790,8 @@ def proxy_reconnect(proxy_name, opts=None):
     if proxy_keepalive_fn not in __proxy__:
         return False  # fail
 
-    if __proxy__[proxy_name + ".get_reboot_active"]():
+    chk_reboot_active_key = proxy_name + ".get_reboot_active"
+    if chk_reboot_active_key in __proxy__ and __proxy__[chk_reboot_active_key]():
         # if rebooting or shutting down, don't run proxy_reconnect
         # it interferes with the connection and disrupts the shutdown/reboot
         # especially

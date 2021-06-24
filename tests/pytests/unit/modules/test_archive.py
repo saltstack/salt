@@ -18,11 +18,9 @@ class ZipFileMock(MagicMock):
         return self._files
 
 
-@pytest.fixture(autouse=True)
-def setup_loader():
-    setup_loader_modules = {archive: {"__grains__": {"id": 0}}}
-    with pytest.helpers.loader_mock(setup_loader_modules) as loader_mock:
-        yield loader_mock
+@pytest.fixture
+def configure_loader_modules():
+    return {archive: {"__grains__": {"id": 0}}}
 
 
 def test_tar():
@@ -448,7 +446,7 @@ def test_rar_raises_exception_if_not_found():
             assert not mock.called
 
 
-@pytest.mark.skip_if_binaries_missing("unrar", "rar", message="unrar not installed")
+@pytest.mark.skip_if_binaries_missing("unrar", "rar", reason="unrar not installed")
 def test_unrar():
     with patch(
         "salt.utils.path.which_bin",

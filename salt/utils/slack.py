@@ -24,7 +24,6 @@ import salt.utils.http
 
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext.six.moves.urllib.parse import urljoin as _urljoin
-from salt.version import __version__
 
 log = logging.getLogger(__name__)
 
@@ -76,7 +75,6 @@ def query(
         query_params = {}
     else:
         query_params = args.copy()
-    query_params["token"] = api_key
 
     if header_dict is None:
         header_dict = {}
@@ -84,6 +82,14 @@ def query(
     if method != "POST":
         header_dict["Accept"] = "application/json"
 
+    # https://api.slack.com/changelog/2020-11-no-more-tokens-in-querystrings-for
+    # -newly-created-apps
+    # Apps created after February 24, 2021 may no longer send tokens as query
+    # parameters and must instead use an HTTP authorization header or
+    # send the token in an HTTP POST body.
+    # Apps created before February 24, 2021 will continue functioning no
+    # matter which way you pass your token.
+    header_dict["Authorization"] = "Bearer {}".format(api_key)
     result = salt.utils.http.query(
         url,
         method,
