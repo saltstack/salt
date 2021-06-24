@@ -4,6 +4,8 @@
 #
 #    pip-compile --output-file=requirements/static/ci/py3.7/windows.txt requirements/pytest.txt requirements/static/ci/common.in requirements/static/ci/windows.in requirements/static/pkg/py3.7/windows.txt
 #
+adal==1.2.7
+    # via msrestazure
 appdirs==1.4.4
     # via virtualenv
 atomicwrites==1.3.0
@@ -17,6 +19,66 @@ aws-sam-translator==1.33.0
     # via cfn-lint
 aws-xray-sdk==0.95
     # via moto
+azure-batch==10.0.0
+    # via -r requirements/static/ci/common.in
+azure-common==1.1.27
+    # via
+    #   -r requirements/static/ci/common.in
+    #   azure-batch
+    #   azure-mgmt-compute
+    #   azure-mgmt-dns
+    #   azure-mgmt-network
+    #   azure-mgmt-resource
+    #   azure-mgmt-storage
+    #   azure-mgmt-subscription
+    #   azure-mgmt-web
+    #   azure-servicemanagement-legacy
+    #   azure-storage-common
+    #   azure-storage-file
+azure-core==1.15.0
+    # via
+    #   -r requirements/static/ci/common.in
+    #   azure-identity
+    #   azure-mgmt-core
+    #   azure-storage-blob
+azure-identity==1.6.0
+    # via -r requirements/static/ci/common.in
+azure-mgmt-compute==21.0.0
+    # via -r requirements/static/ci/common.in
+azure-mgmt-core==1.2.2
+    # via
+    #   -r requirements/static/ci/common.in
+    #   azure-mgmt-compute
+    #   azure-mgmt-dns
+    #   azure-mgmt-network
+    #   azure-mgmt-resource
+    #   azure-mgmt-storage
+    #   azure-mgmt-subscription
+    #   azure-mgmt-web
+azure-mgmt-dns==8.0.0
+    # via -r requirements/static/ci/common.in
+azure-mgmt-network==19.0.0
+    # via -r requirements/static/ci/common.in
+azure-mgmt-resource==18.0.0
+    # via -r requirements/static/ci/common.in
+azure-mgmt-storage==18.0.0
+    # via -r requirements/static/ci/common.in
+azure-mgmt-subscription==1.0.0
+    # via -r requirements/static/ci/common.in
+azure-mgmt-web==3.0.0
+    # via -r requirements/static/ci/common.in
+azure-nspkg==3.0.2
+    # via azure-servicemanagement-legacy
+azure-servicemanagement-legacy==0.20.7
+    # via -r requirements/static/ci/common.in
+azure-storage-blob==12.8.1
+    # via -r requirements/static/ci/common.in
+azure-storage-common==2.1.0
+    # via
+    #   -r requirements/static/ci/common.in
+    #   azure-storage-file
+azure-storage-file==2.1.0
+    # via -r requirements/static/ci/common.in
 boto3==1.17.67 ; python_version >= "3.6"
     # via
     #   -r requirements/static/ci/common.in
@@ -42,6 +104,7 @@ certifi==2020.12.5
     #   -r requirements/static/ci/common.in
     #   -r requirements/static/pkg/py3.7/windows.txt
     #   kubernetes
+    #   msrest
     #   requests
 cffi==1.14.5
     # via
@@ -76,7 +139,13 @@ contextvars==2.4
 cryptography==3.4.6
     # via
     #   -r requirements/static/pkg/py3.7/windows.txt
+    #   adal
+    #   azure-identity
+    #   azure-storage-blob
+    #   azure-storage-common
     #   moto
+    #   msal
+    #   pyjwt
     #   pyopenssl
     #   python-jose
     #   requests-ntlm
@@ -144,6 +213,8 @@ ioloop==0.1a0
     # via -r requirements/static/pkg/py3.7/windows.txt
 ipaddress==1.0.22
     # via kubernetes
+isodate==0.6.0
+    # via msrest
 jaraco.classes==3.2.1
     # via
     #   -r requirements/static/pkg/py3.7/windows.txt
@@ -219,14 +290,36 @@ more-itertools==8.2.0
     #   zipp
 moto==1.3.16
     # via -r requirements/static/ci/common.in
+msal-extensions==0.3.0
+    # via azure-identity
+msal==1.12.0
+    # via
+    #   azure-identity
+    #   msal-extensions
 msgpack==1.0.2
     # via
     #   -r requirements/static/pkg/py3.7/windows.txt
     #   pytest-salt-factories
+msrest==0.6.21
+    # via
+    #   azure-batch
+    #   azure-mgmt-compute
+    #   azure-mgmt-dns
+    #   azure-mgmt-network
+    #   azure-mgmt-resource
+    #   azure-mgmt-storage
+    #   azure-mgmt-subscription
+    #   azure-mgmt-web
+    #   azure-storage-blob
+    #   msrestazure
+msrestazure==0.6.4
+    # via azure-batch
 networkx==2.5
     # via cfn-lint
 ntlm-auth==1.5.0
     # via requests-ntlm
+oauthlib==3.1.1
+    # via requests-oauthlib
 packaging==19.2
     # via pytest
 patch==1.16
@@ -235,6 +328,8 @@ pathtools==0.1.2
     # via watchdog
 pluggy==0.13.0
     # via pytest
+portalocker==1.7.1
+    # via msal-extensions
 portend==2.6
     # via
     #   -r requirements/static/pkg/py3.7/windows.txt
@@ -266,6 +361,10 @@ pycurl==7.43.0.5
     #   -r requirements/static/pkg/py3.7/windows.txt
 pygit2==1.5.0 ; python_version >= "3.7"
     # via -r requirements/static/ci/windows.in
+pyjwt[crypto]==2.1.0
+    # via
+    #   adal
+    #   msal
 pymssql==2.1.5 ; python_version < "3.8"
     # via -r requirements/static/pkg/py3.7/windows.txt
 pymysql==1.0.2
@@ -298,6 +397,8 @@ pytest==6.1.2
 python-dateutil==2.8.1
     # via
     #   -r requirements/static/pkg/py3.7/windows.txt
+    #   adal
+    #   azure-storage-common
     #   botocore
     #   kubernetes
     #   moto
@@ -320,6 +421,7 @@ pywin32==300
     # via
     #   -r requirements/static/pkg/py3.7/windows.txt
     #   cherrypy
+    #   portalocker
     #   wmi
 pywinrm==0.4.1
     # via -r requirements/static/ci/windows.in
@@ -336,17 +438,26 @@ pyzmq==18.0.1 ; python_version < "3.9"
     #   pytest-salt-factories
 requests-ntlm==1.1.0
     # via pywinrm
+requests-oauthlib==1.3.0
+    # via msrest
 requests==2.25.1
     # via
     #   -r requirements/static/ci/common.in
     #   -r requirements/static/pkg/py3.7/windows.txt
+    #   adal
     #   aws-xray-sdk
+    #   azure-core
+    #   azure-servicemanagement-legacy
+    #   azure-storage-common
     #   docker
     #   kubernetes
     #   moto
+    #   msal
+    #   msrest
     #   pyvmomi
     #   pywinrm
     #   requests-ntlm
+    #   requests-oauthlib
     #   responses
 responses==0.10.6
     # via moto
@@ -366,6 +477,8 @@ six==1.16.0
     # via
     #   -r requirements/static/pkg/py3.7/windows.txt
     #   aws-sam-translator
+    #   azure-core
+    #   azure-identity
     #   cassandra-driver
     #   cfn-lint
     #   cheroot
@@ -374,11 +487,13 @@ six==1.16.0
     #   ecdsa
     #   geomet
     #   google-auth
+    #   isodate
     #   jsonschema
     #   junit-xml
     #   kubernetes
     #   mock
     #   moto
+    #   msrestazure
     #   packaging
     #   pyopenssl
     #   python-dateutil
