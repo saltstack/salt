@@ -1,0 +1,1 @@
+Added ability for `salt.wait_for_event` to handle `event_id`s that have a list value.
