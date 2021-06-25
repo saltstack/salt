@@ -14,17 +14,24 @@
 !define OUTFILE "Salt-Minion-${PRODUCT_VERSION}-Py${PYTHON_VERSION}-${CPUARCH}-Setup.exe"
 !define /date TIME_STAMP "%Y-%m-%d-%H-%M-%S"
 
+# Request admin rights
+RequestExecutionLevel admin
+
 # Import Libraries
+!include "FileFunc.nsh"
+!include "LogicLib.nsh"
+!include "MoveFileFolder.nsh"
 !include "MUI2.nsh"
 !include "nsDialogs.nsh"
-!include "LogicLib.nsh"
-!include "FileFunc.nsh"
 !include "StrFunc.nsh"
-!include "x64.nsh"
 !include "WinMessages.nsh"
 !include "WinVer.nsh"
+!include "x64.nsh"
 ${StrLoc}
 ${StrStrAdv}
+
+# Required by MoveFileFolder.nsh
+!insertmacro Locate
 
 !ifdef SaltVersion
     !define PRODUCT_VERSION "${SaltVersion}"
@@ -107,23 +114,25 @@ Page custom pageMinionConfig pageMinionConfig_Leave
 ###############################################################################
 Var Dialog
 Var Label
-Var CheckBox_Minion_Start
-Var CheckBox_Minion_Start_Delayed
-Var ConfigMasterHost
+Var MinionStart_ChkBox
+Var MinionStartDelayed_ChkBox
+Var MasterHost_Cfg
+Var MasterHost_TxtBox
 Var MasterHost
-Var MasterHost_State
-Var ConfigMinionName
+Var MinionName_Cfg
+Var MinionName_TxtBox
 Var MinionName
-Var MinionName_State
 Var ExistingConfigFound
+Var ConfigType_DropList
 Var ConfigType
-Var ConfigType_State
+Var CustomConfig_TxtBox
+Var CustomConfig_Btn
 Var CustomConfig
-Var CustomConfig_btn
-Var CustomConfig_State
-Var WarningCustomConfig
-Var WarningExistingConfig
-Var WarningDefaultConfig
+Var CustomConfigWarning_Lbl
+Var ExistingConfigWarning_Lbl
+Var DefaultConfigWarning_Lbl
+Var MoveExistingConfig_ChkBox
+Var MoveExistingConfig
 Var StartMinion
 Var StartMinionDelayed
 Var DeleteInstallDir
@@ -182,86 +191,94 @@ Function pageMinionConfig
     ${EndIf}
 
     # Master IP or Hostname Dialog Control
-    ${NSD_CreateLabel} 0 0 100% 12u "Master IP or Hostname:"
+    ${NSD_CreateLabel} 0 0 100% 9u "&Master IP or Hostname:"
     Pop $Label
 
-    ${NSD_CreateText} 0 13u 100% 12u $MasterHost_State
-    Pop $MasterHost
+    ${NSD_CreateText} 0 10u 100% 12u $MasterHost
+    Pop $MasterHost_TxtBox
 
     # Minion ID Dialog Control
-    ${NSD_CreateLabel} 0 30u 100% 12u "Minion Name:"
+    ${NSD_CreateLabel} 0 30u 100% 9u "Minion &Name:"
     Pop $Label
 
-    ${NSD_CreateText} 0 43u 100% 12u $MinionName_State
-    Pop $MinionName
+    ${NSD_CreateText} 0 40u 100% 12u $MinionName
+    Pop $MinionName_TxtBox
 
     # Config Drop List
-    ${NSD_CreateDropList} 0 65u 25% 36u ""
-    Pop $ConfigType
-    ${NSD_CB_AddString} $ConfigType "Default Config"
-    ${NSD_CB_AddString} $ConfigType "Custom Config"
-    ${NSD_OnChange} $ConfigType pageMinionConfig_OnChange
+    ${NSD_CreateDropList} 0 60u 25% 36u ""
+    Pop $ConfigType_DropList
+    ${NSD_CB_AddString} $ConfigType_DropList "Default Config"
+    ${NSD_CB_AddString} $ConfigType_DropList "Custom Config"
+    ${NSD_OnChange} $ConfigType_DropList pageMinionConfig_OnChange
 
     # Add Existing Config Warning Label
-    ${NSD_CreateLabel} 0 80u 100% 60u "The values above are taken from an \
-        existing configuration found in `$RootDir\conf\minion`. Configuration \
-        settings defined in the `minion.d` directories, if they exist, are not \
-        shown here.$\n\
+    ${NSD_CreateLabel} 0 75u 100% 50u "The values above are taken from an \
+        existing configuration found in `$RootDir\conf\minion`.$\n\
         $\n\
         Clicking `Install` will leave the existing config unchanged."
-    Pop $WarningExistingConfig
+    Pop $ExistingConfigWarning_Lbl
     CreateFont $0 "Arial" 10 500 /ITALIC
-    SendMessage $WarningExistingConfig ${WM_SETFONT} $0 1
-    SetCtlColors $WarningExistingConfig 0xBB0000 transparent
+    SendMessage $ExistingConfigWarning_Lbl ${WM_SETFONT} $0 1
+    SetCtlColors $ExistingConfigWarning_Lbl 0xBB0000 transparent
+
+    # Add Checkbox to move root_dir
+    ${NSD_CreateCheckBox} 0 125u 100% 10u \
+        " Move &existing root directory (C:\salt) to %ProgramData%\Salt."
+    Pop $MoveExistingConfig_ChkBox
+    CreateFont $0 "Arial" 10 500
+    SendMessage $MoveExistingConfig_ChkBox ${WM_SETFONT} $0 1
+    ${If} $MoveExistingConfig == 1
+        ${NSD_Check} $MoveExistingConfig_ChkBox
+    ${EndIf}
 
     # Add Default Config Warning Label
-    ${NSD_CreateLabel} 0 80u 100% 60u "Clicking `Install` will backup the \
+    ${NSD_CreateLabel} 0 75u 100% 60u "Clicking `Install` will backup the \
         the existing minion config file and minion.d directories. The values \
-        above will be used in the new default config.$\r$\n\
-            $\r$\n\
+        above will be used in the new default config.$\n\
+            $\n\
             NOTE: If Master IP is set to `salt` and Minion Name is set to \
             `hostname` no changes will be made."
-    Pop $WarningDefaultConfig
+    Pop $DefaultConfigWarning_Lbl
     CreateFont $0 "Arial" 10 500 /ITALIC
-    SendMessage $WarningDefaultConfig ${WM_SETFONT} $0 1
-    SetCtlColors $WarningDefaultConfig 0xBB0000 transparent
+    SendMessage $DefaultConfigWarning_Lbl ${WM_SETFONT} $0 1
+    SetCtlColors $DefaultConfigWarning_Lbl 0xBB0000 transparent
 
     # Add Custom Config File Selector and Warning Label
-    ${NSD_CreateText} 26% 65u 64% 12u $CustomConfig_State
-    Pop $CustomConfig
-    ${NSD_CreateButton} 91% 65u 9% 12u "..."
-    Pop $CustomConfig_btn
-    ${NSD_OnClick} $CustomConfig_btn pageCustomConfigBtn_OnClick
+    ${NSD_CreateText} 26% 60u 64% 12u $CustomConfig
+    Pop $CustomConfig_TxtBox
+    ${NSD_CreateButton} 91% 60u 9% 12u "..."
+    Pop $CustomConfig_Btn
+    ${NSD_OnClick} $CustomConfig_Btn pageCustomConfigBtn_OnClick
 
     ${If} $ExistingConfigFound == 0
-        ${NSD_CreateLabel} 0 80u 100% 60u "Values entered above will be used \
-            in the custom config.$\r$\n\
-            $\r$\n\
+        ${NSD_CreateLabel} 0 75u 100% 60u "Values entered above will be used \
+            in the custom config.$\n\
+            $\n\
             NOTE: If Master IP is set to `salt` and Minion Name is set to \
             `hostname` no changes will be made."
     ${Else}
-        ${NSD_CreateLabel} 0 80u 100% 60u "Clicking `Install` will backup the \
+        ${NSD_CreateLabel} 0 75u 100% 60u "Clicking `Install` will backup the \
             the existing minion config file and minion.d directories. The \
-            values above will be used in the custom config.$\r$\n\
-            $\r$\n\
+            values above will be used in the custom config.$\n\
+            $\n\
             NOTE: If Master IP is set to `salt` and Minion Name is set to \
             `hostname` no changes will be made."
     ${Endif}
-    Pop $WarningCustomConfig
+    Pop $CustomConfigWarning_Lbl
     CreateFont $0 "Arial" 10 500 /ITALIC
-    SendMessage $WarningCustomConfig ${WM_SETFONT} $0 1
-    SetCtlColors $WarningCustomConfig 0xBB0000 transparent
+    SendMessage $CustomConfigWarning_Lbl ${WM_SETFONT} $0 1
+    SetCtlColors $CustomConfigWarning_Lbl 0xBB0000 transparent
 
     # If existing config found, add the Existing Config option to the Drop List
     # If not, hide the Default Warning
     ${If} $ExistingConfigFound == 1
-        ${NSD_CB_AddString} $ConfigType "Existing Config"
+        ${NSD_CB_AddString} $ConfigType_DropList "Existing Config"
     ${Else}
-        ShowWindow $WarningDefaultConfig ${SW_HIDE}
+        ShowWindow $DefaultConfigWarning_Lbl ${SW_HIDE}
     ${Endif}
 
-    ${NSD_CB_SelectString} $ConfigType $ConfigType_State
-    ${NSD_SetText} $CustomConfig $CustomConfig_State
+    ${NSD_CB_SelectString} $ConfigType_DropList $ConfigType
+    ${NSD_SetText} $CustomConfig_TxtBox $CustomConfig
 
     Call pageMinionConfig_OnChange
 
@@ -276,55 +293,62 @@ Function pageMinionConfig_OnChange
     Pop $R0
 
     # Assign the current checkbox state to the variable
-    ${NSD_GetText} $ConfigType $ConfigType_State
+    ${NSD_GetText} $ConfigType_DropList $ConfigType
 
     # Update Dialog
-    ${Switch} $ConfigType_State
+    ${Switch} $ConfigType
         ${Case} "Existing Config"
             # Enable Master/Minion and set values
-            EnableWindow $MasterHost 0
-            EnableWindow $MinionName 0
-            ${NSD_SetText} $MasterHost $ConfigMasterHost
-            ${NSD_SetText} $MinionName $ConfigMinionName
+            EnableWindow $MasterHost_TxtBox 0
+            EnableWindow $MinionName_TxtBox 0
+            ${NSD_SetText} $MasterHost_TxtBox $MasterHost_Cfg
+            ${NSD_SetText} $MinionName_TxtBox $MinionName_Cfg
             # Hide Custom File Picker
-            ShowWindow $CustomConfig ${SW_HIDE}
-            ShowWindow $CustomConfig_btn ${SW_HIDE}
+            ShowWindow $CustomConfig_TxtBox ${SW_HIDE}
+            ShowWindow $CustomConfig_Btn ${SW_HIDE}
             # Hide Warnings
-            ShowWindow $WarningDefaultConfig ${SW_HIDE}
-            ShowWindow $WarningCustomConfig ${SW_HIDE}
+            ShowWindow $DefaultConfigWarning_Lbl ${SW_HIDE}
+            ShowWindow $CustomConfigWarning_Lbl ${SW_HIDE}
             # Show Existing Warning
-            ShowWindow $WarningExistingConfig ${SW_SHOW}
+            ShowWindow $ExistingConfigWarning_Lbl ${SW_SHOW}
+            ${If} $RootDir == "C:\salt"
+                ShowWindow $MoveExistingConfig_ChkBox ${SW_SHOW}
+            ${Else}
+                ShowWindow $MoveExistingConfig_ChkBox ${SW_HIDE}
+            ${EndIf}
             ${Break}
         ${Case} "Custom Config"
             # Enable Master/Minion and set values
-            EnableWindow $MasterHost 1
-            EnableWindow $MinionName 1
-            ${NSD_SetText} $MasterHost $MasterHost_State
-            ${NSD_SetText} $MinionName $MinionName_State
+            EnableWindow $MasterHost_TxtBox 1
+            EnableWindow $MinionName_TxtBox 1
+            ${NSD_SetText} $MasterHost_TxtBox $MasterHost
+            ${NSD_SetText} $MinionName_TxtBox $MinionName
             # Show Custom File Picker
-            ShowWindow $CustomConfig ${SW_SHOW}
-            ShowWindow $CustomConfig_btn ${SW_SHOW}
+            ShowWindow $CustomConfig_TxtBox ${SW_SHOW}
+            ShowWindow $CustomConfig_Btn ${SW_SHOW}
             # Hide Warnings
-            ShowWindow $WarningDefaultConfig ${SW_HIDE}
-            ShowWindow $WarningExistingConfig ${SW_HIDE}
+            ShowWindow $DefaultConfigWarning_Lbl ${SW_HIDE}
+            ShowWindow $ExistingConfigWarning_Lbl ${SW_HIDE}
+            ShowWindow $MoveExistingConfig_ChkBox ${SW_HIDE}
             # Show Custom Warning
-            ShowWindow $WarningCustomConfig ${SW_SHOW}
+            ShowWindow $CustomConfigWarning_Lbl ${SW_SHOW}
             ${Break}
         ${Case} "Default Config"
             # Enable Master/Minion and set values
-            EnableWindow $MasterHost 1
-            EnableWindow $MinionName 1
-            ${NSD_SetText} $MasterHost $MasterHost_State
-            ${NSD_SetText} $MinionName $MinionName_State
+            EnableWindow $MasterHost_TxtBox 1
+            EnableWindow $MinionName_TxtBox 1
+            ${NSD_SetText} $MasterHost_TxtBox $MasterHost
+            ${NSD_SetText} $MinionName_TxtBox $MinionName
             # Hide Custom File Picker
-            ShowWindow $CustomConfig ${SW_HIDE}
-            ShowWindow $CustomConfig_btn ${SW_HIDE}
+            ShowWindow $CustomConfig_TxtBox ${SW_HIDE}
+            ShowWindow $CustomConfig_Btn ${SW_HIDE}
             # Hide Warnings
-            ShowWindow $WarningExistingConfig ${SW_HIDE}
-            ShowWindow $WarningCustomConfig ${SW_HIDE}
+            ShowWindow $ExistingConfigWarning_Lbl ${SW_HIDE}
+            ShowWindow $MoveExistingConfig_ChkBox ${SW_HIDE}
+            ShowWindow $CustomConfigWarning_Lbl ${SW_HIDE}
             # Show Default Warning, if there is an existing config
             ${If} $ExistingConfigFound == 1
-                ShowWindow $WarningDefaultConfig ${SW_SHOW}
+                ShowWindow $DefaultConfigWarning_Lbl ${SW_SHOW}
             ${Endif}
             ${Break}
     ${EndSwitch}
@@ -347,7 +371,7 @@ Function pageCustomConfigBtn_OnClick
                       ${OFN_FILEMUSTEXIST} | ${OFN_DONTADDTOREC})'
 
     # Populate file name field
-    ${NSD_GetText} $CustomConfig $2
+    ${NSD_GetText} $CustomConfig_TxtBox $2
     System::Call "*$1(&t${NSIS_MAX_STRLEN}r2)" ; Set lpstrFile to the old path (if any)
 
     # Open the dialog
@@ -356,7 +380,7 @@ Function pageCustomConfigBtn_OnClick
     # Get file name field
     ${If} $2 <> 0
         System::Call "*$1(&t${NSIS_MAX_STRLEN}.r2)"
-        ${NSD_SetText} $CustomConfig $2
+        ${NSD_SetText} $CustomConfig_TxtBox $2
     ${EndIf}
 
     # Free resources
@@ -369,16 +393,47 @@ FunctionEnd
 Function pageMinionConfig_Leave
 
     # Save the State
-    ${NSD_GetText} $MasterHost $MasterHost_State
-    ${NSD_GetText} $MinionName $MinionName_State
-    ${NSD_GetText} $ConfigType $ConfigType_State
-    ${NSD_GetText} $CustomConfig $CustomConfig_State
+    ${NSD_GetText} $MasterHost_TxtBox $MasterHost
+    ${NSD_GetText} $MinionName_TxtBox $MinionName
+    ${NSD_GetText} $ConfigType_DropList $ConfigType
+    ${NSD_GetText} $CustomConfig_TxtBox $CustomConfig
+    ${NSD_GetState} $MoveExistingConfig_ChkBox $MoveExistingConfig
 
     # Abort if config file not found
-    ${If} $ConfigType_State == "Custom Config"
-        IfFileExists "$CustomConfig_State" continue 0
-            MessageBox MB_OK|MB_ICONEXCLAMATION "File not found: $CustomConfig_State" /SD IDOK
+    ${If} $ConfigType == "Custom Config"
+        IfFileExists "$CustomConfig" continue 0
+            MessageBox MB_OK|MB_ICONEXCLAMATION "File not found: $CustomConfig" /SD IDOK
             Abort
+    ${EndIf}
+
+    ${If} $MoveExistingConfig == 1
+
+        # Get directory status
+        ${DirState} "$APPDATA\Salt Project\Salt" $R0  # 0=Empty, 1=full, -1=Not Found
+        StrCmp $R0 "-1" move_files  # If directory not present, move files
+        StrCmp $R0 "0" move_files  # If directory empty, move files
+        MessageBox MB_OKCANCEL \
+            "The $APPDATA\Salt Project\Salt directory is not empty.$\n\
+            These files will need to be moved manually." \
+            /SD IDOK IDCANCEL cancel
+        StrCpy $MoveExistingConfig 0
+        Goto continue
+
+        cancel:
+            ${NSD_UNCHECK} $MoveExistingConfig_ChkBox
+            Abort
+
+        move_files:
+            # Make sure the target directory exists
+            nsExec::Exec "md $APPDATA\Salt Project\Salt"
+            # Take ownership of the C:\salt directory
+            nsExec::Exec "takeown /F C:\salt /R"
+            # Move the C:\salt directory to the new location
+            StrCpy $switch_overwrite 0
+            !insertmacro MoveFolder "C:\salt" "$APPDATA\Salt Project\Salt" "*.*"
+            # Make RootDir the new location
+            StrCpy $RootDir "$APPDATA\Salt Project\Salt"
+
     ${EndIf}
 
     continue:
@@ -399,26 +454,26 @@ Function pageFinish_Show
 
     # Create Start Minion Checkbox
     ${NSD_CreateCheckbox} 120u 90u 100% 12u "&Start salt-minion"
-    Pop $CheckBox_Minion_Start
-    SetCtlColors $CheckBox_Minion_Start "" "ffffff"
+    Pop $MinionStart_ChkBox
+    SetCtlColors $MinionStart_ChkBox "" "ffffff"
     # This command required to bring the checkbox to the front
-    System::Call "User32::SetWindowPos(i, i, i, i, i, i, i) b ($CheckBox_Minion_Start, ${HWND_TOP}, 0, 0, 0, 0, ${SWP_NOSIZE}|${SWP_NOMOVE})"
+    System::Call "User32::SetWindowPos(i, i, i, i, i, i, i) b ($MinionStart_ChkBox, ${HWND_TOP}, 0, 0, 0, 0, ${SWP_NOSIZE}|${SWP_NOMOVE})"
 
     # Create Start Minion Delayed ComboBox
     ${NSD_CreateCheckbox} 130u 102u 100% 12u "&Delayed Start"
-    Pop $CheckBox_Minion_Start_Delayed
-    SetCtlColors $CheckBox_Minion_Start_Delayed "" "ffffff"
+    Pop $MinionStartDelayed_ChkBox
+    SetCtlColors $MinionStartDelayed_ChkBox "" "ffffff"
     # This command required to bring the checkbox to the front
-    System::Call "User32::SetWindowPos(i, i, i, i, i, i, i) b ($CheckBox_Minion_Start_Delayed, ${HWND_TOP}, 0, 0, 0, 0, ${SWP_NOSIZE}|${SWP_NOMOVE})"
+    System::Call "User32::SetWindowPos(i, i, i, i, i, i, i) b ($MinionStartDelayed_ChkBox, ${HWND_TOP}, 0, 0, 0, 0, ${SWP_NOSIZE}|${SWP_NOMOVE})"
 
     # Load current settings for Minion
     ${If} $StartMinion == 1
-        ${NSD_Check} $CheckBox_Minion_Start
+        ${NSD_Check} $MinionStart_ChkBox
     ${EndIf}
 
     # Load current settings for Minion Delayed
     ${If} $StartMinionDelayed == 1
-        ${NSD_Check} $CheckBox_Minion_Start_Delayed
+        ${NSD_Check} $MinionStartDelayed_ChkBox
     ${EndIf}
 
 FunctionEnd
@@ -427,8 +482,8 @@ FunctionEnd
 Function pageFinish_Leave
 
     # Assign the current checkbox states
-    ${NSD_GetState} $CheckBox_Minion_Start $StartMinion
-    ${NSD_GetState} $CheckBox_Minion_Start_Delayed $StartMinionDelayed
+    ${NSD_GetState} $MinionStart_ChkBox $StartMinion
+    ${NSD_GetState} $MinionStartDelayed_ChkBox $StartMinionDelayed
 
 FunctionEnd
 
@@ -617,7 +672,7 @@ Function .onInit
     Call parseInstallerCommandLineSwitches
 
     # Uninstall msi-installed salt
-    # Source    https://nsis-dev.github.io/NSIS-Forums/html/t-303468.html
+    # Source: https://nsis-dev.github.io/NSIS-Forums/html/t-303468.html
     !define upgradecode {FC6FB3A2-65DE-41A9-AD91-D10A402BD641}    ;Salt upgrade code
     StrCpy $0 0
     loop:
@@ -635,20 +690,9 @@ Function .onInit
 
     # If custom config passed, verify its existence before continuing so we
     # don't uninstall an existing installation and then fail
-    ${If} $ConfigType_State == "Custom Config"
-        IfFileExists "$CustomConfig_State" customConfigExists 0
+    ${If} $ConfigType == "Custom Config"
+        IfFileExists "$CustomConfig" customConfigExists 0
         Abort
-    ${EndIf}
-
-    # The NSIS installer is a 32bit application and will use the WOW6432Node in
-    # the registry by default. We need to look in the 64 bit location on 64 bit
-    # systems
-    ${If} ${RunningX64}
-        # This would only apply if we are installing the 64 bit version of Salt
-        ${If} ${CPUARCH} == "AMD64"
-            # https://nsis.sourceforge.io/Docs/Chapter4.html#setregview
-            SetRegView 64
-        ${EndIf}
     ${EndIf}
 
     customConfigExists:
@@ -656,7 +700,11 @@ Function .onInit
         ReadRegStr $R0 HKLM \
             "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}" \
             "UninstallString"
-        StrCmp $R0 "" checkOther
+        StrCmp $R0 "" checkOther  # If it's empty, not installed
+
+        # Set InstDir to the parent directory so that we can uninstall it
+        ${GetParent} $R0 $INSTDIR
+
         # Found existing installation, prompt to uninstall
         MessageBox MB_OKCANCEL|MB_USERICON \
             "${PRODUCT_NAME} is already installed.$\n$\n\
@@ -669,7 +717,11 @@ Function .onInit
         ReadRegStr $R0 HKLM \
             "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME_OTHER}" \
             "UninstallString"
-        StrCmp $R0 "" skipUninstall
+        StrCmp $R0 "" skipUninstall  # If it's empty, not installed
+
+        # Set InstDir to the parent directory so that we can uninstall it
+        ${GetParent} $R0 $INSTDIR
+
         # Found existing installation, prompt to uninstall
         MessageBox MB_OKCANCEL|MB_USERICON \
             "${PRODUCT_NAME_OTHER} is already installed.$\n$\n\
@@ -709,12 +761,15 @@ Function .onInit
     Call getExistingMinionConfig
 
     ${If} $ExistingConfigFound == 0
-    ${AndIf} $ConfigType_State == "Existing Config"
-        StrCpy $ConfigType_State "Default Config"
+    ${AndIf} $ConfigType == "Existing Config"
+        StrCpy $ConfigType "Default Config"
     ${EndIf}
 
     IfSilent 0 +2
-        Call BackupExistingConfig
+        ${If} $ConfigType ==  "Existing Config"
+        ${AndIf} $MoveExistingConfig == 0
+            Call BackupExistingConfig
+        ${EndIf}
 
 FunctionEnd
 
@@ -764,7 +819,7 @@ Function getExistingInstallation
         # This would only apply if we are installing the 64 bit version of Salt
         ${If} ${CPUARCH} == "AMD64"
             # https://nsis.sourceforge.io/Docs/Chapter4.html#setregview
-            SetRegView 64
+            SetRegView 64  # View the 64 bit portion of the registry
         ${EndIf}
     ${EndIf}
 
@@ -798,6 +853,7 @@ Function getExistingInstallation
     ${EndIf}
 
     finished:
+        SetRegView 32  # View the 32 bit portion of the registry
 
 FunctionEnd
 
@@ -806,7 +862,7 @@ FunctionEnd
 Function BackupExistingConfig
 
     ${If} $ExistingConfigFound == 1                     # If existing config found
-    ${AndIfNot} $ConfigType_State == "Existing Config"  # If not using Existing Config
+    ${AndIfNot} $ConfigType == "Existing Config"  # If not using Existing Config
 
         # Backup the minion config
         Rename "$RootDir\conf\minion" "$RootDir\conf\minion-${TIME_STAMP}.bak"
@@ -817,20 +873,20 @@ Function BackupExistingConfig
 
     # By this point there should be no existing config
     # It was either backed up or wasn't there to begin with
-    ${If} $ConfigType_State == "Custom Config"  # If we're using Custom Config
-    ${AndIfNot} $CustomConfig_State == ""       # If a custom config is passed
+    ${If} $ConfigType == "Custom Config"  # If we're using Custom Config
+    ${AndIfNot} $CustomConfig == ""       # If a custom config is passed
 
         # Check for a file name
         # Named file should be in the same directory as the installer
         CreateDirectory "$RootDir\conf"
-        IfFileExists "$EXEDIR\$CustomConfig_State" 0 checkFullPath
-            CopyFiles /SILENT /FILESONLY "$EXEDIR\$CustomConfig_State" "$RootDir\conf\minion"
+        IfFileExists "$EXEDIR\$CustomConfig" 0 checkFullPath
+            CopyFiles /SILENT /FILESONLY "$EXEDIR\$CustomConfig" "$RootDir\conf\minion"
             goto finished
 
         # Maybe it was a full path to a file
         checkFullPath:
-        IfFileExists "$CustomConfig_State" 0 finished
-            CopyFiles /SILENT /FILESONLY "$CustomConfig_State" "$RootDir\conf\minion"
+        IfFileExists "$CustomConfig" 0 finished
+            CopyFiles /SILENT /FILESONLY "$CustomConfig" "$RootDir\conf\minion"
 
         finished:
 
@@ -871,9 +927,21 @@ Section -Post
     WriteRegStr HKLM "${PRODUCT_MINION_REGKEY}" "" "$INSTDIR\salt-minion.bat"
     WriteRegStr HKLM "${PRODUCT_MINION_REGKEY}" "Path" "$INSTDIR\bin\"
 
+    # The NSIS installer is a 32bit application and will use the WOW6432Node in
+    # the registry by default. We need to look in the 64 bit location on 64 bit
+    # systems
+    ${If} ${RunningX64}
+        # This would only apply if we are installing the 64 bit version of Salt
+        ${If} ${CPUARCH} == "AMD64"
+            # https://nsis.sourceforge.io/Docs/Chapter4.html#setregview
+            SetRegView 64  # View 64 bit portion of the registry
+        ${EndIf}
+    ${EndIf}
+
     # Write Salt Configuration Registry Entries
     WriteRegStr HKLM "SOFTWARE\Salt Project\Salt" "install_dir" "$INSTDIR"
     WriteRegStr HKLM "SOFTWARE\Salt Project\Salt" "root_dir" "$RootDir"
+    SetRegView 32  # Set it back to the 32 bit portion of the registry
 
     # Register the Salt-Minion Service
     nsExec::Exec `$INSTDIR\bin\ssm.exe install salt-minion "$INSTDIR\bin\python.exe" -E -s """$INSTDIR\bin\Scripts\salt-minion""" -c """$RootDir\conf""" -l quiet`
@@ -883,7 +951,7 @@ Section -Post
     nsExec::Exec "$INSTDIR\bin\ssm.exe set salt-minion AppStopMethodWindow 2000"
     nsExec::Exec "$INSTDIR\bin\ssm.exe set salt-minion AppRestartDelay 60000"
 
-    ${IfNot} $ConfigType_State == "Existing Config"  # If not using Existing Config
+    ${IfNot} $ConfigType == "Existing Config"  # If not using Existing Config
         Call updateMinionConfig
     ${EndIf}
 
@@ -957,12 +1025,13 @@ Function ${un}uninstallSalt
         # This would only apply if we are installing the 64 bit version of Salt
         ${If} ${CPUARCH} == "AMD64"
             # https://nsis.sourceforge.io/Docs/Chapter4.html#setregview
-            SetRegView 64
+            SetRegView 64  # View 64 bit portion of the registry
         ${EndIf}
     ${EndIf}
 
     # Get Root Directory from the Registry
     ReadRegStr $RootDir HKLM "SOFTWARE\Salt Project\Salt" "root_dir"
+    SetRegView 32  # Set it back to the 32 bit portion (default)
 
     # Stop and Remove salt-minion service
     nsExec::Exec 'net stop salt-minion'
@@ -992,7 +1061,18 @@ Function ${un}uninstallSalt
     DeleteRegKey ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_RUN_REGKEY}"
 
     # Remove Salt Configuration Registry entries
+    # The NSIS installer is a 32bit application and will use the WOW6432Node in
+    # the registry by default. We need to look in the 64 bit location on 64 bit
+    # systems
+    ${If} ${RunningX64}
+        # This would only apply if we are installing the 64 bit version of Salt
+        ${If} ${CPUARCH} == "AMD64"
+            # https://nsis.sourceforge.io/Docs/Chapter4.html#setregview
+            SetRegView 64  # View 64 bit portion of the registry
+        ${EndIf}
+    ${EndIf}
     DeleteRegKey HKLM "SOFTWARE\Salt Project"
+    SetRegView 32  # Set it back to the 32 bit portion (default)
 
     # Automatically close when finished
     SetAutoClose true
@@ -1275,7 +1355,11 @@ Function getExistingMinionConfig
     # Find config, should be in $RootDir\conf\minion
     # Root dir is usually ProgramData\Salt Project\Salt\conf though it may be
     # C:\salt\conf if Salt was installed the old way
-    IfFileExists "$RootDir\conf\minion" check_owner confNotFound
+    IfFileExists "$RootDir\conf\minion" confFound
+    IfFileExists "C:\salt\conf\minion" old_location confNotFound
+
+    old_location:
+    StrCpy $RootDir "C:\salt"
 
     check_owner:
         # We need to verify the owner of the config directory (C:\salt\conf) to
@@ -1347,15 +1431,15 @@ Function getExistingMinionConfig
                 ${StrStrAdv} $2 $1 "- " ">" ">" "0" "0" "0"     # read everything after `- `
                 ${Trim} $2 $2                                   # trim white space
                 ${IfNot} $2 == ""                               # if the line is not empty, we found something
-                    ${If} $ConfigMasterHost == ""               # if the config setting is empty
-                        StrCpy $ConfigMasterHost $2             # make the first item the new entry
+                    ${If} $MasterHost_Cfg == ""                 # if the config setting is empty
+                        StrCpy $MasterHost_Cfg $2               # make the first item the new entry
                     ${Else}
-                        StrCpy $ConfigMasterHost "$ConfigMasterHost,$2"  # Append the new master, comma separated
+                        StrCpy $MasterHost_Cfg "$MasterHost_Cfg,$2"  # Append the new master, comma separated
                     ${EndIf}
                     Goto masterLoop                             # check the next one
                 ${EndIf}
             ${Else}
-                StrCpy $ConfigMasterHost $2                     # a single master entry
+                StrCpy $MasterHost_Cfg $2                       # a single master entry
             ${EndIf}
         ${EndIf}
 
@@ -1363,7 +1447,7 @@ Function getExistingMinionConfig
         ${If} $2 == 0
             ${StrStrAdv} $2 $1 "id: " ">" ">" "0" "0" "0"
             ${Trim} $2 $2
-            StrCpy $ConfigMinionName $2
+            StrCpy $MinionName_Cfg $2
         ${EndIf}
 
     Goto confLoop
@@ -1374,11 +1458,11 @@ Function getExistingMinionConfig
     confNotFound:
 
     # Set Default Config Values if not found
-    ${If} $ConfigMasterHost == ""
-        StrCpy $ConfigMasterHost "salt"
+    ${If} $MasterHost_Cfg == ""
+        StrCpy $MasterHost_Cfg "salt"
     ${EndIf}
-    ${If} $ConfigMinionName == ""
-        StrCpy $ConfigMinionName "hostname"
+    ${If} $MinionName_Cfg == ""
+        StrCpy $MinionName_Cfg "hostname"
     ${EndIf}
 
 FunctionEnd
@@ -1404,12 +1488,12 @@ Function updateMinionConfig
         loop_after_read:
         StrCpy $lst_check 0                             # list check not performed
 
-        ${If} $MasterHost_State == ""                   # if master is empty
-        ${OrIf} $MasterHost_State == "salt"             # or if master is 'salt'
+        ${If} $MasterHost == ""                         # if master is empty
+        ${OrIf} $MasterHost == "salt"                   # or if master is 'salt'
             StrCpy $ConfigWriteMaster 0                 # no need to write master config
         ${EndIf}                                        # close if statement
-        ${If} $MinionName_State == ""                   # if minion is empty
-        ${OrIf} $MinionName_State == "hostname"         # and if minion is not 'hostname'
+        ${If} $MinionName == ""                         # if minion is empty
+        ${OrIf} $MinionName == "hostname"               # and if minion is not 'hostname'
             StrCpy $ConfigWriteMinion 0                 # no need to write minion config
         ${EndIf}                                        # close if statement
 
@@ -1421,7 +1505,7 @@ Function updateMinionConfig
 
                 ${Explode} $9 "," $MasterHost_state     # Split the hostname on commas, $9 is the number of items found
                 ${If} $9 == 1                           # 1 means only a single master was passed
-                    StrCpy $cfg_line "master: $MasterHost_State$\r$\n"  # write the master
+                    StrCpy $cfg_line "master: $MasterHost$\r$\n"  # write the master
                 ${Else}                                 # make a multi-master entry
                     StrCpy $cfg_line "master:"          # make the first line "master:"
 
@@ -1456,7 +1540,7 @@ Function updateMinionConfig
             ${StrLoc} $3 $cfg_line "id:" ">"            # where is 'id:' in this line
             ${If} $3 == 0                               # is it in the first...
             ${OrIf} $3 == 1                             # or the second position (account for comments)
-                StrCpy $cfg_line "id: $MinionName_State$\r$\n"  # write the minion config setting
+                StrCpy $cfg_line "id: $MinionName$\r$\n"  # write the minion config setting
                 StrCpy $ConfigWriteMinion 0             # minion value written to config
             ${EndIf}                                    # close if statement
         ${EndIf}                                        # close if statement
@@ -1477,7 +1561,7 @@ Function updateMinionConfig
 
         ${Explode} $9 "," $MasterHost_state             # split the hostname on commas, $9 is the number of items found
         ${If} $9 == 1                                   # 1 means only a single master was passed
-            StrCpy $cfg_line "master: $MasterHost_State"  # write the master
+            StrCpy $cfg_line "master: $MasterHost"      # write the master
         ${Else}                                         # make a multi-master entry
             StrCpy $cfg_line "master:"                  # make the first line "master:"
 
@@ -1495,7 +1579,7 @@ Function updateMinionConfig
     ${EndIf}                                            # close if statement
 
     ${If} $ConfigWriteMinion == 1                       # minion ID not written to the config
-        StrCpy $cfg_line "$\r$\nid: $MinionName_State"  # write the minion config setting
+        StrCpy $cfg_line "$\r$\nid: $MinionName"        # write the minion config setting
         FileWrite $1 $cfg_line                          # write changed or unchanged line to temp file
     ${EndIf}                                            # close if statement
 
@@ -1639,6 +1723,8 @@ Function parseInstallerCommandLineSwitches
         FileWrite $0 "/install-location=$\tSpecify the installation location for the Salt binaries.$\n"
         FileWrite $0 "$\t$\t$\tThis will be ignored for existing installations.$\n"
         FileWrite $0 "$\n"
+        FileWrite $0 "/move-config$\t$\tIf config is found at C:\salt it will be moved to %ProgramData%$\n"
+        FileWrite $0 "$\n"
         FileWrite $0 "/S$\t$\t$\tInstall Salt silently$\n"
         FileWrite $0 "$\n"
         FileWrite $0 "/?$\t$\t$\tDisplay this help screen$\n"
@@ -1670,7 +1756,7 @@ Function parseInstallerCommandLineSwitches
     display_help_not_found:
 
     # Set default value for Use Existing Config
-    StrCpy $ConfigType_State "Existing Config"
+    StrCpy $ConfigType "Existing Config"
 
     # Check for start-minion switches
     # /start-service is to be deprecated, so we must check for both
@@ -1701,38 +1787,38 @@ Function parseInstallerCommandLineSwitches
     # If setting master, we don't want to use existing config
     ${GetOptions} $R0 "/master=" $R1
     ${IfNot} $R1 == ""
-        StrCpy $MasterHost_State $R1
-        StrCpy $ConfigType_State "Default Config"
-    ${ElseIf} $MasterHost_State == ""
-        StrCpy $MasterHost_State "salt"
+        StrCpy $MasterHost $R1
+        StrCpy $ConfigType "Default Config"
+    ${ElseIf} $MasterHost == ""
+        StrCpy $MasterHost "salt"
     ${EndIf}
 
     # Minion Config: Minion ID
     # If setting minion id, we don't want to use existing config
     ${GetOptions} $R0 "/minion-name=" $R1
     ${IfNot} $R1 == ""
-        StrCpy $MinionName_State $R1
-        StrCpy $ConfigType_State "Default Config"
-    ${ElseIf} $MinionName_State == ""
-        StrCpy $MinionName_State "hostname"
+        StrCpy $MinionName $R1
+        StrCpy $ConfigType "Default Config"
+    ${ElseIf} $MinionName == ""
+        StrCpy $MinionName "hostname"
     ${EndIf}
 
     # Use Default Config
     ClearErrors
     ${GetOptions} $R0 "/default-config" $R1
     IfErrors default_config_not_found
-        StrCpy $ConfigType_State "Default Config"
+        StrCpy $ConfigType "Default Config"
     default_config_not_found:
 
     # Use Custom Config
     # Set default value for Use Custom Config
-    StrCpy $CustomConfig_State ""
+    StrCpy $CustomConfig ""
     # Existing config will get a `.bak` extension
     ${GetOptions} $R0 "/custom-config=" $R1
     ${IfNot} $R1 == ""
         # A Custom Config was passed, set it
-        StrCpy $CustomConfig_State $R1
-        StrCpy $ConfigType_State "Custom Config"
+        StrCpy $CustomConfig $R1
+        StrCpy $ConfigType "Custom Config"
     ${EndIf}
 
     # Set Install Location
@@ -1742,5 +1828,12 @@ Function parseInstallerCommandLineSwitches
         # A Custom Location was passed, set it
         StrCpy $CustomLocation $R1
     ${EndIf}
+
+    # Set Move Config Option
+    ClearErrors
+    ${GetOptions} $R0 "/move-config" $R1
+    IfErrors move_config_not_found
+        StrCpy $MoveExistingConfig 1
+    move_config_not_found:
 
 FunctionEnd
