@@ -342,12 +342,13 @@ def compare_list_of_dicts(old, new, convert_id_to_name=None):
     return ret
 
 
-def get_config_from_cloud(cloud_provider):
+def get_config_from_cloud():
     """
     Function use to retreive the configuration from the cloud
     provider
     """
-    conn_kwarg = ""
+    cloud_provider='my-azurearm-config'
+    conn_kwargs = ""
     client = salt.cloud.CloudClient(path="/etc/salt/cloud")
     conn_kwargs = client.opts["providers"][cloud_provider]["azurearm"]
-    return conn_kwarg
+    return conn_kwargs
