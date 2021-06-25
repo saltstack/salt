@@ -99,8 +99,8 @@ def test_is_auth(test_data):
     with patch_salt:
         pcs.is_auth(test_data.nodes, pcsuser=test_data.username, pcspasswd=test_data.password)
     
-    print("Exp command: ", exp_cmd)
-    print("call_args_list: ", mock_cmd.call_args_list[0][0][0] )
+    # print("Exp command: ", exp_cmd)
+    # print("call_args_list: ", mock_cmd.call_args_list[0][0][0] )
     assert mock_cmd.call_args_list[0][0][0] == exp_cmd
 
 @pytest.mark.parametrize("ver_cmp_ret,old_ver", [(1, False), (0, True)])
@@ -187,8 +187,8 @@ def test_config_show(test_data):
         pcs.cib_push(
             test_data.cib_filename, scope="configuration", extra_args=test_data.extra_args
             )
-    print("Exp command: ", exp_cmd)
-    print("call_args_list: ", mock_cmd.call_args_list[0][0][0] )
+    # print("Exp command: ", exp_cmd)
+    # print("call_args_list: ", mock_cmd.call_args_list[0][0][0] )
     assert mock_cmd.call_args_list[0][0][0] == exp_cmd
 
 
@@ -205,8 +205,8 @@ def test_item_show_defaults(test_data):
         pcs.cib_push(
             test_data.cib_filename, scope="configuration", extra_args=test_data.extra_args
             )
-    print("Exp command: ", exp_cmd)
-    print("call_args_list: ", mock_cmd.call_args_list[0][0][0] )
+    # print("Exp command: ", exp_cmd)
+    # print("call_args_list: ", mock_cmd.call_args_list[0][0][0] )
     assert mock_cmd.call_args_list[0][0][0] == exp_cmd
 
 
@@ -234,8 +234,8 @@ def test_item_show_defaults(ver_cmp_ret, old_ver, test_data):
         pcs.item_show(
             "resource"
         )
-    print("Exp command: ", exp_cmd)
-    print("call_args_list: ", mock_cmd.call_args_list[0][0][0] )
+    # print("Exp command: ", exp_cmd)
+    # print("call_args_list: ", mock_cmd.call_args_list[0][0][0] )
     assert mock_cmd.call_args_list[0][0][0] == exp_cmd
 
 @pytest.mark.parametrize("ver_cmp_ret,old_ver", [(1, False), (0, True)])
@@ -262,8 +262,8 @@ def test_item_show_set_itemid(ver_cmp_ret, old_ver, test_data):
         pcs.item_show(
             "resource", "itemid"
         )
-    print("Exp command: ", exp_cmd)
-    print("call_args_list: ", mock_cmd.call_args_list[0][0][0] )
+    # print("Exp command: ", exp_cmd)
+    # print("call_args_list: ", mock_cmd.call_args_list[0][0][0] )
     assert mock_cmd.call_args_list[0][0][0] == exp_cmd
 
 @pytest.mark.parametrize("ver_cmp_ret,old_ver", [(1, False), (0, True)])
@@ -290,8 +290,8 @@ def test_item_show_set_itemid_itemtype(ver_cmp_ret, old_ver, test_data):
         pcs.item_show(
             "constraint", item_id="item_id", item_type="item_type"
         )
-    print("Exp command: ", exp_cmd)
-    print("call_args_list: ", mock_cmd.call_args_list[0][0][0] )
+    # print("Exp command: ", exp_cmd)
+    # print("call_args_list: ", mock_cmd.call_args_list[0][0][0] )
     assert mock_cmd.call_args_list[0][0][0] == exp_cmd
 
 
@@ -309,6 +309,6 @@ def test_item_create(test_data):
         pcs.item_create(
              "item","item_id","item_type", create='create', extra_args=test_data.extra_args, cibfile=test_data.cib_filename
             )
-    print("Exp command: ", exp_cmd)
-    print("call_args_list: ", mock_cmd.call_args_list[0][0][0] )
+    # print("Exp command: ", exp_cmd)
+    # print("call_args_list: ", mock_cmd.call_args_list[0][0][0] )
     assert mock_cmd.call_args_list[0][0][0] == exp_cmd
