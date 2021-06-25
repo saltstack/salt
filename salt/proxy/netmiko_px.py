@@ -186,7 +186,7 @@ import contextlib
 import logging
 import time
 
-from salt.utils.args import clean_kwargs
+import salt.utils.args
 
 try:
     from netmiko import ConnectHandler
@@ -296,7 +296,7 @@ def make_con(connection_timeout=DEFAULT_CONNECTION_TIMEOUT):
         try:
             connection = ConnectHandler(**args)
         except Exception as exc:  # pylint: disable=broad-except
-            log.warn("Got exception %r", exc)
+            log.warning("Got exception %r", exc)
             found_exception = exc
         else:
             break
@@ -304,7 +304,7 @@ def make_con(connection_timeout=DEFAULT_CONNECTION_TIMEOUT):
             if found_exception:
                 raise found_exception
             else:
-                raise Exception("Unable to create conneciton")
+                raise Exception("Unable to create connection")
     return connection
 
 
@@ -388,7 +388,7 @@ def call(method, *args, **kwargs):
     """
     Calls an arbitrary netmiko method.
     """
-    kwargs = clean_kwargs(**kwargs)
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     connection_timeout = __context__["netmiko_device"]["connection_timeout"]
 
     with connection(connection_timeout) as con:
