@@ -699,17 +699,6 @@ Function .onInit
         Abort
     ${EndIf}
 
-    # The NSIS installer is a 32bit application and will use the WOW6432Node in
-    # the registry by default. We need to look in the 64 bit location on 64 bit
-    # systems
-    ${If} ${RunningX64}
-        # This would only apply if we are installing the 64 bit version of Salt
-        ${If} ${CPUARCH} == "AMD64"
-            # https://nsis.sourceforge.io/Docs/Chapter4.html#setregview
-            SetRegView 64
-        ${EndIf}
-    ${EndIf}
-
     customConfigExists:
         # Check for existing installation
         ReadRegStr $R0 HKLM \
@@ -918,7 +907,7 @@ Function getExistingInstallation
         # This would only apply if we are installing the 64 bit version of Salt
         ${If} ${CPUARCH} == "AMD64"
             # https://nsis.sourceforge.io/Docs/Chapter4.html#setregview
-            SetRegView 64
+            SetRegView 64  # View the 64 bit portion of the registry
         ${EndIf}
     ${EndIf}
 
@@ -952,6 +941,7 @@ Function getExistingInstallation
     ${EndIf}
 
     finished:
+        SetRegView 32  # View the 32 bit portion of the registry
 
 FunctionEnd
 
