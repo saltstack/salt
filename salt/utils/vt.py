@@ -456,6 +456,7 @@ class Terminal:
                 args = [self.args]
             #if isinstance(self.args, string_types):
             #    args = shlex.split(self.args)
+            #    args = self.args.split()
             elif self.args:
                 args = list(self.args)
             else:
