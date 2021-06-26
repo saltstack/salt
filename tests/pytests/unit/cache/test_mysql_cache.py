@@ -1,0 +1,143 @@
+"""
+unit tests for the mysql_cache cache
+"""
+
+
+import logging
+
+import pytest
+import salt.cache.mysql_cache as mysql_cache
+import salt.payload
+import salt.utils.files
+from salt.exceptions import SaltCacheError
+from tests.support.mock import MagicMock, call, patch
+
+log = logging.getLogger(__name__)
+
+
+@pytest.fixture
+def configure_loader_modules():
+    return {mysql_cache: {}}
+
+
+@pytest.fixture
+def master_config():
+    opts = salt.config.DEFAULT_MASTER_OPTS.copy()
+    opts["__role"] = "master"
+    return opts
+
+
+def test_run_query():
+    """
+    Tests that a SaltCacheError is raised when there is a problem writing to the
+    cache file.
+    """
+    with patch.object(mysql_cache, "_mysql_kwargs", return_value={}), patch(
+        "MySQLdb.connect", MagicMock()
+    ) as mock_connect:
+        expected_calls = call.cursor().execute("SELECT 1;")
+        mysql_cache.run_query(conn=mock_connect, query="SELECT 1;")
+        mock_connect.assert_has_calls((expected_calls,), True)
+
+
+def test_store(master_config):
+    """
+    Tests that the store function writes the data to the serializer for storage.
+    """
+    serializer = salt.payload.Serial(master_config)
+
+    with patch.object(mysql_cache, "_table_name", "salt"):
+        with patch.object(mysql_cache, "_init_client") as mock_init_client:
+            with patch.object(mysql_cache, "client") as mock_connect_client:
+                with patch.dict(mysql_cache.__context__, {"serial": serializer}):
+                    with patch.object(mysql_cache, "run_query") as mock_run_query:
+                        mock_run_query.return_value = (MagicMock(), 1)
+
+                        expected_calls = [
+                            call(
+                                mock_connect_client,
+                                "REPLACE INTO salt (bank, etcd_key, data) values(%s,%s,%s)",
+                                ("minions/minion", "key1", b"\xa4data"),
+                            )
+                        ]
+
+                        try:
+                            mysql_cache.store(
+                                bank="minions/minion", key="key1", data="data"
+                            )
+                        except SaltCacheError:
+                            pytest.fail("This test should not raise an exception")
+                        mock_run_query.assert_has_calls(expected_calls, True)
+
+                    with patch.object(mysql_cache, "run_query") as mock_run_query:
+                        mock_run_query.return_value = (MagicMock(), 2)
+
+                        expected_calls = [
+                            call(
+                                mock_connect_client,
+                                "REPLACE INTO salt (bank, etcd_key, data) values(%s,%s,%s)",
+                                ("minions/minion", "key2", b"\xa4data"),
+                            )
+                        ]
+
+                        try:
+                            mysql_cache.store(
+                                bank="minions/minion", key="key2", data="data"
+                            )
+                        except SaltCacheError:
+                            pytest.fail("This test should not raise an exception")
+                        mock_run_query.assert_has_calls(expected_calls, True)
+
+                    with patch.object(mysql_cache, "run_query") as mock_run_query:
+                        mock_run_query.return_value = (MagicMock(), 0)
+                        with pytest.raises(SaltCacheError) as exc_info:
+                            mysql_cache.store(
+                                bank="minions/minion", key="data", data="data"
+                            )
+                        expected = "Error storing minions/minion data returned 0"
+                        assert expected in str(exc_info.value)
+
+
+def test_fetch(master_config):
+    """
+    Tests that the fetch function reads the data from the serializer for storage.
+    """
+    serializer = salt.payload.Serial(master_config)
+
+    with patch.object(mysql_cache, "_init_client") as mock_init_client:
+        with patch("MySQLdb.connect") as mock_connect:
+            with patch.object(mysql_cache, "_mysql_kwargs", return_value={}):
+
+                connection = mock_connect.return_value
+                cursor = connection.cursor.return_value
+                cursor.fetchone.return_value = (b"\xa5hello",)
+
+                with patch.dict(mysql_cache.__context__, {"serial": serializer}):
+                    ret = mysql_cache.fetch(bank="bank", key="key")
+                    assert ret == "hello"
+
+
+def test_flush():
+    """
+    Tests the flush function in mysql_cache.
+    """
+    with patch.object(mysql_cache, "_table_name", "salt"):
+        with patch.object(mysql_cache, "_init_client") as mock_init_client:
+            with patch.object(mysql_cache, "client") as mock_connect_client:
+                with patch.object(mysql_cache, "run_query") as mock_run_query:
+
+                    expected_calls = [
+                        call(mock_connect_client, "DELETE FROM salt WHERE bank='bank'"),
+                    ]
+                    mock_run_query.return_value = (MagicMock(), "")
+                    mysql_cache.flush(bank="bank")
+                    mock_run_query.assert_has_calls(expected_calls, True)
+
+                    expected_calls = [
+                        call(
+                            mock_connect_client,
+                            "DELETE FROM salt WHERE bank='bank' AND etcd_key='key'",
+                        )
+                    ]
+                    mysql_cache.flush(bank="bank", key="key")
+                    mock_run_query.assert_has_calls(expected_calls, True)

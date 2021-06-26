@@ -119,7 +119,6 @@ def run_query(conn, query, args=None, retries=3):
         else:
             log.info("mysql_cache: recreating db connection due to: %r", e)
         global client
-        log.debug("=== MySQLdb.connect %s ===", MySQLdb.connect)
         client = MySQLdb.connect(**_mysql_kwargs)
         return run_query(client, query, args, retries - 1)
     except Exception as e:  # pylint: disable=broad-except
