@@ -20,6 +20,7 @@ Azure (ARM) DNS Execution Module
     * `azure-storage-common <https://pypi.python.org/pypi/azure-storage-common>`_ >= 1.4.2
     * `azure-storage-blob <https://pypi.python.org/pypi/azure-storage-blob>`_ >= 12.8.1
     * `azure-storage-file <https://pypi.python.org/pypi/azure-storage-file>`_ >= 2.1.0
+    * `azure-mgmt-dns <https://pypi.python.org/pypi/azure-mgmt-dns>`_ >= 8.0.0
     * `msrestazure <https://pypi.python.org/pypi/msrestazure>`_ >= 0.6.41
 
 :platform: linux
@@ -141,6 +142,8 @@ def record_set_create_or_update(
     dnsconn = __utils__["azurearm.get_client"]("dns", **kwargs)
 
     try:
+        # This is broken and doesn't return any usefull data
+        # parameters=record_set_model,
         record_set_model = __utils__["azurearm.create_object_model"](
             "dns", "RecordSet", **kwargs
         )
@@ -149,15 +152,19 @@ def record_set_create_or_update(
         return result
 
     try:
+        parameters = {}
+        parameters['ttl'] = kwargs['ttl']
+        parameters['arecords'] = kwargs['arecords']
         record_set = dnsconn.record_sets.create_or_update(
             relative_record_set_name=name,
             zone_name=zone_name,
             resource_group_name=resource_group,
             record_type=record_type,
-            parameters=record_set_model,
+            parameters=parameters,
             if_match=kwargs.get("if_match"),
             if_none_match=kwargs.get("if_none_match"),
         )
+
         result = record_set.as_dict()
     except CloudError as exc:
         __utils__["azurearm.log_cloud_error"]("dns", str(exc), **kwargs)
@@ -701,7 +708,7 @@ def zones_list(top=None, cloud_provider=None, **kwargs):
 
     :param top:
         The maximum number of DNS zones to return. If not specified,
-        eturns up to 100 zones.
+        returns up to 100 zones.
 
     :param cloud_provider: The Cloud Provider parameter allow you to use a defined
         provider config in /etc/salt/cloud.providers.d/
