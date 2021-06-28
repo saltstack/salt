@@ -61,7 +61,7 @@ def salt_cli(salt_master):
     The ``salt`` CLI as a fixture against the running master
     """
     assert salt_master.is_running()
-    return salt_master.get_salt_cli()
+    return salt_master.salt_cli()
 
 
 @pytest.fixture(scope="package")
