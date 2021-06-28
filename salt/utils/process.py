@@ -13,6 +13,7 @@ import logging
 import multiprocessing
 import multiprocessing.util
 import os
+import queue
 import signal
 import socket
 import subprocess
@@ -27,13 +28,11 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.versions
-from salt.ext.six.moves import queue, range
+from salt._logging.mixins import NewStyleClassMixin
 from salt.ext.tornado import gen
-from salt.log.mixins import NewStyleClassMixIn
 
 log = logging.getLogger(__name__)
 
-# pylint: disable=import-error
 HAS_PSUTIL = False
 try:
     import psutil
@@ -97,6 +96,7 @@ def daemonize(redirect_out=True):
     # Unfortunately when a python multiprocess is called the output is
     # not cleanly redirected and the parent process dies when the
     # multiprocessing process attempts to access stdout or err.
+
     if redirect_out:
         with salt.utils.files.fopen("/dev/null", "r+") as dev_null:
             # Redirect python stdin/out/err
@@ -528,19 +528,20 @@ class ProcessManager:
                 need_log_queue = False
 
             if need_log_queue:
-                if "log_queue" not in kwargs:
-                    if hasattr(self, "log_queue"):
-                        kwargs["log_queue"] = self.log_queue
+                if "log_port" not in kwargs:
+                    if hasattr(self, "log_port"):
+                        salt.log.setup.set_multiprocessing_logging_port(self.log_port)
+                        kwargs["log_port"] = self.log_port
                     else:
                         kwargs[
-                            "log_queue"
-                        ] = salt.log.setup.get_multiprocessing_logging_queue()
-                if "log_queue_level" not in kwargs:
-                    if hasattr(self, "log_queue_level"):
-                        kwargs["log_queue_level"] = self.log_queue_level
+                            "log_port"
+                        ] = salt.log.setup.get_multiprocessing_logging_port()
+                if "log_level" not in kwargs:
+                    if hasattr(self, "log_level"):
+                        kwargs["log_level"] = self.log_level
                     else:
                         kwargs[
-                            "log_queue_level"
+                            "log_level"
                         ] = salt.log.setup.get_multiprocessing_logging_level()
 
         # create a nicer name for the debug log
@@ -824,29 +825,28 @@ class ProcessManager:
                 )
 
 
-class Process(multiprocessing.Process, NewStyleClassMixIn):
+class Process(multiprocessing.Process, NewStyleClassMixin):
     def __init__(self, *args, **kwargs):
-        log_queue = kwargs.pop("log_queue", None)
-        log_queue_level = kwargs.pop("log_queue_level", None)
+        log_port = kwargs.pop("log_port", None)
+        log_level = kwargs.pop("log_level", None)
         super().__init__(*args, **kwargs)
         if salt.utils.platform.is_windows():
             # On Windows, subclasses should call super if they define
             # __setstate__ and/or __getstate__
             self._args_for_getstate = copy.copy(args)
             self._kwargs_for_getstate = copy.copy(kwargs)
-        self.log_queue = log_queue
-        if self.log_queue is None:
-            self.log_queue = salt.log.setup.get_multiprocessing_logging_queue()
+        self.log_port = log_port
+        if self.log_port is None:
+            self.log_port = salt.log.setup.get_multiprocessing_logging_port()
         else:
             # Set the logging queue so that it can be retrieved later with
             # salt.log.setup.get_multiprocessing_logging_queue().
-            salt.log.setup.set_multiprocessing_logging_queue(self.log_queue)
-
-        self.log_queue_level = log_queue_level
-        if self.log_queue_level is None:
-            self.log_queue_level = salt.log.setup.get_multiprocessing_logging_level()
+            salt.log.setup.set_multiprocessing_logging_port(self.log_port)
+        self.log_level = log_level
+        if self.log_level is None:
+            self.log_level = salt.log.setup.get_multiprocessing_logging_level()
         else:
-            salt.log.setup.set_multiprocessing_logging_level(self.log_queue_level)
+            salt.log.setup.set_multiprocessing_logging_level(self.log_level)
 
         self._after_fork_methods = [
             (Process._setup_process_logging, [self], {}),
@@ -876,10 +876,10 @@ class Process(multiprocessing.Process, NewStyleClassMixIn):
     def __getstate__(self):
         args = self._args_for_getstate
         kwargs = self._kwargs_for_getstate
-        if "log_queue" not in kwargs:
-            kwargs["log_queue"] = self.log_queue
-        if "log_queue_level" not in kwargs:
-            kwargs["log_queue_level"] = self.log_queue_level
+        if "log_port" not in kwargs:
+            kwargs["log_port"] = self.log_port
+        if "log_level" not in kwargs:
+            kwargs["log_level"] = self.log_level
         return {
             "args": args,
             "kwargs": kwargs,
@@ -893,7 +893,7 @@ class Process(multiprocessing.Process, NewStyleClassMixIn):
         self._finalize_methods = None
 
     def _setup_process_logging(self):
-        salt.log.setup.setup_multiprocessing_logging(self.log_queue)
+        salt.log.setup.setup_multiprocessing_zmq_logging(self.log_port)
 
     def __decorate_run(self, run_func):
         @functools.wraps(run_func)

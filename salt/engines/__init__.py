@@ -59,9 +59,7 @@ def start_engines(opts, proc_mgr, proxy=None):
                 name = "{}.Engine({})".format(__name__, start_func.__module__)
             log.info("Starting Engine %s", name)
             proc_mgr.add_process(
-                Engine,
-                args=(name, opts, fun, engine_opts, funcs, runners, proxy),
-                name=name,
+                Engine, args=(opts, fun, engine_opts, funcs, runners, proxy), name=name,
             )
 
 
@@ -70,12 +68,11 @@ class Engine(salt.utils.process.SignalHandlingProcess):
     Execute the given engine in a new process
     """
 
-    def __init__(self, name, opts, fun, config, funcs, runners, proxy, **kwargs):
+    def __init__(self, opts, fun, config, funcs, runners, proxy, **kwargs):
         """
         Set up the process executor
         """
         super().__init__(**kwargs)
-        self.name = name
         self.opts = opts
         self.config = config
         self.fun = fun
@@ -88,15 +85,15 @@ class Engine(salt.utils.process.SignalHandlingProcess):
     # process so that a register_after_fork() equivalent will work on Windows.
     def __setstate__(self, state):
         self.__init__(
-            state["name"],
             state["opts"],
             state["fun"],
             state["config"],
             state["funcs"],
             state["runners"],
             state["proxy"],
-            log_queue=state["log_queue"],
-            log_queue_level=state["log_queue_level"],
+            name=state["name"],
+            log_port=state["log_port"],
+            log_level=state["log_level"],
         )
 
     def __getstate__(self):
@@ -108,8 +105,8 @@ class Engine(salt.utils.process.SignalHandlingProcess):
             "funcs": self.funcs,
             "runners": self.runners,
             "proxy": self.proxy,
-            "log_queue": self.log_queue,
-            "log_queue_level": self.log_queue_level,
+            "log_port": self.log_port,
+            "log_level": self.log_level,
         }
 
     def run(self):

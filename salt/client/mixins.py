@@ -509,12 +509,12 @@ class AsyncClientMixin:
         """
         if daemonize and not salt.utils.platform.is_windows():
             # Shutdown the multiprocessing before daemonizing
-            salt.log.setup.shutdown_multiprocessing_logging()
+            salt.log.setup.shutdown_multiprocessing_zmq_logging()
 
             salt.utils.process.daemonize()
 
             # Reconfigure multiprocessing logging after daemonizing
-            salt.log.setup.setup_multiprocessing_logging()
+            salt.log.setup.setup_multiprocessing_zmq_logging()
 
         # pack a few things into low
         low["__jid__"] = jid
@@ -563,6 +563,7 @@ class AsyncClientMixin:
             target=proc_func,
             name="ProcessFunc",
             args=(fun, low, user, async_pub["tag"], async_pub["jid"]),
+            log_port=self.opts["mp_logging_port"],
         )
         with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
             # Reset current signals before starting the process in

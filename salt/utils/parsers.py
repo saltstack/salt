@@ -264,7 +264,7 @@ class OptionParser(optparse.OptionParser):
             # Stop logging through the queue
             log.shutdown_multiprocessing_logging()
             # Stop the logging queue listener process
-            log.shutdown_multiprocessing_logging_listener(daemonizing=True)
+            log.shutdown_multiprocessing_logging_zmq_listener(daemonizing=True)
         if isinstance(msg, str) and msg and msg[-1] != "\n":
             msg = "{}\n".format(msg)
         optparse.OptionParser.exit(self, status, msg)
@@ -884,9 +884,11 @@ class LogLevelMixIn(metaclass=MixInMeta):
 
     def _setup_mp_logging_listener(self):
         if self._setup_mp_logging_listener_:
-            log.setup_multiprocessing_logging_listener(
-                self.config, self._get_mp_logging_listener_queue()
-            )
+            log.set_multiprocessing_logging_port(self.config["mp_logging_port"])
+            if self.config["mp_logging_consumer"]:
+                log.setup_multiprocessing_logging_zmq_listener(
+                    self.config, self.config["mp_logging_port"],
+                )
 
     def _setup_mp_logging_client(self):
         if self._setup_mp_logging_listener_:
@@ -904,7 +906,9 @@ class LogLevelMixIn(metaclass=MixInMeta):
                 # This will allow log file rotation on Windows
                 # since only one process can own the log file
                 # for log file rotation to work.
-                log.setup_multiprocessing_logging(self._get_mp_logging_listener_queue())
+                log.setup_multiprocessing_zmq_logging(
+                    log.get_multiprocessing_logging_port()
+                )
                 # Remove the temp logger and any other configured loggers since
                 # all of our logging is going through the multiprocessing
                 # logging listener.
@@ -1035,12 +1039,11 @@ class DaemonMixIn(metaclass=MixInMeta):
             if self._setup_mp_logging_listener_ is True:
                 # Stop the logging queue listener for the current process
                 # We'll restart it once forked
-                log.shutdown_multiprocessing_logging_listener(daemonizing=True)
+                log.shutdown_multiprocessing_logging_zmq_listener(daemonizing=True)
 
             # Late import so logging works correctly
             salt.utils.process.daemonize()
 
-        # Setup the multiprocessing log queue listener if enabled
         self._setup_mp_logging_listener()
 
     def check_running(self):

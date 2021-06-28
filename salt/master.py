@@ -152,16 +152,14 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
     # process so that a register_after_fork() equivalent will work on Windows.
     def __setstate__(self, state):
         self.__init__(
-            state["opts"],
-            log_queue=state["log_queue"],
-            log_queue_level=state["log_queue_level"],
+            state["opts"], log_port=state["log_port"], log_level=state["log_level"]
         )
 
     def __getstate__(self):
         return {
             "opts": self.opts,
-            "log_queue": self.log_queue,
-            "log_queue_level": self.log_queue_level,
+            "log_port": self.log_port,
+            "log_level": self.log_level,
         }
 
     def _post_fork_init(self):
@@ -376,13 +374,13 @@ class FileserverUpdate(salt.utils.process.SignalHandlingProcess):
     # process so that a register_after_fork() equivalent will work on Windows.
     def __setstate__(self, state):
         self.__init__(
-            state["opts"], log_queue=state["log_queue"],
+            state["opts"], log_port=state["log_port"],
         )
 
     def __getstate__(self):
         return {
             "opts": self.opts,
-            "log_queue": self.log_queue,
+            "log_port": self.log_port,
         }
 
     def fill_buckets(self):
@@ -707,12 +705,11 @@ class Master(SMaster):
             self.process_manager = salt.utils.process.ProcessManager(wait_for_kill=5)
             pub_channels = []
             log.info("Creating master publisher process")
-            log_queue = salt.log.setup.get_multiprocessing_logging_queue()
+            log_port = salt.log.setup.get_multiprocessing_logging_port()
             for _, opts in iter_transport_opts(self.opts):
                 chan = salt.transport.server.PubServerChannel.factory(opts)
-                chan.pre_fork(self.process_manager, kwargs={"log_queue": log_queue})
+                chan.pre_fork(self.process_manager, kwargs={"log_port": log_port})
                 pub_channels.append(chan)
-
             log.info("Creating master event publisher process")
             self.process_manager.add_process(
                 salt.utils.event.EventPublisher, args=(self.opts,)
@@ -769,10 +766,8 @@ class Master(SMaster):
             log.info("Creating master request server process")
             kwargs = {}
             if salt.utils.platform.is_windows():
-                kwargs["log_queue"] = log_queue
-                kwargs[
-                    "log_queue_level"
-                ] = salt.log.setup.get_multiprocessing_logging_level()
+                kwargs["log_port"] = log_port
+                kwargs["log_level"] = salt.log.setup.get_multiprocessing_logging_level()
                 kwargs["secrets"] = SMaster.secrets
 
             self.process_manager.add_process(
@@ -857,8 +852,8 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
             state["key"],
             state["mkey"],
             secrets=state["secrets"],
-            log_queue=state["log_queue"],
-            log_queue_level=state["log_queue_level"],
+            log_port=state["log_port"],
+            log_level=state["log_level"],
         )
 
     def __getstate__(self):
@@ -867,8 +862,8 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
             "key": self.key,
             "mkey": self.master_key,
             "secrets": self.secrets,
-            "log_queue": self.log_queue,
-            "log_queue_level": self.log_queue_level,
+            "log_port": self.log_port,
+            "log_level": self.log_level,
         }
 
     def _handle_signals(self, signum, sigframe):  # pylint: disable=unused-argument
@@ -879,11 +874,12 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
         """
         Binds the reply server
         """
-        if self.log_queue is not None:
-            salt.log.setup.set_multiprocessing_logging_queue(self.log_queue)
-        if self.log_queue_level is not None:
-            salt.log.setup.set_multiprocessing_logging_level(self.log_queue_level)
-        salt.log.setup.setup_multiprocessing_logging(self.log_queue)
+        if self.log_port is not None:
+            salt.log.setup.set_multiprocessing_logging_port(self.log_port)
+        if self.log_level is not None:
+            salt.log.setup.set_multiprocessing_logging_level(self.log_level)
+        salt.log.setup.setup_multiprocessing_zmq_logging(self.log_port)
+
         if self.secrets is not None:
             SMaster.secrets = self.secrets
 
@@ -913,8 +909,8 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
 
         kwargs = {}
         if salt.utils.platform.is_windows():
-            kwargs["log_queue"] = self.log_queue
-            kwargs["log_queue_level"] = self.log_queue_level
+            kwargs["log_port"] = self.log_port
+            kwargs["log_level"] = self.log_level
 
         if self.opts["req_server_niceness"] and not salt.utils.platform.is_windows():
             log.info(
@@ -991,9 +987,7 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
     # These methods are only used when pickling so will not be used on
     # non-Windows platforms.
     def __setstate__(self, state):
-        super().__init__(
-            log_queue=state["log_queue"], log_queue_level=state["log_queue_level"]
-        )
+        super().__init__(log_port=state["log_port"], log_level=state["log_level"])
         self.opts = state["opts"]
         self.req_channels = state["req_channels"]
         self.mkey = state["mkey"]
@@ -1009,8 +1003,8 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
             "key": self.key,
             "k_mtime": self.k_mtime,
             "secrets": SMaster.secrets,
-            "log_queue": self.log_queue,
-            "log_queue_level": self.log_queue_level,
+            "log_port": self.log_port,
+            "log_level": self.log_level,
         }
 
     def _handle_signals(self, signum, sigframe):

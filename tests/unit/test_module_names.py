@@ -34,6 +34,7 @@ EXCLUDED_FILES = [
     os.path.join("tests", "committer_parser.py"),
     os.path.join("tests", "consist.py"),
     os.path.join("tests", "eventlisten.py"),
+    os.path.join("tests", "integration", "logging", "test_zmq_logging.py"),
     os.path.join("tests", "jenkins.py"),
     os.path.join("tests", "minionswarm.py"),
     os.path.join("tests", "modparser.py"),

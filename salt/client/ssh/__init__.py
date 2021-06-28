@@ -600,7 +600,11 @@ class SSH:
                     self.targets[host],
                     mine,
                 )
-                routine = Process(target=self.handle_routine, args=args)
+                routine = Process(
+                    target=self.handle_routine,
+                    args=args,
+                    log_port=self.opts["mp_logging_port"],
+                )
                 routine.start()
                 running[host] = {"thread": routine}
                 continue

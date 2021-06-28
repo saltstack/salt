@@ -45,7 +45,6 @@ from salt.exceptions import SaltInvocationError
 from salt.ext import six
 from salt.utils.odict import OrderedDict
 
-# pylint: disable=import-error
 try:
     import dateutil.parser as dateutil_parser
 
@@ -61,7 +60,7 @@ try:
     _CRON_SUPPORTED = True
 except ImportError:
     _CRON_SUPPORTED = False
-# pylint: enable=import-error
+
 
 log = logging.getLogger(__name__)
 

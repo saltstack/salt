@@ -10,6 +10,7 @@ import sys
 import time
 import types
 from copy import deepcopy
+from urllib.parse import urlparse
 
 import salt.defaults.exitcodes
 import salt.exceptions
@@ -27,12 +28,6 @@ import salt.utils.validate.path
 import salt.utils.xdg
 import salt.utils.yaml
 import salt.utils.zeromq
-
-# pylint: disable=import-error,no-name-in-module
-from salt.ext.six.moves.urllib.parse import urlparse
-
-# pylint: enable=import-error,no-name-in-module
-
 
 try:
     import psutil
@@ -953,6 +948,9 @@ VALID_OPTS = immutabletypes.freeze(
         # Feature flag config
         "features": dict,
         "fips_mode": bool,
+        # Multiprocessing Logging
+        "mp_logging_port": int,
+        "mp_logging_consumer": bool,
     }
 )
 
@@ -973,6 +971,8 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "master_alive_interval": 0,
         "master_failback": False,
         "master_failback_interval": 0,
+        "mp_logging_port": 4311,
+        "mp_logging_consumer": True,
         "verify_master_pubkey_sign": False,
         "sign_pub_messages": False,
         "always_verify_signature": False,
@@ -1558,6 +1558,8 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "master_sign_pubkey": False,
         "master_pubkey_signature": "master_pubkey_signature",
         "master_use_pubkey_signature": False,
+        "mp_logging_port": 4321,
+        "mp_logging_consumer": True,
         "zmq_filtering": False,
         "zmq_monitor": False,
         "con_cache": False,
@@ -1627,6 +1629,8 @@ DEFAULT_PROXY_MINION_OPTS = immutabletypes.freeze(
         "pki_dir": os.path.join(salt.syspaths.CONFIG_DIR, "pki", "proxy"),
         "cachedir": os.path.join(salt.syspaths.CACHE_DIR, "proxy"),
         "sock_dir": os.path.join(salt.syspaths.SOCK_DIR, "proxy"),
+        "mp_logging_port": 4331,
+        "mp_logging_consumer": True,
     }
 )
 

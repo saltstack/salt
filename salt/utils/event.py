@@ -1149,16 +1149,14 @@ class EventPublisher(salt.utils.process.SignalHandlingProcess):
     # process so that a register_after_fork() equivalent will work on Windows.
     def __setstate__(self, state):
         self.__init__(
-            state["opts"],
-            log_queue=state["log_queue"],
-            log_queue_level=state["log_queue_level"],
+            state["opts"], log_port=state["log_port"], log_level=state["log_level"]
         )
 
     def __getstate__(self):
         return {
             "opts": self.opts,
-            "log_queue": self.log_queue,
-            "log_queue_level": self.log_queue_level,
+            "log_port": self.log_port,
+            "log_level": self.log_level,
         }
 
     def run(self):
@@ -1280,16 +1278,14 @@ class EventReturn(salt.utils.process.SignalHandlingProcess):
     # process so that a register_after_fork() equivalent will work on Windows.
     def __setstate__(self, state):
         self.__init__(
-            state["opts"],
-            log_queue=state["log_queue"],
-            log_queue_level=state["log_queue_level"],
+            state["opts"], log_port=state["log_port"], log_level=state["log_level"]
         )
 
     def __getstate__(self):
         return {
             "opts": self.opts,
-            "log_queue": self.log_queue,
-            "log_queue_level": self.log_queue_level,
+            "log_port": self.log_port,
+            "log_level": self.log_level,
         }
 
     def _handle_signals(self, signum, sigframe):
