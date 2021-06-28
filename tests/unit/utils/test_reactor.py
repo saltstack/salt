@@ -1,7 +1,3 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import codecs
 import glob
 import logging
@@ -14,7 +10,9 @@ import salt.utils.files
 import salt.utils.reactor as reactor
 import salt.utils.yaml
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
-from tests.support.mock import MagicMock, Mock, mock_open, patch
+from tests.support.mock import MagicMock, Mock
+from tests.support.mock import original_mock_open as mock_open
+from tests.support.mock import patch
 from tests.support.unit import TestCase
 
 REACTOR_CONFIG = """\

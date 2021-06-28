@@ -37,9 +37,9 @@ from mock import (
     __version__,
     call,
     create_autospec,
-    patch,
-    sentinel,
 )
+from mock import mock_open as original_mock_open
+from mock import patch, sentinel
 
 # pylint: disable=no-name-in-module,no-member
 
