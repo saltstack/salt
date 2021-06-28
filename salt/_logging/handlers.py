@@ -18,10 +18,15 @@ import threading
 import traceback
 from collections import deque
 
-import salt._logging
-import salt.utils.msgpack
 from salt._logging.mixins import ExcInfoOnLogLevelFormatMixin, NewStyleClassMixin
 from salt.utils.versions import warn_until_date
+
+try:
+    import msgpack
+
+    HAS_MSGPACK = True
+except ImportError:
+    HAS_MSGPACK = False
 
 try:
     import zmq
@@ -432,6 +437,10 @@ class ZMQHandler(ExcInfoOnLogLevelFormatMixin, logging.Handler, NewStyleClassMix
     def __init__(
         self, host="127.0.0.1", port=3330, log_prefix=None, level=logging.NOTSET
     ):
+        if not HAS_ZMQ:
+            raise RuntimeError("pyzmq is not installed")
+        if not HAS_MSGPACK:
+            raise RuntimeError("msgpack is not installed")
         super().__init__(level=level)
         self.pid = os.getpid()
         self.push_address = "tcp://{}:{}".format(host, port)
@@ -497,7 +506,7 @@ class ZMQHandler(ExcInfoOnLogLevelFormatMixin, logging.Handler, NewStyleClassMix
 
         try:
             if self.in_proxy is not None:
-                self.in_proxy.send(salt.utils.msgpack.dumps(None))
+                self.in_proxy.send(msgpack.dumps(None))
                 self.in_proxy.close(1500)
                 self.proxy_thread.join()
             if self.context is not None:
@@ -538,7 +547,7 @@ class ZMQHandler(ExcInfoOnLogLevelFormatMixin, logging.Handler, NewStyleClassMix
         # On Python >= 3.5 we also have stack_info, but we've formatted altready so, reset it
         record.stack_info = None
         try:
-            return salt.utils.msgpack.dumps(record.__dict__, use_bin_type=True)
+            return msgpack.dumps(record.__dict__, use_bin_type=True)
         except TypeError as exc:
             # Failed to serialize something with msgpack
             logging.getLogger(__name__).error(
@@ -604,7 +613,9 @@ class ZMQHandler(ExcInfoOnLogLevelFormatMixin, logging.Handler, NewStyleClassMix
             )
             sys.stderr.flush()
 
-        sentinel = salt.utils.msgpack.dumps(None)
+        sentinel = msgpack.dumps(None)
+        socket_bind_event.set()
+
         while True:
             try:
                 msg = out_proxy.recv()
