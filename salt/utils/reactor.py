@@ -49,26 +49,6 @@ class Reactor(salt.utils.process.SignalHandlingProcess, salt.state.Compiler):
         salt.state.Compiler.__init__(self, opts, self.minion.rend)
         self.is_leader = True
 
-    # We need __setstate__ and __getstate__ to avoid pickling errors since
-    # 'self.rend' (from salt.state.Compiler) contains a function reference
-    # which is not picklable.
-    # These methods are only used when pickling so will not be used on
-    # non-Windows platforms.
-    def __setstate__(self, state):
-        Reactor.__init__(
-            self,
-            state["opts"],
-            log_port=state["log_port"],
-            log_level=state["log_level"],
-        )
-
-    def __getstate__(self):
-        return {
-            "opts": self.opts,
-            "log_port": self.log_port,
-            "log_level": self.log_level,
-        }
-
     def render_reaction(self, glob_ref, tag, data):
         """
         Execute the render system against a single reaction file and return

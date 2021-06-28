@@ -80,35 +80,6 @@ class Engine(salt.utils.process.SignalHandlingProcess):
         self.runners = runners
         self.proxy = proxy
 
-    # __setstate__ and __getstate__ are only used on Windows.
-    # We do this so that __init__ will be invoked on Windows in the child
-    # process so that a register_after_fork() equivalent will work on Windows.
-    def __setstate__(self, state):
-        self.__init__(
-            state["opts"],
-            state["fun"],
-            state["config"],
-            state["funcs"],
-            state["runners"],
-            state["proxy"],
-            name=state["name"],
-            log_port=state["log_port"],
-            log_level=state["log_level"],
-        )
-
-    def __getstate__(self):
-        return {
-            "name": self.name,
-            "opts": self.opts,
-            "fun": self.fun,
-            "config": self.config,
-            "funcs": self.funcs,
-            "runners": self.runners,
-            "proxy": self.proxy,
-            "log_port": self.log_port,
-            "log_level": self.log_level,
-        }
-
     def run(self):
         """
         Run the master service!

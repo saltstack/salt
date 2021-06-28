@@ -150,26 +150,6 @@ if USE_LOAD_BALANCER:
             self.socket_queue = socket_queue
             self._socket = None
 
-        # __setstate__ and __getstate__ are only used on Windows.
-        # We do this so that __init__ will be invoked on Windows in the child
-        # process so that a register_after_fork() equivalent will work on
-        # Windows.
-        def __setstate__(self, state):
-            self.__init__(
-                state["opts"],
-                state["socket_queue"],
-                log_port=state["log_port"],
-                log_level=state["log_level"],
-            )
-
-        def __getstate__(self):
-            return {
-                "opts": self.opts,
-                "socket_queue": self.socket_queue,
-                "log_port": self.log_port,
-                "log_level": self.log_level,
-            }
-
         def close(self):
             if self._socket is not None:
                 self._socket.shutdown(socket.SHUT_RDWR)

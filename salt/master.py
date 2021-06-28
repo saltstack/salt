@@ -147,21 +147,6 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
         # A serializer for general maint operations
         self.serial = salt.payload.Serial(self.opts)
 
-    # __setstate__ and __getstate__ are only used on Windows.
-    # We do this so that __init__ will be invoked on Windows in the child
-    # process so that a register_after_fork() equivalent will work on Windows.
-    def __setstate__(self, state):
-        self.__init__(
-            state["opts"], log_port=state["log_port"], log_level=state["log_level"]
-        )
-
-    def __getstate__(self):
-        return {
-            "opts": self.opts,
-            "log_port": self.log_port,
-            "log_level": self.log_level,
-        }
-
     def _post_fork_init(self):
         """
         Some things need to be init'd after the fork has completed
@@ -368,20 +353,6 @@ class FileserverUpdate(salt.utils.process.SignalHandlingProcess):
 
         self.fileserver = salt.fileserver.Fileserver(self.opts)
         self.fill_buckets()
-
-    # __setstate__ and __getstate__ are only used on Windows.
-    # We do this so that __init__ will be invoked on Windows in the child
-    # process so that a register_after_fork() equivalent will work on Windows.
-    def __setstate__(self, state):
-        self.__init__(
-            state["opts"], log_port=state["log_port"],
-        )
-
-    def __getstate__(self):
-        return {
-            "opts": self.opts,
-            "log_port": self.log_port,
-        }
 
     def fill_buckets(self):
         """
@@ -843,29 +814,6 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
         self.key = key
         self.secrets = secrets
 
-    # __setstate__ and __getstate__ are only used on Windows.
-    # We do this so that __init__ will be invoked on Windows in the child
-    # process so that a register_after_fork() equivalent will work on Windows.
-    def __setstate__(self, state):
-        self.__init__(
-            state["opts"],
-            state["key"],
-            state["mkey"],
-            secrets=state["secrets"],
-            log_port=state["log_port"],
-            log_level=state["log_level"],
-        )
-
-    def __getstate__(self):
-        return {
-            "opts": self.opts,
-            "key": self.key,
-            "mkey": self.master_key,
-            "secrets": self.secrets,
-            "log_port": self.log_port,
-            "log_level": self.log_level,
-        }
-
     def _handle_signals(self, signum, sigframe):  # pylint: disable=unused-argument
         self.destroy(signum)
         super()._handle_signals(signum, sigframe)
@@ -987,25 +935,14 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
     # These methods are only used when pickling so will not be used on
     # non-Windows platforms.
     def __setstate__(self, state):
-        super().__init__(log_port=state["log_port"], log_level=state["log_level"])
-        self.opts = state["opts"]
-        self.req_channels = state["req_channels"]
-        self.mkey = state["mkey"]
-        self.key = state["key"]
+        super().__setstate__(state)
         self.k_mtime = state["k_mtime"]
         SMaster.secrets = state["secrets"]
 
     def __getstate__(self):
-        return {
-            "opts": self.opts,
-            "req_channels": self.req_channels,
-            "mkey": self.mkey,
-            "key": self.key,
-            "k_mtime": self.k_mtime,
-            "secrets": SMaster.secrets,
-            "log_port": self.log_port,
-            "log_level": self.log_level,
-        }
+        state = super().__getstate__()
+        state.update({"k_mtime": self.k_mtime, "secrets": SMaster.secrets})
+        return state
 
     def _handle_signals(self, signum, sigframe):
         for channel in getattr(self, "req_channels", ()):
