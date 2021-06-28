@@ -17,7 +17,7 @@ SALT_CODE_DIR = CODE_DIR / "salt"
 
 
 @task(iterable=["files"], positional=["files"])
-def check_virtual(ctx, files):
+def check_virtual(ctx, files, enforce_virtualname=False):
     """
     Check Salt loader modules for a defined `__virtualname__` attribute and `__virtual__` function.
 
@@ -129,7 +129,7 @@ def check_virtual(ctx, files):
             if found_virtualname_attr:
                 break
 
-        if not found_virtualname_attr:
+        if not found_virtualname_attr and enforce_virtualname:
             errors += 1
             exitcode = 1
             utils.error(
