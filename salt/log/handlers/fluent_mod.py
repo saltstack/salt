@@ -78,11 +78,10 @@ import logging.handlers
 import socket
 import threading
 import time
-import types
 
 import salt.utils.msgpack
 import salt.utils.network
-from salt.log.setup import LOG_LEVELS
+from salt._logging import LOG_LEVELS
 
 log = logging.getLogger(__name__)
 
@@ -233,7 +232,7 @@ class MessageFormatter(logging.Formatter):
                 # These are already handled above or explicitly pruned.
                 continue
 
-            if isinstance(value, (str, bool, dict, float, int, list, types.NoneType)):
+            if value is None or isinstance(value, (str, bool, dict, float, int, list)):
                 val = value
             else:
                 val = repr(value)
@@ -282,7 +281,7 @@ class MessageFormatter(logging.Formatter):
                 # These are already handled above or explicitly avoided.
                 continue
 
-            if isinstance(value, (str, bool, dict, float, int, list, types.NoneType)):
+            if value is None or isinstance(value, (str, bool, dict, float, int, list)):
                 val = value
             else:
                 val = repr(value)

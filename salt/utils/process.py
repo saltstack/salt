@@ -20,8 +20,8 @@ import sys
 import threading
 import time
 
+import salt._logging
 import salt.defaults.exitcodes
-import salt.log.setup
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
@@ -148,6 +148,9 @@ def daemonize_if(opts):
 
 
 def systemd_notify_call(action):
+    """
+    Notify systemd that this process has started
+    """
     process = subprocess.Popen(
         ["systemd-notify", action], stdout=subprocess.PIPE, stderr=subprocess.PIPE
     )
@@ -895,16 +898,11 @@ class Process(multiprocessing.Process):
         return instance
 
     def __init__(self, *args, **kwargs):
-        log_queue = kwargs.pop("log_queue", None)
-        log_queue_level = kwargs.pop("log_queue_level", None)
+        logging_config = kwargs.pop("__logging_config__", None)
         super().__init__(*args, **kwargs)
-        self.log_queue = log_queue
-        if self.log_queue is None:
-            self.log_queue = salt.log.setup.get_multiprocessing_logging_queue()
-
-        self.log_queue_level = log_queue_level
-        if self.log_queue_level is None:
-            self.log_queue_level = salt.log.setup.get_multiprocessing_logging_level()
+        if logging_config is None:
+            logging_config = salt._logging.get_logging_options_dict()
+        self.__logging_config__ = logging_config
 
         # Because we need to enforce our after fork and finalize routines,
         # we must wrap this class run method to allow for these extra steps
@@ -942,10 +940,8 @@ class Process(multiprocessing.Process):
         """
         args = self._args_for_getstate
         kwargs = self._kwargs_for_getstate
-        if "log_queue" not in kwargs:
-            kwargs["log_queue"] = self.log_queue
-        if "log_queue_level" not in kwargs:
-            kwargs["log_queue_level"] = self.log_queue_level
+        if "__logging_config__" not in kwargs:
+            kwargs["__logging_config__"] = self.__logging_config__
         return {
             "args": args,
             "kwargs": kwargs,
@@ -958,26 +954,15 @@ class Process(multiprocessing.Process):
         def wrapped_run_func():
             # Static after fork method, always needs to happen first
             appendproctitle(self.name)
+            if not salt._logging.get_logging_options_dict():
+                salt._logging.set_logging_options_dict(self.__logging_config__)
             try:
-                salt.log.setup.set_multiprocessing_logging_queue(self.log_queue)
-            except Exception:  # pylint: disable=broad-except
+                salt._logging.setup_logging()
+            except Exception as exc:  # pylint: disable=broad-except
                 log.exception(
-                    "Failed to run salt.log.setup.set_multiprocessing_logging_queue() on %s",
+                    "Failed to configure logging on %s: %s",
                     self,
-                )
-            try:
-                salt.log.setup.set_multiprocessing_logging_level(self.log_queue_level)
-            except Exception:  # pylint: disable=broad-except
-                log.exception(
-                    "Failed to run salt.log.setup.set_multiprocessing_logging_level() on %s",
-                    self,
-                )
-            try:
-                salt.log.setup.setup_multiprocessing_logging(self.log_queue)
-            except Exception:  # pylint: disable=broad-except
-                log.exception(
-                    "Failed to run salt.log.setup.setup_multiprocessing_logging() on %s",
-                    self,
+                    exc,
                 )
 
             for method, args, kwargs in self._after_fork_methods:
@@ -1025,12 +1010,9 @@ class Process(multiprocessing.Process):
                 finally:
                     # Static finalize method, should always run last
                     try:
-                        salt.log.setup.shutdown_multiprocessing_logging()
-                    except Exception:  # pylint: disable=broad-except
-                        log.exception(
-                            "Failed to run salt.log.setup.shutdown_multiprocessing_logging() on %s",
-                            self,
-                        )
+                        salt._logging.shutdown_logging()
+                    except Exception as exc:  # pylint: disable=broad-except
+                        log.exception("Failed to shutdown logging on %s: %s", self, exc)
 
         return wrapped_run_func
 
@@ -1106,6 +1088,9 @@ class SignalHandlingProcess(Process):
 
 @contextlib.contextmanager
 def default_signals(*signals):
+    """
+    Temporarily restore signals to their default values.
+    """
     old_signals = {}
     for signum in signals:
         try:

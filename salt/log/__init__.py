@@ -10,7 +10,7 @@
 """
 
 # Import several classes/functions from salt.log.setup for backwards compatibility
-from salt._logging.impl import LOG_LEVELS, SORTED_LEVEL_NAMES
+from salt._logging import LOG_LEVELS, SORTED_LEVEL_NAMES
 from salt.log.setup import (
     is_console_configured,
     is_logfile_configured,
