@@ -1104,7 +1104,7 @@ def shutdown_log_forwarding_consumer():
         setup_log_forwarding_consumer.__process__ = None
 
 
-def setup_log_forwarding_consumer(opts, daemonized=False):
+def setup_log_forwarding_consumer(opts, log_file_setting_name=None, daemonized=False):
     """
     Setup the log forwarding consumer
 
@@ -1117,6 +1117,9 @@ def setup_log_forwarding_consumer(opts, daemonized=False):
         # We won't setup the logging process
         return
 
+    if log_file_setting_name is None:
+        log_file_setting_name = "log_file"
+
     if not opts["log_forwarding_consumer"]:
         # Don't setup the log forwarding consumer.
         # Let's setup the regular logging handlers
@@ -1128,7 +1131,7 @@ def setup_log_forwarding_consumer(opts, daemonized=False):
                 date_format=opts.get("log_datefmt_console"),
             )
         setup_logfile_handler(
-            opts.get("log_file"),
+            opts.get(log_file_setting_name),
             log_level=opts.get("log_level_logfile"),
             log_format=opts.get("log_fmt_logfile"),
             date_format=opts.get("log_datefmt_logfile"),
@@ -1171,7 +1174,7 @@ def setup_log_forwarding_consumer(opts, daemonized=False):
         # We only need to pass log related opts
         filtered_opts = {}
         for key, value in opts.items():
-            if not key.startswith(("log_", "extension_modules")):
+            if not key.startswith(("log_", "extension_modules", log_file_setting_name)):
                 continue
             filtered_opts[key] = value
 
@@ -1185,6 +1188,7 @@ def setup_log_forwarding_consumer(opts, daemonized=False):
                 "opts": filtered_opts,
                 "host": get_log_forwarding_host(),
                 "port": get_log_forwarding_port(),
+                "log_file_setting_name": log_file_setting_name,
                 "daemonized": daemonized,
             },
             name="SaltLoggingProcess",
@@ -1220,7 +1224,12 @@ def setup_log_forwarding_consumer(opts, daemonized=False):
 
 
 def _log_forwarding_consumer_target(
-    running_event, opts=None, host=None, port=None, daemonized=False
+    running_event,
+    opts=None,
+    host=None,
+    port=None,
+    log_file_setting_name=None,
+    daemonized=False,
 ):
     """
     This function is meant to run on a separate process.
@@ -1250,6 +1259,9 @@ def _log_forwarding_consumer_target(
     if port is None:
         port = get_log_forwarding_port()
 
+    if log_file_setting_name is None:
+        log_file_setting_name = "log_file"
+
     # Reconfigure all logging in this new process
     if daemonized is False:
         # The console should be quited when running daemonized
@@ -1259,7 +1271,7 @@ def _log_forwarding_consumer_target(
             date_format=opts.get("log_datefmt_console"),
         )
     setup_logfile_handler(
-        opts.get("log_file"),
+        opts.get(log_file_setting_name),
         log_level=opts.get("log_level_logfile"),
         log_format=opts.get("log_fmt_logfile"),
         date_format=opts.get("log_datefmt_logfile"),
