@@ -20,7 +20,6 @@ import salt.engines
 import salt.ext.tornado.gen
 import salt.ext.tornado.ioloop
 import salt.loader
-import salt.log.setup
 import salt.minion
 import salt.payload
 import salt.pillar

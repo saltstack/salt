@@ -17,6 +17,7 @@ import sys
 import threading
 import time
 
+import salt._logging
 import salt.acl
 import salt.auth
 import salt.client
@@ -28,7 +29,6 @@ import salt.engines
 import salt.exceptions
 import salt.ext.tornado.gen
 import salt.key
-import salt.log.setup
 import salt.minion
 import salt.payload
 import salt.pillar
@@ -212,6 +212,7 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
         old_present = set()
         while True:
             now = int(time.time())
+            log.trace("Running maintenance routines")
             if (now - last) >= self.loop_interval:
                 salt.daemons.masterapi.clean_old_jobs(self.opts)
                 salt.daemons.masterapi.clean_expired_tokens(self.opts)
@@ -676,14 +677,15 @@ class Master(SMaster):
             self.process_manager = salt.utils.process.ProcessManager(wait_for_kill=5)
             pub_channels = []
             log.info("Creating master publisher process")
-            log_port = salt.log.setup.get_multiprocessing_logging_port()
             for _, opts in iter_transport_opts(self.opts):
                 chan = salt.transport.server.PubServerChannel.factory(opts)
-                chan.pre_fork(self.process_manager, kwargs={"log_port": log_port})
+                chan.pre_fork(self.process_manager)
                 pub_channels.append(chan)
             log.info("Creating master event publisher process")
             self.process_manager.add_process(
-                salt.utils.event.EventPublisher, args=(self.opts,)
+                salt.utils.event.EventPublisher,
+                args=(self.opts,),
+                name="EventPublisher",
             )
 
             if self.opts.get("reactor"):
@@ -704,12 +706,14 @@ class Master(SMaster):
 
             # must be after channels
             log.info("Creating master maintenance process")
-            self.process_manager.add_process(Maintenance, args=(self.opts,))
+            self.process_manager.add_process(
+                Maintenance, args=(self.opts,), name="Maintenance"
+            )
 
             if self.opts.get("event_return"):
                 log.info("Creating master event return process")
                 self.process_manager.add_process(
-                    salt.utils.event.EventReturn, args=(self.opts,)
+                    salt.utils.event.EventReturn, args=(self.opts,), name="EventReturn"
                 )
 
             ext_procs = self.opts.get("ext_processes", [])
@@ -728,7 +732,9 @@ class Master(SMaster):
             if self.opts["con_cache"]:
                 log.info("Creating master concache process")
                 self.process_manager.add_process(
-                    salt.utils.master.ConnectedCache, args=(self.opts,)
+                    salt.utils.master.ConnectedCache,
+                    args=(self.opts,),
+                    name="ConnectedCache",
                 )
                 # workaround for issue #16315, race condition
                 log.debug("Sleeping for two seconds to let concache rest")
@@ -737,8 +743,6 @@ class Master(SMaster):
             log.info("Creating master request server process")
             kwargs = {}
             if salt.utils.platform.is_windows():
-                kwargs["log_port"] = log_port
-                kwargs["log_level"] = salt.log.setup.get_multiprocessing_logging_level()
                 kwargs["secrets"] = SMaster.secrets
 
             self.process_manager.add_process(
@@ -748,7 +752,9 @@ class Master(SMaster):
                 name="ReqServer",
             )
 
-            self.process_manager.add_process(FileserverUpdate, args=(self.opts,))
+            self.process_manager.add_process(
+                FileserverUpdate, args=(self.opts,), name="FileserverUpdate"
+            )
 
             # Fire up SSDP discovery publisher
             if self.opts["discovery"]:
@@ -760,7 +766,8 @@ class Master(SMaster):
                             answer={
                                 "mapping": self.opts["discovery"].get("mapping", {})
                             },
-                        ).run
+                        ).run,
+                        name="SSDPDiscoveryServer",
                     )
                 else:
                     log.error("Unable to load SSDP: asynchronous IO is not available.")
@@ -823,10 +830,14 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
         Binds the reply server
         """
         if self.log_port is not None:
-            salt.log.setup.set_multiprocessing_logging_port(self.log_port)
+            salt._logging.set_log_forwarding_port(self.log_port)
+        if self.log_prefix is not None:
+            salt._logging.set_log_forwarding_prefix(self.log_prefix)
         if self.log_level is not None:
-            salt.log.setup.set_multiprocessing_logging_level(self.log_level)
-        salt.log.setup.setup_multiprocessing_zmq_logging(self.log_port)
+            salt._logging.set_log_forwarding_level(self.log_level)
+        salt._logging.setup_log_forwarding(
+            self.log_host, self.log_port, self.log_level, self.log_prefix
+        )
 
         if self.secrets is not None:
             SMaster.secrets = self.secrets
@@ -855,11 +866,6 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
             if transport != "tcp":
                 tcp_only = False
 
-        kwargs = {}
-        if salt.utils.platform.is_windows():
-            kwargs["log_port"] = self.log_port
-            kwargs["log_level"] = self.log_level
-
         if self.opts["req_server_niceness"] and not salt.utils.platform.is_windows():
             log.info(
                 "setting ReqServer_ProcessManager niceness to %d",
@@ -876,7 +882,6 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
                 self.process_manager.add_process(
                     MWorker,
                     args=(self.opts, self.master_key, self.key, req_channels, name),
-                    kwargs=kwargs,
                     name=name,
                 )
         self.process_manager.run()

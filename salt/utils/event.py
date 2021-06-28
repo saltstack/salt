@@ -63,7 +63,6 @@ import salt.config
 import salt.defaults.exitcodes
 import salt.ext.tornado.ioloop
 import salt.ext.tornado.iostream
-import salt.log.setup
 import salt.payload
 import salt.transport.client
 import salt.transport.ipc

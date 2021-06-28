@@ -13,7 +13,7 @@ import time
 import traceback
 from random import randint
 
-import salt.defaults.exitcodes  # pylint: disable=unused-import
+import salt.defaults.exitcodes
 from salt.exceptions import SaltClientError, SaltReqTimeoutError, SaltSystemExit
 
 log = logging.getLogger(__name__)
@@ -108,6 +108,14 @@ def minion_process():
     """
     Start a minion process
     """
+    # Because the minion is going to start on a separate process,
+    # salt._logging.in_mainprocess() will return False.
+    # We'll just force it to return True for this particular case so
+    # that proper logging can be set up.
+    import salt._logging
+
+    salt._logging.in_mainprocess.__pid__ = os.getpid()
+    # Now the reamining required imports
     import salt.utils.platform
     import salt.utils.process
     import salt.cli.daemons
@@ -218,7 +226,9 @@ def salt_minion():
     prev_sigterm_handler = signal.getsignal(signal.SIGTERM)
     while True:
         try:
-            process = multiprocessing.Process(target=minion_process)
+            process = multiprocessing.Process(
+                target=minion_process, name="MinionKeepAlive"
+            )
             process.start()
             signal.signal(
                 signal.SIGTERM,

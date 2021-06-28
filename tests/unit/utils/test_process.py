@@ -1,6 +1,7 @@
 import datetime
 import functools
 import io
+import logging
 import multiprocessing
 import os
 import signal
@@ -10,6 +11,7 @@ import time
 import warnings
 
 import pytest
+import salt._logging
 import salt.utils.platform
 import salt.utils.process
 from salt.utils.versions import warn_until_date
@@ -23,6 +25,8 @@ try:
     HAS_PSUTIL = True
 except ImportError:
     pass
+
+log = logging.getLogger(__name__)
 
 
 def die(func):
@@ -87,6 +91,22 @@ def spin(func):
         self.addCleanup(delattr, self, attrname)
 
     return wrapper
+
+
+def remove_logging_funcs(proc):
+    """
+    Removes logging related after fork and finalize callbacks.
+    These are not what's being tested and when only running unittests leaving them in
+    will actually cause troubles since logging is not setup.
+    """
+    for func, args, kwargs in proc._after_fork_methods[:]:
+        if func is salt._logging.setup_log_forwarding:
+            proc._after_fork_methods.remove((func, args, kwargs))
+            break
+    for func, args, kwargs in proc._finalize_methods[:]:
+        if func is salt._logging.shutdown_log_forwarding:
+            proc._finalize_methods.remove((func, args, kwargs))
+            break
 
 
 class TestProcessManager(TestCase):
@@ -255,8 +275,8 @@ class TestProcessCallbacks(TestCase):
 
     def test_callbacks(self):
         "Validate Process call after fork and finalize methods"
-        teardown_to_mock = "salt.log.setup.shutdown_multiprocessing_logging"
-        log_to_mock = "salt.log.setup.setup_multiprocessing_logging"
+        teardown_to_mock = "salt._logging.shutdown_log_forwarding"
+        log_to_mock = "salt._logging.setup_log_forwarding"
         with patch(teardown_to_mock) as ma, patch(log_to_mock) as mb:
             evt = multiprocessing.Event()
             proc = salt.utils.process.Process(target=self.process_target, args=(evt,))
@@ -276,8 +296,8 @@ class TestProcessCallbacks(TestCase):
             def run(self):
                 self.evt.set()
 
-        teardown_to_mock = "salt.log.setup.shutdown_multiprocessing_logging"
-        log_to_mock = "salt.log.setup.setup_multiprocessing_logging"
+        teardown_to_mock = "salt._logging.shutdown_log_forwarding"
+        log_to_mock = "salt._logging.setup_log_forwarding"
         with patch(teardown_to_mock) as ma, patch(log_to_mock) as mb:
             proc = MyProcess()
             proc.run()
@@ -303,6 +323,7 @@ class TestSignalHandlingProcess(TestCase):
         try:
             with patch("psutil.Process", self.Process):
                 proc = salt.utils.process.SignalHandlingProcess(target=self.target)
+                remove_logging_funcs(proc)
                 proc.start()
         except psutil.NoSuchProcess:
             assert False, "psutil.NoSuchProcess raised"
@@ -311,6 +332,7 @@ class TestSignalHandlingProcess(TestCase):
         try:
             with patch("psutil.Process.children", self.children):
                 proc = salt.utils.process.SignalHandlingProcess(target=self.target)
+                remove_logging_funcs(proc)
                 proc.start()
         except psutil.NoSuchProcess:
             assert False, "psutil.NoSuchProcess raised"
@@ -349,6 +371,7 @@ class TestSignalHandlingProcess(TestCase):
         sh_proc = salt.utils.process.SignalHandlingProcess(
             target=self.run_forever_target, args=(self.run_forever_sub_target, evt)
         )
+        remove_logging_funcs(sh_proc)
         sh_proc.start()
         proc = multiprocessing.Process(target=self.kill_target_sub_proc)
         proc.start()
@@ -385,6 +408,7 @@ class TestSignalHandlingProcess(TestCase):
             target=self.pid_setting_target,
             args=(self.run_forever_sub_target, val, evt),
         )
+        remove_logging_funcs(proc)
         proc.start()
 
         # Create a second process that should not respond to SIGINT or SIGTERM
@@ -429,8 +453,8 @@ class TestSignalHandlingProcessCallbacks(TestCase):
     def test_callbacks(self):
         "Validate SignalHandlingProcess call after fork and finalize methods"
 
-        teardown_to_mock = "salt.log.setup.shutdown_multiprocessing_logging"
-        log_to_mock = "salt.log.setup.setup_multiprocessing_logging"
+        teardown_to_mock = "salt._logging.shutdown_log_forwarding"
+        log_to_mock = "salt._logging.setup_log_forwarding"
         sig_to_mock = "salt.utils.process.SignalHandlingProcess._setup_signals"
         # Mock _setup_signals so we do not register one for this process.
         evt = multiprocessing.Event()
@@ -455,8 +479,8 @@ class TestSignalHandlingProcessCallbacks(TestCase):
             def run(self):
                 self.evt.set()
 
-        teardown_to_mock = "salt.log.setup.shutdown_multiprocessing_logging"
-        log_to_mock = "salt.log.setup.setup_multiprocessing_logging"
+        teardown_to_mock = "salt._logging.shutdown_log_forwarding"
+        log_to_mock = "salt._logging.setup_log_forwarding"
         sig_to_mock = "salt.utils.process.SignalHandlingProcess._setup_signals"
         # Mock _setup_signals so we do not register one for this process.
         with patch(sig_to_mock):

@@ -1650,14 +1650,6 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
         """
         salt.utils.process.appendproctitle(self.__class__.__name__)
 
-        log_port = kwargs.get("log_port")
-        if log_port is not None:
-            salt.log.setup.set_multiprocessing_logging_port(log_port)
-        log_level = kwargs.get("log_level")
-        if log_level is not None:
-            salt.log.setup.set_multiprocessing_logging_level(log_level)
-        salt.log.setup.setup_multiprocessing_zmq_logging(log_port)
-
         # Check if io_loop was set outside
         if self.io_loop is None:
             self.io_loop = salt.ext.tornado.ioloop.IOLoop.current()
@@ -1692,7 +1684,7 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
         try:
             self.io_loop.start()
         except (KeyboardInterrupt, SystemExit):
-            salt.log.setup.shutdown_multiprocessing_logging()
+            pass
         finally:
             pull_sock.close()
 

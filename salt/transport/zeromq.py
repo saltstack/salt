@@ -18,7 +18,6 @@ import salt.ext.tornado
 import salt.ext.tornado.concurrent
 import salt.ext.tornado.gen
 import salt.ext.tornado.ioloop
-import salt.log.setup
 import salt.payload
 import salt.transport.client
 import salt.transport.mixins.auth
@@ -951,7 +950,7 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
     def connect(self):
         return salt.ext.tornado.gen.sleep(5)
 
-    def _publish_daemon(self, *args, **kwargs):
+    def _publish_daemon(self, **kwargs):
         """
         Bind to the interface specified in the configuration file
         """
@@ -963,11 +962,6 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
                 self.opts["pub_server_niceness"],
             )
             os.nice(self.opts["pub_server_niceness"])
-
-        log_port = kwargs.get("log_port", None)
-        if log_port:
-            salt.log.setup.set_multiprocessing_logging_port(log_port)
-            salt.log.setup.setup_multiprocessing_zmq_logging(log_port)
 
         # Set up the context
         context = zmq.Context(1)

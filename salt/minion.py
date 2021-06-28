@@ -31,7 +31,6 @@ import salt.ext.tornado
 import salt.ext.tornado.gen
 import salt.ext.tornado.ioloop
 import salt.loader
-import salt.log.setup
 import salt.payload
 import salt.pillar
 import salt.serializers.msgpack
@@ -123,7 +122,6 @@ def resolve_dns(opts, fallback=True):
         "use_master_when_local", False
     ):
         check_dns = False
-    # Since salt.log is imported below, salt.utils.network needs to be imported here as well
     import salt.utils.network
 
     if check_dns is True:
@@ -141,16 +139,12 @@ def resolve_dns(opts, fallback=True):
                         if retry_dns_count == 0:
                             raise SaltMasterUnresolvableError
                         retry_dns_count -= 1
-                    import salt.log
-
-                    msg = (
-                        "Master hostname: '{}' not found or not responsive. "
-                        "Retrying in {} seconds"
-                    ).format(opts["master"], opts["retry_dns"])
-                    if salt.log.setup.is_console_configured():
-                        log.error(msg)
-                    else:
-                        print("WARNING: {}".format(msg))
+                    log.error(
+                        "Master hostname: '%s' not found or not responsive. "
+                        "Retrying in %s seconds",
+                        opts["master"],
+                        opts["retry_dns"],
+                    )
                     time.sleep(opts["retry_dns"])
                     try:
                         ret["master_ip"] = salt.utils.network.dns_check(
@@ -1731,11 +1725,8 @@ class Minion(MinionBase):
             with default_signals(signal.SIGINT, signal.SIGTERM):
                 process = SignalHandlingProcess(
                     target=self._target,
-                    name="ProcessPayload",
+                    name="ProcessPayload(Jid={})".format(data["jid"]),
                     args=(instance, self.opts, data, self.connected),
-                )
-                process._after_fork_methods.append(
-                    (salt.utils.crypt.reinit_crypto, [], {})
                 )
                 process.register_after_fork_method(salt.utils.crypt.reinit_crypto)
         else:

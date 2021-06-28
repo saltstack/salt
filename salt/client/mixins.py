@@ -11,9 +11,9 @@ import traceback
 import weakref
 from collections.abc import Mapping, MutableMapping
 
+import salt._logging
 import salt.exceptions
 import salt.ext.tornado.stack_context
-import salt.log.setup
 import salt.minion
 import salt.transport.client
 import salt.utils.args
@@ -508,13 +508,10 @@ class AsyncClientMixin:
         locally and fire the return data on the event bus
         """
         if daemonize and not salt.utils.platform.is_windows():
-            # Shutdown the multiprocessing before daemonizing
-            salt.log.setup.shutdown_multiprocessing_zmq_logging()
-
             salt.utils.process.daemonize()
 
             # Reconfigure multiprocessing logging after daemonizing
-            salt.log.setup.setup_multiprocessing_zmq_logging()
+            salt._logging.setup_log_forwarding()
 
         # pack a few things into low
         low["__jid__"] = jid
@@ -563,7 +560,6 @@ class AsyncClientMixin:
             target=proc_func,
             name="ProcessFunc",
             args=(fun, low, user, async_pub["tag"], async_pub["jid"]),
-            log_port=self.opts["mp_logging_port"],
         )
         with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
             # Reset current signals before starting the process in

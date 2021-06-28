@@ -24,9 +24,6 @@ import traceback
 import types
 import urllib.parse
 
-import msgpack
-import zmq
-
 # pylint: disable=unused-import
 from salt._logging import (
     LOG_COLORS,
@@ -54,6 +51,7 @@ warn_until_date(
     "20230101",
     "Please stop using '{name}' and instead use 'salt._logging'. "
     "'{name}' will go away after {{date}}.".format(name=__name__),
+    stacklevel=4,
 )
 
 __CONSOLE_CONFIGURED = False
@@ -70,7 +68,6 @@ __MP_LOGGING_HOST = "127.0.0.1"
 __MP_LOGGING_LEVEL = logging.GARBAGE
 __MP_LOGGING_QUEUE_PROCESS = None
 __MP_LOGGING_QUEUE_HANDLER = None
-__MP_LOGGING_ZMQ_PROCESS = None
 __MP_LOGGING_ZMQ_HANDLER = None
 __MP_IN_MAINPROCESS = multiprocessing.current_process().name == "MainProcess"
 __MP_MAINPROCESS_ID = None
@@ -354,7 +351,6 @@ def setup_logfile_logger(
                 "Failed to setup the Syslog logging handler: %s", err
             )
             shutdown_multiprocessing_logging_listener()
-            shutdown_multiprocessing_logging_zmq_listener()
             sys.exit(2)
     else:
         # make sure, the logging directory exists and attempt to create it if necessary
@@ -521,26 +517,6 @@ def get_multiprocessing_logging_queue():
     return __MP_LOGGING_QUEUE
 
 
-def get_multiprocessing_logging_host():
-    return __MP_LOGGING_HOST
-
-
-def get_multiprocessing_logging_port():
-    if __MP_LOGGING_PORT is None:
-        raise RuntimeError("Logging port not set")
-    return __MP_LOGGING_PORT
-
-
-def set_multiprocessing_logging_host(host):
-    global __MP_LOGGING_HOST
-    __MP_LOGGING_HOST = host
-
-
-def set_multiprocessing_logging_port(port):
-    global __MP_LOGGING_PORT
-    __MP_LOGGING_PORT = port
-
-
 def set_multiprocessing_logging_queue(queue):
     global __MP_LOGGING_QUEUE
     if __MP_LOGGING_QUEUE is not queue:
@@ -571,57 +547,6 @@ def set_multiprocessing_logging_level_by_opts(opts):
         log_levels.append(LOG_LEVELS.get(level.lower(), logging.ERROR))
 
     __MP_LOGGING_LEVEL = min(log_levels)
-
-
-def setup_multiprocessing_logging_zmq_listener(opts, port=None):
-    global __MP_LOGGING_ZMQ_PROCESS
-    global __MP_LOGGING_LISTENER_CONFIGURED
-    global __MP_MAINPROCESS_ID
-
-    if __MP_IN_MAINPROCESS is False:
-        # We're not in the MainProcess, return! No logging listener setup shall happen
-        return
-
-    if __MP_LOGGING_LISTENER_CONFIGURED is True:
-        return
-
-    if __MP_MAINPROCESS_ID is not None and __MP_MAINPROCESS_ID != os.getpid():
-        # We're not in the MainProcess, return! No logging listener setup shall happen
-        return
-
-    __MP_MAINPROCESS_ID = os.getpid()
-    __MP_LOGGING_ZMQ_PROCESS = multiprocessing.Process(
-        target=_process_multiprocessing_logging_zmq,
-        args=(opts, port or get_multiprocessing_logging_port(),),
-    )
-    __MP_LOGGING_ZMQ_PROCESS.start()
-    __MP_LOGGING_LISTENER_CONFIGURED = True
-
-
-def setup_multiprocessing_logging_listener(opts, queue=None):
-    global __MP_LOGGING_QUEUE_PROCESS
-    global __MP_LOGGING_LISTENER_CONFIGURED
-    global __MP_MAINPROCESS_ID
-
-    if __MP_IN_MAINPROCESS is False:
-        # We're not in the MainProcess, return! No logging listener setup shall happen
-        return
-
-    if __MP_LOGGING_LISTENER_CONFIGURED is True:
-        return
-
-    if __MP_MAINPROCESS_ID is not None and __MP_MAINPROCESS_ID != os.getpid():
-        # We're not in the MainProcess, return! No logging listener setup shall happen
-        return
-
-    __MP_MAINPROCESS_ID = os.getpid()
-    __MP_LOGGING_QUEUE_PROCESS = multiprocessing.Process(
-        target=__process_multiprocessing_logging_queue,
-        args=(opts, queue or get_multiprocessing_logging_queue(),),
-    )
-    __MP_LOGGING_QUEUE_PROCESS.daemon = True
-    __MP_LOGGING_QUEUE_PROCESS.start()
-    __MP_LOGGING_LISTENER_CONFIGURED = True
 
 
 def setup_multiprocessing_zmq_logging(port=None):
@@ -655,7 +580,7 @@ def setup_multiprocessing_zmq_logging(port=None):
         __remove_queue_logging_handler()
 
         # Let's add a queue handler to the logging root handlers
-        handler = ZMQHandler(port or get_multiprocessing_logging_port())
+        handler = ZMQHandler(port)
         __MP_LOGGING_ZMQ_HANDLER = handler
         if __MP_IN_MAINPROCESS is True:
             for handler in logging.root.handlers:
@@ -775,30 +700,6 @@ def shutdown_temp_logging():
     __remove_temp_logging_handler()
 
 
-def shutdown_multiprocessing_zmq_logging():
-    global __MP_LOGGING_CONFIGURED
-    global __MP_LOGGING_ZMQ_HANDLER
-
-    if not __MP_LOGGING_CONFIGURED or not __MP_LOGGING_ZMQ_HANDLER:
-        return
-
-    try:
-        # handler = zmq_handlers.pop(os.getpid())
-        logging._acquireLock()
-        # Let's remove the queue handler from the logging root handlers
-        logging.root.removeHandler(__MP_LOGGING_ZMQ_HANDLER)
-        __MP_LOGGING_ZMQ_HANDLER = None
-        __MP_LOGGING_CONFIGURED = False
-        if not logging.root.handlers:
-            # Ensure we have at least one logging root handler so
-            # something can handle logging messages. This case should
-            # only occur on Windows since on Windows we log to console
-            # and file through the Multiprocessing Logging Listener.
-            setup_console_logger()
-    finally:
-        logging._releaseLock()
-
-
 def shutdown_multiprocessing_logging():
     global __MP_LOGGING_CONFIGURED
     global __MP_LOGGING_QUEUE_HANDLER
@@ -820,51 +721,6 @@ def shutdown_multiprocessing_logging():
             setup_console_logger()
     finally:
         logging._releaseLock()
-
-
-def shutdown_multiprocessing_logging_zmq_listener(daemonizing=False):
-    global __MP_LOGGING_ZMQ_PROCESS
-    global __MP_LOGGING_LISTENER_CONFIGURED
-
-    if daemonizing is False and __MP_IN_MAINPROCESS is True:
-        # We're in the MainProcess and we're not daemonizing, return!
-        # No multiprocessing logging listener shutdown shall happen
-        return
-
-    if not daemonizing:
-        # Need to remove the queue handler so that it doesn't try to send
-        # data over a queue that was shut down on the listener end.
-        shutdown_multiprocessing_zmq_logging()
-
-    if __MP_LOGGING_QUEUE_PROCESS is None:
-        return
-
-    if __MP_MAINPROCESS_ID is not None and __MP_MAINPROCESS_ID != os.getpid():
-        # We're not in the MainProcess, return! No logging listener setup shall happen
-        return
-
-    if __MP_LOGGING_ZMQ_PROCESS.is_alive():
-        logging.getLogger(__name__).debug(
-            "Stopping the multiprocessing logging queue listener"
-        )
-        host = get_multiprocessing_logging_host()
-        port = get_multiprocessing_logging_port()
-        context = zmq.Context()
-        sender = context.socket(zmq.PUSH)
-        sender.connect("tcp://{}:{}".format(host, port))
-        try:
-            sender.send(msgpack.dumps(None))
-        finally:
-            sender.close(1)
-            context.term()
-        if __MP_LOGGING_ZMQ_PROCESS.is_alive():
-            # Process is still alive!?
-            __MP_LOGGING_ZMQ_PROCESS.terminate()
-        __MP_LOGGING_ZMQ_PROCESS = None
-        __MP_LOGGING_LISTENER_CONFIGURED = False
-        logging.getLogger(__name__).debug(
-            "Stopped the multiprocessing logging queue listener"
-        )
 
 
 def shutdown_multiprocessing_logging_listener(daemonizing=False):
@@ -939,79 +795,6 @@ def patch_python_logging_handlers():
     logging.handlers.RotatingFileHandler = RotatingFileHandler
     if sys.version_info >= (3, 2):
         logging.handlers.QueueHandler = QueueHandler
-
-
-def _process_multiprocessing_logging_zmq(opts, port, dbg=False):
-    # Avoid circular import
-    import salt.utils.process
-
-    salt.utils.process.appendproctitle("MultiprocessingLoggingZMQ")
-
-    # Assign UID/GID of user to proc if set
-    from salt.utils.verify import check_user
-
-    user = opts.get("user")
-    if user:
-        check_user(user)
-
-    from salt.utils.platform import is_windows
-
-    if is_windows():
-        # On Windows, creating a new process doesn't fork (copy the parent
-        # process image). Due to this, we need to setup all of our logging
-        # inside this process.
-        setup_temp_logger()
-        setup_console_logger(
-            log_level=opts.get("log_level"),
-            log_format=opts.get("log_fmt_console"),
-            date_format=opts.get("log_datefmt_console"),
-        )
-        setup_logfile_logger(
-            opts.get("log_file"),
-            log_level=opts.get("log_level_logfile"),
-            log_format=opts.get("log_fmt_logfile"),
-            date_format=opts.get("log_datefmt_logfile"),
-            max_bytes=opts.get("log_rotate_max_bytes", 0),
-            backup_count=opts.get("log_rotate_backup_count", 0),
-        )
-        setup_extended_logging(opts)
-
-    context = zmq.Context()
-    puller = context.socket(zmq.PULL)
-    try:
-        puller.bind("tcp://127.0.0.1:{}".format(port))
-    except zmq.ZMQError as exc:
-        raise LoggingRuntimeError("Unable to bind to puller port: {}".format(port))
-    try:
-        while True:
-            try:
-                msg = puller.recv()
-                if msgpack.version >= (0, 5, 2):
-                    record_dict = msgpack.loads(msg, raw=False)
-                else:
-                    record_dict = msgpack.loads(msg, encoding="utf-8")
-                if record_dict is None:
-                    # A sentinel to stop processing the queue
-                    break
-                # Just log everything, filtering will happen on the main process
-                # logging handlers
-                record = logging.makeLogRecord(record_dict)
-                logger = logging.getLogger(record.name)
-                logger.handle(record)
-            except (EOFError, KeyboardInterrupt, SystemExit) as exc:
-                break
-            except Exception as exc:  # pylint: disable=broad-except
-                logging.getLogger(__name__).warning(
-                    "An exception occurred in the multiprocessing logging "
-                    "queue thread: %s",
-                    exc,
-                    exc_info_on_loglevel=logging.DEBUG,
-                )
-    except Exception as exc:  # pylint: disable=broad-except
-        pass
-    finally:
-        puller.close(1)
-        context.term()
 
 
 def __process_multiprocessing_logging_queue(opts, queue):
@@ -1153,7 +936,6 @@ def __global_logging_exception_handler(
         # Stop the logging queue listener thread
         if is_mp_logging_listener_configured():
             shutdown_multiprocessing_logging_listener()
-            shutdown_multiprocessing_logging_zmq_listener()
         return
 
     # Log the exception

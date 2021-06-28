@@ -14,14 +14,12 @@ import salt.client.ssh.client
 import salt.config
 import salt.daemons.masterapi
 import salt.exceptions
-import salt.log  # pylint: disable=W0611
 import salt.runner
 import salt.syspaths
 import salt.utils.args
 import salt.utils.minions
 import salt.wheel
 from salt.defaults import DEFAULT_TARGET_DELIM
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -271,8 +269,6 @@ class NetapiClient:
 
 CLIENTS = [
     name
-    for name, _ in inspect.getmembers(
-        NetapiClient, predicate=inspect.ismethod if six.PY2 else None
-    )
+    for name, _ in inspect.getmembers(NetapiClient, predicate=None)
     if not (name == "run" or name.startswith("_"))
 ]

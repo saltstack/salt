@@ -20,8 +20,6 @@ from salt.exceptions import (
     SaltConfigurationError,
     SaltInvocationError,
 )
-from salt.ext import six
-from salt.log import LOG_LEVELS
 
 IS_WINDOWS = False
 if getattr(sys, "getwindowsversion", False):

@@ -22,8 +22,8 @@ import threading
 import time
 import types
 
+import salt._logging
 import salt.defaults.exitcodes
-import salt.log.setup
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
@@ -518,31 +518,17 @@ class ProcessManager:
         if kwargs is None:
             kwargs = {}
 
-        if salt.utils.platform.is_windows():
-            # Need to ensure that 'log_queue' and 'log_queue_level' is
-            # correctly transferred to processes that inherit from
-            # 'Process'.
-            if type(Process) is type(tgt) and (issubclass(tgt, Process)):
-                need_log_queue = True
-            else:
-                need_log_queue = False
-
-            if need_log_queue:
-                if "log_port" not in kwargs:
-                    if hasattr(self, "log_port"):
-                        salt.log.setup.set_multiprocessing_logging_port(self.log_port)
-                        kwargs["log_port"] = self.log_port
-                    else:
-                        kwargs[
-                            "log_port"
-                        ] = salt.log.setup.get_multiprocessing_logging_port()
-                if "log_level" not in kwargs:
-                    if hasattr(self, "log_level"):
-                        kwargs["log_level"] = self.log_level
-                    else:
-                        kwargs[
-                            "log_level"
-                        ] = salt.log.setup.get_multiprocessing_logging_level()
+        # Need to ensure that log settings are correctly transferred
+        # to processes that inherit from 'Process'.
+        if type(Process) is type(tgt) and issubclass(tgt, Process):
+            if "log_host" not in kwargs:
+                kwargs["log_host"] = salt._logging.get_log_forwarding_host()
+            if "log_port" not in kwargs:
+                kwargs["log_port"] = salt._logging.get_log_forwarding_port()
+            if "log_prefix" not in kwargs:
+                kwargs["log_prefix"] = salt._logging.get_log_forwarding_prefix()
+            if "log_level" not in kwargs:
+                kwargs["log_level"] = salt._logging.get_log_forwarding_level()
 
         # create a nicer name for the debug log
         if name is None:
@@ -562,9 +548,7 @@ class ProcessManager:
         ):
             process = tgt(*args, **kwargs)
         else:
-            process = multiprocessing.Process(
-                target=tgt, args=args, kwargs=kwargs, name=name
-            )
+            process = Process(target=tgt, args=args, kwargs=kwargs, name=name)
 
         if isinstance(process, SignalHandlingProcess):
             with default_signals(signal.SIGINT, signal.SIGTERM):
@@ -799,10 +783,7 @@ class ProcessManager:
                     "Some processes failed to respect the KILL signal: %s",
                     "; ".join(
                         "Process: {} (Pid: {})".format(v["Process"], k)
-                        for (  # pylint: disable=str-format-in-logging
-                            k,
-                            v,
-                        ) in self._process_map.items()
+                        for (k, v) in self._process_map.items()
                     ),
                 )
                 log.info("kill_children retries left: %s", available_retries)
@@ -813,10 +794,7 @@ class ProcessManager:
                     "Failed to kill the following processes: %s",
                     "; ".join(
                         "Process: {} (Pid: {})".format(v["Process"], k)
-                        for (  # pylint: disable=str-format-in-logging
-                            k,
-                            v,
-                        ) in self._process_map.items()
+                        for (k, v,) in self._process_map.items()
                     ),
                 )
                 log.warning(
@@ -842,22 +820,27 @@ class Process(multiprocessing.Process, NewStyleClassMixin):
         return instance
 
     def __init__(self, *args, **kwargs):
+        log_host = kwargs.pop("log_host", None)
         log_port = kwargs.pop("log_port", None)
+        log_prefix = kwargs.pop("log_prefix", None)
         log_level = kwargs.pop("log_level", None)
         super().__init__(*args, **kwargs)
 
+        if log_host is None:
+            log_host = salt._logging.get_log_forwarding_host()
+        self.log_host = log_host
+
+        if log_port is None:
+            log_port = salt._logging.get_log_forwarding_port()
         self.log_port = log_port
-        if self.log_port is None:
-            self.log_port = salt.log.setup.get_multiprocessing_logging_port()
-        else:
-            # Set the logging queue so that it can be retrieved later with
-            # salt.log.setup.get_multiprocessing_logging_queue().
-            salt.log.setup.set_multiprocessing_logging_port(self.log_port)
+
+        if log_prefix is None:
+            log_prefix = salt._logging.get_log_forwarding_prefix()
+        self.log_prefix = log_prefix
+
+        if log_level is None:
+            log_level = salt._logging.get_log_forwarding_level()
         self.log_level = log_level
-        if self.log_level is None:
-            self.log_level = salt.log.setup.get_multiprocessing_logging_level()
-        else:
-            salt.log.setup.set_multiprocessing_logging_level(self.log_level)
 
         # Because we need to enforce our after fork and finalize routines,
         # we must wrap this class run method to allow for these extra steps
@@ -882,8 +865,12 @@ class Process(multiprocessing.Process, NewStyleClassMixin):
     def __getstate__(self):
         args = self._args_for_getstate
         kwargs = self._kwargs_for_getstate
+        if "log_host" not in kwargs:
+            kwargs["log_host"] = self.log_host
         if "log_port" not in kwargs:
             kwargs["log_port"] = self.log_port
+        if "log_prefix" not in kwargs:
+            kwargs["log_prefix"] = self.log_prefix
         if "log_level" not in kwargs:
             kwargs["log_level"] = self.log_level
         return {
@@ -896,8 +883,20 @@ class Process(multiprocessing.Process, NewStyleClassMixin):
     def __decorate_run(self, run_func):
         @functools.wraps(run_func)
         def wrapped_run_func():
-            # Static after fork method, always needs to happen first
-            salt.log.setup.setup_multiprocessing_logging(self.log_queue)
+            # Static after fork method(s), always need to happen first
+
+            # Set the log forwarding host so that it can be retrieved later
+            salt._logging.set_log_forwarding_host(self.log_host)
+            # Set the log forwarding port so that it can be retrieved later
+            salt._logging.set_log_forwarding_port(self.log_port)
+            # Set the log forwarding level so that it can be retrieved later
+            salt._logging.set_log_forwarding_level(self.log_level)
+            # Set the log forwarding prefix so that it can be retrieved later
+            salt._logging.set_log_forwarding_prefix(self.log_prefix)
+            # Setup log forwarding
+            salt._logging.setup_log_forwarding(
+                self.log_host, self.log_port, self.log_level, self.log_prefix
+            )
 
             for method, args, kwargs in self._after_fork_methods:
                 log.debug("Running after fork method %r", method)
@@ -923,7 +922,7 @@ class Process(multiprocessing.Process, NewStyleClassMixin):
                     log.debug("Running finalize method %r", method)
                     method(*args, **kwargs)
                 # Static finalize method, should always run last
-                salt.log.setup.shutdown_multiprocessing_logging()
+                salt._logging.shutdown_log_forwarding()
 
         return wrapped_run_func
 
