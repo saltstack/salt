@@ -78,8 +78,8 @@ def _get_top_file_envs():
     try:
         return __context__["saltutil._top_file_envs"]
     except KeyError:
+        st_ = salt.state.HighState(__opts__, initial_pillar=__pillar__.value())
         try:
-            st_ = salt.state.HighState(__opts__, initial_pillar=__pillar__.value())
             top = st_.get_top()
             if top:
                 envs = list(st_.top_matches(top).keys()) or "base"
@@ -87,6 +87,8 @@ def _get_top_file_envs():
                 envs = "base"
         except SaltRenderError as exc:
             raise CommandExecutionError("Unable to render top file(s): {}".format(exc))
+        finally:
+            st_.destroy()
         __context__["saltutil._top_file_envs"] = envs
         return envs
 
