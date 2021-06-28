@@ -1215,6 +1215,40 @@ repos:
           - jinja2
           - msgpack
 
+  - repo: https://github.com/saltstack/invoke-pre-commit
+    rev: v1.5.0
+    hooks:
+      - id: invoke
+        alias: loader-check-virtual
+        name: Check modules __virtual__
+        files: salt/.*\.py$
+        exclude: >
+            (?x)^(
+                templates/.*|
+                salt/ext/.*|
+            )$
+        args:
+          - loader.check-virtual
+        additional_dependencies:
+          - blessings
+          - pyyaml
+          - distro
+          - jinja2
+          - msgpack
+
+  - repo: https://github.com/saltstack/invoke-pre-commit
+    rev: v1.5.0
+    hooks:
+      - id: invoke
+        alias: loader-check-module-docstrings
+        name: Check salt/modules/*.py docstrings
+        files: salt/modules/.*\.py$
+        args:
+          - loader.check-module-docstrings
+        additional_dependencies:
+          - blessings
+          - pyyaml
+
   - repo: https://github.com/saltstack/mirrors-nox
     rev: v2020.8.22
     hooks:
