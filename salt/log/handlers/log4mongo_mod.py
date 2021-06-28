@@ -37,7 +37,7 @@
 import logging
 import socket
 
-from salt.log.setup import LOG_LEVELS
+from salt._logging import LOG_LEVELS
 
 try:
     from log4mongo.handlers import MongoHandler, MongoFormatter

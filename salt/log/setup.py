@@ -11,6 +11,7 @@
     module salt or any salt depending library imports so any new logging
     logger instance uses our ``salt.log.setup.SaltLoggingClass``.
 """
+# pylint: disable=unused-import
 
 import logging
 import logging.handlers
@@ -22,13 +23,6 @@ import time
 import types
 import urllib.parse
 
-# pylint: disable=unused-import
-from salt._logging import (
-    LOG_COLORS,
-    LOG_LEVELS,
-    LOG_VALUES_TO_LEVELS,
-    SORTED_LEVEL_NAMES,
-)
 from salt._logging.handlers import (
     FileHandler,
     QueueHandler,
@@ -38,16 +32,15 @@ from salt._logging.handlers import (
     WatchedFileHandler,
 )
 from salt._logging.impl import (
-    LOGGING_NULL_HANDLER,
-    LOGGING_STORE_HANDLER,
-    LOGGING_TEMP_HANDLER,
+    LOG_COLORS,
+    LOG_LEVELS,
+    LOG_VALUES_TO_LEVELS,
+    SORTED_LEVEL_NAMES,
     SaltColorLogRecord,
     SaltLogRecord,
 )
 from salt._logging.impl import set_log_record_factory as setLogRecordFactory
 from salt.utils.versions import warn_until_date
-
-# pylint: enable=unused-import
 
 warn_until_date(
     "20240101",
@@ -105,6 +98,16 @@ class SaltLogQueueHandler(QueueHandler):
     """
     Subclassed just to differentiate when debugging
     """
+
+
+# Store a reference to the temporary queue logging handler
+LOGGING_NULL_HANDLER = None
+
+# Store a reference to the temporary console logger
+LOGGING_TEMP_HANDLER = None
+
+# Store a reference to the "storing" logging handler
+LOGGING_STORE_HANDLER = None
 
 
 def getLogger(name):  # pylint: disable=C0103

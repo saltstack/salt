@@ -147,6 +147,9 @@ def verify_socket(interface, pub_port, ret_port):
 
 
 def verify_logs_filter(files):
+    """
+    Filter files to verify.
+    """
     to_verify = []
     for filename in files:
         verify_file = True
