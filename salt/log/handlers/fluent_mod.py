@@ -84,7 +84,6 @@ import types
 import salt.utils.msgpack
 import salt.utils.network
 from salt._logging.impl import LOG_LEVELS
-from salt._logging.mixins import NewStyleClassMixin
 
 log = logging.getLogger(__name__)
 
@@ -176,7 +175,7 @@ def setup_handlers():
         yield False
 
 
-class MessageFormatter(logging.Formatter, NewStyleClassMixin):
+class MessageFormatter(logging.Formatter):
     def __init__(self, payload_type, version, tags, msg_type=None, msg_path=None):
         self.payload_type = payload_type
         self.version = version

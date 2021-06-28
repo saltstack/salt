@@ -38,7 +38,6 @@ import logging
 import socket
 
 from salt._logging.impl import LOG_LEVELS
-from salt._logging.mixins import NewStyleClassMixin
 
 try:
     from log4mongo.handlers import MongoHandler, MongoFormatter
@@ -56,7 +55,7 @@ def __virtual__():
     return __virtualname__
 
 
-class FormatterWithHost(logging.Formatter, NewStyleClassMixin):
+class FormatterWithHost(logging.Formatter):
     def format(self, record):
         mongoformatter = MongoFormatter()
         document = mongoformatter.format(record)

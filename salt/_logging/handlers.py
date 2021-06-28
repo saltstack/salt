@@ -18,7 +18,7 @@ import threading
 import traceback
 from collections import deque
 
-from salt._logging.mixins import ExcInfoOnLogLevelFormatMixin, NewStyleClassMixin
+from salt._logging.mixins import ExcInfoOnLogLevelFormatMixin
 from salt.utils.versions import warn_until_date
 
 try:
@@ -87,9 +87,7 @@ class TemporaryLoggingHandler(logging.NullHandler):
                 handler.handle(record)
 
 
-class StreamHandler(
-    ExcInfoOnLogLevelFormatMixin, logging.StreamHandler, NewStyleClassMixin
-):
+class StreamHandler(ExcInfoOnLogLevelFormatMixin, logging.StreamHandler):
     """
     Stream handler which properly handles exc_info on a per handler basis
     """
@@ -144,17 +142,13 @@ class DeferredStreamHandler(StreamHandler):
                 handler.handle(record)
 
 
-class FileHandler(
-    ExcInfoOnLogLevelFormatMixin, logging.FileHandler, NewStyleClassMixin
-):
+class FileHandler(ExcInfoOnLogLevelFormatMixin, logging.FileHandler):
     """
     File handler which properly handles exc_info on a per handler basis
     """
 
 
-class SysLogHandler(
-    ExcInfoOnLogLevelFormatMixin, logging.handlers.SysLogHandler, NewStyleClassMixin
-):
+class SysLogHandler(ExcInfoOnLogLevelFormatMixin, logging.handlers.SysLogHandler):
     """
     Syslog handler which properly handles exc_info on a per handler basis
     """
@@ -186,9 +180,7 @@ class SysLogHandler(
 
 
 class RotatingFileHandler(
-    ExcInfoOnLogLevelFormatMixin,
-    logging.handlers.RotatingFileHandler,
-    NewStyleClassMixin,
+    ExcInfoOnLogLevelFormatMixin, logging.handlers.RotatingFileHandler,
 ):
     """
     Rotating file handler which properly handles exc_info on a per handler basis
@@ -233,9 +225,7 @@ class RotatingFileHandler(
 
 
 class WatchedFileHandler(
-    ExcInfoOnLogLevelFormatMixin,
-    logging.handlers.WatchedFileHandler,
-    NewStyleClassMixin,
+    ExcInfoOnLogLevelFormatMixin, logging.handlers.WatchedFileHandler,
 ):
     """
     Watched file handler which properly handles exc_info on a per handler basis
@@ -244,9 +234,7 @@ class WatchedFileHandler(
 
 if sys.version_info < (3, 2):
 
-    class QueueHandler(
-        ExcInfoOnLogLevelFormatMixin, logging.Handler, NewStyleClassMixin
-    ):
+    class QueueHandler(ExcInfoOnLogLevelFormatMixin, logging.Handler):
         """
         This handler sends events to a queue. Typically, it would be used together
         with a multiprocessing Queue to centralise logging to file in one process
@@ -424,7 +412,7 @@ else:
                 )
 
 
-class ZMQHandler(ExcInfoOnLogLevelFormatMixin, logging.Handler, NewStyleClassMixin):
+class ZMQHandler(ExcInfoOnLogLevelFormatMixin, logging.Handler):
 
     # We offload sending the log records to the consumer to a separate
     # thread because PUSH socket's WILL block if the receiving end can't
