@@ -48,7 +48,6 @@ jobs:
       if: github.event_name != 'pull_request'
       env:
         SKIP: lint-salt,lint-tests,pyupgrade,remove-import-headers,rstcheck
-        PIP_EXTRA_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
       run: |
         pre-commit run --show-diff-on-failure --color=always --all-files
 
@@ -56,7 +55,6 @@ jobs:
       if: github.event_name == 'pull_request' && steps.changed-files.outputs.repo == 'true'
       env:
         SKIP: lint-salt,lint-tests
-        PIP_EXTRA_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
       run: |
         pre-commit run --show-diff-on-failure --color=always --files ${{ join(fromJSON(steps.changed-files.outputs.repo_files), ' ') }}
 
