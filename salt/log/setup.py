@@ -51,6 +51,7 @@ from salt._logging.impl import (
     SaltLogRecord,
 )
 from salt._logging.impl import set_log_record_factory as setLogRecordFactory
+from salt.exceptions import LoggingRuntimeError
 
 # pylint: enable=unused-import
 
@@ -965,7 +966,10 @@ def _process_multiprocessing_logging_zmq(opts, port, dbg=False):
 
     context = zmq.Context()
     puller = context.socket(zmq.PULL)
-    puller.bind("tcp://127.0.0.1:{}".format(port))
+    try:
+        puller.bind("tcp://127.0.0.1:{}".format(port))
+    except zmq.ZMQError as exc:
+        raise LoggingRuntimeError("Unable to bind to puller port: {}".format(port))
     try:
         while True:
             try:
