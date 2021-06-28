@@ -12,7 +12,7 @@ import logging
 import salt.client.netapi
 import salt.utils.files
 import salt.utils.parsers as parsers
-from salt.utils.verify import check_user, verify_log, verify_log_files
+from salt.utils.verify import check_user
 
 log = logging.getLogger(__name__)
 
@@ -31,20 +31,6 @@ class SaltAPI(parsers.SaltAPIParser):
             super(YourSubClass, self).prepare()
         """
         super().prepare()
-
-        try:
-            if self.config["verify_env"]:
-                logfile = self.options.api_logfile
-                if logfile is not None:
-                    # Logfile is not using Syslog, verify
-                    with salt.utils.files.set_umask(0o027):
-                        verify_log_files([logfile], self.config["user"])
-        except OSError as err:
-            log.exception("Failed to prepare salt environment")
-            self.shutdown(err.errno)
-
-        self.setup_logfile_logger()
-        verify_log(self.config)
         log.info("Setting up the Salt API")
         self.api = salt.client.netapi.NetapiClient(self.config)
         self.daemonize_if_required()
