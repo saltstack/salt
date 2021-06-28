@@ -414,13 +414,6 @@ def _connect(**kwargs):
     _connarg("connection_unix_socket", "unix_socket", get_opts)
     _connarg("connection_default_file", "read_default_file", get_opts)
     _connarg("connection_default_group", "read_default_group", get_opts)
-    # MySQLdb states that this is required for charset usage
-    # but in fact it's more than it's internally activated
-    # when charset is used, activating use_unicode here would
-    # retrieve utf8 strings as unicode() objects in salt
-    # and we do not want that.
-    # _connarg('connection_use_unicode', 'use_unicode')
-    connargs["use_unicode"] = False
     _connarg("connection_charset", "charset")
     # Ensure MySQldb knows the format we use for queries with arguments
     MySQLdb.paramstyle = "pyformat"
@@ -428,6 +421,13 @@ def _connect(**kwargs):
     for key in copy.deepcopy(connargs):
         if not connargs[key]:
             del connargs[key]
+
+    # MySQLdb states that this is required for charset usage
+    # but in fact it's more than it's internally activated
+    # when charset is used, activating use_unicode here would
+    # retrieve utf8 strings as unicode() objects in salt
+    # and we do not want that. So we'll force it to False.
+    connargs["use_unicode"] = False
 
     if (
         connargs.get("passwd", True) is None
