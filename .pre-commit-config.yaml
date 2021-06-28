@@ -1197,6 +1197,9 @@ repos:
         additional_dependencies:
           - blessings
           - pyyaml
+          - distro
+          - jinja2
+          - msgpack
 
   - repo: https://github.com/saltstack/invoke-pre-commit
     rev: v1.5.0
@@ -1211,6 +1214,9 @@ repos:
         additional_dependencies:
           - blessings
           - pyyaml
+          - distro
+          - jinja2
+          - msgpack
 
   - repo: https://github.com/saltstack/mirrors-nox
     rev: v2020.8.22
