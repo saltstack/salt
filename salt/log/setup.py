@@ -43,13 +43,7 @@ from salt._logging.handlers import (
     WatchedFileHandler,
     ZMQHandler,
 )
-from salt._logging.impl import (
-    LOGGING_NULL_HANDLER,
-    LOGGING_STORE_HANDLER,
-    LOGGING_TEMP_HANDLER,
-    SaltColorLogRecord,
-    SaltLogRecord,
-)
+from salt._logging.impl import SaltColorLogRecord, SaltLogRecord
 from salt._logging.impl import set_log_record_factory as setLogRecordFactory
 from salt.exceptions import LoggingRuntimeError
 from salt.utils.versions import warn_until_date
@@ -114,6 +108,16 @@ class SaltLogQueueHandler(QueueHandler):
     """
     Subclassed just to differentiate when debugging
     """
+
+
+# Store a reference to the temporary queue logging handler
+LOGGING_NULL_HANDLER = None
+
+# Store a reference to the temporary console logger
+LOGGING_TEMP_HANDLER = None
+
+# Store a reference to the "storing" logging handler
+LOGGING_STORE_HANDLER = None
 
 
 def getLogger(name):  # pylint: disable=C0103

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     Sentry Logging Handler
     ======================
@@ -85,17 +84,13 @@
     .. _`Raven`: https://raven.readthedocs.io
     .. _`Raven client documentation`: https://raven.readthedocs.io/en/latest/config/index.html#client-arguments
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 import re
 
-# Import salt libs
 import salt.loader
-from salt.log import LOG_LEVELS
+from salt._logging import LOG_LEVELS
 
-# Import 3rd party libs
 try:
     import raven
     from raven.handlers.logging import SentryHandler
@@ -105,8 +100,6 @@ except ImportError:
     HAS_RAVEN = False
 
 log = logging.getLogger(__name__)
-__grains__ = {}
-__salt__ = {}
 
 # Define the module's virtual name
 __virtualname__ = "sentry"
@@ -138,9 +131,7 @@ def setup_handlers():
             transport_registry = TransportRegistry(default_transports)
             url = urlparse(dsn)
             if not transport_registry.supported_scheme(url.scheme):
-                raise ValueError(
-                    "Unsupported Sentry DSN scheme: {0}".format(url.scheme)
-                )
+                raise ValueError("Unsupported Sentry DSN scheme: {}".format(url.scheme))
         except ValueError as exc:
             log.info("Raven failed to parse the configuration provided DSN: %s", exc)
 
@@ -217,7 +208,7 @@ def setup_handlers():
         if exclude_patterns:
             filter_regexes = [re.compile(pattern) for pattern in exclude_patterns]
 
-            class FilterExcludedMessages(object):
+            class FilterExcludedMessages:
                 @staticmethod
                 def filter(record):
                     m = record.getMessage()

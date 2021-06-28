@@ -899,6 +899,7 @@ class Process(multiprocessing.Process, NewStyleClassMixin):
         @functools.wraps(run_func)
         def wrapped_run_func():
             for method, args, kwargs in self._after_fork_methods:
+                log.debug("Running after fork method %r", method)
                 method(*args, **kwargs)
             try:
                 return run_func()
@@ -918,6 +919,7 @@ class Process(multiprocessing.Process, NewStyleClassMixin):
                 raise
             finally:
                 for method, args, kwargs in self._finalize_methods:
+                    log.debug("Running finalize method %r", method)
                     method(*args, **kwargs)
 
         return wrapped_run_func
