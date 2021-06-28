@@ -40,15 +40,6 @@ class TornadoImporter:
 sys.meta_path = [TornadoImporter()] + sys.meta_path
 
 
-def install_ioloop():
-    # Make sure we always use tornado's ioloop
-    import salt.ext.tornado.ioloop
-
-    salt.ext.tornado.ioloop.IOLoop().install()
-
-
-install_ioloop()
-
 # All salt related deprecation warnings should be shown once each!
 warnings.filterwarnings(
     "once",  # Show once
