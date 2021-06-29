@@ -490,8 +490,12 @@ def cluster_setup(
 ):
     """
     Setup Pacemaker cluster on nodes.
-    Should be run on one cluster node only
-    (there may be race conditions)
+    Should be run on one cluster node only to avoid race conditions.
+    This performs auth as well as setup so can be run in place of the auth state.
+    It is recommended not to run auth on Debian/Ubuntu for a new cluster and just
+    to run this because of the initial cluster config that is installed on
+    Ubuntu/Debian by default.
+
 
     name
         Irrelevant, not used (recommended: pcs_setup__setup)
@@ -521,6 +525,8 @@ def cluster_setup(
                 - extra_args:
                     - '--start'
                     - '--enable'
+                - pcsuser: hacluster
+                - pcspasswd: hoonetorg
     """
 
     ret = {"name": name, "result": True, "comment": "", "changes": {}}
