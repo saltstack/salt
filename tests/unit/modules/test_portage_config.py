@@ -9,10 +9,11 @@ import re
 
 import salt.modules.portage_config as portage_config
 import salt.utils.files
+import salt.utils.platform
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class PortageConfigTestCase(TestCase, LoaderModuleMockMixin):
@@ -54,6 +55,7 @@ class PortageConfigTestCase(TestCase, LoaderModuleMockMixin):
             self.addCleanup(delattr, self, "portage")
             return {portage_config: {"portage": self.portage}}
 
+    @skipIf(salt.utils.platform.is_windows(), reason="Does not run on Windows")
     def test_get_config_file_wildcards(self):
         pairs = [
             ("*/*::repo", "/etc/portage/package.mask/repo"),
@@ -66,6 +68,7 @@ class PortageConfigTestCase(TestCase, LoaderModuleMockMixin):
         for (atom, expected) in pairs:
             self.assertEqual(portage_config._get_config_file("mask", atom), expected)
 
+    @skipIf(salt.utils.platform.is_windows(), reason="Does not run on Windows")
     def test_enforce_nice_config(self):
         atoms = [
             ("*/*::repo", "repo"),
