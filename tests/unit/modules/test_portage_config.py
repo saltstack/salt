@@ -17,7 +17,7 @@ try:
     import portage  # pylint: disable=unused-import
     HAS_PORTAGE = True
 
-except (ImportError, ModuleNotFoundError):
+except ImportError:
     HAS_PORTAGE = False
 
 
