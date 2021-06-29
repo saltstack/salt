@@ -14,6 +14,12 @@ from tests.support.mock import MagicMock, call, patch
 
 log = logging.getLogger(__name__)
 
+pytestmark = [
+    pytest.mark.skipif(
+        mysql_cache.MySQLdb is None, reason="No python mysql client installed."
+    ),
+]
+
 
 @pytest.fixture
 def configure_loader_modules():
