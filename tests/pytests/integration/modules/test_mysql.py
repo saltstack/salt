@@ -314,7 +314,6 @@ def test_grant_add_revoke_password_hash(salt_call_cli_wrapper):
         host="%",
         password_hash="*2470C0C06DEE42FD1618BB99005ADCA2EC9D1E19",
     )
-    log.debug("=== ret %s ===", ret)
     assert ret.json
 
     # Grant privileges to user to specific table
