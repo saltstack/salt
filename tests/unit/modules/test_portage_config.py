@@ -12,9 +12,9 @@ from tests.support.mock import patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
 
-
 try:
     import portage  # pylint: disable=unused-import
+
     HAS_PORTAGE = True
 
 except ImportError:
@@ -25,6 +25,7 @@ class PortageConfigTestCase(TestCase, LoaderModuleMockMixin):
     """
     Class for running portage module tests.
     """
+
     def setup_loader_modules(self):
         return {}
 
