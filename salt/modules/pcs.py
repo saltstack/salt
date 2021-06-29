@@ -30,7 +30,7 @@ def __use_new_commands():
     """
     The command line arguments of pcs changed after version 0.10
     This will return True if the new arguments are needed and
-    false if the ole ones are needed
+    false if the old ones are needed
     """
     pcs_version = __salt__["pkg.version"]("pcs")
     log.debug("PCS package version %s", pcs_version)
