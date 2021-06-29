@@ -7,7 +7,7 @@ Versions are `MAJOR.PATCH`.
 
 # Changelog
 
-Salt 3003.1 (2021-04-20)
+Salt 3003.1 (2021-06-08)
 ========================
 
 Removed
@@ -22,6 +22,17 @@ Fixed
 - Import salt.utils.azurearm instead of using __utils__ from loader in azure cloud.  This fixes an issue where __utils__ would become unavailable when we are using the ThreadPool in azurearm. (#59744)
 - Use contextvars libary from site-packages if it is intalled. Fixes salt ssh for targets with python <=3.6 (#59942)
 
+Fixed
+-----
+
+- Fixed race condition in batch logic. Added `listen` option to `LocalClient` to prevent event subscriber from purging cached events during batch iteration. (#56273)
+- Fixed dependencies for Amazon Linux 2 on https://repo.saltproject.io since Amazon Linux 2 now provides some of the python libraries in their repos. (#59982)
+- IPCMessageSubscriber objects expose their connect method as a coroutine so they can be wrapped by SyncWrapper. (#60049)
+- Import salt.utils.azurearm instead of using __utils__ from loader in azure cloud.  This fixes an issue where __utils__ would become unavailable when we are using the ThreadPool in azurearm. (#59744)
+- Use contextvars libary from site-packages if it is intalled. Fixes salt ssh for targets with python <=3.6 (#59942)
+- Add back support to load old entrypoints by iterating instead of type checking (#59961)
+- Pass the value of the `__grains__` NamedContext to salt.pillar.get_pillar, instead of the NamedContext object itself. (#59975)
+- Fix pillar serialization in jinja templates (#60083)
 
 Salt 3003 (2021-03-05)
 ======================

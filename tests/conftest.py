@@ -172,7 +172,7 @@ def pytest_addoption(parser):
         dest="proxy",
         action="store_true",
         default=False,
-        help="Run proxy tests",
+        help="Run proxy tests (DEPRECATED)",
     )
     test_selection_group.addoption(
         "--run-slow", action="store_true", default=False, help="Run slow tests.",
@@ -1002,42 +1002,8 @@ def salt_sub_minion_factory(salt_master_factory):
 
 
 @pytest.fixture(scope="session")
-def salt_proxy_factory(salt_factories, salt_master_factory):
-    proxy_minion_id = "proxytest"
-    root_dir = salt_factories.get_root_dir_for_daemon(proxy_minion_id)
-    conf_dir = root_dir / "conf"
-    conf_dir.mkdir(parents=True, exist_ok=True)
-    RUNTIME_VARS.TMP_PROXY_CONF_DIR = str(conf_dir)
-
-    with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, "proxy")) as rfh:
-        config_defaults = yaml.deserialize(rfh.read())
-
-    config_defaults["root_dir"] = str(root_dir)
-    config_defaults["hosts.file"] = os.path.join(RUNTIME_VARS.TMP, "hosts")
-    config_defaults["aliases.file"] = os.path.join(RUNTIME_VARS.TMP, "aliases")
-    config_defaults["transport"] = salt_master_factory.config["transport"]
-
-    config_overrides = {
-        "log_level_logfile": "quiet",
-        "file_roots": salt_master_factory.config["file_roots"].copy(),
-        "pillar_roots": salt_master_factory.config["pillar_roots"].copy(),
-    }
-
-    factory = salt_master_factory.salt_proxy_minion_daemon(
-        proxy_minion_id,
-        defaults=config_defaults,
-        overrides=config_overrides,
-        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
-    )
-    factory.after_terminate(
-        pytest.helpers.remove_stale_minion_key, salt_master_factory, factory.id
-    )
-    return factory
-
-
-@pytest.fixture(scope="session")
 def salt_cli(salt_master_factory):
-    return salt_master_factory.get_salt_cli()
+    return salt_master_factory.salt_cli()
 
 
 @pytest.fixture(scope="session")

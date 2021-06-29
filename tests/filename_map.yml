@@ -121,6 +121,9 @@ salt/cloud/*:
 salt/cloud/__init__.py:
   - pytests.functional.cli.test_salt_cloud
 
+salt/engines/*:
+  - pytests.unit.engines.test_engines
+
 salt/grains/*:
   - integration.grains.test_custom
 
