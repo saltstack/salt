@@ -1513,8 +1513,8 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         name = "/etc/testdir"
         user = "salt"
         group = "saltstack"
-        if salt.utils.platform.is_windows():
-            name = name.replace("/", "\\")
+        # if salt.utils.platform.is_windows():
+        #     name = name.replace("/", "\\")
 
         ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
