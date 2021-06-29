@@ -76,9 +76,6 @@ def test_is_auth_old(test_data):
         pcs.is_auth(
             test_data.nodes, pcsuser=test_data.username, pcspasswd=test_data.password
         )
-
-    # print("Exp command: ", exp_cmd)
-    # print("call_args_list: ", mock_cmd.call_args_list[0][0][0])
     assert mock_cmd.call_args_list[0][0][0] == exp_cmd
 
 
@@ -107,9 +104,6 @@ def test_is_auth(test_data):
         pcs.is_auth(
             test_data.nodes, pcsuser=test_data.username, pcspasswd=test_data.password
         )
-
-    # print("Exp command: ", exp_cmd)
-    # print("call_args_list: ", mock_cmd.call_args_list[0][0][0] )
     assert mock_cmd.call_args_list[0][0][0] == exp_cmd
 
 
@@ -152,7 +146,6 @@ def test_cluster_destroy(test_data):
     patch_salt = patch.dict(pcs.__salt__, {"cmd.run_all": mock_cmd})
     with patch_salt:
         pcs.cluster_destroy(extra_args=test_data.extra_args)
-
     assert mock_cmd.call_args_list[0][0][0] == exp_cmd
 
 
@@ -194,32 +187,6 @@ def test_cib_push(test_data):
     assert mock_cmd.call_args_list[0][0][0] == exp_cmd
 
 
-def test_config_show(test_data):
-    """
-    Test for config show
-    """
-    exp_cmd = [
-        "pcs",
-        "cluster",
-        "cib-push",
-        test_data.cib_filename,
-        "scope=configuration",
-    ]
-    exp_cmd.extend(test_data.extra_args)
-
-    mock_cmd = MagicMock()
-    patch_salt = patch.dict(pcs.__salt__, {"cmd.run_all": mock_cmd})
-    with patch_salt:
-        pcs.cib_push(
-            test_data.cib_filename,
-            scope="configuration",
-            extra_args=test_data.extra_args,
-        )
-    # print("Exp command: ", exp_cmd)
-    # print("call_args_list: ", mock_cmd.call_args_list[0][0][0] )
-    assert mock_cmd.call_args_list[0][0][0] == exp_cmd
-
-
 @pytest.mark.parametrize("ver_cmp_ret,old_ver", [(1, False), (0, True)])
 def test_item_show_config_defaults(ver_cmp_ret, old_ver, test_data):
     """
@@ -242,8 +209,6 @@ def test_item_show_config_defaults(ver_cmp_ret, old_ver, test_data):
 
     with patch_salt:
         pcs.item_show("resource")
-    # print("Exp command: ", exp_cmd)
-    # print("call_args_list: ", mock_cmd.call_args_list[0][0][0] )
     assert mock_cmd.call_args_list[0][0][0] == exp_cmd
 
 
@@ -269,8 +234,6 @@ def test_item_show_set_itemid(ver_cmp_ret, old_ver, test_data):
 
     with patch_salt:
         pcs.item_show("resource", "itemid")
-    # print("Exp command: ", exp_cmd)
-    # print("call_args_list: ", mock_cmd.call_args_list[0][0][0] )
     assert mock_cmd.call_args_list[0][0][0] == exp_cmd
 
 
@@ -296,8 +259,6 @@ def test_item_show_set_itemid_itemtype(ver_cmp_ret, old_ver, test_data):
 
     with patch_salt:
         pcs.item_show("constraint", item_id="item_id", item_type="item_type")
-    # print("Exp command: ", exp_cmd)
-    # print("call_args_list: ", mock_cmd.call_args_list[0][0][0] )
     assert mock_cmd.call_args_list[0][0][0] == exp_cmd
 
 
@@ -328,6 +289,4 @@ def test_item_create(test_data):
             extra_args=test_data.extra_args,
             cibfile=test_data.cib_filename,
         )
-    # print("Exp command: ", exp_cmd)
-    # print("call_args_list: ", mock_cmd.call_args_list[0][0][0] )
     assert mock_cmd.call_args_list[0][0][0] == exp_cmd
