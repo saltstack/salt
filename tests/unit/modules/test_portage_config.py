@@ -5,57 +5,30 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
 
-import re
-
 import salt.modules.portage_config as portage_config
 import salt.utils.files
-import salt.utils.platform
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
 
 
+try:
+    import portage  # pylint: disable=unused-import
+    HAS_PORTAGE = True
+
+except (ImportError, ModuleNotFoundError):
+    HAS_PORTAGE = False
+
+
 class PortageConfigTestCase(TestCase, LoaderModuleMockMixin):
-    class DummyAtom:
-        def __init__(self):
-            self.cp = None
-            self.repo = None
-
-        def __call__(self, atom, *_, **__):
-            if atom == "#" or isinstance(atom, MagicMock):
-                self.repo = None
-                self.cp = None
-                return self
-
-            # extract (and remove) repo
-            atom, self.repo = atom.split("::") if "::" in atom else (atom, None)
-
-            # remove '>, >=, <=, =, ~' etc.
-            atom = re.sub(r"[<>~+=]", "", atom)
-            # remove slots
-            atom = re.sub(r":[0-9][^:]*", "", atom)
-            # remove version
-            atom = re.sub(r"-[0-9][\.0-9]*", "", atom)
-
-            self.cp = atom
-            return self
-
+    """
+    Class for running portage module tests.
+    """
     def setup_loader_modules(self):
-        try:
-            import portage  # pylint: disable=unused-import
+        return {}
 
-            return {}
-        except ImportError:
-            dummy_atom = self.DummyAtom()
-            self.portage = MagicMock()
-            self.portage.dep.Atom = MagicMock(side_effect=dummy_atom)
-            self.portage.dep_getkey = MagicMock(side_effect=lambda x: dummy_atom(x).cp)
-            self.portage.exception.InvalidAtom = Exception
-            self.addCleanup(delattr, self, "portage")
-            return {portage_config: {"portage": self.portage}}
-
-    @skipIf(salt.utils.platform.is_windows(), reason="Does not run on Windows")
+    @skipIf(not HAS_PORTAGE, reason="Portage not available on this system.")
     def test_get_config_file_wildcards(self):
         pairs = [
             ("*/*::repo", "/etc/portage/package.mask/repo"),
@@ -68,7 +41,7 @@ class PortageConfigTestCase(TestCase, LoaderModuleMockMixin):
         for (atom, expected) in pairs:
             self.assertEqual(portage_config._get_config_file("mask", atom), expected)
 
-    @skipIf(salt.utils.platform.is_windows(), reason="Does not run on Windows")
+    @skipIf(not HAS_PORTAGE, reason="Portage not available on this system.")
     def test_enforce_nice_config(self):
         atoms = [
             ("*/*::repo", "repo"),
