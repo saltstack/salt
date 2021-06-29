@@ -672,7 +672,9 @@ def _clean_dir(root, keep, exclude_pat, win_keep=None):
         if nfn not in real_keep:
             # -- check if this is a part of exclude_pat(only). No need to
             # check include_pat
-            if not salt.utils.stringutils.check_include_exclude(os.path.relpath(nfn, root), None, exclude_pat):
+            if not salt.utils.stringutils.check_include_exclude(
+                os.path.relpath(nfn, root), None, exclude_pat
+            ):
                 return
             # Before we can accurately assess the removal of a file, we must
             # check for windows case sensitive files. If we originally meant

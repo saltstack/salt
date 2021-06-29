@@ -2931,7 +2931,7 @@ class TestFindKeepFiles(TestCase):
             win_keep=[
                 "C:\\test\\parent_folder\\meh-1.txt",
                 "C:\\Test\\Parent_folder\\Meh-2.txt",
-            ]
+            ],
         )
         actual = sorted(list(keep))
         expected = []
