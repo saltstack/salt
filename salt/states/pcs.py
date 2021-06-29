@@ -56,7 +56,10 @@ After modifying the cibfile, it can be pushed to the live CIB in the cluster:
 
 Create a cluster from scratch:
 
-1. Authorize nodes to each other:
+1. This authorizes nodes to each other. It probably won't work with Ubuntu as
+    it rolls out a default cluster that needs to be destroyed before the
+    new cluster can be created. This is a little complicated so it's best
+    to just run the cluster_setup below in most cases.:
 
    .. code-block:: yaml
 
@@ -67,7 +70,7 @@ Create a cluster from scratch:
                    - node2.example.com
                - pcsuser: hacluster
                - pcspasswd: hoonetorg
-               - extra_args: []
+
 
 2. Do the initial cluster setup:
 
@@ -82,6 +85,8 @@ Create a cluster from scratch:
                - extra_args:
                    - '--start'
                    - '--enable'
+               - pcsuser: hacluster
+               - pcspasswd: hoonetorg
 
 3. Optional: Set cluster properties:
 
@@ -391,7 +396,7 @@ def auth(name, nodes, pcsuser="hacluster", pcspasswd="hacluster", extra_args=Non
     pcspasswd
         password for pcsuser (default: hacluster)
     extra_args
-        list of extra args for the \'pcs cluster auth\' command
+        list of extra args for the \'pcs cluster auth\' command, there are none so it's here for compatibility.
 
     Example:
 
@@ -442,12 +447,8 @@ def auth(name, nodes, pcsuser="hacluster", pcspasswd="hacluster", extra_args=Non
     if __opts__["test"]:
         ret["result"] = None
         return ret
-    if not isinstance(extra_args, (list, tuple)):
-        extra_args = []
 
-    authorize = __salt__["pcs.auth"](
-        nodes=nodes, pcsuser=pcsuser, pcspasswd=pcspasswd, extra_args=extra_args
-    )
+    authorize = __salt__["pcs.auth"](nodes=nodes, pcsuser=pcsuser, pcspasswd=pcspasswd)
     log.trace("Output of pcs.auth: %s", authorize)
 
     authorize_dict = {}
@@ -478,7 +479,15 @@ def auth(name, nodes, pcsuser="hacluster", pcspasswd="hacluster", extra_args=Non
     return ret
 
 
-def cluster_setup(name, nodes, pcsclustername="pcscluster", extra_args=None, pcsuser="hacluster", pcspasswd="hacluster", pcs_auth_extra_args=None):
+def cluster_setup(
+    name,
+    nodes,
+    pcsclustername="pcscluster",
+    extra_args=None,
+    pcsuser="hacluster",
+    pcspasswd="hacluster",
+    pcs_auth_extra_args=None,
+):
     """
     Setup Pacemaker cluster on nodes.
     Should be run on one cluster node only
@@ -544,11 +553,10 @@ def cluster_setup(name, nodes, pcsclustername="pcscluster", extra_args=None, pcs
         ret["result"] = None
         return ret
 
-    # Debian based distros deploy corosync with some initial cluster setup. 
+    # Debian based distros deploy corosync with some initial cluster setup.
     # The following detects if it's a Debian based distro and then stops Corosync
     # and removes the config files. I've put this here because trying to do all this in the
     # state file can break running clusters and can also take quite a long time to debug.
-    
 
     log.debug("OS_Family: %s", __grains__.get("os_family"))
     if __grains__.get("os_family") == "Debian":

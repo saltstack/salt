@@ -30,7 +30,7 @@ def __use_new_commands():
     """
     The command line arguments of pcs changed after version 0.10
     This will return True if the new arguments are needed and
-    false if the ole ones are needed
+    false if the old ones are needed
     """
     pcs_version = __salt__["pkg.version"]("pcs")
     log.debug("PCS package version %s", pcs_version)
@@ -85,9 +85,9 @@ def item_show(
         if show == "show":
             show = "config"
         elif isinstance(show, (list, tuple)):
-             for i in range(len(show)):
+            for i in enumerate(show):
                 if show[i] == "show":
-                    show[i] = "config" 
+                    show[i] = "config"
 
     if isinstance(show, str):
         cmd += [show]
@@ -183,14 +183,12 @@ def auth(nodes, pcsuser="hacluster", pcspasswd="hacluster", extra_args=None):
         salt '*' pcs.auth nodes='[ node1.example.org node2.example.org ]' pcsuser=hacluster pcspasswd=hoonetorg"
     """
     if __use_new_commands():
-        cmd = ["pcs", "host", "auth" ]
+        cmd = ["pcs", "host", "auth"]
     else:
         cmd = ["pcs", "cluster", "auth"]
 
     cmd.extend(["-u", pcsuser, "-p", pcspasswd])
 
-    if isinstance(extra_args, (list, tuple)):
-        cmd += extra_args
     cmd += nodes
 
     return __salt__["cmd.run_all"](cmd, output_loglevel="trace", python_shell=False)
@@ -214,21 +212,15 @@ def is_auth(nodes, pcsuser="hacluster", pcspasswd="hacluster"):
         salt '*' pcs.is_auth nodes='[node1.example.org node2.example.org]' pcsuser=hacluster pcspasswd=hoonetorg
     """
     if __use_new_commands():
-
-        cmd = ["pcs", "host", "auth"]
-
-        cmd += ["-u", pcsuser, "-p", pcspasswd]
-
-        cmd += nodes
+        cmd = ["pcs", "host", "auth", "-u", pcsuser, "-p", pcspasswd]
     else:
         cmd = ["pcs", "cluster", "auth"]
-        cmd += nodes
-    log.info("Commands: %s", cmd)
+
+    cmd += nodes
+
     return __salt__["cmd.run_all"](
         cmd, stdin="\n\n", output_loglevel="trace", python_shell=False
     )
-
-
 
 
 def cluster_setup(nodes, pcsclustername="pcscluster", extra_args=None):
@@ -251,10 +243,10 @@ def cluster_setup(nodes, pcsclustername="pcscluster", extra_args=None):
     cmd = ["pcs", "cluster", "setup"]
 
     if __use_new_commands():
-        #cmd += [pcsclustername, "--force"]
+        # cmd += [pcsclustername, "--force"]
         cmd += [pcsclustername]
     else:
-        #cmd += ["--name", pcsclustername, "--force"]
+        # cmd += ["--name", pcsclustername, "--force"]
         cmd += ["--name", pcsclustername]
 
     cmd += nodes
@@ -264,6 +256,7 @@ def cluster_setup(nodes, pcsclustername="pcscluster", extra_args=None):
     log.debug("Running cluster setup: %s", cmd)
 
     return __salt__["cmd.run_all"](cmd, output_loglevel="trace", python_shell=False)
+
 
 def cluster_destroy(extra_args=None):
     """
@@ -286,6 +279,7 @@ def cluster_destroy(extra_args=None):
     log.debug("Running cluster destroy: %s", cmd)
 
     return __salt__["cmd.run_all"](cmd, output_loglevel="trace", python_shell=False)
+
 
 def cluster_node_add(node, extra_args=None):
     """
@@ -481,6 +475,7 @@ def stonith_create(
         extra_args=stonith_device_options,
         cibfile=cibfile,
     )
+
 
 def resource_show(resource_id, extra_args=None, cibfile=None):
     """
