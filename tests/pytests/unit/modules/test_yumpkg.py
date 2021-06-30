@@ -7,7 +7,7 @@ import salt.modules.rpm_lowpkg as rpm
 import salt.modules.yumpkg as yumpkg
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from tests.support.mock import MagicMock, Mock, patch
+from tests.support.mock import MagicMock, Mock, call, patch
 
 try:
     import pytest
@@ -986,6 +986,138 @@ def test_install_with_options():
             )
 
 
+def test_remove_with_epoch():
+    """
+    Tests that we properly identify a version containing an epoch for
+    deinstallation.
+
+    You can deinstall pkgs only without the epoch if no arch is provided:
+
+    .. code-block:: bash
+
+        yum remove PackageKit-yum-1.1.10-2.el7.centos
+    """
+    name = "foo"
+    installed = "8:3.8.12-4.n.el7"
+    list_pkgs_mock = MagicMock(
+        side_effect=lambda **kwargs: {
+            name: [installed] if kwargs.get("versions_as_list", False) else installed
+        }
+    )
+    cmd_mock = MagicMock(
+        return_value={"pid": 12345, "retcode": 0, "stdout": "", "stderr": ""}
+    )
+    salt_mock = {
+        "cmd.run_all": cmd_mock,
+        "lowpkg.version_cmp": rpm.version_cmp,
+        "pkg_resource.parse_targets": MagicMock(
+            return_value=({name: installed}, "repository")
+        ),
+    }
+    full_pkg_string = "-".join((name, installed[2:]))
+    with patch.object(yumpkg, "list_pkgs", list_pkgs_mock), patch(
+        "salt.utils.systemd.has_scope", MagicMock(return_value=False)
+    ), patch.dict(yumpkg.__salt__, salt_mock):
+
+        with patch.dict(yumpkg.__grains__, {"os": "CentOS", "osrelease": 7}):
+            expected = ["yum", "-y", "remove", full_pkg_string]
+            yumpkg.remove(name)
+            call = cmd_mock.mock_calls[0][1][0]
+            assert call == expected, call
+
+
+def test_remove_with_epoch_and_arch_info():
+    """
+    Tests that we properly identify a version containing an epoch and arch
+    deinstallation.
+
+    You can deinstall pkgs with or without epoch in combination with the arch.
+    Here we test for the absence of the epoch, but the presence for the arch:
+
+    .. code-block:: bash
+
+        yum remove PackageKit-yum-1.1.10-2.el7.centos.x86_64
+    """
+    arch = "x86_64"
+    name = "foo"
+    name_and_arch = name + "." + arch
+    installed = "8:3.8.12-4.n.el7"
+    list_pkgs_mock = MagicMock(
+        side_effect=lambda **kwargs: {
+            name_and_arch: [installed]
+            if kwargs.get("versions_as_list", False)
+            else installed
+        }
+    )
+    cmd_mock = MagicMock(
+        return_value={"pid": 12345, "retcode": 0, "stdout": "", "stderr": ""}
+    )
+    salt_mock = {
+        "cmd.run_all": cmd_mock,
+        "lowpkg.version_cmp": rpm.version_cmp,
+        "pkg_resource.parse_targets": MagicMock(
+            return_value=({name_and_arch: installed}, "repository")
+        ),
+    }
+    full_pkg_string = "-".join((name, installed[2:]))
+    with patch.object(yumpkg, "list_pkgs", list_pkgs_mock), patch(
+        "salt.utils.systemd.has_scope", MagicMock(return_value=False)
+    ), patch.dict(yumpkg.__salt__, salt_mock):
+
+        with patch.dict(yumpkg.__grains__, {"os": "CentOS", "osrelease": 7}):
+            expected = ["yum", "-y", "remove", full_pkg_string + "." + arch]
+            yumpkg.remove(name)
+            call = cmd_mock.mock_calls[0][1][0]
+            assert call == expected, call
+
+
+def test_remove_with_wildcard():
+    """
+    Tests that we properly identify a version containing an epoch for
+    deinstallation.
+
+    You can deinstall pkgs only without the epoch if no arch is provided:
+
+    .. code-block:: bash
+
+        yum remove foo*
+
+        yum remove pkgs='[{"foo*": "8:3.8.12-4.n.el7"}]'
+    """
+    name = "foobarpkg"
+    installed = "8:3.8.12-4.n.el7"
+    list_pkgs_mock = MagicMock(
+        side_effect=lambda **kwargs: {
+            name: [installed] if kwargs.get("versions_as_list", False) else installed
+        }
+    )
+    cmd_mock = MagicMock(
+        return_value={"pid": 12345, "retcode": 0, "stdout": "", "stderr": ""}
+    )
+    salt_mock = {
+        "cmd.run_all": cmd_mock,
+        "lowpkg.version_cmp": rpm.version_cmp,
+        "pkg_resource.parse_targets": MagicMock(
+            return_value=({name: installed}, "repository")
+        ),
+    }
+    full_pkg_string = "-".join((name, installed[2:]))
+    with patch.object(yumpkg, "list_pkgs", list_pkgs_mock), patch(
+        "salt.utils.systemd.has_scope", MagicMock(return_value=False)
+    ), patch.dict(yumpkg.__salt__, salt_mock):
+
+        with patch.dict(yumpkg.__grains__, {"os": "CentOS", "osrelease": 7}):
+            expected = ["yum", "-y", "remove", full_pkg_string]
+            yumpkg.remove("foo*")
+            call = cmd_mock.mock_calls[0][1][0]
+            assert call == expected, call
+
+            expected = ["yum", "-y", "remove", full_pkg_string]
+            yumpkg.remove(pkgs=[{"foo*": "8:3.8.12-4.n.el7"}])
+            call = cmd_mock.mock_calls[0][1][0]
+            assert call == expected, call
+
+
 def test_install_with_epoch():
     """
     Tests that we properly identify a version containing an epoch as an
@@ -1683,6 +1815,48 @@ def test_get_repo_with_non_existent_repo(list_repos_var):
     assert ret == expected, ret
 
 
+def test_pkg_update_dnf():
+    """
+    Tests that the proper CLI options are added when obsoletes=False
+    """
+    name = "foo"
+    old = "1.2.2-1.fc31"
+    new = "1.2.3-1.fc31"
+    cmd_mock = MagicMock(return_value={"retcode": 0})
+    list_pkgs_mock = MagicMock(side_effect=[{name: old}, {name: new}])
+    parse_targets_mock = MagicMock(return_value=({"foo": None}, "repository"))
+    with patch.dict(
+        yumpkg.__salt__,
+        {"cmd.run_all": cmd_mock, "pkg_resource.parse_targets": parse_targets_mock},
+    ), patch.object(yumpkg, "refresh_db", MagicMock()), patch.object(
+        yumpkg, "list_pkgs", list_pkgs_mock
+    ), patch.object(
+        yumpkg, "_yum", MagicMock(return_value="dnf")
+    ), patch(
+        "salt.utils.systemd.has_scope", MagicMock(return_value=False)
+    ):
+        ret = yumpkg.update(name, setopt="obsoletes=0,plugins=0")
+        expected = {name: {"old": old, "new": new}}
+        assert ret == expected, ret
+
+        cmd_mock.assert_called_once_with(
+            [
+                "dnf",
+                "--quiet",
+                "-y",
+                "--setopt",
+                "plugins=0",
+                "--setopt",
+                "obsoletes=False",
+                "upgrade",
+                "foo",
+            ],
+            env={},
+            output_loglevel="trace",
+            python_shell=False,
+        )
+
+
 def test_call_yum_default():
     """
     Call default Yum/Dnf.
@@ -1747,3 +1921,36 @@ def test_call_yum_with_kwargs():
                 python_shell=True,
                 username="Darth Vader",
             )
+
+
+@pytest.mark.skipif(not salt.utils.systemd.booted(), reason="Requires systemd")
+@patch("salt.modules.yumpkg._yum", Mock(return_value="dnf"))
+def test_services_need_restart():
+    """
+    Test that dnf needs-restarting output is parsed and
+    salt.utils.systemd.pid_to_service is called as expected.
+    """
+    expected = ["firewalld", "salt-minion"]
+
+    dnf_mock = Mock(
+        return_value="123 : /usr/bin/firewalld\n456 : /usr/bin/salt-minion\n"
+    )
+    systemd_mock = Mock(side_effect=["firewalld", "salt-minion"])
+    with patch.dict(yumpkg.__salt__, {"cmd.run_stdout": dnf_mock}), patch(
+        "salt.utils.systemd.pid_to_service", systemd_mock
+    ):
+        assert sorted(yumpkg.services_need_restart()) == expected
+        systemd_mock.assert_has_calls([call("123"), call("456")])
+
+
+@patch("salt.modules.yumpkg._yum", Mock(return_value="dnf"))
+def test_services_need_restart_requires_systemd():
+    """Test that yumpkg.services_need_restart raises an error if systemd is unavailable."""
+    with patch("salt.utils.systemd.booted", Mock(return_value=False)):
+        pytest.raises(CommandExecutionError, yumpkg.services_need_restart)
+
+
+@patch("salt.modules.yumpkg._yum", Mock(return_value="yum"))
+def test_services_need_restart_requires_dnf():
+    """Test that yumpkg.services_need_restart raises an error if DNF is unavailable."""
+    pytest.raises(CommandExecutionError, yumpkg.services_need_restart)
