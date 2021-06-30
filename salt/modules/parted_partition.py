@@ -612,20 +612,17 @@ def rescue(device, start, end):
     return out
 
 
-def resize(device, minor, start, end):
+def resize(device, minor, end):
     """
     Resizes the partition with number <minor>.
-
-    The partition will start <start> from the beginning of the disk, and end
+    The partition will start from the current beginning of the disk, and end
     <end> from the beginning of the disk. resize never changes the minor number.
     Extended partitions can be resized, so long as the new extended partition
     completely contains all logical partitions.
-
+    <end> is the end-sector in megabytes
     CLI Example:
-
     .. code-block:: bash
-
-        salt '*' partition.resize /dev/sda 3 200 850
+        salt '*' partition.resize /dev/sda 3 850
     """
     _validate_device(device)
 
@@ -638,7 +635,7 @@ def resize(device, minor, start, end):
     _validate_partition_boundary(end)
 
     out = __salt__["cmd.run"](
-        "parted -m -s -- {} resize {} {} {}".format(device, minor, start, end)
+        "parted -m -s -- {} resize {} {}".format(device, minor, end)
     )
     return out.splitlines()
 
