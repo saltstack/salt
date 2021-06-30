@@ -9,9 +9,9 @@ import pytest
 import salt.config
 import salt.utils.yaml
 from salt.output import display_output
+from saltfactories.utils.tempfiles import temp_file
 from tests.support.case import ShellCase
 from tests.support.mixins import RUNTIME_VARS
-from tests.support.pytest.helpers import temp_state_file
 
 
 class OutputReturnTest(ShellCase):
@@ -137,7 +137,9 @@ class OutputReturnTest(ShellCase):
           module.run:
             - name: test.ping
         """
-        with temp_state_file("simple-ping.sls", simple_ping_sls):
+        with temp_file(
+            "simple-ping.sls", simple_ping_sls, RUNTIME_VARS.TMP_BASEENV_STATE_TREE
+        ):
             # Test basic highstate output. No frills.
             expected = [
                 "minion:",
