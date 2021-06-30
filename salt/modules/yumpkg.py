@@ -81,6 +81,7 @@ def __virtual__():
         "virtuozzo",
         "issabel pbx",
         "openeuler",
+        "alibaba cloud (aliyun)",
     )
 
     if os_family == "redhat" or os_grain in enabled:
