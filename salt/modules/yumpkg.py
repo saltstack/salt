@@ -19,7 +19,6 @@ Support for YUM/DNF
 
 import configparser
 import contextlib
-import copy
 import datetime
 import fnmatch
 import itertools
@@ -2107,7 +2106,7 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
     # real package names from the packages
     # which are currently installed.
     pkg_matches = {}
-    for pkg_param in copy.deepcopy(pkg_params):
+    for pkg_param in list(pkg_params):
         if "*" in pkg_param:
             pkg_matches = {
                 x: pkg_params[pkg_param] for x in old if fnmatch.fnmatch(x, pkg_param)

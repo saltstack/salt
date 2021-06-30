@@ -1924,7 +1924,6 @@ def test_call_yum_with_kwargs():
 
 
 @pytest.mark.skipif(not salt.utils.systemd.booted(), reason="Requires systemd")
-@patch("salt.modules.yumpkg._yum", Mock(return_value="dnf"))
 def test_services_need_restart():
     """
     Test that dnf needs-restarting output is parsed and
@@ -1936,21 +1935,22 @@ def test_services_need_restart():
         return_value="123 : /usr/bin/firewalld\n456 : /usr/bin/salt-minion\n"
     )
     systemd_mock = Mock(side_effect=["firewalld", "salt-minion"])
-    with patch.dict(yumpkg.__salt__, {"cmd.run_stdout": dnf_mock}), patch(
-        "salt.utils.systemd.pid_to_service", systemd_mock
-    ):
-        assert sorted(yumpkg.services_need_restart()) == expected
-        systemd_mock.assert_has_calls([call("123"), call("456")])
+    with patch("salt.modules.yumpkg._yum", Mock(return_value="dnf")):
+        with patch.dict(yumpkg.__salt__, {"cmd.run_stdout": dnf_mock}), patch(
+            "salt.utils.systemd.pid_to_service", systemd_mock
+        ):
+            assert sorted(yumpkg.services_need_restart()) == expected
+            systemd_mock.assert_has_calls([call("123"), call("456")])
 
 
-@patch("salt.modules.yumpkg._yum", Mock(return_value="dnf"))
 def test_services_need_restart_requires_systemd():
     """Test that yumpkg.services_need_restart raises an error if systemd is unavailable."""
-    with patch("salt.utils.systemd.booted", Mock(return_value=False)):
-        pytest.raises(CommandExecutionError, yumpkg.services_need_restart)
+    with patch("salt.modules.yumpkg._yum", Mock(return_value="dnf")):
+        with patch("salt.utils.systemd.booted", Mock(return_value=False)):
+            pytest.raises(CommandExecutionError, yumpkg.services_need_restart)
 
 
-@patch("salt.modules.yumpkg._yum", Mock(return_value="yum"))
 def test_services_need_restart_requires_dnf():
     """Test that yumpkg.services_need_restart raises an error if DNF is unavailable."""
-    pytest.raises(CommandExecutionError, yumpkg.services_need_restart)
+    with patch("salt.modules.yumpkg._yum", Mock(return_value="yum")):
+        pytest.raises(CommandExecutionError, yumpkg.services_need_restart)
