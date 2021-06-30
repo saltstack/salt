@@ -78,7 +78,7 @@ def _get_top_file_envs():
     try:
         return __context__["saltutil._top_file_envs"]
     except KeyError:
-        with salt.state.HighState(__opts__, initial_pillar=__pillar__.value()) as _st:
+        with salt.state.HighState(__opts__, initial_pillar=__pillar__.value()) as st_:
             try:
                 top = st_.get_top()
                 if top:
