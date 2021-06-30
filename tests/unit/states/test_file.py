@@ -1710,7 +1710,11 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                             with patch.object(os.path, "isdir", mock_t):
                                 self.assertDictEqual(
                                     filestate.directory(
-                                        name, user=user, recurse=recurse, group=group, children_only=True,
+                                        name,
+                                        user=user,
+                                        recurse=recurse,
+                                        group=group,
+                                        children_only=True,
                                     ),
                                     ret,
                                 )
