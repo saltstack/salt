@@ -1714,7 +1714,6 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                         user=user,
                                         recurse=recurse,
                                         group=group,
-                                        children_only=True,
                                     ),
                                     ret,
                                 )
