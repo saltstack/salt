@@ -1513,8 +1513,8 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         name = "/etc/testdir"
         user = "salt"
         group = "saltstack"
-        # if salt.utils.platform.is_windows():
-        #     name = name.replace("/", "\\")
+        if salt.utils.platform.is_windows():
+            name = name.replace("/", "\\")
 
         ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
@@ -1710,7 +1710,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                             with patch.object(os.path, "isdir", mock_t):
                                 self.assertDictEqual(
                                     filestate.directory(
-                                        name, user=user, recurse=recurse, group=group
+                                        name, user=user, recurse=recurse, group=group, children_only=True,
                                     ),
                                     ret,
                                 )
@@ -1739,12 +1739,12 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                         }
 
                         if salt.utils.platform.is_windows():
-                            _mock_perms = MagicMock(return_value=check_perms_ret)
+                            mock_perms = MagicMock(return_value=check_perms_ret)
                         else:
-                            _mock_perms = MagicMock(return_value=(check_perms_ret, ""))
+                            mock_perms = MagicMock(return_value=(check_perms_ret, ""))
                         with patch.object(os.path, "isdir", mock_t):
                             with patch.dict(
-                                filestate.__salt__, {"file.check_perms": _mock_perms}
+                                filestate.__salt__, {"file.check_perms": mock_perms}
                             ):
                                 self.assertDictEqual(
                                     filestate.directory(name, user=user, group=group),
