@@ -1510,7 +1510,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         """
         Test to ensure that a named directory is present and has the right perms
         """
-        name = RUNTIME_VARS.TMP
+        name = os.path.join(RUNTIME_VARS.TMP, "testdir")
         user = "salt"
         group = "saltstack"
 
@@ -1706,7 +1706,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                             with patch.object(os.path, "isdir", mock_t):
                                 self.assertDictEqual(
                                     filestate.directory(
-                                        name, user=user, recurse=recurse, group=group,
+                                        name, user=user, recurse=recurse, group=group
                                     ),
                                     ret,
                                 )
