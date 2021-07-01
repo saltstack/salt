@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Management of the GPG keychains
 ===============================
@@ -6,12 +5,8 @@ Management of the GPG keychains
 .. versionadded:: 2016.3.0
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
-
-# Import 3rd-party libs
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -38,30 +33,29 @@ def present(
     name, keys=None, user=None, keyserver=None, gnupghome=None, trust=None, **kwargs
 ):
     """
-    Ensure GPG public key is present in keychain
+    Ensure GPG public key is present in keychain.
 
     name
-        The unique name or keyid for the GPG public key.
+        The unique name or keyid for the GPG public key
+        if `keys` is not used.
 
     keys
         The keyId or keyIds to add to the GPG keychain.
 
     user
-        Add GPG keys to the specified user's keychain
+        Add GPG keys to the specified user's keychain.
 
     keyserver
         The keyserver to retrieve the keys from.
 
     gnupghome
-        Override GNUPG Home directory
+        Override GNUPG Home directory.
 
     trust
         Trust level for the key in the keychain,
         ignored by default.  Valid trust levels:
         expired, unknown, not_trusted, marginally,
         fully, ultimately
-
-
     """
 
     ret = {"name": name, "result": True, "changes": {}, "comment": []}
@@ -77,7 +71,7 @@ def present(
     if not keys:
         keys = name
 
-    if isinstance(keys, six.string_types):
+    if isinstance(keys, str):
         keys = [keys]
 
     for key in keys:
@@ -94,18 +88,18 @@ def present(
                             ret["comment"].append(result["comment"])
                         else:
                             ret["comment"].append(
-                                "Set trust level for {0} to {1}".format(key, trust)
+                                "Set trust level for {} to {}".format(key, trust)
                             )
                     else:
                         ret["comment"].append(
-                            "GPG Public Key {0} already in correct trust state".format(
+                            "GPG Public Key {} already in correct trust state".format(
                                 key
                             )
                         )
                 else:
-                    ret["comment"].append("Invalid trust level {0}".format(trust))
+                    ret["comment"].append("Invalid trust level {}".format(trust))
 
-            ret["comment"].append("GPG Public Key {0} already in keychain ".format(key))
+            ret["comment"].append("GPG Public Key {} already in keychain ".format(key))
 
         else:
             result = __salt__["gpg.receive_keys"](keyserver, key, user, gnupghome,)
@@ -113,7 +107,7 @@ def present(
                 ret["result"] = result["result"]
                 ret["comment"].append(result["comment"])
             else:
-                ret["comment"].append("Adding {0} to GPG keychain".format(name))
+                ret["comment"].append("Adding {} to GPG keychain".format(key))
 
             if trust:
                 if trust in _VALID_TRUST_VALUES:
@@ -125,10 +119,10 @@ def present(
                         ret["comment"].append(result["comment"])
                     else:
                         ret["comment"].append(
-                            "Set trust level for {0} to {1}".format(key, trust)
+                            "Set trust level for {} to {}".format(key, trust)
                         )
                 else:
-                    ret["comment"].append("Invalid trust level {0}".format(trust))
+                    ret["comment"].append("Invalid trust level {}".format(trust))
 
     ret["comment"] = "\n".join(ret["comment"])
     return ret
@@ -136,13 +130,14 @@ def present(
 
 def absent(name, keys=None, user=None, gnupghome=None, **kwargs):
     """
-    Ensure GPG public key is absent in keychain
+    Ensure GPG public key is absent in keychain.
 
     name
-        The unique name or keyid for the GPG public key.
+        The unique name or keyid for the GPG public key
+        if `keys` is not used.
 
     keys
-        The keyId or keyIds to add to the GPG keychain.
+        The keyId or keyIds to remove from the GPG keychain.
 
     user
         Remove GPG keys from the specified user's keychain
@@ -154,7 +149,7 @@ def absent(name, keys=None, user=None, gnupghome=None, **kwargs):
 
     ret = {"name": name, "result": True, "changes": {}, "comment": []}
 
-    _current_keys = __salt__["gpg.list_keys"]()
+    _current_keys = __salt__["gpg.list_keys"](user=user, gnupghome=gnupghome)
 
     current_keys = []
     for key in _current_keys:
@@ -163,7 +158,7 @@ def absent(name, keys=None, user=None, gnupghome=None, **kwargs):
     if not keys:
         keys = name
 
-    if isinstance(keys, six.string_types):
+    if isinstance(keys, str):
         keys = [keys]
 
     for key in keys:
@@ -173,8 +168,8 @@ def absent(name, keys=None, user=None, gnupghome=None, **kwargs):
                 ret["result"] = result["result"]
                 ret["comment"].append(result["comment"])
             else:
-                ret["comment"].append("Deleting {0} from GPG keychain".format(name))
+                ret["comment"].append("Deleting {} from GPG keychain".format(key))
         else:
-            ret["comment"].append("{0} not found in GPG keychain".format(name))
+            ret["comment"].append("{} not found in GPG keychain".format(key))
     ret["comment"] = "\n".join(ret["comment"])
     return ret
