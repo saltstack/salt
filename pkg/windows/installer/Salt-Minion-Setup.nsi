@@ -955,9 +955,24 @@ Section -Post
     nsExec::Exec "$INSTDIR\bin\ssm.exe set salt-minion AppStopMethodWindow 2000"
     nsExec::Exec "$INSTDIR\bin\ssm.exe set salt-minion AppRestartDelay 60000"
 
-    ${IfNot} $ConfigType == "Existing Config"  # If not using Existing Config
-        Call updateMinionConfig
-    ${EndIf}
+    # There is a default minion config laid down in the $INSTDIR directory
+    ${Switch} $ConfigType
+        ${Case} "Existing Config"
+            # If this is an Existing Config, we just remove it
+            RMDir /r "$INSTDIR\conf"
+            ${Break}
+        ${Case} "Custom Config"
+            # If this is a Custom Config, we remove it and update the custom config
+            RMDir /r "$INSTDIR\conf"
+            Call updateMinionConfig
+            ${Break}
+        ${Case} "Default Config"
+            # If this is the default config, we move it and update it
+            StrCpy $switch_overwrite 1
+            !insertmacro MoveFolder "$INSTDIR\conf" "$APPDATA\Salt Project\Salt\conf" "*.*"
+            Call updateMinionConfig
+            ${Break}
+    ${EndSwitch}
 
     # Add $INSTDIR in the Path
     EnVar::SetHKLM
