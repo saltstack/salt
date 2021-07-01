@@ -96,7 +96,7 @@ def configure_loader_modules(roster_domain, salt_master_factory, tmp_path):
                 "renderer": "jinja|yaml",
                 "renderer_blacklist": [],
                 "renderer_whitelist": [],
-                "roster_dir": tmp_path,
+                "roster_dir": str(tmp_path),
                 "roster_domain": roster_domain,
             },
             "__runner__": runner,
