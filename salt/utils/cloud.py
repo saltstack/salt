@@ -124,6 +124,9 @@ SSH_PASSWORD_PROMP_SUDO_RE = re.compile(
     r"(?:.*sudo)(?:.*)[Pp]assword(?: for .*)?:", re.M
 )
 
+SERVER_ALIVE_INTERVAL = 10
+SERVER_ALIVE_COUNT_MAX = 3
+
 # Get logging started
 log = logging.getLogger(__name__)
 
@@ -183,9 +186,16 @@ def __ssh_gateway_arguments(kwargs):
         ssh_gateway_user = kwargs.get("ssh_gateway_user", "root")
 
         # Setup ProxyCommand
-        extended_arguments = '-oProxyCommand="ssh {} {} {} {} {}@{} -p {} {}"'.format(
+        extended_arguments = '-oProxyCommand="ssh {} {} {} {} {} {} {}@{} -p {} {}"'.format(
             # Don't add new hosts to the host key database
             "-oStrictHostKeyChecking=no",
+            # make sure ssh can time out on connection lose
+            "-oServerAliveInterval={}".format(
+                kwargs.get("server_alive_interval", SERVER_ALIVE_INTERVAL)
+            ),
+            "-oServerAliveCountMax={}".format(
+                kwargs.get("server_alive_count_max", SERVER_ALIVE_COUNT_MAX)
+            ),
             # Set hosts key database path to /dev/null, i.e., non-existing
             "-oUserKnownHostsFile=/dev/null",
             # Don't re-use the SSH connection. Less failures.
