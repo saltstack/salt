@@ -1,0 +1,1 @@
+Stop SSH from hanging if connection is lost. Also added args to customized grace period.
