@@ -52,6 +52,8 @@ import os
 
 import salt.loader
 import salt.template
+import salt.utils.verify
+from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 
@@ -66,10 +68,12 @@ def targets(tgt, tgt_type="glob", **kwargs):
     raw = dict.fromkeys(os.listdir(roster_dir), "")
     log.debug("Filtering %d minions in %s", len(raw), roster_dir)
     matched_raw = __utils__["roster_matcher.targets"](raw, tgt, tgt_type, "ipv4")
-    rendered = {
-        minion_id: _render(os.path.join(roster_dir, minion_id), **kwargs)
-        for minion_id in matched_raw
-    }
+    rendered = {}
+    for minion_id in matched_raw:
+        target_file = salt.utils.verify.clean_path(roster_dir, minion_id)
+        if not os.path.exists(target_file):
+            raise CommandExecutionError("{} does not exist".format(target_file))
+        rendered[minion_id] = _render(target_file, **kwargs)
     pruned_rendered = {id_: data for id_, data in rendered.items() if data}
     log.debug(
         "Matched %d minions with tgt=%s and tgt_type=%s."
