@@ -4671,7 +4671,7 @@ class HighState(BaseHighState):
             return None
 
     def destroy(self):
-        self.fileclient.destroy()
+        self.client.destroy()
 
     def __enter__(self):
         return self
