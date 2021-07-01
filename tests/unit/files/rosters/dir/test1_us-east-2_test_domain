@@ -1,3 +1,0 @@
-#!jinja|yaml
-port: 2222
-user: george
