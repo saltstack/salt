@@ -1706,10 +1706,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                             with patch.object(os.path, "isdir", mock_t):
                                 self.assertDictEqual(
                                     filestate.directory(
-                                        name,
-                                        user=user,
-                                        recurse=recurse,
-                                        group=group,
+                                        name, user=user, recurse=recurse, group=group,
                                     ),
                                     ret,
                                 )
@@ -1760,21 +1757,16 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                             }
                         )
                         with patch.object(os.path, "isdir", mock_t):
-                            print("*"*10)
-                            print(ret)
-                            call = filestate.directory(name,user=user,dir_mode=700,recurse=recurse,group=group,children_only=True)
-                            print(call)
-                            print("*"*10)
-                            # self.assertDictEqual(
-                            #     filestate.directory(
-                            #         name,
-                            #         user=user,
-                            #         dir_mode=700,
-                            #         recurse=recurse,
-                            #         group=group,
-                            #         children_only=True,
-                            #     ),
-                            #     ret,
+                            self.assertDictEqual(
+                                filestate.directory(
+                                    name,
+                                    user=user,
+                                    dir_mode=700,
+                                    recurse=recurse,
+                                    group=group,
+                                    children_only=True,
+                                ),
+                                ret,
 
     # 'recurse' function tests: 1
 
