@@ -3828,7 +3828,7 @@ def directory(
 
     # issue 32707: reflect children_only selection in comments
     if not ret["comment"]:
-        if children_only:
+        if children_only and not salt.utils.platform.is_windows():
             ret["comment"] = "Directory {}/* updated".format(name)
         else:
             if ret["changes"]:
