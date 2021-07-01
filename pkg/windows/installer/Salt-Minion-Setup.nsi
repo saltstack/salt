@@ -427,10 +427,10 @@ Function pageMinionConfig_Leave
             # Make sure the target directory exists
             nsExec::Exec "md $APPDATA\Salt Project\Salt"
             # Take ownership of the C:\salt directory
-            nsExec::Exec "takeown /F C:\salt /R"
+            nsExec::Exec "takeown /F $RootDir /R"
             # Move the C:\salt directory to the new location
             StrCpy $switch_overwrite 0
-            !insertmacro MoveFolder "C:\salt" "$APPDATA\Salt Project\Salt" "*.*"
+            !insertmacro MoveFolder "$RootDir" "$APPDATA\Salt Project\Salt" "*.*"
             # Make RootDir the new location
             StrCpy $RootDir "$APPDATA\Salt Project\Salt"
 
@@ -1074,6 +1074,11 @@ Function ${un}uninstallSalt
     DeleteRegKey HKLM "SOFTWARE\Salt Project"
     SetRegView 32  # Set it back to the 32 bit portion (default)
 
+    # SystemDrive is not a built in NSIS constant, so we need to get it from
+    # the environment variables
+    ReadEnvStr $0 "SystemDrive"  # Get the SystemDrive env var
+    StrCpy $SysDrive "$0\"
+
     # Automatically close when finished
     SetAutoClose true
 
@@ -1089,12 +1094,8 @@ Function ${un}uninstallSalt
                 /SD IDNO IDNO finished
         ${EndIf}
 
-        # Remove INSTDIR
-        # Make sure you're not removing Program Files
-        ${If} $INSTDIR != '$ProgramFiles'
-        ${AndIf} $INSTDIR != '$ProgramFiles64'
-            RMDir /r "$INSTDIR"
-        ${EndIf}
+        SetOutPath "$SysDrive"  # Can't remove CWD
+        RMDir /r "$INSTDIR"
 
     ${Else}
 
@@ -1106,11 +1107,6 @@ Function ${un}uninstallSalt
         # We can always remove the Installation Directory on New Method Installs
         # because it only contains binary data
 
-        # SystemDrive is not a built in NSIS constant, so we need to get it from
-        # the environment variables
-        ReadEnvStr $0 "SystemDrive"  # Get the SystemDrive env var
-        StrCpy $SysDrive "$0\"
-
         # Remove INSTDIR
         # Make sure you're not removing important system directory such as
         # Program Files, C:\Windows, or C:
@@ -1118,6 +1114,7 @@ Function ${un}uninstallSalt
         ${AndIf} $INSTDIR != $ProgramFiles64
         ${AndIf} $INSTDIR != $SysDrive
         ${AndIf} $INSTDIR != $WinDir
+            SetOutPath "$SysDrive"  # Can't remove CWD
             RMDir /r $INSTDIR
         ${EndIf}
 
@@ -1129,6 +1126,7 @@ Function ${un}uninstallSalt
         ${GetParent} $INSTDIR $0  # Get parent directory (Salt Project)
         ${If} $0 == "$ProgramFiles\Salt Project" # Make sure it's not ProgramFiles
         ${OrIf} $0 == "$ProgramFiles64\Salt Project" # Make sure it's not Program Files (x86)
+            SetOutPath "$SysDrive"  # Can't remove CWD
             RMDir /r $0
         ${EndIf}
 
@@ -1145,6 +1143,7 @@ Function ${un}uninstallSalt
         # It is not user selectable
         ${GetParent} $RootDir $0  # Get parent directory
         ${If} $0 == "$APPDATA\Salt Project"  # Make sure it's not ProgramData
+            SetOutPath "$SysDrive"  # Can't remove CWD
             RMDir /r $0
         ${EndIf}
 
