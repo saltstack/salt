@@ -658,8 +658,12 @@ Section "MainSection" SEC01
 
     SetOutPath "$INSTDIR\"
     SetOverwrite off
-    CreateDirectory $RootDir\conf\pki\minion
-    CreateDirectory $RootDir\conf\minion.d
+    CreateDirectory "$RootDir\conf\pki\minion"
+    CreateDirectory "$RootDir\conf\minion.d"
+    CreateDirectory "$RootDir\var\cache\salt\minion\extmods\grains"
+    CreateDirectory "$RootDir\var\cache\salt\minion\proc"
+    CreateDirectory "$RootDir\var\log\salt\minion"
+    CreateDirectory "$RootDir\var\run"
     File /r "..\buildenv\"
     nsExec::Exec 'icacls $RootDir /inheritance:r /grant:r "*S-1-5-32-544":(OI)(CI)F /grant:r "*S-1-5-18":(OI)(CI)F'
 
