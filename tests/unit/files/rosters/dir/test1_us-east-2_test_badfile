@@ -1,6 +1,0 @@
-#!jinja|yaml
-host: 127.0.0.2
-port: 22
-THIS FILE IS NOT WELL FORMED YAML
-sudo: true
-user: scoundrel
