@@ -103,6 +103,13 @@ class FirewalldTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(firewalld, "__firewall_cmd", return_value=firewall_cmd_ret):
             self.assertEqual(firewalld.list_zones(), ret)
 
+    def test_list_zones_empty_response(self):
+        """
+        Test list_zones if firewall-cmd call returns nothing
+        """
+        with patch.object(firewalld, "__firewall_cmd", return_value=""):
+            self.assertEqual(firewalld.list_zones(), {})
+
     def test_get_zones(self):
         """
         Test for Print predefined zones
@@ -232,6 +239,13 @@ class FirewalldTestCase(TestCase, LoaderModuleMockMixin):
         }
         with patch.object(firewalld, "__firewall_cmd", return_value=firewall_cmd_ret):
             self.assertEqual(firewalld.list_all(), ret)
+
+    def test_list_all_empty_response(self):
+        """
+        Test list_all if firewall-cmd call returns nothing
+        """
+        with patch.object(firewalld, "__firewall_cmd", return_value=""):
+            self.assertEqual(firewalld.list_all(), {})
 
     def test_list_services(self):
         """
