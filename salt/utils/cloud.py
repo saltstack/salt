@@ -701,7 +701,14 @@ def wait_for_fun(fun, timeout=900, **kwargs):
             return False
 
 
-def wait_for_port(host, port=22, timeout=900, gateway=None):
+def wait_for_port(
+    host,
+    port=22,
+    timeout=900,
+    gateway=None,
+    server_alive_interval=SERVER_ALIVE_INTERVAL,
+    server_alive_count_max=SERVER_ALIVE_COUNT_MAX,
+):
     """
     Wait until a connection to the specified port can be made on a specified
     host. This is usually port 22 (for SSH), but in the case of Windows
@@ -775,6 +782,9 @@ def wait_for_port(host, port=22, timeout=900, gateway=None):
         [
             # Don't add new hosts to the host key database
             "-oStrictHostKeyChecking=no",
+            # make sure ssh can time out on connection lose
+            "-oServerAliveInterval={}".format(server_alive_interval),
+            "-oServerAliveCountMax={}".format(server_alive_count_max),
             # Set hosts key database path to /dev/null, i.e., non-existing
             "-oUserKnownHostsFile=/dev/null",
             # Don't re-use the SSH connection. Less failures.
@@ -2155,6 +2165,13 @@ def scp_file(dest_path, contents=None, kwargs=None, local_file=None):
         ssh_args = [
             # Don't add new hosts to the host key database
             "-oStrictHostKeyChecking=no",
+            # make sure ssh can time out on connection lose
+            "-oServerAliveInterval={}".format(
+                kwargs.get("server_alive_interval", SERVER_ALIVE_INTERVAL)
+            ),
+            "-oServerAliveCountMax={}".format(
+                kwargs.get("server_alive_count_max", SERVER_ALIVE_COUNT_MAX)
+            ),
             # Set hosts key database path to /dev/null, i.e., non-existing
             "-oUserKnownHostsFile=/dev/null",
             # Don't re-use the SSH connection. Less failures.
@@ -2272,6 +2289,13 @@ def sftp_file(dest_path, contents=None, kwargs=None, local_file=None):
         ssh_args = [
             # Don't add new hosts to the host key database
             "-oStrictHostKeyChecking=no",
+            # make sure ssh can time out on connection lose
+            "-oServerAliveInterval={}".format(
+                kwargs.get("server_alive_interval", SERVER_ALIVE_INTERVAL)
+            ),
+            "-oServerAliveCountMax={}".format(
+                kwargs.get("server_alive_count_max", SERVER_ALIVE_COUNT_MAX)
+            ),
             # Set hosts key database path to /dev/null, i.e., non-existing
             "-oUserKnownHostsFile=/dev/null",
             # Don't re-use the SSH connection. Less failures.
