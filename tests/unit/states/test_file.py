@@ -1767,6 +1767,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                     children_only=True,
                                 ),
                                 ret,
+                            )
 
     # 'recurse' function tests: 1
 
