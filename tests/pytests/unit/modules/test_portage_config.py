@@ -10,7 +10,6 @@ import salt.utils.files
 from tests.support.mock import patch
 from tests.support.runtests import RUNTIME_VARS
 
-
 pytest.importorskip("portage", reason="System is not gentoo/funtoo.")
 
 
