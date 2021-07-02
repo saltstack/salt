@@ -81,13 +81,15 @@ def item_show(
         cmd += [item_type]
 
     # New implementions use config instead of show. This resolves that issue.
-    if new_commands and item != "config":
+    if new_commands and (
+        item != "config" and item != "constraint" and item != "property"
+    ):
         if show == "show":
             show = "config"
         elif isinstance(show, (list, tuple)):
-            for i in enumerate(show):
-                if show[i] == "show":
-                    show[i] = "config"
+            for index, value in enumerate(show):
+                if show[index] == "show":
+                    show[index] = "config"
 
     if isinstance(show, str):
         cmd += [show]

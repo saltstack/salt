@@ -237,24 +237,30 @@ def test_item_show_set_itemid(ver_cmp_ret, old_ver, test_data):
     assert mock_cmd.call_args_list[0][0][0] == exp_cmd
 
 
-@pytest.mark.parametrize("ver_cmp_ret,old_ver", [(1, False), (0, True)])
-def test_item_show_set_itemid_itemtype(ver_cmp_ret, old_ver, test_data):
+def test_item_show_set_itemid_config():
     """
     Test for item show
     """
-    exp_cmd = ["pcs", "constraint", "item_type"]
-    if old_ver:
-        exp_cmd.extend(["show", "item_id", "--full"])
-    else:
-        exp_cmd.extend(["config", "item_id", "--full"])
+    exp_cmd = ["pcs", "config", "show", "item_id"]
+    mock_cmd = MagicMock()
+    patch_salt = patch.dict(
+        pcs.__salt__, {"cmd.run_all": mock_cmd, "pkg.version_cmp": MagicMock(1)}
+    )
+
+    with patch_salt:
+        pcs.item_show("config", item_id="item_id", item_type="item_type")
+    assert mock_cmd.call_args_list[0][0][0] == exp_cmd
+
+
+def test_item_show_set_itemid_constraint():
+    """
+    Test for item show
+    """
+    exp_cmd = ["pcs", "constraint", "item_type", "show", "item_id", "--full"]
 
     mock_cmd = MagicMock()
     patch_salt = patch.dict(
-        pcs.__salt__,
-        {
-            "cmd.run_all": mock_cmd,
-            "pkg.version_cmp": MagicMock(return_value=ver_cmp_ret),
-        },
+        pcs.__salt__, {"cmd.run_all": mock_cmd, "pkg.version_cmp": MagicMock(1)},
     )
 
     with patch_salt:
