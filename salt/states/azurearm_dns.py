@@ -587,7 +587,7 @@ def record_set_present(
                     for val in local:
                         for key in val:
                             local_val = val[key]
-                            remote_val = val.get(key)
+                            remote_val = remote.get(key)
                             if isinstance(local_val, str):
                                 local_val = local_val.lower()
                             if isinstance(remote_val, str):
