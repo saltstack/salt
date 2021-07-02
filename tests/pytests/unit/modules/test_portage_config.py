@@ -10,21 +10,14 @@ import salt.utils.files
 from tests.support.mock import patch
 from tests.support.runtests import RUNTIME_VARS
 
-try:
-    import portage  # pylint: disable=unused-import
 
-    HAS_PORTAGE = True
-
-except ImportError:
-    HAS_PORTAGE = False
+pytest.importorskip("portage", reason="System is not gentoo/funtoo.")
 
 
-@pytest.fixture
 def setup_loader_modules():
     return {}
 
 
-@pytest.mark.skipif(not HAS_PORTAGE, reason="Portage not available on this system.")
 def test_get_config_file_wildcards():
     pairs = [
         ("*/*::repo", "/etc/portage/package.mask/repo"),
@@ -38,7 +31,6 @@ def test_get_config_file_wildcards():
         assert portage_config._get_config_file("mask", atom) == expected
 
 
-@pytest.mark.skipif(not HAS_PORTAGE, reason="Portage not available on this system.")
 def test_enforce_nice_config():
     atoms = [
         ("*/*::repo", "repo"),
