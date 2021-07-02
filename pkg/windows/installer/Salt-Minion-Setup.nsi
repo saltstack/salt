@@ -1063,13 +1063,16 @@ Function getExistingMinionConfig
         # We need to verify the owner of an existing config
         # Salt will set the owner of the C:\salt directory to the Administrators
         # Group (S-1-5-32-544). An unprivileged user cannot cannot set the owner
-        # by default. If the owner is Administrators, then we will trust it.
-        # Otherwise,
+        # by default. If the owner is the "Administrators" group, then we will
+        # trust it. Otherwise, we will give them the option to abort or backup
+        # the untrusted directory and continue.
         AccessControl::GetFileOwner /SID "$INSTDIR\conf"
         Pop $0
+        # Use well-known sid S-1-5-32-544 for the Administrators Group
         StrCmp $0 "S-1-5-32-544" correct_owner
         MessageBox MB_YESNO "Insecure config found at $INSTDIR\conf. If you \
-            continue, the config directory will be renamed to $INSTDIR\conf.insecure. \
+            continue, the config directory will be renamed to \
+            $INSTDIR\conf.insecure and the default config will be used. \
             Continue?" /SD IDYES IDYES insecure_config
             Abort
 
