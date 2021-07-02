@@ -9,9 +9,7 @@ def combine_comments(comments):
     single line of text containing all of the comments.
     """
     if isinstance(comments, list):
-        for idx, val in enumerate(comments):
-            if not isinstance(val, str):
-                comments[idx] = str(val)
+        comments = [c if isinstance(c, str) else str(c) for c in comments]
     else:
         if not isinstance(comments, str):
             comments = [str(comments)]

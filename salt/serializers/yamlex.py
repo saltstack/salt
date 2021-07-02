@@ -125,7 +125,7 @@ BaseLoader = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
 # CSafeDumper causes repr errors in python3, so use the pure Python one
 try:
     # Depending on how PyYAML was built, yaml.SafeDumper may actually be
-    # yaml.cyaml.CSafeDumper (i.e. the C dumper instead of pure Python).
+    # yaml.dumper.SafeDumper.
     BaseDumper = yaml.dumper.SafeDumper
 except AttributeError:
     # Here just in case, but yaml.dumper.SafeDumper should always exist

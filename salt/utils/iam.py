@@ -48,6 +48,4 @@ def _convert_key_to_str(key):
     """
     Stolen completely from boto.providers
     """
-    if isinstance(key, str):
-        return key.encode()
     return key

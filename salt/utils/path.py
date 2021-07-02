@@ -239,10 +239,7 @@ def join(*parts, **kwargs):
     The "use_posixpath" kwarg can be be used to force joining using poxixpath,
     which is useful for Salt fileserver paths on Windows masters.
     """
-    new_parts = []
-    for part in parts:
-        new_parts.append(salt.utils.stringutils.to_str(part))
-    parts = new_parts
+    parts = [salt.utils.stringutils.to_str(part) for part in parts]
 
     kwargs = salt.utils.args.clean_kwargs(**kwargs)
     use_posixpath = kwargs.pop("use_posixpath", False)

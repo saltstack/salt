@@ -72,7 +72,7 @@ def _do_http(opts, profile="default"):
         auth = _auth(url=url, realm=realm, user=user, passwd=passwd)
         urllib.request.install_opener(auth)
 
-    url += "?{}".format(urllib.prase.urlencode(opts))
+    url += "?{}".format(urllib.parse.urlencode(opts))
 
     for line in urllib.request.urlopen(url, timeout=timeout).read().splitlines():
         splt = line.split("=", 1)

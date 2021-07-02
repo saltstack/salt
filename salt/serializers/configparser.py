@@ -80,8 +80,8 @@ def _read_dict(cp, dictionary):
     """
     for section, keys in dictionary.items():
         section = str(section)
-
-        cp.add_section(section)
+        if not _is_defaultsect(section):
+            cp.add_section(section)
 
         for key, value in keys.items():
             key = cp.optionxform(str(key))
