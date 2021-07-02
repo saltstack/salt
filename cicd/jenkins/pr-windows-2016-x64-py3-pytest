@@ -12,10 +12,8 @@ runTestSuite(
     nox_env_name: 'pytest-zeromq',
     nox_passthrough_opts: '',
     python_version: 'py3',
-    //splits: ['unit', 'integration'],
     testrun_timeout: 9,
     use_spot_instances: false,
-    //fast_slow_staged_testrun: true
 )
 
 // vim: ft=groovy
