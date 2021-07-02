@@ -10,7 +10,6 @@ import salt.utils.files
 from tests.support.mock import patch
 from tests.support.runtests import RUNTIME_VARS
 
-
 try:
     import portage  # pylint: disable=unused-import
 
@@ -86,7 +85,9 @@ def test_enforce_nice_config():
 
     for typ, additions in supported:
         for atom, file_name in atoms:
-            with salt.utils.files.fopen(base_path.format(typ) + "/" + file_name, "r") as fh:
+            with salt.utils.files.fopen(
+                base_path.format(typ) + "/" + file_name, "r"
+            ) as fh:
                 for line in fh:
                     for atom in line:
                         assert atom not in line
