@@ -830,7 +830,7 @@ class Cloud:
                 )
         return data
 
-    def image_list(self, lookup="all"):
+    def image_list(self, lookup="all", location=None):
         """
         Return a mapping of all image data for available providers
         """
@@ -860,7 +860,7 @@ class Cloud:
                 with salt.utils.context.func_globals_inject(
                     self.clouds[fun], __active_provider_name__=":".join([alias, driver])
                 ):
-                    data[alias][driver] = self.clouds[fun]()
+                    data[alias][driver] = self.clouds[fun](location=location)
             except Exception as err:  # pylint: disable=broad-except
                 log.error(
                     "Failed to get the output of '%s()': %s",

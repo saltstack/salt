@@ -416,7 +416,7 @@ def avail_locations(call=None):
     return ret
 
 
-def avail_images(call=None, location="local"):
+def avail_images(call=None, location=None):
     """
     Return a list of the images that are on the provider
 
@@ -431,6 +431,9 @@ def avail_images(call=None, location="local"):
             "The avail_images function must be called with "
             "-f or --function, or with the --list-images option"
         )
+
+    if location is None:
+        locations = "local"
 
     ret = {}
     for host_name, host_details in avail_locations().items():
