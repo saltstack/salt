@@ -312,11 +312,13 @@ def compare_list_of_dicts(old, new, convert_id_to_name=None):
         ret["comment"] = 'configuration dictionaries must contain the "name" key!'
         return ret
 
-    for idx,  val in enumerate(local_configs):
+    for idx, val in enumerate(local_configs):
         for key in val:
             local_val = val[key]
             if key in convert_id_to_name:
-                remote_val = remote_configs[idx].get(key, {}).get("id", "").split("/")[-1]
+                remote_val = (
+                    remote_configs[idx].get(key, {}).get("id", "").split("/")[-1]
+                )
             else:
                 remote_val = remote_configs[idx].get(key)
                 if isinstance(local_val, str):
