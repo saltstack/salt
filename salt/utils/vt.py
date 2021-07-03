@@ -531,6 +531,9 @@ class Terminal:
                     raise TerminalException("Could not open controlling tty, /dev/tty")
                 else:
                     os.close(tty_fd)
+
+            salt.utils.crypt.reinit_crypto()
+
             if preexec_fn is not None:
                 preexec_fn()
 
