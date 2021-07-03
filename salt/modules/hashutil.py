@@ -289,6 +289,8 @@ def github_signature(string, shared_secret, challenge_hmac):
     msg = string
     key = shared_secret
     hashtype, challenge = challenge_hmac.split("=")
+    if isinstance(msg, str):
+        msg = salt.utils.stringutils.to_bytes(msg)
     if isinstance(key, str):
         key = salt.utils.stringutils.to_bytes(key)
     hmac_hash = hmac.new(key, msg, getattr(hashlib, hashtype))
