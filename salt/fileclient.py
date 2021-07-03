@@ -756,7 +756,10 @@ class Client:
                 **get_kwargs
             )
             if "handle" not in query:
-                raise MinionError("Error: {} reading {}".format(query["error"], url))
+                redacted_url = salt.utils.url.redact_http_basic_auth(url)
+                raise MinionError(
+                    "Error: {} reading {}".format(query["error"], redacted_url)
+                )
             if no_cache:
                 if write_body[2]:
                     return "".join(result)

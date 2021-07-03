@@ -819,6 +819,7 @@ def get_source_sum(
         """
         DRY helper for reporting invalid source_hash input
         """
+        redacted_source_hash = salt.utils.url.redact_http_basic_auth(source_hash)
         raise CommandExecutionError(
             "Source hash {} format is invalid. The supported formats are: "
             "1) a hash, 2) an expression in the format <hash_type>=<hash>, or "

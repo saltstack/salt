@@ -1,7 +1,11 @@
 """
 Tests for the file state
 """
+import logging
+
 import pytest
+
+log = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="module")
@@ -194,3 +198,52 @@ def test_issue_50221(
         assert target_path.is_file()
         # The type of new line, ie, `\n` vs `\r\n` is not important
         assert target_path.read_text().replace("\r\n", "\n") == expected_content
+
+
+def test_issue_60203(
+    salt_master, salt_call_cli, tmp_path, salt_minion,
+):
+    target_path = tmp_path / "issue-60203-target.txt"
+    sls_name = "issue-60203"
+    sls_contents = """
+    credentials exposed via file:
+      file.managed:
+        - name: /tmp/test.tar.gz
+        - source: 'https://account:dontshowme@notahost.saltstack.io/files/test.tar.gz'
+        - source_hash: 'https://account:dontshowme@notahost.saltstack.io/files/test.tar.gz.sha256'
+    """
+    sls_tempfile = salt_master.state_tree.base.temp_file(
+        "{}.sls".format(sls_name), sls_contents
+    )
+    with sls_tempfile:
+        ret = salt_call_cli.run("state.apply", sls_name)
+        assert ret.exitcode == 1
+        assert ret.json
+        assert (
+            "file_|-credentials exposed via file_|-/tmp/test.tar.gz_|-managed"
+            in ret.json
+        )
+        assert (
+            "comment"
+            in ret.json[
+                "file_|-credentials exposed via file_|-/tmp/test.tar.gz_|-managed"
+            ]
+        )
+        assert (
+            "Unable to manage"
+            in ret.json[
+                "file_|-credentials exposed via file_|-/tmp/test.tar.gz_|-managed"
+            ]["comment"]
+        )
+        assert (
+            "<redacted>"
+            in ret.json[
+                "file_|-credentials exposed via file_|-/tmp/test.tar.gz_|-managed"
+            ]["comment"]
+        )
+        assert (
+            "dontshowme"
+            not in ret.json[
+                "file_|-credentials exposed via file_|-/tmp/test.tar.gz_|-managed"
+            ]["comment"]
+        )
