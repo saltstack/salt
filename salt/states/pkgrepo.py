@@ -91,7 +91,9 @@ import salt.utils.data
 import salt.utils.files
 import salt.utils.pkg.deb
 import salt.utils.pkg.rpm
+import salt.utils.stringutils
 import salt.utils.versions
+from difflib import unified_diff
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 
@@ -316,6 +318,9 @@ def managed(name, ppa=None, copr=None, **kwargs):
         ret["comment"] = "Repo management not implemented on this platform"
         return ret
 
+    if "refresh_db" in kwargs:
+        kwargs["refresh"] = kwargs.pop("refresh_db")
+
     if "key_url" in kwargs and ("keyid" in kwargs or "keyserver" in kwargs):
         ret["result"] = False
         ret["comment"] = (
@@ -498,8 +503,13 @@ def managed(name, ppa=None, copr=None, **kwargs):
             ret["changes"]["repo"] = name
         return ret
 
-    # empty file before configure
+    # Empty file before configure
     if kwargs.get("clean_file", False):
+        # Save the contents of the original file:
+        with salt.utils.files.fopen(kwargs["file"], "r") as f:
+            original_file = [
+                salt.utils.stringutils.to_unicode(line) for line in f.readlines()
+            ]
         with salt.utils.files.fopen(kwargs["file"], "w"):
             pass
 
@@ -532,6 +542,16 @@ def managed(name, ppa=None, copr=None, **kwargs):
     except Exception as exc:  # pylint: disable=broad-except
         ret["result"] = False
         ret["comment"] = "Failed to confirm config of repo '{}': {}".format(name, exc)
+
+    if kwargs.get("clean_file", False):
+        # Save the contents of the modified file:
+        with salt.utils.files.fopen(kwargs["file"], "r") as f:
+            modified_file = [
+                salt.utils.stringutils.to_unicode(line) for line in f.readlines()
+            ]
+        diff = "".join(unified_diff(original_file, modified_file, n=0))
+        #if diff:
+        #    ret["changes"] = {"diff": diff}
 
     # Clear cache of available packages, if present, since changes to the
     # repositories may change the packages that are available.
