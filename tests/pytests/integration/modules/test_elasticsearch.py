@@ -12,7 +12,7 @@ pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.skip_if_binaries_missing("dockerd"),
     pytest.mark.skipif(
-        elasticsearch.elasticsearch is None,
+        elasticsearch.HAS_ELASTICSEARCH is False,
         reason="No python elasticsearch client installed.",
     ),
 ]
