@@ -1579,9 +1579,9 @@ def _mysql_user_create(
         args["password"] = str(password)
     elif password_hash is not None:
         if salt.utils.versions.version_cmp(server_version, compare_version) >= 0:
-            qry += " IDENTIFIED BY %(password)s"
+            qry += " IDENTIFIED WITH %{auth_plugin)s AS %(password)s"
         else:
-            qry += " IDENTIFIED BY PASSWORD %(password)s"
+            qry += " IDENTIFIED AS %(password)s"
         args["password"] = password_hash
     elif salt.utils.data.is_true(allow_passwordless):
         if not plugin_status("auth_socket", **connection_args):
