@@ -6940,7 +6940,11 @@ def all_capabilities(**kwargs):
         host_caps = ElementTree.fromstring(conn.getCapabilities())
         domains = [
             [
-                (guest.get("arch", {}).get("name", None), key)
+                (
+                    guest.get("arch", {}).get("name", None),
+                    key,
+                    guest.get("arch", {}).get("emulator", None),
+                )
                 for key in guest.get("arch", {}).get("domains", {}).keys()
             ]
             for guest in [
@@ -6958,10 +6962,10 @@ def all_capabilities(**kwargs):
             "domains": [
                 _parse_domain_caps(
                     ElementTree.fromstring(
-                        conn.getDomainCapabilities(None, arch, None, domain)
+                        conn.getDomainCapabilities(emulator, arch, None, domain)
                     )
                 )
-                for (arch, domain) in flattened
+                for (arch, domain, emulator) in flattened
             ],
         }
         return result
