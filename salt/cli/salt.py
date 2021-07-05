@@ -289,7 +289,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
             try:
                 self.config["batch"] = self.options.batch
                 batch = salt.cli.batch.Batch(
-                    self.config, eauth=eauth, parser=self.options
+                    self.config, eauth=eauth, _parser=self.options
                 )
             except SaltClientError:
                 # We will print errors to the console further down the stack
