@@ -5,7 +5,9 @@ import salt.modules.cmdmod as cmd
 import salt.modules.opkg as opkg
 from tests.support.mock import patch
 
-pytestmark = pytest.mark.skip_if_binaries_missing("stat", "md5sum", "uname")
+pytestmark = [
+    pytest.mark.skip_if_binaries_missing("stat", "md5sum", "uname"),
+]
 
 
 @pytest.fixture

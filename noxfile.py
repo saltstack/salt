@@ -148,6 +148,8 @@ def _get_pydir(session):
     version_info = _get_session_python_version_info(session)
     if version_info < (3, 5):
         session.error("Only Python >= 3.5 is supported")
+    if IS_WINDOWS and version_info < (3, 6):
+        session.error("Only Python >= 3.6 is supported on Windows")
     return "py{}.{}".format(*version_info)
 
 
@@ -179,7 +181,8 @@ def _install_system_packages(session):
                 shutil.copyfile(src, dst)
 
 
-def _get_pip_requirements_file(session, transport, crypto=None):
+def _get_pip_requirements_file(session, transport, crypto=None, requirements_type="ci"):
+    assert requirements_type in ("ci", "pkg")
     pydir = _get_pydir(session)
 
     if IS_WINDOWS:
@@ -187,36 +190,40 @@ def _get_pip_requirements_file(session, transport, crypto=None):
             _requirements_file = os.path.join(
                 "requirements",
                 "static",
-                "ci",
+                requirements_type,
                 pydir,
                 "{}-windows.txt".format(transport),
             )
             if os.path.exists(_requirements_file):
                 return _requirements_file
             _requirements_file = os.path.join(
-                "requirements", "static", "ci", pydir, "windows.txt"
+                "requirements", "static", requirements_type, pydir, "windows.txt"
             )
             if os.path.exists(_requirements_file):
                 return _requirements_file
         _requirements_file = os.path.join(
-            "requirements", "static", "ci", pydir, "windows-crypto.txt"
+            "requirements", "static", requirements_type, pydir, "windows-crypto.txt"
         )
         if os.path.exists(_requirements_file):
             return _requirements_file
     elif IS_DARWIN:
         if crypto is None:
             _requirements_file = os.path.join(
-                "requirements", "static", "ci", pydir, "{}-darwin.txt".format(transport)
+                "requirements",
+                "static",
+                requirements_type,
+                pydir,
+                "{}-darwin.txt".format(transport),
             )
             if os.path.exists(_requirements_file):
                 return _requirements_file
             _requirements_file = os.path.join(
-                "requirements", "static", "ci", pydir, "darwin.txt"
+                "requirements", "static", requirements_type, pydir, "darwin.txt"
             )
             if os.path.exists(_requirements_file):
                 return _requirements_file
         _requirements_file = os.path.join(
-            "requirements", "static", "ci", pydir, "darwin-crypto.txt"
+            "requirements", "static", requirements_type, pydir, "darwin-crypto.txt"
         )
         if os.path.exists(_requirements_file):
             return _requirements_file
@@ -225,19 +232,19 @@ def _get_pip_requirements_file(session, transport, crypto=None):
             _requirements_file = os.path.join(
                 "requirements",
                 "static",
-                "ci",
+                requirements_type,
                 pydir,
                 "{}-freebsd.txt".format(transport),
             )
             if os.path.exists(_requirements_file):
                 return _requirements_file
             _requirements_file = os.path.join(
-                "requirements", "static", "ci", pydir, "freebsd.txt"
+                "requirements", "static", requirements_type, pydir, "freebsd.txt"
             )
             if os.path.exists(_requirements_file):
                 return _requirements_file
         _requirements_file = os.path.join(
-            "requirements", "static", "ci", pydir, "freebsd-crypto.txt"
+            "requirements", "static", requirements_type, pydir, "freebsd-crypto.txt"
         )
         if os.path.exists(_requirements_file):
             return _requirements_file
@@ -245,36 +252,51 @@ def _get_pip_requirements_file(session, transport, crypto=None):
         _install_system_packages(session)
         if crypto is None:
             _requirements_file = os.path.join(
-                "requirements", "static", "ci", pydir, "{}-linux.txt".format(transport)
+                "requirements",
+                "static",
+                requirements_type,
+                pydir,
+                "{}-linux.txt".format(transport),
             )
             if os.path.exists(_requirements_file):
                 return _requirements_file
             _requirements_file = os.path.join(
-                "requirements", "static", "ci", pydir, "linux.txt"
+                "requirements", "static", requirements_type, pydir, "linux.txt"
             )
             if os.path.exists(_requirements_file):
                 return _requirements_file
         _requirements_file = os.path.join(
-            "requirements", "static", "ci", pydir, "linux-crypto.txt"
+            "requirements", "static", requirements_type, pydir, "linux-crypto.txt"
         )
         if os.path.exists(_requirements_file):
             return _requirements_file
 
 
-def _install_requirements(session, transport, *extra_requirements):
+def _install_requirements(
+    session, transport, *extra_requirements, requirements_type="ci"
+):
     if SKIP_REQUIREMENTS_INSTALL:
         session.log(
             "Skipping Python Requirements because SKIP_REQUIREMENTS_INSTALL was found in the environ"
         )
         return
 
-    # setuptools 50.0.0 is broken
-    # https://github.com/pypa/setuptools/issues?q=is%3Aissue+setuptools+50+
-    install_command = ["--progress-bar=off", "-U", "setuptools<50.0.0"]
-    session.install(*install_command, silent=PIP_INSTALL_SILENT)
+    install_command = [
+        "python",
+        "-m",
+        "pip",
+        "install",
+        "--progress-bar=off",
+        "-U",
+        "pip>=20.2.4",
+        "setuptools!=50.*,!=51.*,!=52.*",
+    ]
+    session.run(*install_command, silent=PIP_INSTALL_SILENT)
 
     # Install requirements
-    requirements_file = _get_pip_requirements_file(session, transport)
+    requirements_file = _get_pip_requirements_file(
+        session, transport, requirements_type=requirements_type
+    )
     install_command = ["--progress-bar=off", "-r", requirements_file]
     session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
@@ -977,7 +999,8 @@ def docs_html(session, compress, clean):
     """
     Build Salt's HTML Documentation
     """
-    pydir = _get_pydir(session)
+    install_upgrades = ["--progress-bar=off", "-U", "pip", "setuptools", "wheel"]
+    session.install(*install_upgrades, silent=PIP_INSTALL_SILENT)
     requirements_file = os.path.join(
         "requirements", "static", "ci", _get_pydir(session), "docs.txt"
     )
@@ -1000,7 +1023,8 @@ def docs_man(session, compress, update, clean):
     """
     Build Salt's Manpages Documentation
     """
-    pydir = _get_pydir(session)
+    install_upgrades = ["--progress-bar=off", "-U", "pip", "setuptools", "wheel"]
+    session.install(*install_upgrades, silent=PIP_INSTALL_SILENT)
     requirements_file = os.path.join(
         "requirements", "static", "ci", _get_pydir(session), "docs.txt"
     )
@@ -1018,7 +1042,8 @@ def docs_man(session, compress, update, clean):
     os.chdir("..")
 
 
-def _invoke(session):
+@nox.session(name="invoke", python="3")
+def invoke(session):
     """
     Run invoke tasks
     """
@@ -1043,53 +1068,6 @@ def _invoke(session):
     if files:
         cmd.append("--files={}".format(" ".join(files)))
     session.run(*cmd)
-
-
-@nox.session(name="invoke", python="3")
-def invoke(session):
-    """
-    Run an invoke target
-    """
-    _invoke(session)
-
-
-@nox.session(name="invoke-pre-commit", python=False)
-def invoke_pre_commit(session):
-    """
-    DO NOT CALL THIS NOX SESSION DIRECTLY
-
-    This session is called from a pre-commit hook
-    """
-    if "VIRTUAL_ENV" not in os.environ:
-        session.error(
-            "This should be running from within a virtualenv and "
-            "'VIRTUAL_ENV' was not found as an environment variable."
-        )
-    if "pre-commit" not in os.environ["VIRTUAL_ENV"]:
-        session.error(
-            "This should be running from within a pre-commit virtualenv and "
-            "'VIRTUAL_ENV'({}) does not appear to be a pre-commit virtualenv.".format(
-                os.environ["VIRTUAL_ENV"]
-            )
-        )
-    from nox.virtualenv import VirtualEnv
-
-    # Let's patch nox to make it run inside the pre-commit virtualenv
-    try:
-        session._runner.venv = VirtualEnv(  # pylint: disable=unexpected-keyword-arg
-            os.environ["VIRTUAL_ENV"],
-            interpreter=session._runner.func.python,
-            reuse_existing=True,
-            venv=True,
-        )
-    except TypeError:
-        # This is still nox-py2
-        session._runner.venv = VirtualEnv(
-            os.environ["VIRTUAL_ENV"],
-            interpreter=session._runner.func.python,
-            reuse_existing=True,
-        )
-    _invoke(session)
 
 
 @nox.session(name="changelog", python="3")

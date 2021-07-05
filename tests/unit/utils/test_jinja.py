@@ -74,6 +74,13 @@ class JinjaTestCase(TestCase):
         expected = Markup('foo:\n      "bar"')
         assert result == expected, result
 
+    def test_tojson_should_ascii_sort_keys_when_told(self):
+        data = {"z": "zzz", "y": "yyy", "x": "xxx"}
+        expected = '{"x": "xxx", "y": "yyy", "z": "zzz"}'
+
+        actual = tojson(data, sort_keys=True)
+        assert actual == expected
+
 
 class MockFileClient:
     """
@@ -1387,8 +1394,7 @@ class TestCustomExtensions(TestCase):
         """
         urls = (
             # These cannot be HTTPS urls since urllib2 chokes on those
-            "http://saltstack.com",
-            "http://community.saltstack.com",
+            "http://saltproject.io",
             "http://google.com",
             "http://duckduckgo.com",
         )

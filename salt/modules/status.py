@@ -3,7 +3,6 @@ Module for returning various status data about a minion.
 These data can be useful for compiling into stats later.
 """
 
-
 import collections
 import copy
 import datetime
@@ -22,12 +21,10 @@ import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
-from salt.ext.six.moves import range, zip
 
 log = logging.getLogger(__file__)
 
 __virtualname__ = "status"
-__opts__ = {}
 
 # Don't shadow built-in's.
 __func_alias__ = {"time_": "time"}
@@ -1778,6 +1775,8 @@ def proxy_reconnect(proxy_name, opts=None):
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt '*' status.proxy_reconnect rest_sample
     """
 
@@ -1791,7 +1790,8 @@ def proxy_reconnect(proxy_name, opts=None):
     if proxy_keepalive_fn not in __proxy__:
         return False  # fail
 
-    if __proxy__[proxy_name + ".get_reboot_active"]():
+    chk_reboot_active_key = proxy_name + ".get_reboot_active"
+    if chk_reboot_active_key in __proxy__ and __proxy__[chk_reboot_active_key]():
         # if rebooting or shutting down, don't run proxy_reconnect
         # it interferes with the connection and disrupts the shutdown/reboot
         # especially

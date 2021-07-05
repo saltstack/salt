@@ -61,7 +61,7 @@ except ImportError:
     try:
         from Cryptodome.Cipher import PKCS1_OAEP
     except ImportError:
-        from Crypto.Cipher import PKCS1_OAEP
+        from Crypto.Cipher import PKCS1_OAEP  # nosec
 
 log = logging.getLogger(__name__)
 

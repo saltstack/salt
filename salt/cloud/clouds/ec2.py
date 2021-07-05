@@ -88,7 +88,6 @@ import os
 import pprint
 import re
 import stat
-import sys
 import time
 import urllib.parse
 import uuid
@@ -202,12 +201,7 @@ def _xml_to_dict(xmltree):
     """
     Convert an XML tree into a dict
     """
-    if sys.version_info < (2, 7):
-        children_len = len(xmltree.getchildren())
-    else:
-        children_len = len(xmltree)
-
-    if children_len < 1:
+    if len(xmltree) < 1:
         name = xmltree.tag
         if "}" in name:
             comps = name.split("}")
@@ -221,12 +215,7 @@ def _xml_to_dict(xmltree):
             comps = name.split("}")
             name = comps[1]
         if name not in xmldict:
-            if sys.version_info < (2, 7):
-                children_len = len(item.getchildren())
-            else:
-                children_len = len(item)
-
-            if children_len > 0:
+            if len(item) > 0:
                 xmldict[name] = _xml_to_dict(item)
             else:
                 xmldict[name] = item.text
@@ -471,15 +460,10 @@ def query(
         items = root
 
     if setname:
-        if sys.version_info < (2, 7):
-            children_len = len(root.getchildren())
-        else:
-            children_len = len(root)
-
-        for item in range(0, children_len):
-            comps = root[item].tag.split("}")
+        for idx, item in enumerate(root):
+            comps = item.tag.split("}")
             if comps[1] == setname:
-                items = root[item]
+                items = root[idx]
 
     ret = []
     for item in items:
@@ -3866,8 +3850,6 @@ def disable_term_protect(name, call=None):
 def disable_detailed_monitoring(name, call=None):
     """
     Enable/disable detailed monitoring on a node
-
-    CLI Example:
     """
     if call != "action":
         raise SaltCloudSystemExit(
@@ -3892,9 +3874,6 @@ def disable_detailed_monitoring(name, call=None):
 def enable_detailed_monitoring(name, call=None):
     """
     Enable/disable detailed monitoring on a node
-
-    CLI Example:
-
     """
     if call != "action":
         raise SaltCloudSystemExit(
@@ -4178,6 +4157,31 @@ def volume_create(**kwargs):
     return create_volume(kwargs, "function")
 
 
+def _load_params(kwargs):
+    params = {"Action": "CreateVolume", "AvailabilityZone": kwargs["zone"]}
+
+    if "size" in kwargs:
+        params["Size"] = kwargs["size"]
+
+    if "snapshot" in kwargs:
+        params["SnapshotId"] = kwargs["snapshot"]
+
+    if "type" in kwargs:
+        params["VolumeType"] = kwargs["type"]
+
+    # io1 and io2 types require the iops parameter
+    if "iops" in kwargs and kwargs.get("type", "standard").lower() in ["io1", "io2"]:
+        params["Iops"] = kwargs["iops"]
+
+    # You can't set `encrypted` if you pass a snapshot
+    if "encrypted" in kwargs and "snapshot" not in kwargs:
+        params["Encrypted"] = kwargs["encrypted"]
+        if "kmskeyid" in kwargs:
+            params["KmsKeyId"] = kwargs["kmskeyid"]
+
+    return params
+
+
 def create_volume(kwargs=None, call=None, wait_to_finish=False):
     """
     Create a volume.
@@ -4192,16 +4196,17 @@ def create_volume(kwargs=None, call=None, wait_to_finish=False):
         The snapshot-id from which to create the volume. Integer.
 
     type
-        The volume type. This can be gp2 for General Purpose SSD, io1 for Provisioned
-        IOPS SSD, st1 for Throughput Optimized HDD, sc1 for Cold HDD, or standard for
-        Magnetic volumes. String.
+        The volume type. This can be ``gp2`` for General Purpose SSD, ``io1`` or
+        ``io2`` for Provisioned IOPS SSD, ``st1`` for Throughput Optimized HDD,
+        ``sc1`` for Cold HDD, or ``standard`` for Magnetic volumes. String.
 
     iops
         The number of I/O operations per second (IOPS) to provision for the volume,
         with a maximum ratio of 50 IOPS/GiB. Only valid for Provisioned IOPS SSD
         volumes. Integer.
 
-        This option will only be set if ``type`` is also specified as ``io1``.
+        This option will only be set if ``type`` is also specified as ``io1`` or
+        ``io2``
 
     encrypted
         Specifies whether the volume will be encrypted. Boolean.
@@ -4236,32 +4241,19 @@ def create_volume(kwargs=None, call=None, wait_to_finish=False):
         log.error("An availability zone must be specified to create a volume.")
         return False
 
+    if "kmskeyid" in kwargs and "encrypted" not in kwargs:
+        log.error("If a KMS Key ID is specified, encryption must be enabled")
+        return False
+
+    if kwargs.get("type").lower() in ["io1", "io2"] and "iops" not in kwargs:
+        log.error("Iops must be specified for types 'io1' and 'io2'")
+        return False
+
     if "size" not in kwargs and "snapshot" not in kwargs:
         # This number represents GiB
         kwargs["size"] = "10"
 
-    params = {"Action": "CreateVolume", "AvailabilityZone": kwargs["zone"]}
-
-    if "size" in kwargs:
-        params["Size"] = kwargs["size"]
-
-    if "snapshot" in kwargs:
-        params["SnapshotId"] = kwargs["snapshot"]
-
-    if "type" in kwargs:
-        params["VolumeType"] = kwargs["type"]
-
-    if "iops" in kwargs and kwargs.get("type", "standard") == "io1":
-        params["Iops"] = kwargs["iops"]
-
-    # You can't set `encrypted` if you pass a snapshot
-    if "encrypted" in kwargs and "snapshot" not in kwargs:
-        params["Encrypted"] = kwargs["encrypted"]
-        if "kmskeyid" in kwargs:
-            params["KmsKeyId"] = kwargs["kmskeyid"]
-    if "kmskeyid" in kwargs and "encrypted" not in kwargs:
-        log.error("If a KMS Key ID is specified, encryption must be enabled")
-        return False
+    params = _load_params(kwargs)
 
     log.debug(params)
 

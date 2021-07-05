@@ -246,6 +246,12 @@ def _expand_address(addy):
     return ret
 
 
+def _expand_region(region):
+    ret = {}
+    ret["name"] = region.name
+    return ret
+
+
 def _expand_balancer(lb):
     """
     Convert the libcloud load-balancer object into something more serializable.
@@ -564,7 +570,8 @@ def __get_ssh_credentials(vm_):
 
 def create_network(kwargs=None, call=None):
     """
-    ... versionchanged:: 2017.7.0
+    .. versionchanged:: 2017.7.0
+
     Create a GCE network. Must specify name and cidr.
 
     CLI Example:
@@ -694,7 +701,8 @@ def show_network(kwargs=None, call=None):
 
 def create_subnetwork(kwargs=None, call=None):
     """
-    ... versionadded:: 2017.7.0
+    .. versionadded:: 2017.7.0
+
     Create a GCE Subnetwork. Must specify name, cidr, network, and region.
 
     CLI Example:
@@ -768,7 +776,8 @@ def create_subnetwork(kwargs=None, call=None):
 
 def delete_subnetwork(kwargs=None, call=None):
     """
-    ... versionadded:: 2017.7.0
+    .. versionadded:: 2017.7.0
+
     Delete a GCE Subnetwork. Must specify name and region.
 
     CLI Example:
@@ -827,7 +836,8 @@ def delete_subnetwork(kwargs=None, call=None):
 
 def show_subnetwork(kwargs=None, call=None):
     """
-    ... versionadded:: 2017.7.0
+    .. versionadded:: 2017.7.0
+
     Show details of an existing GCE Subnetwork. Must specify name and region.
 
     CLI Example:
@@ -1176,6 +1186,7 @@ def create_address(kwargs=None, call=None):
     name = kwargs["name"]
     ex_region = kwargs["region"]
     ex_address = kwargs.get("address", None)
+    kwargs["region"] = _expand_region(kwargs["region"])
 
     conn = get_conn()
 
@@ -1183,7 +1194,7 @@ def create_address(kwargs=None, call=None):
         "event",
         "create address",
         "salt/cloud/address/creating",
-        args=kwargs,
+        args=salt.utils.data.simple_types_filter(kwargs),
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
     )
@@ -1194,7 +1205,7 @@ def create_address(kwargs=None, call=None):
         "event",
         "created address",
         "salt/cloud/address/created",
-        args=kwargs,
+        args=salt.utils.data.simple_types_filter(kwargs),
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
     )
@@ -2279,7 +2290,7 @@ def request_instance(vm_):
     """
     Request a single GCE instance from a data dict.
 
-    .. versionchanged: 2017.7.0
+    .. versionchanged:: 2017.7.0
     """
     if not GCE_VM_NAME_REGEX.match(vm_["name"]):
         raise SaltCloudSystemExit(
@@ -2329,13 +2340,20 @@ def request_instance(vm_):
 
     if external_ip.lower() == "ephemeral":
         external_ip = "ephemeral"
+        vm_["external_ip"] = external_ip
     elif external_ip == "None":
         external_ip = None
+        vm_["external_ip"] = external_ip
     else:
         region = __get_region(conn, vm_)
         external_ip = __create_orget_address(conn, external_ip, region)
+
+        vm_["external_ip"] = {
+            "name": external_ip.name,
+            "address": external_ip.address,
+            "region": external_ip.region.name,
+        }
     kwargs["external_ip"] = external_ip
-    vm_["external_ip"] = external_ip
 
     if LIBCLOUD_VERSION_INFO > (0, 15, 1):
 

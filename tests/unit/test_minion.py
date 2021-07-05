@@ -391,6 +391,33 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             finally:
                 minion.destroy()
 
+    def test_minion_module_refresh(self):
+        """
+        Tests that the 'module_refresh' just return in case there is no 'schedule'
+        because destroy method was already called.
+        """
+        with patch("salt.minion.Minion.ctx", MagicMock(return_value={})), patch(
+            "salt.utils.process.SignalHandlingProcess.start",
+            MagicMock(return_value=True),
+        ), patch(
+            "salt.utils.process.SignalHandlingProcess.join",
+            MagicMock(return_value=True),
+        ):
+            try:
+                mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
+                minion = salt.minion.Minion(
+                    mock_opts, io_loop=salt.ext.tornado.ioloop.IOLoop(),
+                )
+                minion.schedule = salt.utils.schedule.Schedule(
+                    mock_opts, {}, returners={}
+                )
+                self.assertTrue(hasattr(minion, "schedule"))
+                minion.destroy()
+                self.assertTrue(not hasattr(minion, "schedule"))
+                self.assertTrue(not minion.module_refresh())
+            finally:
+                minion.destroy()
+
     @pytest.mark.slow_test
     def test_when_ping_interval_is_set_the_callback_should_be_added_to_periodic_callbacks(
         self,
@@ -767,3 +794,12 @@ class MinionAsyncTestCase(
             with self.assertRaises(SaltClientError, msg="No master could be resolved"):
                 minion = salt.minion.Minion(mock_opts)
                 yield minion.connect_master()
+
+
+class MasterMinionTestCase(TestCase):
+    def test_config_cache_path_overrides(self):
+        cachedir = os.path.abspath("/path/to/master/cache")
+        opts = {"cachedir": cachedir, "conf_file": None}
+
+        mminion = salt.minion.MasterMinion(opts)
+        self.assertEqual(mminion.opts["cachedir"], cachedir)

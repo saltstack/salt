@@ -71,11 +71,24 @@ try:
 except ImportError:
     HAS_PSEXEC = False
 
+
+# Set the minimum version of PyWinrm.
+WINRM_MIN_VER = "0.3.0"
+
+
 try:
     import winrm
     from winrm.exceptions import WinRMTransportError
 
-    HAS_WINRM = True
+    # Verify WinRM 0.3.0 or greater
+    import pkg_resources  # pylint: disable=3rd-party-module-not-gated
+
+    winrm_pkg = pkg_resources.get_distribution("pywinrm")
+    if not salt.utils.versions.compare(winrm_pkg.version, ">=", WINRM_MIN_VER):
+        HAS_WINRM = False
+    else:
+        HAS_WINRM = True
+
 except ImportError:
     HAS_WINRM = False
 
@@ -592,7 +605,7 @@ def bootstrap(vm_, opts=None):
         "event",
         "executing deploy script",
         "salt/cloud/{}/deploying".format(vm_["name"]),
-        args={"kwargs": event_kwargs},
+        args={"kwargs": salt.utils.data.simple_types_filter(event_kwargs)},
         sock_dir=opts.get("sock_dir", os.path.join(__opts__["sock_dir"], "master")),
         transport=opts.get("transport", "zeromq"),
     )
@@ -1205,7 +1218,11 @@ def deploy_windows(
         opts = {}
 
     if use_winrm and not HAS_WINRM:
-        log.error("WinRM requested but module winrm could not be imported")
+        log.error(
+            "WinRM requested but module winrm could not be imported. "
+            "Ensure you are using version %s or higher.",
+            WINRM_MIN_VER,
+        )
         return False
 
     starttime = time.mktime(time.localtime())
@@ -2518,8 +2535,7 @@ def remove_sshkey(host, known_hosts=None):
     else:
         log.debug("Removing ssh key for %s from known hosts file", host)
 
-    cmd = "ssh-keygen -R {}".format(host)
-    subprocess.call(cmd, shell=True)
+    subprocess.call(["ssh-keygen", "-R", host])
 
 
 def wait_for_ip(

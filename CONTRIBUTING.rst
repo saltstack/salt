@@ -8,8 +8,8 @@ in a number of ways:
 
 -  Using Salt and opening well-written bug reports.
 -  Joining a `working group <https://github.com/saltstack/community>`__.
--  Answering questions on `irc <https://webchat.freenode.net/#salt>`__,
-   the `community Slack <https://saltstackcommunity.herokuapp.com/>`__,
+-  Answering questions on `irc <https://web.libera.chat/#salt>`__,
+   the `community Slack <https://join.slack.com/t/saltstackcommunity/shared_invite/zt-3av8jjyf-oBQ2M0vhXOhJpNpRkPWBvg>`__,
    the `salt-users mailing
    list <https://groups.google.com/forum/#!forum/salt-users>`__,
    `Server Fault <https://serverfault.com/questions/tagged/saltstack>`__,
@@ -262,7 +262,7 @@ group <https://github.com/saltstack/docs-hub>`__ and the `testing
 working
 group <https://github.com/saltstack/community/tree/master/working_groups/wg-Testing>`__.
 We also regularly stream our test clinic `live on
-Twitch <https://www.twitch.tv/saltstackinc>`__ every Tuesday afternoon
+Twitch <https://www.twitch.tv/saltprojectoss>`__ every Tuesday afternoon
 and Thursday morning, Central Time. If you’d like specific help with
 tests, bring them to the clinic. If no community members need help, you
 can also just watch tests written in real time.
@@ -507,8 +507,7 @@ your PR is submitted during the week you should be able to expect some
 kind of communication within that business day. If your tests are
 passing and we’re not in a code freeze, ideally your code will be merged
 that day. If you haven’t heard from your assigned reviewer, ping them on
-GitHub, `irc <https://webchat.freenode.net/#salt>`__, or Community
-Slack.
+GitHub, `irc <https://web.libera.chat/#salt>`__, or Community Slack.
 
 It’s likely that your reviewer will leave some comments that need
 addressing - it may be a style change, or you forgot a changelog entry,

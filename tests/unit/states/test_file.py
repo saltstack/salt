@@ -1672,7 +1672,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                 {
                                     "comment": comt,
                                     "result": False,
-                                    "changes": {name: "New Dir"},
+                                    "changes": {name: {"directory": "new"}},
                                 }
                             )
                             self.assertDictEqual(
