@@ -1,0 +1,1 @@
+Now hosts.rm_host can remove entries from /etc/hosts when this file have inline comments.

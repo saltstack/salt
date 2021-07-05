@@ -10,6 +10,10 @@ adal==1.2.3
     # via
     #   azure-datalake-store
     #   msrestazure
+ansible-base==2.10.9
+    # via ansible
+ansible==3.4.0
+    # via -r requirements/static/ci/linux.in
 apache-libcloud==2.5.0 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
 appdirs==1.4.4
@@ -411,6 +415,7 @@ cryptography==3.3.2
     # via
     #   -r requirements/static/pkg/py3.8/linux.txt
     #   adal
+    #   ansible-base
     #   azure-cosmosdb-table
     #   azure-keyvault
     #   azure-storage-common
@@ -482,6 +487,7 @@ jaraco.functools==2.0
 jinja2==2.11.3
     # via
     #   -r requirements/static/pkg/py3.8/linux.txt
+    #   ansible-base
     #   junos-eznc
     #   moto
     #   napalm
@@ -667,7 +673,9 @@ oauthlib==3.1.0
 oscrypto==1.2.0
     # via certvalidator
 packaging==19.2
-    # via pytest
+    # via
+    #   ansible-base
+    #   pytest
 paramiko==2.7.1 ; sys_platform != "win32" and sys_platform != "darwin"
     # via
     #   -r requirements/static/ci/common.in
@@ -715,7 +723,7 @@ pygit2==1.0.3 ; python_version <= "3.8"
     # via -r requirements/static/ci/linux.in
 pyiface==0.0.11
     # via -r requirements/static/ci/linux.in
-pyinotify==0.9.6 ; sys_platform != "win32" and sys_platform != "darwin"
+pyinotify==0.9.6 ; sys_platform != "win32" and sys_platform != "darwin" and platform_system != "openbsd"
     # via -r requirements/static/ci/common.in
 pyjwt==1.7.1
     # via adal
@@ -739,7 +747,7 @@ pytest-helpers-namespace==2021.4.29
     # via
     #   -r requirements/pytest.txt
     #   pytest-salt-factories
-pytest-salt-factories==0.903.2
+pytest-salt-factories==0.906.0
     # via -r requirements/pytest.txt
 pytest-subtests==0.4.0
     # via -r requirements/pytest.txt
@@ -783,6 +791,7 @@ pyvmomi==6.7.1.2018.12
 pyyaml==5.4.1
     # via
     #   -r requirements/static/pkg/py3.8/linux.txt
+    #   ansible-base
     #   cfn-lint
     #   clustershell
     #   junos-eznc
