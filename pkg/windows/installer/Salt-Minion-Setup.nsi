@@ -1049,7 +1049,7 @@ Function getExistingMinionConfig
     StrCpy $ExistingConfigFound 0
 
     confFind:
-    IfFileExists "$INSTDIR\conf\minion" confFound confNotFound
+    IfFileExists "$INSTDIR\conf\minion" check_owner confNotFound
 
     confNotFound:
     ${If} $INSTDIR == "c:\salt\bin\Scripts"
@@ -1059,9 +1059,28 @@ Function getExistingMinionConfig
         goto confReallyNotFound
     ${EndIf}
 
-    confFound:
-    StrCpy $ExistingConfigFound 1
-    FileOpen $0 "$INSTDIR\conf\minion" r
+    check_owner:
+        # We need to verify the owner of an existing config
+        # Salt will set the owner of the C:\salt directory to the Administrators
+        # Group (S-1-5-32-544). An unprivileged user cannot cannot set the owner
+        # by default. If the owner is Administrators, then we will trust it.
+        # Otherwise,
+        AccessControl::GetFileOwner /SID "$INSTDIR\conf"
+        Pop $0
+        StrCmp $0 "S-1-5-32-544" correct_owner
+        MessageBox MB_YESNO "Insecure config found at $INSTDIR\conf. If you \
+            continue, the config directory will be renamed to $INSTDIR\conf.insecure. \
+            Continue?" /SD IDYES IDYES insecure_config
+            Abort
+
+    insecure_config:
+        # Backing up insecure config
+        Rename "$INSTDIR\conf" "$INSTDIR\conf.insecure"
+        Goto confReallyNotFound
+
+    correct_owner:
+        StrCpy $ExistingConfigFound 1
+        FileOpen $0 "$INSTDIR\conf\minion" r
 
     confLoop:
         ClearErrors                                             # clear Errors
