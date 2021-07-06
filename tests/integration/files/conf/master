@@ -60,6 +60,10 @@ external_auth:
       - '@runner'
       - 'test.*'
   auto:
+    saltdev-netapi:
+      - '@wheel'
+      - '@runner'
+      - test.*
     saltdev_auto:
       - '@wheel'
       - '@runner'
