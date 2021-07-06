@@ -1656,122 +1656,118 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                             "comment": "",
                             "changes": {},
                         }
-
-                        # Windows currently does not support recursive and children only
-                        if not salt.utils.platform.is_windows():
+                        if salt.utils.platform.is_windows():
+                            mock_perms = MagicMock(return_value=check_perms_ret)
+                        else:
                             mock_perms = MagicMock(return_value=(check_perms_ret, ""))
 
-                            recurse = ["silent"]
-                            ret = {
-                                "name": name,
-                                "result": False,
-                                "comment": "Directory {} updated".format(name),
-                                "changes": {"recursion": "Changes silenced"},
-                            }
-                            with patch.dict(
-                                filestate.__salt__, {"file.check_perms": mock_perms}
-                            ):
-                                with patch.object(os.path, "isdir", mock_t):
-                                    self.assertDictEqual(
-                                        filestate.directory(
-                                            name,
-                                            user=user,
-                                            recurse=recurse,
-                                            group=group,
-                                        ),
-                                        ret,
-                                    )
-
-                            check_perms_ret = {
-                                "name": name,
-                                "result": False,
-                                "comment": "",
-                                "changes": {},
-                            }
-
-                            mock_perms = MagicMock(return_value=(check_perms_ret, ""))
-
-                            recurse = ["ignore_files", "ignore_dirs"]
-                            ret = {
-                                "name": name,
-                                "result": False,
-                                "comment": 'Must not specify "recurse" '
-                                'options "ignore_files" and '
-                                '"ignore_dirs" at the same '
-                                "time.",
-                                "changes": {},
-                            }
-                            with patch.dict(
-                                filestate.__salt__, {"file.check_perms": mock_perms}
-                            ):
-                                with patch.object(os.path, "isdir", mock_t):
-                                    self.assertDictEqual(
-                                        filestate.directory(
-                                            name,
-                                            user=user,
-                                            recurse=recurse,
-                                            group=group,
-                                        ),
-                                        ret,
-                                    )
-
-                            comt = "Directory {} updated".format(name)
-                            ret = {
-                                "name": name,
-                                "result": True,
-                                "comment": comt,
-                                "changes": {
-                                    "group": "group",
-                                    "mode": "0777",
-                                    "user": "user",
-                                },
-                            }
-
-                            check_perms_ret = {
-                                "name": name,
-                                "result": True,
-                                "comment": "",
-                                "changes": {
-                                    "group": "group",
-                                    "mode": "0777",
-                                    "user": "user",
-                                },
-                            }
-
-                            mock_perms = MagicMock(return_value=(check_perms_ret, ""))
-
-                            with patch.object(os.path, "isdir", mock_t):
-                                with patch.dict(
-                                    filestate.__salt__, {"file.check_perms": mock_perms}
-                                ):
-                                    self.assertDictEqual(
-                                        filestate.directory(
-                                            name, user=user, group=group
-                                        ),
-                                        ret,
-                                    )
-
-                            recurse = ["mode"]
-                            ret.update(
-                                {
-                                    "comment": "The directory {} is in the "
-                                    "correct state".format(name),
-                                    "changes": {},
-                                    "result": True,
-                                }
-                            )
+                        recurse = ["silent"]
+                        ret = {
+                            "name": name,
+                            "result": False,
+                            "comment": "Directory {} updated".format(name),
+                            "changes": {"recursion": "Changes silenced"},
+                        }
+                        with patch.dict(
+                            filestate.__salt__, {"file.check_perms": mock_perms}
+                        ):
                             with patch.object(os.path, "isdir", mock_t):
                                 self.assertDictEqual(
                                     filestate.directory(
-                                        name,
-                                        user=user,
-                                        dir_mode=700,
-                                        recurse=recurse,
-                                        group=group,
-                                        children_only=True,
+                                        name, user=user, recurse=recurse, group=group
                                     ),
                                     ret,
                                 )
+
+                        check_perms_ret = {
+                            "name": name,
+                            "result": False,
+                            "comment": "",
+                            "changes": {},
+                        }
+                        if salt.utils.platform.is_windows():
+                            mock_perms = MagicMock(return_value=check_perms_ret)
+                        else:
+                            mock_perms = MagicMock(return_value=(check_perms_ret, ""))
+
+                        recurse = ["ignore_files", "ignore_dirs"]
+                        ret = {
+                            "name": name,
+                            "result": False,
+                            "comment": 'Must not specify "recurse" '
+                            'options "ignore_files" and '
+                            '"ignore_dirs" at the same '
+                            "time.",
+                            "changes": {},
+                        }
+                        with patch.dict(
+                            filestate.__salt__, {"file.check_perms": mock_perms}
+                        ):
+                            with patch.object(os.path, "isdir", mock_t):
+                                self.assertDictEqual(
+                                    filestate.directory(
+                                        name, user=user, recurse=recurse, group=group
+                                    ),
+                                    ret,
+                                )
+
+                        comt = "Directory {} updated".format(name)
+                        ret = {
+                            "name": name,
+                            "result": True,
+                            "comment": comt,
+                            "changes": {
+                                "group": "group",
+                                "mode": "0777",
+                                "user": "user",
+                            },
+                        }
+
+                        check_perms_ret = {
+                            "name": name,
+                            "result": True,
+                            "comment": "",
+                            "changes": {
+                                "group": "group",
+                                "mode": "0777",
+                                "user": "user",
+                            },
+                        }
+
+                        if salt.utils.platform.is_windows():
+                            mock_perms = MagicMock(return_value=check_perms_ret)
+                        else:
+                            mock_perms = MagicMock(return_value=(check_perms_ret, ""))
+                        with patch.object(os.path, "isdir", mock_t):
+                            with patch.dict(
+                                filestate.__salt__, {"file.check_perms": mock_perms}
+                            ):
+                                self.assertDictEqual(
+                                    filestate.directory(name, user=user, group=group),
+                                    ret,
+                                )
+
+                        recurse = ["mode"]
+                        ret.update(
+                            {
+                                "comment": "The directory {} is in the "
+                                "correct state".format(name),
+                                "changes": {},
+                                "result": True,
+                            }
+                        )
+                        with patch.object(os.path, "isdir", mock_t):
+                            self.assertDictEqual(
+                                filestate.directory(
+                                    name,
+                                    user=user,
+                                    dir_mode=700,
+                                    recurse=recurse,
+                                    group=group,
+                                    children_only=True,
+                                ),
+                                ret,
+                            )
 
     # 'recurse' function tests: 1
 
