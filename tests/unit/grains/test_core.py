@@ -1232,6 +1232,90 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                             grains.get("virtual"), "container",
                         )
 
+        with patch.object(os.path, "isdir", MagicMock(return_value=False)):
+            with patch.object(
+                os.path,
+                "isfile",
+                MagicMock(
+                    side_effect=lambda x: True
+                    if x in ("/proc/1/cgroup", "/proc/1/environ")
+                    else False
+                ),
+            ):
+                file_contents = {
+                    "/proc/1/cgroup": "10:memory",
+                    "/proc/1/environ": "container=lxc",
+                }
+                with patch(
+                    "salt.utils.files.fopen", mock_open(read_data=file_contents)
+                ):
+                    with patch.dict(core.__salt__, {"cmd.run_all": MagicMock()}):
+                        grains = core._virtual({"kernel": "Linux"})
+                        self.assertEqual(grains.get("virtual_subtype"), "LXC")
+                        self.assertEqual(
+                            grains.get("virtual"), "container",
+                        )
+
+    @skipIf(salt.utils.platform.is_windows(), "System is Windows")
+    def test_lxc_virtual_with_virt_what(self):
+        """
+        Test if virtual grains are parsed correctly in LXC using virt-what.
+        """
+        virt = "lxc\nkvm"
+        with patch.object(
+            salt.utils.platform, "is_windows", MagicMock(return_value=False)
+        ):
+            with patch.object(salt.utils.path, "which", MagicMock(return_value=True)):
+                with patch.dict(
+                    core.__salt__,
+                    {
+                        "cmd.run_all": MagicMock(
+                            return_value={
+                                "pid": 78,
+                                "retcode": 0,
+                                "stderr": "",
+                                "stdout": virt,
+                            }
+                        )
+                    },
+                ):
+                    osdata = {
+                        "kernel": "test",
+                    }
+                    ret = core._virtual(osdata)
+                    self.assertEqual(ret["virtual"], "container")
+                    self.assertEqual(ret["virtual_subtype"], "LXC")
+
+    @skipIf(salt.utils.platform.is_windows(), "System is Windows")
+    def test_container_inside_virtual_machine(self):
+        """
+        Test if a container inside an hypervisor is shown as a container
+        """
+        with patch.object(os.path, "isdir", MagicMock(return_value=False)):
+            with patch.object(
+                os.path,
+                "isfile",
+                MagicMock(
+                    side_effect=lambda x: True
+                    if x in ("/proc/cpuinfo", "/proc/1/cgroup", "/proc/1/environ")
+                    else False
+                ),
+            ):
+                file_contents = {
+                    "/proc/cpuinfo": "QEMU Virtual CPU",
+                    "/proc/1/cgroup": "10:memory",
+                    "/proc/1/environ": "container=lxc",
+                }
+                with patch(
+                    "salt.utils.files.fopen", mock_open(read_data=file_contents)
+                ):
+                    with patch.dict(core.__salt__, {"cmd.run_all": MagicMock()}):
+                        grains = core._virtual({"kernel": "Linux"})
+                        self.assertEqual(grains.get("virtual_subtype"), "LXC")
+                        self.assertEqual(
+                            grains.get("virtual"), "container",
+                        )
+
     @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
     def test_xen_virtual(self):
         """
@@ -1247,9 +1331,9 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(
                 core.__salt__, {"cmd.run": MagicMock(return_value="")}
             ), patch.dict(
-                core.__salt__, {"cmd.run_all": MagicMock(return_value={"retcode": 0})}
+                core.__salt__,
+                {"cmd.run_all": MagicMock(return_value={"retcode": 0, "stdout": ""})},
             ):
-                log.debug("Testing Xen")
                 self.assertEqual(
                     core._virtual({"kernel": "Linux"}).get("virtual_subtype"),
                     "Xen PV DomU",

@@ -2798,6 +2798,8 @@ class State:
             status = "onchanges"
         elif "change" in fun_stats:
             status = "change"
+        elif "onfail" in fun_stats:
+            status = "onfail"
         else:
             status = "met"
 
@@ -3445,7 +3447,7 @@ class LazyAvailStates:
     def items(self):
         self._fill()
         ret = []
-        for saltenv, states in self._avail:
+        for saltenv, states in self._avail.items():
             ret.append((saltenv, self.__getitem__(saltenv)))
         return ret
 

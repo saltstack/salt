@@ -6,8 +6,8 @@ import threading
 import time
 
 import pytest
+from saltfactories.utils.tempfiles import temp_file
 from tests.support.case import SSHCase
-from tests.support.pytest.helpers import temp_state_file
 from tests.support.runtests import RUNTIME_VARS
 
 SSH_SLS = "ssh_state_tests"
@@ -134,9 +134,9 @@ class SSHStateTest(SSHCase):
             RUNTIME_VARS.TMP
         )
 
-        with temp_state_file("top.sls", top_sls), temp_state_file(
-            "core.sls", core_state
-        ):
+        with temp_file(
+            "top.sls", top_sls, RUNTIME_VARS.TMP_BASEENV_STATE_TREE
+        ), temp_file("core.sls", core_state, RUNTIME_VARS.TMP_BASEENV_STATE_TREE):
             ret = self.run_function("state.show_top")
             self.assertEqual(ret, {"base": ["core", "master_tops_test"]})
 
@@ -179,9 +179,9 @@ class SSHStateTest(SSHCase):
             RUNTIME_VARS.TMP
         )
 
-        with temp_state_file("top.sls", top_sls), temp_state_file(
-            "core.sls", core_state
-        ):
+        with temp_file(
+            "top.sls", top_sls, RUNTIME_VARS.TMP_BASEENV_STATE_TREE
+        ), temp_file("core.sls", core_state, RUNTIME_VARS.TMP_BASEENV_STATE_TREE):
             high = self.run_function("state.show_highstate")
             destpath = os.path.join(RUNTIME_VARS.TMP, "testfile")
             self.assertIsInstance(high, dict)
@@ -227,9 +227,9 @@ class SSHStateTest(SSHCase):
             RUNTIME_VARS.TMP
         )
 
-        with temp_state_file("top.sls", top_sls), temp_state_file(
-            "core.sls", core_state
-        ):
+        with temp_file(
+            "top.sls", top_sls, RUNTIME_VARS.TMP_BASEENV_STATE_TREE
+        ), temp_file("core.sls", core_state, RUNTIME_VARS.TMP_BASEENV_STATE_TREE):
             low = self.run_function("state.show_lowstate")
             self.assertIsInstance(low, list)
             self.assertIsInstance(low[0], dict)

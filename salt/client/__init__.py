@@ -71,6 +71,7 @@ def get_local_client(
     skip_perm_errors=False,
     io_loop=None,
     auto_reconnect=False,
+    listen=False,
 ):
     """
     .. versionadded:: 2014.7.0
@@ -78,11 +79,38 @@ def get_local_client(
     Read in the config and return the correct LocalClient object based on
     the configured transport
 
+    :param str c_path: Path of config file to use for opts.
+
+                       The default value is None.
+
+    :param bool mopts: When provided the local client will use this dictionary of
+                       options insead of loading a config file from the value
+                       of c_path.
+
+                       The default value is None.
+
+    :param str skip_perm_errors: Ignore permissions errors while loading keys.
+
+                                 The default value is False.
+
     :param IOLoop io_loop: io_loop used for events.
                            Pass in an io_loop if you want asynchronous
                            operation for obtaining events. Eg use of
                            set_event_handler() API. Otherwise, operation
                            will be synchronous.
+
+    :param bool keep_loop: Do not destroy the event loop when closing the event
+                           subsriber.
+
+    :param bool auto_reconnect: When True the event subscriber will reconnect
+                                automatically if a disconnect error is raised.
+
+    .. versionadded:: 3004
+    :param bool listen: Listen for events indefinitly. When option is set the
+                        LocalClient object will listen for events until it's
+                        destroy method is called.
+
+                        The default value is False.
     """
     if mopts:
         opts = mopts
@@ -98,6 +126,7 @@ def get_local_client(
         skip_perm_errors=skip_perm_errors,
         io_loop=io_loop,
         auto_reconnect=auto_reconnect,
+        listen=listen,
     )
 
 
@@ -128,6 +157,7 @@ class LocalClient:
 
         local = salt.client.LocalClient()
         local.cmd('*', 'test.fib', [10])
+
     """
 
     def __init__(
@@ -138,13 +168,41 @@ class LocalClient:
         io_loop=None,
         keep_loop=False,
         auto_reconnect=False,
+        listen=False,
     ):
         """
+        :param str c_path: Path of config file to use for opts.
+
+                           The default value is None.
+
+        :param bool mopts: When provided the local client will use this dictionary of
+                           options insead of loading a config file from the value
+                           of c_path.
+
+                           The default value is None.
+
+        :param str skip_perm_errors: Ignore permissions errors while loading keys.
+
+                                     The default value is False.
+
         :param IOLoop io_loop: io_loop used for events.
                                Pass in an io_loop if you want asynchronous
                                operation for obtaining events. Eg use of
-                               set_event_handler() API. Otherwise,
-                               operation will be synchronous.
+                               set_event_handler() API. Otherwise, operation
+                               will be synchronous.
+
+        :param bool keep_loop: Do not destroy the event loop when closing the event
+                               subsriber.
+
+        :param bool auto_reconnect: When True the event subscriber will reconnect
+                                    automatically if a disconnect error is raised.
+
+        .. versionadded:: 3004
+        :param bool listen: Listen for events indefinitly. When option is set the
+                            LocalClient object will listen for events until it's
+                            destroy method is called.
+
+                            The default value is False.
         """
         if mopts:
             self.opts = mopts
@@ -162,12 +220,13 @@ class LocalClient:
         self.skip_perm_errors = skip_perm_errors
         self.key = self.__read_master_key()
         self.auto_reconnect = auto_reconnect
+        self.listen = listen
         self.event = salt.utils.event.get_event(
             "master",
             self.opts["sock_dir"],
             self.opts["transport"],
             opts=self.opts,
-            listen=False,
+            listen=self.listen,
             io_loop=io_loop,
             keep_loop=keep_loop,
         )
@@ -1052,6 +1111,9 @@ class LocalClient:
             )
             yield raw
 
+    def returns_for_job(self, jid):
+        return self.returners["{}.get_load".format(self.opts["master_job_cache"])](jid)
+
     def get_iter_returns(
         self,
         jid,
@@ -1088,10 +1150,7 @@ class LocalClient:
         missing = set()
         # Check to see if the jid is real, if not return the empty dict
         try:
-            if (
-                self.returners["{}.get_load".format(self.opts["master_job_cache"])](jid)
-                == {}
-            ):
+            if not self.returns_for_job(jid):
                 log.warning("jid does not exist")
                 yield {}
                 # stop the iteration, since the jid is invalid
