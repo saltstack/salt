@@ -1,22 +1,15 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Rahul Handay <rahulha@saltstack.com>
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import errno
 import os
 
 import salt.modules.puppet as puppet
-
-# Import Salt Libs
 import salt.utils.args
 import salt.utils.files
 from salt.exceptions import CommandExecutionError
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, mock_open, patch
 from tests.support.unit import TestCase

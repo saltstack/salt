@@ -29,7 +29,6 @@ import salt.utils.network
 import salt.utils.path
 import salt.utils.stringutils
 from salt._compat import ipaddress
-from salt.ext.six.moves import zip  # pylint: disable=redefined-builtin
 from salt.utils.odict import OrderedDict
 
 # Integrations

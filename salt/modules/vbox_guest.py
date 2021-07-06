@@ -1,10 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 VirtualBox Guest Additions installer
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import contextlib
 import functools
 import glob
@@ -12,9 +9,6 @@ import logging
 import os
 import re
 import tempfile
-
-# Import Salt libs
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 __virtualname__ = "vbox_guest"
@@ -89,7 +83,7 @@ def _return_mount_error(f):
         try:
             return f(*args, **kwargs)
         except OSError as e:
-            return six.text_type(e)
+            return str(e)
 
     return wrapper
 
@@ -107,7 +101,7 @@ def _additions_install_program_path(mount_point):
 
 def _additions_install_opensuse(**kwargs):
     kernel_type = re.sub(r"^(\d|\.|-)*", "", __grains__.get("kernelrelease", ""))
-    kernel_devel = "kernel-{0}-devel".format(kernel_type)
+    kernel_devel = "kernel-{}-devel".format(kernel_type)
     return __states__["pkg.installed"](None, pkgs=["make", "gcc", kernel_devel])
 
 
@@ -151,7 +145,7 @@ def _additions_install_linux(mount_point, **kwargs):
         return additions_version()
     elif installer_ret["retcode"] in (127, "127"):
         return (
-            "'{0}' not found on CD. Make sure that VirtualBox Guest "
+            "'{}' not found on CD. Make sure that VirtualBox Guest "
             "Additions CD is attached to the CD IDE Controller.".format(
                 os.path.basename(installer_path)
             )
@@ -196,7 +190,7 @@ def _additions_dir():
     if dirs:
         return dirs[0]
     else:
-        raise EnvironmentError("No VirtualBox Guest Additions dirs found!")
+        raise OSError("No VirtualBox Guest Additions dirs found!")
 
 
 def _additions_remove_linux_run(cmd):
@@ -209,7 +203,7 @@ def _additions_remove_linux(**kwargs):
         return _additions_remove_linux_run(
             os.path.join(_additions_dir(), "uninstall.sh")
         )
-    except EnvironmentError:
+    except OSError:
         return False
 
 
@@ -281,10 +275,10 @@ def additions_version():
     """
     try:
         d = _additions_dir()
-    except EnvironmentError:
+    except OSError:
         return False
     if d and len(os.listdir(d)) > 0:
-        return re.sub(r"^{0}-".format(_additions_dir_prefix), "", os.path.basename(d))
+        return re.sub(r"^{}-".format(_additions_dir_prefix), "", os.path.basename(d))
     return False
 
 
@@ -325,7 +319,7 @@ def grant_access_to_shared_folders_to(name, users=None):
             else:
                 return (
                     "VirtualBox Guest Additions seems to be installed, but "
-                    "group '{0}' not found. Check your installation and fix "
+                    "group '{}' not found. Check your installation and fix "
                     "it. You can uninstall VirtualBox Guest Additions with "
                     "the help of command :py:func:`vbox_guest.additions_remove "
                     "<salt.modules.vbox_guest.additions_remove> (it has "
@@ -336,7 +330,7 @@ def grant_access_to_shared_folders_to(name, users=None):
                     "".format(_shared_folders_group)
                 )
         else:
-            return "Cannot replace members of the '{0}' group." "".format(
+            return "Cannot replace members of the '{}' group." "".format(
                 _shared_folders_group
             )
 

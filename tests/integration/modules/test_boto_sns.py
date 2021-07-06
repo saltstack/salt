@@ -1,18 +1,13 @@
-# -*- coding: utf-8 -*-
 """
 Validate the boto_sns module
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import re
 
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 
-# Import 3rd-party libs
 try:
     import boto
 
@@ -104,7 +99,7 @@ class BotoSNSTest(ModuleCase):
         )
 
     def _get_arn(self, name):
-        return "arn:aws:sns:us-east-1:{0}:{1}".format(self.account_id, name)
+        return "arn:aws:sns:us-east-1:{}:{}".format(self.account_id, name)
 
     @property
     def account_id(self):

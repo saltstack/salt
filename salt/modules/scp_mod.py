@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 SCP Module
 ==========
@@ -7,13 +6,10 @@ SCP Module
 
 Module to copy files via `SCP <https://man.openbsd.org/scp>`_
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 
 # Import salt modules
-from salt.ext import six
 
 try:
     import scp
@@ -44,7 +40,7 @@ def _select_kwargs(**kwargs):
     paramiko_args.append("auto_add_policy")
     scp_args = __utils__["args.get_function_argspec"](scp.SCPClient.__init__)[0]
     scp_args.pop(0)  # strip transport arg (it is passed in _prepare_connection)
-    for key, val in six.iteritems(kwargs):
+    for key, val in kwargs.items():
         if key in paramiko_args and val is not None:
             paramiko_kwargs[key] = val
         if key in scp_args and val is not None:

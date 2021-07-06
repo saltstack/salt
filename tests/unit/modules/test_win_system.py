@@ -1,20 +1,14 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Rahul Handay <rahulha@saltstack.com>
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import types
 from datetime import datetime
 
-# Import Salt Libs
 import salt.modules.win_system as win_system
 import salt.utils.platform
 import salt.utils.stringutils
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, patch
 from tests.support.unit import TestCase, skipIf
@@ -27,7 +21,7 @@ except ImportError:
     HAS_WMI = False
 
 
-class MockWMI_ComputerSystem(object):
+class MockWMI_ComputerSystem:
     """
     Mock WMI Win32_ComputerSystem Class
     """
@@ -67,7 +61,7 @@ class MockWMI_ComputerSystem(object):
         return [0]
 
 
-class MockWMI_OperatingSystem(object):
+class MockWMI_OperatingSystem:
     """
     Mock WMI Win32_OperatingSystem Class
     """
@@ -97,7 +91,7 @@ class MockWMI_ComputerSystemProduct:
         self.SKUNumber = None
 
 
-class MockWMI_Processor(object):
+class MockWMI_Processor:
     """
     Mock WMI Win32_Processor Class
     """
@@ -112,7 +106,7 @@ class MockWMI_Processor(object):
         pass
 
 
-class MockWMI_BIOS(object):
+class MockWMI_BIOS:
     """
     Mock WMI Win32_BIOS Class
     """
@@ -147,9 +141,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
         modules_globals["wmi"] = wmi
 
         if win_system.HAS_WIN32NET_MODS is False:
-            win32api = types.ModuleType(
-                str("win32api")  # future lint: disable=blacklisted-function
-            )
+            win32api = types.ModuleType("win32api")
             now = datetime.now()
             win32api.GetLocalTime = MagicMock(
                 return_value=[
@@ -165,7 +157,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
             )
             modules_globals["win32api"] = win32api
             win32net = types.ModuleType(
-                str("win32net")
+                "win32net"
             )  # future lint: disable=blacklisted-function
             win32net.NetServerGetInfo = MagicMock()
             win32net.NetServerSetInfo = MagicMock()
@@ -606,7 +598,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
         """
         # Create a mock processor class that does not have the
         # NumberOfCoresEnabled property
-        class MockWMIProcessor(object):
+        class MockWMIProcessor:
             """
             Mock WMI Win32_Processor Class
             """

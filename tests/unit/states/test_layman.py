@@ -1,14 +1,8 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
 import salt.states.layman as layman
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -34,12 +28,12 @@ class LaymanTestCase(TestCase, LoaderModuleMockMixin):
 
         mock = MagicMock(side_effect=[[name], []])
         with patch.dict(layman.__salt__, {"layman.list_local": mock}):
-            comt = "Overlay {0} already present".format(name)
+            comt = "Overlay {} already present".format(name)
             ret.update({"comment": comt})
             self.assertDictEqual(layman.present(name), ret)
 
             with patch.dict(layman.__opts__, {"test": True}):
-                comt = "Overlay {0} is set to be added".format(name)
+                comt = "Overlay {} is set to be added".format(name)
                 ret.update({"comment": comt, "result": None})
                 self.assertDictEqual(layman.present(name), ret)
 
@@ -55,11 +49,11 @@ class LaymanTestCase(TestCase, LoaderModuleMockMixin):
 
         mock = MagicMock(side_effect=[[], [name]])
         with patch.dict(layman.__salt__, {"layman.list_local": mock}):
-            comt = "Overlay {0} already absent".format(name)
+            comt = "Overlay {} already absent".format(name)
             ret.update({"comment": comt})
             self.assertDictEqual(layman.absent(name), ret)
 
             with patch.dict(layman.__opts__, {"test": True}):
-                comt = "Overlay {0} is set to be deleted".format(name)
+                comt = "Overlay {} is set to be deleted".format(name)
                 ret.update({"comment": comt, "result": None})
                 self.assertDictEqual(layman.absent(name), ret)

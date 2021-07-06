@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 The thin runner is used to manage the salt thin systems.
 
@@ -7,10 +6,7 @@ in a standalone way. This runner has tools which generate the standalone salt
 system for easy consumption.
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt libs
 import salt.utils.thin
 
 

@@ -90,7 +90,7 @@ _repack_pkgs = _namespaced_function(_repack_pkgs, globals())
 
 if salt.utils.platform.is_windows():
     # pylint: disable=import-error,no-name-in-module,unused-import
-    from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
+    from urllib.parse import urlparse as _urlparse
     from salt.exceptions import SaltRenderError
     import collections
     import datetime
