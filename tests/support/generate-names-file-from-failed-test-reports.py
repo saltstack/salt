@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     tests.support.generate-from-names-from-failed-test-reports
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -7,7 +6,6 @@
     PyTest's --last-failed where PyTest only runs last failed tests.
 """
 # pylint: disable=resource-leakage
-from __future__ import absolute_import, print_function, unicode_literals
 
 import argparse
 import glob

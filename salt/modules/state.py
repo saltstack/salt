@@ -1367,9 +1367,7 @@ def sls(mods, test=None, exclude=None, queue=False, sync_mods=None, **kwargs):
 
     # If the state file is an integer, convert to a string then to unicode
     if isinstance(mods, int):
-        mods = salt.utils.stringutils.to_unicode(
-            str(mods)
-        )  # future lint: disable=blacklisted-function
+        mods = salt.utils.stringutils.to_unicode(str(mods))
 
     mods = salt.utils.args.split_input(mods)
 

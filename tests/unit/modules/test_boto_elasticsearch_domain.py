@@ -5,7 +5,6 @@ import string
 
 import salt.loader
 import salt.modules.boto_elasticsearch_domain as boto_elasticsearch_domain
-from salt.ext.six.moves import range
 from salt.utils.versions import LooseVersion
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch

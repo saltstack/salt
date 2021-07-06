@@ -10,7 +10,6 @@ import os
 import salt.utils.files
 import salt.utils.odict as odict
 import salt.utils.stringutils
-from salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)
 
@@ -308,10 +307,10 @@ def add_host(ip, alias):
 
     inserted = False
     for i, h in hosts.items():
-        for j in range(len(h)):
+        for num, host in enumerate(h):
             if isinstance(h, list):
-                if h[j].startswith("#") and i == ip:
-                    h.insert(j, alias)
+                if host.startswith("#") and i == ip:
+                    h.insert(num, alias)
                     inserted = True
     if not inserted:
         hosts.setdefault(ip, {}).setdefault("aliases", []).append(alias)
