@@ -700,7 +700,8 @@ def bootstrap(
     except OSError as exc:
         # don't block here, try to execute it if can pass
         _logger.error(
-            "BUILDOUT bootstrap permissions error:" " {}".format(exc),
+            "BUILDOUT bootstrap permissions error: %s",
+            exc,
             exc_info=_logger.isEnabledFor(logging.DEBUG),
         )
     cmd = "{} bootstrap.py {}".format(python, bootstrap_args)

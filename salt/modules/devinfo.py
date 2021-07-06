@@ -124,7 +124,7 @@ def _hwinfo_parse_short(report):
             current_result = value
             key_counter = 0
         else:
-            log.error("Error parsing hwinfo short output: {}".format(line))
+            log.error("Error parsing hwinfo short output: %s", line)
 
     return result
 

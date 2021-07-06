@@ -58,9 +58,9 @@ def _get_missing_results(results, dest_dir):
         present = set(os.listdir(dest_dir))
     except OSError as exc:
         if exc.errno == errno.ENOENT:
-            log.debug("pkgbuild.built: dest_dir '{}' does not exist".format(dest_dir))
+            log.debug("pkgbuild.built: dest_dir '%s' does not exist", dest_dir)
         elif exc.errno == errno.EACCES:
-            log.error("pkgbuilt.built: cannot access dest_dir '{}'".format(dest_dir))
+            log.error("pkgbuilt.built: cannot access dest_dir '%s'", dest_dir)
         present = set()
     return sorted(set(results).difference(present))
 

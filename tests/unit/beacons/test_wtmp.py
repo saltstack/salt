@@ -169,7 +169,7 @@ class WTMPBeaconTestCase(TestCase, LoaderModuleMockMixin):
                 ]
 
                 ret = wtmp.beacon(config)
-                log.debug("{}".format(ret))
+                log.debug("wtmp beacon: %s", ret)
                 self.assertEqual(ret, _expected)
 
     @skipIf(not _TIME_SUPPORTED, "dateutil.parser is missing.")
