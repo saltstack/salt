@@ -88,9 +88,6 @@ def post_master_init(self, master):
     if "proxy" not in self.opts:
         self.opts["proxy"] = self.opts["pillar"]["proxy"]
 
-    # FIXME, I think the deltaproxy should always merge opts with pillar...
-    #    if self.opts.get("proxy_merge_pillar_in_opts"):
-    # Override proxy opts with pillar data when the user required.
     self.opts = salt.utils.dictupdate.merge(
         self.opts,
         self.opts["pillar"],
