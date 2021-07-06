@@ -16,7 +16,7 @@ chardet==3.0.4
     # via requests
 cheroot==8.3.0
     # via cherrypy
-cherrypy==18.6.0
+cherrypy==18.6.1
     # via -r requirements/windows.txt
 contextvars==2.4
     # via -r requirements/base.txt
@@ -28,7 +28,7 @@ distro==1.5.0
     # via -r requirements/base.txt
 gitdb==4.0.7
     # via gitpython
-gitpython==3.1.14
+gitpython==3.1.18
     # via -r requirements/windows.txt
 idna==2.8
     # via requests
@@ -49,9 +49,9 @@ jaraco.text==3.5.0
     # via jaraco.collections
 jinja2==2.10.1
     # via -r requirements/base.txt
-libnacl==1.7.2
+libnacl==1.8.0
     # via -r requirements/windows.txt
-lxml==4.6.2
+lxml==4.6.3
     # via -r requirements/windows.txt
 mako==1.1.4
     # via -r requirements/windows.txt
@@ -83,7 +83,7 @@ pycryptodomex==3.10.1
     # via -r requirements/crypto.txt
 pycurl==7.43.0.5
     # via -r requirements/windows.txt
-pymssql==2.1.4
+pymssql==2.2.1
     # via -r requirements/windows.txt
 pymysql==1.0.2
     # via -r requirements/windows.txt
@@ -97,7 +97,7 @@ pythonnet==2.5.2
     # via -r requirements/windows.txt
 pytz==2019.3
     # via tempora
-pywin32==300
+pywin32==301
     # via
     #   -r requirements/windows.txt
     #   cherrypy

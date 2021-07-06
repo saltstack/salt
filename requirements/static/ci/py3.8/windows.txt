@@ -61,7 +61,7 @@ cheroot==8.3.0
     # via
     #   -r requirements/static/pkg/py3.8/windows.txt
     #   cherrypy
-cherrypy==18.6.0
+cherrypy==18.6.1
     # via
     #   -r requirements/static/ci/common.in
     #   -r requirements/static/pkg/py3.8/windows.txt
@@ -116,7 +116,7 @@ gitdb==4.0.7
     # via
     #   -r requirements/static/pkg/py3.8/windows.txt
     #   gitpython
-gitpython==3.1.14
+gitpython==3.1.18
     # via
     #   -r requirements/static/ci/common.in
     #   -r requirements/static/pkg/py3.8/windows.txt
@@ -183,9 +183,9 @@ keyring==5.7.1
     # via -r requirements/static/ci/common.in
 kubernetes==3.0.0
     # via -r requirements/static/ci/common.in
-libnacl==1.7.2
+libnacl==1.8.0
     # via -r requirements/static/pkg/py3.8/windows.txt
-lxml==4.6.2
+lxml==4.6.3
     # via -r requirements/static/pkg/py3.8/windows.txt
 mako==1.1.4
     # via
@@ -259,6 +259,8 @@ pycurl==7.43.0.5
     #   -r requirements/static/pkg/py3.8/windows.txt
 pygit2==1.5.0 ; python_version >= "3.7"
     # via -r requirements/static/ci/windows.in
+pymssql==2.2.1
+    # via -r requirements/static/pkg/py3.8/windows.txt
 pymysql==1.0.2
     # via -r requirements/static/pkg/py3.8/windows.txt
 pyopenssl==20.0.1
@@ -267,9 +269,11 @@ pyparsing==2.4.5
     # via packaging
 pyrsistent==0.17.3
     # via jsonschema
-pytest-helpers-namespace==2019.1.8
-    # via -r requirements/pytest.txt
-pytest-salt-factories==0.121.1
+pytest-helpers-namespace==2021.4.29
+    # via
+    #   -r requirements/pytest.txt
+    #   pytest-salt-factories
+pytest-salt-factories==0.906.0
     # via -r requirements/pytest.txt
 pytest-subtests==0.4.0
     # via -r requirements/pytest.txt
@@ -298,21 +302,21 @@ python-jose[cryptography]==3.2.0
     # via moto
 pythonnet==2.5.2
     # via -r requirements/static/pkg/py3.8/windows.txt
-pytz==2019.3
+pytz==2020.1
     # via
     #   -r requirements/static/pkg/py3.8/windows.txt
     #   moto
     #   tempora
 pyvmomi==6.7.1.2018.12
     # via -r requirements/static/ci/common.in
-pywin32==300
+pywin32==301
     # via
     #   -r requirements/static/pkg/py3.8/windows.txt
     #   cherrypy
     #   wmi
 pywinrm==0.4.1
     # via -r requirements/static/ci/windows.in
-pyyaml==5.3.1
+pyyaml==5.4.1
     # via
     #   -r requirements/static/pkg/py3.8/windows.txt
     #   cfn-lint
@@ -405,7 +409,9 @@ urllib3==1.26.4
     #   python-etcd
     #   requests
 virtualenv==20.0.20
-    # via -r requirements/static/ci/common.in
+    # via
+    #   -r requirements/static/ci/common.in
+    #   pytest-salt-factories
 watchdog==0.10.3
     # via -r requirements/static/ci/common.in
 websocket-client==0.40.0
