@@ -22,7 +22,6 @@ def __virtual__():
     """
     Only return if all the modules are available
     """
-    log.debug("Deltaproxy control proxy __virtual__() called...")
     return True
 
 
@@ -30,7 +29,6 @@ def init(opts):
     """
     init
     """
-    log.debug("deltaproxy proxy init() called...")
     DETAILS["initialized"] = True
 
 
