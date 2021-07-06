@@ -10,6 +10,10 @@ adal==1.2.3
     # via
     #   azure-datalake-store
     #   msrestazure
+ansible-base==2.10.9
+    # via ansible
+ansible==3.4.0
+    # via -r requirements/static/ci/linux.in
 apache-libcloud==2.5.0 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
 appdirs==1.4.4
@@ -408,6 +412,7 @@ cryptography==3.0
     # via
     #   -r requirements/static/pkg/py3.5/linux.txt
     #   adal
+    #   ansible-base
     #   azure-cosmosdb-table
     #   azure-keyvault
     #   azure-storage-common
@@ -488,6 +493,7 @@ jaraco.functools==2.0
 jinja2==2.11.3
     # via
     #   -r requirements/static/pkg/py3.5/linux.txt
+    #   ansible-base
     #   junos-eznc
     #   moto
 jmespath==0.9.4
@@ -522,7 +528,7 @@ kubernetes==3.0.0
     # via -r requirements/static/ci/common.in
 libnacl==1.7.1 ; sys_platform != "win32" and sys_platform != "darwin"
     # via -r requirements/static/ci/common.in
-lxml==4.6.2
+lxml==4.6.3
     # via
     #   junos-eznc
     #   ncclient
@@ -663,7 +669,9 @@ oauthlib==3.1.0
 oscrypto==1.2.0
     # via certvalidator
 packaging==19.2
-    # via pytest
+    # via
+    #   ansible-base
+    #   pytest
 paramiko==2.7.1 ; sys_platform != "win32" and sys_platform != "darwin"
     # via
     #   -r requirements/static/ci/common.in
@@ -707,7 +715,7 @@ pygit2==1.0.3 ; python_version <= "3.8"
     # via -r requirements/static/ci/linux.in
 pyiface==0.0.11
     # via -r requirements/static/ci/linux.in
-pyinotify==0.9.6 ; sys_platform != "win32" and sys_platform != "darwin"
+pyinotify==0.9.6 ; sys_platform != "win32" and sys_platform != "darwin" and platform_system != "openbsd"
     # via -r requirements/static/ci/common.in
 pyjwt==1.7.1
     # via adal
@@ -725,9 +733,11 @@ pyrsistent==0.17.3
     # via jsonschema
 pyserial==3.4
     # via junos-eznc
-pytest-helpers-namespace==2019.1.8
-    # via -r requirements/pytest.txt
-pytest-salt-factories==0.121.1
+pytest-helpers-namespace==2021.4.29
+    # via
+    #   -r requirements/pytest.txt
+    #   pytest-salt-factories
+pytest-salt-factories==0.906.0
     # via -r requirements/pytest.txt
 pytest-subtests==0.4.0
     # via -r requirements/pytest.txt
@@ -771,6 +781,7 @@ pyvmomi==6.7.1.2018.12
 pyyaml==5.3.1
     # via
     #   -r requirements/static/pkg/py3.5/linux.txt
+    #   ansible-base
     #   cfn-lint
     #   clustershell
     #   junos-eznc
@@ -820,7 +831,7 @@ scp==0.13.2
     # via junos-eznc
 setproctitle==1.1.10
     # via -r requirements/static/pkg/py3.5/linux.txt
-six==1.15.0
+six==1.16.0
     # via
     #   -r requirements/static/pkg/py3.5/linux.txt
     #   aws-sam-translator
@@ -918,7 +929,9 @@ vapi-runtime==2.19.0
 vcert==0.7.3 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
 virtualenv==20.0.20
-    # via -r requirements/static/ci/common.in
+    # via
+    #   -r requirements/static/ci/common.in
+    #   pytest-salt-factories
 vmc-client-bindings==1.32.0
     # via vsphere-automation-sdk
 vmc-draas-client-bindings==1.17.0

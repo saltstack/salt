@@ -110,6 +110,7 @@ def init(opts):
         "username",
         "password",
         "passwd",
+        "port",
         "gather_facts",
         "mode",
         "baud",

@@ -27,6 +27,13 @@ salt/modules/(debian_service|freebsdservice|gentoo_service|launchctl_service|mac
   - integration.modules.test_service
   - integration.states.test_service
 
+
+salt/modules/ansiblegate.py:
+  - pytests.unit.states.test_ansiblegate
+  - pytests.integration.states.test_ansiblegate
+  - pytests.functional.modules.test_ansiblegate
+  - pytests.unit.modules.test_ansiblegate
+
 salt/modules/*apache.py:
   - pytests.unit.states.apache.test_apache
   - pytests.unit.states.apache.test_conf
@@ -120,6 +127,9 @@ salt/cloud/*:
 
 salt/cloud/__init__.py:
   - pytests.functional.cli.test_salt_cloud
+
+salt/engines/*:
+  - pytests.unit.engines.test_engines
 
 salt/grains/*:
   - integration.grains.test_custom
