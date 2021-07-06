@@ -1674,7 +1674,10 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                 with patch.object(os.path, "isdir", mock_t):
                                     self.assertDictEqual(
                                         filestate.directory(
-                                            name, user=user, recurse=recurse, group=group
+                                            name,
+                                            user=user,
+                                            recurse=recurse,
+                                            group=group,
                                         ),
                                         ret,
                                     )
@@ -1685,7 +1688,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                 "comment": "",
                                 "changes": {},
                             }
-                                
+
                             mock_perms = MagicMock(return_value=(check_perms_ret, ""))
 
                             recurse = ["ignore_files", "ignore_dirs"]
@@ -1704,7 +1707,10 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                 with patch.object(os.path, "isdir", mock_t):
                                     self.assertDictEqual(
                                         filestate.directory(
-                                            name, user=user, recurse=recurse, group=group
+                                            name,
+                                            user=user,
+                                            recurse=recurse,
+                                            group=group,
                                         ),
                                         ret,
                                     )
@@ -1739,7 +1745,9 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                     filestate.__salt__, {"file.check_perms": mock_perms}
                                 ):
                                     self.assertDictEqual(
-                                        filestate.directory(name, user=user, group=group),
+                                        filestate.directory(
+                                            name, user=user, group=group
+                                        ),
                                         ret,
                                     )
 
