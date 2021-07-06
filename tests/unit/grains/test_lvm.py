@@ -1,12 +1,8 @@
 """
     :codeauthor: :email:`Shane Lee <slee@saltstack.com>`
 """
-# Import Python libs
 
-# Import Salt Libs
 import salt.grains.lvm as lvm
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase

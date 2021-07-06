@@ -1,11 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 :maintainer:    Alberto Planas <aplanas@suse.com>
 :maturity:      new
 :depends:       None
 :platform:      Linux
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
@@ -54,10 +52,8 @@ def _match(udev_info, match_info):
 
         # Converting both values to sets make easy to see if there is
         # a coincidence between both values
-        value = set(value) if isinstance(value, list) else set([value])
-        udev_value = (
-            set(udev_value) if isinstance(udev_value, list) else set([udev_value])
-        )
+        value = set(value) if isinstance(value, list) else {value}
+        udev_value = set(udev_value) if isinstance(udev_value, list) else {udev_value}
         res = res and (value & udev_value)
     return res
 

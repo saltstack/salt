@@ -1,18 +1,12 @@
-# -*- coding: utf-8 -*-
-
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import sys
 
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 
 
 class SysctlModuleTest(ModuleCase):
     def setUp(self):
-        super(SysctlModuleTest, self).setUp()
+        super().setUp()
         ret = self.run_function("cmd.has_exec", ["sysctl"])
         if not ret:
             self.skipTest("sysctl not found")

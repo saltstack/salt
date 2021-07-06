@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage RabbitMQ Plugins
 =======================
@@ -13,12 +12,9 @@ Example:
       rabbitmq_plugin.enabled: []
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import Salt Libs
 from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
@@ -49,11 +45,11 @@ def enabled(name, runas=None):
         plugin_enabled = __salt__["rabbitmq.plugin_is_enabled"](name, runas=runas)
     except CommandExecutionError as err:
         ret["result"] = False
-        ret["comment"] = "Error: {0}".format(err)
+        ret["comment"] = "Error: {}".format(err)
         return ret
 
     if plugin_enabled:
-        ret["comment"] = "Plugin '{0}' is already enabled.".format(name)
+        ret["comment"] = "Plugin '{}' is already enabled.".format(name)
         return ret
 
     if not __opts__["test"]:
@@ -61,16 +57,16 @@ def enabled(name, runas=None):
             __salt__["rabbitmq.enable_plugin"](name, runas=runas)
         except CommandExecutionError as err:
             ret["result"] = False
-            ret["comment"] = "Error: {0}".format(err)
+            ret["comment"] = "Error: {}".format(err)
             return ret
     ret["changes"].update({"old": "", "new": name})
 
     if __opts__["test"] and ret["changes"]:
         ret["result"] = None
-        ret["comment"] = "Plugin '{0}' is set to be enabled.".format(name)
+        ret["comment"] = "Plugin '{}' is set to be enabled.".format(name)
         return ret
 
-    ret["comment"] = "Plugin '{0}' was enabled.".format(name)
+    ret["comment"] = "Plugin '{}' was enabled.".format(name)
     return ret
 
 
@@ -90,11 +86,11 @@ def disabled(name, runas=None):
         plugin_enabled = __salt__["rabbitmq.plugin_is_enabled"](name, runas=runas)
     except CommandExecutionError as err:
         ret["result"] = False
-        ret["comment"] = "Error: {0}".format(err)
+        ret["comment"] = "Error: {}".format(err)
         return ret
 
     if not plugin_enabled:
-        ret["comment"] = "Plugin '{0}' is already disabled.".format(name)
+        ret["comment"] = "Plugin '{}' is already disabled.".format(name)
         return ret
 
     if not __opts__["test"]:
@@ -102,14 +98,14 @@ def disabled(name, runas=None):
             __salt__["rabbitmq.disable_plugin"](name, runas=runas)
         except CommandExecutionError as err:
             ret["result"] = False
-            ret["comment"] = "Error: {0}".format(err)
+            ret["comment"] = "Error: {}".format(err)
             return ret
     ret["changes"].update({"old": name, "new": ""})
 
     if __opts__["test"] and ret["changes"]:
         ret["result"] = None
-        ret["comment"] = "Plugin '{0}' is set to be disabled.".format(name)
+        ret["comment"] = "Plugin '{}' is set to be disabled.".format(name)
         return ret
 
-    ret["comment"] = "Plugin '{0}' was disabled.".format(name)
+    ret["comment"] = "Plugin '{}' was disabled.".format(name)
     return ret

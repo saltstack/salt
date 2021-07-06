@@ -1,12 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 tests.unit.utils.test_configparser
 ==================================
 
 Test the funcs in the custom parsers in salt.utils.configparser
 """
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 import errno
@@ -14,14 +11,9 @@ import logging
 import os
 
 import salt.utils.configparser
-
-# Import salt libs
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.stringutils
-from salt.ext import six
-
-# Import Salt Testing Libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
 
@@ -111,7 +103,7 @@ class TestGitConfigParser(TestCase):
 
     def _test_write(self, mode):
         kwargs = {"mode": mode}
-        if six.PY3 and salt.utils.platform.is_windows() and "b" not in mode:
+        if salt.utils.platform.is_windows() and "b" not in mode:
             kwargs["encoding"] = "utf-8"
         with salt.utils.files.fopen(self.new_config, **kwargs) as fp_:
             self.conf.write(fp_)

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Management of zc.buildout
 =========================
@@ -35,14 +34,9 @@ Available Functions
           - onlyif: /bin/test_else_installed
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 import sys
-
-# Import salt libs
-from salt.ext.six import string_types
 
 # Define the module's virtual name
 __virtualname__ = "buildout"
@@ -87,11 +81,11 @@ def _ret_status(
         out = exec_status.get("out", "")
         if not quiet:
             if out:
-                if isinstance(out, string_types):
+                if isinstance(out, str):
                     comment += "\n" + out
             outlog = exec_status.get("outlog", None)
             if outlog:
-                if isinstance(outlog, string_types):
+                if isinstance(outlog, str):
                     comment += "\n" + outlog
     return {
         "changes": changes,
