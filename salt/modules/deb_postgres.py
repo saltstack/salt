@@ -3,15 +3,11 @@ Module to provide Postgres compatibility to salt for debian family specific tool
 
 """
 
-# Import python libs
 
 import logging
 import pipes
 
-# Import salt libs
 import salt.utils.path
-
-# Import 3rd-party libs
 
 log = logging.getLogger(__name__)
 

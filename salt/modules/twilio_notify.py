@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module for notifications via Twilio
 
@@ -19,12 +18,8 @@ Module for notifications via Twilio
             twilio.account_sid: AC32a3c83990934481addd5ce1659f04d2
             twilio.auth_token: mytoken
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
-
-# import 3rd party libs
-from salt.ext import six
 
 HAS_LIBS = False
 try:
@@ -105,7 +100,7 @@ def send_sms(profile, body, to, from_):
     ret["message"]["status"] = message.status
     ret["message"]["num_segments"] = message.num_segments
     ret["message"]["body"] = message.body
-    ret["message"]["date_sent"] = six.text_type(message.date_sent)
-    ret["message"]["date_created"] = six.text_type(message.date_created)
+    ret["message"]["date_sent"] = str(message.date_sent)
+    ret["message"]["date_created"] = str(message.date_created)
     log.info(ret)
     return ret

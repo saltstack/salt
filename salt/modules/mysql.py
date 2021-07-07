@@ -1110,7 +1110,15 @@ def alter_db(name, character_set=None, collate=None, **connection_args):
         collate or existing.get("collate"),
     )
     args = {}
-    _execute(cur, qry, args)
+    try:
+        if _execute(cur, qry, args):
+            log.info("DB '%s' altered", name)
+            return True
+    except MySQLdb.OperationalError as exc:
+        err = "MySQL Error {}: {}".format(*exc.args)
+        __context__["mysql.error"] = err
+        log.error(err)
+    return False
 
 
 def db_get(name, **connection_args):
@@ -1134,7 +1142,14 @@ def db_get(name, **connection_args):
         "INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME=%(dbname)s;"
     )
     args = {"dbname": name}
-    _execute(cur, qry, args)
+    try:
+        _execute(cur, qry, args)
+    except MySQLdb.OperationalError as exc:
+        err = "MySQL Error {}: {}".format(*exc.args)
+        __context__["mysql.error"] = err
+        log.error(err)
+        return []
+
     if cur.rowcount:
         rows = cur.fetchall()
         return {"character_set": rows[0][0], "collate": rows[0][1]}
@@ -1579,7 +1594,8 @@ def _mysql_user_create(
         args["password"] = str(password)
     elif password_hash is not None:
         if salt.utils.versions.version_cmp(server_version, compare_version) >= 0:
-            qry += " IDENTIFIED BY %(password)s"
+            args["auth_plugin"] = auth_plugin
+            qry += " IDENTIFIED WITH %(auth_plugin)s AS %(password)s"
         else:
             qry += " IDENTIFIED BY PASSWORD %(password)s"
         args["password"] = password_hash
@@ -1829,7 +1845,12 @@ def _mysql_user_chpass(
     args["host"] = host
 
     if salt.utils.versions.version_cmp(server_version, compare_version) >= 0:
-        qry = "ALTER USER %(user)s@%(host)s IDENTIFIED BY %(password)s;"
+        args["auth_plugin"] = auth_plugin
+        qry = "ALTER USER %(user)s@%(host)s IDENTIFIED WITH %(auth_plugin)s "
+        if password is not None:
+            qry += "BY %(password)s;"
+        elif password_hash is not None:
+            qry += "AS %(password)s;"
     else:
         qry = (
             "UPDATE mysql.user SET "
@@ -1882,7 +1903,7 @@ def _mariadb_user_chpass(
 ):
 
     server_version = salt.utils.data.decode(version(**connection_args))
-    compare_version = "10.4.0"
+    compare_version = "10.4"
 
     args = {}
 
@@ -1905,7 +1926,9 @@ def _mariadb_user_chpass(
     args["host"] = host
 
     if salt.utils.versions.version_cmp(server_version, compare_version) >= 0:
-        qry = "ALTER USER %(user)s@%(host)s IDENTIFIED BY %(password)s;"
+        args["auth_plugin"] = auth_plugin
+        qry = "ALTER USER %(user)s@%(host)s IDENTIFIED VIA %(auth_plugin)s USING "
+        qry += password_sql
     else:
         qry = (
             "UPDATE mysql.user SET "
@@ -2374,6 +2397,7 @@ def grant_exists(
         if (
             salt.utils.versions.version_cmp(server_version, "8.0") >= 0
             and "MariaDB" not in server_version
+            and database == "*.*"
         ):
             grant = ",".join([i for i in __all_privileges__])
         else:

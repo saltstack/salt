@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module for sending data to OpsGenie
 
@@ -20,14 +19,10 @@ Module for sending data to OpsGenie
                 reason: {{ data['data']['reason'] }}
                 action_type: Create
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
 import requests
-
-# Import Salt libs
 import salt.exceptions
 import salt.utils.json
 
