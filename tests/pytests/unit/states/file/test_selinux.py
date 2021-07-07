@@ -8,7 +8,9 @@ from tests.support.mock import MagicMock, patch
 log = logging.getLogger(__name__)
 
 
-pytestmark = pytest.mark.skipif(pytest.mark.skip_unless_on_linux)
+pytestmark = pytest.mark.skipif(
+    pytest.mark.skip_unless_on_linux, reason="Only run on Linux"
+)
 
 
 @pytest.fixture
