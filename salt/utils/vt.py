@@ -28,7 +28,8 @@ import logging
 # Import python libs
 import os
 import select
-import shlex
+
+# import shlex
 import signal
 import subprocess
 import sys
@@ -316,7 +317,7 @@ class Terminal:
         self.stderr_logger_level = LOG_LEVELS.get(log_stderr_level, log_stderr_level)
         if log_stderr is True:
             self.stderr_logger = logging.getLogger(
-                "{0}.{1}.PID-{2}.STDERR".format(
+                "{}.{}.PID-{}.STDERR".format(
                     __name__, self.__class__.__name__, self.pid
                 )
             )
@@ -454,7 +455,7 @@ class Terminal:
             # TODO: Get rid of this logic, just use the same api as Popen
             if isinstance(self.args, str):
                 args = [self.args]
-            #if isinstance(self.args, string_types):
+            # if isinstance(self.args, string_types):
             #    args = shlex.split(self.args)
             #    args = self.args.split()
             elif self.args:
@@ -570,6 +571,7 @@ class Terminal:
 
             if not self.isalive():
                 if not rfds:
+                    self.close()
                     return None, None
                 rlist, _, _ = select.select(rfds, [], [], 0)
                 if not rlist:
@@ -579,10 +581,12 @@ class Terminal:
                         # There is data that was received but for which
                         # decoding failed, attempt decoding again to generate
                         # relevant exception
+                        self.close()
                         return (
                             salt.utils.stringutils.to_unicode(self.partial_data_stdout),
                             salt.utils.stringutils.to_unicode(self.partial_data_stderr),
                         )
+                    self.close()
                     return None, None
             elif self.__irix_hack:
                 # Irix takes a long time before it realizes a child was
@@ -855,11 +859,13 @@ class Terminal:
                 self.exitstatus = _wexitstatus(status)
                 self.signalstatus = None
                 self.terminated = True
+                self.close()
             elif _wifsignaled(status):
                 self.status = status
                 self.exitstatus = None
                 self.signalstatus = _wtermsig(status)
                 self.terminated = True
+                self.close()
             elif _wifstopped(status):
                 raise _terminal_exception(
                     "isalive() encountered condition where child process is "
