@@ -1379,7 +1379,12 @@ def hardlink(
         group = user
 
     if group is None:
-        group = __salt__["file.gid_to_group"](__salt__["user.info"](user).get("gid", 0))
+        if "user.info" in __salt__:
+            group = __salt__["file.gid_to_group"](
+                __salt__["user.info"](user).get("gid", 0)
+            )
+        else:
+            group = user
 
     preflight_errors = []
     uid = __salt__["file.user_to_uid"](user)
@@ -1639,7 +1644,12 @@ def symlink(
         group = user
 
     if group is None:
-        group = __salt__["file.gid_to_group"](__salt__["user.info"](user).get("gid", 0))
+        if "user.info" in __salt__:
+            group = __salt__["file.gid_to_group"](
+                __salt__["user.info"](user).get("gid", 0)
+            )
+        else:
+            group = user
 
     preflight_errors = []
     if salt.utils.platform.is_windows():
@@ -7144,9 +7154,12 @@ def copy_(
             group = user
 
         if group is None:
-            group = __salt__["file.gid_to_group"](
-                __salt__["user.info"](user).get("gid", 0)
-            )
+            if "user.info" in __salt__:
+                group = __salt__["file.gid_to_group"](
+                    __salt__["user.info"](user).get("gid", 0)
+                )
+            else:
+                group = user
 
         u_check = _check_user(user, group)
         if u_check:

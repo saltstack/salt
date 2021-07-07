@@ -45,7 +45,7 @@ salt/modules/augeas_cfg.py:
 
 salt/modules/cp.py:
   - unit.modules.test_file
-  - unit.states.test_file
+  - pytests.unit.states.file.test_copy
   - integration.modules.test_file
   - integration.states.test_file
 
