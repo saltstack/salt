@@ -301,6 +301,11 @@ def __virtual__():
         return (False, "Module transactional_update requires a transactional system")
 
 
+class TransactionalUpdateHighstate(salt.client.ssh.state.SSHHighState):
+    def _master_tops(self):
+        return self.client.master_tops()
+
+
 def _global_params(self_update, snapshot=None, quiet=False):
     """Utility function to prepare common global parameters."""
     params = ["--non-interactive", "--drop-if-no-change"]
@@ -1107,7 +1112,7 @@ def sls(
     # Clone the options data and apply some default values. May not be
     # needed, as this module just delegate
     opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
-    st_ = salt.client.ssh.state.SSHHighState(
+    st_ = TransactionalUpdateHighstate(
         opts, pillar, __salt__, salt.fileclient.get_file_client(__opts__)
     )
 
@@ -1180,7 +1185,7 @@ def highstate(activate_transaction=False, **kwargs):
     # Clone the options data and apply some default values. May not be
     # needed, as this module just delegate
     opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
-    st_ = salt.client.ssh.state.SSHHighState(
+    st_ = TransactionalUpdateHighstate(
         opts, pillar, __salt__, salt.fileclient.get_file_client(__opts__)
     )
 
