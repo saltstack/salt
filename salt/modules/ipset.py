@@ -451,7 +451,7 @@ def check_set(name=None, family="ipv4"):
 
     """
     if not name:
-        return "Error: Set needs to be specified AAA"
+        return "Error: Set needs to be specified"
 
     setinfo = _find_set_info(name)
     if not setinfo:
