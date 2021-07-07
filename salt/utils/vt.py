@@ -859,13 +859,11 @@ class Terminal:
                 self.exitstatus = _wexitstatus(status)
                 self.signalstatus = None
                 self.terminated = True
-                self.close()
             elif _wifsignaled(status):
                 self.status = status
                 self.exitstatus = None
                 self.signalstatus = _wtermsig(status)
                 self.terminated = True
-                self.close()
             elif _wifstopped(status):
                 raise _terminal_exception(
                     "isalive() encountered condition where child process is "
