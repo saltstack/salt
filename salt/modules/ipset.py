@@ -654,10 +654,6 @@ def flush(name=None, family="ipv4"):
         salt '*' ipset.flush set
     """
 
-    settype = _find_set_type(name)
-    if not settype:
-        return "Error: Set {} does not exist".format(name)
-
     ipset_family = _IPSET_FAMILIES[family]
     if name:
         cmd = "{} flush {}".format(_ipset_cmd(), name)
