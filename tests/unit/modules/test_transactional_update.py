@@ -622,22 +622,22 @@ class TransactionalUpdateTestCase(TestCase, LoaderModuleMockMixin):
             utils_mock["files.rm_rf"].assert_called_once()
 
     @patch("salt.modules.transactional_update._create_and_execute_salt_state")
-    @patch("salt.client.ssh.state.SSHHighState")
+    @patch("salt.modules.transactional_update.TransactionalUpdateHighstate")
     @patch("salt.fileclient.get_file_client")
     @patch("salt.utils.state.get_sls_opts")
     def test_sls(
         self,
         get_sls_opts,
         get_file_client,
-        SSHHighState,
+        TransactionalUpdateHighstate,
         _create_and_execute_salt_state,
     ):
         """Test transactional_update.sls"""
-        SSHHighState.return_value = SSHHighState
-        SSHHighState.render_highstate.return_value = (None, [])
-        SSHHighState.state.reconcile_extend.return_value = (None, [])
-        SSHHighState.state.requisite_in.return_value = (None, [])
-        SSHHighState.state.verify_high.return_value = []
+        TransactionalUpdateHighstate.return_value = TransactionalUpdateHighstate
+        TransactionalUpdateHighstate.render_highstate.return_value = (None, [])
+        TransactionalUpdateHighstate.state.reconcile_extend.return_value = (None, [])
+        TransactionalUpdateHighstate.state.requisite_in.return_value = (None, [])
+        TransactionalUpdateHighstate.state.verify_high.return_value = []
 
         _create_and_execute_salt_state.return_value = "result"
         opts_mock = {
@@ -649,18 +649,18 @@ class TransactionalUpdateTestCase(TestCase, LoaderModuleMockMixin):
             _create_and_execute_salt_state.assert_called_once()
 
     @patch("salt.modules.transactional_update._create_and_execute_salt_state")
-    @patch("salt.client.ssh.state.SSHHighState")
+    @patch("salt.modules.transactional_update.TransactionalUpdateHighstate")
     @patch("salt.fileclient.get_file_client")
     @patch("salt.utils.state.get_sls_opts")
     def test_highstate(
         self,
         get_sls_opts,
         get_file_client,
-        SSHHighState,
+        TransactionalUpdateHighstate,
         _create_and_execute_salt_state,
     ):
         """Test transactional_update.highstage"""
-        SSHHighState.return_value = SSHHighState
+        TransactionalUpdateHighstate.return_value = TransactionalUpdateHighstate
 
         _create_and_execute_salt_state.return_value = "result"
         opts_mock = {
