@@ -411,6 +411,12 @@ def test_hardlink():
             filestate.hardlink(name, target, user=user, force=True, group=group) == ret
         )
 
+    patches = {}
+    patches["file.user_to_uid"] = mock_empty
+    patches["file.group_to_gid"] = mock_empty
+    patches["file.is_hardlink"] = mock_t
+    patches["file.stats"] = mock_empty
+
     # Make new link when group is None and file.gid_to_group is unavailable
     with patch.dict(filestate.__salt__, patches), patch.dict(
         filestate.__salt__, {"file.user_to_uid": mock_uid}
