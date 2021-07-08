@@ -53,13 +53,13 @@ def test_enforce_nice_config(tmp_path):
         ("use", ["apple", "-banana", "ananas", "orange"]),
     ]
 
-    base_path = tmp_path / "/package.{0}"
+    base_path = str(tmp_path / "/package.{0}")
 
     def make_line(atom, addition):
         return atom + (" " + addition if addition != "" else "") + "\n"
 
     for typ, additions in supported:
-        path = base_path / typ
+        path = base_path.format(typ)
         with salt.utils.files.fopen(path, "a") as fh:
             for atom, _ in atoms:
                 for addition in additions:
@@ -76,7 +76,7 @@ def test_enforce_nice_config(tmp_path):
     for typ, additions in supported:
         for atom, file_name in atoms:
             with salt.utils.files.fopen(
-                base_path / typ / "/" / file_name, "r"
+                base_path.format(typ) + "/" + file_name, "r"
             ) as fh:
                 for line in fh:
                     for atom in line:
