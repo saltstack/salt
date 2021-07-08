@@ -7245,9 +7245,12 @@ def copy_(
         if not preserve:
             if salt.utils.platform.is_windows():
                 # TODO: Add the other win_* parameters to this function
-                ret = __salt__["file.check_perms"](path=name, ret=ret, owner=user)
+                check_ret = __salt__["file.check_perms"](path=name, ret=ret, owner=user)
             else:
-                __salt__["file.check_perms"](name, ret, user, group, mode)
+                check_ret = __salt__["file.check_perms"](name, ret, user, group, mode)
+            if not check_ret["result"]:
+                ret["result"] = check_ret["result"]
+                ret["comment"] = check_ret["comment"]
     except OSError:
         return _error(ret, 'Failed to copy "{}" to "{}"'.format(source, name))
     return ret

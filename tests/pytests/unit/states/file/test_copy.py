@@ -138,6 +138,26 @@ def test_copy():
                             ret.update({"comment": comt, "result": False})
                             assert filestate.copy_(name, source, preserve=True) == ret
 
+            ret_check_perms = {
+                "name": name,
+                "changes": {},
+                "comment": [],
+                "result": True,
+            }
+
+            mock_check_perms = MagicMock(return_value=ret_check_perms)
+            with patch.dict(
+                filestate.__salt__,
+                {
+                    "file.user_to_uid": mock_uid,
+                    "file.group_to_gid": mock_gid,
+                    "file.get_user": mock_user,
+                    "file.get_group": mock_grp,
+                    "file.get_mode": mock_grp,
+                    "file.check_perms": mock_check_perms,
+                },
+            ):
+
                 comt = 'Copied "{}" to "{}"'.format(source, name)
                 with patch.dict(filestate.__opts__, {"user": "salt"}):
                     with patch.object(os.path, "isdir", mock_t):
