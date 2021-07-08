@@ -168,7 +168,6 @@ class Terminal:
         self.signalstatus = None
         # status returned by os.waitpid
         self.status = None
-        self.__irix_hack = "irix" in sys.platform.lower()
 
         if stream_stdout is True:
             self.stream_stdout = sys.stdout
@@ -515,25 +514,6 @@ class Terminal:
                             salt.utils.stringutils.to_unicode(self.partial_data_stderr),
                         )
                     self.close()
-                    return None, None
-            elif self.__irix_hack:
-                # Irix takes a long time before it realizes a child was
-                # terminated.
-                # FIXME So does this mean Irix systems are forced to always
-                # have a 2 second delay when calling read_nonblocking?
-                # That sucks.
-                rlist, _, _ = select.select(rfds, [], [], 2)
-                if not rlist:
-                    self.flag_eof_stdout = self.flag_eof_stderr = True
-                    log.debug("End of file(EOL). Slow platform.")
-                    if self.partial_data_stdout or self.partial_data_stderr:
-                        # There is data that was received but for which
-                        # decoding failed, attempt decoding again to generate
-                        # relevant exception
-                        return (
-                            salt.utils.stringutils.to_unicode(self.partial_data_stdout),
-                            salt.utils.stringutils.to_unicode(self.partial_data_stderr),
-                        )
                     return None, None
 
             stderr = ""
