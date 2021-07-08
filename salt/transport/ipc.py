@@ -371,6 +371,10 @@ class IPCClient:
                 if exc.errno != errno.EBADF:
                     # If its not a bad file descriptor error, raise
                     raise
+            except RuntimeError:
+                # The underlying IOLoop has already been closed.
+                log.debug("IOLoop already closed.")
+                pass
 
     # pylint: disable=W1701
     def __del__(self):
