@@ -8,7 +8,7 @@ apache-libcloud==2.5.0
     # via -r requirements/darwin.txt
 certifi==2020.6.20
     # via requests
-cffi==1.12.2
+cffi==1.14.5
     # via cryptography
 chardet==3.0.4
     # via requests
