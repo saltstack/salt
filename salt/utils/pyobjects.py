@@ -9,7 +9,6 @@ import inspect
 import logging
 
 from salt.utils.odict import OrderedDict
-from salt.utils.schema import Prepareable
 
 REQUISITES = (
     "listen",
@@ -290,7 +289,7 @@ class SaltObject:
         return __wrapper__()
 
 
-class MapMeta(type, metaclass=Prepareable):
+class MapMeta(type):
     """
     This is the metaclass for our Map class, used for building data maps based
     off of grain data.

@@ -18,8 +18,6 @@ In the minion configuration file, the following block is required:
 """
 
 import logging
-
-# import python std lib
 import time
 
 # ----------------------------------------------------------------------------------------------------------------------

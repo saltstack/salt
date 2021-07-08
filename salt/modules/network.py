@@ -570,7 +570,17 @@ def _ip_route_linux():
 
         # need to fake similar output to that provided by netstat
         # to maintain output format
-        if comps[0] == "unreachable":
+        if comps[0] in (
+            "unicast",
+            "broadcast",
+            "throw",
+            "unreachable",
+            "prohibit",
+            "blackhole",
+            "nat",
+            "anycast",
+            "multicast",
+        ):
             continue
 
         if comps[0] == "default":
@@ -1456,10 +1466,8 @@ def mod_hostname(hostname):
                     # fmt: off
                     fh_.write(
                         __utils__["stringutils.to_str"](
-                            "HOSTNAME={}{}{}\n".format(
-                                __utils__["stringutils.dequote"](hostname),
-                                quote_type,
-                                __utils__["stringutils.dequote"](hostname),
+                            "HOSTNAME={1}{0}{1}\n".format(
+                                __utils__["stringutils.dequote"](hostname), quote_type
                             )
                         )
                     )
@@ -1800,11 +1808,11 @@ def default_route(family=None):
 
         salt '*' network.default_route
     """
-
     if family != "inet" and family != "inet6" and family is not None:
         raise CommandExecutionError("Invalid address family {}".format(family))
 
-    _routes = routes()
+    _routes = routes(family)
+
     default_route = {}
     if __grains__["kernel"] == "Linux":
         default_route["inet"] = ["0.0.0.0", "default"]

@@ -32,7 +32,6 @@ import salt.output
 import salt.syspaths
 import salt.utils.data
 import salt.utils.event
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -88,7 +87,7 @@ def _parallel_map(func, inputs):
         thread.start()
         return thread
 
-    threads = list(six.moves.map(create_thread, six.moves.range(len(inputs))))
+    threads = list(map(create_thread, range(len(inputs))))
     for thread in threads:
         thread.join()
     for error in errors:
@@ -858,8 +857,7 @@ def parallel_runners(name, runners, **kwargs):  # pylint: disable=unused-argumen
     # time we exctract the actual return value of the runner (saltutil.runner
     # adds some extra information that is not interesting to us).
     outputs = {
-        runner_id: out["return"]
-        for runner_id, out in six.moves.zip(runners.keys(), outputs)
+        runner_id: out["return"] for runner_id, out in zip(runners.keys(), outputs)
     }
 
     # If each of the runners returned its output in the format compatible with

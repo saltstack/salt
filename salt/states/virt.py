@@ -670,6 +670,7 @@ def defined(
             )
             ret["changes"][name] = status
             if not status.get("definition"):
+                ret["changes"] = {}
                 ret["comment"] = "Domain {} unchanged".format(name)
                 ret["result"] = True
             elif status.get("errors"):
@@ -1026,7 +1027,7 @@ def running(
 
     result = True if not __opts__["test"] else None
     if ret["result"] is None or ret["result"]:
-        changed = ret["changes"][name].get("definition", False)
+        changed = ret["changes"].get(name, {}).get("definition", False)
         try:
             domain_state = __salt__["virt.vm_state"](name)
             if domain_state.get(name) != "running":
@@ -1041,6 +1042,8 @@ def running(
                 if not ret["comment"].endswith("unchanged"):
                     comment = "{} and started".format(ret["comment"])
                 ret["comment"] = comment
+                if name not in ret["changes"]:
+                    ret["changes"][name] = {}
                 ret["changes"][name]["started"] = True
             elif not changed:
                 ret["comment"] = "Domain {} exists and is running".format(name)

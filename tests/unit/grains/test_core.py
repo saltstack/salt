@@ -738,6 +738,35 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         self._run_os_grains_tests(None, _os_release_map, expectation)
 
     @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
+    def test_rocky_8_os_grains(self):
+        """
+        Test if OS grains are parsed correctly in Rocky 8
+        """
+        _os_release_map = {
+            "os_release_file": {
+                "NAME": "Rocky Linux",
+                "VERSION_ID": "8.4",
+                "PRETTY_NAME": "Rocky Linux 8.4 (Green Obsidian)",
+                "ID": "rocky",
+                "ANSI_COLOR": "0;32",
+                "CPE_NAME": "cpe:/o:rocky:rocky:8.4:GA",
+            },
+            "_linux_distribution": ("rocky", "8.4", ""),
+        }
+
+        expectation = {
+            "os": "Rocky",
+            "os_family": "RedHat",
+            "oscodename": "Rocky Linux 8.4 (Green Obsidian)",
+            "osfullname": "Rocky Linux",
+            "osrelease": "8.4",
+            "osrelease_info": (8, 4,),
+            "osmajorrelease": 8,
+            "osfinger": "Rocky Linux-8",
+        }
+        self._run_os_grains_tests(None, _os_release_map, expectation)
+
+    @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
     def test_mendel_os_grains(self):
         """
         Test if OS grains are parsed correctly in Mendel Linux
@@ -1203,20 +1232,108 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                             grains.get("virtual"), "container",
                         )
 
+        with patch.object(os.path, "isdir", MagicMock(return_value=False)):
+            with patch.object(
+                os.path,
+                "isfile",
+                MagicMock(
+                    side_effect=lambda x: True
+                    if x in ("/proc/1/cgroup", "/proc/1/environ")
+                    else False
+                ),
+            ):
+                file_contents = {
+                    "/proc/1/cgroup": "10:memory",
+                    "/proc/1/environ": "container=lxc",
+                }
+                with patch(
+                    "salt.utils.files.fopen", mock_open(read_data=file_contents)
+                ):
+                    with patch.dict(core.__salt__, {"cmd.run_all": MagicMock()}):
+                        grains = core._virtual({"kernel": "Linux"})
+                        self.assertEqual(grains.get("virtual_subtype"), "LXC")
+                        self.assertEqual(
+                            grains.get("virtual"), "container",
+                        )
+
+    @skipIf(salt.utils.platform.is_windows(), "System is Windows")
+    def test_lxc_virtual_with_virt_what(self):
+        """
+        Test if virtual grains are parsed correctly in LXC using virt-what.
+        """
+        virt = "lxc\nkvm"
+        with patch.object(
+            salt.utils.platform, "is_windows", MagicMock(return_value=False)
+        ):
+            with patch.object(salt.utils.path, "which", MagicMock(return_value=True)):
+                with patch.dict(
+                    core.__salt__,
+                    {
+                        "cmd.run_all": MagicMock(
+                            return_value={
+                                "pid": 78,
+                                "retcode": 0,
+                                "stderr": "",
+                                "stdout": virt,
+                            }
+                        )
+                    },
+                ):
+                    osdata = {
+                        "kernel": "test",
+                    }
+                    ret = core._virtual(osdata)
+                    self.assertEqual(ret["virtual"], "container")
+                    self.assertEqual(ret["virtual_subtype"], "LXC")
+
+    @skipIf(salt.utils.platform.is_windows(), "System is Windows")
+    def test_container_inside_virtual_machine(self):
+        """
+        Test if a container inside an hypervisor is shown as a container
+        """
+        with patch.object(os.path, "isdir", MagicMock(return_value=False)):
+            with patch.object(
+                os.path,
+                "isfile",
+                MagicMock(
+                    side_effect=lambda x: True
+                    if x in ("/proc/cpuinfo", "/proc/1/cgroup", "/proc/1/environ")
+                    else False
+                ),
+            ):
+                file_contents = {
+                    "/proc/cpuinfo": "QEMU Virtual CPU",
+                    "/proc/1/cgroup": "10:memory",
+                    "/proc/1/environ": "container=lxc",
+                }
+                with patch(
+                    "salt.utils.files.fopen", mock_open(read_data=file_contents)
+                ):
+                    with patch.dict(core.__salt__, {"cmd.run_all": MagicMock()}):
+                        grains = core._virtual({"kernel": "Linux"})
+                        self.assertEqual(grains.get("virtual_subtype"), "LXC")
+                        self.assertEqual(
+                            grains.get("virtual"), "container",
+                        )
+
     @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
     def test_xen_virtual(self):
         """
-        Test if OS grains are parsed correctly in Ubuntu Xenial Xerus
+        Test if OS grains are parsed correctly for Xen hypervisors
         """
         with patch.multiple(
             os.path,
-            isdir=MagicMock(side_effect=lambda x: x == "/sys/bus/xen"),
-            isfile=MagicMock(
-                side_effect=lambda x: x == "/sys/bus/xen/drivers/xenconsole"
+            isdir=MagicMock(
+                side_effect=lambda x: x
+                in ["/sys/bus/xen", "/sys/bus/xen/drivers/xenconsole"]
             ),
         ):
-            with patch.dict(core.__salt__, {"cmd.run": MagicMock(return_value="")}):
-                log.debug("Testing Xen")
+            with patch.dict(
+                core.__salt__, {"cmd.run": MagicMock(return_value="")}
+            ), patch.dict(
+                core.__salt__,
+                {"cmd.run_all": MagicMock(return_value={"retcode": 0, "stdout": ""})},
+            ):
                 self.assertEqual(
                     core._virtual({"kernel": "Linux"}).get("virtual_subtype"),
                     "Xen PV DomU",
@@ -1437,8 +1554,8 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
 
         def _check_type(key, value, ip4_empty, ip6_empty):
             """
-                check type and other checks
-                """
+            check type and other checks
+            """
             assert isinstance(value, list)
 
             if "4" in key:

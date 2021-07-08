@@ -2,16 +2,11 @@
 Salt module to manage RAID arrays with mdadm
 """
 import logging
-
-# Import python libs
 import os
 import re
 
-# Import salt libs
 import salt.utils.path
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-
-# Import 3rd-party libs
 
 # Set up logger
 log = logging.getLogger(__name__)

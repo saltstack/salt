@@ -4,7 +4,6 @@ directories for python loadable code and organizes the code into the
 plugin interfaces used by Salt.
 """
 
-import contextvars
 import copy
 import functools
 import importlib
@@ -44,6 +43,13 @@ from salt.exceptions import LoaderError
 from salt.template import check_render_pipe_str
 from salt.utils import entrypoints
 from salt.utils.decorators import Depends
+
+try:
+    # Try the stdlib C extension first
+    import _contextvars as contextvars
+except ImportError:
+    # Py<3.7
+    import contextvars
 
 log = logging.getLogger(__name__)
 
@@ -173,14 +179,7 @@ def _module_dirs(
                     if ctx.exception_caught:
                         continue
 
-                    if isinstance(loaded_entry_point_value, list):
-                        # This is old style entry-point, and, as such, the entry point name MUST
-                        # match the value of `ext_type_dirs
-                        if entry_point.name != ext_type_dirs:
-                            continue
-                        for path in loaded_entry_point_value:
-                            loaded_entry_point_paths.add(path)
-                    elif isinstance(loaded_entry_point_value, dict):
+                    if isinstance(loaded_entry_point_value, dict):
                         # This is new style entry-point and it returns a dictionary.
                         # It MUST contain `ext_type` in it's keys to be considered
                         if ext_type not in loaded_entry_point_value:
@@ -194,6 +193,13 @@ def _module_dirs(
                                 )
                             for path in loaded_entry_point_value[ext_type]:
                                 loaded_entry_point_paths.add(path)
+                    else:
+                        # This is old style entry-point, and, as such, the entry point name MUST
+                        # match the value of `ext_type_dirs
+                        if entry_point.name != ext_type_dirs:
+                            continue
+                        for path in loaded_entry_point_value:
+                            loaded_entry_point_paths.add(path)
                 elif isinstance(loaded_entry_point, types.ModuleType):
                     # This is a new style entry points definition which just points us to a package
                     #
@@ -1166,7 +1172,7 @@ def _generate_module(name):
 
     code = "'''Salt loaded {} parent module'''".format(name.split(".")[-1])
     # ModuleType can't accept a unicode type on PY2
-    module = types.ModuleType(str(name))  # future lint: disable=blacklisted-function
+    module = types.ModuleType(str(name))
     exec(code, module.__dict__)
     sys.modules[name] = module
 

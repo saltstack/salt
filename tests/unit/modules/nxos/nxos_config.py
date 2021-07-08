@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 template_engine_file_str = "no feature ospf"
 
 config_result = [["no feature ospf"], [{}]]
