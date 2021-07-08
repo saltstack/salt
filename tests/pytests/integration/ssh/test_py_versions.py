@@ -6,7 +6,7 @@ import shutil
 import subprocess
 
 import pytest
-from saltfactories.factories.daemons.container import ContainerFactory
+from saltfactories.daemons.container import Container
 from saltfactories.utils import random_string
 from saltfactories.utils.ports import get_unused_localhost_port
 
@@ -63,7 +63,7 @@ def docker_client():
         client = docker.from_env()
     except DockerException:
         pytest.skip("Failed to get a connection to docker running on the system")
-    connectable = ContainerFactory.client_connectable(client)
+    connectable = Container.client_connectable(client)
     if connectable is not True:  # pragma: nocover
         pytest.skip(connectable)
     return client
@@ -133,8 +133,8 @@ def ssh_docker_container(salt_factories, docker_client, ssh_port, ssh_keys):
 def salt_ssh_cli(salt_master, salt_ssh_roster_file, ssh_keys, ssh_docker_container):
     assert salt_master.is_running()
     assert ssh_docker_container.is_running()
-    return salt_master.get_salt_ssh_cli(
-        default_timeout=180,
+    return salt_master.salt_ssh_cli(
+        timeout=180,
         roster_file=salt_ssh_roster_file,
         target_host="localhost",
         client_key=str(ssh_keys.priv_path),

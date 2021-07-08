@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module for controlling the LED matrix or reading environment data on the SenseHat of a Raspberry Pi.
 
@@ -20,7 +19,6 @@ Example:
 
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
@@ -8,9 +7,7 @@
 
     Several path related validators
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import os
 
 

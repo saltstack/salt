@@ -19,13 +19,13 @@ import shutil
 import tempfile
 import time
 import traceback
+import urllib.parse
 
 import salt.utils.files
 import salt.utils.path
 import salt.utils.user
 import salt.utils.vt
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
 
 HAS_LIBS = False
 
@@ -114,7 +114,7 @@ def _get_src(tree_base, source, saltenv="base", runas="root"):
     """
     Get the named sources and place them into the tree_base
     """
-    parsed = _urlparse(source)
+    parsed = urllib.parse.urlparse(source)
     sbase = os.path.basename(source)
     dest = os.path.join(tree_base, "SOURCES", sbase)
     if parsed.scheme:
@@ -153,7 +153,7 @@ def _get_deps(deps, tree_base, saltenv="base"):
             "'deps' must be a Python list or comma-separated string"
         )
     for deprpm in deps:
-        parsed = _urlparse(deprpm)
+        parsed = urllib.parse._urlparse(deprpm)
         depbase = os.path.basename(deprpm)
         dest = os.path.join(tree_base, depbase)
         if parsed.scheme:

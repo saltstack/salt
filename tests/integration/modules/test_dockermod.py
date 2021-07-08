@@ -8,9 +8,9 @@ import sys
 
 import pytest
 import salt.utils.path
+from saltfactories.utils.tempfiles import temp_file
 from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
-from tests.support.pytest.helpers import temp_state_file
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
@@ -81,7 +81,7 @@ class DockerCallTestCase(ModuleCase, SaltReturnAssertsMixin):
             RUNTIME_VARS.TMP
         )
 
-        with temp_state_file("core.sls", core_state):
+        with temp_file("core.sls", core_state, RUNTIME_VARS.TMP_BASEENV_STATE_TREE):
             ret = self.run_function("docker.apply", [self.random_name, "core"])
             self.assertSaltTrueReturn(ret)
 
@@ -106,8 +106,8 @@ class DockerCallTestCase(ModuleCase, SaltReturnAssertsMixin):
             RUNTIME_VARS.TMP
         )
 
-        with temp_state_file("top.sls", top_sls), temp_state_file(
-            "core.sls", core_state
-        ):
+        with temp_file(
+            "top.sls", top_sls, RUNTIME_VARS.TMP_BASEENV_STATE_TREE
+        ), temp_file("core.sls", core_state, RUNTIME_VARS.TMP_BASEENV_STATE_TREE):
             ret = self.run_function("docker.apply", [self.random_name])
             self.assertSaltTrueReturn(ret)

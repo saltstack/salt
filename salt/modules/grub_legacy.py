@@ -1,15 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 Support for GRUB Legacy
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import os
 
 import salt.utils.decorators as decorators
-
-# Import salt libs
 import salt.utils.files
 from salt.exceptions import CommandExecutionError
 
@@ -80,14 +75,14 @@ def conf():
                 if line.startswith("\n"):
                     in_stanza = False
                     if "title" in stanza:
-                        stanza += "order {0}".format(pos)
+                        stanza += "order {}".format(pos)
                         pos += 1
                         stanzas.append(stanza)
                     stanza = ""
                     continue
                 if line.strip().startswith("title"):
                     if in_stanza:
-                        stanza += "order {0}".format(pos)
+                        stanza += "order {}".format(pos)
                         pos += 1
                         stanzas.append(stanza)
                         stanza = ""
@@ -102,10 +97,10 @@ def conf():
                 if not line.endswith("\n"):
                     line += "\n"
                 stanza += line
-                stanza += "order {0}".format(pos)
+                stanza += "order {}".format(pos)
                 pos += 1
                 stanzas.append(stanza)
-    except (IOError, OSError) as exc:
+    except OSError as exc:
         msg = "Could not read grub config: {0}"
         raise CommandExecutionError(msg.format(exc))
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Management of OpenStack Keystone Domains
 ========================================
@@ -27,7 +26,6 @@ Example States
         - name: domain1
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 __virtualname__ = "keystone_domain"
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Return data to a Cassandra ColumnFamily
 
@@ -19,16 +18,10 @@ Required python modules: pycassa
     salt '*' test.ping --return cassandra
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import salt libs
 import salt.utils.jid
-
-# Import third party libs
-from salt.ext import six
 
 try:
     import pycassa  # pylint: disable=import-error
@@ -76,10 +69,10 @@ def returner(ret):
 
     columns = {"fun": ret["fun"], "id": ret["id"]}
     if isinstance(ret["return"], dict):
-        for key, value in six.iteritems(ret["return"]):
-            columns["return.{0}".format(key)] = six.text_type(value)
+        for key, value in ret["return"].items():
+            columns["return.{}".format(key)] = str(value)
     else:
-        columns["return"] = six.text_type(ret["return"])
+        columns["return"] = str(ret["return"])
 
     log.debug(columns)
     ccf.insert(ret["jid"], columns)
