@@ -38,7 +38,7 @@ class IPCTester:
     server = attr.ib()
     client = attr.ib()
     payloads = attr.ib(default=attr.Factory(list))
-    payload_ack = attr.ib(default=attr.Factory(locks.Condition))
+    payload_ack = attr.ib(default=attr.Factory(locks.Event))
 
     @server.default
     def _server_default(self):
@@ -55,7 +55,7 @@ class IPCTester:
     async def handle_payload(self, payload, reply_func):
         self.payloads.append(payload)
         await reply_func(payload)
-        self.payload_ack.notify()
+        self.payload_ack.set()
 
     def new_client(self):
         return IPCTester(
@@ -69,6 +69,7 @@ class IPCTester:
     async def send(self, payload, timeout=60):
         ret = await self.client.send(payload)
         await self.payload_ack.wait(self.io_loop.time() + timeout)
+        self.payload_ack.clear()
         return ret
 
     def __enter__(self):
