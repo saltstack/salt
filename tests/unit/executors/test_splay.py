@@ -1,10 +1,4 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import salt.executors.splay as splay_exec
-
-# Import Salt libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase
 

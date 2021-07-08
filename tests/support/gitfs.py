@@ -18,8 +18,8 @@ import salt.utils.yaml
 from salt.fileserver import gitfs
 from salt.pillar import git_pillar
 from salt.utils.immutabletypes import freeze
-from saltfactories.factories.base import DaemonFactory
-from saltfactories.factories.daemons.sshd import SshdDaemonFactory as _SshdDaemonFactory
+from saltfactories.bases import Daemon
+from saltfactories.daemons.sshd import Sshd as _Sshd
 from saltfactories.utils.ports import get_unused_localhost_port
 from tests.support.case import ModuleCase
 from tests.support.helpers import patched_environ, requires_system_grains
@@ -67,7 +67,7 @@ _OPTS = freeze(
 )
 
 
-class SshdDaemonFactory(_SshdDaemonFactory):
+class Sshd(_Sshd):
     def apply_pre_start_states(self, salt_call_cli, testclass, username):
         if self.listen_port in self.check_ports:
             self.check_ports.remove(self.listen_port)
@@ -132,7 +132,7 @@ class SshdDaemonFactory(_SshdDaemonFactory):
 
 
 @attr.s(kw_only=True, slots=True)
-class UwsgiDaemon(DaemonFactory):
+class UwsgiDaemon(Daemon):
 
     config_dir = attr.ib()
     listen_port = attr.ib(default=attr.Factory(get_unused_localhost_port))
@@ -202,7 +202,7 @@ class UwsgiDaemon(DaemonFactory):
 
 
 @attr.s(kw_only=True, slots=True)
-class NginxDaemon(DaemonFactory):
+class NginxDaemon(Daemon):
 
     config_dir = attr.ib()
     uwsgi_port = attr.ib()
@@ -269,24 +269,24 @@ def ssh_pillar_tests_prep(request, salt_master, salt_minion):
     """
     Stand up an SSHD server to serve up git repos for tests.
     """
-    salt_call_cli = salt_minion.get_salt_call_cli()
+    salt_call_cli = salt_minion.salt_call_cli()
 
     sshd_bin = salt.utils.path.which("sshd")
     sshd_config_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
 
-    sshd_proc = SshdDaemonFactory(
-        cli_script_name=sshd_bin,
+    sshd_proc = Sshd(
+        script_name=sshd_bin,
         config_dir=sshd_config_dir,
         start_timeout=120,
         display_name=request.cls.__name__,
     )
-    sshd_proc.register_before_start_callback(
+    sshd_proc.before_start(
         sshd_proc.apply_pre_start_states,
         salt_call_cli=salt_call_cli,
         testclass=request.cls,
         username=salt_master.config["user"],
     )
-    sshd_proc.register_after_start_callback(
+    sshd_proc.after_start(
         sshd_proc.set_known_host,
         salt_call_cli=salt_call_cli,
         username=salt_master.config["user"],
@@ -322,7 +322,7 @@ def webserver_pillar_tests_prep(request, salt_master, salt_minion):
     Stand up an nginx + uWSGI + git-http-backend webserver to
     serve up git repos for tests.
     """
-    salt_call_cli = salt_minion.get_salt_call_cli()
+    salt_call_cli = salt_minion.salt_call_cli()
 
     root_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
     config_dir = os.path.join(root_dir, "config")
@@ -332,12 +332,12 @@ def webserver_pillar_tests_prep(request, salt_master, salt_minion):
     uwsgi_proc = nginx_proc = None
     try:
         uwsgi_proc = UwsgiDaemon(
-            cli_script_name=uwsgi_bin,
+            script_name=uwsgi_bin,
             config_dir=config_dir,
             start_timeout=120,
             display_name=request.cls.__name__,
         )
-        uwsgi_proc.register_before_start_callback(
+        uwsgi_proc.before_start(
             uwsgi_proc.apply_pre_start_states,
             salt_call_cli=salt_call_cli,
             testclass=request.cls,
@@ -345,13 +345,13 @@ def webserver_pillar_tests_prep(request, salt_master, salt_minion):
         )
         uwsgi_proc.start()
         nginx_proc = NginxDaemon(
-            cli_script_name="nginx",
+            script_name="nginx",
             config_dir=config_dir,
             start_timeout=120,
             uwsgi_port=uwsgi_proc.listen_port,
             display_name=request.cls.__name__,
         )
-        nginx_proc.register_before_start_callback(
+        nginx_proc.before_start(
             nginx_proc.apply_pre_start_states,
             salt_call_cli=salt_call_cli,
             testclass=request.cls,

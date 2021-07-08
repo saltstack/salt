@@ -24,8 +24,8 @@ import salt.utils.stringutils
 import salt.utils.yamlencoding
 from salt import __path__ as saltpath
 from salt.exceptions import CommandExecutionError, SaltInvocationError, SaltRenderError
-from salt.ext import six
 from salt.features import features
+from salt.loader_context import NamedLoaderContext
 from salt.utils.decorators.jinja import JinjaFilter, JinjaGlobal, JinjaTest
 from salt.utils.odict import OrderedDict
 from salt.utils.versions import LooseVersion
@@ -272,7 +272,7 @@ def wrap_tmpl_func(render_str):
 
         except SaltRenderError as exc:
             log.exception("Rendering exception occurred")
-            # return dict(result=False, data=six.text_type(exc))
+            # return dict(result=False, data=str(exc))
             raise
         except Exception:  # pylint: disable=broad-except
             return dict(result=False, data=traceback.format_exc())
@@ -477,7 +477,10 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     decoded_context = {}
     for key, value in context.items():
         if not isinstance(value, str):
-            decoded_context[key] = value
+            if isinstance(value, NamedLoaderContext):
+                decoded_context[key] = value.value()
+            else:
+                decoded_context[key] = value
             continue
 
         try:
@@ -490,7 +493,6 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
                 SLS_ENCODING,
             )
             decoded_context[key] = salt.utils.data.decode(value)
-
     try:
         template = jinja_env.from_string(tmplstr)
         template.globals.update(decoded_context)
@@ -631,12 +633,9 @@ def render_cheetah_tmpl(tmplstr, context, tmplpath=None):
     data = tclass(namespaces=[context])
 
     # Figure out which method to call based on the type of tmplstr
-    if six.PY3 and isinstance(tmplstr, str):
+    if isinstance(tmplstr, str):
         # This should call .__unicode__()
         res = str(data)
-    elif six.PY2 and isinstance(tmplstr, str):
-        # Expicitly call .__unicode__()
-        res = data.__unicode__()
     elif isinstance(tmplstr, bytes):
         # This should call .__str()
         res = str(data)

@@ -2,7 +2,7 @@ import io
 
 import salt.proxy.junos as junos
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import patch
+from tests.support.mock import ANY, patch
 from tests.support.unit import TestCase, skipIf
 
 try:
@@ -21,12 +21,31 @@ class JunosProxyTestCase(TestCase, LoaderModuleMockMixin):
         return {junos: {"DETAILS": {}, "__pillar__": {}}}
 
     def setUp(self):
-        self.opts = {"proxy": {"username": "xxxx", "password]": "xxx", "host": "junos"}}
+        self.opts = {
+            "proxy": {
+                "username": "xxxx",
+                "password]": "xxx",
+                "host": "junos",
+                "port": "960",
+            }
+        }
 
     @patch("ncclient.manager.connect")
     def test_init(self, mock_connect):
         junos.init(self.opts)
         self.assertTrue(junos.thisproxy.get("initialized"))
+        mock_connect.assert_called_with(
+            allow_agent=True,
+            device_params={"name": "junos", "local": False, "use_filter": False},
+            host="junos",
+            hostkey_verify=False,
+            key_filename=None,
+            password=None,
+            port="960",
+            sock_fd=None,
+            ssh_config=ANY,
+            username="xxxx",
+        )
 
     @patch("ncclient.manager.connect")
     def test_init_err(self, mock_connect):

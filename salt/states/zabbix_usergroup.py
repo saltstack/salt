@@ -1,16 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 Management of Zabbix user groups.
 
 :codeauthor: Jiri Kotlin <jiri.kotlin@ultimum.io>
 
 """
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Salt libs
-from salt.ext import six
 
 
 def __virtual__():
@@ -57,14 +50,14 @@ def present(name, **kwargs):
     ret = {"name": name, "changes": {}, "result": False, "comment": ""}
 
     # Comment and change messages
-    comment_usergroup_created = "User group {0} created.".format(name)
-    comment_usergroup_updated = "User group {0} updated.".format(name)
-    comment_usergroup_notcreated = "Unable to create user group: {0}. ".format(name)
-    comment_usergroup_exists = "User group {0} already exists.".format(name)
+    comment_usergroup_created = "User group {} created.".format(name)
+    comment_usergroup_updated = "User group {} updated.".format(name)
+    comment_usergroup_notcreated = "Unable to create user group: {}. ".format(name)
+    comment_usergroup_exists = "User group {} already exists.".format(name)
     changes_usergroup_created = {
         name: {
-            "old": "User group {0} does not exist.".format(name),
-            "new": "User group {0} created.".format(name),
+            "old": "User group {} does not exist.".format(name),
+            "new": "User group {} created.".format(name),
         }
     }
 
@@ -93,7 +86,7 @@ def present(name, **kwargs):
                     # Make sure right values are strings so we can compare them with the current user group rights
                     for right in kwargs["rights"]:
                         for key in right:
-                            right[key] = six.text_type(right[key])
+                            right[key] = str(right[key])
                     if sorted(kwargs["rights"]) != sorted(usergroup["rights"]):
                         update_rights = True
                 else:
@@ -185,7 +178,7 @@ def present(name, **kwargs):
             ret["changes"] = changes_usergroup_created
         else:
             ret["result"] = False
-            ret["comment"] = comment_usergroup_notcreated + six.text_type(
+            ret["comment"] = comment_usergroup_notcreated + str(
                 usergroup_create["error"]
             )
 
@@ -193,7 +186,7 @@ def present(name, **kwargs):
     if error:
         ret["changes"] = {}
         ret["result"] = False
-        ret["comment"] = six.text_type(error)
+        ret["comment"] = str(error)
 
     return ret
 
@@ -226,13 +219,13 @@ def absent(name, **kwargs):
     ret = {"name": name, "changes": {}, "result": False, "comment": ""}
 
     # Comment and change messages
-    comment_usergroup_deleted = "User group {0} deleted.".format(name)
-    comment_usergroup_notdeleted = "Unable to delete user group: {0}. ".format(name)
-    comment_usergroup_notexists = "User group {0} does not exist.".format(name)
+    comment_usergroup_deleted = "User group {} deleted.".format(name)
+    comment_usergroup_notdeleted = "Unable to delete user group: {}. ".format(name)
+    comment_usergroup_notexists = "User group {} does not exist.".format(name)
     changes_usergroup_deleted = {
         name: {
-            "old": "User group {0} exists.".format(name),
-            "new": "User group {0} deleted.".format(name),
+            "old": "User group {} exists.".format(name),
+            "new": "User group {} deleted.".format(name),
         }
     }
 
@@ -268,7 +261,7 @@ def absent(name, **kwargs):
             ret["changes"] = changes_usergroup_deleted
         else:
             ret["result"] = False
-            ret["comment"] = comment_usergroup_notdeleted + six.text_type(
+            ret["comment"] = comment_usergroup_notdeleted + str(
                 usergroup_delete["error"]
             )
 
