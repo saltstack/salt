@@ -7247,7 +7247,9 @@ def copy_(
                 # TODO: Add the other win_* parameters to this function
                 check_ret = __salt__["file.check_perms"](path=name, ret=ret, owner=user)
             else:
-                check_ret = __salt__["file.check_perms"](name, ret, user, group, mode)
+                check_ret, perms = __salt__["file.check_perms"](
+                    name, ret, user, group, mode
+                )
             if not check_ret["result"]:
                 ret["result"] = check_ret["result"]
                 ret["comment"] = check_ret["comment"]

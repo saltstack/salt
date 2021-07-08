@@ -138,14 +138,17 @@ def test_copy():
                             ret.update({"comment": comt, "result": False})
                             assert filestate.copy_(name, source, preserve=True) == ret
 
-            ret_check_perms = {
+            check_perms_ret = {
                 "name": name,
                 "changes": {},
                 "comment": [],
                 "result": True,
             }
+            check_perms_perms = {}
 
-            mock_check_perms = MagicMock(return_value=ret_check_perms)
+            mock_check_perms = MagicMock(
+                return_value=(check_perms_ret, check_perms_perms)
+            )
             with patch.dict(
                 filestate.__salt__,
                 {
