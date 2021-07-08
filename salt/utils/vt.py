@@ -29,7 +29,6 @@ import logging
 import os
 import select
 
-# import shlex
 import signal
 import subprocess
 import sys
@@ -71,33 +70,6 @@ class TerminalException(Exception):
     """
     Terminal specific exception
     """
-
-
-# ----- Cleanup Running Instances ------------------------------------------->
-# This lists holds Terminal instances for which the underlying process had
-# not exited at the time its __del__ method got called: those processes are
-# wait()ed for synchronously from _cleanup() when a new Terminal object is
-# created, to avoid zombie processes.
-_ACTIVE = []
-
-
-def _cleanup():
-    """
-    Make sure that any terminal processes still running when __del__ was called
-    to the waited and cleaned up.
-    """
-    for inst in _ACTIVE[:]:
-        res = inst.isalive()
-        if res is not True:
-            try:
-                _ACTIVE.remove(inst)
-            except ValueError:
-                # This can happen if two threads create a new Terminal instance
-                # It's harmless that it was already removed, so ignore.
-                pass
-
-
-# <---- Cleanup Running Instances --------------------------------------------
 
 
 def setwinsize(child, rows=80, cols=80):
@@ -178,7 +150,6 @@ class Terminal:
         self.preexec_fn = preexec_fn
         self.receive_encoding = force_receive_encoding
 
-        # ----- Set the desired terminal size ------------------------------->
         if rows is None and cols is None:
             rows, cols = self.__detect_parent_terminal_size()
         elif rows is not None and cols is None:
@@ -187,9 +158,6 @@ class Terminal:
             rows, _ = self.__detect_parent_terminal_size()
         self.rows = rows
         self.cols = cols
-        # <---- Set the desired terminal size --------------------------------
-
-        # ----- Internally Set Attributes ----------------------------------->
         self.pid = None
         self.stdin = None
         self.stdout = None
@@ -210,9 +178,7 @@ class Terminal:
         # status returned by os.waitpid
         self.status = None
         self.__irix_hack = "irix" in sys.platform.lower()
-        # <---- Internally Set Attributes ------------------------------------
 
-        # ----- Direct Streaming Setup -------------------------------------->
         if stream_stdout is True:
             self.stream_stdout = sys.stdout
         elif stream_stdout is False:
@@ -254,9 +220,7 @@ class Terminal:
                 "Don't know how to handle '{0}' as the VT's "
                 "'stream_stderr' parameter.".format(stream_stderr)
             )
-        # <---- Direct Streaming Setup ---------------------------------------
 
-        # ----- Spawn our terminal ------------------------------------------>
         try:
             self._spawn()
         except Exception as err:  # pylint: disable=W0703
@@ -282,9 +246,7 @@ class Terminal:
             log.trace("Terminal Command: %s", terminal_command)
         else:
             log.debug("Terminal Command: %s", terminal_command)
-        # <---- Spawn our terminal -------------------------------------------
 
-        # ----- Setup Logging ----------------------------------------------->
         # Setup logging after spawned in order to have a pid value
         self.stdin_logger_level = LOG_LEVELS.get(log_stdin_level, log_stdin_level)
         if log_stdin is True:
@@ -327,9 +289,7 @@ class Terminal:
             self.stderr_logger = log_stderr
         else:
             self.stderr_logger = None
-        # <---- Setup Logging ------------------------------------------------
 
-    # ----- Common Public API ----------------------------------------------->
     def send(self, data):
         """
         Send data to the terminal. You are responsible to send any required
@@ -379,18 +339,12 @@ class Terminal:
     def has_unread_data(self):
         return self.flag_eof_stderr is False or self.flag_eof_stdout is False
 
-    # <---- Common Public API ------------------------------------------------
-
-    # ----- Common Internal API --------------------------------------------->
     def _translate_newlines(self, data):
         if data is None or not data:
             return
         # PTY's always return \r\n as the line feeds
         return data.replace("\r\n", os.linesep)
 
-    # <---- Common Internal API ----------------------------------------------
-
-    # ----- Context Manager Methods ----------------------------------------->
     def __enter__(self):
         return self
 
@@ -400,11 +354,7 @@ class Terminal:
         if self.isalive():
             self.wait()
 
-    # <---- Context Manager Methods ------------------------------------------
-
-    # ----- Platform Specific Methods ------------------------------------------->
     if mswindows:
-        # ----- Windows Methods --------------------------------------------->
         def _execute(self):
             raise NotImplementedError
 
@@ -447,17 +397,11 @@ class Terminal:
                 self.exitstatus = ecode
 
         kill = terminate
-    # <---- Windows Methods --------------------------------------------------
     else:
-        # ----- Linux Methods ----------------------------------------------->
-        # ----- Internal API ------------------------------------------------>
         def _spawn(self):
             # TODO: Get rid of this logic, just use the same api as Popen
             if isinstance(self.args, str):
                 args = [self.args]
-            # if isinstance(self.args, string_types):
-            #    args = shlex.split(self.args)
-            #    args = self.args.split()
             elif self.args:
                 args = list(self.args)
             else:
@@ -611,33 +555,23 @@ class Terminal:
             stderr = ""
             stdout = ""
 
-            # ----- Store FD Flags ------------------------------------------>
             if self.child_fd:
                 fd_flags = fcntl.fcntl(self.child_fd, fcntl.F_GETFL)
             if self.child_fde:
                 fde_flags = fcntl.fcntl(self.child_fde, fcntl.F_GETFL)
-            # <---- Store FD Flags -------------------------------------------
-
-            # ----- Non blocking Reads -------------------------------------->
             if self.child_fd:
                 fcntl.fcntl(self.child_fd, fcntl.F_SETFL, fd_flags | os.O_NONBLOCK)
             if self.child_fde:
                 fcntl.fcntl(self.child_fde, fcntl.F_SETFL, fde_flags | os.O_NONBLOCK)
-            # <---- Non blocking Reads ---------------------------------------
 
-            # ----- Check for any incoming data ----------------------------->
             rlist, _, _ = select.select(rfds, [], [], 0)
-            # <---- Check for any incoming data ------------------------------
 
-            # ----- Nothing to Process!? ------------------------------------>
             if not rlist:
                 if not self.isalive():
                     self.flag_eof_stdout = self.flag_eof_stderr = True
                     log.debug("End of file(EOL). Very slow platform.")
                     return None, None
-            # <---- Nothing to Process!? -------------------------------------
 
-            # ----- Helper function for processing STDERR and STDOUT -------->
             def read_and_decode_fd(fd, maxsize, partial_data_attr=None):
                 bytes_read = getattr(self, partial_data_attr, b"")
                 # Only read one byte if we already have some existing data
@@ -677,9 +611,6 @@ class Terminal:
                     else:
                         raise
 
-            # <---- Helper function for processing STDERR and STDOUT ---------
-
-            # ----- Process STDERR ------------------------------------------>
             if self.child_fde in rlist and not self.flag_eof_stderr:
                 try:
                     stderr, partial_data = read_and_decode_fd(
@@ -710,9 +641,7 @@ class Terminal:
                 finally:
                     if self.child_fde is not None:
                         fcntl.fcntl(self.child_fde, fcntl.F_SETFL, fde_flags)
-            # <---- Process STDERR -------------------------------------------
 
-            # ----- Process STDOUT ------------------------------------------>
             if self.child_fd in rlist and not self.flag_eof_stdout:
                 try:
                     stdout, partial_data = read_and_decode_fd(
@@ -944,29 +873,3 @@ class Terminal:
             Kill the process with SIGKILL
             """
             self.send_signal(signal.SIGKILL)
-
-        # <---- Public API ---------------------------------------------------
-    # <---- Linux Methods ----------------------------------------------------
-
-    # ----- Cleanup!!! ------------------------------------------------------>
-    # pylint: disable=W1701
-    def __del__(self, _maxsize=sys.maxsize, _active=_ACTIVE):  # pylint: disable=W0102
-        # I've disabled W0102 above which is regarding a dangerous default
-        # value of [] for _ACTIVE, though, this is how Python itself handles
-        # their subprocess clean up code.
-        # XXX: Revisit this cleanup code to make it less dangerous.
-
-        if self.pid is None:
-            # We didn't get to successfully create a child process.
-            return
-
-        # In case the child hasn't been waited on, check if it's done.
-        if self.isalive() and _ACTIVE is not None:
-            # Child is still running, keep us alive until we can wait on it.
-            _ACTIVE.append(self)
-
-    # pylint: enable=W1701
-    # <---- Cleanup!!! -------------------------------------------------------
-
-
-# <---- Platform Specific Methods --------------------------------------------
