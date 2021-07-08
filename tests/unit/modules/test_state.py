@@ -233,6 +233,12 @@ class MockState:
             """
             return True
 
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_):
+            pass
+
 
 class MockSerial:
     """
