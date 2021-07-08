@@ -8,7 +8,6 @@ import pytest
 import salt.modules.portage_config as portage_config
 import salt.utils.files
 from tests.support.mock import patch
-from tests.support.runtests import RUNTIME_VARS
 
 pytest.importorskip("portage", reason="System is not gentoo/funtoo.")
 
@@ -30,7 +29,7 @@ def test_get_config_file_wildcards():
         assert portage_config._get_config_file("mask", atom) == expected
 
 
-def test_enforce_nice_config():
+def test_enforce_nice_config(tmp_path):
     atoms = [
         ("*/*::repo", "repo"),
         ("*/pkg1::repo", "pkg1"),
@@ -54,13 +53,13 @@ def test_enforce_nice_config():
         ("use", ["apple", "-banana", "ananas", "orange"]),
     ]
 
-    base_path = RUNTIME_VARS.TMP + "/package.{0}"
+    base_path = tmp_path / "/package.{0}"
 
     def make_line(atom, addition):
         return atom + (" " + addition if addition != "" else "") + "\n"
 
     for typ, additions in supported:
-        path = base_path.format(typ)
+        path = base_path / typ
         with salt.utils.files.fopen(path, "a") as fh:
             for atom, _ in atoms:
                 for addition in additions:
@@ -77,7 +76,7 @@ def test_enforce_nice_config():
     for typ, additions in supported:
         for atom, file_name in atoms:
             with salt.utils.files.fopen(
-                base_path.format(typ) + "/" + file_name, "r"
+                base_path / typ / "/" / file_name, "r"
             ) as fh:
                 for line in fh:
                     for atom in line:
