@@ -72,10 +72,10 @@ def fixStdOutErrFileNoIfNeeded(func):
 
 
 class VTTestCase(TestCase):
-    #    @skipIf(
-    #        True,
-    #        "Disabled until we can figure out why this fails when whole test suite runs.",
-    #    )
+    @skipIf(
+        salt.utils.platform.is_windows(),
+        "Skip on Windows because this feature is not supported",
+    )
     def test_vt_size(self):
         """Confirm that the terminal size is being set"""
         #        if not sys.stdin.isatty():
