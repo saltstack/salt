@@ -341,7 +341,7 @@ def reboot(name, conn=None):
         __utils__["cloud.fire_event"](
             "event",
             "{} has been rebooted".format(name),
-            "salt-cloud" "salt/cloud/{}/rebooting".format(name),
+            "salt/cloud/{}/rebooting".format(name),
             args={"name": name},
             sock_dir=__opts__["sock_dir"],
             transport=__opts__["transport"],
