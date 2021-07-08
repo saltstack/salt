@@ -3,6 +3,7 @@
 """
 
 import salt.modules.firewalld as firewalld
+from tests.support.helpers import dedent
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -34,8 +35,80 @@ class FirewalldTestCase(TestCase, LoaderModuleMockMixin):
         """
         Test for List everything added for or enabled in all zones
         """
-        with patch.object(firewalld, "__firewall_cmd", return_value=[]):
-            self.assertEqual(firewalld.default_zone(), [])
+        # pylint: disable=trailing-whitespace
+        firewall_cmd_ret = dedent(
+            """\
+                nm-shared
+                  target: ACCEPT
+                  icmp-block-inversion: no
+                  interfaces: 
+                  sources: 
+                  services: dhcp dns ssh
+                  ports: 
+                  protocols: icmp ipv6-icmp
+                  masquerade: no
+                  forward-ports: 
+                  source-ports: 
+                  icmp-blocks: 
+                  rich rules: 
+                \trule priority="32767" reject
+
+                public
+                  target: default
+                  icmp-block-inversion: no
+                  interfaces: 
+                  sources: 
+                  services: cockpit dhcpv6-client ssh
+                  ports: 
+                  protocols: 
+                  masquerade: no
+                  forward-ports: 
+                  source-ports: 
+                  icmp-blocks: 
+                  rich rules:
+                """
+        )
+        # pylint: enable=trailing-whitespace
+        ret = {
+            "nm-shared": {
+                "forward-ports": [""],
+                "icmp-block-inversion": ["no"],
+                "icmp-blocks": [""],
+                "interfaces": [""],
+                "masquerade": ["no"],
+                "ports": [""],
+                "protocols": ["icmp ipv6-icmp"],
+                "rich rules": ["", 'rule priority="32767" reject'],
+                "services": ["dhcp dns ssh"],
+                "source-ports": [""],
+                "sources": [""],
+                "target": ["ACCEPT"],
+            },
+            "public": {
+                "forward-ports": [""],
+                "icmp-block-inversion": ["no"],
+                "icmp-blocks": [""],
+                "interfaces": [""],
+                "masquerade": ["no"],
+                "ports": [""],
+                "protocols": [""],
+                "rich rules": [""],
+                "services": ["cockpit dhcpv6-client ssh"],
+                "source-ports": [""],
+                "sources": [""],
+                "target": ["default"],
+            },
+        }
+
+        with patch.object(firewalld, "__firewall_cmd", return_value=firewall_cmd_ret):
+            self.assertEqual(firewalld.list_zones(), ret)
+
+    def test_list_zones_empty_response(self):
+        """
+        Test list_zones if firewall-cmd call returns nothing
+        """
+        with patch.object(firewalld, "__firewall_cmd", return_value=""):
+            self.assertEqual(firewalld.list_zones(), {})
 
     def test_get_zones(self):
         """
@@ -128,6 +201,48 @@ class FirewalldTestCase(TestCase, LoaderModuleMockMixin):
     def test_list_all(self):
         """
         Test for List everything added for or enabled in a zone
+        """
+        # pylint: disable=trailing-whitespace
+        firewall_cmd_ret = dedent(
+            """\
+            public
+              target: default
+              icmp-block-inversion: no
+              interfaces: eth0
+              sources: 
+              services: cockpit dhcpv6-client ssh
+              ports: 
+              protocols: 
+              masquerade: no
+              forward-ports: 
+              source-ports: 
+              icmp-blocks: 
+              rich rules: 
+            """
+        )
+        # pylint: enable=trailing-whitespace
+        ret = {
+            "public": {
+                "forward-ports": [""],
+                "icmp-block-inversion": ["no"],
+                "icmp-blocks": [""],
+                "interfaces": ["eth0"],
+                "masquerade": ["no"],
+                "ports": [""],
+                "protocols": [""],
+                "rich rules": [""],
+                "services": ["cockpit dhcpv6-client ssh"],
+                "source-ports": [""],
+                "sources": [""],
+                "target": ["default"],
+            }
+        }
+        with patch.object(firewalld, "__firewall_cmd", return_value=firewall_cmd_ret):
+            self.assertEqual(firewalld.list_all(), ret)
+
+    def test_list_all_empty_response(self):
+        """
+        Test list_all if firewall-cmd call returns nothing
         """
         with patch.object(firewalld, "__firewall_cmd", return_value=""):
             self.assertEqual(firewalld.list_all(), {})
