@@ -23,9 +23,12 @@ def test_latest():
     with patch.object(hg, "_fail", mock):
         assert hg.latest("salt")
 
-    mock = MagicMock(side_effect=[False, True, False, False, False, False])
-    with patch.object(os.path, "isdir", mock):
-        mock = MagicMock(return_value=True)
+    with patch.object(
+        os.path,
+        "isdir",
+        autospec=True,
+        side_effect=[False, True, False, False, False, False],
+    ):
         with patch.object(hg, "_handle_existing", mock):
             assert hg.latest("salt", target="c:\\salt")
 
@@ -53,8 +56,7 @@ def test_latest_update_changes():
         hg.__salt__,
         {"hg.revision": revision_mock, "hg.pull": pull_mock, "hg.update": update_mock},
     ):
-        mock = MagicMock(side_effect=[True, True])
-        with patch.object(os.path, "isdir", mock):
+        with patch.object(os.path, "isdir", autospec=True, side_effect=[True, True]):
             mock = MagicMock(return_value=True)
             with patch.dict(hg.__opts__, {"test": False}):
                 with patch.object(hg, "_clone_repo", mock):
@@ -80,8 +82,7 @@ def test_latest_no_update_changes():
         hg.__salt__,
         {"hg.revision": revision_mock, "hg.pull": pull_mock, "hg.update": update_mock},
     ):
-        mock = MagicMock(side_effect=[True, True])
-        with patch.object(os.path, "isdir", mock):
+        with patch.object(os.path, "isdir", autospec=True, side_effect=[True, True]):
             mock = MagicMock(return_value=True)
             with patch.dict(hg.__opts__, {"test": False}):
                 with patch.object(hg, "_clone_repo", mock):
@@ -109,8 +110,7 @@ def test_latest_no_update_no_changes():
         hg.__salt__,
         {"hg.revision": revision_mock, "hg.pull": pull_mock, "hg.update": update_mock},
     ):
-        mock = MagicMock(side_effect=[True, True])
-        with patch.object(os.path, "isdir", mock):
+        with patch.object(os.path, "isdir", autospec=True, side_effect=[True, True]):
             mock = MagicMock(return_value=True)
             with patch.dict(hg.__opts__, {"test": False}):
                 with patch.object(hg, "_clone_repo", mock):
