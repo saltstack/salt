@@ -146,9 +146,12 @@ def test_copy():
             }
             check_perms_perms = {}
 
-            mock_check_perms = MagicMock(
-                return_value=(check_perms_ret, check_perms_perms)
-            )
+            if salt.utils.platform.is_windows():
+                mock_check_perms = MagicMock(return_value=check_perms_ret)
+            else:
+                mock_check_perms = MagicMock(
+                    return_value=(check_perms_ret, check_perms_perms)
+                )
             with patch.dict(
                 filestate.__salt__,
                 {
