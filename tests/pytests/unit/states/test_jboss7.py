@@ -1,7 +1,8 @@
 import pytest
+import salt.modules.jboss7 as jboss_mod
 import salt.states.jboss7 as jboss7
 from salt.exceptions import CommandExecutionError
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import MagicMock, create_autospec, patch
 
 
 @pytest.fixture
@@ -9,18 +10,18 @@ def configure_loader_modules():
     return {
         jboss7: {
             "__salt__": {
-                "jboss7.read_datasource": MagicMock(),
-                "jboss7.create_datasource": MagicMock(),
-                "jboss7.update_datasource": MagicMock(),
-                "jboss7.remove_datasource": MagicMock(),
-                "jboss7.read_simple_binding": MagicMock(),
-                "jboss7.create_simple_binding": MagicMock(),
-                "jboss7.update_simple_binding": MagicMock(),
-                "jboss7.undeploy": MagicMock(),
-                "jboss7.deploy": MagicMock,
-                "file.get_managed": MagicMock,
-                "file.manage_file": MagicMock,
-                "jboss7.list_deployments": MagicMock,
+                "jboss7.read_datasource": create_autospec(jboss_mod),
+                "jboss7.create_datasource": create_autospec(jboss_mod),
+                "jboss7.update_datasource": create_autospec(jboss_mod),
+                "jboss7.remove_datasource": create_autospec(jboss_mod),
+                "jboss7.read_simple_binding": create_autospec(jboss_mod),
+                "jboss7.create_simple_binding": create_autospec(jboss_mod),
+                "jboss7.update_simple_binding": create_autospec(jboss_mod),
+                "jboss7.undeploy": create_autospec(jboss_mod),
+                "jboss7.deploy": create_autospec(jboss_mod),
+                "file.get_managed": create_autospec(jboss_mod),
+                "file.manage_file": create_autospec(jboss_mod),
+                "jboss7.list_deployments": create_autospec(jboss_mod),
             },
             "__env__": "base",
         }
