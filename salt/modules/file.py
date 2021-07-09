@@ -2484,6 +2484,7 @@ def replace(
     """
     symlink = False
     if is_link(path):
+        assert False
         symlink = True
         target_path = os.readlink(path)
         given_path = os.path.expanduser(path)
