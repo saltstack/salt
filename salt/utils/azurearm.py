@@ -114,8 +114,11 @@ def _determine_auth(**kwargs):
                 "populated if using username/password authentication."
             )
         else:
-            credentials = azure.identity.UsernamePasswordCredential(  # pylint: disable=E1120
-                kwargs["username"], kwargs["password"], cloud_environment=cloud_env
+            credentials = azure.identity.UsernamePasswordCredential(
+                client_id=kwargs["client_id"],
+                username=kwargs["username"],
+                password=kwargs["password"],
+                cloud_environment=cloud_env,
             )
     elif "subscription_id" in kwargs:
         try:
