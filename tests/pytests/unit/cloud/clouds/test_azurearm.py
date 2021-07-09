@@ -151,8 +151,6 @@ def test_get_conn():
     # username and password via provider config
     expected = {
         "subscription_id": "3287abc8-f98a-c678-3bde-326766fd3617",
-        "username": "donkeymonkey",
-        "password": "monkeydonkey",
     }
     with patch(
         "salt.utils.azurearm.get_client", side_effect=lambda client_type, **kw: kw
