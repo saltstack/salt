@@ -82,7 +82,7 @@ def test_function_signatures():
     )
 
     # we literally only check that a final creation call occurred.
-    mock_azure.get_conn.return_value.virtual_machines.create_or_update.assert_called_once()
+    mock_azure.get_conn.return_value.virtual_machines.begin_create_or_update.assert_called_once()
 
 
 def test_get_configured_provider():
