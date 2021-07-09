@@ -1,10 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 VirtualBox Guest Additions installer state
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 
 log = logging.getLogger(__name__)

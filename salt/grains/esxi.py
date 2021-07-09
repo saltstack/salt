@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Generate baseline proxy minion grains for ESXi hosts.
 
@@ -6,8 +5,6 @@ Generate baseline proxy minion grains for ESXi hosts.
 
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 

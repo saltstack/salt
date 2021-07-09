@@ -6,14 +6,9 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
 
-# Import Python libs
 
 import salt.modules.parted_partition as parted
-
-# Import Salt libs
 from salt.exceptions import CommandExecutionError
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase

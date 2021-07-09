@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Microsoft IIS site management
 
@@ -9,10 +8,6 @@ from Microsoft IIS.
 
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-from salt.ext.six.moves import map
 
 # Define the module's virtual name
 __virtualname__ = "win_iis"
@@ -31,7 +26,7 @@ def _get_binding_info(hostheader="", ipaddress="*", port=80):
     """
     Combine the host header, IP address, and TCP port into bindingInformation format.
     """
-    ret = r"{0}:{1}:{2}".format(ipaddress, port, hostheader.replace(" ", ""))
+    ret = r"{}:{}:{}".format(ipaddress, port, hostheader.replace(" ", ""))
 
     return ret
 
@@ -90,13 +85,13 @@ def deployed(
     current_sites = __salt__["win_iis.list_sites"]()
 
     if name in current_sites:
-        ret["comment"] = "Site already present: {0}".format(name)
+        ret["comment"] = "Site already present: {}".format(name)
         ret["result"] = True
     elif __opts__["test"]:
-        ret["comment"] = "Site will be created: {0}".format(name)
+        ret["comment"] = "Site will be created: {}".format(name)
         ret["changes"] = {"old": None, "new": name}
     else:
-        ret["comment"] = "Created site: {0}".format(name)
+        ret["comment"] = "Created site: {}".format(name)
         ret["changes"] = {"old": None, "new": name}
         ret["result"] = __salt__["win_iis.create_site"](
             name, sourcepath, apppool, hostheader, ipaddress, port, protocol
@@ -124,13 +119,13 @@ def remove_site(name):
     current_sites = __salt__["win_iis.list_sites"]()
 
     if name not in current_sites:
-        ret["comment"] = "Site has already been removed: {0}".format(name)
+        ret["comment"] = "Site has already been removed: {}".format(name)
         ret["result"] = True
     elif __opts__["test"]:
-        ret["comment"] = "Site will be removed: {0}".format(name)
+        ret["comment"] = "Site will be removed: {}".format(name)
         ret["changes"] = {"old": name, "new": None}
     else:
-        ret["comment"] = "Removed site: {0}".format(name)
+        ret["comment"] = "Removed site: {}".format(name)
         ret["changes"] = {"old": name, "new": None}
         ret["result"] = __salt__["win_iis.remove_site"](name)
     return ret
@@ -176,19 +171,19 @@ def create_binding(
                 - protocol: https
                 - sslflags: 0
     """
-    ret = {"name": name, "changes": {}, "comment": str(), "result": None}
+    ret = {"name": name, "changes": {}, "comment": "", "result": None}
 
     binding_info = _get_binding_info(hostheader, ipaddress, port)
     current_bindings = __salt__["win_iis.list_bindings"](site)
 
     if binding_info in current_bindings:
-        ret["comment"] = "Binding already present: {0}".format(binding_info)
+        ret["comment"] = "Binding already present: {}".format(binding_info)
         ret["result"] = True
     elif __opts__["test"]:
-        ret["comment"] = "Binding will be created: {0}".format(binding_info)
+        ret["comment"] = "Binding will be created: {}".format(binding_info)
         ret["changes"] = {"old": None, "new": binding_info}
     else:
-        ret["comment"] = "Created binding: {0}".format(binding_info)
+        ret["comment"] = "Created binding: {}".format(binding_info)
         ret["changes"] = {"old": None, "new": binding_info}
         ret["result"] = __salt__["win_iis.create_binding"](
             site, hostheader, ipaddress, port, protocol, sslflags
@@ -224,19 +219,19 @@ def remove_binding(name, site, hostheader="", ipaddress="*", port=80):
                 - ipaddress: '*'
                 - port: 443
     """
-    ret = {"name": name, "changes": {}, "comment": str(), "result": None}
+    ret = {"name": name, "changes": {}, "comment": "", "result": None}
 
     binding_info = _get_binding_info(hostheader, ipaddress, port)
     current_bindings = __salt__["win_iis.list_bindings"](site)
 
     if binding_info not in current_bindings:
-        ret["comment"] = "Binding has already been removed: {0}".format(binding_info)
+        ret["comment"] = "Binding has already been removed: {}".format(binding_info)
         ret["result"] = True
     elif __opts__["test"]:
-        ret["comment"] = "Binding will be removed: {0}".format(binding_info)
+        ret["comment"] = "Binding will be removed: {}".format(binding_info)
         ret["changes"] = {"old": binding_info, "new": None}
     else:
-        ret["comment"] = "Removed binding: {0}".format(binding_info)
+        ret["comment"] = "Removed binding: {}".format(binding_info)
         ret["changes"] = {"old": binding_info, "new": None}
         ret["result"] = __salt__["win_iis.remove_binding"](
             site, hostheader, ipaddress, port
@@ -283,7 +278,7 @@ def create_cert_binding(name, site, hostheader="", ipaddress="*", port=443, sslf
 
     .. versionadded:: 2016.11.0
     """
-    ret = {"name": name, "changes": {}, "comment": str(), "result": None}
+    ret = {"name": name, "changes": {}, "comment": "", "result": None}
 
     binding_info = _get_binding_info(hostheader, ipaddress, port)
     current_cert_bindings = __salt__["win_iis.list_cert_bindings"](site)
@@ -292,19 +287,19 @@ def create_cert_binding(name, site, hostheader="", ipaddress="*", port=443, sslf
         current_name = current_cert_bindings[binding_info]["certificatehash"]
 
         if name == current_name:
-            ret["comment"] = "Certificate binding already present: {0}".format(name)
+            ret["comment"] = "Certificate binding already present: {}".format(name)
             ret["result"] = True
             return ret
         ret["comment"] = (
             "Certificate binding already present with a different"
-            " thumbprint: {0}".format(current_name)
+            " thumbprint: {}".format(current_name)
         )
         ret["result"] = False
     elif __opts__["test"]:
-        ret["comment"] = "Certificate binding will be created: {0}".format(name)
+        ret["comment"] = "Certificate binding will be created: {}".format(name)
         ret["changes"] = {"old": None, "new": name}
     else:
-        ret["comment"] = "Created certificate binding: {0}".format(name)
+        ret["comment"] = "Created certificate binding: {}".format(name)
         ret["changes"] = {"old": None, "new": name}
         ret["result"] = __salt__["win_iis.create_cert_binding"](
             name, site, hostheader, ipaddress, port, sslflags
@@ -350,24 +345,22 @@ def remove_cert_binding(name, site, hostheader="", ipaddress="*", port=443):
 
     .. versionadded:: 2016.11.0
     """
-    ret = {"name": name, "changes": {}, "comment": str(), "result": None}
+    ret = {"name": name, "changes": {}, "comment": "", "result": None}
 
     binding_info = _get_binding_info(hostheader, ipaddress, port)
     current_cert_bindings = __salt__["win_iis.list_cert_bindings"](site)
 
     if binding_info not in current_cert_bindings:
-        ret["comment"] = "Certificate binding has already been removed: {0}".format(
-            name
-        )
+        ret["comment"] = "Certificate binding has already been removed: {}".format(name)
         ret["result"] = True
     elif __opts__["test"]:
-        ret["comment"] = "Certificate binding will be removed: {0}".format(name)
+        ret["comment"] = "Certificate binding will be removed: {}".format(name)
         ret["changes"] = {"old": name, "new": None}
     else:
         current_name = current_cert_bindings[binding_info]["certificatehash"]
 
         if name == current_name:
-            ret["comment"] = "Removed certificate binding: {0}".format(name)
+            ret["comment"] = "Removed certificate binding: {}".format(name)
             ret["changes"] = {"old": name, "new": None}
             ret["result"] = __salt__["win_iis.remove_cert_binding"](
                 name, site, hostheader, ipaddress, port
@@ -401,13 +394,13 @@ def create_apppool(name):
     current_apppools = __salt__["win_iis.list_apppools"]()
 
     if name in current_apppools:
-        ret["comment"] = "Application pool already present: {0}".format(name)
+        ret["comment"] = "Application pool already present: {}".format(name)
         ret["result"] = True
     elif __opts__["test"]:
-        ret["comment"] = "Application pool will be created: {0}".format(name)
+        ret["comment"] = "Application pool will be created: {}".format(name)
         ret["changes"] = {"old": None, "new": name}
     else:
-        ret["comment"] = "Created application pool: {0}".format(name)
+        ret["comment"] = "Created application pool: {}".format(name)
         ret["changes"] = {"old": None, "new": name}
         ret["result"] = __salt__["win_iis.create_apppool"](name)
     return ret
@@ -434,13 +427,13 @@ def remove_apppool(name):
     current_apppools = __salt__["win_iis.list_apppools"]()
 
     if name not in current_apppools:
-        ret["comment"] = "Application pool has already been removed: {0}".format(name)
+        ret["comment"] = "Application pool has already been removed: {}".format(name)
         ret["result"] = True
     elif __opts__["test"]:
-        ret["comment"] = "Application pool will be removed: {0}".format(name)
+        ret["comment"] = "Application pool will be removed: {}".format(name)
         ret["changes"] = {"old": name, "new": None}
     else:
-        ret["comment"] = "Removed application pool: {0}".format(name)
+        ret["comment"] = "Removed application pool: {}".format(name)
         ret["changes"] = {"old": name, "new": None}
         ret["result"] = __salt__["win_iis.remove_apppool"](name)
     return ret
@@ -490,7 +483,7 @@ def container_setting(name, container, settings=None):
         3: "SpecificUser",
         4: "ApplicationPoolIdentity",
     }
-    ret = {"name": name, "changes": {}, "comment": str(), "result": None}
+    ret = {"name": name, "changes": {}, "comment": "", "result": None}
 
     if not settings:
         ret["comment"] = "No settings to change provided."
@@ -608,18 +601,18 @@ def create_app(name, site, sourcepath, apppool=None):
                 - sourcepath: C:\\inetpub\\site0\\v1
                 - apppool: site0
     """
-    ret = {"name": name, "changes": {}, "comment": str(), "result": None}
+    ret = {"name": name, "changes": {}, "comment": "", "result": None}
 
     current_apps = __salt__["win_iis.list_apps"](site)
 
     if name in current_apps:
-        ret["comment"] = "Application already present: {0}".format(name)
+        ret["comment"] = "Application already present: {}".format(name)
         ret["result"] = True
     elif __opts__["test"]:
-        ret["comment"] = "Application will be created: {0}".format(name)
+        ret["comment"] = "Application will be created: {}".format(name)
         ret["changes"] = {"old": None, "new": name}
     else:
-        ret["comment"] = "Created application: {0}".format(name)
+        ret["comment"] = "Created application: {}".format(name)
         ret["changes"] = {"old": None, "new": name}
         ret["result"] = __salt__["win_iis.create_app"](name, site, sourcepath, apppool)
     return ret
@@ -641,18 +634,18 @@ def remove_app(name, site):
                 - name: v1
                 - site: site0
     """
-    ret = {"name": name, "changes": {}, "comment": str(), "result": None}
+    ret = {"name": name, "changes": {}, "comment": "", "result": None}
 
     current_apps = __salt__["win_iis.list_apps"](site)
 
     if name not in current_apps:
-        ret["comment"] = "Application has already been removed: {0}".format(name)
+        ret["comment"] = "Application has already been removed: {}".format(name)
         ret["result"] = True
     elif __opts__["test"]:
-        ret["comment"] = "Application will be removed: {0}".format(name)
+        ret["comment"] = "Application will be removed: {}".format(name)
         ret["changes"] = {"old": name, "new": None}
     else:
-        ret["comment"] = "Removed application: {0}".format(name)
+        ret["comment"] = "Removed application: {}".format(name)
         ret["changes"] = {"old": name, "new": None}
         ret["result"] = __salt__["win_iis.remove_app"](name, site)
     return ret
@@ -694,18 +687,18 @@ def create_vdir(name, site, sourcepath, app="/"):
                 - sourcepath: C:\\inetpub\\vdirs\\foo
                 - app: v1
     """
-    ret = {"name": name, "changes": {}, "comment": str(), "result": None}
+    ret = {"name": name, "changes": {}, "comment": "", "result": None}
 
     current_vdirs = __salt__["win_iis.list_vdirs"](site, app)
 
     if name in current_vdirs:
-        ret["comment"] = "Virtual directory already present: {0}".format(name)
+        ret["comment"] = "Virtual directory already present: {}".format(name)
         ret["result"] = True
     elif __opts__["test"]:
-        ret["comment"] = "Virtual directory will be created: {0}".format(name)
+        ret["comment"] = "Virtual directory will be created: {}".format(name)
         ret["changes"] = {"old": None, "new": name}
     else:
-        ret["comment"] = "Created virtual directory: {0}".format(name)
+        ret["comment"] = "Created virtual directory: {}".format(name)
         ret["changes"] = {"old": None, "new": name}
         ret["result"] = __salt__["win_iis.create_vdir"](name, site, sourcepath, app)
 
@@ -739,18 +732,18 @@ def remove_vdir(name, site, app="/"):
                 - site: site0
                 - app: v1
     """
-    ret = {"name": name, "changes": {}, "comment": str(), "result": None}
+    ret = {"name": name, "changes": {}, "comment": "", "result": None}
 
     current_vdirs = __salt__["win_iis.list_vdirs"](site, app)
 
     if name not in current_vdirs:
-        ret["comment"] = "Virtual directory has already been removed: {0}".format(name)
+        ret["comment"] = "Virtual directory has already been removed: {}".format(name)
         ret["result"] = True
     elif __opts__["test"]:
-        ret["comment"] = "Virtual directory will be removed: {0}".format(name)
+        ret["comment"] = "Virtual directory will be removed: {}".format(name)
         ret["changes"] = {"old": name, "new": None}
     else:
-        ret["comment"] = "Removed virtual directory: {0}".format(name)
+        ret["comment"] = "Removed virtual directory: {}".format(name)
         ret["changes"] = {"old": name, "new": None}
         ret["result"] = __salt__["win_iis.remove_vdir"](name, site, app)
 
@@ -795,7 +788,7 @@ def set_app(name, site, settings=None):
                     applicationPool: appPool0
     """
     # pylint: enable=anomalous-backslash-in-string
-    ret = {"name": name, "changes": {}, "comment": str(), "result": None}
+    ret = {"name": name, "changes": {}, "comment": "", "result": None}
 
     if not settings:
         ret["comment"] = "No settings to change provided."
@@ -906,7 +899,7 @@ def webconfiguration_settings(name, settings=None):
 
     """
 
-    ret = {"name": name, "changes": {}, "comment": str(), "result": None}
+    ret = {"name": name, "changes": {}, "comment": "", "result": None}
 
     if not settings:
         ret["comment"] = "No settings to change provided."

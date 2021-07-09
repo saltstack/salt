@@ -358,7 +358,7 @@ certifi==2020.6.20
     #   requests
 certvalidator==0.11.1
     # via vcert
-cffi==1.12.2
+cffi==1.14.5
     # via
     #   -r requirements/static/ci/common.in
     #   -r requirements/static/pkg/py3.7/darwin.txt
@@ -522,7 +522,7 @@ kubernetes==3.0.0
     # via -r requirements/static/ci/common.in
 linode-python==1.1.1
     # via -r requirements/static/pkg/py3.7/darwin.txt
-lxml==4.6.2
+lxml==4.6.3
     # via
     #   junos-eznc
     #   napalm
@@ -729,9 +729,11 @@ pyserial==3.4
     # via
     #   junos-eznc
     #   netmiko
-pytest-helpers-namespace==2019.1.8
-    # via -r requirements/pytest.txt
-pytest-salt-factories==0.121.1
+pytest-helpers-namespace==2021.4.29
+    # via
+    #   -r requirements/pytest.txt
+    #   pytest-salt-factories
+pytest-salt-factories==0.906.0
     # via -r requirements/pytest.txt
 pytest-subtests==0.4.0
     # via -r requirements/pytest.txt
@@ -827,7 +829,7 @@ scp==0.13.2
     #   netmiko
 setproctitle==1.1.10
     # via -r requirements/static/pkg/py3.7/darwin.txt
-six==1.15.0
+six==1.16.0
     # via
     #   -r requirements/static/pkg/py3.7/darwin.txt
     #   aws-sam-translator
@@ -903,7 +905,9 @@ urllib3==1.26.4
 vcert==0.7.3 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
 virtualenv==20.0.20
-    # via -r requirements/static/ci/common.in
+    # via
+    #   -r requirements/static/ci/common.in
+    #   pytest-salt-factories
 vultr==1.0.1
     # via -r requirements/static/pkg/py3.7/darwin.txt
 watchdog==0.9.0

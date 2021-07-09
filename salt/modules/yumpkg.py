@@ -1967,6 +1967,15 @@ def upgrade(
 
         salt '*' pkg.upgrade security=True exclude='kernel*'
     """
+    if _yum() == "dnf" and not obsoletes:
+        # for dnf we can just disable obsoletes
+        _setopt = [
+            opt
+            for opt in salt.utils.args.split_input(kwargs.pop("setopt", []))
+            if not opt.startswith("obsoletes=")
+        ]
+        _setopt.append("obsoletes=False")
+        kwargs["setopt"] = _setopt
     options = _get_options(get_extra_options=True, **kwargs)
 
     if salt.utils.data.is_true(refresh):
@@ -1997,8 +2006,6 @@ def upgrade(
     else:
         # do not force the removal of obsolete packages
         if _yum() == "dnf":
-            # for dnf we can just disable obsoletes
-            cmd.append("--obsoletes=False")
             cmd.append("upgrade" if not minimal else "upgrade-minimal")
         else:
             # for yum we have to use update instead of upgrade
@@ -2093,6 +2100,24 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
 
     old = list_pkgs()
     targets = []
+
+    # Loop through pkg_params looking for any
+    # which contains a wildcard and get the
+    # real package names from the packages
+    # which are currently installed.
+    pkg_matches = {}
+    for pkg_param in list(pkg_params):
+        if "*" in pkg_param:
+            pkg_matches = {
+                x: pkg_params[pkg_param] for x in old if fnmatch.fnmatch(x, pkg_param)
+            }
+
+            # Remove previous pkg_param
+            pkg_params.pop(pkg_param)
+
+    # Update pkg_params with the matches
+    pkg_params.update(pkg_matches)
+
     for target in pkg_params:
         version_to_remove = pkg_params[target]
         installed_versions = old[target].split(",")

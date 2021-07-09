@@ -39,6 +39,7 @@ Current known limitations
 import csv
 import ctypes
 import glob
+import io
 import locale
 import logging
 import os
@@ -55,8 +56,6 @@ import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.win_lgpo_netsh
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.ext import six
-from salt.ext.six.moves import range
 from salt.serializers.configparser import deserialize
 
 log = logging.getLogger(__name__)
@@ -4675,7 +4674,7 @@ def _remove_unicode_encoding(xml_file):
     modified_xml = re.sub(
         r' encoding=[\'"]+unicode[\'"]+', "", xml_content.decode("utf-16"), count=1
     )
-    xml_tree = lxml.etree.parse(six.StringIO(modified_xml))
+    xml_tree = lxml.etree.parse(io.StringIO(modified_xml))
     return xml_tree
 
 
@@ -4693,7 +4692,7 @@ def _remove_invalid_xmlns(xml_file):
     modified_xml = re.sub(
         r' xmlns=[\'"]+.*[\'"]+', "", xml_content.decode("utf-8"), count=1
     )
-    xml_tree = lxml.etree.parse(six.StringIO(modified_xml))
+    xml_tree = lxml.etree.parse(io.StringIO(modified_xml))
     return xml_tree
 
 

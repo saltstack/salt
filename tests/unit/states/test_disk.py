@@ -1,16 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 Tests for disk state
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 from os import path
 
-# Import Salt Libs
 import salt.states.disk as disk
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -156,17 +150,13 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
             "data": self.mock_data[mock_fs],
         }
 
-        mock_ret[
-            "comment"
-        ] = "Disk used space is below minimum of {0} % at {1} %".format(
+        mock_ret["comment"] = "Disk used space is below minimum of {} % at {} %".format(
             mock_min, mock_used
         )
         ret = disk.status(mock_fs, minimum=mock_min)
         self.assertEqual(ret, mock_ret)
 
-        mock_ret[
-            "comment"
-        ] = "Disk used space is above maximum of {0} % at {1} %".format(
+        mock_ret["comment"] = "Disk used space is above maximum of {} % at {} %".format(
             mock_max, mock_used
         )
         ret = disk.status(mock_fs, maximum=mock_max)

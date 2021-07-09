@@ -2,19 +2,14 @@
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
-# Import Python Libs
 
-# Import Salt Libs
 import salt.modules.win_groupadd as win_groupadd
 import salt.utils.win_functions
-
-# Import Salt Testing Libs
 from tests.support.helpers import TstSuiteLoggingHandler
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, patch
 from tests.support.unit import TestCase, skipIf
 
-# Import Other Libs
 # pylint: disable=unused-import
 try:
     import win32com

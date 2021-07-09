@@ -1,17 +1,11 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import time
 
-# Import Salt Libs
 import salt.modules.ldapmod as ldapmod
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -32,7 +26,7 @@ class LdapmodTestCase(TestCase, LoaderModuleMockMixin):
         Test if it run an arbitrary LDAP query and return the results.
         """
 
-        class MockConnect(object):
+        class MockConnect:
             """
             Mocking _connect method
             """
