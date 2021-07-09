@@ -508,17 +508,13 @@ def _realpath_windows(path):
     for part in path.split(os.path.sep):
         if base != "":
             try:
-                part = os.readlink(os.path.sep.join([base, part]))
+                # Need to use salt.utils.path.readlink as it handles junctions
+                part = salt.utils.path.readlink(os.path.sep.join([base, part]))
                 base = os.path.abspath(part)
             except OSError:
                 base = os.path.abspath(os.path.sep.join([base, part]))
         else:
             base = part
-    # Python 3.8 added support for directory junctions which prefixes the
-    # return with `\\?\`. We need to strip that off.
-    # https://docs.python.org/3/library/os.html#os.readlink
-    if base.startswith("\\\\?\\"):
-        base = base[4:]
     return base
 
 
