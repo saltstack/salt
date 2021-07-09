@@ -1803,6 +1803,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         expectation = {
             "productname": "SPARC S7-2",
             "product": "SPARC S7-2",
+            "manufacturer": "Oracle Corporation",
         }
         with salt.utils.files.fopen(
             os.path.join(SOLARIS_DIR, "prtconf.s7-zone")
@@ -1820,6 +1821,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         expectation = {
             "productname": "SPARC S7-2",
             "product": "SPARC S7-2",
+            "manufacturer": "Oracle Corporation",
         }
         with salt.utils.files.fopen(
             os.path.join(SOLARIS_DIR, "prtdiag.s7")
@@ -1837,6 +1839,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         expectation = {
             "productname": "SPARC Enterprise T5220",
             "product": "SPARC Enterprise T5220",
+            "manufacturer": "Oracle Corporation",
         }
         with salt.utils.files.fopen(
             os.path.join(SOLARIS_DIR, "prtdiag.t5220")
@@ -1854,6 +1857,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         expectation = {
             "productname": "SPARC Enterprise T5220",
             "product": "SPARC Enterprise T5220",
+            "manufacturer": "Oracle Corporation",
         }
         with salt.utils.files.fopen(
             os.path.join(SOLARIS_DIR, "prtconf.t5220-zone")
@@ -1915,7 +1919,11 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             core.__salt__, {"cmd.run": MagicMock(return_value=prtdata)}
         ):
             os_grains = core.os_data()
-        grains = {k: v for k, v in os_grains.items() if k in {"product", "productname"}}
+        grains = {
+            k: v
+            for k, v in os_grains.items()
+            if k in {"product", "productname", "manufacturer"}
+        }
         self.assertEqual(grains, expectation)
 
     @patch("os.path.isfile")
