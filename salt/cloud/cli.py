@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Primary interfaces for the salt-cloud system
 """
@@ -11,14 +10,11 @@ Primary interfaces for the salt-cloud system
 # The cli, master and cloud configs will merge for opts
 # the VM data will be in opts['profiles']
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
 import sys
 
-# Import salt libs
 import salt.cloud
 import salt.config
 import salt.defaults.exitcodes
@@ -28,10 +24,6 @@ import salt.utils.cloud
 import salt.utils.parsers
 import salt.utils.user
 from salt.exceptions import SaltCloudException, SaltCloudSystemExit
-
-# Import 3rd-party libs
-from salt.ext import six
-from salt.ext.six.moves import input
 from salt.utils.verify import check_user, verify_env, verify_log, verify_log_files
 
 log = logging.getLogger(__name__)
@@ -72,7 +64,7 @@ class SaltCloud(salt.utils.parsers.SaltCloudParser):
                 if logfile is not None:
                     # Logfile is not using Syslog, verify
                     verify_log_files([logfile], salt_master_user)
-        except (IOError, OSError) as err:
+        except OSError as err:
             log.error("Error while verifying the environment: %s", err)
             sys.exit(err.errno)
 
@@ -185,7 +177,7 @@ class SaltCloud(salt.utils.parsers.SaltCloudParser):
             if map_file is not None:
                 if names != ():
                     msg = (
-                        "Supplying a mapfile, '{0}', in addition to instance names {1} "
+                        "Supplying a mapfile, '{}', in addition to instance names {} "
                         "with the '--destroy' or '-d' function is not supported. "
                         "Please choose to delete either the entire map file or individual "
                         "instances.".format(map_file, names)
@@ -205,12 +197,12 @@ class SaltCloud(salt.utils.parsers.SaltCloudParser):
 
             msg = "The following virtual machines are set to be destroyed:\n"
             names = set()
-            for alias, drivers in six.iteritems(matching):
-                msg += "  {0}:\n".format(alias)
-                for driver, vms in six.iteritems(drivers):
-                    msg += "    {0}:\n".format(driver)
+            for alias, drivers in matching.items():
+                msg += "  {}:\n".format(alias)
+                for driver, vms in drivers.items():
+                    msg += "    {}:\n".format(driver)
                     for name in vms:
-                        msg += "      {0}\n".format(name)
+                        msg += "      {}\n".format(name)
                         names.add(name)
             # pylint: disable=broad-except
             try:
@@ -238,7 +230,7 @@ class SaltCloud(salt.utils.parsers.SaltCloudParser):
             machines = []
             msg = (
                 "The following virtual machines are set to be actioned with "
-                '"{0}":\n'.format(self.options.action)
+                '"{}":\n'.format(self.options.action)
             )
             for name in names:
                 if "=" in name:
@@ -246,7 +238,7 @@ class SaltCloud(salt.utils.parsers.SaltCloudParser):
                     key, value = name.split("=", 1)
                     kwargs[key] = value
                 else:
-                    msg += "  {0}\n".format(name)
+                    msg += "  {}\n".format(name)
                     machines.append(name)
             names = machines
 
@@ -272,7 +264,7 @@ class SaltCloud(salt.utils.parsers.SaltCloudParser):
                 self.error(
                     "Any arguments passed to --function need to be passed "
                     "as kwargs. Ex: image=ami-54cf5c3d. Remaining "
-                    "arguments: {0}".format(args)
+                    "arguments: {}".format(args)
                 )
             # pylint: disable=broad-except
             try:
@@ -295,7 +287,7 @@ class SaltCloud(salt.utils.parsers.SaltCloudParser):
 
         elif self.options.set_password:
             username = self.credential_username
-            provider_name = "salt.cloud.provider.{0}".format(self.credential_provider)
+            provider_name = "salt.cloud.provider.{}".format(self.credential_provider)
             # TODO: check if provider is configured
             # set the password
             salt.utils.cloud.store_password_in_keyring(provider_name, username)
@@ -315,8 +307,8 @@ class SaltCloud(salt.utils.parsers.SaltCloudParser):
                 if "errors" in dmap:
                     # display profile errors
                     msg += "Found the following errors:\n"
-                    for profile_name, error in six.iteritems(dmap["errors"]):
-                        msg += "  {0}: {1}\n".format(profile_name, error)
+                    for profile_name, error in dmap["errors"].items():
+                        msg += "  {}: {}\n".format(profile_name, error)
                     sys.stderr.write(msg)
                     sys.stderr.flush()
 
@@ -324,19 +316,19 @@ class SaltCloud(salt.utils.parsers.SaltCloudParser):
                 if "existing" in dmap:
                     msg += "The following virtual machines already exist:\n"
                     for name in dmap["existing"]:
-                        msg += "  {0}\n".format(name)
+                        msg += "  {}\n".format(name)
 
                 if dmap["create"]:
                     msg += "The following virtual machines are set to be " "created:\n"
                     for name in dmap["create"]:
-                        msg += "  {0}\n".format(name)
+                        msg += "  {}\n".format(name)
 
                 if "destroy" in dmap:
                     msg += (
                         "The following virtual machines are set to be " "destroyed:\n"
                     )
                     for name in dmap["destroy"]:
-                        msg += "  {0}\n".format(name)
+                        msg += "  {}\n".format(name)
 
                 if not dmap["create"] and not dmap.get("destroy", None):
                     if not dmap.get("existing", None):
@@ -389,7 +381,7 @@ class SaltCloud(salt.utils.parsers.SaltCloudParser):
             if args:
                 self.error(
                     "Any arguments passed to --bootstrap need to be passed as "
-                    "kwargs. Ex: ssh_username=larry. Remaining arguments: {0}".format(
+                    "kwargs. Ex: ssh_username=larry. Remaining arguments: {}".format(
                         args
                     )
                 )
@@ -425,7 +417,7 @@ class SaltCloud(salt.utils.parsers.SaltCloudParser):
                 # This is a salt cloud system exit
                 if exc.exit_code > 0:
                     # the exit code is bigger than 0, it's an error
-                    msg = "Error: {0}".format(msg)
+                    msg = "Error: {}".format(msg)
                 self.exit(exc.exit_code, msg.format(exc).rstrip() + "\n")
             # It's not a system exit but it's an error we can
             # handle

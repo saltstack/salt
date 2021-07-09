@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 '''\
 Welcome to the Salt repl which exposes the execution environment of a minion in
 a pre-configured Python shell
@@ -22,20 +21,16 @@ completion behavior can be customized via the ~/.inputrc file.
 '''
 # pylint: disable=file-perms
 
-# Import python libs
-from __future__ import absolute_import
 
 import atexit
+import builtins
 import os
 import pprint  # pylint: disable=unused-import
 import readline
 import sys
 from code import InteractiveConsole
 
-# Import 3rd party libs
 import jinja2
-
-# Import salt libs
 import salt.client
 import salt.config
 import salt.loader
@@ -46,7 +41,6 @@ import salt.runner
 # pylint: disable=unused-import
 # These are imported to be available in the spawned shell
 import salt.utils.yaml
-from salt.ext.six.moves import builtins  # pylint: disable=import-error
 
 # pylint: enable=unused-import
 

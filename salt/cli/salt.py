@@ -167,7 +167,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
         try:
             if self.options.subset:
                 cmd_func = self.local_client.cmd_subset
-                kwargs["sub"] = self.options.subset
+                kwargs["subset"] = self.options.subset
                 kwargs["cli"] = True
             else:
                 cmd_func = self.local_client.cmd_cli

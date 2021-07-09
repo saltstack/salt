@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Provide authentication using local files
 
@@ -95,8 +94,6 @@ When using ``htdigest`` the ``^realm`` must be set:
 
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
