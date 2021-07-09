@@ -28,7 +28,6 @@ import logging
 # Import python libs
 import os
 import select
-
 import signal
 import subprocess
 import sys
@@ -133,15 +132,10 @@ class Terminal:
         # Used for tests
         force_receive_encoding=__salt_system_encoding__,
     ):
-
-        # Let's avoid Zombies!!!
-        _cleanup()
-
         if not args and not executable:
             raise TerminalException(
                 'You need to pass at least one of "args", "executable" '
             )
-
         self.args = args
         self.executable = executable
         self.shell = shell
@@ -354,6 +348,7 @@ class Terminal:
             self.wait()
 
     if mswindows:
+
         def _execute(self):
             raise NotImplementedError
 
@@ -397,6 +392,7 @@ class Terminal:
 
         kill = terminate
     else:
+
         def _spawn(self):
             # TODO: Get rid of this logic, just use the same api as Popen
             if isinstance(self.args, str):
