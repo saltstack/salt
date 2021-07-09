@@ -452,6 +452,11 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
     if isinstance(enable, str):
         enable = salt.utils.data.is_true(enable)
 
+    if "service.offline" in __salt__ and __salt__["service.offline"]:
+        ret["result"] = True
+        ret["comment"] = "Running in OFFLINE mode. Nothing to do"
+        return ret
+
     # Check if the service is available
     try:
         if not _available(name, ret):
@@ -659,6 +664,11 @@ def dead(name, enable=None, sig=None, init_delay=None, **kwargs):
     # Convert enable to boolean in case user passed a string value
     if isinstance(enable, str):
         enable = salt.utils.data.is_true(enable)
+
+    if "service.offline" in __salt__ and __salt__["service.offline"]:
+        ret["result"] = True
+        ret["comment"] = "Running in OFFLINE mode. Nothing to do"
+        return ret
 
     # Check if the service is available
     try:
