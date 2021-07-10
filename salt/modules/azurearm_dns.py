@@ -153,8 +153,8 @@ def record_set_create_or_update(
 
     try:
         parameters = {}
-        parameters['ttl'] = kwargs['ttl']
-        parameters['arecords'] = kwargs['arecords']
+        parameters["ttl"] = kwargs["ttl"]
+        parameters["arecords"] = kwargs["arecords"]
         record_set = dnsconn.record_sets.create_or_update(
             relative_record_set_name=name,
             zone_name=zone_name,
