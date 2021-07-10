@@ -197,6 +197,15 @@ def _linux_cpudata():
                 elif key == "Processor":
                     grains["cpu_model"] = val.split("-")[0]
                     grains["num_cpus"] = 1
+                # PPC64LE support - /proc/cpuinfo
+                #
+                # processor	: 0
+                # cpu		: POWER9 (architected), altivec supported
+                # clock		: 2750.000000MHz
+                # revision	: 2.2 (pvr 004e 0202)
+                elif key == "cpu":
+                    grains["cpu_model"] = val
+
     if "num_cpus" not in grains:
         grains["num_cpus"] = 0
     if "cpu_model" not in grains:
@@ -878,6 +887,17 @@ def _virtual(osdata):
                 elif "hyperv" in line:
                     grains["virtual"] = "HyperV"
                     break
+                elif line == "ibm_power-kvm":
+                    grains["virtual"] = "kvm"
+                    break
+                elif line == "ibm_power-lpar_shared":
+                    grains["virtual"] = "LPAR"
+                    grains["virtual_subtype"] = "shared"
+                    break
+                elif line == "ibm_power-lpar_dedicated":
+                    grains["virtual"] = "LPAR"
+                    grains["virtual_subtype"] = "dedicated"
+                    break
             break
         elif command == "dmidecode":
             # Product Name: VirtualBox
@@ -1533,6 +1553,49 @@ def _osx_platform_data():
     return grains
 
 
+def _linux_devicetree_platform_data():
+    """
+    Additional data for Linux Devicetree subsystem - https://www.kernel.org/doc/html/latest/devicetree/usage-model.html
+    Returns: A dictionary containing values for the following:
+        - manufacturer
+        - produtname
+        - serialnumber
+    """
+
+    def _read_dt_string(path):
+        try:
+            # /proc/device-tree should be used instead of /sys/firmware/devicetree/base
+            # see https://github.com/torvalds/linux/blob/v5.13/Documentation/ABI/testing/sysfs-firmware-ofw#L14
+            loc = "/proc/device-tree/{}".format(path)
+            if os.path.isfile(loc):
+                with salt.utils.files.fopen(loc, mode="r") as f:
+                    return f.read().rstrip("\x00")  # all strings are null-terminated
+        except Exception:  # pylint: disable=broad-except
+            return None
+
+        return None
+
+    grains = {}
+
+    model = _read_dt_string("model")
+    if model:
+        # Devicetree spec v0.3, section 2.3.2
+        tmp = model.split(",", 1)
+        if len(tmp) == 2:
+            # format "manufacturer,model"
+            grains["manufacturer"] = tmp[0]
+            grains["productname"] = tmp[1]
+        else:
+            grains["productname"] = tmp[0]
+
+    systemid = _read_dt_string("system-id")
+    if systemid:
+        # not in specs, but observed on "Linux on Power" systems
+        grains["serialnumber"] = systemid
+
+    return grains
+
+
 def id_():
     """
     Return the id
@@ -2143,6 +2206,10 @@ def os_data():
             grains["os"] = _OS_NAME_MAP.get(shortname, distroname)
         grains.update(_linux_cpudata())
         grains.update(_linux_gpu_data())
+
+        # only if devicetree is mounted
+        if os.path.isdir("/proc/device-tree"):
+            grains.update(_linux_devicetree_platform_data())
     elif grains["kernel"] == "SunOS":
         if salt.utils.platform.is_smartos():
             # See https://github.com/joyent/smartos-live/issues/224
