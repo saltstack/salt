@@ -1,0 +1,98 @@
+name: PR Checks
+
+on:
+  pull_request_target:
+    types: [opened, synchronize]
+
+jobs:
+
+  Check-Changed-Files-Docstrings:
+    name: Check Docstrings For Changed Files On PR
+    runs-on: ubuntu-latest
+
+    steps:
+
+    - uses: actions/checkout@v2
+    - uses: actions/setup-python@v2
+      with:
+        python-version: '3.7'
+
+    - name: Install Pre-Commit
+      env:
+        PIP_EXTRA_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
+      run: |
+        python -m pip install --upgrade pip
+        pip install pre-commit
+
+    - id: changed-files
+      name: Get Changed Files
+      uses: dorny/paths-filter@v2
+      with:
+        token: ${{ github.token }}
+        list-files: json
+        filters: |
+          salt:
+            - added|modified:
+              - 'salt/**'
+
+    - name: Check Docstrings For Changed Files On PR
+      id: check-known-missing-docstrings
+      if: github.event_name == 'pull_request' && steps.changed-files.outputs.salt == 'true'
+      continue-on-error: true
+      run: |
+        pre-commit run -v --hook-stage manual check-known-missing-docstrings --show-diff-on-failure --color=never --files ${{ join(fromJSON(steps.changed-files.outputs.salt_files), ' ') }} | tee output.txt
+
+    - name: Prepare Output
+      id: prepare-output
+      if: hashFiles('output.txt') != ''
+      run: |
+        OUTPUT=$(cat output.txt)
+        OUTPUT="${OUTPUT//'%'/'%25'}"
+        OUTPUT="${OUTPUT//$'\n'/'%0A'}"
+        OUTPUT="${OUTPUT//$'\r'/'%0D'}"
+        echo "::set-output name=contents::$OUTPUT"
+
+    - name: Comment on PR
+      if: hashFiles('output.txt') != ''
+      uses: actions/github-script@v4
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          var comment_header = `### The Salt Project Needs **Your** Help`
+
+          // Get the existing comments.
+          const {data: comments} = await github.issues.listComments({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.payload.number,
+          })
+
+          // Delete existing comments created by this action
+          for (const comment of comments) {
+            if ( comment.user.login === 'github-actions[bot]' ) {
+              if ( comment.body.startsWith(comment_header) ) {
+                github.issues.deleteComment({
+                  issue_number: context.issue.number,
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: comment.id
+                })
+              }
+            }
+          }
+
+          // Define the comment message
+          var msg = `${comment_header}
+
+          <details>
+          <summary>Please check the following and see if you can help.</summary>
+          <pre>${{ steps.prepare-output.outputs.contents }}</pre>
+          </details>`
+
+          // Add the new comment
+          github.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: msg
+          })
