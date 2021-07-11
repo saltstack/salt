@@ -1,9 +1,9 @@
 '*':
   - pytests.integration.modules.test_sysmod
+  - pytests.unit.utils.test_versions
   - unit.test_module_names
   - unit.test_virtualname
   - unit.utils.test_doc
-  - unit.utils.test_versions
 
 setup.py:
   - pytests.scenarios.setup.test_man
