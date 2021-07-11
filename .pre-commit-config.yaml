@@ -1199,7 +1199,7 @@ repos:
 
   # ----- Pre-Commit ------------------------------------------------------------------------------------------------>
   - repo: https://github.com/saltstack/invoke-pre-commit
-    rev: v1.5.0
+    rev: v1.9.0
     hooks:
       - id: invoke
         alias: check-docs
@@ -1215,7 +1215,7 @@ repos:
           - msgpack
 
   - repo: https://github.com/saltstack/invoke-pre-commit
-    rev: v1.5.0
+    rev: v1.9.0
     hooks:
       - id: invoke
         alias: check-filemap
@@ -1232,7 +1232,7 @@ repos:
           - msgpack
 
   - repo: https://github.com/saltstack/invoke-pre-commit
-    rev: v1.5.0
+    rev: v1.9.0
     hooks:
       - id: invoke
         alias: loader-check-virtual
@@ -1253,7 +1253,7 @@ repos:
           - msgpack
 
   - repo: https://github.com/saltstack/invoke-pre-commit
-    rev: v1.5.0
+    rev: v1.9.0
     hooks:
       - id: invoke
         alias: check-docstrings
@@ -1266,6 +1266,29 @@ repos:
             )$
         args:
           - docstrings.check
+        additional_dependencies:
+          - blessings
+          - pyyaml
+          - distro
+          - jinja2
+          - msgpack
+
+  - repo: https://github.com/saltstack/invoke-pre-commit
+    rev: v1.9.0
+    hooks:
+      - id: invoke
+        alias: check-known-missing-docstrings
+        name: Check Known Missing Docstrings
+        stages: [manual]
+        files: salt/.*\.py$
+        exclude: >
+            (?x)^(
+                templates/.*|
+                salt/ext/.*|
+            )$
+        args:
+          - docstrings.check
+          - --error-on-known-failures
         additional_dependencies:
           - blessings
           - pyyaml
