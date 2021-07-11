@@ -69,8 +69,6 @@ class VTTestCase(TestCase):
     )
     def test_vt_size(self):
         """Confirm that the terminal size is being set"""
-        #        if not sys.stdin.isatty():
-        #            self.skipTest("Not attached to a TTY. The test would fail.")
         cols = random.choice(range(80, 250))
         terminal = salt.utils.vt.Terminal(
             "stty size",
