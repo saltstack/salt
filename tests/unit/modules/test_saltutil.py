@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import salt.modules.saltutil as saltutil
 from salt.client import LocalClient
 from tests.support.mixins import LoaderModuleMockMixin

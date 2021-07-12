@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Management of MySQL users
 =========================
@@ -40,12 +39,9 @@ This state is not able to grant permissions for the user. See
 :py:mod:`salt.states.mysql_grants` for further instructions.
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import sys
 
-# Import salt libs
 import salt.utils.data
 
 
@@ -121,7 +117,7 @@ def present(
         "name": name,
         "changes": {},
         "result": True,
-        "comment": "User {0}@{1} is already present".format(name, host),
+        "comment": "User {}@{} is already present".format(name, host),
     }
 
     passwordless = not any((password, password_hash))
@@ -183,9 +179,7 @@ def present(
 
         # The user is present, change the password
         if __opts__["test"]:
-            ret["comment"] = "Password for user {0}@{1} is set to be ".format(
-                name, host
-            )
+            ret["comment"] = "Password for user {}@{} is set to be ".format(name, host)
             ret["result"] = None
             if passwordless:
                 ret["comment"] += "cleared"
@@ -205,17 +199,17 @@ def present(
             unix_socket,
             **connection_args
         ):
-            ret["comment"] = "Password for user {0}@{1} has been " "{2}".format(
+            ret["comment"] = "Password for user {}@{} has been {}".format(
                 name, host, "cleared" if passwordless else "changed"
             )
             ret["changes"][name] = "Updated"
         else:
-            ret["comment"] = "Failed to {0} password for user " "{1}@{2}".format(
+            ret["comment"] = "Failed to {} password for user {}@{}".format(
                 "clear" if passwordless else "change", name, host
             )
             err = _get_mysql_error()
             if err is not None:
-                ret["comment"] += " ({0})".format(err)
+                ret["comment"] += " ({})".format(err)
             if passwordless and not salt.utils.data.is_true(allow_passwordless):
                 ret["comment"] += (
                     ". Note: allow_passwordless must be True "
@@ -232,7 +226,7 @@ def present(
 
         # The user is not present, make it!
         if __opts__["test"]:
-            ret["comment"] = "User {0}@{1} is set to be added".format(name, host)
+            ret["comment"] = "User {}@{} is set to be added".format(name, host)
             ret["result"] = None
             if passwordless:
                 ret["comment"] += " with passwordless login"
@@ -252,15 +246,15 @@ def present(
             auth_plugin=auth_plugin,
             **connection_args
         ):
-            ret["comment"] = "The user {0}@{1} has been added".format(name, host)
+            ret["comment"] = "The user {}@{} has been added".format(name, host)
             if passwordless:
                 ret["comment"] += " with passwordless login"
             ret["changes"][name] = "Present"
         else:
-            ret["comment"] = "Failed to create user {0}@{1}".format(name, host)
+            ret["comment"] = "Failed to create user {}@{}".format(name, host)
             err = _get_mysql_error()
             if err is not None:
-                ret["comment"] += " ({0})".format(err)
+                ret["comment"] += " ({})".format(err)
             ret["result"] = False
 
     return ret
@@ -279,10 +273,10 @@ def absent(name, host="localhost", **connection_args):
     if __salt__["mysql.user_exists"](name, host, **connection_args):
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "User {0}@{1} is set to be removed".format(name, host)
+            ret["comment"] = "User {}@{} is set to be removed".format(name, host)
             return ret
         if __salt__["mysql.user_remove"](name, host, **connection_args):
-            ret["comment"] = "User {0}@{1} has been removed".format(name, host)
+            ret["comment"] = "User {}@{} has been removed".format(name, host)
             ret["changes"][name] = "Absent"
             return ret
         else:
@@ -299,7 +293,7 @@ def absent(name, host="localhost", **connection_args):
             return ret
 
     # fallback
-    ret["comment"] = ("User {0}@{1} is not present, so it cannot be removed").format(
+    ret["comment"] = "User {}@{} is not present, so it cannot be removed".format(
         name, host
     )
     return ret

@@ -1,11 +1,4 @@
-# -*- coding: utf-8 -*-
-
-# Import Salt Testing Libs
-from __future__ import absolute_import
-
 import salt.modules.selinux as selinux
-
-# Import Salt libs
 from salt.exceptions import SaltInvocationError
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch

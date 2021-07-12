@@ -1,23 +1,16 @@
-# -*- coding: utf-8 -*-
 """
 Install features/packages for Windows using DISM, which is useful for minions
 not running server versions of Windows. Some functions are only available on
 Windows 10.
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import logging
 import os
 import re
 
-# Import Salt libs
 import salt.utils.platform
 import salt.utils.versions
-
-# Import 3rd party libs
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 __virtualname__ = "dism"
@@ -58,11 +51,11 @@ def _get_components(type_regex, plural_type, install_value, image=None):
     cmd = [
         bin_dism,
         "/English",
-        "/Image:{0}".format(image) if image else "/Online",
-        "/Get-{0}".format(plural_type),
+        "/Image:{}".format(image) if image else "/Online",
+        "/Get-{}".format(plural_type),
     ]
     out = __salt__["cmd.run"](cmd)
-    pattern = r"{0} : (.*)\r\n.*State : {1}\r\n".format(type_regex, install_value)
+    pattern = r"{} : (.*)\r\n.*State : {}\r\n".format(type_regex, install_value)
     capabilities = re.findall(pattern, out, re.MULTILINE)
     capabilities.sort()
     return capabilities
@@ -101,19 +94,19 @@ def add_capability(
     if salt.utils.versions.version_cmp(__grains__["osversion"], "10") == -1:
         raise NotImplementedError(
             "`install_capability` is not available on this version of Windows: "
-            "{0}".format(__grains__["osversion"])
+            "{}".format(__grains__["osversion"])
         )
 
     cmd = [
         bin_dism,
         "/Quiet",
-        "/Image:{0}".format(image) if image else "/Online",
+        "/Image:{}".format(image) if image else "/Online",
         "/Add-Capability",
-        "/CapabilityName:{0}".format(capability),
+        "/CapabilityName:{}".format(capability),
     ]
 
     if source:
-        cmd.append("/Source:{0}".format(source))
+        cmd.append("/Source:{}".format(source))
     if limit_access:
         cmd.append("/LimitAccess")
     if not restart:
@@ -149,15 +142,15 @@ def remove_capability(capability, image=None, restart=False):
     if salt.utils.versions.version_cmp(__grains__["osversion"], "10") == -1:
         raise NotImplementedError(
             "`uninstall_capability` is not available on this version of "
-            "Windows: {0}".format(__grains__["osversion"])
+            "Windows: {}".format(__grains__["osversion"])
         )
 
     cmd = [
         bin_dism,
         "/Quiet",
-        "/Image:{0}".format(image) if image else "/Online",
+        "/Image:{}".format(image) if image else "/Online",
         "/Remove-Capability",
-        "/CapabilityName:{0}".format(capability),
+        "/CapabilityName:{}".format(capability),
     ]
 
     if not restart:
@@ -191,13 +184,13 @@ def get_capabilities(image=None):
     if salt.utils.versions.version_cmp(__grains__["osversion"], "10") == -1:
         raise NotImplementedError(
             "`installed_capabilities` is not available on this version of "
-            "Windows: {0}".format(__grains__["osversion"])
+            "Windows: {}".format(__grains__["osversion"])
         )
 
     cmd = [
         bin_dism,
         "/English",
-        "/Image:{0}".format(image) if image else "/Online",
+        "/Image:{}".format(image) if image else "/Online",
         "/Get-Capabilities",
     ]
     out = __salt__["cmd.run"](cmd)
@@ -234,7 +227,7 @@ def installed_capabilities(image=None):
     if salt.utils.versions.version_cmp(__grains__["osversion"], "10") == -1:
         raise NotImplementedError(
             "`installed_capabilities` is not available on this version of "
-            "Windows: {0}".format(__grains__["osversion"])
+            "Windows: {}".format(__grains__["osversion"])
         )
     return _get_components("Capability Identity", "Capabilities", "Installed")
 
@@ -264,7 +257,7 @@ def available_capabilities(image=None):
     if salt.utils.versions.version_cmp(__grains__["osversion"], "10") == -1:
         raise NotImplementedError(
             "`installed_capabilities` is not available on this version of "
-            "Windows: {0}".format(__grains__["osversion"])
+            "Windows: {}".format(__grains__["osversion"])
         )
     return _get_components("Capability Identity", "Capabilities", "Not Present")
 
@@ -309,14 +302,14 @@ def add_feature(
     cmd = [
         bin_dism,
         "/Quiet",
-        "/Image:{0}".format(image) if image else "/Online",
+        "/Image:{}".format(image) if image else "/Online",
         "/Enable-Feature",
-        "/FeatureName:{0}".format(feature),
+        "/FeatureName:{}".format(feature),
     ]
     if package:
-        cmd.append("/PackageName:{0}".format(package))
+        cmd.append("/PackageName:{}".format(package))
     if source:
-        cmd.append("/Source:{0}".format(source))
+        cmd.append("/Source:{}".format(source))
     if limit_access:
         cmd.append("/LimitAccess")
     if enable_parent:
@@ -352,9 +345,9 @@ def remove_feature(feature, remove_payload=False, image=None, restart=False):
     cmd = [
         bin_dism,
         "/Quiet",
-        "/Image:{0}".format(image) if image else "/Online",
+        "/Image:{}".format(image) if image else "/Online",
         "/Disable-Feature",
-        "/FeatureName:{0}".format(feature),
+        "/FeatureName:{}".format(feature),
     ]
 
     if remove_payload:
@@ -400,15 +393,15 @@ def get_features(package=None, image=None):
     cmd = [
         bin_dism,
         "/English",
-        "/Image:{0}".format(image) if image else "/Online",
+        "/Image:{}".format(image) if image else "/Online",
         "/Get-Features",
     ]
 
     if package:
         if "~" in package:
-            cmd.append("/PackageName:{0}".format(package))
+            cmd.append("/PackageName:{}".format(package))
         else:
-            cmd.append("/PackagePath:{0}".format(package))
+            cmd.append("/PackagePath:{}".format(package))
 
     out = __salt__["cmd.run"](cmd)
 
@@ -502,9 +495,9 @@ def add_package(
     cmd = [
         bin_dism,
         "/Quiet",
-        "/Image:{0}".format(image) if image else "/Online",
+        "/Image:{}".format(image) if image else "/Online",
         "/Add-Package",
-        "/PackagePath:{0}".format(package),
+        "/PackagePath:{}".format(package),
     ]
 
     if ignore_check:
@@ -547,7 +540,7 @@ def remove_package(package, image=None, restart=False):
     cmd = [
         bin_dism,
         "/Quiet",
-        "/Image:{0}".format(image) if image else "/Online",
+        "/Image:{}".format(image) if image else "/Online",
         "/Remove-Package",
     ]
 
@@ -555,9 +548,9 @@ def remove_package(package, image=None, restart=False):
         cmd.append("/NoRestart")
 
     if "~" in package:
-        cmd.append("/PackageName:{0}".format(package))
+        cmd.append("/PackageName:{}".format(package))
     else:
-        cmd.append("/PackagePath:{0}".format(package))
+        cmd.append("/PackagePath:{}".format(package))
 
     return __salt__["cmd.run_all"](cmd)
 
@@ -608,20 +601,20 @@ def package_info(package, image=None):
     cmd = [
         bin_dism,
         "/English",
-        "/Image:{0}".format(image) if image else "/Online",
+        "/Image:{}".format(image) if image else "/Online",
         "/Get-PackageInfo",
     ]
 
     if "~" in package:
-        cmd.append("/PackageName:{0}".format(package))
+        cmd.append("/PackageName:{}".format(package))
     else:
-        cmd.append("/PackagePath:{0}".format(package))
+        cmd.append("/PackagePath:{}".format(package))
 
     out = __salt__["cmd.run_all"](cmd)
 
     if out["retcode"] == 0:
         ret = dict()
-        for line in six.text_type(out["stdout"]).splitlines():
+        for line in str(out["stdout"]).splitlines():
             if " : " in line:
                 info = line.split(" : ")
                 if len(info) < 2:

@@ -1382,24 +1382,20 @@ def netdev():
 
             # add data
             ret[dev] = {}
-            for i in range(len(netstat_ipv4[0]) - 1):
-                if netstat_ipv4[0][i] == "Name":
+            for val in netstat_ipv4[0][:-1]:
+                if val == "Name":
                     continue
-                if netstat_ipv4[0][i] in ["Address", "Net/Dest"]:
-                    ret[dev][
-                        "IPv4 {field}".format(field=netstat_ipv4[0][i])
-                    ] = netstat_ipv4[1][i]
+                if val in ["Address", "Net/Dest"]:
+                    ret[dev]["IPv4 {field}".format(field=val)] = val
                 else:
-                    ret[dev][netstat_ipv4[0][i]] = _number(netstat_ipv4[1][i])
-            for i in range(len(netstat_ipv6[0]) - 1):
-                if netstat_ipv6[0][i] == "Name":
+                    ret[dev][val] = _number(val)
+            for val in netstat_ipv6[0][:-1]:
+                if val == "Name":
                     continue
-                if netstat_ipv6[0][i] in ["Address", "Net/Dest"]:
-                    ret[dev][
-                        "IPv6 {field}".format(field=netstat_ipv6[0][i])
-                    ] = netstat_ipv6[1][i]
+                if val in ["Address", "Net/Dest"]:
+                    ret[dev]["IPv6 {field}".format(field=val)] = val
                 else:
-                    ret[dev][netstat_ipv6[0][i]] = _number(netstat_ipv6[1][i])
+                    ret[dev][val] = _number(val)
 
         return ret
 

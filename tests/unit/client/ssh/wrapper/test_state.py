@@ -1,16 +1,9 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: :email:`saltybob <bbaker@saltstack.com`
 """
-from __future__ import absolute_import
 
-# Import Salt libs
 from salt.client.ssh.wrapper import state
-
-# Import Salt Testing libs
 from tests.support.unit import TestCase
-
-# Import python libs
 
 
 class StateTests(TestCase):

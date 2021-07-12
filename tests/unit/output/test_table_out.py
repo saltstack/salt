@@ -1,16 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 unittests for table outputter
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
 import salt.output.table_out as table_out
 import salt.utils.stringutils
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase
 

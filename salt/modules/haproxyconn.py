@@ -1,12 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 Support for haproxy
 
 .. versionadded:: 2014.7.0
 """
 
-# Import Python libs
-from __future__ import absolute_import, generators, print_function, unicode_literals
 
 import logging
 import os
@@ -50,9 +47,9 @@ def _get_conn(socket=DEFAULT_SOCKET_URL):
     """
     Get connection to haproxy socket.
     """
-    assert os.path.exists(socket), "{0} does not exist.".format(socket)
+    assert os.path.exists(socket), "{} does not exist.".format(socket)
     issock = os.stat(socket).st_mode
-    assert stat.S_ISSOCK(issock), "{0} is not a socket.".format(socket)
+    assert stat.S_ISSOCK(issock), "{} is not a socket.".format(socket)
     ha_conn = haproxy.conn.HaPConn(socket)
     return ha_conn
 
