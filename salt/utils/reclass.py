@@ -1,13 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 Common utility functions for the reclass adapters
 http://reclass.pantsfullofunix.net
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
-
-# Import python libs
 import sys
 
 

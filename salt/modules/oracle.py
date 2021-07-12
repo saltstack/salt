@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Oracle DataBase connection module
 
@@ -32,12 +31,10 @@ Oracle DataBase connection module
             <db>:
               uri: .....
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
 
-from salt.ext import six
 from salt.utils.decorators import depends
 
 log = logging.getLogger(__name__)
@@ -85,7 +82,7 @@ def _unicode_output(cursor, name, default_type, size, precision, scale):
         cx_Oracle.FIXED_CHAR,
         cx_Oracle.CLOB,
     ):
-        return cursor.var(six.text_type, size, cursor.arraysize)
+        return cursor.var(str, size, cursor.arraysize)
 
 
 def _connect(uri):
@@ -210,7 +207,7 @@ def client_version():
 
         salt '*' oracle.client_version
     """
-    return ".".join((six.text_type(x) for x in cx_Oracle.clientversion()))
+    return ".".join(str(x) for x in cx_Oracle.clientversion())
 
 
 def show_pillar(item=None):

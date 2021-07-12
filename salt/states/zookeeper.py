@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 :depends:  kazoo
 :configuration: See :py:mod:`salt.modules.zookeeper` for setup instructions.
@@ -26,8 +25,6 @@ The following options can be included in the acl dictionary:
     :type all: bool
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 __virtualname__ = "zookeeper"
 
@@ -135,7 +132,7 @@ def present(
     ret = {
         "name": name,
         "result": False,
-        "comment": "Failed to setup znode {0}".format(name),
+        "comment": "Failed to setup znode {}".format(name),
         "changes": {},
     }
     connkwargs = {
@@ -157,13 +154,13 @@ def present(
             ret["result"] = True
             ret[
                 "comment"
-            ] = "Znode {0} is already set to the correct value with the correct acls".format(
+            ] = "Znode {} is already set to the correct value with the correct acls".format(
                 name
             )
             return ret
         elif __opts__["test"] is True:
             ret["result"] = None
-            ret["comment"] = "Znode {0} is will be updated".format(name)
+            ret["comment"] = "Znode {} is will be updated".format(name)
             ret["changes"]["old"] = {}
             ret["changes"]["new"] = {}
             if value != cur_value:
@@ -191,12 +188,12 @@ def present(
             ret["changes"] = changes
             if value_result and acl_result:
                 ret["result"] = True
-                ret["comment"] = "Znode {0} successfully updated".format(name)
+                ret["comment"] = "Znode {} successfully updated".format(name)
             return ret
 
     if __opts__["test"] is True:
         ret["result"] = None
-        ret["comment"] = "{0} is will be created".format(name)
+        ret["comment"] = "{} is will be created".format(name)
         ret["changes"]["old"] = {}
         ret["changes"]["new"] = {}
         ret["changes"]["new"]["acls"] = chk_acls
@@ -221,7 +218,7 @@ def present(
     ret["changes"] = changes
     if value_result and acl_result:
         ret["result"] = True
-        ret["comment"] = "Znode {0} successfully created".format(name)
+        ret["comment"] = "Znode {} successfully created".format(name)
 
     return ret
 
@@ -279,7 +276,7 @@ def absent(
     ret = {
         "name": name,
         "result": False,
-        "comment": "Failed to delete znode {0}".format(name),
+        "comment": "Failed to delete znode {}".format(name),
         "changes": {},
     }
     connkwargs = {
@@ -293,7 +290,7 @@ def absent(
 
     if __salt__["zookeeper.exists"](name, **connkwargs) is False:
         ret["result"] = True
-        ret["comment"] = "Znode {0} does not exist".format(name)
+        ret["comment"] = "Znode {} does not exist".format(name)
         return ret
 
     changes = {}
@@ -304,7 +301,7 @@ def absent(
 
     if __opts__["test"] is True:
         ret["result"] = None
-        ret["comment"] = "Znode {0} will be removed".format(name)
+        ret["comment"] = "Znode {} will be removed".format(name)
         ret["changes"]["old"] = changes
         return ret
 
@@ -312,7 +309,7 @@ def absent(
 
     if __salt__["zookeeper.exists"](name, **connkwargs) is False:
         ret["result"] = True
-        ret["comment"] = "Znode {0} has been removed".format(name)
+        ret["comment"] = "Znode {} has been removed".format(name)
         ret["changes"]["old"] = changes
 
     return ret
@@ -376,7 +373,7 @@ def acls(
     ret = {
         "name": name,
         "result": False,
-        "comment": "Failed to set acls on znode {0}".format(name),
+        "comment": "Failed to set acls on znode {}".format(name),
         "changes": {},
     }
     connkwargs = {
@@ -398,12 +395,12 @@ def acls(
     cur_acls = __salt__["zookeeper.get_acls"](name, **connkwargs)
     if _check_acls(cur_acls, chk_acls):
         ret["result"] = True
-        ret["comment"] = "Znode {0} acls already set".format(name)
+        ret["comment"] = "Znode {} acls already set".format(name)
         return ret
 
     if __opts__["test"] is True:
         ret["result"] = None
-        ret["comment"] = "Znode {0} acls will be updated".format(name)
+        ret["comment"] = "Znode {} acls will be updated".format(name)
         ret["changes"]["old"] = cur_acls
         ret["changes"]["new"] = chk_acls
         return ret
@@ -414,7 +411,7 @@ def acls(
     ret["changes"] = {"old": cur_acls, "new": new_acls}
     if _check_acls(new_acls, chk_acls):
         ret["result"] = True
-        ret["comment"] = "Znode {0} acls updated".format(name)
+        ret["comment"] = "Znode {} acls updated".format(name)
         return ret
-    ret["comment"] = "Znode {0} acls failed to update".format(name)
+    ret["comment"] = "Znode {} acls failed to update".format(name)
     return ret
