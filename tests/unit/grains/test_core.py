@@ -1680,6 +1680,42 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                 # fqdns is disabled by default on proxy minions
                 assert core.fqdns() == {"fqdns": []}
 
+    def test_enable_fqdns_false_is_aix(self):
+        """
+        testing fqdns grains is disabled by default for minions on AIX
+        """
+        with patch("salt.utils.platform.is_aix", return_value=True, autospec=True):
+            with patch.dict(
+                "salt.grains.core.__salt__",
+                {"network.fqdns": MagicMock(return_value="my.fake.domain")},
+            ):
+                # fqdns is disabled by default on minions on AIX
+                assert core.fqdns() == {"fqdns": []}
+
+    def test_enable_fqdns_false_is_sunos(self):
+        """
+        testing fqdns grains is disabled by default for minions on Solaris platforms
+        """
+        with patch("salt.utils.platform.is_sunos", return_value=True, autospec=True):
+            with patch.dict(
+                "salt.grains.core.__salt__",
+                {"network.fqdns": MagicMock(return_value="my.fake.domain")},
+            ):
+                # fqdns is disabled by default on minions on Solaris platforms
+                assert core.fqdns() == {"fqdns": []}
+
+    def test_enable_fqdns_false_is_junos(self):
+        """
+        testing fqdns grains is disabled by default for minions on Junos
+        """
+        with patch("salt.utils.platform.is_junos", return_value=True, autospec=True):
+            with patch.dict(
+                "salt.grains.core.__salt__",
+                {"network.fqdns": MagicMock(return_value="my.fake.domain")},
+            ):
+                # fqdns is disabled by default on minions on Junos (Juniper)
+                assert core.fqdns() == {"fqdns": []}
+
     @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
     @patch(
         "salt.utils.network.ip_addrs", MagicMock(return_value=["1.2.3.4", "5.6.7.8"])
