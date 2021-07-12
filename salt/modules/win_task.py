@@ -16,7 +16,6 @@ from datetime import datetime
 import salt.utils.platform
 import salt.utils.winapi
 from salt.exceptions import ArgumentValueError, CommandExecutionError
-from salt.ext.six.moves import range
 
 try:
     import pythoncom

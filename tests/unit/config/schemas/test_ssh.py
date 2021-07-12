@@ -1,24 +1,16 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
     tests.unit.config.schemas.test_ssh
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.utils.stringutils
-
-# Import Salt Libs
 from salt.config.schemas import ssh as ssh_schemas
 from salt.config.schemas.minion import MinionConfiguration
 from salt.utils.versions import LooseVersion as _LooseVersion
-
-# Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
 
-# Import 3rd-party libs
 try:
     import jsonschema
     import jsonschema.exceptions
@@ -141,7 +133,7 @@ class RosterEntryConfigTest(TestCase):
                 format_checker=jsonschema.FormatChecker(),
             )
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {0}".format(exc))
+            self.fail("ValidationError raised: {}".format(exc))
 
         try:
             jsonschema.validate(
@@ -150,7 +142,7 @@ class RosterEntryConfigTest(TestCase):
                 format_checker=jsonschema.FormatChecker(),
             )
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {0}".format(exc))
+            self.fail("ValidationError raised: {}".format(exc))
 
         try:
             jsonschema.validate(
@@ -159,7 +151,7 @@ class RosterEntryConfigTest(TestCase):
                 format_checker=jsonschema.FormatChecker(),
             )
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {0}".format(exc))
+            self.fail("ValidationError raised: {}".format(exc))
 
         try:
             jsonschema.validate(
@@ -168,7 +160,7 @@ class RosterEntryConfigTest(TestCase):
                 format_checker=jsonschema.FormatChecker(),
             )
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {0}".format(exc))
+            self.fail("ValidationError raised: {}".format(exc))
 
         try:
             jsonschema.validate(
@@ -183,7 +175,7 @@ class RosterEntryConfigTest(TestCase):
                 format_checker=jsonschema.FormatChecker(),
             )
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {0}".format(exc))
+            self.fail("ValidationError raised: {}".format(exc))
 
         try:
             jsonschema.validate(
@@ -197,7 +189,7 @@ class RosterEntryConfigTest(TestCase):
                 format_checker=jsonschema.FormatChecker(),
             )
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {0}".format(exc))
+            self.fail("ValidationError raised: {}".format(exc))
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate(
@@ -252,7 +244,7 @@ class RosterItemTest(TestCase):
                 format_checker=jsonschema.FormatChecker(),
             )
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {0}".format(exc))
+            self.fail("ValidationError raised: {}".format(exc))
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate(

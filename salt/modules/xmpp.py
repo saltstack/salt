@@ -52,7 +52,6 @@ except ImportError:
     try:
         from slixmpp import ClientXMPP as _ClientXMPP
         from slixmpp.exceptions import XMPPError
-
         HAS_LIBS = True
     except ImportError:
 

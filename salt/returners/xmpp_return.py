@@ -87,7 +87,6 @@ except ImportError:
 
         HAS_LIBS = True
     except ImportError:
-
         class _ClientXMPP:
             """
             Fake class in order not to raise errors
@@ -145,7 +144,6 @@ def __virtual__():
     return (
         False,
         "Could not import xmpp returner; sleekxmpp or slixmpp python client is not "
-        "installed or is older than version '{}'.".format(min_version),
     )
 
 
