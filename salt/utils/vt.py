@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
@@ -19,13 +18,10 @@
     .. __: https://github.com/pexpect/pexpect
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import errno
 import functools
 import logging
-
-# Import python libs
 import os
 import select
 import signal
@@ -33,12 +29,9 @@ import subprocess
 import sys
 import time
 
-# Import salt libs
 import salt.utils.crypt
 import salt.utils.data
 import salt.utils.stringutils
-
-# Import salt libs
 from salt.ext import six
 from salt.ext.six import string_types
 from salt.log.setup import LOG_LEVELS
@@ -189,7 +182,7 @@ class Terminal:
             self.stream_stdout = stream_stdout
         else:
             raise TerminalException(
-                "Don't know how to handle '{0}' as the VT's "
+                "Don't know how to handle '{}' as the VT's "
                 "'stream_stdout' parameter.".format(stream_stdout)
             )
 
@@ -210,7 +203,7 @@ class Terminal:
             self.stream_stderr = stream_stderr
         else:
             raise TerminalException(
-                "Don't know how to handle '{0}' as the VT's "
+                "Don't know how to handle '{}' as the VT's "
                 "'stream_stderr' parameter.".format(stream_stderr)
             )
 
@@ -222,7 +215,7 @@ class Terminal:
             log.warning(
                 "Failed to spawn the VT: %s", err, exc_info_on_loglevel=logging.DEBUG
             )
-            raise TerminalException("Failed to spawn the VT. Error: {0}".format(err))
+            raise TerminalException("Failed to spawn the VT. Error: {}".format(err))
 
         log.debug(
             "Child Forked! PID: %s  STDOUT_FD: %s  STDERR_FD: %s",
@@ -244,9 +237,7 @@ class Terminal:
         self.stdin_logger_level = LOG_LEVELS.get(log_stdin_level, log_stdin_level)
         if log_stdin is True:
             self.stdin_logger = logging.getLogger(
-                "{0}.{1}.PID-{2}.STDIN".format(
-                    __name__, self.__class__.__name__, self.pid
-                )
+                "{}.{}.PID-{}.STDIN".format(__name__, self.__class__.__name__, self.pid)
             )
         elif log_stdin is not None:
             if not isinstance(log_stdin, logging.Logger):
@@ -258,7 +249,7 @@ class Terminal:
         self.stdout_logger_level = LOG_LEVELS.get(log_stdout_level, log_stdout_level)
         if log_stdout is True:
             self.stdout_logger = logging.getLogger(
-                "{0}.{1}.PID-{2}.STDOUT".format(
+                "{}.{}.PID-{}.STDOUT".format(
                     __name__, self.__class__.__name__, self.pid
                 )
             )
@@ -294,7 +285,7 @@ class Terminal:
         """
         Send the provided data to the terminal appending a line feed.
         """
-        return self.send("{0}{1}".format(data, linesep))
+        return self.send("{}{}".format(data, linesep))
 
     def recv(self, maxsize=None):
         """
@@ -373,7 +364,7 @@ class Terminal:
             elif sig == signal.CTRL_BREAK_EVENT:
                 os.kill(self.pid, signal.CTRL_BREAK_EVENT)
             else:
-                raise ValueError("Unsupported signal: {0}".format(sig))
+                raise ValueError("Unsupported signal: {}".format(sig))
             # pylint: enable=E1101
 
         def terminate(self, force=False):
@@ -451,7 +442,7 @@ class Terminal:
                 if tty_fd >= 0:
                     os.close(tty_fd)
                     raise TerminalException(
-                        "Could not open child pty, {0}".format(child_name)
+                        "Could not open child pty, {}".format(child_name)
                     )
             # which exception, shouldn't we catch explicitly .. ?
             except Exception:  # pylint: disable=broad-except
@@ -487,12 +478,7 @@ class Terminal:
             try:
                 if self.stdin_logger:
                     self.stdin_logger.log(self.stdin_logger_level, data)
-                if six.PY3:
-                    written = os.write(
-                        self.child_fd, data.encode(__salt_system_encoding__)
-                    )
-                else:
-                    written = os.write(self.child_fd, data)
+                written = os.write(self.child_fd, data.encode(__salt_system_encoding__))
             except OSError as why:
                 if why.errno == errno.EPIPE:  # broken pipe
                     os.close(self.child_fd)
@@ -659,7 +645,7 @@ class Terminal:
                 packed = struct.pack(b"HHHH", 0, 0, 0, 0)
                 ioctl = fcntl.ioctl(sys.stdin.fileno(), TIOCGWINSZ, packed)
                 return struct.unpack(b"HHHH", ioctl)[0:2]
-            except IOError:
+            except OSError:
                 # Return a default value of 24x80
                 return 24, 80
 
@@ -727,7 +713,7 @@ class Terminal:
                         "else call waitpid() on our process?"
                     )
                 else:
-                    six.reraise(*sys.exc_info())
+                    raise
 
             # I have to do this twice for Solaris.
             # I can't even believe that I figured this out...
@@ -746,7 +732,7 @@ class Terminal:
                             "someone else call waitpid() on our process?"
                         )
                     else:
-                        six.reraise(*sys.exc_info())
+                        raise
 
                 # If pid is still 0 after two calls to waitpid() then the
                 # process really is alive. This seems to work on all platforms,
