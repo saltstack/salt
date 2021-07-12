@@ -846,8 +846,6 @@ def present(
                 "profile": win_profile,
                 "logonscript": win_logonscript,
             }
-
-        # user.add returns true, false, or a str in the case of windows failure
         result = __salt__["user.add"](**params)
         if result is True:
             ret["comment"] = "New user {} created".format(name)

@@ -1,18 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 Convenience functions for dealing with datetime classes
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
 
-# Import Python libs
 import datetime
 
-# Import Salt libs
 import salt.utils.stringutils
-
-# Import 3rd-party libs
-from salt.ext import six
 from salt.utils.decorators.jinja import jinja_filter
 
 try:
@@ -37,7 +30,7 @@ def date_cast(date):
 
     # fuzzy date
     try:
-        if isinstance(date, six.string_types):
+        if isinstance(date, str):
             try:
                 if HAS_TIMELIB:
                     # py3: yes, timelib.strtodatetime wants bytes, not str :/
@@ -54,10 +47,10 @@ def date_cast(date):
         return datetime.datetime.fromtimestamp(date)
     except Exception:  # pylint: disable=broad-except
         if HAS_TIMELIB:
-            raise ValueError("Unable to parse {0}".format(date))
+            raise ValueError("Unable to parse {}".format(date))
 
         raise RuntimeError(
-            "Unable to parse {0}. Consider installing timelib".format(date)
+            "Unable to parse {}. Consider installing timelib".format(date)
         )
 
 

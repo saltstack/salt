@@ -1,16 +1,12 @@
-# -*- coding: utf-8 -*-
 """
 Module to interact with keystores
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
 from datetime import datetime
 
-# Import third party libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -32,7 +28,7 @@ def __virtual__():
     Check dependencies
     """
     if has_depends is False:
-        msg = "jks unavailable: {0} execution module cant be loaded ".format(
+        msg = "jks unavailable: {} execution module cant be loaded ".format(
             __virtualname__
         )
         return False, msg
@@ -159,7 +155,7 @@ def add(name, keystore, passphrase, certificate, private_key=None):
         cert_string = __salt__["x509.get_pem_entry"](certificate)
     except SaltInvocationError:
         raise SaltInvocationError(
-            "Invalid certificate file or string: {0}".format(certificate)
+            "Invalid certificate file or string: {}".format(certificate)
         )
 
     if private_key:

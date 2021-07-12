@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Mike Place <mp@saltstack.com>
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import io
 
@@ -45,7 +43,7 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
         }
 
     def setUp(self):
-        super(CronTestCase, self).setUp()
+        super().setUp()
         self._crontab = io.StringIO()
         self.addCleanup(delattr, self, "_crontab")
         self.set_crontab("")

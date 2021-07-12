@@ -1,15 +1,7 @@
-# -*- coding: utf-8 -*-
-
-# Import python libs
-from __future__ import absolute_import, unicode_literals
-
 import sys
 
-# Import Salt Libs
 import salt.utils.minions
 from tests.support.mock import MagicMock, patch
-
-# Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
 
 NODEGROUPS = {
