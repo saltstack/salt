@@ -22,10 +22,8 @@ import warnings
 from distutils.version import LooseVersion as _LooseVersion
 from distutils.version import StrictVersion as _StrictVersion
 
-import salt.version
-
 # pylint: enable=blacklisted-module
-
+import salt.version
 
 log = logging.getLogger(__name__)
 
@@ -94,9 +92,9 @@ def warn_until(
     be raised to remind the developers to remove the warning because the
     target version has been reached.
 
-    :param version: The version info or name after which the warning becomes a
-                    ``RuntimeError``. For example ``(0, 17)`` or ``Hydrogen``
-                    or an instance of :class:`salt.version.SaltStackVersion`.
+    :param version: The version info or name after which the warning becomes a ``RuntimeError``.
+                    For example ``(2019, 2)``, ``3000``, ``Hydrogen`` or an instance of
+                    :class:`salt.version.SaltStackVersion` or :class:`salt.version.SaltVersion`.
     :param message: The warning message to be displayed.
     :param category: The warning class to be thrown, by default
                      ``DeprecationWarning``
@@ -111,13 +109,16 @@ def warn_until(
                                 checks to raise a ``RuntimeError``.
     """
     if not isinstance(
-        version, (tuple, str, salt.version.SaltVersion, salt.version.SaltStackVersion)
+        version,
+        (tuple, int, str, salt.version.SaltVersion, salt.version.SaltStackVersion),
     ):
         raise RuntimeError(
-            "The 'version' argument should be passed as a tuple, string or "
+            "The 'version' argument should be passed as a tuple, integer, string or "
             "an instance of 'salt.version.SaltVersion' or "
             "'salt.version.SaltStackVersion'."
         )
+    elif isinstance(version, int):
+        version = salt.version.SaltStackVersion(version)
     elif isinstance(version, salt.version.SaltVersion):
         version = salt.version.SaltStackVersion(*version.info)
     elif isinstance(version, tuple):

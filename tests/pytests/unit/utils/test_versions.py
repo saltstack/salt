@@ -90,6 +90,24 @@ def test_compare():
         assert log_mock.error.called
 
 
+@pytest.mark.parametrize(
+    "version", ("Chlorine", 3007, (3007, 0), salt.version.SaltVersionsInfo.CHLORINE,)
+)
+def test_warn_until_good_version_argument(version):
+    with pytest.raises(
+        RuntimeError,
+        match=(
+            r"The warning triggered on filename \'(.*)test_versions.py\', "
+            r"line number ([\d]+), is supposed to be shown until version "
+            r"3007 is released. Current version is now 3009. "
+            r"Please remove the warning."
+        ),
+    ):
+        salt.utils.versions.warn_until(
+            version, "Deprecation Message after {version}!", _version_info_=(3009, 0)
+        )
+
+
 def test_warn_until_bad_version_name_raises_runtime_error():
     # Ensure proper behavior
     with warnings.catch_warnings(record=True) as recorded_warnings:
