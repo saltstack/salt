@@ -143,7 +143,7 @@ def __virtual__():
             return __virtualname__
     return (
         False,
-        "Could not import xmpp returner; sleekxmpp or slixmpp python client is not "
+        "Could not import xmpp returner; sleekxmpp or slixmpp python client is not ",
     )
 
 
