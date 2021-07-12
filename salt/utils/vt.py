@@ -32,8 +32,6 @@ import time
 import salt.utils.crypt
 import salt.utils.data
 import salt.utils.stringutils
-from salt.ext import six
-from salt.ext.six import string_types
 from salt.log.setup import LOG_LEVELS
 
 mswindows = sys.platform == "win32"
