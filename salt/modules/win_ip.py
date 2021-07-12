@@ -132,7 +132,7 @@ def is_enabled(iface):
 
         salt -G 'os_family:Windows' ip.is_enabled 'Local Area Connection #2'
     """
-    cmd = ["netsh", "interface", "show", "interface", "name={}".format(iface)]
+    cmd = ["netsh", "interface", "ip", "show", "interface", "name={}".format(iface)]
     iface_found = False
     for line in __salt__["cmd.run"](cmd, python_shell=False).splitlines():
         if "Connect state:" in line:
