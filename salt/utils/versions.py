@@ -108,19 +108,10 @@ def warn_until(
                                 issued. When we're only after the salt version
                                 checks to raise a ``RuntimeError``.
     """
-    if not isinstance(
-        version,
-        (tuple, int, str, salt.version.SaltVersion, salt.version.SaltStackVersion),
-    ):
-        raise RuntimeError(
-            "The 'version' argument should be passed as a tuple, integer, string or "
-            "an instance of 'salt.version.SaltVersion' or "
-            "'salt.version.SaltStackVersion'."
-        )
+    if isinstance(version, salt.version.SaltVersion):
+        version = salt.version.SaltStackVersion(*version.info)
     elif isinstance(version, int):
         version = salt.version.SaltStackVersion(version)
-    elif isinstance(version, salt.version.SaltVersion):
-        version = salt.version.SaltStackVersion(*version.info)
     elif isinstance(version, tuple):
         version = salt.version.SaltStackVersion(*version)
     elif isinstance(version, str):
@@ -132,6 +123,12 @@ def warn_until(
                 )
             )
         version = salt.version.SaltStackVersion.from_name(version)
+    elif not isinstance(version, salt.version.SaltStackVersion):
+        raise RuntimeError(
+            "The 'version' argument should be passed as a tuple, integer, string or "
+            "an instance of 'salt.version.SaltVersion' or "
+            "'salt.version.SaltStackVersion'."
+        )
 
     if stacklevel is None:
         # Attribute the warning to the calling function, not to warn_until()
