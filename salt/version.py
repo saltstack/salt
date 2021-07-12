@@ -363,7 +363,7 @@ class SaltStackVersion:
         import salt.utils.versions
 
         salt.utils.versions.warn_until(
-            SaltVersionsInfo.SULFUR.name,
+            SaltVersionsInfo.SULFUR,
             "The use of SaltStackVersion.from_last_named_version() is "
             "deprecated and set to be removed in {version}. Please use "
             "SaltStackVersion.current_release() instead.",
