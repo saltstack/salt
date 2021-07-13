@@ -3,19 +3,24 @@ Azure (ARM) Network Execution Module
 
 .. versionadded:: 2019.2.0
 
-:maintainer: <devops@decisionlab.io>
+:maintainer: <devops@decisionlab.io>, <devops@l2web.ca>
 :maturity: new
 :depends:
-    * `azure <https://pypi.python.org/pypi/azure>`_ >= 2.0.0
-    * `azure-common <https://pypi.python.org/pypi/azure-common>`_ >= 1.1.8
-    * `azure-mgmt <https://pypi.python.org/pypi/azure-mgmt>`_ >= 1.0.0
-    * `azure-mgmt-compute <https://pypi.python.org/pypi/azure-mgmt-compute>`_ >= 1.0.0
-    * `azure-mgmt-network <https://pypi.python.org/pypi/azure-mgmt-network>`_ >= 1.7.1
-    * `azure-mgmt-resource <https://pypi.python.org/pypi/azure-mgmt-resource>`_ >= 1.1.0
-    * `azure-mgmt-storage <https://pypi.python.org/pypi/azure-mgmt-storage>`_ >= 1.0.0
-    * `azure-mgmt-web <https://pypi.python.org/pypi/azure-mgmt-web>`_ >= 0.32.0
-    * `azure-storage <https://pypi.python.org/pypi/azure-storage>`_ >= 0.34.3
-    * `msrestazure <https://pypi.python.org/pypi/msrestazure>`_ >= 0.4.21
+    * `azure-core <https://pypi.python.org/pypi/azure-core>`_ >= 1.15.0
+    * `azure-batch <https://pypi.python.org/pypi/azure-batch>`_ >= 10.0.0
+    * `azure-identity <https://pypi.python.org/pypi/azure-identity>`_ >= 1.6.0
+    * `azure-common <https://pypi.python.org/pypi/azure-common>`_ >= 1.1.27
+    * `azure-mgmt-core <https://pypi.python.org/pypi/azure-mgmt-core>`_ >= 1.2.2
+    * `azure-mgmt-subscription <https://pypi.python.org/pypi/azure-mgmt-subscription>`_ >= 1.0.0
+    * `azure-mgmt-compute <https://pypi.python.org/pypi/azure-mgmt-compute>`_ >= 20.0.0
+    * `azure-mgmt-network <https://pypi.python.org/pypi/azure-mgmt-network>`_ >= 19.0.0
+    * `azure-mgmt-resource <https://pypi.python.org/pypi/azure-mgmt-resource>`_ >= 18.0.0
+    * `azure-mgmt-storage <https://pypi.python.org/pypi/azure-mgmt-storage>`_ >= 18.0.0
+    * `azure-mgmt-web <https://pypi.python.org/pypi/azure-mgmt-web>`_ >= 2.0.0
+    * `azure-storage-common <https://pypi.python.org/pypi/azure-storage-common>`_ >= 1.4.2
+    * `azure-storage-blob <https://pypi.python.org/pypi/azure-storage-blob>`_ >= 12.8.1
+    * `azure-storage-file <https://pypi.python.org/pypi/azure-storage-file>`_ >= 2.1.0
+    * `msrestazure <https://pypi.python.org/pypi/msrestazure>`_ >= 0.6.41
 :platform: linux
 
 :configuration: This module requires Azure Resource Manager credentials to be passed as keyword arguments
@@ -46,11 +51,20 @@ Azure (ARM) Network Execution Module
 """
 
 # Python libs
+# from __future__ import absolute_import
 
 import logging
 
+import salt.cloud
+import salt.loader
+import salt.utils
+import salt.utils.azurearm
+
 # Salt libs
 from salt.exceptions import SaltInvocationError  # pylint: disable=unused-import
+
+# from salt.ext.six.moves import range
+
 
 # Azure libs
 HAS_LIBS = False
@@ -80,7 +94,7 @@ def __virtual__():
     return __virtualname__
 
 
-def check_dns_name_availability(name, region, **kwargs):
+def check_dns_name_availability(name, region, cloud_provider=None, **kwargs):
     """
     .. versionadded:: 2019.2.0
 
@@ -90,6 +104,10 @@ def check_dns_name_availability(name, region, **kwargs):
 
     :param region: The region to query for the DNS name in question.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider
+
     CLI Example:
 
     .. code-block:: bash
@@ -97,6 +115,10 @@ def check_dns_name_availability(name, region, **kwargs):
         salt-call azurearm_network.check_dns_name_availability testdnsname westus
 
     """
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        kwargs.update(conn_config)
+
     netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         check_dns_name = netconn.check_dns_name_availability(
@@ -111,7 +133,7 @@ def check_dns_name_availability(name, region, **kwargs):
 
 
 def check_ip_address_availability(
-    ip_address, virtual_network, resource_group, **kwargs
+    ip_address, virtual_network, resource_group=None, cloud_provider=None, **kwargs
 ):
     """
     .. versionadded:: 2019.2.0
@@ -127,6 +149,10 @@ def check_ip_address_availability(
     :param resource_group: The resource group name assigned to the
         virtual network.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you don't have to specify ressource_group as it is already defined in the provider
+
     CLI Example:
 
     .. code-block:: bash
@@ -134,6 +160,15 @@ def check_ip_address_availability(
         salt-call azurearm_network.check_ip_address_availability 10.0.0.4 testnet testgroup
 
     """
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if resource_group is None:
+            resource_group = conn_config["resource_group"]
+        else:
+            conn_config["resource_group"] = resource_group
+        kwargs.update(conn_config)
+
     netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         check_ip = netconn.virtual_networks.check_ip_address_availability(
@@ -149,7 +184,9 @@ def check_ip_address_availability(
     return result
 
 
-def default_security_rule_get(name, security_group, resource_group, **kwargs):
+def default_security_rule_get(
+    name, security_group, resource_group=None, cloud_provider=None, **kwargs
+):
     """
     .. versionadded:: 2019.2.0
 
@@ -163,6 +200,10 @@ def default_security_rule_get(name, security_group, resource_group, **kwargs):
     :param resource_group: The resource group name assigned to the
         network security group.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider
+
     CLI Example:
 
     .. code-block:: bash
@@ -171,6 +212,14 @@ def default_security_rule_get(name, security_group, resource_group, **kwargs):
 
     """
     result = {}
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if resource_group is None:
+            resource_group = conn_config["resource_group"]
+        else:
+            conn_config["resource_group"] = resource_group
+        kwargs.update(conn_config)
 
     default_rules = default_security_rules_list(
         security_group=security_group, resource_group=resource_group, **kwargs
@@ -192,7 +241,9 @@ def default_security_rule_get(name, security_group, resource_group, **kwargs):
     return result
 
 
-def default_security_rules_list(security_group, resource_group, **kwargs):
+def default_security_rules_list(
+    security_group, resource_group=None, cloud_provider=None, **kwargs
+):
     """
     .. versionadded:: 2019.2.0
 
@@ -203,6 +254,10 @@ def default_security_rules_list(security_group, resource_group, **kwargs):
     :param resource_group: The resource group name assigned to the
         network security group.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider
+
     CLI Example:
 
     .. code-block:: bash
@@ -211,6 +266,14 @@ def default_security_rules_list(security_group, resource_group, **kwargs):
 
     """
     result = {}
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if resource_group is None:
+            resource_group = conn_config["resource_group"]
+        else:
+            conn_config["resource_group"] = resource_group
+        kwargs.update(conn_config)
 
     secgroup = network_security_group_get(
         security_group=security_group, resource_group=resource_group, **kwargs
@@ -228,7 +291,9 @@ def default_security_rules_list(security_group, resource_group, **kwargs):
     return result
 
 
-def security_rules_list(security_group, resource_group, **kwargs):
+def security_rules_list(
+    security_group, resource_group=None, cloud_provider=None, **kwargs
+):
     """
     .. versionadded:: 2019.2.0
 
@@ -239,6 +304,10 @@ def security_rules_list(security_group, resource_group, **kwargs):
     :param resource_group: The resource group name assigned to the
         network security group.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider
+
     CLI Example:
 
     .. code-block:: bash
@@ -246,6 +315,15 @@ def security_rules_list(security_group, resource_group, **kwargs):
         salt-call azurearm_network.security_rules_list testnsg testgroup
 
     """
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if resource_group is None:
+            resource_group = conn_config["resource_group"]
+        else:
+            conn_config["resource_group"] = resource_group
+        kwargs.update(conn_config)
+
     netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         secrules = netconn.security_rules.list(
@@ -267,7 +345,8 @@ def security_rule_create_or_update(
     priority,
     protocol,
     security_group,
-    resource_group,
+    resource_group=None,
+    cloud_provider=None,
     source_address_prefix=None,
     destination_address_prefix=None,
     source_port_range=None,
@@ -337,6 +416,10 @@ def security_rule_create_or_update(
     :param resource_group: The resource group name assigned to the
         network security group.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider
+
     CLI Example:
 
     .. code-block:: bash
@@ -364,6 +447,14 @@ def security_rule_create_or_update(
         if eval(params[0]):
             # pylint: disable=exec-used
             exec("{} = None".format(params[1]))
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if resource_group is None:
+            resource_group = conn_config["resource_group"]
+        else:
+            conn_config["resource_group"] = resource_group
+        kwargs.update(conn_config)
 
     netconn = __utils__["azurearm.get_client"]("network", **kwargs)
 
@@ -411,7 +502,9 @@ def security_rule_create_or_update(
     return result
 
 
-def security_rule_delete(security_rule, security_group, resource_group, **kwargs):
+def security_rule_delete(
+    security_rule, security_group, resource_group=None, cloud_provider=None, **kwargs
+):
     """
     .. versionadded:: 2019.2.0
 
@@ -425,6 +518,10 @@ def security_rule_delete(security_rule, security_group, resource_group, **kwargs
     :param resource_group: The resource group name assigned to the
         network security group.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider
+
     CLI Example:
 
     .. code-block:: bash
@@ -433,6 +530,15 @@ def security_rule_delete(security_rule, security_group, resource_group, **kwargs
 
     """
     result = False
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if resource_group is None:
+            resource_group = conn_config["resource_group"]
+        else:
+            conn_config["resource_group"] = resource_group
+        kwargs.update(conn_config)
+
     netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         secrule = netconn.security_rules.delete(
@@ -448,7 +554,9 @@ def security_rule_delete(security_rule, security_group, resource_group, **kwargs
     return result
 
 
-def security_rule_get(security_rule, security_group, resource_group, **kwargs):
+def security_rule_get(
+    security_rule, security_group, resource_group=None, cloud_provider=None, **kwargs
+):
     """
     .. versionadded:: 2019.2.0
 
@@ -462,6 +570,10 @@ def security_rule_get(security_rule, security_group, resource_group, **kwargs):
     :param resource_group: The resource group name assigned to the
         network security group.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider
+
     CLI Example:
 
     .. code-block:: bash
@@ -469,6 +581,15 @@ def security_rule_get(security_rule, security_group, resource_group, **kwargs):
         salt-call azurearm_network.security_rule_get testrule1 testnsg testgroup
 
     """
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if resource_group is None:
+            resource_group = conn_config["resource_group"]
+        else:
+            conn_config["resource_group"] = resource_group
+        kwargs.update(conn_config)
+
     netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         secrule = netconn.security_rules.get(
@@ -485,7 +606,7 @@ def security_rule_get(security_rule, security_group, resource_group, **kwargs):
 
 
 def network_security_group_create_or_update(
-    name, resource_group, **kwargs
+    name, resource_group=None, cloud_provider=None, **kwargs
 ):  # pylint: disable=invalid-name
     """
     .. versionadded:: 2019.2.0
@@ -497,6 +618,10 @@ def network_security_group_create_or_update(
     :param resource_group: The resource group name assigned to the
         network security group.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider
+
     CLI Example:
 
     .. code-block:: bash
@@ -504,6 +629,15 @@ def network_security_group_create_or_update(
         salt-call azurearm_network.network_security_group_create_or_update testnsg testgroup
 
     """
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if resource_group is None:
+            resource_group = conn_config["resource_group"]
+        else:
+            conn_config["resource_group"] = resource_group
+        kwargs.update(conn_config)
+
     if "location" not in kwargs:
         rg_props = __salt__["azurearm_resource.resource_group_get"](
             resource_group, **kwargs
@@ -544,7 +678,9 @@ def network_security_group_create_or_update(
     return result
 
 
-def network_security_group_delete(name, resource_group, **kwargs):
+def network_security_group_delete(
+    name, resource_group=None, cloud_provider=None, **kwargs
+):
     """
     .. versionadded:: 2019.2.0
 
@@ -555,6 +691,10 @@ def network_security_group_delete(name, resource_group, **kwargs):
     :param resource_group: The resource group name assigned to the
         network security group.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider
+
     CLI Example:
 
     .. code-block:: bash
@@ -563,6 +703,15 @@ def network_security_group_delete(name, resource_group, **kwargs):
 
     """
     result = False
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if resource_group is None:
+            resource_group = conn_config["resource_group"]
+        else:
+            conn_config["resource_group"] = resource_group
+        kwargs.update(conn_config)
+
     netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         secgroup = netconn.network_security_groups.delete(
@@ -576,7 +725,9 @@ def network_security_group_delete(name, resource_group, **kwargs):
     return result
 
 
-def network_security_group_get(name, resource_group, **kwargs):
+def network_security_group_get(
+    name, resource_group=None, cloud_provider=None, **kwargs
+):
     """
     .. versionadded:: 2019.2.0
 
@@ -587,6 +738,10 @@ def network_security_group_get(name, resource_group, **kwargs):
     :param resource_group: The resource group name assigned to the
         network security group.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider
+
     CLI Example:
 
     .. code-block:: bash
@@ -594,6 +749,15 @@ def network_security_group_get(name, resource_group, **kwargs):
         salt-call azurearm_network.network_security_group_get testnsg testgroup
 
     """
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if resource_group is None:
+            resource_group = conn_config["resource_group"]
+        else:
+            conn_config["resource_group"] = resource_group
+        kwargs.update(conn_config)
+
     netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         secgroup = netconn.network_security_groups.get(
@@ -607,7 +771,7 @@ def network_security_group_get(name, resource_group, **kwargs):
     return result
 
 
-def network_security_groups_list(resource_group, **kwargs):
+def network_security_groups_list(resource_group=None, cloud_provider=None, **kwargs):
     """
     .. versionadded:: 2019.2.0
 
@@ -615,6 +779,10 @@ def network_security_groups_list(resource_group, **kwargs):
 
     :param resource_group: The resource group name to list network security \
         groups within.
+
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider
 
     CLI Example:
 
@@ -624,6 +792,15 @@ def network_security_groups_list(resource_group, **kwargs):
 
     """
     result = {}
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if resource_group is None:
+            resource_group = conn_config["resource_group"]
+        else:
+            conn_config["resource_group"] = resource_group
+        kwargs.update(conn_config)
+
     netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         secgroups = __utils__["azurearm.paged_object_to_list"](
@@ -638,11 +815,17 @@ def network_security_groups_list(resource_group, **kwargs):
     return result
 
 
-def network_security_groups_list_all(**kwargs):  # pylint: disable=invalid-name
+def network_security_groups_list_all(
+    cloud_provider=None, **kwargs
+):  # pylint: disable=invalid-name
     """
     .. versionadded:: 2019.2.0
 
     List all network security groups within a subscription.
+
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider
 
     CLI Example:
 
@@ -652,6 +835,11 @@ def network_security_groups_list_all(**kwargs):  # pylint: disable=invalid-name
 
     """
     result = {}
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        kwargs.update(conn_config)
+
     netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         secgroups = __utils__["azurearm.paged_object_to_list"](
@@ -666,7 +854,7 @@ def network_security_groups_list_all(**kwargs):  # pylint: disable=invalid-name
     return result
 
 
-def subnets_list(virtual_network, resource_group, **kwargs):
+def subnets_list(virtual_network, resource_group=None, cloud_provider=None, **kwargs):
     """
     .. versionadded:: 2019.2.0
 
@@ -677,6 +865,10 @@ def subnets_list(virtual_network, resource_group, **kwargs):
     :param resource_group: The resource group name assigned to the
         virtual network.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider
+
     CLI Example:
 
     .. code-block:: bash
@@ -685,6 +877,15 @@ def subnets_list(virtual_network, resource_group, **kwargs):
 
     """
     result = {}
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if resource_group is None:
+            resource_group = conn_config["resource_group"]
+        else:
+            conn_config["resource_group"] = resource_group
+        kwargs.update(conn_config)
+
     netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         subnets = __utils__["azurearm.paged_object_to_list"](
@@ -702,7 +903,9 @@ def subnets_list(virtual_network, resource_group, **kwargs):
     return result
 
 
-def subnet_get(name, virtual_network, resource_group, **kwargs):
+def subnet_get(
+    name, virtual_network, resource_group=None, cloud_provider=None, **kwargs
+):
     """
     .. versionadded:: 2019.2.0
 
@@ -716,6 +919,10 @@ def subnet_get(name, virtual_network, resource_group, **kwargs):
     :param resource_group: The resource group name assigned to the
         virtual network.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider
+
     CLI Example:
 
     .. code-block:: bash
@@ -723,6 +930,15 @@ def subnet_get(name, virtual_network, resource_group, **kwargs):
         salt-call azurearm_network.subnet_get testsubnet testnet testgroup
 
     """
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if resource_group is None:
+            resource_group = conn_config["resource_group"]
+        else:
+            conn_config["resource_group"] = resource_group
+        kwargs.update(conn_config)
+
     netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         subnet = netconn.subnets.get(
@@ -740,7 +956,12 @@ def subnet_get(name, virtual_network, resource_group, **kwargs):
 
 
 def subnet_create_or_update(
-    name, address_prefix, virtual_network, resource_group, **kwargs
+    name,
+    address_prefix,
+    virtual_network,
+    resource_group=None,
+    cloud_provider=None,
+    **kwargs
 ):
     """
     .. versionadded:: 2019.2.0
@@ -757,6 +978,10 @@ def subnet_create_or_update(
     :param resource_group: The resource group name assigned to the
         virtual network.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider
+
     CLI Example:
 
     .. code-block:: bash
@@ -765,6 +990,15 @@ def subnet_create_or_update(
                   '10.0.0.0/24' testnet testgroup
 
     """
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if resource_group is None:
+            resource_group = conn_config["resource_group"]
+        else:
+            conn_config["resource_group"] = resource_group
+        kwargs.update(conn_config)
+
     netconn = __utils__["azurearm.get_client"]("network", **kwargs)
 
     # Use NSG name to link to the ID of an existing NSG.
@@ -818,7 +1052,9 @@ def subnet_create_or_update(
     return result
 
 
-def subnet_delete(name, virtual_network, resource_group, **kwargs):
+def subnet_delete(
+    name, virtual_network, resource_group=None, cloud_provider=None, **kwargs
+):
     """
     .. versionadded:: 2019.2.0
 
@@ -832,6 +1068,10 @@ def subnet_delete(name, virtual_network, resource_group, **kwargs):
     :param resource_group: The resource group name assigned to the
         virtual network.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider
+
     CLI Example:
 
     .. code-block:: bash
@@ -840,6 +1080,15 @@ def subnet_delete(name, virtual_network, resource_group, **kwargs):
 
     """
     result = False
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if resource_group is None:
+            resource_group = conn_config["resource_group"]
+        else:
+            conn_config["resource_group"] = resource_group
+        kwargs.update(conn_config)
+
     netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         subnet = netconn.subnets.delete(
@@ -855,11 +1104,15 @@ def subnet_delete(name, virtual_network, resource_group, **kwargs):
     return result
 
 
-def virtual_networks_list_all(**kwargs):
+def virtual_networks_list_all(cloud_provider=None, **kwargs):
     """
     .. versionadded:: 2019.2.0
 
     List all virtual networks within a subscription.
+
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider
 
     CLI Example:
 
@@ -869,6 +1122,11 @@ def virtual_networks_list_all(**kwargs):
 
     """
     result = {}
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        kwargs.update(conn_config)
+
     netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         vnets = __utils__["azurearm.paged_object_to_list"](
@@ -884,7 +1142,7 @@ def virtual_networks_list_all(**kwargs):
     return result
 
 
-def virtual_networks_list(resource_group, **kwargs):
+def virtual_networks_list(resource_group=None, cloud_provider=None, **kwargs):
     """
     .. versionadded:: 2019.2.0
 
@@ -892,6 +1150,10 @@ def virtual_networks_list(resource_group, **kwargs):
 
     :param resource_group: The resource group name to list virtual networks
         within.
+
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider
 
     CLI Example:
 
@@ -901,6 +1163,15 @@ def virtual_networks_list(resource_group, **kwargs):
 
     """
     result = {}
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if resource_group is None:
+            resource_group = conn_config["resource_group"]
+        else:
+            conn_config["resource_group"] = resource_group
+        kwargs.update(conn_config)
+
     netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         vnets = __utils__["azurearm.paged_object_to_list"](
@@ -917,7 +1188,9 @@ def virtual_networks_list(resource_group, **kwargs):
 
 
 # pylint: disable=invalid-name
-def virtual_network_create_or_update(name, address_prefixes, resource_group, **kwargs):
+def virtual_network_create_or_update(
+    name, address_prefixes, resource_group=None, cloud_provider=None, **kwargs
+):
     """
     .. versionadded:: 2019.2.0
 
@@ -932,6 +1205,10 @@ def virtual_network_create_or_update(name, address_prefixes, resource_group, **k
     :param resource_group: The resource group name assigned to the
         virtual network.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider
+
     CLI Example:
 
     .. code-block:: bash
@@ -940,6 +1217,15 @@ def virtual_network_create_or_update(name, address_prefixes, resource_group, **k
                   testnet ['10.0.0.0/16'] testgroup
 
     """
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if resource_group is None:
+            resource_group = conn_config["resource_group"]
+        else:
+            conn_config["resource_group"] = resource_group
+        kwargs.update(conn_config)
+
     if "location" not in kwargs:
         rg_props = __salt__["azurearm_resource.resource_group_get"](
             resource_group, **kwargs
@@ -991,7 +1277,7 @@ def virtual_network_create_or_update(name, address_prefixes, resource_group, **k
     return result
 
 
-def virtual_network_delete(name, resource_group, **kwargs):
+def virtual_network_delete(name, resource_group=None, cloud_provider=None, **kwargs):
     """
     .. versionadded:: 2019.2.0
 
@@ -1002,6 +1288,10 @@ def virtual_network_delete(name, resource_group, **kwargs):
     :param resource_group: The resource group name assigned to the
         virtual network
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider
+
     CLI Example:
 
     .. code-block:: bash
@@ -1010,6 +1300,15 @@ def virtual_network_delete(name, resource_group, **kwargs):
 
     """
     result = False
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if resource_group is None:
+            resource_group = conn_config["resource_group"]
+        else:
+            conn_config["resource_group"] = resource_group
+        kwargs.update(conn_config)
+
     netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         vnet = netconn.virtual_networks.delete(
@@ -1023,7 +1322,7 @@ def virtual_network_delete(name, resource_group, **kwargs):
     return result
 
 
-def virtual_network_get(name, resource_group, **kwargs):
+def virtual_network_get(name, resource_group=None, cloud_provider=None, **kwargs):
     """
     .. versionadded:: 2019.2.0
 
@@ -1034,6 +1333,10 @@ def virtual_network_get(name, resource_group, **kwargs):
     :param resource_group: The resource group name assigned to the
         virtual network.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider
+
     CLI Example:
 
     .. code-block:: bash
@@ -1041,6 +1344,15 @@ def virtual_network_get(name, resource_group, **kwargs):
         salt-call azurearm_network.virtual_network_get testnet testgroup
 
     """
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if resource_group is None:
+            resource_group = conn_config["resource_group"]
+        else:
+            conn_config["resource_group"] = resource_group
+        kwargs.update(conn_config)
+
     netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         vnet = netconn.virtual_networks.get(
@@ -1054,11 +1366,15 @@ def virtual_network_get(name, resource_group, **kwargs):
     return result
 
 
-def load_balancers_list_all(**kwargs):
+def load_balancers_list_all(cloud_provider=None, **kwargs):
     """
     .. versionadded:: 2019.2.0
 
     List all load balancers within a subscription.
+
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider
 
     CLI Example:
 
@@ -1068,6 +1384,11 @@ def load_balancers_list_all(**kwargs):
 
     """
     result = {}
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        kwargs.update(conn_config)
+
     netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         load_balancers = __utils__["azurearm.paged_object_to_list"](
@@ -1083,7 +1404,7 @@ def load_balancers_list_all(**kwargs):
     return result
 
 
-def load_balancers_list(resource_group, **kwargs):
+def load_balancers_list(resource_group=None, cloud_provider=None, **kwargs):
     """
     .. versionadded:: 2019.2.0
 
@@ -1091,6 +1412,10 @@ def load_balancers_list(resource_group, **kwargs):
 
     :param resource_group: The resource group name to list load balancers
         within.
+
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider
 
     CLI Example:
 
@@ -1100,6 +1425,15 @@ def load_balancers_list(resource_group, **kwargs):
 
     """
     result = {}
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if resource_group is None:
+            resource_group = conn_config["resource_group"]
+        else:
+            conn_config["resource_group"] = resource_group
+        kwargs.update(conn_config)
+
     netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         load_balancers = __utils__["azurearm.paged_object_to_list"](
@@ -1115,7 +1449,7 @@ def load_balancers_list(resource_group, **kwargs):
     return result
 
 
-def load_balancer_get(name, resource_group, **kwargs):
+def load_balancer_get(name, resource_group=None, cloud_provider=None, **kwargs):
     """
     .. versionadded:: 2019.2.0
 
@@ -1126,6 +1460,10 @@ def load_balancer_get(name, resource_group, **kwargs):
     :param resource_group: The resource group name assigned to the
         load balancer.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider
+
     CLI Example:
 
     .. code-block:: bash
@@ -1133,6 +1471,15 @@ def load_balancer_get(name, resource_group, **kwargs):
         salt-call azurearm_network.load_balancer_get testlb testgroup
 
     """
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if resource_group is None:
+            resource_group = conn_config["resource_group"]
+        else:
+            conn_config["resource_group"] = resource_group
+        kwargs.update(conn_config)
+
     netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         load_balancer = netconn.load_balancers.get(
@@ -1146,7 +1493,9 @@ def load_balancer_get(name, resource_group, **kwargs):
     return result
 
 
-def load_balancer_create_or_update(name, resource_group, **kwargs):
+def load_balancer_create_or_update(
+    name, resource_group=None, cloud_provider=None, **kwargs
+):
     """
     .. versionadded:: 2019.2.0
 
@@ -1157,6 +1506,10 @@ def load_balancer_create_or_update(name, resource_group, **kwargs):
     :param resource_group: The resource group name assigned to the
         load balancer.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider
+
     CLI Example:
 
     .. code-block:: bash
@@ -1164,6 +1517,15 @@ def load_balancer_create_or_update(name, resource_group, **kwargs):
         salt-call azurearm_network.load_balancer_create_or_update testlb testgroup
 
     """
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if resource_group is None:
+            resource_group = conn_config["resource_group"]
+        else:
+            conn_config["resource_group"] = resource_group
+        kwargs.update(conn_config)
+
     if "location" not in kwargs:
         rg_props = __salt__["azurearm_resource.resource_group_get"](
             resource_group, **kwargs
@@ -1332,7 +1694,7 @@ def load_balancer_create_or_update(name, resource_group, **kwargs):
     return result
 
 
-def load_balancer_delete(name, resource_group, **kwargs):
+def load_balancer_delete(name, resource_group=None, cloud_provider=None, **kwargs):
     """
     .. versionadded:: 2019.2.0
 
@@ -1343,6 +1705,10 @@ def load_balancer_delete(name, resource_group, **kwargs):
     :param resource_group: The resource group name assigned to the
         load balancer.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider
+
     CLI Example:
 
     .. code-block:: bash
@@ -1351,6 +1717,15 @@ def load_balancer_delete(name, resource_group, **kwargs):
 
     """
     result = False
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if resource_group is None:
+            resource_group = conn_config["resource_group"]
+        else:
+            conn_config["resource_group"] = resource_group
+        kwargs.update(conn_config)
+
     netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         load_balancer = netconn.load_balancers.delete(
@@ -1364,13 +1739,17 @@ def load_balancer_delete(name, resource_group, **kwargs):
     return result
 
 
-def usages_list(location, **kwargs):
+def usages_list(location, cloud_provider=None, **kwargs):
     """
     .. versionadded:: 2019.2.0
 
     List subscription network usage for a location.
 
     :param location: The Azure location to query for network usage.
+
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider
 
     CLI Example:
 
@@ -1379,6 +1758,11 @@ def usages_list(location, **kwargs):
         salt-call azurearm_network.usages_list westus
 
     """
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        kwargs.update(conn_config)
+
     netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         result = __utils__["azurearm.paged_object_to_list"](
@@ -1391,7 +1775,7 @@ def usages_list(location, **kwargs):
     return result
 
 
-def network_interface_delete(name, resource_group, **kwargs):
+def network_interface_delete(name, resource_group=None, cloud_provider=None, **kwargs):
     """
     .. versionadded:: 2019.2.0
 
@@ -1402,6 +1786,10 @@ def network_interface_delete(name, resource_group, **kwargs):
     :param resource_group: The resource group name assigned to the
         network interface.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider
+
     CLI Example:
 
     .. code-block:: bash
@@ -1410,6 +1798,14 @@ def network_interface_delete(name, resource_group, **kwargs):
 
     """
     result = False
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if resource_group is None:
+            resource_group = conn_config["resource_group"]
+        else:
+            conn_config["resource_group"] = resource_group
+        kwargs.update(conn_config)
 
     netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
@@ -1424,7 +1820,7 @@ def network_interface_delete(name, resource_group, **kwargs):
     return result
 
 
-def network_interface_get(name, resource_group, **kwargs):
+def network_interface_get(name, resource_group=None, cloud_provider=None, **kwargs):
     """
     .. versionadded:: 2019.2.0
 
@@ -1435,6 +1831,10 @@ def network_interface_get(name, resource_group, **kwargs):
     :param resource_group: The resource group name assigned to the
         network interface.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider
+
     CLI Example:
 
     .. code-block:: bash
@@ -1442,6 +1842,15 @@ def network_interface_get(name, resource_group, **kwargs):
         salt-call azurearm_network.network_interface_get test-iface0 testgroup
 
     """
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if resource_group is None:
+            resource_group = conn_config["resource_group"]
+        else:
+            conn_config["resource_group"] = resource_group
+        kwargs.update(conn_config)
+
     netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         nic = netconn.network_interfaces.get(
@@ -1457,7 +1866,13 @@ def network_interface_get(name, resource_group, **kwargs):
 
 # pylint: disable=invalid-name
 def network_interface_create_or_update(
-    name, ip_configurations, subnet, virtual_network, resource_group, **kwargs
+    name,
+    ip_configurations,
+    subnet,
+    virtual_network,
+    resource_group=None,
+    cloud_provider=None,
+    **kwargs
 ):
     """
     .. versionadded:: 2019.2.0
@@ -1477,6 +1892,10 @@ def network_interface_create_or_update(
     :param resource_group: The resource group name assigned to the
         virtual network.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider
+
     CLI Example:
 
     .. code-block:: bash
@@ -1485,6 +1904,15 @@ def network_interface_create_or_update(
                   testsubnet testnet testgroup
 
     """
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if resource_group is None:
+            resource_group = conn_config["resource_group"]
+        else:
+            conn_config["resource_group"] = resource_group
+        kwargs.update(conn_config)
+
     if "location" not in kwargs:
         rg_props = __salt__["azurearm_resource.resource_group_get"](
             resource_group, **kwargs
@@ -1580,11 +2008,15 @@ def network_interface_create_or_update(
     return result
 
 
-def network_interfaces_list_all(**kwargs):
+def network_interfaces_list_all(cloud_provider=None, **kwargs):
     """
     .. versionadded:: 2019.2.0
 
     List all network interfaces within a subscription.
+
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider
 
     CLI Example:
 
@@ -1594,6 +2026,11 @@ def network_interfaces_list_all(**kwargs):
 
     """
     result = {}
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        kwargs.update(conn_config)
+
     netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         nics = __utils__["azurearm.paged_object_to_list"](
@@ -1609,7 +2046,7 @@ def network_interfaces_list_all(**kwargs):
     return result
 
 
-def network_interfaces_list(resource_group, **kwargs):
+def network_interfaces_list(resource_group=None, cloud_provider=None, **kwargs):
     """
     .. versionadded:: 2019.2.0
 
@@ -1617,6 +2054,10 @@ def network_interfaces_list(resource_group, **kwargs):
 
     :param resource_group: The resource group name to list network
         interfaces within.
+
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider
 
     CLI Example:
 
@@ -1626,6 +2067,15 @@ def network_interfaces_list(resource_group, **kwargs):
 
     """
     result = {}
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if resource_group is None:
+            resource_group = conn_config["resource_group"]
+        else:
+            conn_config["resource_group"] = resource_group
+        kwargs.update(conn_config)
+
     netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         nics = __utils__["azurearm.paged_object_to_list"](
@@ -1642,7 +2092,9 @@ def network_interfaces_list(resource_group, **kwargs):
 
 
 # pylint: disable=invalid-name
-def network_interface_get_effective_route_table(name, resource_group, **kwargs):
+def network_interface_get_effective_route_table(
+    name, resource_group=None, cloud_provider=None, **kwargs
+):
     """
     .. versionadded:: 2019.2.0
 
@@ -1653,6 +2105,10 @@ def network_interface_get_effective_route_table(name, resource_group, **kwargs):
     :param resource_group: The resource group name assigned to the
         network interface.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider
+
     CLI Example:
 
     .. code-block:: bash
@@ -1660,6 +2116,15 @@ def network_interface_get_effective_route_table(name, resource_group, **kwargs):
         salt-call azurearm_network.network_interface_get_effective_route_table test-iface0 testgroup
 
     """
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if resource_group is None:
+            resource_group = conn_config["resource_group"]
+        else:
+            conn_config["resource_group"] = resource_group
+        kwargs.update(conn_config)
+
     netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         nic = netconn.network_interfaces.get_effective_route_table(
@@ -1678,7 +2143,7 @@ def network_interface_get_effective_route_table(name, resource_group, **kwargs):
 
 # pylint: disable=invalid-name
 def network_interface_list_effective_network_security_groups(
-    name, resource_group, **kwargs
+    name, resource_group=None, cloud_provider=None, **kwargs
 ):
     """
     .. versionadded:: 2019.2.0
@@ -1690,6 +2155,10 @@ def network_interface_list_effective_network_security_groups(
     :param resource_group: The resource group name assigned to the
         network interface.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider
+
     CLI Example:
 
     .. code-block:: bash
@@ -1697,6 +2166,15 @@ def network_interface_list_effective_network_security_groups(
         salt-call azurearm_network.network_interface_list_effective_network_security_groups test-iface0 testgroup
 
     """
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if resource_group is None:
+            resource_group = conn_config["resource_group"]
+        else:
+            conn_config["resource_group"] = resource_group
+        kwargs.update(conn_config)
+
     netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         nic = netconn.network_interfaces.list_effective_network_security_groups(
@@ -1715,7 +2193,7 @@ def network_interface_list_effective_network_security_groups(
 
 # pylint: disable=invalid-name
 def list_virtual_machine_scale_set_vm_network_interfaces(
-    scale_set, vm_index, resource_group, **kwargs
+    scale_set, vm_index, resource_group=None, cloud_provider=None, **kwargs
 ):
     """
     .. versionadded:: 2019.2.0
@@ -1729,6 +2207,10 @@ def list_virtual_machine_scale_set_vm_network_interfaces(
     :param resource_group: The resource group name assigned to the
         scale set.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider
+
     CLI Example:
 
     .. code-block:: bash
@@ -1737,6 +2219,15 @@ def list_virtual_machine_scale_set_vm_network_interfaces(
 
     """
     result = {}
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if resource_group is None:
+            resource_group = conn_config["resource_group"]
+        else:
+            conn_config["resource_group"] = resource_group
+        kwargs.update(conn_config)
+
     netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         nics = __utils__["azurearm.paged_object_to_list"](
@@ -1758,7 +2249,7 @@ def list_virtual_machine_scale_set_vm_network_interfaces(
 
 # pylint: disable=invalid-name
 def list_virtual_machine_scale_set_network_interfaces(
-    scale_set, resource_group, **kwargs
+    scale_set, resource_group=None, cloud_provider=None, **kwargs
 ):
     """
     .. versionadded:: 2019.2.0
@@ -1770,6 +2261,10 @@ def list_virtual_machine_scale_set_network_interfaces(
     :param resource_group: The resource group name assigned to the
         scale set.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider
+
     CLI Example:
 
     .. code-block:: bash
@@ -1778,6 +2273,15 @@ def list_virtual_machine_scale_set_network_interfaces(
 
     """
     result = {}
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if resource_group is None:
+            resource_group = conn_config["resource_group"]
+        else:
+            conn_config["resource_group"] = resource_group
+        kwargs.update(conn_config)
+
     netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         nics = __utils__["azurearm.paged_object_to_list"](
@@ -1798,7 +2302,7 @@ def list_virtual_machine_scale_set_network_interfaces(
 
 # pylint: disable=invalid-name
 def get_virtual_machine_scale_set_network_interface(
-    name, scale_set, vm_index, resource_group, **kwargs
+    name, scale_set, vm_index, resource_group=None, cloud_provider=None, **kwargs
 ):
     """
     .. versionadded:: 2019.2.0
@@ -1814,6 +2318,10 @@ def get_virtual_machine_scale_set_network_interface(
     :param resource_group: The resource group name assigned to the
         scale set.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider
+
     CLI Example:
 
     .. code-block:: bash
@@ -1821,6 +2329,15 @@ def get_virtual_machine_scale_set_network_interface(
         salt-call azurearm_network.get_virtual_machine_scale_set_network_interface test-iface0 testset testvm testgroup
 
     """
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if resource_group is None:
+            resource_group = conn_config["resource_group"]
+        else:
+            conn_config["resource_group"] = resource_group
+        kwargs.update(conn_config)
+
     expand = kwargs.get("expand")
 
     netconn = __utils__["azurearm.get_client"]("network", **kwargs)
@@ -1841,7 +2358,7 @@ def get_virtual_machine_scale_set_network_interface(
     return result
 
 
-def public_ip_address_delete(name, resource_group, **kwargs):
+def public_ip_address_delete(name, resource_group=None, cloud_provider=None, **kwargs):
     """
     .. versionadded:: 2019.2.0
 
@@ -1852,6 +2369,10 @@ def public_ip_address_delete(name, resource_group, **kwargs):
     :param resource_group: The resource group name assigned to the
         public IP address.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider
+
     CLI Example:
 
     .. code-block:: bash
@@ -1860,6 +2381,15 @@ def public_ip_address_delete(name, resource_group, **kwargs):
 
     """
     result = False
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if resource_group is None:
+            resource_group = conn_config["resource_group"]
+        else:
+            conn_config["resource_group"] = resource_group
+        kwargs.update(conn_config)
+
     netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         pub_ip = netconn.public_ip_addresses.delete(
@@ -1873,7 +2403,7 @@ def public_ip_address_delete(name, resource_group, **kwargs):
     return result
 
 
-def public_ip_address_get(name, resource_group, **kwargs):
+def public_ip_address_get(name, resource_group=None, cloud_provider=None, **kwargs):
     """
     .. versionadded:: 2019.2.0
 
@@ -1884,6 +2414,10 @@ def public_ip_address_get(name, resource_group, **kwargs):
     :param resource_group: The resource group name assigned to the
         public IP address.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider
+
     CLI Example:
 
     .. code-block:: bash
@@ -1891,6 +2425,15 @@ def public_ip_address_get(name, resource_group, **kwargs):
         salt-call azurearm_network.public_ip_address_get test-pub-ip testgroup
 
     """
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if resource_group is None:
+            resource_group = conn_config["resource_group"]
+        else:
+            conn_config["resource_group"] = resource_group
+        kwargs.update(conn_config)
+
     expand = kwargs.get("expand")
 
     netconn = __utils__["azurearm.get_client"]("network", **kwargs)
@@ -1909,7 +2452,9 @@ def public_ip_address_get(name, resource_group, **kwargs):
     return result
 
 
-def public_ip_address_create_or_update(name, resource_group, **kwargs):
+def public_ip_address_create_or_update(
+    name, resource_group=None, cloud_provider=None, **kwargs
+):
     """
     .. versionadded:: 2019.2.0
 
@@ -1920,6 +2465,10 @@ def public_ip_address_create_or_update(name, resource_group, **kwargs):
     :param resource_group: The resource group name assigned to the
         public IP address.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider
+
     CLI Example:
 
     .. code-block:: bash
@@ -1927,6 +2476,15 @@ def public_ip_address_create_or_update(name, resource_group, **kwargs):
         salt-call azurearm_network.public_ip_address_create_or_update test-ip-0 testgroup
 
     """
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if resource_group is None:
+            resource_group = conn_config["resource_group"]
+        else:
+            conn_config["resource_group"] = resource_group
+        kwargs.update(conn_config)
+
     if "location" not in kwargs:
         rg_props = __salt__["azurearm_resource.resource_group_get"](
             resource_group, **kwargs
@@ -1967,11 +2525,15 @@ def public_ip_address_create_or_update(name, resource_group, **kwargs):
     return result
 
 
-def public_ip_addresses_list_all(**kwargs):
+def public_ip_addresses_list_all(cloud_provider=None, **kwargs):
     """
     .. versionadded:: 2019.2.0
 
     List all public IP addresses within a subscription.
+
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider
 
     CLI Example:
 
@@ -1981,6 +2543,11 @@ def public_ip_addresses_list_all(**kwargs):
 
     """
     result = {}
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        kwargs.update(conn_config)
+
     netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         pub_ips = __utils__["azurearm.paged_object_to_list"](
@@ -1996,7 +2563,7 @@ def public_ip_addresses_list_all(**kwargs):
     return result
 
 
-def public_ip_addresses_list(resource_group, **kwargs):
+def public_ip_addresses_list(resource_group=None, cloud_provider=None, **kwargs):
     """
     .. versionadded:: 2019.2.0
 
@@ -2004,6 +2571,10 @@ def public_ip_addresses_list(resource_group, **kwargs):
 
     :param resource_group: The resource group name to list public IP
         addresses within.
+
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider
 
     CLI Example:
 
@@ -2013,6 +2584,15 @@ def public_ip_addresses_list(resource_group, **kwargs):
 
     """
     result = {}
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if resource_group is None:
+            resource_group = conn_config["resource_group"]
+        else:
+            conn_config["resource_group"] = resource_group
+        kwargs.update(conn_config)
+
     netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         pub_ips = __utils__["azurearm.paged_object_to_list"](
@@ -2028,7 +2608,9 @@ def public_ip_addresses_list(resource_group, **kwargs):
     return result
 
 
-def route_filter_rule_delete(name, route_filter, resource_group, **kwargs):
+def route_filter_rule_delete(
+    name, route_filter, resource_group=None, cloud_provider=None, **kwargs
+):
     """
     .. versionadded:: 2019.2.0
 
@@ -2041,6 +2623,10 @@ def route_filter_rule_delete(name, route_filter, resource_group, **kwargs):
     :param resource_group: The resource group name assigned to the
         route filter.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider
+
     CLI Example:
 
     .. code-block:: bash
@@ -2049,6 +2635,15 @@ def route_filter_rule_delete(name, route_filter, resource_group, **kwargs):
 
     """
     result = False
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if resource_group is None:
+            resource_group = conn_config["resource_group"]
+        else:
+            conn_config["resource_group"] = resource_group
+        kwargs.update(conn_config)
+
     netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         rule = netconn.route_filter_rules.delete(
@@ -2064,7 +2659,9 @@ def route_filter_rule_delete(name, route_filter, resource_group, **kwargs):
     return result
 
 
-def route_filter_rule_get(name, route_filter, resource_group, **kwargs):
+def route_filter_rule_get(
+    name, route_filter, resource_group=None, cloud_provider=None, **kwargs
+):
     """
     .. versionadded:: 2019.2.0
 
@@ -2077,6 +2674,10 @@ def route_filter_rule_get(name, route_filter, resource_group, **kwargs):
     :param resource_group: The resource group name assigned to the
         route filter.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider
+
     CLI Example:
 
     .. code-block:: bash
@@ -2085,6 +2686,15 @@ def route_filter_rule_get(name, route_filter, resource_group, **kwargs):
 
     """
     result = {}
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if resource_group is None:
+            resource_group = conn_config["resource_group"]
+        else:
+            conn_config["resource_group"] = resource_group
+        kwargs.update(conn_config)
+
     netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         rule = netconn.route_filter_rules.get(
@@ -2102,7 +2712,13 @@ def route_filter_rule_get(name, route_filter, resource_group, **kwargs):
 
 
 def route_filter_rule_create_or_update(
-    name, access, communities, route_filter, resource_group, **kwargs
+    name,
+    access,
+    communities,
+    route_filter,
+    resource_group=None,
+    cloud_provider=None,
+    **kwargs
 ):
     """
     .. versionadded:: 2019.2.0
@@ -2120,6 +2736,10 @@ def route_filter_rule_create_or_update(
     :param resource_group: The resource group name assigned to the
         route filter.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider
+
     CLI Example:
 
     .. code-block:: bash
@@ -2128,6 +2748,15 @@ def route_filter_rule_create_or_update(
                   test-rule allow "['12076:51006']" test-filter testgroup
 
     """
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if resource_group is None:
+            resource_group = conn_config["resource_group"]
+        else:
+            conn_config["resource_group"] = resource_group
+        kwargs.update(conn_config)
+
     if not isinstance(communities, list):
         log.error("The communities parameter must be a list of strings!")
         return False
@@ -2180,7 +2809,9 @@ def route_filter_rule_create_or_update(
     return result
 
 
-def route_filter_rules_list(route_filter, resource_group, **kwargs):
+def route_filter_rules_list(
+    route_filter, resource_group=None, cloud_provider=None, **kwargs
+):
     """
     .. versionadded:: 2019.2.0
 
@@ -2191,6 +2822,10 @@ def route_filter_rules_list(route_filter, resource_group, **kwargs):
     :param resource_group: The resource group name assigned to the
         route filter.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider
+
     CLI Example:
 
     .. code-block:: bash
@@ -2199,6 +2834,15 @@ def route_filter_rules_list(route_filter, resource_group, **kwargs):
 
     """
     result = {}
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if resource_group is None:
+            resource_group = conn_config["resource_group"]
+        else:
+            conn_config["resource_group"] = resource_group
+        kwargs.update(conn_config)
+
     netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         rules = __utils__["azurearm.paged_object_to_list"](
@@ -2216,7 +2860,7 @@ def route_filter_rules_list(route_filter, resource_group, **kwargs):
     return result
 
 
-def route_filter_delete(name, resource_group, **kwargs):
+def route_filter_delete(name, resource_group=None, cloud_provider=None, **kwargs):
     """
     .. versionadded:: 2019.2.0
 
@@ -2227,6 +2871,10 @@ def route_filter_delete(name, resource_group, **kwargs):
     :param resource_group: The resource group name assigned to the
         route filter.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider
+
     CLI Example:
 
     .. code-block:: bash
@@ -2235,6 +2883,15 @@ def route_filter_delete(name, resource_group, **kwargs):
 
     """
     result = False
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if resource_group is None:
+            resource_group = conn_config["resource_group"]
+        else:
+            conn_config["resource_group"] = resource_group
+        kwargs.update(conn_config)
+
     netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         route_filter = netconn.route_filters.delete(
@@ -2248,7 +2905,7 @@ def route_filter_delete(name, resource_group, **kwargs):
     return result
 
 
-def route_filter_get(name, resource_group, **kwargs):
+def route_filter_get(name, resource_group=None, cloud_provider=None, **kwargs):
     """
     .. versionadded:: 2019.2.0
 
@@ -2259,6 +2916,10 @@ def route_filter_get(name, resource_group, **kwargs):
     :param resource_group: The resource group name assigned to the
         route filter.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider
+
     CLI Example:
 
     .. code-block:: bash
@@ -2266,6 +2927,14 @@ def route_filter_get(name, resource_group, **kwargs):
         salt-call azurearm_network.route_filter_get test-filter testgroup
 
     """
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if resource_group is None:
+            resource_group = conn_config["resource_group"]
+        else:
+            conn_config["resource_group"] = resource_group
+        kwargs.update(conn_config)
+
     expand = kwargs.get("expand")
 
     netconn = __utils__["azurearm.get_client"]("network", **kwargs)
@@ -2282,7 +2951,9 @@ def route_filter_get(name, resource_group, **kwargs):
     return result
 
 
-def route_filter_create_or_update(name, resource_group, **kwargs):
+def route_filter_create_or_update(
+    name, resource_group=None, cloud_provider=None, **kwargs
+):
     """
     .. versionadded:: 2019.2.0
 
@@ -2293,6 +2964,10 @@ def route_filter_create_or_update(name, resource_group, **kwargs):
     :param resource_group: The resource group name assigned to the
         route filter.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider
+
     CLI Example:
 
     .. code-block:: bash
@@ -2300,6 +2975,14 @@ def route_filter_create_or_update(name, resource_group, **kwargs):
         salt-call azurearm_network.route_filter_create_or_update test-filter testgroup
 
     """
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if resource_group is None:
+            resource_group = conn_config["resource_group"]
+        else:
+            conn_config["resource_group"] = resource_group
+        kwargs.update(conn_config)
+
     if "location" not in kwargs:
         rg_props = __salt__["azurearm_resource.resource_group_get"](
             resource_group, **kwargs
@@ -2340,7 +3023,7 @@ def route_filter_create_or_update(name, resource_group, **kwargs):
     return result
 
 
-def route_filters_list(resource_group, **kwargs):
+def route_filters_list(resource_group=None, cloud_provider=None, **kwargs):
     """
     .. versionadded:: 2019.2.0
 
@@ -2348,6 +3031,10 @@ def route_filters_list(resource_group, **kwargs):
 
     :param resource_group: The resource group name to list route
         filters within.
+
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider
 
     CLI Example:
 
@@ -2357,6 +3044,15 @@ def route_filters_list(resource_group, **kwargs):
 
     """
     result = {}
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if resource_group is None:
+            resource_group = conn_config["resource_group"]
+        else:
+            conn_config["resource_group"] = resource_group
+        kwargs.update(conn_config)
+
     netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         filters = __utils__["azurearm.paged_object_to_list"](
@@ -2374,11 +3070,15 @@ def route_filters_list(resource_group, **kwargs):
     return result
 
 
-def route_filters_list_all(**kwargs):
+def route_filters_list_all(cloud_provider=None, **kwargs):
     """
     .. versionadded:: 2019.2.0
 
     List all route filters within a subscription.
+
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider
 
     CLI Example:
 
@@ -2388,6 +3088,11 @@ def route_filters_list_all(**kwargs):
 
     """
     result = {}
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        kwargs.update(conn_config)
+
     netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         filters = __utils__["azurearm.paged_object_to_list"](
@@ -2403,7 +3108,7 @@ def route_filters_list_all(**kwargs):
     return result
 
 
-def route_delete(name, route_table, resource_group, **kwargs):
+def route_delete(name, route_table, resource_group=None, cloud_provider=None, **kwargs):
     """
     .. versionadded:: 2019.2.0
 
@@ -2416,6 +3121,10 @@ def route_delete(name, route_table, resource_group, **kwargs):
     :param resource_group: The resource group name assigned to the
         route table.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider
+
     CLI Example:
 
     .. code-block:: bash
@@ -2424,6 +3133,15 @@ def route_delete(name, route_table, resource_group, **kwargs):
 
     """
     result = False
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if resource_group is None:
+            resource_group = conn_config["resource_group"]
+        else:
+            conn_config["resource_group"] = resource_group
+        kwargs.update(conn_config)
+
     netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         route = netconn.routes.delete(
@@ -2439,7 +3157,7 @@ def route_delete(name, route_table, resource_group, **kwargs):
     return result
 
 
-def route_get(name, route_table, resource_group, **kwargs):
+def route_get(name, route_table, resource_group=None, cloud_provider=None, **kwargs):
     """
     .. versionadded:: 2019.2.0
 
@@ -2452,6 +3170,10 @@ def route_get(name, route_table, resource_group, **kwargs):
     :param resource_group: The resource group name assigned to the
         route table.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider
+
     CLI Example:
 
     .. code-block:: bash
@@ -2460,6 +3182,15 @@ def route_get(name, route_table, resource_group, **kwargs):
 
     """
     result = {}
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if resource_group is None:
+            resource_group = conn_config["resource_group"]
+        else:
+            conn_config["resource_group"] = resource_group
+        kwargs.update(conn_config)
+
     netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         route = netconn.routes.get(
@@ -2481,7 +3212,8 @@ def route_create_or_update(
     address_prefix,
     next_hop_type,
     route_table,
-    resource_group,
+    resource_group=None,
+    cloud_provider=None,
     next_hop_ip_address=None,
     **kwargs
 ):
@@ -2505,6 +3237,10 @@ def route_create_or_update(
     :param resource_group: The resource group name assigned to the
         route table.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider
+
     CLI Example:
 
     .. code-block:: bash
@@ -2513,6 +3249,14 @@ def route_create_or_update(
 
     """
     netconn = __utils__["azurearm.get_client"]("network", **kwargs)
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if resource_group is None:
+            resource_group = conn_config["resource_group"]
+        else:
+            conn_config["resource_group"] = resource_group
+        kwargs.update(conn_config)
 
     try:
         rt_model = __utils__["azurearm.create_object_model"](
@@ -2548,7 +3292,7 @@ def route_create_or_update(
     return result
 
 
-def routes_list(route_table, resource_group, **kwargs):
+def routes_list(route_table, resource_group=None, cloud_provider=None, **kwargs):
     """
     .. versionadded:: 2019.2.0
 
@@ -2559,6 +3303,10 @@ def routes_list(route_table, resource_group, **kwargs):
     :param resource_group: The resource group name assigned to the
         route table.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider
+
     CLI Example:
 
     .. code-block:: bash
@@ -2567,6 +3315,15 @@ def routes_list(route_table, resource_group, **kwargs):
 
     """
     result = {}
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if resource_group is None:
+            resource_group = conn_config["resource_group"]
+        else:
+            conn_config["resource_group"] = resource_group
+        kwargs.update(conn_config)
+
     netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         routes = __utils__["azurearm.paged_object_to_list"](
@@ -2584,7 +3341,7 @@ def routes_list(route_table, resource_group, **kwargs):
     return result
 
 
-def route_table_delete(name, resource_group, **kwargs):
+def route_table_delete(name, resource_group=None, cloud_provider=None, **kwargs):
     """
     .. versionadded:: 2019.2.0
 
@@ -2595,6 +3352,10 @@ def route_table_delete(name, resource_group, **kwargs):
     :param resource_group: The resource group name assigned to the
         route table.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider
+
     CLI Example:
 
     .. code-block:: bash
@@ -2603,6 +3364,15 @@ def route_table_delete(name, resource_group, **kwargs):
 
     """
     result = False
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if resource_group is None:
+            resource_group = conn_config["resource_group"]
+        else:
+            conn_config["resource_group"] = resource_group
+        kwargs.update(conn_config)
+
     netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         table = netconn.route_tables.delete(
@@ -2616,7 +3386,7 @@ def route_table_delete(name, resource_group, **kwargs):
     return result
 
 
-def route_table_get(name, resource_group, **kwargs):
+def route_table_get(name, resource_group=None, cloud_provider=None, **kwargs):
     """
     .. versionadded:: 2019.2.0
 
@@ -2627,6 +3397,10 @@ def route_table_get(name, resource_group, **kwargs):
     :param resource_group: The resource group name assigned to the
         route table.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider
+
     CLI Example:
 
     .. code-block:: bash
@@ -2634,6 +3408,15 @@ def route_table_get(name, resource_group, **kwargs):
         salt-call azurearm_network.route_table_get test-rt-table testgroup
 
     """
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if resource_group is None:
+            resource_group = conn_config["resource_group"]
+        else:
+            conn_config["resource_group"] = resource_group
+        kwargs.update(conn_config)
+
     expand = kwargs.get("expand")
 
     netconn = __utils__["azurearm.get_client"]("network", **kwargs)
@@ -2650,7 +3433,9 @@ def route_table_get(name, resource_group, **kwargs):
     return result
 
 
-def route_table_create_or_update(name, resource_group, **kwargs):
+def route_table_create_or_update(
+    name, resource_group=None, cloud_provider=None, **kwargs
+):
     """
     .. versionadded:: 2019.2.0
 
@@ -2661,6 +3446,10 @@ def route_table_create_or_update(name, resource_group, **kwargs):
     :param resource_group: The resource group name assigned to the
         route table.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider
+
     CLI Example:
 
     .. code-block:: bash
@@ -2668,6 +3457,15 @@ def route_table_create_or_update(name, resource_group, **kwargs):
         salt-call azurearm_network.route_table_create_or_update test-rt-table testgroup
 
     """
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if resource_group is None:
+            resource_group = conn_config["resource_group"]
+        else:
+            conn_config["resource_group"] = resource_group
+        kwargs.update(conn_config)
+
     if "location" not in kwargs:
         rg_props = __salt__["azurearm_resource.resource_group_get"](
             resource_group, **kwargs
@@ -2708,7 +3506,7 @@ def route_table_create_or_update(name, resource_group, **kwargs):
     return result
 
 
-def route_tables_list(resource_group, **kwargs):
+def route_tables_list(resource_group=None, cloud_provider=None, **kwargs):
     """
     .. versionadded:: 2019.2.0
 
@@ -2716,6 +3514,10 @@ def route_tables_list(resource_group, **kwargs):
 
     :param resource_group: The resource group name to list route
         tables within.
+
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider
 
     CLI Example:
 
@@ -2725,6 +3527,15 @@ def route_tables_list(resource_group, **kwargs):
 
     """
     result = {}
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if resource_group is None:
+            resource_group = conn_config["resource_group"]
+        else:
+            conn_config["resource_group"] = resource_group
+        kwargs.update(conn_config)
+
     netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         tables = __utils__["azurearm.paged_object_to_list"](
@@ -2740,11 +3551,15 @@ def route_tables_list(resource_group, **kwargs):
     return result
 
 
-def route_tables_list_all(**kwargs):
+def route_tables_list_all(cloud_provider=None, **kwargs):
     """
     .. versionadded:: 2019.2.0
 
     List all route tables within a subscription.
+
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider
 
     CLI Example:
 
@@ -2754,6 +3569,11 @@ def route_tables_list_all(**kwargs):
 
     """
     result = {}
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        kwargs.update(conn_config)
+
     netconn = __utils__["azurearm.get_client"]("network", **kwargs)
     try:
         tables = __utils__["azurearm.paged_object_to_list"](

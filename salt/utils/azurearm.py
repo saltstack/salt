@@ -3,21 +3,25 @@ Azure (ARM) Utilities
 
 .. versionadded:: 2019.2.0
 
-:maintainer: <devops@eitr.tech>
+:maintainer: <devops@eitr.tech>, <devops@l2web.ca>
 :maturity: new
 :depends:
-    * `azure <https://pypi.python.org/pypi/azure>`_ >= 2.0.0rc6
-    * `azure-common <https://pypi.python.org/pypi/azure-common>`_ >= 1.1.4
-    * `azure-mgmt <https://pypi.python.org/pypi/azure-mgmt>`_ >= 0.30.0rc6
-    * `azure-mgmt-compute <https://pypi.python.org/pypi/azure-mgmt-compute>`_ >= 0.33.0
-    * `azure-mgmt-network <https://pypi.python.org/pypi/azure-mgmt-network>`_ >= 0.30.0rc6
-    * `azure-mgmt-resource <https://pypi.python.org/pypi/azure-mgmt-resource>`_ >= 0.30.0
-    * `azure-mgmt-storage <https://pypi.python.org/pypi/azure-mgmt-storage>`_ >= 0.30.0rc6
-    * `azure-mgmt-web <https://pypi.python.org/pypi/azure-mgmt-web>`_ >= 0.30.0rc6
-    * `azure-storage <https://pypi.python.org/pypi/azure-storage>`_ >= 0.32.0
-    * `msrestazure <https://pypi.python.org/pypi/msrestazure>`_ >= 0.4.21
+    * `azure-core <https://pypi.python.org/pypi/azure-core>`_ >= 1.15.0
+    * `azure-batch <https://pypi.python.org/pypi/azure-batch>`_ >= 10.0.0
+    * `azure-identity <https://pypi.python.org/pypi/azure-identity>`_ >= 1.6.0
+    * `azure-common <https://pypi.python.org/pypi/azure-common>`_ >= 1.1.27
+    * `azure-mgmt-core <https://pypi.python.org/pypi/azure-mgmt-core>`_ >= 1.2.2
+    * `azure-mgmt-subscription <https://pypi.python.org/pypi/azure-mgmt-subscription>`_ >= 1.0.0
+    * `azure-mgmt-compute <https://pypi.python.org/pypi/azure-mgmt-compute>`_ >= 20.0.0
+    * `azure-mgmt-network <https://pypi.python.org/pypi/azure-mgmt-network>`_ >= 19.0.0
+    * `azure-mgmt-resource <https://pypi.python.org/pypi/azure-mgmt-resource>`_ >= 18.0.0
+    * `azure-mgmt-storage <https://pypi.python.org/pypi/azure-mgmt-storage>`_ >= 18.0.0
+    * `azure-mgmt-web <https://pypi.python.org/pypi/azure-mgmt-web>`_ >= 2.0.0
+    * `azure-storage-common <https://pypi.python.org/pypi/azure-storage-common>`_ >= 1.4.2
+    * `azure-storage-blob <https://pypi.python.org/pypi/azure-storage-blob>`_ >= 12.8.1
+    * `azure-storage-file <https://pypi.python.org/pypi/azure-storage-file>`_ >= 2.1.0
+    * `msrestazure <https://pypi.python.org/pypi/msrestazure>`_ >= 0.6.4
 :platform: linux
-
 """
 
 import importlib
@@ -32,10 +36,7 @@ import salt.version
 from salt.exceptions import SaltInvocationError, SaltSystemExit
 
 try:
-    from azure.common.credentials import (
-        UserPassCredentials,
-        ServicePrincipalCredentials,
-    )
+    import azure.identity
     from msrestazure.azure_cloud import (
         MetadataEndpointError,
         get_cloud_from_metadata_endpoint,
@@ -93,10 +94,10 @@ def _determine_auth(**kwargs):
                 "populated if using service principals."
             )
         else:
-            credentials = ServicePrincipalCredentials(
-                kwargs["client_id"],
-                kwargs["secret"],
-                tenant=kwargs["tenant"],
+            credentials = azure.identity.ClientSecretCredential(
+                client_id=kwargs["client_id"],
+                client_secret=kwargs["secret"],
+                tenant_id=kwargs["tenant"],
                 cloud_environment=cloud_env,
             )
     elif set(user_pass_creds_kwargs).issubset(kwargs):
@@ -106,8 +107,11 @@ def _determine_auth(**kwargs):
                 "populated if using username/password authentication."
             )
         else:
-            credentials = UserPassCredentials(
-                kwargs["username"], kwargs["password"], cloud_environment=cloud_env
+            credentials = azure.identity.UsernamePasswordCredential(
+                client_id=kwargs["client_id"],
+                username=kwargs["username"],
+                password=kwargs["password"],
+                cloud_environment=cloud_env,
             )
     elif "subscription_id" in kwargs:
         try:
@@ -180,16 +184,14 @@ def get_client(client_type, **kwargs):
 
     if client_type == "subscription":
         client = Client(
-            credentials=credentials, base_url=cloud_env.endpoints.resource_manager,
+            credential=credentials, base_url=cloud_env.endpoints.resource_manager,
         )
     else:
         client = Client(
-            credentials=credentials,
+            credential=credentials,
             subscription_id=subscription_id,
             base_url=cloud_env.endpoints.resource_manager,
         )
-
-    client.config.add_user_agent("Salt/{}".format(salt.version.__version__))
 
     return client
 
@@ -312,9 +314,9 @@ def compare_list_of_dicts(old, new, convert_id_to_name=None):
         ret["comment"] = 'configuration dictionaries must contain the "name" key!'
         return ret
 
-    for idx, val in enumerate(local_configs):
-        for key in val:
-            local_val = val[key]
+    for idx in enumerate(len(local_configs)):
+        for key in local_configs[idx]:
+            local_val = local_configs[idx][key]
             if key in convert_id_to_name:
                 remote_val = (
                     remote_configs[idx].get(key, {}).get("id", "").split("/")[-1]
@@ -330,3 +332,14 @@ def compare_list_of_dicts(old, new, convert_id_to_name=None):
                 return ret
 
     return ret
+
+
+def get_config_from_cloud(cloud_provider):
+    """
+    Function use to retreive the configuration from the cloud
+    provider
+    """
+    conn_kwargs = ""
+    client = salt.cloud.CloudClient(path="/etc/salt/cloud")
+    conn_kwargs = client.opts["providers"][cloud_provider]["azurearm"]
+    return conn_kwargs

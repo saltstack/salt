@@ -9,16 +9,21 @@ Azure ARM Cloud Module
 The Azure ARM cloud module is used to control access to Microsoft Azure Resource Manager
 
 :depends:
-    * `azure <https://pypi.python.org/pypi/azure>`_ >= 2.0.0rc6
-    * `azure-common <https://pypi.python.org/pypi/azure-common>`_ >= 1.1.4
-    * `azure-mgmt <https://pypi.python.org/pypi/azure-mgmt>`_ >= 0.30.0rc6
-    * `azure-mgmt-compute <https://pypi.python.org/pypi/azure-mgmt-compute>`_ >= 0.33.0
-    * `azure-mgmt-network <https://pypi.python.org/pypi/azure-mgmt-network>`_ >= 0.30.0rc6
-    * `azure-mgmt-resource <https://pypi.python.org/pypi/azure-mgmt-resource>`_ >= 0.30.0
-    * `azure-mgmt-storage <https://pypi.python.org/pypi/azure-mgmt-storage>`_ >= 0.30.0rc6
-    * `azure-mgmt-web <https://pypi.python.org/pypi/azure-mgmt-web>`_ >= 0.30.0rc6
-    * `azure-storage <https://pypi.python.org/pypi/azure-storage>`_ >= 0.32.0
-    * `msrestazure <https://pypi.python.org/pypi/msrestazure>`_ >= 0.4.21
+    * `azure-core <https://pypi.python.org/pypi/azure-core>`_ >= 1.15.0
+    * `azure-batch <https://pypi.python.org/pypi/azure-batch>`_ >= 10.0.0
+    * `azure-identity <https://pypi.python.org/pypi/azure-identity>`_ >= 1.6.0
+    * `azure-common <https://pypi.python.org/pypi/azure-common>`_ >= 1.1.27
+    * `azure-mgmt-core <https://pypi.python.org/pypi/azure-mgmt-core>`_ >= 1.2.2
+    * `azure-mgmt-subscription <https://pypi.python.org/pypi/azure-mgmt-subscription>`_ >= 1.0.0
+    * `azure-mgmt-compute <https://pypi.python.org/pypi/azure-mgmt-compute>`_ >= 20.0.0
+    * `azure-mgmt-network <https://pypi.python.org/pypi/azure-mgmt-network>`_ >= 19.0.0
+    * `azure-mgmt-resource <https://pypi.python.org/pypi/azure-mgmt-resource>`_ >= 18.0.0
+    * `azure-mgmt-storage <https://pypi.python.org/pypi/azure-mgmt-storage>`_ >= 18.0.0
+    * `azure-mgmt-web <https://pypi.python.org/pypi/azure-mgmt-web>`_ >= 2.0.0
+    * `azure-storage-common <https://pypi.python.org/pypi/azure-storage-common>`_ >= 1.4.2
+    * `azure-storage-blob <https://pypi.python.org/pypi/azure-storage-blob>`_ >= 12.8.1
+    * `azure-storage-file <https://pypi.python.org/pypi/azure-storage-file>`_ >= 2.1.0
+    * `msrestazure <https://pypi.python.org/pypi/msrestazure>`_ >= 0.6.4
 :configuration:
     Required provider parameters:
 
@@ -116,10 +121,13 @@ from salt.exceptions import (
 
 HAS_LIBS = False
 try:
+    import azure.storage.blob
     import azure.mgmt.compute.models as compute_models
     import azure.mgmt.network.models as network_models
-    from azure.storage.blob.blockblobservice import BlockBlobService
     from msrestazure.azure_exceptions import CloudError
+    from azure.mgmt.resource import ResourceManagementClient  # pylint: disable=W0611
+    from azure.mgmt.network import NetworkManagementClient  # pylint: disable=W0611
+    from azure.mgmt.compute import ComputeManagementClient  # pylint: disable=W0611
 
     HAS_LIBS = True
 except ImportError:
@@ -241,9 +249,9 @@ def get_dependencies():
 def get_conn(client_type):
     """
     Return a connection object for a client type.
+    Added section to globalize connections to avoid azure throttling
     """
     conn_kwargs = {}
-
     conn_kwargs["subscription_id"] = salt.utils.stringutils.to_str(
         config.get_cloud_config_value(
             "subscription_id", get_configured_provider(), __opts__, search_global=False
@@ -280,7 +288,35 @@ def get_conn(client_type):
         )
         conn_kwargs.update({"username": username, "password": password})
 
-    client = salt.utils.azurearm.get_client(client_type=client_type, **conn_kwargs)
+    if client_type == "resource":
+        if "az_conn_resouces" not in globals():
+            global az_conn_resouces  # pylint: disable=W0601
+            az_conn_resouces = salt.utils.azurearm.get_client(
+                client_type="resource", **conn_kwargs
+            )
+            client = az_conn_resouces
+        else:
+            client = az_conn_resouces
+
+    if client_type == "network":
+        if "az_conn_network" not in globals():
+            global az_conn_network  # pylint: disable=W0601
+            az_conn_network = salt.utils.azurearm.get_client(
+                client_type="network", **conn_kwargs
+            )
+            client = az_conn_network
+        else:
+            client = az_conn_network
+
+    if client_type == "compute":
+        if "az_conn_compute" not in globals():
+            global az_conn_compute  # pylint: disable=W0601
+            az_conn_compute = salt.utils.azurearm.get_client(
+                client_type="compute", **conn_kwargs
+            )
+            client = az_conn_compute
+        else:
+            client = az_conn_compute
 
     return client
 
@@ -340,8 +376,15 @@ def avail_images(call=None):
             "The avail_images function must be called with "
             "-f or --function, or with the --list-images option"
         )
-    compconn = get_conn(client_type="compute")
-    region = get_location()
+    try:
+        compconn = get_conn(client_type="compute")
+    except CloudError as exc:
+        salt.utils.azurearm.log_cloud_error("resource", exc.message)
+    try:
+        region = get_location()
+    except CloudError as exc:
+        salt.utils.azurearm.log_cloud_error("resource", exc.message)
+
     publishers = []
     ret = {}
 
@@ -385,12 +428,16 @@ def avail_images(call=None):
         return data
 
     try:
-        publishers_query = compconn.virtual_machine_images.list_publishers(
-            location=region
+        publishers = config.get_cloud_config_value(
+            "publishers", get_configured_provider(), __opts__, search_global=False
         )
-        for publisher_obj in publishers_query:
-            publisher = publisher_obj.as_dict()
-            publishers.append(publisher["name"])
+        if not publishers:
+            publishers_query = compconn.virtual_machine_images.list_publishers(
+                location=region
+            )
+            for publisher_obj in publishers_query:
+                publisher = publisher_obj.as_dict()
+                publishers.append(publisher["name"])
     except CloudError as exc:
         salt.utils.azurearm.log_cloud_error("compute", exc.message)
 
@@ -399,7 +446,6 @@ def avail_images(call=None):
     results.wait()
 
     ret = {k: v for result in results.get() for k, v in result.items()}
-
     return ret
 
 
@@ -599,13 +645,13 @@ def delete_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
     for ip_ in iface.ip_configurations:
         ips.append(ip_.name)
 
-    poller = netconn.network_interfaces.delete(
+    poller = netconn.network_interfaces.begin_delete(
         kwargs["resource_group"], kwargs["iface_name"],
     )
     poller.wait()
 
     for ip_ in ips:
-        poller = netconn.public_ip_addresses.delete(kwargs["resource_group"], ip_)
+        poller = netconn.public_ip_addresses.begin_delete(kwargs["resource_group"], ip_)
         poller.wait()
 
     return {iface_name: ips}
@@ -755,7 +801,7 @@ def create_network_interface(call=None, kwargs=None):
 
     if kwargs.get("allocate_public_ip") is True:
         pub_ip_name = "{}-ip".format(kwargs["iface_name"])
-        poller = netconn.public_ip_addresses.create_or_update(
+        poller = netconn.public_ip_addresses.begin_create_or_update(
             resource_group_name=kwargs["resource_group"],
             public_ip_address_name=pub_ip_name,
             parameters=PublicIPAddress(
@@ -809,7 +855,7 @@ def create_network_interface(call=None, kwargs=None):
         ip_configurations=ip_configurations,
     )
 
-    poller = netconn.network_interfaces.create_or_update(
+    poller = netconn.network_interfaces.begin_create_or_update(
         kwargs["resource_group"], kwargs["iface_name"], iface_params
     )
     try:
@@ -1210,12 +1256,12 @@ def request_instance(vm_):
         args=__utils__["cloud.filter_event"](
             "requesting", vm_, ["name", "profile", "provider", "driver"]
         ),
-        sock_dir=__opts__["sock_dir"],
+        sock_dir=__opts__["sock_dir"],  # pylint: disable=no-value-for-parameter
         transport=__opts__["transport"],
     )
 
     try:
-        vm_create = compconn.virtual_machines.create_or_update(
+        vm_create = compconn.virtual_machines.begin_create_or_update(
             resource_group_name=vm_["resource_group"],
             vm_name=vm_["name"],
             parameters=params,
@@ -1296,7 +1342,7 @@ def create(vm_):
         return ip_address
 
     try:
-        data = salt.utils.cloud.wait_for_ip(
+        data = __utils__["cloud.wait_for_ip"](
             _query_node_data,
             update_args=(vm_["name"], vm_["bootstrap_interface"],),
             timeout=config.get_cloud_config_value(
@@ -1376,7 +1422,7 @@ def destroy(name, call=None, kwargs=None):  # pylint: disable=unused-argument
 
     ret = {name: {}}
     log.debug("Deleting VM")
-    result = compconn.virtual_machines.delete(node_data["resource_group"], name)
+    result = compconn.virtual_machines.begin_delete(node_data["resource_group"], name)
     result.wait()
 
     if __opts__.get("update_cachedir", False) is True:
@@ -1584,7 +1630,7 @@ def _get_block_blob_service(kwargs=None):
 
     endpoint_suffix = cloud_env.suffixes.storage_endpoint
 
-    return BlockBlobService(
+    return azure.storage.blob.BlobServiceClient(
         storage_account,
         storage_key,
         sas_token=sas_token,
@@ -1645,7 +1691,7 @@ def delete_managed_disk(call=None, kwargs=None):  # pylint: disable=unused-argum
     compconn = get_conn(client_type="compute")
 
     try:
-        compconn.disks.delete(kwargs["resource_group"], kwargs["blob"])
+        compconn.disks.begin_delete(kwargs["resource_group"], kwargs["blob"])
     except Exception as exc:  # pylint: disable=broad-except
         log.error(
             "Error deleting managed disk %s - %s", kwargs.get("blob"), str(exc),
@@ -1813,7 +1859,7 @@ def create_or_update_vmextension(
             settings=settings,
             protected_settings=protected_settings,
         )
-        poller = compconn.virtual_machine_extensions.create_or_update(
+        poller = compconn.virtual_machine_extensions.begin_create_or_update(
             resource_group,
             kwargs["virtual_machine_name"],
             kwargs["extension_name"],

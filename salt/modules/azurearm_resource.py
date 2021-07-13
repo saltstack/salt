@@ -3,19 +3,24 @@ Azure (ARM) Resource Execution Module
 
 .. versionadded:: 2019.2.0
 
-:maintainer: <devops@decisionlab.io>
+:maintainer: <devops@decisionlab.io>, <devops@l2web.ca>
 :maturity: new
 :depends:
-    * `azure <https://pypi.python.org/pypi/azure>`_ >= 2.0.0
-    * `azure-common <https://pypi.python.org/pypi/azure-common>`_ >= 1.1.8
-    * `azure-mgmt <https://pypi.python.org/pypi/azure-mgmt>`_ >= 1.0.0
-    * `azure-mgmt-compute <https://pypi.python.org/pypi/azure-mgmt-compute>`_ >= 1.0.0
-    * `azure-mgmt-network <https://pypi.python.org/pypi/azure-mgmt-network>`_ >= 1.7.1
-    * `azure-mgmt-resource <https://pypi.python.org/pypi/azure-mgmt-resource>`_ >= 1.1.0
-    * `azure-mgmt-storage <https://pypi.python.org/pypi/azure-mgmt-storage>`_ >= 1.0.0
-    * `azure-mgmt-web <https://pypi.python.org/pypi/azure-mgmt-web>`_ >= 0.32.0
-    * `azure-storage <https://pypi.python.org/pypi/azure-storage>`_ >= 0.34.3
-    * `msrestazure <https://pypi.python.org/pypi/msrestazure>`_ >= 0.4.21
+    * `azure-core <https://pypi.python.org/pypi/azure-core>`_ >= 1.15.0
+    * `azure-batch <https://pypi.python.org/pypi/azure-batch>`_ >= 10.0.0
+    * `azure-identity <https://pypi.python.org/pypi/azure-identity>`_ >= 1.6.0
+    * `azure-common <https://pypi.python.org/pypi/azure-common>`_ >= 1.1.27
+    * `azure-mgmt-core <https://pypi.python.org/pypi/azure-mgmt-core>`_ >= 1.2.2
+    * `azure-mgmt-subscription <https://pypi.python.org/pypi/azure-mgmt-subscription>`_ >= 1.0.0
+    * `azure-mgmt-compute <https://pypi.python.org/pypi/azure-mgmt-compute>`_ >= 20.0.0
+    * `azure-mgmt-network <https://pypi.python.org/pypi/azure-mgmt-network>`_ >= 19.0.0
+    * `azure-mgmt-resource <https://pypi.python.org/pypi/azure-mgmt-resource>`_ >= 18.0.0
+    * `azure-mgmt-storage <https://pypi.python.org/pypi/azure-mgmt-storage>`_ >= 18.0.0
+    * `azure-mgmt-web <https://pypi.python.org/pypi/azure-mgmt-web>`_ >= 2.0.0
+    * `azure-storage-common <https://pypi.python.org/pypi/azure-storage-common>`_ >= 1.4.2
+    * `azure-storage-blob <https://pypi.python.org/pypi/azure-storage-blob>`_ >= 12.8.1
+    * `azure-storage-file <https://pypi.python.org/pypi/azure-storage-file>`_ >= 2.1.0
+    * `msrestazure <https://pypi.python.org/pypi/msrestazure>`_ >= 0.6.41
 :platform: linux
 
 :configuration: This module requires Azure Resource Manager credentials to be passed as keyword arguments
@@ -49,7 +54,12 @@ Azure (ARM) Resource Execution Module
 
 import logging
 
+import salt.cloud
+
 # Salt Libs
+import salt.loader
+import salt.utils
+import salt.utils.azurearm
 import salt.utils.json
 
 # Azure libs
@@ -80,11 +90,16 @@ def __virtual__():
     return __virtualname__
 
 
-def resource_groups_list(**kwargs):
+def resource_groups_list(cloud_provider=None, **kwargs):
     """
     .. versionadded:: 2019.2.0
 
     List all resource groups within a subscription.
+
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider.
+        if you specify the ressource_group anyway, it will overwrite the cloud ressource_group value.
 
     CLI Example:
 
@@ -92,8 +107,20 @@ def resource_groups_list(**kwargs):
 
         salt-call azurearm_resource.resource_groups_list
 
+    .. code-block:: bash
+
+        salt-call azurearm_resource.resource_groups_list cloud_provider=my-azurearm-config
+
     """
     result = {}
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if "error" in conn_config:
+            return conn_config
+        else:
+            kwargs.update(conn_config)
+
     resconn = __utils__["azurearm.get_client"]("resource", **kwargs)
     try:
         groups = __utils__["azurearm.paged_object_to_list"](
@@ -109,7 +136,7 @@ def resource_groups_list(**kwargs):
     return result
 
 
-def resource_group_check_existence(name, **kwargs):
+def resource_group_check_existence(name, cloud_provider=None, **kwargs):
     """
     .. versionadded:: 2019.2.0
 
@@ -117,14 +144,31 @@ def resource_group_check_existence(name, **kwargs):
 
     :param name: The resource group name to check.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider.
+        if you specify the ressource_group anyway, it will overwrite the cloud ressource_group value.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt-call azurearm_resource.resource_group_check_existence testgroup
 
+    .. code-block:: bash
+
+        salt-call azurearm_resource.resource_group_check_existence cloud_provider=my-azurearm-config
+
     """
     result = False
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if "error" in conn_config:
+            return conn_config
+        else:
+            kwargs.update(conn_config)
+
     resconn = __utils__["azurearm.get_client"]("resource", **kwargs)
     try:
         result = resconn.resource_groups.check_existence(name)
@@ -135,7 +179,7 @@ def resource_group_check_existence(name, **kwargs):
     return result
 
 
-def resource_group_get(name, **kwargs):
+def resource_group_get(name, cloud_provider=None, **kwargs):
     """
     .. versionadded:: 2019.2.0
 
@@ -143,14 +187,31 @@ def resource_group_get(name, **kwargs):
 
     :param name: The resource group name to get.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider.
+        if you specify the ressource_group anyway, it will overwrite the cloud ressource_group value.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt-call azurearm_resource.resource_group_get testgroup
 
+    .. code-block:: bash
+
+        salt-call azurearm_resource.resource_group_get cloud_provider=my-azurearm-config
+
     """
     result = {}
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if "error" in conn_config:
+            return conn_config
+        else:
+            kwargs.update(conn_config)
+
     resconn = __utils__["azurearm.get_client"]("resource", **kwargs)
     try:
         group = resconn.resource_groups.get(name)
@@ -164,7 +225,7 @@ def resource_group_get(name, **kwargs):
 
 
 def resource_group_create_or_update(
-    name, location, **kwargs
+    name, location, cloud_provider=None, **kwargs
 ):  # pylint: disable=invalid-name
     """
     .. versionadded:: 2019.2.0
@@ -176,14 +237,31 @@ def resource_group_create_or_update(
     :param location: The location of the resource group. This value
         is not able to be updated once the resource group is created.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider.
+        if you specify the ressource_group anyway, it will overwrite the cloud ressource_group value.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt-call azurearm_resource.resource_group_create_or_update testgroup westus
 
+    .. code-block:: bash
+
+        salt-call azurearm_resource.resource_group_create_or_update testgroup westus cloud_provider=my-azurearm-config
+
     """
     result = {}
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if "error" in conn_config:
+            return conn_config
+        else:
+            kwargs.update(conn_config)
+
     resconn = __utils__["azurearm.get_client"]("resource", **kwargs)
     resource_group_params = {
         "location": location,
@@ -200,7 +278,7 @@ def resource_group_create_or_update(
     return result
 
 
-def resource_group_delete(name, **kwargs):
+def resource_group_delete(name, cloud_provider=None, **kwargs):
     """
     .. versionadded:: 2019.2.0
 
@@ -208,14 +286,30 @@ def resource_group_delete(name, **kwargs):
 
     :param name: The resource group name to delete.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider.
+        if you specify the ressource_group anyway, it will overwrite the cloud ressource_group value.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt-call azurearm_resource.resource_group_delete testgroup
 
+    .. code-block:: bash
+
+        salt-call azurearm_resource.resource_group_delete cloud_provider=my-azurearm-config
+
     """
     result = False
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if "error" in conn_config:
+            return conn_config
+        else:
+            kwargs.update(conn_config)
+
     resconn = __utils__["azurearm.get_client"]("resource", **kwargs)
     try:
         group = resconn.resource_groups.delete(name)
@@ -227,7 +321,9 @@ def resource_group_delete(name, **kwargs):
     return result
 
 
-def deployment_operation_get(operation, deployment, resource_group, **kwargs):
+def deployment_operation_get(
+    operation, deployment, resource_group=None, cloud_provider=None, **kwargs
+):
     """
     .. versionadded:: 2019.2.0
 
@@ -240,13 +336,32 @@ def deployment_operation_get(operation, deployment, resource_group, **kwargs):
     :param resource_group: The resource group name assigned to the
         deployment.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider.
+        if you specify the ressource_group anyway, it will overwrite the cloud ressource_group value.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt-call azurearm_resource.deployment_operation_get XXXXX testdeploy testgroup
 
+    .. code-block:: bash
+
+        salt-call azurearm_resource.deployment_operation_get XXXXX testdeploy cloud_provider=my-azurearm-config
+
     """
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if "error" in conn_config:
+            return conn_config
+        else:
+            if resource_group is None:
+                resource_group = conn_config["resource_group"]
+            else:
+                conn_config["resource_group"] = resource_group
+            kwargs.update(conn_config)
     resconn = __utils__["azurearm.get_client"]("resource", **kwargs)
     try:
         operation = resconn.deployment_operations.get(
@@ -263,7 +378,9 @@ def deployment_operation_get(operation, deployment, resource_group, **kwargs):
     return result
 
 
-def deployment_operations_list(name, resource_group, result_limit=10, **kwargs):
+def deployment_operations_list(
+    name, resource_group=None, cloud_provider=None, result_limit=10, **kwargs
+):
     """
     .. versionadded:: 2019.2.0
 
@@ -277,14 +394,35 @@ def deployment_operations_list(name, resource_group, result_limit=10, **kwargs):
     :param result_limit: (Default: 10) The limit on the list of deployment
         operations.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider.
+        if you specify the ressource_group anyway, it will overwrite the cloud ressource_group value.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt-call azurearm_resource.deployment_operations_list testdeploy testgroup
 
+    .. code-block:: bash
+
+        salt-call azurearm_resource.deployment_operations_list testdeploy cloud_provider=my-azurearm-config
+
     """
     result = {}
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if "error" in conn_config:
+            return conn_config
+        else:
+            if resource_group is None:
+                resource_group = conn_config["resource_group"]
+            else:
+                conn_config["resource_group"] = resource_group
+            kwargs.update(conn_config)
+
     resconn = __utils__["azurearm.get_client"]("resource", **kwargs)
     try:
         operations = __utils__["azurearm.paged_object_to_list"](
@@ -304,7 +442,7 @@ def deployment_operations_list(name, resource_group, result_limit=10, **kwargs):
     return result
 
 
-def deployment_delete(name, resource_group, **kwargs):
+def deployment_delete(name, resource_group=None, cloud_provider=None, **kwargs):
     """
     .. versionadded:: 2019.2.0
 
@@ -315,14 +453,35 @@ def deployment_delete(name, resource_group, **kwargs):
     :param resource_group: The resource group name assigned to the
         deployment.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider.
+        if you specify the ressource_group anyway, it will overwrite the cloud ressource_group value.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt-call azurearm_resource.deployment_delete testdeploy testgroup
 
+    .. code-block:: bash
+
+        salt-call azurearm_resource.deployment_delete testdeploy cloud_provider=my-azurearm-config
+
     """
     result = False
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if "error" in conn_config:
+            return conn_config
+        else:
+            if resource_group is None:
+                resource_group = conn_config["resource_group"]
+            else:
+                conn_config["resource_group"] = resource_group
+            kwargs.update(conn_config)
+
     resconn = __utils__["azurearm.get_client"]("resource", **kwargs)
     try:
         deploy = resconn.deployments.delete(
@@ -336,7 +495,9 @@ def deployment_delete(name, resource_group, **kwargs):
     return result
 
 
-def deployment_check_existence(name, resource_group, **kwargs):
+def deployment_check_existence(
+    name, resource_group=None, cloud_provider=None, **kwargs
+):
     """
     .. versionadded:: 2019.2.0
 
@@ -347,14 +508,35 @@ def deployment_check_existence(name, resource_group, **kwargs):
     :param resource_group: The resource group name assigned to the
         deployment.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider.
+        if you specify the ressource_group anyway, it will overwrite the cloud ressource_group value.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt-call azurearm_resource.deployment_check_existence testdeploy testgroup
 
+    .. code-block:: bash
+
+        salt-call azurearm_resource.deployment_check_existence testdeploy cloud_provider=my-azurearm-config
+
     """
     result = False
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if "error" in conn_config:
+            return conn_config
+        else:
+            if resource_group is None:
+                resource_group = conn_config["resource_group"]
+            else:
+                conn_config["resource_group"] = resource_group
+            kwargs.update(conn_config)
+
     resconn = __utils__["azurearm.get_client"]("resource", **kwargs)
     try:
         result = resconn.deployments.check_existence(
@@ -368,7 +550,8 @@ def deployment_check_existence(name, resource_group, **kwargs):
 
 def deployment_create_or_update(
     name,
-    resource_group,
+    resource_group=None,
+    cloud_provider=None,
     deploy_mode="incremental",
     debug_setting="none",
     deploy_params=None,
@@ -414,13 +597,34 @@ def deployment_create_or_update(
     :param template_link: The URI of the template. Use either the template_link property or the
         deploy_template property, but not both.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider.
+        if you specify the ressource_group anyway, it will overwrite the cloud ressource_group value.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt-call azurearm_resource.deployment_create_or_update testdeploy testgroup
 
+    .. code-block:: bash
+
+        salt-call azurearm_resource.deployment_create_or_update testdeploy cloud_provider=my-azurearm-config
+
     """
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if "error" in conn_config:
+            return conn_config
+        else:
+            if resource_group is None:
+                resource_group = conn_config["resource_group"]
+            else:
+                conn_config["resource_group"] = resource_group
+            kwargs.update(conn_config)
+
     resconn = __utils__["azurearm.get_client"]("resource", **kwargs)
 
     prop_kwargs = {"mode": deploy_mode}
@@ -479,7 +683,7 @@ def deployment_create_or_update(
     return result
 
 
-def deployment_get(name, resource_group, **kwargs):
+def deployment_get(name, resource_group=None, cloud_provider=None, **kwargs):
     """
     .. versionadded:: 2019.2.0
 
@@ -490,13 +694,33 @@ def deployment_get(name, resource_group, **kwargs):
     :param resource_group: The resource group name assigned to the
         deployment.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider.
+        if you specify the ressource_group anyway, it will overwrite the cloud ressource_group value.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt-call azurearm_resource.deployment_get testdeploy testgroup
 
+    .. code-block:: bash
+
+        salt-call azurearm_resource.deployment_get testdeploy cloud_provider=my-azurearm-config
+
     """
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if "error" in conn_config:
+            return conn_config
+        else:
+            if resource_group is None:
+                resource_group = conn_config["resource_group"]
+            else:
+                conn_config["resource_group"] = resource_group
+            kwargs.update(conn_config)
+
     resconn = __utils__["azurearm.get_client"]("resource", **kwargs)
     try:
         deploy = resconn.deployments.get(
@@ -510,7 +734,7 @@ def deployment_get(name, resource_group, **kwargs):
     return result
 
 
-def deployment_cancel(name, resource_group, **kwargs):
+def deployment_cancel(name, resource_group=None, cloud_provider=None, **kwargs):
     """
     .. versionadded:: 2019.2.0
 
@@ -521,13 +745,33 @@ def deployment_cancel(name, resource_group, **kwargs):
     :param resource_group: The resource group name assigned to the
         deployment.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider.
+        if you specify the ressource_group anyway, it will overwrite the cloud ressource_group value.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt-call azurearm_resource.deployment_cancel testdeploy testgroup
 
+    .. code-block:: bash
+
+        salt-call azurearm_resource.deployment_cancel testdeploy cloud_provider=my-azurearm-config
+
     """
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if "error" in conn_config:
+            return conn_config
+        else:
+            if resource_group is None:
+                resource_group = conn_config["resource_group"]
+            else:
+                conn_config["resource_group"] = resource_group
+            kwargs.update(conn_config)
+
     resconn = __utils__["azurearm.get_client"]("resource", **kwargs)
     try:
         resconn.deployments.cancel(
@@ -543,7 +787,8 @@ def deployment_cancel(name, resource_group, **kwargs):
 
 def deployment_validate(
     name,
-    resource_group,
+    resource_group=None,
+    cloud_provider=None,
     deploy_mode=None,
     debug_setting=None,
     deploy_params=None,
@@ -590,13 +835,33 @@ def deployment_validate(
     :param template_link: The URI of the template. Use either the template_link property or the
         deploy_template property, but not both.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider.
+        if you specify the ressource_group anyway, it will overwrite the cloud ressource_group value.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt-call azurearm_resource.deployment_validate testdeploy testgroup
 
+    .. code-block:: bash
+
+        salt-call azurearm_resource.deployment_validate testdeploy cloud_provider=my-azurearm-config
+
     """
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if "error" in conn_config:
+            return conn_config
+        else:
+            if resource_group is None:
+                resource_group = conn_config["resource_group"]
+            else:
+                conn_config["resource_group"] = resource_group
+            kwargs.update(conn_config)
+
     resconn = __utils__["azurearm.get_client"]("resource", **kwargs)
 
     prop_kwargs = {"mode": deploy_mode}
@@ -651,7 +916,9 @@ def deployment_validate(
     return result
 
 
-def deployment_export_template(name, resource_group, **kwargs):
+def deployment_export_template(
+    name, resource_group=None, cloud_provider=None, **kwargs
+):
     """
     .. versionadded:: 2019.2.0
 
@@ -662,13 +929,33 @@ def deployment_export_template(name, resource_group, **kwargs):
     :param resource_group: The resource group name assigned to the
         deployment.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider.
+        if you specify the ressource_group anyway, it will overwrite the cloud ressource_group value.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt-call azurearm_resource.deployment_export_template testdeploy testgroup
 
+    .. code-block:: bash
+
+        salt-call azurearm_resource.deployment_export_template testdeploy cloud_provider=my-azurearm-config
+
     """
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if "error" in conn_config:
+            return conn_config
+        else:
+            if resource_group is None:
+                resource_group = conn_config["resource_group"]
+            else:
+                conn_config["resource_group"] = resource_group
+            kwargs.update(conn_config)
+
     resconn = __utils__["azurearm.get_client"]("resource", **kwargs)
     try:
         deploy = resconn.deployments.export_template(
@@ -682,11 +969,16 @@ def deployment_export_template(name, resource_group, **kwargs):
     return result
 
 
-def deployments_list(resource_group, **kwargs):
+def deployments_list(resource_group=None, cloud_provider=None, **kwargs):
     """
     .. versionadded:: 2019.2.0
 
     List all deployments within a resource group.
+
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider.
+        if you specify the ressource_group anyway, it will overwrite the cloud ressource_group value.
 
     CLI Example:
 
@@ -694,8 +986,24 @@ def deployments_list(resource_group, **kwargs):
 
         salt-call azurearm_resource.deployments_list testgroup
 
+    .. code-block:: bash
+
+        salt-call azurearm_resource.deployments_list cloud_provider=my-azurearm-config
+
     """
     result = {}
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if "error" in conn_config:
+            return conn_config
+        else:
+            if resource_group is None:
+                resource_group = conn_config["resource_group"]
+            else:
+                conn_config["resource_group"] = resource_group
+            kwargs.update(conn_config)
+
     resconn = __utils__["azurearm.get_client"]("resource", **kwargs)
     try:
         deployments = __utils__["azurearm.paged_object_to_list"](
@@ -713,7 +1021,7 @@ def deployments_list(resource_group, **kwargs):
     return result
 
 
-def subscriptions_list_locations(subscription_id=None, **kwargs):
+def subscriptions_list_locations(subscription_id=None, cloud_provider=None, **kwargs):
     """
     .. versionadded:: 2019.2.0
 
@@ -721,14 +1029,34 @@ def subscriptions_list_locations(subscription_id=None, **kwargs):
 
     :param subscription_id: The ID of the subscription to query.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider.
+        if you specify the ressource_group anyway, it will overwrite the cloud ressource_group value.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt-call azurearm_resource.subscriptions_list_locations XXXXXXXX
 
+    .. code-block:: bash
+
+        salt-call azurearm_resource.subscriptions_list_locations XXXXXXXX cloud_provider=my-azurearm-config
+
     """
     result = {}
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if "error" in conn_config:
+            return conn_config
+        else:
+            if not subscription_id:
+                subscription_id = conn_config["subscription_id"]
+            else:
+                conn_config["subscription_id"] = subscription_id
+            kwargs.update(conn_config)
 
     if not subscription_id:
         subscription_id = kwargs.get("subscription_id")
@@ -752,7 +1080,7 @@ def subscriptions_list_locations(subscription_id=None, **kwargs):
     return result
 
 
-def subscription_get(subscription_id=None, **kwargs):
+def subscription_get(subscription_id=None, cloud_provider=None, **kwargs):
     """
     .. versionadded:: 2019.2.0
 
@@ -760,14 +1088,34 @@ def subscription_get(subscription_id=None, **kwargs):
 
     :param subscription_id: The ID of the subscription to query.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider.
+        if you specify the ressource_group anyway, it will overwrite the cloud ressource_group value.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt-call azurearm_resource.subscription_get XXXXXXXX
 
+    .. code-block:: bash
+
+        salt-call azurearm_resource.subscription_get XXXXXXXX cloud_provider=my-azurearm-config
+
     """
     result = {}
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if "error" in conn_config:
+            return conn_config
+        else:
+            if not subscription_id:
+                subscription_id = conn_config["subscription_id"]
+            else:
+                conn_config["subscription_id"] = subscription_id
+            kwargs.update(conn_config)
 
     if not subscription_id:
         subscription_id = kwargs.get("subscription_id")
@@ -788,11 +1136,16 @@ def subscription_get(subscription_id=None, **kwargs):
     return result
 
 
-def subscriptions_list(**kwargs):
+def subscriptions_list(cloud_provider=None, **kwargs):
     """
     .. versionadded:: 2019.2.0
 
     List all subscriptions for a tenant.
+
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider.
+        if you specify the ressource_group anyway, it will overwrite the cloud ressource_group value.
 
     CLI Example:
 
@@ -800,8 +1153,20 @@ def subscriptions_list(**kwargs):
 
         salt-call azurearm_resource.subscriptions_list
 
+    .. code-block:: bash
+
+        salt-call azurearm_resource.subscriptions_list cloud_provider=my-azurearm-config
+
     """
     result = {}
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if "error" in conn_config:
+            return conn_config
+        else:
+            kwargs.update(conn_config)
+
     subconn = __utils__["azurearm.get_client"]("subscription", **kwargs)
     try:
         subs = __utils__["azurearm.paged_object_to_list"](subconn.subscriptions.list())
@@ -815,11 +1180,16 @@ def subscriptions_list(**kwargs):
     return result
 
 
-def tenants_list(**kwargs):
+def tenants_list(cloud_provider=None, **kwargs):
     """
     .. versionadded:: 2019.2.0
 
     List all tenants for your account.
+
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider.
+        if you specify the ressource_group anyway, it will overwrite the cloud ressource_group value.
 
     CLI Example:
 
@@ -827,8 +1197,20 @@ def tenants_list(**kwargs):
 
         salt-call azurearm_resource.tenants_list
 
+    .. code-block:: bash
+
+        salt-call azurearm_resource.tenants_list cloud_provider=my-azurearm-config
+
     """
     result = {}
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if "error" in conn_config:
+            return conn_config
+        else:
+            kwargs.update(conn_config)
+
     subconn = __utils__["azurearm.get_client"]("subscription", **kwargs)
     try:
         tenants = __utils__["azurearm.paged_object_to_list"](subconn.tenants.list())
@@ -842,7 +1224,7 @@ def tenants_list(**kwargs):
     return result
 
 
-def policy_assignment_delete(name, scope, **kwargs):
+def policy_assignment_delete(name, scope, cloud_provider=None, **kwargs):
     """
     .. versionadded:: 2019.2.0
 
@@ -852,6 +1234,11 @@ def policy_assignment_delete(name, scope, **kwargs):
 
     :param scope: The scope of the policy assignment.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider.
+        if you specify the ressource_group anyway, it will overwrite the cloud ressource_group value.
+
     CLI Example:
 
     .. code-block:: bash
@@ -859,8 +1246,21 @@ def policy_assignment_delete(name, scope, **kwargs):
         salt-call azurearm_resource.policy_assignment_delete testassign \
         /subscriptions/bc75htn-a0fhsi-349b-56gh-4fghti-f84852
 
+    .. code-block:: bash
+
+        salt-call azurearm_resource.policy_assignment_delete testassign \
+        /subscriptions/bc75htn-a0fhsi-349b-56gh-4fghti-f84852 cloud_provider=my-azurearm-config
+
     """
     result = False
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if "error" in conn_config:
+            return conn_config
+        else:
+            kwargs.update(conn_config)
+
     polconn = __utils__["azurearm.get_client"]("policy", **kwargs)
     try:
         # pylint: disable=unused-variable
@@ -874,7 +1274,9 @@ def policy_assignment_delete(name, scope, **kwargs):
     return result
 
 
-def policy_assignment_create(name, scope, definition_name, **kwargs):
+def policy_assignment_create(
+    name, scope, definition_name, cloud_provider=None, **kwargs
+):
     """
     .. versionadded:: 2019.2.0
 
@@ -886,6 +1288,11 @@ def policy_assignment_create(name, scope, definition_name, **kwargs):
 
     :param definition_name: The name of the policy definition to assign.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider.
+        if you specify the ressource_group anyway, it will overwrite the cloud ressource_group value.
+
     CLI Example:
 
     .. code-block:: bash
@@ -893,7 +1300,20 @@ def policy_assignment_create(name, scope, definition_name, **kwargs):
         salt-call azurearm_resource.policy_assignment_create testassign \
         /subscriptions/bc75htn-a0fhsi-349b-56gh-4fghti-f84852 testpolicy
 
+    .. code-block:: bash
+
+        salt-call azurearm_resource.policy_assignment_create testassign \
+        /subscriptions/bc75htn-a0fhsi-349b-56gh-4fghti-f84852 testpolicy cloud_provider=my-azurearm-config
+
     """
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if "error" in conn_config:
+            return conn_config
+        else:
+            kwargs.update(conn_config)
+
     polconn = __utils__["azurearm.get_client"]("policy", **kwargs)
 
     # "get" doesn't work for built-in policies per https://github.com/Azure/azure-cli/issues/692
@@ -958,7 +1378,7 @@ def policy_assignment_create(name, scope, definition_name, **kwargs):
     return result
 
 
-def policy_assignment_get(name, scope, **kwargs):
+def policy_assignment_get(name, scope, cloud_provider=None, **kwargs):
     """
     .. versionadded:: 2019.2.0
 
@@ -968,6 +1388,11 @@ def policy_assignment_get(name, scope, **kwargs):
 
     :param scope: The scope of the policy assignment.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider.
+        if you specify the ressource_group anyway, it will overwrite the cloud ressource_group value.
+
     CLI Example:
 
     .. code-block:: bash
@@ -975,7 +1400,20 @@ def policy_assignment_get(name, scope, **kwargs):
         salt-call azurearm_resource.policy_assignment_get testassign \
         /subscriptions/bc75htn-a0fhsi-349b-56gh-4fghti-f84852
 
+    .. code-block:: bash
+
+        salt-call azurearm_resource.policy_assignment_get testassign \
+        /subscriptions/bc75htn-a0fhsi-349b-56gh-4fghti-f84852 cloud_provider=my-azurearm-config
+
     """
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if "error" in conn_config:
+            return conn_config
+        else:
+            kwargs.update(conn_config)
+
     polconn = __utils__["azurearm.get_client"]("policy", **kwargs)
     try:
         policy = polconn.policy_assignments.get(
@@ -990,7 +1428,7 @@ def policy_assignment_get(name, scope, **kwargs):
 
 
 def policy_assignments_list_for_resource_group(
-    resource_group, **kwargs
+    resource_group, cloud_provider=None, **kwargs
 ):  # pylint: disable=invalid-name
     """
     .. versionadded:: 2019.2.0
@@ -999,14 +1437,35 @@ def policy_assignments_list_for_resource_group(
 
     :param resource_group: The resource group name to list policy assignments within.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider.
+        if you specify the ressource_group anyway, it will overwrite the cloud ressource_group value.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt-call azurearm_resource.policy_assignments_list_for_resource_group testgroup
 
+    .. code-block:: bash
+
+        salt-call azurearm_resource.policy_assignments_list_for_resource_group cloud_provider=my-azurearm-config
+
     """
     result = {}
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if "error" in conn_config:
+            return conn_config
+        else:
+            if resource_group is None:
+                resource_group = conn_config["resource_group"]
+            else:
+                conn_config["resource_group"] = resource_group
+            kwargs.update(conn_config)
+
     polconn = __utils__["azurearm.get_client"]("policy", **kwargs)
     try:
         policy_assign = __utils__["azurearm.paged_object_to_list"](
@@ -1024,11 +1483,16 @@ def policy_assignments_list_for_resource_group(
     return result
 
 
-def policy_assignments_list(**kwargs):
+def policy_assignments_list(cloud_provider=None, **kwargs):
     """
     .. versionadded:: 2019.2.0
 
     List all policy assignments for a subscription.
+
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider.
+        if you specify the ressource_group anyway, it will overwrite the cloud ressource_group value.
 
     CLI Example:
 
@@ -1036,8 +1500,20 @@ def policy_assignments_list(**kwargs):
 
         salt-call azurearm_resource.policy_assignments_list
 
+    .. code-block:: bash
+
+        salt-call azurearm_resource.policy_assignments_list cloud_provider=my-azurearm-config
+
     """
     result = {}
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if "error" in conn_config:
+            return conn_config
+        else:
+            kwargs.update(conn_config)
+
     polconn = __utils__["azurearm.get_client"]("policy", **kwargs)
     try:
         policy_assign = __utils__["azurearm.paged_object_to_list"](
@@ -1054,7 +1530,7 @@ def policy_assignments_list(**kwargs):
 
 
 def policy_definition_create_or_update(
-    name, policy_rule, **kwargs
+    name, policy_rule, cloud_provider=None, **kwargs
 ):  # pylint: disable=invalid-name
     """
     .. versionadded:: 2019.2.0
@@ -1066,16 +1542,32 @@ def policy_definition_create_or_update(
     :param policy_rule: A dictionary defining the
         `policy rule <https://docs.microsoft.com/en-us/azure/azure-policy/policy-definition#policy-rule>`_.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider.
+        if you specify the ressource_group anyway, it will overwrite the cloud ressource_group value.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt-call azurearm_resource.policy_definition_create_or_update testpolicy '{...rule definition..}'
 
+    .. code-block:: bash
+
+        salt-call azurearm_resource.policy_definition_create_or_update testpolicy '{...rule definition..}' cloud_provider=my-azurearm-config
+
     """
     if not isinstance(policy_rule, dict):
         result = {"error": "The policy rule must be a dictionary!"}
         return result
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if "error" in conn_config:
+            return conn_config
+        else:
+            kwargs.update(conn_config)
 
     polconn = __utils__["azurearm.get_client"]("policy", **kwargs)
 
@@ -1111,7 +1603,7 @@ def policy_definition_create_or_update(
     return result
 
 
-def policy_definition_delete(name, **kwargs):
+def policy_definition_delete(name, cloud_provider=None, **kwargs):
     """
     .. versionadded:: 2019.2.0
 
@@ -1119,14 +1611,31 @@ def policy_definition_delete(name, **kwargs):
 
     :param name: The name of the policy definition to delete.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider.
+        if you specify the ressource_group anyway, it will overwrite the cloud ressource_group value.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt-call azurearm_resource.policy_definition_delete testpolicy
 
+    .. code-block:: bash
+
+        salt-call azurearm_resource.policy_definition_delete testpolicy cloud_provider=my-azurearm-config
+
     """
     result = False
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if "error" in conn_config:
+            return conn_config
+        else:
+            kwargs.update(conn_config)
+
     polconn = __utils__["azurearm.get_client"]("policy", **kwargs)
     try:
         # pylint: disable=unused-variable
@@ -1138,7 +1647,7 @@ def policy_definition_delete(name, **kwargs):
     return result
 
 
-def policy_definition_get(name, **kwargs):
+def policy_definition_get(name, cloud_provider=None, **kwargs):
     """
     .. versionadded:: 2019.2.0
 
@@ -1146,13 +1655,30 @@ def policy_definition_get(name, **kwargs):
 
     :param name: The name of the policy definition to query.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider.
+        if you specify the ressource_group anyway, it will overwrite the cloud ressource_group value.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt-call azurearm_resource.policy_definition_get testpolicy
 
+    .. code-block:: bash
+
+        salt-call azurearm_resource.policy_definition_get testpolicy cloud_provider=my-azurearm-config
+
     """
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if "error" in conn_config:
+            return conn_config
+        else:
+            kwargs.update(conn_config)
+
     polconn = __utils__["azurearm.get_client"]("policy", **kwargs)
     try:
         policy_def = polconn.policy_definitions.get(policy_definition_name=name)
@@ -1164,7 +1690,7 @@ def policy_definition_get(name, **kwargs):
     return result
 
 
-def policy_definitions_list(hide_builtin=False, **kwargs):
+def policy_definitions_list(hide_builtin=False, cloud_provider=None, **kwargs):
     """
     .. versionadded:: 2019.2.0
 
@@ -1172,14 +1698,31 @@ def policy_definitions_list(hide_builtin=False, **kwargs):
 
     :param hide_builtin: Boolean which will filter out BuiltIn policy definitions from the result.
 
+    :param cloud_provider: The Cloud Provider parameter allow you to use a defined
+        provider config in /etc/salt/cloud.providers.d/
+        with this paramater, you dont have to specify ressource_group as it is already defined in the provider.
+        if you specify the ressource_group anyway, it will overwrite the cloud ressource_group value
+
     CLI Example:
 
     .. code-block:: bash
 
         salt-call azurearm_resource.policy_definitions_list
 
+    .. code-block:: bash
+
+        salt-call azurearm_resource.policy_definitions_list cloud_provider=my-azurearm-config
+
     """
     result = {}
+
+    if cloud_provider is not None:
+        conn_config = salt.utils.azurearm.get_config_from_cloud(cloud_provider)
+        if "error" in conn_config:
+            return conn_config
+        else:
+            kwargs.update(conn_config)
+
     polconn = __utils__["azurearm.get_client"]("policy", **kwargs)
     try:
         policy_defs = __utils__["azurearm.paged_object_to_list"](

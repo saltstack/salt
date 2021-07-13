@@ -82,7 +82,7 @@ def test_function_signatures():
     )
 
     # we literally only check that a final creation call occurred.
-    mock_azure.get_conn.return_value.virtual_machines.create_or_update.assert_called_once()
+    mock_azure.get_conn.return_value.virtual_machines.begin_create_or_update.assert_called_once()
 
 
 def test_get_configured_provider():
@@ -151,8 +151,6 @@ def test_get_conn():
     # username and password via provider config
     expected = {
         "subscription_id": "3287abc8-f98a-c678-3bde-326766fd3617",
-        "username": "donkeymonkey",
-        "password": "monkeydonkey",
     }
     with patch(
         "salt.utils.azurearm.get_client", side_effect=lambda client_type, **kw: kw

@@ -127,6 +127,7 @@ def configure_loader_modules():
     }
 
 
+# name, zone_name, record_type, resource_group=None, cloud_provider=None, **kwargs
 def test_record_set_create_or_update(credentials):
     """
     tests record set object creation
@@ -142,10 +143,10 @@ def test_record_set_create_or_update(credentials):
     }
 
     record_set_args, record_set_kwargs = azurearm_dns.record_set_create_or_update(
-        "myhost",
-        "myzone",
-        "testgroup",
-        "A",
+        name="myhost",
+        zone_name="myzone",
+        resource_group="testgroup",
+        record_type="A",
         arecords=[{"ipv4_address": "10.0.0.1"}],
         ttl=300,
         **credentials
