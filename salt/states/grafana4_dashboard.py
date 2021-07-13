@@ -173,9 +173,7 @@ def present(
     if updated_needed:
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = str(
-                "Dashboard {0} is set to be updated, changes={1}"
-            ).format(  # future lint: blacklisted-function
+            ret["comment"] = "Dashboard {} is set to be updated, changes={}".format(
                 name,
                 salt.utils.json.dumps(
                     _dashboard_diff(_cleaned(new_dashboard), _cleaned(old_dashboard)),
