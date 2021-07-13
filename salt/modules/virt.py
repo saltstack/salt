@@ -516,41 +516,50 @@ def _get_disks(conn, dom):
             def _get_disk_volume_data(pool_name, volume_name):
                 qemu_target = "{}/{}".format(pool_name, volume_name)
                 pool = conn.storagePoolLookupByName(pool_name)
-                vol = pool.storageVolLookupByName(volume_name)
-                vol_info = vol.info()
-                extra_properties = {
-                    "virtual size": vol_info[1],
-                    "disk size": vol_info[2],
-                }
-
-                backing_files = [
-                    {
-                        "file": node.find("source").get("file"),
-                        "file format": node.find("format").get("type"),
+                extra_properties = {}
+                try:
+                    vol = pool.storageVolLookupByName(volume_name)
+                    vol_info = vol.info()
+                    extra_properties = {
+                        "virtual size": vol_info[1],
+                        "disk size": vol_info[2],
                     }
-                    for node in elem.findall(".//backingStore[source]")
-                ]
 
-                if backing_files:
-                    # We had the backing files in a flat list, nest them again.
-                    extra_properties["backing file"] = backing_files[0]
-                    parent = extra_properties["backing file"]
-                    for sub_backing_file in backing_files[1:]:
-                        parent["backing file"] = sub_backing_file
-                        parent = sub_backing_file
+                    backing_files = [
+                        {
+                            "file": node.find("source").get("file"),
+                            "file format": node.find("format").get("type"),
+                        }
+                        for node in elem.findall(".//backingStore[source]")
+                    ]
 
-                else:
-                    # In some cases the backing chain is not displayed by the domain definition
-                    # Try to see if we have some of it in the volume definition.
-                    vol_desc = ElementTree.fromstring(vol.XMLDesc())
-                    backing_path = vol_desc.find("./backingStore/path")
-                    backing_format = vol_desc.find("./backingStore/format")
-                    if backing_path is not None:
-                        extra_properties["backing file"] = {"file": backing_path.text}
-                        if backing_format is not None:
-                            extra_properties["backing file"][
-                                "file format"
-                            ] = backing_format.get("type")
+                    if backing_files:
+                        # We had the backing files in a flat list, nest them again.
+                        extra_properties["backing file"] = backing_files[0]
+                        parent = extra_properties["backing file"]
+                        for sub_backing_file in backing_files[1:]:
+                            parent["backing file"] = sub_backing_file
+                            parent = sub_backing_file
+
+                    else:
+                        # In some cases the backing chain is not displayed by the domain definition
+                        # Try to see if we have some of it in the volume definition.
+                        vol_desc = ElementTree.fromstring(vol.XMLDesc())
+                        backing_path = vol_desc.find("./backingStore/path")
+                        backing_format = vol_desc.find("./backingStore/format")
+                        if backing_path is not None:
+                            extra_properties["backing file"] = {
+                                "file": backing_path.text
+                            }
+                            if backing_format is not None:
+                                extra_properties["backing file"][
+                                    "file format"
+                                ] = backing_format.get("type")
+                except libvirt.libvirtError:
+                    # The volume won't be found if the pool is not started, just output less infos
+                    log.info(
+                        "Couldn't extract all volume informations: pool is likely not running or refreshed"
+                    )
                 return (qemu_target, extra_properties)
 
             if disk_type == "file":
@@ -5908,12 +5917,7 @@ def _is_kvm_hyper():
     """
     Returns a bool whether or not this node is a KVM hypervisor
     """
-    try:
-        with salt.utils.files.fopen("/proc/modules") as fp_:
-            if "kvm_" not in salt.utils.stringutils.to_unicode(fp_.read()):
-                return False
-    except OSError:
-        # No /proc/modules? Are we on Windows? Or Solaris?
+    if not os.path.exists("/dev/kvm"):
         return False
     return "libvirtd" in __salt__["cmd.run"](__grains__["ps"])
 
@@ -6936,7 +6940,11 @@ def all_capabilities(**kwargs):
         host_caps = ElementTree.fromstring(conn.getCapabilities())
         domains = [
             [
-                (guest.get("arch", {}).get("name", None), key)
+                (
+                    guest.get("arch", {}).get("name", None),
+                    key,
+                    guest.get("arch", {}).get("emulator", None),
+                )
                 for key in guest.get("arch", {}).get("domains", {}).keys()
             ]
             for guest in [
@@ -6954,10 +6962,10 @@ def all_capabilities(**kwargs):
             "domains": [
                 _parse_domain_caps(
                     ElementTree.fromstring(
-                        conn.getDomainCapabilities(None, arch, None, domain)
+                        conn.getDomainCapabilities(emulator, arch, None, domain)
                     )
                 )
-                for (arch, domain) in flattened
+                for (arch, domain, emulator) in flattened
             ],
         }
         return result

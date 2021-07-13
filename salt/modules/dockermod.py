@@ -507,9 +507,8 @@ def _clear_context():
     """
     Clear the state/exists values stored in context
     """
-    # Can't use 'for key in __context__' or six.iterkeys(__context__) because
-    # an exception will be raised if the size of the dict is modified during
-    # iteration.
+    # Can't use 'for key in __context__' because an exception will be raised if
+    # the size of the dict is modified during iteration.
     keep_context = (
         "docker.client",
         "docker.exec_driver",

@@ -1,12 +1,4 @@
-# -*- coding: utf-8 -*-
-
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Salt Libs
 import salt.pillar.mysql as mysql
-
-# Import Salt Testing libs
 from tests.support.unit import TestCase, skipIf
 
 
@@ -780,7 +772,7 @@ class MysqlPillarTestCase(TestCase):
                         assert list(y.keys()) == ["g"]
                         assert y["g"] == 2
                     else:
-                        raise ValueError("Unexpected value {0}".format(y))
+                        raise ValueError("Unexpected value {}".format(y))
             elif "h" in x:
                 assert len(x["h"]) == 1
                 for y in x["h"]:
@@ -791,9 +783,9 @@ class MysqlPillarTestCase(TestCase):
                         assert len(y.keys()) == 2
                         assert y["k"] == 4
                     else:
-                        raise ValueError("Unexpected value {0}".format(y))
+                        raise ValueError("Unexpected value {}".format(y))
             else:
-                raise ValueError("Unexpected value {0}".format(x))
+                raise ValueError("Unexpected value {}".format(x))
 
     def test_302_process_results_with_lists_consecutive(self):
         """
@@ -837,7 +829,7 @@ class MysqlPillarTestCase(TestCase):
                         assert list(y.keys()) == ["g"]
                         assert y["g"] == 2
                     else:
-                        raise ValueError("Unexpected value {0}".format(y))
+                        raise ValueError("Unexpected value {}".format(y))
             elif len(x[0][0]) == 2:
                 for y in x[0]:
                     if "j" in y:
@@ -847,6 +839,6 @@ class MysqlPillarTestCase(TestCase):
                         assert len(y.keys()) == 2
                         assert y["k"] == 4
                     else:
-                        raise ValueError("Unexpected value {0}".format(len(x[0][0])))
+                        raise ValueError("Unexpected value {}".format(len(x[0][0])))
             else:
-                raise ValueError("Unexpected value {0}".format(x))
+                raise ValueError("Unexpected value {}".format(x))

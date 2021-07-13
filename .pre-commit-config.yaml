@@ -4,7 +4,7 @@ default_language_version:
 exclude: ^(doc/_static/.*|doc/_themes/.*)$
 repos:
   - repo: https://github.com/saltstack/pip-tools-compile-impersonate
-    rev: "3.0"
+    rev: "4.1"
     hooks:
 
   # ----- Packaging Requirements ------------------------------------------------------------------------------------>
@@ -1018,7 +1018,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-invoke-py3.5-requirements
         name: Linux CI Py3.5 Invoke Requirements
-        files: ^requirements/static/ci/invoke\.in$
+        files: ^requirements/static/ci/(invoke\.in|py3.5/invoke\.txt)$
         pass_filenames: false
         args:
           - -v
@@ -1028,7 +1028,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-invoke-py3.6-requirements
         name: Linux CI Py3.6 Invoke Requirements
-        files: ^requirements/static/ci/invoke\.in$
+        files: ^requirements/static/ci/(invoke\.in|py3.6/invoke\.txt)$
         pass_filenames: false
         args:
           - -v
@@ -1038,7 +1038,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-invoke-py3.7-requirements
         name: Linux CI Py3.7 Invoke Requirements
-        files: ^requirements/static/ci/invoke\.in$
+        files: ^requirements/static/ci/(invoke\.in|py3.7/invoke\.txt)$
         pass_filenames: false
         args:
           - -v
@@ -1048,7 +1048,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-invoke-py3.8-requirements
         name: Linux CI Py3.8 Invoke Requirements
-        files: ^requirements/static/ci/invoke\.in$
+        files: ^requirements/static/ci/(invoke\.in|py3.8/invoke\.txt)$
         pass_filenames: false
         args:
           - -v
@@ -1058,7 +1058,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-invoke-py3.9-requirements
         name: Linux CI Py3.9 Invoke Requirements
-        files: ^requirements/static/ci/invoke\.in$
+        files: ^requirements/static/ci/(invoke\.in|py3.9/invoke\.txt)$
         pass_filenames: false
         args:
           - -v
@@ -1068,7 +1068,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-invoke-py3.10-requirements
         name: Linux CI Py3.10 Invoke Requirements
-        files: ^requirements/static/ci/invoke\.in$
+        files: ^requirements/static/ci/(invoke\.in|py3.10/invoke\.txt)$
         pass_filenames: false
         args:
           - -v
@@ -1185,6 +1185,39 @@ repos:
   # <---- Security ---------------------------------------------------------------------------------------------------
 
   # ----- Pre-Commit ------------------------------------------------------------------------------------------------>
+  - repo: https://github.com/saltstack/invoke-pre-commit
+    rev: v1.5.0
+    hooks:
+      - id: invoke
+        alias: check-docs
+        name: Check Docs
+        files: ^(salt/.*\.py|doc/ref/.*\.rst)$
+        args:
+          - docs.check
+        additional_dependencies:
+          - blessings
+          - pyyaml
+          - distro
+          - jinja2
+          - msgpack
+
+  - repo: https://github.com/saltstack/invoke-pre-commit
+    rev: v1.5.0
+    hooks:
+      - id: invoke
+        alias: check-filemap
+        name: Check Filename Map Change Matching
+        files: ^tests/(filename_map\.yml|.*\.py)$
+        pass_filenames: false
+        args:
+          - filemap.check
+        additional_dependencies:
+          - blessings
+          - pyyaml
+          - distro
+          - jinja2
+          - msgpack
+
   - repo: https://github.com/saltstack/mirrors-nox
     rev: v2020.8.22
     hooks:
@@ -1213,31 +1246,4 @@ repos:
           - -e
           - lint-tests-pre-commit
           - --
-
-  - repo: https://github.com/saltstack/mirrors-nox
-    rev: v2020.8.22
-    hooks:
-      - id: nox
-        alias: check-docs
-        name: Check Docs
-        files: ^(salt/.*\.py|doc/ref/.*\.rst)$
-        args:
-          - -e
-          - invoke-pre-commit
-          - --
-          - docs.check
-
-  - repo: https://github.com/saltstack/mirrors-nox
-    rev: v2020.8.22
-    hooks:
-      - id: nox
-        alias: check-filemap
-        name: Check Filename Map Change Matching
-        files: ^tests/(filename_map\.yml|.*\.py)$
-        pass_filenames: false
-        args:
-          - -e
-          - invoke-pre-commit
-          - --
-          - filemap.check
   # <---- Pre-Commit -------------------------------------------------------------------------------------------------

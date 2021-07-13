@@ -8,7 +8,6 @@ import salt.loader
 import salt.modules.boto_secgroup as boto_secgroup
 
 # pylint: disable=import-error
-from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 from salt.utils.odict import OrderedDict
 from salt.utils.versions import LooseVersion
 from tests.support.mixins import LoaderModuleMockMixin

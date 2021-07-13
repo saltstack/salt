@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Read in an Ansible inventory file or script
 
@@ -87,13 +86,10 @@ This is the format that an inventory script needs to output to work with ansible
 
 Any of the [groups] or direct hostnames will return.  The 'all' is special, and returns everything.
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 import fnmatch
 
-# Import Salt libs
 import salt.utils.path
 from salt.roster import get_roster_file
 
@@ -122,7 +118,7 @@ def targets(tgt, tgt_type="glob", **kwargs):
     Default: /etc/salt/roster
     """
     inventory = __runner__["salt.cmd"](
-        "cmd.run", "ansible-inventory -i {0} --list".format(get_roster_file(__opts__))
+        "cmd.run", "ansible-inventory -i {} --list".format(get_roster_file(__opts__))
     )
     __context__["inventory"] = __utils__["json.loads"](
         __utils__["stringutils.to_str"](inventory)

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
@@ -8,16 +7,12 @@
 """
 
 # Import python libraries
-from __future__ import absolute_import, print_function, unicode_literals
 
 import sys
 
-# Import salt libs
 import salt.modules.virtualenv_mod as virtualenv_mod
 from salt.exceptions import CommandExecutionError
 from tests.support.helpers import ForceImportErrorOn, TstSuiteLoggingHandler
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -280,7 +275,7 @@ class VirtualenvTestCase(TestCase, LoaderModuleMockMixin):
                 "/tmp/foo", python=sys.executable,
             )
             mock.assert_called_once_with(
-                ["virtualenv", "--python={0}".format(sys.executable), "/tmp/foo"],
+                ["virtualenv", "--python={}".format(sys.executable), "/tmp/foo"],
                 runas=None,
                 python_shell=False,
             )

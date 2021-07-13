@@ -1225,7 +1225,7 @@ def call(
             'name': name
             'changes': {'retval': result},
             'result': True if result is None else bool(result),
-            'comment': result if isinstance(result, six.string_types) else ''
+            'comment': result if isinstance(result, str) else ''
         }
     """
     ret = {"name": name, "changes": {}, "result": False, "comment": ""}

@@ -2,14 +2,11 @@
 Tests for salt.utils.data
 """
 
-
+import builtins
 import logging
 
 import salt.utils.data
 import salt.utils.stringutils
-from salt.ext.six.moves import (  # pylint: disable=import-error,redefined-builtin
-    builtins,
-)
 from salt.utils.odict import OrderedDict
 from tests.support.mock import patch
 from tests.support.unit import LOREM_IPSUM, TestCase

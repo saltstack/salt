@@ -1,18 +1,10 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Rupesh Tare <rupesht@saltstack.com>
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.modules.launchctl_service as launchctl
 import salt.utils.stringutils
-
-# Import Salt Libs
-from salt.ext import six
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -81,8 +73,7 @@ class LaunchctlTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(
             launchctl, "_service_by_name", return_value={"plist": {"Label": "A"}}
         ):
-            if six.PY3:
-                launchctl_data = salt.utils.stringutils.to_bytes(launchctl_data)
+            launchctl_data = salt.utils.stringutils.to_bytes(launchctl_data)
             with patch.object(
                 launchctl, "_get_launchctl_data", return_value=launchctl_data
             ):

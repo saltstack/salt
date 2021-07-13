@@ -30,7 +30,7 @@ EX_SCP_NOT_FOUND = 14
 EX_CANTCREAT = 73
 
 
-class OptionsContainer(object):
+class OptionsContainer:
     """
     An empty class for holding instance attribute values.
     """

@@ -19,7 +19,6 @@ import salt.utils.yaml
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 # pylint: disable=import-error
-from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 from tests.support.helpers import dedent
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
@@ -1954,8 +1953,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
 
                 with patch.dict(virt.__dict__, {"CACHE_DIR": cache_dir}):
                     with patch(
-                        "salt.ext.six.moves.urllib.request.urlopen",
-                        MagicMock(return_value=mock_response),
+                        "urllib.request.urlopen", MagicMock(return_value=mock_response),
                     ):
                         with patch(
                             "salt.utils.files.fopen", return_value=mock_response
@@ -5079,6 +5077,14 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         )
         self.assertEqual(
             {"qemu", "kvm"}, {domainCaps["domain"] for domainCaps in caps["domains"]},
+        )
+
+        self.assertEqual(
+            {call[0] for call in self.mock_conn.getDomainCapabilities.call_args_list},
+            {
+                ("/usr/bin/qemu-system-x86_64", "x86_64", None, "kvm"),
+                ("/usr/bin/qemu-system-x86_64", "x86_64", None, "qemu"),
+            },
         )
 
     def test_network_tag(self):

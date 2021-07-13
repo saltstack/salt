@@ -1,18 +1,10 @@
-# -*- coding: utf-8 -*-
-
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 # Imports Standards
 import os
 
-# Import salt libs
 import salt.utils.platform
 import salt.utils.user
 from tests.support.mock import patch
 from tests.support.runtests import this_user
-
-# Import Salt Testing libs
 from tests.support.unit import TestCase, skipIf
 
 # Import Conditionals
