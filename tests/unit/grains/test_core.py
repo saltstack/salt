@@ -1349,7 +1349,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             if cmd == "/usr/bin/zonename":
                 # NOTE: we return the name of the zone
                 return "myzone"
-            log.debug("cmd.run: '{}'".format(cmd))
+            log.debug("cmd.run: '%s'", cmd)
 
         def _cmd_all_side_effect(cmd):
             # NOTE: prtdiag doesn't work inside a zone
@@ -1361,7 +1361,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                     "stdout": "",
                     "stderr": "prtdiag can only be run in the global zone",
                 }
-            log.debug("cmd.run_all: '{}'".format(cmd))
+            log.debug("cmd.run_all: '%s'", cmd)
 
         def _which_side_effect(path):
             if path == "prtdiag":
@@ -1401,7 +1401,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                     "stdout": "",
                     "stderr": "prtdiag can only be run in the global zone",
                 }
-            log.debug("cmd.run_all: '{}'".format(cmd))
+            log.debug("cmd.run_all: '%s'", cmd)
 
         def _which_side_effect(path):
             if path == "prtdiag":
