@@ -1,0 +1,1 @@
++ It was no longer possible to use the network.manage module under Windows because the wrong command was used. - The correct command is now used
