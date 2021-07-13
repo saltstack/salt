@@ -411,6 +411,7 @@ class Terminal:
                 stdin=child,
                 stdout=child,
                 stderr=subprocess.PIPE,
+                close_fds=False,
             )
             os.close(child)
             self.child_fd = parent
