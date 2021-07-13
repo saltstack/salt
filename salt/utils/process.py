@@ -313,7 +313,7 @@ def set_pidfile(pidfile, user):
         os.makedirs(pdir)
     try:
         with salt.utils.files.fopen(pidfile, "w+") as ofile:
-            ofile.write(str(os.getpid()))  # future lint: disable=blacklisted-function
+            ofile.write(str(os.getpid()))
     except OSError:
         pass
 
