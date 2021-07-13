@@ -1,12 +1,6 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import
-
 import textwrap
 
 from salt.modules import devinfo
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch
 from tests.support.unit import TestCase

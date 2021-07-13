@@ -1,14 +1,10 @@
-# coding: utf-8
-
 # Python libs
-from __future__ import absolute_import
 
 import datetime
 import logging
 
 # Salt libs
 import salt.beacons.wtmp as wtmp
-from salt.ext import six
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, mock_open, patch
 
@@ -86,7 +82,7 @@ class WTMPBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch("salt.utils.files.fopen", mock_open(b"")) as m_open:
             ret = wtmp.beacon(config)
-            call_args = next(six.itervalues(m_open.filehandles))[0].call.args
+            call_args = next(iter(m_open.filehandles.values()))[0].call.args
             assert call_args == (wtmp.WTMP, "rb"), call_args
             assert ret == [], ret
 
@@ -173,7 +169,7 @@ class WTMPBeaconTestCase(TestCase, LoaderModuleMockMixin):
                 ]
 
                 ret = wtmp.beacon(config)
-                log.debug("{}".format(ret))
+                log.debug("wtmp beacon: %s", ret)
                 self.assertEqual(ret, _expected)
 
     @skipIf(not _TIME_SUPPORTED, "dateutil.parser is missing.")
@@ -240,7 +236,7 @@ class WTMPBeaconTestCase(TestCase, LoaderModuleMockMixin):
                 with patch("time.time", MagicMock(return_value=1506121200)):
                     with patch("struct.unpack", MagicMock(return_value=pack)):
                         with patch(
-                            "{0}.info".format(groupadd),
+                            "{}.info".format(groupadd),
                             new=MagicMock(return_value=mock_group_info),
                         ):
                             config = [

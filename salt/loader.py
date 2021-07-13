@@ -1172,7 +1172,7 @@ def _generate_module(name):
 
     code = "'''Salt loaded {} parent module'''".format(name.split(".")[-1])
     # ModuleType can't accept a unicode type on PY2
-    module = types.ModuleType(str(name))  # future lint: disable=blacklisted-function
+    module = types.ModuleType(str(name))
     exec(code, module.__dict__)
     sys.modules[name] = module
 

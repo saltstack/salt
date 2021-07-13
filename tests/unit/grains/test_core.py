@@ -744,25 +744,25 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         """
         _os_release_map = {
             "os_release_file": {
-                "NAME": "Rocky",
-                "VERSION_ID": "8.3",
-                "PRETTY_NAME": "Rocky 8",
-                "ID": "Rocky",
-                "ANSI_COLOR": "0;31",
-                "CPE_NAME": "cpe:/o:rocky:rocky:8.3",
+                "NAME": "Rocky Linux",
+                "VERSION_ID": "8.4",
+                "PRETTY_NAME": "Rocky Linux 8.4 (Green Obsidian)",
+                "ID": "rocky",
+                "ANSI_COLOR": "0;32",
+                "CPE_NAME": "cpe:/o:rocky:rocky:8.4:GA",
             },
-            "_linux_distribution": ("rocky", "8.3", ""),
+            "_linux_distribution": ("rocky", "8.4", ""),
         }
 
         expectation = {
             "os": "Rocky",
             "os_family": "RedHat",
-            "oscodename": "Rocky 8",
-            "osfullname": "Rocky",
-            "osrelease": "8.3",
-            "osrelease_info": (8, 3,),
+            "oscodename": "Rocky Linux 8.4 (Green Obsidian)",
+            "osfullname": "Rocky Linux",
+            "osrelease": "8.4",
+            "osrelease_info": (8, 4,),
             "osmajorrelease": 8,
-            "osfinger": "Rocky-8",
+            "osfinger": "Rocky Linux-8",
         }
         self._run_os_grains_tests(None, _os_release_map, expectation)
 
@@ -1349,7 +1349,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             if cmd == "/usr/bin/zonename":
                 # NOTE: we return the name of the zone
                 return "myzone"
-            log.debug("cmd.run: '{}'".format(cmd))
+            log.debug("cmd.run: '%s'", cmd)
 
         def _cmd_all_side_effect(cmd):
             # NOTE: prtdiag doesn't work inside a zone
@@ -1361,7 +1361,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                     "stdout": "",
                     "stderr": "prtdiag can only be run in the global zone",
                 }
-            log.debug("cmd.run_all: '{}'".format(cmd))
+            log.debug("cmd.run_all: '%s'", cmd)
 
         def _which_side_effect(path):
             if path == "prtdiag":
@@ -1401,7 +1401,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                     "stdout": "",
                     "stderr": "prtdiag can only be run in the global zone",
                 }
-            log.debug("cmd.run_all: '{}'".format(cmd))
+            log.debug("cmd.run_all: '%s'", cmd)
 
         def _which_side_effect(path):
             if path == "prtdiag":
