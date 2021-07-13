@@ -58,8 +58,8 @@ def test_installed_version():
     with patch.dict(gem.__salt__, {"gem.list": gem_list}):
         with patch.dict(gem.__salt__, {"gem.install": gem_install_succeeds}):
             ret = gem.installed("foo", version=">= 1.0")
-            assert True is ret["result"]
-            assert "Installed Gem meets version requirements." == ret["comment"]
+            assert ret["result"] is True
+            assert ret["comment"] == "Installed Gem meets version requirements."
 
 
 def test_removed():
@@ -70,16 +70,16 @@ def test_removed():
     with patch.dict(gem.__salt__, {"gem.list": gem_list}):
         with patch.dict(gem.__salt__, {"gem.uninstall": gem_uninstall_succeeds}):
             ret = gem.removed("quux")
-            assert True is ret["result"]
+            assert ret["result"] is True
             ret = gem.removed("foo")
-            assert True is ret["result"]
+            assert ret["result"] is True
             gem_uninstall_succeeds.assert_called_once_with(
                 "foo", None, runas=None, gem_bin=None
             )
 
         with patch.dict(gem.__salt__, {"gem.uninstall": gem_uninstall_fails}):
             ret = gem.removed("bar")
-            assert False is ret["result"]
+            assert ret["result"] is False
             gem_uninstall_fails.assert_called_once_with(
                 "bar", None, runas=None, gem_bin=None
             )
@@ -93,15 +93,15 @@ def test_sources_add():
     with patch.dict(gem.__salt__, {"gem.sources_list": gem_sources_list}):
         with patch.dict(gem.__salt__, {"gem.sources_add": gem_sources_add_succeeds}):
             ret = gem.sources_add("http://foo")
-            assert True is ret["result"]
+            assert ret["result"] is True
             ret = gem.sources_add("http://fui")
-            assert True is ret["result"]
+            assert ret["result"] is True
             gem_sources_add_succeeds.assert_called_once_with(
                 source_uri="http://fui", ruby=None, runas=None
             )
         with patch.dict(gem.__salt__, {"gem.sources_add": gem_sources_add_fails}):
             ret = gem.sources_add("http://fui")
-            assert False is ret["result"]
+            assert ret["result"] is False
             gem_sources_add_fails.assert_called_once_with(
                 source_uri="http://fui", ruby=None, runas=None
             )
@@ -117,15 +117,15 @@ def test_sources_remove():
             gem.__salt__, {"gem.sources_remove": gem_sources_remove_succeeds}
         ):
             ret = gem.sources_remove("http://fui")
-            assert True is ret["result"]
+            assert ret["result"] is True
             ret = gem.sources_remove("http://foo")
-            assert True is ret["result"]
+            assert ret["result"] is True
             gem_sources_remove_succeeds.assert_called_once_with(
                 source_uri="http://foo", ruby=None, runas=None
             )
         with patch.dict(gem.__salt__, {"gem.sources_remove": gem_sources_remove_fails}):
             ret = gem.sources_remove("http://bar")
-            assert False is ret["result"]
+            assert ret["result"] is False
             gem_sources_remove_fails.assert_called_once_with(
                 source_uri="http://bar", ruby=None, runas=None
             )

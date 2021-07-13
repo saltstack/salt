@@ -88,7 +88,7 @@ def test_task_present_new_task():
     enable_mock.assert_called_once_with("testname")
     assert "TICKscript diff" in ret["changes"]
     assert "enabled" in ret["changes"]
-    assert True is ret["changes"]["enabled"]["new"]
+    assert ret["changes"]["enabled"]["new"] is True
 
 
 def test_task_present_existing_task_updated_script():
@@ -104,7 +104,7 @@ def test_task_present_existing_task_updated_script():
         task_type="stream",
         dbrps=["testdb.default"],
     )
-    assert False is enable_mock.called
+    assert enable_mock.called is False
     assert "TICKscript diff" in ret["changes"]
     assert "enabled" not in ret["changes"]
 
@@ -112,18 +112,18 @@ def test_task_present_existing_task_updated_script():
 def test_task_present_existing_task_not_enabled():
     ret, get_mock, define_mock, enable_mock, _ = _present(task=_task(enabled=False))
     get_mock.assert_called_once_with("testname")
-    assert False is define_mock.called
+    assert define_mock.called is False
     enable_mock.assert_called_once_with("testname")
     assert "diff" not in ret["changes"]
     assert "enabled" in ret["changes"]
-    assert True is ret["changes"]["enabled"]["new"]
+    assert ret["changes"]["enabled"]["new"] is True
 
 
 def test_task_present_disable_existing_task():
     ret, get_mock, define_mock, _, disable_mock = _present(task=_task(), enable=False)
     get_mock.assert_called_once_with("testname")
-    assert False is define_mock.called
+    assert define_mock.called is False
     disable_mock.assert_called_once_with("testname")
     assert "diff" not in ret["changes"]
     assert "enabled" in ret["changes"]
-    assert False is ret["changes"]["enabled"]["new"]
+    assert ret["changes"]["enabled"]["new"] is False
