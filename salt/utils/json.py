@@ -3,7 +3,7 @@ Functions to work with JSON
 """
 
 
-import json  # future lint: blacklisted-module
+import json
 import logging
 
 import salt.utils.data
@@ -39,7 +39,7 @@ def find_json(raw):
             working = "\n".join(salt.utils.data.decode(lines[ind:]))
 
         try:
-            ret = json.loads(working)  # future lint: blacklisted-function
+            ret = json.loads(working)
         except ValueError:
             continue
         if ret:
@@ -113,7 +113,7 @@ def dump(obj, fp, **kwargs):
     json_module = kwargs.pop("_json_module", json)
     if "ensure_ascii" not in kwargs:
         kwargs["ensure_ascii"] = False
-    return json_module.dump(obj, fp, **kwargs)  # future lint: blacklisted-function
+    return json_module.dump(obj, fp, **kwargs)
 
 
 def dumps(obj, **kwargs):
@@ -134,4 +134,4 @@ def dumps(obj, **kwargs):
     json_module = kwargs.pop("_json_module", json)
     if "ensure_ascii" not in kwargs:
         kwargs["ensure_ascii"] = False
-    return json_module.dumps(obj, **kwargs)  # future lint: blacklisted-function
+    return json_module.dumps(obj, **kwargs)
