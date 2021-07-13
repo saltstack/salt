@@ -2957,6 +2957,8 @@ def _hw_data(osdata):
             res = regex.search(data)
             if res and len(res.groups()) >= 1:
                 grains["manufacturer"] = res.group(1).strip().replace("'", "")
+                # Remove manufacture in Sulfur: salt.utils.versions.warn_until("Sulfur")
+                grains["manufacture"] = grains["manufacturer"]
                 break
 
         for regex in product_regexes:
