@@ -24,6 +24,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import itertools
 import os
 import re
+import subprocess
 import uuid
 
 # Import Salt libs
@@ -549,10 +550,13 @@ documentation regarding this topic.
         )
 
     if not permanent:
-        ret["after"]["{0}_image".format(orig_fstype)] = image_path
-        ret["after"]["{0}_image_info".format(orig_fstype)] = (
-            os.popen("file {0}/image".format(image_path)).read().strip()
+        ret["after"]["{}_image".format(orig_fstype)] = image_path
+        image_info_proc = subprocess.run(
+            ["file", "{}/image".format(image_path)], check=True, stdout=subprocess.PIPE
         )
+        ret["after"][
+            "{}_image_info".format(orig_fstype)
+        ] = image_info_proc.stdout.strip()
     else:
         ret["after"]["{0}_image".format(orig_fstype)] = "removed"
         ret["after"]["{0}_image_info".format(orig_fstype)] = "N/A"
