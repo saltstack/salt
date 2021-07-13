@@ -96,13 +96,13 @@ def test_cert_already_present():
 
     with patch.dict(keystore.__opts__, {"test": True}):
         with patch.dict(
-            keystore.__salt__, {"keystore.list": MagicMock(return_value=cert_return)},
+            keystore.__salt__,
+            {
+                "keystore.list": MagicMock(return_value=cert_return),
+                "x509.read_certificate": MagicMock(return_value=x509_return),
+            },
         ):
-            with patch.dict(
-                keystore.__salt__,
-                {"x509.read_certificate": MagicMock(return_value=x509_return)},
-            ):
-                assert keystore.managed(name, passphrase, entries) == state_return
+            assert keystore.managed(name, passphrase, entries) == state_return
 
 
 @patch("os.path.exists", MagicMock(return_value=True))
@@ -198,16 +198,11 @@ def test_cert_update():
         {
             "keystore.list": MagicMock(return_value=cert_return),
             "x509.read_certificate": MagicMock(return_value=x509_return),
+            "keystore.remove": MagicMock(return_value=True),
+            "keystore.add": MagicMock(return_value=True),
         },
     ):
-        with patch.dict(
-            keystore.__salt__,
-            {
-                "keystore.remove": MagicMock(return_value=True),
-                "keystore.add": MagicMock(return_value=True),
-            },
-        ):
-            assert keystore.managed(name, passphrase, entries) == state_return
+        assert keystore.managed(name, passphrase, entries) == state_return
 
 
 @patch("os.path.exists", MagicMock(return_value=False))
