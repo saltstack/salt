@@ -1,11 +1,8 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jochen Breuer <jbreuer@suse.de>
 """
 # pylint: disable=no-value-for-parameter
 
-# Import Python Libs
-from __future__ import absolute_import
 
 import os
 from contextlib import contextmanager
@@ -13,8 +10,6 @@ from contextlib import contextmanager
 import salt.utils.files
 import salt.utils.platform
 from salt.modules import kubernetesmod as kubernetes
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import Mock, patch
 from tests.support.unit import TestCase, skipIf

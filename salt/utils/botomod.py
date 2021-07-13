@@ -34,7 +34,6 @@ import salt.loader_context
 import salt.utils.stringutils
 import salt.utils.versions
 from salt.exceptions import SaltInvocationError
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 from salt.loader import minion_mods
 
 # pylint: disable=import-error
@@ -172,10 +171,8 @@ def get_connection(
         conn = __utils__['boto.get_connection']('ec2', profile='custom_profile')
     """
 
-    # future lint: disable=blacklisted-function
     module = str(module or service)
     module, submodule = ("boto." + module).rsplit(".", 1)
-    # future lint: enable=blacklisted-function
 
     svc_mod = getattr(__import__(module, fromlist=[submodule]), submodule)
 

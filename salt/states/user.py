@@ -483,9 +483,8 @@ def present(
             if algo == "1":
                 log.warning("Using MD5 for hashing passwords is considered insecure!")
             log.debug(
-                "Re-using existing shadow salt for hashing password using {}".format(
-                    algorithms.get(algo)
-                )
+                "Re-using existing shadow salt for hashing password using %s",
+                algorithms.get(algo),
             )
             password = __salt__["shadow.gen_password"](
                 password, crypt_salt=shadow_salt, algorithm=algorithms.get(algo)
@@ -553,8 +552,7 @@ def present(
     if groups and optional_groups:
         for isected in set(groups).intersection(optional_groups):
             log.warning(
-                'Group "%s" specified in both groups and optional_groups '
-                "for user %s",
+                'Group "%s" specified in both groups and optional_groups for user %s',
                 isected,
                 name,
             )
@@ -846,8 +844,6 @@ def present(
                 "profile": win_profile,
                 "logonscript": win_logonscript,
             }
-
-        # user.add returns true, false, or a str in the case of windows failure
         result = __salt__["user.add"](**params)
         if result is True:
             ret["comment"] = "New user {} created".format(name)

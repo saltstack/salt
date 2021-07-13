@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module for sending messages to MS Teams
 
@@ -13,15 +12,9 @@ Module for sending messages to MS Teams
     msteams:
       hook_url: https://outlook.office.com/webhook/837
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import 3rd-party libs
-import salt.ext.six.moves.http_client  # pylint: disable=import-error,no-name-in-module,redefined-builtin
-
-# Import Salt libs
 import salt.utils.json
 from salt.exceptions import SaltInvocationError
 

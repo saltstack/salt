@@ -1,18 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 A state module designed to enforce load-balancing configurations for F5 Big-IP entities.
     :maturity:      develop
     :platform:      f5_bigip_11.6
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt libs
 import salt.utils.json
-
-# Import 3rd-party libs
-from salt.ext import six
 
 
 # set up virtual function
@@ -61,7 +54,7 @@ def _strip_key(dictionary, keyword):
     when there were no changes made to the entity.
     """
 
-    for key, value in six.iteritems(dictionary):
+    for key, value in dictionary.items():
         if key == keyword:
             dictionary[key] = None
         elif isinstance(value, dict):
@@ -2775,7 +2768,7 @@ def create_monitor(hostname, username, password, monitor_type, name, **kwargs):
             "name": name,
         }
 
-        for key, value in six.iteritems(kwargs):
+        for key, value in kwargs.items():
             params[key] = value
 
         return _test_output(ret, "create", params)
@@ -2846,7 +2839,7 @@ def manage_monitor(hostname, username, password, monitor_type, name, **kwargs):
             "name": name,
         }
 
-        for key, value in six.iteritems(kwargs):
+        for key, value in kwargs.items():
             params[key] = value
 
         return _test_output(ret, "manage", params)
@@ -2927,7 +2920,7 @@ def modify_monitor(hostname, username, password, monitor_type, name, **kwargs):
             "name": name,
         }
 
-        for key, value in six.iteritems(kwargs):
+        for key, value in kwargs.items():
             params[key] = value
 
         return _test_output(ret, "modify", params)
@@ -3176,7 +3169,7 @@ def manage_profile(hostname, username, password, profile_type, name, **kwargs):
             "name": name,
         }
 
-        for key, value in six.iteritems(kwargs):
+        for key, value in kwargs.items():
             params[key] = value
 
         return _test_output(ret, "manage", params)
@@ -3257,7 +3250,7 @@ def modify_profile(hostname, username, password, profile_type, name, **kwargs):
             "name": name,
         }
 
-        for key, value in six.iteritems(kwargs):
+        for key, value in kwargs.items():
             params[key] = value
 
         return _test_output(ret, "modify", params)

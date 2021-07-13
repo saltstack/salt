@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 hjson renderer for Salt
 
@@ -7,12 +6,7 @@ See the hjson_ documentation for more information
 .. _hjson: http://laktak.github.io/hjson/
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import salt libs
-from salt.ext import six
-
-# Import 3rd party libs
 try:
     import hjson
 
@@ -28,7 +22,7 @@ def render(hjson_data, saltenv="base", sls="", **kws):
 
     :rtype: A Python data structure
     """
-    if not isinstance(hjson_data, six.string_types):
+    if not isinstance(hjson_data, str):
         hjson_data = hjson_data.read()
 
     if hjson_data.startswith("#!"):

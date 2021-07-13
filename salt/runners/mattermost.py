@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module for sending messages to Mattermost
 
@@ -15,23 +14,16 @@ Module for sending messages to Mattermost
           api_url: https://example.com
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import Salt libs
 import salt.utils.json
 
-# Import Salt libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 import salt.utils.mattermost
 
 # pylint: enable=import-error,no-name-in-module
 from salt.exceptions import SaltInvocationError
-
-# Import 3rd-party libs
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -138,7 +130,7 @@ def post_message(message, channel=None, username=None, api_url=None, hook=None):
     log.debug("Parameters: %s", parameters)
     data = salt.utils.json.dumps(parameters)
     result = salt.utils.mattermost.query(
-        api_url=api_url, hook=hook, data=str("payload={0}").format(data)
+        api_url=api_url, hook=hook, data="payload={}".format(data)
     )  # future lint: blacklisted-function
 
     if result:
@@ -174,9 +166,9 @@ def post_event(event, channel=None, username=None, api_url=None, hook=None):
 
     log.debug("Event: %s", event)
     log.debug("Event data: %s", event["data"])
-    message = "tag: {0}\r\n".format(event["tag"])
-    for key, value in six.iteritems(event["data"]):
-        message += "{0}: {1}\r\n".format(key, value)
+    message = "tag: {}\r\n".format(event["tag"])
+    for key, value in event["data"].items():
+        message += "{}: {}\r\n".format(key, value)
     result = post_message(
         message, channel=channel, username=username, api_url=api_url, hook=hook
     )

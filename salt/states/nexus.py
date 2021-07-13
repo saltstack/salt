@@ -1,17 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 This state downloads artifacts from Nexus 3.x.
 
 .. versionadded:: 2018.3.0
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
-
-# Import Salt libs
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -95,7 +89,7 @@ def downloaded(name, artifact, target_dir="/tmp", target_file=None):
         fetch_result = __fetch_from_nexus(artifact, target_dir, target_file)
     except Exception as exc:  # pylint: disable=broad-except
         ret["result"] = False
-        ret["comment"] = six.text_type(exc)
+        ret["comment"] = str(exc)
         return ret
 
     log.debug("fetch_result=%s", fetch_result)
