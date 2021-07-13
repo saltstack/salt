@@ -8,10 +8,8 @@ systems that cannot or should not host a minion agent.
 import logging
 import os
 
-# Import salt libs
 import salt.loader
 import salt.syspaths
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 

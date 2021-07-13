@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Return salt data via Slack using Incoming Webhooks
 
@@ -56,27 +55,14 @@ append '--return_config alternative' to the salt command.
     salt '*' test.ping --return slack_webhook --return_config alternative
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import json
-
-# Import Python libs
 import logging
+import urllib.parse
 
-# pylint: disable=import-error,no-name-in-module,redefined-builtin
-import salt.ext.six.moves.http_client
-
-# Import Salt Libs
 import salt.returners
 import salt.utils.http
 import salt.utils.yaml
-from salt.ext import six
-from salt.ext.six.moves import map, range
-from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
-from salt.ext.six.moves.urllib.parse import urljoin as _urljoin
-
-# pylint: enable=import-error,no-name-in-module,redefined-builtin
-
 
 log = logging.getLogger(__name__)
 
@@ -142,7 +128,7 @@ def _sprinkle(config_str):
     """
     parts = [x for sub in config_str.split("{") for x in sub.split("}")]
     for i in range(1, len(parts), 2):
-        parts[i] = six.text_type(__grains__.get(parts[i], ""))
+        parts[i] = str(__grains__.get(parts[i], ""))
     return "".join(parts)
 
 
@@ -345,9 +331,9 @@ def _post_message(webhook, author_icon, title, report):
 
     payload = _generate_payload(author_icon, title, report)
 
-    data = _urlencode({"payload": json.dumps(payload, ensure_ascii=False)})
+    data = urllib.parse.urlencode({"payload": json.dumps(payload, ensure_ascii=False)})
 
-    webhook_url = _urljoin("https://hooks.slack.com/services/", webhook)
+    webhook_url = urllib.parse.urljoin("https://hooks.slack.com/services/", webhook)
     query_result = salt.utils.http.query(webhook_url, "POST", data=data)
 
     # Sometimes the status is not available, so status 200 is assumed when it is not present

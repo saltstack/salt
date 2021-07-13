@@ -62,6 +62,10 @@ TEST_SYSTEM_GROUP = "test_system_group"
 
 DEFAULT_ENDING = salt.utils.stringutils.to_bytes(os.linesep)
 
+pytestmark = [
+    pytest.mark.skip_on_freebsd(reason="These tests timeout on FreeBSD"),
+]
+
 
 def _test_managed_file_mode_keep_helper(testcase, local=False):
     """
@@ -865,7 +869,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         managed = salt.utils.stringutils.to_unicode(test_file.read_bytes())
         expected = dedent(
             """\
-            Die Webseite ist https://saltstack.com.
+            Die Webseite ist https://saltproject.io.
             Der Zucker ist süß.
 
             """

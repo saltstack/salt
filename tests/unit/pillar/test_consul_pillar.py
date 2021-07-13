@@ -1,15 +1,4 @@
-# -*- coding: utf-8 -*-
-
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Salt Libs
 import salt.pillar.consul_pillar as consul_pillar
-
-# Import 3rd-party libs
-from salt.ext import six
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
@@ -139,7 +128,7 @@ class ConsulPillarTestCase(TestCase, LoaderModuleMockMixin):
                 pillar_data = consul_pillar.ext_pillar(
                     "testminion", {}, "consul_config root=test-shared/"
                 )
-                assert isinstance(pillar_data["user"]["dontsplit"], six.string_types)
+                assert isinstance(pillar_data["user"]["dontsplit"], str)
 
     def test_non_expansion(self):
         with patch.dict(
@@ -155,7 +144,7 @@ class ConsulPillarTestCase(TestCase, LoaderModuleMockMixin):
                     {},
                     "consul_config root=test-shared/ expand_keys=false",
                 )
-                assert isinstance(pillar_data["user"]["dontexpand"], six.string_types)
+                assert isinstance(pillar_data["user"]["dontexpand"], str)
 
     def test_dict_merge(self):
         test_dict = {}

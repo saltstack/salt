@@ -120,12 +120,13 @@ def _changes(plays):
     Find changes in ansible return data
     """
     changes = {}
+
     for play in plays["plays"]:
         task_changes = {}
         for task in play["tasks"]:
             host_changes = {}
             for host, data in task["hosts"].items():
-                if data["changed"] is True:
+                if data.get("changed", False) is True:
                     host_changes[host] = data.get("diff", data.get("changes", {}))
                 elif any(x in data for x in ["failed", "skipped", "unreachable"]):
                     host_changes[host] = data.get("results", data.get("msg", {}))

@@ -425,7 +425,7 @@ def _check_queue(queue, kwargs):
 
 def _get_initial_pillar(opts):
     return (
-        __pillar__
+        __pillar__.value()
         if __opts__.get("__cli", None) == "salt-call"
         and opts["pillarenv"] == __opts__["pillarenv"]
         else None
@@ -1367,9 +1367,7 @@ def sls(mods, test=None, exclude=None, queue=False, sync_mods=None, **kwargs):
 
     # If the state file is an integer, convert to a string then to unicode
     if isinstance(mods, int):
-        mods = salt.utils.stringutils.to_unicode(
-            str(mods)
-        )  # future lint: disable=blacklisted-function
+        mods = salt.utils.stringutils.to_unicode(str(mods))
 
     mods = salt.utils.args.split_input(mods)
 

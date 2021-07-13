@@ -1,19 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 Unit tests for salt/modules/salt_version.py
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.modules.salt_version as salt_version
 import salt.version
-
-# Import Salt libs
-from salt.ext import six
 from tests.support.mock import MagicMock, patch
-
-# Import Salt Testing libs
 from tests.support.unit import TestCase
 
 
@@ -40,7 +32,7 @@ class SaltVersionTestCase(TestCase):
                 assert len(v) == 2
 
         sv = sv.__str__()
-        assert isinstance(sv, six.string_types)
+        assert isinstance(sv, str)
 
         with patch("salt.version.SaltStackVersion.LNAMES", {"neon": (2019, 8)}):
             sv = salt.version.SaltStackVersion.from_name("Neon")

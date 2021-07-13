@@ -41,27 +41,27 @@ Function Get-Settings {
             "NSISPluginEnVar"  = "nsis-plugin-envar.zip"
             "NSISPluginUnzipA" = "nsis-plugin-nsisunz.zip"
             "NSISPluginUnzipU" = "nsis-plugin-nsisunzu.zip"
-            "VCppBuildTools"   = "visualcppbuildtools_full.exe"
+            "VS2015BuildTools" = "vcppbuildtools_full.zip"
         }
         $ini.Add("Prerequisites", $Prerequisites)
 
         # Location of programs on 64 bit Windows
         $64bitPaths = @{
-            "NSISDir"           = "C:\Program Files (x86)\NSIS"
-            "NSISPluginsDirA"   = "C:\Program Files (x86)\NSIS\Plugins\x86-ansi"
-            "NSISPluginsDirU"   = "C:\Program Files (x86)\NSIS\Plugins\x86-unicode"
-            "VCforPythonDir"    = "C:\Program Files (x86)\Common Files\Microsoft\Visual C++ for Python\9.0"
-            "VCppBuildToolsDir" = "C:\Program Files (x86)\Microsoft Visual C++ Build Tools"
+            "NSISDir"              = "C:\Program Files (x86)\NSIS"
+            "NSISPluginsDirA"      = "C:\Program Files (x86)\NSIS\Plugins\x86-ansi"
+            "NSISPluginsDirU"      = "C:\Program Files (x86)\NSIS\Plugins\x86-unicode"
+            "VCforPythonDir"       = "C:\Program Files (x86)\Common Files\Microsoft\Visual C++ for Python\9.0"
+            "VS2015BuildToolsDir"  = "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\bin"
         }
         $ini.Add("64bitPaths", $64bitPaths)
 
         # Location of programs on 32 bit Windows
         $32bitPaths = @{
-            "NSISDir"           = "C:\Program Files\NSIS"
-            "NSISPluginsDirA"   = "C:\Program Files\NSIS\Plugins\x86-ansi"
-            "NSISPluginsDirU"   = "C:\Program Files\NSIS\Plugins\x86-unicode"
-            "VCforPythonDir"    = "C:\Program Files\Common Files\Microsoft\Visual C++ for Python\9.0"
-            "VCppBuildToolsDir" = "C:\Program Files\Microsoft Visual C++ Build Tools"
+            "NSISDir"              = "C:\Program Files\NSIS"
+            "NSISPluginsDirA"      = "C:\Program Files\NSIS\Plugins\x86-ansi"
+            "NSISPluginsDirU"      = "C:\Program Files\NSIS\Plugins\x86-unicode"
+            "VCforPythonDir"       = "C:\Program Files\Common Files\Microsoft\Visual C++ for Python\9.0"
+            "VS2015BuildToolsDir"  = "C:\Program Files\Microsoft Visual Studio 14.0\VC\bin"
         }
         $ini.Add("32bitPaths", $32bitPaths)
 

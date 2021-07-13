@@ -244,6 +244,8 @@ def _check_ver(pyver, op, wanted):
     wanted = distutils.version.LooseVersion(wanted)
     if not isinstance(pyver, str):
         pyver = str(pyver)
+    if not isinstance(wanted, str):
+        wanted = str(wanted)
     return getattr(operator, "__{}__".format(op))(pyver, wanted)
 
 
@@ -300,8 +302,9 @@ class WriteSaltVersion(Command):
         ):
             # Write the version file
             if getattr(self.distribution, "salt_version_hardcoded_path", None) is None:
-                print("This command is not meant to be called on it's own")
-                exit(1)
+                self.distribution.salt_version_hardcoded_path = SALT_VERSION_HARDCODED
+                sys.stderr.write("This command is not meant to be called on it's own\n")
+                sys.stderr.flush()
 
             if not self.distribution.with_salt_version:
                 salt_version = (
@@ -1013,9 +1016,30 @@ class SaltDistribution(distutils.dist.Distribution):
         with open(SALT_LONG_DESCRIPTION_FILE, encoding="utf-8") as f:
             self.long_description = f.read()
         self.long_description_content_type = "text/x-rst"
+        self.python_requires = ">=3.5"
+        self.classifiers = [
+            "Programming Language :: Python",
+            "Programming Language :: Cython",
+            "Programming Language :: Python :: 3",
+            "Programming Language :: Python :: 3 :: Only",
+            "Programming Language :: Python :: 3.5",
+            "Programming Language :: Python :: 3.6",
+            "Programming Language :: Python :: 3.7",
+            "Programming Language :: Python :: 3.8",
+            "Programming Language :: Python :: 3.9",
+            "Development Status :: 5 - Production/Stable",
+            "Environment :: Console",
+            "Intended Audience :: Developers",
+            "Intended Audience :: Information Technology",
+            "Intended Audience :: System Administrators",
+            "License :: OSI Approved :: Apache Software License",
+            "Operating System :: POSIX :: Linux",
+            "Topic :: System :: Clustering",
+            "Topic :: System :: Distributed Computing",
+        ]
         self.author = "Thomas S Hatch"
         self.author_email = "thatch45@gmail.com"
-        self.url = "http://saltstack.org"
+        self.url = "https://saltproject.io"
         self.cmdclass.update(
             {
                 "test": TestCommand,
@@ -1072,28 +1096,6 @@ class SaltDistribution(distutils.dist.Distribution):
         return modules
 
     # ----- Static Data -------------------------------------------------------------------------------------------->
-    @property
-    def _property_classifiers(self):
-        return [
-            "Programming Language :: Python",
-            "Programming Language :: Cython",
-            "Programming Language :: Python :: 3",
-            "Programming Language :: Python :: 3 :: Only",
-            "Programming Language :: Python :: 3.5",
-            "Programming Language :: Python :: 3.6",
-            "Programming Language :: Python :: 3.7",
-            "Programming Language :: Python :: 3.8",
-            "Development Status :: 5 - Production/Stable",
-            "Environment :: Console",
-            "Intended Audience :: Developers",
-            "Intended Audience :: Information Technology",
-            "Intended Audience :: System Administrators",
-            "License :: OSI Approved :: Apache Software License",
-            "Operating System :: POSIX :: Linux",
-            "Topic :: System :: Clustering",
-            "Topic :: System :: Distributed Computing",
-        ]
-
     @property
     def _property_dependency_links(self):
         return [

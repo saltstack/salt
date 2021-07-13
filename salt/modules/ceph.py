@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module to provide ceph control with salt.
 
@@ -6,8 +5,6 @@ Module to provide ceph control with salt.
 
 .. versionadded:: 2016.11.0
 """
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
@@ -25,7 +22,7 @@ except ImportError:
 
 def __virtual__():
     if HAS_CEPH_CFG is False:
-        msg = "ceph_cfg unavailable: {0} execution module cant be loaded ".format(
+        msg = "ceph_cfg unavailable: {} execution module cant be loaded ".format(
             __virtualname__
         )
         return False, msg

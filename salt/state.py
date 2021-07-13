@@ -15,6 +15,7 @@ The data sent to the state calls is as follows:
 import copy
 import datetime
 import fnmatch
+import importlib
 import logging
 import os
 import random
@@ -47,15 +48,10 @@ import salt.utils.url
 # Explicit late import to avoid circular import. DO NOT MOVE THIS.
 import salt.utils.yamlloader as yamlloader
 from salt.exceptions import CommandExecutionError, SaltRenderError, SaltReqTimeoutError
-
-# pylint: disable=import-error,no-name-in-module,redefined-builtin
-from salt.ext.six.moves import map, range, reload_module
 from salt.serializers.msgpack import deserialize as msgpack_deserialize
 from salt.serializers.msgpack import serialize as msgpack_serialize
 from salt.template import compile_template, compile_template_str
 from salt.utils.odict import DefaultOrderedDict, OrderedDict
-
-# pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 log = logging.getLogger(__name__)
 
@@ -233,7 +229,7 @@ def find_name(name, state, high):
     Note: if `state` is sls, then we are looking for all IDs that match the given SLS
     """
     ext_id = []
-    if name in high:
+    if name in high and state in high[name]:
         ext_id.append((name, state))
     # if we are requiring an entire SLS, then we need to add ourselves to everything in that SLS
     elif state == "sls":
@@ -1201,7 +1197,7 @@ class State:
             # process 'site-packages', the 'site' module needs to be reloaded in
             # order for the newly installed package to be importable.
             try:
-                reload_module(site)
+                importlib.reload(site)
             except RuntimeError:
                 log.error(
                     "Error encountered during module reload. Modules were not reloaded."
@@ -1624,8 +1620,8 @@ class State:
         ext = high.pop("__extend__")
         for ext_chunk in ext:
             for name, body in ext_chunk.items():
-                if name not in high:
-                    state_type = next(x for x in body if not x.startswith("__"))
+                state_type = next(x for x in body if not x.startswith("__"))
+                if name not in high or state_type not in high[name]:
                     # Check for a matching 'name' override in high data
                     ids = find_name(name, state_type, high)
                     if len(ids) != 1:
@@ -1654,18 +1650,14 @@ class State:
                     # high[name][state] is extended by run, both are lists
                     for arg in run:
                         update = False
-                        for hind in range(len(high[name][state])):
-                            if isinstance(arg, str) and isinstance(
-                                high[name][state][hind], str
-                            ):
+                        for hind, val in enumerate(high[name][state]):
+                            if isinstance(arg, str) and isinstance(val, str):
                                 # replacing the function, replace the index
                                 high[name][state].pop(hind)
                                 high[name][state].insert(hind, arg)
                                 update = True
                                 continue
-                            if isinstance(arg, dict) and isinstance(
-                                high[name][state][hind], dict
-                            ):
+                            if isinstance(arg, dict) and isinstance(val, dict):
                                 # It is an option, make sure the options match
                                 argfirst = next(iter(arg))
                                 if argfirst == next(iter(high[name][state][hind])):
@@ -2798,6 +2790,8 @@ class State:
             status = "onchanges"
         elif "change" in fun_stats:
             status = "change"
+        elif "onfail" in fun_stats:
+            status = "onfail"
         else:
             status = "met"
 
@@ -3445,7 +3439,7 @@ class LazyAvailStates:
     def items(self):
         self._fill()
         ret = []
-        for saltenv, states in self._avail:
+        for saltenv, states in self._avail.items():
             ret.append((saltenv, self.__getitem__(saltenv)))
         return ret
 
@@ -4675,6 +4669,15 @@ class HighState(BaseHighState):
             return cls.stack[-1]
         except IndexError:
             return None
+
+    def destroy(self):
+        self.client.destroy()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_):
+        self.destroy()
 
 
 class MasterState(State):

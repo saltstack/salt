@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 .. versionadded:: 2014.7.0
 
@@ -12,8 +11,6 @@ to another location::
 
     sqlite_queue_dir: /home/myuser/salt/master/queues
 """
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import glob
 import logging
@@ -23,9 +20,6 @@ import sqlite3
 
 import salt.utils.json
 from salt.exceptions import SaltInvocationError
-
-# Import 3rd-party libs
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -44,7 +38,7 @@ def _conn(queue):
     Return an sqlite connection
     """
     queue_dir = __opts__["sqlite_queue_dir"]
-    db = os.path.join(queue_dir, "{0}.db".format(queue))
+    db = os.path.join(queue_dir, "{}.db".format(queue))
     log.debug("Connecting to: %s", db)
 
     con = sqlite3.connect(db)
@@ -67,9 +61,7 @@ def _list_tables(con):
 def _create_table(con, queue):
     with con:
         cur = con.cursor()
-        cmd = "CREATE TABLE {0}(id INTEGER PRIMARY KEY, " "name TEXT UNIQUE)".format(
-            queue
-        )
+        cmd = "CREATE TABLE {}(id INTEGER PRIMARY KEY, name TEXT UNIQUE)".format(queue)
         log.debug("SQL Query: %s", cmd)
         cur.execute(cmd)
     return True
@@ -82,7 +74,7 @@ def _list_items(queue):
     con = _conn(queue)
     with con:
         cur = con.cursor()
-        cmd = "SELECT name FROM {0}".format(queue)
+        cmd = "SELECT name FROM {}".format(queue)
         log.debug("SQL Query: %s", cmd)
         cur.execute(cmd)
         contents = cur.fetchall()
@@ -144,19 +136,17 @@ def insert(queue, items):
     con = _conn(queue)
     with con:
         cur = con.cursor()
-        if isinstance(items, six.string_types):
+        if isinstance(items, str):
             items = _quote_escape(items)
-            cmd = """INSERT INTO {0}(name) VALUES('{1}')""".format(queue, items)
+            cmd = "INSERT INTO {}(name) VALUES('{}')".format(queue, items)
             log.debug("SQL Query: %s", cmd)
             try:
                 cur.execute(cmd)
             except sqlite3.IntegrityError as esc:
-                return "Item already exists in this queue. " "sqlite error: {0}".format(
-                    esc
-                )
+                return "Item already exists in this queue. sqlite error: {}".format(esc)
         if isinstance(items, list):
             items = [_quote_escape(el) for el in items]
-            cmd = "INSERT INTO {0}(name) VALUES(?)".format(queue)
+            cmd = "INSERT INTO {}(name) VALUES(?)".format(queue)
             log.debug("SQL Query: %s", cmd)
             newitems = []
             for item in items:
@@ -167,21 +157,17 @@ def insert(queue, items):
             except sqlite3.IntegrityError as esc:
                 return (
                     "One or more items already exists in this queue. "
-                    "sqlite error: {0}".format(esc)
+                    "sqlite error: {}".format(esc)
                 )
         if isinstance(items, dict):
             items = salt.utils.json.dumps(items).replace('"', "'")
             items = _quote_escape(items)
-            cmd = str("""INSERT INTO {0}(name) VALUES('{1}')""").format(
-                queue, items
-            )  # future lint: disable=blacklisted-function
+            cmd = "INSERT INTO {}(name) VALUES('{}')".format(queue, items)
             log.debug("SQL Query: %s", cmd)
             try:
                 cur.execute(cmd)
             except sqlite3.IntegrityError as esc:
-                return "Item already exists in this queue. " "sqlite error: {0}".format(
-                    esc
-                )
+                return "Item already exists in this queue. sqlite error: {}".format(esc)
     return True
 
 
@@ -192,15 +178,15 @@ def delete(queue, items):
     con = _conn(queue)
     with con:
         cur = con.cursor()
-        if isinstance(items, six.string_types):
+        if isinstance(items, str):
             items = _quote_escape(items)
-            cmd = """DELETE FROM {0} WHERE name = '{1}'""".format(queue, items)
+            cmd = "DELETE FROM {} WHERE name = '{}'".format(queue, items)
             log.debug("SQL Query: %s", cmd)
             cur.execute(cmd)
             return True
         if isinstance(items, list):
             items = [_quote_escape(el) for el in items]
-            cmd = "DELETE FROM {0} WHERE name = ?".format(queue)
+            cmd = "DELETE FROM {} WHERE name = ?".format(queue)
             log.debug("SQL Query: %s", cmd)
             newitems = []
             for item in items:
@@ -210,9 +196,7 @@ def delete(queue, items):
         if isinstance(items, dict):
             items = salt.utils.json.dumps(items).replace('"', "'")
             items = _quote_escape(items)
-            cmd = ("""DELETE FROM {0} WHERE name = '{1}'""").format(
-                queue, items
-            )  # future lint: disable=blacklisted-function
+            cmd = "DELETE FROM {} WHERE name = '{}'".format(queue, items)
             log.debug("SQL Query: %s", cmd)
             cur.execute(cmd)
             return True
@@ -223,16 +207,16 @@ def pop(queue, quantity=1, is_runner=False):
     """
     Pop one or more or all items from the queue return them.
     """
-    cmd = "SELECT name FROM {0}".format(queue)
+    cmd = "SELECT name FROM {}".format(queue)
     if quantity != "all":
         try:
             quantity = int(quantity)
         except ValueError as exc:
-            error_txt = (
-                'Quantity must be an integer or "all".\n' 'Error: "{0}".'.format(exc)
+            error_txt = 'Quantity must be an integer or "all".\nError: "{}".'.format(
+                exc
             )
             raise SaltInvocationError(error_txt)
-        cmd = "".join([cmd, " LIMIT {0}".format(quantity)])
+        cmd = "".join([cmd, " LIMIT {}".format(quantity)])
     log.debug("SQL Query: %s", cmd)
     con = _conn(queue)
     items = []
@@ -243,9 +227,7 @@ def pop(queue, quantity=1, is_runner=False):
             items = [item[0] for item in result]
             itemlist = '","'.join(items)
             _quote_escape(itemlist)
-            del_cmd = """DELETE FROM {0} WHERE name IN ("{1}")""".format(
-                queue, itemlist
-            )
+            del_cmd = 'DELETE FROM {} WHERE name IN ("{}")'.format(queue, itemlist)
 
             log.debug("SQL Query: %s", del_cmd)
 
