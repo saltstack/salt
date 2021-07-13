@@ -19,7 +19,6 @@ import shutil
 import ssl
 import stat
 import sys
-import tempfile
 from functools import partial, wraps
 from unittest import TestCase  # pylint: disable=blacklisted-module
 
