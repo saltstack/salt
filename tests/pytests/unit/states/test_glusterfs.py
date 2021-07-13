@@ -64,9 +64,9 @@ def test_peered():
 
                 ret.update({"result": False})
 
-                comt = (
-                    "Failed to peer with {0}," + " please check logs for errors"
-                ).format(name)
+                comt = "Failed to peer with {}, please check logs for errors".format(
+                    name
+                )
                 ret.update({"comment": comt, "changes": {}})
                 assert glusterfs.peered(name) == ret
 
@@ -128,7 +128,7 @@ def test_volume_present():
             ret.update({"comment": comt, "result": None})
             assert glusterfs.volume_present(name, bricks, start=False) == ret
 
-            comt = ("Volume {0} already exists" + " and will be started").format(name)
+            comt = "Volume {} already exists and will be started".format(name)
             ret.update({"comment": comt, "result": None})
             assert glusterfs.volume_present(name, bricks, start=True) == ret
 
@@ -137,7 +137,7 @@ def test_volume_present():
             ret.update({"comment": comt, "result": None})
             assert glusterfs.volume_present(name, bricks, start=False) == ret
 
-            comt = ("Volume {0} will be created" + " and started").format(name)
+            comt = "Volume {} will be created and started".format(name)
             ret.update({"comment": comt, "result": None})
             assert glusterfs.volume_present(name, bricks, start=True) == ret
 
