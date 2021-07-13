@@ -4670,6 +4670,15 @@ class HighState(BaseHighState):
         except IndexError:
             return None
 
+    def destroy(self):
+        self.client.destroy()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_):
+        self.destroy()
+
 
 class MasterState(State):
     """
