@@ -896,15 +896,13 @@ def linux_interfaces():
     ifconfig_path = None if ip_path else salt.utils.path.which("ifconfig")
     if ip_path:
         cmd1 = subprocess.Popen(
-            "{} link show".format(ip_path),
-            shell=True,
+            [ip_path, "link", "show"],
             close_fds=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
         ).communicate()[0]
         cmd2 = subprocess.Popen(
-            "{} addr show".format(ip_path),
-            shell=True,
+            [ip_path, "addr", "show"],
             close_fds=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
@@ -916,10 +914,7 @@ def linux_interfaces():
         )
     elif ifconfig_path:
         cmd = subprocess.Popen(
-            "{} -a".format(ifconfig_path),
-            shell=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
+            [ifconfig_path, "-a"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
         ).communicate()[0]
         ifaces = _interfaces_ifconfig(salt.utils.stringutils.to_str(cmd))
     return ifaces
@@ -997,10 +992,7 @@ def netbsd_interfaces():
 
     ifconfig_path = salt.utils.path.which("ifconfig")
     cmd = subprocess.Popen(
-        "{} -a".format(ifconfig_path),
-        shell=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
+        [ifconfig_path, "-a"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
     ).communicate()[0]
     return _netbsd_interfaces_ifconfig(salt.utils.stringutils.to_str(cmd))
 
@@ -1140,8 +1132,10 @@ def _hw_addr_aix(iface):
     MAC address not available in through interfaces
     """
     cmd = subprocess.Popen(
-        "entstat -d {} | grep 'Hardware Address'".format(iface),
-        shell=True,
+        ["grep", "Hardware Address"],
+        stdin=subprocess.Popen(
+            ["entstat", "-d", iface], stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+        ).stdout,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
     ).communicate()[0]
