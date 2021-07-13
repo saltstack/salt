@@ -66,7 +66,7 @@ except ImportError:
     try:
         from Cryptodome.Cipher import PKCS1_OAEP
     except ImportError:
-        from Crypto.Cipher import PKCS1_OAEP
+        from Crypto.Cipher import PKCS1_OAEP  # nosec
 
 if six.PY3 and salt.utils.platform.is_windows():
     USE_LOAD_BALANCER = True

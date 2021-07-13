@@ -74,13 +74,17 @@ if not HAS_M2:
 
 if not HAS_M2 and not HAS_CDOME:
     try:
-        from Crypto.Cipher import AES, PKCS1_OAEP
-        from Crypto.Hash import SHA
-        from Crypto.PublicKey import RSA
-        from Crypto.Signature import PKCS1_v1_5
+        from Crypto.Cipher import (  # nosec
+            AES,
+            PKCS1_OAEP,
+        )
+        from Crypto.Hash import SHA  # nosec
+        from Crypto.PublicKey import RSA  # nosec
+        from Crypto.Signature import PKCS1_v1_5  # nosec
 
         # let this be imported, if possible
-        import Crypto.Random  # pylint: disable=W0611
+        import Crypto.Random  # nosec pylint: disable=unused-import
+
     except ImportError:
         # No need for crypt in local mode
         pass
