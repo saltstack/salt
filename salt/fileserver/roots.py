@@ -172,7 +172,7 @@ def update():
                         mtime_map_path,
                         line,
                     )
-    except OSError:
+    except (OSError, UnicodeDecodeError):
         pass
 
     # compare the maps, set changed to the return value
@@ -266,6 +266,7 @@ def file_hash(load, fnd):
         except (
             os.error,
             OSError,
+            UnicodeDecodeError,
         ):  # Can't use Python select() because we need Windows support
             log.debug("Fileserver encountered lock when reading cache file. Retrying.")
             # Delete the file since its incomplete (either corrupted or incomplete)
