@@ -132,10 +132,6 @@ def test_contents_pillar_doesnt_add_more_newlines():
     # make sure the newline
     pillar_value = "i am the pillar value{}".format(os.linesep)
 
-    run_contents_pillar(pillar_value, expected=pillar_value)
-
-
-def run_contents_pillar(pillar_value, expected):
     returner = MagicMock(return_value=None)
     path = "/tmp/foo"
     pillar_path = "foo:bar"
@@ -165,7 +161,7 @@ def run_contents_pillar(pillar_value, expected):
         # If the test is failing, check the position of the "contents" param
         # in the manage_file() function in salt/modules/file.py, the fix is
         # likely as simple as updating the 2nd index below.
-        assert expected == returner.call_args[0][-5]
+        assert returner.call_args[0][-5] == pillar_value
 
 
 # 'exists' function tests: 1

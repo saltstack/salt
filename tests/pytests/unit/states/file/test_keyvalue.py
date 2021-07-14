@@ -8,11 +8,6 @@ import salt.serializers.plist as plistserializer
 import salt.serializers.python as pythonserializer
 import salt.serializers.yaml as yamlserializer
 import salt.states.file as filestate
-import salt.utils.files
-import salt.utils.json
-import salt.utils.platform
-import salt.utils.win_functions
-import salt.utils.yaml
 from tests.support.helpers import dedent
 
 log = logging.getLogger(__name__)
@@ -44,27 +39,24 @@ def test_file_keyvalue_key_values(tmp_path):
     """
     test file.keyvalue when using key_values kwarg
     """
-    content = dedent(
+    contents = dedent(
         """\
         #PermitRootLogin prohibit-password
         #StrictMode yes
         """
     )
-    tempfile = str(tmp_path / "tempfile")
+    with pytest.helpers.temp_file(
+        "tempfile", contents=contents, directory=tmp_path
+    ) as tempfile:
+        ret = filestate.keyvalue(
+            name=str(tempfile),
+            key_values=collections.OrderedDict(PermitRootLogin="yes"),
+            separator=" ",
+            uncomment="#",
+            key_ignore_case=True,
+        )
 
-    with salt.utils.files.fopen(tempfile, "w+") as fp_:
-        fp_.write(content)
-
-    ret = filestate.keyvalue(
-        name=tempfile,
-        key_values=collections.OrderedDict(PermitRootLogin="yes"),
-        separator=" ",
-        uncomment="#",
-        key_ignore_case=True,
-    )
-
-    with salt.utils.files.fopen(tempfile, "r") as fp_:
-        f_contents = fp_.read()
+        f_contents = tempfile.read_text()
         assert "PermitRootLogin yes" in f_contents
         assert "#StrictMode yes" in f_contents
 
@@ -73,31 +65,28 @@ def test_file_keyvalue_empty(tmp_path):
     """
     test file.keyvalue when key_values is empty
     """
-    content = dedent(
+    contents = dedent(
         """\
         #PermitRootLogin prohibit-password
         #StrictMode yes
         """
     )
-    tempfile = str(tmp_path / "tempfile")
+    with pytest.helpers.temp_file(
+        "tempfile", contents=contents, directory=tmp_path
+    ) as tempfile:
+        ret = filestate.keyvalue(
+            name=str(tempfile),
+            key_values={},
+            separator=" ",
+            uncomment="#",
+            key_ignore_case=True,
+        )
 
-    with salt.utils.files.fopen(tempfile, "w+") as fp_:
-        fp_.write(content)
-
-    ret = filestate.keyvalue(
-        name=tempfile,
-        key_values={},
-        separator=" ",
-        uncomment="#",
-        key_ignore_case=True,
-    )
-
-    assert (
-        ret["comment"]
-        == "file.keyvalue key and value not supplied and key_values is empty"
-    )
-    with salt.utils.files.fopen(tempfile, "r") as fp_:
-        f_contents = fp_.read()
+        assert (
+            ret["comment"]
+            == "file.keyvalue key and value not supplied and key_values is empty"
+        )
+        f_contents = tempfile.read_text()
         assert "PermitRootLogin yes" not in f_contents
         assert "#StrictMode yes" in f_contents
 
@@ -106,30 +95,27 @@ def test_file_keyvalue_not_dict(tmp_path):
     """
     test file.keyvalue when key_values not a dict
     """
-    content = dedent(
+    contents = dedent(
         """\
         #PermitRootLogin prohibit-password
         #StrictMode yes
         """
     )
-    tempfile = str(tmp_path / "tempfile")
+    with pytest.helpers.temp_file(
+        "tempfile", contents=contents, directory=tmp_path
+    ) as tempfile:
+        ret = filestate.keyvalue(
+            name=str(tempfile),
+            key_values=["PermiteRootLogin", "yes"],
+            separator=" ",
+            uncomment="#",
+            key_ignore_case=True,
+        )
 
-    with salt.utils.files.fopen(tempfile, "w+") as fp_:
-        fp_.write(content)
-
-    ret = filestate.keyvalue(
-        name=tempfile,
-        key_values=["PermiteRootLogin", "yes"],
-        separator=" ",
-        uncomment="#",
-        key_ignore_case=True,
-    )
-
-    assert (
-        ret["comment"]
-        == "file.keyvalue key and value not supplied and key_values is not a dictionary"
-    )
-    with salt.utils.files.fopen(tempfile, "r") as fp_:
-        f_contents = fp_.read()
+        assert (
+            ret["comment"]
+            == "file.keyvalue key and value not supplied and key_values is not a dictionary"
+        )
+        f_contents = tempfile.read_text()
         assert "PermitRootLogin yes" not in f_contents
         assert "#StrictMode yes" in f_contents

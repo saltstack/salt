@@ -163,51 +163,43 @@ def test_copy():
             ):
 
                 comt = 'Copied "{}" to "{}"'.format(source, name)
-                with patch.dict(filestate.__opts__, {"user": "salt"}):
-                    with patch.object(os.path, "isdir", mock_t):
-                        with patch.object(os.path, "lexists", mock_f):
-                            with patch.dict(filestate.__opts__, {"test": False}):
-                                with patch.dict(
-                                    filestate.__salt__, {"file.remove": mock_io}
-                                ):
-                                    with patch.object(shutil, "copytree", MagicMock()):
-                                        group = None
-                                        ret.update(
-                                            {
-                                                "comment": comt,
-                                                "result": True,
-                                                "changes": {
-                                                    "/tmp/salt": "/tmp/salt/salt"
-                                                },
-                                            }
-                                        )
-                                        res = filestate.copy_(
-                                            name, source, group=group, preserve=False
-                                        )
-                                        assert res == ret
+                with patch.dict(filestate.__opts__, {"user": "salt"}), patch.object(
+                    os.path, "isdir", mock_t
+                ), patch.object(os.path, "lexists", mock_f), patch.dict(
+                    filestate.__opts__, {"test": False}
+                ), patch.dict(
+                    filestate.__salt__, {"file.remove": mock_io}
+                ), patch.object(
+                    shutil, "copytree", MagicMock()
+                ):
+                    group = None
+                    ret.update(
+                        {
+                            "comment": comt,
+                            "result": True,
+                            "changes": {"/tmp/salt": "/tmp/salt/salt"},
+                        }
+                    )
+                    res = filestate.copy_(name, source, group=group, preserve=False)
+                    assert res == ret
 
                 comt = 'Copied "{}" to "{}"'.format(source, name)
-                with patch.dict(filestate.__opts__, {"user": "salt"}):
-                    with patch.object(
-                        os.path, "isdir", MagicMock(side_effect=[False, True, False])
-                    ):
-                        with patch.object(os.path, "lexists", mock_f):
-                            with patch.dict(filestate.__opts__, {"test": False}):
-                                with patch.dict(
-                                    filestate.__salt__, {"file.remove": mock_io}
-                                ):
-                                    with patch.object(shutil, "copy", MagicMock()):
-                                        group = None
-                                        ret.update(
-                                            {
-                                                "comment": comt,
-                                                "result": True,
-                                                "changes": {
-                                                    "/tmp/salt": "/tmp/salt/salt"
-                                                },
-                                            }
-                                        )
-                                        res = filestate.copy_(
-                                            name, source, group=group, preserve=False
-                                        )
-                                        assert res == ret
+                with patch.dict(filestate.__opts__, {"user": "salt"}), patch.object(
+                    os.path, "isdir", MagicMock(side_effect=[False, True, False])
+                ), patch.object(os.path, "lexists", mock_f), patch.dict(
+                    filestate.__opts__, {"test": False}
+                ), patch.dict(
+                    filestate.__salt__, {"file.remove": mock_io}
+                ), patch.object(
+                    shutil, "copy", MagicMock()
+                ):
+                    group = None
+                    ret.update(
+                        {
+                            "comment": comt,
+                            "result": True,
+                            "changes": {"/tmp/salt": "/tmp/salt/salt"},
+                        }
+                    )
+                    res = filestate.copy_(name, source, group=group, preserve=False)
+                    assert res == ret

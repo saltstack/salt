@@ -42,14 +42,17 @@ def configure_loader_modules():
 
 
 @pytest.mark.skip_on_windows(reason="Do not run on Windows")
-def test_hardlink():
+def test_hardlink(tmp_path):
     """
     Test to create a hardlink.
     """
 
-    name = os.path.join(os.sep, "tmp", "testfile.txt")
-    target = salt.utils.files.mkstemp()
-    test_dir = os.path.join(os.sep, "tmp")
+    name = str(tmp_path / "testfile.txt")
+    target = str(tmp_path / "target.txt")
+    with salt.utils.files.fopen(target, "w") as fp:
+        fp.write("")
+
+    test_dir = str(tmp_path)
     user, group = "salt", "saltstack"
 
     def return_val(**kwargs):
