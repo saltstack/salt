@@ -2404,6 +2404,8 @@ class Minion(MinionBase):
         self.schedule.functions = self.functions
         self.schedule.returners = self.returners
 
+        self.beacons_refresh()
+
     def beacons_refresh(self):
         """
         Refresh the functions and returners.
