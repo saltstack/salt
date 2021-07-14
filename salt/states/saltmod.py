@@ -667,13 +667,13 @@ def wait_for_event(name, id_list, event_id="id", timeout=300, node="master"):
 
                         val_list = [id for id in id_list if id in val]
 
-                        if len(val_list) == 0:
+                        if not val_list:
                             log.trace(
                                 "wait_for_event: Event identifier '%s' not in "
                                 "id_list; skipping",
                                 event_id,
                             )
-                        elif len(val_list) > 0:
+                        elif val_list:
                             minions_seen = ret["changes"].setdefault("minions_seen", [])
                             for found_val in val_list:
                                 id_list.remove(found_val)
