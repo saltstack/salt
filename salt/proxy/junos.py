@@ -110,6 +110,7 @@ def init(opts):
         "username",
         "password",
         "passwd",
+        "port",
         "gather_facts",
         "mode",
         "baud",
@@ -127,7 +128,7 @@ def init(opts):
     for arg in optional_args:
         if arg in proxy_keys:
             args[arg] = opts["proxy"][arg]
-    log.debug("Args: {}".format(args))
+    log.debug("Args: %s", args)
     thisproxy["conn"] = jnpr.junos.Device(**args)
     try:
         thisproxy["conn"].open()
@@ -138,7 +139,7 @@ def init(opts):
         ConnectTimeoutError,
         ConnectError,
     ) as ex:
-        log.error("{} : not able to initiate connection to the device".format(str(ex)))
+        log.error("%s : not able to initiate connection to the device", ex)
         thisproxy["initialized"] = False
         return
 
@@ -154,12 +155,12 @@ def init(opts):
     try:
         thisproxy["conn"].bind(cu=jnpr.junos.utils.config.Config)
     except Exception as ex:  # pylint: disable=broad-except
-        log.error("Bind failed with Config class due to: {}".format(str(ex)))
+        log.error("Bind failed with Config class due to: %s", ex)
 
     try:
         thisproxy["conn"].bind(sw=jnpr.junos.utils.sw.SW)
     except Exception as ex:  # pylint: disable=broad-except
-        log.error("Bind failed with SW class due to: {}".format(str(ex)))
+        log.error("Bind failed with SW class due to: %s", ex)
     thisproxy["initialized"] = True
 
 
@@ -276,7 +277,7 @@ def shutdown(opts):
     This is called when the proxy-minion is exiting to make sure the
     connection to the device is closed cleanly.
     """
-    log.debug("Proxy module {} shutting down!!".format(opts["id"]))
+    log.debug("Proxy module %s shutting down!!", opts["id"])
     try:
         thisproxy["conn"].close()
 

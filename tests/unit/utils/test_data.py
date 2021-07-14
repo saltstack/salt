@@ -2,14 +2,11 @@
 Tests for salt.utils.data
 """
 
-
+import builtins
 import logging
 
 import salt.utils.data
 import salt.utils.stringutils
-from salt.ext.six.moves import (  # pylint: disable=import-error,redefined-builtin
-    builtins,
-)
 from salt.utils.odict import OrderedDict
 from tests.support.mock import patch
 from tests.support.unit import LOREM_IPSUM, TestCase
@@ -693,9 +690,7 @@ class DataTestCase(TestCase):
     def test_stringify(self):
         self.assertRaises(TypeError, salt.utils.data.stringify, 9)
         self.assertEqual(
-            salt.utils.data.stringify(
-                ["one", "two", "three", 4, 5]
-            ),  # future lint: disable=blacklisted-function
+            salt.utils.data.stringify(["one", "two", "three", 4, 5]),
             ["one", "two", "three", "4", "5"],
         )
 

@@ -1,15 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 GNOME implementations
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import re
 
-# Import Salt libs
 import salt.utils.path
 
 try:
@@ -20,7 +16,6 @@ except ImportError:
     HAS_PWD = False
 
 
-# Import 3rd-party libs
 try:
     from gi.repository import Gio, GLib  # pylint: disable=W0611
 
@@ -50,7 +45,7 @@ def __virtual__():
     )
 
 
-class _GSettings(object):
+class _GSettings:
     def __init__(self, user, schema, key):
         self.SCHEMA = schema
         self.KEY = key
@@ -83,7 +78,7 @@ class _GSettings(object):
 
         cmd = self.gsetting_command + ["get", str(self.SCHEMA), str(self.KEY)]
         environ = {}
-        environ["XDG_RUNTIME_DIR"] = "/run/user/{0}".format(uid)
+        environ["XDG_RUNTIME_DIR"] = "/run/user/{}".format(uid)
         result = __salt__["cmd.run_all"](
             cmd, runas=user, env=environ, python_shell=False
         )
@@ -108,12 +103,12 @@ class _GSettings(object):
             log.info("User does not exist")
             result = {}
             result["retcode"] = 1
-            result["stdout"] = "User {0} does not exist".format(user)
+            result["stdout"] = "User {} does not exist".format(user)
             return result
 
         cmd = self.gsetting_command + ["set", self.SCHEMA, self.KEY, value]
         environ = {}
-        environ["XDG_RUNTIME_DIR"] = "/run/user/{0}".format(uid)
+        environ["XDG_RUNTIME_DIR"] = "/run/user/{}".format(uid)
         result = __salt__["cmd.run_all"](
             cmd, runas=user, env=environ, python_shell=False
         )

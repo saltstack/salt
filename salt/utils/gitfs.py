@@ -9,6 +9,7 @@ import errno
 import fnmatch
 import glob
 import hashlib
+import io
 import logging
 import os
 import shlex
@@ -35,7 +36,6 @@ import salt.utils.user
 import salt.utils.versions
 from salt.config import DEFAULT_MASTER_OPTS as _DEFAULT_MASTER_OPTS
 from salt.exceptions import FileserverConfigError, GitLockError, get_error_message
-from salt.ext import six
 from salt.utils.event import tagify
 from salt.utils.odict import OrderedDict
 from salt.utils.process import os_is_running as pid_exists
@@ -1397,7 +1397,7 @@ class GitPython(GitProvider):
             file_path = add_mountpoint(relpath(file_blob.path))
             files.add(file_path)
             if stat.S_ISLNK(file_blob.mode):
-                stream = six.BytesIO()
+                stream = io.BytesIO()
                 file_blob.stream_data(stream)
                 stream.seek(0)
                 link_tgt = salt.utils.stringutils.to_str(stream.read())
@@ -1427,7 +1427,7 @@ class GitPython(GitProvider):
                     # this path's object ID will be the target of the
                     # symlink. Follow the symlink and set path to the
                     # location indicated in the blob data.
-                    stream = six.BytesIO()
+                    stream = io.BytesIO()
                     file_blob.stream_data(stream)
                     stream.seek(0)
                     link_tgt = salt.utils.stringutils.to_str(stream.read())
@@ -3048,7 +3048,7 @@ class GitFS(GitBase):
         with salt.utils.files.fopen(fpath, "rb") as fp_:
             fp_.seek(load["loc"])
             data = fp_.read(self.opts["file_buffer_size"])
-            if data and six.PY3 and not salt.utils.files.is_binary(fpath):
+            if data and not salt.utils.files.is_binary(fpath):
                 data = data.decode(__salt_system_encoding__)
             if gzip and data:
                 data = salt.utils.gzip_util.compress(data, gzip)

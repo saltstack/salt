@@ -409,9 +409,9 @@ def _format_env_vars(env_vars):
         if isinstance(env_vars, dict):
             for key, val in env_vars.items():
                 if not isinstance(key, str):
-                    key = str(key)  # future lint: disable=blacklisted-function
+                    key = str(key)
                 if not isinstance(val, str):
-                    val = str(val)  # future lint: disable=blacklisted-function
+                    val = str(val)
                 ret[key] = val
         else:
             raise CommandExecutionError(
@@ -1399,7 +1399,7 @@ def list_upgrades(bin_env=None, user=None, cwd=None):
             if match:
                 name, version_ = match.groups()
             else:
-                logger.error("Can't parse line '{}'".format(line))
+                logger.error("Can't parse line %r", line)
                 continue
             packages[name] = version_
 

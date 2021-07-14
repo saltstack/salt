@@ -1,15 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 Read lm-sensors
 
 .. versionadded:: 2014.1.3
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 
-# import Salt libs
 import salt.utils.path
 
 log = logging.getLogger(__name__)
@@ -46,7 +42,7 @@ def sense(chip, fahrenheit=False):
     if fahrenheit is True:
         extra_args = "-f"
     sensors = __salt__["cmd.run"](
-        "/usr/bin/sensors {0} {1}".format(chip, extra_args), python_shell=False
+        "/usr/bin/sensors {} {}".format(chip, extra_args), python_shell=False
     ).splitlines()
     ret = {}
     for sensor in sensors:
