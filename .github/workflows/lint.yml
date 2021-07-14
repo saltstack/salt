@@ -41,6 +41,9 @@ jobs:
               - noxfile.py
               - salt/**/*.py
               - tasks/**/*.py
+          rcfile:
+            - added|modified:
+              - .pylintrc
 
     - name: Install Python Requirements
       env:
@@ -56,7 +59,7 @@ jobs:
         nox --forcecolor -e lint-salt -- ${{ join(fromJSON(steps.changed-files.outputs.salt_files), ' ') }}
 
     - name: Lint ALL Files
-      if: steps.changed-files.outputs.salt == 'true'
+      if: steps.changed-files.outputs.salt == 'true' || steps.changed-files.outputs.rcfile == 'true'
       env:
         SKIP_REQUIREMENTS_INSTALL: YES
       run: |
@@ -97,6 +100,9 @@ jobs:
           tests:
             - added|modified:
               - tests/**/*.py
+          rcfile:
+            - added|modified:
+              - .pylintrc
 
     - name: Install Python Requirements
       env:
@@ -112,7 +118,7 @@ jobs:
         nox --forcecolor -e lint-tests -- ${{ join(fromJSON(steps.changed-files.outputs.tests_files), ' ') }}
 
     - name: Lint ALL Files
-      if: steps.changed-files.outputs.tests == 'true'
+      if: steps.changed-files.outputs.tests == 'true' || steps.changed-files.outputs.rcfile == 'true'
       env:
         SKIP_REQUIREMENTS_INSTALL: YES
       run: |

@@ -302,8 +302,9 @@ class WriteSaltVersion(Command):
         ):
             # Write the version file
             if getattr(self.distribution, "salt_version_hardcoded_path", None) is None:
-                print("This command is not meant to be called on it's own")
-                exit(1)
+                self.distribution.salt_version_hardcoded_path = SALT_VERSION_HARDCODED
+                sys.stderr.write("This command is not meant to be called on it's own\n")
+                sys.stderr.flush()
 
             if not self.distribution.with_salt_version:
                 salt_version = (

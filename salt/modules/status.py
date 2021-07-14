@@ -1793,9 +1793,9 @@ def proxy_reconnect(proxy_name, opts=None):
         # especially
         minion_id = opts.get("proxyid", "") or opts.get("id", "")
         log.info(
-            "{} ({} proxy) is rebooting or shutting down. Don't probe connection.".format(
-                minion_id, proxy_name
-            )
+            "%s (%s proxy) is rebooting or shutting down. Don't probe connection.",
+            minion_id,
+            proxy_name,
         )
         return True
 
