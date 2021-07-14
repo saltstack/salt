@@ -73,7 +73,7 @@ def post_master_init(self, master):
         # when compile_pillar is run.
         self.opts["master"] = master
 
-        tag = "deltaproxy/start"
+        tag = "salt/deltaproxy/start"
         self._fire_master(tag=tag)
 
     if "proxy" not in self.opts["pillar"] and "proxy" not in self.opts:
@@ -159,9 +159,11 @@ def post_master_init(self, master):
         salt.engines.start_engines, self.opts, self.process_manager, proxy=self.proxy
     )
 
+    proxy_init_func_name = "{}.init".format(fq_proxyname)
+    proxy_shutdown_func_name = "{}.shutdown".format(fq_proxyname)
     if (
-        "{}.init".format(fq_proxyname) not in self.proxy
-        or "{}.shutdown".format(fq_proxyname) not in self.proxy
+        proxy_init_func_name not in self.proxy
+        or proxy_shutdown_func_name not in self.proxy
     ):
         errmsg = (
             "Proxymodule {} is missing an init() or a shutdown() or both. "
@@ -174,7 +176,7 @@ def post_master_init(self, master):
     self.module_executors = self.proxy.get(
         "{}.module_executors".format(fq_proxyname), lambda: []
     )()
-    proxy_init_fn = self.proxy[fq_proxyname + ".init"]
+    proxy_init_fn = self.proxy[proxy_init_func_name]
     proxy_init_fn(self.opts)
 
     self.opts["grains"] = salt.loader.grains(self.opts, proxy=self.proxy)
