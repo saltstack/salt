@@ -226,11 +226,10 @@ salt/modules/*_sysctl.py:
   - integration.modules.test_sysctl
 
 salt/netapi/rest_cherrypy/*:
-  - pytests.integration.netapi.test_client
-  - pytests.integration.netapi.test_ssh_client
   - pytests.functional.netapi.rest_cherrypy.test_auth
   - pytests.functional.netapi.rest_cherrypy.test_auth_pam
   - pytests.functional.netapi.rest_cherrypy.test_cors
+  - pytests.functional.netapi.rest_cherrypy.test_external_auth_syntax
   - pytests.functional.netapi.rest_cherrypy.test_in_formats
   - pytests.functional.netapi.rest_cherrypy.test_out_formats
   - pytests.integration.netapi.rest_cherrypy.test_arg_kwarg
@@ -238,14 +237,15 @@ salt/netapi/rest_cherrypy/*:
   - pytests.integration.netapi.rest_cherrypy.test_jobs
   - pytests.integration.netapi.rest_cherrypy.test_run
   - pytests.integration.netapi.rest_cherrypy.test_webhook_disable_auth
+  - pytests.integration.netapi.test_client
+  - pytests.integration.netapi.test_ssh_client
 
 salt/netapi/rest_tornado/*:
   - integration.netapi.rest_tornado.test_app
-  - pytests.integration.netapi.test_client
-  - pytests.integration.netapi.test_ssh_client
   - pytests.functional.netapi.rest_tornado.test_auth_handler
   - pytests.functional.netapi.rest_tornado.test_base_api_handler
   - pytests.functional.netapi.rest_tornado.test_event_listener
+  - pytests.functional.netapi.rest_tornado.test_external_auth_syntax
   - pytests.functional.netapi.rest_tornado.test_utils
   - pytests.functional.netapi.rest_tornado.test_webhooks_handler
   - pytests.functional.netapi.rest_tornado.test_websockets_handler
@@ -254,6 +254,8 @@ salt/netapi/rest_tornado/*:
   - pytests.integration.netapi.rest_tornado.test_minions_api_handler
   - pytests.integration.netapi.rest_tornado.test_root_handler
   - pytests.integration.netapi.rest_tornado.test_run_api_handler
+  - pytests.integration.netapi.test_client
+  - pytests.integration.netapi.test_ssh_client
 
 salt/output/*:
   - integration.output.test_output
