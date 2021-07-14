@@ -6,7 +6,9 @@ from salt.exceptions import CommandExecutionError
 def install_npm(sminion):
     try:
         sminion.functions.pkg.install("npm")
-    except CommandExecutionError:
+        # Just name the thing we're looking for
+        sminion.functions.npm  # pylint: disable=pointless-statement
+    except (CommandExecutionError, AttributeError):
         pytest.skip("Unable to install npm")
 
 
