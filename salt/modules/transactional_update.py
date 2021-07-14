@@ -280,11 +280,13 @@ import logging
 import os
 import sys
 import tempfile
+import time  # required by _check_queue invocation later
 
 import salt.client.ssh.state
 import salt.client.ssh.wrapper.state
 import salt.exceptions
 import salt.utils.args
+from salt.modules.state import _check_queue, _prior_running_states, _wait, running
 
 __func_alias__ = {"apply_": "apply"}
 
@@ -295,7 +297,14 @@ def __virtual__():
     """
     transactional-update command is required.
     """
+    global _check_queue, _wait, _prior_running_states, running
     if __utils__["path.which"]("transactional-update"):
+        _check_queue = salt.utils.functools.namespaced_function(_check_queue, globals())
+        _wait = salt.utils.functools.namespaced_function(_wait, globals())
+        _prior_running_states = salt.utils.functools.namespaced_function(
+            _prior_running_states, globals()
+        )
+        running = salt.utils.functools.namespaced_function(running, globals())
         return True
     else:
         return (False, "Module transactional_update requires a transactional system")
@@ -1068,7 +1077,13 @@ def _create_and_execute_salt_state(
 
 
 def sls(
-    mods, saltenv="base", test=None, exclude=None, activate_transaction=False, **kwargs
+    mods,
+    saltenv="base",
+    test=None,
+    exclude=None,
+    activate_transaction=False,
+    queue=False,
+    **kwargs
 ):
     """Execute the states in one or more SLS files inside a transaction.
 
@@ -1093,6 +1108,13 @@ def sls(
         (i.e there is a new snaphot in the system), a new reboot will
         be scheduled (default False)
 
+    queue
+        Instead of failing immediately when another state run is in progress,
+        queue the new state run to begin running once the other has finished.
+
+        This option starts a new thread for each queued state run, so use this
+        option sparingly. (Default: False)
+
     For a formal description of the possible parameters accepted in
     this function, check `state.sls` documentation.
 
@@ -1104,6 +1126,10 @@ def sls(
         salt microos transactional_update.sls stuff activate_transaction=True
 
     """
+    conflict = _check_queue(queue, kwargs)
+    if conflict is not None:
+        return conflict
+
     # Get a copy of the pillar data, to avoid overwriting the current
     # pillar, instead the one delegated
     pillar = copy.deepcopy(__pillar__)
@@ -1156,7 +1182,7 @@ def sls(
     )
 
 
-def highstate(activate_transaction=False, **kwargs):
+def highstate(activate_transaction=False, queue=False, **kwargs):
     """Retrieve the state data from the salt master for this minion and
     execute it inside a transaction.
 
@@ -1168,6 +1194,13 @@ def highstate(activate_transaction=False, **kwargs):
         (i.e there is a new snaphot in the system), a new reboot will
         be scheduled (default False)
 
+    queue
+        Instead of failing immediately when another state run is in progress,
+        queue the new state run to begin running once the other has finished.
+
+        This option starts a new thread for each queued state run, so use this
+        option sparingly. (Default: False)
+
     CLI Example:
 
     .. code-block:: bash
@@ -1177,6 +1210,10 @@ def highstate(activate_transaction=False, **kwargs):
         salt microos transactional_update.highstate activate_transaction=True
 
     """
+    conflict = _check_queue(queue, kwargs)
+    if conflict is not None:
+        return conflict
+
     # Get a copy of the pillar data, to avoid overwriting the current
     # pillar, instead the one delegated
     pillar = copy.deepcopy(__pillar__)
@@ -1210,7 +1247,7 @@ def highstate(activate_transaction=False, **kwargs):
     )
 
 
-def single(fun, name, test=None, activate_transaction=False, **kwargs):
+def single(fun, name, test=None, activate_transaction=False, queue=False, **kwargs):
     """Execute a single state function with the named kwargs, returns
     False if insufficient data is sent to the command
 
@@ -1224,6 +1261,13 @@ def single(fun, name, test=None, activate_transaction=False, **kwargs):
         (i.e there is a new snaphot in the system), a new reboot will
         be scheduled (default False)
 
+    queue
+        Instead of failing immediately when another state run is in progress,
+        queue the new state run to begin running once the other has finished.
+
+        This option starts a new thread for each queued state run, so use this
+        option sparingly. (Default: False)
+
     CLI Example:
 
     .. code-block:: bash
@@ -1232,6 +1276,10 @@ def single(fun, name, test=None, activate_transaction=False, **kwargs):
         salt microos transactional_update.single pkg.installed name=emacs activate_transaction=True
 
     """
+    conflict = _check_queue(queue, kwargs)
+    if conflict is not None:
+        return conflict
+
     # Get a copy of the pillar data, to avoid overwriting the current
     # pillar, instead the one delegated
     pillar = copy.deepcopy(__pillar__)
