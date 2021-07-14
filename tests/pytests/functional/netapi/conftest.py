@@ -3,7 +3,7 @@ import pathlib
 import pytest
 import salt.config
 import tests.support.netapi as netapi
-from saltfactories.utils.ports import get_unused_localhost_port
+from pytestshellutils.utils.ports import get_unused_localhost_port
 
 
 @pytest.fixture
