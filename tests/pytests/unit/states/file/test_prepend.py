@@ -76,7 +76,7 @@ def test_prepend():
             "file.prepend": mock_t,
         },
     ):
-        comt = "The following files will be changed:\n/tmp/etc:" " directory - new\n"
+        comt = "The following files will be changed:\n/tmp/etc: directory - new\n"
         changes = {"/tmp/etc": {"directory": "new"}}
         if salt.utils.platform.is_windows():
             comt = 'The directory "c:\\tmp\\etc" will be changed'

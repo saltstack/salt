@@ -91,11 +91,9 @@ def test_copy():
                 # Group argument is ignored on Windows systems. Group is set
                 # to user
                 if salt.utils.platform.is_windows():
-                    comt = "User salt is not available Group salt" " is not available"
+                    comt = "User salt is not available Group salt is not available"
                 else:
-                    comt = (
-                        "User salt is not available Group saltstack" " is not available"
-                    )
+                    comt = "User salt is not available Group saltstack is not available"
                 ret.update({"comment": comt, "result": False})
                 assert filestate.copy_(name, source, user=user, group=group) == ret
 
@@ -134,7 +132,7 @@ def test_copy():
                             assert filestate.copy_(name, source, preserve=True) == ret
 
                         with patch.dict(filestate.__opts__, {"test": False}):
-                            comt = "The target directory /tmp is" " not present"
+                            comt = "The target directory /tmp is not present"
                             ret.update({"comment": comt, "result": False})
                             assert filestate.copy_(name, source, preserve=True) == ret
 

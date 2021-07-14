@@ -126,7 +126,7 @@ def test_directory():
         if salt.utils.platform.is_windows():
             comt = ""
         else:
-            comt = "User salt is not available Group saltstack" " is not available"
+            comt = "User salt is not available Group saltstack is not available"
         ret.update({"comment": comt, "name": name})
         assert filestate.directory(name, user=user, group=group) == ret
 
@@ -142,7 +142,7 @@ def test_directory():
                 MagicMock(side_effect=[True, True, False, True, True, True, False]),
             ):
                 with patch.object(os.path, "lexists", mock_t):
-                    comt = "File exists where the backup target" " A should go"
+                    comt = "File exists where the backup target A should go"
                     ret.update({"comment": comt})
                     assert (
                         filestate.directory(

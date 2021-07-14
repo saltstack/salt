@@ -178,18 +178,16 @@ def test_managed():
             assert filestate.managed("") == ret
 
             with patch.object(os.path, "isfile", mock_f):
-                comt = "File {} is not present and is not set for " "creation".format(
-                    name
-                )
+                comt = "File {} is not present and is not set for creation".format(name)
                 ret.update({"comment": comt, "name": name, "result": True})
                 assert filestate.managed(name, create=False) == ret
 
             # Group argument is ignored on Windows systems. Group is set to
             # user
             if salt.utils.platform.is_windows():
-                comt = "User salt is not available Group salt" " is not available"
+                comt = "User salt is not available Group salt is not available"
             else:
-                comt = "User salt is not available Group saltstack" " is not available"
+                comt = "User salt is not available Group saltstack is not available"
             ret.update({"comment": comt, "result": False})
             assert filestate.managed(name, user=user, group=group) == ret
 

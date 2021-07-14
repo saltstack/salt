@@ -276,7 +276,7 @@ def test_hardlink():
         os.path, "isfile", mock_f
     ):
 
-        expected = "Target of hard link {} is already pointing " "to {}".format(
+        expected = "Target of hard link {} is already pointing to {}".format(
             name, target
         )
         ret = return_val(result=True, comment=expected, name=name)
@@ -317,7 +317,7 @@ def test_hardlink():
         os.path, "isfile", mock_f
     ):
 
-        expected = "Unable to set target of hard link {} -> " "{}: {}".format(
+        expected = "Unable to set target of hard link {} -> {}: {}".format(
             name, target, ""
         )
         ret = return_val(result=False, comment=expected, name=name)
@@ -358,7 +358,7 @@ def test_hardlink():
         os.path, "isfile", mock_f
     ):
 
-        expected = "Unable to create new hard link {} -> " "{}: {}".format(
+        expected = "Unable to create new hard link {} -> {}: {}".format(
             name, target, ""
         )
         ret = return_val(result=False, comment=expected, name=name)
@@ -402,7 +402,7 @@ def test_hardlink():
         os.path, "isfile", mock_t
     ):
 
-        expected = "Unable to create new hard link {} -> " "{}: {}".format(
+        expected = "Unable to create new hard link {} -> {}: {}".format(
             name, target, ""
         )
         changes = dict(forced="File for hard link was forcibly replaced")

@@ -267,9 +267,9 @@ def test_recurse():
 
         # Group argument is ignored on Windows systems. Group is set to user
         if salt.utils.platform.is_windows():
-            comt = "User salt is not available Group salt" " is not available"
+            comt = "User salt is not available Group salt is not available"
         else:
-            comt = "User salt is not available Group saltstack" " is not available"
+            comt = "User salt is not available Group saltstack is not available"
         ret.update({"comment": comt})
         assert filestate.recurse(name, source, user=user, group=group) == ret
 
@@ -462,7 +462,7 @@ def test_accumulated():
                 "__id__": "ID",
             },
         ):
-            comt = "Accumulator {} for file {} " "was charged by text".format(
+            comt = "Accumulator {} for file {} was charged by text".format(
                 name, filename
             )
             ret.update({"comment": comt, "name": name, "result": True})
@@ -485,7 +485,7 @@ def test_serialize_into_managed_file():
     mock_t = MagicMock(return_value=True)
     mock_f = MagicMock(return_value=False)
     with patch.object(os.path, "isfile", mock_f):
-        comt = "File {} is not present and is not set for " "creation".format(name)
+        comt = "File {} is not present and is not set for creation".format(name)
         ret.update({"comment": comt, "name": name, "result": True})
         assert filestate.serialize(name, create=False) == ret
 
