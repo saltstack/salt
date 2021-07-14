@@ -154,7 +154,7 @@ class AzureBlobTestCase(TestCase, LoaderModuleMockMixin):
         }
         cache_file = tempfile.NamedTemporaryFile()
         # Pickles the metadata and stores it in cache_file
-        with salt.utils.files.fopen(str(cache_file), "wb") as fp_:
+        with salt.utils.files.fopen(str(cache_file.name), "wb") as fp_:
             pickle.dump(metadata, fp_)
         # Patches the _get_containers_cache_filename module so that it returns the name of the new tempfile that
         # represents the cache file
@@ -257,7 +257,7 @@ class AzureBlobTestCase(TestCase, LoaderModuleMockMixin):
         }
         cache_file = tempfile.NamedTemporaryFile()
         # Pickles the metadata and stores it in cache_file
-        with salt.utils.files.fopen(str(cache_file), "wb") as fp_:
+        with salt.utils.files.fopen(str(cache_file.name), "wb") as fp_:
             pickle.dump(metadata, fp_)
         # Checks to see if _read_containers_cache_file can successfully read the pickled metadata from the cache file
         ret = azureblob._read_containers_cache_file(str(cache_file))
