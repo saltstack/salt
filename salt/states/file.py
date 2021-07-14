@@ -3672,14 +3672,18 @@ def directory(
                 return _error(ret, "No directory to create {} in".format(name))
 
         if salt.utils.platform.is_windows():
-            __salt__["file.mkdir"](
-                path=name,
-                owner=win_owner,
-                grant_perms=win_perms,
-                deny_perms=win_deny_perms,
-                inheritance=win_inheritance,
-                reset=win_perms_reset,
-            )
+            try:
+                __salt__["file.mkdir"](
+                    path=name,
+                    owner=win_owner,
+                    grant_perms=win_perms,
+                    deny_perms=win_deny_perms,
+                    inheritance=win_inheritance,
+                    reset=win_perms_reset,
+                )
+            except CommandExecutionError as exc:
+                ret["changes"] = {}
+                return _error(ret, "Failed to create directory: {}".format(exc.message))
         else:
             __salt__["file.mkdir"](name, user=user, group=group, mode=dir_mode)
 

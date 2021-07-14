@@ -1384,6 +1384,13 @@ def mkdir(
     if not os.path.isdir(drive):
         raise CommandExecutionError("Drive {} is not mapped".format(drive))
 
+    # Validate user before modifying the system
+    if grant_perms and not _validate_users(grant_perms):
+        raise CommandExecutionError("Invalid user in grant perms")
+
+    if deny_perms and not _validate_users(deny_perms):
+        raise CommandExecutionError("Invalid user in deny perms")
+
     path = os.path.expanduser(path)
     path = os.path.expandvars(path)
 
@@ -1811,3 +1818,30 @@ def set_perms(path, grant_perms=None, deny_perms=None, inheritance=True, reset=F
         inheritance=inheritance,
         reset=reset,
     )
+
+
+def _validate_users(perms):
+    """
+    Loop through all users in a set of permission dictionaries
+    to validate that the users exist on the system before modifying
+    the system.
+
+    Args:
+
+        perms (dict):
+            User requested permissions for system modification.
+
+    Returns:
+        bool: True if successful False is unsuccessful
+
+    Raises:
+        CommandExecutionError
+
+    """
+    for user in perms:
+        # verify user exists on system before we create a directory
+        try:
+            __utils__["dacl.get_name"](user)
+        except CommandExecutionError:
+            return False
+    return True
