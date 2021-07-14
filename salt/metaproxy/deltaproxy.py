@@ -107,9 +107,8 @@ def post_master_init(self, master):
                 self.opts["mine_functions"] = general_proxy_mines + specific_proxy_mines
             except TypeError as terr:
                 log.error(
-                    "Unable to merge mine functions from the pillar in the opts, for proxy {}".format(
-                        self.opts["id"]
-                    )
+                    "Unable to merge mine functions from the pillar in the opts, for proxy %s",
+                    self.opts["id"],
                 )
 
     fq_proxyname = self.opts["proxy"]["proxytype"]
@@ -923,9 +922,8 @@ def handle_decoded_payload(self, data):
         while process_count >= process_count_max:
             if once_logged is False:
                 log.debug(
-                    "Maximum number of processes reached while executing jid {}, waiting...".format(
-                        data["jid"]
-                    )
+                    "Maximum number of processes reached while executing jid %s, waiting...",
+                    data["jid"],
                 )
                 once_logged = True
             yield tornado.gen.sleep(0.5)
