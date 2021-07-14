@@ -63,16 +63,14 @@ def test_rename():
     mock_lex = MagicMock(return_value=False)
     with patch.object(os.path, "isabs", mock_t):
         with patch.object(os.path, "lexists", mock_lex):
-            comt = 'Source file "{}" has already been moved out of ' "place".format(
-                source
-            )
+            comt = 'Source file "{}" has already been moved out of place'.format(source)
             ret.update({"comment": comt, "result": True})
             assert filestate.rename(name, source) == ret
 
     mock_lex = MagicMock(side_effect=[True, True, True])
     with patch.object(os.path, "isabs", mock_t):
         with patch.object(os.path, "lexists", mock_lex):
-            comt = 'The target file "{}" exists and will not be ' "overwritten".format(
+            comt = 'The target file "{}" exists and will not be overwritten'.format(
                 name
             )
             ret.update({"comment": comt, "result": True})
@@ -83,7 +81,7 @@ def test_rename():
     with patch.object(os.path, "isabs", mock_t):
         with patch.object(os.path, "lexists", mock_lex):
             with patch.dict(filestate.__opts__, {"test": False}):
-                comt = 'Failed to delete "{}" in preparation for ' "forced move".format(
+                comt = 'Failed to delete "{}" in preparation for forced move'.format(
                     name
                 )
                 with patch.dict(filestate.__salt__, {"file.remove": mock_rem}):
