@@ -3377,9 +3377,9 @@ def _get_patches(installed_only=False):
 
     if parsing_errors:
         log.warning(
-            "Skipped some unexpected output while running '{}' to list patches. Please check output".format(
-                " ".join(cmd)
-            )
+            "Skipped some unexpected output while running '%s' to list "
+            "patches. Please check output",
+            " ".join(cmd),
         )
 
     if installed_only:

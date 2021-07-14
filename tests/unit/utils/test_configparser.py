@@ -121,14 +121,12 @@ class TestGitConfigParser(TestCase):
             self.conf.get("alias", "modified"),
             """! git status --porcelain | awk 'match($1, "M"){print $2}'""",
         )
-        # future lint: disable=non-unicode-string
         self.assertEqual(
             self.conf.get("alias", "hist"),
             salt.utils.stringutils.to_unicode(
                 r"""log --pretty=format:\"%h %ad | %s%d [%an]\" --graph --date=short"""
             ),
         )
-        # future lint: enable=non-unicode-string
 
     def test_read_space_indent(self):
         """
@@ -216,11 +214,7 @@ class TestGitConfigParser(TestCase):
         # If the regex doesn't match, no items should be removed
         self.assertFalse(
             self.conf.remove_option_regexp(
-                self.remote,
-                "fetch",
-                salt.utils.stringutils.to_unicode(
-                    r"\d{7,10}"
-                ),  # future lint: disable=non-unicode-string
+                self.remote, "fetch", salt.utils.stringutils.to_unicode(r"\d{7,10}"),
             )
         )
         # Make sure that all three values are still there (since none should

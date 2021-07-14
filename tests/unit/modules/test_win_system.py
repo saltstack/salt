@@ -156,9 +156,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
                 ]
             )
             modules_globals["win32api"] = win32api
-            win32net = types.ModuleType(
-                "win32net"
-            )  # future lint: disable=blacklisted-function
+            win32net = types.ModuleType("win32net")
             win32net.NetServerGetInfo = MagicMock()
             win32net.NetServerSetInfo = MagicMock()
             modules_globals["win32net"] = win32net
