@@ -61,7 +61,9 @@ class BatchTest(ShellCase):
 
         os_grain = os_grain.strip()
         cmd = self.run_salt(
-            '-C "G@os:{0} and not localhost" -b 25% test.ping'.format(os_grain),
+            '-C "G@os:{} and not localhost" -b 25% test.ping'.format(
+                os_grain.replace(" ", "?")
+            ),
             timeout=self.run_timeout,
         )
         self.assertIn(sub_min_ret, cmd)
