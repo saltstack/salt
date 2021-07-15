@@ -1168,7 +1168,7 @@ def test_bsd_memdata():
         "amd64",
     )
 
-    with patch("platform.uname", MagicMock(return_value=mock_freebsd_uname)):
+    with patch("platform.uname", MagicMock(return_value=mock_freebsd_uname[3])):
         with patch.object(
             salt.utils.platform, "is_linux", MagicMock(return_value=False)
         ):
@@ -1355,7 +1355,7 @@ def test_illumos_virtual():
         if cmd == "/usr/bin/zonename":
             # NOTE: we return the name of the zone
             return "myzone"
-        log.debug("cmd.run: '{}'".format(cmd))
+        log.debug(f"cmd.run: '{cmd}'")
 
     def _cmd_all_side_effect(cmd):
         # NOTE: prtdiag doesn't work inside a zone
@@ -1367,7 +1367,7 @@ def test_illumos_virtual():
                 "stdout": "",
                 "stderr": "prtdiag can only be run in the global zone",
             }
-        log.debug("cmd.run_all: '{}'".format(cmd))
+        log.debug(f"cmd.run_all: '{cmd}'")
 
     def _which_side_effect(path):
         if path == "prtdiag":
@@ -1404,7 +1404,7 @@ def test_illumos_fallback_virtual():
                 "stdout": "",
                 "stderr": "prtdiag can only be run in the global zone",
             }
-        log.debug("cmd.run_all: '{}'".format(cmd))
+        log.debug(f"cmd.run_all: '{cmd}'")
 
     def _which_side_effect(path):
         if path == "prtdiag":
@@ -1469,14 +1469,9 @@ def _check_empty(key, value, empty):
     if empty is True and value exists assert error
     """
     if not empty and not value:
-        raise Exception("{} is empty, expecting a value".format(key))
+        raise Exception(f"{key} is empty, expecting a value")
     elif empty and value:
-        raise Exception(
-            "{} is suppose to be empty. value: {} \
-                        exists".format(
-                key, value
-            )
-        )
+        raise Exception(f"{key} is suppose to be empty. value: {value} exists")
 
 
 def _check_ip_fqdn_set(value, empty, _set=None):
@@ -2377,7 +2372,7 @@ def test_bsd_osfullname():
         "amd64",
     )
 
-    with patch("platform.uname", MagicMock(return_value=mock_freebsd_uname)):
+    with patch("platform.uname", MagicMock(return_value=mock_freebsd_uname[3])):
         with patch.object(
             salt.utils.platform, "is_linux", MagicMock(return_value=False)
         ):
