@@ -210,16 +210,12 @@ def installed(
         ret["result"] = False
         ret["comment"] = "Error installing '{}': {}".format(", ".join(pkg_list), err)
         return ret
-
-    if call and (isinstance(call, list) or isinstance(call, dict)):
+    else:
         ret["result"] = True
         ret["changes"] = {"old": [], "new": pkgs_to_install}
         ret["comment"] = "Package(s) '{}' successfully installed".format(
             ", ".join(pkgs_to_install)
         )
-    else:
-        ret["result"] = False
-        ret["comment"] = "Could not install package(s) '{}'".format(", ".join(pkg_list))
 
     return ret
 
