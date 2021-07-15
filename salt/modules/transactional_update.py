@@ -280,7 +280,9 @@ import logging
 import os
 import sys
 import tempfile
-import time  # required by _check_queue invocation later
+
+# required by _check_queue invocation later
+import time  # pylint: disable=unused-import
 
 import salt.client.ssh.state
 import salt.client.ssh.wrapper.state
