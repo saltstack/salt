@@ -75,6 +75,7 @@ def configure_loader_modules():
                 "dacl.set_perms": win_dacl.set_perms,
                 "files.normalize_mode": salt.utils.files.normalize_mode,
                 "path.islink": salt.utils.path.islink,
+                "dacl.get_name": win_dacl.get_name,
             }
         },
         win_dacl: {"__opts__": {"test": False}},
@@ -234,6 +235,38 @@ def test_check_perms_grant(setup_teardown_vars):
         inheritance=None,
     )
     assert ret == expected
+
+
+def test_check_perms_validate():
+    """
+    Test validate helper function
+    """
+    grant_perms = {
+        "testuser": {
+            "perms": {
+                "read_attributes",
+                "create_folders"
+            }
+        }
+    }
+    ret = win_file._validate_users(grant_perms)
+    assert ret is False
+
+
+def test_check_perms_validate_true():
+    """
+    Test validate helper function when user does exist
+    """
+    grant_perms = {
+        "Administrator": {
+            "perms": {
+                "read_attributes",
+                "create_folders"
+            }
+        }
+    }
+    ret = win_file._validate_users(grant_perms)
+    assert ret is False
 
 
 def test_check_perms_inheritance_false_test_true(setup_teardown_vars):
