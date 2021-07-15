@@ -60,7 +60,7 @@ Now you can use secrets stored in pass as pillar values.
 The following will result in pillar ``foo_bar`` having contents of pass entry ``secret/foo/bar``:
 
 .. code-block:: yaml
-    
+
     #!yaml|pass
 
     foo_bar: |
@@ -69,7 +69,6 @@ The following will result in pillar ``foo_bar`` having contents of pass entry ``
 .. note::
     If the entry doesn't exist, you'll end uyp with just the string ``secret/foo/bar`` as the pillar value
 """
-
 
 import logging
 import os
