@@ -15,25 +15,17 @@ def install_npm(sminion):
 @pytest.mark.slow_test
 @pytest.mark.destructive_test
 @pytest.mark.requires_network
-def test_removed_installed_cycle(sminion):
+def test_removed_installed_cycle(states, modules):
     project_version = "pm2@5.1.0"
-    success = sminion.functions.npm.uninstall("pm2")
+    success = modules.npm.uninstall("pm2")
     assert success, "Unable to uninstall pm2 in prep for tests"
 
-    ret = next(
-        iter(
-            sminion.functions.state.single(
-                "npm.installed", name=project_version
-            ).values()
-        )
+    ret = states.npm.installed(name=project_version)
+    assert ret.result is True, "Failed to states.npm.installed {} - {}".format(
+        project_version, ret.comment
     )
-    success = ret["result"]
-    assert success, "Failed to states.npm.installed " + project_version + ret["comment"]
 
-    ret = next(
-        iter(
-            sminion.functions.state.single("npm.removed", name=project_version).values()
-        )
+    ret = states.npm.removed(name=project_version)
+    assert ret.result is True, "Failed to states.npm.removed {} - {}".format(
+        project_version, ret.comment
     )
-    success = ret["result"]
-    assert success, "Failed to states.npm.removed " + project_version
