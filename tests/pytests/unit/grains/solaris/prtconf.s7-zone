@@ -1,0 +1,24 @@
+System Configuration:  Oracle Corporation  sun4v
+Memory size: 16384 Megabytes
+System Peripherals (PROM Nodes):
+
+Node 0xfffffffff
+    scsi-initiator-id:  00000007
+    idprom:  00000000.00000000.00000000.00000000.00000000.00000000.00000000.00000000
+    pcie-ari-supported:
+    #priqs-per-pcibus:  00000010
+    #priqs-per-cpu:  00000010
+    priq-eq-sizes:  00000003
+    non-ios-perf-counters:  'ORCL,sn-non-ios-pr'
+    ios-perf-counters:  'ORCL,sn-ios-pr'
+    storage-variant:  '8dbp'
+    product-name:  'SPARC S7-2'
+    banner-name:  'SPARC S7-2'
+    name:  'ORCL,SPARC-S7-2'
+    stick-frequency:  3b9aca00
+    hv-api-groups:  00000000.00000000.00000000.00000000.00000000.00000000.00000000.00000000.000000060.00000000.00000000
+    breakpoint-trap:  0000007f
+    device_type:  'sun4v'
+    compatible: 'sun4v'
+    #address-cells:  00000002
+    #size-cells:  00000002

@@ -1,0 +1,24 @@
+System Configuration:  Oracle Corporation  sun4v SPARC S7-2
+Memory size: 16384 Megabytes
+
+================================ Virtual CPUs ================================
+
+
+CPU ID Frequency Implementation         Status
+------ --------- ---------------------- -------
+0      4267 MHz  SPARC-S7               on-line
+1      4267 MHz  SPARC-S7               on-line
+2      4267 MHz  SPARC-S7               on-line
+3      4267 MHz  SPARC-S7               on-line
+4      4267 MHz  SPARC-S7               on-line
+5      4267 MHz  SPARC-S7               on-line
+6      4267 MHz  SPARC-S7               on-line
+7      4267 MHz  SPARC-S7               on-line
+8      4267 MHz  SPARC-S7               on-line
+9      4267 MHz  SPARC-S7               on-line
+10     4267 MHz  SPARC-S7               on-line
+11     4267 MHz  SPARC-S7               on-line
+12     4267 MHz  SPARC-S7               on-line
+13     4267 MHz  SPARC-S7               on-line
+14     4267 MHz  SPARC-S7               on-line
+15     4267 MHz  SPARC-S7               on-line
