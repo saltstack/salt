@@ -1,12 +1,9 @@
-# encoding: utf-8
 """
 A script to start the CherryPy WSGI server
 
 This is run by ``salt-api`` and started in a multiprocess.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import logging
 import os
 
@@ -45,7 +42,7 @@ def __virtual__():
             from salt.utils.versions import LooseVersion as V
 
             if "cherrypy" in globals() and V(cherrypy.__version__) < V(cpy_min):
-                error_msg = "Required version of CherryPy is {0} or " "greater.".format(
+                error_msg = "Required version of CherryPy is {} or greater.".format(
                     cpy_min
                 )
             else:

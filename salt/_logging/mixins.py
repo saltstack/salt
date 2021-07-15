@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     salt._logging.mixins
     ~~~~~~~~~~~~~~~~~~~~
@@ -6,14 +5,12 @@
     Logging related mix-ins
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import sys
 
 
-class NewStyleClassMixin(object):
+class NewStyleClassMixin:
     """
     Simple new style class to make pylint shut up!
     This is required because SaltLoggingClass can't subclass object directly:
@@ -22,7 +19,7 @@ class NewStyleClassMixin(object):
     """
 
 
-class LoggingProfileMixin(object):
+class LoggingProfileMixin:
     """
     Simple mix-in class to add a trace method to python's logging.
     """
@@ -31,7 +28,7 @@ class LoggingProfileMixin(object):
         self.log(getattr(logging, "PROFILE", 15), msg, *args, **kwargs)
 
 
-class LoggingTraceMixin(object):
+class LoggingTraceMixin:
     """
     Simple mix-in class to add a trace method to python's logging.
     """
@@ -40,7 +37,7 @@ class LoggingTraceMixin(object):
         self.log(getattr(logging, "TRACE", 5), msg, *args, **kwargs)
 
 
-class LoggingGarbageMixin(object):
+class LoggingGarbageMixin:
     """
     Simple mix-in class to add a garbage method to python's logging.
     """
@@ -74,10 +71,10 @@ class LoggingMixinMeta(type):
             bases.append(LoggingTraceMixin)
         if include_garbage:
             bases.append(LoggingGarbageMixin)
-        return super(LoggingMixinMeta, mcs).__new__(mcs, name, tuple(bases), attrs)
+        return super().__new__(mcs, name, tuple(bases), attrs)
 
 
-class ExcInfoOnLogLevelFormatMixin(object):
+class ExcInfoOnLogLevelFormatMixin:
     """
     Logging handler class mixin to properly handle including exc_info on a per logging handler basis
     """
@@ -86,7 +83,7 @@ class ExcInfoOnLogLevelFormatMixin(object):
         """
         Format the log record to include exc_info if the handler is enabled for a specific log level
         """
-        formatted_record = super(ExcInfoOnLogLevelFormatMixin, self).format(record)
+        formatted_record = super().format(record)
         exc_info_on_loglevel = getattr(record, "exc_info_on_loglevel", None)
         exc_info_on_loglevel_formatted = getattr(
             record, "exc_info_on_loglevel_formatted", None

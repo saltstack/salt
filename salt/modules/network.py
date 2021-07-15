@@ -579,6 +579,7 @@ def _ip_route_linux():
         # need to fake similar output to that provided by netstat
         # to maintain output format
         if line.group("unreachable") == "unreachable":
+
             continue
 
         if line.group("network") == "default":
@@ -1402,7 +1403,7 @@ def mod_hostname(hostname):
                 if "Static hostname" in line[0]:
                     o_hostname = line[1].strip()
         else:
-            log.debug("{} was unable to get hostname".format(hostname_cmd))
+            log.debug("%s was unable to get hostname", hostname_cmd)
             o_hostname = __salt__["network.get_hostname"]()
     elif not __utils__["platform.is_sunos"]():
         # don't run hostname -f because -f is not supported on all platforms
@@ -1417,9 +1418,9 @@ def mod_hostname(hostname):
         )
         if result["retcode"] != 0:
             log.debug(
-                "{} was unable to set hostname. Error: {}".format(
-                    hostname_cmd, result["stderr"],
-                )
+                "%s was unable to set hostname. Error: %s",
+                hostname_cmd,
+                result["stderr"],
             )
             return False
     elif not __utils__["platform.is_sunos"]():
@@ -1804,11 +1805,11 @@ def default_route(family=None):
 
         salt '*' network.default_route
     """
-
     if family != "inet" and family != "inet6" and family is not None:
         raise CommandExecutionError("Invalid address family {}".format(family))
 
-    _routes = routes()
+    _routes = routes(family)
+
     default_route = {}
     if __grains__["kernel"] == "Linux":
         default_route["inet"] = ["0.0.0.0", "default"]
@@ -2117,6 +2118,6 @@ def fqdns():
             fqdns.update(item)
 
     elapsed = time.time() - start
-    log.debug("Elapsed time getting FQDNs: {} seconds".format(elapsed))
+    log.debug("Elapsed time getting FQDNs: %s seconds", elapsed)
 
     return {"fqdns": sorted(list(fqdns))}

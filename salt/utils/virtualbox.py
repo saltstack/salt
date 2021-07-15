@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Utilities to help make requests to virtualbox
 
@@ -7,27 +6,18 @@ The virtualbox SDK reference can be found at http://download.virtualbox.org/virt
 This code assumes vboxapi.py from VirtualBox distribution
 being in PYTHONPATH, or installed system-wide
 """
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import re
 import time
 
-import salt.ext.six as six
-
-# Import salt libs
 import salt.utils.compat
 import salt.utils.data
-
-# Import 3rd-party libs
-from salt.ext.six.moves import range
 from salt.utils.timeout import wait_for
 
 log = logging.getLogger(__name__)
 
 
-# Import virtualbox libs
 HAS_LIBS = False
 try:
     import vboxapi
@@ -390,7 +380,7 @@ def vb_get_network_addresses(machine_name=None, machine=None, wait_for_pattern=N
             for i in range(total_slots):
                 try:
                     address = machine.getGuestPropertyValue(
-                        "/VirtualBox/GuestInfo/Net/{0}/V4/IP".format(i)
+                        "/VirtualBox/GuestInfo/Net/{}/V4/IP".format(i)
                     )
                     if address:
                         ip_addresses.append(address)
@@ -615,9 +605,7 @@ def vb_xpcom_to_attribute_dict(
     """
     # Check the interface
     if interface_name:
-        m = re.search(
-            r"XPCOM.+implementing {0}".format(interface_name), six.text_type(xpcom)
-        )
+        m = re.search(r"XPCOM.+implementing {}".format(interface_name), str(xpcom))
         if not m:
             # TODO maybe raise error here?
             log.warning(
@@ -660,7 +648,7 @@ def treat_machine_dict(machine):
         {
             "id": machine.get("id", ""),
             "image": machine.get("image", ""),
-            "size": "{0} MB".format(machine.get("memorySize", 0)),
+            "size": "{} MB".format(machine.get("memorySize", 0)),
             "state": machine_get_machinestate_str(machine),
             "private_ips": [],
             "public_ips": [],
@@ -708,7 +696,7 @@ def vb_machinestate_to_tuple(machinestate):
     """
     if isinstance(machinestate, int):
         ret = MACHINE_STATES_ENUM.get(machinestate, UNKNOWN_MACHINE_STATE)
-    elif isinstance(machinestate, six.string_types):
+    elif isinstance(machinestate, str):
         ret = MACHINE_STATES.get(machinestate, UNKNOWN_MACHINE_STATE)
     else:
         ret = UNKNOWN_MACHINE_STATE
@@ -736,9 +724,9 @@ def vb_machine_exists(name):
         vbox.findMachine(name)
         return True
     except Exception as e:  # pylint: disable=broad-except
-        if isinstance(e.message, six.string_types):
+        if isinstance(e.message, str):
             message = e.message
-        elif hasattr(e, "msg") and isinstance(getattr(e, "msg"), six.string_types):
+        elif hasattr(e, "msg") and isinstance(getattr(e, "msg"), str):
             message = getattr(e, "msg")
         else:
             message = ""

@@ -54,9 +54,7 @@ try:
 except ImportError:
     import types
 
-    __generated_syspaths = types.ModuleType(
-        "salt._syspaths"
-    )  # future lint: blacklisted-function
+    __generated_syspaths = types.ModuleType("salt._syspaths")
     for key in EXPECTED_VARIABLES:
         setattr(__generated_syspaths, key, None)
 else:

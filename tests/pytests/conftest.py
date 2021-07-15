@@ -142,7 +142,14 @@ def salt_master_factory(
         "auth": {"method": "token", "token": "testsecret", "uses": 0},
         "policies": ["testpolicy"],
     }
-    config_overrides = {}
+
+    # Config settings to test `event_return`
+    config_defaults["returner_dirs"] = []
+    config_defaults["returner_dirs"].append(
+        os.path.join(RUNTIME_VARS.FILES, "returners")
+    )
+    config_defaults["event_return"] = "runtests_noop"
+    config_overrides = {"pytest-master": {"log": {"level": "DEBUG"}}}
     ext_pillar = []
     if salt.utils.platform.is_windows():
         ext_pillar.append(
@@ -297,21 +304,8 @@ def salt_sub_minion_factory(salt_master_factory, salt_sub_minion_id):
 
 
 @pytest.fixture(scope="session")
-def salt_proxy_factory(salt_factories, salt_master_factory):
+def salt_proxy_factory(salt_master_factory):
     proxy_minion_id = random_string("proxytest-")
-    root_dir = salt_factories.get_root_dir_for_daemon(proxy_minion_id)
-    conf_dir = root_dir / "conf"
-    conf_dir.mkdir(parents=True, exist_ok=True)
-    RUNTIME_VARS.TMP_PROXY_CONF_DIR = str(conf_dir)
-
-    with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, "proxy")) as rfh:
-        config_defaults = yaml.deserialize(rfh.read())
-
-    config_defaults["root_dir"] = str(root_dir)
-    config_defaults["hosts.file"] = os.path.join(RUNTIME_VARS.TMP, "hosts")
-    config_defaults["aliases.file"] = os.path.join(RUNTIME_VARS.TMP, "aliases")
-    config_defaults["transport"] = salt_master_factory.config["transport"]
-    config_defaults["user"] = salt_master_factory.config["user"]
 
     config_overrides = {
         "file_roots": salt_master_factory.config["file_roots"].copy(),
@@ -320,7 +314,6 @@ def salt_proxy_factory(salt_factories, salt_master_factory):
 
     factory = salt_master_factory.salt_proxy_minion_daemon(
         proxy_minion_id,
-        defaults=config_defaults,
         overrides=config_overrides,
         extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
         start_timeout=240,
