@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Return salt data to Zabbix
 
@@ -17,13 +16,8 @@ To use the Zabbix returner, append '--return zabbix' to the salt command. ex:
     salt '*' test.ping --return zabbix
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
-
-# Import Salt libs
-from salt.ext import six
 
 # Define the module's virtual name
 __virtualname__ = "zabbix"
@@ -78,12 +72,12 @@ def returner(ret):
     job_minion_id = ret["id"]
 
     if type(ret["return"]) is dict:
-        for state, item in six.iteritems(ret["return"]):
+        for state, item in ret["return"].items():
             if "comment" in item and "name" in item and item["result"] is False:
                 errors = True
                 zabbix_send(
                     "salt.trap.high",
-                    "SALT:\nname: {0}\ncomment: {1}".format(
+                    "SALT:\nname: {}\ncomment: {}".format(
                         item["name"], item["comment"]
                     ),
                 )
@@ -91,10 +85,10 @@ def returner(ret):
                 changes = True
                 zabbix_send(
                     "salt.trap.warning",
-                    "SALT:\nname: {0}\ncomment: {1}".format(
+                    "SALT:\nname: {}\ncomment: {}".format(
                         item["name"], item["comment"]
                     ),
                 )
 
     if not changes and not errors:
-        zabbix_send("salt.trap.info", "SALT {0} OK".format(job_minion_id))
+        zabbix_send("salt.trap.info", "SALT {} OK".format(job_minion_id))

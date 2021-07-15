@@ -420,9 +420,7 @@ def create_read_replica(
         kwargs = {}
         for key in ("OptionGroupName", "MonitoringRoleArn"):
             if locals()[key] is not None:
-                kwargs[key] = str(
-                    locals()[key]
-                )  # future lint: disable=blacklisted-function
+                kwargs[key] = str(locals()[key])
 
         for key in ("MonitoringInterval", "Iops", "Port"):
             if locals()[key] is not None:
@@ -627,9 +625,7 @@ def update_parameter_group(
         if type(value) is bool:
             item.update({"ParameterValue": "on" if value else "off"})
         else:
-            item.update(
-                {"ParameterValue": str(value)}
-            )  # future lint: disable=blacklisted-function
+            item.update({"ParameterValue": str(value)})
         param_list.append(item)
 
     if not param_list:
@@ -861,7 +857,7 @@ def delete(
         if locals()["final_db_snapshot_identifier"] is not None:
             kwargs["FinalDBSnapshotIdentifier"] = str(
                 locals()["final_db_snapshot_identifier"]
-            )  # future lint: disable=blacklisted-function
+            )
 
         res = conn.delete_db_instance(DBInstanceIdentifier=name, **kwargs)
 
@@ -1015,9 +1011,7 @@ def describe_parameter_group(
         kwargs = {}
         for key in ("Marker", "Filters"):
             if locals()[key] is not None:
-                kwargs[key] = str(
-                    locals()[key]
-                )  # future lint: disable=blacklisted-function
+                kwargs[key] = str(locals()[key])
 
         if locals()["MaxRecords"] is not None:
             kwargs["MaxRecords"] = int(locals()["MaxRecords"])
@@ -1076,9 +1070,7 @@ def describe_parameters(
         kwargs.update({"DBParameterGroupName": name})
         for key in ("Marker", "Source"):
             if locals()[key] is not None:
-                kwargs[key] = str(
-                    locals()[key]
-                )  # future lint: disable=blacklisted-function
+                kwargs[key] = str(locals()[key])
 
         if locals()["MaxRecords"] is not None:
             kwargs["MaxRecords"] = int(locals()["MaxRecords"])

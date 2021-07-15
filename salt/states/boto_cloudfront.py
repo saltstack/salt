@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage CloudFront distributions
 
@@ -44,8 +43,6 @@ either passed in as a dict, or a string to pull from pillars or minion config:
 :depends: boto3
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import difflib
 import logging
@@ -115,7 +112,7 @@ def present(
     )
     if "error" in res:
         ret["result"] = False
-        ret["comment"] = "Error checking distribution {0}: {1}".format(
+        ret["comment"] = "Error checking distribution {}: {}".format(
             name, res["error"],
         )
         return ret
@@ -124,7 +121,7 @@ def present(
     if old is None:
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "Distribution {0} set for creation.".format(name)
+            ret["comment"] = "Distribution {} set for creation.".format(name)
             ret["changes"] = {"old": None, "new": name}
             return ret
 
@@ -133,13 +130,13 @@ def present(
         )
         if "error" in res:
             ret["result"] = False
-            ret["comment"] = "Error creating distribution {0}: {1}".format(
+            ret["comment"] = "Error creating distribution {}: {}".format(
                 name, res["error"],
             )
             return ret
 
         ret["result"] = True
-        ret["comment"] = "Created distribution {0}.".format(name)
+        ret["comment"] = "Created distribution {}.".format(name)
         ret["changes"] = {"old": None, "new": name}
         return ret
     else:
@@ -175,13 +172,13 @@ def present(
         any_changes = bool("old" in diffed_config or "new" in diffed_config)
         if not any_changes:
             ret["result"] = True
-            ret["comment"] = "Distribution {0} has correct config.".format(name,)
+            ret["comment"] = "Distribution {} has correct config.".format(name,)
             return ret
 
         if __opts__["test"]:
             ret["result"] = None
             ret["comment"] = "\n".join(
-                ["Distribution {0} set for new config:".format(name), changes_diff]
+                ["Distribution {} set for new config:".format(name), changes_diff]
             )
             ret["changes"] = {"diff": changes_diff}
             return ret
@@ -191,12 +188,12 @@ def present(
         )
         if "error" in res:
             ret["result"] = False
-            ret["comment"] = "Error updating distribution {0}: {1}".format(
+            ret["comment"] = "Error updating distribution {}: {}".format(
                 name, res["error"],
             )
             return ret
 
         ret["result"] = True
-        ret["comment"] = "Updated distribution {0}.".format(name)
+        ret["comment"] = "Updated distribution {}.".format(name)
         ret["changes"] = {"diff": changes_diff}
         return ret

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 A module that adds data to the Pillar structure retrieved by an http request
 
@@ -40,17 +39,9 @@ in <> brackets) in the url in order to populate pillar data based on the grain v
 Module Documentation
 ====================
 """
-
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import re
-
-from salt.ext import six
-
-# Import Salt libs
-from salt.ext.six.moves.urllib.parse import quote as _quote
+import urllib.parse
 
 log = logging.getLogger(__name__)
 
@@ -70,7 +61,7 @@ def ext_pillar(minion_id, pillar, url, with_grains=False):  # pylint: disable=W0
     :rtype: dict
     """
 
-    url = url.replace("%s", _quote(minion_id))
+    url = url.replace("%s", urllib.parse.quote(minion_id))
 
     grain_pattern = r"<(?P<grain_name>.*?)>"
 
@@ -85,8 +76,8 @@ def ext_pillar(minion_id, pillar, url, with_grains=False):  # pylint: disable=W0
                 log.error("Unable to get minion '%s' grain: %s", minion_id, grain_name)
                 return {}
 
-            grain_value = _quote(six.text_type(grain_value))
-            url = re.sub("<{0}>".format(grain_name), grain_value, url)
+            grain_value = urllib.parse.quote(str(grain_value))
+            url = re.sub("<{}>".format(grain_name), grain_value, url)
 
     log.debug("Getting url: %s", url)
     data = __salt__["http.query"](url=url, decode=True, decode_type="yaml")

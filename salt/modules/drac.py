@@ -1,19 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 Manage Dell DRAC
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import Salt libs
 import salt.utils.path
-
-# Import 3rd-party libs
-from salt.ext import six
-from salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)
 
@@ -51,7 +43,7 @@ def __execute_cmd(command):
     """
     Execute rac commands
     """
-    cmd = __salt__["cmd.run_all"]("racadm {0}".format(command))
+    cmd = __salt__["cmd.run_all"]("racadm {}".format(command))
 
     if cmd["retcode"] != 0:
         log.warning("racadm return an exit code '%s'.", cmd["retcode"])
@@ -115,7 +107,7 @@ def nameservers(*ns):
     for i in range(1, len(ns) + 1):
         if not __execute_cmd(
             "config -g cfgLanNetworking -o \
-                cfgDNSServer{0} {1}".format(
+                cfgDNSServer{} {}".format(
                 i, ns[i - 1]
             )
         ):
@@ -143,7 +135,7 @@ def syslog(server, enable=True):
     ):
         return __execute_cmd(
             "config -g cfgRemoteHosts -o \
-                cfgRhostsSyslogServer1 {0}".format(
+                cfgRhostsSyslogServer1 {}".format(
                 server
             )
         )
@@ -191,7 +183,7 @@ def list_users():
     for idx in range(1, 17):
         cmd = __salt__["cmd.run_all"](
             "racadm getconfig -g \
-                cfgUserAdmin -i {0}".format(
+                cfgUserAdmin -i {}".format(
                 idx
             )
         )
@@ -236,7 +228,7 @@ def delete_user(username, uid=None):
     if uid:
         return __execute_cmd(
             'config -g cfgUserAdmin -o \
-                              cfgUserAdminUserName -i {0} ""'.format(
+                              cfgUserAdminUserName -i {} ""'.format(
                 uid
             )
         )
@@ -266,7 +258,7 @@ def change_password(username, password, uid=None):
     if uid:
         return __execute_cmd(
             "config -g cfgUserAdmin -o \
-                cfgUserAdminPassword -i {0} {1}".format(
+                cfgUserAdminPassword -i {} {}".format(
                 uid, password
             )
         )
@@ -308,7 +300,7 @@ def create_user(username, password, permissions, users=None):
         log.warning("'%s' already exists", username)
         return False
 
-    for idx in six.iterkeys(users):
+    for idx in users.keys():
         _uids.add(users[idx]["index"])
 
     uid = sorted(list(set(range(2, 12)) - _uids), reverse=True).pop()
@@ -316,7 +308,7 @@ def create_user(username, password, permissions, users=None):
     # Create user accountvfirst
     if not __execute_cmd(
         "config -g cfgUserAdmin -o \
-                 cfgUserAdminUserName -i {0} {1}".format(
+                 cfgUserAdminUserName -i {} {}".format(
             uid, username
         )
     ):
@@ -338,7 +330,7 @@ def create_user(username, password, permissions, users=None):
     # Enable users admin
     if not __execute_cmd(
         "config -g cfgUserAdmin -o \
-                          cfgUserAdminEnable -i {0} 1".format(
+                          cfgUserAdminEnable -i {} 1".format(
             uid
         )
     ):
@@ -398,7 +390,7 @@ def set_permissions(username, permissions, uid=None):
 
     return __execute_cmd(
         "config -g cfgUserAdmin -o \
-            cfgUserAdminPrivilege -i {0} 0x{1:08X}".format(
+            cfgUserAdminPrivilege -i {} 0x{:08X}".format(
             uid, permission
         )
     )
@@ -417,7 +409,7 @@ def set_snmp(community):
     """
     return __execute_cmd(
         "config -g cfgOobSnmp -o \
-            cfgOobSnmpAgentCommunity {0}".format(
+            cfgOobSnmpAgentCommunity {}".format(
             community
         )
     )
@@ -434,7 +426,7 @@ def set_network(ip, netmask, gateway):
         salt dell drac.set_network [DRAC IP] [NETMASK] [GATEWAY]
         salt dell drac.set_network 192.168.0.2 255.255.255.0 192.168.0.1
     """
-    return __execute_cmd("setniccfg -s {0} {1} {2}".format(ip, netmask, gateway))
+    return __execute_cmd("setniccfg -s {} {} {}".format(ip, netmask, gateway))
 
 
 def server_reboot():
