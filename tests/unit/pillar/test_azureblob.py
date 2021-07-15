@@ -165,7 +165,7 @@ class AzureBlobTestCase(TestCase, LoaderModuleMockMixin):
         ):
             # Patches the _read_containers_cache_file module so that it returns what it normally would if the new
             # tempfile representing the cache file was passed to it
-            plugged = azureblob._read_containers_cache_file(str(cache_file))
+            plugged = azureblob._read_containers_cache_file(str(cache_file.name))
             with patch.object(
                 azureblob,
                 "_read_containers_cache_file",
