@@ -1,21 +1,14 @@
-# -*- coding: utf-8 -*-
 """
 Tests for salt.utils.dateutils
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
 
-# Import Salt libs
 import salt.utils.dateutils
 from tests.support.mock import patch
-
-# Import Salt Testing libs
 from tests.support.unit import TestCase, skipIf
 
-# Import 3rd-party libs
 try:
     import timelib  # pylint: disable=import-error,unused-import
 

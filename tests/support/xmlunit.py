@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Pedro Algarvio (pedro@algarvio.me)
     :copyright: Copyright 2014 by the SaltStack Team, see AUTHORS for more details.
@@ -12,8 +11,6 @@
 """
 # pylint: disable=wrong-import-order,wrong-import-position
 
-# Import python libs
-from __future__ import absolute_import
 
 import io
 import logging
@@ -34,7 +31,7 @@ try:
         """
 
         def __init__(self, first, second):
-            super(_DuplicateWriter, self).__init__()
+            super().__init__()
             self._first = first
             self._second = second
 
@@ -96,7 +93,7 @@ try:
 except ImportError:
     HAS_XMLRUNNER = False
 
-    class XMLTestRunner(object):
+    class XMLTestRunner:
         """
         This is a dumb class just so we don't break projects at import time
         """

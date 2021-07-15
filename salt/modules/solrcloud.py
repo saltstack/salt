@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module for solrcloud configuration
 
@@ -6,16 +5,12 @@ Module for solrcloud configuration
 
 For now, module is limited to http-exposed API. It doesn't implement config upload via Solr zkCli
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 
 import salt.utils.http as http
 from salt.exceptions import SaltInvocationError
-from salt.ext import six
 
-# Import salt libs
 log = logging.getLogger(__name__)
 
 """
@@ -83,7 +78,7 @@ def _query(url, solr_url="http://localhost:8983/solr/", **kwargs):
 
     """
 
-    if not isinstance(solr_url, six.string_types):
+    if not isinstance(solr_url, str):
         raise ValueError("solr_url must be a string")
 
     if solr_url[-1:] != "/":
@@ -102,7 +97,7 @@ def _query(url, solr_url="http://localhost:8983/solr/", **kwargs):
         else:
             raise SaltInvocationError(
                 "Got a {status} error when calling {solr_url}{url} : {error}".format(
-                    status=six.text_type(query_result["status"]),
+                    status=str(query_result["status"]),
                     solr_url=solr_url,
                     url=url,
                     error=query_result["error"],
@@ -121,7 +116,7 @@ def _validate_core_properties(properties):
 
     props_string = ""
 
-    for prop_name, prop_value in six.iteritems(properties):
+    for prop_name, prop_value in properties.items():
         if prop_name in BOOL_PROPS_LIST:
             if not isinstance(prop_value, bool):
                 raise ValueError('Option "' + prop_name + '" value must be an boolean')
@@ -134,7 +129,7 @@ def _validate_core_properties(properties):
                 + ("true" if prop_value else "false")
             )
         elif prop_name in STRING_PROPS_LIST:
-            if not isinstance(prop_value, six.string_types):
+            if not isinstance(prop_value, str):
                 raise ValueError(
                     'In option "properties", core property "'
                     + prop_name
@@ -145,11 +140,7 @@ def _validate_core_properties(properties):
 
         else:
             props_string = (
-                props_string
-                + "&property."
-                + six.text_type(prop_name)
-                + "="
-                + six.text_type(prop_value)
+                props_string + "&property." + str(prop_name) + "=" + str(prop_value)
             )
 
     return props_string
@@ -164,19 +155,19 @@ def _validate_collection_options(options):
 
     options_string = ""
 
-    for option_name, option_value in six.iteritems(options):
+    for option_name, option_value in options.items():
         if option_name in STRING_OPTIONS_LIST:
-            if not isinstance(option_value, six.string_types):
+            if not isinstance(option_value, str):
                 raise ValueError('Option "' + option_name + '" value must be a string')
 
             options_string = options_string + "&" + option_name + "=" + option_value
 
         elif option_name in INT_OPTIONS_LIST:
-            if not isinstance(option_value, six.integer_types):
+            if not isinstance(option_value, int):
                 raise ValueError('Option "' + option_name + '" value must be an int')
 
             options_string = (
-                options_string + "&" + option_name + "=" + six.text_type(option_value)
+                options_string + "&" + option_name + "=" + str(option_value)
             )
 
         elif option_name in BOOL_OPTIONS_LIST:
@@ -260,7 +251,7 @@ def alias_exists(alias_name, **kwargs):
         salt '*' solrcloud.alias_exists my_alias
     """
 
-    if not isinstance(alias_name, six.string_types):
+    if not isinstance(alias_name, str):
         raise ValueError("Alias name must be a string")
 
     cluster = cluster_status(**kwargs)
@@ -282,12 +273,12 @@ def alias_get_collections(alias_name, **kwargs):
         salt '*' solrcloud.alias_get my_alias
     """
 
-    if not isinstance(alias_name, six.string_types):
+    if not isinstance(alias_name, str):
         raise ValueError("Alias name must be a string")
 
     collection_aliases = [
         (k_v[0], k_v[1]["aliases"])
-        for k_v in six.iteritems(cluster_status(**kwargs)["collections"])
+        for k_v in cluster_status(**kwargs)["collections"].items()
         if "aliases" in k_v[1]
     ]
     aliases = [
@@ -317,7 +308,7 @@ def alias_set_collections(alias_name, collections=None, **kwargs):
         )
 
     for collection in collections:
-        if not isinstance(collection, six.string_types):
+        if not isinstance(collection, str):
             raise ValueError("Collection name must be a string")
 
     return _query(
@@ -384,7 +375,7 @@ def collection_exists(collection_name, **kwargs):
 
     """
 
-    if not isinstance(collection_name, six.string_types):
+    if not isinstance(collection_name, str):
         raise ValueError("Collection name must be a string")
 
     return collection_name in collection_list(**kwargs)
@@ -408,7 +399,7 @@ def collection_backup(collection_name, location, backup_name=None, **kwargs):
         raise ValueError("Collection doesn't exists")
 
     if backup_name is not None:
-        backup_name = "&name={0}".format(backup_name)
+        backup_name = "&name={}".format(backup_name)
     else:
         backup_name = ""
 

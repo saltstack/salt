@@ -2,13 +2,11 @@
 Utility functions for minions
 """
 
-# Import Python Libs
 
 import logging
 import os
 import threading
 
-# Import Salt Libs
 import salt.payload
 import salt.utils.files
 import salt.utils.platform
