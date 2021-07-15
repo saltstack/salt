@@ -18,8 +18,7 @@ def profile(name):
     Example tuned.sls file to set profile to virtual-guest
 
     tuned:
-      tuned:
-        - profile
+      tuned.profile
         - name: virtual-guest
 
     name
