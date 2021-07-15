@@ -1141,7 +1141,7 @@ def genrepo(**kwargs):
 
         # Skip hidden directories (.git)
         if re.search(r"[\\/]\..*", root):
-            log.debug("Skipping files in directory: {}".format(root))
+            log.debug("Skipping files in directory: %s", root)
             continue
 
         short_path = os.path.relpath(root, repo_details.local_dest)
@@ -1199,7 +1199,7 @@ def _repo_process_pkg_sls(filename, short_path_name, ret, successful_verbose):
     renderers = salt.loader.render(__opts__, __salt__)
 
     def _failed_compile(prefix_msg, error_msg):
-        log.error("{} '{}': {} ".format(prefix_msg, short_path_name, error_msg))
+        log.error("%s '%s': %s", prefix_msg, short_path_name, error_msg)
         ret.setdefault("errors", {})[short_path_name] = [
             "{}, {} ".format(prefix_msg, error_msg)
         ]
@@ -1774,8 +1774,9 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
             ):
                 ret[pkg_name] = {"install status": "task started"}
                 if not __salt__["task.run"](name="update-salt-software"):
-                    log.error("Failed to install %s", pkg_name)
-                    log.error("Scheduled Task failed to run")
+                    log.error(
+                        "Scheduled Task failed to run. Failed to install %s", pkg_name
+                    )
                     ret[pkg_name] = {"install status": "failed"}
                 else:
 
@@ -1790,15 +1791,18 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                             break
 
                     if not task_running:
-                        log.error("Failed to install %s", pkg_name)
-                        log.error("Scheduled Task failed to run")
+                        log.error(
+                            "Scheduled Task failed to run. Failed to install %s",
+                            pkg_name,
+                        )
                         ret[pkg_name] = {"install status": "failed"}
 
             # All other packages run with task scheduler
             else:
                 if not __salt__["task.run_wait"](name="update-salt-software"):
-                    log.error("Failed to install %s", pkg_name)
-                    log.error("Scheduled Task failed to run")
+                    log.error(
+                        "Scheduled Task failed to run. Failed to install %s", pkg_name
+                    )
                     ret[pkg_name] = {"install status": "failed"}
         else:
             # Launch the command
@@ -1824,9 +1828,12 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                 ret[pkg_name] = {"install status": "success, reboot initiated"}
                 changed.append(pkg_name)
             else:
-                log.error("Failed to install %s", pkg_name)
-                log.error("retcode %s", result["retcode"])
-                log.error("installer output: %s", result["stdout"])
+                log.error(
+                    "Failed to install %s; retcode: %s; installer output: %s",
+                    pkg_name,
+                    result["retcode"],
+                    result["stdout"],
+                )
                 ret[pkg_name] = {"install status": "failed"}
 
     # Get a new list of installed software
@@ -2140,8 +2147,9 @@ def remove(name=None, pkgs=None, **kwargs):
                 )
                 # Run Scheduled Task
                 if not __salt__["task.run_wait"](name="update-salt-software"):
-                    log.error("Failed to remove %s", pkgname)
-                    log.error("Scheduled Task failed to run")
+                    log.error(
+                        "Scheduled Task failed to run. Failed to remove %s", pkgname
+                    )
                     ret[pkgname] = {"uninstall status": "failed"}
             else:
                 # Launch the command
@@ -2168,9 +2176,12 @@ def remove(name=None, pkgs=None, **kwargs):
                     ret[pkgname] = {"uninstall status": "success, reboot initiated"}
                     changed.append(pkgname)
                 else:
-                    log.error("Failed to remove %s", pkgname)
-                    log.error("retcode %s", result["retcode"])
-                    log.error("uninstaller output: %s", result["stdout"])
+                    log.error(
+                        "Failed to remove %s; retcode: %s; uninstaller output: %s",
+                        pkgname,
+                        result["retcode"],
+                        result["stdout"],
+                    )
                     ret[pkgname] = {"uninstall status": "failed"}
 
     # Get a new list of installed software
@@ -2287,8 +2298,7 @@ def get_repo_data(saltenv="base"):
                 log.exception(exc)
                 return {}
     except OSError as exc:
-        log.error("Not able to read repo file")
-        log.exception(exc)
+        log.exception("Not able to read repo file: %s", exc)
         return {}
 
 

@@ -22,10 +22,8 @@ import warnings
 from distutils.version import LooseVersion as _LooseVersion
 from distutils.version import StrictVersion as _StrictVersion
 
-import salt.version
-
 # pylint: enable=blacklisted-module
-
+import salt.version
 
 log = logging.getLogger(__name__)
 
@@ -94,9 +92,9 @@ def warn_until(
     be raised to remind the developers to remove the warning because the
     target version has been reached.
 
-    :param version: The version info or name after which the warning becomes a
-                    ``RuntimeError``. For example ``(0, 17)`` or ``Hydrogen``
-                    or an instance of :class:`salt.version.SaltStackVersion`.
+    :param version: The version info or name after which the warning becomes a ``RuntimeError``.
+                    For example ``(2019, 2)``, ``3000``, ``Hydrogen`` or an instance of
+                    :class:`salt.version.SaltStackVersion` or :class:`salt.version.SaltVersion`.
     :param message: The warning message to be displayed.
     :param category: The warning class to be thrown, by default
                      ``DeprecationWarning``
@@ -110,15 +108,27 @@ def warn_until(
                                 issued. When we're only after the salt version
                                 checks to raise a ``RuntimeError``.
     """
-    if not isinstance(version, (tuple, str, salt.version.SaltStackVersion)):
-        raise RuntimeError(
-            "The 'version' argument should be passed as a tuple, string or "
-            "an instance of 'salt.version.SaltStackVersion'."
-        )
+    if isinstance(version, salt.version.SaltVersion):
+        version = salt.version.SaltStackVersion(*version.info)
+    elif isinstance(version, int):
+        version = salt.version.SaltStackVersion(version)
     elif isinstance(version, tuple):
         version = salt.version.SaltStackVersion(*version)
     elif isinstance(version, str):
+        if version.lower() not in salt.version.SaltStackVersion.LNAMES:
+            raise RuntimeError(
+                "Incorrect spelling for the release name in the warn_utils "
+                "call. Expecting one of these release names: {}".format(
+                    [vs.name for vs in salt.version.SaltVersionsInfo.versions()]
+                )
+            )
         version = salt.version.SaltStackVersion.from_name(version)
+    elif not isinstance(version, salt.version.SaltStackVersion):
+        raise RuntimeError(
+            "The 'version' argument should be passed as a tuple, integer, string or "
+            "an instance of 'salt.version.SaltVersion' or "
+            "'salt.version.SaltStackVersion'."
+        )
 
     if stacklevel is None:
         # Attribute the warning to the calling function, not to warn_until()
