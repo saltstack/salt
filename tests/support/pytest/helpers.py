@@ -213,14 +213,17 @@ class TestAccount:
         return self._user_info
 
     def __enter__(self):
-        log.debug("Creating system account: %s", self)
-        ret = self.sminion.functions.user.add(self.username)
-        assert ret
-        ret = self.sminion.functions.shadow.set_password(
-            self.username,
-            self.password if salt.utils.platform.is_darwin() else self.hashed_password,
-        )
-        assert ret
+        if not self.sminion.functions.user.info(self.username):
+            log.debug("Creating system account: %s", self)
+            ret = self.sminion.functions.user.add(self.username)
+            assert ret
+            ret = self.sminion.functions.shadow.set_password(
+                self.username,
+                self.password
+                if salt.utils.platform.is_darwin()
+                else self.hashed_password,
+            )
+            assert ret
         assert self.username in self.sminion.functions.user.list_users()
         if self.group is not None:
             group = self.sminion.functions.group.info(self.group)
@@ -235,11 +238,32 @@ class TestAccount:
 
     def __exit__(self, *args):
         if self.group:
-            self.sminion.functions.group.deluser(self.group, self.username)
+            try:
+                self.sminion.functions.group.deluser(self.group, self.username)
+                log.debug("Removed user %r from group %r", self.username, self.group)
+            except Exception:  # pylint: disable=broad-except
+                log.warning(
+                    "Failed to emove user %r from group %r",
+                    self.username,
+                    self.group,
+                    exc_info=True,
+                )
             if self._delete_group:
-                self.sminion.functions.group.delete(self.group)
-        self.sminion.functions.user.delete(self.username, remove=True, force=True)
-        log.debug("Deleted system account: %s", self.username)
+                try:
+                    self.sminion.functions.group.delete(self.group)
+                    log.debug("Deleted system group: %s", self.group)
+                except Exception:  # pylint: disable=broad-except
+                    log.warning(
+                        "Failed to delete system group: %s", self.group, exc_info=True
+                    )
+
+        try:
+            self.sminion.functions.user.delete(self.username, remove=True, force=True)
+            log.debug("Deleted system account: %s", self.username)
+        except Exception:  # pylint: disable=broad-except
+            log.warning(
+                "Failed to delete system account: %s", self.username, exc_info=True
+            )
 
 
 @pytest.helpers.register
