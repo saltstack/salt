@@ -1,6 +1,7 @@
 import sys
 
 import pytest
+import salt.modules.state as statemod
 import salt.modules.transactional_update as tu
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError
@@ -16,7 +17,10 @@ class TransactionalUpdateTestCase(TestCase, LoaderModuleMockMixin):
     """
 
     def setup_loader_modules(self):
-        return {tu: {"__salt__": {}, "__utils__": {}}}
+        return {
+            tu: {"__salt__": {}, "__utils__": {}},
+            statemod: {"__salt__": {}, "__context__": {}},
+        }
 
     def test__global_params_no_self_update(self):
         """Test transactional_update._global_params without self_update"""
@@ -643,8 +647,13 @@ class TransactionalUpdateTestCase(TestCase, LoaderModuleMockMixin):
         opts_mock = {
             "hash_type": "md5",
         }
+        salt_mock = {
+            "saltutil.is_running": MagicMock(return_value=[]),
+        }
         get_sls_opts.return_value = opts_mock
-        with patch.dict(tu.__opts__, opts_mock):
+        with patch.dict(tu.__opts__, opts_mock), patch.dict(
+            statemod.__salt__, salt_mock
+        ):
             assert tu.sls("module") == "result"
             _create_and_execute_salt_state.assert_called_once()
 
@@ -666,8 +675,13 @@ class TransactionalUpdateTestCase(TestCase, LoaderModuleMockMixin):
         opts_mock = {
             "hash_type": "md5",
         }
+        salt_mock = {
+            "saltutil.is_running": MagicMock(return_value=[]),
+        }
         get_sls_opts.return_value = opts_mock
-        with patch.dict(tu.__opts__, opts_mock):
+        with patch.dict(tu.__opts__, opts_mock), patch.dict(
+            statemod.__salt__, salt_mock
+        ):
             assert tu.highstate() == "result"
             _create_and_execute_salt_state.assert_called_once()
 
@@ -683,7 +697,12 @@ class TransactionalUpdateTestCase(TestCase, LoaderModuleMockMixin):
         opts_mock = {
             "hash_type": "md5",
         }
+        salt_mock = {
+            "saltutil.is_running": MagicMock(return_value=[]),
+        }
         get_sls_opts.return_value = opts_mock
-        with patch.dict(tu.__opts__, opts_mock):
+        with patch.dict(tu.__opts__, opts_mock), patch.dict(
+            statemod.__salt__, salt_mock
+        ):
             assert tu.single("pkg.installed", name="emacs") == "result"
             _create_and_execute_salt_state.assert_called_once()
