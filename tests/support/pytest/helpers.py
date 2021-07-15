@@ -180,6 +180,7 @@ class TestAccount:
     group = attr.ib(default=None)
     _group_info = attr.ib(init=False, repr=False, default=None)
     _delete_group = attr.ib(init=False, repr=False, default=False)
+    _user_info = attr.ib(init=False, repr=False, default=None)
 
     def __attrs_post_init__(self):
         random_str = random_string("-", uppercase=False)
@@ -202,6 +203,14 @@ class TestAccount:
                 **self.sminion.functions.group.info(self.group)
             )
         return self._group_info
+
+    @property
+    def user_info(self):
+        if self._user_info is None:
+            self._user_info = types.SimpleNamespace(
+                **self.sminion.functions.user.info(self.username)
+            )
+        return self._user_info
 
     def __enter__(self):
         log.debug("Creating system account: %s", self)
