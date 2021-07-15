@@ -349,7 +349,7 @@ def _read_containers_cache_file(cache_file):
     """
     log.debug("Reading containers cache file")
 
-    with salt.utils.files.fopen(str(cache_file.name), "rb") as fp_:
+    with salt.utils.files.fopen(cache_file, "rb") as fp_:
         data = pickle.load(fp_)
 
     return data
