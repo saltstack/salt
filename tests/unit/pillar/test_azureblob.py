@@ -260,7 +260,7 @@ class AzureBlobTestCase(TestCase, LoaderModuleMockMixin):
         with salt.utils.files.fopen(str(cache_file.name), "wb") as fp_:
             pickle.dump(metadata, fp_)
         # Checks to see if _read_containers_cache_file can successfully read the pickled metadata from the cache file
-        ret = azureblob._read_containers_cache_file(str(cache_file))
+        ret = azureblob._read_containers_cache_file(str(cache_file.name))
         fp_.close()
         os.remove(str(fp_.name))
         cache_file.close()
