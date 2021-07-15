@@ -1168,34 +1168,37 @@ def test_bsd_memdata():
         "amd64",
     )
 
-    with patch("platform.uname", MagicMock(return_value=mock_freebsd_uname[3])):
-        with patch.object(
-            salt.utils.platform, "is_linux", MagicMock(return_value=False)
+    with patch("platform.uname", MagicMock(return_value=mock_freebsd_uname)):
+        with patch(
+            "platform.uname.version", MagicMock(return_value=mock_freebsd_uname[3])
         ):
             with patch.object(
-                salt.utils.platform, "is_freebsd", MagicMock(return_value=True)
+                salt.utils.platform, "is_linux", MagicMock(return_value=False)
             ):
-                # Skip the first if statement
                 with patch.object(
-                    salt.utils.platform, "is_proxy", MagicMock(return_value=False)
+                    salt.utils.platform, "is_freebsd", MagicMock(return_value=True)
                 ):
-                    # Skip the init grain compilation (not pertinent)
-                    with patch.object(os.path, "exists", path_exists_mock):
-                        with patch("salt.utils.path.which") as mock:
-                            mock.return_value = "/sbin/sysctl"
-                            # Make a bunch of functions return empty dicts,
-                            # we don't care about these grains for the
-                            # purposes of this test.
-                            with patch.object(core, "_bsd_cpudata", empty_mock):
-                                with patch.object(core, "_hw_data", empty_mock):
-                                    with patch.object(core, "_virtual", empty_mock):
-                                        with patch.object(core, "_ps", empty_mock):
-                                            # Mock the osarch
-                                            with patch.dict(
-                                                core.__salt__,
-                                                {"cmd.run": cmd_run_mock},
-                                            ):
-                                                os_grains = core.os_data()
+                    # Skip the first if statement
+                    with patch.object(
+                        salt.utils.platform, "is_proxy", MagicMock(return_value=False)
+                    ):
+                        # Skip the init grain compilation (not pertinent)
+                        with patch.object(os.path, "exists", path_exists_mock):
+                            with patch("salt.utils.path.which") as mock:
+                                mock.return_value = "/sbin/sysctl"
+                                # Make a bunch of functions return empty dicts,
+                                # we don't care about these grains for the
+                                # purposes of this test.
+                                with patch.object(core, "_bsd_cpudata", empty_mock):
+                                    with patch.object(core, "_hw_data", empty_mock):
+                                        with patch.object(core, "_virtual", empty_mock):
+                                            with patch.object(core, "_ps", empty_mock):
+                                                # Mock the osarch
+                                                with patch.dict(
+                                                    core.__salt__,
+                                                    {"cmd.run": cmd_run_mock},
+                                                ):
+                                                    os_grains = core.os_data()
 
     assert os_grains.get("mem_total") == 2023
     assert os_grains.get("swap_total") == 400
@@ -2372,34 +2375,39 @@ def test_bsd_osfullname():
         "amd64",
     )
 
-    with patch("platform.uname", MagicMock(return_value=mock_freebsd_uname[3])):
-        with patch.object(
-            salt.utils.platform, "is_linux", MagicMock(return_value=False)
+    with patch("platform.uname", MagicMock(return_value=mock_freebsd_uname)):
+        with patch(
+            "platform.uname.version", MagicMock(return_value=mock_freebsd_uname[3])
         ):
             with patch.object(
-                salt.utils.platform, "is_freebsd", MagicMock(return_value=True)
+                salt.utils.platform, "is_linux", MagicMock(return_value=False)
             ):
-                # Skip the first if statement
                 with patch.object(
-                    salt.utils.platform, "is_proxy", MagicMock(return_value=False)
+                    salt.utils.platform, "is_freebsd", MagicMock(return_value=True)
                 ):
-                    # Skip the init grain compilation (not pertinent)
-                    with patch.object(os.path, "exists", path_exists_mock):
-                        with patch("salt.utils.path.which") as mock:
-                            mock.return_value = "/sbin/sysctl"
-                            # Make a bunch of functions return empty dicts,
-                            # we don't care about these grains for the
-                            # purposes of this test.
-                            with patch.object(
-                                core, "_bsd_cpudata", empty_mock
-                            ), patch.object(core, "_hw_data", empty_mock), patch.object(
-                                core, "_virtual", empty_mock
-                            ), patch.object(
-                                core, "_ps", empty_mock
-                            ), patch.dict(
-                                core.__salt__, {"cmd.run": cmd_run_mock}
-                            ):
-                                os_grains = core.os_data()
+                    # Skip the first if statement
+                    with patch.object(
+                        salt.utils.platform, "is_proxy", MagicMock(return_value=False)
+                    ):
+                        # Skip the init grain compilation (not pertinent)
+                        with patch.object(os.path, "exists", path_exists_mock):
+                            with patch("salt.utils.path.which") as mock:
+                                mock.return_value = "/sbin/sysctl"
+                                # Make a bunch of functions return empty dicts,
+                                # we don't care about these grains for the
+                                # purposes of this test.
+                                with patch.object(
+                                    core, "_bsd_cpudata", empty_mock
+                                ), patch.object(
+                                    core, "_hw_data", empty_mock
+                                ), patch.object(
+                                    core, "_virtual", empty_mock
+                                ), patch.object(
+                                    core, "_ps", empty_mock
+                                ), patch.dict(
+                                    core.__salt__, {"cmd.run": cmd_run_mock}
+                                ):
+                                    os_grains = core.os_data()
 
     assert "osfullname" in os_grains
     assert os_grains.get("osfullname") == "FreeBSD"
