@@ -1,4 +1,4 @@
-@Library('salt@master-1.10') _
+@Library('salt@master-1.11') _
 
 runLint(
     env: env)

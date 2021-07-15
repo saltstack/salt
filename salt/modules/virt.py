@@ -1395,7 +1395,7 @@ def _get_images_dir():
     find legacy virt.images, then tries virt:images.
     """
     img_dir = __salt__["config.get"]("virt:images")
-    log.debug("Image directory from config option `virt:images`" " is %s", img_dir)
+    log.debug("Image directory from config option `virt:images` is %s", img_dir)
     return img_dir
 
 
@@ -1443,9 +1443,7 @@ def _zfs_image_create(
             )
         )
     elif destination_fs in existing_disk:
-        log.info(
-            "ZFS filesystem {} already exists. Skipping creation".format(destination_fs)
-        )
+        log.info("ZFS filesystem %s already exists. Skipping creation", destination_fs)
         blockdevice_path = os.path.join("/dev/zvol", pool, vm_name)
         return blockdevice_path
 
@@ -5867,7 +5865,7 @@ def purge(vm_, dirs=False, removables=False, **kwargs):
             # TODO create solution for 'dataset is busy'
             time.sleep(3)
             fs_name = disks[disk]["file"][len("/dev/zvol/") :]
-            log.info("Destroying VM ZFS volume {}".format(fs_name))
+            log.info("Destroying VM ZFS volume %s", fs_name)
             __salt__["zfs.destroy"](name=fs_name, force=True)
         elif os.path.exists(disks[disk]["file"]):
             os.remove(disks[disk]["file"])
@@ -5917,12 +5915,7 @@ def _is_kvm_hyper():
     """
     Returns a bool whether or not this node is a KVM hypervisor
     """
-    try:
-        with salt.utils.files.fopen("/proc/modules") as fp_:
-            if "kvm_" not in salt.utils.stringutils.to_unicode(fp_.read()):
-                return False
-    except OSError:
-        # No /proc/modules? Are we on Windows? Or Solaris?
+    if not os.path.exists("/dev/kvm"):
         return False
     return "libvirtd" in __salt__["cmd.run"](__grains__["ps"])
 
@@ -6945,7 +6938,11 @@ def all_capabilities(**kwargs):
         host_caps = ElementTree.fromstring(conn.getCapabilities())
         domains = [
             [
-                (guest.get("arch", {}).get("name", None), key)
+                (
+                    guest.get("arch", {}).get("name", None),
+                    key,
+                    guest.get("arch", {}).get("emulator", None),
+                )
                 for key in guest.get("arch", {}).get("domains", {}).keys()
             ]
             for guest in [
@@ -6963,10 +6960,10 @@ def all_capabilities(**kwargs):
             "domains": [
                 _parse_domain_caps(
                     ElementTree.fromstring(
-                        conn.getDomainCapabilities(None, arch, None, domain)
+                        conn.getDomainCapabilities(emulator, arch, None, domain)
                     )
                 )
-                for (arch, domain) in flattened
+                for (arch, domain, emulator) in flattened
             ],
         }
         return result
@@ -7703,7 +7700,7 @@ def network_info(name=None, **kwargs):
             for net in nets
         }
     except libvirt.libvirtError as err:
-        log.debug("Silenced libvirt error: %s", str(err))
+        log.debug("Silenced libvirt error: %s", err)
     finally:
         conn.close()
     return result
@@ -8540,7 +8537,7 @@ def pool_info(name=None, **kwargs):
         ]
         result = {pool.name(): _pool_extract_infos(pool) for pool in pools}
     except libvirt.libvirtError as err:
-        log.debug("Silenced libvirt error: %s", str(err))
+        log.debug("Silenced libvirt error: %s", err)
     finally:
         conn.close()
     return result
@@ -8957,7 +8954,7 @@ def volume_infos(pool=None, volume=None, **kwargs):
         }
         return {pool_name: volumes for (pool_name, volumes) in vols.items() if volumes}
     except libvirt.libvirtError as err:
-        log.debug("Silenced libvirt error: %s", str(err))
+        log.debug("Silenced libvirt error: %s", err)
     finally:
         conn.close()
     return result

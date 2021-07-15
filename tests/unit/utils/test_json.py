@@ -125,9 +125,7 @@ class JSONTestCase(TestCase):
         # results in trailing whitespace on lines ending in a comma. So, for a
         # proper comparison, we will have to run rstrip on each line of the
         # return and then stitch it back together.
-        ret = "\n".join(
-            [x.rstrip() for x in ret.splitlines()]
-        )  # future lint: disable=blacklisted-function
+        ret = "\n".join([x.rstrip() for x in ret.splitlines()])
         self.assertEqual(ret, self.serialized_indent4)
         # Loading it should be equal to the original data
         self.assertEqual(salt.utils.json.loads(ret), self.data)
