@@ -661,6 +661,93 @@ class TransactionalUpdateTestCase(TestCase, LoaderModuleMockMixin):
     @patch("salt.modules.transactional_update.TransactionalUpdateHighstate")
     @patch("salt.fileclient.get_file_client")
     @patch("salt.utils.state.get_sls_opts")
+    def test_sls_queue_true(
+        self,
+        get_sls_opts,
+        get_file_client,
+        TransactionalUpdateHighstate,
+        _create_and_execute_salt_state,
+    ):
+        """Test transactional_update.sls"""
+        TransactionalUpdateHighstate.return_value = TransactionalUpdateHighstate
+        TransactionalUpdateHighstate.render_highstate.return_value = (None, [])
+        TransactionalUpdateHighstate.state.reconcile_extend.return_value = (None, [])
+        TransactionalUpdateHighstate.state.requisite_in.return_value = (None, [])
+        TransactionalUpdateHighstate.state.verify_high.return_value = []
+
+        _create_and_execute_salt_state.return_value = "result"
+        opts_mock = {
+            "hash_type": "md5",
+        }
+        salt_mock = {
+            "saltutil.is_running": MagicMock(
+                side_effect=[
+                    [
+                        {
+                            "fun": "state.running",
+                            "pid": "4126",
+                            "jid": "20150325123407204096",
+                        }
+                    ],
+                    [],
+                ]
+            ),
+        }
+        get_sls_opts.return_value = opts_mock
+        with patch.dict(tu.__opts__, opts_mock), patch.dict(
+            statemod.__salt__, salt_mock
+        ):
+            assert tu.sls("module", queue=True) == "result"
+            _create_and_execute_salt_state.assert_called_once()
+
+    @patch("salt.modules.transactional_update._create_and_execute_salt_state")
+    @patch("salt.modules.transactional_update.TransactionalUpdateHighstate")
+    @patch("salt.fileclient.get_file_client")
+    @patch("salt.utils.state.get_sls_opts")
+    def test_sls_queue_false_failing(
+        self,
+        get_sls_opts,
+        get_file_client,
+        TransactionalUpdateHighstate,
+        _create_and_execute_salt_state,
+    ):
+        """Test transactional_update.sls"""
+        TransactionalUpdateHighstate.return_value = TransactionalUpdateHighstate
+        TransactionalUpdateHighstate.render_highstate.return_value = (None, [])
+        TransactionalUpdateHighstate.state.reconcile_extend.return_value = (None, [])
+        TransactionalUpdateHighstate.state.requisite_in.return_value = (None, [])
+        TransactionalUpdateHighstate.state.verify_high.return_value = []
+
+        _create_and_execute_salt_state.return_value = "result"
+        opts_mock = {
+            "hash_type": "md5",
+        }
+        salt_mock = {
+            "saltutil.is_running": MagicMock(
+                side_effect=[
+                    [
+                        {
+                            "fun": "state.running",
+                            "pid": "4126",
+                            "jid": "20150325123407204096",
+                        }
+                    ],
+                    [],
+                ]
+            ),
+        }
+        get_sls_opts.return_value = opts_mock
+        with patch.dict(tu.__opts__, opts_mock), patch.dict(
+            statemod.__salt__, salt_mock
+        ):
+            assert tu.sls("module", queue=False) == [
+                'The function "state.running" is running as PID 4126 and was started at 2015, Mar 25 12:34:07.204096 with jid 20150325123407204096'
+            ]
+
+    @patch("salt.modules.transactional_update._create_and_execute_salt_state")
+    @patch("salt.modules.transactional_update.TransactionalUpdateHighstate")
+    @patch("salt.fileclient.get_file_client")
+    @patch("salt.utils.state.get_sls_opts")
     def test_highstate(
         self,
         get_sls_opts,
@@ -686,6 +773,85 @@ class TransactionalUpdateTestCase(TestCase, LoaderModuleMockMixin):
             _create_and_execute_salt_state.assert_called_once()
 
     @patch("salt.modules.transactional_update._create_and_execute_salt_state")
+    @patch("salt.modules.transactional_update.TransactionalUpdateHighstate")
+    @patch("salt.fileclient.get_file_client")
+    @patch("salt.utils.state.get_sls_opts")
+    def test_highstate_queue_true(
+        self,
+        get_sls_opts,
+        get_file_client,
+        TransactionalUpdateHighstate,
+        _create_and_execute_salt_state,
+    ):
+        """Test transactional_update.highstage"""
+        TransactionalUpdateHighstate.return_value = TransactionalUpdateHighstate
+
+        _create_and_execute_salt_state.return_value = "result"
+        opts_mock = {
+            "hash_type": "md5",
+        }
+        salt_mock = {
+            "saltutil.is_running": MagicMock(
+                side_effect=[
+                    [
+                        {
+                            "fun": "state.running",
+                            "pid": "4126",
+                            "jid": "20150325123407204096",
+                        }
+                    ],
+                    [],
+                ]
+            ),
+        }
+        get_sls_opts.return_value = opts_mock
+        with patch.dict(tu.__opts__, opts_mock), patch.dict(
+            statemod.__salt__, salt_mock
+        ):
+            assert tu.highstate(queue=True) == "result"
+            _create_and_execute_salt_state.assert_called_once()
+
+    @patch("salt.modules.transactional_update._create_and_execute_salt_state")
+    @patch("salt.modules.transactional_update.TransactionalUpdateHighstate")
+    @patch("salt.fileclient.get_file_client")
+    @patch("salt.utils.state.get_sls_opts")
+    def test_highstate_queue_false_failing(
+        self,
+        get_sls_opts,
+        get_file_client,
+        TransactionalUpdateHighstate,
+        _create_and_execute_salt_state,
+    ):
+        """Test transactional_update.highstage"""
+        TransactionalUpdateHighstate.return_value = TransactionalUpdateHighstate
+
+        _create_and_execute_salt_state.return_value = "result"
+        opts_mock = {
+            "hash_type": "md5",
+        }
+        salt_mock = {
+            "saltutil.is_running": MagicMock(
+                side_effect=[
+                    [
+                        {
+                            "fun": "state.running",
+                            "pid": "4126",
+                            "jid": "20150325123407204096",
+                        }
+                    ],
+                    [],
+                ]
+            ),
+        }
+        get_sls_opts.return_value = opts_mock
+        with patch.dict(tu.__opts__, opts_mock), patch.dict(
+            statemod.__salt__, salt_mock
+        ):
+            assert tu.highstate(queue=False) == [
+                'The function "state.running" is running as PID 4126 and was started at 2015, Mar 25 12:34:07.204096 with jid 20150325123407204096'
+            ]
+
+    @patch("salt.modules.transactional_update._create_and_execute_salt_state")
     @patch("salt.client.ssh.state.SSHState")
     @patch("salt.utils.state.get_sls_opts")
     def test_single(self, get_sls_opts, SSHState, _create_and_execute_salt_state):
@@ -705,4 +871,75 @@ class TransactionalUpdateTestCase(TestCase, LoaderModuleMockMixin):
             statemod.__salt__, salt_mock
         ):
             assert tu.single("pkg.installed", name="emacs") == "result"
+            _create_and_execute_salt_state.assert_called_once()
+
+    @patch("salt.modules.transactional_update._create_and_execute_salt_state")
+    @patch("salt.client.ssh.state.SSHState")
+    @patch("salt.utils.state.get_sls_opts")
+    def test_single_queue_false_failing(
+        self, get_sls_opts, SSHState, _create_and_execute_salt_state
+    ):
+        """Test transactional_update.single"""
+        SSHState.return_value = SSHState
+        SSHState.verify_data.return_value = None
+
+        _create_and_execute_salt_state.return_value = "result"
+        opts_mock = {
+            "hash_type": "md5",
+        }
+        salt_mock = {
+            "saltutil.is_running": MagicMock(
+                side_effect=[
+                    [
+                        {
+                            "fun": "state.running",
+                            "pid": "4126",
+                            "jid": "20150325123407204096",
+                        }
+                    ],
+                    [],
+                ]
+            ),
+        }
+        get_sls_opts.return_value = opts_mock
+        with patch.dict(tu.__opts__, opts_mock), patch.dict(
+            statemod.__salt__, salt_mock
+        ):
+            assert tu.single("pkg.installed", name="emacs", queue=False) == [
+                'The function "state.running" is running as PID 4126 and was started at 2015, Mar 25 12:34:07.204096 with jid 20150325123407204096'
+            ]
+
+    @patch("salt.modules.transactional_update._create_and_execute_salt_state")
+    @patch("salt.client.ssh.state.SSHState")
+    @patch("salt.utils.state.get_sls_opts")
+    def test_single_queue_true(
+        self, get_sls_opts, SSHState, _create_and_execute_salt_state
+    ):
+        """Test transactional_update.single"""
+        SSHState.return_value = SSHState
+        SSHState.verify_data.return_value = None
+
+        _create_and_execute_salt_state.return_value = "result"
+        opts_mock = {
+            "hash_type": "md5",
+        }
+        salt_mock = {
+            "saltutil.is_running": MagicMock(
+                side_effect=[
+                    [
+                        {
+                            "fun": "state.running",
+                            "pid": "4126",
+                            "jid": "20150325123407204096",
+                        }
+                    ],
+                    [],
+                ]
+            ),
+        }
+        get_sls_opts.return_value = opts_mock
+        with patch.dict(tu.__opts__, opts_mock), patch.dict(
+            statemod.__salt__, salt_mock
+        ):
+            assert tu.single("pkg.installed", name="emacs", queue=True) == "result"
             _create_and_execute_salt_state.assert_called_once()
