@@ -3220,10 +3220,7 @@ class FileBasicsTestCase(TestCase, LoaderModuleMockMixin):
                 },
             ):
                 expected_call = call(
-                    "http://t.est.com/http/file1",
-                    decode_body=False,
-                    method="HEAD",
-                    backend="requests",
+                    "http://t.est.com/http/file1", decode_body=False, method="HEAD",
                 )
                 with patch(
                     "salt.utils.http.query", MagicMock(return_value={})
