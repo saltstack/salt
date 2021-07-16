@@ -1588,10 +1588,16 @@ def _linux_devicetree_platform_data():
         else:
             grains["productname"] = tmp[0]
 
+    # not in specs, but observed on "Linux on Power" systems
     systemid = _read_dt_string("system-id")
     if systemid:
-        # not in specs, but observed on "Linux on Power" systems
         grains["serialnumber"] = systemid
+
+    # not in spec, but populated for ARM Linux - https://github.com/torvalds/linux/blob/master/arch/arm/kernel/setup.c#L961
+    # as this is "more correct" naming, this should have priority over system-id
+    serial = _read_dt_string("serial-number")
+    if serial:
+        grains["serialnumber"] = serial
 
     return grains
 
