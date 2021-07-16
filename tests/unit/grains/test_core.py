@@ -2584,6 +2584,23 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                 {"/proc/device-tree/system-id": "IBM,123456,789"},
                 {"serialnumber": "IBM,123456,789"},
             ),
+            (
+                {
+                    "/proc/device-tree/model": "Raspberry Pi 4 Model B Rev 1.1",
+                    "/proc/device-tree/serial-number": "100000000123456789",
+                },
+                {
+                    "serialnumber": "100000000123456789",
+                    "productname": "Raspberry Pi 4 Model B Rev 1.1",
+                },
+            ),
+            (
+                {
+                    "/proc/device-tree/serial-number": "100000000123456789",
+                    "/proc/device-tree/system-id": "fsl,ABCDEF",
+                },
+                {"serialnumber": "100000000123456789"},
+            ),
         ]
 
         for test_input, expected in parameters:

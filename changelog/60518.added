@@ -1,1 +1,1 @@
-Added suport for ppc64le core grains (cpu_model, virtual, productname, manufacturer, serialnumber)
+Added suport for Linux ppc64le core grains (cpu_model, virtual, productname, manufacturer, serialnumber) and arm core grains (serialnumber, productname)
