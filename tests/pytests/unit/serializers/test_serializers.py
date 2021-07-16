@@ -10,7 +10,7 @@ import salt.serializers.python as python
 import salt.serializers.toml as toml
 import salt.serializers.yaml as yaml
 import salt.serializers.yamlex as yamlex
-import yaml as _yaml  # future lint: disable=blacklisted-import
+import yaml as _yaml
 from salt.serializers import SerializationError
 from salt.serializers.yaml import EncryptedString
 from salt.utils.odict import OrderedDict

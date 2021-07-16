@@ -131,7 +131,7 @@ def post_message(message, channel=None, username=None, api_url=None, hook=None):
     data = salt.utils.json.dumps(parameters)
     result = salt.utils.mattermost.query(
         api_url=api_url, hook=hook, data="payload={}".format(data)
-    )  # future lint: blacklisted-function
+    )
 
     if result:
         return True
