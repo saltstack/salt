@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Support for RallyDev
 
@@ -13,15 +12,11 @@ Requires a ``username`` and a ``password`` in ``/etc/salt/minion``:
       password: 123pass
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
 import salt.utils.http
 import salt.utils.json
-
-# Import salt libs
 from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -84,7 +79,7 @@ def _query(
         path += action
 
     if command:
-        path += "/{0}".format(command)
+        path += "/{}".format(command)
 
     log.debug("RallyDev URL: %s", path)
 

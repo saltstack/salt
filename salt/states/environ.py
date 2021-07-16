@@ -1,19 +1,12 @@
-# -*- coding: utf-8 -*-
 """
 Support for getting and setting the environment variables
 of the current salt process.
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
-# Import Salt libs
 import salt.utils.platform
-
-# Import 3rd-party libs
-from salt.ext import six
 
 
 def __virtual__():
@@ -100,7 +93,7 @@ def setenv(
 
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
     environ = {}
-    if isinstance(value, six.string_types) or value is False:
+    if isinstance(value, str) or value is False:
         environ[name] = value
     elif isinstance(value, dict):
         environ = value
@@ -122,7 +115,7 @@ def setenv(
 
     current_environ = dict(os.environ)
     already_set = []
-    for key, val in six.iteritems(environ):
+    for key, val in environ.items():
         if val is False:
             # We unset this key from the environment if
             # false_unsets is True. Otherwise we want to set
