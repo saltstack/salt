@@ -47,7 +47,7 @@ def redirect(argv):
         msg = "Must pass in a salt command, available commands are:"
         for cmd in AVAIL:
             msg += f"\n{cmd}"
-        print(msg, stream=sys.stderr, flush=True)
+        print(msg, file=sys.stderr, flush=True)
         sys.exit(1)
     cmd = sys.argv[1]
     if cmd == "shell":
