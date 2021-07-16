@@ -1159,15 +1159,17 @@ def test_bsd_memdata():
     cmd_run_mock = MagicMock(side_effect=lambda x: _cmd_run_map[x])
     empty_mock = MagicMock(return_value={})
 
-    mock_freebsd_uname = (
-        "FreeBSD",
-        "freebsd10.3-hostname-8148",
-        "10.3-RELEASE",
-        "FreeBSD 10.3-RELEASE #0 r297264: Fri Mar 25 02:10:02 UTC 2016     root@releng1.nyi.freebsd.org:/usr/obj/usr/src/sys/GENERIC",
-        "amd64",
-        "amd64",
+    mock_freebsd_uname = MagicMock(
+        return_value=(
+            "FreeBSD",
+            "freebsd10.3-hostname-8148",
+            "10.3-RELEASE",
+            "FreeBSD 10.3-RELEASE #0 r297264: Fri Mar 25 02:10:02 UTC 2016     root@releng1.nyi.freebsd.org:/usr/obj/usr/src/sys/GENERIC",
+            "amd64",
+            "amd64",
+        )
     )
-    with patch.object(platform, "uname", MagicMock(return_value=mock_freebsd_uname)):
+    with patch.object(platform, "uname", mock_freebsd_uname):
         with patch.object(
             salt.utils.platform, "is_linux", MagicMock(return_value=False)
         ):
@@ -1354,7 +1356,8 @@ def test_illumos_virtual():
         if cmd == "/usr/bin/zonename":
             # NOTE: we return the name of the zone
             return "myzone"
-        log.debug(f"cmd.run: '{cmd}'")
+        mylogdebug = "cmd.run_all: '{}'".format(cmd)
+        log.debug(mylogdebug)
 
     def _cmd_all_side_effect(cmd):
         # NOTE: prtdiag doesn't work inside a zone
@@ -1366,7 +1369,8 @@ def test_illumos_virtual():
                 "stdout": "",
                 "stderr": "prtdiag can only be run in the global zone",
             }
-        log.debug(f"cmd.run_all: '{cmd}'")
+        mylogdebug = "cmd.run_all: '{}'".format(cmd)
+        log.debug(mylogdebug)
 
     def _which_side_effect(path):
         if path == "prtdiag":
@@ -1403,7 +1407,8 @@ def test_illumos_fallback_virtual():
                 "stdout": "",
                 "stderr": "prtdiag can only be run in the global zone",
             }
-        log.debug(f"cmd.run_all: '{cmd}'")
+        mylogdebug = "cmd.run_all: '{}'".format(cmd)
+        log.debug(mylogdebug)
 
     def _which_side_effect(path):
         if path == "prtdiag":
@@ -1468,9 +1473,11 @@ def _check_empty(key, value, empty):
     if empty is True and value exists assert error
     """
     if not empty and not value:
-        raise Exception(f"{key} is empty, expecting a value")
+        raise Exception("{} is empty, expecting a value".format(key))
     elif empty and value:
-        raise Exception(f"{key} is suppose to be empty. value: {value} exists")
+        raise Exception(
+            "{} is suppose to be empty. value: {} exists".format(key, value)
+        )
 
 
 def _check_ip_fqdn_set(value, empty, _set=None):
