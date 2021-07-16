@@ -116,8 +116,8 @@ def describe_topic(name, region=None, key=None, keyid=None, profile=None):
                 arn, region=region, key=key, keyid=keyid, profile=profile
             )
             # Grab extended attributes for the above subscriptions
-            for sub in range(len(ret["Subscriptions"])):
-                sub_arn = ret["Subscriptions"][sub]["SubscriptionArn"]
+            for sub in ret["Subscriptions"]:
+                sub_arn = sub["SubscriptionArn"]
                 if not sub_arn.startswith("arn:aws:sns:"):
                     # Sometimes a sub is in e.g. PendingAccept or other
                     # wierd states and doesn't have an ARN yet

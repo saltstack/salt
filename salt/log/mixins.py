@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
@@ -11,10 +10,7 @@
     Some mix-in classes to be used in salt's logging
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt libs
 # pylint: disable=unused-import
 from salt._logging.mixins import (
     ExcInfoOnLogLevelFormatMixin as ExcInfoOnLogLevelFormatMixIn,

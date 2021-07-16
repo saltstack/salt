@@ -1,15 +1,7 @@
-# -*- coding: utf-8 -*-
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import collections
 
-# Import Salt Libs
 import salt.roster.sshconfig as sshconfig
 from tests.support import mixins
-
-# Import Salt Testing Libs
 from tests.support.mock import mock_open, patch
 from tests.support.unit import TestCase
 

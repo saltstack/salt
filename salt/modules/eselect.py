@@ -1,14 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 Support for eselect, Gentoo's configuration and management tool.
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import salt libs
 import salt.utils.path
 
 log = logging.getLogger(__name__)
@@ -54,7 +50,7 @@ def exec_action(
         salt '*' eselect.exec_action php update action_parameter='apache2'
     """
     out = __salt__["cmd.run"](
-        "eselect --brief --colour=no {0} {1} {2} {3}".format(
+        "eselect --brief --colour=no {} {} {} {}".format(
             module, module_parameter or "", action, action_parameter or ""
         ),
         python_shell=False,
@@ -198,7 +194,7 @@ def set_target(module, target, module_parameter=None, action_parameter=None):
         salt '*' eselect.set_target kernel linux-3.17.5-gentoo
     """
     if action_parameter:
-        action_parameter = "{0} {1}".format(action_parameter, target)
+        action_parameter = "{} {}".format(action_parameter, target)
     else:
         action_parameter = target
 

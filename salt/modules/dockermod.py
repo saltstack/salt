@@ -506,9 +506,8 @@ def _clear_context():
     """
     Clear the state/exists values stored in context
     """
-    # Can't use 'for key in __context__' or six.iterkeys(__context__) because
-    # an exception will be raised if the size of the dict is modified during
-    # iteration.
+    # Can't use 'for key in __context__' because an exception will be raised if
+    # the size of the dict is modified during iteration.
     keep_context = (
         "docker.client",
         "docker.exec_driver",
@@ -903,9 +902,7 @@ def _get_create_kwargs(
             client_args = get_client_args(["create_container", "host_config"])
         except CommandExecutionError as exc:
             log.error(
-                "docker.create: Error getting client args: '%s'",
-                exc.__str__(),
-                exc_info=True,
+                "docker.create: Error getting client args: '%s'", exc, exc_info=True,
             )
             raise CommandExecutionError("Failed to get client args: {}".format(exc))
 
@@ -2099,7 +2096,7 @@ def resolve_tag(name, **kwargs):
         return False
     except KeyError:
         log.error(
-            "Inspecting docker image '%s' returned an unexpected data " "structure: %s",
+            "Inspecting docker image '%s' returned an unexpected data structure: %s",
             name,
             inspect_result,
         )
@@ -2513,7 +2510,7 @@ def version():
 
 
 def _create_networking_config(networks):
-    log.debug("creating networking config from {}".format(networks))
+    log.debug("creating networking config from %s", networks)
     return _client_wrapper(
         "create_networking_config",
         {
@@ -3270,7 +3267,7 @@ def create(
         )
 
     log.debug(
-        "docker.create: creating container %susing the following " "arguments: %s",
+        "docker.create: creating container %susing the following arguments: %s",
         "with name '{}' ".format(name) if name is not None else "",
         kwargs,
     )
@@ -3435,7 +3432,7 @@ def run_container(
             raise SaltInvocationError("Invalid format for networks argument")
 
     log.debug(
-        "docker.create: creating container %susing the following " "arguments: %s",
+        "docker.create: creating container %susing the following arguments: %s",
         "with name '{}' ".format(name) if name is not None else "",
         kwargs,
     )

@@ -1,19 +1,12 @@
-# -*- coding: utf-8 -*-
 """
 Connection library for Amazon IAM
 
 :depends: requests
 """
-from __future__ import absolute_import, unicode_literals
 
-# Import Python libs
 import logging
 import pprint
 import time
-
-import salt.utils.data
-from salt.ext import six
-from salt.ext.six.moves import range
 
 try:
     import requests
@@ -55,9 +48,4 @@ def _convert_key_to_str(key):
     """
     Stolen completely from boto.providers
     """
-    # IMPORTANT: on PY2, the secret key must be str and not unicode to work
-    # properly with hmac.new (see http://bugs.python.org/issue5285)
-    #
-    # pylint: disable=incompatible-py3-code,undefined-variable
-    return salt.utils.data.encode(key) if six.PY2 and isinstance(key, unicode) else key
-    # pylint: enable=incompatible-py3-code,undefined-variable
+    return key
