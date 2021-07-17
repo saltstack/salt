@@ -1,18 +1,8 @@
-# -*- coding: utf-8 -*-
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import os
 
 import salt.modules.status as status
-
-# Import Salt Libs
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError
-from salt.ext import six
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, mock_open, patch
 from tests.support.unit import TestCase
@@ -31,7 +21,7 @@ class StatusTestCase(TestCase, LoaderModuleMockMixin):
         Define common mock data for status.uptime tests
         """
 
-        class MockData(object):
+        class MockData:
             """
             Store mock data
             """
@@ -56,7 +46,7 @@ class StatusTestCase(TestCase, LoaderModuleMockMixin):
         Define common mock data for cmd.run_all for status.uptime on SunOS
         """
 
-        class MockData(object):
+        class MockData:
             """
             Store mock data
             """
@@ -91,7 +81,7 @@ class StatusTestCase(TestCase, LoaderModuleMockMixin):
         ), patch(
             "os.path.exists", MagicMock(return_value=True)
         ):
-            proc_uptime = salt.utils.stringutils.to_str("{0} {1}".format(m.ut, m.idle))
+            proc_uptime = salt.utils.stringutils.to_str("{} {}".format(m.ut, m.idle))
 
             with patch("salt.utils.files.fopen", mock_open(read_data=proc_uptime)):
                 ret = status.uptime()
@@ -134,7 +124,7 @@ class StatusTestCase(TestCase, LoaderModuleMockMixin):
 
         kern_boottime = (
             "{{ sec = {0}, usec = {1:0<6} }} Mon Oct 03 03:09:18.23 2016"
-            "".format(*six.text_type(m.now - m.ut).split("."))
+            "".format(*str(m.now - m.ut).split("."))
         )
         with patch.multiple(
             salt.utils.platform,
@@ -186,7 +176,7 @@ class StatusTestCase(TestCase, LoaderModuleMockMixin):
         Define mock data for status.cpustats on OpenBSD
         """
 
-        class MockData(object):
+        class MockData:
             """
             Store mock data
             """
@@ -235,7 +225,7 @@ class StatusTestCase(TestCase, LoaderModuleMockMixin):
             self.assertDictEqual(ret, m.ret)
 
     def _set_up_test_cpuinfo_bsd(self):
-        class MockData(object):
+        class MockData:
             """
             Store mock data
             """
@@ -272,7 +262,7 @@ class StatusTestCase(TestCase, LoaderModuleMockMixin):
                     self.assertDictEqual(ret, m.ret)
 
     def _set_up_test_meminfo_openbsd(self):
-        class MockData(object):
+        class MockData:
             """
             Store mock data
             """
@@ -311,7 +301,7 @@ class StatusTestCase(TestCase, LoaderModuleMockMixin):
         Define mock data for status.w on Linux
         """
 
-        class MockData(object):
+        class MockData:
             """
             Store mock data
             """
@@ -336,7 +326,7 @@ class StatusTestCase(TestCase, LoaderModuleMockMixin):
         Define mock data for status.w on Linux
         """
 
-        class MockData(object):
+        class MockData:
             """
             Store mock data
             """
@@ -379,7 +369,7 @@ class StatusTestCase(TestCase, LoaderModuleMockMixin):
                     self.assertListEqual(ret, m.ret)
 
     def _set_up_test_status_pid_linux(self):
-        class MockData(object):
+        class MockData:
             """
             Store mock data
             """

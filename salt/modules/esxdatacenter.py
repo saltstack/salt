@@ -1,10 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 Module used to access the esxdatacenter proxy connection methods
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 
 import salt.utils.platform

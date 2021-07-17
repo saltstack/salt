@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 This module have been tested on infoblox API v1.2.1,
 other versions of the API are likly workable.
@@ -32,19 +31,14 @@ API documents can be found on your infoblox server at:
             api_key=passs
 
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import time
-
-# Import Salt libs
-from salt.ext import six
 
 IMPORT_ERR = None
 try:
     import libinfoblox
 except Exception as exc:  # pylint: disable=broad-except
-    IMPORT_ERR = six.text_type(exc)
+    IMPORT_ERR = str(exc)
 __virtualname__ = "infoblox"
 
 
@@ -67,7 +61,7 @@ def _get_config(**api_opts):
         "api_key": "",
     }
     if "__salt__" in globals():
-        config_key = "{0}.config".format(__virtualname__)
+        config_key = "{}.config".format(__virtualname__)
         config.update(__salt__["config.get"](config_key, {}))
     # pylint: disable=C0201
     for k in set(config.keys()) & set(api_opts.keys()):
@@ -78,7 +72,7 @@ def _get_config(**api_opts):
 def _get_infoblox(**api_opts):
     config = _get_config(**api_opts)
     # TODO: perhaps cache in __opts__
-    cache_key = "infoblox_session_{0},{1},{2}".format(
+    cache_key = "infoblox_session_{},{},{}".format(
         config["api_url"], config["api_user"], config["api_key"]
     )
     if cache_key in cache:
@@ -149,7 +143,7 @@ def update_object(objref, data, **api_opts):
         salt-call infoblox.update_object objref=[ref_of_object] data={}
     """
     if "__opts__" in globals() and __opts__["test"]:
-        return {"Test": "Would attempt to update object: {0}".format(objref)}
+        return {"Test": "Would attempt to update object: {}".format(objref)}
     infoblox = _get_infoblox(**api_opts)
     return infoblox.update_object(objref, data)
 
@@ -165,7 +159,7 @@ def delete_object(objref, **api_opts):
         salt-call infoblox.delete_object objref=[ref_of_object]
     """
     if "__opts__" in globals() and __opts__["test"]:
-        return {"Test": "Would attempt to delete object: {0}".format(objref)}
+        return {"Test": "Would attempt to delete object: {}".format(objref)}
     infoblox = _get_infoblox(**api_opts)
     return infoblox.delete_object(objref)
 
@@ -181,7 +175,7 @@ def create_object(object_type, data, **api_opts):
         salt-call infoblox.update_object object_type=record:host  data={}
     """
     if "__opts__" in globals() and __opts__["test"]:
-        return {"Test": "Would attempt to create object: {0}".format(object_type)}
+        return {"Test": "Would attempt to create object: {}".format(object_type)}
     infoblox = _get_infoblox(**api_opts)
     return infoblox.create_object(object_type, data)
 

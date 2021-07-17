@@ -1,10 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 Lazily-evaluated data structures, primarily used by Salt's loader
 """
 
-# Import Python Libs
-from __future__ import absolute_import, unicode_literals
 
 import logging
 from collections.abc import MutableMapping
@@ -81,7 +78,7 @@ class LazyDict(MutableMapping):
 
         Override this to return a more meaningfull error message if possible
         """
-        return "'{0}' is not available.".format(function_name)
+        return "'{}' is not available.".format(function_name)
 
     def __setitem__(self, key, val):
         self._dict[key] = val

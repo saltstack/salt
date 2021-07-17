@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Use etcd data as a Pillar source
 
@@ -58,12 +57,9 @@ key with all minions but override its value for a specific minion::
     etcdctl set /salt-private/special_minion_id/mykey my_other_value
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 
-# Import third party libs
 try:
     import salt.utils.etcd_util
 
