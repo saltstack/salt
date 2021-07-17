@@ -1,29 +1,21 @@
-# -*- coding: utf-8 -*-
 """
 Tests for the Azure Blob External Pillar.
 """
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
-import sys
 import pickle
+import sys
 import tempfile
 import time
 
 import salt.config
 import salt.loader
-
-# Import Salt Libs
 import salt.pillar.azureblob as azureblob
 import salt.utils.files
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-
-# Import Salt Testing libs
 from tests.support.unit import TestCase, skipIf
 
-# Import Azure libs
 HAS_LIBS = False
 try:
     # pylint: disable=no-name-in-module
@@ -35,7 +27,24 @@ try:
 except ImportError:
     pass
 
-is_windows = sys.platform.startswith('win')
+is_windows = sys.platform.startswith("win")
+if is_windows:
+    secret_path = "base\\secret.sls"
+    pillar_azureblob_path = "c:\\salt\\var\\cache\\salt\\master\\pillar_azureblob"
+    basesecret_path = "c:\\salt\\var\\cache\\salt\\master\\pillar_azureblob\\base\\test\\base\\secret.sls"
+    test_files_path = (
+        "c:\\salt\\var\\cache\\salt\\master\\pillar_azureblob\\test-files.cache"
+    )
+    delimiter = "\\"
+else:
+    secret_path = "base/secret.sls"
+    pillar_azureblob_path = "/var/cache/salt/master/pillar_azureblob"
+    basesecret_path = (
+        "/var/cache/salt/master/pillar_azureblob/base/test/base/secret.sls"
+    )
+    test_files_path = "/var/cache/salt/master/pillar_azureblob/test-files.cache"
+    delimiter = "/"
+
 
 class MockBlob(dict):
     """
@@ -45,7 +54,7 @@ class MockBlob(dict):
     name = ""
 
     def __init__(self):
-        super(MockBlob, self).__init__(
+        super().__init__(
             {
                 "container": None,
                 "name": "test.sls",
@@ -57,7 +66,7 @@ class MockBlob(dict):
         )
 
 
-class MockContainerClient(object):
+class MockContainerClient:
     """
     Creates a Mock ContainerClient.
     """
@@ -72,7 +81,7 @@ class MockContainerClient(object):
         pass
 
 
-class MockBlobServiceClient(object):
+class MockBlobServiceClient:
     """
     Creates a Mock BlobServiceClient.
     """
@@ -157,7 +166,7 @@ class AzureBlobTestCase(TestCase, LoaderModuleMockMixin):
         metadata = {
             "base": {
                 "test": [
-                    {"name": "base/secret.sls", "relevant": "include.sls"},
+                    {"name": secret_path, "relevant": "include.sls"},
                     {"name": "blobtest.sls", "irrelevant": "ignore.sls"},
                 ]
             }
@@ -194,10 +203,7 @@ class AzureBlobTestCase(TestCase, LoaderModuleMockMixin):
         Tests the result of _get_cache_dir.
         """
         ret = azureblob._get_cache_dir()
-        if is_windows:
-            self.assertEqual(ret, "c:\\salt\\var\\cache\\salt\\master\\pillar_azureblob")
-        else:
-            self.assertEqual(ret, "/var/cache/salt/master/pillar_azureblob")
+        self.assertEqual(ret, pillar_azureblob_path)
 
     def test__get_cached_file_name(self):
         """
@@ -205,16 +211,9 @@ class AzureBlobTestCase(TestCase, LoaderModuleMockMixin):
         """
         container = "test"
         saltenv = "base"
-        path = "base/secret.sls"
+        path = secret_path
         ret = azureblob._get_cached_file_name(container, saltenv, path)
-        if is_windows:
-            self.assertEqual(
-                ret, "c:\\salt\\var\\cache\\salt\\master\\pillar_azureblob\\base\\test\\basesecret.sls"
-            )
-        else:
-            self.assertEqual(
-                ret, "/var/cache/salt/master/pillar_azureblob/base/test/base/secret.sls"
-            )
+        self.assertEqual(ret, basesecret_path)
 
     def test__get_containers_cache_filename(self):
         """
@@ -222,14 +221,7 @@ class AzureBlobTestCase(TestCase, LoaderModuleMockMixin):
         """
         container = "test"
         ret = azureblob._get_containers_cache_filename(container)
-        if is_windows:
-            self.assertEqual(
-                ret, "c:\\salt\\var\\cache\\salt\\master\\pillar_azureblob\\test-files.cache"
-            )
-        else:
-            self.assertEqual(
-                ret, "/var/cache/salt/master/pillar_azureblob/test-files.cache"
-            )
+        self.assertEqual(ret, test_files_path)
 
     def test__refresh_containers_cache_file(self):
         """
@@ -273,7 +265,7 @@ class AzureBlobTestCase(TestCase, LoaderModuleMockMixin):
         metadata = {
             "base": {
                 "test": [
-                    {"name": "base/secret.sls", "relevant": "include.sls"},
+                    {"name": secret_path, "relevant": "include.sls"},
                     {"name": "blobtest.sls", "irrelevant": "ignore.sls"},
                 ]
             }
@@ -294,15 +286,16 @@ class AzureBlobTestCase(TestCase, LoaderModuleMockMixin):
         Tests the result of _find_files. Ensures it only finds files and not directories. Ensures it also ignore
             irrelevant files.
         """
+
         metadata = {
             "test": [
-                {"name": "base/secret.sls"},
+                {"name": secret_path},
                 {"name": "blobtest.sls", "irrelevant": "ignore.sls"},
                 {"name": "base/"},
             ]
         }
         ret = azureblob._find_files(metadata)
-        self.assertEqual(ret, {"test": ["base/secret.sls", "blobtest.sls"]})
+        self.assertEqual(ret, {"test": [secret_path, "blobtest.sls"]})
 
     def test__find_file_meta1(self):
         """
@@ -312,25 +305,25 @@ class AzureBlobTestCase(TestCase, LoaderModuleMockMixin):
         metadata = {
             "base": {
                 "test": [
-                    {"name": "base/secret.sls", "relevant": "include.sls"},
+                    {"name": secret_path, "relevant": "include.sls"},
                     {"name": "blobtest.sls", "irrelevant": "ignore.sls"},
                 ]
             }
         }
         container = "test"
         saltenv = "base"
-        path = "base/secret.sls"
+        path = secret_path
         ret = azureblob._find_file_meta(metadata, container, saltenv, path)
-        self.assertEqual(ret, {"name": "base/secret.sls", "relevant": "include.sls"})
+        self.assertEqual(ret, {"name": secret_path, "relevant": "include.sls"})
 
     def test__find_file_meta2(self):
         """
         Tests the result of _find_file_meta when the saltenv in metadata does not match the specified saltenv.
         """
-        metadata = {"wrong": {"test": [{"name": "base/secret.sls"}]}}
+        metadata = {"wrong": {"test": [{"name": secret_path}]}}
         container = "test"
         saltenv = "base"
-        path = "base/secret.sls"
+        path = secret_path
         ret = azureblob._find_file_meta(metadata, container, saltenv, path)
         self.assertEqual(ret, None)
 
@@ -338,9 +331,9 @@ class AzureBlobTestCase(TestCase, LoaderModuleMockMixin):
         """
         Tests the result of _find_file_meta when the container in metadata does not match the specified metadata.
         """
-        metadata = {"base": {"wrong": [{"name": "base/secret.sls"}]}}
+        metadata = {"base": {"wrong": [{"name": secret_path}]}}
         container = "test"
         saltenv = "base"
-        path = "base/secret.sls"
+        path = secret_path
         ret = azureblob._find_file_meta(metadata, container, saltenv, path)
         self.assertEqual(ret, None)
