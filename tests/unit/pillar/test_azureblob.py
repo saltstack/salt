@@ -6,6 +6,7 @@ Tests for the Azure Blob External Pillar.
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
+import sys
 import pickle
 import tempfile
 import time
@@ -34,6 +35,7 @@ try:
 except ImportError:
     pass
 
+is_windows = sys.platform.startswith('win')
 
 class MockBlob(dict):
     """
@@ -192,7 +194,10 @@ class AzureBlobTestCase(TestCase, LoaderModuleMockMixin):
         Tests the result of _get_cache_dir.
         """
         ret = azureblob._get_cache_dir()
-        self.assertEqual(ret, "/var/cache/salt/master/pillar_azureblob")
+        if is_windows:
+            self.assertEqual(ret, "c:\\salt\\var\\cache\\salt\\master\\pillar_azureblob")
+        else:
+            self.assertEqual(ret, "/var/cache/salt/master/pillar_azureblob")
 
     def test__get_cached_file_name(self):
         """
@@ -202,9 +207,14 @@ class AzureBlobTestCase(TestCase, LoaderModuleMockMixin):
         saltenv = "base"
         path = "base/secret.sls"
         ret = azureblob._get_cached_file_name(container, saltenv, path)
-        self.assertEqual(
-            ret, "/var/cache/salt/master/pillar_azureblob/base/test/base/secret.sls"
-        )
+        if is_windows:
+            self.assertEqual(
+                ret, "c:\\salt\\var\\cache\\salt\\master\\pillar_azureblob\\base\\test\\basesecret.sls"
+            )
+        else:
+            self.assertEqual(
+                ret, "/var/cache/salt/master/pillar_azureblob/base/test/base/secret.sls"
+            )
 
     def test__get_containers_cache_filename(self):
         """
@@ -212,9 +222,14 @@ class AzureBlobTestCase(TestCase, LoaderModuleMockMixin):
         """
         container = "test"
         ret = azureblob._get_containers_cache_filename(container)
-        self.assertEqual(
-            ret, "/var/cache/salt/master/pillar_azureblob/test-files.cache"
-        )
+        if is_windows:
+            self.assertEqual(
+                ret, "c:\\salt\\var\\cache\\salt\\master\\pillar_azureblob\\test-files.cache"
+            )
+        else:
+            self.assertEqual(
+                ret, "/var/cache/salt/master/pillar_azureblob/test-files.cache"
+            )
 
     def test__refresh_containers_cache_file(self):
         """
