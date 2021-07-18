@@ -145,6 +145,10 @@ class StateResult:
     def comment(self):
         return self.full_return["comment"]
 
+    @property
+    def warnings(self):
+        return self.full_return.get("warnings") or []
+
     def __eq__(self, value):
         raise RuntimeError(
             "Please assert comparisons with {}.filtered instead".format(
