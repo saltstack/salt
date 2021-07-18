@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
@@ -13,12 +12,9 @@
 
         http://code.activestate.com/recipes/440554/
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import errno
 import logging
-
-# Import python libs
 import os
 import select
 import subprocess
@@ -65,7 +61,7 @@ class NonBlockingPopen(subprocess.Popen):
         logging_command = kwargs.pop("logging_command", None)
         stderr = kwargs.get("stderr", None)
 
-        super(NonBlockingPopen, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         # self._stdin_logger = logging.getLogger(
         #    self._stdin_logger_name_.format(pid=self.pid)
@@ -149,8 +145,8 @@ class NonBlockingPopen(subprocess.Popen):
                     return self._close(which)
                 raise
 
-            getattr(self, "{0}_buff".format(which)).write(read)
-            getattr(self, "_{0}_logger".format(which)).debug(read.rstrip())
+            getattr(self, "{}_buff".format(which)).write(read)
+            getattr(self, "_{}_logger".format(which)).debug(read.rstrip())
             if self.stream_stds:
                 getattr(sys, which).write(read)
 
@@ -197,8 +193,8 @@ class NonBlockingPopen(subprocess.Popen):
                 if self.universal_newlines:
                     buff = self._translate_newlines(buff)
 
-                getattr(self, "{0}_buff".format(which)).write(buff)
-                getattr(self, "_{0}_logger".format(which)).debug(buff.rstrip())
+                getattr(self, "{}_buff".format(which)).write(buff)
+                getattr(self, "_{}_logger".format(which)).debug(buff.rstrip())
                 if self.stream_stds:
                     getattr(sys, which).write(buff)
 
@@ -230,7 +226,7 @@ class NonBlockingPopen(subprocess.Popen):
             time.sleep(interval)
 
     def communicate(self, input=None):  # pylint: disable=arguments-differ
-        super(NonBlockingPopen, self).communicate(input)
+        super().communicate(input)
         self.stdout_buff.flush()
         self.stdout_buff.seek(0)
         self.stderr_buff.flush()

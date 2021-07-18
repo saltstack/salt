@@ -358,7 +358,7 @@ certifi==2020.6.20
     #   requests
 certvalidator==0.11.1
     # via vcert
-cffi==1.12.2
+cffi==1.14.5
     # via
     #   -r requirements/static/ci/common.in
     #   -r requirements/static/pkg/py3.7/darwin.txt
@@ -733,7 +733,7 @@ pytest-helpers-namespace==2021.4.29
     # via
     #   -r requirements/pytest.txt
     #   pytest-salt-factories
-pytest-salt-factories==0.903.2
+pytest-salt-factories==0.906.0
     # via -r requirements/pytest.txt
 pytest-subtests==0.4.0
     # via -r requirements/pytest.txt
