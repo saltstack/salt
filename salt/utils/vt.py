@@ -311,7 +311,7 @@ class Terminal:
             if self.child_fde is not None:
                 os.close(self.child_fde)
                 self.child_fde = None
-            time.sleep(0.1)
+            time.sleep(0.3)
             if terminate:
                 if not self.terminate(kill):
                     raise TerminalException("Failed to terminate child process.")
@@ -399,6 +399,9 @@ class Terminal:
                 self.args = " ".join(self.args)
 
             parent, child = pty.openpty()
+            # Adding a small sleep for the underlying os operation to complete.
+            # Without this we will see intermitant OSError from Popen.
+            time.sleep(0.3)
             child_name = os.ttyname(child)
             os.set_inheritable(child, True)
             proc = subprocess.Popen(  # pylint: disable=subprocess-popen-preexec-fn
