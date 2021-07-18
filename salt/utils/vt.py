@@ -383,21 +383,8 @@ class Terminal:
     else:
 
         def _spawn(self):
-            # TODO: Get rid of this logic, just use the same api as Popen
-            if isinstance(self.args, str):
-                args = [self.args]
-            elif self.args:
-                args = list(self.args)
-            else:
-                args = []
-            self.args = args
-            if self.executable:
-                self.args[0] = self.executable
-            if self.executable is None:
-                self.executable = self.args[0]
-            if self.shell:
+            if not isinstance(self.args, str) and self.shell is True:
                 self.args = " ".join(self.args)
-
             parent, child = pty.openpty()
             # Adding a small sleep for the underlying os operation to complete.
             # Without this we will see intermitant OSError from Popen.
@@ -410,10 +397,12 @@ class Terminal:
                     self._preexec, child_name, self.rows, self.cols, self.preexec_fn
                 ),
                 shell=self.shell,  # nosec
+                executable=self.executable,
                 cwd=self.cwd,
                 stdin=child,
                 stdout=child,
                 stderr=subprocess.PIPE,
+                env=self.env,
             )
             os.close(child)
             self.child_fd = parent
