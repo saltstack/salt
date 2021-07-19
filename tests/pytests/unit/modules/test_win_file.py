@@ -242,7 +242,7 @@ def test_check_perms_validate():
     Test validate helper function
     """
     grant_perms = {
-        "testuser": {
+        "user_does_not_exist": {
             "perms": {
                 "read_attributes",
                 "create_folders"
@@ -266,7 +266,7 @@ def test_check_perms_validate_true():
         }
     }
     ret = win_file._validate_users(grant_perms)
-    assert ret is False
+    assert ret is True
 
 
 def test_check_perms_inheritance_false_test_true(setup_teardown_vars):
