@@ -703,6 +703,8 @@ def test_running_with_reload():
             service.__utils__, utils
         ), patch.dict(
             service.__opts__, {"test": False}
+        ), patch(
+            "salt.utils.systemd.offline", MagicMock(return_value=False)
         ):
             service.dead(service_name, enable=False)
             result = service.running(name=service_name, enable=True, reload=False)
