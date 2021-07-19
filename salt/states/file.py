@@ -665,6 +665,7 @@ def _clean_dir(root, keep, exclude_pat):
     preserving the files in a list (keep) and part of exclude_pat
     """
     # Create a case-sensitive dict before doing comparisons for Windows
+    win_keep = None
     if salt.utils.platform.is_windows():
         win_keep = keep
 
