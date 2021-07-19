@@ -61,7 +61,7 @@ def secure_password(length=20, use_random=True):
                         continue
                 pw += re.sub(
                     salt.utils.stringutils.to_str(r"[\W_]", encoding=encoding),
-                    "",  # future lint: disable=blacklisted-function
+                    "",
                     char,
                 )
             else:
