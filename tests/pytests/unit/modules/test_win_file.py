@@ -19,7 +19,7 @@ from salt.exceptions import CommandExecutionError
 from tests.support.mock import patch
 
 
-pytest.importorskip("salt.modules.win_file", reason="System is not Windows.")
+pytest.importorskip("win32api", reason="System is not Windows.")
 
 
 class DummyStat:
