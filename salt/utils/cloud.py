@@ -124,6 +124,9 @@ SSH_PASSWORD_PROMP_SUDO_RE = re.compile(
     r"(?:.*sudo)(?:.*)[Pp]assword(?: for .*)?:", re.M
 )
 
+SERVER_ALIVE_INTERVAL = 10
+SERVER_ALIVE_COUNT_MAX = 3
+
 # Get logging started
 log = logging.getLogger(__name__)
 
@@ -183,9 +186,16 @@ def __ssh_gateway_arguments(kwargs):
         ssh_gateway_user = kwargs.get("ssh_gateway_user", "root")
 
         # Setup ProxyCommand
-        extended_arguments = '-oProxyCommand="ssh {} {} {} {} {}@{} -p {} {}"'.format(
+        extended_arguments = '-oProxyCommand="ssh {} {} {} {} {} {} {}@{} -p {} {}"'.format(
             # Don't add new hosts to the host key database
             "-oStrictHostKeyChecking=no",
+            # make sure ssh can time out on connection lose
+            "-oServerAliveInterval={}".format(
+                kwargs.get("server_alive_interval", SERVER_ALIVE_INTERVAL)
+            ),
+            "-oServerAliveCountMax={}".format(
+                kwargs.get("server_alive_count_max", SERVER_ALIVE_COUNT_MAX)
+            ),
             # Set hosts key database path to /dev/null, i.e., non-existing
             "-oUserKnownHostsFile=/dev/null",
             # Don't re-use the SSH connection. Less failures.
@@ -605,7 +615,7 @@ def bootstrap(vm_, opts=None):
         "event",
         "executing deploy script",
         "salt/cloud/{}/deploying".format(vm_["name"]),
-        args={"kwargs": event_kwargs},
+        args={"kwargs": salt.utils.data.simple_types_filter(event_kwargs)},
         sock_dir=opts.get("sock_dir", os.path.join(__opts__["sock_dir"], "master")),
         transport=opts.get("transport", "zeromq"),
     )
@@ -691,7 +701,14 @@ def wait_for_fun(fun, timeout=900, **kwargs):
             return False
 
 
-def wait_for_port(host, port=22, timeout=900, gateway=None):
+def wait_for_port(
+    host,
+    port=22,
+    timeout=900,
+    gateway=None,
+    server_alive_interval=SERVER_ALIVE_INTERVAL,
+    server_alive_count_max=SERVER_ALIVE_COUNT_MAX,
+):
     """
     Wait until a connection to the specified port can be made on a specified
     host. This is usually port 22 (for SSH), but in the case of Windows
@@ -765,6 +782,9 @@ def wait_for_port(host, port=22, timeout=900, gateway=None):
         [
             # Don't add new hosts to the host key database
             "-oStrictHostKeyChecking=no",
+            # make sure ssh can time out on connection lose
+            "-oServerAliveInterval={}".format(server_alive_interval),
+            "-oServerAliveCountMax={}".format(server_alive_count_max),
             # Set hosts key database path to /dev/null, i.e., non-existing
             "-oUserKnownHostsFile=/dev/null",
             # Don't re-use the SSH connection. Less failures.
@@ -2145,6 +2165,13 @@ def scp_file(dest_path, contents=None, kwargs=None, local_file=None):
         ssh_args = [
             # Don't add new hosts to the host key database
             "-oStrictHostKeyChecking=no",
+            # make sure ssh can time out on connection lose
+            "-oServerAliveInterval={}".format(
+                kwargs.get("server_alive_interval", SERVER_ALIVE_INTERVAL)
+            ),
+            "-oServerAliveCountMax={}".format(
+                kwargs.get("server_alive_count_max", SERVER_ALIVE_COUNT_MAX)
+            ),
             # Set hosts key database path to /dev/null, i.e., non-existing
             "-oUserKnownHostsFile=/dev/null",
             # Don't re-use the SSH connection. Less failures.
@@ -2262,6 +2289,13 @@ def sftp_file(dest_path, contents=None, kwargs=None, local_file=None):
         ssh_args = [
             # Don't add new hosts to the host key database
             "-oStrictHostKeyChecking=no",
+            # make sure ssh can time out on connection lose
+            "-oServerAliveInterval={}".format(
+                kwargs.get("server_alive_interval", SERVER_ALIVE_INTERVAL)
+            ),
+            "-oServerAliveCountMax={}".format(
+                kwargs.get("server_alive_count_max", SERVER_ALIVE_COUNT_MAX)
+            ),
             # Set hosts key database path to /dev/null, i.e., non-existing
             "-oUserKnownHostsFile=/dev/null",
             # Don't re-use the SSH connection. Less failures.
