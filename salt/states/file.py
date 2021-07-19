@@ -682,9 +682,7 @@ def _clean_dir(root, keep, exclude_pat, win_keep=None):
             # remove the file, check against the original list.
             if win_keep:
                 for item in win_keep:
-                    if item.lower() != nfn.lower():
-                        continue
-                    elif item.lower() == nfn.lower():
+                    if item.casefold() == nfn.casefold():
                         return
             removed.add(nfn)
             if not __opts__["test"]:

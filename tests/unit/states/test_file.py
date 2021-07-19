@@ -2914,7 +2914,7 @@ class TestFindKeepFiles(TestCase):
         actual = sorted(list(keep))
         self.assertListEqual(actual, expected)
 
-    @skipIf(not salt.utils.platform.is_windows(), "Only run on Windows")
+    @pytest.mark.skip_unless_on_windows()
     def test__clean_dir_win32(self):
         """
         Test _clean_dir to ensure that regardless of case, we keep all files
