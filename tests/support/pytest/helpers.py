@@ -291,7 +291,7 @@ class StateReturnAsserts:
             for saltret in self.get_within_state_return("result"):
                 assert saltret is True
         except AssertionError:
-            log.info("Salt Full Return:\n{}".format(pprint.pformat(self.ret)))
+            log.info("Salt Full Return:\n%s", pprint.pformat(self.ret))
             try:
                 raise AssertionError(
                     "{result} is not True. Salt Comment:\n{comment}".format(
@@ -310,7 +310,7 @@ class StateReturnAsserts:
             for saltret in self.get_within_state_return("result"):
                 assert saltret is False
         except AssertionError:
-            log.info("Salt Full Return:\n{}".format(pprint.pformat(self.ret)))
+            log.info("Salt Full Return:\n%s", pprint.pformat(self.ret))
             try:
                 raise AssertionError(
                     "{result} is not False. Salt Comment:\n{comment}".format(
@@ -327,7 +327,7 @@ class StateReturnAsserts:
             for saltret in self.get_within_state_return("result"):
                 assert saltret is None
         except AssertionError:
-            log.info("Salt Full Return:\n{}".format(pprint.pformat(self.ret)))
+            log.info("Salt Full Return:\n%s", pprint.pformat(self.ret))
             try:
                 raise AssertionError(
                     "{result} is not None. Salt Comment:\n{comment}".format(

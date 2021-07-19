@@ -20,6 +20,8 @@ jobs:
         apt-get install -y git/buster-backports
 
     - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
 
     - name: Install Nox
       env:

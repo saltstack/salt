@@ -35,7 +35,7 @@ def _ensure_string(val):
     # Account for cases where the identifier is not a string
     # which would cause to_unicode to fail.
     if not isinstance(val, str):
-        val = str(val)  # future lint: enable=blacklisted-function
+        val = str(val)
     try:
         return salt.utils.stringutils.to_unicode(val)
     except TypeError:
