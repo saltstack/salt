@@ -51,7 +51,6 @@ import salt.utils.data
 import salt.utils.json
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.ext.six.moves import map
 
 try:
     # pylint: disable=unused-import

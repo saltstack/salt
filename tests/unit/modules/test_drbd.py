@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.modules.drbd as drbd
 from tests.support.mixins import LoaderModuleMockMixin

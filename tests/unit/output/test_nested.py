@@ -1,15 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 Unit tests for the Nested outputter
 """
 
-# Import Python Libs
-from __future__ import absolute_import
 
-# Import Salt Libs
 import salt.output.nested as nested
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase
 
@@ -29,11 +23,11 @@ class NestedOutputterTestCase(TestCase, LoaderModuleMockMixin):
             "local": {
                 "args": (1, "two", 3.1),
                 "kwargs": {
-                    u"__pub_pid": 25938,
+                    "__pub_pid": 25938,
                     "wow": {"a": 1, "b": "hello"},
-                    u"__pub_fun": "test.arg",
-                    u"__pub_jid": "20171207105927331329",
-                    u"__pub_tgt": "salt-call",
+                    "__pub_fun": "test.arg",
+                    "__pub_jid": "20171207105927331329",
+                    "__pub_tgt": "salt-call",
                     "txt": "hello",
                 },
             }

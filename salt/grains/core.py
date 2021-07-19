@@ -40,7 +40,6 @@ import salt.utils.path
 import salt.utils.pkg.rpm
 import salt.utils.platform
 import salt.utils.stringutils
-from salt.ext.six.moves import range
 from salt.utils.network import _get_interfaces
 
 

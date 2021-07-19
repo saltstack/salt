@@ -1,19 +1,15 @@
-# -*- coding: utf-8 -*-
-
 """
 :maintainer:    Alberto Planas <aplanas@suse.com>
 :maturity:      new
 :depends:       None
 :platform:      Linux
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
 
 import salt.utils.json as json
 from salt.exceptions import CommandExecutionError
-from salt.ext.six.moves import zip
 from salt.utils.args import clean_kwargs
 from salt.utils.files import fopen
 
