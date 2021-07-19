@@ -9,6 +9,7 @@ Management of Zabbix hosts.
 from collections.abc import Mapping
 from copy import deepcopy
 
+import salt.utils.dictdiffer
 import salt.utils.json
 
 
@@ -38,11 +39,11 @@ def present(host, groups, interfaces, **kwargs):
     :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
     :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
     :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
-    :param visible_name: Optional - string with visible name of the host, use 'visible_name' instead of 'name' \
-    parameter to not mess with value supplied from Salt sls file.
-    :param inventory_clean: Optional - Boolean value that selects if the current inventory will be cleaned and \
-    overwritten by the declared inventory list (True); or if the inventory will be kept and only updated with \
-    inventory list contents (False). Defaults to True
+    :param visible_name: Optional - string with visible name of the host, use 'visible_name' instead of 'name'
+        parameter to not mess with value supplied from Salt sls file.
+    :param inventory_clean: Optional - Boolean value that selects if the current inventory will be cleaned and
+        overwritten by the declared inventory list (True); or if the inventory will be kept and only updated with
+        inventory list contents (False). Defaults to True
 
     .. code-block:: yaml
 
@@ -299,12 +300,11 @@ def present(host, groups, interfaces, **kwargs):
         if host_updated_params:
             update_host = True
 
-        if "inventory_mode" in host_extra_properties:
-            inventory_mode = host_extra_properties["inventory_mode"]
-        elif host["inventory_mode"] == "-1":
-            inventory_mode = "0"
-        else:
-            inventory_mode = host["inventory_mode"]
+        host_inventory_mode = host["inventory_mode"]
+        inventory_mode = host_extra_properties.get(
+            "inventory_mode",
+            "0" if host_inventory_mode == "-1" else host_inventory_mode,
+        )
 
         cur_proxy_hostid = host["proxy_hostid"]
         if proxy_hostid != cur_proxy_hostid:
@@ -355,29 +355,12 @@ def present(host, groups, interfaces, **kwargs):
         # if inventory_mode is '-1', the inventory will be erased, why compare it?
         if inventory is not None and inventory_mode != "-1":
             cur_inventory = __salt__["zabbix.host_inventory_get"](
-                hostids=hostid, **connection_args
+                hostid=hostid, **connection_args
             )
-            if cur_inventory:
-                cur_inventory.pop("hostid", None)
-                cur_inventory.pop("inventory_mode", None)
-                if new_inventory:
-                    for key in new_inventory:
-                        if (
-                            key in cur_inventory
-                            and new_inventory[key] != cur_inventory[key]
-                        ):
-                            update_inventory = True
-                            break
-                else:
-                    # remove the empty keys in current inventory
-                    cur_inventory = {k: v for k, v in cur_inventory.items() if v}
-                    # if current inventory any no empty key and new inventory is empty
-                    if not cur_inventory:
-                        update_inventory = True
-            else:
-                # if current inventory is empty and the new one have anything
-                if new_inventory:
-                    update_inventory = True
+
+            inventory_diff = salt.utils.dictdiffer.diff(cur_inventory, new_inventory)
+            if inventory_diff.changed():
+                update_inventory = True
 
     # Dry run, test=true mode
     if __opts__["test"]:
