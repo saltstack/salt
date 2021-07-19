@@ -1159,14 +1159,19 @@ def test_bsd_memdata():
     cmd_run_mock = MagicMock(side_effect=lambda x: _cmd_run_map[x])
     empty_mock = MagicMock(return_value={})
 
+    from collections import namedtuple
+
+    dgm_uname = namedtuple(
+        "dgm_uname", ["system", "node", "release", "version", "machine", "processor"]
+    )
     mock_freebsd_uname = MagicMock(
-        return_value=(
-            "FreeBSD",
-            "freebsd10.3-hostname-8148",
-            "10.3-RELEASE",
-            "FreeBSD 10.3-RELEASE #0 r297264: Fri Mar 25 02:10:02 UTC 2016     root@releng1.nyi.freebsd.org:/usr/obj/usr/src/sys/GENERIC",
-            "amd64",
-            "amd64",
+        return_value=dgm_uname(
+            system="FreeBSD",
+            node="freebsd10.3-hostname-8148",
+            version="10.3-RELEASE",
+            release="FreeBSD 10.3-RELEASE #0 r297264: Fri Mar 25 02:10:02 UTC 2016     root@releng1.nyi.freebsd.org:/usr/obj/usr/src/sys/GENERIC",
+            machine="amd64",
+            processor="amd64",
         )
     )
     with patch.object(platform, "uname", mock_freebsd_uname):
@@ -2369,48 +2374,58 @@ def test_bsd_osfullname():
     cmd_run_mock = MagicMock(side_effect=lambda x: _cmd_run_map[x])
     empty_mock = MagicMock(return_value={})
 
-    mock_freebsd_uname = (
-        "FreeBSD",
-        "freebsd10.3-hostname-8148",
-        "10.3-RELEASE",
-        "FreeBSD 10.3-RELEASE #0 r297264: Fri Mar 25 02:10:02 UTC 2016     root@releng1.nyi.freebsd.org:/usr/obj/usr/src/sys/GENERIC",
-        "amd64",
-        "amd64",
+    ## DGM     mock_freebsd_uname = (
+    ## DGM         "FreeBSD",
+    ## DGM         "freebsd10.3-hostname-8148",
+    ## DGM         "10.3-RELEASE",
+    ## DGM         "FreeBSD 10.3-RELEASE #0 r297264: Fri Mar 25 02:10:02 UTC 2016     root@releng1.nyi.freebsd.org:/usr/obj/usr/src/sys/GENERIC",
+    ## DGM         "amd64",
+    ## DGM         "amd64",
+    ## DGM     )
+    from collections import namedtuple
+
+    dgm_uname = namedtuple(
+        "dgm_uname", ["system", "node", "release", "version", "machine", "processor"]
+    )
+    mock_freebsd_uname = MagicMock(
+        return_value=dgm_uname(
+            system="FreeBSD",
+            node="freebsd10.3-hostname-8148",
+            version="10.3-RELEASE",
+            release="FreeBSD 10.3-RELEASE #0 r297264: Fri Mar 25 02:10:02 UTC 2016     root@releng1.nyi.freebsd.org:/usr/obj/usr/src/sys/GENERIC",
+            machine="amd64",
+            processor="amd64",
+        )
     )
 
     with patch("platform.uname", MagicMock(return_value=mock_freebsd_uname)):
         with patch.object(
-            "uname", "version", MagicMock(return_value=mock_freebsd_uname[3])
+            salt.utils.platform, "is_linux", MagicMock(return_value=False)
         ):
             with patch.object(
-                salt.utils.platform, "is_linux", MagicMock(return_value=False)
+                salt.utils.platform, "is_freebsd", MagicMock(return_value=True)
             ):
+                # Skip the first if statement
                 with patch.object(
-                    salt.utils.platform, "is_freebsd", MagicMock(return_value=True)
+                    salt.utils.platform, "is_proxy", MagicMock(return_value=False)
                 ):
-                    # Skip the first if statement
-                    with patch.object(
-                        salt.utils.platform, "is_proxy", MagicMock(return_value=False)
-                    ):
-                        # Skip the init grain compilation (not pertinent)
-                        with patch.object(os.path, "exists", path_exists_mock):
-                            with patch("salt.utils.path.which") as mock:
-                                mock.return_value = "/sbin/sysctl"
-                                # Make a bunch of functions return empty dicts,
-                                # we don't care about these grains for the
-                                # purposes of this test.
-                                with patch.object(
-                                    core, "_bsd_cpudata", empty_mock
-                                ), patch.object(
-                                    core, "_hw_data", empty_mock
-                                ), patch.object(
-                                    core, "_virtual", empty_mock
-                                ), patch.object(
-                                    core, "_ps", empty_mock
-                                ), patch.dict(
-                                    core.__salt__, {"cmd.run": cmd_run_mock}
-                                ):
-                                    os_grains = core.os_data()
+                    # Skip the init grain compilation (not pertinent)
+                    with patch.object(os.path, "exists", path_exists_mock):
+                        with patch("salt.utils.path.which") as mock:
+                            mock.return_value = "/sbin/sysctl"
+                            # Make a bunch of functions return empty dicts,
+                            # we don't care about these grains for the
+                            # purposes of this test.
+                            with patch.object(
+                                core, "_bsd_cpudata", empty_mock
+                            ), patch.object(core, "_hw_data", empty_mock), patch.object(
+                                core, "_virtual", empty_mock
+                            ), patch.object(
+                                core, "_ps", empty_mock
+                            ), patch.dict(
+                                core.__salt__, {"cmd.run": cmd_run_mock}
+                            ):
+                                os_grains = core.os_data()
 
     assert "osfullname" in os_grains
     assert os_grains.get("osfullname") == "FreeBSD"
