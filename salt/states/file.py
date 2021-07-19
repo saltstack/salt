@@ -659,11 +659,15 @@ def _find_keep_files(root, keep):
     return real_keep
 
 
-def _clean_dir(root, keep, exclude_pat, win_keep=None):
+def _clean_dir(root, keep, exclude_pat):
     """
     Clean out all of the files and directories in a directory (root) while
     preserving the files in a list (keep) and part of exclude_pat
     """
+    # Create a case-sensitive dict before doing comparisons for Windows
+    if salt.utils.platform.is_windows():
+        win_keep = keep
+
     root = os.path.normcase(root)
     real_keep = _find_keep_files(root, keep)
     removed = set()
@@ -4293,14 +4297,8 @@ def recurse(
 
     if clean:
         # TODO: Use directory(clean=True) instead
-        # If we are running on windows, store a copy of the files that the
-        # system itself has found. We must store a copy of the case sensitive
-        # files.
-        win_keep = None
-        if salt.utils.platform.is_windows():
-            win_keep = copy.deepcopy(keep)
         keep.update(_gen_keep_files(name, require))
-        removed = _clean_dir(name, list(keep), exclude_pat, win_keep)
+        removed = _clean_dir(name, list(keep), exclude_pat)
         if removed:
             if __opts__["test"]:
                 if ret["result"]:

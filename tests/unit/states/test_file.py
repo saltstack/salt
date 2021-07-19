@@ -2928,10 +2928,6 @@ class TestFindKeepFiles(TestCase):
                 "C:\\Test\\Parent_folder\\Meh-2.txt",
             ],
             exclude_pat=None,
-            win_keep=[
-                "C:\\test\\parent_folder\\meh-1.txt",
-                "C:\\Test\\Parent_folder\\Meh-2.txt",
-            ],
         )
         actual = sorted(list(keep))
         expected = []
