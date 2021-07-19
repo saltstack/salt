@@ -41,7 +41,6 @@ def algorithm(request):
 
 
 @pytest.mark.skipif(not salt.utils.pycrypto.HAS_CRYPT, reason="crypt not available")
-@patch("salt.utils.pycrypto.methods", {})
 @pytest.mark.parametrize(
     "algorithm, expected",
     [
@@ -56,20 +55,22 @@ def test_gen_hash_crypt(algorithm, expected):
     """
     Test gen_hash with crypt library
     """
-    ret = salt.utils.pycrypto.gen_hash(
-        crypt_salt=expected["salt"], password=passwd, algorithm=algorithm
-    )
-    assert ret == expected["hashed"]
+    with patch("salt.utils.pycrypto.methods", {}):
+        with patch("salt.utils.pycrypto.methods", {}):
+            ret = salt.utils.pycrypto.gen_hash(
+                crypt_salt=expected["salt"], password=passwd, algorithm=algorithm
+            )
+            assert ret == expected["hashed"]
 
-    ret = salt.utils.pycrypto.gen_hash(
-        crypt_salt=expected["badsalt"], password=passwd, algorithm=algorithm
-    )
-    assert ret != expected["hashed"]
+            ret = salt.utils.pycrypto.gen_hash(
+                crypt_salt=expected["badsalt"], password=passwd, algorithm=algorithm
+            )
+            assert ret != expected["hashed"]
 
-    ret = salt.utils.pycrypto.gen_hash(
-        crypt_salt=None, password=passwd, algorithm=algorithm
-    )
-    assert ret != expected["hashed"]
+            ret = salt.utils.pycrypto.gen_hash(
+                crypt_salt=None, password=passwd, algorithm=algorithm
+            )
+            assert ret != expected["hashed"]
 
 
 @pytest.mark.skipif(not salt.utils.pycrypto.HAS_CRYPT, reason="crypt not available")
@@ -88,8 +89,6 @@ def test_gen_hash_crypt_default_algorithm(expected):
 
 
 @pytest.mark.skipif(not salt.utils.pycrypto.HAS_PASSLIB, reason="passlib not available")
-@patch("salt.utils.pycrypto.methods", {})
-@patch("salt.utils.pycrypto.HAS_CRYPT", False)
 @pytest.mark.parametrize(
     "algorithm, expected",
     [
@@ -104,20 +103,22 @@ def test_gen_hash_passlib(algorithm, expected):
     """
     Test gen_hash with passlib
     """
-    ret = salt.utils.pycrypto.gen_hash(
-        crypt_salt=expected["salt"], password=passwd, algorithm=algorithm
-    )
-    assert ret == expected["hashed"]
+    with patch("salt.utils.pycrypto.methods", {}):
+        with patch("salt.utils.pycrypto.HAS_CRYPT", False):
+            ret = salt.utils.pycrypto.gen_hash(
+                crypt_salt=expected["salt"], password=passwd, algorithm=algorithm
+            )
+            assert ret == expected["hashed"]
 
-    ret = salt.utils.pycrypto.gen_hash(
-        crypt_salt=expected["badsalt"], password=passwd, algorithm=algorithm
-    )
-    assert ret != expected["hashed"]
+            ret = salt.utils.pycrypto.gen_hash(
+                crypt_salt=expected["badsalt"], password=passwd, algorithm=algorithm
+            )
+            assert ret != expected["hashed"]
 
-    ret = salt.utils.pycrypto.gen_hash(
-        crypt_salt=None, password=passwd, algorithm=algorithm
-    )
-    assert ret != expected["hashed"]
+            ret = salt.utils.pycrypto.gen_hash(
+                crypt_salt=None, password=passwd, algorithm=algorithm
+            )
+            assert ret != expected["hashed"]
 
 
 def test_gen_hash_passlib_no_arguments():
@@ -134,38 +135,39 @@ def test_gen_hash_passlib_default_algorithm():
         assert ret == expected["hashed"]
 
 
-@patch("salt.utils.pycrypto.HAS_CRYPT", False)
-@patch("salt.utils.pycrypto.HAS_PASSLIB", False)
 def test_gen_hash_no_lib():
     """
     test gen_hash with no crypt library available
     """
-    with pytest.raises(SaltInvocationError):
-        salt.utils.pycrypto.gen_hash()
+    with patch("salt.utils.pycrypto.HAS_CRYPT", False):
+        with patch("salt.utils.pycrypto.HAS_PASSLIB", False):
+            with pytest.raises(SaltInvocationError):
+                salt.utils.pycrypto.gen_hash()
 
 
-@patch("salt.utils.pycrypto.HAS_CRYPT", True)
-@patch("salt.utils.pycrypto.methods", {"crypt": None})
-@patch("salt.utils.pycrypto.HAS_PASSLIB", True)
 def test_gen_hash_selection():
     """
     verify the hash backend selection works correctly
     """
-    with patch("salt.utils.pycrypto._gen_hash_crypt", autospec=True) as gh_crypt:
-        with patch(
-            "salt.utils.pycrypto._gen_hash_passlib", autospec=True
-        ) as gh_passlib:
-            with pytest.raises(SaltInvocationError):
-                salt.utils.pycrypto.gen_hash(algorithm="doesntexist")
 
-            salt.utils.pycrypto.gen_hash(algorithm="crypt")
-            gh_crypt.assert_called_once()
-            gh_passlib.assert_not_called()
+    with patch("salt.utils.pycrypto.HAS_CRYPT", True):
+        with patch("salt.utils.pycrypto.methods", {"crypt": None}):
+            with patch("salt.utils.pycrypto.HAS_PASSLIB", True):
+                with patch("salt.utils.pycrypto._gen_hash_crypt", autospec=True) as gh_crypt:
+                    with patch(
+                        "salt.utils.pycrypto._gen_hash_passlib", autospec=True
+                    ) as gh_passlib:
+                        with pytest.raises(SaltInvocationError):
+                            salt.utils.pycrypto.gen_hash(algorithm="doesntexist")
 
-            gh_crypt.reset_mock()
-            salt.utils.pycrypto.gen_hash(algorithm="sha512")
-            gh_crypt.assert_not_called()
-            gh_passlib.assert_called_once()
+                        salt.utils.pycrypto.gen_hash(algorithm="crypt")
+                        gh_crypt.assert_called_once()
+                        gh_passlib.assert_not_called()
+
+                        gh_crypt.reset_mock()
+                        salt.utils.pycrypto.gen_hash(algorithm="sha512")
+                        gh_crypt.assert_not_called()
+                        gh_passlib.assert_called_once()
 
 
 def test_gen_hash_crypt_warning(caplog):
