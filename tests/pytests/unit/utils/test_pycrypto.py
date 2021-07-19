@@ -153,7 +153,9 @@ def test_gen_hash_selection():
     with patch("salt.utils.pycrypto.HAS_CRYPT", True):
         with patch("salt.utils.pycrypto.methods", {"crypt": None}):
             with patch("salt.utils.pycrypto.HAS_PASSLIB", True):
-                with patch("salt.utils.pycrypto._gen_hash_crypt", autospec=True) as gh_crypt:
+                with patch(
+                    "salt.utils.pycrypto._gen_hash_crypt", autospec=True
+                ) as gh_crypt:
                     with patch(
                         "salt.utils.pycrypto._gen_hash_passlib", autospec=True
                     ) as gh_passlib:
