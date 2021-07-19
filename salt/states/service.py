@@ -359,7 +359,7 @@ def _disable(name, started, result=True, **kwargs):
 
 
 def _offline():
-    return "service.offline" in __salt__ and __salt__["service.offline"]
+    return "service.offline" in __salt__ and __salt__["service.offline"]()
 
 
 def _available(name, ret):
