@@ -279,42 +279,6 @@ def test_user_present_home_directory_created(modules, states, username, createho
     assert pathlib.Path(user_info["home"]).is_dir() is createhome
 
 
-@pytest.mark.skip_unless_on_linux(reason="only supported on linux")
-def test_user_present_gid_from_name(states, username):
-    """
-    Test that gid_from_name results in warning, while it is on a
-    deprecation path.
-    """
-    # Add the user
-    ret = states.user.present(name=username, gid_from_name=True)
-    assert ret.result is True
-    assert ret.warnings
-    expected = [
-        "The 'gid_from_name' argument in the user.present state has been "
-        "replaced with 'usergroup'. Update your SLS file to get rid of "
-        "this warning."
-    ]
-    assert ret.warnings == expected
-
-
-@pytest.mark.skip_unless_on_linux(reason="only supported on linux")
-def test_user_present_gid_from_name_and_usergroup(states, username):
-    """
-    Test that gid_from_name results in warning, while it is on a
-    deprecation path.
-    """
-    # Add the user
-    ret = states.user.present(name=username, gid_from_name=True, usergroup=True)
-    assert ret.result is True
-    assert ret.warnings
-    expected = [
-        "The 'gid_from_name' argument in the user.present state has been "
-        "replaced with 'usergroup'. Ignoring since 'usergroup' was also "
-        "used."
-    ]
-    assert ret.warnings == expected
-
-
 @pytest.mark.skip_on_darwin(reason="groups/gid not fully supported")
 @pytest.mark.skip_on_windows(reason="groups/gid not fully supported")
 def test_user_present_change_gid_but_keep_group(
