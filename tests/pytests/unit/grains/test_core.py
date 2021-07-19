@@ -2380,7 +2380,7 @@ def test_bsd_osfullname():
 
     with patch("platform.uname", MagicMock(return_value=mock_freebsd_uname)):
         with patch.object(
-            platform.uname, "version", MagicMock(return_value=mock_freebsd_uname[3])
+            "uname", "version", MagicMock(return_value=mock_freebsd_uname[3])
         ):
             with patch.object(
                 salt.utils.platform, "is_linux", MagicMock(return_value=False)
