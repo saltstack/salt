@@ -1,4 +1,4 @@
-@Library('salt@master-1.10') _
+@Library('salt@master-1.11') _
 
 runTestSuite(
     concurrent_builds: 1,
@@ -6,7 +6,6 @@ runTestSuite(
     distro_version: '11',
     distro_arch: 'amd64',
     env: env,
-    golden_images_branch: 'master',
     jenkins_slave_label: 'kitchen-slave',
     nox_env_name: 'pytest-zeromq',
     nox_passthrough_opts: '--ssh-tests',
