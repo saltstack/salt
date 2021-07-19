@@ -1405,14 +1405,14 @@ def host_update(hostid, **connection_args):
         return ret
 
 
-def host_inventory_get(hostids, **connection_args):
+def host_inventory_get(hostid, **connection_args):
     """
     Retrieve host inventory according to the given parameters.
     See: https://www.zabbix.com/documentation/2.4/manual/api/reference/host/object#host_inventory
 
     .. versionadded:: 2019.2.0
 
-    :param hostids: Return only host interfaces used by the given hosts.
+    :param hostid: ID of the host to query
     :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
     :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
     :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
@@ -1431,8 +1431,8 @@ def host_inventory_get(hostids, **connection_args):
         if conn_args:
             method = "host.get"
             params = {"selectInventory": "extend"}
-            if hostids:
-                params.setdefault("hostids", hostids)
+            if hostid:
+                params.setdefault("hostids", hostid)
             params = _params_extend(params, **connection_args)
             ret = _query(method, params, conn_args["url"], conn_args["auth"])
             return (
