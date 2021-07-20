@@ -221,7 +221,8 @@ class TestAccount:
     password = attr.ib(default=None)
     hashed_password = attr.ib(default=None, repr=False)
     group_name = attr.ib(default=None)
-    group = attr.ib(init=False, repr=False, default=None)
+    create_group = attr.ib(repr=False, default=False)
+    _group = attr.ib(init=False, repr=False, default=None)
     _delete_account = attr.ib(init=False, repr=False, default=False)
 
     def __attrs_post_init__(self):
@@ -237,13 +238,23 @@ class TestAccount:
             and not salt.utils.platform.is_windows()
         ):
             self.hashed_password = salt.utils.pycrypto.gen_hash(password=self.password)
-        if self.group_name is None:
+        if self.create_group is True and self.group_name is None:
             self.group_name = self.username
-        self.group = TestGroup(sminion=self.sminion, name=self.group_name)
+        if self.group_name is not None:
+            self._group = TestGroup(sminion=self.sminion, name=self.group_name)
 
     @property
     def info(self):
         return types.SimpleNamespace(**self.sminion.functions.user.info(self.username))
+
+    @property
+    def group(self):
+        if self._group is None:
+            raise RuntimeError(
+                "Neither `create_group` nor `group_name` was passed when creating the "
+                "account. There's no group attribute in this account instance."
+            )
+        return self._group
 
     def __enter__(self):
         if not self.sminion.functions.user.info(self.username):
@@ -258,25 +269,29 @@ class TestAccount:
             ret = self.sminion.functions.shadow.set_password(self.username, password)
             assert ret
         assert self.username in self.sminion.functions.user.list_users()
-        self.group.__enter__()
-        self.sminion.functions.group.adduser(self.group.name, self.username)
+        if self._group:
+            self.group.__enter__()
+            self.sminion.functions.group.adduser(self.group.name, self.username)
         log.debug("Created system account: %s", self)
         # Run tests
         return self
 
     def __exit__(self, *args):
-        try:
-            self.sminion.functions.group.deluser(self.group.name, self.username)
-            log.debug("Removed user %r from group %r", self.username, self.group.name)
-        except Exception:  # pylint: disable=broad-except
-            log.warning(
-                "Failed to remove user %r from group %r",
-                self.username,
-                self.group.name,
-                exc_info=True,
-            )
+        if self._group:
+            try:
+                self.sminion.functions.group.deluser(self.group.name, self.username)
+                log.debug(
+                    "Removed user %r from group %r", self.username, self.group.name
+                )
+            except Exception:  # pylint: disable=broad-except
+                log.warning(
+                    "Failed to remove user %r from group %r",
+                    self.username,
+                    self.group.name,
+                    exc_info=True,
+                )
 
-        self.group.__exit__(*args)
+            self.group.__exit__(*args)
 
         if self._delete_account:
             try:
@@ -293,7 +308,12 @@ class TestAccount:
 @pytest.helpers.register
 @contextmanager
 def create_account(
-    username=None, password=None, hashed_password=None, group_name=None, sminion=None
+    username=None,
+    password=None,
+    hashed_password=None,
+    group_name=None,
+    create_group=False,
+    sminion=None,
 ):
     with TestAccount(
         sminion=sminion,
@@ -301,6 +321,7 @@ def create_account(
         password=password,
         hashed_password=hashed_password,
         group_name=group_name,
+        create_group=create_group,
     ) as account:
         yield account
 
