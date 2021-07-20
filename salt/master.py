@@ -438,52 +438,54 @@ class FileserverUpdate(salt.utils.process.SignalHandlingProcess):
                     (backend, update_func)
                 ] = None
 
-    def update_fileserver(self, interval, backends):
+    @staticmethod
+    def _do_update(backends):
+        """
+        Perform fileserver updates
+        """
+        for backend, update_args in backends.items():
+            backend_name, update_func = backend
+            try:
+                if update_args:
+                    log.debug(
+                        "Updating %s fileserver cache for the following targets: %s",
+                        backend_name,
+                        update_args,
+                    )
+                    args = (update_args,)
+                else:
+                    log.debug("Updating %s fileserver cache", backend_name)
+                    args = ()
+
+                update_func(*args)
+            except Exception as exc:  # pylint: disable=broad-except
+                log.exception(
+                    "Uncaught exception while updating %s fileserver cache",
+                    backend_name,
+                )
+
+    @classmethod
+    def update(cls, interval, backends, timeout=300):
         """
         Threading target which handles all updates for a given wait interval
         """
-
-        def _do_update():
+        start = time.time()
+        condition = threading.Condition()
+        while time.time() - start < timeout:
             log.debug(
                 "Performing fileserver updates for items with an update "
                 "interval of %d",
                 interval,
             )
-            for backend, update_args in backends.items():
-                backend_name, update_func = backend
-                try:
-                    if update_args:
-                        log.debug(
-                            "Updating %s fileserver cache for the following "
-                            "targets: %s",
-                            backend_name,
-                            update_args,
-                        )
-                        args = (update_args,)
-                    else:
-                        log.debug("Updating %s fileserver cache", backend_name)
-                        args = ()
-
-                    update_func(*args)
-                except Exception as exc:  # pylint: disable=broad-except
-                    log.exception(
-                        "Uncaught exception while updating %s fileserver " "cache",
-                        backend_name,
-                    )
-
+            cls._do_update(backends)
             log.debug(
                 "Completed fileserver updates for items with an update "
                 "interval of %d, waiting %d seconds",
                 interval,
                 interval,
             )
-
-        condition = threading.Condition()
-        _do_update()
-        while True:
             with condition:
                 condition.wait(interval)
-            _do_update()
 
     def run(self):
         """
@@ -506,13 +508,15 @@ class FileserverUpdate(salt.utils.process.SignalHandlingProcess):
 
         for interval in self.buckets:
             self.update_threads[interval] = threading.Thread(
-                target=self.update_fileserver, args=(interval, self.buckets[interval]),
+                target=self.update, args=(interval, self.buckets[interval]),
             )
             self.update_threads[interval].start()
 
-        # Keep the process alive
-        while True:
-            time.sleep(60)
+        while self.update_threads:
+            for name, thread in list(self.update_threads.items()):
+                thread.join(1)
+                if not thread.is_alive():
+                    self.update_threads.pop(name)
 
 
 class Master(SMaster):

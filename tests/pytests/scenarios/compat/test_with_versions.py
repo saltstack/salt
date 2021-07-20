@@ -10,7 +10,7 @@ import pathlib
 
 import attr
 import pytest
-from saltfactories.factories.daemons.container import SaltMinionContainerFactory
+from saltfactories.daemons.container import SaltMinion
 from saltfactories.utils import random_string
 from tests.support.runtests import RUNTIME_VARS
 
@@ -43,7 +43,7 @@ CMD . $VIRTUAL_ENV/bin/activate
 def _get_test_versions():
     test_versions = []
     for python_version in ("2", "3"):
-        for salt_version in ("2017.7.8", "2018.3.5", "2019.2.4", "3000.6"):
+        for salt_version in ("2019.2.4", "3000.6"):
             test_versions.append(
                 PySaltCombo(python_version=python_version, salt_version=salt_version)
             )
@@ -78,7 +78,7 @@ def minion_image(
     docker_client, pysaltcombo, container_virtualenv_path, minion_image_name
 ):
     extra = ""
-    if pysaltcombo.salt_version.startswith(("2017.7.", "2018.3.", "2019.2.")):
+    if pysaltcombo.salt_version.startswith("2019.2."):
         # We weren't pinning higher versions which we now know are problematic
         extra = "RUN pip install --ignore-installed --progress-bar=off -U "
         extra += (
@@ -109,9 +109,8 @@ def minion_id(pysaltcombo):
 
 
 @pytest.fixture(scope="function")
-def artifacts_path(minion_id):
-    with pytest.helpers.temp_directory(minion_id) as temp_directory:
-        yield temp_directory
+def artifacts_path(minion_id, tmp_path):
+    yield tmp_path / minion_id
 
 
 @pytest.mark.skip_if_binaries_missing("docker")
@@ -131,21 +130,21 @@ def salt_minion(
         # We also want to scrutinize the key acceptance
         "open_mode": False,
     }
-    factory = salt_master.get_salt_minion_daemon(
+    factory = salt_master.salt_minion_daemon(
         minion_id,
-        config_overrides=config_overrides,
-        factory_class=SaltMinionContainerFactory,
+        overrides=config_overrides,
+        factory_class=SaltMinion,
         extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
-        # SaltMinionContainerFactory kwargs
+        # SaltMinion kwargs
         name=minion_id,
         image=minion_image,
         docker_client=docker_client,
         start_timeout=120,
         container_run_kwargs={
-            "volumes": {artifacts_path: {"bind": "/artifacts", "mode": "z"}}
+            "volumes": {str(artifacts_path): {"bind": "/artifacts", "mode": "z"}}
         },
     )
-    factory.register_after_terminate_callback(
+    factory.after_terminate(
         pytest.helpers.remove_stale_minion_key, salt_master, factory.id
     )
     with factory.started():
@@ -172,12 +171,6 @@ def unicode(request, pysaltcombo):
 
 @pytest.fixture
 def populated_state_tree(pysaltcombo, minion_id, package_name, state_tree, unicode):
-    if unicode and pysaltcombo.salt_version.startswith("2017.7."):
-        pytest.xfail(
-            "Salt {} is known for problematic unicode handling on state files".format(
-                pysaltcombo.salt_version
-            )
-        )
     module_contents = """
     def get_test_package_name():
         return "{}"
@@ -236,7 +229,7 @@ def test_highstate(salt_cli, salt_minion, package_name):
 @pytest.fixture
 def cp_file_source(pysaltcombo, unicode):
     if unicode and pysaltcombo.python_version == "2":
-        if pysaltcombo.salt_version.startswith(("2018.3", "2019.2", "3000.")):
+        if pysaltcombo.salt_version.startswith(("2019.2", "3000.")):
             pytest.xfail(
                 "Salt {} is know to fail with unicode issues under Py2 when copying files".format(
                     pysaltcombo.salt_version
@@ -262,5 +255,5 @@ def test_cp(salt_cp_cli, salt_minion, artifacts_path, cp_file_source):
     assert ret.json is not None
     assert isinstance(ret.json, dict), ret.json
     assert ret.json == {remote_path: True}
-    cp_file_dest = pathlib.Path(artifacts_path) / "cheese"
+    cp_file_dest = artifacts_path / "cheese"
     assert cp_file_source.read_text() == cp_file_dest.read_text()

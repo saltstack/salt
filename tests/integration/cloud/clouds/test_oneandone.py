@@ -1,16 +1,11 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: :email:`Amel Ajdinovic <amel@stackpointcloud.com>`
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Testing Libs
 from tests.integration.cloud.helpers.cloud_test_base import TIMEOUT, CloudTest
 from tests.support.unit import skipIf
 
-# Import Third-Party Libs
 try:
     from oneandone.client import OneAndOneService  # pylint: disable=unused-import
 
@@ -32,7 +27,7 @@ class OneAndOneTest(CloudTest):
         """
         Tests the return of running the --list-images command for 1and1
         """
-        image_list = self.run_cloud("--list-images {0}".format(self.PROVIDER_NAME))
+        image_list = self.run_cloud("--list-images {}".format(self.PROVIDER_NAME))
         self.assertIn("coreOSimage", [i.strip() for i in image_list])
 
     def test_instance(self):
@@ -41,7 +36,7 @@ class OneAndOneTest(CloudTest):
         """
         # check if instance with salt installed returned
         ret_str = self.run_cloud(
-            "-p oneandone-test {0}".format(self.instance_name), timeout=TIMEOUT
+            "-p oneandone-test {}".format(self.instance_name), timeout=TIMEOUT
         )
         self.assertInstanceExists(ret_str)
 

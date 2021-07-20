@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Tests the localfs tokens interface.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
@@ -14,7 +12,7 @@ from tests.support.mock import patch
 from tests.support.unit import TestCase
 
 
-class CalledWith(object):
+class CalledWith:
     def __init__(self, func, called_with=None):
         self.func = func
         if called_with is None:

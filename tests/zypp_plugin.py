@@ -1,10 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 Related to zypp_plugins_test.py module.
 """
 
 
-class Plugin(object):
+class Plugin:
     """
     Bogus module for Zypp Plugins tests.
     """
@@ -24,7 +23,7 @@ class Plugin(object):
         """
 
 
-class BogusIO(object):
+class BogusIO:
     """
     Read/write logger.
     """

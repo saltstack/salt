@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 ZFS grain provider
 
@@ -10,16 +9,12 @@ ZFS grain provider
 .. versionadded:: 2018.3.0
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 
 # Solve the Chicken and egg problem where grains need to run before any
 # of the modules are loaded and are generally available for any usage.
 import salt.modules.cmdmod
-
-# Import salt libs
 import salt.utils.dictupdate
 import salt.utils.path
 import salt.utils.platform

@@ -13,6 +13,7 @@ import logging
 import multiprocessing
 import multiprocessing.util
 import os
+import queue
 import signal
 import socket
 import subprocess
@@ -27,7 +28,6 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.versions
-from salt.ext.six.moves import queue, range
 from salt.ext.tornado import gen
 from salt.log.mixins import NewStyleClassMixIn
 
@@ -228,9 +228,7 @@ def claim_mantle_of_responsibility(file_name):
     # all OSs supported by salt has psutil
     if not HAS_PSUTIL:
         log.critical(
-            "Assuming no other Process has this responsibility! pidfile: {}".format(
-                file_name
-            )
+            "Assuming no other Process has this responsibility! pidfile: %s", file_name
         )
         return True
 
@@ -245,9 +243,9 @@ def claim_mantle_of_responsibility(file_name):
         with salt.utils.files.fopen(file_name, "r") as file:
             file_process_info = json.load(file)
     except json.decoder.JSONDecodeError:
-        log.error("pidfile: {} is corrupted".format(file_name))
+        log.error("pidfile: %s is corrupted", file_name)
     except FileNotFoundError:
-        log.info("pidfile: {} not found".format(file_name))
+        log.info("pidfile: %s not found", file_name)
 
     this_process_info = get_process_info()
 
@@ -282,9 +280,7 @@ def check_mantle_of_responsibility(file_name):
     # all OSs supported by salt has psutil
     if not HAS_PSUTIL:
         log.critical(
-            "Assuming no other Process has this responsibility! pidfile: {}".format(
-                file_name
-            )
+            "Assuming no other Process has this responsibility! pidfile: %s", file_name
         )
         return
 
@@ -293,10 +289,10 @@ def check_mantle_of_responsibility(file_name):
         with salt.utils.files.fopen(file_name, "r") as file:
             file_process_info = json.load(file)
     except json.decoder.JSONDecodeError:
-        log.error("pidfile: {} is corrupted".format(file_name))
+        log.error("pidfile: %s is corrupted", file_name)
         return
     except FileNotFoundError:
-        log.info("pidfile: {} not found".format(file_name))
+        log.info("pidfile: %s not found", file_name)
         return
 
     if not isinstance(file_process_info, dict) or not isinstance(
@@ -317,7 +313,7 @@ def set_pidfile(pidfile, user):
         os.makedirs(pdir)
     try:
         with salt.utils.files.fopen(pidfile, "w+") as ofile:
-            ofile.write(str(os.getpid()))  # future lint: disable=blacklisted-function
+            ofile.write(str(os.getpid()))
     except OSError:
         pass
 
@@ -585,12 +581,21 @@ class ProcessManager:
         """
         if self._restart_processes is False:
             return
-        log.info(
-            "Process %s (%s) died with exit status %s, restarting...",
-            self._process_map[pid]["tgt"],
-            pid,
-            self._process_map[pid]["Process"].exitcode,
-        )
+        exit = self._process_map[pid]["Process"].exitcode
+        if exit > 0:
+            log.info(
+                "Process %s (%s) died with exit status %s, restarting...",
+                self._process_map[pid]["tgt"],
+                pid,
+                self._process_map[pid]["Process"].exitcode,
+            )
+        else:
+            log.debug(
+                "Process %s (%s) died with exit status %s, restarting...",
+                self._process_map[pid]["tgt"],
+                pid,
+                self._process_map[pid]["Process"].exitcode,
+            )
         # don't block, the process is already dead
         self._process_map[pid]["Process"].join(1)
 

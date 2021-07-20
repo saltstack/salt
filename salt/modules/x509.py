@@ -1033,7 +1033,8 @@ def create_crl(
         crltext = crl.export(**export_kwargs)
     except (TypeError, ValueError):
         log.warning(
-            "Error signing crl with specified digest. Are you using pyopenssl 0.15 or newer? The default md5 digest will be used."
+            "Error signing crl with specified digest. Are you using "
+            "pyopenssl 0.15 or newer? The default md5 digest will be used."
         )
         export_kwargs.pop("digest", None)
         crltext = crl.export(**export_kwargs)
@@ -1626,7 +1627,7 @@ def create_certificate(path=None, text=False, overwrite=True, ca_server=None, **
             name=extname, value=extval, critical=critical, issuer=issuer
         )
         if not ext.x509_ext:
-            log.info("Invalid X509v3 Extension. {}: {}".format(extname, extval))
+            log.info("Invalid X509v3 Extension. %s: %s", extname, extval)
             continue
 
         cert.add_ext(ext)
@@ -1734,7 +1735,9 @@ def create_csr(path=None, text=False, **kwargs):
     if "private_key" not in kwargs and "public_key" in kwargs:
         kwargs["private_key"] = kwargs["public_key"]
         log.warning(
-            "OpenSSL no longer allows working with non-signed CSRs. A private_key must be specified. Attempting to use public_key as private_key"
+            "OpenSSL no longer allows working with non-signed CSRs. "
+            "A private_key must be specified. Attempting to use public_key "
+            "as private_key"
         )
 
     if "private_key" not in kwargs:
@@ -1788,7 +1791,7 @@ def create_csr(path=None, text=False, **kwargs):
             name=extname, value=extval, critical=critical, issuer=issuer
         )
         if not ext.x509_ext:
-            log.info("Invalid X509v3 Extension. {}: {}".format(extname, extval))
+            log.info("Invalid X509v3 Extension. %s: %s", extname, extval)
             continue
 
         extstack.push(ext)

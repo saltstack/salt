@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 n9k_show_ver = """
 Cisco Nexus Operating System (NX-OS) Software
 TAC support: http://www.cisco.com/tac

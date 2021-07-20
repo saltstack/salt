@@ -40,7 +40,6 @@ import salt.utils.path
 import salt.utils.pkg.rpm
 import salt.utils.platform
 import salt.utils.stringutils
-from salt.ext.six.moves import range
 from salt.utils.network import _get_interfaces
 
 
@@ -857,15 +856,17 @@ def _virtual(osdata):
                 grains["virtual"] = "VirtualPC"
                 break
             elif "lxc" in output:
-                grains["virtual"] = "LXC"
-                break
-            elif "systemd-nspawn" in output:
-                grains["virtual"] = "LXC"
+                grains["virtual"] = "container"
+                grains["virtual_subtype"] = "LXC"
                 break
         elif command == "virt-what":
             for line in output.splitlines():
-                if line in ("kvm", "qemu", "uml", "xen", "lxc"):
+                if line in ("kvm", "qemu", "uml", "xen"):
                     grains["virtual"] = line
+                    break
+                elif "lxc" in line:
+                    grains["virtual"] = "container"
+                    grains["virtual_subtype"] = "LXC"
                     break
                 elif "vmware" in line:
                     grains["virtual"] = "VMware"
@@ -876,6 +877,7 @@ def _virtual(osdata):
                 elif "hyperv" in line:
                     grains["virtual"] = "HyperV"
                     break
+            break
         elif command == "dmidecode":
             # Product Name: VirtualBox
             if "Vendor: QEMU" in output:
@@ -1028,27 +1030,6 @@ def _virtual(osdata):
             # If a Dom0 or DomU was detected, obviously this is xen
             if "dom" in grains.get("virtual_subtype", "").lower():
                 grains["virtual"] = "xen"
-        # Check container type after hypervisors, to avoid variable overwrite on containers running in virtual environment.
-        if os.path.isfile("/proc/1/cgroup"):
-            try:
-                with salt.utils.files.fopen("/proc/1/cgroup", "r") as fhr:
-                    fhr_contents = fhr.read()
-                if ":/lxc/" in fhr_contents:
-                    grains["virtual"] = "container"
-                    grains["virtual_subtype"] = "LXC"
-                elif ":/kubepods/" in fhr_contents:
-                    grains["virtual_subtype"] = "kubernetes"
-                elif ":/libpod_parent/" in fhr_contents:
-                    grains["virtual_subtype"] = "libpod"
-                else:
-                    if any(
-                        x in fhr_contents
-                        for x in (":/system.slice/docker", ":/docker/", ":/docker-ce/")
-                    ):
-                        grains["virtual"] = "container"
-                        grains["virtual_subtype"] = "Docker"
-            except OSError:
-                pass
         if os.path.isfile("/proc/cpuinfo"):
             with salt.utils.files.fopen("/proc/cpuinfo", "r") as fhr:
                 if "QEMU Virtual CPU" in fhr.read():
@@ -1081,6 +1062,38 @@ def _virtual(osdata):
                 )
             except OSError:
                 pass
+        # Check container type after hypervisors, to avoid variable overwrite on containers running in virtual environment.
+        if os.path.isfile("/proc/1/cgroup"):
+            try:
+                with salt.utils.files.fopen("/proc/1/cgroup", "r") as fhr:
+                    fhr_contents = fhr.read()
+                if ":/lxc/" in fhr_contents:
+                    grains["virtual"] = "container"
+                    grains["virtual_subtype"] = "LXC"
+                elif ":/kubepods/" in fhr_contents:
+                    grains["virtual_subtype"] = "kubernetes"
+                elif ":/libpod_parent/" in fhr_contents:
+                    grains["virtual_subtype"] = "libpod"
+                else:
+                    if any(
+                        x in fhr_contents
+                        for x in (":/system.slice/docker", ":/docker/", ":/docker-ce/")
+                    ):
+                        grains["virtual"] = "container"
+                        grains["virtual_subtype"] = "Docker"
+            except OSError:
+                pass
+        # Newer versions of LXC didn't have "lxc" in /proc/1/cgroup. Check environ
+        if ("virtual_subtype" not in grains) or (grains["virtual_subtype"] != "LXC"):
+            if os.path.isfile("/proc/1/environ"):
+                try:
+                    with salt.utils.files.fopen("/proc/1/environ", "r") as fhr:
+                        fhr_contents = fhr.read()
+                    if "container=lxc" in fhr_contents:
+                        grains["virtual"] = "container"
+                        grains["virtual_subtype"] = "LXC"
+                except OSError:
+                    pass
     elif osdata["kernel"] == "FreeBSD":
         kenv = salt.utils.path.which("kenv")
         if kenv:
@@ -2871,7 +2884,7 @@ def _hw_data(osdata):
             re.compile(r) for r in [r"(?im)^\s*Domain\s+UUID:\s*(\S+)"]  # virtinfo
         ]
 
-        manufacture_regexes = [
+        manufacturer_regexes = [
             re.compile(r)
             for r in [r"(?im)^\s*System\s+Configuration:\s*(.*)(?=sun)"]  # prtdiag
         ]
@@ -2940,10 +2953,12 @@ def _hw_data(osdata):
                 grains["uuid"] = res.group(1).strip().replace("'", "")
                 break
 
-        for regex in manufacture_regexes:
+        for regex in manufacturer_regexes:
             res = regex.search(data)
             if res and len(res.groups()) >= 1:
-                grains["manufacture"] = res.group(1).strip().replace("'", "")
+                grains["manufacturer"] = res.group(1).strip().replace("'", "")
+                # Remove manufacture in Sulfur: salt.utils.versions.warn_until("Sulfur")
+                grains["manufacture"] = grains["manufacturer"]
                 break
 
         for regex in product_regexes:
