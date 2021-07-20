@@ -20,7 +20,7 @@ import textwrap
 import pytest
 import salt.config
 import salt.loader
-import salt.loader_context
+import salt.loader.context
 import salt.utils.files
 import salt.utils.stringutils
 from tests.support.case import ModuleCase
@@ -317,7 +317,7 @@ class LazyLoaderVirtualEnabledTest(TestCase):
         self.assertEqual(self.loader._dict, {})
         # get something, and make sure its a func
         func = self.loader["test.ping"]
-        with salt.loader_context.loader_context(self.loader):
+        with salt.loader.context.loader_context(self.loader):
             with patch.dict(func.__globals__["__context__"], {"foo": "bar"}):
                 self.assertEqual(
                     self.loader["test.echo"].__globals__["__context__"]["foo"], "bar"
@@ -327,7 +327,7 @@ class LazyLoaderVirtualEnabledTest(TestCase):
                 )
 
     def test_globals(self):
-        with salt.loader_context.loader_context(self.loader):
+        with salt.loader.context.loader_context(self.loader):
             func_globals = self.loader["test.ping"].__globals__
             self.assertEqual(
                 func_globals["__grains__"].value(), self.opts.get("grains", {})
@@ -354,7 +354,7 @@ class LazyLoaderVirtualEnabledTest(TestCase):
                 self.assertEqual(self.opts[key], val)
 
     def test_pack(self):
-        with salt.loader_context.loader_context(self.loader):
+        with salt.loader.context.loader_context(self.loader):
             self.loader.pack["__foo__"] = "bar"
             func_globals = self.loader["test.ping"].__globals__
             self.assertEqual(func_globals["__foo__"].value(), "bar")
@@ -1299,16 +1299,16 @@ class LoaderMultipleGlobalTest(ModuleCase):
 
         self.loader2.pack["__foo__"] = "bar2"
         func2 = self.loader2["test.ping"]
-        token = salt.loader_context.loader_ctxvar.set(self.loader1)
+        token = salt.loader.context.loader_ctxvar.set(self.loader1)
         try:
             assert func1.__globals__["__foo__"].value() == "bar1"
         finally:
-            salt.loader_context.loader_ctxvar.reset(token)
-        token = salt.loader_context.loader_ctxvar.set(self.loader2)
+            salt.loader.context.loader_ctxvar.reset(token)
+        token = salt.loader.context.loader_ctxvar.set(self.loader2)
         try:
             assert func2.__globals__["__foo__"].value() == "bar2"
         finally:
-            salt.loader_context.loader_ctxvar.reset(token)
+            salt.loader.context.loader_ctxvar.reset(token)
 
 
 class LoaderCleanupTest(ModuleCase):

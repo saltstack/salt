@@ -4,7 +4,7 @@ import random
 import string
 
 import salt.loader
-import salt.loader_context
+import salt.loader.context
 import salt.modules.boto_apigateway as boto_apigateway
 from salt.utils.versions import LooseVersion
 from tests.support.mixins import LoaderModuleMockMixin
@@ -711,7 +711,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         """
         tests that we properly handle errors when create an api key fails.
         """
-        with salt.loader_context.loader_context(self.utils):
+        with salt.loader.context.loader_context(self.utils):
             self.conn.create_api_key.side_effect = ClientError(
                 error_content, "create_api_key"
             )

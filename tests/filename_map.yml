@@ -186,7 +186,7 @@ salt/(client/ssh/.+|cli/ssh\.py):
 salt/config/*:
   - unit.test_config
 
-salt/loader.py:
+salt/loader/*:
   - integration.loader.test_ext_grains
   - integration.loader.test_ext_modules
   - pytests.functional.test_loader

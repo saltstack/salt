@@ -7,7 +7,7 @@ import sys
 
 import pytest
 import salt.loader
-import salt.loader_context
+import salt.loader.context
 import salt.utils.files
 from tests.support.helpers import dedent
 
@@ -92,18 +92,18 @@ def test_loaders_create_named_loader_contexts(loader_dir):
     assert isinstance(func, salt.loader.LoadedFunc)
     module_name = func.func.__module__
     module = sys.modules[module_name]
-    assert isinstance(module.__context__, salt.loader_context.NamedLoaderContext)
+    assert isinstance(module.__context__, salt.loader.context.NamedLoaderContext)
 
 
 def test_loaders_convert_context_to_values(loader_dir):
     """
     LazyLoaders convert NamedLoaderContexts to values when instantiated.
     """
-    loader_context = salt.loader_context.LoaderContext()
+    loader_context = salt.loader.context.LoaderContext()
     grains_default = {
         "os": "linux",
     }
-    grains = salt.loader_context.NamedLoaderContext(
+    grains = salt.loader.context.NamedLoaderContext(
         "grains", loader_context, grains_default
     )
     opts = {

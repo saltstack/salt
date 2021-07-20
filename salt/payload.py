@@ -12,7 +12,7 @@ import gc
 # import sys  # Use if sys is commented out below
 import logging
 
-import salt.loader_context
+import salt.loader.context
 import salt.log
 import salt.transport.frame
 import salt.utils.immutabletypes as immutabletypes
