@@ -1,13 +1,11 @@
-@Library('salt@master-1.10') _
+@Library('salt@master-1.11') _
 
 runTestSuite(
-    ami_image_id: 'ami-09a38a1d2d9fa3201',
     concurrent_builds: 1,
     distro_name: 'arch',
     distro_version: 'lts',
     distro_arch: 'x86-64',
     env: env,
-    golden_images_branch: 'master',
     jenkins_slave_label: 'kitchen-slave',
     nox_env_name: 'pytest-zeromq',
     nox_passthrough_opts: '--ssh-tests',

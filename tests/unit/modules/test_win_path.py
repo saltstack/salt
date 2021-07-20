@@ -64,13 +64,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
         orig_path = ("C:\\Foo", "C:\\Bar")
 
         def _env(path):
-            return {
-                str(
-                    "PATH"
-                ): salt.utils.stringutils.to_str(  # future lint: disable=blacklisted-function
-                    self.pathsep.join(path)
-                )
-            }
+            return {"PATH": salt.utils.stringutils.to_str(self.pathsep.join(path))}
 
         def _run(name, index=None, retval=True, path=None):
             if path is None:
@@ -188,13 +182,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
         orig_path = ("C:\\Foo", "C:\\Bar", "C:\\Baz")
 
         def _env(path):
-            return {
-                str(
-                    "PATH"
-                ): salt.utils.stringutils.to_str(  # future lint: disable=blacklisted-function
-                    self.pathsep.join(path)
-                )
-            }
+            return {"PATH": salt.utils.stringutils.to_str(self.pathsep.join(path))}
 
         def _run(name="c:\\salt", index=None, retval=True, path=None):
             if path is None:
