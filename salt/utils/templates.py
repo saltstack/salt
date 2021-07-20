@@ -25,7 +25,7 @@ import salt.utils.yamlencoding
 from salt import __path__ as saltpath
 from salt.exceptions import CommandExecutionError, SaltInvocationError, SaltRenderError
 from salt.features import features
-from salt.loader_context import NamedLoaderContext
+from salt.loader.context import NamedLoaderContext
 from salt.utils.decorators.jinja import JinjaFilter, JinjaGlobal, JinjaTest
 from salt.utils.odict import OrderedDict
 from salt.utils.versions import LooseVersion
