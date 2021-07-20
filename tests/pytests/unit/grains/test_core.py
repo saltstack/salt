@@ -1141,7 +1141,7 @@ def test_linux_memdata():
     assert memdata.get("swap_total") == 4676
 
 
-@pytest.mark.skip_if_windows(reason="System is Windows")
+@pytest.mark.skip_on_windows(reason="System is Windows")
 def test_bsd_memdata():
     """
     Test to memdata on *BSD systems
@@ -1207,7 +1207,7 @@ def test_bsd_memdata():
     assert os_grains.get("swap_total") == 400
 
 
-@pytest.mark.skip_if_windows(reason="System is Windows")
+@pytest.mark.skip_on_windows(reason="System is Windows")
 def test_docker_virtual():
     """
     Test if virtual grains are parsed correctly in Docker.
@@ -1232,7 +1232,7 @@ def test_docker_virtual():
                         assert grains.get("virtual") == "container"
 
 
-@pytest.mark.skip_if_windows(reason="System is Windows")
+@pytest.mark.skip_on_windows(reason="System is Windows")
 def test_lxc_virtual():
     """
     Test if virtual grains are parsed correctly in LXC.
@@ -1271,7 +1271,7 @@ def test_lxc_virtual():
                     assert grains.get("virtual") == "container"
 
 
-@pytest.mark.skip_if_windows(reason="System is Windows")
+@pytest.mark.skip_on_windows(reason="System is Windows")
 def test_lxc_virtual_with_virt_what():
     """
     Test if virtual grains are parsed correctly in LXC using virt-what.
@@ -1300,7 +1300,7 @@ def test_lxc_virtual_with_virt_what():
                 assert ret["virtual_subtype"] == "LXC"
 
 
-@pytest.mark.skip_if_windows(reason="System is Windows")
+@pytest.mark.skip_on_windows(reason="System is Windows")
 def test_container_inside_virtual_machine():
     """
     Test if a container inside an hypervisor is shown as a container
@@ -1351,7 +1351,7 @@ def test_xen_virtual():
             )
 
 
-@pytest.mark.skip_if_windows(reason="System is Windows")
+@pytest.mark.skip_on_windows(reason="System is Windows")
 def test_illumos_virtual():
     """
     Test if virtual grains are parsed correctly inside illumos/solaris zone
@@ -1396,7 +1396,7 @@ def test_illumos_virtual():
             assert grains.get("virtual") == "zone"
 
 
-@pytest.mark.skip_if_windows(reason="System is Windows")
+@pytest.mark.skip_on_windows(reason="System is Windows")
 def test_illumos_fallback_virtual():
     """
     Test if virtual grains are parsed correctly inside illumos/solaris zone
@@ -2356,7 +2356,7 @@ def test_osdata_virtual_key_win():
         assert osdata_grains["virtual"] != "physical"
 
 
-@pytest.mark.skip_if_windows(reason="System is Windows")
+@pytest.mark.skip_on_windows(reason="System is Windows")
 def test_bsd_osfullname():
     """
     Test to ensure osfullname exists on *BSD systems
