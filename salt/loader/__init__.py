@@ -26,7 +26,7 @@ from zipimport import zipimporter
 import salt.config
 import salt.defaults.events
 import salt.defaults.exitcodes
-import salt.loader_context
+import salt.loader.context
 import salt.syspaths
 import salt.utils.args
 import salt.utils.context
@@ -1316,14 +1316,14 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         self.inject_globals = {}
         self.pack = {} if pack is None else pack
         for i in self.pack:
-            if isinstance(self.pack[i], salt.loader_context.NamedLoaderContext):
+            if isinstance(self.pack[i], salt.loader.context.NamedLoaderContext):
                 self.pack[i] = self.pack[i].value()
         if opts is None:
             opts = {}
         opts = copy.deepcopy(opts)
         for i in ["pillar", "grains"]:
             if i in opts and isinstance(
-                opts[i], salt.loader_context.NamedLoaderContext
+                opts[i], salt.loader.context.NamedLoaderContext
             ):
                 opts[i] = opts[i].value()
         threadsafety = not opts.get("multiprocessing")
@@ -1637,7 +1637,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         """
         if "__grains__" not in self.pack:
             grains = opts.get("grains", {})
-            if isinstance(grains, salt.loader_context.NamedLoaderContext):
+            if isinstance(grains, salt.loader.context.NamedLoaderContext):
                 grains = grains.value()
             self.context_dict["grains"] = grains
             self.pack["__grains__"] = salt.utils.context.NamespacedDictWrapper(
@@ -1646,7 +1646,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
         if "__pillar__" not in self.pack:
             pillar = opts.get("pillar", {})
-            if isinstance(pillar, salt.loader_context.NamedLoaderContext):
+            if isinstance(pillar, salt.loader.context.NamedLoaderContext):
                 pillar = pillar.value()
             self.context_dict["pillar"] = pillar
             self.pack["__pillar__"] = salt.utils.context.NamespacedDictWrapper(
@@ -1889,16 +1889,16 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             sys.path.remove(fpath_dirname)
             self.__clean_sys_path()
 
-        loader_context = salt.loader_context.LoaderContext()
+        loader_context = salt.loader.context.LoaderContext()
         if hasattr(mod, "__salt_loader__"):
-            if not isinstance(mod.__salt_loader__, salt.loader_context.LoaderContext):
+            if not isinstance(mod.__salt_loader__, salt.loader.context.LoaderContext):
                 log.warning("Override  __salt_loader__: %s", mod)
                 mod.__salt_loader__ = loader_context
         else:
             mod.__salt_loader__ = loader_context
 
         if hasattr(mod, "__opts__"):
-            if not isinstance(mod.__opts__, salt.loader_context.NamedLoaderContext):
+            if not isinstance(mod.__opts__, salt.loader.context.NamedLoaderContext):
                 if not hasattr(mod, "__orig_opts__"):
                     mod.__orig_opts__ = copy.deepcopy(mod.__opts__)
                 mod.__opts__ = copy.deepcopy(mod.__orig_opts__)
@@ -2279,17 +2279,17 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         """
         self.parent_loader = None
         try:
-            current_loader = salt.loader_context.loader_ctxvar.get()
+            current_loader = salt.loader.context.loader_ctxvar.get()
         except LookupError:
             current_loader = None
         if current_loader is not self:
             self.parent_loader = current_loader
-        token = salt.loader_context.loader_ctxvar.set(self)
+        token = salt.loader.context.loader_ctxvar.set(self)
         try:
             return _func_or_method(*args, **kwargs)
         finally:
             self.parent_loader = None
-            salt.loader_context.loader_ctxvar.reset(token)
+            salt.loader.context.loader_ctxvar.reset(token)
 
     def run_in_thread(self, _func_or_method, *args, **kwargs):
         """
