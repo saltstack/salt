@@ -355,7 +355,7 @@ def present(host, groups, interfaces, **kwargs):
         # if inventory_mode is '-1', the inventory will be erased, why compare it?
         if inventory is not None and inventory_mode != "-1":
             cur_inventory = __salt__["zabbix.host_inventory_get"](
-                hostid=hostid, **connection_args
+                hostids=hostid, **connection_args
             )
 
             inventory_diff = salt.utils.dictdiffer.diff(cur_inventory, new_inventory)
