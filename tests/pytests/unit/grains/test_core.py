@@ -1161,17 +1161,27 @@ def test_bsd_memdata():
 
     from collections import namedtuple
 
-    dgm_uname = namedtuple(
-        "dgm_uname", ["system", "node", "release", "version", "machine", "processor"]
+    nt_uname = namedtuple(
+        "nt_uname", ["system", "node", "release", "version", "machine", "processor"]
     )
+    ## DGM     mock_freebsd_uname = MagicMock(
+    ## DGM         return_value=nt_uname(
+    ## DGM             system="FreeBSD",
+    ## DGM             node="freebsd10.3-hostname-8148",
+    ## DGM             version="10.3-RELEASE",
+    ## DGM             release="FreeBSD 10.3-RELEASE #0 r297264: Fri Mar 25 02:10:02 UTC 2016     root@releng1.nyi.freebsd.org:/usr/obj/usr/src/sys/GENERIC",
+    ## DGM             machine="amd64",
+    ## DGM             processor="amd64",
+    ## DGM         )
+    ## DGM     )
     mock_freebsd_uname = MagicMock(
-        return_value=dgm_uname(
-            system="FreeBSD",
-            node="freebsd10.3-hostname-8148",
-            version="10.3-RELEASE",
-            release="FreeBSD 10.3-RELEASE #0 r297264: Fri Mar 25 02:10:02 UTC 2016     root@releng1.nyi.freebsd.org:/usr/obj/usr/src/sys/GENERIC",
-            machine="amd64",
-            processor="amd64",
+        return_value=nt_uname(
+            "FreeBSD",
+            "freebsd10.3-hostname-8148",
+            "10.3-RELEASE",
+            "FreeBSD 10.3-RELEASE #0 r297264: Fri Mar 25 02:10:02 UTC 2016     root@releng1.nyi.freebsd.org:/usr/obj/usr/src/sys/GENERIC",
+            "amd64",
+            "amd64",
         )
     )
     with patch.object(platform, "uname", mock_freebsd_uname):
@@ -2374,31 +2384,23 @@ def test_bsd_osfullname():
     cmd_run_mock = MagicMock(side_effect=lambda x: _cmd_run_map[x])
     empty_mock = MagicMock(return_value={})
 
-    ## DGM     mock_freebsd_uname = (
-    ## DGM         "FreeBSD",
-    ## DGM         "freebsd10.3-hostname-8148",
-    ## DGM         "10.3-RELEASE",
-    ## DGM         "FreeBSD 10.3-RELEASE #0 r297264: Fri Mar 25 02:10:02 UTC 2016     root@releng1.nyi.freebsd.org:/usr/obj/usr/src/sys/GENERIC",
-    ## DGM         "amd64",
-    ## DGM         "amd64",
-    ## DGM     )
     from collections import namedtuple
 
-    dgm_uname = namedtuple(
-        "dgm_uname", ["system", "node", "release", "version", "machine", "processor"]
+    nt_uname = namedtuple(
+        "nt_uname", ["system", "node", "release", "version", "machine", "processor"]
     )
     mock_freebsd_uname = MagicMock(
-        return_value=dgm_uname(
-            system="FreeBSD",
-            node="freebsd10.3-hostname-8148",
-            version="10.3-RELEASE",
-            release="FreeBSD 10.3-RELEASE #0 r297264: Fri Mar 25 02:10:02 UTC 2016     root@releng1.nyi.freebsd.org:/usr/obj/usr/src/sys/GENERIC",
-            machine="amd64",
-            processor="amd64",
+        return_value=nt_uname(
+            "FreeBSD",
+            "freebsd10.3-hostname-8148",
+            "10.3-RELEASE",
+            "FreeBSD 10.3-RELEASE #0 r297264: Fri Mar 25 02:10:02 UTC 2016     root@releng1.nyi.freebsd.org:/usr/obj/usr/src/sys/GENERIC",
+            "amd64",
+            "amd64",
         )
     )
 
-    with patch("platform.uname", MagicMock(return_value=mock_freebsd_uname)):
+    with patch.object(platform, "uname", mock_freebsd_uname):
         with patch.object(
             salt.utils.platform, "is_linux", MagicMock(return_value=False)
         ):
