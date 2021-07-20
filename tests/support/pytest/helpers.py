@@ -171,12 +171,58 @@ def remove_stale_minion_key(master, minion_id):
 
 
 @attr.s(kw_only=True, slots=True)
+class TestGroup:
+    sminion = attr.ib(default=None, repr=False)
+    name = attr.ib(default=None)
+    _delete_group = attr.ib(init=False, repr=False, default=False)
+
+    def __attrs_post_init__(self):
+        if self.sminion is None:
+            self.sminion = create_sminion()
+        if self.name is None:
+            self.name = random_string("group-", uppercase=False)
+
+    @property
+    def info(self):
+        return types.SimpleNamespace(**self.sminion.functions.group.info(self.name))
+
+    def __enter__(self):
+        group = self.sminion.functions.group.info(self.name)
+        if not group:
+            ret = self.sminion.functions.group.add(self.name)
+            assert ret
+            self._delete_group = True
+        log.debug("Created system group: %s", self)
+        # Run tests
+        return self
+
+    def __exit__(self, *_):
+        if self._delete_group:
+            try:
+                self.sminion.functions.group.delete(self.name)
+                log.debug("Deleted system group: %s", self.name)
+            except Exception:  # pylint: disable=broad-except
+                log.warning(
+                    "Failed to delete system group: %s", self.name, exc_info=True
+                )
+
+
+@pytest.helpers.register
+@contextmanager
+def create_group(name=None, sminion=None):
+    with TestGroup(sminion=sminion, name=name) as group:
+        yield group
+
+
+@attr.s(kw_only=True, slots=True)
 class TestAccount:
     sminion = attr.ib(default=None, repr=False)
     username = attr.ib(default=None)
     password = attr.ib(default=None)
     hashed_password = attr.ib(default=None, repr=False)
-    groups = attr.ib(default=None)
+    group_name = attr.ib(default=None)
+    group = attr.ib(init=False, repr=False, default=None)
+    _delete_account = attr.ib(init=False, repr=False, default=False)
 
     def __attrs_post_init__(self):
         if self.sminion is None:
@@ -187,34 +233,71 @@ class TestAccount:
             self.password = self.username
         if self.hashed_password is None:
             self.hashed_password = salt.utils.pycrypto.gen_hash(password=self.password)
+        if self.group_name is None:
+            self.group_name = self.username
+        self.group = TestGroup(sminion=self.sminion, name=self.group_name)
+
+    @property
+    def info(self):
+        return types.SimpleNamespace(**self.sminion.functions.user.info(self.username))
 
     def __enter__(self):
-        log.debug("Creating system account: %s", self)
-        ret = self.sminion.functions.user.add(self.username)
-        assert ret
-        ret = self.sminion.functions.shadow.set_password(
-            self.username,
-            self.password if salt.utils.platform.is_darwin() else self.hashed_password,
-        )
-        assert ret
+        if not self.sminion.functions.user.info(self.username):
+            log.debug("Creating system account: %s", self)
+            ret = self.sminion.functions.user.add(self.username)
+            assert ret
+            self._delete_account = True
+            ret = self.sminion.functions.shadow.set_password(
+                self.username,
+                self.password
+                if salt.utils.platform.is_darwin()
+                else self.hashed_password,
+            )
+            assert ret
         assert self.username in self.sminion.functions.user.list_users()
+        self.group.__enter__()
+        self.sminion.functions.group.adduser(self.group.name, self.username)
         log.debug("Created system account: %s", self)
         # Run tests
         return self
 
     def __exit__(self, *args):
-        self.sminion.functions.user.delete(self.username, remove=True, force=True)
-        log.debug("Deleted system account: %s", self.username)
+        try:
+            self.sminion.functions.group.deluser(self.group.name, self.username)
+            log.debug("Removed user %r from group %r", self.username, self.group.name)
+        except Exception:  # pylint: disable=broad-except
+            log.warning(
+                "Failed to remove user %r from group %r",
+                self.username,
+                self.group.name,
+                exc_info=True,
+            )
+
+        self.group.__exit__(*args)
+
+        if self._delete_account:
+            try:
+                self.sminion.functions.user.delete(
+                    self.username, remove=True, force=True
+                )
+                log.debug("Deleted system account: %s", self.username)
+            except Exception:  # pylint: disable=broad-except
+                log.warning(
+                    "Failed to delete system account: %s", self.username, exc_info=True
+                )
 
 
 @pytest.helpers.register
 @contextmanager
-def create_account(username=None, password=None, hashed_password=None, sminion=None):
+def create_account(
+    username=None, password=None, hashed_password=None, group_name=None, sminion=None
+):
     with TestAccount(
         sminion=sminion,
         username=username,
         password=password,
         hashed_password=hashed_password,
+        group_name=group_name,
     ) as account:
         yield account
 
