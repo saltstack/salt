@@ -1164,16 +1164,6 @@ def test_bsd_memdata():
     nt_uname = namedtuple(
         "nt_uname", ["system", "node", "release", "version", "machine", "processor"]
     )
-    ## DGM     mock_freebsd_uname = MagicMock(
-    ## DGM         return_value=nt_uname(
-    ## DGM             system="FreeBSD",
-    ## DGM             node="freebsd10.3-hostname-8148",
-    ## DGM             version="10.3-RELEASE",
-    ## DGM             release="FreeBSD 10.3-RELEASE #0 r297264: Fri Mar 25 02:10:02 UTC 2016     root@releng1.nyi.freebsd.org:/usr/obj/usr/src/sys/GENERIC",
-    ## DGM             machine="amd64",
-    ## DGM             processor="amd64",
-    ## DGM         )
-    ## DGM     )
     mock_freebsd_uname = MagicMock(
         return_value=nt_uname(
             "FreeBSD",
