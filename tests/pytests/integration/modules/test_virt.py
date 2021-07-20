@@ -80,7 +80,7 @@ def virt_minion_0(
     loaded_config = SaltVirtMinionContainerFactory.write_config(config)
     factory = SaltVirtMinionContainerFactory(
         name=virt_minion_0_id,
-        image="quay.io/rst0git/virt-minion",
+        image="ch3ll/issues:testme",
         docker_client=docker_client,
         config=loaded_config,
         script_name=salt_minion_script_path,
@@ -130,7 +130,7 @@ def virt_minion_1(
     loaded_config = SaltVirtMinionContainerFactory.write_config(config)
     factory = SaltVirtMinionContainerFactory(
         name=virt_minion_1_id,
-        image="quay.io/rst0git/virt-minion",
+        image="ch3ll/issues:testme",
         docker_client=docker_client,
         config=loaded_config,
         script_name=salt_minion_script_path,
