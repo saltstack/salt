@@ -67,7 +67,7 @@ def group_2():
 
 @pytest.fixture
 def existing_account():
-    with pytest.helpers.create_account() as _account:
+    with pytest.helpers.create_account(create_group=True) as _account:
         yield _account
 
 
