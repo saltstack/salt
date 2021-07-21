@@ -80,6 +80,7 @@ Given the following.
 
         # coolmod.py
 
+
         def utils_func_getter(name):
             return __utils__[name]
 
@@ -95,7 +96,7 @@ in the context of a loader.
         opts = {}
         utils = salt.loader.utils(opts)
         with salt.loader.context(utils):
-            func = coolmod.utils_func_getter('foo.bar')
+            func = coolmod.utils_func_getter("foo.bar")
 
 
 
