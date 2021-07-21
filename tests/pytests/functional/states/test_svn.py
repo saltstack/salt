@@ -4,6 +4,7 @@ Tests for the SVN state
 import logging
 
 import pytest
+import salt.utils.platform
 
 log = logging.getLogger(__name__)
 
@@ -97,7 +98,12 @@ def test_latest_user(svn, repo_url, repo_revision, repo_target, account):
     for entry in repo_target.iterdir():
         entry_stat = entry.stat()
         assert entry_stat.st_uid == account.info.uid
-        assert entry_stat.st_gid == account.info.gid
+        try:
+            assert entry_stat.st_gid == account.info.gid
+        except AssertionError:
+            if not salt.utils.platform.is_darwin():
+                raise
+            pytest.xfail("The 'cmd' module does not change to the user group on Darwin")
 
 
 @pytest.mark.slow_test
