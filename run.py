@@ -70,7 +70,8 @@ def redirect(argv):
 
 
 def py_shell():
-    import readline  # optional, will allow Up/Down/History in the console
+    if not sys.platform.startswith("win"):
+        import readline  # optional, will allow Up/Down/History in the console
     import code
 
     variables = globals().copy()
