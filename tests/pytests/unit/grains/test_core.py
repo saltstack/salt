@@ -1871,6 +1871,7 @@ def test_solaris_sparc_s7zone(os_release_dir, solaris_dir):
     expectation = {
         "productname": "SPARC S7-2",
         "product": "SPARC S7-2",
+        "manufacturer": "Oracle Corporation",
     }
     with salt.utils.files.fopen(
         os.path.join(solaris_dir, "prtconf.s7-zone")
@@ -1889,6 +1890,7 @@ def test_solaris_sparc_s7(os_release_dir, solaris_dir):
     expectation = {
         "productname": "SPARC S7-2",
         "product": "SPARC S7-2",
+        "manufacturer": "Oracle Corporation",
     }
     with salt.utils.files.fopen(
         os.path.join(solaris_dir, "prtdiag.s7")
@@ -1907,6 +1909,7 @@ def test_solaris_sparc_t5220(os_release_dir, solaris_dir):
     expectation = {
         "productname": "SPARC Enterprise T5220",
         "product": "SPARC Enterprise T5220",
+        "manufacturer": "Oracle Corporation",
     }
     with salt.utils.files.fopen(
         os.path.join(solaris_dir, "prtdiag.t5220")
@@ -1925,6 +1928,7 @@ def test_solaris_sparc_t5220zone(os_release_dir, solaris_dir):
     expectation = {
         "productname": "SPARC Enterprise T5220",
         "product": "SPARC Enterprise T5220",
+        "manufacturer": "Oracle Corporation",
     }
     with salt.utils.files.fopen(
         os.path.join(solaris_dir, "prtconf.t5220-zone")
@@ -1987,7 +1991,11 @@ def _check_solaris_sparc_productname_grains(os_release_dir, prtdata, expectation
         core.__salt__, {"cmd.run": MagicMock(return_value=prtdata)}
     ):
         os_grains = core.os_data()
-    grains = {k: v for k, v in os_grains.items() if k in {"product", "productname"}}
+    grains = {
+        k: v
+        for k, v in os_grains.items()
+        if k in {"product", "productname", "manufacturer"}
+    }
     assert grains == expectation
 
 
