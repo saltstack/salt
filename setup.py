@@ -94,9 +94,6 @@ else:
 USE_STATIC_REQUIREMENTS = os.environ.get("USE_STATIC_REQUIREMENTS")
 if USE_STATIC_REQUIREMENTS is not None:
     USE_STATIC_REQUIREMENTS = USE_STATIC_REQUIREMENTS == "1"
-# Are we running pop-build
-if "TIAMAT_BUILD" in os.environ:
-    USE_STATIC_REQUIREMENTS = True
 
 try:
     # Add the esky bdist target if the module is available
