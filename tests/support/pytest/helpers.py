@@ -272,6 +272,10 @@ class TestAccount:
         if self._group:
             self.group.__enter__()
             self.sminion.functions.group.adduser(self.group.name, self.username)
+            if not salt.utils.platform.is_windows():
+                # Make this group the primary_group for the user
+                self.sminion.functions.user.chgid(self.username, self.group.info.gid)
+                assert self.info.gid == self.group.info.gid
         log.debug("Created system account: %s", self)
         # Run tests
         return self
