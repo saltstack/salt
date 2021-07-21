@@ -12,7 +12,7 @@ def app_urls():
     ]
 
 
-async def test_get_no_mid(http_client):
+async def test_get_no_mid(http_client, salt_minion, salt_sub_minion):
     response = await http_client.fetch(
         "/minions",
         method="GET",
@@ -20,8 +20,11 @@ async def test_get_no_mid(http_client):
     )
     response_obj = salt.utils.json.loads(response.body)
     assert len(response_obj["return"]) == 1
+    assert isinstance(response_obj["return"][0], dict)
     # one per minion
     assert len(response_obj["return"][0]) == 2
+    assert salt_minion.id in response_obj["return"][0]
+    assert salt_sub_minion.id in response_obj["return"][0]
     # check a single grain
     for minion_id, grains in response_obj["return"][0].items():
         assert minion_id == grains["id"]
@@ -36,7 +39,9 @@ async def test_get(http_client, salt_minion):
     )
     response_obj = salt.utils.json.loads(response.body)
     assert len(response_obj["return"]) == 1
+    assert isinstance(response_obj["return"][0], dict)
     assert len(response_obj["return"][0]) == 1
+    assert salt_minion.id in response_obj["return"][0]
     # check a single grain
     assert response_obj["return"][0][salt_minion.id]["id"] == salt_minion.id
 
