@@ -1,11 +1,3 @@
-"""
-    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
-
-
-    tests.integration.shell.syndic
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-"""
-
 import logging
 import os
 import time
