@@ -1022,6 +1022,8 @@ SectionEnd
 !macro uninstallSalt un
 Function ${un}uninstallSalt
 
+    # WARNING: Any changes made here need to be reflected in the MSI uninstaller
+
     # Make sure we're in the right directory
     ${If} $INSTDIR == "c:\salt\bin\Scripts"
       StrCpy $INSTDIR "C:\salt"
@@ -1062,6 +1064,7 @@ Function ${un}uninstallSalt
 
     # Remove files
     Delete "$INSTDIR\uninst.exe"
+    # TODO: The service needs to be unregistered before removing SSM
     Delete "$INSTDIR\ssm.exe"
     Delete "$INSTDIR\salt*"
     Delete "$INSTDIR\vcredist.exe"
