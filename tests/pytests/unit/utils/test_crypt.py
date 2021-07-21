@@ -4,7 +4,6 @@ Unit tests for salt.utils.crypt.py
 
 
 import salt.utils.crypt
-from tests.support.mock import patch
 
 try:
     import M2Crypt  # pylint: disable=unused-import
@@ -42,10 +41,3 @@ def test_random():
 def test_reinit_crypto():
     # make sure reinit cryptot does not crash
     salt.utils.crypt.reinit_crypto()
-
-    # make sure reinit does not crash when no crypt is found
-    with patch("salt.utils.crypt.HAS_M2CRYPTO", False):
-        with patch("salt.utils.crypt.HAS_CRYPTODOME", False):
-            with patch("salt.utils.crypt.HAS_CRYPTO", False):
-                with patch("salt.utils.crypt.Random", None):
-                    salt.utils.crypt.reinit_crypto()

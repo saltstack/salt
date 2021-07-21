@@ -124,7 +124,7 @@ def reinit_crypto():
         child processes after using os.fork()
 
     """
-    if HAS_CRYPTODOME or HAS_CRYPTO:
+    if not HAS_M2CRYPTO:
         Random.atfork()
 
 
