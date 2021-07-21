@@ -377,7 +377,7 @@ def _add_new_hard_disk_helper(
 
 
 def _edit_existing_network_adapter(
-    network_adapter, new_network_name, adapter_type, switch_type, container_ref=None
+    network_adapter, new_network_name, adapter_type, switch_type, container_ref=None, new_mac_address=None
 ):
     adapter_type.strip().lower()
     switch_type.strip().lower()
@@ -449,8 +449,12 @@ def _edit_existing_network_adapter(
     edited_network_adapter.controllerKey = network_adapter.controllerKey
     edited_network_adapter.unitNumber = network_adapter.unitNumber
     edited_network_adapter.addressType = network_adapter.addressType
-    edited_network_adapter.macAddress = network_adapter.macAddress
     edited_network_adapter.wakeOnLanEnabled = network_adapter.wakeOnLanEnabled
+    if new_mac_address:
+        edited_network_adapter.macAddress = new_mac_address
+        edited_network_adapter.addressType = vim.vm.device.VirtualEthernetCardOption.MacTypes.manual
+    else:
+        edited_network_adapter.macAddress = network_adapter.macAddress
     network_spec = vim.vm.device.VirtualDeviceSpec()
     network_spec.operation = vim.vm.device.VirtualDeviceSpec.Operation.edit
     network_spec.device = edited_network_adapter
@@ -881,12 +885,19 @@ def _manage_devices(devices, vm=None, container_ref=None, new_vm_name=None):
                             in devices["network"][device.deviceInfo.label]
                             else ""
                         )
+                        mac_address = (
+                            devices["network"][device.deviceInfo.label]["mac"]
+                            if "mac"
+                            in devices["network"][device.deviceInfo.label]
+                            else ""
+                        )
                         network_spec = _edit_existing_network_adapter(
                             device,
                             network_name,
                             adapter_type,
                             switch_type,
                             container_ref,
+                            mac_address,
                         )
                         adapter_mapping = _set_network_adapter_mapping(
                             devices["network"][device.deviceInfo.label]
