@@ -3,15 +3,17 @@ Tests for salt.loader.context
 """
 import copy
 
-import salt.loader
 import salt.loader.context
+import salt.loader.lazy
 
 
 def test_named_loader_context():
     loader_context = salt.loader.context.LoaderContext()
     named_context = salt.loader.context.NamedLoaderContext("__test__", loader_context)
     test_dunder = {"foo": "bar"}
-    lazy_loader = salt.loader.LazyLoader(["/foo"], pack={"__test__": test_dunder})
+    lazy_loader = salt.loader.lazy.lazyLazyLoader(
+        ["/foo"], pack={"__test__": test_dunder}
+    )
     assert named_context.loader() is None
     token = salt.loader.context.loader_ctxvar.set(lazy_loader)
     try:
