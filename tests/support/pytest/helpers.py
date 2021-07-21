@@ -231,7 +231,11 @@ class TestAccount:
             self.username = random_string("account-", uppercase=False)
         if self.password is None:
             self.password = self.username
-        if self.hashed_password is None:
+        if (
+            self.hashed_password is None
+            and not salt.utils.platform.is_darwin()
+            and not salt.utils.platform.is_windows()
+        ):
             self.hashed_password = salt.utils.pycrypto.gen_hash(password=self.password)
         if self.group_name is None:
             self.group_name = self.username
@@ -247,12 +251,11 @@ class TestAccount:
             ret = self.sminion.functions.user.add(self.username)
             assert ret
             self._delete_account = True
-            ret = self.sminion.functions.shadow.set_password(
-                self.username,
-                self.password
-                if salt.utils.platform.is_darwin()
-                else self.hashed_password,
-            )
+            if salt.utils.platform.is_darwin() or salt.utils.platform.is_windows():
+                password = self.password
+            else:
+                password = self.hashed_password
+            ret = self.sminion.functions.shadow.set_password(self.username, password)
             assert ret
         assert self.username in self.sminion.functions.user.list_users()
         self.group.__enter__()
