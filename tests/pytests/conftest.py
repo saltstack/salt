@@ -215,7 +215,12 @@ def salt_master_factory(
             salt_eauth_account_factory.username: ["@wheel", "@runner", "test.*"],
         },
         "auto": {
-            salt_netapi_account_factory.username: ["@wheel", "@runner", "test.*"],
+            salt_netapi_account_factory.username: [
+                "@wheel",
+                "@runner",
+                "test.*",
+                "grains.*",
+            ],
             salt_auto_account_factory.username: ["@wheel", "@runner", "test.*"],
             "*": ["@wheel", "@runner", "test.*"],
         },
