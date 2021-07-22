@@ -334,6 +334,7 @@ def test_user_present_existing(states, username):
     )
     assert ret.result is True
 
+    win_profile = "C:\\Users\\{}".format(username)
     win_description = "Temporary Account"
     ret = states.user.present(
         name=username,
