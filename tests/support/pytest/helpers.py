@@ -231,7 +231,7 @@ class TestAccount:
         if self.username is None:
             self.username = random_string("account-", uppercase=False)
         if self.password is None:
-            self.password = self.username
+            self.password = random_string("pwd-", size=8)
         if (
             self.hashed_password is None
             and not salt.utils.platform.is_darwin()
