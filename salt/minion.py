@@ -1245,7 +1245,7 @@ class Minion(MinionBase):
         self.periodic_callbacks = {}
 
         if io_loop is None:
-            self.io_loop = salt.ext.tornado.IOLoop.current()
+            self.io_loop = salt.ext.tornado.ioloop.IOLoop.current()
         else:
             self.io_loop = io_loop
 
