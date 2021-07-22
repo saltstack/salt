@@ -1173,22 +1173,24 @@ def from_filenames_collection_modifyitems(config, items):
         if properly_slashed_path.is_absolute():
             # In this case, this path is considered to be a file containing a line separated list
             # of files to consider
-            with salt.utils.files.fopen(str(path)) as rfh:
-                for line in rfh:
-                    line_path = pathlib.Path(
-                        line.strip().replace("\\", os.sep).replace("/", os.sep)
-                    )
-                    if not line_path.exists():
-                        errors.append(
-                            "{}: Does not exist. Source {}".format(
-                                line_path, properly_slashed_path
-                            )
+            contents = properly_slashed_path.read_text()
+            for sep in ("\r\n", "\\r\\n", "\\n"):
+                contents = contents.replace(sep, "\n")
+            for line in contents.split("\n"):
+                line_path = pathlib.Path(
+                    line.strip().replace("\\", os.sep).replace("/", os.sep)
+                )
+                if not line_path.exists():
+                    errors.append(
+                        "{}: Does not exist. Source {}".format(
+                            line_path, properly_slashed_path
                         )
-                        continue
-                    changed_files_selections.append(
-                        "{}: Source {}".format(line_path, properly_slashed_path)
                     )
-                    from_filenames_paths.add(line_path)
+                    continue
+                changed_files_selections.append(
+                    "{}: Source {}".format(line_path, properly_slashed_path)
+                )
+                from_filenames_paths.add(line_path)
             continue
         changed_files_selections.append(
             "{}: Source --from-filenames".format(properly_slashed_path)
@@ -1213,8 +1215,8 @@ def from_filenames_collection_modifyitems(config, items):
                 # This is not a test module, but consider any test_*.py files in child directories
                 for match in path.parent.rglob("test_*.py"):
                     test_module_selections.append(
-                        "{}: Source {}/test_*.py recursive glob match".format(
-                            match, path.parent
+                        "{}: Source '{}/test_*.py' recursive glob match because '{}' was modified".format(
+                            match, path.parent, path
                         )
                     )
                     test_module_paths.add(match)
@@ -1267,7 +1269,7 @@ def from_filenames_collection_modifyitems(config, items):
                         for match in matches:
                             test_module_paths.add(_match_to_test_file(match))
                             test_module_selections.append(
-                                "{}: Source '{}' regex from tests/filename_map.yml".format(
+                                "{}: Source '{}' regex match from 'tests/filename_map.yml'".format(
                                     match, rule
                                 )
                             )
@@ -1282,7 +1284,7 @@ def from_filenames_collection_modifyitems(config, items):
                         for match in matches:
                             match_path = _match_to_test_file(match)
                             test_module_selections.append(
-                                "{}: Source '{}' file rule from tests/filename_map.yml".format(
+                                "{}: Source '{}' file rule from 'tests/filename_map.yml'".format(
                                     match_path, filerule
                                 )
                             )
@@ -1297,7 +1299,7 @@ def from_filenames_collection_modifyitems(config, items):
                     for match in matches:
                         match_path = _match_to_test_file(match)
                         test_module_selections.append(
-                            "{}: Source '{}' direct file rule from tests/filename_map.yml".format(
+                            "{}: Source '{}' direct file rule from 'tests/filename_map.yml'".format(
                                 match_path, filerule
                             )
                         )
