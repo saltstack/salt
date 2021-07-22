@@ -1,5 +1,5 @@
 """
-Tests for salt.loader
+Tests for salt.loader.lazy
 """
 
 import os
