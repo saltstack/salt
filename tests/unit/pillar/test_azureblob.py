@@ -107,36 +107,30 @@ class AzureBlobTestCase(TestCase, LoaderModuleMockMixin):
             azureblob: {"__opts__": self.opts, "__utils__": utils},
         }
 
-    def test__init_expired(self):
+    def test__init_not_expired(self):
         """
-        Tests the result of _init when the cache is expired.
+        Tests the result of _init when the cache is not expired.
         """
         container = "test"
         multiple_env = False
         environment = "base"
-        blob_cache_expire = 0  # The cache will be expired
-        blob_client = MockBlobServiceClient()
+        blob_cache_expire = time.time()**2  # Far, far in the future
+        metadata = {
+            "base": {
+                "test": [
+                    {"name": secret_path, "relevant": "include.sls"},
+                    {"name": "blobtest.sls", "irrelevant": "ignore.sls"},
+                ]
+            }
+        }
         with tempfile.TemporaryDirectory() as cachedir, patch.dict(azureblob.__opts__, {"cachedir": cachedir}), patch('salt.pillar.azureblob.BlobServiceClient.from_connection_string', return_value=blob_client):
+            # Set our existing cache data
+            with salt.utils.files.foepn(azureblob._get_containers_cache_filename(), 'wb') as fp:
+                pickle.dump(metadata, fp)
             ret = azureblob._init(
                 "", container, multiple_env, environment, blob_cache_expire
             )
-        self.assertEqual(
-            ret,
-            {
-                "base": {
-                    "test": [
-                        {
-                            "container": None,
-                            "name": "test.sls",
-                            "prefix": None,
-                            "delimiter": "/",
-                            "results_per_page": None,
-                            "location_mode": None,
-                        }
-                    ]
-                }
-            },
-        )
+        self.assertEqual(ret, metadata)
 
     def test__init_not_expired(self):
         """
@@ -166,7 +160,7 @@ class AzureBlobTestCase(TestCase, LoaderModuleMockMixin):
             azureblob,
             "_get_containers_cache_filename",
             return_value=cache_file.name
-            #MagicMock(return_value=str(cache_file.name)),
+            # MagicMock(return_value=str(cache_file.name)),
         ):
             # Patches the _read_containers_cache_file module so that it returns what it normally would if the new
             # tempfile representing the cache file was passed to it
