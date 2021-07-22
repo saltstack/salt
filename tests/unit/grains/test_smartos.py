@@ -1,17 +1,11 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: :email:`Jorge Schrauwen <sjorge@blackdot.be>`
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import textwrap
 
-# Import Salt Libs
 import salt.grains.smartos as smartos
 from tests.support.mock import MagicMock, Mock, mock_open, patch
-
-# Import Salt Testing Libs
 from tests.support.unit import TestCase
 
 

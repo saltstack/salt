@@ -2,18 +2,11 @@
 Tests for salt.utils.data
 """
 
-# Import Python libs
-
+import builtins
 import logging
 
-# Import Salt libs
 import salt.utils.data
 import salt.utils.stringutils
-
-# Import 3rd party libs
-from salt.ext.six.moves import (  # pylint: disable=import-error,redefined-builtin
-    builtins,
-)
 from salt.utils.odict import OrderedDict
 from tests.support.mock import patch
 from tests.support.unit import LOREM_IPSUM, TestCase
@@ -239,6 +232,20 @@ class DataTestCase(TestCase):
             "default",
             salt.utils.data.traverse_dict_and_list(
                 {"foo": {"baz": "didn't work"}}, "foo:bar", "default",
+            ),
+        )
+
+    def test_issue_39709(self):
+        test_two_level_dict_and_list = {
+            "foo": ["bar", "baz", {"lorem": {"ipsum": [{"dolor": "sit"}]}}]
+        }
+
+        self.assertEqual(
+            "sit",
+            salt.utils.data.traverse_dict_and_list(
+                test_two_level_dict_and_list,
+                ["foo", "lorem", "ipsum", "dolor"],
+                {"not_found": "not_found"},
             ),
         )
 
@@ -683,9 +690,7 @@ class DataTestCase(TestCase):
     def test_stringify(self):
         self.assertRaises(TypeError, salt.utils.data.stringify, 9)
         self.assertEqual(
-            salt.utils.data.stringify(
-                ["one", "two", "three", 4, 5]
-            ),  # future lint: disable=blacklisted-function
+            salt.utils.data.stringify(["one", "two", "three", 4, 5]),
             ["one", "two", "three", "4", "5"],
         )
 

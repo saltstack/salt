@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Execution module for Amazon Route53 written against Boto 3
 
@@ -48,23 +47,17 @@ Execution module for Amazon Route53 written against Boto 3
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602,W0106
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import re
 import time
 
-# Import Salt libs
 import salt.utils.compat
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.ext import six
-from salt.ext.six.moves import range
 
-log = logging.getLogger(__name__)  # pylint: disable=W1699
+log = logging.getLogger(__name__)
 
-# Import third party libs
 try:
     # pylint: disable=unused-import
     import boto3
@@ -87,7 +80,6 @@ def __virtual__():
 
 
 def __init__(opts):
-    salt.utils.compat.pack_dunder(__name__)
     if HAS_BOTO3:
         __utils__["boto3.assign_funcs"](__name__, "route53")
 
@@ -126,7 +118,7 @@ def _wait_for_sync(change, conn, tries=10, sleep=20):
             if e.response.get("Error", {}).get("Code") == "Throttling":
                 log.debug("Throttled by AWS API.")
             else:
-                six.reraise(*sys.exc_info())
+                raise
         if status == "INSYNC":
             return True
         time.sleep(sleep)
@@ -377,7 +369,9 @@ def create_hosted_zone(
     profile
         Dict, or pillar key pointing to a dict, containing AWS region/key/keyid.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto3_route53.create_hosted_zone example.org.
     """
@@ -491,7 +485,9 @@ def update_hosted_zone_comment(
     PrivateZone
         Boolean - Set to True if changing a private hosted zone.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto3_route53.update_hosted_zone_comment Name=example.org. \
                 Comment="This is an example comment for an example zone"
@@ -580,7 +576,9 @@ def associate_vpc_with_hosted_zone(
     Comment
         Any comments you want to include about the change being made.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto3_route53.associate_vpc_with_hosted_zone \
                     Name=example.org. VPCName=myVPC \
@@ -704,7 +702,9 @@ def disassociate_vpc_from_hosted_zone(
     Comment
         Any comments you want to include about the change being made.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto3_route53.disassociate_vpc_from_hosted_zone \
                     Name=example.org. VPCName=myVPC \
@@ -809,7 +809,9 @@ def delete_hosted_zone(Id, region=None, key=None, keyid=None, profile=None):
     """
     Delete a Route53 hosted zone.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto3_route53.delete_hosted_zone Z1234567890
     """
@@ -828,7 +830,9 @@ def delete_hosted_zone_by_domain(
     """
     Delete a Route53 hosted zone by domain name, and PrivateZone status if provided.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto3_route53.delete_hosted_zone_by_domain example.org.
     """
@@ -983,7 +987,9 @@ def get_resource_records(
     False), CommandExecutionError can be raised in the case of both public and private zones
     matching the domain. XXX FIXME DOCU
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto3_route53.get_records test.example.org example.org A
     """
@@ -1066,7 +1072,7 @@ def get_resource_records(
                 log.debug("Throttled by AWS API.")
                 time.sleep(3)
                 continue
-            six.reraise(*sys.exc_info())
+            raise
 
 
 def change_resource_record_sets(
@@ -1186,7 +1192,7 @@ def change_resource_record_sets(
             log.error(
                 "Failed to apply requested changes to the hosted zone %s: %s",
                 (Name or HostedZoneId),
-                six.text_type(e),
+                str(e),
             )
             raise e
     return False

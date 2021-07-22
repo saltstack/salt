@@ -1,9 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 ZMQ-specific functions
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
@@ -74,7 +71,7 @@ def check_ipc_path_max_len(uri):
     if ipc_path_max_len and len(uri) > ipc_path_max_len:
         raise SaltSystemExit(
             "The socket path is longer than allowed by OS. "
-            "'{0}' is longer than {1} characters. "
+            "'{}' is longer than {} characters. "
             "Either try to reduce the length of this setting's "
             "path or switch to TCP; in the configuration file, "
             'set "ipc_mode: tcp".'.format(uri, ipc_path_max_len)

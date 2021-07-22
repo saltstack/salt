@@ -165,7 +165,7 @@ Starting in release ``9.2(1)`` and onward, the .ova file can be copied to the ``
 
 Copy the ``guestshell.ova`` file to ``volatile:`` if supported, otherwise copy it to ``bootflash:``
 
-.. code:: bash
+.. code-block:: console
 
   n3xxx# copy scp://admin@1.2.3.4/guestshell.ova volatile: vrf management
   guestshell.ova 100% 55MB 10.9MB/s 00:05
@@ -174,7 +174,7 @@ Copy the ``guestshell.ova`` file to ``volatile:`` if supported, otherwise copy i
 
 Use the ``guestshell enable`` command to install and enable guestshell.
 
-.. code:: bash
+.. code-block:: console
 
   n3xxx# guestshell enable package volatile:guestshell.ova
 
@@ -213,7 +213,7 @@ The ``guestshell`` container environment is enabled by default on most platforms
 
 **Example.** Allocate resources for guestshell by setting new limits to 500MB disk and 350MB memory.
 
-.. code:: bash
+.. code:: console
 
   n3k# guestshell resize rootfs 500
   n3k# guestshell resize memory 350
@@ -238,7 +238,7 @@ The ``guestshell`` is an independent CentOS container that does not inherit sett
 
 **OPTIONAL: Add DNS Configuration**
 
-.. code:: bash
+.. code:: console
 
   [root@guestshell guestshell]#  cat >> /etc/resolv.conf << EOF
   nameserver 10.0.0.202
@@ -248,7 +248,7 @@ The ``guestshell`` is an independent CentOS container that does not inherit sett
 
 **OPTIONAL: Define proxy server variables if needed to allow network access to SaltStack package repositories**
 
-.. code:: bash
+.. code:: console
 
   export http_proxy=http://proxy.yourdomain.com:<port>
   export https_proxy=https://proxy.yourdomain.com:<port>

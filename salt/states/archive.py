@@ -4,7 +4,6 @@ Extract an archive
 .. versionadded:: 2014.1.0
 """
 
-# Import Python libs
 import errno
 import logging
 import os
@@ -16,7 +15,6 @@ import tarfile
 from contextlib import closing
 from urllib.parse import urlparse
 
-# Import Salt libs
 import salt.utils.args
 import salt.utils.files
 import salt.utils.hashutils

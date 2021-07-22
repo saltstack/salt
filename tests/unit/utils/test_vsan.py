@@ -1,24 +1,18 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: :email:`Alexandru Bleotu <alexandru.bleotu@morganstanley.com>`
 
     Tests functions in salt.utils.vsan
 """
 
-# Import python libraries
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import Salt libraries
 from salt.exceptions import (
     VMwareApiError,
     VMwareObjectRetrievalError,
     VMwareRuntimeError,
 )
 from salt.utils import vsan
-
-# Import Salt testing libraries
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, PropertyMock, patch
 from tests.support.unit import TestCase, skipIf
@@ -32,7 +26,6 @@ except ImportError:
 HAS_PYVSAN = vsan.HAS_PYVSAN
 
 
-# Get Logging Started
 log = logging.getLogger(__name__)
 
 
@@ -88,13 +81,7 @@ class GetVsanClusterConfigSystemTestCase(TestCase, LoaderModuleMockMixin):
     """Tests for salt.utils.vsan.get_vsan_cluster_config_system"""
 
     def setup_loader_modules(self):
-        return {
-            vsan: {
-                "__virtual__": MagicMock(return_value="vsan"),
-                "sys": MagicMock(),
-                "ssl": MagicMock(),
-            }
-        }
+        return {vsan: {"sys": MagicMock(), "ssl": MagicMock()}}
 
     def setUp(self):
         self.mock_si = MagicMock()
@@ -154,13 +141,7 @@ class GetVsanDiskManagementSystemTestCase(TestCase, LoaderModuleMockMixin):
     """Tests for salt.utils.vsan.get_vsan_disk_management_system"""
 
     def setup_loader_modules(self):
-        return {
-            vsan: {
-                "__virtual__": MagicMock(return_value="vsan"),
-                "sys": MagicMock(),
-                "ssl": MagicMock(),
-            }
-        }
+        return {vsan: {"sys": MagicMock(), "ssl": MagicMock()}}
 
     def setUp(self):
         self.mock_si = MagicMock()
@@ -944,7 +925,7 @@ class GetClusterVsanInfoTestCase(TestCase, LoaderModuleMockMixin):
     """Tests for salt.utils.vsan.get_cluster_vsan_info"""
 
     def setup_loader_modules(self):
-        return {vsan: {"__virtual__": MagicMock(return_value="vsan")}}
+        return {vsan: {}}
 
     def setUp(self):
         self.mock_cl_ref = MagicMock()
@@ -1162,7 +1143,7 @@ class _WaitForTasks(TestCase, LoaderModuleMockMixin):
     """Tests for salt.utils.vsan._wait_for_tasks"""
 
     def setup_loader_modules(self):
-        return {vsan: {"__virtual__": MagicMock(return_value="vsan")}}
+        return {vsan: {}}
 
     def setUp(self):
         self.mock_si = MagicMock()

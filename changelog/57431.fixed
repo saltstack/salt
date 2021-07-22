@@ -1,1 +1,0 @@
-Fix for `virt.get_profiles` resolves an error that appears due to new parameters introduced with `_disk_profile()`

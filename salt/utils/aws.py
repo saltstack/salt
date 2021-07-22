@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Connection library for AWS
 
@@ -8,7 +7,6 @@ This is a base library used by a number of AWS services.
 
 :depends: requests
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import binascii
 import hashlib
@@ -16,25 +14,15 @@ import hmac
 import logging
 import random
 import re
-
-# Import Python libs
-import sys
 import time
+import urllib.parse
+import xml.etree.ElementTree as ET
 from datetime import datetime
 
 import salt.config
-
-# Import Salt libs
 import salt.utils.hashutils
 import salt.utils.xmlutil as xml
-from salt._compat import ElementTree as ET
-from salt.ext import six
 
-# pylint: disable=import-error,redefined-builtin,no-name-in-module
-from salt.ext.six.moves import map, range, zip
-from salt.ext.six.moves.urllib.parse import urlencode, urlparse
-
-# Import 3rd-party libs
 try:
     import requests
 
@@ -121,7 +109,7 @@ def creds(provider):
 
         try:
             result = requests.get(
-                "http://169.254.169.254/latest/meta-data/iam/security-credentials/{0}".format(
+                "http://169.254.169.254/latest/meta-data/iam/security-credentials/{}".format(
                     role
                 ),
                 proxies={"http": ""},
@@ -169,13 +157,13 @@ def sig2(method, endpoint, params, provider, aws_api_version):
     params_with_headers["AWSAccessKeyId"] = access_key_id
     params_with_headers["SignatureVersion"] = "2"
     params_with_headers["SignatureMethod"] = "HmacSHA256"
-    params_with_headers["Timestamp"] = "{0}".format(timestamp)
+    params_with_headers["Timestamp"] = "{}".format(timestamp)
     params_with_headers["Version"] = aws_api_version
     keys = sorted(params_with_headers.keys())
     values = list(list(map(params_with_headers.get, keys)))
-    querystring = urlencode(list(zip(keys, values)))
+    querystring = urllib.parse.urlencode(list(zip(keys, values)))
 
-    canonical = "{0}\n{1}\n/\n{2}".format(
+    canonical = "{}\n{}\n/\n{}".format(
         method.encode("utf-8"), endpoint.encode("utf-8"), querystring.encode("utf-8"),
     )
 
@@ -284,7 +272,7 @@ def sig4(
         params_with_headers["Version"] = aws_api_version
     keys = sorted(params_with_headers.keys())
     values = list(map(params_with_headers.get, keys))
-    querystring = urlencode(list(zip(keys, values))).replace("+", "%20")
+    querystring = urllib.parse.urlencode(list(zip(keys, values))).replace("+", "%20")
 
     amzdate = timenow.strftime("%Y%m%dT%H%M%SZ")
     datestamp = timenow.strftime("%Y%m%d")
@@ -306,10 +294,10 @@ def sig4(
     if token != "":
         new_headers["X-Amz-security-token"] = token
 
-    for header in sorted(new_headers.keys(), key=six.text_type.lower):
+    for header in sorted(new_headers.keys(), key=str.lower):
         lower_header = header.lower()
         a_canonical_headers.append(
-            "{0}:{1}".format(lower_header, new_headers[header].strip())
+            "{}:{}".format(lower_header, new_headers[header].strip())
         )
         a_signed_headers.append(lower_header)
     canonical_headers = "\n".join(a_canonical_headers) + "\n"
@@ -343,12 +331,12 @@ def sig4(
 
     # Add signing information to the request
     authorization_header = (
-        "{0} Credential={1}/{2}, SignedHeaders={3}, Signature={4}"
+        "{} Credential={}/{}, SignedHeaders={}, Signature={}"
     ).format(algorithm, access_key_id, credential_scope, signed_headers, signature,)
 
     new_headers["Authorization"] = authorization_header
 
-    requesturl = "{0}?{1}".format(requesturl, querystring)
+    requesturl = "{}?{}".format(requesturl, querystring)
     return new_headers, requesturl
 
 
@@ -444,16 +432,16 @@ def query(
     if endpoint is None:
         if not requesturl:
             endpoint = prov_dict.get(
-                "endpoint", "{0}.{1}.{2}".format(product, location, service_url)
+                "endpoint", "{}.{}.{}".format(product, location, service_url)
             )
 
-            requesturl = "https://{0}/".format(endpoint)
+            requesturl = "https://{}/".format(endpoint)
         else:
-            endpoint = urlparse(requesturl).netloc
+            endpoint = urllib.parse.urlparse(requesturl).netloc
             if endpoint == "":
                 endpoint_err = (
                     "Could not find a valid endpoint in the "
-                    "requesturl: {0}. Looking for something "
+                    "requesturl: {}. Looking for something "
                     "like https://some.aws.endpoint/?args"
                 ).format(requesturl)
                 log.error(endpoint_err)
@@ -466,7 +454,7 @@ def query(
 
     aws_api_version = prov_dict.get(
         "aws_api_version",
-        prov_dict.get("{0}_api_version".format(product), DEFAULT_AWS_API_VERSION),
+        prov_dict.get("{}_api_version".format(product), DEFAULT_AWS_API_VERSION),
     )
 
     # Fallback to ec2's id & key if none is found, for this component
@@ -547,15 +535,10 @@ def query(
         items = root
 
     if setname:
-        if sys.version_info < (2, 7):
-            children_len = len(root.getchildren())
-        else:
-            children_len = len(root)
-
-        for item in range(0, children_len):
-            comps = root[item].tag.split("}")
+        for idx, item in enumerate(root):
+            comps = item.tag.split("}")
             if comps[1] == setname:
-                items = root[item]
+                items = root[idx]
 
     ret = []
     for item in items:

@@ -30,7 +30,7 @@ EX_SCP_NOT_FOUND = 14
 EX_CANTCREAT = 73
 
 
-class OptionsContainer(object):
+class OptionsContainer:
     """
     An empty class for holding instance attribute values.
     """
@@ -239,12 +239,14 @@ def get_executable():
         "python",
     )
     for py_cmd in pycmds:
-        cmd = (
-            py_cmd
-            + " -c  \"import sys; sys.stdout.write('%s:%s' % (sys.version_info[0], sys.version_info[1]))\""
-        )
         stdout, _ = subprocess.Popen(
-            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True
+            [
+                py_cmd,
+                "-c"
+                "import sys; sys.stdout.write('%s:%s' % (sys.version_info[0], sys.version_info[1]))",
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
         ).communicate()
         if sys.version_info[0] == 2 and sys.version_info[1] < 7:
             stdout = stdout.decode(get_system_encoding(), "replace").strip()

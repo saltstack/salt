@@ -1,15 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 Provide the service module for the proxy-minion REST sample
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import fnmatch
 import logging
 import re
 
-# Import Salt libs
 import salt.utils.platform
 
 log = logging.getLogger(__name__)
@@ -65,7 +61,7 @@ def list_():
     """
     Return a list of all available services.
 
-    .. versionadded: 2015.8.1
+    .. versionadded:: 2015.8.1
 
     CLI Example:
 

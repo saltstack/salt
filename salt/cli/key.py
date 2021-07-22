@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import salt.utils.parsers
 from salt.utils.verify import check_user, verify_log
 

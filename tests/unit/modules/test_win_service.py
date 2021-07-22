@@ -1,17 +1,14 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Rahul Handay <rahulha@saltstack.com>
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
+import pytest
 import salt.modules.win_service as win_service
 import salt.utils.path
-from tests.support.helpers import slowTest
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
 
-# Import 3rd Party Libs
 try:
     WINAPI = True
     import win32serviceutil
@@ -134,7 +131,7 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
             )
 
     @skipIf(not WINAPI, "win32serviceutil not available")
-    @slowTest
+    @pytest.mark.slow_test
     def test_start(self):
         """
             Test to start the specified service
@@ -179,7 +176,7 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
             self.assertTrue(win_service.start("spongebob"))
 
     @skipIf(not WINAPI, "win32serviceutil not available")
-    @slowTest
+    @pytest.mark.slow_test
     def test_stop(self):
         """
             Test to stop the specified service

@@ -1,15 +1,8 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Salt Libs
 import salt.modules.win_timezone as win_timezone
 from salt.exceptions import CommandExecutionError
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
@@ -38,6 +31,21 @@ class WinTimezoneTestCase(TestCase, LoaderModuleMockMixin):
         )
         with patch.dict(win_timezone.__salt__, {"cmd.run_all": mock_read_ok}):
             self.assertEqual(win_timezone.get_zone(), "Asia/Calcutta")
+
+    def test_get_zone_normal_dstoff(self):
+        """
+        Test if it gets current timezone with dst off (i.e. America/Denver)
+        """
+        mock_read_ok = MagicMock(
+            return_value={
+                "pid": 78,
+                "retcode": 0,
+                "stderr": "",
+                "stdout": "Mountain Standard Time_dstoff",
+            }
+        )
+        with patch.dict(win_timezone.__salt__, {"cmd.run_all": mock_read_ok}):
+            self.assertEqual(win_timezone.get_zone(), "America/Denver")
 
     def test_get_zone_unknown(self):
         """

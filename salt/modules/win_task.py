@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # https://msdn.microsoft.com/en-us/library/windows/desktop/aa383608(v=vs.85).aspx
 """
 Windows Task Scheduler Module
@@ -9,20 +8,15 @@ You can add and edit existing tasks.
 You can add and clear triggers and actions.
 You can list all tasks, folders, triggers, and actions.
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import time
 from datetime import datetime
 
-# Import Salt libs
 import salt.utils.platform
 import salt.utils.winapi
 from salt.exceptions import ArgumentValueError, CommandExecutionError
-from salt.ext.six.moves import range
 
-# Import 3rd Party Libraries
 try:
     import pythoncom
     import win32com.client
@@ -232,7 +226,7 @@ def _get_date_value(date):
     :rtype: str
     """
     try:
-        return "{0}".format(date)
+        return "{}".format(date)
     except ValueError:
         return "Never"
 
@@ -327,11 +321,11 @@ def _save_task_definition(
         try:
             failure_code = fc[exc[5]]
         except KeyError:
-            failure_code = "Unknown Failure: {0}".format(error)
+            failure_code = "Unknown Failure: {}".format(error)
 
         log.debug("Failed to modify task: %s", failure_code)
 
-        return "Failed to modify task: {0}".format(failure_code)
+        return "Failed to modify task: {}".format(failure_code)
 
 
 def list_tasks(location="\\"):
@@ -549,7 +543,7 @@ def create_task(
     # Check for existing task
     if name in list_tasks(location) and not force:
         # Connect to an existing task definition
-        return "{0} already exists".format(name)
+        return "{} already exists".format(name)
 
     # connect to the task scheduler
     with salt.utils.winapi.Com():
@@ -640,7 +634,7 @@ def create_task_from_xml(
     # Check for existing task
     if name in list_tasks(location):
         # Connect to an existing task definition
-        return "{0} already exists".format(name)
+        return "{} already exists".format(name)
 
     if not xml_text and not xml_path:
         raise ArgumentValueError("Must specify either xml_text or xml_path")
@@ -714,7 +708,7 @@ def create_task_from_xml(
             try:
                 failure_code = fc[error_code]
             except KeyError:
-                failure_code = "Unknown Failure: {0}".format(error_code)
+                failure_code = "Unknown Failure: {}".format(error_code)
             finally:
                 log.debug("Failed to create task: %s", failure_code)
             raise CommandExecutionError(failure_code)
@@ -750,7 +744,7 @@ def create_folder(name, location="\\"):
     # Check for existing folder
     if name in list_folders(location):
         # Connect to an existing task definition
-        return "{0} already exists".format(name)
+        return "{} already exists".format(name)
 
     # Create the task service object
     with salt.utils.winapi.Com():
@@ -999,7 +993,7 @@ def edit_task(
 
             else:
                 # Not found and create_new not set, return not found
-                return "{0} not found".format(name)
+                return "{} not found".format(name)
 
         # General Information
         if save_definition:
@@ -1165,7 +1159,7 @@ def delete_task(name, location="\\"):
     """
     # Check for existing task
     if name not in list_tasks(location):
-        return "{0} not found in {1}".format(name, location)
+        return "{} not found in {}".format(name, location)
 
     # connect to the task scheduler
     with salt.utils.winapi.Com():
@@ -1206,7 +1200,7 @@ def delete_folder(name, location="\\"):
     """
     # Check for existing folder
     if name not in list_folders(location):
-        return "{0} not found in {1}".format(name, location)
+        return "{} not found in {}".format(name, location)
 
     # connect to the task scheduler
     with salt.utils.winapi.Com():
@@ -1244,11 +1238,11 @@ def run(name, location="\\"):
 
     .. code-block:: bash
 
-        salt 'minion-id' task.list_run <task_name>
+        salt 'minion-id' task.run <task_name>
     """
     # Check for existing folder
     if name not in list_tasks(location):
-        return "{0} not found in {1}".format(name, location)
+        return "{} not found in {}".format(name, location)
 
     # connect to the task scheduler
     with salt.utils.winapi.Com():
@@ -1287,11 +1281,11 @@ def run_wait(name, location="\\"):
 
     .. code-block:: bash
 
-        salt 'minion-id' task.list_run_wait <task_name>
+        salt 'minion-id' task.run_wait <task_name>
     """
     # Check for existing folder
     if name not in list_tasks(location):
-        return "{0} not found in {1}".format(name, location)
+        return "{} not found in {}".format(name, location)
 
     # connect to the task scheduler
     with salt.utils.winapi.Com():
@@ -1352,7 +1346,7 @@ def stop(name, location="\\"):
     """
     # Check for existing folder
     if name not in list_tasks(location):
-        return "{0} not found in {1}".format(name, location)
+        return "{} not found in {}".format(name, location)
 
     # connect to the task scheduler
     with salt.utils.winapi.Com():
@@ -1401,7 +1395,7 @@ def status(name, location="\\"):
     """
     # Check for existing folder
     if name not in list_tasks(location):
-        return "{0} not found in {1}".format(name, location)
+        return "{} not found in {}".format(name, location)
 
     # connect to the task scheduler
     with salt.utils.winapi.Com():
@@ -1440,7 +1434,7 @@ def info(name, location="\\"):
     """
     # Check for existing folder
     if name not in list_tasks(location):
-        return "{0} not found in {1}".format(name, location)
+        return "{} not found in {}".format(name, location)
 
     # connect to the task scheduler
     with salt.utils.winapi.Com():
@@ -1686,7 +1680,7 @@ def add_action(name=None, location="\\", action_type="Execute", **kwargs):
 
             else:
                 # Not found and create_new not set, return not found
-                return "{0} not found".format(name)
+                return "{} not found".format(name)
 
         # Action Settings
         task_action = task_definition.Actions.Create(action_types[action_type])
@@ -1780,7 +1774,7 @@ def _clear_actions(name, location="\\"):
     # TODO: action.
     # Check for existing task
     if name not in list_tasks(location):
-        return "{0} not found in {1}".format(name, location)
+        return "{} not found in {}".format(name, location)
 
     # Create the task service object
     with salt.utils.winapi.Com():
@@ -2223,7 +2217,7 @@ def add_trigger(
     else:
         tm_obj = datetime.strptime("00:00:00", "%H:%M:%S")
 
-    start_boundary = "{0}T{1}".format(
+    start_boundary = "{}T{}".format(
         dt_obj.strftime("%Y-%m-%d"), tm_obj.strftime("%H:%M:%S")
     )
 
@@ -2246,7 +2240,7 @@ def add_trigger(
 
     end_boundary = None
     if dt_obj and tm_obj:
-        end_boundary = "{0}T{1}".format(
+        end_boundary = "{}T{}".format(
             dt_obj.strftime("%Y-%m-%d"), tm_obj.strftime("%H:%M:%S")
         )
 
@@ -2275,7 +2269,7 @@ def add_trigger(
 
             else:
                 # Not found and create_new not set, return not found
-                return "{0} not found".format(name)
+                return "{} not found".format(name)
 
         # Create a New Trigger
         trigger = task_definition.Triggers.Create(trigger_types[trigger_type])
@@ -2453,7 +2447,7 @@ def clear_triggers(name, location="\\"):
     """
     # Check for existing task
     if name not in list_tasks(location):
-        return "{0} not found in {1}".format(name, location)
+        return "{} not found in {}".format(name, location)
 
     # Create the task service object
     with salt.utils.winapi.Com():

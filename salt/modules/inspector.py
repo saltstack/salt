@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # Copyright 2015 SUSE LLC
 #
@@ -17,7 +16,6 @@
 """
 Module for full system inspection.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import getpass
 import logging
@@ -27,9 +25,6 @@ import salt.utils.fsutils
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 from salt.exceptions import get_error_message as _get_error_message
-
-# Import Salt libs
-from salt.ext import six
 from salt.modules.inspectlib.exceptions import (
     InspectorKiwiProcessorException,
     InspectorQueryException,
@@ -54,26 +49,9 @@ def _(module):
     :return:
     """
 
-    mod = None
-    # pylint: disable=E0598
-    try:
-        # importlib is in Python 2.7+ and 3+
-        import importlib
+    import importlib
 
-        mod = importlib.import_module("salt.modules.inspectlib.{0}".format(module))
-    except ImportError:
-        # No importlib around (2.6)
-        mod = getattr(
-            __import__(
-                "salt.modules.inspectlib",
-                globals(),
-                locals(),
-                fromlist=[six.text_type(module)],
-            ),
-            module,
-        )
-    # pylint: enable=E0598
-
+    mod = importlib.import_module("salt.modules.inspectlib.{}".format(module))
     mod.__grains__ = __grains__
     mod.__pillar__ = __pillar__
     mod.__salt__ = __salt__
@@ -93,8 +71,6 @@ def inspect(mode="all", priority=19, **kwargs):
         * **filter**: Comma-separated directories to track payload.
 
     * **priority**: (advanced) Set priority of the inspection. Default is low priority.
-
-
 
     CLI Example:
 
@@ -283,7 +259,7 @@ def delete(all=False, *databases):
 
     ::parameter: all. Default: False. Remove all snapshots, if set to True.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -299,7 +275,7 @@ def delete(all=False, *databases):
             cachedir=__opts__["cachedir"], piddir=os.path.dirname(__opts__["pidfile"])
         )
         for dbid in all and inspector.db.list() or databases:
-            ret[dbid] = inspector.db._db.purge(six.text_type(dbid))
+            ret[dbid] = inspector.db._db.purge(str(dbid))
         return ret
     except InspectorSnapshotException as err:
         raise CommandExecutionError(err)

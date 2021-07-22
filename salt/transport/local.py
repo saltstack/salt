@@ -1,11 +1,5 @@
-# -*- coding: utf-8 -*-
-
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 
-# Import Salt Libs
 import salt.utils.files
 from salt.transport.client import ReqChannel
 
@@ -54,6 +48,6 @@ class LocalChannel(ReqChannel):
     def crypted_transfer_decode_dictentry(
         self, load, dictkey=None, tries=3, timeout=60
     ):
-        super(LocalChannel, self).crypted_transfer_decode_dictentry(
+        super().crypted_transfer_decode_dictentry(
             load, dictkey=dictkey, tries=tries, timeout=timeout
         )

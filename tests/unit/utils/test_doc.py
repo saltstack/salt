@@ -1,15 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 Unit Tests for functions located in salt.utils.doc.py.
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt libs
 import salt.utils.doc
-
-# Import Salt Testing libs
 from tests.support.unit import TestCase
 
 

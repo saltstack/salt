@@ -1,18 +1,13 @@
-# -*- coding: utf-8 -*-
 """
 Functions which implement running reactor jobs
 """
 
-
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import fnmatch
 import glob
 import logging
 import os
 
-# Import salt libs
 import salt.client
 import salt.defaults.exitcodes
 import salt.runner
@@ -26,9 +21,6 @@ import salt.utils.master
 import salt.utils.process
 import salt.utils.yaml
 import salt.wheel
-
-# Import 3rd-party libs
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -50,7 +42,7 @@ class Reactor(salt.utils.process.SignalHandlingProcess, salt.state.Compiler):
     }
 
     def __init__(self, opts, **kwargs):
-        super(Reactor, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         local_minion_opts = opts.copy()
         local_minion_opts["file_client"] = "local"
         self.minion = salt.minion.MasterMinion(local_minion_opts)
@@ -114,11 +106,11 @@ class Reactor(salt.utils.process.SignalHandlingProcess, salt.state.Compiler):
         """
         log.debug("Gathering reactors for tag %s", tag)
         reactors = []
-        if isinstance(self.opts["reactor"], six.string_types):
+        if isinstance(self.opts["reactor"], str):
             try:
                 with salt.utils.files.fopen(self.opts["reactor"]) as fp_:
                     react_map = salt.utils.yaml.safe_load(fp_)
-            except (OSError, IOError):
+            except OSError:
                 log.error('Failed to read reactor map: "%s"', self.opts["reactor"])
             except Exception:  # pylint: disable=broad-except
                 log.error(
@@ -131,10 +123,10 @@ class Reactor(salt.utils.process.SignalHandlingProcess, salt.state.Compiler):
                 continue
             if len(ropt) != 1:
                 continue
-            key = next(six.iterkeys(ropt))
+            key = next(iter(ropt.keys()))
             val = ropt[key]
             if fnmatch.fnmatch(tag, key):
-                if isinstance(val, six.string_types):
+                if isinstance(val, str):
                     reactors.append(val)
                 elif isinstance(val, list):
                     reactors.extend(val)
@@ -144,12 +136,12 @@ class Reactor(salt.utils.process.SignalHandlingProcess, salt.state.Compiler):
         """
         Return a list of the reactors
         """
-        if isinstance(self.minion.opts["reactor"], six.string_types):
+        if isinstance(self.minion.opts["reactor"], str):
             log.debug("Reading reactors from yaml %s", self.opts["reactor"])
             try:
                 with salt.utils.files.fopen(self.opts["reactor"]) as fp_:
                     react_map = salt.utils.yaml.safe_load(fp_)
-            except (OSError, IOError):
+            except OSError:
                 log.error('Failed to read reactor map: "%s"', self.opts["reactor"])
             except Exception:  # pylint: disable=broad-except
                 log.error(
@@ -166,7 +158,7 @@ class Reactor(salt.utils.process.SignalHandlingProcess, salt.state.Compiler):
         """
         reactors = self.list_all()
         for reactor in reactors:
-            _tag = next(six.iterkeys(reactor))
+            _tag = next(iter(reactor.keys()))
             if _tag == tag:
                 return {"status": False, "comment": "Reactor already exists."}
 
@@ -179,7 +171,7 @@ class Reactor(salt.utils.process.SignalHandlingProcess, salt.state.Compiler):
         """
         reactors = self.list_all()
         for reactor in reactors:
-            _tag = next(six.iterkeys(reactor))
+            _tag = next(iter(reactor.keys()))
             if _tag == tag:
                 self.minion.opts["reactor"].remove(reactor)
                 return {"status": True, "comment": "Reactor deleted."}
@@ -311,7 +303,7 @@ class Reactor(salt.utils.process.SignalHandlingProcess, salt.state.Compiler):
                                 log.warning("Exit ignored by reactor")
 
 
-class ReactWrap(object):
+class ReactWrap:
     """
     Wrapper that executes low data for the Reactor System
     """

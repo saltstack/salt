@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Apache Libcloud DNS Management
 ==============================
@@ -28,18 +27,13 @@ Connection module for Apache Libcloud DNS management
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
 
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import logging
 
-# Import salt libs
-import salt.utils.compat
 from salt.utils.versions import LooseVersion as _LooseVersion
 
 log = logging.getLogger(__name__)
 
-# Import third party libs
 REQUIRED_LIBCLOUD_VERSION = "2.0.0"
 try:
     # pylint: disable=unused-import
@@ -64,14 +58,10 @@ def __virtual__():
     """
     if not HAS_LIBCLOUD:
         msg = (
-            "A apache-libcloud library with version at least {0} was not " "found"
+            "A apache-libcloud library with version at least {} was not " "found"
         ).format(REQUIRED_LIBCLOUD_VERSION)
         return (False, msg)
     return True
-
-
-def __init__(opts):
-    salt.utils.compat.pack_dunder(__name__)
 
 
 def _get_driver(profile):

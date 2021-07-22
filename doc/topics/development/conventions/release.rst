@@ -82,10 +82,5 @@ for a bugfix release.
 #. Update win-repo-ng with new salt versions.
 #. Announce release is live to irc, salt-users, salt-announce and release slack channel.
 
-For more information about the difference between the ``master`` branch and
-bugfix release branches, please refer to the :ref:`Which Salt Branch?
-<which-salt-branch>` section of Salt's :ref:`Contributing <contributing>`
-documentation.
-
 .. _`github`: https://github.com/saltstack/salt/releases
 .. _`repo.saltstack.com`: https://repo.saltstack.com

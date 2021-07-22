@@ -1,30 +1,21 @@
-# -*- coding: utf-8 -*-
 """
 Installer support for macOS.
 
 Installer is the native .pkg/.mpkg package manager for macOS.
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import os.path
+import urllib
 
 import salt.utils.itertools
 import salt.utils.mac_utils
-
-# Import Salt libs
 import salt.utils.path
 import salt.utils.platform
 from salt.exceptions import SaltInvocationError
 
-# Import 3rd-party libs
-from salt.ext.six.moves import urllib  # pylint: disable=import-error
-
 # Don't shadow built-in's.
 __func_alias__ = {"list_": "list"}
 
-# Define the module's virtual name
 __virtualname__ = "pkgutil"
 
 
@@ -77,10 +68,10 @@ def _install_from_path(path):
     Internal function to install a package from the given path
     """
     if not os.path.exists(path):
-        msg = "File not found: {0}".format(path)
+        msg = "File not found: {}".format(path)
         raise SaltInvocationError(msg)
 
-    cmd = 'installer -pkg "{0}" -target /'.format(path)
+    cmd = 'installer -pkg "{}" -target /'.format(path)
     return salt.utils.mac_utils.execute_return_success(cmd)
 
 
@@ -106,7 +97,7 @@ def install(source, package_id):
 
     uri = urllib.parse.urlparse(source)
     if not uri.scheme == "":
-        msg = "Unsupported scheme for source uri: {0}".format(uri.scheme)
+        msg = "Unsupported scheme for source uri: {}".format(uri.scheme)
         raise SaltInvocationError(msg)
 
     _install_from_path(source)
@@ -134,6 +125,6 @@ def forget(package_id):
 
         salt '*' pkgutil.forget com.apple.pkg.gcc4.2Leo
     """
-    cmd = "pkgutil --forget {0}".format(package_id)
+    cmd = "pkgutil --forget {}".format(package_id)
     salt.utils.mac_utils.execute_return_success(cmd)
     return not is_installed(package_id)

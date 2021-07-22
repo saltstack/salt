@@ -1,25 +1,27 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Mike Place <mp@saltstack.com>
 """
-from __future__ import absolute_import
 
 import copy
+import logging
 import os
 
+import pytest
 import salt.ext.tornado
 import salt.ext.tornado.testing
 import salt.minion
 import salt.syspaths
 import salt.utils.crypt
 import salt.utils.event as event
+import salt.utils.platform
 import salt.utils.process
-from salt.exceptions import SaltMasterUnresolvableError, SaltSystemExit
-from salt.ext.six.moves import range
-from tests.support.helpers import skip_if_not_root, slowTest
+from salt._compat import ipaddress
+from salt.exceptions import SaltClientError, SaltMasterUnresolvableError, SaltSystemExit
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
+
+log = logging.getLogger(__name__)
 
 
 class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
@@ -78,7 +80,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 "master_uri": "tcp://127.0.0.1:4555",
             }
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_source_int_name_remote(self):
         """
         test when file_client remote and
@@ -118,7 +120,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 "master_uri": "tcp://127.0.0.1:4555",
             }
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_source_address(self):
         """
         test when source_address is set
@@ -160,7 +162,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
     # Tests for _handle_decoded_payload in the salt.minion.Minion() class: 3
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_handle_decoded_payload_jid_match_in_jid_queue(self):
         """
         Tests that the _handle_decoded_payload function returns when a jid is given that is already present
@@ -186,7 +188,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         finally:
             minion.destroy()
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_handle_decoded_payload_jid_queue_addition(self):
         """
         Tests that the _handle_decoded_payload function adds a jid to the minion's jid_queue when the new
@@ -223,7 +225,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             finally:
                 minion.destroy()
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_handle_decoded_payload_jid_queue_reduced_minion_jid_queue_hwm(self):
         """
         Tests that the _handle_decoded_payload function removes a jid from the minion's jid_queue when the
@@ -259,7 +261,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             finally:
                 minion.destroy()
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_process_count_max(self):
         """
         Tests that the _handle_decoded_payload function does not spawn more than the configured amount of processes,
@@ -324,7 +326,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             finally:
                 minion.destroy()
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_beacons_before_connect(self):
         """
         Tests that the 'beacons_before_connect' option causes the beacons to be initialized before connect.
@@ -357,7 +359,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             finally:
                 minion.destroy()
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_scheduler_before_connect(self):
         """
         Tests that the 'scheduler_before_connect' option causes the scheduler to be initialized before connect.
@@ -389,7 +391,34 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             finally:
                 minion.destroy()
 
-    @slowTest
+    def test_minion_module_refresh(self):
+        """
+        Tests that the 'module_refresh' just return in case there is no 'schedule'
+        because destroy method was already called.
+        """
+        with patch("salt.minion.Minion.ctx", MagicMock(return_value={})), patch(
+            "salt.utils.process.SignalHandlingProcess.start",
+            MagicMock(return_value=True),
+        ), patch(
+            "salt.utils.process.SignalHandlingProcess.join",
+            MagicMock(return_value=True),
+        ):
+            try:
+                mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
+                minion = salt.minion.Minion(
+                    mock_opts, io_loop=salt.ext.tornado.ioloop.IOLoop(),
+                )
+                minion.schedule = salt.utils.schedule.Schedule(
+                    mock_opts, {}, returners={}
+                )
+                self.assertTrue(hasattr(minion, "schedule"))
+                minion.destroy()
+                self.assertTrue(not hasattr(minion, "schedule"))
+                self.assertTrue(not minion.module_refresh())
+            finally:
+                minion.destroy()
+
+    @pytest.mark.slow_test
     def test_when_ping_interval_is_set_the_callback_should_be_added_to_periodic_callbacks(
         self,
     ):
@@ -421,9 +450,11 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             finally:
                 minion.destroy()
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_when_passed_start_event_grains(self):
         mock_opts = self.get_config("minion", from_scratch=True)
+        # provide mock opts an os grain since we'll look for it later.
+        mock_opts["grains"]["os"] = "linux"
         mock_opts["start_event_grains"] = ["os"]
         io_loop = salt.ext.tornado.ioloop.IOLoop()
         io_loop.make_current()
@@ -441,7 +472,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         finally:
             minion.destroy()
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_when_not_passed_start_event_grains(self):
         mock_opts = self.get_config("minion", from_scratch=True)
         io_loop = salt.ext.tornado.ioloop.IOLoop()
@@ -457,7 +488,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         finally:
             minion.destroy()
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_when_other_events_fired_and_start_event_grains_are_set(self):
         mock_opts = self.get_config("minion", from_scratch=True)
         mock_opts["start_event_grains"] = ["os"]
@@ -474,7 +505,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         finally:
             minion.destroy()
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_minion_retry_dns_count(self):
         """
         Tests that the resolve_dns will retry dns look ups for a maximum of
@@ -494,7 +525,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 SaltMasterUnresolvableError, salt.minion.resolve_dns, self.opts
             )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_gen_modules_executors(self):
         """
         Ensure gen_modules is called with the correct arguments #54429
@@ -504,7 +535,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         io_loop.make_current()
         minion = salt.minion.Minion(mock_opts, io_loop=io_loop)
 
-        class MockPillarCompiler(object):
+        class MockPillarCompiler:
             def compile_pillar(self):
                 return {}
 
@@ -517,7 +548,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             minion.destroy()
 
     @patch("salt.utils.process.default_signals")
-    @slowTest
+    @pytest.mark.slow_test
     def test_reinit_crypto_on_fork(self, def_mock):
         """
         Ensure salt.utils.crypt.reinit_crypto() is executed when forking for new job
@@ -627,16 +658,44 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             self.assertIn("ps", minion.opts["beacons"])
             self.assertEqual(minion.opts["beacons"]["ps"], bdata)
 
+    def test_prep_ip_port(self):
+        _ip = ipaddress.ip_address
+
+        opts = {"master": "10.10.0.3", "master_uri_format": "ip_only"}
+        ret = salt.minion.prep_ip_port(opts)
+        self.assertEqual(ret, {"master": _ip("10.10.0.3")})
+
+        opts = {
+            "master": "10.10.0.3",
+            "master_port": 1234,
+            "master_uri_format": "default",
+        }
+        ret = salt.minion.prep_ip_port(opts)
+        self.assertEqual(ret, {"master": "10.10.0.3"})
+
+        opts = {"master": "10.10.0.3:1234", "master_uri_format": "default"}
+        ret = salt.minion.prep_ip_port(opts)
+        self.assertEqual(ret, {"master": "10.10.0.3", "master_port": 1234})
+
+        opts = {"master": "host name", "master_uri_format": "default"}
+        self.assertRaises(SaltClientError, salt.minion.prep_ip_port, opts)
+
+        opts = {"master": "10.10.0.3:abcd", "master_uri_format": "default"}
+        self.assertRaises(SaltClientError, salt.minion.prep_ip_port, opts)
+
+        opts = {"master": "10.10.0.3::1234", "master_uri_format": "default"}
+        self.assertRaises(SaltClientError, salt.minion.prep_ip_port, opts)
+
 
 class MinionAsyncTestCase(
     TestCase, AdaptedConfigurationTestCaseMixin, salt.ext.tornado.testing.AsyncTestCase
 ):
     def setUp(self):
-        super(MinionAsyncTestCase, self).setUp()
+        super().setUp()
         self.opts = {}
         self.addCleanup(delattr, self, "opts")
 
-    @skip_if_not_root
+    @pytest.mark.skip_if_not_root
     def test_sock_path_len(self):
         """
         This tests whether or not a larger hash causes the sock path to exceed
@@ -662,3 +721,85 @@ class MinionAsyncTestCase(
             except SaltSystemExit:
                 result = False
         self.assertTrue(result)
+
+    @salt.ext.tornado.testing.gen_test
+    @skipIf(
+        salt.utils.platform.is_windows(), "Skipping, no Salt master running on Windows."
+    )
+    def test_master_type_failover(self):
+        """
+        Tests master_type "failover" to not fall back to 127.0.0.1 address when master does not resolve in DNS
+        """
+        mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
+        mock_opts.update(
+            {
+                "master_type": "failover",
+                "master": ["master1", "master2"],
+                "__role": "",
+                "retry_dns": 0,
+            }
+        )
+
+        class MockPubChannel:
+            def connect(self):
+                raise SaltClientError("MockedChannel")
+
+            def close(self):
+                return
+
+        def mock_resolve_dns(opts, fallback=False):
+            self.assertFalse(fallback)
+
+            if opts["master"] == "master1":
+                raise SaltClientError("Cannot resolve {}".format(opts["master"]))
+
+            return {
+                "master_ip": "192.168.2.1",
+                "master_uri": "tcp://192.168.2.1:4505",
+            }
+
+        def mock_transport_factory(opts, **kwargs):
+            self.assertEqual(opts["master"], "master2")
+            return MockPubChannel()
+
+        with patch("salt.minion.resolve_dns", mock_resolve_dns), patch(
+            "salt.transport.client.AsyncPubChannel.factory", mock_transport_factory
+        ), patch("salt.loader.grains", MagicMock(return_value=[])):
+            with self.assertRaises(SaltClientError, msg="MockedChannel"):
+                minion = salt.minion.Minion(mock_opts)
+                yield minion.connect_master()
+
+    @salt.ext.tornado.testing.gen_test
+    def test_master_type_failover_no_masters(self):
+        """
+        Tests master_type "failover" to not fall back to 127.0.0.1 address when no master can be resolved
+        """
+        mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
+        mock_opts.update(
+            {
+                "master_type": "failover",
+                "master": ["master1", "master2"],
+                "__role": "",
+                "retry_dns": 0,
+            }
+        )
+
+        def mock_resolve_dns(opts, fallback=False):
+            self.assertFalse(fallback)
+            raise SaltClientError("Cannot resolve {}".format(opts["master"]))
+
+        with patch("salt.minion.resolve_dns", mock_resolve_dns), patch(
+            "salt.loader.grains", MagicMock(return_value=[])
+        ):
+            with self.assertRaises(SaltClientError, msg="No master could be resolved"):
+                minion = salt.minion.Minion(mock_opts)
+                yield minion.connect_master()
+
+
+class MasterMinionTestCase(TestCase):
+    def test_config_cache_path_overrides(self):
+        cachedir = os.path.abspath("/path/to/master/cache")
+        opts = {"cachedir": cachedir, "conf_file": None}
+
+        mminion = salt.minion.MasterMinion(opts)
+        self.assertEqual(mminion.opts["cachedir"], cachedir)

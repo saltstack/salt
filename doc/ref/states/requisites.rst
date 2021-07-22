@@ -363,6 +363,8 @@ shown in json for clarity:
         }
     }
 
+.. code-block:: json
+
     {
         "local": {
             "pkgrepo_|-salt-minion_|-salt-minion_|-managed": {
@@ -1055,8 +1057,9 @@ run if **any** of the files do not exist:
               - /path/file
               - /path/file2
 
-listen
-~~~~~~
+runas
+~~~~~
+
 
 .. versionadded:: 2017.7.0
 

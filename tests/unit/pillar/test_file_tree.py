@@ -1,25 +1,18 @@
-# -*- coding: utf-8 -*-
 """
 test for pillar file_tree.py
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import shutil
 import tempfile
 
 import salt.pillar.file_tree as file_tree
-
-# Import Salt Libs
 import salt.utils.files
 import salt.utils.stringutils
 from tests.support.helpers import TstSuiteLoggingHandler
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-
-# Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
 
@@ -159,3 +152,19 @@ class FileTreePillarTestCase(TestCase, LoaderModuleMockMixin):
                             break
                     else:
                         raise AssertionError("Did not find error message")
+
+    def test_file_tree_bytes(self):
+        """
+        test file_tree pillar returns bytes
+        """
+        absolute_path = os.path.join(self.pillar_path, "base")
+        with patch(
+            "salt.utils.minions.CkMinions.check_minions",
+            MagicMock(return_value=_CHECK_MINIONS_RETURN),
+        ):
+            mypillar = file_tree.ext_pillar(MINION_ID, None, absolute_path)
+            self.assertEqual(BASE_PILLAR_CONTENT, mypillar)
+
+            with patch.dict(file_tree.__opts__, {"pillarenv": "dev"}):
+                mypillar = file_tree.ext_pillar(MINION_ID, None, absolute_path)
+                self.assertEqual(mypillar["files"]["groupfile"], b"base")

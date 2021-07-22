@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Azure (ARM) Compute Execution Module
 
@@ -47,7 +46,6 @@ Azure (ARM) Compute Execution Module
 """
 
 # Python libs
-from __future__ import absolute_import
 
 import logging
 
@@ -127,9 +125,7 @@ def availability_set_create_or_update(
             "compute", "AvailabilitySet", **kwargs
         )
     except TypeError as exc:
-        result = {
-            "error": "The object model could not be built. ({0})".format(str(exc))
-        }
+        result = {"error": "The object model could not be built. ({})".format(str(exc))}
         return result
 
     try:
@@ -145,7 +141,7 @@ def availability_set_create_or_update(
         result = {"error": str(exc)}
     except SerializationError as exc:
         result = {
-            "error": "The object model could not be parsed. ({0})".format(str(exc))
+            "error": "The object model could not be parsed. ({})".format(str(exc))
         }
 
     return result

@@ -6,6 +6,7 @@ import textwrap
 import uuid
 
 import jinja2
+import pytest
 import salt.config
 import salt.state
 import salt.utils.files
@@ -19,7 +20,6 @@ from salt.utils.pyobjects import (
     State,
     StateFactory,
 )
-from tests.support.helpers import slowTest
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
 
@@ -291,7 +291,7 @@ class RendererTests(RendererMixin, StateTests, MapBuilder):
     def tearDownClass(cls):
         cls.File = None
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_basic(self):
         basic_template = textwrap.dedent(
             """\
@@ -319,7 +319,7 @@ class RendererTests(RendererMixin, StateTests, MapBuilder):
         )
         self.assertEqual(Registry.states, OrderedDict())
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_invalid_function(self):
         def _test():
             invalid_template = textwrap.dedent(
@@ -332,7 +332,7 @@ class RendererTests(RendererMixin, StateTests, MapBuilder):
 
         self.assertRaises(InvalidFunction, _test)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_include(self):
         include_template = textwrap.dedent(
             """\
@@ -343,7 +343,7 @@ class RendererTests(RendererMixin, StateTests, MapBuilder):
         ret = self.render(include_template)
         self.assertEqual(ret, OrderedDict([("include", ["http"])]))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_extend(self):
         extend_template = textwrap.dedent(
             """\
@@ -383,7 +383,7 @@ class RendererTests(RendererMixin, StateTests, MapBuilder):
             ),
         )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_sls_imports(self):
         def render_and_assert(template):
             ret = self.render(
@@ -437,7 +437,7 @@ class RendererTests(RendererMixin, StateTests, MapBuilder):
         self.write_template_file("recursive_map.sls", self.recursive_map_template)
         render_and_assert(self.recursive_import_template)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_import_scope(self):
         self.write_template_file("map.sls", self.build_map())
         self.write_template_file("recursive_map.sls", self.recursive_map_template)
@@ -458,7 +458,7 @@ class RendererTests(RendererMixin, StateTests, MapBuilder):
 
         self.assertRaises(NameError, do_render)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_random_password(self):
         """Test for https://github.com/saltstack/salt/issues/21796"""
         random_password_template = textwrap.dedent(
@@ -471,7 +471,7 @@ class RendererTests(RendererMixin, StateTests, MapBuilder):
         )
         ret = self.render(random_password_template)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_import_random_password(self):
         """Import test for https://github.com/saltstack/salt/issues/21796"""
         random_password_template = textwrap.dedent(
@@ -492,7 +492,7 @@ class RendererTests(RendererMixin, StateTests, MapBuilder):
         )
         ret = self.render(random_password_import_template)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_requisite_implicit_list(self):
         """Ensure that the implicit list characteristic works as expected"""
         requisite_implicit_list_template = textwrap.dedent(
@@ -580,7 +580,7 @@ class MapTests(RendererMixin, TestCase, MapBuilder):
         else:
             raise AssertionError("both dicts are equal")
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_map(self):
         """
         Test declarative ordering
@@ -624,7 +624,7 @@ class MapTests(RendererMixin, TestCase, MapBuilder):
         ret = self.samba_with_grains(template, self.ubuntu_grains)
         self.assert_not_equal(ret, *self.ubuntu_attrs)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_map_with_priority(self):
         """
         With declarative ordering, the debian service name would override the

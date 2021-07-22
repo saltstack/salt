@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import
-
 from salt.modules import tuned
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch

@@ -247,10 +247,9 @@ done at the CLI:
 
     caller = salt.client.Caller()
 
-    ret = caller.cmd('event.send',
-                     'myco/event/success'
-                     { 'success': True,
-                       'message': "It works!" })
+    ret = caller.cmd(
+        "event.send", "myco/event/success", {"success": True, "message": "It works!"}
+    )
 
     if not ret:
         # the event could not be sent, process the error here

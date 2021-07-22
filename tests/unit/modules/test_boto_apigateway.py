@@ -1,25 +1,16 @@
-# -*- coding: utf-8 -*-
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import datetime
 import logging
 import random
 import string
 
-# Import Salt libs
 import salt.loader
+import salt.loader_context
 import salt.modules.boto_apigateway as boto_apigateway
-from salt.ext.six.moves import range, zip
 from salt.utils.versions import LooseVersion
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
 
-# Import 3rd-party libs
 # pylint: disable=import-error,no-name-in-module
 try:
     import boto3
@@ -168,10 +159,10 @@ class BotoApiGatewayTestCaseBase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
         self.opts = opts = salt.config.DEFAULT_MINION_OPTS.copy()
-        utils = salt.loader.utils(
+        self.utils = salt.loader.utils(
             opts, whitelist=["boto3", "args", "systemd", "path", "platform"]
         )
-        return {boto_apigateway: {"__opts__": opts, "__utils__": utils}}
+        return {boto_apigateway: {"__opts__": opts, "__utils__": self.utils}}
 
     def setUp(self):
         TestCase.setUp(self)
@@ -196,9 +187,10 @@ class BotoApiGatewayTestCaseBase(TestCase, LoaderModuleMockMixin):
         self.conn = MagicMock()
         session_instance.client.return_value = self.conn
         self.addCleanup(delattr, self, "conn")
+        self.addCleanup(delattr, self, "utils")
 
 
-class BotoApiGatewayTestCaseMixin(object):
+class BotoApiGatewayTestCaseMixin:
     def _diff_list_dicts(self, listdict1, listdict2, sortkey):
         """
         Compares the two list of dictionaries to ensure they have same content.  Returns True
@@ -220,12 +212,12 @@ class BotoApiGatewayTestCaseMixin(object):
 @skipIf(
     _has_required_boto() is False,
     "The boto3 module must be greater than"
-    " or equal to version {0}".format(required_boto3_version),
+    " or equal to version {}".format(required_boto3_version),
 )
 @skipIf(
     _has_required_botocore() is False,
     "The botocore module must be greater than"
-    " or equal to version {0}".format(required_botocore_version),
+    " or equal to version {}".format(required_botocore_version),
 )
 class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseMixin):
     """
@@ -485,7 +477,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         self.assertTrue(create_api_result.get("created"))
         self.assertTrue(api)
         self.assertEqual(api["id"], assigned_api_id)
-        self.assertEqual(api["createdDate"], "{0}".format(created_date))
+        self.assertEqual(api["createdDate"], "{}".format(created_date))
         self.assertEqual(api["name"], "unit-testing123")
         self.assertEqual(api["description"], "unit-testing1234")
 
@@ -707,7 +699,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             "test-salt-key", "test-lambda-api-key", **conn_parameters
         )
         api_key = create_api_key_result.get("apiKey")
-        now_str = "{0}".format(now)
+        now_str = "{}".format(now)
 
         self.assertTrue(create_api_key_result.get("created"))
         self.assertEqual(api_key.get("lastUpdatedDate"), now_str)
@@ -719,21 +711,21 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         """
         tests that we properly handle errors when create an api key fails.
         """
+        with salt.loader_context.loader_context(self.utils):
+            self.conn.create_api_key.side_effect = ClientError(
+                error_content, "create_api_key"
+            )
+            create_api_key_result = boto_apigateway.create_api_key(
+                "test-salt-key", "unit-testing1234"
+            )
+            api_key = create_api_key_result.get("apiKey")
 
-        self.conn.create_api_key.side_effect = ClientError(
-            error_content, "create_api_key"
-        )
-        create_api_key_result = boto_apigateway.create_api_key(
-            "test-salt-key", "unit-testing1234"
-        )
-        api_key = create_api_key_result.get("apiKey")
-
-        self.assertFalse(api_key)
-        self.assertIs(create_api_key_result.get("created"), False)
-        self.assertEqual(
-            create_api_key_result.get("error").get("message"),
-            error_message.format("create_api_key"),
-        )
+            self.assertFalse(api_key)
+            self.assertIs(create_api_key_result.get("created"), False)
+            self.assertEqual(
+                create_api_key_result.get("error").get("message"),
+                error_message.format("create_api_key"),
+            )
 
     def test_that_when_deleting_an_api_key_that_exists_the_delete_api_key_method_returns_true(
         self,
@@ -1057,7 +1049,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             restApiId="rm06h9oac4", stageName="test", **conn_parameters
         )
         deployment = result.get("deployment")
-        now_str = "{0}".format(now)
+        now_str = "{}".format(now)
 
         self.assertTrue(result.get("created"))
         self.assertEqual(deployment.get("createdDate"), now_str)
@@ -1320,7 +1312,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             **conn_parameters
         )
         stage = result.get("stage")
-        now_str = "{0}".format(now)
+        now_str = "{}".format(now)
         self.assertIs(result.get("created"), True)
         self.assertEqual(stage.get("createdDate"), now_str)
         self.assertEqual(stage.get("lastUpdatedDate"), now_str)

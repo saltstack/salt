@@ -1,15 +1,5 @@
-# -*- coding: utf-8 -*-
-
-# Import Python libs
-from __future__ import absolute_import
-
 import salt.modules.pillar as pillarmod
-
-# Import Salt libs
-from salt.ext import six
 from salt.utils.odict import OrderedDict
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -35,7 +25,7 @@ class PillarModuleTestCase(TestCase, LoaderModuleMockMixin):
             OrderedDict([("key", "<str>")]),
         )
 
-        self.assertEqual(pillarmod._obfuscate_inner(set((1, 2))), set(["<int>"]))
+        self.assertEqual(pillarmod._obfuscate_inner({1, 2}), {"<int>"})
 
         self.assertEqual(pillarmod._obfuscate_inner((1, 2)), ("<int>", "<int>"))
 
@@ -46,10 +36,7 @@ class PillarModuleTestCase(TestCase, LoaderModuleMockMixin):
     def test_ls(self):
         with patch("salt.modules.pillar.items", MagicMock(return_value=pillar_value_1)):
             ls = sorted(pillarmod.ls())
-            if six.PY3:
-                self.assertCountEqual(ls, ["a", "b"])
-            else:
-                self.assertEqual(ls, ["a", "b"])
+            self.assertCountEqual(ls, ["a", "b"])
 
     def test_pillar_get_default_merge(self):
         defaults = {
@@ -142,3 +129,30 @@ class PillarModuleTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(
                 pillarmod.get(key="foo", default=None, merge=True), "bar",
             )
+
+    def test_pillar_get_int_key(self):
+        """
+        Confirm that we can access pillar keys that are integers
+        """
+        with patch.dict(pillarmod.__pillar__, {12345: "luggage_code"}):
+
+            self.assertEqual(
+                pillarmod.get(key=12345, default=None, merge=True), "luggage_code",
+            )
+
+        with patch.dict(
+            pillarmod.__pillar__, {12345: {"l2": {"l3": "my_luggage_code"}}}
+        ):
+
+            res = pillarmod.get(key=12345)
+            self.assertEqual({"l2": {"l3": "my_luggage_code"}}, res)
+
+            default = {"l2": {"l3": "your_luggage_code"}}
+
+            res = pillarmod.get(key=12345, default=default)
+            self.assertEqual({"l2": {"l3": "my_luggage_code"}}, res)
+            self.assertEqual({"l2": {"l3": "your_luggage_code"}}, default)
+
+            res = pillarmod.get(key=12345, default=default, merge=True)
+            self.assertEqual({"l2": {"l3": "my_luggage_code"}}, res)
+            self.assertEqual({"l2": {"l3": "your_luggage_code"}}, default)

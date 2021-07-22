@@ -1,18 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 Beacon to emit adb device state changes for Android devices
 
 .. versionadded:: 2016.3.0
 """
-
-# Import Python libs
-from __future__ import absolute_import, unicode_literals
-
 import logging
 
-# Salt libs
 import salt.utils.path
-from salt.ext.six.moves import map
 
 log = logging.getLogger(__name__)
 
@@ -70,7 +63,7 @@ def validate(config):
                     False,
                     (
                         "Need a one of the following adb "
-                        "states: {0}".format(", ".join(states))
+                        "states: {}".format(", ".join(states))
                     ),
                 )
     return True, "Valid beacon configuration"
@@ -122,7 +115,7 @@ def beacon(config):
 
             if "battery_low" in _config:
                 val = last_state.get(device, {})
-                cmd = "adb -s {0} shell cat /sys/class/power_supply/*/capacity".format(
+                cmd = "adb -s {} shell cat /sys/class/power_supply/*/capacity".format(
                     device
                 )
                 battery_levels = __salt__["cmd.run"](

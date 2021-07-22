@@ -1,18 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 Beacon to emit when a display is available to a linux machine
 
 .. versionadded:: 2016.3.0
 """
-
-# Import Python libs
-from __future__ import absolute_import, unicode_literals
-
 import logging
 
-# Salt libs
 import salt.utils.path
-from salt.ext.six.moves import map
 
 log = logging.getLogger(__name__)
 

@@ -1,17 +1,11 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
+import socket
 
 import salt.modules.win_network as win_network
-
-# Import Salt Libs
 import salt.utils.network
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, patch
 from tests.support.unit import TestCase, skipIf
@@ -24,7 +18,7 @@ except ImportError:
     HAS_WMI = False
 
 
-class Mockwmi(object):
+class Mockwmi:
     """
     Mock wmi class
     """
@@ -35,7 +29,7 @@ class Mockwmi(object):
         pass
 
 
-class Mockwinapi(object):
+class Mockwinapi:
     """
     Mock winapi class
     """
@@ -43,7 +37,7 @@ class Mockwinapi(object):
     def __init__(self):
         pass
 
-    class winapi(object):
+    class winapi:
         """
         Mock winapi class
         """
@@ -51,7 +45,7 @@ class Mockwinapi(object):
         def __init__(self):
             pass
 
-        class Com(object):
+        class Com:
             """
             Mock Com method
             """
@@ -311,4 +305,22 @@ class WinNetworkTestCase(TestCase, LoaderModuleMockMixin):
                     "interface": "Wi-Fi",
                     "source": "10.0.0.15",
                 },
+            )
+
+    def test_connect_53371(self):
+        """
+        Test that UnboundLocalError is not thrown on socket.gaierror
+        as reported in #53371
+        """
+        with patch(
+            "socket.getaddrinfo",
+            autospec=True,
+            side_effect=socket.gaierror("[Errno 11004] getaddrinfo failed"),
+        ):
+            rtn = win_network.connect("test-server", 80)
+            assert rtn
+            assert not rtn["result"]
+            assert (
+                rtn["comment"]
+                == "Unable to connect to test-server (unknown) on tcp port 80"
             )

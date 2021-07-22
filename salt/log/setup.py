@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
@@ -13,7 +12,6 @@
     logger instance uses our ``salt.log.setup.SaltLoggingClass``.
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import logging.handlers
@@ -24,6 +22,7 @@ import sys
 import time
 import traceback
 import types
+import urllib.parse
 
 # pylint: disable=unused-import
 from salt._logging import (
@@ -48,8 +47,6 @@ from salt._logging.impl import (
     SaltLogRecord,
 )
 from salt._logging.impl import set_log_record_factory as setLogRecordFactory
-from salt.ext import six
-from salt.ext.six.moves.urllib.parse import urlparse
 
 # pylint: enable=unused-import
 
@@ -266,7 +263,7 @@ def setup_logfile_logger(
 
     level = LOG_LEVELS.get(log_level.lower(), logging.ERROR)
 
-    parsed_log_path = urlparse(log_path)
+    parsed_log_path = urllib.parse.urlparse(log_path)
 
     root_logger = logging.getLogger()
 
@@ -295,7 +292,7 @@ def setup_logfile_logger(
                 # Logging facilities start with LOG_ if this is not the case
                 # fail right now!
                 raise RuntimeError(
-                    "The syslog facility '{0}' is not known".format(facility_name)
+                    "The syslog facility '{}' is not known".format(facility_name)
                 )
         else:
             # This is the case of udp or tcp without a facility specified
@@ -306,7 +303,7 @@ def setup_logfile_logger(
             # This python syslog version does not know about the user provided
             # facility name
             raise RuntimeError(
-                "The syslog facility '{0}' is not known".format(facility_name)
+                "The syslog facility '{}' is not known".format(facility_name)
             )
         syslog_opts["facility"] = facility
 
@@ -332,7 +329,7 @@ def setup_logfile_logger(
         try:
             # Et voilá! Finally our syslog handler instance
             handler = SysLogHandler(**syslog_opts)
-        except socket.error as err:
+        except OSError as err:
             logging.getLogger(__name__).error(
                 "Failed to setup the Syslog logging handler: %s", err
             )
@@ -370,7 +367,7 @@ def setup_logfile_logger(
                 handler = WatchedFileHandler(
                     log_path, mode="a", encoding="utf-8", delay=0
                 )
-        except (IOError, OSError):
+        except OSError:
             logging.getLogger(__name__).warning(
                 "Failed to open log file, do you have permission to write to %s?",
                 log_path,
@@ -420,7 +417,7 @@ def setup_extended_logging(opts):
     # log records with them
     additional_handlers = []
 
-    for name, get_handlers_func in six.iteritems(providers):
+    for name, get_handlers_func in providers.items():
         logging.getLogger(__name__).info("Processing `log_handlers.%s`", name)
         # Keep a reference to the logging handlers count before getting the
         # possible additional ones.
@@ -529,7 +526,7 @@ def set_multiprocessing_logging_level_by_opts(opts):
         LOG_LEVELS.get(opts.get("log_level", "").lower(), logging.ERROR),
         LOG_LEVELS.get(opts.get("log_level_logfile", "").lower(), logging.ERROR),
     ]
-    for level in six.itervalues(opts.get("log_granular_levels", {})):
+    for level in opts.get("log_granular_levels", {}).values():
         log_levels.append(LOG_LEVELS.get(level.lower(), logging.ERROR))
 
     __MP_LOGGING_LEVEL = min(log_levels)
@@ -716,7 +713,7 @@ def shutdown_multiprocessing_logging_listener(daemonizing=False):
             __MP_LOGGING_QUEUE = None
             __MP_LOGGING_QUEUE_PROCESS.join(1)
             __MP_LOGGING_QUEUE = None
-        except IOError:
+        except OSError:
             # We were unable to deliver the sentinel to the queue
             # carry on...
             pass

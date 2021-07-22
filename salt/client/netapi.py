@@ -1,14 +1,10 @@
-# encoding: utf-8
 """
 The main entry point for salt-api
 """
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import signal
 
-# Import salt-api libs
 import salt.loader
 import salt.utils.process
 
@@ -21,7 +17,7 @@ class RunNetapi(salt.utils.process.SignalHandlingProcess):
     """
 
     def __init__(self, opts, fname, **kwargs):
-        super(RunNetapi, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.opts = opts
         self.fname = fname
 
@@ -50,7 +46,7 @@ class RunNetapi(salt.utils.process.SignalHandlingProcess):
         netapi_func()
 
 
-class NetapiClient(object):
+class NetapiClient:
     """
     Start each netapi module that is configured to run
     """

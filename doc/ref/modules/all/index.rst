@@ -172,7 +172,6 @@ execution modules
     gentoolkitmod
     git
     github
-    glance
     glanceng
     glassfish
     glusterfs
@@ -427,6 +426,7 @@ execution modules
     serverdensity_device
     servicenow
     slack_notify
+    slackware_service
     slsutil
     smartos_imgadm
     smartos_nictagadm

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Management of OpenStack Glance Images
 ========================================
@@ -23,7 +22,6 @@ Example States
         - name: cirros
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 __virtualname__ = "glance_image"
 

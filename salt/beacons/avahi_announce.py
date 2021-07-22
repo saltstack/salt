@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Beacon to announce via avahi (zeroconf)
 
@@ -11,16 +10,12 @@ Dependencies
 - dbus-python
 
 """
-# Import Python libs
-from __future__ import absolute_import, unicode_literals
 
 import logging
 import time
 
 import salt.utils.stringutils
-from salt.ext.six.moves import map
 
-# Import 3rd Party libs
 try:
     import avahi
 
@@ -60,12 +55,12 @@ def __virtual__():
             return __virtualname__
         return (
             False,
-            "The {0} beacon cannot be loaded. The "
+            "The {} beacon cannot be loaded. The "
             "'python-dbus' dependency is missing.".format(__virtualname__),
         )
     return (
         False,
-        "The {0} beacon cannot be loaded. The "
+        "The {} beacon cannot be loaded. The "
         "'python-avahi' dependency is missing.".format(__virtualname__),
     )
 

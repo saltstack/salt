@@ -1,3 +1,5 @@
+.. _`Apache 2.0 license`: http://www.apache.org/licenses/LICENSE-2.0.html
+
 ====================
 Introduction to Salt
 ====================
@@ -120,17 +122,15 @@ security-related announcements. This list is low-traffic.
 IRC
 ===
 
-The ``#salt`` IRC channel is hosted on the popular `Freenode`_ network. You
-can use the `Freenode webchat client`_ right from your browser.
+The ``#salt`` IRC channel is hosted on the popular `LiberaChat`_ network. You
+can use the `LiberaChat webchat client`_ right from your browser.  `Logs of the
+IRC channel activity`_ are also available.
 
-`Logs of the IRC channel activity`_ are being collected courtesy of Moritz Lenz.
+.. _LiberaChat: https://libera.chat/
+.. _`LiberaChat webchat client`: https://web.libera.chat/#salt
+.. _`Logs of the IRC channel activity`: http://ngxbot.nginx.org/logs/%23salt/
 
-.. _Freenode: http://freenode.net/irc_servers.shtml
-.. _`Freenode webchat client`: https://webchat.freenode.net/#salt
-.. _`Logs of the IRC channel activity`: http://irclog.perlgeek.de/salt/
-
-If you wish to discuss the development of Salt itself join us in
-``#salt-devel``.
+If you wish to discuss the development of Salt itself join us in ``#salt-devel``.
 
 
 Follow on Github
@@ -182,13 +182,13 @@ https://www.openhub.net/p/salt
 Other community links
 =====================
 
-- `Salt Stack Inc. <http://www.saltstack.com>`_
+- `Salt Project <http://saltproject.io>`_
 - `Subreddit <http://www.reddit.com/r/saltstack>`_
-- `YouTube <https://www.youtube.com/user/SaltStack>`_
-- `Facebook <https://www.facebook.com/SaltStack>`_
-- `Twitter <https://twitter.com/SaltStackInc>`_
+- `YouTube <https://www.youtube.com/channel/UCpveTIucFx9ljGelW63-BWg>`_
+- `Facebook <https://www.facebook.com/SaltProjectOSS>`_
+- `Twitter <https://twitter.com/Salt_Project_OS>`_
 - `Wikipedia page <https://en.wikipedia.org/wiki/Salt_(software)>`_
-- `Stack Overflow <https://stackoverflow.com/questions/tagged/salt-stack>`_
+- `Stack Overflow <https://stackoverflow.com/questions/tagged/salt-stack+or+salt-cloud+or+salt-creation>`_
 
 Hack the Source
 ===============

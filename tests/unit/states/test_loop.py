@@ -1,12 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 Tests for loop state(s)
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
+import pytest
 import salt.states.loop
-from salt.ext.six.moves import range
-from tests.support.helpers import slowTest
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -116,7 +113,7 @@ class LoopTestCaseNoEval(TestCase, LoaderModuleMockMixin):
                 },
             )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_immediate_success(self):
         """
         Test for an immediate success.
@@ -258,7 +255,7 @@ class LoopTestCaseNoEval(TestCase, LoaderModuleMockMixin):
         """
         with patch.dict(
             salt.states.loop.__salt__,  # pylint: disable=no-member
-            {"foo.bar": MagicMock(side_effect=KeyError(str("FOO")))},
+            {"foo.bar": MagicMock(side_effect=KeyError("FOO"))},
         ):
             self.assertDictEqual(
                 salt.states.loop.until_no_eval(name="foo.bar", expected=True),

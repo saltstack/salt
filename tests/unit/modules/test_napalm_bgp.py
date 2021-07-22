@@ -33,7 +33,6 @@ class NapalmBgpModuleTestCase(TestCase, LoaderModuleMockMixin):
         return {napalm_bgp: module_globals}
 
     def test_config(self):
-        print(123,)
         ret = napalm_bgp.config("test_group")
         assert ret["out"] == napalm_test_support.TEST_BGP_CONFIG.copy()
 

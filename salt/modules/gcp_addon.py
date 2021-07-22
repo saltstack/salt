@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 A route is a rule that specifies how certain packets should be handled by the
 virtual network. Routes are associated with virtual machine instances by tag,
@@ -18,15 +17,7 @@ through your gateway instance.
 
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
-
-# Import salt libs
-from salt.ext import six
-
-log = logging.getLogger(__name__)
 
 try:
     import googleapiclient.discovery
@@ -35,6 +26,8 @@ try:
     HAS_LIB = True
 except ImportError:
     HAS_LIB = False
+
+log = logging.getLogger(__name__)
 
 __virtualname__ = "gcp"
 
@@ -107,16 +100,18 @@ def route_create(
 
     CLI Example:
 
-    salt 'salt-master.novalocal' gcp.route_create
-        credential_file=/root/secret_key.json
-        project_id=cp100-170315
-        name=derby-db-route1
-        next_hop_instance=instance-1
-        instance_zone=us-central1-a
-        network=default
-        dest_range=0.0.0.0/0
-        tags=['no-ip']
-        priority=700
+    .. code-block:: bash
+
+        salt 'salt-master.novalocal' gcp.route_create
+            credential_file=/root/secret_key.json
+            project_id=cp100-170315
+            name=derby-db-route1
+            next_hop_instance=instance-1
+            instance_zone=us-central1-a
+            network=default
+            dest_range=0.0.0.0/0
+            tags=['no-ip']
+            priority=700
 
     In above example, the instances which are having tag "no-ip" will route the
     packet to instance "instance-1"(if packet is intended to other network)
@@ -129,11 +124,9 @@ def route_create(
     routes = service.routes()
 
     routes_config = {
-        "name": six.text_type(name),
-        "network": _get_network(project_id, six.text_type(network), service=service)[
-            "selfLink"
-        ],
-        "destRange": six.text_type(dest_range),
+        "name": str(name),
+        "network": _get_network(project_id, str(network), service=service)["selfLink"],
+        "destRange": str(dest_range),
         "nextHopInstance": _get_instance(
             project_id, instance_zone, next_hop_instance, service=service
         )["selfLink"],

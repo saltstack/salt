@@ -1,23 +1,12 @@
-# -*- coding: utf-8 -*-
-
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import copy
 import os
 
 import salt.modules.grains as grainsmod
 import salt.utils.dictupdate as dictupdate
-
-# Import Salt libs
 from salt.exceptions import SaltException
-
-# Import 3rd-party libs
 from salt.utils.odict import OrderedDict
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-
-# Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
 

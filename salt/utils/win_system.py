@@ -8,14 +8,11 @@ Functions shared with salt.modules.win_system and salt.grains.pending_reboot
 # NOTE: DO NOT USE RAW STRINGS IN THIS MODULE! UNICODE_LITERALS DOES NOT PLAY
 # NICELY WITH RAW STRINGS CONTAINING \u or \U.
 
-# Import python libs
 import logging
 
-# Import Salt libs
 import salt.utils.win_reg
 import salt.utils.win_update
 
-# Import 3rd-party Libs
 try:
     import win32api
     import win32con
@@ -294,11 +291,6 @@ def get_pending_update():
 
     ``HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\WindowsUpdate\\Auto Update\\RebootRequired``
     ``HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\WindowsUpdate\\Auto Update\\PostRebootReporting``
-
-    If there are any subkeys under the following registry key, a reboot is
-    pending:
-
-    ``HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\WindowsUpdate\\Services\\Pending``
 
     .. versionadded:: 3001
 

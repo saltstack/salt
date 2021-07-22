@@ -1,16 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 Functions dealing with encryption
 """
-
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Python libs
 import hashlib
 import logging
 import os
 
-# Import Salt libs
 import salt.loader
 import salt.utils.files
 from salt.exceptions import SaltInvocationError
@@ -19,7 +13,7 @@ log = logging.getLogger(__name__)
 
 
 try:
-    import Crypto.Random
+    import Crypto.Random  # nosec
 
     HAS_CRYPTO = True
 except ImportError:
@@ -74,8 +68,8 @@ def decrypt(
     try:
         if valid_rend and rend not in valid_rend:
             raise SaltInvocationError(
-                "'{0}' is not a valid decryption renderer. Valid choices "
-                "are: {1}".format(rend, ", ".join(valid_rend))
+                "'{}' is not a valid decryption renderer. Valid choices "
+                "are: {}".format(rend, ", ".join(valid_rend))
             )
     except TypeError as exc:
         # SaltInvocationError inherits TypeError, so check for it first and
@@ -93,7 +87,7 @@ def decrypt(
     rend_func = renderers.get(rend)
     if rend_func is None:
         raise SaltInvocationError(
-            "Decryption renderer '{0}' is not available".format(rend)
+            "Decryption renderer '{}' is not available".format(rend)
         )
 
     return rend_func(data, translate_newlines=translate_newlines)
@@ -133,7 +127,7 @@ def pem_finger(path=None, key=None, sum_type="sha256"):
     for ind, _ in enumerate(pre):
         if ind % 2:
             # Is odd
-            finger += "{0}:".format(pre[ind])
+            finger += "{}:".format(pre[ind])
         else:
             finger += pre[ind]
     return finger.rstrip(":")
