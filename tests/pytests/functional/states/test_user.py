@@ -238,6 +238,9 @@ def test_user_present_gecos(modules, states, username):
         assert user_info["homephone"] == str(homephone)
 
 
+@pytest.mark.skip_on_windows(
+    reason="windows minion does not support roomnumber or phone",
+)
 def test_user_present_gecos_empty_fields(modules, states, username):
     """
     It ensures that if no GECOS data is supplied, the fields will be coerced
