@@ -255,7 +255,7 @@ def _get_containers_cache_filename(container):
     """
     cache_dir = _get_cache_dir()
     if not os.path.exists(cache_dir):
-        os.makedirs(cache_dir)
+        os.makedirs(cache_dir, exist_ok=True)
 
     return os.path.join(cache_dir, "{}-files.cache".format(container))
 

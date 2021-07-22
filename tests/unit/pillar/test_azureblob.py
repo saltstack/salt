@@ -116,25 +116,10 @@ class AzureBlobTestCase(TestCase, LoaderModuleMockMixin):
         environment = "base"
         blob_cache_expire = 0  # The cache will be expired
         blob_client = MockBlobServiceClient()
-        cache_file = tempfile.NamedTemporaryFile()
-        # Patches the _get_containers_cache_filename module so that it returns the name of the new tempfile that
-        # represents the cache file
-        with patch.object(
-            azureblob,
-            "_get_containers_cache_filename",
-            MagicMock(return_value=str(cache_file.name)),
-        ):
-            # Patches the from_connection_string module of the BlobServiceClient class so that a connection string does
-            # not need to be given. Additionally it returns example blob data used by the ext_pillar.
-            with patch.object(
-                BlobServiceClient,
-                "from_connection_string",
-                MagicMock(return_value=blob_client),
-            ):
-                ret = azureblob._init(
-                    "", container, multiple_env, environment, blob_cache_expire
-                )
-        cache_file.close()
+        with tempfile.TemporaryDirectory() as cachedir, patch.dict(azureblob.__opts__, {"cachedir": cachedir}), patch('salt.pillar.azureblob.BlobServiceClient.from_connection_string', return_value=blob_client):
+            ret = azureblob._init(
+                "", container, multiple_env, environment, blob_cache_expire
+            )
         self.assertEqual(
             ret,
             {
@@ -180,7 +165,8 @@ class AzureBlobTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(
             azureblob,
             "_get_containers_cache_filename",
-            MagicMock(return_value=str(cache_file.name)),
+            return_value=cache_file.name
+            #MagicMock(return_value=str(cache_file.name)),
         ):
             # Patches the _read_containers_cache_file module so that it returns what it normally would if the new
             # tempfile representing the cache file was passed to it
