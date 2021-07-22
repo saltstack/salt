@@ -3486,6 +3486,7 @@ def mod_aggregate(low, chunks, running):
         "removed",
         "purged",
     ]
+    log.debug("=== low %s chunks %s running %s ===", low, chunks, running)
     if low.get("fun") not in agg_enabled:
         return low
     for chunk in chunks:
@@ -3511,25 +3512,28 @@ def mod_aggregate(low, chunks, running):
                     pkgs.extend(chunk["sources"])
                     chunk["__agg__"] = True
             else:
-                if pkg_type is None:
-                    pkg_type = "pkgs"
-                if pkg_type == "pkgs":
-                    # Pull out the pkg names!
-                    if "pkgs" in chunk:
-                        pkgs.extend(chunk["pkgs"])
-                        chunk["__agg__"] = True
-                    elif "name" in chunk:
-                        version = chunk.pop("version", None)
-                        if version is not None:
-                            pkgs.append({chunk["name"]: version})
-                        else:
-                            pkgs.append(chunk["name"])
-                        chunk["__agg__"] = True
+                # If hold exists in the chunk, do not add to aggregation
+                if "hold" not in chunk:
+                    if pkg_type is None:
+                        pkg_type = "pkgs"
+                    if pkg_type == "pkgs":
+                        # Pull out the pkg names!
+                        if "pkgs" in chunk:
+                            pkgs.extend(chunk["pkgs"])
+                            chunk["__agg__"] = True
+                        elif "name" in chunk:
+                            version = chunk.pop("version", None)
+                            if version is not None:
+                                pkgs.append({chunk["name"]: version})
+                            else:
+                                pkgs.append(chunk["name"])
+                            chunk["__agg__"] = True
     if pkg_type is not None and pkgs:
         if pkg_type in low:
             low[pkg_type].extend(pkgs)
         else:
             low[pkg_type] = pkgs
+    log.debug("=== in mod_aggregate - low %s ===", low)
     return low
 
 

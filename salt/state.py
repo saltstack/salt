@@ -841,6 +841,35 @@ class State:
                     return
                 self.mod_init.add(low["state"])
 
+    def _aggregate_requisites(self, low, chunks):
+        """
+        Aggregate the requisites
+        """
+        requisites = {}
+        low_state = low["state"]
+        for chunk in chunks:
+            log.debug("==== _aggregate_requisites - chunk %s ===", chunk)
+            # if the state function in the chunk matches
+            # the state function in the low we're looking at
+            # and __agg__ is True, add the requisites from the
+            # chunk to those in the low.
+            if chunk["state"] == low["state"] and chunk.get("__agg__"):
+                for req in STATE_REQUISITE_KEYWORDS:
+                    if req in chunk:
+                        if req in requisites:
+                            requisites[req].extend(chunk[req])
+                        else:
+                            requisites[req] = chunk[req]
+                for req in STATE_REQUISITE_IN_KEYWORDS:
+                    if req in chunk:
+                        if req in requisites:
+                            requisites[req].extend(chunk[req])
+                        else:
+                            requisites[req] = chunk[req]
+        log.debug("==== _aggregate_requisites - requisites %s ===", requisites)
+        low.update(requisites)
+        return low
+
     def _mod_aggregate(self, low, running, chunks):
         """
         Execute the aggregation systems to runtime modify the low chunk
@@ -857,6 +886,8 @@ class State:
             if agg_fun in self.states:
                 try:
                     low = self.states[agg_fun](low, chunks, running)
+                    log.debug("==== after mod_aggregate - low %s ===", low)
+                    low = self._aggregate_requisites(low, chunks)
                     low["__agg__"] = True
                 except TypeError:
                     log.error("Failed to execute aggregate for state %s", low["state"])
@@ -891,6 +922,7 @@ class State:
         if "onlyif" in low_data:
             _ret = self._run_check_onlyif(low_data, cmd_opts)
             ret["result"] = _ret["result"]
+
             ret["comment"].append(_ret["comment"])
             if "skip_watch" in _ret:
                 ret["skip_watch"] = _ret["skip_watch"]
