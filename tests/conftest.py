@@ -1152,7 +1152,14 @@ def from_filenames_collection_modifyitems(config, items):
         # Don't do anything
         return
 
-    log.info("Calculating test modules to run based on the paths in --from-filenames")
+    terminal_reporter = config.pluginmanager.getplugin("terminalreporter")
+    terminal_reporter.ensure_newline()
+    terminal_reporter.section(
+        "From Filenames(--from-filenames) Test Selection", sep=">"
+    )
+    errors = []
+    test_module_selections = []
+    changed_files_selections = []
     from_filenames_paths = set()
     for path in [path.strip() for path in from_filenames.split(",")]:
         # Make sure that, no matter what kind of path we're passed, Windows or Posix path,
@@ -1161,11 +1168,7 @@ def from_filenames_collection_modifyitems(config, items):
             path.replace("\\", os.sep).replace("/", os.sep)
         )
         if not properly_slashed_path.exists():
-            log.info(
-                "The path %s(%s) passed in --from-filenames does not exist",
-                path,
-                properly_slashed_path,
-            )
+            errors.append("{}: Does not exist".format(properly_slashed_path))
             continue
         if properly_slashed_path.is_absolute():
             # In this case, this path is considered to be a file containing a line separated list
@@ -1176,14 +1179,20 @@ def from_filenames_collection_modifyitems(config, items):
                         line.strip().replace("\\", os.sep).replace("/", os.sep)
                     )
                     if not line_path.exists():
-                        log.info(
-                            "The path %s contained in %s passed in --from-filenames does not exist",
-                            line_path,
-                            properly_slashed_path,
+                        errors.append(
+                            "{}: Does not exist. Source {}".format(
+                                line_path, properly_slashed_path
+                            )
                         )
                         continue
+                    changed_files_selections.append(
+                        "{}: Source {}".format(line_path, properly_slashed_path)
+                    )
                     from_filenames_paths.add(line_path)
             continue
+        changed_files_selections.append(
+            "{}: Source --from-filenames".format(properly_slashed_path)
+        )
         from_filenames_paths.add(properly_slashed_path)
 
     # Let's start collecting test modules
@@ -1203,10 +1212,16 @@ def from_filenames_collection_modifyitems(config, items):
             if path.name == "conftest.py":
                 # This is not a test module, but consider any test_*.py files in child directories
                 for match in path.parent.rglob("test_*.py"):
+                    test_module_selections.append(
+                        "{}: Source {}/test_*.py recursive glob match".format(
+                            match, path.parent
+                        )
+                    )
                     test_module_paths.add(match)
                 continue
             # Tests in the listing don't require additional matching and will be added to the
             # list of tests to run
+            test_module_selections.append("{}: Source --from-filenames".format(path))
             test_module_paths.add(path)
             continue
         if path.name == "setup.py" or path.as_posix().startswith("salt/"):
@@ -1235,7 +1250,11 @@ def from_filenames_collection_modifyitems(config, items):
             for pattern in glob_patterns:
                 for match in TESTS_DIR.rglob(pattern):
                     relative_path = match.relative_to(CODE_DIR)
-                    log.info("Glob pattern %r matched '%s'", pattern, relative_path)
+                    test_module_selections.append(
+                        "{}: Source '{}' glob pattern match".format(
+                            relative_path, pattern
+                        )
+                    )
                     test_module_paths.add(relative_path)
 
             # Do we have an entry in tests/filename_map.yml
@@ -1247,6 +1266,11 @@ def from_filenames_collection_modifyitems(config, items):
                     if re.match(rule, path.as_posix()):
                         for match in matches:
                             test_module_paths.add(_match_to_test_file(match))
+                            test_module_selections.append(
+                                "{}: Source '{}' regex from tests/filename_map.yml".format(
+                                    match, rule
+                                )
+                            )
                 elif "*" in rule or "\\" in rule:
                     # Glob matching
                     for filerule in CODE_DIR.glob(rule):
@@ -1256,7 +1280,13 @@ def from_filenames_collection_modifyitems(config, items):
                         if filerule != path:
                             continue
                         for match in matches:
-                            test_module_paths.add(_match_to_test_file(match))
+                            match_path = _match_to_test_file(match)
+                            test_module_selections.append(
+                                "{}: Source '{}' file rule from tests/filename_map.yml".format(
+                                    match_path, filerule
+                                )
+                            )
+                            test_module_paths.add(match_path)
                 else:
                     if path.as_posix() != rule:
                         continue
@@ -1265,15 +1295,34 @@ def from_filenames_collection_modifyitems(config, items):
                     if not filerule.exists():
                         continue
                     for match in matches:
-                        test_module_paths.add(_match_to_test_file(match))
+                        match_path = _match_to_test_file(match)
+                        test_module_selections.append(
+                            "{}: Source '{}' direct file rule from tests/filename_map.yml".format(
+                                match_path, filerule
+                            )
+                        )
+                        test_module_paths.add(match_path)
             continue
         else:
-            log.info("Don't know what to do with path %s", path)
+            errors.append("{}: Don't know what to do with this path".format(path))
 
-    log.info(
-        "Collected the following paths from --from-filenames processing:\n%s",
-        "\n".join(sorted(map(str, test_module_paths))),
+    if errors:
+        terminal_reporter.write("Errors:\n", bold=True)
+        for error in errors:
+            terminal_reporter.write(" * {}\n".format(error))
+    if changed_files_selections:
+        terminal_reporter.write("Changed files collected:\n", bold=True)
+        for selection in changed_files_selections:
+            terminal_reporter.write(" * {}\n".format(selection))
+    if test_module_selections:
+        terminal_reporter.write("Selected test modules:\n", bold=True)
+        for selection in test_module_selections:
+            terminal_reporter.write(" * {}\n".format(selection))
+    terminal_reporter.section(
+        "From Filenames(--from-filenames) Test Selection", sep="<"
     )
+    terminal_reporter.ensure_newline()
+
     selected = []
     deselected = []
     for item in items:
