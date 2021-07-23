@@ -1589,21 +1589,7 @@ def _mysql_user_create(
     args = {}
     args["user"] = user
     args["host"] = host
-    if password is not None:
-        if salt.utils.versions.version_cmp(server_version, compare_version) >= 0:
-            args["auth_plugin"] = auth_plugin
-            qry += " IDENTIFIED WITH %(auth_plugin)s BY %(password)s"
-        else:
-            qry += " IDENTIFIED BY %(password)s"
-        args["password"] = str(password)
-    elif password_hash is not None:
-        if salt.utils.versions.version_cmp(server_version, compare_version) >= 0:
-            args["auth_plugin"] = auth_plugin
-            qry += " IDENTIFIED WITH %(auth_plugin)s AS %(password)s"
-        else:
-            qry += " IDENTIFIED BY PASSWORD %(password)s"
-        args["password"] = password_hash
-    elif salt.utils.data.is_true(allow_passwordless):
+    if unix_socket:
         if not plugin_status("auth_socket", **connection_args):
             err = "The auth_socket plugin is not enabled."
             log.error(err)
@@ -1616,12 +1602,33 @@ def _mysql_user_create(
                 else:
                     log.error("Auth via unix_socket can be set only for host=localhost")
     else:
-        log.error(
-            "password or password_hash must be specified, unless "
-            "allow_passwordless=True"
-        )
-        qry = False
-
+        if not salt.utils.data.is_true(allow_passwordless):
+            if password is not None:
+                if (
+                    salt.utils.versions.version_cmp(server_version, compare_version)
+                    >= 0
+                ):
+                    args["auth_plugin"] = auth_plugin
+                    qry += " IDENTIFIED WITH %(auth_plugin)s BY %(password)s"
+                else:
+                    qry += " IDENTIFIED BY %(password)s"
+                args["password"] = str(password)
+            elif password_hash is not None:
+                if (
+                    salt.utils.versions.version_cmp(server_version, compare_version)
+                    >= 0
+                ):
+                    args["auth_plugin"] = auth_plugin
+                    qry += " IDENTIFIED WITH %(auth_plugin)s AS %(password)s"
+                else:
+                    qry += " IDENTIFIED BY PASSWORD %(password)s"
+                args["password"] = password_hash
+            else:
+                log.error(
+                    "password or password_hash must be specified, unless "
+                    "allow_passwordless=True"
+                )
+                qry = False
     return qry, args
 
 
@@ -1641,13 +1648,7 @@ def _mariadb_user_create(
     args = {}
     args["user"] = user
     args["host"] = host
-    if password is not None:
-        qry += " IDENTIFIED BY %(password)s"
-        args["password"] = str(password)
-    elif password_hash is not None:
-        qry += " IDENTIFIED BY PASSWORD %(password)s"
-        args["password"] = password_hash
-    elif salt.utils.data.is_true(allow_passwordless):
+    if unix_socket:
         if not plugin_status("unix_socket", **connection_args):
             err = "The unix_socket plugin is not enabled."
             log.error(err)
@@ -1660,12 +1661,19 @@ def _mariadb_user_create(
                 else:
                     log.error("Auth via unix_socket can be set only for host=localhost")
     else:
-        log.error(
-            "password or password_hash must be specified, unless "
-            "allow_passwordless=True"
-        )
-        qry = False
-
+        if not salt.utils.data.is_true(allow_passwordless):
+            if password is not None:
+                qry += " IDENTIFIED BY %(password)s"
+                args["password"] = str(password)
+            elif password_hash is not None:
+                qry += " IDENTIFIED BY PASSWORD %(password)s"
+                args["password"] = password_hash
+            else:
+                log.error(
+                    "password or password_hash must be specified, unless "
+                    "allow_passwordless=True"
+                )
+                qry = False
     return qry, args
 
 
