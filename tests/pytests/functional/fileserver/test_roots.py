@@ -12,9 +12,7 @@ def configure_loader_modules(base_env_state_tree_root_dir):
     opts = salt.config.DEFAULT_MINION_OPTS.copy()
     print(base_env_state_tree_root_dir)
     opts["file_roots"]["base"] = [str(base_env_state_tree_root_dir)]
-    return {
-        roots: {"__opts__": opts,},
-    }
+    return {roots: {"__opts__": opts}}
 
 
 # nox -e pytest-zeromq-3.8(coverage=False) -- -vvv --run-slow --run-destructive tests\pytests\functional\fileserver\test_roots.py
