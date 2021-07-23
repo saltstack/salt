@@ -1556,6 +1556,9 @@ class Webserver:
         """
         self.ioloop.add_callback(self.ioloop.stop)
         self.server_thread.join()
+        # Replace the current IOLoop so we do not effect other tests.
+        ioloop = salt.ext.tornado.ioloop.IOLoop()
+        ioloop.make_current()
 
 
 class SaveRequestsPostHandler(salt.ext.tornado.web.RequestHandler):
