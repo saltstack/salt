@@ -87,6 +87,7 @@ tests/unit/templates/roots
 
 # Pycharm
 .idea
+venv/
 
 # VS Code
 .vscode
