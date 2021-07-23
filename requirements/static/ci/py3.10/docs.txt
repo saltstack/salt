@@ -145,7 +145,7 @@ tempora==1.14.1
     #   portend
 timelib==0.2.5
     # via -r requirements/static/pkg/py3.10/linux.txt
-urllib3==1.26.4
+urllib3==1.26.5
     # via
     #   -r requirements/static/pkg/py3.10/linux.txt
     #   requests

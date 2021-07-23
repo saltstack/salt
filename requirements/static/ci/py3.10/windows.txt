@@ -399,7 +399,7 @@ toml==0.10.2
     # via
     #   -r requirements/static/ci/common.in
     #   pytest
-urllib3==1.26.4
+urllib3==1.26.5
     # via
     #   -r requirements/static/pkg/py3.10/windows.txt
     #   botocore
