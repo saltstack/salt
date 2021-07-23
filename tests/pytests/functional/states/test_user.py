@@ -100,6 +100,9 @@ def test_user_present_with_existing_group(states, username, existing_account):
     assert ret.result is True
 
 
+@pytest.mark.skip_on_windows(
+    reason="Home directories are handled differently in Windows"
+)
 def test_user_present_when_home_dir_does_not_18843(states, existing_account):
     """
     User exists but home directory does not. Home directory get's created
