@@ -239,7 +239,7 @@ class TestAccount:
         ):
             self.hashed_password = salt.utils.pycrypto.gen_hash(password=self.password)
         if self.create_group is True and self.group_name is None:
-            self.group_name = self.username
+            self.group_name = "group-{}".format(self.username)
         if self.group_name is not None:
             self._group = TestGroup(sminion=self.sminion, name=self.group_name)
 
@@ -299,9 +299,12 @@ class TestAccount:
 
         if self._delete_account:
             try:
-                self.sminion.functions.user.delete(
-                    self.username, remove=True, force=True
-                )
+                delete_kwargs = {"force": True}
+                if salt.utils.platform.is_windows():
+                    delete_kwargs["purge"] = True
+                else:
+                    delete_kwargs["remove"] = True
+                self.sminion.functions.user.delete(self.username, **delete_kwargs)
                 log.debug("Deleted system account: %s", self.username)
             except Exception:  # pylint: disable=broad-except
                 log.warning(
