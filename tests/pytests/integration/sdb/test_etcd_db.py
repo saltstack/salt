@@ -32,6 +32,7 @@ def etc_docker_container(salt_call_cli, sdb_etcd_port):
             port_bindings="{}:2379".format(sdb_etcd_port),
             environment={"ALLOW_NONE_AUTHENTICATION": "yes", "ETCD_ENABLE_V2": "true"},
             cap_add="IPC_LOCK",
+            network_mode="host",
         )
         assert ret.exitcode == 0
         assert ret.json

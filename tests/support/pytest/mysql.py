@@ -98,6 +98,7 @@ def mysql_container(request, salt_factories, salt_call_cli):
         check_ports=[combo.mysql_port],
         container_run_kwargs={
             "ports": {"3306/tcp": combo.mysql_port},
+            "network_mode": "host",
             "environment": {
                 "MYSQL_ROOT_PASSWORD": mysql_passwd,
                 "MYSQL_ROOT_HOST": "%",
