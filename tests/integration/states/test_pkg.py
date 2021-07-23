@@ -533,12 +533,10 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
                 # Exit loop if a versionlock package installed correctly
                 try:
                     self.assertSaltTrueReturn(ret)
-                    log.debug(
-                        "Installed versionlock package: {}".format(versionlock_pkg)
-                    )
+                    log.debug("Installed versionlock package: %s", versionlock_pkg)
                     break
-                except AssertionError as e:
-                    log.debug("Versionlock package not found:\n{}".format(e))
+                except AssertionError as exc:
+                    log.debug("Versionlock package not found:\n%s", exc)
             else:
                 self.fail("Could not install versionlock package from {}".format(pkgs))
 
@@ -654,12 +652,10 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
                 # Exit loop if a versionlock package installed correctly
                 try:
                     self.assertSaltTrueReturn(ret)
-                    log.debug(
-                        "Installed versionlock package: {}".format(versionlock_pkg)
-                    )
+                    log.debug("Installed versionlock package: %s", versionlock_pkg)
                     break
-                except AssertionError as e:
-                    log.debug("Versionlock package not found:\n{}".format(e))
+                except AssertionError as exc:
+                    log.debug("Versionlock package not found:\n%s", exc)
             else:
                 self.fail("Could not install versionlock package from {}".format(pkgs))
 

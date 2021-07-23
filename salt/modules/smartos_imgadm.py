@@ -89,7 +89,7 @@ def _parse_image_meta(image=None, detail=False):
                 name=name, version=version, published=published,
             )
     else:
-        log.debug("smartos_image - encountered invalid image payload: {}".format(image))
+        log.debug("smartos_image - encountered invalid image payload: %s", image)
         ret = {"Error": "This looks like an orphaned image, image payload was invalid."}
 
     return ret

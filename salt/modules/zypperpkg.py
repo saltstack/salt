@@ -1102,7 +1102,7 @@ def _get_configured_repos(root=None):
             ]
         )
     else:
-        log.warning("Repositories not found in {}".format(repos))
+        log.warning("Repositories not found in %s", repos)
 
     return repos_cfg
 
@@ -1572,7 +1572,7 @@ def install(
             pkg_params = {name: version_num}
         else:
             log.warning(
-                '"version" parameter will be ignored for multiple ' "package targets"
+                '"version" parameter will be ignored for multiple package targets'
             )
 
     if pkg_type == "repository":
@@ -2043,7 +2043,7 @@ def list_locks(root=None):
     except OSError:
         pass
     except Exception:  # pylint: disable=broad-except
-        log.warning("Detected a problem when accessing {}".format(_locks))
+        log.warning("Detected a problem when accessing %s", _locks)
 
     return locks
 

@@ -2100,6 +2100,24 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
 
     old = list_pkgs()
     targets = []
+
+    # Loop through pkg_params looking for any
+    # which contains a wildcard and get the
+    # real package names from the packages
+    # which are currently installed.
+    pkg_matches = {}
+    for pkg_param in list(pkg_params):
+        if "*" in pkg_param:
+            pkg_matches = {
+                x: pkg_params[pkg_param] for x in old if fnmatch.fnmatch(x, pkg_param)
+            }
+
+            # Remove previous pkg_param
+            pkg_params.pop(pkg_param)
+
+    # Update pkg_params with the matches
+    pkg_params.update(pkg_matches)
+
     for target in pkg_params:
         version_to_remove = pkg_params[target]
         installed_versions = old[target].split(",")
@@ -3359,9 +3377,9 @@ def _get_patches(installed_only=False):
 
     if parsing_errors:
         log.warning(
-            "Skipped some unexpected output while running '{}' to list patches. Please check output".format(
-                " ".join(cmd)
-            )
+            "Skipped some unexpected output while running '%s' to list "
+            "patches. Please check output",
+            " ".join(cmd),
         )
 
     if installed_only:

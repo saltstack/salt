@@ -227,7 +227,6 @@ class MockCall:
         self.kwargs = kwargs
 
     def __repr__(self):
-        # future lint: disable=blacklisted-function
         ret = "MockCall("
         for arg in self.args:
             ret += repr(arg) + ", "
@@ -240,7 +239,6 @@ class MockCall:
                 ret += "{}={}".format(salt.utils.stringutils.to_str(key), repr(val))
         ret += ")"
         return ret
-        # future lint: enable=blacklisted-function
 
     def __str__(self):
         return self.__repr__()

@@ -346,7 +346,7 @@ def ignore_cidr(vm_, ip):
         cidrs = [cidrs]
     for cidr in cidrs or []:
         if ip_address(ip) in ip_network(cidr):
-            log.warning("IP '{}' found within '{}'; ignoring it.".format(ip, cidr))
+            log.warning("IP %r found within %r; ignoring it.", ip, cidr)
             return True
 
     return False
