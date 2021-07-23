@@ -3,45 +3,41 @@
 """
 
 import logging
-import os
-import shutil
 
 import pytest  # pylint: disable=unused-import
 import salt.state
-from saltfactories.utils.tempfiles import temp_file
-from tests.support.runtests import RUNTIME_VARS
 
 log = logging.getLogger(__name__)
 
 
 @pytest.fixture
 def root_dir(tmp_path):
-    return str(tmp_path / "root_dir")
+    return tmp_path / "root_dir"
 
 
 @pytest.fixture
 def state_tree_dir(root_dir):
-    return os.path.join(root_dir, "state_tree")
+    return root_dir / "state_tree"
 
 
 @pytest.fixture
 def cache_dir(root_dir):
-    return os.path.join(root_dir, "cachedir")
+    return root_dir / "cache_dir"
 
 
 @pytest.fixture
 def highstate(temp_salt_minion, temp_salt_master, root_dir, state_tree_dir, cache_dir):
-    for dpath in (root_dir, state_tree_dir, cache_dir):
-        if not os.path.isdir(dpath):
-            os.makedirs(dpath)
+    # for dpath in (root_dir, state_tree_dir, cache_dir):
+    #    if not os.path.isdir(dpath):
+    #        os.makedirs(dpath)
 
     opts = temp_salt_minion.config.copy()
-    opts["root_dir"] = root_dir
+    opts["root_dir"] = str(root_dir)
     opts["state_events"] = False
     opts["id"] = "match"
     opts["file_client"] = "local"
-    opts["file_roots"] = dict(base=[state_tree_dir])
-    opts["cachedir"] = cache_dir
+    opts["file_roots"] = dict(base=[str(state_tree_dir)])
+    opts["cachedir"] = str(cache_dir)
     opts["test"] = False
 
     opts.update(
@@ -88,9 +84,13 @@ def test_matches_whitelist_with_string(highstate):
 
 
 def test_compile_state_usage(highstate, state_tree_dir):
-    top = temp_file("top.sls", "base: {'*': [foo]}", state_tree_dir)
-    used_state = temp_file("foo.sls", "foo: test.nop", state_tree_dir)
-    unused_state = temp_file("bar.sls", "bar: test.nop", state_tree_dir)
+    top = pytest.helpers.temp_file("top.sls", "base: {'*': [foo]}", str(state_tree_dir))
+    used_state = pytest.helpers.temp_file(
+        "foo.sls", "foo: test.nop", str(state_tree_dir)
+    )
+    unused_state = pytest.helpers.temp_file(
+        "bar.sls", "bar: test.nop", str(state_tree_dir)
+    )
 
     with top, used_state, unused_state:
         state_usage_dict = highstate.compile_state_usage()
@@ -106,17 +106,70 @@ def test_find_sls_ids_with_exclude(highstate, state_tree_dir):
     """
     See https://github.com/saltstack/salt/issues/47182
     """
-    sls_dir = "issue-47182"
-    shutil.copytree(
-        os.path.join(RUNTIME_VARS.BASE_FILES, sls_dir),
-        os.path.join(state_tree_dir, sls_dir),
-    )
-    shutil.move(os.path.join(state_tree_dir, sls_dir, "top.sls"), state_tree_dir)
-    # Manually compile the high data. We don't have to worry about all of
-    # the normal error checking we do here since we know that all the SLS
-    # files exist and there is no whitelist/blacklist being used.
-    top = highstate.get_top()  # pylint: disable=assignment-from-none
-    matches = highstate.top_matches(top)
-    high, _ = highstate.render_highstate(matches)
-    ret = salt.state.find_sls_ids("issue-47182.stateA.newer", high)
-    assert ret == [("somestuff", "cmd")]
+    top_sls = """
+    base:
+      '*':
+        - issue-47182.stateA
+        - issue-47182.stateB
+        """
+
+    slsfile1 = """
+    slsfile1-nop:
+        test.nop
+        """
+
+    slsfile2 = """
+    slsfile2-nop:
+      test.nop
+        """
+
+    stateB = """
+    include:
+      - issue-47182.slsfile1
+      - issue-47182.slsfile2
+
+    some-state:
+      test.nop:
+        - require:
+          - sls: issue-47182.slsfile1
+        - require_in:
+          - sls: issue-47182.slsfile2
+        """
+
+    stateA_init = """
+    include:
+      - issue-47182.stateA.newer
+        """
+
+    stateA_newer = """
+    exclude:
+      - sls: issue-47182.stateA
+
+    somestuff:
+      cmd.run:
+        - name: echo This supersedes the stuff previously done in issue-47182.stateA
+        """
+
+    sls_dir = str(state_tree_dir / "issue-47182")
+    stateA_sls_dir = str(state_tree_dir / "issue-47182" / "stateA")
+
+    with pytest.helpers.temp_file("top.sls", top_sls, str(state_tree_dir)):
+        with pytest.helpers.temp_file(
+            "slsfile1.sls", slsfile1, sls_dir
+        ), pytest.helpers.temp_file(
+            "slsfile1.sls", slsfile1, sls_dir
+        ), pytest.helpers.temp_file(
+            "stateB.sls", stateB, sls_dir
+        ), pytest.helpers.temp_file(
+            "init.sls", stateA_init, stateA_sls_dir
+        ), pytest.helpers.temp_file(
+            "newer.sls", stateA_newer, stateA_sls_dir
+        ):
+            # Manually compile the high data. We don't have to worry about all of
+            # the normal error checking we do here since we know that all the SLS
+            # files exist and there is no whitelist/blacklist being used.
+            top = highstate.get_top()  # pylint: disable=assignment-from-none
+            matches = highstate.top_matches(top)
+            high, _ = highstate.render_highstate(matches)
+            ret = salt.state.find_sls_ids("issue-47182.stateA.newer", high)
+            assert ret == [("somestuff", "cmd")]
