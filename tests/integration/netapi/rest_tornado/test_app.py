@@ -3,10 +3,10 @@ import threading
 import time
 
 import pytest
+import salt.ext.tornado.ioloop
 import salt.utils.json
 import salt.utils.stringutils
 from salt.netapi.rest_tornado import saltnado
-from salt.utils.zeromq import ZMQDefaultLoop as ZMQIOLoop
 from tests.support.helpers import TstSuiteLoggingHandler
 from tests.support.unit import skipIf
 from tests.unit.netapi.test_rest_tornado import SaltnadoTestsBase
@@ -646,7 +646,9 @@ class TestEventsSaltAPIHandler(SaltnadoIntegrationTestsBase):
         else:
             # wait so that we can ensure that the next future is ready to go
             # to make sure we don't explode if the next one is ready
-            ZMQIOLoop.current().add_timeout(time.time() + 0.5, self._stop)
+            salt.ext.tornado.ioloop.IOLoop.current().add_timeout(
+                time.time() + 0.5, self._stop
+            )
 
         event = event.strip()
         # if we got a retry, just continue
