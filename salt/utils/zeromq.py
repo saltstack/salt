@@ -27,24 +27,8 @@ try:
         LIBZMQ_VERSION_INFO = tuple(
             [int(v_el) for v_el in zmq.zmq_version().split(".")]
         )
-        if ZMQ_VERSION_INFO[0] > 16:  # 17.0.x+ deprecates zmq's ioloops
-            ZMQDefaultLoop = salt.ext.tornado.ioloop.IOLoop
 except Exception:  # pylint: disable=broad-except
     log.exception("Error while getting LibZMQ/PyZMQ library version")
-
-if ZMQDefaultLoop is None:
-    try:
-        import zmq.eventloop.ioloop
-
-        # Support for ZeroMQ 13.x
-        if not hasattr(zmq.eventloop.ioloop, "ZMQIOLoop"):
-            zmq.eventloop.ioloop.ZMQIOLoop = zmq.eventloop.ioloop.IOLoop
-        if salt.ext.tornado.version_info < (5,):
-            ZMQDefaultLoop = zmq.eventloop.ioloop.ZMQIOLoop
-    except ImportError:
-        ZMQDefaultLoop = None
-    if ZMQDefaultLoop is None:
-        ZMQDefaultLoop = salt.ext.tornado.ioloop.IOLoop
 
 
 def install_zmq():

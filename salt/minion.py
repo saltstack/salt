@@ -1025,7 +1025,7 @@ class MinionManager(MinionBase):
         self.minions = []
         self.jid_queue = []
 
-        seff.io_loop = salt.ext.tornado.ioloop.IOLoop.current()
+        self.io_loop = salt.ext.tornado.ioloop.IOLoop.current()
         self.process_manager = ProcessManager(name="MultiMinionProcessManager")
         self.io_loop.spawn_callback(
             self.process_manager.run, **{"asynchronous": True}
