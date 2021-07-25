@@ -21,6 +21,41 @@ class BeaconsTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {beacons: {}}
 
+    def test_beacon_process(self):
+        """
+        Test the process function in the beacon class
+        returns the correct information when an exception
+        occurs
+        """
+        mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
+        mock_opts["id"] = "minion"
+        mock_opts["__role"] = "minion"
+        mock_opts["beacons"] = {
+            "watch_apache": [
+                {"processes": {"apache2": "stopped"}},
+                {"beacon_module": "ps"},
+            ]
+        }
+        beacon_mock = MagicMock(side_effect=Exception("Global Thermonuclear War"))
+        beacon_mock.__globals__ = {}
+
+        with patch.dict(beacons.__opts__, mock_opts):
+            beacon = salt.beacons.Beacon(mock_opts, [])
+
+            found = "ps.beacon" in beacon.beacons
+            beacon.beacons["ps.beacon"] = beacon_mock
+            ret = beacon.process(mock_opts["beacons"], mock_opts["grains"])
+
+            _expected = [
+                {
+                    "tag": "salt/beacon/minion/watch_apache/",
+                    "error": "Global Thermonuclear War",
+                    "data": {},
+                    "beacon_name": "ps",
+                }
+            ]
+            self.assertEqual(ret, _expected)
+
     def test_beacon_module(self):
         """
         Test that beacon_module parameter for beacon configuration

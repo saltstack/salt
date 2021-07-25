@@ -5,6 +5,7 @@ This package contains the loader modules for the salt streams system
 import copy
 import logging
 import re
+import sys
 
 import salt.loader
 import salt.utils.event
@@ -125,16 +126,35 @@ class Beacon:
                         continue
 
                 # Fire the beacon!
-                raw = self.beacons[fun_str](b_config[mod])
-                for data in raw:
+                error = None
+                try:
+                    log.debug(self.beacons[fun_str])
+                    raw = self.beacons[fun_str](b_config[mod])
+                except:  # pylint: disable=bare-except
+                    error = "{}".format(sys.exc_info()[1])
+                    log.error("Unable to start %s beacon, %s", mod, error)
+                    # send beacon error event
                     tag = "salt/beacon/{}/{}/".format(self.opts["id"], mod)
-                    if "tag" in data:
-                        tag += data.pop("tag")
-                    if "id" not in data:
-                        data["id"] = self.opts["id"]
-                    ret.append({"tag": tag, "data": data, "beacon_name": beacon_name})
-                if runonce:
-                    self.disable_beacon(mod)
+                    ret.append(
+                        {
+                            "tag": tag,
+                            "error": error,
+                            "data": {},
+                            "beacon_name": beacon_name,
+                        }
+                    )
+                if not error:
+                    for data in raw:
+                        tag = "salt/beacon/{}/{}/".format(self.opts["id"], mod)
+                        if "tag" in data:
+                            tag += data.pop("tag")
+                        if "id" not in data:
+                            data["id"] = self.opts["id"]
+                        ret.append(
+                            {"tag": tag, "data": data, "beacon_name": beacon_name}
+                        )
+                    if runonce:
+                        self.disable_beacon(mod)
             else:
                 log.warning("Unable to process beacon %s", mod)
         return ret
