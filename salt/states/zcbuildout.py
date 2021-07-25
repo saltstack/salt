@@ -52,7 +52,7 @@ def __virtual__():
     return (False, "buildout module could not be loaded")
 
 
-INVALID_RESPONSE = "We did not get any expectable answer from docker"
+INVALID_RESPONSE = "Unexpected response from docker"
 VALID_RESPONSE = ""
 NOTSET = object()
 MAPPING_CACHE = {}

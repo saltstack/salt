@@ -52,16 +52,9 @@ if Defined x (
 :: Define Variables
 @echo Defining Variables...
 @echo ----------------------------------------------------------------------
-if %Python%==3 (
-    Set "PyDir=C:\Python37"
-    Set "PyVerMajor=3"
-    Set "PyVerMinor=7"
-) else (
-    :: Placeholder for future version
-    :: Set "PyDir=C:\Python4"
-    :: Set "PyVerMajor=0"
-    :: Set "PyVerMinor=0"
-)
+if %PyDir%=="" (Set "PyDir=C:\Python38")
+if %PyVerMajor%=="" (Set "PyVerMajor=3")
+if %PyVerMinor%=="" (Set "PyVerMinor=8")
 
 :: Verify the Python Installation
 If not Exist "%PyDir%\python.exe" (
@@ -181,8 +174,10 @@ powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url% 
 :: Remove the fixed path in .exe files
 @echo Removing fixed path from .exe files
 @echo ----------------------------------------------------------------------
-"%PyDir%\python" "%CurDir%\portable.py" -f "%BinDir%\Scripts\easy_install.exe"
-"%PyDir%\python" "%CurDir%\portable.py" -f "%BinDir%\Scripts\easy_install-%PyVerMajor%.%PyVerMinor%.exe"
+:: As of setuptools 53.0 easy_install has been removed
+:: https://github.com/pypa/setuptools/pull/2544
+:: "%PyDir%\python" "%CurDir%\portable.py" -f "%BinDir%\Scripts\easy_install.exe"
+:: "%PyDir%\python" "%CurDir%\portable.py" -f "%BinDir%\Scripts\easy_install-%PyVerMajor%.%PyVerMinor%.exe"
 "%PyDir%\python" "%CurDir%\portable.py" -f "%BinDir%\Scripts\pip.exe"
 "%PyDir%\python" "%CurDir%\portable.py" -f "%BinDir%\Scripts\pip%PyVerMajor%.%PyVerMinor%.exe"
 "%PyDir%\python" "%CurDir%\portable.py" -f "%BinDir%\Scripts\pip%PyVerMajor%.exe"
