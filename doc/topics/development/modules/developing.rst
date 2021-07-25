@@ -68,7 +68,7 @@ The Salt Loader
 
 Salt's loader system is responsible for reading `Special Module Contents`_ and
 providing the context for the special `Dunder Dictionaries`_. When modules
-developed for Salt's loader are imported directly the dunder attributes won't
+developed for Salt's loader are imported directly, the dunder attributes won't
 be populated. You can use the `Loader Context`_ to work around this.
 
 Loader Context
