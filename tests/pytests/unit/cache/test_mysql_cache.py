@@ -154,3 +154,83 @@ def test_flush():
                 ]
                 mysql_cache.flush(bank="bank", key="key")
                 mock_run_query.assert_has_calls(expected_calls, True)
+
+
+def test_init_client(master_config):
+    """
+    Tests that the _init_client places the correct information in __context__
+    """
+    with patch.dict(
+        mysql_cache.__opts__, {"mysql.max_allowed_packet": 100000},
+    ):
+        with patch.object(mysql_cache, "_create_table") as mock_create_table:
+            mysql_cache._init_client()
+
+            assert "mysql_table_name" in mysql_cache.__context__
+            assert mysql_cache.__context__["mysql_table_name"] == "salt"
+
+            assert "mysql_kwargs" in mysql_cache.__context__
+            assert mysql_cache.__context__["mysql_kwargs"]["autocommit"]
+            assert mysql_cache.__context__["mysql_kwargs"]["host"] == "127.0.0.1"
+            assert mysql_cache.__context__["mysql_kwargs"]["db"] == "salt_cache"
+            assert mysql_cache.__context__["mysql_kwargs"]["port"] == 3306
+            assert (
+                mysql_cache.__context__["mysql_kwargs"]["max_allowed_packet"] == 100000
+            )
+
+    with patch.dict(
+        mysql_cache.__opts__,
+        {
+            "mysql.max_allowed_packet": 100000,
+            "mysql.db": "salt_mysql_db",
+            "mysql.host": "mysql-host",
+        },
+    ):
+        with patch.object(mysql_cache, "_create_table") as mock_create_table:
+            mysql_cache._init_client()
+
+            assert "mysql_table_name" in mysql_cache.__context__
+            assert mysql_cache.__context__["mysql_table_name"] == "salt"
+
+            assert "mysql_kwargs" in mysql_cache.__context__
+            assert mysql_cache.__context__["mysql_kwargs"]["autocommit"]
+            assert mysql_cache.__context__["mysql_kwargs"]["host"] == "mysql-host"
+            assert mysql_cache.__context__["mysql_kwargs"]["db"] == "salt_mysql_db"
+            assert mysql_cache.__context__["mysql_kwargs"]["port"] == 3306
+            assert (
+                mysql_cache.__context__["mysql_kwargs"]["max_allowed_packet"] == 100000
+            )
+
+
+def test_create_table(master_config):
+    """
+    Tests that the _create_table
+    """
+
+    serializer = salt.payload.Serial(master_config)
+
+    mock_connect_client = MagicMock()
+    with patch.dict(
+        mysql_cache.__context__,
+        {
+            "serial": serializer,
+            "mysql_table_name": "salt",
+            "mysql_client": mock_connect_client,
+            "mysql_kwargs": {"db": "salt_cache"},
+        },
+    ):
+        with patch.object(mysql_cache, "run_query") as mock_run_query:
+            mock_run_query.return_value = (MagicMock(), 1)
+
+            sql_call = """CREATE TABLE IF NOT EXISTS salt (
+      bank CHAR(255),
+      etcd_key CHAR(255),
+      data MEDIUMBLOB,
+      PRIMARY KEY(bank, etcd_key)
+    );"""
+            expected_calls = [call(mock_connect_client, sql_call)]
+            try:
+                mysql_cache._create_table()
+            except SaltCacheError:
+                pytest.fail("This test should not raise an exception")
+            mock_run_query.assert_has_calls(expected_calls, True)

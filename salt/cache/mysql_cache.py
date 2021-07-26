@@ -148,7 +148,7 @@ def _create_table():
         __context__["mysql_table_name"]
     )
     log.info("mysql_cache: creating table %s", __context__["mysql_table_name"])
-    cur, _ = run_query(__context__["myql_client"], query)
+    cur, _ = run_query(__context__["mysql_client"], query)
     cur.close()
 
 
@@ -158,17 +158,27 @@ def _init_client():
     if __context__.get("mysql_client") is not None:
         return
 
+    opts = copy.deepcopy(__opts__)
     mysql_kwargs = {
-        "host": __opts__.get("mysql.host", "127.0.0.1"),
-        "user": __opts__.get("mysql.user", None),
-        "passwd": __opts__.get("mysql.password", None),
-        "db": __opts__.get("mysql.database", _DEFAULT_DATABASE_NAME),
-        "port": __opts__.get("mysql.port", 3306),
-        "unix_socket": __opts__.get("mysql.unix_socket", None),
-        "connect_timeout": __opts__.get("mysql.connect_timeout", None),
         "autocommit": True,
+        "host": opts.pop("mysql.host", "127.0.0.1"),
+        "user": opts.pop("mysql.user", None),
+        "passwd": opts.pop("mysql.password", None),
+        "db": opts.pop("mysql.database", _DEFAULT_DATABASE_NAME),
+        "port": opts.pop("mysql.port", 3306),
+        "unix_socket": opts.pop("mysql.unix_socket", None),
+        "connect_timeout": opts.pop("mysql.connect_timeout", None),
     }
-    __context__["mysql_table_name"] = __opts__.get("mysql.table_name")
+    mysql_kwargs["autocommit"] = True
+
+    __context__["mysql_table_name"] = opts.pop("mysql.table_name", "salt")
+
+    # Gather up any additional MySQL configuration options
+    for k in opts:
+        if k.startswith("mysql."):
+            _key = k.split(".")[1]
+            mysql_kwargs[_key] = opts.get(k)
+
     # TODO: handle SSL connection parameters
 
     for k, v in copy.deepcopy(mysql_kwargs).items():
