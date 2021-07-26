@@ -184,11 +184,7 @@ class BuildoutTestCase(Base):
         ret2 = buildout._salt_callback(callback2)(2, b=6)
         self.assertEqual(ret2["status"], False)
         self.assertTrue(ret2["logs_by_level"]["error"][0].startswith("Traceback"))
-        self.assertTrue(
-            "We did not get any "
-            "expectable answer "
-            "from buildout" in ret2["comment"]
-        )
+        self.assertTrue("Unexpected response from buildout" in ret2["comment"])
         self.assertEqual(ret2["out"], None)
         for l in buildout.LOG.levels:
             self.assertTrue(0 == len(buildout.LOG.by_level[l]))

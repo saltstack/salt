@@ -639,6 +639,7 @@ class IPCMessageSubscriber(IPCClient):
 
     async_methods = [
         "read",
+        "connect",
     ]
     close_methods = [
         "close",

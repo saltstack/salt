@@ -1,13 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 Runner module to directly manage the git external pillar
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 
-# Import salt libs
 import salt.pillar.git_pillar
 import salt.utils.gitfs
 from salt.exceptions import SaltRunnerError

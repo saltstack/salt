@@ -3715,7 +3715,7 @@ def _metaproxy_call(opts, fn_name):
         metaproxy_name = opts["metaproxy"]
     except KeyError:
         metaproxy_name = "proxy"
-        log.error(
+        log.debug(
             "No metaproxy key found in opts for id %s. Defaulting to standard proxy minion",
             opts["id"],
         )

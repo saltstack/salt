@@ -7,9 +7,9 @@ from contextlib import closing
 
 import pytest
 import salt.utils.http as http
+from saltfactories.utils.tempfiles import temp_file
 from tests.support.helpers import MirrorPostHandler, Webserver
 from tests.support.mock import MagicMock, patch
-from tests.support.pytest.helpers import temp_state_file
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
 
@@ -287,7 +287,7 @@ class HTTPGetTestCase(TestCase):
             RUNTIME_VARS.TMP
         )
 
-        with temp_state_file("{}/core.sls".format(self.get_webserver.root), core_state):
+        with temp_file("core.sls", core_state, self.get_webserver.root):
             for backend in ["tornado", "requests", "urllib2"]:
                 ret = http.query(self.get_webserver.url("core.sls"), backend=backend)
                 body = ret.get("body", "")

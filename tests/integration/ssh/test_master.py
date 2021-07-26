@@ -3,9 +3,9 @@ Simple Smoke Tests for Connected SSH minions
 """
 
 import pytest
+from saltfactories.utils.tempfiles import temp_file
 from tests.support.case import SSHCase
 from tests.support.helpers import requires_system_grains
-from tests.support.pytest.helpers import temp_state_file
 from tests.support.runtests import RUNTIME_VARS
 
 
@@ -59,7 +59,7 @@ class SSHMasterTestCase(SSHCase):
             RUNTIME_VARS.TMP
         )
 
-        with temp_state_file("core.sls", core_state):
+        with temp_file("core.sls", core_state, RUNTIME_VARS.TMP_BASEENV_STATE_TREE):
             ret = self.run_function("state.apply", ["core"])
             for key, value in ret.items():
                 self.assertTrue(value["result"])
@@ -82,9 +82,9 @@ class SSHMasterTestCase(SSHCase):
             RUNTIME_VARS.TMP
         )
 
-        with temp_state_file("top.sls", top_sls), temp_state_file(
-            "core.sls", core_state
-        ):
+        with temp_file(
+            "top.sls", top_sls, RUNTIME_VARS.TMP_BASEENV_STATE_TREE
+        ), temp_file("core.sls", core_state, RUNTIME_VARS.TMP_BASEENV_STATE_TREE):
             ret = self.run_function("state.highstate")
             for key, value in ret.items():
                 self.assertTrue(value["result"])

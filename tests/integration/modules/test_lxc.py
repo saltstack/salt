@@ -15,7 +15,7 @@ from tests.support.unit import skipIf
 @pytest.mark.windows_whitelisted
 @pytest.mark.skip_if_not_root
 @pytest.mark.skip_if_binaries_missing(
-    "lxc-start", message="LXC is not installed or minimal version not met"
+    "lxc-start", reason="LXC is not installed or minimal version not met"
 )
 class LXCModuleTest(ModuleCase):
     """

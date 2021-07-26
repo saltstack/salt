@@ -726,6 +726,7 @@ class TestGitPythonAuthenticatedHTTP(TestGitPythonHTTP, GitPythonMixin):
     password = PASSWORD
 
 
+@skipIf(salt.utils.platform.is_aarch64(), "Test is broken on aarch64")
 @skipIf(_windows_or_mac(), "minion is windows or mac")
 @skipIf(
     not HAS_PYGIT2,

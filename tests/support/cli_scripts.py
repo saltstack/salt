@@ -9,7 +9,7 @@
 import logging
 import os
 
-from tests.support.saltfactories_compat import generate_script
+from saltfactories.utils.cli_scripts import generate_script
 
 log = logging.getLogger(__name__)
 

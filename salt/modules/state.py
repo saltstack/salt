@@ -1367,9 +1367,7 @@ def sls(mods, test=None, exclude=None, queue=False, sync_mods=None, **kwargs):
 
     # If the state file is an integer, convert to a string then to unicode
     if isinstance(mods, int):
-        mods = salt.utils.stringutils.to_unicode(
-            str(mods)
-        )  # future lint: disable=blacklisted-function
+        mods = salt.utils.stringutils.to_unicode(str(mods))
 
     mods = salt.utils.args.split_input(mods)
 
@@ -2475,7 +2473,7 @@ def event(
             if salt.utils.stringutils.expr_match(ret["tag"], tagmatch):
                 if not quiet:
                     salt.utils.stringutils.print_cli(
-                        "{}\t{}".format(  # future lint: blacklisted-function
+                        "{}\t{}".format(
                             salt.utils.stringutils.to_str(ret["tag"]),
                             salt.utils.json.dumps(
                                 salt.utils.data.decode(ret["data"]),

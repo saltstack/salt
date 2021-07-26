@@ -1,13 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 Service support for the REST example
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import logging
 
-# Import Salts libs
 import salt.utils.platform
 
 log = logging.getLogger(__name__)

@@ -3,6 +3,8 @@
 """
 
 
+import configparser
+import io
 import os
 from xml.dom import minidom
 
@@ -11,8 +13,6 @@ import salt.modules.zypperpkg as zypper
 import salt.utils.files
 import salt.utils.pkg
 from salt.exceptions import CommandExecutionError
-from salt.ext import six
-from salt.ext.six.moves import configparser
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, call, patch
 from tests.support.unit import TestCase
@@ -1516,7 +1516,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
         """
         repos_cfg = configparser.ConfigParser()
         for cfg in ["zypper-repo-1.cfg", "zypper-repo-2.cfg"]:
-            repos_cfg.readfp(six.moves.StringIO(get_test_data(cfg)))
+            repos_cfg.readfp(io.StringIO(get_test_data(cfg)))
 
         for alias in repos_cfg.sections():
             r_info = zypper._get_repo_info(alias, repos_cfg=repos_cfg)

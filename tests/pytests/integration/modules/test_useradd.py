@@ -4,7 +4,10 @@ Integration tests for modules/useradd.py and modules/win_useradd.py
 import pytest
 from tests.support.helpers import random_string, requires_system_grains
 
-pytestmark = [pytest.mark.windows_whitelisted, pytest.mark.skip_unless_on_windows]
+pytestmark = [
+    pytest.mark.windows_whitelisted,
+    pytest.mark.skip_unless_on_windows,
+]
 
 
 @pytest.fixture(scope="function")

@@ -8,8 +8,8 @@ from tests.support.mixins import SaltReturnAssertsMixin
 
 
 @pytest.mark.skipif(salt.modules.lxd.HAS_PYLXD is False, reason="pylxd not installed")
-@pytest.mark.skip_if_binaries_missing("lxd", message="LXD not installed")
-@pytest.mark.skip_if_binaries_missing("lxc", message="LXC not installed")
+@pytest.mark.skip_if_binaries_missing("lxd", reason="LXD not installed")
+@pytest.mark.skip_if_binaries_missing("lxc", reason="LXC not installed")
 class LxdProfileTestCase(ModuleCase, SaltReturnAssertsMixin):
     def tearDown(self):
         self.run_state(

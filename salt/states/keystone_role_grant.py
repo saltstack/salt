@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Management of OpenStack Keystone Role Grants
 ============================================
@@ -27,7 +26,6 @@ Example States
         - description: 'my group'
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 __virtualname__ = "keystone_role_grant"
 

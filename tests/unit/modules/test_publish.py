@@ -1,22 +1,16 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
 import salt.modules.publish as publish
 from salt.exceptions import SaltReqTimeoutError
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
 
 
-class SAuth(object):
+class SAuth:
     """
     Mock SAuth class
     """
@@ -32,7 +26,7 @@ class SAuth(object):
         return "salt_tok"
 
 
-class Channel(object):
+class Channel:
     """
     Mock Channel class
     """

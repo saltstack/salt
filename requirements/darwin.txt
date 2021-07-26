@@ -1,6 +1,7 @@
 # Darwin source distribution requirements
 
 -r zeromq.txt
+-r pyobjc.txt
 
 apache-libcloud>=2.4.0
 backports.ssl_match_hostname>=3.7.0.1; python_version < '3.7'
@@ -19,4 +20,3 @@ python-gnupg>=0.4.4
 setproctitle>=1.1.10
 timelib>=0.2.5
 vultr>=1.0.1
-pyobjc==6.2.2

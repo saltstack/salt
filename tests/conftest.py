@@ -34,7 +34,6 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.win_functions
-import saltfactories.utils.compat
 from salt.serializers import yaml
 from salt.utils.immutabletypes import freeze
 from tests.support.helpers import (
@@ -173,7 +172,7 @@ def pytest_addoption(parser):
         dest="proxy",
         action="store_true",
         default=False,
-        help="Run proxy tests",
+        help="Run proxy tests (DEPRECATED)",
     )
     test_selection_group.addoption(
         "--run-slow", action="store_true", default=False, help="Run slow tests.",
@@ -465,9 +464,7 @@ def pytest_runtest_setup(item):
         item._skipped_by_mark = True
         pytest.skip(PRE_PYTEST_SKIP_REASON)
 
-    if saltfactories.utils.compat.has_unittest_attr(
-        item, "__slow_test__"
-    ) or item.get_closest_marker("slow_test"):
+    if item.get_closest_marker("slow_test"):
         if item.config.getoption("--run-slow") is False:
             item._skipped_by_mark = True
             pytest.skip("Slow tests are disabled!")
@@ -802,11 +799,11 @@ def salt_syndic_master_factory(
         }
     )
 
-    factory = salt_factories.get_salt_master_daemon(
+    factory = salt_factories.salt_master_daemon(
         "syndic_master",
         order_masters=True,
-        config_defaults=config_defaults,
-        config_overrides=config_overrides,
+        defaults=config_defaults,
+        overrides=config_overrides,
         extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
     )
     return factory
@@ -823,10 +820,10 @@ def salt_syndic_factory(salt_factories, salt_syndic_master_factory):
         opts["transport"] = salt_syndic_master_factory.config["transport"]
         config_defaults["syndic"] = opts
     config_overrides = {"log_level_logfile": "quiet"}
-    factory = salt_syndic_master_factory.get_salt_syndic_daemon(
+    factory = salt_syndic_master_factory.salt_syndic_daemon(
         "syndic",
-        config_defaults=config_defaults,
-        config_overrides=config_overrides,
+        defaults=config_defaults,
+        overrides=config_overrides,
         extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
     )
     return factory
@@ -935,10 +932,10 @@ def salt_master_factory(
         else:
             shutil.copyfile(source, dest)
 
-    factory = salt_syndic_master_factory.get_salt_master_daemon(
+    factory = salt_syndic_master_factory.salt_master_daemon(
         "master",
-        config_defaults=config_defaults,
-        config_overrides=config_overrides,
+        defaults=config_defaults,
+        overrides=config_overrides,
         extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
     )
     return factory
@@ -961,13 +958,13 @@ def salt_minion_factory(salt_master_factory):
     virtualenv_binary = get_virtualenv_binary_path()
     if virtualenv_binary:
         config_overrides["venv_bin"] = virtualenv_binary
-    factory = salt_master_factory.get_salt_minion_daemon(
+    factory = salt_master_factory.salt_minion_daemon(
         "minion",
-        config_defaults=config_defaults,
-        config_overrides=config_overrides,
+        defaults=config_defaults,
+        overrides=config_overrides,
         extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
     )
-    factory.register_after_terminate_callback(
+    factory.after_terminate(
         pytest.helpers.remove_stale_minion_key, salt_master_factory, factory.id
     )
     return factory
@@ -992,43 +989,13 @@ def salt_sub_minion_factory(salt_master_factory):
     virtualenv_binary = get_virtualenv_binary_path()
     if virtualenv_binary:
         config_overrides["venv_bin"] = virtualenv_binary
-    factory = salt_master_factory.get_salt_minion_daemon(
+    factory = salt_master_factory.salt_minion_daemon(
         "sub_minion",
-        config_defaults=config_defaults,
-        config_overrides=config_overrides,
+        defaults=config_defaults,
+        overrides=config_overrides,
         extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
     )
-    factory.register_after_terminate_callback(
-        pytest.helpers.remove_stale_minion_key, salt_master_factory, factory.id
-    )
-    return factory
-
-
-@pytest.fixture(scope="session")
-def salt_proxy_factory(salt_factories, salt_master_factory):
-    proxy_minion_id = "proxytest"
-    root_dir = salt_factories.get_root_dir_for_daemon(proxy_minion_id)
-    conf_dir = root_dir / "conf"
-    conf_dir.mkdir(parents=True, exist_ok=True)
-    RUNTIME_VARS.TMP_PROXY_CONF_DIR = str(conf_dir)
-
-    with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, "proxy")) as rfh:
-        config_defaults = yaml.deserialize(rfh.read())
-
-    config_defaults["root_dir"] = str(root_dir)
-    config_defaults["hosts.file"] = os.path.join(RUNTIME_VARS.TMP, "hosts")
-    config_defaults["aliases.file"] = os.path.join(RUNTIME_VARS.TMP, "aliases")
-    config_defaults["transport"] = salt_master_factory.config["transport"]
-
-    config_overrides = {"log_level_logfile": "quiet"}
-
-    factory = salt_master_factory.get_salt_proxy_minion_daemon(
-        proxy_minion_id,
-        config_defaults=config_defaults,
-        config_overrides=config_overrides,
-        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
-    )
-    factory.register_after_terminate_callback(
+    factory.after_terminate(
         pytest.helpers.remove_stale_minion_key, salt_master_factory, factory.id
     )
     return factory
@@ -1036,27 +1003,27 @@ def salt_proxy_factory(salt_factories, salt_master_factory):
 
 @pytest.fixture(scope="session")
 def salt_cli(salt_master_factory):
-    return salt_master_factory.get_salt_cli()
+    return salt_master_factory.salt_cli()
 
 
 @pytest.fixture(scope="session")
 def salt_cp_cli(salt_master_factory):
-    return salt_master_factory.get_salt_cp_cli()
+    return salt_master_factory.salt_cp_cli()
 
 
 @pytest.fixture(scope="session")
 def salt_key_cli(salt_master_factory):
-    return salt_master_factory.get_salt_key_cli()
+    return salt_master_factory.salt_key_cli()
 
 
 @pytest.fixture(scope="session")
 def salt_run_cli(salt_master_factory):
-    return salt_master_factory.get_salt_run_cli()
+    return salt_master_factory.salt_run_cli()
 
 
 @pytest.fixture(scope="session")
 def salt_call_cli(salt_minion_factory):
-    return salt_minion_factory.get_salt_call_cli()
+    return salt_minion_factory.salt_call_cli()
 
 
 @pytest.fixture(scope="session", autouse=True)

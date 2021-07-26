@@ -869,7 +869,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         managed = salt.utils.stringutils.to_unicode(test_file.read_bytes())
         expected = dedent(
             """\
-            Die Webseite ist https://saltstack.com.
+            Die Webseite ist https://saltproject.io.
             Der Zucker ist süß.
 
             """

@@ -24,9 +24,9 @@ log = logging.getLogger(__name__)
 pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.skip_on_freebsd(reason="No Docker on FreeBSD available"),
-    pytest.mark.skip_if_binaries_missing("busybox", message="Busybox not installed"),
+    pytest.mark.skip_if_binaries_missing("busybox", reason="Busybox not installed"),
     pytest.mark.skip_if_binaries_missing(
-        "docker", "dockerd", message="Docker not installed"
+        "docker", "dockerd", reason="Docker not installed"
     ),
 ]
 

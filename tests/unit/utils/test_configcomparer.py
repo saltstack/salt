@@ -1,14 +1,6 @@
-# -*- coding: utf-8 -*-
-
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import copy
 
-# Import Salt libs
 import salt.utils.configcomparer as configcomparer
-
-# Import Salt Testing libs
 from tests.support.unit import TestCase
 
 

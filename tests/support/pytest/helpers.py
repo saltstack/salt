@@ -6,11 +6,9 @@
 """
 import logging
 import os
-import pathlib
 import pprint
 import re
 import shutil
-import tempfile
 import textwrap
 import types
 import warnings
@@ -21,139 +19,12 @@ import pytest
 import salt.utils.platform
 import salt.utils.pycrypto
 from saltfactories.utils import random_string
+from saltfactories.utils.tempfiles import temp_file
 from tests.support.pytest.loader import LoaderModuleMock
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.sminion import create_sminion
 
 log = logging.getLogger(__name__)
-
-
-@pytest.helpers.register
-@contextmanager
-def temp_directory(name=None):
-    """
-    This helper creates a temporary directory. It should be used as a context manager
-    which returns the temporary directory path, and, once out of context, deletes it.
-
-    Can be directly imported and used, or, it can be used as a pytest helper function if
-    ``pytest-helpers-namespace`` is installed.
-
-    .. code-block:: python
-
-        import os
-        import pytest
-
-        def test_blah():
-            with pytest.helpers.temp_directory() as tpath:
-                print(tpath)
-                assert os.path.exists(tpath)
-
-            assert not os.path.exists(tpath)
-    """
-    try:
-        if name is not None:
-            directory_path = os.path.join(RUNTIME_VARS.TMP, name)
-        else:
-            directory_path = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
-
-        if not os.path.isdir(directory_path):
-            os.makedirs(directory_path)
-
-        yield directory_path
-    finally:
-        shutil.rmtree(directory_path, ignore_errors=True)
-
-
-@pytest.helpers.register
-@contextmanager
-def temp_file(name=None, contents=None, directory=None, strip_first_newline=True):
-    """
-    This helper creates a temporary file. It should be used as a context manager
-    which returns the temporary file path, and, once out of context, deletes it.
-
-    Can be directly imported and used, or, it can be used as a pytest helper function if
-    ``pytest-helpers-namespace`` is installed.
-
-    .. code-block:: python
-
-        import os
-        import pytest
-
-        def test_blah():
-            with pytest.helpers.temp_file("blah.txt") as tpath:
-                print(tpath)
-                assert os.path.exists(tpath)
-
-            assert not os.path.exists(tpath)
-
-    Args:
-        name(str):
-            The temporary file name
-        contents(str):
-            The contents of the temporary file
-        directory(str):
-            The directory where to create the temporary file. If ``None``, then ``RUNTIME_VARS.TMP``
-            will be used.
-        strip_first_newline(bool):
-            Wether to strip the initial first new line char or not.
-    """
-    try:
-        if directory is None:
-            directory = RUNTIME_VARS.TMP
-
-        if not isinstance(directory, pathlib.Path):
-            directory = pathlib.Path(str(directory))
-
-        if name is not None:
-            file_path = directory / name
-        else:
-            handle, file_path = tempfile.mkstemp(dir=str(directory))
-            os.close(handle)
-            file_path = pathlib.Path(file_path)
-
-        file_directory = file_path.parent
-        if not file_directory.is_dir():
-            file_directory.mkdir(parents=True)
-
-        if contents is not None:
-            if contents:
-                if contents.startswith("\n") and strip_first_newline:
-                    contents = contents[1:]
-                file_contents = textwrap.dedent(contents)
-            else:
-                file_contents = contents
-
-            file_path.write_text(file_contents)
-            log_contents = "{0} Contents of {1}\n{2}\n{3} Contents of {1}".format(
-                ">" * 6, file_path, file_contents, "<" * 6
-            )
-            log.debug("Created temp file: %s\n%s", file_path, log_contents)
-        else:
-            log.debug("Touched temp file: %s", file_path)
-
-        yield file_path
-
-    finally:
-        if file_path.exists():
-            file_path.unlink()
-            log.debug("Deleted temp file: %s", file_path)
-
-        try:
-            file_path.relative_to(directory)
-
-            created_directory = file_path.parent
-            while True:
-                if created_directory == directory:
-                    break
-                if created_directory.parent == directory:
-                    break
-                created_directory = created_directory.parent
-            if created_directory != directory:
-                shutil.rmtree(str(created_directory), ignore_errors=True)
-                log.debug("Deleted temp directory: %s", created_directory)
-        except ValueError:
-            # The 'file_path' is not located within 'directory'
-            pass
 
 
 @pytest.helpers.register
@@ -300,12 +171,59 @@ def remove_stale_minion_key(master, minion_id):
 
 
 @attr.s(kw_only=True, slots=True)
+class TestGroup:
+    sminion = attr.ib(default=None, repr=False)
+    name = attr.ib(default=None)
+    _delete_group = attr.ib(init=False, repr=False, default=False)
+
+    def __attrs_post_init__(self):
+        if self.sminion is None:
+            self.sminion = create_sminion()
+        if self.name is None:
+            self.name = random_string("group-", uppercase=False)
+
+    @property
+    def info(self):
+        return types.SimpleNamespace(**self.sminion.functions.group.info(self.name))
+
+    def __enter__(self):
+        group = self.sminion.functions.group.info(self.name)
+        if not group:
+            ret = self.sminion.functions.group.add(self.name)
+            assert ret
+            self._delete_group = True
+        log.debug("Created system group: %s", self)
+        # Run tests
+        return self
+
+    def __exit__(self, *_):
+        if self._delete_group:
+            try:
+                self.sminion.functions.group.delete(self.name)
+                log.debug("Deleted system group: %s", self.name)
+            except Exception:  # pylint: disable=broad-except
+                log.warning(
+                    "Failed to delete system group: %s", self.name, exc_info=True
+                )
+
+
+@pytest.helpers.register
+@contextmanager
+def create_group(name=None, sminion=None):
+    with TestGroup(sminion=sminion, name=name) as group:
+        yield group
+
+
+@attr.s(kw_only=True, slots=True)
 class TestAccount:
     sminion = attr.ib(default=None, repr=False)
     username = attr.ib(default=None)
     password = attr.ib(default=None)
     hashed_password = attr.ib(default=None, repr=False)
-    groups = attr.ib(default=None)
+    group_name = attr.ib(default=None)
+    create_group = attr.ib(repr=False, default=False)
+    _group = attr.ib(init=False, repr=False, default=None)
+    _delete_account = attr.ib(init=False, repr=False, default=False)
 
     def __attrs_post_init__(self):
         if self.sminion is None:
@@ -314,36 +232,100 @@ class TestAccount:
             self.username = random_string("account-", uppercase=False)
         if self.password is None:
             self.password = self.username
-        if self.hashed_password is None:
+        if (
+            self.hashed_password is None
+            and not salt.utils.platform.is_darwin()
+            and not salt.utils.platform.is_windows()
+        ):
             self.hashed_password = salt.utils.pycrypto.gen_hash(password=self.password)
+        if self.create_group is True and self.group_name is None:
+            self.group_name = self.username
+        if self.group_name is not None:
+            self._group = TestGroup(sminion=self.sminion, name=self.group_name)
+
+    @property
+    def info(self):
+        return types.SimpleNamespace(**self.sminion.functions.user.info(self.username))
+
+    @property
+    def group(self):
+        if self._group is None:
+            raise RuntimeError(
+                "Neither `create_group` nor `group_name` was passed when creating the "
+                "account. There's no group attribute in this account instance."
+            )
+        return self._group
 
     def __enter__(self):
-        log.debug("Creating system account: %s", self)
-        ret = self.sminion.functions.user.add(self.username)
-        assert ret
-        ret = self.sminion.functions.shadow.set_password(
-            self.username,
-            self.password if salt.utils.platform.is_darwin() else self.hashed_password,
-        )
-        assert ret
+        if not self.sminion.functions.user.info(self.username):
+            log.debug("Creating system account: %s", self)
+            ret = self.sminion.functions.user.add(self.username)
+            assert ret
+            self._delete_account = True
+            if salt.utils.platform.is_darwin() or salt.utils.platform.is_windows():
+                password = self.password
+            else:
+                password = self.hashed_password
+            ret = self.sminion.functions.shadow.set_password(self.username, password)
+            assert ret
         assert self.username in self.sminion.functions.user.list_users()
+        if self._group:
+            self.group.__enter__()
+            self.sminion.functions.group.adduser(self.group.name, self.username)
+            if not salt.utils.platform.is_windows():
+                # Make this group the primary_group for the user
+                self.sminion.functions.user.chgid(self.username, self.group.info.gid)
+                assert self.info.gid == self.group.info.gid
         log.debug("Created system account: %s", self)
         # Run tests
         return self
 
     def __exit__(self, *args):
-        self.sminion.functions.user.delete(self.username, remove=True, force=True)
-        log.debug("Deleted system account: %s", self.username)
+        if self._group:
+            try:
+                self.sminion.functions.group.deluser(self.group.name, self.username)
+                log.debug(
+                    "Removed user %r from group %r", self.username, self.group.name
+                )
+            except Exception:  # pylint: disable=broad-except
+                log.warning(
+                    "Failed to remove user %r from group %r",
+                    self.username,
+                    self.group.name,
+                    exc_info=True,
+                )
+
+            self.group.__exit__(*args)
+
+        if self._delete_account:
+            try:
+                self.sminion.functions.user.delete(
+                    self.username, remove=True, force=True
+                )
+                log.debug("Deleted system account: %s", self.username)
+            except Exception:  # pylint: disable=broad-except
+                log.warning(
+                    "Failed to delete system account: %s", self.username, exc_info=True
+                )
 
 
 @pytest.helpers.register
 @contextmanager
-def create_account(username=None, password=None, hashed_password=None, sminion=None):
+def create_account(
+    username=None,
+    password=None,
+    hashed_password=None,
+    group_name=None,
+    create_group=False,
+    sminion=None,
+):
     with TestAccount(
         sminion=sminion,
         username=username,
         password=password,
         hashed_password=hashed_password,
+        group_name=group_name,
+        create_group=create_group,
     ) as account:
         yield account
 
@@ -420,7 +402,7 @@ class StateReturnAsserts:
             for saltret in self.get_within_state_return("result"):
                 assert saltret is True
         except AssertionError:
-            log.info("Salt Full Return:\n{}".format(pprint.pformat(self.ret)))
+            log.info("Salt Full Return:\n%s", pprint.pformat(self.ret))
             try:
                 raise AssertionError(
                     "{result} is not True. Salt Comment:\n{comment}".format(
@@ -439,7 +421,7 @@ class StateReturnAsserts:
             for saltret in self.get_within_state_return("result"):
                 assert saltret is False
         except AssertionError:
-            log.info("Salt Full Return:\n{}".format(pprint.pformat(self.ret)))
+            log.info("Salt Full Return:\n%s", pprint.pformat(self.ret))
             try:
                 raise AssertionError(
                     "{result} is not False. Salt Comment:\n{comment}".format(
@@ -456,7 +438,7 @@ class StateReturnAsserts:
             for saltret in self.get_within_state_return("result"):
                 assert saltret is None
         except AssertionError:
-            log.info("Salt Full Return:\n{}".format(pprint.pformat(self.ret)))
+            log.info("Salt Full Return:\n%s", pprint.pformat(self.ret))
             try:
                 raise AssertionError(
                     "{result} is not None. Salt Comment:\n{comment}".format(
@@ -582,7 +564,7 @@ class FakeSaltExtension:
             author = Pedro
             author_email = pedro@algarvio.me
             keywords = salt-extension
-            url = http://saltstack.com
+            url = http://saltproject.io
             license = Apache Software License 2.0
             classifiers =
                 Programming Language :: Python
@@ -607,6 +589,7 @@ class FakeSaltExtension:
             salt.loader=
               module_dirs = {1}
               runner_dirs = {1}.loader:get_runner_dirs
+              states_dirs = {1}.loader:get_state_dirs
               wheel_dirs = {1}.loader:get_new_style_entry_points
             """.format(
                         self.name, self.pkgname
@@ -630,6 +613,9 @@ class FakeSaltExtension:
 
             def get_runner_dirs():
                 return [str(PKG_ROOT / "runners1"), str(PKG_ROOT / "runners2")]
+
+            def get_state_dirs():
+                yield str(PKG_ROOT / "states1")
 
             def get_new_style_entry_points():
                 return {"wheel": [str(PKG_ROOT / "the_wheel_modules")]}
@@ -727,6 +713,24 @@ class FakeSaltExtension:
 
             def echo2(string):
                 return string
+            """
+                )
+            )
+
+            states_dir = extension_package_dir / "states1"
+            states_dir.mkdir()
+            states_dir.joinpath("__init__.py").write_text("")
+            states_dir.joinpath("foobar1.py").write_text(
+                textwrap.dedent(
+                    """\
+            __virtualname__ = "foobar"
+
+            def __virtual__():
+                return True
+
+            def echoed(string):
+                ret = {"name": name, "changes": {}, "result": True, "comment": string}
+                return ret
             """
                 )
             )

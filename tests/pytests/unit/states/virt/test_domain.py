@@ -23,7 +23,7 @@ def test_defined_no_change(test):
         ):
             assert virt.defined("myvm") == {
                 "name": "myvm",
-                "changes": {"myvm": {"definition": False}},
+                "changes": {},
                 "result": True,
                 "comment": "Domain myvm unchanged",
             }
@@ -274,16 +274,13 @@ def test_running_no_change(test, running):
                 "virt.list_domains": MagicMock(return_value=["myvm"]),
             },
         ):
-            changes = {"definition": False}
-            comment = "Domain myvm exists and is running"
-            if running == "shutdown":
-                changes["started"] = True
-                comment = "Domain myvm started"
             assert virt.running("myvm") == {
                 "name": "myvm",
                 "result": True,
-                "changes": {"myvm": changes},
-                "comment": comment,
+                "changes": {"myvm": {"started": True}} if running == "shutdown" else {},
+                "comment": "Domain myvm started"
+                if running == "shutdown"
+                else "Domain myvm exists and is running",
             }
             if running == "shutdown" and not test:
                 start_mock.assert_called()
@@ -414,7 +411,7 @@ def test_running_start_error():
         ):
             assert virt.running("myvm") == {
                 "name": "myvm",
-                "changes": {"myvm": {"definition": False}},
+                "changes": {},
                 "result": False,
                 "comment": "libvirt error msg",
             }
@@ -438,12 +435,12 @@ def test_running_update(test, running):
                 "virt.list_domains": MagicMock(return_value=["myvm"]),
             },
         ):
-            changes = {"myvm": {"definition": True, "cpu": True}}
+            changes = {"definition": True, "cpu": True}
             if running == "shutdown":
-                changes["myvm"]["started"] = True
+                changes["started"] = True
             assert virt.running("myvm", cpu=2) == {
                 "name": "myvm",
-                "changes": changes,
+                "changes": {"myvm": changes},
                 "result": True if not test else None,
                 "comment": "Domain myvm updated"
                 if running == "running"
