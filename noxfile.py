@@ -13,6 +13,7 @@ import os
 import shutil
 import sys
 import tempfile
+from pathlib import Path
 
 # fmt: off
 if __name__ == "__main__":
@@ -1006,13 +1007,17 @@ def docs_html(session, compress, clean):
     )
     install_command = ["--progress-bar=off", "-r", requirements_file]
     session.install(*install_command, silent=PIP_INSTALL_SILENT)
-    os.chdir("doc/")
+
+    build_dir = Path("doc", "_build", "html")
+    sphinxopts = "-W"
     if clean:
-        session.run("make", "clean", external=True)
-    session.run("make", "html", "SPHINXOPTS=-W", external=True)
+        sphinxopts += "E"
+    args = [sphinxopts, "--keep-going", "doc", str(build_dir)]
+    session.run("sphinx-build", *args, external=True)
     if compress:
-        session.run("tar", "-cJvf", "html-archive.tar.xz", "_build/html", external=True)
-    os.chdir("..")
+        session.run(
+            "tar", "-cJvf", "doc/html-archive.tar.xz", "doc/_build/html", external=True
+        )
 
 
 @nox.session(name="docs-man", python="3")

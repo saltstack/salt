@@ -809,18 +809,6 @@ repos:
   # ----- Doc CI Requirements --------------------------------------------------------------------------------------->
       - id: pip-tools-compile
         alias: compile-doc-requirements
-        name: Docs CI Py3.5 Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/docs\.in|static/pkg/linux\.in|static/pkg/.*/linux\.txt)$
-        pass_filenames: false
-        args:
-          - -v
-          - --py-version=3.5
-          - --platform=linux
-          - --include=requirements/static/pkg/py{py_version}/linux.txt
-          - requirements/static/ci/docs.in
-
-      - id: pip-tools-compile
-        alias: compile-doc-requirements
         name: Docs CI Py3.6 Requirements
         files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/docs\.in|static/pkg/linux\.in|static/pkg/.*/linux\.txt)$
         pass_filenames: false
