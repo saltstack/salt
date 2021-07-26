@@ -272,9 +272,7 @@ def _get_pip_requirements_file(session, transport, crypto=None, requirements_typ
             return _requirements_file
 
 
-def _install_requirements(
-    session, transport, *extra_requirements, requirements_type="ci"
-):
+def _upgrade_pip_setuptools_and_wheel(session):
     if SKIP_REQUIREMENTS_INSTALL:
         session.log(
             "Skipping Python Requirements because SKIP_REQUIREMENTS_INSTALL was found in the environ"
@@ -288,10 +286,17 @@ def _install_requirements(
         "install",
         "--progress-bar=off",
         "-U",
-        "pip",
+        "pip>=20.2.4,<21.2",
         "setuptools!=50.*,!=51.*,!=52.*",
+        "wheel",
     ]
     session.run(*install_command, silent=PIP_INSTALL_SILENT)
+
+
+def _install_requirements(
+    session, transport, *extra_requirements, requirements_type="ci"
+):
+    _upgrade_pip_setuptools_and_wheel(session)
 
     # Install requirements
     requirements_file = _get_pip_requirements_file(
@@ -999,6 +1004,7 @@ def docs_html(session, compress, clean):
     """
     Build Salt's HTML Documentation
     """
+    _upgrade_pip_setuptools_and_wheel(session)
     requirements_file = os.path.join(
         "requirements", "static", "ci", _get_pydir(session), "docs.txt"
     )
@@ -1022,6 +1028,7 @@ def docs_man(session, compress, update, clean):
     """
     Build Salt's Manpages Documentation
     """
+    _upgrade_pip_setuptools_and_wheel(session)
     requirements_file = os.path.join(
         "requirements", "static", "ci", _get_pydir(session), "docs.txt"
     )
