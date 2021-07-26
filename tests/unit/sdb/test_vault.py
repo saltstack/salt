@@ -2,14 +2,10 @@
 Test case for the vault SDB module
 """
 
-# Import python libs
 
-# Import Salt libs
 import salt.sdb.vault as vault
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, call, patch
-
-# Import Salt Testing libs
 from tests.support.unit import TestCase
 
 

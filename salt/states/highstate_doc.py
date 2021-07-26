@@ -1,10 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 To be used with processors in module `highstate_doc`.
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 __virtualname__ = "highstate_doc"
 
@@ -39,7 +36,7 @@ def note(name, source=None, contents=None, **kwargs):
     """
     comment = ""
     if source:
-        comment += "include file: {0}\n".format(source)
+        comment += "include file: {}\n".format(source)
     if contents and len(contents) < 200:
         comment += contents
     return {"name": name, "result": True, "comment": comment, "changes": {}}

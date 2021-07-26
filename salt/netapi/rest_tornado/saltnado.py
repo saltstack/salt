@@ -1604,9 +1604,7 @@ class EventsSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
             try:
                 event = yield self.application.event_listener.get_event(self)
                 self.write("tag: {}\n".format(event.get("tag", "")))
-                self.write(
-                    "data: {}\n\n".format(_json_dumps(event))
-                )  # future lint: disable=blacklisted-function
+                self.write("data: {}\n\n".format(_json_dumps(event)))
                 self.flush()
             except TimeoutException:
                 break

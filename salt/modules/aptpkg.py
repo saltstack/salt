@@ -1550,7 +1550,6 @@ def _consolidate_repo_sources(sources):
     repos = [s for s in sources.list if not s.invalid]
 
     for repo in repos:
-        # future lint: disable=blacklisted-function
         key = str(
             (
                 getattr(repo, "architectures", []),
@@ -1560,7 +1559,6 @@ def _consolidate_repo_sources(sources):
                 repo.dist,
             )
         )
-        # future lint: enable=blacklisted-function
         if key in consolidated:
             combined = consolidated[key]
             combined_comps = set(repo.comps).union(set(combined.comps))
@@ -1909,7 +1907,7 @@ def _convert_if_int(value):
     :rtype: bool|int|str
     """
     try:
-        value = int(str(value))  # future lint: disable=blacklisted-function
+        value = int(str(value))
     except ValueError:
         pass
     return value

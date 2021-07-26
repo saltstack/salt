@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Proxy Minion interface module for managing VMware ESXi hosts.
 
@@ -270,7 +269,6 @@ for standing up an ESXi host from scratch.
 
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os

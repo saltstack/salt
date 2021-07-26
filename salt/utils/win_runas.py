@@ -110,7 +110,7 @@ def runas(cmdLine, username, password=None, cwd=None):
         impersonation_token = salt.platform.win.impersonate_sid(
             salt.platform.win.SYSTEM_SID, session_id=0, privs=["SeTcbPrivilege"],
         )
-    except OSError:  # pylint: disable=undefined-variable
+    except OSError:
         log.debug("Unable to impersonate SYSTEM user")
         impersonation_token = None
         win32api.CloseHandle(th)

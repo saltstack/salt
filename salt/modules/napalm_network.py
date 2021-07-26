@@ -18,7 +18,6 @@ Dependencies
 .. versionchanged:: 2017.7.0
 """
 
-# Import Python libs
 import datetime
 import logging
 import time
@@ -31,7 +30,6 @@ import salt.utils.versions
 log = logging.getLogger(__name__)
 
 
-# Import 3rd-party libs
 try:
     import jxmlease  # pylint: disable=unused-import
 

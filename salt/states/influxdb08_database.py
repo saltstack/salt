@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Management of Influxdb 0.8 databases
 ====================================
@@ -8,9 +7,6 @@ Management of Influxdb 0.8 databases
 .. versionadded:: 2014.7.0
 
 """
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 
 def __virtual__():
@@ -48,23 +44,21 @@ def present(name, user=None, password=None, host=None, port=None):
     if not __salt__["influxdb08.db_exists"](name, user, password, host, port):
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "Database {0} is absent and needs to be created".format(
+            ret["comment"] = "Database {} is absent and needs to be created".format(
                 name
             )
             return ret
         if __salt__["influxdb08.db_create"](name, user, password, host, port):
-            ret["comment"] = "Database {0} has been created".format(name)
+            ret["comment"] = "Database {} has been created".format(name)
             ret["changes"][name] = "Present"
             return ret
         else:
-            ret["comment"] = "Failed to create database {0}".format(name)
+            ret["comment"] = "Failed to create database {}".format(name)
             ret["result"] = False
             return ret
 
     # fallback
-    ret["comment"] = "Database {0} is already present, so cannot be created".format(
-        name
-    )
+    ret["comment"] = "Database {} is already present, so cannot be created".format(name)
     return ret
 
 
@@ -94,19 +88,19 @@ def absent(name, user=None, password=None, host=None, port=None):
     if __salt__["influxdb08.db_exists"](name, user, password, host, port):
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "Database {0} is present and needs to be removed".format(
+            ret["comment"] = "Database {} is present and needs to be removed".format(
                 name
             )
             return ret
         if __salt__["influxdb08.db_remove"](name, user, password, host, port):
-            ret["comment"] = "Database {0} has been removed".format(name)
+            ret["comment"] = "Database {} has been removed".format(name)
             ret["changes"][name] = "Absent"
             return ret
         else:
-            ret["comment"] = "Failed to remove database {0}".format(name)
+            ret["comment"] = "Failed to remove database {}".format(name)
             ret["result"] = False
             return ret
 
     # fallback
-    ret["comment"] = "Database {0} is not present, so it cannot be removed".format(name)
+    ret["comment"] = "Database {} is not present, so it cannot be removed".format(name)
     return ret

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :synopsis: Base class for kernelpkg modules
     :platform: Linux
@@ -7,7 +6,6 @@
 """
 # pylint: disable=invalid-name,no-member
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 # Salt testing libs
 try:
@@ -17,7 +15,7 @@ except ImportError:
     pass
 
 
-class KernelPkgTestCase(object):
+class KernelPkgTestCase:
     """
     Test cases shared by all kernelpkg virtual modules
     """

@@ -17,7 +17,6 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.url
 import salt.utils.versions
-from salt.ext import six
 from salt.utils.args import get_function_argspec as _argspec
 from salt.utils.decorators import ensure_unicode_args
 

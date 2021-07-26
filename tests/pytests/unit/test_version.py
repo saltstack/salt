@@ -8,7 +8,12 @@ import re
 
 import pytest
 import salt.version
-from salt.version import SaltStackVersion, system_information, versions_report
+from salt.version import (
+    SaltStackVersion,
+    SaltVersionsInfo,
+    system_information,
+    versions_report,
+)
 from tests.support.mock import MagicMock, patch
 
 STRIP_INITIAL_NON_NUMBERS_REGEX = re.compile(r"(?:[^\d]+)?(?P<vs>.*)")
@@ -376,6 +381,28 @@ def test_version_repr(version_tuple, expected):
     and new versioning scheme
     """
     assert repr(SaltStackVersion(*version_tuple)) == expected
+
+
+def test_previous_and_next_releases():
+    with patch.multiple(
+        SaltVersionsInfo,
+        _previous_release=None,
+        _next_release=None,
+        _current_release=SaltVersionsInfo.CALIFORNIUM,
+    ):
+        assert SaltVersionsInfo.current_release() == SaltVersionsInfo.CALIFORNIUM
+        assert SaltVersionsInfo.next_release() == SaltVersionsInfo.EINSTEINIUM
+        assert SaltVersionsInfo.previous_release() == SaltVersionsInfo.BERKELIUM
+
+    with patch.multiple(
+        SaltVersionsInfo,
+        _previous_release=None,
+        _next_release=None,
+        _current_release=SaltVersionsInfo.NEPTUNIUM,
+    ):
+        assert SaltVersionsInfo.current_release() == SaltVersionsInfo.NEPTUNIUM
+        assert SaltVersionsInfo.next_release() == SaltVersionsInfo.PLUTONIUM
+        assert SaltVersionsInfo.previous_release() == SaltVersionsInfo.URANIUM
 
 
 @pytest.mark.skip_unless_on_linux

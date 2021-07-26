@@ -16,7 +16,6 @@ import salt.utils.path
 import salt.utils.platform
 import salt.utils.user
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.ext.six.moves import range
 from salt.utils.versions import LooseVersion as _LooseVersion
 
 log = logging.getLogger(__name__)
@@ -33,7 +32,7 @@ def __virtual__():
     global RABBITMQ_PLUGINS
 
     if salt.utils.platform.is_windows():
-        from salt.ext.six.moves import winreg
+        import winreg
 
         key = None
         try:

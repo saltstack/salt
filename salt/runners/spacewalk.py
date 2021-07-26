@@ -31,8 +31,7 @@ master configuration at ``/etc/salt/master`` or ``/etc/salt/master.d/spacewalk.c
 
 import atexit
 import logging
-
-from salt.ext import six
+import xmlrpc.client
 
 log = logging.getLogger(__name__)
 
@@ -99,9 +98,7 @@ def _get_client_and_key(url, user, password, verbose=0):
     Return the client object and session key for the client
     """
     session = {}
-    session["client"] = six.moves.xmlrpc_client.Server(
-        url, verbose=verbose, use_datetime=True
-    )
+    session["client"] = xmlrpc.client.Server(url, verbose=verbose, use_datetime=True)
     session["key"] = session["client"].auth.login(user, password)
 
     return session

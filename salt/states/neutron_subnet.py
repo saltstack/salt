@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Management of OpenStack Neutron Subnets
 =========================================
@@ -47,7 +46,6 @@ Example States
         - ip_version: 6
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 __virtualname__ = "neutron_subnet"
 

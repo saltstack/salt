@@ -142,7 +142,14 @@ def salt_master_factory(
         "auth": {"method": "token", "token": "testsecret", "uses": 0},
         "policies": ["testpolicy"],
     }
-    config_overrides = {}
+
+    # Config settings to test `event_return`
+    config_defaults["returner_dirs"] = []
+    config_defaults["returner_dirs"].append(
+        os.path.join(RUNTIME_VARS.FILES, "returners")
+    )
+    config_defaults["event_return"] = "runtests_noop"
+    config_overrides = {"pytest-master": {"log": {"level": "DEBUG"}}}
     ext_pillar = []
     if salt.utils.platform.is_windows():
         ext_pillar.append(
@@ -297,15 +304,13 @@ def salt_sub_minion_factory(salt_master_factory, salt_sub_minion_id):
 
 
 @pytest.fixture(scope="session")
-def salt_proxy_factory(salt_master_factory, grains):
+def salt_proxy_factory(salt_master_factory):
     proxy_minion_id = random_string("proxytest-")
 
     config_overrides = {
         "file_roots": salt_master_factory.config["file_roots"].copy(),
         "pillar_roots": salt_master_factory.config["pillar_roots"].copy(),
     }
-    if salt.utils.platform.is_darwin() and tuple(grains["osrelease_info"]) < (10, 50):
-        config_overrides["pytest-minion"] = {"log": {"disabled": True}}
 
     factory = salt_master_factory.salt_proxy_minion_daemon(
         proxy_minion_id,
