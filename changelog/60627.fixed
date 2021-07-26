@@ -1,0 +1,1 @@
+salt.modules.aptpkg now handles dpkg frontend lock errors and retries.

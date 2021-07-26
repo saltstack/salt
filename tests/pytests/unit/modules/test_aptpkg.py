@@ -1040,8 +1040,8 @@ def test_call_apt_dpkg_lock():
     cmd_side_effect = [
         {"stderr": "Could not get lock"},
         {"stderr": "Could not get lock"},
-        {"stderr": "Could not get lock"},
-        {"stderr": "Could not get lock"},
+        {"stderr": "dpkg: error: dpkg frontend lock is locked by another process"},
+        {"stderr": "dpkg: error: dpkg frontend lock is locked by another process"},
         {"stderr": "", "stdout": ""},
     ]
 
