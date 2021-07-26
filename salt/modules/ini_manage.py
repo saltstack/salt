@@ -412,9 +412,7 @@ class _Ini(_Section):
     def refresh(self, inicontents=None):
         if inicontents is None:
             if not os.path.exists(self.name):
-                log.trace(
-                    "File {} does not exist and will be created".format(self.name)
-                )
+                log.trace("File %s does not exist and will be created", self.name)
                 return
             try:
                 with salt.utils.files.fopen(self.name) as rfh:
