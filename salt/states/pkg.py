@@ -747,7 +747,9 @@ def _find_install_targets(
         for key in resolved_latest:
             if not resolved_latest[key]:
                 if key in cur_pkgs:
-                    resolved_latest[key] = cur_pkgs[key]["version"][-1]
+                    if salt.utils.platform.is_freebsd():
+                        resolved_latest[key] = cur_pkgs[key]["version"][-1]
+                    resolved_latest[key] = cur_pkgs[key][-1]
                 else:
                     resolved_latest[key] = None
         # Update the desired versions with the ones we resolved
