@@ -4,13 +4,9 @@
 
     HAProxy beacon test cases
 """
-import logging
-
 import pytest
 import salt.beacons.haproxy as haproxy
 from tests.support.mock import MagicMock, patch
-
-log = logging.getLogger(__name__)
 
 
 @pytest.fixture
