@@ -848,7 +848,6 @@ class State:
         requisites = {}
         low_state = low["state"]
         for chunk in chunks:
-            log.debug("==== _aggregate_requisites - chunk %s ===", chunk)
             # if the state function in the chunk matches
             # the state function in the low we're looking at
             # and __agg__ is True, add the requisites from the
@@ -866,7 +865,6 @@ class State:
                             requisites[req].extend(chunk[req])
                         else:
                             requisites[req] = chunk[req]
-        log.debug("==== _aggregate_requisites - requisites %s ===", requisites)
         low.update(requisites)
         return low
 
@@ -886,7 +884,6 @@ class State:
             if agg_fun in self.states:
                 try:
                     low = self.states[agg_fun](low, chunks, running)
-                    log.debug("==== after mod_aggregate - low %s ===", low)
                     low = self._aggregate_requisites(low, chunks)
                     low["__agg__"] = True
                 except TypeError:
@@ -922,7 +919,6 @@ class State:
         if "onlyif" in low_data:
             _ret = self._run_check_onlyif(low_data, cmd_opts)
             ret["result"] = _ret["result"]
-
             ret["comment"].append(_ret["comment"])
             if "skip_watch" in _ret:
                 ret["skip_watch"] = _ret["skip_watch"]

@@ -3486,7 +3486,6 @@ def mod_aggregate(low, chunks, running):
         "removed",
         "purged",
     ]
-    log.debug("=== low %s chunks %s running %s ===", low, chunks, running)
     if low.get("fun") not in agg_enabled:
         return low
     for chunk in chunks:
@@ -3533,7 +3532,6 @@ def mod_aggregate(low, chunks, running):
             low[pkg_type].extend(pkgs)
         else:
             low[pkg_type] = pkgs
-    log.debug("=== in mod_aggregate - low %s ===", low)
     return low
 
 
