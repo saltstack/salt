@@ -243,7 +243,7 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
 
         self._io_loop = kwargs.get("io_loop")
         if self._io_loop is None:
-            seff._io_loop = salt.ext.tornado.ioloop.IOLoop.current()
+            self._io_loop = salt.ext.tornado.ioloop.IOLoop.current()
 
         if self.crypt != "clear":
             # we don't need to worry about auth as a kwarg, since its a singleton
