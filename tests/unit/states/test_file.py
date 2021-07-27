@@ -2933,6 +2933,25 @@ class TestFindKeepFiles(TestCase):
         expected = []
         self.assertListEqual(actual, expected)
 
+    @pytest.mark.skip_unless_on_darwin()
+    def test__find_keep_files_darwin(self):
+        """
+        Test _clean_dir to ensure that regardless of case, we keep all files
+        requested and do not delete any. Therefore, the expected list should
+        be empty for this test.
+        """
+        keep = filestate._clean_dir(
+             "/test/parent_folder",
+            [
+                "/test/parent_folder/meh-1.txt",
+                "/Test/Parent_Folder/Meh-2.txt",
+            ],
+            exclude_pat=None,
+        )
+        actual = sorted(list(keep))
+        expected = []
+        self.assertListEqual(actual, expected)
+
 
 class TestFileTidied(TestCase):
     def setUp(self):
