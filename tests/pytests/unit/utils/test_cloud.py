@@ -220,3 +220,16 @@ def test_winrm_pinnned_version():
             winrm_pkg = pkg_resources.get_distribution("pywinrm")
             assert winrm_pkg.version >= '0.3.0'
     # fmt: on
+
+
+@patch("salt.utils.cloud.wait_for_port", return_value=True)
+@patch("salt.utils.cloud.wait_for_passwd", return_value=True)
+@patch("salt.utils.cloud._exec_ssh_cmd")
+@patch("salt.utils.cloud.root_cmd", return_value=False)
+def test_deploy_script_ssh_timeout(root_cmd, *_):
+    cloud.deploy_script("127.0.0.1", ssh_timeout=34)
+    # verify that ssh_timeout made it into ssh_kwargs
+    assert root_cmd.call_count == 1
+    ssh_kwargs = root_cmd.call_args.kwargs
+    assert "ssh_timeout" in ssh_kwargs
+    assert ssh_kwargs["ssh_timeout"] == 34
