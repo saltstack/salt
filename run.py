@@ -81,7 +81,7 @@ def redirect(argv):
         with tiamatpip.utils.patched_sys_argv(args):
             s_fun()
     else:
-        s_run()
+        s_fun()
 
 
 def py_shell():
