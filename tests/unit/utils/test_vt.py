@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
@@ -9,8 +8,6 @@
     VirtualTerminal tests
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import functools
 import io
@@ -20,17 +17,12 @@ import subprocess
 import sys
 import time
 
-# Import Salt libs
 import salt.utils
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.vt
-
-# Import 3rd-party libs
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
-
-# Import Salt Testing libs
 from tests.support.paths import CODE_DIR
 from tests.support.unit import TestCase, skipIf
 
@@ -73,26 +65,35 @@ def fixStdOutErrFileNoIfNeeded(func):
 
 class VTTestCase(TestCase):
     @skipIf(
-        True,
-        "Disabled until we can figure out why this fails when whole test suite runs.",
+        salt.utils.platform.is_windows(),
+        "Skip on Windows because this feature is not supported",
     )
     def test_vt_size(self):
         """Confirm that the terminal size is being set"""
-        if not sys.stdin.isatty():
-            self.skipTest("Not attached to a TTY. The test would fail.")
         cols = random.choice(range(80, 250))
         terminal = salt.utils.vt.Terminal(
-            'echo "Foo!"',
+            "stty size",
             shell=True,
             cols=cols,
             rows=24,
             stream_stdout=False,
             stream_stderr=False,
         )
-        # First the assertion
         self.assertEqual(terminal.getwinsize(), (24, cols))
-        # Then wait for the terminal child to exit
-        terminal.wait()
+        buffer_o = buffer_e = ""
+        while terminal.has_unread_data:
+            stdout, stderr = terminal.recv()
+            if stdout:
+                buffer_o += stdout
+            if stderr:
+                buffer_e += stderr
+        assert buffer_o.strip() == "24 {}".format(cols)
+        try:
+            # Then wait for the terminal child to exit, this will raise an
+            # exception if the process has already exited.
+            terminal.wait()
+        except salt.utils.vt.TerminalException:
+            pass
         terminal.close()
 
     @skipIf(
@@ -116,7 +117,7 @@ class VTTestCase(TestCase):
                 )
                 stdout, _ = proc.communicate()
                 return int(stdout.strip())
-            except (ValueError, OSError, IOError):
+            except (ValueError, OSError):
                 if salt.utils.platform.is_darwin():
                     # We're unable to findout how many PTY's are open
                     self.skipTest(
@@ -131,7 +132,7 @@ class VTTestCase(TestCase):
         for idx in range(0, nr_ptys + n_executions):
             try:
                 with salt.utils.vt.Terminal(
-                    'echo "Run {0}"'.format(idx),
+                    'echo "Run {}"'.format(idx),
                     shell=True,
                     stream_stdout=False,
                     stream_stderr=False,
@@ -140,7 +141,7 @@ class VTTestCase(TestCase):
                 try:
                     if current_pty_count() > (nr_ptys + (n_executions / 2)):
                         self.fail("VT is not cleaning up PTY's")
-                except (ValueError, OSError, IOError):
+                except (ValueError, OSError):
                     self.fail("Unable to find out how many PTY's are open")
             except Exception as exc:  # pylint: disable=broad-except
                 if "out of pty devices" in str(exc):
@@ -153,7 +154,7 @@ class VTTestCase(TestCase):
         for idx in range(0, nr_ptys + n_executions):
             try:
                 terminal = salt.utils.vt.Terminal(
-                    'echo "Run {0}"'.format(idx),
+                    'echo "Run {}"'.format(idx),
                     shell=True,
                     stream_stdout=False,
                     stream_stderr=False,
@@ -162,7 +163,7 @@ class VTTestCase(TestCase):
                 try:
                     if current_pty_count() > (nr_ptys + (n_executions / 2)):
                         self.fail("VT is not cleaning up PTY's")
-                except (ValueError, OSError, IOError):
+                except (ValueError, OSError):
                     self.fail("Unable to find out how many PTY's are open")
             except Exception as exc:  # pylint: disable=broad-except
                 if "out of pty devices" in str(exc):
