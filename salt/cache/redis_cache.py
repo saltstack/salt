@@ -48,7 +48,7 @@ bank_prefix: ``$BANK``
     The prefix used for the name of the Redis key storing the list of sub-banks.
 
 bank_keys_prefix: ``$BANKEYS``
-    The prefix used for the name of the Redis keyt storing the list of keys under a certain bank.
+    The prefix used for the name of the Redis key storing the list of keys under a certain bank.
 
 key_prefix: ``$KEY``
     The prefix of the Redis keys having the value of the keys to be cached under
@@ -137,8 +137,10 @@ Cluster Configuration Example:
 
 
 import logging
+import time
 
 import salt.payload
+import salt.utils.stringutils
 from salt.exceptions import SaltCacheError
 
 # Import salt
@@ -281,7 +283,10 @@ def _get_key_redis_key(bank, key):
     """
     opts = _get_redis_keys_opts()
     return "{prefix}{separator}{bank}/{key}".format(
-        prefix=opts["key_prefix"], separator=opts["separator"], bank=bank, key=key
+        prefix=opts["key_prefix"],
+        separator=opts["separator"],
+        bank=bank,
+        key=salt.utils.stringutils.to_str(key),
     )
 
 
@@ -341,7 +346,7 @@ def _get_banks_to_remove(redis_server, bank, path=""):
 # -----------------------------------------------------------------------------
 
 
-def store(bank, key, data):
+def legacy_store(bank, key, data):
     """
     Store the data in a Redis key.
     """
@@ -365,7 +370,7 @@ def store(bank, key, data):
         raise SaltCacheError(mesg)
 
 
-def fetch(bank, key):
+def legacy_fetch(bank, key):
     """
     Fetch data from the Redis cache.
     """
@@ -385,7 +390,7 @@ def fetch(bank, key):
     return salt.payload.loads(redis_value)
 
 
-def flush(bank, key=None):
+def legacy_flush(bank, key=None):
     """
     Remove the key from the cache bank with all the key content. If no key is specified, remove
     the entire bank with all keys and sub-banks inside.
@@ -463,7 +468,7 @@ def flush(bank, key=None):
             # delete the bank key itself
     else:
         redis_key = _get_key_redis_key(bank, key)
-        redis_pipe.delete(redis_key)  # delete the key cached
+        # redis_pipe.delete(redis_key)  # delete the key cached
         log.debug("Removing the key %s under the %s bank (%s)", key, bank, redis_key)
         bank_keys_redis_key = _get_bank_keys_redis_key(bank)
         redis_pipe.srem(bank_keys_redis_key, key)
@@ -485,7 +490,7 @@ def flush(bank, key=None):
     return True
 
 
-def list_(bank):
+def legacy_list_(bank):
     """
     Lists entries stored in the specified bank.
     """
@@ -504,17 +509,85 @@ def list_(bank):
     return list(banks)
 
 
-def contains(bank, key):
+def legacy_contains(bank, key):
     """
     Checks if the specified bank contains the specified key.
     """
     redis_server = _get_redis_server()
     bank_redis_key = _get_bank_redis_key(bank)
     try:
-        return redis_server.sismember(bank_redis_key, key)
+        if key is None:
+            return (
+                salt.utils.stringutils.to_str(redis_server.type(bank_redis_key))
+                != "none"
+            )
+        else:
+            return redis_server.sismember(bank_redis_key, key)
     except (RedisConnectionError, RedisResponseError) as rerr:
         mesg = "Cannot retrieve the Redis cache key {rkey}: {rerr}".format(
             rkey=bank_redis_key, rerr=rerr
         )
         log.error(mesg)
         raise SaltCacheError(mesg)
+
+
+# ---
+
+
+# TODO: We're not really using the layout specified in the docs for this module. It shouldn't be a big deal to refactor this to do such a thing. Esp. Since now we have tests that guarantee similarity with localfs -W. Werner, 2021-09-28
+def flush(bank, key=None):
+    redis_server = _get_redis_server()
+    redis_pipe = redis_server.pipeline()
+    if key is None:
+        for k in list_(bank, redis_server=redis_server):
+            redis_pipe.delete(bank + "/" + k)
+        redis_pipe.delete("$KEYS_" + bank)
+    else:
+        bank_key = bank + "/" + key
+        redis_pipe.delete(bank_key)
+        redis_pipe.srem("$KEYS_" + bank, key)
+    redis_pipe.execute()
+
+
+def fetch(bank, key, redis_server=None):
+    redis_server = redis_server or _get_redis_server()
+    value = redis_server.get(bank + "/" + key)
+    if value is not None:
+        redis_value = __context__["serial"].loads(value)
+    else:
+        redis_value = {}
+    return redis_value
+
+
+def contains(bank, key):
+    redis_server = _get_redis_server()
+    # TODO: It may be better to use redis' sismember here - except localfs doesn't do the same thing necessarily, because key is None simply checks for existence of the "bank" -W. Werner, 2021-09-28
+    keys_in_bank = list_(bank=bank, redis_server=redis_server)
+    return bool(keys_in_bank) if key is None else key in keys_in_bank
+
+
+def list_(bank, redis_server=None):
+    redis_server = redis_server or _get_redis_server()
+    return [val.decode() for val in redis_server.smembers("$KEYS_" + bank)]
+
+
+def store(bank, key, data):
+    redis_server = _get_redis_server()
+    redis_pipe = redis_server.pipeline()
+    value = __context__["serial"].dumps(data)
+    redis_pipe.set(bank + "/" + key, value)
+    # time.time should return time since UTC - i.e. on two different systems
+    # with correct system clocks, regardless of local timezones, time.time
+    # called simultaneously should return the same value.
+    # TODO: We should add some kind of bank+key gen function like exists in the legacy block. Maybe just use those. -W. Werner, 2021-09-28
+    # localfs is int-truncating the time, so should we!
+    redis_pipe.set(
+        "$TSTAMP_" + bank + "/" + key, __context__["serial"].dumps(int(time.time()))
+    )
+    redis_pipe.sadd("$KEYS_" + bank, key)
+    redis_pipe.execute()
+
+
+def updated(bank, key):
+    redis_server = _get_redis_server()
+    return fetch(bank="$TSTAMP_" + bank, key=key, redis_server=redis_server) or None

@@ -199,10 +199,12 @@ def ls(bank):
     path = "{}/{}".format(path_prefix, bank)
     try:
         return _walk(client.read(path))
+    except etcd.EtcdKeyNotFound:
+        return []
     except Exception as exc:  # pylint: disable=broad-except
         raise SaltCacheError(
             'There was an error getting the key "{}": {}'.format(bank, exc)
-        )
+        ) from exc
 
 
 def contains(bank, key):
@@ -210,14 +212,19 @@ def contains(bank, key):
     Checks if the specified bank contains the specified key.
     """
     _init_client()
-    etcd_key = "{}/{}/{}".format(path_prefix, bank, key)
+    etcd_key = "{}/{}/{}".format(path_prefix, bank, key or "")
     try:
         r = client.read(etcd_key)
-        # return True for keys, not dirs
-        return r.dir is False
+        # return True for keys, not dirs, unless key is None
+        return r.dir if key is None else r.dir is False
     except etcd.EtcdKeyNotFound:
         return False
     except Exception as exc:  # pylint: disable=broad-except
         raise SaltCacheError(
             "There was an error getting the key, {}: {}".format(etcd_key, exc)
         )
+
+
+def updated(bank, key):
+    return None
+    # TODO should be something besides nop

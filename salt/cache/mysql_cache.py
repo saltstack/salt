@@ -270,3 +270,7 @@ def contains(bank, key):
     r = cur.fetchone()
     cur.close()
     return r[0] == 1
+
+
+def updated(bank, key):
+    ...  # TODO: FIXME -W. Werner, 2021-07-27
