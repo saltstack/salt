@@ -245,22 +245,25 @@ def test_ssh_gateway_arguments_alive_args():
     )
 
 
-@patch("salt.utils.cloud.socket", MagicMock())
 def test_wait_for_port_default_alive_args():
-    with patch(
-        "salt.utils.cloud._exec_ssh_cmd", MagicMock(return_value=0)
-    ) as exec_ssh_cmd:
-        cloud.wait_for_port(
-            "127.0.0.1", gateway={"ssh_gateway": "host", "ssh_gateway_user": "user"},
-        )
-        assert exec_ssh_cmd.call_count == 2
-        ssh_call = exec_ssh_cmd.call_args[0][0]
-        assert (
-            "-oServerAliveInterval={}".format(cloud.SERVER_ALIVE_INTERVAL) in ssh_call
-        )
-        assert (
-            "-oServerAliveCountMax={}".format(cloud.SERVER_ALIVE_COUNT_MAX) in ssh_call
-        )
+    with patch("salt.utils.cloud.socket", autospec=True):
+        with patch(
+            "salt.utils.cloud._exec_ssh_cmd", autospec=True, return_value=0
+        ) as exec_ssh_cmd:
+            cloud.wait_for_port(
+                "127.0.0.1",
+                gateway={"ssh_gateway": "host", "ssh_gateway_user": "user"},
+            )
+            assert exec_ssh_cmd.call_count == 2
+            ssh_call = exec_ssh_cmd.call_args[0][0]
+            assert (
+                "-oServerAliveInterval={}".format(cloud.SERVER_ALIVE_INTERVAL)
+                in ssh_call
+            )
+            assert (
+                "-oServerAliveCountMax={}".format(cloud.SERVER_ALIVE_COUNT_MAX)
+                in ssh_call
+            )
 
 
 @patch("salt.utils.cloud.socket", MagicMock())

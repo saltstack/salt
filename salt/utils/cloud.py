@@ -124,7 +124,7 @@ SSH_PASSWORD_PROMP_SUDO_RE = re.compile(
     r"(?:.*sudo)(?:.*)[Pp]assword(?: for .*)?:", re.M
 )
 
-SERVER_ALIVE_INTERVAL = 10
+SERVER_ALIVE_INTERVAL = 60
 SERVER_ALIVE_COUNT_MAX = 3
 
 # Get logging started
