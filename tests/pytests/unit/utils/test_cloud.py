@@ -224,75 +224,65 @@ def test_winrm_pinnned_version():
 
 
 def test_ssh_gateway_arguments_default_alive_args():
+    server_alive_interval = 60
+    server_alive_count_max = 3
     arguments = ssh_gateway_arguments({"ssh_gateway": "host"})
-    assert "-oServerAliveInterval={}".format(cloud.SERVER_ALIVE_INTERVAL) in arguments
-    assert "-oServerAliveCountMax={}".format(cloud.SERVER_ALIVE_COUNT_MAX) in arguments
+    assert "-oServerAliveInterval={}".format(server_alive_interval) in arguments
+    assert "-oServerAliveCountMax={}".format(server_alive_count_max) in arguments
 
 
 def test_ssh_gateway_arguments_alive_args():
+    server_alive_interval = 10
+    server_alive_count_max = 8
     arguments = ssh_gateway_arguments(
         {
             "ssh_gateway": "host",
-            "server_alive_interval": cloud.SERVER_ALIVE_INTERVAL + 1,
-            "server_alive_count_max": cloud.SERVER_ALIVE_COUNT_MAX * 2,
+            "server_alive_interval": server_alive_interval,
+            "server_alive_count_max": server_alive_count_max,
         }
     )
-    assert (
-        "-oServerAliveInterval={}".format(cloud.SERVER_ALIVE_INTERVAL + 1) in arguments
-    )
-    assert (
-        "-oServerAliveCountMax={}".format(cloud.SERVER_ALIVE_COUNT_MAX * 2) in arguments
-    )
+    assert "-oServerAliveInterval={}".format(server_alive_interval) in arguments
+    assert "-oServerAliveCountMax={}".format(server_alive_count_max) in arguments
 
 
 def test_wait_for_port_default_alive_args():
-    with patch("salt.utils.cloud.socket", autospec=True):
-        with patch(
-            "salt.utils.cloud._exec_ssh_cmd", autospec=True, return_value=0
-        ) as exec_ssh_cmd:
-            cloud.wait_for_port(
-                "127.0.0.1",
-                gateway={"ssh_gateway": "host", "ssh_gateway_user": "user"},
-            )
-            assert exec_ssh_cmd.call_count == 2
-            ssh_call = exec_ssh_cmd.call_args[0][0]
-            assert (
-                "-oServerAliveInterval={}".format(cloud.SERVER_ALIVE_INTERVAL)
-                in ssh_call
-            )
-            assert (
-                "-oServerAliveCountMax={}".format(cloud.SERVER_ALIVE_COUNT_MAX)
-                in ssh_call
-            )
+    server_alive_interval = 60
+    server_alive_count_max = 3
+    with patch("salt.utils.cloud.socket", autospec=True), patch(
+        "salt.utils.cloud._exec_ssh_cmd", autospec=True, return_value=0
+    ) as exec_ssh_cmd:
+        cloud.wait_for_port(
+            "127.0.0.1", gateway={"ssh_gateway": "host", "ssh_gateway_user": "user"},
+        )
+        assert exec_ssh_cmd.call_count == 2
+        ssh_call = exec_ssh_cmd.call_args[0][0]
+        assert "-oServerAliveInterval={}".format(server_alive_interval) in ssh_call
+        assert "-oServerAliveCountMax={}".format(server_alive_count_max) in ssh_call
 
 
-@patch("salt.utils.cloud.socket", MagicMock())
 def test_wait_for_port_alive_args():
-    with patch(
-        "salt.utils.cloud._exec_ssh_cmd", MagicMock(return_value=0)
+    server_alive_interval = 66
+    server_alive_count_max = 1
+    with patch("salt.utils.cloud.socket", autospec=True), patch(
+        "salt.utils.cloud._exec_ssh_cmd", autospec=True, return_value=0
     ) as exec_ssh_cmd:
         cloud.wait_for_port(
             "127.0.0.1",
-            server_alive_interval=cloud.SERVER_ALIVE_INTERVAL * 2,
-            server_alive_count_max=cloud.SERVER_ALIVE_COUNT_MAX + 1,
+            server_alive_interval=server_alive_interval,
+            server_alive_count_max=server_alive_count_max,
             gateway={"ssh_gateway": "host", "ssh_gateway_user": "user"},
         )
         assert exec_ssh_cmd.call_count == 2
         ssh_call = exec_ssh_cmd.call_args[0][0]
-        assert (
-            "-oServerAliveInterval={}".format(cloud.SERVER_ALIVE_INTERVAL * 2)
-            in ssh_call
-        )
-        assert (
-            "-oServerAliveCountMax={}".format(cloud.SERVER_ALIVE_COUNT_MAX + 1)
-            in ssh_call
-        )
+        assert "-oServerAliveInterval={}".format(server_alive_interval) in ssh_call
+        assert "-oServerAliveCountMax={}".format(server_alive_count_max) in ssh_call
 
 
-@patch("salt.utils.cloud.socket", MagicMock())
 def test_scp_file_default_alive_args():
-    with patch(
-        "salt.utils.cloud._exec_ssh_cmd", MagicMock(return_value=0)
+    server_alive_interval = 60
+    server_alive_count_max = 3
+    with patch("salt.utils.cloud.socket", autospec=True), patch(
+        "salt.utils.cloud._exec_ssh_cmd", autospec=True, return_value=0
     ) as exec_ssh_cmd:
         cloud.scp_file(
             "/salt.txt",
@@ -302,18 +292,15 @@ def test_scp_file_default_alive_args():
         )
         assert exec_ssh_cmd.call_count == 1
         ssh_call = exec_ssh_cmd.call_args[0][0]
-        assert (
-            "-oServerAliveInterval={}".format(cloud.SERVER_ALIVE_INTERVAL) in ssh_call
-        )
-        assert (
-            "-oServerAliveCountMax={}".format(cloud.SERVER_ALIVE_COUNT_MAX) in ssh_call
-        )
+        assert "-oServerAliveInterval={}".format(server_alive_interval) in ssh_call
+        assert "-oServerAliveCountMax={}".format(server_alive_count_max) in ssh_call
 
 
-@patch("salt.utils.cloud.socket", MagicMock())
 def test_scp_file_alive_args():
-    with patch(
-        "salt.utils.cloud._exec_ssh_cmd", MagicMock(return_value=0)
+    server_alive_interval = 64
+    server_alive_count_max = 4
+    with patch("salt.utils.cloud.socket", autospec=True), patch(
+        "salt.utils.cloud._exec_ssh_cmd", autospec=True, return_value=0
     ) as exec_ssh_cmd:
         cloud.scp_file(
             "/salt.txt",
@@ -321,27 +308,22 @@ def test_scp_file_alive_args():
             kwargs={
                 "hostname": "127.0.0.1",
                 "username": "user",
-                "server_alive_interval": cloud.SERVER_ALIVE_INTERVAL + 2,
-                "server_alive_count_max": cloud.SERVER_ALIVE_COUNT_MAX + 3,
+                "server_alive_interval": server_alive_interval,
+                "server_alive_count_max": server_alive_count_max,
             },
             local_file="/salt.txt",
         )
         assert exec_ssh_cmd.call_count == 1
         ssh_call = exec_ssh_cmd.call_args[0][0]
-        assert (
-            "-oServerAliveInterval={}".format(cloud.SERVER_ALIVE_INTERVAL + 2)
-            in ssh_call
-        )
-        assert (
-            "-oServerAliveCountMax={}".format(cloud.SERVER_ALIVE_COUNT_MAX + 3)
-            in ssh_call
-        )
+        assert "-oServerAliveInterval={}".format(server_alive_interval) in ssh_call
+        assert "-oServerAliveCountMax={}".format(server_alive_count_max) in ssh_call
 
 
-@patch("salt.utils.cloud.socket", MagicMock())
 def test_sftp_file_default_alive_args():
-    with patch(
-        "salt.utils.cloud._exec_ssh_cmd", MagicMock(return_value=0)
+    server_alive_interval = 60
+    server_alive_count_max = 3
+    with patch("salt.utils.cloud.socket", autospec=True), patch(
+        "salt.utils.cloud._exec_ssh_cmd", autospec=True, return_value=0
     ) as exec_ssh_cmd:
         cloud.sftp_file(
             "/salt.txt",
@@ -351,18 +333,15 @@ def test_sftp_file_default_alive_args():
         )
         assert exec_ssh_cmd.call_count == 1
         ssh_call = exec_ssh_cmd.call_args[0][0]
-        assert (
-            "-oServerAliveInterval={}".format(cloud.SERVER_ALIVE_INTERVAL) in ssh_call
-        )
-        assert (
-            "-oServerAliveCountMax={}".format(cloud.SERVER_ALIVE_COUNT_MAX) in ssh_call
-        )
+        assert "-oServerAliveInterval={}".format(server_alive_interval) in ssh_call
+        assert "-oServerAliveCountMax={}".format(server_alive_count_max) in ssh_call
 
 
-@patch("salt.utils.cloud.socket", MagicMock())
 def test_sftp_file_alive_args():
-    with patch(
-        "salt.utils.cloud._exec_ssh_cmd", MagicMock(return_value=0)
+    server_alive_interval = 62
+    server_alive_count_max = 6
+    with patch("salt.utils.cloud.socket", autospec=True), patch(
+        "salt.utils.cloud._exec_ssh_cmd", autospec=True, return_value=0
     ) as exec_ssh_cmd:
         cloud.sftp_file(
             "/salt.txt",
@@ -370,18 +349,12 @@ def test_sftp_file_alive_args():
             kwargs={
                 "hostname": "127.0.0.1",
                 "username": "user",
-                "server_alive_interval": cloud.SERVER_ALIVE_INTERVAL + 2,
-                "server_alive_count_max": cloud.SERVER_ALIVE_COUNT_MAX + 3,
+                "server_alive_interval": server_alive_interval,
+                "server_alive_count_max": server_alive_count_max,
             },
             local_file="/salt.txt",
         )
         assert exec_ssh_cmd.call_count == 1
         ssh_call = exec_ssh_cmd.call_args[0][0]
-        assert (
-            "-oServerAliveInterval={}".format(cloud.SERVER_ALIVE_INTERVAL + 2)
-            in ssh_call
-        )
-        assert (
-            "-oServerAliveCountMax={}".format(cloud.SERVER_ALIVE_COUNT_MAX + 3)
-            in ssh_call
-        )
+        assert "-oServerAliveInterval={}".format(server_alive_interval) in ssh_call
+        assert "-oServerAliveCountMax={}".format(server_alive_count_max) in ssh_call
