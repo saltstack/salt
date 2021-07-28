@@ -35,6 +35,7 @@ from functools import reduce  # do not remove
 
 import salt.utils.atomicfile  # do not remove, used in imported file.py functions
 import salt.utils.platform
+import salt.utils.win_dacl
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 # do not remove, used in imported file.py functions
@@ -1841,7 +1842,7 @@ def _validate_users(perms):
     for user in perms:
         # verify user exists on system before we create a directory
         try:
-            __utils__["dacl.get_name"](user)
+            salt.utils.win_dacl.get_name(user)
         except CommandExecutionError:
             return False
     return True
