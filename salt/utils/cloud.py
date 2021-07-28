@@ -186,7 +186,9 @@ def __ssh_gateway_arguments(kwargs):
         ssh_gateway_user = kwargs.get("ssh_gateway_user", "root")
 
         # Setup ProxyCommand
-        extended_arguments = '-oProxyCommand="ssh {strict_host_key_checking} {server_alive_interval} {server_alive_count_max} {user_known_hosts_file} {control_path} {ssh_gateway_key} {ssh_gateway_user}@{ssh_gateway} -p {ssh_gateway_port} {ssh_gateway_command}"'.format(
+        extended_arguments = '-oProxyCommand="ssh {strict_host_key_checking} {server_alive_interval} \
+{server_alive_count_max} {user_known_hosts_file} {control_path} {ssh_gateway_key} \
+{ssh_gateway_user}@{ssh_gateway} -p {ssh_gateway_port} {ssh_gateway_command}"'.format(
             # Don't add new hosts to the host key database
             strict_host_key_checking="-oStrictHostKeyChecking=no",
             # make sure ssh can time out on connection lose
