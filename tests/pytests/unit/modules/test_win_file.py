@@ -6,18 +6,16 @@
 """
 import os
 
-from mock import MagicMock
 import pytest
+import salt.modules.temp as temp
 import salt.modules.win_file as win_file
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.win_dacl as win_dacl
 import salt.utils.win_functions
-import salt.modules.temp as temp
 from salt.exceptions import CommandExecutionError
-from tests.support.mock import patch
-
+from tests.support.mock import MagicMock, patch
 
 pytest.importorskip("win32api", reason="System is not Windows.")
 
@@ -97,9 +95,7 @@ def test_issue_43328_check_perms_no_ret(fake_path):
     exist
     """
     with patch("os.path.exists", return_value=False):
-        pytest.raises(
-            CommandExecutionError, win_file.check_perms, fake_path
-        )
+        pytest.raises(CommandExecutionError, win_file.check_perms, fake_path)
 
 
 def test_issue_52002_check_file_remove_symlink(tmp_path):
@@ -138,7 +134,9 @@ def test_check_perms_set_owner_test_true(setup_teardown_vars):
         "result": None,
     }
     with patch.dict(win_dacl.__opts__, {"test": True}):
-        ret = win_file.check_perms(path=temp_file, owner="Administrators", inheritance=None)
+        ret = win_file.check_perms(
+            path=temp_file, owner="Administrators", inheritance=None
+        )
         assert ret == expected
 
 
@@ -153,9 +151,7 @@ def test_check_perms_set_owner(setup_teardown_vars):
         "name": temp_file,
         "result": True,
     }
-    ret = win_file.check_perms(
-        path=temp_file, owner="Administrators", inheritance=None
-    )
+    ret = win_file.check_perms(path=temp_file, owner="Administrators", inheritance=None)
     assert ret == expected
 
 
@@ -242,12 +238,7 @@ def test_check_perms_validate():
     Test validate helper function
     """
     grant_perms = {
-        "user_does_not_exist": {
-            "perms": {
-                "read_attributes",
-                "create_folders"
-            }
-        }
+        "user_does_not_exist": {"perms": {"read_attributes", "create_folders"}}
     }
     ret = win_file._validate_users(grant_perms)
     assert ret is False
@@ -257,14 +248,7 @@ def test_check_perms_validate_true():
     """
     Test validate helper function when user does exist
     """
-    grant_perms = {
-        "Administrator": {
-            "perms": {
-                "read_attributes",
-                "create_folders"
-            }
-        }
-    }
+    grant_perms = {"Administrator": {"perms": {"read_attributes", "create_folders"}}}
     ret = win_file._validate_users(grant_perms)
     assert ret is True
 
@@ -324,9 +308,7 @@ def test_check_perms_reset_test_true(setup_teardown_vars):
     win_dacl.set_inheritance(obj_name=temp_file, enabled=False, clear=True)
     # Set some permissions
     win_dacl.set_permissions(
-        obj_name=temp_file,
-        principal="Administrator",
-        permissions="full_control",
+        obj_name=temp_file, principal="Administrator", permissions="full_control",
     )
     expected = {
         "comment": "",
@@ -369,9 +351,7 @@ def test_check_perms_reset(setup_teardown_vars):
     win_dacl.set_inheritance(obj_name=temp_file, enabled=False, clear=True)
     # Set some permissions
     win_dacl.set_permissions(
-        obj_name=temp_file,
-        principal="Administrator",
-        permissions="full_control",
+        obj_name=temp_file, principal="Administrator", permissions="full_control",
     )
     expected = {
         "comment": "",
