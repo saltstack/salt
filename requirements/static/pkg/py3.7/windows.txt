@@ -126,7 +126,7 @@ timelib==0.2.5
     # via -r requirements/windows.txt
 typing-extensions==3.10.0.0
     # via gitpython
-urllib3==1.26.4
+urllib3==1.26.6
     # via requests
 wheel==0.36.2
     # via -r requirements/windows.txt

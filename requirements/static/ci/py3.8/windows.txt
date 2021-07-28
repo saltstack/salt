@@ -401,7 +401,7 @@ toml==0.10.2
     # via
     #   -r requirements/static/ci/common.in
     #   pytest
-urllib3==1.26.4
+urllib3==1.26.6
     # via
     #   -r requirements/static/pkg/py3.8/windows.txt
     #   botocore
