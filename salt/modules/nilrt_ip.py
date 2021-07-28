@@ -3,6 +3,7 @@ The networking module for NI Linux Real-Time distro
 
 """
 
+import configparser
 import logging
 import os
 import re
@@ -11,7 +12,6 @@ import time
 import salt.exceptions
 import salt.utils.files
 import salt.utils.validate.net
-from salt.ext.six.moves import configparser
 
 try:
     import pyconnman

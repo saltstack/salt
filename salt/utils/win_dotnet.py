@@ -1,13 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 Dot NET functions
 
 .. versionadded:: 3001
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt libs
 import salt.utils.platform
 import salt.utils.win_reg as win_reg
 from salt.utils.versions import LooseVersion
@@ -102,12 +98,12 @@ def versions():
             else:
                 continue
 
-            service_pack = " SP{0}".format(sp) if sp != "N/A" else ""
+            service_pack = " SP{}".format(sp) if sp != "N/A" else ""
             return_dict["versions"].append(version)
             return_dict["details"][ver_key] = {
                 "version": version,
                 "service_pack": sp,
-                "full": "{0}{1}".format(version, service_pack),
+                "full": "{}{}".format(version, service_pack),
             }
 
     return return_dict

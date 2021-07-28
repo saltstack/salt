@@ -1,18 +1,12 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Rahul Handay <rahulha@saltstack.com>
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
-# Import Salt Libs
 import salt.modules.win_path as win_path
 import salt.utils.stringutils
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -27,8 +21,8 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
         return {win_path: {}}
 
     def __init__(self, *args, **kwargs):
-        super(WinPathTestCase, self).__init__(*args, **kwargs)
-        self.pathsep = str(";")  # future lint: disable=blacklisted-function
+        super().__init__(*args, **kwargs)
+        self.pathsep = ";"
 
     def assert_call_matches(self, mock_obj, new_path):
         mock_obj.assert_called_once_with(
@@ -70,13 +64,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
         orig_path = ("C:\\Foo", "C:\\Bar")
 
         def _env(path):
-            return {
-                str(
-                    "PATH"
-                ): salt.utils.stringutils.to_str(  # future lint: disable=blacklisted-function
-                    self.pathsep.join(path)
-                )
-            }
+            return {"PATH": salt.utils.stringutils.to_str(self.pathsep.join(path))}
 
         def _run(name, index=None, retval=True, path=None):
             if path is None:
@@ -194,13 +182,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
         orig_path = ("C:\\Foo", "C:\\Bar", "C:\\Baz")
 
         def _env(path):
-            return {
-                str(
-                    "PATH"
-                ): salt.utils.stringutils.to_str(  # future lint: disable=blacklisted-function
-                    self.pathsep.join(path)
-                )
-            }
+            return {"PATH": salt.utils.stringutils.to_str(self.pathsep.join(path))}
 
         def _run(name="c:\\salt", index=None, retval=True, path=None):
             if path is None:

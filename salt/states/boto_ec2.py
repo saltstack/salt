@@ -57,7 +57,6 @@ from time import sleep, time
 import salt.utils.data
 import salt.utils.dictupdate as dictupdate
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)
 

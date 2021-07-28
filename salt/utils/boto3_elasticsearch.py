@@ -1,16 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 Botocore waiters for elasticsearch that are not present in boto3+botocore (yet).
 
 :codeauthor: Herbert Buurman <herbert.buurman@ogd.nl>
 :depends: boto3
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.utils.versions
-
-# Import Salt libs
 from salt.exceptions import SaltInvocationError
 
 try:

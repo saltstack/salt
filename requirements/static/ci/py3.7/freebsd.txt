@@ -710,7 +710,7 @@ pyeapi==0.8.3
     # via napalm
 pygit2==1.5.0 ; python_version >= "3.7"
     # via -r requirements/static/ci/freebsd.in
-pyinotify==0.9.6 ; sys_platform != "win32" and sys_platform != "darwin"
+pyinotify==0.9.6 ; sys_platform != "win32" and sys_platform != "darwin" and platform_system != "openbsd"
     # via -r requirements/static/ci/common.in
 pyjwt==2.0.0
     # via adal
@@ -732,7 +732,7 @@ pytest-helpers-namespace==2021.4.29
     # via
     #   -r requirements/pytest.txt
     #   pytest-salt-factories
-pytest-salt-factories==0.903.2
+pytest-salt-factories==0.906.0
     # via -r requirements/pytest.txt
 pytest-subtests==0.4.0
     # via -r requirements/pytest.txt

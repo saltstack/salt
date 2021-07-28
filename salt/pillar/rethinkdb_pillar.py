@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Provide external pillar data from RethinkDB
 
@@ -42,7 +41,6 @@ In the example above the following happens.
 Module Documentation
 ====================
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libraries
 import logging

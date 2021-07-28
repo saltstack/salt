@@ -61,7 +61,7 @@ cheroot==8.3.0
     # via
     #   -r requirements/static/pkg/py3.7/windows.txt
     #   cherrypy
-cherrypy==18.6.0
+cherrypy==18.6.1
     # via
     #   -r requirements/static/ci/common.in
     #   -r requirements/static/pkg/py3.7/windows.txt
@@ -73,7 +73,7 @@ colorama==0.4.1
     # via pytest
 contextvars==2.4
     # via -r requirements/static/pkg/py3.7/windows.txt
-cryptography==3.4.6
+cryptography==3.4.7
     # via
     #   -r requirements/static/pkg/py3.7/windows.txt
     #   moto
@@ -116,7 +116,7 @@ gitdb==4.0.5
     # via
     #   -r requirements/static/pkg/py3.7/windows.txt
     #   gitpython
-gitpython==3.1.13
+gitpython==3.1.18
     # via
     #   -r requirements/static/ci/common.in
     #   -r requirements/static/pkg/py3.7/windows.txt
@@ -190,7 +190,7 @@ keyring==5.7.1
     # via -r requirements/static/ci/common.in
 kubernetes==3.0.0
     # via -r requirements/static/ci/common.in
-libnacl==1.7.2
+libnacl==1.8.0
     # via -r requirements/static/pkg/py3.7/windows.txt
 lxml==4.6.3
     # via -r requirements/static/pkg/py3.7/windows.txt
@@ -266,7 +266,7 @@ pycurl==7.43.0.5
     #   -r requirements/static/pkg/py3.7/windows.txt
 pygit2==1.5.0 ; python_version >= "3.7"
     # via -r requirements/static/ci/windows.in
-pymssql==2.1.5 ; python_version < "3.8"
+pymssql==2.2.1
     # via -r requirements/static/pkg/py3.7/windows.txt
 pymysql==1.0.2
     # via -r requirements/static/pkg/py3.7/windows.txt
@@ -280,7 +280,7 @@ pytest-helpers-namespace==2021.4.29
     # via
     #   -r requirements/pytest.txt
     #   pytest-salt-factories
-pytest-salt-factories==0.903.2
+pytest-salt-factories==0.906.0
     # via -r requirements/pytest.txt
 pytest-subtests==0.4.0
     # via -r requirements/pytest.txt
@@ -303,7 +303,7 @@ python-dateutil==2.8.1
     #   moto
 python-etcd==0.4.5
     # via -r requirements/static/ci/common.in
-python-gnupg==0.4.6
+python-gnupg==0.4.7
     # via -r requirements/static/pkg/py3.7/windows.txt
 python-jose[cryptography]==3.2.0
     # via moto
@@ -316,7 +316,7 @@ pytz==2020.1
     #   tempora
 pyvmomi==6.7.1.2018.12
     # via -r requirements/static/ci/common.in
-pywin32==300
+pywin32==301
     # via
     #   -r requirements/static/pkg/py3.7/windows.txt
     #   cherrypy
@@ -409,6 +409,10 @@ toml==0.10.2
     # via
     #   -r requirements/static/ci/common.in
     #   pytest
+typing-extensions==3.10.0.0
+    # via
+    #   -r requirements/static/pkg/py3.7/windows.txt
+    #   gitpython
 urllib3==1.26.4
     # via
     #   -r requirements/static/pkg/py3.7/windows.txt

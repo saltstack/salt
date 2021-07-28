@@ -204,12 +204,12 @@ class AESReqServerMixin:
                 # we reject new minions, minions that are already
                 # connected must be allowed for the mine, highstate, etc.
                 if load["id"] not in minions:
-                    msg = (
-                        "Too many minions connected (max_minions={}). "
-                        "Rejecting connection from id "
-                        "{}".format(self.opts["max_minions"], load["id"])
+                    log.info(
+                        "Too many minions connected (max_minions=%s). "
+                        "Rejecting connection from id %s",
+                        self.opts["max_minions"],
+                        load["id"],
                     )
-                    log.info(msg)
                     eload = {
                         "result": False,
                         "act": "full",
@@ -242,7 +242,7 @@ class AESReqServerMixin:
         elif os.path.isfile(pubfn_rejected):
             # The key has been rejected, don't place it in pending
             log.info(
-                "Public key rejected for %s. Key is present in " "rejection key dir.",
+                "Public key rejected for %s. Key is present in rejection key dir.",
                 load["id"],
             )
             eload = {"result": False, "id": load["id"], "pub": load["pub"]}
@@ -328,7 +328,7 @@ class AESReqServerMixin:
                 except OSError:
                     pass
                 log.info(
-                    "Pending public key for %s rejected via " "autoreject_file",
+                    "Pending public key for %s rejected via autoreject_file",
                     load["id"],
                 )
                 ret = {"enc": "clear", "load": {"ret": False}}
@@ -437,7 +437,7 @@ class AESReqServerMixin:
                 with salt.utils.files.fopen(pubfn, "w+") as fp_:
                     fp_.write(load["pub"])
             elif not load["pub"]:
-                log.error("Public key is empty: {}".format(load["id"]))
+                log.error("Public key is empty: %s", load["id"])
                 return {"enc": "clear", "load": {"ret": False}}
 
         pub = None

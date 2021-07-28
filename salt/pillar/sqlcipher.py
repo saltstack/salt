@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Retrieve Pillar data by running a SQLCipher query
 
@@ -57,20 +56,15 @@ Complete Example
             as_list: True
             with_lists: [1,3]
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
-
-# Import python libs
 from contextlib import contextmanager
 
-# Import Salt libs
 from salt.pillar.sql_base import SqlBaseExtPillar
 
 # Set up logging
 log = logging.getLogger(__name__)
 
-# Import third party libs
 try:
     from pysqlcipher import dbapi2 as sqlcipher
 
@@ -123,7 +117,7 @@ class SQLCipherExtPillar(SqlBaseExtPillar):
         conn = sqlcipher.connect(
             _options.get("database"), timeout=float(_options.get("timeout"))
         )
-        conn.execute('pragma key="{0}"'.format(_options.get("pass")))
+        conn.execute('pragma key="{}"'.format(_options.get("pass")))
         cursor = conn.cursor()
         try:
             yield cursor

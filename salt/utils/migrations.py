@@ -1,14 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 Migration tools
 """
-from __future__ import absolute_import, unicode_literals
 
-# Import python libs
 import os.path
 import shutil
 
-# Import salt libs
 import salt.syspaths as syspaths
 
 

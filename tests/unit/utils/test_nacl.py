@@ -1,17 +1,9 @@
-# -*- coding: utf-8 -*-
-
-# Import python libs
-from __future__ import absolute_import
-
 import os
 
-# Import Salt libs
 import salt.modules.config as config
 import salt.utils.files
 from tests.support.helpers import with_tempfile
 from tests.support.mixins import LoaderModuleMockMixin
-
-# Import Salt Testing libs
 from tests.support.unit import TestCase, skipIf
 
 try:

@@ -9,6 +9,7 @@ import re
 import sys
 import time
 import types
+import urllib.parse
 from copy import deepcopy
 
 import salt.defaults.exitcodes
@@ -27,12 +28,6 @@ import salt.utils.validate.path
 import salt.utils.xdg
 import salt.utils.yaml
 import salt.utils.zeromq
-
-# pylint: disable=import-error,no-name-in-module
-from salt.ext.six.moves.urllib.parse import urlparse
-
-# pylint: enable=import-error,no-name-in-module
-
 
 try:
     import psutil
@@ -2387,7 +2382,7 @@ def syndic_config(
     ]
     for config_key in ("log_file", "key_logfile", "syndic_log_file"):
         # If this is not a URI and instead a local path
-        if urlparse(opts.get(config_key, "")).scheme == "":
+        if urllib.parse.urlparse(opts.get(config_key, "")).scheme == "":
             prepend_root_dirs.append(config_key)
     prepend_root_dir(opts, prepend_root_dirs)
     return opts
@@ -2638,7 +2633,7 @@ def cloud_config(
 
     # prepend root_dir
     prepend_root_dirs = ["cachedir"]
-    if "log_file" in opts and urlparse(opts["log_file"]).scheme == "":
+    if "log_file" in opts and urllib.parse.urlparse(opts["log_file"]).scheme == "":
         prepend_root_dirs.append(opts["log_file"])
     prepend_root_dir(opts, prepend_root_dirs)
 
@@ -3707,7 +3702,7 @@ def apply_minion_config(
 
     # These can be set to syslog, so, not actual paths on the system
     for config_key in ("log_file", "key_logfile"):
-        if urlparse(opts.get(config_key, "")).scheme == "":
+        if urllib.parse.urlparse(opts.get(config_key, "")).scheme == "":
             prepend_root_dirs.append(config_key)
 
     prepend_root_dir(opts, prepend_root_dirs)
@@ -3915,7 +3910,7 @@ def apply_master_config(overrides=None, defaults=None):
         if log_setting is None:
             continue
 
-        if urlparse(log_setting).scheme == "":
+        if urllib.parse.urlparse(log_setting).scheme == "":
             prepend_root_dirs.append(config_key)
 
     prepend_root_dir(opts, prepend_root_dirs)
@@ -4116,7 +4111,7 @@ def apply_spm_config(overrides, defaults):
         if log_setting is None:
             continue
 
-        if urlparse(log_setting).scheme == "":
+        if urllib.parse.urlparse(log_setting).scheme == "":
             prepend_root_dirs.append(config_key)
 
     prepend_root_dir(opts, prepend_root_dirs)

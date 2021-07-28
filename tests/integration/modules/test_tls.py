@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Wayne Werner <wwerner@saltstack.com>
 """
 
 # Import the future
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import tempfile

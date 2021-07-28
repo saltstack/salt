@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Interface to Red Hat tuned-adm module
 
@@ -8,10 +7,7 @@ Interface to Red Hat tuned-adm module
 :platform:      Linux
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt libs
 import salt.exceptions
 
 
@@ -56,10 +52,10 @@ def profile(name):
 
     # test mode
     if __opts__["test"] is True:
-        ret["comment"] = 'The state of "{0}" will be changed.'.format(current_state)
+        ret["comment"] = 'The state of "{}" will be changed.'.format(current_state)
         ret["changes"] = {
             "old": current_state,
-            "new": "Profile will be set to {0}".format(profile),
+            "new": "Profile will be set to {}".format(profile),
         }
 
         # return None when testing
@@ -71,7 +67,7 @@ def profile(name):
     new_state = __salt__["tuned.profile"](profile)
 
     # create the comment data structure
-    ret["comment"] = 'The state of "{0}" was changed!'.format(profile)
+    ret["comment"] = 'The state of "{}" was changed!'.format(profile)
 
     # fill in the ret data structure
     ret["changes"] = {
@@ -113,7 +109,7 @@ def off(name=None):
 
     # test mode
     if __opts__["test"] is True:
-        ret["comment"] = 'The state of "{0}" will be changed.'.format(current_state)
+        ret["comment"] = 'The state of "{}" will be changed.'.format(current_state)
         ret["changes"] = {
             "old": current_state,
             "new": "Profile will be set to off",

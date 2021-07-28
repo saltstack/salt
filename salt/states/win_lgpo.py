@@ -463,10 +463,27 @@ def set_(
         if requested_policy:
             for p_name, p_setting in requested_policy.items():
                 if p_name in current_policy[class_map[p_class]]:
-                    # compare
+                    # compare the requested and current policies
                     log.debug(
-                        "need to compare %s from current/requested " "policy", p_name
+                        "need to compare %s from current/requested policy", p_name
                     )
+
+                    # resolve user names in the requested policy and the current
+                    # policy so that we are comparing apples to apples
+                    if p_data["policy_lookup"][p_name]["rights_assignment"]:
+                        resolved_names = []
+                        for name in p_data["requested_policy"][p_name]:
+                            resolved_names.append(
+                                salt.utils.win_functions.get_sam_name(name)
+                            )
+                        p_data["requested_policy"][p_name] = resolved_names
+                        resolved_names = []
+                        for name in current_policy[class_map[p_class]][p_name]:
+                            resolved_names.append(
+                                salt.utils.win_functions.get_sam_name(name)
+                            )
+                        current_policy[class_map[p_class]][p_name] = resolved_names
+
                     changes = False
                     requested_policy_json = salt.utils.json.dumps(
                         p_data["requested_policy"][p_name], sort_keys=True

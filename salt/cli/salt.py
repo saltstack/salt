@@ -167,7 +167,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
         try:
             if self.options.subset:
                 cmd_func = self.local_client.cmd_subset
-                kwargs["sub"] = self.options.subset
+                kwargs["subset"] = self.options.subset
                 kwargs["cli"] = True
             else:
                 cmd_func = self.local_client.cmd_cli
@@ -289,7 +289,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
             try:
                 self.config["batch"] = self.options.batch
                 batch = salt.cli.batch.Batch(
-                    self.config, eauth=eauth, parser=self.options
+                    self.config, eauth=eauth, _parser=self.options
                 )
             except SaltClientError:
                 # We will print errors to the console further down the stack

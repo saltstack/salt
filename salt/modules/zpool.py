@@ -19,7 +19,6 @@ import os
 import salt.utils.decorators
 import salt.utils.decorators.path
 import salt.utils.path
-from salt.ext.six.moves import zip
 from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)

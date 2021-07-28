@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Proxy Minion interface module for managing VMWare ESXi clusters.
 
@@ -150,15 +149,9 @@ Associated states are documented in
 Look there to find an example structure for Pillar as well as an example
 ``.sls`` file for configuring an ESX cluster from scratch.
 """
-
-
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import os
 
-# Import Salt Libs
 import salt.exceptions
 from salt.config.schemas.esxcluster import EsxclusterProxySchema
 from salt.utils.dictupdate import merge

@@ -1,15 +1,8 @@
-# -*- coding: utf-8 -*-
 # pylint: disable=unused-argument
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt libs
 import salt.states.jboss7 as jboss7
 from salt.exceptions import CommandExecutionError
-from salt.ext import six
-
-# Import Salt testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -635,7 +628,7 @@ class JBoss7StateTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 self.fail("An exception should be thrown")
             except CommandExecutionError as e:
-                self.assertEqual(six.text_type(e), "Incorrect binding name.")
+                self.assertEqual(str(e), "Incorrect binding name.")
 
     def test_should_raise_exception_if_cannot_update_binding(self):
         def read_func(jboss_config, binding_name, profile):
@@ -667,7 +660,7 @@ class JBoss7StateTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 self.fail("An exception should be thrown")
             except CommandExecutionError as e:
-                self.assertEqual(six.text_type(e), "Incorrect binding name.")
+                self.assertEqual(str(e), "Incorrect binding name.")
 
     def test_datasource_exist_create_datasource_good_code(self):
         jboss_config = {

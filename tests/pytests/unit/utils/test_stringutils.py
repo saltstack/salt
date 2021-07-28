@@ -2,13 +2,13 @@
 Tests for stringutils utility file.
 """
 
+import builtins
 import re
 import sys
 import textwrap
 
 import pytest
 import salt.utils.stringutils
-from salt.ext.six.moves import builtins, range  # pylint: disable=redefined-builtin
 from tests.support.mock import patch
 from tests.support.unit import LOREM_IPSUM
 
