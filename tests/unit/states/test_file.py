@@ -2941,10 +2941,10 @@ class TestFindKeepFiles(TestCase):
         be empty for this test.
         """
         keep = filestate._clean_dir(
-             "/test/parent_folder",
+            "/test/parent_folder",
             [
-                "/test/parent_folder/meh-1.txt",
-                "/Test/Parent_Folder/Meh-2.txt",
+                "/test/folder/parent_folder/meh-1.txt",
+                "/Test/folder/Parent_Folder/Meh-2.txt",
             ],
             exclude_pat=None,
         )
