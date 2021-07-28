@@ -208,7 +208,7 @@ def set(name, data, **kwargs):
                     if args["type"] == "password":
                         ret["changes"][key] = "(password hidden)"
                     else:
-                        ret["changes"][key] = ("{}").format(args["value"])
+                        ret["changes"][key] = "{}".format(args["value"])
                 else:
                     ret["result"] = False
                     ret["comment"] = "Some settings failed to be applied."

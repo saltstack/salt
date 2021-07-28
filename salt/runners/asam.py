@@ -35,13 +35,15 @@ import logging
 HAS_LIBS = False
 try:
     import requests
-    from salt.ext.six.moves.html_parser import HTMLParser  # pylint: disable=E0611
+    import html.parser
 
     HAS_LIBS = True
 
-    class ASAMHTMLParser(HTMLParser):  # fix issue #30477
+    # pylint: disable=abstract-method
+
+    class ASAMHTMLParser(html.parser.HTMLParser):  # fix issue #30477
         def __init__(self):
-            HTMLParser.__init__(self)
+            html.parser.HTMLParser.__init__(self)
             self.data = []
 
         def handle_starttag(self, tag, attrs):
@@ -51,6 +53,8 @@ try:
                 if attr[0] != "href":
                     return
                 self.data.append(attr[1])
+
+    # pylint: enable=abstract-method
 
 
 except ImportError:

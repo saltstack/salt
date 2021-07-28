@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Namecheap SSL Certificate Management
 
@@ -26,17 +25,11 @@ file, or in the Pillar data.
     #Sandbox url
     #namecheap.url: https://api.sandbox.namecheap.xml.response
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import Salt libs
 import salt.utils.files
 import salt.utils.stringutils
-
-# Import 3rd-party libs
-from salt.ext import six
 
 try:
     import salt.utils.namecheap
@@ -291,7 +284,7 @@ def __get_certificates(
     if http_dc_validation:
         opts["HTTPDCValidation"] = "True"
 
-    for key, value in six.iteritems(kwargs):
+    for key, value in kwargs.items():
         opts[key] = value
 
     response_xml = salt.utils.namecheap.post_request(opts)
@@ -419,12 +412,12 @@ def renew(years, certificate_id, certificate_type, promotion_code=None):
         raise Exception("Invalid option for certificate_type=" + certificate_type)
 
     if years < 1 or years > 5:
-        log.error("Invalid option for years=%s", six.text_type(years))
-        raise Exception("Invalid option for years=" + six.text_type(years))
+        log.error("Invalid option for years=%s", str(years))
+        raise Exception("Invalid option for years=" + str(years))
 
     opts = salt.utils.namecheap.get_opts("namecheap.ssl.renew")
-    opts["Years"] = six.text_type(years)
-    opts["CertificateID"] = six.text_type(certificate_id)
+    opts["Years"] = str(years)
+    opts["CertificateID"] = str(certificate_id)
     opts["SSLType"] = certificate_type
     if promotion_code is not None:
         opts["PromotionCode"] = promotion_code
@@ -598,8 +591,8 @@ def create(years, certificate_type, promotion_code=None, sans_to_add=None):
         raise Exception("Invalid option for certificate_type=" + certificate_type)
 
     if years < 1 or years > 5:
-        log.error("Invalid option for years=%s", six.text_type(years))
-        raise Exception("Invalid option for years=" + six.text_type(years))
+        log.error("Invalid option for years=%s", str(years))
+        raise Exception("Invalid option for years=" + str(years))
 
     opts = salt.utils.namecheap.get_opts("namecheap.ssl.create")
 
@@ -767,7 +760,7 @@ def get_list(**kwargs):
         salt 'my-minion' namecheap_ssl.get_list Processing
     """
     opts = salt.utils.namecheap.get_opts("namecheap.ssl.getList")
-    for key, value in six.iteritems(kwargs):
+    for key, value in kwargs.items():
         opts[key] = value
 
     response_xml = salt.utils.namecheap.get_request(opts)

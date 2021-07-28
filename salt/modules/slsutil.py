@@ -1,15 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 Utility functions for use with or in SLS files
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import textwrap
 
-# Import Salt libs
 import salt.exceptions
 import salt.loader
 import salt.template
@@ -191,12 +187,12 @@ def _get_serialize_fn(serializer, fn_name):
 
     if not fns:
         raise salt.exceptions.CommandExecutionError(
-            "Serializer '{0}' not found.".format(serializer)
+            "Serializer '{}' not found.".format(serializer)
         )
 
     if not fn:
         raise salt.exceptions.CommandExecutionError(
-            "Serializer '{0}' does not implement {1}.".format(serializer, fn_name)
+            "Serializer '{}' does not implement {}.".format(serializer, fn_name)
         )
 
     return fn

@@ -1,18 +1,14 @@
-# -*- coding: utf-8 -*-
 """
 Module for checking jinja maps and verifying the result of loading JSON/YAML
 files
 
 .. versionadded:: 3000
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import functools
 import logging
 import textwrap
 
-# Import Salt libs
 import salt.loader
 import salt.template
 import salt.utils.json

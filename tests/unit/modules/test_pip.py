@@ -1,18 +1,9 @@
-# -*- coding: utf-8 -*-
-
-# Import python libs
-from __future__ import absolute_import
-
 import os
 import sys
 
 import salt.modules.pip as pip
-
-# Import salt libs
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -1350,7 +1341,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                 {"latest_filetype": "wheel", "version": "1.4.1", "name": "appdirs", "latest_version": "1.4.3"},
                 {"latest_filetype": "sdist", "version": "1.11.63", "name": "awscli", "latest_version": "1.12.1"}
                 ]"""
-        mock = MagicMock(return_value={"retcode": 0, "stdout": "{0}".format(eggs)})
+        mock = MagicMock(return_value={"retcode": 0, "stdout": "{}".format(eggs)})
         with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
             with patch("salt.modules.pip.version", MagicMock(return_value="9.1.1")):
                 ret = pip.list_upgrades()

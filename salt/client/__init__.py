@@ -530,6 +530,10 @@ class LocalClient:
             >>> SLC.cmd_subset('*', 'test.ping', subset=1)
             {'jerry': True}
         """
+
+        # Support legacy parameter name:
+        subset = kwargs.pop("sub", subset)
+
         minion_ret = self.cmd(tgt, "sys.list_functions", tgt_type=tgt_type, **kwargs)
         minions = list(minion_ret)
         random.shuffle(minions)

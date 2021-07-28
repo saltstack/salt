@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Chronos
 ========
@@ -24,7 +23,6 @@ the chronos endpoint:
 
 .. versionadded:: 2015.8.2
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
@@ -57,7 +55,7 @@ def ping():
     """
     try:
         response = salt.utils.http.query(
-            "{0}/scheduler/jobs".format(CONFIG[CONFIG_BASE_URL]),
+            "{}/scheduler/jobs".format(CONFIG[CONFIG_BASE_URL]),
             decode_type="json",
             decode=True,
         )

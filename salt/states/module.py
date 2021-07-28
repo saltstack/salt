@@ -305,7 +305,6 @@ import salt.utils.args
 import salt.utils.functools
 import salt.utils.jid
 from salt.exceptions import SaltInvocationError
-from salt.ext.six.moves import range
 from salt.utils.decorators import with_deprecated
 
 

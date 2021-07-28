@@ -397,12 +397,12 @@ class SSH:
                         )
                     )
                 log.info(
-                    "The host {} has been added to the roster {}".format(
-                        self.opts.get("tgt", ""), roster_file
-                    )
+                    "The host %s has been added to the roster %s",
+                    self.opts.get("tgt", ""),
+                    roster_file,
                 )
         else:
-            log.error("Unable to update roster {}: access denied".format(roster_file))
+            log.error("Unable to update roster %s: access denied", roster_file)
 
     def _update_targets(self):
         """
@@ -771,11 +771,11 @@ class SSH:
                     jid, job_load
                 )
         except Exception as exc:  # pylint: disable=broad-except
-            log.exception(exc)
             log.error(
                 "Could not save load with returner %s: %s",
                 self.opts["master_job_cache"],
                 exc,
+                exc_info=True,
             )
 
         if self.opts.get("verbose"):
@@ -1048,29 +1048,22 @@ class Single:
         if self.ssh_pre_flight:
             if not self.opts.get("ssh_run_pre_flight", False) and self.check_thin_dir():
                 log.info(
-                    "{} thin dir already exists. Not running ssh_pre_flight script".format(
-                        self.thin_dir
-                    )
+                    "%s thin dir already exists. Not running ssh_pre_flight script",
+                    self.thin_dir,
                 )
             elif not os.path.exists(self.ssh_pre_flight):
                 log.error(
-                    "The ssh_pre_flight script {} does not exist".format(
-                        self.ssh_pre_flight
-                    )
+                    "The ssh_pre_flight script %s does not exist", self.ssh_pre_flight
                 )
             else:
                 stdout, stderr, retcode = self.run_ssh_pre_flight()
                 if retcode != 0:
                     log.error(
-                        "Error running ssh_pre_flight script {}".format(
-                            self.ssh_pre_file
-                        )
+                        "Error running ssh_pre_flight script %s", self.ssh_pre_file
                     )
                     return stdout, stderr, retcode
                 log.info(
-                    "Successfully ran the ssh_pre_flight script: {}".format(
-                        self.ssh_pre_file
-                    )
+                    "Successfully ran the ssh_pre_flight script: %s", self.ssh_pre_file
                 )
 
         if self.opts.get("raw_shell", False):

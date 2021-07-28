@@ -24,7 +24,6 @@ import salt.utils.data
 import salt.utils.dictupdate
 import salt.utils.url
 from salt.exceptions import SaltClientError
-from salt.ext import six
 from salt.template import compile_template
 
 # Even though dictupdate is imported, invoking salt.utils.dictupdate.merge here

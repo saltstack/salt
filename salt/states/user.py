@@ -266,7 +266,6 @@ def present(
     nologinit=False,
     allow_uid_change=False,
     allow_gid_change=False,
-    **kwargs
 ):
     """
     Ensure that the named user is present with the specified properties
@@ -483,9 +482,8 @@ def present(
             if algo == "1":
                 log.warning("Using MD5 for hashing passwords is considered insecure!")
             log.debug(
-                "Re-using existing shadow salt for hashing password using {}".format(
-                    algorithms.get(algo)
-                )
+                "Re-using existing shadow salt for hashing password using %s",
+                algorithms.get(algo),
             )
             password = __salt__["shadow.gen_password"](
                 password, crypt_salt=shadow_salt, algorithm=algorithms.get(algo)
@@ -553,33 +551,10 @@ def present(
     if groups and optional_groups:
         for isected in set(groups).intersection(optional_groups):
             log.warning(
-                'Group "%s" specified in both groups and optional_groups '
-                "for user %s",
+                'Group "%s" specified in both groups and optional_groups for user %s',
                 isected,
                 name,
             )
-
-    # Warn until Silicon release, when old gid_from_name argument is used.
-    # Since gid_from_name is the only thing that we're pulling from the kwargs,
-    # we can also remove **kwargs from the function definition once we remove
-    # the entire if block below. The following two tests will also become
-    # redundant when this block is cleaned up:
-    #
-    # integration.states.test_user.UserTest.test_user_present_gid_from_name
-    # integration.states.test_user.UserTest.test_user_present_gid_from_name_and_usergroup
-    gid_from_name = kwargs.pop("gid_from_name", None)
-    if gid_from_name is not None:
-        msg = (
-            "The 'gid_from_name' argument in the user.present state has "
-            "been replaced with 'usergroup'"
-        )
-        if usergroup is not None:
-            msg += ". Ignoring since 'usergroup' was also used."
-        else:
-            msg += ". Update your SLS file to get rid of this warning."
-            usergroup = gid_from_name
-        salt.utils.versions.warn_until("Silicon", msg)
-        ret.setdefault("warnings", []).append(msg)
 
     # If usergroup was specified, we'll also be creating a new
     # group. We should report this change without setting the gid
@@ -846,8 +821,6 @@ def present(
                 "profile": win_profile,
                 "logonscript": win_logonscript,
             }
-
-        # user.add returns true, false, or a str in the case of windows failure
         result = __salt__["user.add"](**params)
         if result is True:
             ret["comment"] = "New user {} created".format(name)

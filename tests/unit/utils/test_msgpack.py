@@ -9,7 +9,6 @@ import sys
 from io import BytesIO
 
 import salt.utils.msgpack
-from salt.ext.six.moves import range
 from salt.utils.odict import OrderedDict
 from tests.support.unit import TestCase, skipIf
 

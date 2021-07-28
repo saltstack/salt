@@ -10,7 +10,6 @@ import textwrap
 
 import salt.loader
 import salt.modules.boto3_elasticsearch as boto3_elasticsearch
-from salt.ext.six.moves import range
 from salt.utils.versions import LooseVersion
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch

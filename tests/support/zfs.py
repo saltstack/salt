@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     tests.support.zfs
     ~~~~~~~~~~~~~~~~~
@@ -6,17 +5,12 @@
     ZFS related unit test data structures
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import salt libs
 import salt.utils.zfs
-
-# Import Salt tests libs
 from tests.support.mock import MagicMock, patch
 
 
-class ZFSMockData(object):
+class ZFSMockData:
     def __init__(self):
         # property_map mocks
         self.pmap_exec_zpool = {
