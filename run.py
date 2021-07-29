@@ -80,6 +80,8 @@ def redirect(argv):
     if not sys.platform.startswith("win"):
         with tiamatpip.utils.patched_sys_argv(args):
             s_fun()
+    else:
+        s_fun()
 
 
 def py_shell():
