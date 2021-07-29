@@ -224,6 +224,7 @@ def test_winrm_pinnned_version():
 
 
 def test_ssh_gateway_arguments_default_alive_args():
+    # test ssh gateway
     server_alive_interval = 60
     server_alive_count_max = 3
     arguments = ssh_gateway_arguments({"ssh_gateway": "host"})
