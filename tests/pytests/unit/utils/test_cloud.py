@@ -358,6 +358,7 @@ def test_sftp_file_alive_args():
         assert "-oServerAliveInterval={}".format(server_alive_interval) in ssh_call
         assert "-oServerAliveCountMax={}".format(server_alive_count_max) in ssh_call
 
+
 def test_deploy_script_ssh_timeout():
     with patch("salt.utils.cloud.root_cmd", return_value=False) as root_cmd, patch(
         "salt.utils.cloud.wait_for_port", return_value=True
