@@ -2473,7 +2473,7 @@ def event(
             if salt.utils.stringutils.expr_match(ret["tag"], tagmatch):
                 if not quiet:
                     salt.utils.stringutils.print_cli(
-                        "{}\t{}".format(  # future lint: blacklisted-function
+                        "{}\t{}".format(
                             salt.utils.stringutils.to_str(ret["tag"]),
                             salt.utils.json.dumps(
                                 salt.utils.data.decode(ret["data"]),
