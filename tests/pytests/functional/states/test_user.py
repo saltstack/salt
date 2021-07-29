@@ -67,7 +67,7 @@ def group_2():
 
 @pytest.fixture
 def existing_account():
-    with pytest.helpers.create_account() as _account:
+    with pytest.helpers.create_account(create_group=True) as _account:
         yield _account
 
 
@@ -100,6 +100,9 @@ def test_user_present_with_existing_group(states, username, existing_account):
     assert ret.result is True
 
 
+@pytest.mark.skip_on_windows(
+    reason="Home directories are handled differently in Windows"
+)
 def test_user_present_when_home_dir_does_not_18843(states, existing_account):
     """
     User exists but home directory does not. Home directory get's created
@@ -238,6 +241,9 @@ def test_user_present_gecos(modules, states, username):
         assert user_info["homephone"] == str(homephone)
 
 
+@pytest.mark.skip_on_windows(
+    reason="windows minion does not support roomnumber or phone",
+)
 def test_user_present_gecos_empty_fields(modules, states, username):
     """
     It ensures that if no GECOS data is supplied, the fields will be coerced
@@ -331,6 +337,7 @@ def test_user_present_existing(states, username):
     )
     assert ret.result is True
 
+    win_profile = "C:\\Users\\{}".format(username)
     win_description = "Temporary Account"
     ret = states.user.present(
         name=username,
