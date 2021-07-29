@@ -186,27 +186,24 @@ def __ssh_gateway_arguments(kwargs):
         ssh_gateway_user = kwargs.get("ssh_gateway_user", "root")
 
         # Setup ProxyCommand
-        extended_arguments = '-oProxyCommand="ssh {strict_host_key_checking} {server_alive_interval} \
-{server_alive_count_max} {user_known_hosts_file} {control_path} {ssh_gateway_key} \
-{ssh_gateway_user}@{ssh_gateway} -p {ssh_gateway_port} {ssh_gateway_command}"'.format(
-            # Don't add new hosts to the host key database
-            strict_host_key_checking="-oStrictHostKeyChecking=no",
-            # make sure ssh can time out on connection lose
-            server_alive_interval="-oServerAliveInterval={}".format(
-                kwargs.get("server_alive_interval", SERVER_ALIVE_INTERVAL)
-            ),
-            server_alive_count_max="-oServerAliveCountMax={}".format(
-                kwargs.get("server_alive_count_max", SERVER_ALIVE_COUNT_MAX)
-            ),
-            # Set hosts key database path to /dev/null, i.e., non-existing
-            user_known_hosts_file="-oUserKnownHostsFile=/dev/null",
-            # Don't re-use the SSH connection. Less failures.
-            control_path="-oControlPath=none",
-            ssh_gateway_key=ssh_gateway_key,
-            ssh_gateway_user=ssh_gateway_user,
-            ssh_gateway=ssh_gateway,
-            ssh_gateway_port=ssh_gateway_port,
-            ssh_gateway_command=ssh_gateway_command,
+        extended_arguments = " ".join(
+            (
+                "ssh",
+                "-oStrictHostKeyChecking=no",
+                "-oServerAliveInterval={}".format(
+                    kwargs.get("server_alive_interval", SERVER_ALIVE_INTERVAL)
+                ),
+                "-oServerAliveCountMax={}".format(
+                    kwargs.get("server_alive_count_max", SERVER_ALIVE_COUNT_MAX)
+                ),
+                "-oUserKnownHostsFile=/dev/null",
+                "-oControlPath=none",
+                str(ssh_gateway_key),
+                "{}@{}".format(ssh_gateway_user, ssh_gateway),
+                "-p",
+                str(ssh_gateway_port),
+                str(ssh_gateway_command),
+            )
         )
 
         log.info(
