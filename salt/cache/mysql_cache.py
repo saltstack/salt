@@ -88,7 +88,7 @@ def __virtual__():
     return bool(MySQLdb), "No python mysql client installed." if MySQLdb is None else ""
 
 
-def run_query(conn, query, args=None, retries=3):
+def run_query(conn, query, retries=3, args=None):
     """
     Get a cursor and run a query. Reconnect up to `retries` times if
     needed.
