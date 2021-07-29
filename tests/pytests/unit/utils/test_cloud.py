@@ -222,7 +222,6 @@ def test_winrm_pinnned_version():
             assert winrm_pkg.version >= '0.3.0'
     # fmt: on
 
-
 def test_ssh_gateway_arguments_default_alive_args():
     server_alive_interval = 60
     server_alive_count_max = 3
@@ -358,3 +357,17 @@ def test_sftp_file_alive_args():
         ssh_call = exec_ssh_cmd.call_args[0][0]
         assert "-oServerAliveInterval={}".format(server_alive_interval) in ssh_call
         assert "-oServerAliveCountMax={}".format(server_alive_count_max) in ssh_call
+
+def test_deploy_script_ssh_timeout():
+    with patch("salt.utils.cloud.root_cmd", return_value=False) as root_cmd, patch(
+        "salt.utils.cloud.wait_for_port", return_value=True
+    ), patch("salt.utils.cloud.wait_for_passwd", return_value=True), patch(
+        "salt.utils.cloud._exec_ssh_cmd"
+    ):
+        cloud.deploy_script("127.0.0.1", ssh_timeout=34)
+        # verify that ssh_timeout made it into ssh_kwargs
+        assert root_cmd.call_count == 1
+        ssh_kwargs = root_cmd.call_args.kwargs
+        assert "ssh_timeout" in ssh_kwargs
+        assert ssh_kwargs["ssh_timeout"] == 34
+
