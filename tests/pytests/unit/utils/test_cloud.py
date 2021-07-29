@@ -371,4 +371,3 @@ def test_deploy_script_ssh_timeout():
         ssh_kwargs = root_cmd.call_args.kwargs
         assert "ssh_timeout" in ssh_kwargs
         assert ssh_kwargs["ssh_timeout"] == 34
-
