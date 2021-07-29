@@ -5,20 +5,10 @@ plugin interfaces used by Salt.
 """
 
 import contextlib
-import copy
-import functools
-import importlib
-import importlib.machinery
-import importlib.util
-import inspect
 import logging
 import os
 import re
-import sys
-import tempfile
-import threading
 import time
-import traceback
 import types
 
 import salt.config
@@ -40,16 +30,8 @@ import salt.utils.versions
 from salt.exceptions import LoaderError
 from salt.template import check_render_pipe_str
 from salt.utils import entrypoints
-from salt.utils.decorators import Depends
 
 from .lazy import SALT_BASE_PATH, FilterDictWrapper, LazyLoader
-
-try:
-    # Try the stdlib C extension first
-    import _contextvars as contextvars
-except ImportError:
-    # Py<3.7
-    import contextvars
 
 log = logging.getLogger(__name__)
 
