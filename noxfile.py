@@ -286,7 +286,7 @@ def _upgrade_pip_setuptools_and_wheel(session):
         "install",
         "--progress-bar=off",
         "-U",
-        "pip>=20.2.4",
+        "pip>=20.2.4,<21.2",
         "setuptools!=50.*,!=51.*,!=52.*",
         "wheel",
     ]
