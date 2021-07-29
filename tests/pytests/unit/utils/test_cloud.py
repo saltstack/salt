@@ -222,6 +222,7 @@ def test_winrm_pinnned_version():
             assert winrm_pkg.version >= '0.3.0'
     # fmt: on
 
+
 def test_ssh_gateway_arguments_default_alive_args():
     server_alive_interval = 60
     server_alive_count_max = 3
