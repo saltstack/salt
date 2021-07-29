@@ -3225,29 +3225,13 @@ class FileBasicsTestCase(TestCase, LoaderModuleMockMixin):
                 with patch(
                     "salt.utils.http.query", MagicMock(return_value={})
                 ) as http_query:
-                    with patch.object(filemod, "HAS_REQUESTS", True):
-                        ret = filemod.source_list(
-                            [{"http://t.est.com/http/file1": "filehash"}], "", "base"
-                        )
-                        self.assertEqual(
-                            list(ret), ["http://t.est.com/http/file1", "filehash"]
-                        )
-                        self.assertIn(expected_call, http_query.mock_calls)
-
-                expected_call = call(
-                    "http://t.est.com/http/file2", decode_body=False, method="HEAD"
-                )
-                with patch(
-                    "salt.utils.http.query", MagicMock(return_value={})
-                ) as http_query:
-                    with patch.object(filemod, "HAS_REQUESTS", False):
-                        ret = filemod.source_list(
-                            [{"http://t.est.com/http/file2": "filehash"}], "", "base"
-                        )
-                        self.assertEqual(
-                            list(ret), ["http://t.est.com/http/file2", "filehash"]
-                        )
-                        self.assertIn(expected_call, http_query.mock_calls)
+                    ret = filemod.source_list(
+                        [{"http://t.est.com/http/file1": "filehash"}], "", "base"
+                    )
+                    self.assertEqual(
+                        list(ret), ["http://t.est.com/http/file1", "filehash"]
+                    )
+                    self.assertIn(expected_call, http_query.mock_calls)
 
     def test_source_list_for_list_returns_existing_file(self):
         with patch.dict(
