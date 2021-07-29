@@ -314,9 +314,9 @@ def compare_list_of_dicts(old, new, convert_id_to_name=None):
         ret["comment"] = 'configuration dictionaries must contain the "name" key!'
         return ret
 
-    for idx in enumerate(len(local_configs)):
-        for key in local_configs[idx]:
-            local_val = local_configs[idx][key]
+    for idx, val in enumerate(local_configs):
+        for key in val:
+            local_val = val[key]
             if key in convert_id_to_name:
                 remote_val = (
                     remote_configs[idx].get(key, {}).get("id", "").split("/")[-1]
@@ -339,7 +339,6 @@ def get_config_from_cloud(cloud_provider):
     Function use to retreive the configuration from the cloud
     provider
     """
-    conn_kwargs = ""
     client = salt.cloud.CloudClient(path="/etc/salt/cloud")
     conn_kwargs = client.opts["providers"][cloud_provider]["azurearm"]
     return conn_kwargs
