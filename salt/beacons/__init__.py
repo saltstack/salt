@@ -128,7 +128,6 @@ class Beacon:
                 # Fire the beacon!
                 error = None
                 try:
-                    log.debug(self.beacons[fun_str])
                     raw = self.beacons[fun_str](b_config[mod])
                 except:  # pylint: disable=bare-except
                     error = "{}".format(sys.exc_info()[1])
