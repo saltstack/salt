@@ -244,7 +244,7 @@ def dec_file(name, out=None, **kwargs):
             sk_file=/etc/salt/pki/master/nacl.pub
     """
     kwargs["opts"] = __opts__
-    return salt.utils.nacl.dec_file(name, out, **kwargs)
+    return salt.utils.nacl.dec_file(name, out, **kwargs).decode()
 
 
 def sealedbox_encrypt(data, **kwargs):
