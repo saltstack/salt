@@ -277,7 +277,7 @@ def sealedbox_decrypt(data, **kwargs):
         salt-call --local nacl.sealedbox_decrypt data='pEXHQM6cuaF7A=' sk='YmFkcGFzcwo='
     """
     kwargs["opts"] = __opts__
-    return salt.utils.nacl.sealedbox_decrypt(data, **kwargs)
+    return salt.utils.nacl.sealedbox_decrypt(data, **kwargs).decode()
 
 
 def secretbox_encrypt(data, **kwargs):
@@ -311,4 +311,4 @@ def secretbox_decrypt(data, **kwargs):
         salt-call --local nacl.secretbox_decrypt data='pEXHQM6cuaF7A=' sk='YmFkcGFzcwo='
     """
     kwargs["opts"] = __opts__
-    return salt.utils.nacl.secretbox_decrypt(data, **kwargs)
+    return salt.utils.nacl.secretbox_decrypt(data, **kwargs).decode()
