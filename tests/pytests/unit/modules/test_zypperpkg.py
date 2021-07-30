@@ -55,3 +55,23 @@ def test_list_pkgs_no_context():
         pkgs = zypper.list_pkgs(versions_as_list=True, use_context=False)
         list_pkgs_context_mock.assert_not_called()
         list_pkgs_context_mock.reset_mock()
+
+def test_normalize_name():
+    """
+    Test that package is normalized only when it should be
+    """
+    with patch.dict(zypper.__grains__, {"osarch": "x86_64"}):
+        result = zypper.normalize_name("foo")
+        assert result == "foo", result
+        result = zypper.normalize_name("foo.x86_64")
+        assert result == "foo", result
+        result = zypper.normalize_name("foo.noarch")
+        assert result == "foo", result
+
+    with patch.dict(zypper.__grains__, {"osarch": "aarch64"}):
+        result = zypper.normalize_name("foo")
+        assert result == "foo", result
+        result = zypper.normalize_name("foo.aarch64")
+        assert result == "foo", result
+        result = zypper.normalize_name("foo.noarch")
+        assert result == "foo", result
