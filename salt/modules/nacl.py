@@ -223,7 +223,7 @@ def dec(data, **kwargs):
     box_type: secretbox, sealedbox(default)
     """
     kwargs["opts"] = __opts__
-    return salt.utils.nacl.dec(data, **kwargs)
+    return salt.utils.nacl.dec(data, **kwargs).decode()
 
 
 def dec_file(name, out=None, **kwargs):
