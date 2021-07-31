@@ -31,6 +31,7 @@ import salt.ext.tornado
 import salt.ext.tornado.gen
 import salt.ext.tornado.ioloop
 import salt.loader
+import salt.loader.lazy
 import salt.log.setup
 import salt.payload
 import salt.pillar
@@ -3709,7 +3710,7 @@ class ProxyMinionManager(MinionManager):
 
 
 def _metaproxy_call(opts, fn_name):
-    loaded_base_name = "{}.{}".format(opts["id"], salt.loader.LOADED_BASE_NAME)
+    loaded_base_name = "{}.{}".format(opts["id"], salt.loader.lazy.LOADED_BASE_NAME)
     metaproxy = salt.loader.metaproxy(opts, loaded_base_name=loaded_base_name)
     try:
         metaproxy_name = opts["metaproxy"]
