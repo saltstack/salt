@@ -118,6 +118,16 @@ class SSHHighState(salt.state.BaseHighState):
                 )
         return ret
 
+    def destroy(self):
+        if self.client:
+            self.client.destroy()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_):
+        self.destroy()
+
 
 def lowstate_file_refs(chunks, extras=""):
     """

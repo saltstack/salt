@@ -331,24 +331,24 @@ def highstate(root, **kwargs):
     # Clone the options data and apply some default values. May not be
     # needed, as this module just delegate
     opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
-    st_ = salt.client.ssh.state.SSHHighState(
+    with salt.client.ssh.state.SSHHighState(
         opts, pillar, __salt__, salt.fileclient.get_file_client(__opts__)
-    )
+    ) as st_:
 
-    # Compile and verify the raw chunks
-    chunks = st_.compile_low_chunks()
-    file_refs = salt.client.ssh.state.lowstate_file_refs(
-        chunks,
-        salt.client.ssh.wrapper.state._merge_extra_filerefs(
-            kwargs.get("extra_filerefs", ""), opts.get("extra_filerefs", "")
-        ),
-    )
-    # Check for errors
-    for chunk in chunks:
-        if not isinstance(chunk, dict):
-            __context__["retcode"] = 1
-            return chunks
+        # Compile and verify the raw chunks
+        chunks = st_.compile_low_chunks()
+        file_refs = salt.client.ssh.state.lowstate_file_refs(
+            chunks,
+            salt.client.ssh.wrapper.state._merge_extra_filerefs(
+                kwargs.get("extra_filerefs", ""), opts.get("extra_filerefs", "")
+            ),
+        )
+        # Check for errors
+        for chunk in chunks:
+            if not isinstance(chunk, dict):
+                __context__["retcode"] = 1
+                return chunks
 
-    test = kwargs.pop("test", False)
-    hash_type = opts["hash_type"]
-    return _create_and_execute_salt_state(root, chunks, file_refs, test, hash_type)
+        test = kwargs.pop("test", False)
+        hash_type = opts["hash_type"]
+        return _create_and_execute_salt_state(root, chunks, file_refs, test, hash_type)
