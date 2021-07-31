@@ -4601,6 +4601,15 @@ class BaseHighState:
 
         return state_usage
 
+    def destroy(self):
+        raise NotImplementedError
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_):
+        self.destroy()
+
 
 class HighState(BaseHighState):
     """
