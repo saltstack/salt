@@ -192,14 +192,14 @@ def _move(src, dst):
 
 
 def _run_command(args):
-    log.info("Running command: {}".format(args))
+    log.info("Running command: %s", args)
     proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = proc.communicate()
     if stdout:
-        log.debug("Command output: \n{}".format(stdout))
+        log.debug("Command output: \n%s", stdout)
     if stderr:
         log.error(stderr)
-    log.info("Return code: {}".format(proc.returncode))
+    log.info("Return code: %s", proc.returncode)
     return stdout, stderr, proc.returncode
 
 
@@ -212,7 +212,7 @@ def _make_sdist(opts, python_bin="python"):
             glob.iglob(os.path.join(opts.source_dir, "dist", "salt-*.tar.gz")),
             key=os.path.getctime,
         )
-        log.info("sdist is located at {}".format(sdist_path))
+        log.info("sdist is located at %s", sdist_path)
         return sdist_path
     else:
         _abort("Failed to create sdist")
@@ -239,7 +239,7 @@ def build_centos(opts):
     except OSError as exc:
         _abort("{}".format(exc))
 
-    log.info("major_release: {}".format(major_release))
+    log.info("major_release: %s", major_release)
 
     define_opts = ["--define", "_topdir {}".format(os.path.join(opts.build_dir))]
     build_reqs = ["rpm-build"]
@@ -280,8 +280,8 @@ def build_centos(opts):
         salt_pkgver = ".".join((base, offset, oid))
         salt_srcver = "-".join((base, offset, oid))
 
-    log.info("salt_pkgver: {}".format(salt_pkgver))
-    log.info("salt_srcver: {}".format(salt_srcver))
+    log.info("salt_pkgver: %s", salt_pkgver)
+    log.info("salt_srcver: %s", salt_srcver)
 
     # Setup build environment
     for build_dir in "BUILD BUILDROOT RPMS SOURCES SPECS SRPMS".split():
@@ -377,9 +377,7 @@ if __name__ == "__main__":
         level=LOG_LEVELS[opts.log_level],
     )
     if opts.log_level not in LOG_LEVELS:
-        log.error(
-            "Invalid log level '{}', falling back to 'warning'".format(opts.log_level)
-        )
+        log.error("Invalid log level '%s', falling back to 'warning'", opts.log_level)
 
     # Build for the specified platform
     if not opts.platform:
@@ -394,5 +392,5 @@ if __name__ == "__main__":
     print(msg)  # pylint: disable=C0325
     for artifact in artifacts:
         shutil.copy(artifact, opts.artifact_dir)
-        log.info("Copied {} to artifact directory".format(artifact))
+        log.info("Copied %s to artifact directory", artifact)
     log.info("Done!")

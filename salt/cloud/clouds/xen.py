@@ -928,8 +928,11 @@ def _get_vm(name=None, session=None):
     if session is None:
         session = _get_session()
     vms = session.xenapi.VM.get_by_name_label(name)
+    vms = [x for x in vms if not session.xenapi.VM.get_is_a_template(x)]
     if len(vms) == 1:
         return vms[0]
+    else:
+        log.error("VM %s returned %s matches. 1 match expected.", name, len(vms))
     return None
 
 

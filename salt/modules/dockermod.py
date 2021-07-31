@@ -903,9 +903,7 @@ def _get_create_kwargs(
             client_args = get_client_args(["create_container", "host_config"])
         except CommandExecutionError as exc:
             log.error(
-                "docker.create: Error getting client args: '%s'",
-                exc.__str__(),
-                exc_info=True,
+                "docker.create: Error getting client args: '%s'", exc, exc_info=True,
             )
             raise CommandExecutionError("Failed to get client args: {}".format(exc))
 
@@ -2099,7 +2097,7 @@ def resolve_tag(name, **kwargs):
         return False
     except KeyError:
         log.error(
-            "Inspecting docker image '%s' returned an unexpected data " "structure: %s",
+            "Inspecting docker image '%s' returned an unexpected data structure: %s",
             name,
             inspect_result,
         )
@@ -2513,7 +2511,7 @@ def version():
 
 
 def _create_networking_config(networks):
-    log.debug("creating networking config from {}".format(networks))
+    log.debug("creating networking config from %s", networks)
     return _client_wrapper(
         "create_networking_config",
         {
@@ -3270,7 +3268,7 @@ def create(
         )
 
     log.debug(
-        "docker.create: creating container %susing the following " "arguments: %s",
+        "docker.create: creating container %susing the following arguments: %s",
         "with name '{}' ".format(name) if name is not None else "",
         kwargs,
     )
@@ -3435,7 +3433,7 @@ def run_container(
             raise SaltInvocationError("Invalid format for networks argument")
 
     log.debug(
-        "docker.create: creating container %susing the following " "arguments: %s",
+        "docker.create: creating container %susing the following arguments: %s",
         "with name '{}' ".format(name) if name is not None else "",
         kwargs,
     )
@@ -6659,27 +6657,26 @@ def _compile_state(sls_opts, mods=None):
     """
     Generates the chunks of lowdata from the list of modules
     """
-    st_ = HighState(sls_opts)
+    with HighState(sls_opts) as st_:
+        if not mods:
+            return st_.compile_low_chunks()
 
-    if not mods:
-        return st_.compile_low_chunks()
+        high_data, errors = st_.render_highstate({sls_opts["saltenv"]: mods})
+        high_data, ext_errors = st_.state.reconcile_extend(high_data)
+        errors += ext_errors
+        errors += st_.state.verify_high(high_data)
+        if errors:
+            return errors
 
-    high_data, errors = st_.render_highstate({sls_opts["saltenv"]: mods})
-    high_data, ext_errors = st_.state.reconcile_extend(high_data)
-    errors += ext_errors
-    errors += st_.state.verify_high(high_data)
-    if errors:
-        return errors
+        high_data, req_in_errors = st_.state.requisite_in(high_data)
+        errors += req_in_errors
+        high_data = st_.state.apply_exclude(high_data)
+        # Verify that the high data is structurally sound
+        if errors:
+            return errors
 
-    high_data, req_in_errors = st_.state.requisite_in(high_data)
-    errors += req_in_errors
-    high_data = st_.state.apply_exclude(high_data)
-    # Verify that the high data is structurally sound
-    if errors:
-        return errors
-
-    # Compile and verify the raw chunks
-    return st_.state.compile_high_data(high_data)
+        # Compile and verify the raw chunks
+        return st_.state.compile_high_data(high_data)
 
 
 def call(name, function, *args, **kwargs):
