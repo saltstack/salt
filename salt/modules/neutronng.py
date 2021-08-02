@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Neutron module for interacting with OpenStack Neutron
 
@@ -26,7 +25,6 @@ Example configuration
       identity_api_version: 3
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 HAS_SHADE = False
 try:

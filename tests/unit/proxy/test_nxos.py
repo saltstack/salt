@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
     :codeauthor: Mike Wiebe <@mikewiebe>
 """
@@ -18,14 +16,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.proxy.nxos as nxos_proxy
 import salt.utils.nxos as nxos_utils
 from salt.exceptions import CommandExecutionError
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, create_autospec, patch
 from tests.support.unit import TestCase

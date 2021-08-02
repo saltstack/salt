@@ -1,16 +1,7 @@
-# -*- coding: utf-8 -*-
-
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import collections
 import textwrap
 
-# Import Salt libs
 import salt.renderers.yaml as yaml
-from salt.ext import six
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch
 from tests.support.unit import TestCase
@@ -24,13 +15,11 @@ class YAMLRendererTestCase(TestCase, LoaderModuleMockMixin):
         """
         Make sure the entire data structure is unicode
         """
-        if six.PY3:
-            return
-        if isinstance(value, six.string_types):
-            if not isinstance(value, six.text_type):
+        if isinstance(value, str):
+            if not isinstance(value, str):
                 self.raise_error(value)
         elif isinstance(value, collections.Mapping):
-            for k, v in six.iteritems(value):
+            for k, v in value.items():
                 self.assert_unicode(k)
                 self.assert_unicode(v)
         elif isinstance(value, collections.Iterable):

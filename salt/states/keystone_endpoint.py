@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Management of OpenStack Keystone Endpoints
 ==========================================
@@ -37,7 +36,6 @@ Example States
         - service_name: glance
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 __virtualname__ = "keystone_endpoint"
 

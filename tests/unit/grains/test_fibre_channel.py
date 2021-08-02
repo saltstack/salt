@@ -1,15 +1,9 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: :email:`Shane Lee <slee@saltstack.com>`
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
 import salt.grains.fibre_channel as fibre_channel
 from tests.support.mock import MagicMock, mock_open, patch
-
-# Import Salt Testing Libs
 from tests.support.unit import TestCase
 
 

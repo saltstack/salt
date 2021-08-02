@@ -1223,13 +1223,16 @@ def _get_subnetname_id(subnetname):
         opts=__opts__,
         sigver="4",
     ):
-        tags = subnet.get("tagSet", {}).get("item", {})
-        if not isinstance(tags, list):
-            tags = [tags]
-        for tag in tags:
-            if tag["key"] == "Name" and tag["value"] == subnetname:
-                log.debug("AWS Subnet ID of %s is %s", subnetname, subnet["subnetId"])
-                return subnet["subnetId"]
+        if "tagSet" in subnet:
+            tags = subnet.get("tagSet", {}).get("item", [])
+            if not isinstance(tags, list):
+                tags = [tags]
+            for tag in tags:
+                if tag["key"] == "Name" and tag["value"] == subnetname:
+                    log.debug(
+                        "AWS Subnet ID of %s is %s", subnetname, subnet["subnetId"]
+                    )
+                    return subnet["subnetId"]
     return None
 
 

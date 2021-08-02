@@ -1,14 +1,5 @@
-# -*- coding: utf-8 -*-
-
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import salt.modules.jboss7 as jboss7
-
-# Import salt libs
 from salt.utils.odict import OrderedDict
-
-# Import salt testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock
 from tests.support.unit import TestCase

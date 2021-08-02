@@ -206,7 +206,6 @@ import salt.utils.event
 import salt.utils.json
 import salt.utils.minions
 import salt.utils.yaml
-import salt.utils.zeromq
 from salt.exceptions import (
     AuthenticationError,
     AuthorizationError,
@@ -215,7 +214,6 @@ from salt.exceptions import (
 from salt.ext.tornado.concurrent import Future
 from salt.utils.event import tagify
 
-salt.utils.zeromq.install_zmq()
 _json = salt.utils.json.import_json()
 log = logging.getLogger(__name__)
 
@@ -1604,9 +1602,7 @@ class EventsSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
             try:
                 event = yield self.application.event_listener.get_event(self)
                 self.write("tag: {}\n".format(event.get("tag", "")))
-                self.write(
-                    "data: {}\n\n".format(_json_dumps(event))
-                )  # future lint: disable=blacklisted-function
+                self.write("data: {}\n\n".format(_json_dumps(event)))
                 self.flush()
             except TimeoutException:
                 break

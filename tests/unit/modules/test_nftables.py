@@ -1,7 +1,6 @@
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
-
 import json
 
 import salt.modules.nftables as nftables

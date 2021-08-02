@@ -1,7 +1,4 @@
-# coding: utf-8
-
 # Python libs
-from __future__ import absolute_import
 
 # Salt libs
 import salt.beacons.smartos_vmadm as vmadm

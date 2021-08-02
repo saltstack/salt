@@ -249,7 +249,7 @@ def _new_serial(ca_name):
     else:
         mode = "a+"
     with salt.utils.files.fopen(serial_file, mode) as ofile:
-        ofile.write(str(hashnum))  # future lint: disable=blacklisted-function
+        ofile.write(str(hashnum))
 
     return hashnum
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Thomas Stoner <tmstoner@cisco.com>
 """
@@ -16,10 +15,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-
-from __future__ import absolute_import
-
 import re
 from string import Template
 
@@ -29,7 +24,7 @@ from string import Template
 # pylint: disable-msg=C0301
 
 
-class NXOSPlatform(object):
+class NXOSPlatform:
 
     """ Cisco Systems Base Platform Unit Test Object """
 

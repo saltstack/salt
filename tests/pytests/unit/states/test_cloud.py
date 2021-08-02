@@ -159,16 +159,12 @@ def test_profile():
             assert cloud.profile(name, profile) == ret
 
         with patch.dict(cloud.__opts__, {"test": False}):
-            comt = ("Failed to create instance {}" "using profile {}").format(
-                name, profile
-            )
+            comt = "Failed to create instance {} using profile {}".format(name, profile)
             ret.update({"comment": comt, "result": False})
             assert cloud.profile(name, profile) == ret
 
         with patch.dict(cloud.__opts__, {"test": False}):
-            comt = ("Failed to create instance {}" "using profile {}").format(
-                name, profile
-            )
+            comt = "Failed to create instance {} using profile {}".format(name, profile)
             ret.update({"comment": comt, "result": False})
             assert cloud.profile(name, profile) == ret
 

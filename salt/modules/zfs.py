@@ -20,7 +20,6 @@ import salt.utils.args
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.versions
-from salt.ext.six.moves import zip
 from salt.utils.odict import OrderedDict
 
 __virtualname__ = "zfs"

@@ -1,18 +1,12 @@
-# -*- coding: utf-8 -*-
 """
 unit tests for salt.cache
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.cache
-
-# Import Salt libs
 import salt.payload
 from tests.support.mock import patch
 
-# Import Salt Testing libs
 # import integration
 from tests.support.unit import TestCase
 
