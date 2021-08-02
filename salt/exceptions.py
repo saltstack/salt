@@ -94,6 +94,12 @@ class AuthenticationError(SaltException):
     """
 
 
+class InvalidKeyError(SaltException):
+    """
+    Raised when we encounter an invalid RSA key.
+    """
+
+
 class CommandNotFoundError(SaltException):
     """
     Used in modules or grains when a required binary is not available

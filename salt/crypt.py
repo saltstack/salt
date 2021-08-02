@@ -36,6 +36,7 @@ import salt.utils.verify
 import salt.version
 from salt.exceptions import (
     AuthenticationError,
+    InvalidKeyError,
     MasterExit,
     SaltClientError,
     SaltReqTimeoutError,
@@ -220,10 +221,16 @@ def get_rsa_pub_key(path):
         with salt.utils.files.fopen(path, "rb") as f:
             data = f.read().replace(b"RSA ", b"")
         bio = BIO.MemoryBuffer(data)
-        key = RSA.load_pub_key_bio(bio)
+        try:
+            key = RSA.load_pub_key_bio(bio)
+        except RSA.RSAError:
+            raise InvalidKeyError("Encountered bad RSA public key")
     else:
         with salt.utils.files.fopen(path) as f:
-            key = RSA.importKey(f.read())
+            try:
+                key = RSA.importKey(f.read())
+            except (ValueError, IndexError, TypeError):
+                raise InvalidKeyError("Encountered bad RSA public key")
     return key
 
 
