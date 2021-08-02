@@ -62,7 +62,7 @@ def write(domain, key, value, type="string", user=None):
 
 def read(domain, key, user=None):
     """
-    Write a default to the system
+    Read a default from the system
 
     CLI Example:
 
@@ -79,7 +79,7 @@ def read(domain, key, user=None):
         The key of the given domain to read from
 
     user
-        The user to write the defaults to
+        The user to read the defaults as
 
     """
     cmd = 'defaults read "{}" "{}"'.format(domain, key)

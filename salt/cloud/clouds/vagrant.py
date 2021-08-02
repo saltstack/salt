@@ -34,6 +34,13 @@ def __virtual__():
     return True
 
 
+def _get_active_provider_name():
+    try:
+        return __active_provider_name__.value()
+    except AttributeError:
+        return __active_provider_name__
+
+
 def avail_locations(call=None):
     r"""
     This function returns a list of locations available.
@@ -265,7 +272,7 @@ def get_configured_provider():
     Return the first configured instance.
     """
     ret = config.is_provider_configured(
-        __opts__, __active_provider_name__ or "vagrant", ""
+        __opts__, _get_active_provider_name() or "vagrant", ""
     )
     return ret
 
@@ -316,7 +323,7 @@ def destroy(name, call=None):
 
             if opts.get("update_cachedir", False) is True:
                 __utils__["cloud.delete_minion_cachedir"](
-                    name, __active_provider_name__.split(":")[0], opts
+                    name, _get_active_provider_name().split(":")[0], opts
                 )
 
             return {"Destroyed": "{} was destroyed.".format(name)}

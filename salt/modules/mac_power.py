@@ -133,7 +133,7 @@ def get_computer_sleep():
 
     CLI Example:
 
-    ..code-block:: bash
+    .. code-block:: bash
 
         salt '*' power.get_computer_sleep
     """
@@ -175,7 +175,7 @@ def get_display_sleep():
 
     CLI Example:
 
-    ..code-block:: bash
+    .. code-block:: bash
 
         salt '*' power.get_display_sleep
     """
@@ -217,7 +217,7 @@ def get_harddisk_sleep():
 
     CLI Example:
 
-    ..code-block:: bash
+    .. code-block:: bash
 
         salt '*' power.get_harddisk_sleep
     """

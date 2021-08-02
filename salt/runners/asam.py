@@ -2,11 +2,11 @@
 Novell ASAM Runner
 ==================
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.8.0
 
 Runner to interact with Novell ASAM Fan-Out Driver
 
-:codeauthor: Nitin Madhok <nmadhok@clemson.edu>
+:codeauthor: Nitin Madhok <nmadhok@g.clemson.edu>
 
 To use this runner, set up the Novell Fan-Out Driver URL, username and password in the
 master configuration at ``/etc/salt/master`` or ``/etc/salt/master.d/asam.conf``:
@@ -17,9 +17,11 @@ master configuration at ``/etc/salt/master`` or ``/etc/salt/master.d/asam.conf``
       prov1.domain.com
         username: "testuser"
         password: "verybadpass"
+        verify_ssl: true
       prov2.domain.com
         username: "testuser"
         password: "verybadpass"
+        verify_ssl: true
 
 .. note::
 
@@ -33,13 +35,15 @@ import logging
 HAS_LIBS = False
 try:
     import requests
-    from salt.ext.six.moves.html_parser import HTMLParser  # pylint: disable=E0611
+    import html.parser
 
     HAS_LIBS = True
 
-    class ASAMHTMLParser(HTMLParser):  # fix issue #30477
+    # pylint: disable=abstract-method
+
+    class ASAMHTMLParser(html.parser.HTMLParser):  # fix issue #30477
         def __init__(self):
-            HTMLParser.__init__(self)
+            html.parser.HTMLParser.__init__(self)
             self.data = []
 
         def handle_starttag(self, tag, attrs):
@@ -49,6 +53,8 @@ try:
                 if attr[0] != "href":
                     return
                 self.data.append(attr[1])
+
+    # pylint: enable=abstract-method
 
 
 except ImportError:
@@ -84,6 +90,10 @@ def _get_asam_configuration(driver_url=""):
                 password = service_config.get("password", None)
                 protocol = service_config.get("protocol", "https")
                 port = service_config.get("port", 3451)
+                verify_ssl = service_config.get("verify_ssl")
+
+                if verify_ssl is None:
+                    verify_ssl = True
 
                 if not username or not password:
                     log.error(
@@ -108,6 +118,7 @@ def _get_asam_configuration(driver_url=""):
                     ),
                     "username": username,
                     "password": password,
+                    "verify_ssl": verify_ssl,
                 }
 
                 if (not driver_url) or (driver_url == asam_server):
@@ -206,7 +217,7 @@ def remove_platform(name, server_url):
     auth = (config["username"], config["password"])
 
     try:
-        html_content = _make_post_request(url, data, auth, verify=False)
+        html_content = _make_post_request(url, data, auth, verify=config["verify_ssl"])
     except Exception as exc:  # pylint: disable=broad-except
         err_msg = "Failed to look up existing platforms on {}".format(server_url)
         log.error("%s:\n%s", err_msg, exc)
@@ -222,7 +233,9 @@ def remove_platform(name, server_url):
         data["postType"] = "platformRemove"
         data["Submit"] = "Yes"
         try:
-            html_content = _make_post_request(url, data, auth, verify=False)
+            html_content = _make_post_request(
+                url, data, auth, verify=config["verify_ssl"]
+            )
         except Exception as exc:  # pylint: disable=broad-except
             err_msg = "Failed to delete platform from {}".format(server_url)
             log.error("%s:\n%s", err_msg, exc)
@@ -261,7 +274,7 @@ def list_platforms(server_url):
     auth = (config["username"], config["password"])
 
     try:
-        html_content = _make_post_request(url, data, auth, verify=False)
+        html_content = _make_post_request(url, data, auth, verify=config["verify_ssl"])
     except Exception as exc:  # pylint: disable=broad-except
         err_msg = "Failed to look up existing platforms"
         log.error("%s:\n%s", err_msg, exc)
@@ -299,7 +312,7 @@ def list_platform_sets(server_url):
     auth = (config["username"], config["password"])
 
     try:
-        html_content = _make_post_request(url, data, auth, verify=False)
+        html_content = _make_post_request(url, data, auth, verify=config["verify_ssl"])
     except Exception as exc:  # pylint: disable=broad-except
         err_msg = "Failed to look up existing platform sets"
         log.error("%s:\n%s", err_msg, exc)
@@ -351,7 +364,7 @@ def add_platform(name, platform_set, server_url):
     auth = (config["username"], config["password"])
 
     try:
-        html_content = _make_post_request(url, data, auth, verify=False)
+        html_content = _make_post_request(url, data, auth, verify=config["verify_ssl"])
     except Exception as exc:  # pylint: disable=broad-except
         err_msg = "Failed to add platform on {}".format(server_url)
         log.error("%s:\n%s", err_msg, exc)

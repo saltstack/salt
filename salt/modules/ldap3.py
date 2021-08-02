@@ -246,7 +246,7 @@ def connect(connect_spec=None):
         This object should be used as a context manager.  It is safe
         to nest ``with`` statements.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -353,7 +353,7 @@ def search(
         dict that maps each of the matching attribute names to a list
         of its values.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -394,7 +394,7 @@ def add(connect_spec, dn, attributes):
     :returns:
         ``True`` if successful, raises an exception otherwise.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -441,7 +441,7 @@ def delete(connect_spec, dn):
     :returns:
         ``True`` if successful, raises an exception otherwise.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -496,7 +496,7 @@ def modify(connect_spec, dn, directives):
     :returns:
         ``True`` if successful, raises an exception otherwise.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -567,7 +567,7 @@ def change(connect_spec, dn, before, after):
     :returns:
         ``True`` if successful, raises an exception otherwise.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 

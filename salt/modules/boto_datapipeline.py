@@ -35,7 +35,7 @@ def activate_pipeline(pipeline_id, region=None, key=None, keyid=None, profile=No
     """
     Start processing pipeline tasks. This function is idempotent.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -57,7 +57,7 @@ def create_pipeline(
     """
     Create a new, empty pipeline. This function is idempotent.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -79,7 +79,7 @@ def delete_pipeline(pipeline_id, region=None, key=None, keyid=None, profile=None
     """
     Delete a pipeline, its pipeline definition, and its run history. This function is idempotent.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -99,7 +99,7 @@ def describe_pipelines(pipeline_ids, region=None, key=None, keyid=None, profile=
     """
     Retrieve metadata about one or more pipelines.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -120,7 +120,7 @@ def get_pipeline_definition(
     """
     Get the definition of the specified pipeline.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -164,7 +164,7 @@ def pipeline_id_from_name(name, region=None, key=None, keyid=None, profile=None)
     """
     Get the pipeline id, if it exists, for the given name.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -197,7 +197,7 @@ def put_pipeline_definition(
     Add tasks, schedules, and preconditions to the specified pipeline. This function is
     idempotent and will replace an existing definition.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 

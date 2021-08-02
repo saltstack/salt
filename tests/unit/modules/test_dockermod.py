@@ -1,17 +1,14 @@
-# -*- coding: utf-8 -*-
 """
 Unit tests for the docker module
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
+import pytest
 import salt.config
 import salt.loader
 import salt.modules.dockermod as docker_mod
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.ext.six.moves import range
-from tests.support.helpers import slowTest
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, call, patch
 from tests.support.unit import TestCase, skipIf
@@ -260,7 +257,7 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
                 all=True, filters={"label": "KEY"}
             )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_check_mine_cache_is_refreshed_on_container_change_event(self):
         """
         Every command that might modify docker containers state.
@@ -394,8 +391,8 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
                     )
                 except AssertionError as exc:
                     raise Exception(
-                        "command '{0}' did not call docker.ps with expected "
-                        "arguments: {1}".format(command_name, exc)
+                        "command '{}' did not call docker.ps with expected "
+                        "arguments: {}".format(command_name, exc)
                     )
 
     def test_update_mine(self):
@@ -951,7 +948,7 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
             ret,
         )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_call_success(self):
         """
         test module calling inside containers

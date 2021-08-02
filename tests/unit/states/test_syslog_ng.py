@@ -1,10 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 Test module for syslog_ng state
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import re

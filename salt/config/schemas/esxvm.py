@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: :email:`Agnes Tevesz (agnes.tevesz@morganstanley.com)`
 
@@ -8,8 +7,6 @@
     ESX Virtual Machine configuration schemas
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 from salt.utils.schema import (
     AnyOfItem,

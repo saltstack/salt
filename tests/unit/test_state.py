@@ -6,6 +6,7 @@ import os
 import shutil
 import tempfile
 
+import pytest  # pylint: disable=unused-import
 import salt.exceptions
 import salt.state
 import salt.utils.files
@@ -13,16 +14,12 @@ import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 from salt.utils.decorators import state as statedecorators
 from salt.utils.odict import OrderedDict
-from tests.support.helpers import slowTest, with_tempfile
+from saltfactories.utils.tempfiles import temp_file
+from tests.support.helpers import with_tempfile
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
-
-try:
-    import pytest
-except ImportError as err:
-    pytest = None
 
 
 class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
@@ -45,7 +42,7 @@ class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         }
         salt.state.format_log(ret)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_render_error_on_invalid_requisite(self):
         """
         Test that the state compiler correctly deliver a rendering
@@ -142,7 +139,7 @@ class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
     def test_verify_onlyif_cmd_error(self):
         """
         Simulates a failure in cmd.retcode from onlyif
-        This could occur is runas is specified with a user that does not exist
+        This could occur if runas is specified with a user that does not exist
         """
         low_data = {
             "onlyif": "somecommand",
@@ -175,7 +172,7 @@ class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
     def test_verify_unless_cmd_error(self):
         """
         Simulates a failure in cmd.retcode from unless
-        This could occur is runas is specified with a user that does not exist
+        This could occur if runas is specified with a user that does not exist
         """
         low_data = {
             "unless": "somecommand",
@@ -204,6 +201,166 @@ class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                     low_data, {"runas": "doesntexist"}
                 )
                 self.assertEqual(expected_result, return_result)
+
+    def test_verify_unless_list_cmd(self):
+        """
+        If any of the unless commands return False (non 0) then the state should
+        run (no skip_watch).
+        """
+        low_data = {
+            "state": "cmd",
+            "name": 'echo "something"',
+            "__sls__": "tests.cmd",
+            "__env__": "base",
+            "__id__": "check unless",
+            "unless": ["exit 0", "exit 1"],
+            "order": 10001,
+            "fun": "run",
+        }
+        expected_result = {
+            "comment": "unless condition is false",
+            "result": False,
+        }
+        with patch("salt.state.State._gather_pillar") as state_patch:
+            minion_opts = self.get_temp_config("minion")
+            state_obj = salt.state.State(minion_opts)
+            return_result = state_obj._run_check_unless(low_data, {})
+            self.assertEqual(expected_result, return_result)
+
+    def test_verify_unless_list_cmd_different_order(self):
+        """
+        If any of the unless commands return False (non 0) then the state should
+        run (no skip_watch). The order shouldn't matter.
+        """
+        low_data = {
+            "state": "cmd",
+            "name": 'echo "something"',
+            "__sls__": "tests.cmd",
+            "__env__": "base",
+            "__id__": "check unless",
+            "unless": ["exit 1", "exit 0"],
+            "order": 10001,
+            "fun": "run",
+        }
+        expected_result = {
+            "comment": "unless condition is false",
+            "result": False,
+        }
+        with patch("salt.state.State._gather_pillar") as state_patch:
+            minion_opts = self.get_temp_config("minion")
+            state_obj = salt.state.State(minion_opts)
+            return_result = state_obj._run_check_unless(low_data, {})
+            self.assertEqual(expected_result, return_result)
+
+    def test_verify_onlyif_list_cmd_different_order(self):
+        low_data = {
+            "state": "cmd",
+            "name": 'echo "something"',
+            "__sls__": "tests.cmd",
+            "__env__": "base",
+            "__id__": "check onlyif",
+            "onlyif": ["exit 1", "exit 0"],
+            "order": 10001,
+            "fun": "run",
+        }
+        expected_result = {
+            "comment": "onlyif condition is false",
+            "result": True,
+            "skip_watch": True,
+        }
+        with patch("salt.state.State._gather_pillar") as state_patch:
+            minion_opts = self.get_temp_config("minion")
+            state_obj = salt.state.State(minion_opts)
+            return_result = state_obj._run_check_onlyif(low_data, {})
+            self.assertEqual(expected_result, return_result)
+
+    def test_verify_unless_list_cmd_valid(self):
+        """
+        If any of the unless commands return False (non 0) then the state should
+        run (no skip_watch). This tests all commands return False.
+        """
+        low_data = {
+            "state": "cmd",
+            "name": 'echo "something"',
+            "__sls__": "tests.cmd",
+            "__env__": "base",
+            "__id__": "check unless",
+            "unless": ["exit 1", "exit 1"],
+            "order": 10001,
+            "fun": "run",
+        }
+        expected_result = {"comment": "unless condition is false", "result": False}
+        with patch("salt.state.State._gather_pillar") as state_patch:
+            minion_opts = self.get_temp_config("minion")
+            state_obj = salt.state.State(minion_opts)
+            return_result = state_obj._run_check_unless(low_data, {})
+            self.assertEqual(expected_result, return_result)
+
+    def test_verify_onlyif_list_cmd_valid(self):
+        low_data = {
+            "state": "cmd",
+            "name": 'echo "something"',
+            "__sls__": "tests.cmd",
+            "__env__": "base",
+            "__id__": "check onlyif",
+            "onlyif": ["exit 0", "exit 0"],
+            "order": 10001,
+            "fun": "run",
+        }
+        expected_result = {"comment": "onlyif condition is true", "result": False}
+        with patch("salt.state.State._gather_pillar") as state_patch:
+            minion_opts = self.get_temp_config("minion")
+            state_obj = salt.state.State(minion_opts)
+            return_result = state_obj._run_check_onlyif(low_data, {})
+            self.assertEqual(expected_result, return_result)
+
+    def test_verify_unless_list_cmd_invalid(self):
+        """
+        If any of the unless commands return False (non 0) then the state should
+        run (no skip_watch). This tests all commands return True
+        """
+        low_data = {
+            "state": "cmd",
+            "name": 'echo "something"',
+            "__sls__": "tests.cmd",
+            "__env__": "base",
+            "__id__": "check unless",
+            "unless": ["exit 0", "exit 0"],
+            "order": 10001,
+            "fun": "run",
+        }
+        expected_result = {
+            "comment": "unless condition is true",
+            "result": True,
+            "skip_watch": True,
+        }
+        with patch("salt.state.State._gather_pillar") as state_patch:
+            minion_opts = self.get_temp_config("minion")
+            state_obj = salt.state.State(minion_opts)
+            return_result = state_obj._run_check_unless(low_data, {})
+            self.assertEqual(expected_result, return_result)
+
+    def test_verify_onlyif_list_cmd_invalid(self):
+        low_data = {
+            "state": "cmd",
+            "name": 'echo "something"',
+            "__sls__": "tests.cmd",
+            "__env__": "base",
+            "__id__": "check onlyif",
+            "onlyif": ["exit 1", "exit 1"],
+            "order": 10001,
+            "fun": "run",
+        }
+        expected_result = {
+            "comment": "onlyif condition is false",
+            "result": True,
+            "skip_watch": True,
+        }
+        with patch("salt.state.State._gather_pillar") as state_patch:
+            minion_opts = self.get_temp_config("minion")
+            state_obj = salt.state.State(minion_opts)
+            return_result = state_obj._run_check_onlyif(low_data, {})
+            self.assertEqual(expected_result, return_result)
 
     def test_verify_unless_parse(self):
         low_data = {
@@ -376,7 +533,7 @@ class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             "__sls__": "tests.cmd",
             "__env__": "base",
             "__id__": "check onlyif",
-            "onlyif": ["/bin/true", "/bin/false"],
+            "onlyif": ["exit 0", "exit 1"],
             "order": 10001,
             "fun": "run",
         }
@@ -691,31 +848,19 @@ class HighStateTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         matches = self.highstate.matches_whitelist(matches, "state2,state3")
         self.assertEqual(matches, {"env": ["state2", "state3"]})
 
-    def test_show_state_usage(self):
-        # monkey patch sub methods
-        self.highstate.avail = {"base": ["state.a", "state.b", "state.c"]}
+    def test_compile_state_usage(self):
+        top = temp_file("top.sls", "base: {'*': [foo]}", self.state_tree_dir)
+        used_state = temp_file("foo.sls", "foo: test.nop", self.state_tree_dir)
+        unused_state = temp_file("bar.sls", "bar: test.nop", self.state_tree_dir)
 
-        def verify_tops(*args, **kwargs):
-            return []
+        with top, used_state, unused_state:
+            state_usage_dict = self.highstate.compile_state_usage()
 
-        def get_top(*args, **kwargs):
-            return None
-
-        def top_matches(*args, **kwargs):
-            return {"base": ["state.a", "state.b"]}
-
-        self.highstate.verify_tops = verify_tops
-        self.highstate.get_top = get_top
-        self.highstate.top_matches = top_matches
-
-        # get compile_state_usage() result
-        state_usage_dict = self.highstate.compile_state_usage()
-
-        self.assertEqual(state_usage_dict["base"]["count_unused"], 1)
-        self.assertEqual(state_usage_dict["base"]["count_used"], 2)
-        self.assertEqual(state_usage_dict["base"]["count_all"], 3)
-        self.assertEqual(state_usage_dict["base"]["used"], ["state.a", "state.b"])
-        self.assertEqual(state_usage_dict["base"]["unused"], ["state.c"])
+            self.assertEqual(state_usage_dict["base"]["count_unused"], 2)
+            self.assertEqual(state_usage_dict["base"]["count_used"], 1)
+            self.assertEqual(state_usage_dict["base"]["count_all"], 3)
+            self.assertEqual(state_usage_dict["base"]["used"], ["foo"])
+            self.assertEqual(state_usage_dict["base"]["unused"], ["bar", "top"])
 
     def test_find_sls_ids_with_exclude(self):
         """
@@ -754,14 +899,9 @@ class MultiEnvHighStateTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             if not os.path.isdir(dpath):
                 os.makedirs(dpath)
         shutil.copy(
-            os.path.join(RUNTIME_VARS.BASE_FILES, "top.sls"), self.base_state_tree_dir
-        )
-        shutil.copy(
-            os.path.join(RUNTIME_VARS.BASE_FILES, "core.sls"), self.base_state_tree_dir
-        )
-        shutil.copy(
             os.path.join(RUNTIME_VARS.BASE_FILES, "test.sls"), self.other_state_tree_dir
         )
+
         overrides = {}
         overrides["root_dir"] = root_dir
         overrides["state_events"] = False
@@ -782,40 +922,99 @@ class MultiEnvHighStateTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         self.highstate.pop_active()
 
     def test_lazy_avail_states_base(self):
-        # list_states not called yet
-        self.assertEqual(self.highstate.avail._filled, False)
-        self.assertEqual(self.highstate.avail._avail, {"base": None})
-        # After getting 'base' env available states
-        self.highstate.avail["base"]  # pylint: disable=pointless-statement
-        self.assertEqual(self.highstate.avail._filled, False)
-        self.assertEqual(self.highstate.avail._avail, {"base": ["core", "top"]})
+        top_sls = """
+        base:
+          '*':
+            - core
+            """
 
-    def test_lazy_avail_states_other(self):
-        # list_states not called yet
-        self.assertEqual(self.highstate.avail._filled, False)
-        self.assertEqual(self.highstate.avail._avail, {"base": None})
-        # After getting 'other' env available states
-        self.highstate.avail["other"]  # pylint: disable=pointless-statement
-        self.assertEqual(self.highstate.avail._filled, True)
-        self.assertEqual(self.highstate.avail._avail, {"base": None, "other": ["test"]})
-
-    def test_lazy_avail_states_multi(self):
-        # list_states not called yet
-        self.assertEqual(self.highstate.avail._filled, False)
-        self.assertEqual(self.highstate.avail._avail, {"base": None})
-        # After getting 'base' env available states
-        self.highstate.avail["base"]  # pylint: disable=pointless-statement
-        self.assertEqual(self.highstate.avail._filled, False)
-        self.assertEqual(self.highstate.avail._avail, {"base": ["core", "top"]})
-        # After getting 'other' env available states
-        self.highstate.avail["other"]  # pylint: disable=pointless-statement
-        self.assertEqual(self.highstate.avail._filled, True)
-        self.assertEqual(
-            self.highstate.avail._avail, {"base": ["core", "top"], "other": ["test"]}
+        core_state = """
+        {}/testfile:
+          file:
+            - managed
+            - source: salt://testfile
+            - makedirs: true
+            """.format(
+            RUNTIME_VARS.TMP
         )
 
+        with temp_file("top.sls", top_sls, self.base_state_tree_dir), temp_file(
+            "core.sls", core_state, self.base_state_tree_dir
+        ):
+            # list_states not called yet
+            self.assertEqual(self.highstate.avail._filled, False)
+            self.assertEqual(self.highstate.avail._avail, {"base": None})
+            # After getting 'base' env available states
+            self.highstate.avail["base"]  # pylint: disable=pointless-statement
+            self.assertEqual(self.highstate.avail._filled, False)
+            self.assertEqual(self.highstate.avail._avail, {"base": ["core", "top"]})
 
-@skipIf(pytest is None, "PyTest is missing")
+    def test_lazy_avail_states_other(self):
+        top_sls = """
+        base:
+          '*':
+            - core
+            """
+
+        core_state = """
+        {}/testfile:
+          file:
+            - managed
+            - source: salt://testfile
+            - makedirs: true
+            """.format(
+            RUNTIME_VARS.TMP
+        )
+
+        with temp_file("top.sls", top_sls, self.base_state_tree_dir), temp_file(
+            "core.sls", core_state, self.base_state_tree_dir
+        ):
+            # list_states not called yet
+            self.assertEqual(self.highstate.avail._filled, False)
+            self.assertEqual(self.highstate.avail._avail, {"base": None})
+            # After getting 'other' env available states
+            self.highstate.avail["other"]  # pylint: disable=pointless-statement
+            self.assertEqual(self.highstate.avail._filled, True)
+            self.assertEqual(
+                self.highstate.avail._avail, {"base": None, "other": ["test"]}
+            )
+
+    def test_lazy_avail_states_multi(self):
+        top_sls = """
+        base:
+          '*':
+            - core
+            """
+
+        core_state = """
+        {}/testfile:
+          file:
+            - managed
+            - source: salt://testfile
+            - makedirs: true
+            """.format(
+            RUNTIME_VARS.TMP
+        )
+
+        with temp_file("top.sls", top_sls, self.base_state_tree_dir), temp_file(
+            "core.sls", core_state, self.base_state_tree_dir
+        ):
+            # list_states not called yet
+            self.assertEqual(self.highstate.avail._filled, False)
+            self.assertEqual(self.highstate.avail._avail, {"base": None})
+            # After getting 'base' env available states
+            self.highstate.avail["base"]  # pylint: disable=pointless-statement
+            self.assertEqual(self.highstate.avail._filled, False)
+            self.assertEqual(self.highstate.avail._avail, {"base": ["core", "top"]})
+            # After getting 'other' env available states
+            self.highstate.avail["other"]  # pylint: disable=pointless-statement
+            self.assertEqual(self.highstate.avail._filled, True)
+            self.assertEqual(
+                self.highstate.avail._avail,
+                {"base": ["core", "top"], "other": ["test"]},
+            )
+
+
 class StateReturnsTestCase(TestCase):
     """
     TestCase for code handling state returns.
@@ -914,7 +1113,6 @@ class StateReturnsTestCase(TestCase):
         assert statedecorators.OutputUnifier("unify")(lambda: data)()["result"] is False
 
 
-@skipIf(pytest is None, "PyTest is missing")
 class SubStateReturnsTestCase(TestCase):
     """
     TestCase for code handling state returns.
@@ -1064,7 +1262,7 @@ class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         self.state_obj.format_slots(cdata)
         self.assertEqual(cdata, {"args": ["arg"], "kwargs": {"key": "val"}})
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_format_slots_arg(self):
         """
         Test the format slots is calling a slot specified in args with corresponding arguments.
@@ -1079,7 +1277,7 @@ class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         mock.assert_called_once_with("fun_arg", fun_key="fun_val")
         self.assertEqual(cdata, {"args": ["fun_return"], "kwargs": {"key": "val"}})
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_format_slots_dict_arg(self):
         """
         Test the format slots is calling a slot specified in dict arg.
@@ -1096,7 +1294,7 @@ class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             cdata, {"args": [{"subarg": "fun_return"}], "kwargs": {"key": "val"}}
         )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_format_slots_listdict_arg(self):
         """
         Test the format slots is calling a slot specified in list containing a dict.
@@ -1113,7 +1311,7 @@ class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             cdata, {"args": [[{"subarg": "fun_return"}]], "kwargs": {"key": "val"}}
         )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_format_slots_liststr_arg(self):
         """
         Test the format slots is calling a slot specified in list containing a dict.
@@ -1128,7 +1326,7 @@ class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         mock.assert_called_once_with("fun_arg", fun_key="fun_val")
         self.assertEqual(cdata, {"args": [["fun_return"]], "kwargs": {"key": "val"}})
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_format_slots_kwarg(self):
         """
         Test the format slots is calling a slot specified in kwargs with corresponding arguments.
@@ -1143,7 +1341,7 @@ class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         mock.assert_called_once_with("fun_arg", fun_key="fun_val")
         self.assertEqual(cdata, {"args": ["arg"], "kwargs": {"key": "fun_return"}})
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_format_slots_multi(self):
         """
         Test the format slots is calling all slots with corresponding arguments when multiple slots
@@ -1185,7 +1383,7 @@ class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             },
         )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_format_slots_malformed(self):
         """
         Test the format slots keeps malformed slots untouched.
@@ -1215,7 +1413,7 @@ class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         mock.assert_not_called()
         self.assertEqual(cdata, sls_data)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_slot_traverse_dict(self):
         """
         Test the slot parsing of dict response.
@@ -1231,7 +1429,7 @@ class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         mock.assert_called_once_with("fun_arg", fun_key="fun_val")
         self.assertEqual(cdata, {"args": ["arg"], "kwargs": {"key": "value1"}})
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_slot_append(self):
         """
         Test the slot parsing of dict response.

@@ -9,6 +9,7 @@ import re
 import sys
 import time
 import types
+import urllib.parse
 from copy import deepcopy
 
 import salt.defaults.exitcodes
@@ -27,12 +28,6 @@ import salt.utils.validate.path
 import salt.utils.xdg
 import salt.utils.yaml
 import salt.utils.zeromq
-
-# pylint: disable=import-error,no-name-in-module
-from salt.ext.six.moves.urllib.parse import urlparse
-
-# pylint: enable=import-error,no-name-in-module
-
 
 try:
     import psutil
@@ -372,6 +367,8 @@ VALID_OPTS = immutabletypes.freeze(
         "state_output": str,
         # Tells the highstate outputter to only report diffs of states that changed
         "state_output_diff": bool,
+        # Tells the highstate outputter whether profile information will be shown for each state run
+        "state_output_profile": bool,
         # When true, states run in the order defined in an SLS file, unless requisites re-order them
         "state_auto_order": bool,
         # Fire events as state chunks are processed by the state compiler
@@ -908,6 +905,8 @@ VALID_OPTS = immutabletypes.freeze(
         # Number of times to try to auth with the master on a reconnect with the
         # tcp transport
         "tcp_authentication_retries": int,
+        # Backoff interval in seconds for minion reconnect with tcp transport
+        "tcp_reconnect_backoff": float,
         # Permit or deny allowing minions to request revoke of its own key
         "allow_minion_key_revoke": bool,
         # File chunk size for salt-cp
@@ -948,6 +947,13 @@ VALID_OPTS = immutabletypes.freeze(
         "disabled_requisites": (str, list),
         # Feature flag config
         "features": dict,
+        "fips_mode": bool,
+        # Feature flag to enable checking if master is connected to a host
+        # on a given port
+        "detect_remote_minions": bool,
+        # The port to be used when checking if a master is connected to a
+        # minion
+        "remote_minions_port": int,
     }
 )
 
@@ -1123,6 +1129,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "tcp_pub_port": 4510,
         "tcp_pull_port": 4511,
         "tcp_authentication_retries": 5,
+        "tcp_reconnect_backoff": 1,
         "log_file": os.path.join(salt.syspaths.LOGS_DIR, "minion"),
         "log_level": "warning",
         "log_level_logfile": None,
@@ -1145,6 +1152,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "state_verbose": True,
         "state_output": "full",
         "state_output_diff": False,
+        "state_output_profile": True,
         "state_auto_order": True,
         "state_events": False,
         "state_aggregate": False,
@@ -1247,6 +1255,8 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "schedule": {},
         "ssh_merge_pillar": True,
         "disabled_requisites": [],
+        "reactor_niceness": None,
+        "fips_mode": False,
     }
 )
 
@@ -1477,6 +1487,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "state_verbose": True,
         "state_output": "full",
         "state_output_diff": False,
+        "state_output_profile": True,
         "state_auto_order": True,
         "state_events": False,
         "state_aggregate": False,
@@ -1582,6 +1593,9 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "minion_data_cache_events": True,
         "enable_ssh_minions": False,
         "netapi_allow_raw_shell": False,
+        "fips_mode": False,
+        "detect_remote_minions": False,
+        "remote_minions_port": 22,
     }
 )
 
@@ -2202,8 +2216,20 @@ def minion_config(
         overrides, defaults, cache_minion_id=cache_minion_id, minion_id=minion_id
     )
     opts["__role"] = role
+    if role != "master":
+        apply_sdb(opts)
+        _validate_opts(opts)
+    return opts
+
+
+def mminion_config(path, overrides, ignore_config_errors=True):
+    opts = minion_config(path, ignore_config_errors=ignore_config_errors, role="master")
+    opts.update(overrides)
     apply_sdb(opts)
+
     _validate_opts(opts)
+    opts["grains"] = salt.loader.grains(opts)
+    opts["pillar"] = {}
     return opts
 
 
@@ -2364,7 +2390,7 @@ def syndic_config(
     ]
     for config_key in ("log_file", "key_logfile", "syndic_log_file"):
         # If this is not a URI and instead a local path
-        if urlparse(opts.get(config_key, "")).scheme == "":
+        if urllib.parse.urlparse(opts.get(config_key, "")).scheme == "":
             prepend_root_dirs.append(config_key)
     prepend_root_dir(opts, prepend_root_dirs)
     return opts
@@ -2615,7 +2641,7 @@ def cloud_config(
 
     # prepend root_dir
     prepend_root_dirs = ["cachedir"]
-    if "log_file" in opts and urlparse(opts["log_file"]).scheme == "":
+    if "log_file" in opts and urllib.parse.urlparse(opts["log_file"]).scheme == "":
         prepend_root_dirs.append(opts["log_file"])
     prepend_root_dir(opts, prepend_root_dirs)
 
@@ -3684,7 +3710,7 @@ def apply_minion_config(
 
     # These can be set to syslog, so, not actual paths on the system
     for config_key in ("log_file", "key_logfile"):
-        if urlparse(opts.get(config_key, "")).scheme == "":
+        if urllib.parse.urlparse(opts.get(config_key, "")).scheme == "":
             prepend_root_dirs.append(config_key)
 
     prepend_root_dir(opts, prepend_root_dirs)
@@ -3892,7 +3918,7 @@ def apply_master_config(overrides=None, defaults=None):
         if log_setting is None:
             continue
 
-        if urlparse(log_setting).scheme == "":
+        if urllib.parse.urlparse(log_setting).scheme == "":
             prepend_root_dirs.append(config_key)
 
     prepend_root_dir(opts, prepend_root_dirs)
@@ -4093,7 +4119,7 @@ def apply_spm_config(overrides, defaults):
         if log_setting is None:
             continue
 
-        if urlparse(log_setting).scheme == "":
+        if urllib.parse.urlparse(log_setting).scheme == "":
             prepend_root_dirs.append(config_key)
 
     prepend_root_dir(opts, prepend_root_dirs)

@@ -409,9 +409,9 @@ def _format_env_vars(env_vars):
         if isinstance(env_vars, dict):
             for key, val in env_vars.items():
                 if not isinstance(key, str):
-                    key = str(key)  # future lint: disable=blacklisted-function
+                    key = str(key)
                 if not isinstance(val, str):
-                    val = str(val)  # future lint: disable=blacklisted-function
+                    val = str(val)
                 ret[key] = val
         else:
             raise CommandExecutionError(
@@ -675,7 +675,9 @@ def install(
         salt '*' pip.install <package name> bin_env=/path/to/virtualenv
         salt '*' pip.install <package name> bin_env=/path/to/pip_bin
 
-    Complicated CLI example::
+    Complicated CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pip.install markdown,django \
                 editable=git+https://github.com/worldcompany/djangoembed.git#egg=djangoembed upgrade=True no_deps=True
@@ -1397,7 +1399,7 @@ def list_upgrades(bin_env=None, user=None, cwd=None):
             if match:
                 name, version_ = match.groups()
             else:
-                logger.error("Can't parse line '{}'".format(line))
+                logger.error("Can't parse line %r", line)
                 continue
             packages[name] = version_
 
@@ -1497,7 +1499,6 @@ def upgrade(bin_env=None, user=None, cwd=None, use_vt=False):
 
         {'<package>':  {'old': '<old-version>',
                         'new': '<new-version>'}}
-
 
     CLI Example:
 

@@ -33,7 +33,6 @@ passed in as a dict, or as a string to pull from pillars or minion config:
         region: us-east-1
 """
 
-
 import copy
 import logging
 
@@ -108,7 +107,8 @@ def create_target_group(
     returns
         (bool) - True on success, False on failure.
 
-    CLI example:
+    CLI Example:
+
     .. code-block:: yaml
 
         create-target:
@@ -168,7 +168,7 @@ def delete_target_group(name, region=None, key=None, keyid=None, profile=None):
     returns
         (bool) - True on success, False on failure.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -304,7 +304,7 @@ def targets_deregistered(
     targets
         A list of target IDs or a string of a single target registered to the target group to be removed
 
-    .. versionadded:: Unknown
+    .. versionadded:: 2017.7.0
 
     .. code-block:: yaml
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     tasks.docstrings
     ~~~~~~~~~~~~~~~~
@@ -115,7 +114,8 @@ def build_path_cache():
             )
         stub_path = stub_path.relative_to(CODE_DIR)
         python_module_to_doc_path[path] = stub_path
-        doc_path_to_python_module[stub_path] = path
+        if path.exists():
+            doc_path_to_python_module[stub_path] = path
 
 
 build_path_cache()
@@ -191,7 +191,7 @@ def check_inline_markup(ctx, files):
                     "The {} function in {} contains ':doc:' usage", funcdef.name, path
                 )
                 exitcode += 1
-    utils.exit_invoke(exitcode)
+    return exitcode
 
 
 @task(iterable=["files"])
@@ -216,7 +216,7 @@ def check_stubs(ctx, files):
             utils.error(
                 "The module at {} does not have a sphinx stub at {}", path, stub_path
             )
-    utils.exit_invoke(exitcode)
+    return exitcode
 
 
 @task(iterable=["files"])
@@ -245,7 +245,7 @@ def check_virtual(ctx, files):
             except KeyError:
                 # This is what we're expecting
                 continue
-    utils.exit_invoke(exitcode)
+    return exitcode
 
 
 @task(iterable=["files"])
@@ -360,7 +360,7 @@ def check_module_indexes(ctx, files):
                 path,
                 ", ".join(extra_modules_in_index),
             )
-    utils.exit_invoke(exitcode)
+    return exitcode
 
 
 @task(iterable=["files"])
@@ -418,42 +418,24 @@ def check_stray(ctx, files):
                 continue
             exitcode += 1
             utils.error(
-                "The doc at {} doesn't have a corresponding python module an is considered a stray "
+                "The doc at {} doesn't have a corresponding python module and is considered a stray "
                 "doc. Please remove it.",
                 path,
             )
-    utils.exit_invoke(exitcode)
+    return exitcode
 
 
 @task(iterable=["files"])
 def check(ctx, files):
-    try:
-        utils.info("Checking inline :doc: markup")
-        check_inline_markup(ctx, files)
-    except SystemExit as exc:
-        if exc.code != 0:
-            raise
-    try:
-        utils.info("Checking python module stubs")
-        check_stubs(ctx, files)
-    except SystemExit as exc:
-        if exc.code != 0:
-            raise
-    try:
-        utils.info("Checking virtual modules")
-        check_virtual(ctx, files)
-    except SystemExit as exc:
-        if exc.code != 0:
-            raise
-    try:
-        utils.info("Checking doc module indexes")
-        check_module_indexes(ctx, files)
-    except SystemExit as exc:
-        if exc.code != 0:
-            raise
-    try:
-        utils.info("Checking stray docs")
-        check_stray(ctx, files)
-    except SystemExit as exc:
-        if exc.code != 0:
-            raise
+    exitcode = 0
+    utils.info("Checking inline :doc: markup")
+    exitcode += check_inline_markup(ctx, files)
+    utils.info("Checking python module stubs")
+    exitcode += check_stubs(ctx, files)
+    utils.info("Checking virtual modules")
+    exitcode += check_virtual(ctx, files)
+    utils.info("Checking stray docs")
+    exitcode += check_stray(ctx, files)
+    utils.info("Checking doc module indexes")
+    exitcode += check_module_indexes(ctx, files)
+    utils.exit_invoke(exitcode)

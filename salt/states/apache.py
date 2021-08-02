@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Apache state
 
@@ -85,12 +84,9 @@ it still needs keyword ``this`` with empty string (or "\b" if nicer output is re
                     do: another thing
 """
 
-from __future__ import absolute_import, print_function, unicode_literals, with_statement
 
-# Import python libs
 import os
 
-# Import Salt libs
 import salt.utils.files
 import salt.utils.stringutils
 

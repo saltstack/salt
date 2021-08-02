@@ -8,7 +8,6 @@ Module for managing the Salt schedule on a minion
 
 import copy as pycopy
 import datetime
-import difflib
 import logging
 import os
 
@@ -251,6 +250,7 @@ def delete(name, **kwargs):
     ret = {
         "comment": "Failed to delete job {} from schedule.".format(name),
         "result": False,
+        "changes": {},
     }
 
     if not name:
@@ -289,6 +289,7 @@ def delete(name, **kwargs):
                             ret["comment"] = "Deleted Job {} from schedule.".format(
                                 name
                             )
+                            ret["changes"][name] = "removed"
                         else:
                             ret[
                                 "comment"
@@ -440,6 +441,7 @@ def add(name, **kwargs):
     ret = {
         "comment": "Failed to add job {} to schedule.".format(name),
         "result": False,
+        "changes": {},
     }
 
     if name in list_(show_all=True, return_yaml=False):
@@ -501,6 +503,7 @@ def add(name, **kwargs):
                         if name in schedule:
                             ret["result"] = True
                             ret["comment"] = "Added job: {} to schedule.".format(name)
+                            ret["changes"][name] = "added"
                             return ret
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system
@@ -553,11 +556,17 @@ def modify(name, **kwargs):
     if "function" not in kwargs:
         kwargs["function"] = _current.get("function")
 
+    # Remove the auto generated _seconds value
     if "_seconds" in _current:
-        _current["seconds"] = _current["_seconds"]
-        del _current["_seconds"]
+        _current["seconds"] = _current.pop("_seconds")
 
-    _new = build_schedule_item(name, **kwargs)
+    # Copy _current _new, then update values from kwargs
+    _new = pycopy.deepcopy(_current)
+    _new.update(kwargs)
+
+    # Remove test from kwargs, it's not a valid schedule option
+    _new.pop("test", None)
+
     if "result" in _new and not _new["result"]:
         return _new
 
@@ -565,13 +574,10 @@ def modify(name, **kwargs):
         ret["comment"] = "Job {} in correct state".format(name)
         return ret
 
-    _current_lines = [
-        "{}:{}\n".format(key, value) for (key, value) in sorted(_current.items())
-    ]
-    _new_lines = ["{}:{}\n".format(key, value) for (key, value) in sorted(_new.items())]
-    _diff = difflib.unified_diff(_current_lines, _new_lines)
-
-    ret["changes"]["diff"] = "".join(_diff)
+    ret["changes"][name] = {
+        "old": salt.utils.odict.OrderedDict(_current),
+        "new": salt.utils.odict.OrderedDict(_new),
+    }
 
     if "test" in kwargs and kwargs["test"]:
         ret["comment"] = "Job: {} would be modified in schedule.".format(name)
@@ -653,7 +659,7 @@ def enable_job(name, **kwargs):
         salt '*' schedule.enable_job job1
     """
 
-    ret = {"comment": [], "result": True}
+    ret = {"comment": [], "result": True, "changes": {}}
 
     if not name:
         ret["comment"] = "Job name is required."
@@ -692,6 +698,7 @@ def enable_job(name, **kwargs):
                         if name in schedule and schedule[name]["enabled"]:
                             ret["result"] = True
                             ret["comment"] = "Enabled Job {} in schedule.".format(name)
+                            ret["changes"][name] = "enabled"
                         else:
                             ret["result"] = False
                             ret[
@@ -715,7 +722,7 @@ def disable_job(name, **kwargs):
         salt '*' schedule.disable_job job1
     """
 
-    ret = {"comment": [], "result": True}
+    ret = {"comment": [], "result": True, "changes": {}}
 
     if not name:
         ret["comment"] = "Job name is required."
@@ -754,6 +761,7 @@ def disable_job(name, **kwargs):
                         if name in schedule and not schedule[name]["enabled"]:
                             ret["result"] = True
                             ret["comment"] = "Disabled Job {} in schedule.".format(name)
+                            ret["changes"][name] = "disabled"
                         else:
                             ret["result"] = False
                             ret[
@@ -814,7 +822,7 @@ def enable(**kwargs):
         salt '*' schedule.enable
     """
 
-    ret = {"comment": [], "result": True}
+    ret = {"comment": [], "changes": {}, "result": True}
 
     if "test" in kwargs and kwargs["test"]:
         ret["comment"] = "Schedule would be enabled."
@@ -835,6 +843,7 @@ def enable(**kwargs):
                         if "enabled" in schedule and schedule["enabled"]:
                             ret["result"] = True
                             ret["comment"] = "Enabled schedule on minion."
+                            ret["changes"]["schedule"] = "enabled"
                         else:
                             ret["result"] = False
                             ret["comment"] = "Failed to enable schedule on minion."
@@ -856,7 +865,7 @@ def disable(**kwargs):
         salt '*' schedule.disable
     """
 
-    ret = {"comment": [], "result": True}
+    ret = {"comment": [], "changes": {}, "result": True}
 
     if "test" in kwargs and kwargs["test"]:
         ret["comment"] = "Schedule would be disabled."
@@ -877,6 +886,7 @@ def disable(**kwargs):
                         if "enabled" in schedule and not schedule["enabled"]:
                             ret["result"] = True
                             ret["comment"] = "Disabled schedule on minion."
+                            ret["changes"]["schedule"] = "disabled"
                         else:
                             ret["result"] = False
                             ret["comment"] = "Failed to disable schedule on minion."
@@ -1316,3 +1326,36 @@ def show_next_fire_time(name, **kwargs):
     else:
         ret["comment"] = "next fire time not available."
     return ret
+
+
+def job_status(name):
+    """
+    Show the information for a particular job.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' schedule.job_status
+
+    """
+
+    schedule = {}
+    try:
+        with salt.utils.event.get_event("minion", opts=__opts__) as event_bus:
+            res = __salt__["event.fire"](
+                {"func": "job_status", "name": name, "fire_event": True},
+                "manage_schedule",
+            )
+            if res:
+                event_ret = event_bus.get_event(
+                    tag="/salt/minion/minion_schedule_job_status_complete", wait=30
+                )
+                return event_ret.get("data", {})
+    except KeyError:
+        # Effectively a no-op, since we can't really return without an event system
+        ret = {}
+        ret["comment"] = "Event module not available. Schedule list failed."
+        ret["result"] = True
+        log.debug("Event module not available. Schedule list failed.")
+        return ret

@@ -96,7 +96,9 @@ def exists(
     """
     Check to see if a security group exists.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_secgroup.exists mysecgroup
     """
@@ -292,7 +294,9 @@ def get_all_security_groups(
     documentation
     <https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_DescribeSecurityGroups.html>`_.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_secgroup.get_all_security_groups filters='{group-name: mygroup}'
     """
@@ -344,7 +348,9 @@ def get_group_id(
     """
     Get a Group ID given a Group Name or Group Name and VPC ID
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_secgroup.get_group_id mysecgroup
     """
@@ -372,7 +378,9 @@ def convert_to_group_ids(
     Given a list of security groups and a vpc_id, convert_to_group_ids will
     convert all list items in the given list to security group ids.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_secgroup.convert_to_group_ids mysecgroup vpc-89yhh7h
     """
@@ -423,7 +431,9 @@ def get_config(
     """
     Get the configuration for a security group.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_secgroup.get_config mysecgroup
     """
@@ -471,7 +481,9 @@ def create(
     """
     Create a security group.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_secgroup.create mysecgroup 'My Security Group'
     """
@@ -514,7 +526,9 @@ def delete(
     """
     Delete a security group.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_secgroup.delete mysecgroup
     """
@@ -566,7 +580,9 @@ def authorize(
     """
     Add a new rule to an existing security group.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_secgroup.authorize mysecgroup ip_protocol=tcp from_port=80 to_port=80 cidr_ip='['10.0.0.0/8', '192.168.0.0/24']'
     """
@@ -653,7 +669,9 @@ def revoke(
     """
     Remove a rule from an existing security group.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_secgroup.revoke mysecgroup ip_protocol=tcp from_port=80 to_port=80 cidr_ip='10.0.0.0/8'
     """
@@ -813,7 +831,7 @@ def set_tags(
     profile
         amazon profile
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -887,7 +905,7 @@ def delete_tags(
     profile
         amazon profile
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 

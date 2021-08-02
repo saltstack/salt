@@ -1,19 +1,14 @@
-# -*- coding: utf-8 -*-
 """
 .. versionadded:: 2015.8.0
 
 Utilities for accessing storage container blobs on Azure
 """
 
-# Import python libs
-from __future__ import absolute_import, unicode_literals
 
 import logging
 
-# Import salt libs
 from salt.exceptions import SaltSystemExit
 
-# Import azure libs
 HAS_LIBS = False
 try:
     import azure

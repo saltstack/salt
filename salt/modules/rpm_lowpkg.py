@@ -2,7 +2,6 @@
 Support for rpm
 """
 
-
 import datetime
 import logging
 import os
@@ -55,7 +54,7 @@ def __virtual__():
             "The rpm execution module failed to load: failed to detect os or os_family grains.",
         )
 
-    enabled = ("amazon", "xcp", "xenserver", "VirtuozzoLinux")
+    enabled = ("amazon", "xcp", "xenserver", "virtuozzolinux")
 
     if os_family in ["redhat", "suse"] or os_grain in enabled:
         return __virtualname__
@@ -262,7 +261,7 @@ def modified(*packages, **flags):
     root
         use root as top level directory (default: "/")
 
-    CLI examples:
+    CLI Examples:
 
     .. code-block:: bash
 
@@ -466,7 +465,7 @@ def diff(package_path, path):
     :param path: Full path to the installed file
     :return: Difference or empty string. For binary files only a notification.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -507,7 +506,7 @@ def info(*packages, **kwargs):
 
     :return:
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 

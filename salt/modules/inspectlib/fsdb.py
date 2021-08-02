@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # Copyright 2016 SUSE LLC
 #
@@ -18,7 +17,6 @@
     :codeauthor: Bo Maryniuk <bo@suse.de>
 """
 
-from __future__ import absolute_import, with_statement
 
 import csv
 import datetime
@@ -28,11 +26,10 @@ import re
 import shutil
 import sys
 
-from salt.ext.six.moves import zip
 from salt.utils.odict import OrderedDict
 
 
-class CsvDBEntity(object):
+class CsvDBEntity:
     """
     Serializable object for the table.
     """
@@ -46,7 +43,7 @@ class CsvDBEntity(object):
         return [getattr(self, attr) for attr in description]
 
 
-class CsvDB(object):
+class CsvDB:
     """
     File-based CSV database.
     This database is in-memory operating relatively small plain text csv files.
@@ -273,7 +270,7 @@ class CsvDB(object):
     def _validate_object(self, obj):
         descr = self._tables.get(obj._TABLE)
         if descr is None:
-            raise Exception("Table {0} not found.".format(obj._TABLE))
+            raise Exception("Table {} not found.".format(obj._TABLE))
         return obj._serialize(self._tables[obj._TABLE])
 
     def __criteria(self, obj, matches=None, mt=None, lt=None, eq=None):

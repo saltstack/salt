@@ -256,7 +256,9 @@ def zone_exists(
 
     .. versionadded:: 2015.8.0
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_route53.zone_exists example.org
 
@@ -347,7 +349,9 @@ def create_zone(
     profile
         AWS pillar profile
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_route53.create_zone example.org
     """
@@ -443,7 +447,9 @@ def create_healthcheck(
 
         AWS pillar profile
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_route53.create_healthcheck 192.168.0.1
         salt myminion boto_route53.create_healthcheck 192.168.0.1 port=443 hc_type=HTTPS \
@@ -495,7 +501,9 @@ def delete_zone(zone, region=None, key=None, keyid=None, profile=None):
 
     .. versionadded:: 2015.8.0
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_route53.delete_zone example.org
     """
@@ -540,7 +548,9 @@ def get_record(
     """
     Get a record from a zone.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_route53.get_record test.example.org example.org A
 
@@ -649,7 +659,9 @@ def add_record(
     """
     Add a record to a zone.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_route53.add_record test.example.org 1.1.1.1 example.org A
 
@@ -754,7 +766,9 @@ def update_record(
     """
     Modify a record in a zone.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_route53.modify_record test.example.org 1.1.1.1 example.org A
 
@@ -841,7 +855,9 @@ def delete_record(
     """
     Modify a record in a zone.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_route53.delete_record test.example.org example.org A
 
@@ -1019,7 +1035,9 @@ def create_hosted_zone(
     profile
         Dict, or pillar key pointing to a dict, containing AWS region/key/keyid.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_route53.create_hosted_zone example.org
     """

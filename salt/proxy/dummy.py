@@ -79,6 +79,10 @@ def _initial_state():
 
 
 def init(opts):
+    """
+    Required.
+    Can be used to initialize the server connection.
+    """
     log.debug("dummy proxy init() called...")
     with _loaded_state(opts) as state:
         state["initialized"] = True
@@ -119,6 +123,9 @@ def grains_refresh():
 
 
 def fns():
+    """
+    Method called by grains module.
+    """
     return {
         "details": "This key is here because a function in "
         "grains/rest_sample.py called fns() here in the proxymodule."

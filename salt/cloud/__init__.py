@@ -2,14 +2,12 @@
 The top level interface used to translate configuration data back to the
 correct cloud modules
 """
-
 import copy
 import glob
 import logging
 import multiprocessing
 import os
 import signal
-import sys
 import time
 import traceback
 from itertools import groupby
@@ -40,7 +38,7 @@ try:
     import Cryptodome.Random
 except ImportError:
     try:
-        import Crypto.Random
+        import Crypto.Random  # nosec
     except ImportError:
         pass  # pycrypto < 2.1
 
@@ -990,7 +988,7 @@ class Cloud:
                 pool_size = self.opts["pool_size"]
             else:
                 pool_size = len(parallel_data)
-            log.info("Destroying in parallel mode; " "Cloud pool size: %s", pool_size)
+            log.info("Destroying in parallel mode; Cloud pool size: %s", pool_size)
 
             # kick off the parallel destroy
             output_multip = enter_mainloop(
@@ -1258,13 +1256,12 @@ class Cloud:
                         )
                         if ret:
                             log.info(
-                                "Synchronized the following dynamic modules: "
-                                "  {}".format(ret)
+                                "Synchronized the following dynamic modules: %s", ret
                             )
                             break
         except KeyError as exc:
             log.exception(
-                "Failed to create VM %s. Configuration value %s needs " "to be set",
+                "Failed to create VM %s. Configuration value %s needs to be set",
                 vm_["name"],
                 exc,
             )
@@ -1664,6 +1661,8 @@ class Map(Cloud):
     def delete_map(self, query=None):
         query_map = self.interpolated_map(query=query)
         for alias, drivers in query_map.copy().items():
+            if alias == "Errors":
+                continue
             for driver, vms in drivers.copy().items():
                 for vm_name, vm_details in vms.copy().items():
                     if vm_details == "Absent":
@@ -1716,7 +1715,7 @@ class Map(Cloud):
                     pass
                 elif self.opts.get("map_pillar") not in self.opts.get("maps"):
                     log.error(
-                        "The specified map not found in pillar at " "'cloud:maps:%s'",
+                        "The specified map not found in pillar at 'cloud:maps:%s'",
                         self.opts["map_pillar"],
                     )
                     raise SaltCloudNotFound()
@@ -1976,8 +1975,7 @@ class Map(Cloud):
                             break
 
                         log.warning(
-                            "'%s' already exists, removing from " "the create map.",
-                            name,
+                            "%r already exists, removing from the create map.", name,
                         )
 
                         if "existing" not in ret:
@@ -2112,7 +2110,7 @@ class Map(Cloud):
             out = self.create(master_profile, local_master=local_master)
 
             if not isinstance(out, dict):
-                log.debug("Master creation details is not a dictionary: {}".format(out))
+                log.debug("Master creation details is not a dictionary: %s", out)
 
             elif "Errors" in out:
                 raise SaltCloudSystemExit(

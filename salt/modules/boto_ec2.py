@@ -51,7 +51,6 @@ import salt.utils.data
 import salt.utils.json
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.ext.six.moves import map
 
 try:
     # pylint: disable=unused-import
@@ -995,6 +994,7 @@ def _to_blockdev_map(thing):
     YAML example:
 
     .. code-block:: yaml
+
         device-maps:
             /dev/sdb:
                 ephemeral_name: ephemeral0
@@ -1328,6 +1328,7 @@ def get_key(key_name, region=None, key=None, keyid=None, profile=None):
     """
     Check to see if a key exists. Returns fingerprint and name if
     it does and False if it doesn't
+
     CLI Example:
 
     .. code-block:: bash

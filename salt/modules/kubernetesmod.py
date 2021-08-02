@@ -22,7 +22,7 @@ provided `kubeconfig` entry is preferred.
 
     salt '*' kubernetes.nodes kubeconfig=/etc/salt/k8s/kubeconfig context=minikube
 
-.. versionadded: 2017.7.0
+.. versionadded:: 2017.7.0
 .. versionchanged:: 2019.2.0
 
 .. warning::
@@ -43,7 +43,6 @@ provided `kubeconfig` entry is preferred.
 
 """
 
-
 import base64
 import errno
 import logging
@@ -51,8 +50,8 @@ import os.path
 import signal
 import sys
 import tempfile
+import time
 from contextlib import contextmanager
-from time import sleep
 
 import salt.utils.files
 import salt.utils.platform
@@ -269,6 +268,9 @@ def ping(**kwargs):
     Returns True if the connection can be established, False otherwise.
 
     CLI Example:
+
+    .. code-block:: bash
+
         salt '*' kubernetes.ping
     """
     status = True
@@ -284,7 +286,9 @@ def nodes(**kwargs):
     """
     Return the names of the nodes composing the kubernetes cluster
 
-    CLI Examples::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' kubernetes.nodes
         salt '*' kubernetes.nodes kubeconfig=/etc/salt/k8s/kubeconfig context=minikube
@@ -312,7 +316,9 @@ def node(name, **kwargs):
     """
     Return the details of the node identified by the specified name
 
-    CLI Examples::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' kubernetes.node name='minikube'
     """
@@ -340,7 +346,9 @@ def node_labels(name, **kwargs):
     """
     Return the labels of the node identified by the specified name
 
-    CLI Examples::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' kubernetes.node_labels name="minikube"
     """
@@ -358,7 +366,9 @@ def node_add_label(node_name, label_name, label_value, **kwargs):
     the node identified by the name `node_name`.
     Creates the label if not present.
 
-    CLI Examples::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' kubernetes.node_add_label node_name="minikube" \
             label_name="foo" label_value="bar"
@@ -386,7 +396,9 @@ def node_remove_label(node_name, label_name, **kwargs):
     Removes the label identified by `label_name` from
     the node identified by the name `node_name`.
 
-    CLI Examples::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' kubernetes.node_remove_label node_name="minikube" \
             label_name="foo"
@@ -413,7 +425,9 @@ def namespaces(**kwargs):
     """
     Return the names of the available namespaces
 
-    CLI Examples::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' kubernetes.namespaces
         salt '*' kubernetes.namespaces kubeconfig=/etc/salt/k8s/kubeconfig context=minikube
@@ -438,7 +452,9 @@ def deployments(namespace="default", **kwargs):
     """
     Return a list of kubernetes deployments defined in the namespace
 
-    CLI Examples::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' kubernetes.deployments
         salt '*' kubernetes.deployments namespace=default
@@ -466,7 +482,9 @@ def services(namespace="default", **kwargs):
     """
     Return a list of kubernetes services defined in the namespace
 
-    CLI Examples::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' kubernetes.services
         salt '*' kubernetes.services namespace=default
@@ -493,7 +511,9 @@ def pods(namespace="default", **kwargs):
     """
     Return a list of kubernetes pods defined in the namespace
 
-    CLI Examples::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' kubernetes.pods
         salt '*' kubernetes.pods namespace=default
@@ -518,7 +538,9 @@ def secrets(namespace="default", **kwargs):
     """
     Return a list of kubernetes secrets defined in the namespace
 
-    CLI Examples::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' kubernetes.secrets
         salt '*' kubernetes.secrets namespace=default
@@ -545,7 +567,9 @@ def configmaps(namespace="default", **kwargs):
     """
     Return a list of kubernetes configmaps defined in the namespace
 
-    CLI Examples::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' kubernetes.configmaps
         salt '*' kubernetes.configmaps namespace=default
@@ -574,7 +598,9 @@ def show_deployment(name, namespace="default", **kwargs):
     """
     Return the kubernetes deployment defined by name and namespace
 
-    CLI Examples::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' kubernetes.show_deployment my-nginx default
         salt '*' kubernetes.show_deployment name=my-nginx namespace=default
@@ -602,7 +628,9 @@ def show_service(name, namespace="default", **kwargs):
     """
     Return the kubernetes service defined by name and namespace
 
-    CLI Examples::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' kubernetes.show_service my-nginx default
         salt '*' kubernetes.show_service name=my-nginx namespace=default
@@ -629,7 +657,9 @@ def show_pod(name, namespace="default", **kwargs):
     """
     Return POD information for a given pod name defined in the namespace
 
-    CLI Examples::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' kubernetes.show_pod guestbook-708336848-fqr2x
         salt '*' kubernetes.show_pod guestbook-708336848-fqr2x namespace=default
@@ -654,7 +684,9 @@ def show_namespace(name, **kwargs):
     """
     Return information for a given namespace defined by the specified name
 
-    CLI Examples::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' kubernetes.show_namespace kube-system
     """
@@ -680,7 +712,9 @@ def show_secret(name, namespace="default", decode=False, **kwargs):
     The secrets can be decoded if specified by the user. Warning: this has
     security implications.
 
-    CLI Examples::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' kubernetes.show_secret confidential default
         salt '*' kubernetes.show_secret name=confidential namespace=default
@@ -711,7 +745,9 @@ def show_configmap(name, namespace="default", **kwargs):
     """
     Return the kubernetes configmap defined by name and namespace.
 
-    CLI Examples::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' kubernetes.show_configmap game-config default
         salt '*' kubernetes.show_configmap name=game-config namespace=default
@@ -738,7 +774,9 @@ def delete_deployment(name, namespace="default", **kwargs):
     """
     Deletes the kubernetes deployment defined by name and namespace
 
-    CLI Examples::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' kubernetes.delete_deployment my-nginx
         salt '*' kubernetes.delete_deployment name=my-nginx namespace=default
@@ -756,7 +794,7 @@ def delete_deployment(name, namespace="default", **kwargs):
             try:
                 with _time_limit(POLLING_TIME_LIMIT):
                     while show_deployment(name, namespace) is not None:
-                        sleep(1)
+                        time.sleep(1)
                     else:  # pylint: disable=useless-else-on-loop
                         mutable_api_response["code"] = 200
             except TimeoutError:
@@ -769,7 +807,7 @@ def delete_deployment(name, namespace="default", **kwargs):
                     mutable_api_response["code"] = 200
                     break
                 else:
-                    sleep(1)
+                    time.sleep(1)
         if mutable_api_response["code"] != 200:
             log.warning(
                 "Reached polling time limit. Deployment is not yet "
@@ -794,7 +832,9 @@ def delete_service(name, namespace="default", **kwargs):
     """
     Deletes the kubernetes service defined by name and namespace
 
-    CLI Examples::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' kubernetes.delete_service my-nginx default
         salt '*' kubernetes.delete_service name=my-nginx namespace=default
@@ -822,7 +862,9 @@ def delete_pod(name, namespace="default", **kwargs):
     """
     Deletes the kubernetes pod defined by name and namespace
 
-    CLI Examples::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' kubernetes.delete_pod guestbook-708336848-5nl8c default
         salt '*' kubernetes.delete_pod name=guestbook-708336848-5nl8c namespace=default
@@ -851,7 +893,9 @@ def delete_namespace(name, **kwargs):
     """
     Deletes the kubernetes namespace defined by name
 
-    CLI Examples::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' kubernetes.delete_namespace salt
         salt '*' kubernetes.delete_namespace name=salt
@@ -877,7 +921,9 @@ def delete_secret(name, namespace="default", **kwargs):
     """
     Deletes the kubernetes secret defined by name and namespace
 
-    CLI Examples::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' kubernetes.delete_secret confidential default
         salt '*' kubernetes.delete_secret name=confidential namespace=default
@@ -906,7 +952,9 @@ def delete_configmap(name, namespace="default", **kwargs):
     """
     Deletes the kubernetes configmap defined by name and namespace
 
-    CLI Examples::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' kubernetes.delete_configmap settings default
         salt '*' kubernetes.delete_configmap name=settings namespace=default
@@ -1056,7 +1104,9 @@ def create_secret(
     """
     Creates the kubernetes secret as defined by the user.
 
-    CLI Examples::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt 'minion1' kubernetes.create_secret \
             passwords default '{"db": "letmein"}'
@@ -1104,7 +1154,9 @@ def create_configmap(
     """
     Creates the kubernetes configmap as defined by the user.
 
-    CLI Examples::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt 'minion1' kubernetes.create_configmap \
             settings default '{"example.conf": "# example file"}'
@@ -1147,6 +1199,9 @@ def create_namespace(name, **kwargs):
     Creates a namespace with the specified name.
 
     CLI Example:
+
+    .. code-block:: bash
+
         salt '*' kubernetes.create_namespace salt
         salt '*' kubernetes.create_namespace name=salt
     """
@@ -1277,7 +1332,9 @@ def replace_secret(
     Replaces an existing secret with a new one defined by name and namespace,
     having the specificed data.
 
-    CLI Examples::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt 'minion1' kubernetes.replace_secret \
             name=passwords data='{"db": "letmein"}'
@@ -1332,7 +1389,9 @@ def replace_configmap(
     Replaces an existing configmap with a new one defined by name and
     namespace with the specified data.
 
-    CLI Examples::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt 'minion1' kubernetes.replace_configmap \
             settings default '{"example.conf": "# example file"}'

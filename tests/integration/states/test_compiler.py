@@ -1,18 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 tests for host state
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt libs
 import salt.utils.platform
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
 
-# Import 3rd-Party libs
 HAS_LSB_RELEASE = True
 try:
     import lsb_release

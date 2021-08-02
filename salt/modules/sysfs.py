@@ -30,7 +30,8 @@ def attr(key, value=None):
 
     :return: value or bool
 
-    CLI example:
+    CLI Example:
+
      .. code-block:: bash
 
         salt '*' sysfs.attr block/sda/queue/logical_block_size
@@ -51,7 +52,8 @@ def write(key, value):
     """
     Write a SysFS attribute/action
 
-    CLI example:
+    CLI Example:
+
      .. code-block:: bash
 
         salt '*' sysfs.write devices/system/cpu/cpu0/cpufreq/scaling_governor 'performance'
@@ -74,7 +76,8 @@ def read(key, root=""):
 
     :return: the full (tree of) SysFS attributes under key
 
-    CLI example:
+    CLI Example:
+
      .. code-block:: bash
 
         salt '*' sysfs.read class/net/em1/statistics
@@ -140,7 +143,8 @@ def target(key, full=True):
 
     :return: fullpath or basename of path
 
-    CLI example:
+    CLI Example:
+
      .. code-block:: bash
 
         salt '*' sysfs.read class/ttyS0
@@ -164,7 +168,8 @@ def interfaces(root):
     Generate a dictionary with all available interfaces relative to root.
     Symlinks are not followed.
 
-    CLI example:
+    CLI Example:
+
      .. code-block:: bash
 
         salt '*' sysfs.interfaces block/bcache0/bcache

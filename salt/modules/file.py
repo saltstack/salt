@@ -28,7 +28,7 @@ import time
 import urllib.parse
 from collections import namedtuple
 from collections.abc import Iterable, Mapping
-from functools import reduce  # pylint: disable=redefined-builtin
+from functools import reduce
 
 import salt.utils.args
 import salt.utils.atomicfile
@@ -260,7 +260,6 @@ def get_gid(path, follow_symlinks=True):
 
     follow_symlinks
         indicated if symlinks should be followed
-
 
     CLI Example:
 
@@ -1482,7 +1481,6 @@ def comment_line(path, regex, char="#", cmnt=True, backup=".bak"):
     .. code-block:: bash
 
         salt '*' file.comment_line '/etc/modules' '^pcspkr'
-
 
     CLI Example:
 
@@ -2789,13 +2787,13 @@ def blockreplace(
         If markers are not found, this parameter can be set to a regex which will
         insert the block before the first found occurrence in the file.
 
-        .. versionadded:: Sodium
+        .. versionadded:: 3001
 
     insert_after_match
         If markers are not found, this parameter can be set to a regex which will
         insert the block after the first found occurrence in the file.
 
-        .. versionadded:: Sodium
+        .. versionadded:: 3001
 
     backup
         The file extension to use for a backup of the file if any edit is made.
@@ -3859,7 +3857,7 @@ def access(path, mode):
     Test whether the Salt process has the specified access to the file. One of
     the following modes must be specified:
 
-    .. code-block::text
+    .. code-block:: text
 
         f: Test the existence of the path
         r: Test the readability of the path
@@ -4103,7 +4101,7 @@ def remove(path):
 
         salt '*' file.remove /tmp/foo
 
-    .. versionchanged:: Neon
+    .. versionchanged:: 3000
         The method now works on all types of file system entries, not just
         files, directories and symlinks.
     """
@@ -4897,7 +4895,7 @@ def extract_hash(
 
     if partial:
         log.debug(
-            "file.extract_hash: Returning the partially identified %s hash " "'%s'",
+            "file.extract_hash: Returning the partially identified %s hash '%s'",
             partial["hash_type"],
             partial["hsum"],
         )
@@ -5103,9 +5101,11 @@ def check_perms(
                 current_serange,
             ) = get_selinux_context(name).split(":")
             log.debug(
-                "Current selinux context user:{} role:{} type:{} range:{}".format(
-                    current_seuser, current_serole, current_setype, current_serange
-                )
+                "Current selinux context user:%s role:%s type:%s range:%s",
+                current_seuser,
+                current_serole,
+                current_setype,
+                current_serange,
             )
         except ValueError:
             log.error("Unable to get current selinux attributes")
@@ -5174,7 +5174,7 @@ def check_perms(
                             range=requested_serange,
                             persist=True,
                         )
-                        log.debug("selinux set result: {}".format(result))
+                        log.debug("selinux set result: %s", result)
                         (
                             current_seuser,
                             current_serole,
@@ -5616,9 +5616,11 @@ def check_file_meta(
                     current_serange,
                 ) = get_selinux_context(name).split(":")
                 log.debug(
-                    "Current selinux context user:{} role:{} type:{} range:{}".format(
-                        current_seuser, current_serole, current_setype, current_serange
-                    )
+                    "Current selinux context user:%s role:%s type:%s range:%s",
+                    current_seuser,
+                    current_serole,
+                    current_setype,
+                    current_serange,
                 )
             except ValueError as exc:
                 log.error("Unable to get current selinux attributes")

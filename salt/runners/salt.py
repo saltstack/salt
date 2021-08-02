@@ -67,7 +67,7 @@ def cmd(fun, *args, **kwargs):
             overridden by setting an ``id`` configuration parameter in the
             master config file.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 

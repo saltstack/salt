@@ -36,7 +36,7 @@ def enable():
     """
     Enable the Packet Filter.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -67,7 +67,7 @@ def disable():
     """
     Disable the Packet Filter.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -102,7 +102,7 @@ def loglevel(level):
         Log level. Should be one of the following: emerg, alert, crit, err, warning, notice,
         info or debug (OpenBSD); or none, urgent, misc, loud (FreeBSD).
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -152,7 +152,7 @@ def load(file="/etc/pf.conf", noop=False):
     noop:
         Don't actually load the rules, just parse them.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -196,7 +196,7 @@ def flush(modifier):
         Please refer to the OpenBSD `pfctl(8) <https://man.openbsd.org/pfctl#T>`_
         documentation for a detailed explanation of each command.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -258,7 +258,7 @@ def table(command, table, **kwargs):
         Please refer to the OpenBSD `pfctl(8) <https://man.openbsd.org/pfctl#T>`_
         documentation for a detailed explanation of each command.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -335,7 +335,7 @@ def show(modifier):
         - states
         - tables
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 

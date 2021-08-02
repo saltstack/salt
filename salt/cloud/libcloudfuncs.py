@@ -7,7 +7,7 @@ import logging
 import os
 
 import salt.client
-import salt.config as config
+import salt.config
 import salt.utils.cloud
 import salt.utils.data
 import salt.utils.event
@@ -16,8 +16,7 @@ from salt.exceptions import SaltCloudNotFound, SaltCloudSystemExit
 # pylint: disable=W0611
 try:
     import libcloud
-    import re
-    from libcloud.compute.types import Provider
+    from libcloud.compute.types import Provider, NodeState
     from libcloud.compute.providers import get_driver
     from libcloud.compute.deployment import MultiStepDeployment, ScriptDeployment
 
@@ -37,43 +36,10 @@ except ImportError:
 # pylint: enable=W0611
 
 
-# Get logging started
 log = logging.getLogger(__name__)
 
 
-LIBCLOUD_MINIMAL_VERSION = (0, 14, 0)
-
-
-def node_state(id_):
-    """
-    Libcloud supported node states
-    """
-    states_int = {
-        0: "RUNNING",
-        1: "REBOOTING",
-        2: "TERMINATED",
-        3: "PENDING",
-        4: "UNKNOWN",
-        5: "STOPPED",
-        6: "SUSPENDED",
-        7: "ERROR",
-        8: "PAUSED",
-    }
-    states_str = {
-        "running": "RUNNING",
-        "rebooting": "REBOOTING",
-        "starting": "STARTING",
-        "terminated": "TERMINATED",
-        "pending": "PENDING",
-        "unknown": "UNKNOWN",
-        "stopping": "STOPPING",
-        "stopped": "STOPPED",
-        "suspended": "SUSPENDED",
-        "error": "ERROR",
-        "paused": "PAUSED",
-        "reconfiguring": "RECONFIGURING",
-    }
-    return states_str[id_] if isinstance(id_, str) else states_int[id_]
+LIBCLOUD_MINIMAL_VERSION = (1, 5, 0)
 
 
 def check_libcloud_version(reqver=LIBCLOUD_MINIMAL_VERSION, why=None):
@@ -85,23 +51,14 @@ def check_libcloud_version(reqver=LIBCLOUD_MINIMAL_VERSION, why=None):
 
     if not isinstance(reqver, (list, tuple)):
         raise RuntimeError(
-            "'reqver' needs to passed as a tuple or list, i.e., (0, 14, 0)"
-        )
-    try:
-        import libcloud  # pylint: disable=redefined-outer-name
-    except ImportError:
-        raise ImportError(
-            "salt-cloud requires >= libcloud {} which is not installed".format(
-                ".".join([str(num) for num in reqver])
-            )
+            "'reqver' needs to passed as a tuple or list, i.e., (1, 5, 0)"
         )
 
     if LIBCLOUD_VERSION_INFO >= reqver:
         return libcloud.__version__
 
-    errormsg = "Your version of libcloud is {}. ".format(libcloud.__version__)
-    errormsg += "salt-cloud requires >= libcloud {}".format(
-        ".".join([str(num) for num in reqver])
+    errormsg = "Your version of libcloud is {}. salt-cloud requires >= libcloud {}".format(
+        libcloud.__version__, ".".join([str(num) for num in reqver])
     )
     if why:
         errormsg += " for {}".format(why)
@@ -220,7 +177,7 @@ def get_location(conn, vm_):
     Return the location object to use
     """
     locations = conn.list_locations()
-    vm_location = config.get_cloud_config_value("location", vm_, __opts__)
+    vm_location = salt.config.get_cloud_config_value("location", vm_, __opts__)
     for img in locations:
         img_id = str(img.id)
         img_name = str(img.name)
@@ -238,7 +195,7 @@ def get_image(conn, vm_):
     Return the image object to use
     """
     images = conn.list_images()
-    vm_image = config.get_cloud_config_value("image", vm_, __opts__)
+    vm_image = salt.config.get_cloud_config_value("image", vm_, __opts__)
 
     for img in images:
         img_id = str(img.id)
@@ -257,7 +214,7 @@ def get_size(conn, vm_):
     Return the VM's size object
     """
     sizes = conn.list_sizes()
-    vm_size = config.get_cloud_config_value("size", vm_, __opts__)
+    vm_size = salt.config.get_cloud_config_value("size", vm_, __opts__)
     if not vm_size:
         return sizes[0]
 
@@ -275,7 +232,7 @@ def script(vm_):
     """
     return ScriptDeployment(
         salt.utils.cloud.os_script(
-            config.get_cloud_config_value("os", vm_, __opts__),
+            salt.config.get_cloud_config_value("os", vm_, __opts__),
             vm_,
             __opts__,
             salt.utils.cloud.salt_config_to_yaml(
@@ -412,7 +369,7 @@ def list_nodes(conn=None, call=None):
             "private_ips": node.private_ips,
             "public_ips": node.public_ips,
             "size": node.size,
-            "state": node_state(node.state),
+            "state": str(node.state).upper(),
         }
     return ret
 

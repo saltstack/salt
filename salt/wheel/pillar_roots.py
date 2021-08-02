@@ -1,20 +1,13 @@
-# -*- coding: utf-8 -*-
 """
 The `pillar_roots` wheel module is used to manage files under the pillar roots
 directories on the master server.
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import os
 
-# Import salt libs
 import salt.utils.files
 import salt.utils.path
-
-# Import 3rd-party libs
-from salt.ext import six
+import salt.utils.verify
 
 
 def find(path, saltenv="base"):
@@ -86,7 +79,7 @@ def read(path, saltenv="base"):
     ret = []
     files = find(path, saltenv)
     for fn_ in files:
-        full = next(six.iterkeys(fn_))
+        full = next(iter(fn_.keys()))
         form = fn_[full]
         if form == "txt":
             with salt.utils.files.fopen(full, "rb") as fp_:
@@ -100,19 +93,23 @@ def write(data, path, saltenv="base", index=0):
     index of the file can be specified to write to a lower priority file root
     """
     if saltenv not in __opts__["pillar_roots"]:
-        return "Named environment {0} is not present".format(saltenv)
+        return "Named environment {} is not present".format(saltenv)
     if len(__opts__["pillar_roots"][saltenv]) <= index:
-        return "Specified index {0} in environment {1} is not present".format(
+        return "Specified index {} in environment {} is not present".format(
             index, saltenv
         )
     if os.path.isabs(path):
-        return (
-            "The path passed in {0} is not relative to the environment " "{1}"
-        ).format(path, saltenv)
+        return "The path passed in {} is not relative to the environment " "{}".format(
+            path, saltenv
+        )
+    roots_dir = __opts__["pillar_roots"][saltenv][index]
+    dest = os.path.join(roots_dir, path)
+    if not salt.utils.verify.clean_path(roots_dir, dest):
+        return "Invalid path"
     dest = os.path.join(__opts__["pillar_roots"][saltenv][index], path)
     dest_dir = os.path.dirname(dest)
     if not os.path.isdir(dest_dir):
         os.makedirs(dest_dir)
     with salt.utils.files.fopen(dest, "w+") as fp_:
         fp_.write(salt.utils.stringutils.to_str(data))
-    return "Wrote data to file {0}".format(dest)
+    return "Wrote data to file {}".format(dest)

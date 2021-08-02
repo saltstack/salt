@@ -11,6 +11,7 @@ from pathlib import Path
 
 import jinja2
 import jinja2.ext
+import jinja2.sandbox
 import salt.utils.data
 import salt.utils.dateutils
 import salt.utils.files
@@ -23,8 +24,8 @@ import salt.utils.stringutils
 import salt.utils.yamlencoding
 from salt import __path__ as saltpath
 from salt.exceptions import CommandExecutionError, SaltInvocationError, SaltRenderError
-from salt.ext import six
 from salt.features import features
+from salt.loader.context import NamedLoaderContext
 from salt.utils.decorators.jinja import JinjaFilter, JinjaGlobal, JinjaTest
 from salt.utils.odict import OrderedDict
 from salt.utils.versions import LooseVersion
@@ -271,7 +272,7 @@ def wrap_tmpl_func(render_str):
 
         except SaltRenderError as exc:
             log.exception("Rendering exception occurred")
-            # return dict(result=False, data=six.text_type(exc))
+            # return dict(result=False, data=str(exc))
             raise
         except Exception:  # pylint: disable=broad-except
             return dict(result=False, data=traceback.format_exc())
@@ -453,17 +454,15 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
         opt_jinja_env_helper(opt_jinja_env, "jinja_env")
 
     if opts.get("allow_undefined", False):
-        jinja_env = jinja2.Environment(**env_args)
+        jinja_env = jinja2.sandbox.SandboxedEnvironment(**env_args)
     else:
-        jinja_env = jinja2.Environment(undefined=jinja2.StrictUndefined, **env_args)
+        jinja_env = jinja2.sandbox.SandboxedEnvironment(
+            undefined=jinja2.StrictUndefined, **env_args
+        )
 
-    tojson_filter = jinja_env.filters.get("tojson")
     indent_filter = jinja_env.filters.get("indent")
     jinja_env.tests.update(JinjaTest.salt_jinja_tests)
     jinja_env.filters.update(JinjaFilter.salt_jinja_filters)
-    if tojson_filter is not None:
-        # Use the existing tojson filter, if present (jinja2 >= 2.9)
-        jinja_env.filters["tojson"] = tojson_filter
     if salt.utils.jinja.JINJA_VERSION >= LooseVersion("2.11"):
         # Use the existing indent filter on Jinja versions where it's not broken
         jinja_env.filters["indent"] = indent_filter
@@ -478,7 +477,10 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     decoded_context = {}
     for key, value in context.items():
         if not isinstance(value, str):
-            decoded_context[key] = value
+            if isinstance(value, NamedLoaderContext):
+                decoded_context[key] = value.value()
+            else:
+                decoded_context[key] = value
             continue
 
         try:
@@ -491,7 +493,6 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
                 SLS_ENCODING,
             )
             decoded_context[key] = salt.utils.data.decode(value)
-
     try:
         template = jinja_env.from_string(tmplstr)
         template.globals.update(decoded_context)
@@ -506,6 +507,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     except (
         jinja2.exceptions.TemplateRuntimeError,
         jinja2.exceptions.TemplateSyntaxError,
+        jinja2.exceptions.SecurityError,
     ) as exc:
         trace = traceback.extract_tb(sys.exc_info()[2])
         line, out = _get_jinja_error(trace, context=decoded_context)
@@ -631,12 +633,9 @@ def render_cheetah_tmpl(tmplstr, context, tmplpath=None):
     data = tclass(namespaces=[context])
 
     # Figure out which method to call based on the type of tmplstr
-    if six.PY3 and isinstance(tmplstr, str):
+    if isinstance(tmplstr, str):
         # This should call .__unicode__()
         res = str(data)
-    elif six.PY2 and isinstance(tmplstr, str):
-        # Expicitly call .__unicode__()
-        res = data.__unicode__()
     elif isinstance(tmplstr, bytes):
         # This should call .__str()
         res = str(data)

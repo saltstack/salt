@@ -670,6 +670,7 @@ def test_retry_option(state, state_tree):
             assert entry >= 3
 
 
+@pytest.mark.flaky(max_runs=4, rerun_filter=lambda *a: salt.utils.platform.is_windows())
 def test_retry_option_success(state, state_tree, tmp_path):
     """
     test a state with the retry option that should return True immedietly (i.e. no retries)

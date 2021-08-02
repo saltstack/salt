@@ -6,7 +6,7 @@ This state is intended for use from the Salt Master. It provides access to
 sending commands down to minions as well as access to executing master-side
 modules. These state functions wrap Salt's :ref:`Python API <python-api>`.
 
-    .. versionadded: 2016.11.0
+    .. versionadded:: 2016.11.0
 
     Support for masterless minions was added to the ``salt.state`` function,
     so they can run orchestration sls files. This is particularly useful when
@@ -32,7 +32,6 @@ import salt.output
 import salt.syspaths
 import salt.utils.data
 import salt.utils.event
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -88,7 +87,7 @@ def _parallel_map(func, inputs):
         thread.start()
         return thread
 
-    threads = list(six.moves.map(create_thread, six.moves.range(len(inputs))))
+    threads = list(map(create_thread, range(len(inputs))))
     for thread in threads:
         thread.join()
     for error in errors:
@@ -134,7 +133,7 @@ def state(
     tgt
         The target specification for the state run.
 
-        .. versionadded: 2016.11.0
+        .. versionadded:: 2016.11.0
 
         Masterless support: When running on a masterless minion, the ``tgt``
         is ignored and will always be the local minion.
@@ -763,7 +762,7 @@ def parallel_runners(name, runners, **kwargs):  # pylint: disable=unused-argumen
     """
     Executes multiple runner modules on the master in parallel.
 
-    .. versionadded:: 2017.x.0 (Nitrogen)
+    .. versionadded:: 2018.3.0
 
     A separate thread is spawned for each runner. This state is intended to be
     used with the orchestrate runner in place of the ``saltmod.runner`` state
@@ -858,8 +857,7 @@ def parallel_runners(name, runners, **kwargs):  # pylint: disable=unused-argumen
     # time we exctract the actual return value of the runner (saltutil.runner
     # adds some extra information that is not interesting to us).
     outputs = {
-        runner_id: out["return"]
-        for runner_id, out in six.moves.zip(runners.keys(), outputs)
+        runner_id: out["return"] for runner_id, out in zip(runners.keys(), outputs)
     }
 
     # If each of the runners returned its output in the format compatible with

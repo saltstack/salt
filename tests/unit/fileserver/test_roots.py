@@ -7,17 +7,19 @@ import os
 import pathlib
 import shutil
 import tempfile
+import textwrap
 
 import salt.fileclient
 import salt.fileserver.roots as roots
 import salt.utils.files
 import salt.utils.hashutils
 import salt.utils.platform
+import salt.utils.stringutils
 from tests.support.mixins import (
     AdaptedConfigurationTestCaseMixin,
     LoaderModuleMockMixin,
 )
-from tests.support.mock import patch
+from tests.support.mock import MagicMock, mock_open, patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
 
@@ -180,3 +182,60 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
         self.assertEqual(ret["files"]["changed"], [])
         self.assertEqual(ret["files"]["removed"], [])
         self.assertEqual(ret["files"]["added"], [])
+
+    def test_update_mtime_map(self):
+        """
+        Test that files with colons in the filename are properly handled in the
+        mtime_map, and that they are properly identified as having changed.
+        """
+        mtime_map_path = os.path.join(self.opts["cachedir"], "roots", "mtime_map")
+        mtime_map_mock = mock_open(
+            read_data={
+                mtime_map_path: textwrap.dedent(
+                    """\
+                    /srv/salt/kleine_Datei.txt:1594263154.0469685
+                    /srv/salt/große:Datei.txt:1594263160.9336357
+                    """
+                ),
+            }
+        )
+        new_mtime_map = {
+            "/srv/salt/kleine_Datei.txt": 1594263154.0469685,
+            "/srv/salt/große:Datei.txt": 1594263261.0616212,
+        }
+
+        with patch(
+            "salt.fileserver.reap_fileserver_cache_dir", MagicMock(return_value=True)
+        ), patch(
+            "salt.fileserver.generate_mtime_map", MagicMock(return_value=new_mtime_map)
+        ), patch.dict(
+            roots.__opts__, {"fileserver_events": False}
+        ), patch(
+            "salt.utils.files.fopen", mtime_map_mock
+        ):
+            ret = roots.update()
+
+        # Confirm the expected return from the function
+        assert ret == {
+            "changed": True,
+            "files": {
+                "changed": ["/srv/salt/große:Datei.txt"],
+                "removed": [],
+                "added": [],
+            },
+            "backend": "roots",
+        }, ret
+
+        # Confirm that the new values were written to the mtime_map. Sort both
+        # lists of lines to account for variances in dictionary iteration order
+        # between Python releases.
+        lines_written = sorted(mtime_map_mock.write_calls())
+        expected = sorted(
+            [
+                salt.utils.stringutils.to_bytes(
+                    "{key}:{val}\n".format(key=key, val=val)
+                )
+                for key, val in new_mtime_map.items()
+            ]
+        )
+        assert lines_written == expected, lines_written

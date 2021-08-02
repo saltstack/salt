@@ -11,6 +11,9 @@ Support for YUM/DNF
     DNF is fully supported as of version 2015.5.10 and 2015.8.4 (partial
     support for DNF was initially added in 2015.8.0), and DNF is used
     automatically in place of YUM in Fedora 22 and newer.
+
+.. versionadded:: 3003
+    Support for ``tdnf`` on Photon OS.
 """
 
 
@@ -70,7 +73,15 @@ def __virtual__():
     except Exception:  # pylint: disable=broad-except
         return (False, "Module yumpkg: no yum based system detected")
 
-    enabled = ("amazon", "xcp", "xenserver", "virtuozzolinux", "virtuozzo")
+    enabled = (
+        "amazon",
+        "xcp",
+        "xenserver",
+        "virtuozzolinux",
+        "virtuozzo",
+        "issabel pbx",
+        "openeuler",
+    )
 
     if os_family == "redhat" or os_grain in enabled:
         if _yum() is None:
@@ -164,6 +175,9 @@ def _yum():
             elif _check(os.path.join(dir, "yum")):
                 context[contextkey] = "yum"
                 break
+            elif _check(os.path.join(dir, "tdnf")):
+                context[contextkey] = "tdnf"
+                break
     return context.get(contextkey)
 
 
@@ -242,6 +256,8 @@ def _versionlock_pkg(grains=None):
         if int(grains.get("osmajorrelease")) >= 8:
             return "python3-dnf-plugin-versionlock"
         return "python2-dnf-plugin-versionlock"
+    elif _yum() == "tdnf":
+        raise SaltInvocationError("Cannot proceed, no versionlock for tdnf")
     else:
         return (
             "yum-versionlock"
@@ -366,7 +382,12 @@ def _get_yum_config():
         # fall back to parsing the config ourselves
         # Look for the config the same order yum does
         fn = None
-        paths = ("/etc/yum/yum.conf", "/etc/yum.conf", "/etc/dnf/dnf.conf")
+        paths = (
+            "/etc/yum/yum.conf",
+            "/etc/yum.conf",
+            "/etc/dnf/dnf.conf",
+            "/etc/tdnf/tdnf.conf",
+        )
         for path in paths:
             if os.path.exists(path):
                 fn = path
@@ -392,7 +413,7 @@ def _get_yum_config():
                     conf[opt] = cp.get("main", opt)
         else:
             log.warning(
-                "Could not find [main] section in %s, using internal " "defaults", fn
+                "Could not find [main] section in %s, using internal defaults", fn
             )
 
     return conf
@@ -664,6 +685,15 @@ def version_cmp(pkg1, pkg2, ignore_epoch=False, **kwargs):
     return __salt__["lowpkg.version_cmp"](pkg1, pkg2, ignore_epoch=ignore_epoch)
 
 
+def _list_pkgs_from_context(versions_as_list, contextkey, attr):
+    """
+    Use pkg list from __context__
+    """
+    return __salt__["pkg_resource.format_pkg_list"](
+        __context__[contextkey], versions_as_list, attr
+    )
+
+
 def list_pkgs(versions_as_list=False, **kwargs):
     """
     List the packages currently installed as a dict. By default, the dict
@@ -710,42 +740,42 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
     contextkey = "pkg.list_pkgs"
 
-    if contextkey not in __context__:
-        ret = {}
-        cmd = [
-            "rpm",
-            "-qa",
-            "--queryformat",
-            salt.utils.pkg.rpm.QUERYFORMAT.replace("%{REPOID}", "(none)") + "\n",
-        ]
-        output = __salt__["cmd.run"](cmd, python_shell=False, output_loglevel="trace")
-        for line in output.splitlines():
-            pkginfo = salt.utils.pkg.rpm.parse_pkginfo(
-                line, osarch=__grains__["osarch"]
-            )
-            if pkginfo is not None:
-                # see rpm version string rules available at https://goo.gl/UGKPNd
-                pkgver = pkginfo.version
-                epoch = None
-                release = None
-                if ":" in pkgver:
-                    epoch, pkgver = pkgver.split(":", 1)
-                if "-" in pkgver:
-                    pkgver, release = pkgver.split("-", 1)
-                all_attr = {
-                    "epoch": epoch,
-                    "version": pkgver,
-                    "release": release,
-                    "arch": pkginfo.arch,
-                    "install_date": pkginfo.install_date,
-                    "install_date_time_t": pkginfo.install_date_time_t,
-                }
-                __salt__["pkg_resource.add_pkg"](ret, pkginfo.name, all_attr)
+    if contextkey in __context__ and kwargs.get("use_context", True):
+        return _list_pkgs_from_context(versions_as_list, contextkey, attr)
 
-        for pkgname in ret:
-            ret[pkgname] = sorted(ret[pkgname], key=lambda d: d["version"])
+    ret = {}
+    cmd = [
+        "rpm",
+        "-qa",
+        "--queryformat",
+        salt.utils.pkg.rpm.QUERYFORMAT.replace("%{REPOID}", "(none)") + "\n",
+    ]
+    output = __salt__["cmd.run"](cmd, python_shell=False, output_loglevel="trace")
+    for line in output.splitlines():
+        pkginfo = salt.utils.pkg.rpm.parse_pkginfo(line, osarch=__grains__["osarch"])
+        if pkginfo is not None:
+            # see rpm version string rules available at https://goo.gl/UGKPNd
+            pkgver = pkginfo.version
+            epoch = None
+            release = None
+            if ":" in pkgver:
+                epoch, pkgver = pkgver.split(":", 1)
+            if "-" in pkgver:
+                pkgver, release = pkgver.split("-", 1)
+            all_attr = {
+                "epoch": epoch,
+                "version": pkgver,
+                "release": release,
+                "arch": pkginfo.arch,
+                "install_date": pkginfo.install_date,
+                "install_date_time_t": pkginfo.install_date_time_t,
+            }
+            __salt__["pkg_resource.add_pkg"](ret, pkginfo.name, all_attr)
 
-        __context__[contextkey] = ret
+    for pkgname in ret:
+        ret[pkgname] = sorted(ret[pkgname], key=lambda d: d["version"])
+
+    __context__[contextkey] = ret
 
     return __salt__["pkg_resource.format_pkg_list"](
         __context__[contextkey], versions_as_list, attr
@@ -1039,7 +1069,7 @@ def list_downloaded(**kwargs):
 
     List prefetched packages downloaded by Yum in the local disk.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -1073,7 +1103,7 @@ def info_installed(*names, **kwargs):
     :param all_versions:
         Include information for all versions of the packages installed on the minion.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -1670,9 +1700,7 @@ def install(
         holds = list_holds(full=False)
     except SaltInvocationError:
         holds = []
-        log.debug(
-            "Failed to get holds, versionlock plugin is probably not " "installed"
-        )
+        log.debug("Failed to get holds, versionlock plugin is probably not installed")
     unhold_prevented = []
 
     @contextlib.contextmanager
@@ -1829,7 +1857,6 @@ def upgrade(
         {'<package>':  {'old': '<old-version>',
                         'new': '<new-version>'}}
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -1940,6 +1967,15 @@ def upgrade(
 
         salt '*' pkg.upgrade security=True exclude='kernel*'
     """
+    if _yum() == "dnf" and not obsoletes:
+        # for dnf we can just disable obsoletes
+        _setopt = [
+            opt
+            for opt in salt.utils.args.split_input(kwargs.pop("setopt", []))
+            if not opt.startswith("obsoletes=")
+        ]
+        _setopt.append("obsoletes=False")
+        kwargs["setopt"] = _setopt
     options = _get_options(get_extra_options=True, **kwargs)
 
     if salt.utils.data.is_true(refresh):
@@ -1970,8 +2006,6 @@ def upgrade(
     else:
         # do not force the removal of obsolete packages
         if _yum() == "dnf":
-            # for dnf we can just disable obsoletes
-            cmd.append("--obsoletes=False")
             cmd.append("upgrade" if not minimal else "upgrade-minimal")
         else:
             # for yum we have to use update instead of upgrade
@@ -2066,12 +2100,32 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
 
     old = list_pkgs()
     targets = []
+
+    # Loop through pkg_params looking for any
+    # which contains a wildcard and get the
+    # real package names from the packages
+    # which are currently installed.
+    pkg_matches = {}
+    for pkg_param in list(pkg_params):
+        if "*" in pkg_param:
+            pkg_matches = {
+                x: pkg_params[pkg_param] for x in old if fnmatch.fnmatch(x, pkg_param)
+            }
+
+            # Remove previous pkg_param
+            pkg_params.pop(pkg_param)
+
+    # Update pkg_params with the matches
+    pkg_params.update(pkg_matches)
+
     for target in pkg_params:
+        version_to_remove = pkg_params[target]
+        installed_versions = old[target].split(",")
+
         # Check if package version set to be removed is actually installed:
-        # old[target] contains a comma-separated list of installed versions
-        if target in old and not pkg_params[target]:
+        if target in old and not version_to_remove:
             targets.append(target)
-        elif target in old and pkg_params[target] in old[target].split(","):
+        elif target in old and version_to_remove in installed_versions:
             arch = ""
             pkgname = target
             try:
@@ -2082,7 +2136,11 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
                 if archpart in salt.utils.pkg.rpm.ARCHES:
                     arch = "." + archpart
                     pkgname = namepart
-            targets.append("{}-{}{}".format(pkgname, pkg_params[target], arch))
+            # Since we don't always have the arch info, epoch information has to parsed out. But
+            # a version check was already performed, so we are removing the right version.
+            targets.append(
+                "{}-{}{}".format(pkgname, version_to_remove.split(":", 1)[-1], arch)
+            )
     if not targets:
         return {}
 
@@ -2326,7 +2384,7 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
                 else:
                     ret[target][
                         "comment"
-                    ] = "Package {} was unable to be " "unheld.".format(target)
+                    ] = "Package {} was unable to be unheld.".format(target)
         else:
             ret[target].update(result=True)
             ret[target]["comment"] = "Package {} is not being held.".format(target)
@@ -2353,7 +2411,6 @@ def list_holds(pattern=__HOLD_PATTERN, full=True):
     full : True
         Show the full hold definition including version and epoch. Set to
         ``False`` to return just the name of the package(s) being held.
-
 
     CLI Example:
 
@@ -3188,7 +3245,7 @@ def download(*packages, **kwargs):
         ``yum-utils`` will already be installed on the minion if the package
         was installed from the Fedora / EPEL repositories.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -3259,7 +3316,7 @@ def diff(*paths, **kwargs):
     :param path: Full path to the installed file
     :return: Difference string or raises and exception if examined file is binary.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -3297,10 +3354,17 @@ def _get_patches(installed_only=False):
 
     cmd = [_yum(), "--quiet", "updateinfo", "list", "all"]
     ret = __salt__["cmd.run_stdout"](cmd, python_shell=False)
+    parsing_errors = False
+
     for line in salt.utils.itertools.split(ret, os.linesep):
-        inst, advisory_id, sev, pkg = re.match(
-            r"([i|\s]) ([^\s]+) +([^\s]+) +([^\s]+)", line
-        ).groups()
+        try:
+            inst, advisory_id, sev, pkg = re.match(
+                r"([i|\s]) ([^\s]+) +([^\s]+) +([^\s]+)", line
+            ).groups()
+        except Exception:  # pylint: disable=broad-except
+            parsing_errors = True
+            continue
+
         if advisory_id not in patches:
             patches[advisory_id] = {
                 "installed": True if inst == "i" else False,
@@ -3310,6 +3374,13 @@ def _get_patches(installed_only=False):
             patches[advisory_id]["summary"].append(pkg)
             if inst != "i":
                 patches[advisory_id]["installed"] = False
+
+    if parsing_errors:
+        log.warning(
+            "Skipped some unexpected output while running '%s' to list "
+            "patches. Please check output",
+            " ".join(cmd),
+        )
 
     if installed_only:
         patches = {k: v for k, v in patches.items() if v["installed"]}
@@ -3352,3 +3423,40 @@ def list_installed_patches(**kwargs):
         salt '*' pkg.list_installed_patches
     """
     return _get_patches(installed_only=True)
+
+
+def services_need_restart(**kwargs):
+    """
+    .. versionadded:: 3003
+
+    List services that use files which have been changed by the
+    package manager. It might be needed to restart them.
+
+    Requires systemd.
+
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pkg.services_need_restart
+    """
+    if _yum() != "dnf":
+        raise CommandExecutionError("dnf is required to list outdated services.")
+    if not salt.utils.systemd.booted(__context__):
+        raise CommandExecutionError("systemd is required to list outdated services.")
+
+    cmd = ["dnf", "--quiet", "needs-restarting"]
+    dnf_output = __salt__["cmd.run_stdout"](cmd, python_shell=False)
+    if not dnf_output:
+        return []
+
+    services = set()
+    for line in dnf_output.split("\n"):
+        pid, has_delim, _ = line.partition(":")
+        if has_delim:
+            service = salt.utils.systemd.pid_to_service(pid.strip())
+            if service:
+                services.add(service)
+
+    return list(services)

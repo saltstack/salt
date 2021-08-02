@@ -4,9 +4,9 @@ Test for ssh_pre_flight roster option
 
 import os
 
+import pytest
 import salt.utils.files
 from tests.support.case import SSHCase
-from tests.support.helpers import slowTest
 from tests.support.runtests import RUNTIME_VARS
 
 
@@ -31,7 +31,7 @@ class SSHPreFlightTest(SSHCase):
         with salt.utils.files.fopen(self.data["ssh_pre_flight"], "w") as fp_:
             fp_.write("touch {}".format(self.test_script))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_ssh_pre_flight(self):
         """
         test ssh when ssh_pre_flight is set
@@ -42,7 +42,7 @@ class SSHPreFlightTest(SSHCase):
 
         assert os.path.exists(self.test_script)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_ssh_run_pre_flight(self):
         """
         test ssh when --pre-flight is passed to salt-ssh
@@ -58,7 +58,7 @@ class SSHPreFlightTest(SSHCase):
         )
         assert os.path.exists(self.test_script)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_ssh_run_pre_flight_failure(self):
         """
         test ssh_pre_flight when there is a failure

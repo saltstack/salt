@@ -2,8 +2,9 @@
 # We can also exclude platforms from the requirements using markers, but if a requirement only applies
 # to a particular platform, please add it to the corresponding `<platform>.in` file in this directory.
 azure==4.0.0; sys_platform != 'win32'
-apache-libcloud>=2.4.0; sys_platform != 'win32'
-boto3>=1.13.5
+apache-libcloud>=1.5.0; sys_platform != 'win32'
+boto3>=1.16.0,<1.17.0; python_version < '3.6'
+boto3>=1.17.67; python_version >= '3.6'
 boto>=2.46.0
 cassandra-driver>=2.0
 certifi
@@ -27,11 +28,12 @@ napalm; sys_platform != 'win32' and python_version > '3.6'
 paramiko>=2.1.6; sys_platform != 'win32' and sys_platform != 'darwin'
 passlib>=1.7.2; sys_platform != 'win32'
 pycurl>=7.43.0.5
-pyinotify>=0.9.6; sys_platform != 'win32' and sys_platform != 'darwin'
+pyinotify>=0.9.6; sys_platform != 'win32' and sys_platform != 'darwin' and platform_system != "openbsd"
 python-etcd>0.4.2
 pyvmomi
 requests
 rfc3987
+sqlparse
 strict_rfc3339>=0.7
 toml
 vcert~=0.7.0; sys_platform != 'win32'
@@ -39,5 +41,5 @@ virtualenv>=20.0.2
 watchdog>=0.9.0
 # Available template libraries that can be used
 genshi>=0.7.3
-cheetah3==3.1.0
+cheetah3>=3.2.2
 mako

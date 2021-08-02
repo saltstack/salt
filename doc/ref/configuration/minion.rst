@@ -1241,7 +1241,7 @@ when trying to authenticate to the master.
 
 .. versionadded:: 2014.7.0
 
-Default: ``60``
+Default: ``5``
 
 When waiting for a master to accept the minion's public key, salt will
 continuously attempt to reconnect until successful. This is the timeout value,
@@ -1250,9 +1250,12 @@ will wait for :conf_minion:`acceptance_wait_time` seconds before trying again.
 Unless your master is under unusually heavy load, this should be left at the
 default.
 
+.. note::
+    For high latency networks try increasing this value
+
 .. code-block:: yaml
 
-    auth_timeout: 60
+    auth_timeout: 5
 
 .. conf_minion:: auth_safemode
 
@@ -2274,6 +2277,20 @@ states is cluttering the logs. Set it to True to ignore them.
 
     state_output_diff: False
 
+.. conf_minion:: state_output_profile
+
+``state_output_profile``
+------------------------
+
+Default: ``True``
+
+The ``state_output_profile`` setting changes whether profile information
+will be shown for each state run.
+
+.. code-block:: yaml
+
+    state_output_profile: True
+
 .. conf_minion:: autoload_dynamic_modules
 
 ``autoload_dynamic_modules``
@@ -2990,7 +3007,7 @@ Default: ``None``
 TLS/SSL connection options. This could be set to a dictionary containing
 arguments corresponding to python ``ssl.wrap_socket`` method. For details see
 `Tornado <http://www.tornadoweb.org/en/stable/tcpserver.html#tornado.tcpserver.TCPServer>`_
-and `Python <https://docs.python.org/2/library/ssl.html#ssl.wrap_socket>`_
+and `Python <https://docs.python.org/3/library/ssl.html#ssl.wrap_socket>`_
 documentation.
 
 Note: to set enum arguments values like ``cert_reqs`` and ``ssl_version`` use
@@ -3301,7 +3318,7 @@ should be logged as the minion starts up and initially connects to the
 master. If not, check for debug log level and that the necessary version of
 ZeroMQ is installed.
 
-.. conf_minion:: failhard
+.. conf_minion:: tcp_authentication_retries
 
 ``tcp_authentication_retries``
 ------------------------------
@@ -3316,6 +3333,18 @@ reauthenticate. The tcp transport should try to connect with a new connection
 if the old one times out on reauthenticating.
 
 `-1` for infinite tries.
+
+.. conf_minion:: tcp_reconnect_backoff
+
+``tcp_reconnect_backoff``
+------------------------------
+
+Default: ``1``
+
+The time in seconds to wait before attempting another connection with salt master
+when the previous connection fails while on TCP transport.
+
+.. conf_minion:: failhard
 
 ``failhard``
 ------------

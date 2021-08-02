@@ -2,7 +2,7 @@
 Manage Elasticsearch Service
 ============================
 
-.. versionadded:: Natrium
+.. versionadded:: 3001
 
 :configuration: This module accepts explicit AWS credentials but can also
     utilize IAM roles assigned to the instance trough Instance Profiles.
@@ -210,7 +210,7 @@ def present(
         (create/update/upgrade) to be completed. Default: ``True``
     :param dict tags: Dict of tags to ensure are present on the Elasticsearch domain.
 
-    .. versionadded:: Natrium
+    .. versionadded:: 3001
 
     Example:
 
@@ -431,7 +431,7 @@ def absent(name, blocking=True, region=None, keyid=None, key=None, profile=None)
     :param bool blocking: Whether or not the state should wait for the deletion
         to be completed. Default: ``True``
 
-    .. versionadded:: Natrium
+    .. versionadded:: 3001
 
     Example:
 
@@ -507,7 +507,7 @@ def upgraded(
     :param str elasticsearch_version: String of format X.Y to specify version for
         the Elasticsearch domain eg. "1.5" or "2.3".
 
-    .. versionadded:: Natrium
+    .. versionadded:: 3001
 
     Example:
 
@@ -672,7 +672,7 @@ def latest(name, minor_only=True, region=None, keyid=None, key=None, profile=Non
     :param str name: The name of the Elasticsearch domain to upgrade.
     :param bool minor_only: Only upgrade to the latest minor version.
 
-    .. versionadded:: Natrium
+    .. versionadded:: 3001
 
     Example:
 
@@ -789,7 +789,7 @@ def tagged(
     :param bool replace: Whether or not to replace (``True``) all existing tags
         on the Elasticsearch domain, or add (``False``) tags to the ES domain.
 
-    .. versionadded:: Natrium
+    .. versionadded:: 3001
 
     """
     ret = {"name": name, "result": "oops", "comment": [], "changes": {}}

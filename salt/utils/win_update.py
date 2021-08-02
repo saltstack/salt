@@ -1116,9 +1116,7 @@ class WindowsUpdateAgent:
 
         try:
             log.debug(cmd)
-            p = subprocess.Popen(
-                cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
-            )
+            p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             return p.communicate()
 
         except OSError as exc:
@@ -1151,6 +1149,6 @@ def needs_reboot():
             obj_sys = win32com.client.Dispatch("Microsoft.Update.SystemInfo")
         except pywintypes.com_error as exc:
             _, msg, _, _ = exc.args
-            log.debug("Failed to create AutoUpdate object: %s", msg)
+            log.debug("Failed to create SystemInfo object: %s", msg)
             return False
         return salt.utils.data.is_true(obj_sys.RebootRequired)

@@ -1,9 +1,7 @@
 """
-watchdog beacon
+Watch files and translate the changes into salt events.
 
 .. versionadded:: 2019.2.0
-
-Watch files and translate the changes into salt events
 
 :depends:   - watchdog Python module >= 0.8.3
 

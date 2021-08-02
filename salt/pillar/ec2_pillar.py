@@ -28,7 +28,7 @@ key is included in ``tag_list_key`` it is removed from ec2_tags. If a tag does
 not exist it is still included as an empty list.
 
 
-..note::
+.. note::
     As with any master configuration change, restart the salt-master daemon for
     changes to take effect.
 

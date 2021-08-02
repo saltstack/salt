@@ -15,6 +15,7 @@ The data sent to the state calls is as follows:
 import copy
 import datetime
 import fnmatch
+import importlib
 import logging
 import os
 import random
@@ -47,15 +48,10 @@ import salt.utils.url
 # Explicit late import to avoid circular import. DO NOT MOVE THIS.
 import salt.utils.yamlloader as yamlloader
 from salt.exceptions import CommandExecutionError, SaltRenderError, SaltReqTimeoutError
-
-# pylint: disable=import-error,no-name-in-module,redefined-builtin
-from salt.ext.six.moves import map, range, reload_module
 from salt.serializers.msgpack import deserialize as msgpack_deserialize
 from salt.serializers.msgpack import serialize as msgpack_serialize
 from salt.template import compile_template, compile_template_str
 from salt.utils.odict import DefaultOrderedDict, OrderedDict
-
-# pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 log = logging.getLogger(__name__)
 
@@ -233,7 +229,7 @@ def find_name(name, state, high):
     Note: if `state` is sls, then we are looking for all IDs that match the given SLS
     """
     ext_id = []
-    if name in high:
+    if name in high and state in high[name]:
         ext_id.append((name, state))
     # if we are requiring an entire SLS, then we need to add ourselves to everything in that SLS
     elif state == "sls":
@@ -928,7 +924,8 @@ class State:
 
     def _run_check_onlyif(self, low_data, cmd_opts):
         """
-        Check that unless doesn't return 0, and that onlyif returns a 0.
+        Make sure that all commands return True for the state to run. If any
+        command returns False (non 0), the state will not run
         """
         ret = {"result": False}
 
@@ -937,7 +934,9 @@ class State:
         else:
             low_data_onlyif = low_data["onlyif"]
 
+        # If any are False the state will NOT run
         def _check_cmd(cmd):
+            # Don't run condition (False)
             if cmd != 0 and ret["result"] is False:
                 ret.update(
                     {
@@ -946,8 +945,10 @@ class State:
                         "result": True,
                     }
                 )
+                return False
             elif cmd == 0:
                 ret.update({"comment": "onlyif condition is true", "result": False})
+            return True
 
         for entry in low_data_onlyif:
             if isinstance(entry, str):
@@ -959,7 +960,8 @@ class State:
                     # Command failed, notify onlyif to skip running the item
                     cmd = 100
                 log.debug("Last command return code: %s", cmd)
-                _check_cmd(cmd)
+                if not _check_cmd(cmd):
+                    return ret
             elif isinstance(entry, dict):
                 if "fun" not in entry:
                     ret["comment"] = "no `fun` argument in onlyif: {}".format(entry)
@@ -971,7 +973,8 @@ class State:
                 if get_return:
                     result = salt.utils.data.traverse_dict_and_list(result, get_return)
                 if self.state_con.get("retcode", 0):
-                    _check_cmd(self.state_con["retcode"])
+                    if not _check_cmd(self.state_con["retcode"]):
+                        return ret
                 elif not result:
                     ret.update(
                         {
@@ -980,6 +983,7 @@ class State:
                             "result": True,
                         }
                     )
+                    return ret
                 else:
                     ret.update({"comment": "onlyif condition is true", "result": False})
 
@@ -990,11 +994,13 @@ class State:
                         "result": False,
                     }
                 )
+                return ret
         return ret
 
     def _run_check_unless(self, low_data, cmd_opts):
         """
-        Check that unless doesn't return 0, and that onlyif returns a 0.
+        Check if any of the commands return False (non 0). If any are False the
+        state will run.
         """
         ret = {"result": False}
 
@@ -1003,8 +1009,10 @@ class State:
         else:
             low_data_unless = low_data["unless"]
 
+        # If any are False the state will run
         def _check_cmd(cmd):
-            if cmd == 0 and ret["result"] is False:
+            # Don't run condition (True)
+            if cmd == 0:
                 ret.update(
                     {
                         "comment": "unless condition is true",
@@ -1012,8 +1020,11 @@ class State:
                         "result": True,
                     }
                 )
-            elif cmd != 0:
+                return False
+            else:
+                ret.pop("skip_watch", None)
                 ret.update({"comment": "unless condition is false", "result": False})
+                return True
 
         for entry in low_data_unless:
             if isinstance(entry, str):
@@ -1025,7 +1036,8 @@ class State:
                 except CommandExecutionError:
                     # Command failed, so notify unless to skip the item
                     cmd = 0
-                _check_cmd(cmd)
+                if _check_cmd(cmd):
+                    return ret
             elif isinstance(entry, dict):
                 if "fun" not in entry:
                     ret["comment"] = "no `fun` argument in unless: {}".format(entry)
@@ -1037,7 +1049,8 @@ class State:
                 if get_return:
                     result = salt.utils.data.traverse_dict_and_list(result, get_return)
                 if self.state_con.get("retcode", 0):
-                    _check_cmd(self.state_con["retcode"])
+                    if _check_cmd(self.state_con["retcode"]):
+                        return ret
                 elif result:
                     ret.update(
                         {
@@ -1050,6 +1063,7 @@ class State:
                     ret.update(
                         {"comment": "unless condition is false", "result": False}
                     )
+                    return ret
             else:
                 ret.update(
                     {
@@ -1183,7 +1197,7 @@ class State:
             # process 'site-packages', the 'site' module needs to be reloaded in
             # order for the newly installed package to be importable.
             try:
-                reload_module(site)
+                importlib.reload(site)
             except RuntimeError:
                 log.error(
                     "Error encountered during module reload. Modules were not reloaded."
@@ -1606,8 +1620,8 @@ class State:
         ext = high.pop("__extend__")
         for ext_chunk in ext:
             for name, body in ext_chunk.items():
-                if name not in high:
-                    state_type = next(x for x in body if not x.startswith("__"))
+                state_type = next(x for x in body if not x.startswith("__"))
+                if name not in high or state_type not in high[name]:
                     # Check for a matching 'name' override in high data
                     ids = find_name(name, state_type, high)
                     if len(ids) != 1:
@@ -1636,18 +1650,14 @@ class State:
                     # high[name][state] is extended by run, both are lists
                     for arg in run:
                         update = False
-                        for hind in range(len(high[name][state])):
-                            if isinstance(arg, str) and isinstance(
-                                high[name][state][hind], str
-                            ):
+                        for hind, val in enumerate(high[name][state]):
+                            if isinstance(arg, str) and isinstance(val, str):
                                 # replacing the function, replace the index
                                 high[name][state].pop(hind)
                                 high[name][state].insert(hind, arg)
                                 update = True
                                 continue
-                            if isinstance(arg, dict) and isinstance(
-                                high[name][state][hind], dict
-                            ):
+                            if isinstance(arg, dict) and isinstance(val, dict):
                                 # It is an option, make sure the options match
                                 argfirst = next(iter(arg))
                                 if argfirst == next(iter(high[name][state][hind])):
@@ -2780,6 +2790,8 @@ class State:
             status = "onchanges"
         elif "change" in fun_stats:
             status = "change"
+        elif "onfail" in fun_stats:
+            status = "onfail"
         else:
             status = "met"
 
@@ -3098,6 +3110,33 @@ class State:
 
         return running
 
+    def call_beacons(self, chunks, running):
+        """
+        Find all of the beacon routines and call the associated mod_beacon runs
+        """
+        listeners = []
+        crefs = {}
+        beacons = []
+        for chunk in chunks:
+            if "beacon" in chunk:
+                beacons.append(chunk)
+        mod_beacons = []
+        errors = {}
+        for chunk in beacons:
+            low = chunk.copy()
+            low["sfun"] = chunk["fun"]
+            low["fun"] = "mod_beacon"
+            low["__id__"] = "beacon_{}".format(low["__id__"])
+            mod_beacons.append(low)
+        ret = self.call_chunks(mod_beacons)
+
+        running.update(ret)
+        for err in errors:
+            errors[err]["__run_num__"] = self.__run_num
+            self.__run_num += 1
+        running.update(errors)
+        return running
+
     def call_listen(self, chunks, running):
         """
         Find all of the listen routines and call the associated mod_watch runs
@@ -3116,6 +3155,7 @@ class State:
                         listeners.append(
                             {(key, val, "lookup"): [{chunk["state"]: chunk["__id__"]}]}
                         )
+
         mod_watchers = []
         errors = {}
         for l_dict in listeners:
@@ -3222,6 +3262,7 @@ class State:
             return errors
         ret = self.call_chunks(chunks)
         ret = self.call_listen(chunks, ret)
+        ret = self.call_beacons(chunks, ret)
 
         def _cleanup_accumulator_data():
             accum_data_path = os.path.join(
@@ -3398,7 +3439,7 @@ class LazyAvailStates:
     def items(self):
         self._fill()
         ret = []
-        for saltenv, states in self._avail:
+        for saltenv, states in self._avail.items():
             ret.append((saltenv, self.__getitem__(saltenv)))
         return ret
 
@@ -4560,6 +4601,15 @@ class BaseHighState:
 
         return state_usage
 
+    def destroy(self):
+        raise NotImplementedError
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_):
+        self.destroy()
+
 
 class HighState(BaseHighState):
     """
@@ -4628,6 +4678,15 @@ class HighState(BaseHighState):
             return cls.stack[-1]
         except IndexError:
             return None
+
+    def destroy(self):
+        self.client.destroy()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_):
+        self.destroy()
 
 
 class MasterState(State):

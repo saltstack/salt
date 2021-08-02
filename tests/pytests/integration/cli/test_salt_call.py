@@ -1,26 +1,17 @@
-"""
-    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
-
-
-    tests.integration.shell.call
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-"""
-
 import copy
 import logging
 import os
 import pprint
 import re
-import shutil
 import sys
 
 import pytest
+import salt.defaults.exitcodes
 import salt.utils.files
 import salt.utils.json
 import salt.utils.platform
 import salt.utils.yaml
-from tests.support.helpers import PRE_PYTEST_SKIP, PRE_PYTEST_SKIP_REASON
-from tests.support.runtests import RUNTIME_VARS
+from tests.support.helpers import PRE_PYTEST_SKIP, PRE_PYTEST_SKIP_REASON, change_cwd
 
 pytestmark = [
     pytest.mark.slow_test,
@@ -61,16 +52,26 @@ def test_json_out_indent(salt_call_cli, indent):
     assert ret.stdout == expected_output
 
 
-def test_local_sls_call(salt_call_cli):
-    fileroot = os.path.join(RUNTIME_VARS.FILES, "file", "base")
-    ret = salt_call_cli.run(
-        "--local", "--file-root", fileroot, "state.sls", "saltcalllocal"
-    )
-    assert ret.exitcode == 0
-    state_run_dict = next(iter(ret.json.values()))
-    assert state_run_dict["name"] == "test.echo"
-    assert state_run_dict["result"] is True
-    assert state_run_dict["changes"]["ret"] == "hello"
+def test_local_sls_call(salt_master, salt_call_cli):
+    sls_contents = """
+    regular-module:
+      module.run:
+        - name: test.echo
+        - text: hello
+    """
+    with salt_master.state_tree.base.temp_file("saltcalllocal.sls", sls_contents):
+        ret = salt_call_cli.run(
+            "--local",
+            "--file-root",
+            str(salt_master.state_tree.base.paths[0]),
+            "state.sls",
+            "saltcalllocal",
+        )
+        assert ret.exitcode == 0
+        state_run_dict = next(iter(ret.json.values()))
+        assert state_run_dict["name"] == "test.echo"
+        assert state_run_dict["result"] is True
+        assert state_run_dict["changes"]["ret"] == "hello"
 
 
 def test_local_salt_call(salt_call_cli):
@@ -118,14 +119,8 @@ def test_issue_6973_state_highstate_exit_code(salt_call_cli):
     for this minion, salt-call should exit non-zero if invoked with
     option --retcode-passthrough
     """
-    src = os.path.join(RUNTIME_VARS.BASE_FILES, "top.sls")
-    dst = os.path.join(RUNTIME_VARS.BASE_FILES, "top.sls.bak")
-    shutil.move(src, dst)
     expected_comment = "No states found for this minion"
-    try:
-        ret = salt_call_cli.run("--retcode-passthrough", "state.highstate")
-    finally:
-        shutil.move(dst, src)
+    ret = salt_call_cli.run("--retcode-passthrough", "state.highstate")
     assert ret.exitcode != 0
     assert expected_comment in ret.stdout
 
@@ -212,9 +207,7 @@ def test_42116_cli_pillar_override(salt_call_cli):
     )
 
 
-def test_pillar_items_masterless(
-    salt_minion, salt_call_cli, base_env_pillar_tree_root_dir
-):
+def test_pillar_items_masterless(salt_minion, salt_call_cli):
     """
     Test to ensure we get expected output
     from pillar.items with salt-call
@@ -234,11 +227,9 @@ def test_pillar_items_masterless(
       - Bedevere
       - Robin
     """
-    top_tempfile = pytest.helpers.temp_file(
-        "top.sls", top_file, base_env_pillar_tree_root_dir
-    )
-    basic_tempfile = pytest.helpers.temp_file(
-        "basic.sls", basic_pillar_file, base_env_pillar_tree_root_dir
+    top_tempfile = salt_minion.pillar_tree.base.temp_file("top.sls", top_file)
+    basic_tempfile = salt_minion.pillar_tree.base.temp_file(
+        "basic.sls", basic_pillar_file
     )
 
     with top_tempfile, basic_tempfile:
@@ -252,47 +243,67 @@ def test_pillar_items_masterless(
         assert ret.json["monty"] == "python"
 
 
-def test_masterless_highstate(salt_call_cli):
+def test_masterless_highstate(salt_minion, salt_call_cli, tmp_path):
     """
     test state.highstate in masterless mode
     """
-    destpath = os.path.join(RUNTIME_VARS.TMP, "testfile")
-    ret = salt_call_cli.run("--local", "state.highstate")
-    assert ret.exitcode == 0
-    state_run_dict = next(iter(ret.json.values()))
-    assert state_run_dict["result"] is True
-    assert state_run_dict["__id__"] == destpath
+    top_sls = """
+    base:
+      '*':
+        - core
+        """
+
+    testfile = tmp_path / "testfile"
+    core_state = """
+    {}:
+      file:
+        - managed
+        - source: salt://testfile
+        - makedirs: true
+        """.format(
+        testfile
+    )
+
+    expected_id = str(testfile)
+
+    with salt_minion.state_tree.base.temp_file(
+        "top.sls", top_sls
+    ), salt_minion.state_tree.base.temp_file("core.sls", core_state):
+        ret = salt_call_cli.run("--local", "state.highstate")
+        assert ret.exitcode == 0
+        state_run_dict = next(iter(ret.json.values()))
+        assert state_run_dict["result"] is True
+        assert state_run_dict["__id__"] == expected_id
 
 
 @pytest.mark.skip_on_windows
-def test_syslog_file_not_found(salt_minion, salt_call_cli):
+def test_syslog_file_not_found(salt_minion, salt_call_cli, tmp_path):
     """
     test when log_file is set to a syslog file that does not exist
     """
-    old_cwd = os.getcwd()
-    with pytest.helpers.temp_directory("log_file_incorrect") as config_dir:
-
-        try:
-            os.chdir(config_dir)
-            minion_config = copy.deepcopy(salt_minion.config)
-            minion_config["log_file"] = "file:///dev/doesnotexist"
-            with salt.utils.files.fopen(os.path.join(config_dir, "minion"), "w") as fh_:
-                fh_.write(salt.utils.yaml.dump(minion_config, default_flow_style=False))
-            ret = salt_call_cli.run(
-                "--config-dir", config_dir, "--log-level=debug", "cmd.run", "echo foo",
+    config_dir = tmp_path / "log_file_incorrect"
+    config_dir.mkdir()
+    with change_cwd(str(config_dir)):
+        minion_config = copy.deepcopy(salt_minion.config)
+        minion_config["log_file"] = "file:///dev/doesnotexist"
+        with salt.utils.files.fopen(str(config_dir / "minion"), "w") as fh_:
+            fh_.write(salt.utils.yaml.dump(minion_config, default_flow_style=False))
+        ret = salt_call_cli.run(
+            "--config-dir={}".format(config_dir),
+            "--log-level=debug",
+            "cmd.run",
+            "echo foo",
+        )
+        if sys.version_info >= (3, 5, 4):
+            assert ret.exitcode == 0
+            assert (
+                "[WARNING ] The log_file does not exist. Logging not setup correctly or syslog service not started."
+                in ret.stderr
             )
-            if sys.version_info >= (3, 5, 4):
-                assert ret.exitcode == 0
-                assert (
-                    "[WARNING ] The log_file does not exist. Logging not setup correctly or syslog service not started."
-                    in ret.stderr
-                )
-                assert ret.json == "foo", ret
-            else:
-                assert ret.exitcode == 2
-                assert "Failed to setup the Syslog logging handler" in ret.stderr
-        finally:
-            os.chdir(old_cwd)
+            assert ret.json == "foo", ret
+        else:
+            assert ret.exitcode == 2
+            assert "Failed to setup the Syslog logging handler" in ret.stderr
 
 
 @PRE_PYTEST_SKIP

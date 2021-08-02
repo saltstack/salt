@@ -1,7 +1,7 @@
 """
 Module for running ZFS zpool command
 
-:codeauthor:    Nitin Madhok <nmadhok@clemson.edu>, Jorge Schrauwen <sjorge@blackdot.be>
+:codeauthor:    Nitin Madhok <nmadhok@g.clemson.edu>, Jorge Schrauwen <sjorge@blackdot.be>
 :maintainer:    Jorge Schrauwen <sjorge@blackdot.be>
 :maturity:      new
 :depends:       salt.utils.zfs
@@ -19,7 +19,6 @@ import os
 import salt.utils.decorators
 import salt.utils.decorators.path
 import salt.utils.path
-from salt.ext.six.moves import zip
 from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)

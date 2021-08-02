@@ -1,10 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 Support for Eix
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import salt libs
 import salt.utils.path
 
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Support for Digicert.  Heavily based on the Venafi runner by Joseph Hall (jphall@saltstack.com).
 
@@ -35,8 +34,6 @@ This API currently only supports RSA key types.  Support for other key types wil
 if interest warrants.
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import os
 import re
@@ -50,7 +47,6 @@ import salt.utils.files
 import salt.utils.http
 import salt.utils.json
 from salt.exceptions import CommandExecutionError, SaltRunnerError
-from salt.ext import six
 
 try:
     from M2Crypto import RSA
@@ -61,7 +57,7 @@ except ImportError:
     try:
         from Cryptodome.PublicKey import RSA
     except ImportError:
-        from Crypto.PublicKey import RSA
+        from Crypto.PublicKey import RSA  # nosec
 
 __virtualname__ = "digicert"
 log = logging.getLogger(__name__)
@@ -116,7 +112,7 @@ def _paginate(url, topkey, *args, **kwargs):
     aggregate_ret = ret["dict"][topkey]
     url = args[0]
     for p in range(2, numpages):
-        param_url = url + "?offset={0}".format(lim * (p - 1))
+        param_url = url + "?offset={}".format(lim * (p - 1))
         next_ret = salt.utils.http.query(param_url, kwargs)
         aggregate_ret[topkey].extend(next_ret["dict"][topkey])
 
@@ -135,9 +131,9 @@ def list_domains(container_id=None):
         salt-run digicert.list_domains
     """
     if container_id:
-        url = "{0}/domain?{1}".format(_base_url(), container_id)
+        url = "{}/domain?{}".format(_base_url(), container_id)
     else:
-        url = "{0}/domain".format(_base_url())
+        url = "{}/domain".format(_base_url())
 
     orgs = _paginate(
         url,
@@ -164,9 +160,9 @@ def list_requests(status=None):
         salt-run digicert.list_requests pending
     """
     if status:
-        url = "{0}/request?status={1}".format(_base_url(), status)
+        url = "{}/request?status={}".format(_base_url(), status)
     else:
-        url = "{0}/request".format(_base_url())
+        url = "{}/request".format(_base_url())
 
     reqs = _paginate(
         url,
@@ -192,7 +188,7 @@ def list_orders(status=None):
 
         salt-run digicert.list_orders
     """
-    url = "{0}/order/certificate".format(_base_url())
+    url = "{}/order/certificate".format(_base_url())
 
     reqs = _paginate(
         url,
@@ -242,7 +238,7 @@ def get_certificate(
 
     if order_id:
         order_cert = salt.utils.http.query(
-            "{0}/order/certificate/{1}".format(_base_url(), order_id),
+            "{}/order/certificate/{}".format(_base_url(), order_id),
             method="GET",
             raise_error=False,
             decode=True,
@@ -273,7 +269,7 @@ def get_certificate(
 
     if filename:
         ret_cert = salt.utils.http.query(
-            "{0}/certificate/{1}/download/format/{2}".format(
+            "{}/certificate/{}/download/format/{}".format(
                 _base_url(), certificate_id, cert_format
             ),
             method="GET",
@@ -286,7 +282,7 @@ def get_certificate(
         )
     else:
         ret_cert = salt.utils.http.query(
-            "{0}/certificate/{1}/download/format/{2}".format(
+            "{}/certificate/{}/download/format/{}".format(
                 _base_url(), certificate_id, cert_format
             ),
             method="GET",
@@ -373,7 +369,7 @@ def list_organizations(container_id=None, include_validation=True):
     """
 
     orgs = _paginate(
-        "{0}/organization".format(_base_url()),
+        "{}/organization".format(_base_url()),
         "organizations",
         method="GET",
         decode=True,
@@ -422,7 +418,7 @@ def order_certificate(
     Previous order details can be retrieved with digicertapi.list_orders.
     """
 
-    if dns_names and isinstance(dns_names, six.string_types):
+    if dns_names and isinstance(dns_names, str):
         dns_names = [dns_names]
     if dns_names and not isinstance(dns_names, Sequence):
         raise SaltRunnerError(
@@ -440,7 +436,7 @@ def order_certificate(
 
     body = {}
 
-    if organization_units and isinstance(organization_units, six.string_types):
+    if organization_units and isinstance(organization_units, str):
         organization_units = [organization_units]
     if organization_units and not isinstance(organization_units, Sequence):
         raise SaltRunnerError("Organization_units is not a valid data type.")
@@ -496,7 +492,7 @@ def order_certificate(
     encoded_body = salt.utils.json.dumps(body)
 
     qdata = salt.utils.http.query(
-        "{0}/order/certificate/ssl".format(_base_url()),
+        "{}/order/certificate/ssl".format(_base_url()),
         method="POST",
         data=encoded_body,
         decode=True,
@@ -540,7 +536,7 @@ def gen_key(minion_id, dns_name=None, password=None, key_len=2048):
         if HAS_M2:
             gen = RSA.gen_key(key_len, 65537)
             private_key = gen.as_pem(
-                cipher="des_ede3_cbc", callback=lambda x: six.b(password)
+                cipher="des_ede3_cbc", callback=lambda x: bytes(password)
             )
         else:
             gen = RSA.generate(bits=key_len)
@@ -572,7 +568,7 @@ def get_org_details(organization_id):
     """
 
     qdata = salt.utils.http.query(
-        "{0}/organization/{1}".format(_base_url(), organization_id),
+        "{}/organization/{}".format(_base_url(), organization_id),
         method="GET",
         decode=True,
         decode_type="json",
@@ -602,13 +598,13 @@ def gen_csr(
 
     if "error" in org_details:
         raise SaltRunnerError(
-            "Problem getting organization details for organization_id={0} ({1})".format(
+            "Problem getting organization details for organization_id={} ({})".format(
                 organization_id, org_details["error"]
             )
         )
     if org_details["dict"].get("status", "active") == "inactive":
         raise SaltRunnerError(
-            "Organization with organization_id={0} is marked inactive".format(
+            "Organization with organization_id={} is marked inactive".format(
                 organization_id
             )
         )
@@ -624,12 +620,12 @@ def gen_csr(
     if "private_key" not in data:
         data["private_key"] = gen_key(minion_id, dns_name, password, key_len=key_len)
 
-    tmppriv = "{0}/priv".format(tmpdir)
-    tmpcsr = "{0}/csr".format(tmpdir)
+    tmppriv = "{}/priv".format(tmpdir)
+    tmpcsr = "{}/csr".format(tmpdir)
     with salt.utils.files.fopen(tmppriv, "w") as if_:
         if_.write(salt.utils.stringutils.to_str(data["private_key"]))
 
-    subject = "/C={0}/ST={1}/L={2}/O={3}".format(
+    subject = "/C={}/ST={}/L={}/O={}".format(
         org_details["dict"]["country"],
         org_details["dict"]["state"],
         org_details["dict"]["city"],
@@ -637,11 +633,11 @@ def gen_csr(
     )
 
     if ou_name:
-        subject = subject + "/OU={0}".format(ou_name)
+        subject = subject + "/OU={}".format(ou_name)
 
-    subject = subject + "/CN={0}".format(dns_name)
+    subject = subject + "/CN={}".format(dns_name)
 
-    cmd = "openssl req -new -{0} -key {1} -out {2} -subj '{3}'".format(
+    cmd = "openssl req -new -{} -key {} -out {} -subj '{}'".format(
         shatype, tmppriv, tmpcsr, subject
     )
     output = __salt__["salt.cmd"]("cmd.run", cmd)
@@ -690,15 +686,15 @@ def show_organization(domain):
         salt-run digicert.show_company example.com
     """
     data = salt.utils.http.query(
-        "{0}/companies/domain/{1}".format(_base_url(), domain),
+        "{}/companies/domain/{}".format(_base_url(), domain),
         status=True,
         decode=True,
         decode_type="json",
         header_dict={"tppl-api-key": _api_key()},
     )
     status = data["status"]
-    if six.text_type(status).startswith("4") or six.text_type(status).startswith("5"):
-        raise CommandExecutionError("There was an API error: {0}".format(data["error"]))
+    if str(status).startswith("4") or str(status).startswith("5"):
+        raise CommandExecutionError("There was an API error: {}".format(data["error"]))
     return data.get("dict", {})
 
 
@@ -713,15 +709,15 @@ def show_csrs():
         salt-run digicert.show_csrs
     """
     data = salt.utils.http.query(
-        "{0}/certificaterequests".format(_base_url()),
+        "{}/certificaterequests".format(_base_url()),
         status=True,
         decode=True,
         decode_type="json",
         header_dict={"tppl-api-key": _api_key()},
     )
     status = data["status"]
-    if six.text_type(status).startswith("4") or six.text_type(status).startswith("5"):
-        raise CommandExecutionError("There was an API error: {0}".format(data["error"]))
+    if str(status).startswith("4") or str(status).startswith("5"):
+        raise CommandExecutionError("There was an API error: {}".format(data["error"]))
     return data.get("dict", {})
 
 
@@ -766,7 +762,7 @@ def del_cached_domain(domains):
         salt-run digicert.del_cached_domain domain1.example.com,domain2.example.com
     """
     cache = salt.cache.Cache(__opts__, syspaths.CACHE_DIR)
-    if isinstance(domains, six.string_types):
+    if isinstance(domains, str):
         domains = domains.split(",")
     if not isinstance(domains, list):
         raise CommandExecutionError(

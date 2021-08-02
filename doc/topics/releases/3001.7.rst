@@ -1,0 +1,17 @@
+.. _release-3001-7:
+
+=========================
+Salt 3001.7 Release Notes
+=========================
+
+Version 3001.7 is a bug fix release for :ref:`3001 <release-3001>`.
+
+
+Fixed
+-----
+
+- Allow "extra_filerefs" as sanitized kwargs for SSH client.
+  Fix regression on "cmd.run" when passing tuples as cmd. (#59664)
+- Allow all ssh kwargs as sanitized kwargs for SSH client. (#59748)
+- Fix argument injection bug in restartcheck.restartcheck. This change hardens
+  the fix for CVE-2020-28243.

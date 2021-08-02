@@ -387,13 +387,13 @@ def indent(s, width=4, first=False, blank=False, indentfirst=None):
 
 
 @jinja_filter("tojson")
-def tojson(val, indent=None):
+def tojson(val, indent=None, **options):
     """
-    Implementation of tojson filter (only present in Jinja 2.9 and later). If
-    Jinja 2.9 or later is installed, then the upstream version of this filter
-    will be used.
+    Implementation of tojson filter (only present in Jinja 2.9 and later).
+    Unlike the Jinja built-in filter, this allows arbitrary options to be
+    passed in to the underlying JSON library.
     """
-    options = {"ensure_ascii": True}
+    options.setdefault("ensure_ascii", True)
     if indent is not None:
         options["indent"] = indent
     return (
@@ -944,7 +944,7 @@ class SerializerExtension(Extension):
         yaml_txt = salt.utils.yaml.safe_dump(
             value, default_flow_style=flow_style
         ).strip()
-        if yaml_txt.endswith("\n..."):  # future lint: disable=blacklisted-function
+        if yaml_txt.endswith("\n..."):
             yaml_txt = yaml_txt[: len(yaml_txt) - 4]
         try:
             return Markup(yaml_txt)
@@ -1083,9 +1083,10 @@ class SerializerExtension(Extension):
 
     def _profile_end(self, label, source, previous_time):
         log.profile(
-            "Time (in seconds) to render {} '{}': {}".format(
-                source, label, time.time() - previous_time
-            )
+            "Time (in seconds) to render %s '%s': %s",
+            source,
+            label,
+            time.time() - previous_time,
         )
 
     def _parse_profile_block(self, parser, label, source, body, lineno):

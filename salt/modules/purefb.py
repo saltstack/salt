@@ -45,7 +45,7 @@ Installation Prerequisites
 :requires: purity_fb
 :platform: all
 
-.. versionadded::  2019.2.0
+.. versionadded:: 2019.2.0
 
 """
 
@@ -170,7 +170,7 @@ def snap_create(name, suffix=None):
 
     Will return False if filesystem selected to snap does not exist.
 
-    .. versionadded::  2019.2.0
+    .. versionadded:: 2019.2.0
 
     name : string
         name of filesystem to snapshot
@@ -212,7 +212,7 @@ def snap_delete(name, suffix=None, eradicate=False):
 
     Will return False if selected snapshot does not exist.
 
-    .. versionadded::  2019.2.0
+    .. versionadded:: 2019.2.0
 
     name : string
         name of filesystem
@@ -257,7 +257,7 @@ def snap_eradicate(name, suffix=None):
 
     Will return False if snapshot is not in a deleted state.
 
-    .. versionadded::  2019.2.0
+    .. versionadded:: 2019.2.0
 
     name : string
         name of filesystem
@@ -292,7 +292,7 @@ def fs_create(
 
     Will return False if filesystem already exists.
 
-    .. versionadded::  2019.2.0
+    .. versionadded:: 2019.2.0
 
     name : string
         name of filesystem (truncated to 63 characters)
@@ -367,7 +367,7 @@ def fs_delete(name, eradicate=False):
 
     Will return False if filesystem doesn't exist or is already in a deleted state.
 
-    .. versionadded::  2019.2.0
+    .. versionadded:: 2019.2.0
 
     name : string
         name of filesystem
@@ -414,7 +414,7 @@ def fs_eradicate(name):
 
     Will return False is filesystem is not in a deleted state.
 
-    .. versionadded::  2019.2.0
+    .. versionadded:: 2019.2.0
 
     name : string
         name of filesystem
@@ -444,7 +444,7 @@ def fs_extend(name, size):
 
     Will return False if new size is less than or equal to existing size.
 
-    .. versionadded::  2019.2.0
+    .. versionadded:: 2019.2.0
 
     name : string
         name of filesystem
@@ -485,7 +485,7 @@ def fs_update(name, rules, snapshot=False):
     Allows for change of NFS export rules and enabling/disabled
     of snapshotting capability.
 
-    .. versionadded::  2019.2.0
+    .. versionadded:: 2019.2.0
 
     name : string
         name of filesystem

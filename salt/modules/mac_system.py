@@ -517,7 +517,7 @@ def get_disable_keyboard_on_lock():
 
     CLI Example:
 
-    ..code-block:: bash
+    .. code-block:: bash
 
         salt '*' system.get_disable_keyboard_on_lock
     """

@@ -1,19 +1,12 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: :email:`Jeff Schroeder <jeffschroeder@computer.org>`
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import base64
 from contextlib import contextmanager
 
-# Import Salt Libs
 import salt.utils.stringutils
-from salt.ext import six
 from salt.states import kubernetes
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
@@ -38,7 +31,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
         Mock any of the kubernetes state function return values and set
         the test options.
         """
-        name = "kubernetes.{0}".format(func_name)
+        name = "kubernetes.{}".format(func_name)
         mocked = {name: MagicMock(return_value=return_value)}
         with patch.dict(kubernetes.__salt__, mocked) as patched:
             with patch.dict(kubernetes.__opts__, {"test": test}):
@@ -54,7 +47,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
             kind="Secret", name=name, namespace=namespace, data=data,
         )
         # Base64 all of the values just like kubectl does
-        for key, value in six.iteritems(secret_data["data"]):
+        for key, value in secret_data["data"].items():
             secret_data["data"][key] = base64.b64encode(
                 salt.utils.stringutils.to_bytes(value)
             )
@@ -853,7 +846,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                         "changes": {},
                         "result": False,
                         "name": "salt",
-                        "comment": "Something went wrong, response: {0}".format(
+                        "comment": "Something went wrong, response: {}".format(
                             deleted,
                         ),
                     },
