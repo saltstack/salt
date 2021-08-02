@@ -325,8 +325,10 @@ def test_get_disk_convert_volumes(make_mock_vm, make_mock_storage_pool):
             "dirty-flag": false
         }
     ]
-    """
+    """,
+        "",
     ]
+    popen_mock.return_value.returncode = 0
     subprocess_mock.Popen = popen_mock
 
     with patch.dict(virt.__dict__, {"subprocess": subprocess_mock}):
@@ -352,6 +354,73 @@ def test_get_disk_convert_volumes(make_mock_vm, make_mock_storage_pool):
                 "cluster size": 65536,
                 "disk size": 340525056,
                 "virtual size": 214748364800,
+            },
+        }
+
+
+def test_get_disk_missing(make_mock_vm):
+    """
+    Test virt.get_disks when the file doesn't exist
+    """
+    vm_def = """<domain type='kvm' id='3'>
+      <name>srv01</name>
+      <devices>
+        <disk type='file' device='disk'>
+          <driver name='qemu' type='qcow2' cache='none' io='native'/>
+          <source file='/path/to/default/srv01_system'/>
+          <target dev='vda' bus='virtio'/>
+        </disk>
+      </devices>
+    </domain>
+    """
+    domain_mock = make_mock_vm(vm_def)
+
+    subprocess_mock = MagicMock()
+    popen_mock = MagicMock(spec=virt.subprocess.Popen)
+    popen_mock.return_value.communicate.return_value = ("", "File not found")
+    popen_mock.return_value.returncode = 1
+    subprocess_mock.Popen = popen_mock
+
+    with patch.dict(virt.__dict__, {"subprocess": subprocess_mock}):
+        assert virt.get_disks("srv01") == {
+            "vda": {
+                "type": "disk",
+                "file": "/path/to/default/srv01_system",
+                "file format": "qcow2",
+                "error": "File not found",
+            },
+        }
+
+
+def test_get_disk_no_qemuimg(make_mock_vm):
+    """
+    Test virt.get_disks when qemu_img can't be found
+    """
+    vm_def = """<domain type='kvm' id='3'>
+      <name>srv01</name>
+      <devices>
+        <disk type='file' device='disk'>
+          <driver name='qemu' type='qcow2' cache='none' io='native'/>
+          <source file='/path/to/default/srv01_system'/>
+          <target dev='vda' bus='virtio'/>
+        </disk>
+      </devices>
+    </domain>
+    """
+    domain_mock = make_mock_vm(vm_def)
+
+    subprocess_mock = MagicMock()
+    subprocess_mock.Popen = MagicMock(
+        side_effect=FileNotFoundError("No such file or directory: 'qemu-img'")
+    )
+
+    with patch.dict(virt.__dict__, {"subprocess": subprocess_mock}):
+        assert virt.get_disks("srv01") == {
+            "vda": {
+                "type": "disk",
+                "file": "/path/to/default/srv01_system",
+                "file format": "qcow2",
+                "error": "qemu-img not found",
             },
         }
 
