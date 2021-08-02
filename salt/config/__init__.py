@@ -948,6 +948,12 @@ VALID_OPTS = immutabletypes.freeze(
         # Feature flag config
         "features": dict,
         "fips_mode": bool,
+        # Feature flag to enable checking if master is connected to a host
+        # on a given port
+        "detect_remote_minions": bool,
+        # The port to be used when checking if a master is connected to a
+        # minion
+        "remote_minions_port": int,
     }
 )
 
@@ -1588,6 +1594,8 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "enable_ssh_minions": False,
         "netapi_allow_raw_shell": False,
         "fips_mode": False,
+        "detect_remote_minions": False,
+        "remote_minions_port": 22,
     }
 )
 
