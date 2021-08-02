@@ -56,6 +56,7 @@ def test_list_pkgs_no_context():
         list_pkgs_context_mock.assert_not_called()
         list_pkgs_context_mock.reset_mock()
 
+
 def test_normalize_name():
     """
     Test that package is normalized only when it should be
