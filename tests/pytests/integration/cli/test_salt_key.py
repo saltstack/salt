@@ -325,7 +325,7 @@ def test_accept_bad_key(salt_master, salt_key_cli):
     key = os.path.join(pki_dir, "minions_pre", min_name)
 
     with salt.utils.files.fopen(key, "w") as fp:
-        fp.write('')
+        fp.write("")
 
     try:
         # Check Key
