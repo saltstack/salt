@@ -42,6 +42,9 @@ except ImportError:
     HAS_PWD = False
 
 
+# XXX Force a change
+
+
 class VirtualEnv:
     def __init__(self, test, venv_dir):
         self.venv_dir = venv_dir
