@@ -255,7 +255,9 @@ def test_installed_cert_hash_different():
     """
     expected = {
         "changes": {"installed": "Friendly Name", "uninstalled": "Friendly Name"},
-        "comment": "Found a certificate with the same name but different hash, removing it.\n",
+        "comment": (
+            "Found a certificate with the same name but different hash, removing it.\n"
+        ),
         "name": "/path/to/cert.p12",
         "result": True,
     }

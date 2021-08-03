@@ -583,8 +583,9 @@ def get_ssh_config(name, network_mask="", get_private_key=False):
 
     except KeyError:
         raise CommandExecutionError(
-            "Insufficient SSH information to contact VM {}. "
-            "Is it running?".format(vm_.get("machine", "(default)"))
+            "Insufficient SSH information to contact VM {}. Is it running?".format(
+                vm_.get("machine", "(default)")
+            )
         )
 
     if network_mask:
