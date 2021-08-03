@@ -177,13 +177,13 @@ def auth(nodes, pcsuser="hacluster", pcspasswd="hacluster", extra_args=None):
     pcspasswd
         password for pcsuser (default: hacluster)
     extra_args
-        list of extra option for the \'pcs cluster auth\' command
+        list of extra option for the \'pcs cluster auth\' command. The newer cluster host command has no extra args and so will ignore it.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' pcs.auth nodes='[ node1.example.org node2.example.org ]' pcsuser=hacluster pcspasswd=hoonetorg"
+        salt '*' pcs.auth nodes='[ node1.example.org node2.example.org ]' pcsuser=hacluster pcspasswd=hoonetorg extra_args=[ '--force' ]
     """
     if __use_new_commands():
         cmd = ["pcs", "host", "auth"]
@@ -191,6 +191,9 @@ def auth(nodes, pcsuser="hacluster", pcspasswd="hacluster", extra_args=None):
         cmd = ["pcs", "cluster", "auth"]
 
     cmd.extend(["-u", pcsuser, "-p", pcspasswd])
+
+    if not __use_new_commands() and isinstance(extra_args, (list, tuple)):
+        cmd += extra_args
 
     cmd += nodes
 
@@ -246,10 +249,8 @@ def cluster_setup(nodes, pcsclustername="pcscluster", extra_args=None):
     cmd = ["pcs", "cluster", "setup"]
 
     if __use_new_commands():
-        # cmd += [pcsclustername, "--force"]
         cmd += [pcsclustername]
     else:
-        # cmd += ["--name", pcsclustername, "--force"]
         cmd += ["--name", pcsclustername]
 
     cmd += nodes
@@ -528,3 +529,4 @@ def resource_create(resource_id, resource_type, resource_options=None, cibfile=N
         extra_args=resource_options,
         cibfile=cibfile,
     )
+

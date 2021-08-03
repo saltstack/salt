@@ -487,6 +487,7 @@ def cluster_setup(
     pcsuser="hacluster",
     pcspasswd="hacluster",
     pcs_auth_extra_args=None,
+    wipe_default=False
 ):
     """
     Setup Pacemaker cluster on nodes.
@@ -511,6 +512,8 @@ def cluster_setup(
         The password for authenticating the cluster (default: hacluster)
     pcs_auth_extra_args
         Extra args to be passed to the auth function in case of reauth.
+    wipe_default
+        This removes the files that are installed with Debian based operating systems. 
 
     Example:
 
@@ -565,7 +568,7 @@ def cluster_setup(
     # state file can break running clusters and can also take quite a long time to debug.
 
     log.debug("OS_Family: %s", __grains__.get("os_family"))
-    if __grains__.get("os_family") == "Debian":
+    if __grains__.get("os_family") == "Debian" and wipe_default:
         __salt__["file.remove"]("/etc/corosync/corosync.conf")
         __salt__["file.remove"]("/var/lib/pacemaker/cib/cib.xml")
         __salt__["service.stop"]("corosync")

@@ -39,6 +39,10 @@ def test_auth(ver_cmp_ret, old_ver, test_data):
         exp_cmd.extend(["host", "auth"])
 
     exp_cmd.extend(["-u", test_data.username, "-p", test_data.password])
+    
+    if old_ver:
+        exp_cmd.extend(test_data.extra_args)
+
     exp_cmd.extend([test_data.nodea, test_data.nodeb])
 
     mock_cmd = MagicMock()
