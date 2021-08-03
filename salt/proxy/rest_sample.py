@@ -38,12 +38,7 @@ def __virtual__():
 
 def init(opts):
     log.debug("rest_sample proxy init() called...")
-    __context__["rest_sample"] = {}
-    __context__["rest_sample"]["initialized"] = True
-
-    # Save the REST URL
-    __context__["rest_sample"]["url"] = opts["proxy"]["url"]
-
+    __context__["rest_sample"] = {"initialized": True, "url": opts["proxy"]["url"]}
     # Make sure the REST URL ends with a '/'
     if not __context__["rest_sample"]["url"].endswith("/"):
         __context__["rest_sample"]["url"] += "/"

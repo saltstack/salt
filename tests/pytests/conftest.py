@@ -331,15 +331,19 @@ def salt_delta_proxy_factory(salt_factories, salt_master_factory):
     conf_dir = root_dir / "conf"
     conf_dir.mkdir(parents=True, exist_ok=True)
 
-    config_defaults = {}
-    config_defaults["root_dir"] = str(root_dir)
-    config_defaults["hosts.file"] = os.path.join(RUNTIME_VARS.TMP, "hosts")
-    config_defaults["aliases.file"] = os.path.join(RUNTIME_VARS.TMP, "aliases")
-    config_defaults["transport"] = salt_master_factory.config["transport"]
-    config_defaults["user"] = salt_master_factory.config["user"]
-    config_defaults["metaproxy"] = "deltaproxy"
-    config_defaults["master"] = "127.0.0.1"
-
+    config_defaults = {
+        "root_dir": str(root_dir),
+        "hosts.file": os.path.join(
+            RUNTIME_VARS.TMP, "hosts"
+        ),  # Do we really need this for these tests?
+        "aliases.file": os.path.join(
+            RUNTIME_VARS.TMP, "aliases"
+        ),  # Do we really need this for these tests?
+        "transport": salt_master_factory.config["transport"],
+        "user": salt_master_factory.config["user"],
+        "metaproxy": "deltaproxy",
+        "master": "127.0.0.1",
+    }
     factory = salt_master_factory.salt_proxy_minion_daemon(
         proxy_minion_id,
         defaults=config_defaults,

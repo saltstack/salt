@@ -85,8 +85,7 @@ def init(opts):
     Required.
     Can be used to initialize the server connection.
     """
-    __context__["dummy_proxy"] = {}
-    __context__["dummy_proxy"]["id"] = opts["id"]
+    __context__["dummy_proxy"] = {"id": opts["id"]}
     log.debug("dummy proxy init() called...")
     with _loaded_state(opts) as state:
         state["initialized"] = True
