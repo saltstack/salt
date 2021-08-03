@@ -209,7 +209,9 @@ class TestGroup:
             ret = self.sminion.functions.group.add(self.name)
             assert ret
             self._delete_group = True
-        log.debug("Created system group: %s", self)
+            log.debug("Created system group: %s", self)
+        else:
+            log.debug("Reusing exising system group: %s", self)
         # Run tests
         return self
 
@@ -279,12 +281,12 @@ class TestAccount:
             ret = self.sminion.functions.user.add(self.username)
             assert ret
             self._delete_account = True
-            if salt.utils.platform.is_darwin() or salt.utils.platform.is_windows():
-                password = self.password
-            else:
-                password = self.hashed_password
-            ret = self.sminion.functions.shadow.set_password(self.username, password)
-            assert ret
+        if salt.utils.platform.is_darwin() or salt.utils.platform.is_windows():
+            password = self.password
+        else:
+            password = self.hashed_password
+        ret = self.sminion.functions.shadow.set_password(self.username, password)
+        assert ret
         assert self.username in self.sminion.functions.user.list_users()
         if self._group:
             self.group.__enter__()
@@ -293,7 +295,10 @@ class TestAccount:
                 # Make this group the primary_group for the user
                 self.sminion.functions.user.chgid(self.username, self.group.info.gid)
                 assert self.info.gid == self.group.info.gid
-        log.debug("Created system account: %s", self)
+        if self._delete_account:
+            log.debug("Created system account: %s", self)
+        else:
+            log.debug("Reusing exisintg system account: %s", self)
         # Run tests
         return self
 
