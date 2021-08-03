@@ -124,7 +124,8 @@ class BatchTest(ShellCase):
 
         # Executing salt with batch: 1 and with failhard. It should stop after the first error.
         cmd = self.run_salt(
-            '"*minion" state.single test.fail_without_changes name=test_me -b 1 --out=yaml --failhard',
+            '"*minion" state.single test.fail_without_changes name=test_me -b 1'
+            " --out=yaml --failhard",
             timeout=self.run_timeout,
         )
 

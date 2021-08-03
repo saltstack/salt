@@ -577,7 +577,8 @@ class AsyncTCPPubChannel(
                 req_channel.send(load, timeout=60)
             except salt.exceptions.SaltReqTimeoutError:
                 log.info(
-                    "fire_master failed: master could not be contacted. Request timed out."
+                    "fire_master failed: master could not be contacted. Request timed"
+                    " out."
                 )
             except Exception:  # pylint: disable=broad-except
                 log.info("fire_master failed: %s", traceback.format_exc())
@@ -1222,7 +1223,8 @@ class SaltMessageClient:
                         }
                     else:
                         log.warning(
-                            "If you need a certain source IP/port, consider upgrading Tornado >= 4.5"
+                            "If you need a certain source IP/port, consider upgrading"
+                            " Tornado >= 4.5"
                         )
                 with salt.utils.asynchronous.current_ioloop(self.io_loop):
                     self._stream = yield self._tcp_client.connect(
@@ -1232,7 +1234,8 @@ class SaltMessageClient:
                 break
             except Exception as exc:  # pylint: disable=broad-except
                 log.warning(
-                    "TCP Message Client encountered an exception while connecting to %s:%s: %r, will reconnect in %d seconds",
+                    "TCP Message Client encountered an exception while connecting to"
+                    " %s:%s: %r, will reconnect in %d seconds",
                     self.host,
                     self.port,
                     exc,
@@ -1273,7 +1276,8 @@ class SaltMessageClient:
                                 self.io_loop.spawn_callback(self._on_recv, header, body)
                             else:
                                 log.error(
-                                    "Got response for message_id %s that we are not tracking",
+                                    "Got response for message_id %s that we are not"
+                                    " tracking",
                                     message_id,
                                 )
                 except salt.ext.tornado.iostream.StreamClosedError as e:

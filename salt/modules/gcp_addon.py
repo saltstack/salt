@@ -39,7 +39,8 @@ def __virtual__():
     if HAS_LIB is False:
         return (
             False,
-            "Required dependencies 'googleapiclient' and/or 'oauth2client' were not found.",
+            "Required dependencies 'googleapiclient' and/or 'oauth2client' were not"
+            " found.",
         )
     return __virtualname__
 

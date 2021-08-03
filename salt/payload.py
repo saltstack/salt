@@ -336,8 +336,9 @@ class SREQ:
             if tried >= tries:
                 self.clear_socket()
                 raise SaltReqTimeoutError(
-                    "SaltReqTimeoutError: after {} seconds, ran {} "
-                    "tries".format(timeout * tried, tried)
+                    "SaltReqTimeoutError: after {} seconds, ran {} tries".format(
+                        timeout * tried, tried
+                    )
                 )
         return self.serial.loads(self.socket.recv())
 

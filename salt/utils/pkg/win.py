@@ -156,9 +156,9 @@ class RegSoftwareInfo:
             self.__reg_32bit_access = (
                 0  # HKEY_USERS does not have a 32bit and 64bit view
             )
-            self.__reg_uninstall_path = (
-                "{}\\Software\\Microsoft\\Windows\\" "CurrentVersion\\Uninstall\\{}"
-            ).format(sid, key_guid)
+            self.__reg_uninstall_path = "{}\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{}".format(
+                sid, key_guid
+            )
             if self.__squid:
                 self.__reg_products_path = (
                     "{}\\Software\\Classes\\Installer\\Products\\{}".format(
@@ -170,8 +170,8 @@ class RegSoftwareInfo:
                 )
                 self.__reg_patches_path = (
                     "Software\\Microsoft\\Windows\\CurrentVersion\\Installer\\UserData\\"
-                    "{}\\Products\\{}\\Patches"
-                ).format(sid, self.__squid)
+                    "{}\\Products\\{}\\Patches".format(sid, self.__squid)
+                )
         else:
             self.__reg_hive = "HKEY_LOCAL_MACHINE"
             self.__reg_32bit = use_32bit
@@ -190,8 +190,8 @@ class RegSoftwareInfo:
                 )
                 self.__reg_patches_path = (
                     "Software\\Microsoft\\Windows\\CurrentVersion\\Installer\\UserData\\"
-                    "S-1-5-18\\Products\\{}\\Patches"
-                ).format(self.__squid)
+                    "S-1-5-18\\Products\\{}\\Patches".format(self.__squid)
+                )
 
         # OpenKey is expensive, open in advance and keep it open.
         # This must exist

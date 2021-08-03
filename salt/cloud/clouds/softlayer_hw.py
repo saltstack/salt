@@ -418,8 +418,7 @@ def create(vm_):
 
 
 def list_nodes_full(
-    mask="mask[id, hostname, primaryIpAddress, \
-        primaryBackendIpAddress, processorPhysicalCoreAmount, memoryCount]",
+    mask="mask[id, hostname, primaryIpAddress, primaryBackendIpAddress, processorPhysicalCoreAmount, memoryCount]",
     call=None,
 ):
     """
@@ -509,7 +508,7 @@ def destroy(name, call=None):
     """
     if call == "function":
         raise SaltCloudSystemExit(
-            "The destroy action must be called with -d, --destroy, " "-a or --action."
+            "The destroy action must be called with -d, --destroy, -a or --action."
         )
 
     __utils__["cloud.fire_event"](

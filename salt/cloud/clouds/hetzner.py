@@ -107,7 +107,7 @@ def _connect_client():
 def avail_locations(call=None):
     if call == "action":
         raise SaltCloudSystemExit(
-            "The list_locations function must be called with " "-f or --function"
+            "The list_locations function must be called with -f or --function"
         )
 
     client = _connect_client()
@@ -120,7 +120,7 @@ def avail_locations(call=None):
 def avail_images(call=None):
     if call == "action":
         raise SaltCloudSystemExit(
-            "The avail_images function must be called with " "-f or --function"
+            "The avail_images function must be called with -f or --function"
         )
 
     client = _connect_client()
@@ -133,7 +133,7 @@ def avail_images(call=None):
 def avail_sizes(call=None):
     if call == "action":
         raise SaltCloudSystemExit(
-            "The avail_sizes function must be called with " "-f or --function"
+            "The avail_sizes function must be called with -f or --function"
         )
 
     client = _connect_client()
@@ -146,7 +146,7 @@ def avail_sizes(call=None):
 def list_ssh_keys(call=None):
     if call == "action":
         raise SaltCloudSystemExit(
-            "The list_ssh_keys function must be called with " "-f or --function"
+            "The list_ssh_keys function must be called with -f or --function"
         )
 
     client = _connect_client()
@@ -159,7 +159,7 @@ def list_ssh_keys(call=None):
 def list_nodes_full(call=None):
     if call == "action":
         raise SaltCloudSystemExit(
-            "The list_nodes_full function must be called with " "-f or --function"
+            "The list_nodes_full function must be called with -f or --function"
         )
 
     client = _connect_client()
@@ -184,7 +184,7 @@ def list_nodes_full(call=None):
 def list_nodes(call=None):
     if call == "action":
         raise SaltCloudSystemExit(
-            "The list_nodes function must be called with " "-f or --function"
+            "The list_nodes function must be called with -f or --function"
         )
 
     ret = {}
@@ -215,7 +215,7 @@ def wait_until(name, state, timeout=300):
 def show_instance(name, call=None):
     if call == "action":
         raise SaltCloudSystemExit(
-            "The show_instance function must be called with " "-f or --function"
+            "The show_instance function must be called with -f or --function"
         )
 
     try:
@@ -476,7 +476,7 @@ def destroy(name, call=None):
     """
     if call == "function":
         raise SaltCloudSystemExit(
-            "The destroy action must be called with -d, --destroy, " "-a or --action."
+            "The destroy action must be called with -d, --destroy, -a or --action."
         )
 
     client = _connect_client()

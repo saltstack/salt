@@ -147,7 +147,9 @@ try:
     import consul
 
     if not hasattr(consul, "__version__"):
-        consul.__version__ = "0.1"  # Some packages has no version, and so this pillar crashes on access to it.
+        consul.__version__ = (  # Some packages has no version, and so this pillar crashes on access to it.
+            "0.1"
+        )
 except ImportError:
     consul = None
 

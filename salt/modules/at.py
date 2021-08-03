@@ -105,9 +105,7 @@ def atq(tag=None):
                 timestr = " ".join(tmp[1:5])
                 job = tmp[6]
                 specs = (
-                    datetime.datetime(
-                        *(time.strptime(timestr, "%b %d, %Y " "%H:%M")[0:5])
-                    )
+                    datetime.datetime(*(time.strptime(timestr, "%b %d, %Y %H:%M")[0:5]))
                     .isoformat()
                     .split("T")
                 )

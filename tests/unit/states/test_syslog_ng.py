@@ -17,8 +17,7 @@ from tests.support.unit import TestCase
 
 SOURCE_1_CONFIG = {
     "id": "s_tail",
-    "config": (
-        """
+    "config": """
         source:
             - file:
               - '"/var/log/apache/access.log"'
@@ -26,8 +25,7 @@ SOURCE_1_CONFIG = {
               - flags:
                 - no-parse
                 - validate-utf8
-        """
-    ),
+        """,
 }
 
 SOURCE_1_EXPECTED = """
@@ -42,15 +40,13 @@ source s_tail {
 
 SOURCE_2_CONFIG = {
     "id": "s_gsoc2014",
-    "config": (
-        """
+    "config": """
         source:
           - tcp:
             - ip: '"0.0.0.0"'
             - port: 1234
             - flags: no-parse
-        """
-    ),
+        """,
 }
 
 SOURCE_2_EXPECTED = """
@@ -64,13 +60,11 @@ source s_gsoc2014 {
 
 FILTER_1_CONFIG = {
     "id": "f_json",
-    "config": (
-        """
+    "config": """
         filter:
           - match:
             - '"@json:"'
-        """
-    ),
+        """,
 }
 
 FILTER_1_EXPECTED = """
@@ -83,15 +77,13 @@ FILTER_1_EXPECTED = """
 
 TEMPLATE_1_CONFIG = {
     "id": "t_demo_filetemplate",
-    "config": (
-        """
+    "config": """
         template:
           - template:
             - '"$ISODATE $HOST $MSG\n"'
           - template_escape:
             - "no"
-        """
-    ),
+        """,
 }
 
 TEMPLATE_1_EXPECTED = """
@@ -107,14 +99,12 @@ TEMPLATE_1_EXPECTED = """
 
 REWRITE_1_CONFIG = {
     "id": "r_set_message_to_MESSAGE",
-    "config": (
-        """
+    "config": """
         rewrite:
           - set:
             - '"${.json.message}"'
             - value : '"$MESSAGE"'
-        """
-    ),
+        """,
 }
 
 REWRITE_1_EXPECTED = """
@@ -128,8 +118,7 @@ REWRITE_1_EXPECTED = """
 
 LOG_1_CONFIG = {
     "id": "l_gsoc2014",
-    "config": (
-        """
+    "config": """
         log:
           - source: s_gsoc2014
           - junction:
@@ -153,8 +142,7 @@ LOG_1_CONFIG = {
             - file:
               - '"/tmp/all.log"'
               - template: t_gsoc2014
-        """
-    ),
+        """,
 }
 
 LOG_1_EXPECTED = """
@@ -196,14 +184,12 @@ LOG_1_EXPECTED = """
 
 OPTIONS_1_CONFIG = {
     "id": "global_options",
-    "config": (
-        """
+    "config": """
         options:
           - time_reap: 30
           - mark_freq: 10
           - keep_hostname: "yes"
-        """
-    ),
+        """,
 }
 
 OPTIONS_1_EXPECTED = """
@@ -216,14 +202,12 @@ OPTIONS_1_EXPECTED = """
 
 SHORT_FORM_CONFIG = {
     "id": "source.s_gsoc",
-    "config": (
-        """
+    "config": """
           - tcp:
             - ip: '"0.0.0.0"'
             - port: 1234
             - flags: no-parse
-        """
-    ),
+        """,
 }
 
 SHORT_FORM_EXPECTED = """
@@ -244,8 +228,7 @@ SHORT_FORM_EXPECTED = """
 
 GIVEN_CONFIG = {
     "id": "config.some_name",
-    "config": (
-        """
+    "config": """
                source s_gsoc {
                   tcp(
                       ip(
@@ -259,8 +242,7 @@ GIVEN_CONFIG = {
                       )
                   );
                };
-        """
-    ),
+        """,
 }
 
 _SALT_VAR_WITH_MODULE_METHODS = {
@@ -373,6 +355,7 @@ class SyslogNGTestCase(TestCase, LoaderModuleMockMixin):
                 command = got["changes"]["new"]
                 self.assertTrue(
                     command.endswith(
-                        "syslog-ng --user=joe --group=users --enable-core --cfgfile=/etc/syslog-ng.conf"
+                        "syslog-ng --user=joe --group=users --enable-core"
+                        " --cfgfile=/etc/syslog-ng.conf"
                     )
                 )

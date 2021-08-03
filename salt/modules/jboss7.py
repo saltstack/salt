@@ -62,7 +62,8 @@ def status(jboss_config, host=None, server_config=None):
         )
     else:
         raise SaltInvocationError(
-            "Invalid parameters. Must either pass both host and server_config or neither"
+            "Invalid parameters. Must either pass both host and server_config or"
+            " neither"
         )
     return __salt__["jboss7_cli.run_operation"](
         jboss_config, operation, fail_on_error=False, retries=0
@@ -178,7 +179,8 @@ def create_datasource(jboss_config, name, datasource_properties, profile=None):
         salt '*' jboss7.create_datasource '{"cli_path": "integration.modules.sysmod.SysModuleTest.test_valid_docs", "controller": "10.11.12.13:9999", "cli_user": "jbossadm", "cli_password": "jbossadm"}' 'my_datasource' '{"driver-name": "mysql", "connection-url": "jdbc:mysql://localhost:3306/sampleDatabase", "jndi-name": "java:jboss/datasources/sampleDS", "user-name": "sampleuser", "password": "secret", "min-pool-size": 3, "use-java-context": True}'
     """
     log.debug(
-        "======================== MODULE FUNCTION: jboss7.create_datasource, name=%s, profile=%s",
+        "======================== MODULE FUNCTION: jboss7.create_datasource, name=%s,"
+        " profile=%s",
         name,
         profile,
     )
@@ -269,7 +271,8 @@ def update_datasource(jboss_config, name, new_properties, profile=None):
 
     """
     log.debug(
-        "======================== MODULE FUNCTION: jboss7.update_datasource, name=%s, profile=%s",
+        "======================== MODULE FUNCTION: jboss7.update_datasource, name=%s,"
+        " profile=%s",
         name,
         profile,
     )
@@ -290,10 +293,10 @@ def update_datasource(jboss_config, name, new_properties, profile=None):
             )
             if not update_result["success"]:
                 ret["result"] = False
-                ret["comment"] = ret["comment"] + (
-                    "Could not update datasource property {} with value {},\n stdout: {}\n".format(
-                        key, new_properties[key], update_result["stdout"]
-                    )
+                ret["comment"] = ret[
+                    "comment"
+                ] + "Could not update datasource property {} with value {},\n stdout: {}\n".format(
+                    key, new_properties[key], update_result["stdout"]
                 )
 
     return ret
@@ -301,7 +304,8 @@ def update_datasource(jboss_config, name, new_properties, profile=None):
 
 def __get_datasource_resource_description(jboss_config, name, profile=None):
     log.debug(
-        "======================== MODULE FUNCTION: jboss7.__get_datasource_resource_description, name=%s, profile=%s",
+        "======================== MODULE FUNCTION:"
+        " jboss7.__get_datasource_resource_description, name=%s, profile=%s",
         name,
         profile,
     )
@@ -365,13 +369,17 @@ def create_simple_binding(jboss_config, binding_name, value, profile=None):
                 my_binding_name my_binding_value
        """
     log.debug(
-        "======================== MODULE FUNCTION: jboss7.create_simple_binding, binding_name=%s, value=%s, profile=%s",
+        "======================== MODULE FUNCTION: jboss7.create_simple_binding,"
+        " binding_name=%s, value=%s, profile=%s",
         binding_name,
         value,
         profile,
     )
-    operation = '/subsystem=naming/binding="{binding_name}":add(binding-type=simple, value="{value}")'.format(
-        binding_name=binding_name, value=__escape_binding_value(value)
+    operation = (
+        '/subsystem=naming/binding="{binding_name}":add(binding-type=simple,'
+        ' value="{value}")'.format(
+            binding_name=binding_name, value=__escape_binding_value(value)
+        )
     )
     if profile is not None:
         operation = '/profile="{profile}"'.format(profile=profile) + operation
@@ -398,13 +406,17 @@ def update_simple_binding(jboss_config, binding_name, value, profile=None):
         salt '*' jboss7.update_simple_binding '{"cli_path": "integration.modules.sysmod.SysModuleTest.test_valid_docs", "controller": "10.11.12.13:9999", "cli_user": "jbossadm", "cli_password": "jbossadm"}' my_binding_name my_binding_value
     """
     log.debug(
-        "======================== MODULE FUNCTION: jboss7.update_simple_binding, binding_name=%s, value=%s, profile=%s",
+        "======================== MODULE FUNCTION: jboss7.update_simple_binding,"
+        " binding_name=%s, value=%s, profile=%s",
         binding_name,
         value,
         profile,
     )
-    operation = '/subsystem=naming/binding="{binding_name}":write-attribute(name=value, value="{value}")'.format(
-        binding_name=binding_name, value=__escape_binding_value(value)
+    operation = (
+        '/subsystem=naming/binding="{binding_name}":write-attribute(name=value,'
+        ' value="{value}")'.format(
+            binding_name=binding_name, value=__escape_binding_value(value)
+        )
     )
     if profile is not None:
         operation = '/profile="{profile}"'.format(profile=profile) + operation
@@ -449,7 +461,8 @@ def __update_datasource_property(
     jboss_config, datasource_name, name, value, ds_attributes, profile=None
 ):
     log.debug(
-        "======================== MODULE FUNCTION: jboss7.__update_datasource_property, datasource_name=%s, name=%s, value=%s, profile=%s",
+        "======================== MODULE FUNCTION: jboss7.__update_datasource_property,"
+        " datasource_name=%s, name=%s, value=%s, profile=%s",
         datasource_name,
         name,
         value,
@@ -506,7 +519,8 @@ def remove_datasource(jboss_config, name, profile=None):
         salt '*' jboss7.remove_datasource '{"cli_path": "integration.modules.sysmod.SysModuleTest.test_valid_docs", "controller": "10.11.12.13:9999", "cli_user": "jbossadm", "cli_password": "jbossadm"}' my_datasource_name
     """
     log.debug(
-        "======================== MODULE FUNCTION: jboss7.remove_datasource, name=%s, profile=%s",
+        "======================== MODULE FUNCTION: jboss7.remove_datasource, name=%s,"
+        " profile=%s",
         name,
         profile,
     )

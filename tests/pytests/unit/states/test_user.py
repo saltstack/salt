@@ -50,8 +50,10 @@ def test_present():
                 with patch.dict(user.__opts__, {"test": True}):
                     ret.update(
                         {
-                            "comment": "The following user attributes are set to be changed:\n"
-                            "key: value\n",
+                            "comment": (
+                                "The following user attributes are set to be changed:\n"
+                                "key: value\n"
+                            ),
                             "result": None,
                         }
                     )

@@ -706,10 +706,9 @@ def extracted(
     kwargs = salt.utils.args.clean_kwargs(**kwargs)
 
     if skip_files_list_verify and skip_verify:
-        ret["comment"] = (
-            'Only one of "skip_files_list_verify" and '
-            '"skip_verify" can be set to True'
-        )
+        ret[
+            "comment"
+        ] = 'Only one of "skip_files_list_verify" and "skip_verify" can be set to True'
         return ret
 
     if "keep_source" in kwargs and "keep" in kwargs:
@@ -756,7 +755,7 @@ def extracted(
         ret["comment"] = "Value for 'if_missing' is not an absolute path"
         return ret
     if not _path_is_abs(enforce_ownership_on):
-        ret["comment"] = "Value for 'enforce_ownership_on' is not an " "absolute path"
+        ret["comment"] = "Value for 'enforce_ownership_on' is not an absolute path"
         return ret
     else:
         if enforce_ownership_on is not None:
@@ -962,9 +961,9 @@ def extracted(
                 # string-ified integer.
                 trim_output = int(trim_output)
             except TypeError:
-                ret["comment"] = (
-                    "Invalid value for trim_output, must be True/False or an " "integer"
-                )
+                ret[
+                    "comment"
+                ] = "Invalid value for trim_output, must be True/False or an integer"
                 return ret
 
     if source_hash:
@@ -1118,7 +1117,7 @@ def extracted(
             errors.append("'if_missing' must be set")
         if not enforce_ownership_on and (user or group):
             errors.append(
-                "Ownership cannot be managed without setting " "'enforce_ownership_on'."
+                "Ownership cannot be managed without setting 'enforce_ownership_on'."
             )
         msg = exc.strerror
         if errors:
@@ -1135,8 +1134,7 @@ def extracted(
                 )
             else:
                 msg += (
-                    "The following workarounds must be used for this state to "
-                    "proceed"
+                    "The following workarounds must be used for this state to proceed"
                 )
             msg += " (assuming the source file is a valid {} archive):\n".format(
                 archive_format
@@ -1657,9 +1655,9 @@ def extracted(
         if __opts__["test"]:
             if ret["changes"].get("updated ownership"):
                 ret["result"] = None
-                ret["comment"] += (
-                    ". Ownership would be updated on one or more " "files/directories."
-                )
+                ret[
+                    "comment"
+                ] += ". Ownership would be updated on one or more files/directories."
 
     if enforce_missing:
         if not if_missing:

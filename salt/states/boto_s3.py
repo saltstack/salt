@@ -209,8 +209,10 @@ def object_present(
             ret["result"] = False
             ret["comment"] = (
                 "Salt uses the {} metadata key internally,"
-                "do not pass it to the boto_s3.object_present state."
-            ).format(HASH_METADATA_KEY)
+                "do not pass it to the boto_s3.object_present state.".format(
+                    HASH_METADATA_KEY
+                )
+            )
             return ret
     combined_extra_args["Metadata"][HASH_METADATA_KEY] = digest
     # Remove upload-only keys from full set of extra_args

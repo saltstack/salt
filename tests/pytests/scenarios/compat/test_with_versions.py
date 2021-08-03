@@ -237,9 +237,8 @@ def cp_file_source(pysaltcombo, unicode):
     if unicode and pysaltcombo.python_version == "2":
         if pysaltcombo.salt_version.startswith(("2019.2", "3000.")):
             pytest.xfail(
-                "Salt {} is know to fail with unicode issues under Py2 when copying files".format(
-                    pysaltcombo.salt_version
-                )
+                "Salt {} is know to fail with unicode issues under Py2 when copying"
+                " files".format(pysaltcombo.salt_version)
             )
     source = pathlib.Path(RUNTIME_VARS.BASE_FILES) / "cheese"
     contents = source.read_text()

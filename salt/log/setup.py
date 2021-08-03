@@ -150,7 +150,7 @@ def setup_temp_logger(log_level="error"):
         LOGGING_NULL_HANDLER.sync_with_handlers([handler])
     else:
         logging.getLogger(__name__).debug(
-            "LOGGING_NULL_HANDLER is already None, can't sync messages " "with it"
+            "LOGGING_NULL_HANDLER is already None, can't sync messages with it"
         )
 
     # Remove the temporary null logging handler
@@ -468,7 +468,7 @@ def setup_extended_logging(opts):
         LOGGING_STORE_HANDLER.sync_with_handlers(additional_handlers)
     else:
         logging.getLogger(__name__).debug(
-            "LOGGING_STORE_HANDLER is already None, can't sync messages " "with it"
+            "LOGGING_STORE_HANDLER is already None, can't sync messages with it"
         )
 
     # Remove the temporary queue logging handler
@@ -800,8 +800,7 @@ def __process_multiprocessing_logging_queue(opts, queue):
             break
         except Exception as exc:  # pylint: disable=broad-except
             logging.getLogger(__name__).warning(
-                "An exception occurred in the multiprocessing logging "
-                "queue thread: %r",
+                "An exception occurred in the multiprocessing logging queue thread: %r",
                 exc,
                 exc_info_on_loglevel=logging.DEBUG,
             )

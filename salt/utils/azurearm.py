@@ -116,7 +116,10 @@ def _determine_auth(**kwargs):
             credentials = MSIAuthentication(cloud_environment=cloud_env)
         except ImportError:
             raise SaltSystemExit(
-                msg="MSI authentication support not availabe (requires msrestazure >= 0.4.14)"
+                msg=(
+                    "MSI authentication support not availabe (requires msrestazure >="
+                    " 0.4.14)"
+                )
             )
 
     else:

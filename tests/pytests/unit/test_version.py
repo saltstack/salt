@@ -371,7 +371,8 @@ def test_bugfix_string():
         ),
         (
             (2019, 2, 3, None, "nb", 20201214, 0, None),
-            "<SaltStackVersion name='Fluorine' major=2019 minor=2 bugfix=3 nb=20201214>",
+            "<SaltStackVersion name='Fluorine' major=2019 minor=2 bugfix=3"
+            " nb=20201214>",
         ),
     ],
 )

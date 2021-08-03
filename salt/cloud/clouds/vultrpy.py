@@ -466,7 +466,7 @@ def create(vm_):
         )
         if int(data.get("status", "200")) >= 300:
             log.error(
-                "Error creating %s on Vultr\n\n" "Vultr API returned %s\n",
+                "Error creating %s on Vultr\n\nVultr API returned %s\n",
                 vm_["name"],
                 data,
             )

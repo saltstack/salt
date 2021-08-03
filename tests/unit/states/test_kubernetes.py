@@ -14,8 +14,8 @@ from tests.support.unit import TestCase, skipIf
 
 @skipIf(
     kubernetes is False,
-    "Probably Kubernetes client lib is not installed. \
-                              Skipping test_kubernetes.py",
+    "Probably Kubernetes client lib is not installed.                              "
+    " Skipping test_kubernetes.py",
 )
 class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
     """
@@ -249,7 +249,9 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                 )
                 self.assertDictEqual(
                     {
-                        "comment": "The configmap is already present. Forcing recreation",
+                        "comment": (
+                            "The configmap is already present. Forcing recreation"
+                        ),
                         "changes": {"data": {"action": "make=peace"}},
                         "name": "settings",
                         "result": True,
@@ -539,7 +541,9 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                         "changes": {
                             "minikube.failure-domain.beta.kubernetes.io/zone": {
                                 "new": {
-                                    "failure-domain.beta.kubernetes.io/zone": "us-central1-a",
+                                    "failure-domain.beta.kubernetes.io/zone": (
+                                        "us-central1-a"
+                                    ),
                                     "beta.kubernetes.io/os": "linux",
                                 },
                                 "old": {"beta.kubernetes.io/os": "linux"},
@@ -566,7 +570,9 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                         "changes": {},
                         "result": True,
                         "name": "failure-domain.beta.kubernetes.io/region",
-                        "comment": "The label is already set and has the specified value",
+                        "comment": (
+                            "The label is already set and has the specified value"
+                        ),
                     },
                     actual,
                 )
@@ -610,10 +616,14 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                         "changes": {
                             "minikube.failure-domain.beta.kubernetes.io/region": {
                                 "new": {
-                                    "failure-domain.beta.kubernetes.io/region": "us-east-1"
+                                    "failure-domain.beta.kubernetes.io/region": (
+                                        "us-east-1"
+                                    )
                                 },
                                 "old": {
-                                    "failure-domain.beta.kubernetes.io/region": "us-west-1"
+                                    "failure-domain.beta.kubernetes.io/region": (
+                                        "us-west-1"
+                                    )
                                 },
                             }
                         },

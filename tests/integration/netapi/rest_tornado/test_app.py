@@ -157,7 +157,8 @@ class TestSaltAPIHandler(SaltnadoIntegrationTestsBase):
         self.assertEqual(
             response_obj["return"],
             [
-                "No minions matched the target. No command was sent, no jid was assigned."
+                "No minions matched the target. No command was sent, no jid was"
+                " assigned."
             ],
         )
 

@@ -137,11 +137,13 @@ def pytest_addoption(parser):
         "--from-filenames",
         default=None,
         help=(
-            "Pass a comma-separated list of file paths, and any test module which corresponds to the "
-            "specified file(s) will run. For example, if 'setup.py' was passed, then the corresponding "
-            "test files defined in 'tests/filename_map.yml' would run. Absolute paths are assumed to be "
-            "files containing relative paths, one per line. Providing the paths in a file can help get "
-            "around shell character limits when the list of files is long."
+            "Pass a comma-separated list of file paths, and any test module which"
+            " corresponds to the specified file(s) will run. For example, if 'setup.py'"
+            " was passed, then the corresponding test files defined in"
+            " 'tests/filename_map.yml' would run. Absolute paths are assumed to be"
+            " files containing relative paths, one per line. Providing the paths in a"
+            " file can help get around shell character limits when the list of files is"
+            " long."
         ),
     )
     # Add deprecated CLI flag until we completely switch to PyTest
@@ -153,7 +155,8 @@ def pytest_addoption(parser):
         default="zeromq",
         choices=("zeromq", "tcp"),
         help=(
-            "Select which transport to run the integration tests with, zeromq or tcp. Default: %(default)s"
+            "Select which transport to run the integration tests with, zeromq or tcp."
+            " Default: %(default)s"
         ),
     )
     test_selection_group.addoption(
@@ -162,9 +165,11 @@ def pytest_addoption(parser):
         dest="ssh",
         action="store_true",
         default=False,
-        help="Run salt-ssh tests. These tests will spin up a temporary "
-        "SSH server on your machine. In certain environments, this "
-        "may be insecure! Default: False",
+        help=(
+            "Run salt-ssh tests. These tests will spin up a temporary "
+            "SSH server on your machine. In certain environments, this "
+            "may be insecure! Default: False"
+        ),
     )
     test_selection_group.addoption(
         "--proxy",
@@ -232,11 +237,13 @@ def pytest_configure(config):
     # Expose the markers we use to pytest CLI
     config.addinivalue_line(
         "markers",
-        "requires_salt_modules(*required_module_names): Skip if at least one module is not available.",
+        "requires_salt_modules(*required_module_names): Skip if at least one module is"
+        " not available.",
     )
     config.addinivalue_line(
         "markers",
-        "requires_salt_states(*required_state_names): Skip if at least one state module is not available.",
+        "requires_salt_states(*required_state_names): Skip if at least one state module"
+        " is not available.",
     )
     config.addinivalue_line(
         "markers", "windows_whitelisted: Mark test as whitelisted to run under Windows"
@@ -246,7 +253,8 @@ def pytest_configure(config):
     )
     config.addinivalue_line(
         "markers",
-        "slow_test: Mark test as being slow. These tests are skipped by default unless `--run-slow` is passed",
+        "slow_test: Mark test as being slow. These tests are skipped by default unless"
+        " `--run-slow` is passed",
     )
     # "Flag" the slowTest decorator if we're skipping slow tests or not
     os.environ["SLOW_TESTS"] = str(config.getoption("--run-slow"))
@@ -286,8 +294,8 @@ def set_max_open_files_limits(min_soft=3072, min_hard=4096):
     # Increase limits
     if set_limits:
         log.debug(
-            " * Max open files settings is too low (soft: %s, hard: %s) for running the tests. "
-            "Trying to raise the limits to soft: %s, hard: %s",
+            " * Max open files settings is too low (soft: %s, hard: %s) for running the"
+            " tests. Trying to raise the limits to soft: %s, hard: %s",
             prev_soft,
             prev_hard,
             soft,
@@ -301,8 +309,8 @@ def set_max_open_files_limits(min_soft=3072, min_hard=4096):
                 resource.setrlimit(resource.RLIMIT_NOFILE, (soft, hard))
         except Exception as err:  # pylint: disable=broad-except
             log.error(
-                "Failed to raise the max open files settings -> %s. Please issue the following command "
-                "on your console: 'ulimit -u %s'",
+                "Failed to raise the max open files settings -> %s. Please issue the"
+                " following command on your console: 'ulimit -u %s'",
                 err,
                 soft,
             )
@@ -322,8 +330,8 @@ def pytest_itemcollected(item):
         # Test is under tests/pytests
         if item.cls and issubclass(item.cls, TestCase):
             pytest.fail(
-                "The tests under {0!r} MUST NOT use unittest's TestCase class or a subclass of it. "
-                "Please move {1!r} outside of {0!r}".format(
+                "The tests under {0!r} MUST NOT use unittest's TestCase class or a"
+                " subclass of it. Please move {1!r} outside of {0!r}".format(
                     str(PYTESTS_DIR.relative_to(CODE_DIR)), item.nodeid
                 )
             )
@@ -331,7 +339,8 @@ def pytest_itemcollected(item):
         # Test is not under tests/pytests
         if not item.cls or (item.cls and not issubclass(item.cls, TestCase)):
             pytest.fail(
-                "The test {!r} appears to be written for pytest but it's not under {!r}. Please move it there.".format(
+                "The test {!r} appears to be written for pytest but it's not under"
+                " {!r}. Please move it there.".format(
                     item.nodeid, str(PYTESTS_DIR.relative_to(CODE_DIR)), pytrace=False
                 )
             )
@@ -384,8 +393,9 @@ def pytest_collection_modifyitems(config, items):
                                             and not request.session.shouldstop
                                         ):
                                             log.debug(
-                                                "The next test item is still under the fixture package path. "
-                                                "Not terminating %s",
+                                                "The next test item is still under the"
+                                                " fixture package path. Not"
+                                                " terminating %s",
                                                 self,
                                             )
                                             return

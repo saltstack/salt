@@ -387,11 +387,16 @@ def test_list_patches():
     :return:
     """
     yum_out = [
-        "i my-fake-patch-not-installed-1234 recommended    spacewalk-usix-2.7.5.2-2.2.noarch",
-        "  my-fake-patch-not-installed-1234 recommended    spacewalksd-5.0.26.2-21.2.x86_64",
-        "i my-fake-patch-not-installed-1234 recommended    suseRegisterInfo-3.1.1-18.2.x86_64",
-        "i my-fake-patch-installed-1234 recommended        my-package-one-1.1-0.1.x86_64",
-        "i my-fake-patch-installed-1234 recommended        my-package-two-1.1-0.1.x86_64",
+        "i my-fake-patch-not-installed-1234 recommended   "
+        " spacewalk-usix-2.7.5.2-2.2.noarch",
+        "  my-fake-patch-not-installed-1234 recommended   "
+        " spacewalksd-5.0.26.2-21.2.x86_64",
+        "i my-fake-patch-not-installed-1234 recommended   "
+        " suseRegisterInfo-3.1.1-18.2.x86_64",
+        "i my-fake-patch-installed-1234 recommended       "
+        " my-package-one-1.1-0.1.x86_64",
+        "i my-fake-patch-installed-1234 recommended       "
+        " my-package-two-1.1-0.1.x86_64",
     ]
 
     expected_patches = {
@@ -1304,7 +1309,9 @@ def test_info_installed_with_all_versions():
             {
                 "build_date": "2015-07-09T10:55:19Z",
                 "vendor": "openSUSE Build Service",
-                "description": "This is the Virgo dummy package used for testing SUSE Manager",
+                "description": (
+                    "This is the Virgo dummy package used for testing SUSE Manager"
+                ),
                 "license": "GPL-2.0",
                 "build_host": "sheep05",
                 "url": "http://www.suse.com",
@@ -1315,7 +1322,9 @@ def test_info_installed_with_all_versions():
                 "install_date_time_t": 1456241517,
                 "summary": "Virgo dummy package",
                 "version": "1.0",
-                "signature": "DSA/SHA1, Thu Jul  9 08:55:33 2015, Key ID 27fa41bd8a7c64f9",
+                "signature": (
+                    "DSA/SHA1, Thu Jul  9 08:55:33 2015, Key ID 27fa41bd8a7c64f9"
+                ),
                 "release": "1.1",
                 "group": "Applications/System",
                 "arch": "i686",
@@ -1324,7 +1333,9 @@ def test_info_installed_with_all_versions():
             {
                 "build_date": "2015-07-09T10:15:19Z",
                 "vendor": "openSUSE Build Service",
-                "description": "This is the Virgo dummy package used for testing SUSE Manager",
+                "description": (
+                    "This is the Virgo dummy package used for testing SUSE Manager"
+                ),
                 "license": "GPL-2.0",
                 "build_host": "sheep05",
                 "url": "http://www.suse.com",
@@ -1335,7 +1346,9 @@ def test_info_installed_with_all_versions():
                 "install_date_time_t": 14562415127,
                 "summary": "Virgo dummy package",
                 "version": "1.0",
-                "signature": "DSA/SHA1, Thu Jul  9 08:55:33 2015, Key ID 27fa41bd8a7c64f9",
+                "signature": (
+                    "DSA/SHA1, Thu Jul  9 08:55:33 2015, Key ID 27fa41bd8a7c64f9"
+                ),
                 "release": "1.1",
                 "group": "Applications/System",
                 "arch": "x86_64",
@@ -1357,7 +1370,9 @@ def test_info_installed_with_all_versions():
                 "install_date_time_t": 1456241495,
                 "summary": "Secure Sockets and Transport Layer Security",
                 "version": "1.0.1i",
-                "signature": "RSA/SHA256, Wed Nov  4 22:21:34 2015, Key ID 70af9e8139db7c82",
+                "signature": (
+                    "RSA/SHA256, Wed Nov  4 22:21:34 2015, Key ID 70af9e8139db7c82"
+                ),
                 "release": "34.1",
                 "group": "Productivity/Networking/Security",
                 "packager": "https://www.suse.com/",
@@ -1534,7 +1549,9 @@ def test_group_info():
     expected = {
         "conditional": [],
         "default": ["qgnomeplatform", "xdg-desktop-portal-gtk"],
-        "description": "GNOME is a highly intuitive and user friendly desktop environment.",
+        "description": (
+            "GNOME is a highly intuitive and user friendly desktop environment."
+        ),
         "group": "GNOME",
         "id": "gnome-desktop",
         "mandatory": [

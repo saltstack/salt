@@ -677,7 +677,8 @@ def rollback(name, **kwargs):
             flags.append("-f")
         else:
             log.warning(
-                "zfs.rollback - force=True can only be used with recursive_all=True or recursive=True"
+                "zfs.rollback - force=True can only be used with recursive_all=True or"
+                " recursive=True"
             )
 
     ## Rollback to snapshot

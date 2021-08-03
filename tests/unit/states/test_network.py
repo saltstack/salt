@@ -89,8 +89,10 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
 
                 ret.update(
                     {
-                        "comment": "Interface salt is set to be"
-                        " updated:\n--- \n+++ \n@@ -1 +1 @@\n-A\n+B",
+                        "comment": (
+                            "Interface salt is set to be"
+                            " updated:\n--- \n+++ \n@@ -1 +1 @@\n-A\n+B"
+                        ),
                         "result": None,
                     }
                 )
@@ -116,10 +118,8 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
                             {
                                 "result": True,
                                 "changes": {
-                                    "interface": "--- \n+"
-                                    "++ \n@@ -1 +1 @@\n-A"
-                                    "\n+B",
-                                    "status": "Interface" " salt down",
+                                    "interface": "--- \n+++ \n@@ -1 +1 @@\n-A\n+B",
+                                    "status": "Interface salt down",
                                 },
                             }
                         )
@@ -170,7 +170,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
 
                 ret.update(
                     {
-                        "comment": "Interface salt routes are" " set to be added.",
+                        "comment": "Interface salt routes are set to be added.",
                         "result": None,
                     }
                 )
@@ -178,9 +178,11 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
 
                 ret.update(
                     {
-                        "comment": "Interface salt routes are set to be"
-                        " updated:\n--- \n+++ \n@@ -1,4 +0,0 @@\n-T\n-r"
-                        "\n-u\n-e"
+                        "comment": (
+                            "Interface salt routes are set to be"
+                            " updated:\n--- \n+++ \n@@ -1,4 +0,0 @@\n-T\n-r"
+                            "\n-u\n-e"
+                        )
                     }
                 )
                 self.assertDictEqual(network.routes("salt", test="a"), ret)
@@ -225,7 +227,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.dict(network.__salt__, {"ip.build_network_settings": mock}):
                     ret.update(
                         {
-                            "comment": "Global network settings" " are up to date.",
+                            "comment": "Global network settings are up to date.",
                             "result": True,
                         }
                     )
@@ -233,8 +235,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
 
                     ret.update(
                         {
-                            "comment": "Global network settings are set to"
-                            " be added.",
+                            "comment": "Global network settings are set to be added.",
                             "result": None,
                         }
                     )
@@ -242,9 +243,11 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
 
                     ret.update(
                         {
-                            "comment": "Global network settings are set to"
-                            " be updated:\n--- \n+++ \n@@ -1,2 +0,0"
-                            " @@\n-A\n-s"
+                            "comment": (
+                                "Global network settings are set to"
+                                " be updated:\n--- \n+++ \n@@ -1,2 +0,0"
+                                " @@\n-A\n-s"
+                            )
                         }
                     )
                     self.assertDictEqual(network.system("salt"), ret)
@@ -261,8 +264,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
                         ret.update(
                             {
                                 "changes": {
-                                    "network_settings": "Added global network"
-                                    " settings."
+                                    "network_settings": "Added global network settings."
                                 },
                                 "comment": "",
                                 "result": False,
@@ -273,10 +275,9 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
                         ret.update(
                             {
                                 "changes": {
-                                    "network_settings": "Added global network"
-                                    " settings."
+                                    "network_settings": "Added global network settings."
                                 },
-                                "comment": "Global network settings" " are up to date.",
+                                "comment": "Global network settings are up to date.",
                                 "result": True,
                             }
                         )

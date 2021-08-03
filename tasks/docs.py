@@ -236,8 +236,8 @@ def check_virtual(ctx, files):
             try:
                 python_module = doc_path_to_python_module[path]
                 utils.error(
-                    "The doc file at {} indicates that it's virtual, yet, there's a python module "
-                    "at {} that will shaddow it.",
+                    "The doc file at {} indicates that it's virtual, yet, there's a"
+                    " python module at {} that will shaddow it.",
                     path,
                     python_module,
                 )
@@ -418,8 +418,8 @@ def check_stray(ctx, files):
                 continue
             exitcode += 1
             utils.error(
-                "The doc at {} doesn't have a corresponding python module and is considered a stray "
-                "doc. Please remove it.",
+                "The doc at {} doesn't have a corresponding python module and is"
+                " considered a stray doc. Please remove it.",
                 path,
             )
     return exitcode

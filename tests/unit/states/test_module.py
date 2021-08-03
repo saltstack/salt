@@ -257,9 +257,8 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
             module_function = module.__salt__[CMD].__name__
         self.assertEqual(
             ret["comment"],
-            (
-                "'{}' failed: {}() got an unexpected keyword argument "
-                "'foo'".format(CMD, module_function)
+            "'{}' failed: {}() got an unexpected keyword argument 'foo'".format(
+                CMD, module_function
             ),
         )
         self.assertFalse(ret["result"])

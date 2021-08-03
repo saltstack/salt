@@ -56,10 +56,8 @@ def __virtual__():
         return __virtualname__
     return (
         False,
-        (
-            "The influxdb execution module could not be loaded:"
-            "influxdb library not available."
-        ),
+        "The influxdb execution module could not be loaded:"
+        "influxdb library not available.",
     )
 
 

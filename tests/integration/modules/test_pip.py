@@ -176,9 +176,8 @@ class PipModuleTest(ModuleCase):
         )
         if not isinstance(ret, dict):
             self.fail(
-                "The 'pip.install' command did not return the excepted dictionary. Output:\n{}".format(
-                    ret
-                )
+                "The 'pip.install' command did not return the excepted dictionary."
+                " Output:\n{}".format(ret)
             )
 
         try:
@@ -187,9 +186,8 @@ class PipModuleTest(ModuleCase):
             self.assertTrue(found)
         except KeyError as exc:
             self.fail(
-                "The returned dictionary is missing an expected key. Error: '{}'. Dictionary: {}".format(
-                    exc, pprint.pformat(ret)
-                )
+                "The returned dictionary is missing an expected key. Error: '{}'."
+                " Dictionary: {}".format(exc, pprint.pformat(ret))
             )
 
     @pytest.mark.slow_test
@@ -220,9 +218,8 @@ class PipModuleTest(ModuleCase):
 
         if not isinstance(ret, dict):
             self.fail(
-                "The 'pip.install' command did not return the excepted dictionary. Output:\n{}".format(
-                    ret
-                )
+                "The 'pip.install' command did not return the excepted dictionary."
+                " Output:\n{}".format(ret)
             )
 
         try:
@@ -231,9 +228,8 @@ class PipModuleTest(ModuleCase):
             self.assertTrue(found)
         except KeyError as exc:
             self.fail(
-                "The returned dictionary is missing an expected key. Error: '{}'. Dictionary: {}".format(
-                    exc, pprint.pformat(ret)
-                )
+                "The returned dictionary is missing an expected key. Error: '{}'."
+                " Dictionary: {}".format(exc, pprint.pformat(ret))
             )
 
     @pytest.mark.slow_test
@@ -256,9 +252,8 @@ class PipModuleTest(ModuleCase):
 
         if not isinstance(ret, dict):
             self.fail(
-                "The 'pip.install' command did not return the excepted dictionary. Output:\n{}".format(
-                    ret
-                )
+                "The 'pip.install' command did not return the excepted dictionary."
+                " Output:\n{}".format(ret)
             )
 
         try:
@@ -267,9 +262,8 @@ class PipModuleTest(ModuleCase):
             self.assertTrue(found)
         except KeyError as exc:
             self.fail(
-                "The returned dictionary is missing an expected key. Error: '{}'. Dictionary: {}".format(
-                    exc, pprint.pformat(ret)
-                )
+                "The returned dictionary is missing an expected key. Error: '{}'."
+                " Dictionary: {}".format(exc, pprint.pformat(ret))
             )
 
     @pytest.mark.slow_test
@@ -301,9 +295,8 @@ class PipModuleTest(ModuleCase):
 
         if not isinstance(ret, dict):
             self.fail(
-                "The 'pip.install' command did not return the excepted dictionary. Output:\n{}".format(
-                    ret
-                )
+                "The 'pip.install' command did not return the excepted dictionary."
+                " Output:\n{}".format(ret)
             )
 
         try:
@@ -312,9 +305,8 @@ class PipModuleTest(ModuleCase):
             self.assertTrue(found)
         except KeyError as exc:
             self.fail(
-                "The returned dictionary is missing an expected key. Error: '{}'. Dictionary: {}".format(
-                    exc, pprint.pformat(ret)
-                )
+                "The returned dictionary is missing an expected key. Error: '{}'."
+                " Dictionary: {}".format(exc, pprint.pformat(ret))
             )
 
     @pytest.mark.slow_test
@@ -336,9 +328,8 @@ class PipModuleTest(ModuleCase):
         )
         if not isinstance(ret, dict):
             self.fail(
-                "The 'pip.install' command did not return the excepted dictionary. Output:\n{}".format(
-                    ret
-                )
+                "The 'pip.install' command did not return the excepted dictionary."
+                " Output:\n{}".format(ret)
             )
 
         try:
@@ -346,9 +337,8 @@ class PipModuleTest(ModuleCase):
             self.assertIn("installed pep8", ret["stdout"])
         except KeyError as exc:
             self.fail(
-                "The returned dictionary is missing an expected key. Error: '{}'. Dictionary: {}".format(
-                    exc, pprint.pformat(ret)
-                )
+                "The returned dictionary is missing an expected key. Error: '{}'."
+                " Dictionary: {}".format(exc, pprint.pformat(ret))
             )
 
     @pytest.mark.slow_test
@@ -377,9 +367,8 @@ class PipModuleTest(ModuleCase):
         )
         if not isinstance(ret, dict):
             self.fail(
-                "The 'pip.install' command did not return the excepted dictionary. Output:\n{}".format(
-                    ret
-                )
+                "The 'pip.install' command did not return the excepted dictionary."
+                " Output:\n{}".format(ret)
             )
 
         try:
@@ -387,9 +376,8 @@ class PipModuleTest(ModuleCase):
             self.assertIn("installed pep8", ret["stdout"])
         except KeyError as exc:
             self.fail(
-                "The returned dictionary is missing an expected key. Error: '{}'. Dictionary: {}".format(
-                    exc, pprint.pformat(ret)
-                )
+                "The returned dictionary is missing an expected key. Error: '{}'."
+                " Dictionary: {}".format(exc, pprint.pformat(ret))
             )
 
     @pytest.mark.slow_test
@@ -413,9 +401,8 @@ class PipModuleTest(ModuleCase):
 
         if not isinstance(ret, dict):
             self.fail(
-                "The 'pip.install' command did not return the excepted dictionary. Output:\n{}".format(
-                    ret
-                )
+                "The 'pip.install' command did not return the excepted dictionary."
+                " Output:\n{}".format(ret)
             )
 
         try:
@@ -425,9 +412,8 @@ class PipModuleTest(ModuleCase):
             self.assertIn("installed pep8", ret["stdout"])
         except KeyError as exc:
             self.fail(
-                "The returned dictionary is missing an expected key. Error: '{}'. Dictionary: {}".format(
-                    exc, pprint.pformat(ret)
-                )
+                "The returned dictionary is missing an expected key. Error: '{}'."
+                " Dictionary: {}".format(exc, pprint.pformat(ret))
             )
 
     @pytest.mark.slow_test
@@ -438,9 +424,8 @@ class PipModuleTest(ModuleCase):
 
         if not isinstance(ret, dict):
             self.fail(
-                "The 'pip.install' command did not return the excepted dictionary. Output:\n{}".format(
-                    ret
-                )
+                "The 'pip.install' command did not return the excepted dictionary."
+                " Output:\n{}".format(ret)
             )
 
         try:
@@ -450,17 +435,15 @@ class PipModuleTest(ModuleCase):
             self.assertIn("installed pep8", ret["stdout"])
         except KeyError as exc:
             self.fail(
-                "The returned dictionary is missing an expected key. Error: '{}'. Dictionary: {}".format(
-                    exc, pprint.pformat(ret)
-                )
+                "The returned dictionary is missing an expected key. Error: '{}'."
+                " Dictionary: {}".format(exc, pprint.pformat(ret))
             )
         ret = self.run_function("pip.uninstall", ["pep8"], bin_env=self.venv_dir)
 
         if not isinstance(ret, dict):
             self.fail(
-                "The 'pip.uninstall' command did not return the excepted dictionary. Output:\n{}".format(
-                    ret
-                )
+                "The 'pip.uninstall' command did not return the excepted dictionary."
+                " Output:\n{}".format(ret)
             )
 
         try:
@@ -468,9 +451,8 @@ class PipModuleTest(ModuleCase):
             self.assertIn("uninstalled pep8", ret["stdout"])
         except KeyError as exc:
             self.fail(
-                "The returned dictionary is missing an expected key. Error: '{}'. Dictionary: {}".format(
-                    exc, pprint.pformat(ret)
-                )
+                "The returned dictionary is missing an expected key. Error: '{}'."
+                " Dictionary: {}".format(exc, pprint.pformat(ret))
             )
 
     @pytest.mark.slow_test
@@ -481,9 +463,8 @@ class PipModuleTest(ModuleCase):
 
         if not isinstance(ret, dict):
             self.fail(
-                "The 'pip.install' command did not return the excepted dictionary. Output:\n{}".format(
-                    ret
-                )
+                "The 'pip.install' command did not return the excepted dictionary."
+                " Output:\n{}".format(ret)
             )
 
         try:
@@ -493,9 +474,8 @@ class PipModuleTest(ModuleCase):
             self.assertIn("installed pep8", ret["stdout"])
         except KeyError as exc:
             self.fail(
-                "The returned dictionary is missing an expected key. Error: '{}'. Dictionary: {}".format(
-                    exc, pprint.pformat(ret)
-                )
+                "The returned dictionary is missing an expected key. Error: '{}'."
+                " Dictionary: {}".format(exc, pprint.pformat(ret))
             )
 
         ret = self.run_function(
@@ -504,9 +484,8 @@ class PipModuleTest(ModuleCase):
 
         if not isinstance(ret, dict):
             self.fail(
-                "The 'pip.install' command did not return the excepted dictionary. Output:\n{}".format(
-                    ret
-                )
+                "The 'pip.install' command did not return the excepted dictionary."
+                " Output:\n{}".format(ret)
             )
 
         try:
@@ -516,18 +495,16 @@ class PipModuleTest(ModuleCase):
             self.assertIn("installed pep8", ret["stdout"])
         except KeyError as exc:
             self.fail(
-                "The returned dictionary is missing an expected key. Error: '{}'. Dictionary: {}".format(
-                    exc, pprint.pformat(ret)
-                )
+                "The returned dictionary is missing an expected key. Error: '{}'."
+                " Dictionary: {}".format(exc, pprint.pformat(ret))
             )
 
         ret = self.run_function("pip.uninstall", ["pep8"], bin_env=self.venv_dir)
 
         if not isinstance(ret, dict):
             self.fail(
-                "The 'pip.uninstall' command did not return the excepted dictionary. Output:\n{}".format(
-                    ret
-                )
+                "The 'pip.uninstall' command did not return the excepted dictionary."
+                " Output:\n{}".format(ret)
             )
 
         try:
@@ -535,9 +512,8 @@ class PipModuleTest(ModuleCase):
             self.assertIn("uninstalled pep8", ret["stdout"])
         except KeyError as exc:
             self.fail(
-                "The returned dictionary is missing an expected key. Error: '{}'. Dictionary: {}".format(
-                    exc, pprint.pformat(ret)
-                )
+                "The returned dictionary is missing an expected key. Error: '{}'."
+                " Dictionary: {}".format(exc, pprint.pformat(ret))
             )
 
     @pytest.mark.slow_test
@@ -558,9 +534,8 @@ class PipModuleTest(ModuleCase):
 
         if not isinstance(ret, dict):
             self.fail(
-                "The 'pip.install' command did not return the excepted dictionary. Output:\n{}".format(
-                    ret
-                )
+                "The 'pip.install' command did not return the excepted dictionary."
+                " Output:\n{}".format(ret)
             )
 
         try:
@@ -570,9 +545,8 @@ class PipModuleTest(ModuleCase):
             self.assertIn("Successfully installed Blinker SaltTesting", ret["stdout"])
         except KeyError as exc:
             self.fail(
-                "The returned dictionary is missing an expected key. Error: '{}'. Dictionary: {}".format(
-                    exc, pprint.pformat(ret)
-                )
+                "The returned dictionary is missing an expected key. Error: '{}'."
+                " Dictionary: {}".format(exc, pprint.pformat(ret))
             )
 
     @pytest.mark.slow_test
@@ -593,9 +567,8 @@ class PipModuleTest(ModuleCase):
 
         if not isinstance(ret, dict):
             self.fail(
-                "The 'pip.install' command did not return the excepted dictionary. Output:\n{}".format(
-                    ret
-                )
+                "The 'pip.install' command did not return the excepted dictionary."
+                " Output:\n{}".format(ret)
             )
 
         try:
@@ -609,9 +582,8 @@ class PipModuleTest(ModuleCase):
                 )
         except KeyError as exc:
             self.fail(
-                "The returned dictionary is missing an expected key. Error: '{}'. Dictionary: {}".format(
-                    exc, pprint.pformat(ret)
-                )
+                "The returned dictionary is missing an expected key. Error: '{}'."
+                " Dictionary: {}".format(exc, pprint.pformat(ret))
             )
 
     @skipIf(not os.path.isfile("pip3"), "test where pip3 is installed")

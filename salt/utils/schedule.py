@@ -245,7 +245,7 @@ class Schedule:
             for job in current_jobs:
                 if "schedule" in job:
                     log.debug(
-                        "schedule.handle_func: Checking job against fun " "%s: %s",
+                        "schedule.handle_func: Checking job against fun %s: %s",
                         func,
                         job,
                     )
@@ -1037,7 +1037,7 @@ class Schedule:
             Handle schedule item with when
             """
             if not _WHEN_SUPPORTED:
-                data["_error"] = "Missing python-dateutil. " "Ignoring job {}.".format(
+                data["_error"] = "Missing python-dateutil. Ignoring job {}.".format(
                     data["name"]
                 )
                 log.error(data["_error"])
@@ -1070,7 +1070,7 @@ class Schedule:
                     if not isinstance(self.opts["grains"]["whens"], dict):
                         data[
                             "_error"
-                        ] = 'Grain "whens" must be a dict. ' "Ignoring job {}.".format(
+                        ] = 'Grain "whens" must be a dict. Ignoring job {}.'.format(
                             data["name"]
                         )
                         log.error(data["_error"])
@@ -1085,7 +1085,7 @@ class Schedule:
                     except ValueError:
                         data[
                             "_error"
-                        ] = "Invalid date string {}. " "Ignoring job {}.".format(
+                        ] = "Invalid date string {}. Ignoring job {}.".format(
                             i, data["name"]
                         )
                         log.error(data["_error"])
@@ -1144,7 +1144,7 @@ class Schedule:
             Handle schedule item with cron
             """
             if not _CRON_SUPPORTED:
-                data["_error"] = "Missing python-croniter. " "Ignoring job {}.".format(
+                data["_error"] = "Missing python-croniter. Ignoring job {}.".format(
                     data["name"]
                 )
                 log.error(data["_error"])
@@ -1161,7 +1161,7 @@ class Schedule:
                         data["cron"], now
                     ).get_next(datetime.datetime)
                 except (ValueError, KeyError):
-                    data["_error"] = "Invalid cron string. " "Ignoring job {}.".format(
+                    data["_error"] = "Invalid cron string. Ignoring job {}.".format(
                         data["name"]
                     )
                     log.error(data["_error"])
@@ -1242,7 +1242,7 @@ class Schedule:
             Handle schedule item with skip_explicit
             """
             if not _RANGE_SUPPORTED:
-                data["_error"] = "Missing python-dateutil. " "Ignoring job {}.".format(
+                data["_error"] = "Missing python-dateutil. Ignoring job {}.".format(
                     data["name"]
                 )
                 log.error(data["_error"])
@@ -1321,7 +1321,7 @@ class Schedule:
             Handle schedule item with skip_explicit
             """
             if not _RANGE_SUPPORTED:
-                data["_error"] = "Missing python-dateutil. " "Ignoring job {}".format(
+                data["_error"] = "Missing python-dateutil. Ignoring job {}".format(
                     data["name"]
                 )
                 log.error(data["_error"])
@@ -1344,7 +1344,7 @@ class Schedule:
                 except ValueError:
                     data[
                         "_error"
-                    ] = "Invalid date string for start. " "Ignoring job {}.".format(
+                    ] = "Invalid date string for start. Ignoring job {}.".format(
                         data["name"]
                     )
                     log.error(data["_error"])
@@ -1356,7 +1356,7 @@ class Schedule:
                 except ValueError:
                     data[
                         "_error"
-                    ] = "Invalid date string for end." " Ignoring job {}.".format(
+                    ] = "Invalid date string for end. Ignoring job {}.".format(
                         data["name"]
                     )
                     log.error(data["_error"])
@@ -1392,7 +1392,7 @@ class Schedule:
             Handle schedule item with after
             """
             if not _WHEN_SUPPORTED:
-                data["_error"] = "Missing python-dateutil. " "Ignoring job {}".format(
+                data["_error"] = "Missing python-dateutil. Ignoring job {}".format(
                     data["name"]
                 )
                 log.error(data["_error"])
@@ -1416,7 +1416,7 @@ class Schedule:
             Handle schedule item with until
             """
             if not _WHEN_SUPPORTED:
-                data["_error"] = "Missing python-dateutil. " "Ignoring job {}".format(
+                data["_error"] = "Missing python-dateutil. Ignoring job {}".format(
                     data["name"]
                 )
                 log.error(data["_error"])
@@ -1713,7 +1713,7 @@ class Schedule:
 
             miss_msg = ""
             if seconds < 0:
-                miss_msg = " (runtime missed " "by {} seconds)".format(abs(seconds))
+                miss_msg = " (runtime missed by {} seconds)".format(abs(seconds))
 
             try:
                 if run:
@@ -1864,7 +1864,7 @@ def clean_proc_dir(opts):
                 except OSError:
                     continue
             log.debug(
-                "schedule.clean_proc_dir: checking job %s for process " "existence", job
+                "schedule.clean_proc_dir: checking job %s for process existence", job
             )
             if job is not None and "pid" in job:
                 if salt.utils.process.os_is_running(job["pid"]):

@@ -995,8 +995,8 @@ class SPMClient:
             "OS Family Dependencies: {os_family_dependencies}\n"
             "Summary: {summary}\n"
             "Description:\n"
-            "{description}"
-        ).format(**formula_def)
+            "{description}".format(**formula_def)
+        )
 
     def _local_list_files(self, args):
         """
